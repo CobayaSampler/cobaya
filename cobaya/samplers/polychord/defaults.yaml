@@ -1,0 +1,40 @@
+# Default arguments for the PolyChord sampler, v1.9
+
+sampler:
+  polychord:
+    # MANDATORY: Path to the PolyChord installation folder
+    path: null
+    # Optional parameters for the sampler:
+    # (if not defined, they are left to their defaults)
+    # -------------------------------------------------
+    # Number of live points (default: 25*dimensionality)
+    nlive: null
+    # Number of steps of the slice-sampling for each new sample (default: 5*dimensionality)
+    num_repeats: null
+    # Whether to check for and explore multi-modality on the posterior (default: True)
+    do_clustering: null
+    # Stopping criterion (main): fraction of the total evidence contained in the live points (default: 0.001)
+    precision_criterion: null
+    # Stopping criterion (alt): maximum number of nested sampling iterations (default: infinite)
+    max_ndead: null
+    # Increase up to `num_repeats` to get more posterior samples (default: 0)
+    boost_posterior: null
+    # Verbosity during the sampling process ([0,1,2,3], default: Same as global `verobosity`)
+    feedback: null
+    # Parameters related to the speed hierarchy (not managed for now)
+    grade_dims: null
+    grade_frac: null
+    # Raw output of PolyChord (no need to change them, normally)
+    # ----------------------------------------------------------
+    base_dir: polychord_output
+    update_files: null
+    file_root: null
+    posteriors: True
+    equals: True
+    cluster_posteriors: True
+    write_resume: True
+    read_resume: True
+    write_stats: True
+    write_live: True
+    write_dead: True
+

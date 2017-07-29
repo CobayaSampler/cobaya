@@ -1,0 +1,8 @@
+theory:
+  camb:
+    path: null
+    precision:
+      # Needed for Planck
+      lens_potential_accuracy: 1
+      # Other precision parameters that you can increase
+      # AccuracyBoost: [larger than 1]

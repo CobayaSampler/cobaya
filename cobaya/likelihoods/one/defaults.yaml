@@ -1,0 +1,9 @@
+# Mock constant (unit) likelihood
+
+likelihood:
+  one:
+    # Mock-likelihood properties:
+    # 1. artificial delay in lik computation  
+    delay: 0  # seconds
+    # 2. prefix of the parameters names
+    mock_prefix: mock_ 

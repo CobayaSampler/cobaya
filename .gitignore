@@ -1,0 +1,17 @@
+# Backups
+*~
+\#*
+.\#*
+
+# Python and packaging
+*.pyc
+*.egg-info/
+
+# Documentation
+docs/_*
+
+# IDE-specific
+.idea
+
+# pytest
+.cache
