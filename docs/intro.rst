@@ -1,6 +1,3 @@
-Introduction
-============
-
 .. include:: ../README.rst
 
 Structure of the code
