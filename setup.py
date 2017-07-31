@@ -29,7 +29,7 @@ setup(
     ],
     keywords='montecarlo sampling cosmology',
     packages=find_packages(exclude=['docs', 'tests']),
-    install_requires=['numpy', 'scipy >= 0.18', 'matplotlib', 'pandas', 'pyyaml'],
+    install_requires=['numpy', 'scipy >= 0.18', 'pandas', 'pyyaml'],
     entry_points={
         'console_scripts': [
             'cobaya-run=cobaya.run:run_script',
