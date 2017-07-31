@@ -92,7 +92,6 @@ def body_of_test(info_prior, tmpdir, gaussian=False, test_yaml=True):
         full_output_file = os.path.join(prefix, output_full_suffix+".yaml")
         from cobaya.yaml_custom import yaml_custom_load
         with open(full_output_file) as full:
-            print yaml_custom_load(full)[input_prior]
             assert yaml_custom_load(full)[input_prior] == info[input_prior], (
                 "The prior information has not been written correctly.")
 
