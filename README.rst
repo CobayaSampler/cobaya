@@ -9,7 +9,7 @@ cobaya, a code for Bayesian analysis in Cosmology
          
 :License: `LGPL <https://www.gnu.org/copyleft/lesser.html>`_ for the code and (except otherwise stated in a docstring) and `GFDL <https://www.gnu.org/licenses/fdl-1.3.en.html>`_ for the documentation.
                  
-**cobaya** is a framework for sampling and statistical modelling: it allows you explore any prior or posterior using a range of Monte Carlo samplers (including the advanced MCMC sampler from CosmoMC_, and the advanced nested sampler PolyChord_). The results of the sampling can be analysed with GetDist_.
+**cobaya** (Guinea Pig, in Spanish) is a framework for sampling and statistical modelling: it allows you explore any prior or posterior using a range of Monte Carlo samplers (including the advanced MCMC sampler from CosmoMC_, and the advanced nested sampler PolyChord_). The results of the sampling can be analysed with GetDist_.
 
 Its authors are `Jesus Torrado`_ and `Antony Lewis`_, and some ideas and modules (at least in the current version) have been adapted from `Monte Python`_, by `Julien Lesgourgues`_ and `Benjamin Audren`_ (in particular, the interface to the Planck 2015 likelihoods, without much modification, and pieces of the interface to the CLASS cosmological code).
 
