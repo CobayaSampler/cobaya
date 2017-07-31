@@ -12,7 +12,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='cobaya-sampler',
-    version='0.1',
+    version='0.114',
     description='Bayesian Analysis in Cosmology',
     long_description=long_description,
     url='http://cobaya.readthedocs.io/en/latest/intro.html',
