@@ -11,14 +11,13 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name='cobaya',
+    name='cobaya-sampler',
     version='0.1',
     description='Bayesian Analysis in Cosmology',
     long_description=long_description,
-    url='https://github.com/JesusTorrado/cobaya',
+    url='http://cobaya.readthedocs.io/en/latest/intro.html',
     author='Jesus Torrado and Antony Lewis',
-    license='LGPL (code, except where stated otherwise) and GFDL (docs)',
-    # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
+    license='LGPL',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Console',
@@ -30,6 +29,7 @@ setup(
     keywords='montecarlo sampling cosmology',
     packages=find_packages(exclude=['docs', 'tests']),
     install_requires=['numpy', 'scipy >= 0.18', 'pandas', 'pyyaml'],
+    python_requires='>=2.7, <3',
     entry_points={
         'console_scripts': [
             'cobaya-run=cobaya.run:run_script',

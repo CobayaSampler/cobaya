@@ -1,8 +1,17 @@
 language: python
 dist: xenial
 python: 2.7
+# (Pre)Installation
 before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -qq libopenblas-base
-  - pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist
+- sudo apt-get update -qq
+- sudo apt-get install -qq libopenblas-base
+- pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist
+# Tests!
 script: pytest tests/test_prior_external.py
+# Deploying to PyPI
+# only some tags and only if successful build!!!
+deploy:
+  password:
+    secure: cNKtcKc/2oK3h1oAysKRi5ctfQUxsmxJ1UYd4DobmmPFdEnG4Gk5+1AliFEK/oXxg4y4qskpVoeOfyrWUZk4sB2UWiQ9zSg2agX1VBUxIvHRx2WMKpbSDkg/44kv1NzTKWqZEotI8k5UtDvOwoGaoy6gFW977r8nerVhQTM4j929SXZISzPfauBqaVeeq5v50DXpe43zzjr5LkdHhOw1Wz7akdnGkLwI71m4BL2yuh6CibXQZzFU5bRwEIED1nePCp6FuytZ205gXra2nHP2Zw1c8mSwVNkfQFJ88J2f3eqqtpOVR1d0ue/VN2yuSIT8GT1Cfn3dS08ocWz3MiLgNYweiFrVu8GQ/c99WxcA+3NDT+F9pC+WZUPnZ9XNwszuXsvN3B7vQ8haR466mypwCgBy0iOvH3KllxgzuHrzSMP4sK70uMqlCn3tbliwpF2fP1pdaDBv+WvNLqCdL60zeINrrOjHOB5dn+YztsoNaN41xWrsuWXfuW33UzHEPI0xl1l2C5CZfDFWWNgZqbFyB56XV1ne3Usy/SOZNmnbDqHqPB0MrzUEJ2KjPMhdPHF9bWrqXxIGSReOvj6XVsdIa/GyO/L1clhlpBTT6iT38IO5HnnIuL16rChggSR55L4DPXYv658zVPy+J6mLqDEM3Dix4HgSWLJ39l8VXYmsgz0=
+  on:
+    tags: true

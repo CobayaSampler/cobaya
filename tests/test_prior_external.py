@@ -95,7 +95,7 @@ def body_of_test(info_prior, tmpdir, gaussian=False, test_yaml=True):
             assert yaml_custom_load(full)[input_prior] == info[input_prior], (
                 "The prior information has not been written correctly.")
 
-# Plots!
+# Plots! for the documentation
 def plot_sample(sample, params):
     import matplotlib.pyplot as plt
     import getdist as gd
@@ -104,9 +104,3 @@ def plot_sample(sample, params):
     gdplot = gdplt.getSubplotPlotter()
     gdplot.triangle_plot(gdsamples, params, filled=True)
     gdplot.export("test.png")
-
-
-if __name__ == "__main__":
-#    if manual:
-        from tempfile import gettempdir
-        test_prior_external_callable(gettempdir())
