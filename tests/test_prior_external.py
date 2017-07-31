@@ -90,7 +90,7 @@ def body_of_test(info_prior, tmpdir, gaussian=False, test_yaml=True):
     # Test updated info -- yaml
     if test_yaml:
         full_output_file = os.path.join(prefix, output_full_suffix+".yaml")
-        from cobaya.tools import yaml_custom_load
+        from cobaya.yaml_custom import yaml_custom_load
         with open(full_output_file) as full:
             print yaml_custom_load(full)[input_prior]
             assert yaml_custom_load(full)[input_prior] == info[input_prior], (

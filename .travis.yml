@@ -1,0 +1,4 @@
+language: python
+dist: xenial
+python: 2.7
+script: pytest test/test_prior_external.py
