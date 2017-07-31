@@ -11,6 +11,13 @@ The treatment on Planck 2015 likelihoods has been adapted without much modificat
 the `MontePython <http://baudren.github.io/montepython.html>`_ code by Julien Lesgourgues
 and Benjamin Audren.
 
+.. note::
+  
+  An older, `MIT-licensed <https://opensource.org/licenses/MIT>`_ version of this module by
+  Julien Lesgourgues and Benjamin Audren can be found in the `source of
+  MontePython <https://github.com/baudren/montepython_public>`_.
+
+
 The Planck 2015 likelihoods defined here are:
 
 - ``planck_2015_lowl``
