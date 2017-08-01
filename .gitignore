@@ -6,6 +6,8 @@
 # Python and packaging
 *.pyc
 *.egg-info/
+build/
+dist/
 
 # Documentation
 docs/_*

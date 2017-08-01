@@ -10,13 +10,15 @@ here = path.abspath(path.dirname(__file__))
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
+from cobaya import __author__, __version__, __url__
+
 setup(
     name='cobaya-sampler',
-    version='0.114',
+    version=__version__,
     description='Bayesian Analysis in Cosmology',
     long_description=long_description,
-    url='http://cobaya.readthedocs.io/en/latest/intro.html',
-    author='Jesus Torrado and Antony Lewis',
+    url=__url__,
+    author=__author__,
     license='LGPL',
     classifiers=[
         'Development Status :: 3 - Alpha',
