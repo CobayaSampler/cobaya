@@ -1,29 +1,27 @@
-Installation
-============
-
-.. _install_mpi:
+Installing cobaya
+=================
 
 Pre-requisites
 --------------
 
-The only requisites are:
+The only pre-requisites are **Python** (version ≥ 2.7) and the Python package manager **pip**.
 
-* Python, version ≥ 2.7
-* ``pip``, the Python package manager
-* (Optional) an MPI implementation (see below)
-* (Optional) the necessary compilers for the cosmological codes and likelihoods
-  
-To check if you have Python installed, type ``python --version`` in the shell, and you should get ``Python 2.7.[whatever]``. Then, type ``pip`` in the shell, and if you get usage instructions, you are golden. If you don't have any of those two installed, use your system's package manager or contact your local IT service.
+To check if you have Python installed, type ``python --version`` in the shell, and you should get ``Python 2.7.[whatever]``. Then, type ``pip`` in the shell, and if you get usage instructions instead of a ``command not found`` message, you are golden. If you don't have any of those two installed, use your system's package manager or contact your local IT service.
 
-Enabling MPI parallelisation is optional but highly recommended: it will allow you to better utilise the size of your cluster. MPI enables inter-process communication, which certain sampler can take advantage of for e.g. achieving a faster convergence of an MCMC proposal distribution, a higher effective acceptance rate in a nested sampler, etc.
+.. _install_mpi:
 
-First, you need to install an MPI implementation in your system. We recommend `OpenMPI <https://www.open-mpi.org/>`_. Install it using your system's package manager (``libopenmpi`` in Debian-based systems) or contact your local IT service.
+Optional: MPI parallellisation
+------------------------------
 
-Next install Python's `mpi4py` package using `pip`:
+Enabling MPI parallellisation is optional but highly recommended: it will allow you to better utilise the size of your cluster. MPI enables inter-process communication, of which many samplers can take advantage, e.g. for achieving a faster convergence of an MCMC proposal distribution, or a higher acceptance rate in a nested sampler.
+
+First, you need to install an MPI implementation in your system. We recommend `OpenMPI <https://www.open-mpi.org/>`_. Install it using your system's package manager (``sudo apt install libopenmpi`` in Debian-based systems) or contact your local IT service.
+
+Next install Python's ``mpi4py``:
 
 .. code:: bash
 
-   $ pip install mpi4py --user
+   $ pip install mpi4py --user --upgrade
 
 Now try
 
@@ -35,65 +33,51 @@ Now try
 If you have a working MPI implementation in your system, this should produce no output. If you don't, the error would look something like ``ImportError: libmpi.so.12: cannot open shared object file``.
 
 
-.. _directory_structure:
+Optional: make cobaya faster with OpenBLAS
+------------------------------------------
 
-Preparing a tidy directory structure
-------------------------------------
+BLAS is a collection of algorithms for linear algebra computations. There will most likely be a BLAS library installed already in your system. It is recommended to make sure that it is an efficient one, preferably the highly-parallellised OpenBLAS.
 
-After it is installed, cobaya can be called from any folder, so it is not necessary (and actually not recommended) to run your chains from within cobaya's installation folder. We recommend instead installing cobaya and all its dependencies (samplers, cosmological codes and likelihoods) in a particular folder, that we will assume is ``/path/to/cosmo``.
+To check if OpenBLAS is installed, in Debian-like systems, type
 
-The final structure would look like
+.. code:: bash
 
-.. code-block:: bash
+   $ dpkg -s libopenblas-base | grep Status
 
-   /path/to/cosmo
-            ├── cobaya
-            ├── getdist
-            ├── likelihoods
-            │   ├── planck_2015
-            │   └── [...]
-            ├── CAMB
-            ├── CLASS
-            ├── PolyChord
-            ├── [...]
-            └── chains  # your chains here!
+The output should end in ``install ok installed``. If you don't have it installed, in a Debian-like system, type ``sudo apt install libopenblas-base`` or ask your local IT service.
 
-            
-All the installation instructions in this documentation will be given with this directory structure in mind. Of course, it is optional, and advanced users should be able to adapt it to their particular needs.
-            
 
-Installing cobaya as a python package
---------------------------------------
+Installing and updating cobaya
+------------------------------
 
-This is the recommended method, since it installs all the python dependences automatically.
+.. warning::
+      
+   Until the final release, there is an additional pre-requisite: a ``git`` installation. Type ``git`` in the shell and check that you get usage instructions instead of a ``command not found``. In the latter case, in a Debian-like system, install it with a ``sudo apt intall git``.
 
-Download the latest release of cobaya from `the github release page <https://github.com/JesusTorrado/cobaya/releases>`_ or, if you want to use the development version, clone from git in a folder of your choice, say ``/path/to/cosmo/``:
 
-.. code-block:: bash
+To install **cobaya** or upgrade it to the last release, simply type in a terminal
 
-   $ cd /path/to/cosmo/
-   $ git clone https://github.com/JesusTorrado/cobaya.git
+.. code:: bash
 
-This will create a folder called ``cobaya`` inside ``/path/to/cosmo``. Change to it and use ``pip`` to install the package in *editable mode*:
+   $ pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist --user --upgrade
+   $ pip install cobaya-sampler --user --upgrade
 
-.. code-block:: bash
 
-   $ cd cobaya
-   $ pip install --editable . --user
-
-Installing the package in *editable mode* will reflect any changes you make to it. It is not mandatory, but it is a good idea should you want to make any modification in the future.
-
-If everything went well, you should be able to import cobaya in python from anywhere in your directory structure:
-
-.. code-block:: bash
-
-   $ cd
-   $ python
-   >>> import cobaya       
-
-If you get an error mesage after the ``import`` statement, something went wrong. Check twice the instructions above, try again, or contact us or your local Python guru.
+.. _install_check:
    
-cobaya also installs some scripts that should be callable from any folder. If everything went well, if you try to invoke ``cobaya-run`` you should get a message asking you for an input file, instead of a ``command not found`` error.
+Make sure that cobaya is installed
+----------------------------------   
+   
+If everything went well, you should be able to import **cobaya** in Python from anywhere in your directory structure:
+
+.. code-block:: bash
+
+   $ python
+   >>> import cobaya
+
+If you get an error message after the ``import`` statement, something went wrong. Check twice the instructions above, try again, or contact us or your local Python guru.
+
+**cobaya** also installs some shell scripts. If everything went well, if you try to run in the shell ``cobaya-run``, you should get a message asking you for an input file, instead of a ``command not found`` error.
 
 .. note::
 
@@ -103,34 +87,87 @@ cobaya also installs some scripts that should be callable from any folder. If ev
 
       export PATH=$PATH:"~/.local/bin/"
 
-   at the end of your ``~/.bashrc`` file, and restart the terminal.
+   at the end of your ``~/.bashrc`` file, and restart the terminal (or do ``source ~/.bashrc``).
+
+
+Troubleshooting
+---------------
 
 .. note::
-      
-   As of this version (alpha) there is no public Python package available. In the future, you should be able to install it from the Python Package Index (PyPI) automatically using pip.  
+
+   This section will be filled with the most common problems that our users encounter, so if you followed the instructions and still something failed (or if you think that the instructions were not clear enough), don't hesitate to contact us!
 
 
-Installing GetDist (only alpha)
--------------------------------
+Installing cobaya in development mode
+-------------------------------------
 
-The current version of cobaya is not compatible with the stable version of GetDist, so it cannot be installed as a python requirement, but needs to be cloned from `this github repo <https://github.com/JesusTorrado/getdist>`_ (preferably into ``/path/to/cosmo`` and installed with
+Use this method if you want to make modifications to the code, either for yourself, or to collaborate with us by implementing a new feature.
+
+.. note::
+
+   Notice that you don't need to modify **cobaya**'s source to use your own priors, likelihoods, etc. Take a look at the corresponding sections.
+
+
+Method 1: Using ``git`` (recommended!)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To download and install **cobaya** in *development mode* you will need ``git`` (`learn how to use git <https://git-scm.com/book/en/v2>`_). Type ``git`` in the shell and check that you get usage instructions instead of a ``command not found``. In the latter case, in a Debian-like system, install it with a ``sudo apt intall git``.
+
+The recommended way is to get a `Github <https://github.com>`_ user and `fork the cobaya repo <https://help.github.com/articles/fork-a-repo/>`_. Then clone you fork and install it as a Python package in *development mode* (i.e. your changes to the code will have an immediate effect, without needing to update the Python package):
+
+.. code:: bash
+
+   $ git clone https://YOUR_USERNAME@github.com/YOUR_USERNAME/cobaya.git
+   $ pip install --editable cobaya --user --upgrade
+
+Alternatively, you can clone from the official **cobaya** repo (but this way you won't be able to upload your changes!).
+
+.. code:: bash
+
+   $ git clone https://github.com/JesusTorrado/cobaya.git
+   $ pip install --editable cobaya --user --upgrade
+
+In any of both cases, this puts you in the last commit of **cobaya**. If you want to start from the last release, say version 1.0, do, from the cobaya folder,
+
+.. code:: bash
+
+   $ git checkout v1.0
+
+Finally, install **GetDist**:
+   
+.. code:: bash
+
+   $ pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist --user --upgrade
+
+and :ref:`install_check`.
+
+
+Method 2: Simplest, no ``git`` (not recommended!)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. warning::
+
+   This method is not recommended: you will not be able to keep track of your changes to the code! We really encourage you to use ``git`` (see method 1).
+
+Download the latest release (the one on top) from **cobaya**'s `Github Releases page <https://github.com/JesusTorrado/cobaya/releases>`_. Uncompress it in some folder, e.g. ``/path/to/cobaya/``, and install it as a python package:
 
 .. code-block:: bash
 
-   $ cd /path/to/cosmo/
-   $ git clone https://github.com/JesusTorrado/getdist.git
-   $ cd getdist
-   $ pip install --editable . --user
+   $ cd /path/to/cobaya/
+   $ pip install --editable cobaya --user
 
+Then install **GetDist**:
 
-Cosmology
----------
+.. code:: bash
 
-No cosmological codes or likelihoods are installed by default. They are left to the user for the sake of lightness of this code, and in case they want to use a modified version of them.
+      $ wget https://github.com/JesusTorrado/getdist/archive/master.zip
+      $ unzip master.zip ; rm master.zip
+      $ mv getdist-master getdist
+      $ pip install getdist --user
+      $ rm -rf getdist
 
-To install the usual cosmological codes, see the corresponding *Installation* sections in names_me's documentation of the interfaces for :doc:`CAMB <theory_camb>` and :doc:`CLASS <theory_class>`.
+Finally, :ref:`install_check`.  
 
-To install the Planck 2015 likelihood, check out the *Installation* section in :doc:`likelihood_planck`.
 
 Uninstalling cobaya (and GetDist, in the alpha)
 ------------------------------------------------
@@ -139,10 +176,11 @@ Simply do, from anywhere
 
 .. code-block:: bash
 
-   $ pip uninstall cobaya getdist
+   $ pip uninstall cobaya-sampler getdist
 
-and delete the corresponding folders.
+(and delete the corresponding folders, if you installed it in development mode.)
 
 .. note::
 
-   As of this version, the scripts installed in the local ``bin`` folder (in Linux ``~/.local/bin``) are not deleted automatically by the command above. You have to delete them manually -- just get rid of the files there that start with ``cobaya`` or ``GetDist``.
+   As of this version, the scripts installed in the local ``bin`` folder (in Linux ``~/.local/bin``) are not deleted automatically by the command above. You have to delete them manually: just get rid of the files in that folder that start with ``cobaya`` or ``GetDist``.
+
