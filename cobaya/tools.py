@@ -48,6 +48,10 @@ def get_labels(params_info):
         labels[p] = ensure_latex(label)
     return labels
 
+def make_header(kind, module):
+    """Created a header for a particular module of a particular kind."""
+    return ("="*80).join(["", "\n %s : %s \n"%(kind.title(), module), "\n"])
+
 def ensure_latex(string):
     """Inserts $'s at the beginning and end of the string, if necessary."""
     if string.strip()[0] != r"$":

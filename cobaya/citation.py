@@ -16,10 +16,10 @@ from __future__ import division
 import os
 
 # Local
-from cobaya.tools import get_folder
+from cobaya.tools import get_folder, make_header
 from cobaya.input import get_modules
 
-def get_citation(module, kind):
+def get_citation_info(module, kind):
     folder = get_folder(module, kind, absolute=True)
     filename = os.path.join(folder, module+".bibtex")
     try:
@@ -30,22 +30,21 @@ def get_citation(module, kind):
             lines = "[Module '%s.%s' not known.]"%(kind, module)
         else:
             lines = "[no citation information found]"
-    header = "\n"+kind.title()+" : "+module
-    header += "\n"+"="*(len(header)-1)+"\n\n"
-    return header+lines+"\n"
+    return lines+"\n"
 
 def citation(*infos):
-    header = "This framework:"
-    header += "\n"+"="*len(header)+"\n\n"
-    print "\n"+header+"[No citation information for now]\n"
+    print make_header("This framework", "")
+    print "[Paper in preparation]\n"
     for kind, modules in get_modules(*infos).iteritems():
         for module in modules:
-            print get_citation(module, kind)
+            print make_header(kind, module)
+            print get_citation_info(module, kind)
 
 # Command-line script
 def citation_script():
-    from cobaya.mpi import import_MPI
-    load_input = import_MPI(".input", "load_input")
-    import sys
-    infos = [load_input(filename) for filename in sys.argv[1:]]
-    citation(*infos)
+    from cobaya.mpi import get_mpi_rank
+    if not get_mpi_rank():
+        import sys
+        from cobaya.input import load_input
+        infos = [load_input(filename) for filename in sys.argv[1:]]
+        citation(*infos)
