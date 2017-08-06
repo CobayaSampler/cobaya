@@ -312,9 +312,6 @@ class mcmc(Sampler):
                     covmat[j_int, i_int] = covmat[i_int, j_int]
         log.info("Sampling with covariance matrix:")
         log.info("%r", covmat)
-        
-        np.savetxt("fufufu.covmat", covmat)
-
         self.proposer.set_covariance(covmat)
         # if not learnt covmat or, of learnt, it does not contain all parameters
         if len(getattr(self, "loaded_params", [])) < len(params):

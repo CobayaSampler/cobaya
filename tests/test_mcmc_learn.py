@@ -34,8 +34,6 @@ def info_gaussian(ranges, n_modes=1, mock_prefix=""):
         cov =  random_cov(ranges, n_modes=n_modes, O_std_min=0.05, O_std_max=0.1)
     elif rank != 0:
         mean, cov = None, None
-    print cov
-    exit()
     mean = comm.bcast(mean, root=0)
     cov  = comm.bcast(cov, root=0)
     dimension = len(ranges)

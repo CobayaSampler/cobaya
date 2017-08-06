@@ -42,8 +42,8 @@ def body_of_test(camb_path, planck_path, x):
 #    for lik in info[input_likelihood]:
 #        info[input_likelihood][lik].update({"speed": 4})
     info["output_prefix"] = "./test_planck/%s_"%x
-    info["debug"] = True
-    info["debug_file"] = "test_planck_slow.log"
+    info["debug"] = False
+#    info["debug_file"] = "test_planck_slow.log"
     print "Input info (dumped to yaml) -------------------------------"
     print yaml_custom_dump(info)
     print "-----------------------------------------------------------"
