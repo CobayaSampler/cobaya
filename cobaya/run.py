@@ -75,11 +75,10 @@ def run(info):
 def run_script():
     from cobaya.mpi import import_MPI
     load_input = import_MPI(".input", "load_input")
-    import sys
-    try:
-        input_file = sys.argv[1]
-    except IndexError:
-        raise IndexError("You must provide an input yaml file as an argument.")
-    info = load_input(input_file)
+    import argparse
+    parser = argparse.ArgumentParser(description="Cobaya's run script.")
+    parser.add_argument("input_file", nargs=1, action="store", metavar="input_file.yaml",
+                        help="An input file to run.")
+    info = load_input(parser.parse_args().input_file[0])
     run(info)
 

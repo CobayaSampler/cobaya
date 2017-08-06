@@ -44,7 +44,10 @@ def citation(*infos):
 def citation_script():
     from cobaya.mpi import get_mpi_rank
     if not get_mpi_rank():
-        import sys
+        import argparse
+        parser = argparse.ArgumentParser(description="Cobaya's citation tool.")
+        parser.add_argument("files", action="store", nargs="+", metavar="input_file.yaml",
+                            help="One or more input files.")
         from cobaya.input import load_input
-        infos = [load_input(filename) for filename in sys.argv[1:]]
+        infos = [load_input(f) for f in parser.parse_args().files]
         citation(*infos)
