@@ -73,6 +73,9 @@ def run(info):
 
 # Command-line script
 def run_script():
+    # Configure the logger ASAP
+    from cobaya.log import logger_setup
+    logger_setup()
     from cobaya.mpi import import_MPI
     load_input = import_MPI(".input", "load_input")
     import argparse

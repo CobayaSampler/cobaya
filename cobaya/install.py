@@ -38,7 +38,7 @@ def install(*infos, **kwargs):
             if is_installed == None:
                 print "Not and external module: nothing to do.\n"
                 continue
-            if is_installed():
+            if is_installed(path=kindpath):
                 print "External module appears to be installed."
                 if force:
                     print "Forcing re-installation, as requested."
@@ -51,6 +51,10 @@ def install(*infos, **kwargs):
 def install_script():
     from cobaya.mpi import get_mpi_rank
     if not get_mpi_rank():
+        # Configure the logger ASAP
+        from cobaya.log import logger_setup
+        logger_setup()
+        # Parse arguments
         import argparse
         parser = argparse.ArgumentParser(
             description="Cobaya's installation tool for external modules.")
@@ -64,4 +68,5 @@ def install_script():
         arguments = parser.parse_args()
         from cobaya.input import load_input
         infos = [load_input(f) for f in arguments.files]
+        # Launch installer
         install(*infos, path=arguments.path[0], force=arguments.force)
