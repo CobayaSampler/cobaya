@@ -31,8 +31,8 @@ log = logging.getLogger(__name__)
 # Other I/O-related tools #################################################################
 
 def get_folder(name, kind, sep="/", absolute="True"):
-    pre = os.path.dirname(__file__) if absolute else ""
-    return pre + sep + subfolders[kind] + sep + name
+    pre = os.path.dirname(__file__)+sep if absolute else ""+(sep if sep=="." else "")
+    return pre + subfolders[kind] + sep + name
 
 def get_labels(params_info):
     """

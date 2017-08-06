@@ -20,8 +20,16 @@ from cobaya.conventions import package
 
 def install(*infos, **kwargs):
     path = kwargs.get("path", ".")
+    abspath = os.path.abspath(path)
+    if not os.path.exists(abspath):
+        raise IOError(
+            "The given path, %s, must exist, but it doesn't."%abspath)
     force = kwargs.get("force", False)
     for kind, modules in get_modules(*infos).iteritems():
+        # Create folder for kind
+        kindpath = os.path.join(abspath, get_folder("", kind, sep="/", absolute=False))
+        if not os.path.exists(kindpath):
+            os.makedirs(kindpath)
         for module in modules:
             print make_header(kind, module)
             module_folder = get_folder(module, kind, sep=".", absolute=False)
@@ -37,7 +45,7 @@ def install(*infos, **kwargs):
                 else:
                     print "Doing nothing.\n"
                     continue
-            imported_module.install(path=path, force=force)
+            imported_module.install(path=kindpath, force=force)
 
 # Command-line script
 def install_script():
@@ -56,4 +64,4 @@ def install_script():
         arguments = parser.parse_args()
         from cobaya.input import load_input
         infos = [load_input(f) for f in arguments.files]
-        install(*infos, path=arguments.path, force=arguments.force)
+        install(*infos, path=arguments.path[0], force=arguments.force)
