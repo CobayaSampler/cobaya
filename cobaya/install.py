@@ -37,7 +37,7 @@ def install(*infos, **kwargs):
                 else:
                     print "Doing nothing.\n"
                     continue
-            imported_module.install()
+            imported_module.install(path=path, force=force)
 
 # Command-line script
 def install_script():
