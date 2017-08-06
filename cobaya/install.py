@@ -11,44 +11,49 @@ from __future__ import division
 
 # Global
 import os
+from importlib import import_module
 
 # Local
-from cobaya.tools import get_folder
+from cobaya.tools import get_folder, make_header
 from cobaya.input import get_modules
+from cobaya.conventions import package
 
-
-
-# los scripts de instalacion tienene que tener un test para ver si ya esta instalado
-# (no necesariamente demasiado fiable) y un opci'on ("force") para ignorar el test.
-
-
-def get_citation(module, kind):
-    folder = get_folder(module, kind, absolute=True)
-    filename = os.path.join(folder, module+".bibtex")
-    try:
-        with open(filename, "r") as f:
-            lines = "".join(f.readlines())
-    except IOError:
-        if not os.path.isdir(folder):
-            lines = "[Module '%s.%s' not known.]"%(kind, module)
-        else:
-            lines = "[no citation information found]"
-    header = "\n"+kind.title()+" : "+module
-    header += "\n"+"="*(len(header)-1)+"\n\n"
-    return header+lines+"\n"
-
-def citation(*infos):
-    header = "This framework:"
-    header += "\n"+"="*len(header)+"\n\n"
-    print "\n"+header+"[No citation information for now]\n"
+def install(*infos, **kwargs):
+    path = kwargs.get("path", ".")
+    force = kwargs.get("force", False)
     for kind, modules in get_modules(*infos).iteritems():
         for module in modules:
-            print get_citation(module, kind)
+            print make_header(kind, module)
+            module_folder = get_folder(module, kind, sep=".", absolute=False)
+            imported_module = import_module(module_folder, package=package)
+            is_installed = getattr(imported_module, "is_installed", None)
+            if is_installed == None:
+                print "Not and external module: nothing to do.\n"
+                continue
+            if is_installed():
+                print "External module appears to be installed."
+                if force:
+                    print "Forcing re-installation, as requested."
+                else:
+                    print "Doing nothing.\n"
+                    continue
+            imported_module.install()
 
 # Command-line script
-def citation_script():
-    from cobaya.mpi import import_MPI
-    load_input = import_MPI(".input", "load_input")
-    import sys
-    infos = [load_input(filename) for filename in sys.argv[1:]]
-    citation(*infos)
+def install_script():
+    from cobaya.mpi import get_mpi_rank
+    if not get_mpi_rank():
+        import argparse
+        parser = argparse.ArgumentParser(
+            description="Cobaya's installation tool for external modules.")
+        parser.add_argument("files", action="store", nargs="+", metavar="input_file.yaml",
+                            help="One or more input files.")
+        parser.add_argument("-p", "--path",
+                            action="store", nargs=1, default=".", metavar=("/some/path"),
+                            help="Desired path where to install external modules.")
+        parser.add_argument("-f", "--force", action="store_true", default="False",
+                            help="Force re-installation of apparently installed modules.")
+        arguments = parser.parse_args()
+        from cobaya.input import load_input
+        infos = [load_input(f) for f in arguments.files]
+        install(*infos, path=arguments.path, force=arguments.force)

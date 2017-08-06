@@ -34,6 +34,7 @@ setup(
     python_requires='>=2.7, <3',
     entry_points={
         'console_scripts': [
+            'cobaya-install=cobaya.install:install_script',
             'cobaya-run=cobaya.run:run_script',
             'cobaya-citation=cobaya.citation:citation_script',
         ],
