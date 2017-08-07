@@ -5,7 +5,8 @@
 likelihood:
   planck_2015_plikHM_TTTEEE:
     path:
-    clik_file: hi_l/plik/plik_dx11dr2_HM_v18_TTTEEE.clik
+    clik_file: plc_2.0/hi_l/plik/plik_dx11dr2_HM_v18_TTTEEE.clik
+    product_id: "1900"
     params:
       A_pol: 1
       cib_index: -1.3

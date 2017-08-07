@@ -236,3 +236,116 @@ class planck_clik_prototype(Likelihood):
     def close(self):
         del(self.clik) # MANDATORY: forces deallocation of the Cython class
         # Actually, it does not work for low-l likelihoods, which is quite dangerous!
+
+
+# Installation routines ###################################################################
+
+# path to be shared by all Planck likelihoods
+common_path = "planck_2015"
+
+def download_from_planck(product_id, path):
+    try:
+        from wget import download, bar_thermometer
+        wget_kwargs = {"out": path, "bar": bar_thermometer}
+        prefix = r"http://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLOGY_OID="
+        filename = download(prefix+product_id, **wget_kwargs)
+    except:
+        log.error("Error downloading!")
+        return False
+    finally:
+        print "" # force newline after wget
+    # uncompress
+    import os
+    import tarfile
+    extension = os.path.splitext(filename)[-1][1:]
+    tar = tarfile.open(filename, "r:"+extension)
+    try:
+        tar.extractall(path)
+        tar.close()
+        os.remove(filename)
+        return True
+    except:
+        log.error("Error decompressing downloaded file! Corrupt file?)")
+        return False
+
+def is_installed_clik(path, log_and_fail=False):
+    clik_path = os.path.join(path, "plc-2.0")
+    if not os.path.exists(clik_path):
+        if log_and_fail:
+            log.error("The given folder does not exist: '%s'",clik_path)
+            raise HandledException
+        return False
+    clik_path = os.path.join(clik_path, "lib/python2.7/site-packages")
+    if not os.path.exists(clik_path):
+        if log_and_fail:
+            log.error("You have not compiled the Planck likelihood code 'clik'.\n"
+                      "Take a look at the docs to see how to do it using 'waf'.")
+            raise HandledException
+        return False
+    sys.path.insert(0, clik_path)
+    try:
+        import clik
+        return True
+    except:
+        return False
+
+def install_clik(path):
+    print "clik: downlowading..."
+    if not download_from_planck("1904", path):
+        log.error("Not possible to download clik.")
+        return False
+    print "clik: configuring..."
+    os.chdir(os.path.join(path, "plc-2.0"))
+    from subprocess import Popen, PIPE
+    process = Popen(["./waf", "configure", "--install_all_deps"], stdout=PIPE, stderr=PIPE)
+    out, err = process.communicate()
+    if err != "" or not out.split("\n")[-2].startswith("'configure' finished successfully"):
+        print out
+        print err
+        log.error("Configuration failed!")
+        return False
+    print "clik: compiling..."
+    process2 = Popen(["./waf", "install"], stdout=PIPE, stderr=PIPE)
+    out2, err2 = process2.communicate()
+    # We don't check that err2" is empty, because harmless warnings are included there.
+    if not out2.split("\n")[-2].startswith("'install' finished successfully"):
+        print out2
+        print err2
+        log.error("Compilation failed!")
+        return False
+    print "clik: finished!"
+    return True
+
+def get_product_id_and_clik_file(name):
+    # get it from the defaults.yaml file
+    from cobaya.conventions import defaults_file, input_likelihood
+    path_defaults_file = os.path.join(os.path.dirname(__file__), "..", name, defaults_file)
+    from cobaya.yaml_custom import yaml_custom_load
+    with open(path_defaults_file, "r") as defaults_file_stream:
+        defaults = yaml_custom_load(defaults_file_stream)[input_likelihood][name]
+    return defaults["product_id"], defaults["clik_file"]
+
+def is_installed(**kwargs):
+    _, filename = get_product_id_and_clik_file(kwargs["name"])
+    return os.path.exists(os.path.realpath(
+        os.path.join(kwargs["path"], "..", common_path, filename)))
+
+def install(force=False, path=None, name=None):
+    # Create common folder: all planck likelihoods share install folder
+    common_full_path = os.path.realpath(os.path.join(path, "..", common_path))
+    if not os.path.exists(common_full_path):
+        os.makedirs(common_full_path)
+    # Install clik
+    if not is_installed_clik(common_full_path):
+        print "Installing the clik code first!"
+        install_clik(common_full_path)
+    # Extract product_id
+    product_id, _ = get_product_id_and_clik_file(name)
+    # Download and uncompress the particular likelihood
+    print "Downloading likelihood data..."
+    if not download_from_planck(product_id, common_full_path):
+        print "Not possible to download this likelihood."
+        log.error("Not possible to download this likelihood.")
+        return False
+    print "Likelihood data downloaded and uncompressed correctly."
+    return True

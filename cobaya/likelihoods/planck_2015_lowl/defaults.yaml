@@ -4,7 +4,8 @@
 likelihood:
   planck_2015_lowl:
     path:
-    clik_file: low_l/commander/commander_rc2_v1.1_l2_29_B.clik
+    clik_file: plc_2.0/low_l/commander/commander_rc2_v1.1_l2_29_B.clik
+    product_id: "1900"
     params:
       A_planck:
         prior: 
