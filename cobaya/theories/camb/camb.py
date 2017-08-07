@@ -24,8 +24,9 @@ This module imports and manages the CAMB cosmological code.
 Usage
 -----
 
-If you are using a likelihood that requires some observable from CAMB, simply add it to the
-theory block, specifying its ``path`` if you have not installed CAMB globally.
+If you are using a likelihood that requires some observable from CAMB, simply add CAMB
+to the theory block.
+
 You can specify any parameter that CAMB understands within the ``theory``
 sub-block of the ``params`` block:
 
@@ -33,7 +34,6 @@ sub-block of the ``params`` block:
 
    theory:
      camb:
-       /path/to/cosmo/CAMB
 
    params:
      theory:
@@ -43,13 +43,10 @@ sub-block of the ``params`` block:
 Installation
 ------------
 
-.. note::
+Pre-requisites
+^^^^^^^^^^^^^^
 
-   If you already have your own version of CAMB, just make sure that the Python interface
-   has been compiled, take note of its installation path and specify it using the
-   ``path`` option in the ``camb`` block of the input.
-                
-cobaya calls CAMB using its Python interface. This means that you need to compile CAMB
+**cobaya** calls CAMB using its Python interface, which requires that you compile CAMB
 using the GNU gfortran compiler version 4.9 or later. To check if you fulfil that
 requisite, type ``gfortran --version`` in the shell, and the first line should look like
 
@@ -60,42 +57,82 @@ requisite, type ``gfortran --version`` in the shell, and the first line should l
 Check that ``[gfortran's version]`` is at least 4.9. If you get an error instead, you need
 to install gfortran (contact your local IT service).
 
-.. note::
-   The fast way, assuming you are installing all your cosmological codes under 
-   ``/path/to/cosmo/``:
 
-   .. code:: bash
+Automatic installation
+^^^^^^^^^^^^^^^^^^^^^^
 
-      $ cd /path/to/cosmo/
-      $ git clone https://github.com/cmbant/CAMB.git
+If you do not plan to modify CAMB, the easiest way to install it is using the
+:doc:`automatic installation script <installation_ext>`. Just make sure that
+``theory: camb:`` appears in one of the files passed as arguments to the installation
+script.
+
+
+Manual installation (or using your own version)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you are planning to modify CAMB or use an already modified version,
+you should not use the automatic installation script. Use the installation method that
+best adapts to your needs:
+
+* [**Recommended**]
+  To install an up-to-date CAMB locally and use git to keep track of your changes,
+  `fork the CAMB repository in Github <https://github.com/cmbant/CAMB>`_
+  (follow `this instructions <https://help.github.com/articles/fork-a-repo/>`_) and clone
+  it in some folder of your choice, say ``/path/to/theories/CAMB``:
+
+  .. code:: bash
+     
+      $ cd /path/to/theories/
+      $ git clone https://[YourGithubUser]@github.com/[YourGithubUser]/CAMB.git
       $ cd CAMB
       $ make
+     
+* To install an up-to-date CAMB locally, if you don't care about keeping track of your
+  changes (and don't want to use ``git``), do:
 
-   If the **second** line produces an error (because you don't have ``git`` installed),
-   try
+  .. code:: bash
 
-   .. code:: bash
-
-      $ cd /path/to/cosmo/
+      $ cd /path/to/theories/
       $ wget https://github.com/cmbant/CAMB/archive/master.zip
       $ unzip master.zip
-      $ rm master.zip       
+      $ rm master.zip
       $ mv CAMB-master CAMB       
       $ cd CAMB
       $ make
-                       
-If the instructions above failed, follow those in the
-`official CAMB web page <http://camb.info/>`_ to get CAMB compiled with the Python
-interface ready.
 
-You do **not** need to install CAMB as python package using
-``python setup.py install --user``, as the official instructions suggest.
-It is actually safer not to do so if you intend to switch between different versions or
-modifications of CAMB.
+* To use your own version, assuming it's placed under ``/path/to/theories/CAMB``,
+  just make sure it is compiled (and that the version on top of which you based your
+  modifications is old enough to have the ``pycamb`` interface implemented.
 
-If you modify CAMB and add new variables, you don't need to let cobaya now, but make sure
+In the three cases above, you **must** to specify the path to your CAMB installation in
+the input block for CAMB (otherwise a system-wide CAMB may be used instead):
+
+.. code:: yaml
+
+   theory:
+     camb:
+       path: /path/to/theories/CAMB
+
+.. note::
+
+   In any of these methods, you should **not** install CAMB as python package using
+   ``python setup.py install --user``, as the official instructions suggest.
+   It is actually safer not to do so if you intend to switch between different versions or
+   modifications of CAMB.
+
+
+Modifying CAMB
+--------------
+
+If you modify CAMB and add new variables, you don't need to let **cobaya** now,
+but make sure
 that the variables you create are exposed in its Python interface (contact CAMB's
 developers if you need help with that).
+
+.. todo::
+
+   Point somewhere to the CAMB documentation where how to make these modifications
+   is explained.
 
 """
 
@@ -257,3 +294,21 @@ class camb(Theory):
             if key not in ['pp', 'ell']:
                 cl[key][2:] = cl[key][2:] /ell_factor[2:] *(T*1.e6)**2
         return cl
+
+
+# Installation routines ###################################################################
+
+def is_installed(**kwargs):
+    try:
+        import camb
+    except:
+        return False
+    return True
+
+def install(force=False, **kwargs):
+    import pip
+    exit_status = pip.main(["install", "camb", "--upgrade", "--user",
+                            "--force-reinstall" if force else ""])
+    if exit_status == 2:
+        return False
+    return True
