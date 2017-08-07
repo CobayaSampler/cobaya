@@ -74,11 +74,6 @@ def run(info):
 
 # Command-line script
 def run_script():
-    # Configure the logger ASAP
-    from cobaya.log import logger_setup, HandledException
-    logger_setup()
-    import logging
-    log = logging.getLogger(__name__)
     from cobaya.mpi import import_MPI
     load_input = import_MPI(".input", "load_input")
     import argparse
@@ -96,10 +91,9 @@ def run_script():
     path_input = info.get(input_path_install)
     if path_cmd:
         if path_input:
-            log.error("CONFLICT: "
+            raise ValueError("CONFLICT: "
                       "You have specified a modules folder both in the command line "
                       "('%s') and the input file ('%s'). There should only be one."%(
                           path_cmd, path_input))
-            raise HandledException
         info[input_path_auto] = path_cmd
     run(info)
