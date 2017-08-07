@@ -70,11 +70,11 @@ class Theory():
 
     # Generic methods: do not touch these
 
-    def __init__(self, info_theory, info_params=None):
+    def __init__(self, info_theory, info_params=None, path_to_installation=None):
         # Create class-level default options
         self._parent_defaults = odict([["speed", 1]])
-        # Instead of using a defaults.yaml, we will simply initialise a 'path' attribute
-        self.path = None
+        # Installation path
+        self.path_to_installation = path_to_installation
         # Load info of the code
         self._updated_info = load_input_and_defaults(self, info_theory, kind=input_theory)
         load_params(self, info_params, allow_unknown_prefixes=[""])
@@ -111,7 +111,7 @@ class Theory():
 #        return a_p
 
 
-def get_Theory(info_theory, info_params=None):
+def get_Theory(info_theory, info_params=None, path_to_installation=None):
     """
     Auxiliary function to retrieve and initialise the requested theory code.
     """
@@ -125,4 +125,5 @@ def get_Theory(info_theory, info_params=None):
     except ImportError:
         log.error("Theory '%s' not found.", name.lower())
         raise HandledException
-    return Theory_class(info_theory[name], info_params=info_params)
+    return Theory_class(info_theory[name], info_params=info_params,
+                        path_to_installation=path_to_installation)

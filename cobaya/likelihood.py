@@ -251,7 +251,8 @@ class LikelihoodCollection():
         if info_theory:
             info_params_theory = info_params.get(input_theory)
             from .theory import get_Theory
-            self.theory = get_Theory(info_theory, info_params=info_params_theory)
+            self.theory = get_Theory(info_theory, info_params=info_params_theory,
+                                     path_to_installation=path_to_installation)
             self._params_input = odict([(k,v) for k,v in info_params.iteritems()
                                         if k!=input_theory])
         else:
