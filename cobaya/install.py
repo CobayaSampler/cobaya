@@ -11,6 +11,8 @@ from __future__ import division
 
 # Global
 import os
+import logging
+from cobaya.log import logger_setup, HandledException
 from importlib import import_module
 
 # Local
@@ -19,6 +21,7 @@ from cobaya.input import get_modules
 from cobaya.conventions import package
 
 def install(*infos, **kwargs):
+    log = logging.getLogger(__name__)
     path = kwargs.get("path", ".")
     abspath = os.path.abspath(path)
     if not os.path.exists(abspath):
@@ -31,6 +34,7 @@ def install(*infos, **kwargs):
         if not os.path.exists(kindpath):
             os.makedirs(kindpath)
         for module in modules:
+            installpath = os.path.join(kindpath, module)
             print make_header(kind, module)
             module_folder = get_folder(module, kind, sep=".", absolute=False)
             imported_module = import_module(module_folder, package=package)
@@ -38,22 +42,34 @@ def install(*infos, **kwargs):
             if is_installed == None:
                 print "Not and external module: nothing to do.\n"
                 continue
-            if is_installed(path=kindpath):
+            if is_installed(path=installpath):
                 print "External module appears to be installed."
                 if force:
                     print "Forcing re-installation, as requested."
                 else:
                     print "Doing nothing.\n"
                     continue
-            imported_module.install(path=kindpath, force=force)
+            success = imported_module.install(path=installpath, force=force)
+            if success:
+                print "Successfully installed!"
+            else:
+                log.error("Installation failed! Look at the error messages above. "
+                          "Solve them and try again, or, if you are unable to solve, "
+                          "install this module manually.")
+            # test again
+            if not is_installed(path=installpath):
+                log.error("Installation apparently worked, but the subsequent installation"
+                          " test failed! Look at the error messages above. "
+                          "Solve them and try again, or, if you are unable to solve, "
+                          "install this module manually.")
 
 # Command-line script
 def install_script():
     from cobaya.mpi import get_mpi_rank
     if not get_mpi_rank():
         # Configure the logger ASAP
-        from cobaya.log import logger_setup
         logger_setup()
+        log = logging.getLogger(__name__)
         # Parse arguments
         import argparse
         parser = argparse.ArgumentParser(
@@ -63,7 +79,7 @@ def install_script():
         parser.add_argument("-p", "--path",
                             action="store", nargs=1, default=".", metavar=("/some/path"),
                             help="Desired path where to install external modules.")
-        parser.add_argument("-f", "--force", action="store_true", default="False",
+        parser.add_argument("-f", "--force", action="store_true", default=False,
                             help="Force re-installation of apparently installed modules.")
         arguments = parser.parse_args()
         from cobaya.input import load_input

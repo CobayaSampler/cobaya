@@ -6,7 +6,7 @@ Table of contents
 
    intro
    installation
-   installation_cosmo
+   installation_ext
    input
    output
    params_prior

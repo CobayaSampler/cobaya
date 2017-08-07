@@ -183,4 +183,3 @@ Simply do, from anywhere
 .. note::
 
    As of this version, the scripts installed in the local ``bin`` folder (in Linux ``~/.local/bin``) are not deleted automatically by the command above. You have to delete them manually: just get rid of the files in that folder that start with ``cobaya`` or ``GetDist``.
-

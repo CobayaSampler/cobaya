@@ -1,7 +1,7 @@
 Input and invocation
 ====================
 
-The input of cobaya consists of a collection of Python dictionaries specifying the different parts of the code to use (likelihoods, theory codes and samplers) and which parameters to sample and how. In practice, this information is provided as a text file in the `YAML <https://en.wikipedia.org/wiki/YAML>`_ language, which is so simple that you don't even have to learn it.
+The input of cobaya consists of a collection of Python dictionaries specifying the different parts of the code to use (likelihoods, theory codes and samplers) and which parameters to sample and how. This information is often provided as a text file in the `YAML <https://en.wikipedia.org/wiki/YAML>`_ language, which is so simple that you don't even have to learn it.
 
 .. _in_example:
 
@@ -36,7 +36,7 @@ An example input file
 
 
 That input structure above contains three *blocks*:
-   
+       
 - ``likelihood``: Specifies a list of likelihoods to sample, with their corresponding options -- here a Gaussian likelihood with the mean and covariance specified under it.
 - ``params``: lists the parameters to be explored, and for each its prior and a LaTeX label to be used when producing plots.
 - ``sampler``: specifies which sampler to use, here the internal MCMC sampler, and some options for it: the number of burn-in samples and the total number of samples to be drawn.
