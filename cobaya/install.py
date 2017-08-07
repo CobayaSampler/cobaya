@@ -51,7 +51,7 @@ def install(*infos, **kwargs):
                     continue
             success = imported_module.install(path=installpath, force=force)
             if success:
-                print "Successfully installed!"
+                print "Successfully installed!\n"
             else:
                 log.error("Installation failed! Look at the error messages above. "
                           "Solve them and try again, or, if you are unable to solve, "

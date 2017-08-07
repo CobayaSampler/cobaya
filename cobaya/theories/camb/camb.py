@@ -307,8 +307,8 @@ def is_installed(**kwargs):
 
 def install(force=False, **kwargs):
     import pip
-    exit_status = pip.main(["install", "camb", "--upgrade", "--user",
-                            "--force-reinstall" if force else ""])
+    exit_status = pip.main(["install", "camb", "--upgrade", "--user"]+
+                           (["--force-reinstall"] if force else []))
     if exit_status == 2:
         return False
     return True

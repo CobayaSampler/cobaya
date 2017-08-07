@@ -336,7 +336,7 @@ def install(force=False, path=None, name=None):
     if not os.path.exists(common_full_path):
         os.makedirs(common_full_path)
     # Install clik
-    if not is_installed_clik(common_full_path):
+    if not is_installed_clik(common_full_path) or force:
         print "Installing the clik code first!"
         install_clik(common_full_path)
     # Extract product_id
