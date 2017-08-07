@@ -20,7 +20,7 @@ def run(info):
 
     # Import names
     from cobaya.conventions import input_likelihood, input_prior, input_params
-    from cobaya.conventions import input_theory, input_sampler
+    from cobaya.conventions import input_theory, input_sampler, input_path_install
     from cobaya.conventions import input_debug, input_debug_file, input_output_prefix
 
     # Configure the logger ASAP
@@ -54,8 +54,9 @@ def run(info):
 
     # Initialise likelihoods and prior
     with Likelihood(
-            info[input_likelihood], info[input_params], info_prior=info.get(input_prior),
-            info_theory=info.get(input_theory)) as likelihood:
+            info_likelihood=info[input_likelihood], info_params=info[input_params],
+            info_prior=info.get(input_prior), info_theory=info.get(input_theory),
+            path_to_installation=info.get(input_path_install)) as likelihood:
         with Prior(likelihood.sampled_params(), info_prior=likelihood.updated_info_prior()) as prior:
             with Sampler(info[input_sampler], prior, likelihood, output) as sampler:
                 # Save the model info (updated by the likelihood and prior)
@@ -74,14 +75,31 @@ def run(info):
 # Command-line script
 def run_script():
     # Configure the logger ASAP
-    from cobaya.log import logger_setup
+    from cobaya.log import logger_setup, HandledException
     logger_setup()
+    import logging
+    log = logging.getLogger(__name__)
     from cobaya.mpi import import_MPI
     load_input = import_MPI(".input", "load_input")
     import argparse
     parser = argparse.ArgumentParser(description="Cobaya's run script.")
     parser.add_argument("input_file", nargs=1, action="store", metavar="input_file.yaml",
                         help="An input file to run.")
-    info = load_input(parser.parse_args().input_file[0])
+    parser.add_argument("-p", "--path",
+                        action="store", nargs="+", metavar=("/some/path"),
+                        help="Path where modules were automatically installed.")
+    args = parser.parse_args()
+    info = load_input(args.input_file[0])
+    # solve path
+    from cobaya.conventions import input_path_install
+    path_cmd = (lambda x: x[0] if x else None)(getattr(args, "path"))
+    path_input = info.get(input_path_install)
+    if path_cmd:
+        if path_input:
+            log.error("CONFLICT: "
+                      "You have specified a modules folder both in the command line "
+                      "('%s') and the input file ('%s'). There should only be one."%(
+                          path_cmd, path_input))
+            raise HandledException
+        info[input_path_auto] = path_cmd
     run(info)
-

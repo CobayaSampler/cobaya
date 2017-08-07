@@ -126,8 +126,9 @@ class Likelihood():
     """Likelihood class prototype."""
 
     # Generic initialisation -- do not touch
-    def __init__(self, info_likelihood, theory=None):
+    def __init__(self, info_likelihood, theory=None, path_to_installation=None):
         self.name = self.__class__.__name__
+        self.path_to_installation = path_to_installation
         # Create class-level default options
         self._parent_defaults = odict([["speed", 1]])
         # Load default and input info
@@ -244,7 +245,8 @@ class LikelihoodCollection():
     Initialises the theory code and the experimental likelihoods.
     """
 
-    def __init__(self, info_likelihood, info_params, info_prior=None, info_theory=None):
+    def __init__(self, info_likelihood, info_params, info_prior=None, info_theory=None,
+                 path_to_installation=None):
         # *IF* there is a theory code, initialise it and separate the parameters
         if info_theory:
             info_params_theory = info_params.get(input_theory)
@@ -271,7 +273,8 @@ class LikelihoodCollection():
                 class_folder = get_folder(name, input_likelihood, sep=".", absolute=False)
                 lik = getattr(
                     import_module(class_folder, package=package), name)
-                self.likelihoods[name] = lik(info, self.theory)
+                self.likelihoods[name] = lik(
+                    info, self.theory, path_to_installation=path_to_installation)
         # Parameters: first check consistency through likelihoods. Then load.
         self._params_defaults = odict()
         for name, lik in self.likelihoods.iteritems():

@@ -21,6 +21,7 @@ input_p_label    = "latex"
 input_debug      = "debug"
 input_debug_file = "debug_file"
 input_output_prefix = "output_prefix"
+input_path_install = "path_to_modules"
 
 # Separator for different names.
 # Its manual inclusion in a string anywhere else (e.g. a parameter name) is forbidden.

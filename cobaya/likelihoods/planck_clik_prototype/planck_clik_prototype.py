@@ -66,6 +66,7 @@ import numpy as np
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import HandledException
+from cobaya.conventions import input_likelihood, subfolders, input_path_install
 
 # Logger
 import logging
@@ -76,36 +77,24 @@ class planck_clik_prototype(Likelihood):
     def initialise(self):
         self.name = self.__class__.__name__
         # Importing Planck's clik library (only once!)
-        if self.path == None:
-            log.error("No path given to the Planck likelihood. Set the likelihood "
-                      "property 'path' to the folder containing 'plc-2.0'.")
-            raise HandledException
         try:
             clik
         except NameError:
-            try:
-                clik_path = os.path.join(self.path, "plc-2.0")
-                log.info("[%s] Importing clik from %s", self.name, clik_path)
-                if not os.path.exists(clik_path):
-                    log.error("The given folder does not exist: '%s'",clik_path)
+            if not self.path:
+                if self.path_to_installation:
+                    self.path = os.path.join(
+                        self.path_to_installation, subfolders[input_likelihood], common_path)
+                else:
+                    log.error("No path given to the Planck likelihood. Set the likelihood "
+                              "property 'path' or the common property '%s'."
+                              %input_path_install)
                     raise HandledException
-                clik_path = os.path.join(clik_path, "lib/python2.7/site-packages")
-                if not os.path.exists(clik_path):
-                    log.error("You have not compiled the Planck likelihood code 'clik'.\n"
-                              "Take a look at the docs to see how to do it using 'waf'.")
-                    raise HandledException
-                sys.path.insert(0, clik_path)
-                import clik
-            except ImportError:
-                log.error("Could not import the Planck likelihood. "
-                          "This shouldn't be happening. Contact the developer.")
-                raise HandledException
+            log.info("[%s] Importing clik from %s", self.name, self.path)
+            # test and import clik
+            is_installed_clik(self.path, log_and_fail=True, import_it=False)
+            import clik
         # Loading the likelihood data
-        if self.path is None:
-            log.error("You must provide a path to the Planck likelihood, "
-                      "up to the location of the folders 'low_l', 'hi_l', etc.")
-            raise HandledException
-        clik_file = os.path.join(self.path,"plc_2.0",self.clik_file)
+        clik_file = os.path.join(self.path, self.clik_file)
         # for lensing, some routines change. Intializing a flag for easier
         # testing of this condition
         if 'lensing' in self.name and 'Planck' in self.name:
@@ -268,7 +257,7 @@ def download_from_planck(product_id, path):
         log.error("Error decompressing downloaded file! Corrupt file?)")
         return False
 
-def is_installed_clik(path, log_and_fail=False):
+def is_installed_clik(path, log_and_fail=False, import_it=True):
     clik_path = os.path.join(path, "plc-2.0")
     if not os.path.exists(clik_path):
         if log_and_fail:
@@ -284,7 +273,8 @@ def is_installed_clik(path, log_and_fail=False):
         return False
     sys.path.insert(0, clik_path)
     try:
-        import clik
+        if import_it:
+            import clik
         return True
     except:
         return False
