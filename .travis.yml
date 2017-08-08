@@ -12,7 +12,7 @@ script:
   - pytest tests/test_prior_external.py
   # Cosmo
   - python tests/cosmo_install.py tests/modules
-  - pytest tests/ -k "cosmo" -m "not slow" --root="tests/modules"
+  - pytest tests/ -k "cosmo" -m "not slow" --modules="tests/modules"
 # Deploying to PyPI
 # only if it buids and if the commit has been tagged
 deploy:
