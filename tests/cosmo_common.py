@@ -22,6 +22,13 @@ def convert_cosmomc_theta(filename):
     np.savetxt(filename_new, covmat, fmt="%.8g", header=" ".join(params))
     return filename_new
 
+# Comprehensive dict of modules for auto-installation #####################################
+info_install = {
+    input_theory: {"camb": None, "classy": None},
+    input_likelihood: {"planck_2015_lowl": None,
+                       "planck_2015_plikHM_TT": None,
+                       "planck_2015_lowTEB": None,
+                       "planck_2015_plikHM_TTTEEE": None}}
 
 # Baseline priors #########################################################################
 
