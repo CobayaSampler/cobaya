@@ -10,6 +10,6 @@ if __name__ == "__main__":
     path = sys.argv[1]
     import os
     if not os.path.exists(path):
-        os.path.mkdirs(path)
+        os.path.makedirs(path)
     from cobaya.install import install
     install(info_install, path=path)

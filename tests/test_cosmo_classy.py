@@ -1,7 +1,7 @@
 # Tries to evaluate the likelihood at LCDM's best fit of Planck 2015, with CLASS
 
 from cobaya.conventions import input_theory, input_likelihood, input_sampler
-from cobaya.conventions import input_params, _chi2, separator
+from cobaya.conventions import input_params, _chi2, separator, input_path_install
 from cobaya.yaml_custom import yaml_custom_load
 from cobaya.run import run
 
@@ -9,24 +9,25 @@ from cosmo_common import params_lowl_highTT, chi2_lowl_highTT
 from cosmo_common import params_lowTEB_highTTTEEE, chi2_lowTEB_highTTTEEE
 from cosmo_common import derived, tolerance_abs
 
-def test_classy_planck_t(classy_path, planck_path):
-    body_of_test(classy_path, planck_path, "t")
+def test_classy_planck_t(modules):
+    body_of_test(modules, "t")
 
-def test_classy_planck_p(classy_path, planck_path):
-    body_of_test(classy_path, planck_path, "p")
+def test_classy_planck_p(modules):
+    body_of_test(modules, "p")
 
-def body_of_test(classy_path, planck_path, x):
+def body_of_test(modules_path, x):
     assert classy_path, "I need CLASSY's folder!"
-    info = {input_theory: {"classy": {"path": classy_path}},
+    info = {input_path_install: modules,
+            input_theory: {"classy": None},
             input_sampler: {"evaluate": None}}
     if x == "t":
-        info[input_likelihood] = {"planck_2015_lowl": {"path": planck_path},
-                                  "planck_2015_plikHM_TT": {"path": planck_path}}
+        info[input_likelihood] = {"planck_2015_lowl": None,
+                                  "planck_2015_plikHM_TT": None}
         info.update(yaml_custom_load(params_lowl_highTT))
         ref_chi2 = chi2_lowl_highTT
     elif x == "p":
-        info[input_likelihood] = {"planck_2015_lowTEB": {"path": planck_path},
-                                  "planck_2015_plikHM_TTTEEE": {"path": planck_path}}
+        info[input_likelihood] = {"planck_2015_lowTEB": None,
+                                  "planck_2015_plikHM_TTTEEE": None}
         info.update(yaml_custom_load(params_lowTEB_highTTTEEE))
         ref_chi2 = chi2_lowTEB_highTTTEEE
     else:

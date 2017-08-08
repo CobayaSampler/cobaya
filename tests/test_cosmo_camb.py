@@ -1,7 +1,7 @@
 # Tries to evaluate the likelihood at LCDM's best fit of Planck 2015, with CAMB
 
 from cobaya.conventions import input_theory, input_likelihood, input_sampler
-from cobaya.conventions import input_params, _chi2, separator
+from cobaya.conventions import input_params, _chi2, separator, input_path_install
 from cobaya.yaml_custom import yaml_custom_load
 from cobaya.run import run
 
@@ -9,24 +9,25 @@ from cosmo_common import params_lowl_highTT, chi2_lowl_highTT
 from cosmo_common import params_lowTEB_highTTTEEE, chi2_lowTEB_highTTTEEE
 from cosmo_common import derived, tolerance_abs
 
-def test_camb_planck_t(camb_path, planck_path):
-    body_of_test(camb_path, planck_path, "t")
+def test_camb_planck_t(modules):
+    body_of_test(modules, "t")
     
-def test_camb_planck_p(camb_path, planck_path):
-    body_of_test(camb_path, planck_path, "p")
+def test_camb_planck_p(modules):
+    body_of_test(modules, "p")
 
-def body_of_test(camb_path, planck_path, x):
-    assert camb_path, "I need CAMB's folder!"
-    info = {input_theory: {"camb": {"path": camb_path}},
+def body_of_test(modules, x):
+    assert modules, "I need a modules folder!"
+    info = {input_path_install: modules,
+            input_theory: {"camb": None},
             input_sampler: {"evaluate": None}}
     if x == "t":
-        info[input_likelihood] = {"planck_2015_lowl": {"path": planck_path},
-                                  "planck_2015_plikHM_TT": {"path": planck_path}}
+        info[input_likelihood] = {"planck_2015_lowl": None,
+                                  "planck_2015_plikHM_TT": None}
         info.update(yaml_custom_load(params_lowl_highTT))
         ref_chi2 = chi2_lowl_highTT
     elif x == "p":
-        info[input_likelihood] = {"planck_2015_lowTEB": {"path": planck_path},
-                                  "planck_2015_plikHM_TTTEEE": {"path": planck_path}}
+        info[input_likelihood] = {"planck_2015_lowTEB": None,
+                                  "planck_2015_plikHM_TTTEEE": None}
         info.update(yaml_custom_load(params_lowTEB_highTTTEEE))
         ref_chi2 = chi2_lowTEB_highTTTEEE
     else:
