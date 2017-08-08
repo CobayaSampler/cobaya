@@ -311,6 +311,6 @@ def install(force=False, **kwargs):
     exit_status = pip.main(["install", "camb", "--upgrade"]+
                            (["--user"] if not "TRAVIS" in os.environ else [])+
                            (["--force-reinstall"] if force else []))
-    if exit_status == 2:
+    if exit_status:
         return False
     return True

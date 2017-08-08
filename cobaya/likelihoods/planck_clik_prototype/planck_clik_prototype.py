@@ -328,7 +328,9 @@ def install(force=False, path=None, name=None):
     # Install clik
     if not is_installed_clik(common_full_path) or force:
         log.info("Installing the clik code first!")
-        install_clik(common_full_path)
+        success = install_clik(common_full_path)
+        if not success:
+            return False
     # Extract product_id
     product_id, _ = get_product_id_and_clik_file(name)
     # Download and uncompress the particular likelihood

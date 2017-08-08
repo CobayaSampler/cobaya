@@ -289,8 +289,9 @@ def is_installed(**kwargs):
 def install(force=False, path=None ,**kwargs):
     log.info("Installing pre-requisites...")
     import pip
-    exit_status = pip.main(["install", "cython", "--upgrade", "--user"])
-    if exit_status == 2:
+    exit_status = pip.main(["install", "cython", "--upgrade"]+
+                           (["--user"] if not "TRAVIS" in os.environ else []))
+    if exit_status:
         log.error("Could not install pre-requisite: cython")
         return False
     log.info("Downloading...")

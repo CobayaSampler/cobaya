@@ -1,6 +1,7 @@
 language: python
 dist: trusty
 python: 2.7
+# (Pre)Installation
 addons:
   apt:
     sources:
@@ -8,10 +9,8 @@ addons:
     packages:
       - gcc-5
       - gfortran-5
-# (Pre)Installation
+      - libopenblas-base
 before_install:
-- sudo apt-get update -qq
-- sudo apt-get install -qq libopenblas-base
 - pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist
 # Tests!
 script:
