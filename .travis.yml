@@ -10,6 +10,8 @@ addons:
       - gcc-5
       - gfortran-5
       - libopenblas-base
+env:
+   - CC=gcc-5   CXX=g++-5   FC=gfortran-5
 before_install:
 - pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist
 # Tests!
