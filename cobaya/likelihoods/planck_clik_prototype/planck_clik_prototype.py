@@ -138,7 +138,7 @@ class planck_clik_prototype(Likelihood):
         if "plikHM_lite" in self.name:
             i = self.expected_params.index('A_Planck')
             self.expected_params[i] = 'A_planck'
-            print("In %s, corrected nuisance parameter name A_Planck to A_planck" % self.name)
+            log.info("In %s, corrected nuisance parameter name A_Planck to A_planck" % self.name)
         
     def logp(self, **params_values):
         # get Cl's from the theory code
@@ -280,11 +280,11 @@ def is_installed_clik(path, log_and_fail=False, import_it=True):
         return False
 
 def install_clik(path):
-    print "clik: downlowading..."
+    log.info("clik: downlowading...")
     if not download_from_planck("1904", path):
         log.error("Not possible to download clik.")
         return False
-    print "clik: configuring..."
+    log.info("clik: configuring... (and maybe installing dependencies...)")
     os.chdir(os.path.join(path, "plc-2.0"))
     from subprocess import Popen, PIPE
     process = Popen(["./waf", "configure", "--install_all_deps"], stdout=PIPE, stderr=PIPE)
@@ -294,7 +294,7 @@ def install_clik(path):
         print err
         log.error("Configuration failed!")
         return False
-    print "clik: compiling..."
+    log.info("clik: compiling...")
     process2 = Popen(["./waf", "install"], stdout=PIPE, stderr=PIPE)
     out2, err2 = process2.communicate()
     # We don't check that err2" is empty, because harmless warnings are included there.
@@ -303,7 +303,7 @@ def install_clik(path):
         print err2
         log.error("Compilation failed!")
         return False
-    print "clik: finished!"
+    log.info("clik: finished!")
     return True
 
 def get_product_id_and_clik_file(name):
