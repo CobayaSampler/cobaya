@@ -9,6 +9,7 @@ addons:
     packages:
       - gcc-5
       - gfortran-5
+      - liblapack3
       - libopenblas-base
 env:
    - CC=gcc-5   CXX=g++-5   FC=gfortran-5
