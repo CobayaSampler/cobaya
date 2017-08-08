@@ -9,8 +9,11 @@ addons:
     packages:
       - gcc-5
       - gfortran-5
-      - liblapack3
+      # numpy (and more)
       - libopenblas-base
+      # Planck likelihood
+      - liblapack3
+      - liblapack-dev
 env:
    - CC=gcc-5   CXX=g++-5   FC=gfortran-5
 before_install:

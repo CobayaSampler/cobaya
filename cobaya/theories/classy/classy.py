@@ -306,7 +306,7 @@ def install(force=False, path=None ,**kwargs):
     print ""
     classy_path = os.path.join(
         parent_path, os.path.splitext(os.path.splitext(os.path.basename(filename))[0])[0])
-    if force:
+    if force and os.path.exists(classy_path):
         from shutil import rmtree
         rmtree(classy_path)
     log.info("Uncompressing...")
