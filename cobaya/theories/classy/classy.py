@@ -338,7 +338,8 @@ def install(force=False, path=None ,**kwargs):
         return False
     log.info("Installing python package...")
     os.chdir("./python")
-    process_install = Popen(["python", "setup.py", "install", "--user"],
+    process_install = Popen(["python", "setup.py", "install"]+
+                            (["--user" if not "TRAVIS" in os.environ else []),
                             stdout=PIPE, stderr=PIPE)
     out, err = process_install.communicate()
     if process_install.returncode:
