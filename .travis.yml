@@ -14,10 +14,10 @@ addons:
       # Planck likelihood
       - liblapack3
       - liblapack-dev
-env:
-   - CC=gcc-5   CXX=g++-5   FC=gfortran-5
 before_install:
-- pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist
+  - pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist
+before_script:
+  - alias gfortran=gfortran-5
 # Tests!
 script:
   # General
