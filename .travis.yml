@@ -1,6 +1,12 @@
 language: python
 dist: xenial
 python: 2.7
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - gcc-5
 # (Pre)Installation
 before_install:
 - sudo apt-get update -qq
