@@ -127,6 +127,7 @@ import numpy as np
 # Local
 from cobaya.theory import Theory
 from cobaya.log import HandledException
+from cobaya.conventions import subfolders, input_theory
 
 # Logger
 import logging
@@ -147,7 +148,7 @@ class classy(Theory):
         # If path not given, try using general path to modules
         if not self.path and self.path_to_installation:
             self.path = os.path.join(
-                self.path_to_installation, subfolders[input_theories], "CLASS")
+                self.path_to_installation, subfolders[input_theory], "CLASS")
         if self.path:
             log.info("Importing *local* CLASS from "+self.path)
             if not os.path.exists(self.path):
@@ -304,8 +305,9 @@ def install(force=False, path=None ,**kwargs):
         log.error("Error downloading the latest release of CLASS.")
         return False
     print ""
-    classy_path = os.path.join(
-        parent_path, os.path.splitext(os.path.splitext(os.path.basename(filename))[0])[0])
+    classy_path_decompressed = os.path.join(parent_path,
+        os.path.splitext(os.path.splitext(os.path.basename(filename))[0])[0])
+    classy_path = os.path.join(parent_path, "CLASS")
     if force and os.path.exists(classy_path):
         from shutil import rmtree
         rmtree(classy_path)
@@ -317,7 +319,8 @@ def install(force=False, path=None ,**kwargs):
         tar.close()
         os.remove(filename)
     except:
-        log.error("Error decompressing downloaded file! Corrupt file?)")
+        log.error("Error decompressing downloaded file! Corrupt file?)")    
+    os.rename(classy_path_decompressed, classy_path)
     # Patch for gcc>=5   
     from subprocess import Popen, PIPE
     # patch (hopefully will be removed in the future)
