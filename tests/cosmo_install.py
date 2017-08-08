@@ -1,4 +1,6 @@
 if __name__ == "__main__":
+    from cobaya.log import logger_setup
+    logger_setup()
     from cobaya.conventions import input_likelihood, input_theory
     info_install = {
     input_theory: {"camb": None, "classy": None},
@@ -10,6 +12,6 @@ if __name__ == "__main__":
     path = sys.argv[1]
     import os
     if not os.path.exists(path):
-        os.path.makedirs(path)
+        os.makedirs(path)
     from cobaya.install import install
     install(info_install, path=path)
