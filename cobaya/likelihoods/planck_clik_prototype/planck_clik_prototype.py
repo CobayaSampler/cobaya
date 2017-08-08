@@ -327,15 +327,14 @@ def install(force=False, path=None, name=None):
         os.makedirs(common_full_path)
     # Install clik
     if not is_installed_clik(common_full_path) or force:
-        print "Installing the clik code first!"
+        log.info("Installing the clik code first!")
         install_clik(common_full_path)
     # Extract product_id
     product_id, _ = get_product_id_and_clik_file(name)
     # Download and uncompress the particular likelihood
-    print "Downloading likelihood data..."
+    log.info("Downloading likelihood data...")
     if not download_from_planck(product_id, common_full_path):
-        print "Not possible to download this likelihood."
         log.error("Not possible to download this likelihood.")
         return False
-    print "Likelihood data downloaded and uncompressed correctly."
+    log.info("Likelihood data downloaded and uncompressed correctly.")
     return True

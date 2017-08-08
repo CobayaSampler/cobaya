@@ -104,7 +104,7 @@ best adapts to your needs:
   just make sure it is compiled (and that the version on top of which you based your
   modifications is old enough to have the ``pycamb`` interface implemented.
 
-In the three cases above, you **must** to specify the path to your CAMB installation in
+In the three cases above, you **must** specify the path to your CAMB installation in
 the input block for CAMB (otherwise a system-wide CAMB may be used instead):
 
 .. code:: yaml

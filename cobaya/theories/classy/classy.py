@@ -34,7 +34,6 @@ sub-block of the ``params`` block:
 
    theory:
      classy:
-       /path/to/cosmo/CLASS
 
    params:
      theory:
@@ -144,7 +143,11 @@ camb_to_class = {"ombh2":"omega_b",
 
 class classy(Theory):
     def initialise(self):
-        """Importing CLASS from the correct path, if given."""
+        """Importing CLASS from the correct path, if given, and if not, globally."""
+        # If path not given, try using general path to modules
+        if not self.path and self.path_to_installation:
+            self.path = os.path.join(
+                self.path_to_installation, subfolders[input_theories], "CLASS")
         if self.path:
             log.info("Importing *local* CLASS from "+self.path)
             if not os.path.exists(self.path):
@@ -273,3 +276,74 @@ class classy(Theory):
                 cl[key] *= (T*1.e6)**2
         return cl
 
+
+# Installation routines ###################################################################
+
+def is_installed(**kwargs):
+    try:
+        import classy
+    except:
+        return False
+    return True
+
+def install(force=False, path=None ,**kwargs):
+    log.info("Installing pre-requisites...")
+    import pip
+    exit_status = pip.main(["install", "cython", "--upgrade", "--user"])
+    if exit_status == 2:
+        log.error("Could not install pre-requisite: cython")
+        return False
+    log.info("Downloading...")
+    parent_path = os.path.abspath(os.path.join(path, ".."))
+    from wget import download, bar_thermometer
+    try:
+        filename = download("https://github.com/lesgourg/class_public/archive/v2.6.1.tar.gz",
+                            out=parent_path, bar=bar_thermometer)
+    except:
+        log.error("Error downloading the latest release of CLASS.")
+        return False
+    print ""
+    classy_path = os.path.join(
+        parent_path, os.path.splitext(os.path.splitext(os.path.basename(filename))[0])[0])
+    if force:
+        from shutil import rmtree
+        rmtree(classy_path)
+    log.info("Uncompressing...")
+    import tarfile
+    tar = tarfile.open(filename, "r:gz")
+    try:
+        tar.extractall(parent_path)
+        tar.close()
+        os.remove(filename)
+    except:
+        log.error("Error decompressing downloaded file! Corrupt file?)")
+    # Patch for gcc>=5   
+    from subprocess import Popen, PIPE
+    # patch (hopefully will be removed in the future)
+    log.info("Patching for gcc>=5...")
+    with open(os.path.join(classy_path, "python/setup.py"), "r") as setup:
+        lines = setup.readlines()
+    i_offending = (i for i,l in enumerate(lines) if "libraries=" in l).next()
+    lines[i_offending] = "libraries=['class', 'mvec', 'm'],\n"
+    with open(os.path.join(classy_path, "python/setup.py"), "w") as setup:
+        setup.write("".join(lines))
+    log.info("Compiling...")
+    os.chdir(classy_path)
+    process_make = Popen(["make"], stdout=PIPE, stderr=PIPE)
+    out, err = process_make.communicate()
+    if process_make.returncode:
+        log.info(out)
+        log.info(err)
+        log.error("Compilation failed!")
+        return False
+    log.info("Installing python package...")
+    os.chdir("./python")
+    process_install = Popen(["python", "setup.py", "install", "--user"],
+                            stdout=PIPE, stderr=PIPE)
+    out, err = process_install.communicate()
+    if process_install.returncode:
+        log.info(out)
+        log.info(err)
+        log.error("Installation failed!")
+        return False
+    return True
