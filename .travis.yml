@@ -16,7 +16,6 @@ addons:
       - liblapack-dev
 before_install:
   - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 50
-  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 50
   - sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-5 50
   - pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist
 # Tests!
