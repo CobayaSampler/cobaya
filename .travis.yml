@@ -9,7 +9,7 @@ addons:
     packages:
       - gcc-5
       - gfortran-5
-      - glibc
+#      - glibc
       # numpy (and more)
       - libopenblas-base
       # Planck likelihood
@@ -19,6 +19,7 @@ before_install:
   - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 50
   - sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-5 50
   - pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist
+  - ldd --version
 # Tests!
 script:
   # General
