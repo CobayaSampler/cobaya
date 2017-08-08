@@ -11,8 +11,8 @@ script:
   # General
   - pytest tests/test_prior_external.py
   # Cosmo
-  - python -c "from cobaya.install import install; from cosmo_common import info_install; import os; path = './modules'; (os.makedirs(path) if not os.path.exists(path) else None); install(info_install, path=path)"
-  - pytest tests/ -k "cosmo" -m "not slow" --root="./modules"
+  - python tests/cosmo_install.py tests/modules
+  - pytest tests/ -k "cosmo" -m "not slow" --root="tests/modules"
 # Deploying to PyPI
 # only if it buids and if the commit has been tagged
 deploy:
