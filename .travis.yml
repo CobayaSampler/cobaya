@@ -9,6 +9,7 @@ addons:
     packages:
       - gcc-5
       - gfortran-5
+      - glibc
       # numpy (and more)
       - libopenblas-base
       # Planck likelihood
