@@ -310,9 +310,8 @@ def get_product_id_and_clik_file(name):
     # get it from the defaults.yaml file
     from cobaya.conventions import defaults_file, input_likelihood
     path_defaults_file = os.path.join(os.path.dirname(__file__), "..", name, defaults_file)
-    from cobaya.yaml_custom import yaml_custom_load
-    with open(path_defaults_file, "r") as defaults_file_stream:
-        defaults = yaml_custom_load(defaults_file_stream)[input_likelihood][name]
+    from cobaya.input import load_input_yaml
+    defaults = load_input_yaml(path_defaults_file)[input_likelihood][name]
     return defaults["product_id"], defaults["clik_file"]
 
 def is_installed(**kwargs):

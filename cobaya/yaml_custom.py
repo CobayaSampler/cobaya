@@ -45,8 +45,6 @@ def yaml_custom_load(stream, Loader=yaml.Loader, object_pairs_hook=odict, file_n
             |\\.(?:nan|NaN|NAN))$''', re.X),
             list(u'-+0123456789.'))
         try:
-            # It forcefully starts from the beggining of the file/stream
-            stream.seek(0)
             return yaml.load(stream, OrderedLoader)
         # Redefining the general exception to give more user-friendly information
         except yaml.YAMLError, exception:
@@ -58,7 +56,6 @@ def yaml_custom_load(stream, Loader=yaml.Loader, object_pairs_hook=odict, file_n
                 signal_right = "    <---- "
                 sep = "|"
                 context = 4
-                stream.seek(0)
                 lines = [l.strip("\n") for l in stream.readlines()]
                 pre = ((("\n"+" "*len(signal)+sep).
                          join([""]+lines[max(line-1-context,0):line-1])))+"\n"

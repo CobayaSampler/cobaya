@@ -47,9 +47,13 @@ def load_input(input_file):
         raise HandledException
     return info
 
-def load_input_yaml(input_file):
+def load_input_yaml(input_file, defaults_file=True):
+    """Wrapper to load a yaml file."""
     with open(input_file,"r") as stream:
-        return yaml_custom_load(stream, file_name=input_file)
+        lines = "".join(stream.readlines())
+    file_name = (input_file if not defaults_file
+                 else "/".join(input_file.split(os.sep)[-2:]))
+    return yaml_custom_load(lines, file_name=defaults_file)
 
 # MPI wrapper for loading the input info
 def load_input_MPI(input_file):
@@ -93,10 +97,7 @@ def load_input_and_defaults(instance, input_info, kind=None, load_defaults_file=
     if load_defaults_file:
         class_defaults_path = os.path.join(
             os.path.dirname(__file__), subfolders[kind], class_name, defaults_file)
-        with open(class_defaults_path,"r") as stream:
-            class_defaults = yaml_custom_load(
-                stream, file_name=os.sep.join(class_defaults_path.split(os.sep)[-2:]))
-        class_defaults = class_defaults[kind]
+        class_defaults = load_input_yaml(class_defaults_path, defaults_file=True)[kind]
         if not class_name in class_defaults:
             log.error(
                 "The defaults file should contain the field '%s:%s'.", kind, class_name)
