@@ -25,8 +25,8 @@ def install(*infos, **kwargs):
     path = kwargs.get("path", ".")
     abspath = os.path.abspath(path)
     if not os.path.exists(abspath):
-        raise IOError(
-            "The given path, %s, must exist, but it doesn't."%abspath)
+        log.error("The given path, %s, must exist, but it doesn't."%abspath)
+        raise HandledException
     force = kwargs.get("force", False)
     for kind, modules in get_modules(*infos).iteritems():
         # Create folder for kind
