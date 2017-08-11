@@ -3,5 +3,7 @@
 Structure of the code
 ---------------------
 
-.. todo::
-   Write this section!
+.. image:: ../structure.svg
+   :width: 300px
+   :align: center
+

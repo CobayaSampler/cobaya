@@ -11,18 +11,14 @@ Now create a ``chains`` folder in that same place and copy the next input into a
                 
    theory:
      camb:
-       path: /path/to/cosmo/CAMB
 
    # theory:
    #   classy:
-   #     path: /path/to/cosmo/CLASS
 
    likelihood:
      planck_2015_lowTEB:
-       path: /home/jesus/scratch/likelihoods/planck2015/
        speed: 1
      planck_2015_plikHM_TTTEEE:
-       path: /home/jesus/scratch/likelihoods/planck2015/
        speed: 4
 
    params:
