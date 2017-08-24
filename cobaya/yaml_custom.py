@@ -56,7 +56,7 @@ def yaml_custom_load(stream, Loader=yaml.Loader, object_pairs_hook=odict, file_n
                 signal_right = "    <---- "
                 sep = "|"
                 context = 4
-                lines = [l.strip("\n") for l in stream.readlines()]
+                lines = stream.split("\n")
                 pre = ((("\n"+" "*len(signal)+sep).
                          join([""]+lines[max(line-1-context,0):line-1])))+"\n"
                 errorline = (signal+sep+lines[line-1]
@@ -66,7 +66,7 @@ def yaml_custom_load(stream, Loader=yaml.Loader, object_pairs_hook=odict, file_n
                 raise InputSyntaxError(
                     errstr + " at line %d, column %d."%(line, column)+pre+errorline+post+
                     "Maybe inconsistent indentation, '=' instead of ':', "
-                    "or a missing ':' on an empty group?")
+                    "no space after ':', or a missing ':' on an empty group?")
             else:
                 raise InputSyntaxError(errstr)
 

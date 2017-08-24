@@ -53,7 +53,7 @@ def load_input_yaml(input_file, defaults_file=True):
         lines = "".join(stream.readlines())
     file_name = (input_file if not defaults_file
                  else "/".join(input_file.split(os.sep)[-2:]))
-    return yaml_custom_load(lines, file_name=defaults_file)
+    return yaml_custom_load(lines, file_name=file_name)
 
 # MPI wrapper for loading the input info
 def load_input_MPI(input_file):

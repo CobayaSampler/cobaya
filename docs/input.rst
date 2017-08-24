@@ -83,13 +83,14 @@ In addition, there are some *top level* options (i.e. defined outside any block)
 Some common YAML *gotchas*
 --------------------------
 
-+ **use colons, not equal signs!** Values are assigned with a ``:``, not a ``=``; e.g. the following input would produce an error:
++ **use colons(+space), not equal signs!** Values are assigned with a ``:``, not a ``=``; e.g. the following input would produce an error:
 
   .. code:: yaml
 
      sampler:
        mcmc:
-         burn_in = 10  # ERROR: should be 'burn_in: 10'
+         burn_in = 10   # ERROR: should be 'burn_in: 10'
+         max_tries:100  # ERROR: should have a space: 'max_tries: 100'
 
 + **missing colons!** Each module or parameter definition, even if it is a bare *mention* and does not have options, must end in a colon (which is actually equivalent to writing a null value ``null`` after the colon); e.g. the following input would produce an error:
 
