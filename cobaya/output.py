@@ -65,6 +65,8 @@ class Output():
         """
         self.info_full = deepcopy(self.info_input)
         for lik in likelihood:
+            if self.info_full[input_likelihood][lik] == None:
+                self.info_full[input_likelihood][lik] = {}
             try:
                 self.info_full[input_likelihood][lik].update(likelihood[lik])
             except AttributeError:

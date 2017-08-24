@@ -189,7 +189,7 @@ class camb(Theory):
         self.states = [{"CAMBparams": None, "CAMBresults": None, "powers": None, 
                         "params": None, "derived": None, "last": 0}
                        for i in range(self.n_states)]
-        # patch: if cosmomc_theta is used, CAMB needs to be passes explicitly "H0=None"
+        # patch: if cosmomc_theta is used, CAMB needs to be passed explicitly "H0=None"
         if (all((p in self.sampled_params()) for p in ["H0", "cosmomc_theta"]) or
             all((p in self.fixed) for p in ["H0", "cosmomc_theta"])):
             log.error("Can't fix or sample simultaneously both H0 and cosmomc_theta.")
