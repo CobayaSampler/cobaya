@@ -198,6 +198,9 @@ class classy(Theory):
         # Sampled -- save the state for avoiding recomputing later
         for p,v in params_values_dict.iteritems():
             args[camb_to_class.get(p,p)] = v
+        # Precision (fixed at the theory block level)
+        if self.precision:
+            args.update(self.precision)
         # Generate and save
         log.debug("Setting parameters: %r", args)
         self.states[i_state]["params"] = params_values_dict

@@ -208,7 +208,8 @@ class camb(Theory):
         # Sampled -- save the state for avoiding recomputing later
         args.update(params_values_dict)
         # Precision (fixed at the theory block level)
-        args.update(self.precision)
+        if self.precision:
+            args.update(self.precision)
         # Generate and save
         log.debug("Setting parameters: %r", args)
         self.states[i_state]["params"] = params_values_dict
