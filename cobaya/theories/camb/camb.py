@@ -268,13 +268,30 @@ class camb(Theory):
     def get_derived(self, derived, i_state):
         """Populates a dictionary of derived parameters with their values, using the
         state #`i_state`."""
+        params = self.states[i_state]["CAMBparams"]
+        results = self.states[i_state]["CAMBresults"]
+        # Create list of *general* functions to get derived parameters
+        # 1. general
+        def from_std(p):
+            return results.get_derived_params().get(p)
+        def from_params(p):
+            return getattr(params, p, None)
+        # fill the list
         for p in self.derived:
-#            print "Derived: ",p," --> ",
-            # needs standard way to get derived parameters!
-#            print self.states[i_state]["CAMBparams"].Reion
-            derived[p] = getattr(self.states[i_state]["CAMBparams"], p)
-            
-#            if derived[p] is not None: print "OK: 1"
+            for f in [from_std, from_params]:
+                derived[p] = f(p)
+                if derived[p] != None:
+                    break
+            # specific calls, if general ones above failed:
+            if derived[p] == None:
+                # Redshift at which universe is half reionized
+                if p == "zrei":
+                    derived[p] = self.camb.get_zre_from_tau(params, params.Reion.optical_depth)
+                # Deuterium-Helium ratio from BBN prediction
+                elif p == "DHBBN":
+                    derived[p] = self.camb.bbn.BBN_table_interpolator().DH(
+                        params.ombh2, delta_neff=0) # NO DEBERIA SER deltaneff=0!!!!!!!!!!!!!!!!!!
+            print "-*-*-*-*-*-*-*-*-*-*-*-*", p, derived[p]
             if derived[p] == None:
                 log.error("Derived param '%s' not implemented in the CAMB interface", p)
                 raise HandledException
