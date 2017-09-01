@@ -92,6 +92,8 @@ baseline_cosmology = r"""
       latex: n_\mathrm{s}
 """%(input_params, input_theory)
 
+# Derived parameters, described in
+# https://wiki.cosmos.esa.int/planckpla2015/images/b/b9/Parameter_tag_definitions_2015.pdf
 derived = {
     "H0":          {"latex": r"H_0"},
     "omegav":      {"latex": r"\Omega_\Lambda"},
@@ -108,8 +110,8 @@ derived = {
 #func??    "A":           {"latex": r"10^9 A_s"},
 #func    "clamp":       {"latex": r"10^9 A_s e^{-2\tau}"},
 #func??    "ns02":        {"latex": r"n_{s,0.002}"}, <------ invert from analytic P(k)
-#---------    "yheused":     {"latex": r"Y_P"}, <--- look it up in interface (BBN)
-#---------    "YpBBN":       {"latex": r"Y_P^\mathrm{BBN}"}, <-- idem
+    "YHe":         {"latex": r"Y_P"},
+    "YPBBN":       {"latex": r"Y_P^\mathrm{BBN}"},
     "DHBBN":       {"latex": r"10^5D/H"},
     "age":         {"latex": r"{\rm{Age}}/\mathrm{Gyr}"},
     "zstar":       {"latex": r"z_*"},

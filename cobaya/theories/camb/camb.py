@@ -288,9 +288,12 @@ class camb(Theory):
                 if p == "zrei":
                     derived[p] = self.camb.get_zre_from_tau(params, params.Reion.optical_depth)
                 # Deuterium-Helium ratio from BBN prediction
+                elif p == "YPBBN":
+                    derived[p] = self.camb.bbn.BBN_table_interpolator().Y_p(
+                        ombh2=params.omegab*(params.H0/100)**2, delta_neff=0)
                 elif p == "DHBBN":
                     derived[p] = self.camb.bbn.BBN_table_interpolator().DH(
-                        params.ombh2, delta_neff=0) # NO DEBERIA SER deltaneff=0!!!!!!!!!!!!!!!!!!
+                        ombh2=params.omegab*(params.H0/100)**2, delta_neff=0)
             print "-*-*-*-*-*-*-*-*-*-*-*-*", p, derived[p]
             if derived[p] == None:
                 log.error("Derived param '%s' not implemented in the CAMB interface", p)
