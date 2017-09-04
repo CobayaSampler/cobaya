@@ -84,8 +84,8 @@ best adapts to your needs:
      
       $ cd /path/to/theories/
       $ git clone https://[YourGithubUser]@github.com/[YourGithubUser]/CAMB.git
-      $ cd CAMB
-      $ make
+      $ cd CAMB/pycamb
+      $ python setup.py build
      
 * To install an up-to-date CAMB locally, if you don't care about keeping track of your
   changes (and don't want to use ``git``), do:
@@ -97,8 +97,8 @@ best adapts to your needs:
       $ unzip master.zip
       $ rm master.zip
       $ mv CAMB-master CAMB       
-      $ cd CAMB
-      $ make
+      $ cd CAMB/pycamb
+      $ python setup.py build
 
 * To use your own version, assuming it's placed under ``/path/to/theories/CAMB``,
   just make sure it is compiled (and that the version on top of which you based your
