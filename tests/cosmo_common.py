@@ -8,6 +8,7 @@ from cobaya.conventions import input_sampler, _chi2, separator
 
 # Expected values and tolerance
 tolerance_abs = 0.1
+tolerance_derived = 0.01
 
 # Converting 100cosmomc_theta to cosmomc_theta in Planck's covmats ########################
 
@@ -101,18 +102,18 @@ derived = {
 #func "omegamh2":    {"latex": r"\Omega_m h^2"},
 #func    "omeganuh2":   {"latex": r"\Omega_\nu h^2"},
 #func    "omegamh3":    {"latex": r"\Omega_m h^3"},
-#----------- "sigma8":      {"latex": r"\sigma_8"},
+    "sigma8":      {"latex": r"\sigma_8"},
 #func    "s8omegamp5":  {"latex": r"\sigma_8 \Omega_m^{0.5}"},
 #func    "s8omegamp25": {"latex": r"\sigma_8 \Omega_m^{0.25}"},
 #func    "s8h5":        {"latex": r"\sigma_8/h^{0.5}"},
 #----------???    "rmsdeflect":  {"latex": r"\langle d^2\rangle^{1/2}"},
-    "zrei":        {"latex": r"z_\mathrm{re}"},
+    "zre":         {"latex": r"z_\mathrm{re}"},
 #func??    "A":           {"latex": r"10^9 A_s"},
 #func    "clamp":       {"latex": r"10^9 A_s e^{-2\tau}"},
 #func??    "ns02":        {"latex": r"n_{s,0.002}"}, <------ invert from analytic P(k)
     "YHe":         {"latex": r"Y_P"},
-    "YPBBN":       {"latex": r"Y_P^\mathrm{BBN}"},
-    "DHBBN":       {"latex": r"10^5D/H"},
+    "Y_p":       {"latex": r"Y_P^\mathrm{BBN}"},
+    "DH":       {"latex": r"10^5D/H"},
     "age":         {"latex": r"{\rm{Age}}/\mathrm{Gyr}"},
     "zstar":       {"latex": r"z_*"},
     "rstar":       {"latex": r"r_*"},
@@ -183,6 +184,42 @@ params_lowl_highTT = """
   calib_100T: 0.99796
   calib_217T: 0.99555
 """%(input_params, input_theory)
+
+derived_lowl_highTT = {
+    # param: [best_fit, sigma]
+    "H0":     [68.44, 1.2],
+    "omegav": [0.6998, 0.016],
+    "omegam":     [None, None], ### [0.3002, 0.016],
+    "omegamh2":   [None, None],
+    "omeganuh2":  [None, None],
+    "omegamh3":   [None, None],
+    "sigma8":     [0.8610, 0.023],
+    "s8omegamp5": [None, None],
+    "s8omegamp25":[None, None],
+    "s8h5":       [None, None],
+    "rmsdeflect": [None, None],
+    "zre":   [13.76, 2.5],
+    "A":      [None, None],
+    "clamp":  [None, None],
+    "ns02":   [None, None],
+    "YHe":    [0.245446, 0.00012],
+    "Y_p":  [0.246773, 0.00012],
+    "DH":  [2.569e-5, 0.051e-5],
+    "age":    [13.7664, 0.048],
+    "zstar":  [1089.55, 0.52],
+    "rstar":  [145.00, 0.55],
+    "thetastar": [1.04136, 0.00051],
+    "DAstar":  [13.924, 0.050],
+    "zdrag":   [1060.05, 0.52],
+    "rdrag":   [147.63, 0.53],
+    "kd":      [0.14039, 0.00053],
+    "thetad":  [0.160715, 0.00029],
+    "zeq":     [3345, 58],
+    "keq":     [0.010208, 0.00018],
+    "thetaeq":  [0.8243, 0.011],
+    "thetarseq": [0.4550, 0.0058],
+    }
+
 
 # Best fit Polarisation ###################################################################
 

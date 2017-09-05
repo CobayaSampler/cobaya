@@ -253,6 +253,7 @@ class camb(Theory):
         self.states[i_state]["last"] = 1
 
     def needs(self, arguments):
+        # Computed quantities required by the likelihood
         for k,v in arguments.items():
             if k == "l_max":
                 # Take the max of the requested ones
@@ -264,6 +265,8 @@ class camb(Theory):
                 log.error("'%s' does not understand the requirement '%s:%s'.",
                           self.__class__.__name__,k,v)
                 raise HandledException
+        # Derived parameters (if some need some additional computations)
+        # ...
 
     def get_derived(self, derived, i_state):
         """Populates a dictionary of derived parameters with their values, using the
@@ -271,33 +274,32 @@ class camb(Theory):
         params = self.states[i_state]["CAMBparams"]
         results = self.states[i_state]["CAMBresults"]
         # Create list of *general* functions to get derived parameters
-        # 1. general
-        def from_std(p):
-            return results.get_derived_params().get(p)
         def from_params(p):
             return getattr(params, p, None)
+        def from_std(p):
+            if p in self.camb.model.derived_names:
+                if not hasattr(self, "get_derived_params"):
+                    self.get_derived_params = results.get_derived_params()
+            return self.get_derived_params.get(p, None)
+        def from_getter(p):
+            return getattr(params, "get_"+p, lambda: None)()
         # fill the list
         for p in self.derived:
-            for f in [from_std, from_params]:
+            for f in [from_params, from_std, from_getter]:
                 derived[p] = f(p)
                 if derived[p] != None:
                     break
             # specific calls, if general ones above failed:
-            if derived[p] == None:
-                # Redshift at which universe is half reionized
-                if p == "zrei":
-                    derived[p] = self.camb.get_zre_from_tau(params, params.Reion.optical_depth)
-                # Deuterium-Helium ratio from BBN prediction
-                elif p == "YPBBN":
-                    derived[p] = self.camb.bbn.BBN_table_interpolator().Y_p(
-                        ombh2=params.omegab*(params.H0/100)**2, delta_neff=0)
-                elif p == "DHBBN":
-                    derived[p] = self.camb.bbn.BBN_table_interpolator().DH(
-                        ombh2=params.omegab*(params.H0/100)**2, delta_neff=0)
-            print "-*-*-*-*-*-*-*-*-*-*-*-*", p, derived[p]
+            if p == "sigma8":
+                derived[p] = results.get_sigma8()[0]
             if derived[p] == None:
                 log.error("Derived param '%s' not implemented in the CAMB interface", p)
                 raise HandledException
+        # Cleanup (necessary!)
+        try:
+            del(self.get_derived_params)
+        except AttributeError:
+            pass
 
     def get_cl(self):
         """

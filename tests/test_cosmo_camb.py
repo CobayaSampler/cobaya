@@ -1,13 +1,16 @@
 # Tries to evaluate the likelihood at LCDM's best fit of Planck 2015, with CAMB
 
-from cobaya.conventions import input_theory, input_likelihood, input_sampler
+from __future__ import division
+
+from cobaya.conventions import input_theory, input_likelihood, input_sampler, _derived_pre
 from cobaya.conventions import input_params, _chi2, separator, input_path_install
 from cobaya.yaml_custom import yaml_custom_load
 from cobaya.run import run
 
-from cosmo_common import params_lowl_highTT, chi2_lowl_highTT
-from cosmo_common import params_lowTEB_highTTTEEE, chi2_lowTEB_highTTTEEE
-from cosmo_common import derived, tolerance_abs
+from cosmo_common import params_lowl_highTT, chi2_lowl_highTT, derived_lowl_highTT
+from cosmo_common import params_lowTEB_highTTTEEE, chi2_lowTEB_highTTTEEE#, derived_lowTEB_highTTTEEE
+from cosmo_common import derived, tolerance_abs, tolerance_derived
+
 
 def test_camb_planck_t(modules):
     body_of_test(modules, "t")
@@ -25,15 +28,21 @@ def body_of_test(modules, x):
                                   "planck_2015_plikHM_TT": None}
         info.update(yaml_custom_load(params_lowl_highTT))
         ref_chi2 = chi2_lowl_highTT
+        derived_values = derived_lowl_highTT
     elif x == "p":
         info[input_likelihood] = {"planck_2015_lowTEB": None,
                                   "planck_2015_plikHM_TTTEEE": None}
         info.update(yaml_custom_load(params_lowTEB_highTTTEEE))
         ref_chi2 = chi2_lowTEB_highTTTEEE
+        derived_values = derived_lowTEB_highTTTEEE
     else:
         raise ValueError("Test not recognised: %r"%x)
-    # Remove H0 in favour of cosmomc_theta
-    info[input_params][input_theory].pop("H0")
+    use_H0_instead_of_theta = False
+    if use_H0_instead_of_theta:
+        info[input_params][input_theory].pop("cosmomc_theta")
+        derived.pop("H0")
+    else:
+        info[input_params][input_theory].pop("H0")
     # Add derived
     info[input_params][input_theory].update(derived)
     updated_info, products = run(info)
@@ -44,6 +53,15 @@ def body_of_test(modules, x):
         assert abs(chi2-ref_chi2[lik]) < tolerance_abs, (
             "Likelihood value for '%s' off by more than %f!"%(lik, tolerance_abs))
     # Check value of derived parameters
-    ###################
-    ###################
-    ###################
+    not_tested = []
+    not_passed = []
+    for p in derived_values:
+        if derived_values[p][0] == None:
+            not_tested += [p]
+            continue
+        rel = (abs(products["sample"][ _derived_pre+p][0]-derived_values[p][0])
+               /derived_values[p][1])
+        if rel > tolerance_derived:
+            not_passed += [(p, rel)]
+    print "Derived parameters not tested because not implemented: %r"%not_tested
+    assert not(not_passed), "Some derived parameters were off: %r"%not_passed
