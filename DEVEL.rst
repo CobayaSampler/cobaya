@@ -125,6 +125,103 @@ From the sampler point of view, the dictionary above becomes a list in the call 
 
 Unfortunately, for many samplers, such as basic MH-MCMC, we do not know a priori if we are going to save a particular point, so we are forced to compute derived parameters even when they are not necessary. In those case, if their computation is prohibitively expensive, it may be faster to run the sample without derived parameters, and add them after the sampling process is finished.
 
+
+Reparametrisation layer
+"""""""""""""""""""""""
+
+We have assumed so far that the **statistical parameters** (i.e. those specified as fixed, sampled or derived, the rôles the **sampler** cares about) where at the same time understood by the **likelihood** (and the **theory code**, if present). This needs not be the case, and actually for the likelihood there are only input and output parameters, which in a trivial case, would correspond respectively to *fixed+sampled* and *derived*.
+
+Actually, this needs not be the case in general, e.g. one may want to fix one or more likelihood arguments to a function of the value of a sampled parameter, or sample from some function or scaling of a likelihood argument, instead of from the likelihood argument directly. The **reparametrisation layers** allow us to be able to do those things at run-time at the *input level*, instead of  having to change the likelihood code to make it understand different parametrisations or impose certain conditions as fixed arguments.
+
+In general, we would have two different reparametrisation blocks:
+
+* The **in** block: :math:`f(\text{fixed and sampled params})\,\Longrightarrow \text{input args}`.
+* The **out** block: :math:`f(\text{output and input args})\,\Longrightarrow \text{derived params}`.
+
+.. note::
+   In the out block, we can specify the derived parameters as a function of the output parameters and *either* the fixed+sampled parameters (pre-**in** block) or the input arguments (post-**in** block). We choose the **post** case, because it looks more consistent.
+
+Notice that now, during the initial checks, instead of making sure that the Likelihood understands all the statistical parameters, we need to check instead that the *arguments* coming from the reparametrisation layer are understood.
+
+Let us look first at the **in** case, in particular at the specification in the input. As an example, let us assume we want to sample the log of a likelihood argument `x`.
+
+In principle, we would have to specify in one block our statistical parameters, and, in a completely separate block, the input arguments as a series of functions of the fixed and sampled parameters. In our example:
+
+.. code:: yaml
+
+   params:
+     logx:
+       prior: ...  # whatever prior, over logx, not x!
+       ref: ...    # whatever reference pdf, over logx, not x!
+     
+   arguments:
+     x: lambda logx: numpy.exp(logx)
+
+This is a little redundant, (specially if we want to store `x` also as a derived parameter: it would appear once and the `params` block, and again in the `arguments` block). Let us *assume* that in almost all cases we communicate trivially with the likelihood using parameter names that it understands, such that the default functions are identities and we only have to specify the non-trivial ones. In that case, it makes sense to specify those functions as **substitutions**, which in out example would look like:
+
+.. code:: yaml
+
+  params:
+    logx:
+      prior: ...  # whatever prior, over logx, not x!
+      ref: ...    # whatever reference pdf, over logx, not x!
+      subs:
+        x: lambda(logx): numpy.exp(logx)
+
+If the correspondences are not one-to-one, because there are more input args needed than statistical params specified (i.e. one stat param define more than one input arg), we can create additional **fixed** parameters as a function of stats params. E.g. if a statistical parameter :math:`y` (not understood by the likelihood) defines two arguments (understood by the likelihood), :math:`u=2y` and :math:`v=3y`, we could do:
+
+.. code:: yaml
+
+  params:
+    y:
+      prior: ...  # whatever prior, over y
+      subs:
+        u: lambda y: 2*y
+    v: lambda y: 3*y
+
+or even better (clearer input), change the prior so that only arguments known by the likelihood are explicit:
+
+.. code:: yaml
+
+   params:
+     u:
+       prior: ...  # *transformed* from prior of y
+     v: lambda u: 3/2*u
+
+.. note::
+
+  The arguments of the functions defining the *understood* arguments should be statistical parameters for now. At the point of writing this notes, we have not implemented multi-level dependencies.
+
+
+Now, for the **out** reparametrisation. First, notice that if they were just specified by assigning them a function, they would look exactly like the fixed and function-valued parameters above, e.g. :math:`v` in the last example. We need of course to distinguish them from input parameters. Notice that assigning them a function looks more like how a fixed parameter would behave, so we will reserve that notation for fixed ones (on the other hand, derived parameters may contain other sub-fields, such as a *range*, which is incompatible with a pure assignment). Thus, we will specify the function with the key `derived`. E.g. if we want both to store :math:`x^2` when sampling :math:`x`, we would input
+
+.. code:: yaml
+
+   params:
+     x:
+       prior: ...  # whatever prior for x
+     x2:
+       derived: lambda x: x**2
+       min: ...  # optional
+
+Respect to the dependencies, one should notice that derived parameters may depend on output arguments that are not explicitly requested, i.e. only appear as arguments of the function defining the derived parameters. One must thus gather all the arguments of those functions at initialisation time to create a list of output parameters that may contain *implicit* ones.
+
+As in the **in** case, for now we avoid multilevel dependencies, by making derived parameters functions of input and output arguments only, not of other derived parameters.
+
+.. note::
+
+   In the current implementation, if we want to store as a derived parameter a fixed parameter that is specified through a function, the only way to do it is to defined an additional derived parameter which is trivially equal to the fixed one. In the :math:`u,\,v` example above, if we would want to store the value of :math:`v` (fixed) we would create a copy of it, :math:`V`:
+
+   .. code:: yaml
+
+      params:
+        u:
+          prior: ...  # *transformed* from prior of y
+        v: lambda u: 3/2*u
+        V:
+          derived: lambda v: v
+
+      
 About the ``theory`` module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
