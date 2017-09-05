@@ -6,9 +6,11 @@ from collections import OrderedDict as odict
 from cobaya.conventions import input_theory, input_likelihood, input_params
 from cobaya.conventions import input_sampler, _chi2, separator
 
-# Expected values and tolerance
-tolerance_abs = 0.1
-tolerance_derived = 0.01
+# Tolerance for the tests
+tolerance_chi2_abs = 0.1
+tolerance_derived = 0.025
+# this last one cannot be smaller: rounding errors in BBN abundances, bc new interp tables
+
 
 # Converting 100cosmomc_theta to cosmomc_theta in Planck's covmats ########################
 
@@ -22,6 +24,7 @@ def convert_cosmomc_theta(filename):
     filename_new = "_0.01theta".join(os.path.splitext(filename))
     np.savetxt(filename_new, covmat, fmt="%.8g", header=" ".join(params))
     return filename_new
+
 
 # Baseline priors #########################################################################
 

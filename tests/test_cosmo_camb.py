@@ -9,7 +9,7 @@ from cobaya.run import run
 
 from cosmo_common import params_lowl_highTT, chi2_lowl_highTT, derived_lowl_highTT
 from cosmo_common import params_lowTEB_highTTTEEE, chi2_lowTEB_highTTTEEE#, derived_lowTEB_highTTTEEE
-from cosmo_common import derived, tolerance_abs, tolerance_derived
+from cosmo_common import derived, tolerance_chi2_abs, tolerance_derived
 
 
 def test_camb_planck_t(modules):
@@ -23,6 +23,11 @@ def body_of_test(modules, x):
     info = {input_path_install: modules,
             input_theory: {"camb": None},
             input_sampler: {"evaluate": None}}
+
+    ## TEST!!!!!! update for BBN!!!!!
+    info["theory"]["camb"] = {"path":"/home/jesus/scratch/CAMB"}
+
+    
     if x == "t":
         info[input_likelihood] = {"planck_2015_lowl": None,
                                   "planck_2015_plikHM_TT": None}
@@ -50,8 +55,8 @@ def body_of_test(modules, x):
     # Check value of likelihoods
     for lik in info[input_likelihood]:
         chi2 = products["sample"][_chi2+separator+lik][0]
-        assert abs(chi2-ref_chi2[lik]) < tolerance_abs, (
-            "Likelihood value for '%s' off by more than %f!"%(lik, tolerance_abs))
+        assert abs(chi2-ref_chi2[lik]) < tolerance_chi2_abs, (
+            "Likelihood value for '%s' off by more than %f!"%(lik, tolerance_chi2_abs))
     # Check value of derived parameters
     not_tested = []
     not_passed = []
