@@ -11,7 +11,7 @@ or useful properties for particular samplers (e.g. with of a proposal pdf in and
 the :class:`Prior` class.
 
 You can specify three different kinds of parameters:
-   
+
 + **Fixed** parameters are specified by assigning them a value, and are passed directly to
   the likelihood or theory code.
 + **Sampled** parameters need a ``prior`` pdf definition and, optionally,
@@ -34,7 +34,7 @@ The syntax for priors and ref's has three fields:
   `scipy.stats <https://docs.scipy.org/doc/scipy/reference/stats.html#continuous-distributions>`_.
 + ``loc`` and ``scale`` (default: 0 and 1, resp.): the *location* and *scale* of the pdf,
   as they are understood for each particular pdf in :class:`scipy.stats` (e.g. for a
-  ``uniform`` pdf, ``loc`` is the lower bound and ``scale`` is the length of the domain, 
+  ``uniform`` pdf, ``loc`` is the lower bound and ``scale`` is the length of the domain,
   whereas in a Gaussian ``norm`` pdf ``loc`` is the centre and ``scale`` is the standard
   deviation).
 + (alternatively) ``min`` and ``max`` (default: 0 and 1 resp.): the boundaries of the pdf
@@ -142,7 +142,7 @@ c) **As an import statement:** If your function cannot be written as a ``lambda`
 
 Let us apply this to the example in section :ref:`in_example`. We will add a
 *gaussian ring* prior on both parameters, centred at the origin, with radius 0.5 and sigma of 0.1;
-and a simple *gaussian* prior on the sum of both parameters, 
+and a simple *gaussian* prior on the sum of both parameters,
 centred at 0.5 and with sigma of 0.2.
 
 Using option **(a)** above, we would simply add another block to the input file:
@@ -220,15 +220,11 @@ from __future__ import division
 # Global
 from collections import OrderedDict as odict
 import numpy as np
-import scipy.stats as stats
-from warnings import warn
 import numbers
-import inspect
-from importlib import import_module
 
 # Local
 from cobaya.conventions import input_prior, input_p_dist, input_p_ref, input_p_label
-from cobaya.tools import get_labels, get_scipy_1d_pdf
+from cobaya.tools import get_labels, get_external_function, get_scipy_1d_pdf
 from cobaya.log import HandledException
 
 # Logger
@@ -246,7 +242,7 @@ class Prior():
         Initialises the prior and reference pdf's from the input information.
         """
         if not params_info:
-            warn("No sampled parameters requested! This will fail for non-mock samplers.")
+            log.warning("No sampled parameters requested! This will fail for non-mock samplers.")
         # Labels and reference point
         self.labels = get_labels(params_info)
         # pdf: a list of independent components
@@ -274,33 +270,21 @@ class Prior():
             self.properties[p] = dict(
                 [(k,v) for k,v in params_info[p].iteritems()
                  if k not in [input_prior,input_p_ref,input_p_label]])
-        # Process the external prior(s): read -> create callable -> get parameters
-        self.external_logp = {}
-        self.external_params = {}
-        for name, info in (info_prior if info_prior else {}).iteritems():
-            # Shell call: input as a string
-            if isinstance(info, basestring):
-                log.debug("External prior loaded from string: '%s'", info)
-                try:
-                    info = eval(info)
-                except Exception, e:
-                    log.error("Failed to load external prior: '%r'", e)
-                    raise HandledException
-            if not callable(info):
-                log.error("The external prior provided is not a function.")
-                raise HandledException
-            self.external_logp[name] = info
-            self.external_params[name] = inspect.getargspec(self.external_logp[name])[0]
-            if not all([p in self.names() for p in self.external_params[name]]):
+        # Process the external prior(s):
+        self.external = odict()
+        for name in (info_prior if info_prior else {}):
+            log.debug("Loading external prior '%s' from: '%s'", name, info_prior[name])
+            self.external[name] = get_external_function(info_prior[name])
+            if not all([p in self.names() for p in self.external[name].args]):
                 log.error(
-                    "The arguments of the external prior must be known *sampled* parameters. "
-                    "Got %r", self.external_params[name])
+                    "The arguments of the external prior '%s' must be known *sampled* parameters. "
+                    "Got %r", name, self.external[name].args)
                 raise HandledException
-            log.warning("External prior loaded. Mind that it might not be normalised!")
-            
+            log.warning("External '%s' prior loaded. Mind that it might not be normalised!", name)
+
     def d(self):
         """
-        Returns: 
+        Returns:
            Dimensionality of the parameter space.
         """
         return len(self.labels)
@@ -316,7 +300,7 @@ class Prior():
         """
         Returns:
            A dictionary ``{paramete names : index of that parameter}``
-        """        
+        """
         return dict([(p,i) for i,p in enumerate(self.labels.keys())])
 
     def property(self, param, prop, default=None):
@@ -324,9 +308,9 @@ class Prior():
         Returns:
            The value of the field ``prop`` of in the info of parameter ``param``, it that
            field has been defined (otherwise, the value of ``default``).
-        """                
+        """
         return self.properties[param].get(prop, default)
-                                      
+
     def limits(self):
         """
         Returns:
@@ -345,13 +329,13 @@ class Prior():
                 log.error("No limits defined for parameter '%s'.", param)
                 raise HandledException
         return np.array(lims.values())
-        
+
     def sample(self, n=1, external_error=True):
         """
         Generates samples from the prior pdf.
 
         If an external prior has been defined, it is not possible to sample from the prior
-        directly. In that case, if you want to sample from the "default" pdf (i.e. 
+        directly. In that case, if you want to sample from the "default" pdf (i.e.
         ignoring the external prior), set `external_error` to `False`.
 
         Returns:
@@ -366,11 +350,11 @@ class Prior():
                 log.error("No sampling possible for parameter '%s'.", param)
                 raise HandledException
         if external_error:
-            if self.external_logp:
+            if self.external:
                 log.error("It is not possible to sample from an external prior.")
                 raise HandledException
         return samples
- 
+
     def p(self, x):
         """
         Returns:
@@ -408,11 +392,10 @@ class Prior():
         """Evaluates the logprior using the external prior only."""
         logp = 0
         index = self.indices()
-        for name, logprior in self.external_logp.iteritems():
-            logp += logprior(
-                **dict([(param,x[index[param]]) for param in self.external_params[name]]))
+        for ext in self.external.values():
+            logp += ext.logp(**dict([(param,x[index[param]]) for param in ext.args]))
         return logp
-        
+
     def covmat(self):
         """
         Returns:

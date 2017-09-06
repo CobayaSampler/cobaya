@@ -17,6 +17,9 @@ from collections import OrderedDict as odict
 from copy import deepcopy
 from importlib import import_module
 import numpy as np
+import inspect
+import scipy.stats as stats
+from collections import namedtuple
 
 # Local
 from cobaya.conventions import subfolders
@@ -28,11 +31,40 @@ import logging
 log = logging.getLogger(__name__)
 
 
-# Other I/O-related tools #################################################################
-
 def get_folder(name, kind, sep="/", absolute="True"):
     pre = os.path.dirname(__file__)+sep if absolute else ""+(sep if sep=="." else "")
     return pre + subfolders[kind] + sep + name
+
+# Tuple that contains and describes an external function
+external_tuple = namedtuple("external_tuple", ("logp", "args"))
+
+def get_external_function(string_or_function):
+    """
+    Processes an external prior or likelihood, given as a string or a function.
+
+    If the input is a string, it must be evaluable to a function. It can contain import
+    statements using :module:`importlib`'s ``import_module``, e.g.
+    ``import_module("my_file").my_function``. You can access :module:`scipy.stats` and
+    :module:`numpy` members under the handles ``stats`` and ``np`` respectively.
+
+    Returns a named tuple ``("logp": [function], "args": [list of arguments])``.
+    """
+    if isinstance(string_or_function, basestring):
+        try:
+            function = eval(string_or_function)
+        except Exception, e:
+            log.error("Failed to load external function: '%r'", e)
+            raise HandledException
+    else:
+        function = string_or_function
+    if not callable(function):
+        log.error("The external function provided is not an actual function.")
+        raise HandledException
+    return external_tuple(function, inspect.getargspec(function)[0])
+
+def make_header(kind, module):
+    """Created a header for a particular module of a particular kind."""
+    return ("="*80).join(["", "\n %s : %s \n"%(kind.title(), module), "\n"])
 
 def get_labels(params_info):
     """
@@ -47,10 +79,6 @@ def get_labels(params_info):
             label = p
         labels[p] = ensure_latex(label)
     return labels
-
-def make_header(kind, module):
-    """Created a header for a particular module of a particular kind."""
-    return ("="*80).join(["", "\n %s : %s \n"%(kind.title(), module), "\n"])
 
 def ensure_latex(string):
     """Inserts $'s at the beginning and end of the string, if necessary."""
@@ -119,4 +147,4 @@ def get_scipy_1d_pdf(info):
 #from scipy.stats import uniform
 #def loguniform():
 #    def __init__(loc=1, scale=0):
-#        self.uniform = 
+#        self.uniform =
