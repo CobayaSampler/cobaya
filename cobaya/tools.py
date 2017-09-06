@@ -38,19 +38,21 @@ def get_folder(name, kind, sep="/", absolute="True"):
     pre = os.path.dirname(__file__)+sep if absolute else ""+(sep if sep=="." else "")
     return pre + subfolders[kind] + sep + name
 
-def get_class(info, kind=input_likelihood):
+def get_class(name, kind=input_likelihood):
     """
     Retrieves the requested likelihood (default) or theory class.
 
     ``info`` must be a dictionary of the kind ``{[class_name]: [options]}``.
+
+    Raises ``ImportError`` if class not found in the appropriate place in the source tree.
     """
-    name = info.keys()[0]
     class_folder = get_folder(name, kind, sep=".", absolute=False)
     try:
         return getattr(import_module(class_folder, package=package), name)
     except ImportError:
-        log.error("%s '%s' not found.", kind.capitalize(), name)
+        log.error("%s '%s' not found. Maybe check capitalisation.", kind.capitalize(), name)
         raise HandledException
+
 
 # Tuple that contains and describes an external function
 external_tuple = namedtuple("external_tuple", ("logp", "args"))
