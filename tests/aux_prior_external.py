@@ -1,1 +1,0 @@
-from test_prior_external import half_ring_func
