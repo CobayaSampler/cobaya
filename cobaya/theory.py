@@ -28,7 +28,7 @@ from collections import OrderedDict as odict
 from importlib import import_module
 
 # Local
-from cobaya.conventions import *
+from cobaya.conventions import input_theory
 from cobaya.tools import get_folder
 from cobaya.input import load_input_and_defaults, load_params, get_updated_params_info
 from cobaya.log import HandledException
@@ -109,21 +109,3 @@ class Theory():
 #        a_p = self.args().copy()
 #        a_p.update(self.params_dict(params_values))
 #        return a_p
-
-
-def get_Theory(info_theory, info_params=None, path_to_installation=None):
-    """
-    Auxiliary function to retrieve and initialise the requested theory code.
-    """
-    if not info_theory:
-        return None
-    name = info_theory.keys()[0]
-    try:
-        class_folder = get_folder(name, input_theory, sep=".", absolute=False)
-        Theory_class = getattr(
-            import_module(class_folder, package=package), name.lower())
-    except ImportError:
-        log.error("Theory '%s' not found.", name.lower())
-        raise HandledException
-    return Theory_class(info_theory[name], info_params=info_params,
-                        path_to_installation=path_to_installation)

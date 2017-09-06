@@ -22,7 +22,7 @@ import scipy.stats as stats
 from collections import namedtuple
 
 # Local
-from cobaya.conventions import subfolders
+from cobaya.conventions import package, subfolders, input_likelihood
 from cobaya.conventions import input_p_label, input_p_dist, input_prior, input_debug
 from cobaya.log import HandledException
 
@@ -32,8 +32,25 @@ log = logging.getLogger(__name__)
 
 
 def get_folder(name, kind, sep="/", absolute="True"):
+    """
+    Gets folder, relative to the package source, of a likelihood, theory or sampler.
+    """
     pre = os.path.dirname(__file__)+sep if absolute else ""+(sep if sep=="." else "")
     return pre + subfolders[kind] + sep + name
+
+def get_class(info, kind=input_likelihood):
+    """
+    Retrieves the requested likelihood (default) or theory class.
+
+    ``info`` must be a dictionary of the kind ``{[class_name]: [options]}``.
+    """
+    name = info.keys()[0]
+    class_folder = get_folder(name, kind, sep=".", absolute=False)
+    try:
+        return getattr(import_module(class_folder, package=package), name)
+    except ImportError:
+        log.error("%s '%s' not found.", kind.capitalize(), name)
+        raise HandledException
 
 # Tuple that contains and describes an external function
 external_tuple = namedtuple("external_tuple", ("logp", "args"))

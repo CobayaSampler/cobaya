@@ -280,7 +280,7 @@ class Prior():
                     "The arguments of the external prior '%s' must be known *sampled* parameters. "
                     "Got %r", name, self.external[name].args)
                 raise HandledException
-            log.warning("External '%s' prior loaded. Mind that it might not be normalised!", name)
+            log.warning("External prior '%s' loaded. Mind that it might not be normalised!", name)
 
     def d(self):
         """

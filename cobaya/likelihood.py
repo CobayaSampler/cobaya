@@ -112,8 +112,8 @@ import numpy as np
 import inspect
 
 # Local
-from cobaya.conventions import *
-from cobaya.tools import get_folder
+from cobaya.conventions import input_likelihood, input_prior, input_params, input_theory
+from cobaya.tools import get_class
 from cobaya.input import load_input_and_defaults, load_params, get_updated_params_info
 from cobaya.log import HandledException
 
@@ -135,9 +135,7 @@ class Likelihood():
         self._updated_info = load_input_and_defaults(
             self, info_likelihood, kind=input_likelihood)
         # Initialise
-        if theory:
-            from .theory import get_Theory
-            self.theory = theory
+        self.theory = theory
         self.initialise()
     
     # What you *must* implement to create your own likelihood:
@@ -227,9 +225,7 @@ class LikelihoodExternalFunction(Likelihood):
         self._updated_info[name] = self._updated_info.pop(self.__class__.__name__)
         self._updated_info[name]["external_function"] = external_function.func_name        
         # Initialise
-        if theory:
-            from .theory import get_Theory
-            self.theory = theory
+        self.theory = theory
         self.initialise()
 
     def logp(self, **params_values):
@@ -238,7 +234,8 @@ class LikelihoodExternalFunction(Likelihood):
         if params_values.get("derived") == {}:
             params_values.pop("derived")
         return self.external_function(**params_values)
-        
+
+
 class LikelihoodCollection():
     """
     Likelihood manager:
@@ -250,9 +247,9 @@ class LikelihoodCollection():
         # *IF* there is a theory code, initialise it and separate the parameters
         if info_theory:
             info_params_theory = info_params.get(input_theory)
-            from .theory import get_Theory
-            self.theory = get_Theory(info_theory, info_params=info_params_theory,
-                                     path_to_installation=path_to_installation)
+            self.theory = get_class(info_theory, kind=input_theory)(
+                info_theory.values()[0], info_params=info_params_theory,
+                path_to_installation=path_to_installation)
             self._params_input = odict([(k,v) for k,v in info_params.iteritems()
                                         if k!=input_theory])
         else:
@@ -263,19 +260,17 @@ class LikelihoodCollection():
         # Initialise Likelihoods and save their updated info
         self.likelihoods = odict()
         for name, info in info_likelihood.iteritems():
-            # If it is a function, create a wrapper class and store it
-            if callable(info):
-                self.likelihoods[name] = LikelihoodExternalFunction(
-                    name, info, theory=self.theory)
-                # Define a class (custom name based on the loop's var "name")
-                # Instantiate it.
-            # Otherwise, assume it is a string, and look it up in the likelihoods folder
-            else:
-                class_folder = get_folder(name, input_likelihood, sep=".", absolute=False)
-                lik = getattr(
-                    import_module(class_folder, package=package), name)
-                self.likelihoods[name] = lik(
-                    info, self.theory, path_to_installation=path_to_installation)
+            # First, if valued as None or a dict, look it up in the likelihoods folder
+            if info == None or hasattr(info, "keys"):
+                self.likelihoods[name] = get_class({name: info})(
+                    info, theory=self.theory, path_to_installation=path_to_installation)
+            # If it fails, check if its an external likelihood and create a wrapper
+#            if callable(info):
+#                self.likelihoods[name] = LikelihoodExternalFunction(
+#                    name, info, theory=self.theory)
+#                # Define a class (custom name based on the loop's var "name")
+#                # Instantiate it.
+                
         # Parameters: first check consistency through likelihoods. Then load.
         self._params_defaults = odict()
         for name, lik in self.likelihoods.iteritems():
@@ -479,4 +474,3 @@ class LikelihoodCollection_MPI(LikelihoodCollection):
                 setattr(self, var, None)
         for var in to_broadcast:
             setattr(self, var, comm.bcast(getattr(self, var), root=0))
-        
