@@ -113,7 +113,8 @@ import inspect
 
 # Local
 from cobaya.conventions import input_likelihood, input_prior, input_params, input_theory
-from cobaya.tools import get_class
+from cobaya.conventions import input_likelihood_external
+from cobaya.tools import get_class, get_external_function
 from cobaya.input import load_input_and_defaults, load_params, get_updated_params_info
 from cobaya.log import HandledException
 
@@ -129,8 +130,6 @@ class Likelihood():
     def __init__(self, info_likelihood, theory=None, path_to_installation=None):
         self.name = self.__class__.__name__
         self.path_to_installation = path_to_installation
-        # Create class-level default options
-        self._parent_defaults = odict([["speed", 1]])
         # Load default and input info
         self._updated_info = load_input_and_defaults(
             self, info_likelihood, kind=input_likelihood)
@@ -206,24 +205,18 @@ class Likelihood():
         """
         self.fixed, self.sampled, self.derived = fixed, sampled, derived
 
-    
+
 class LikelihoodExternalFunction(Likelihood):
-    def __init__(self, name, external_function, theory=None):
+    def __init__(self, name, info, theory=None):
+        # Updated info
         self.name = name
-        # Create class-level default options
-        self._parent_defaults = odict([["speed", 1]])
-        # Load default and input info
-        self._updated_info = load_input_and_defaults(
-            self, {},
-            kind=input_likelihood, load_defaults_file=False)
-        # Store the external function
-        self.external_function = external_function
-        # Read the parameters understood by the likelihood
-        self._params_defaults = odict(
-            [(p, None) for p in inspect.getargspec(self.external_function)[0]])
-        # Create more realistic updated info
-        self._updated_info[name] = self._updated_info.pop(self.__class__.__name__)
-        self._updated_info[name]["external_function"] = external_function.func_name        
+        self._updated_info = {
+            name: getattr(info, input_likelihood_external, None) or # passed as "external"
+                  {input_likelihood_external: info}}          # passed directly
+        # Store the external function and its arguments
+        self.external_function = get_external_function(
+            self._updated_info[name][input_likelihood_external])
+        self._params_defaults = odict([(p, None) for p in self.external_function.args])
         # Initialise
         self.theory = theory
         self.initialise()
@@ -233,7 +226,7 @@ class LikelihoodExternalFunction(Likelihood):
         #   so that we do not have to add it by default to all external liks
         if params_values.get("derived") == {}:
             params_values.pop("derived")
-        return self.external_function(**params_values)
+        return self.external_function.logp(**params_values)
 
 
 class LikelihoodCollection():
@@ -247,8 +240,9 @@ class LikelihoodCollection():
         # *IF* there is a theory code, initialise it and separate the parameters
         if info_theory:
             info_params_theory = info_params.get(input_theory)
-            self.theory = get_class(info_theory, kind=input_theory)(
-                info_theory.values()[0], info_params=info_params_theory,
+            name, fields = info_theory.items()[0]
+            self.theory = get_class(name, kind=input_theory)(
+                fields, info_params=info_params_theory,
                 path_to_installation=path_to_installation)
             self._params_input = odict([(k,v) for k,v in info_params.iteritems()
                                         if k!=input_theory])
@@ -262,15 +256,12 @@ class LikelihoodCollection():
         for name, info in info_likelihood.iteritems():
             # First, if valued as None or a dict, look it up in the likelihoods folder
             if info == None or hasattr(info, "keys"):
-                self.likelihoods[name] = get_class({name: info})(
+                self.likelihoods[name] = get_class(name)(
                     info, theory=self.theory, path_to_installation=path_to_installation)
-            # If it fails, check if its an external likelihood and create a wrapper
-#            if callable(info):
-#                self.likelihoods[name] = LikelihoodExternalFunction(
-#                    name, info, theory=self.theory)
-#                # Define a class (custom name based on the loop's var "name")
-#                # Instantiate it.
-                
+            # Otherwise, check if its an external likelihood and create a wrapper
+            else:
+                self.likelihoods[name] = LikelihoodExternalFunction(
+                    name, info, theory=self.theory)
         # Parameters: first check consistency through likelihoods. Then load.
         self._params_defaults = odict()
         for name, lik in self.likelihoods.iteritems():
@@ -401,7 +392,8 @@ class LikelihoodCollection():
         Parameters recognised by more than one likelihood are blocked in the slowest one.
         """
         params_blocks = self.sampled_params_by_likelihood()
-        speeds = odict([[name,lik.speed] for name,lik in self.likelihoods.iteritems()])
+        speeds = odict([[name,getattr(lik, "speed", 1)]
+                        for name,lik in self.likelihoods.iteritems()])
         if self.theory:
             speeds[input_theory] = self.theory.speed
         speed_blocked = [[speed,params_blocks[name]] for name,speed in speeds.iteritems()]

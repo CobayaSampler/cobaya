@@ -70,10 +70,8 @@ class Output():
             try:
                 self.info_full[input_likelihood][lik].update(likelihood[lik])
             except AttributeError:
-                # External likelihood?
-                if not callable(self.info_full[input_likelihood][lik]):
-                    log.error("External likelihood not callable. Don't know what's happening.")
-                    raise HandledException
+                # External likelihoods given directly as a function
+                self.info_full[input_likelihood][lik] = likelihood[lik]
         if theory:
             self.info_full.update({input_theory: theory})
         if prior:
