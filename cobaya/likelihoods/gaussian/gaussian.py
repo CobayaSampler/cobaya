@@ -63,6 +63,7 @@ from __future__ import division
 # Global
 import numpy as np
 from scipy.stats import multivariate_normal, uniform, random_correlation
+from cobaya.mpi import get_mpi_size
 
 # Local
 from cobaya.likelihood import Likelihood
@@ -161,6 +162,8 @@ def random_mean(ranges, n_modes=1):
 
     If `n_modes>1`, returns an array of such points.
     """
+    if get_mpi_size():
+        print "WARNING! Using with MPI: different process will produce different random results."
     mean = np.array([uniform.rvs(loc=r[0], scale=r[1]-r[0], size=n_modes) for r in ranges])
     mean = mean.T
     if n_modes == 1:
@@ -178,6 +181,8 @@ def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1):
 
     If `n_modes>1`, returns a list of such matrices.
     """
+    if get_mpi_size():
+        print "WARNING! Using with MPI: different process will produce different random results."
     dim = len(ranges)
     scales = np.array([r[1]-r[0] for r in ranges])
     cov = []
