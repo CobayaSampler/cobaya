@@ -22,6 +22,7 @@ input_debug      = "debug"
 input_debug_file = "debug_file"
 input_output_prefix = "output_prefix"
 input_path_install = "path_to_modules"
+input_likelihood_external = "external"
 
 # Separator for different names.
 # Its manual inclusion in a string anywhere else (e.g. a parameter name) is forbidden.

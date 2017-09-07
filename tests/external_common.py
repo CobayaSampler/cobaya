@@ -14,6 +14,7 @@ import inspect
 # Local
 from cobaya.conventions import input_output_prefix, input_params, input_prior
 from cobaya.conventions import input_sampler, input_likelihood, output_full_suffix
+from cobaya.conventions import _chi2, separator, input_likelihood_external
 from cobaya.run import run
 from cobaya.yaml_custom import yaml_custom_load
 
@@ -76,13 +77,26 @@ def body_of_test(info_logpdf, kind, tmpdir, manual=False):
                            -products["sample"]["minuslogprior"].values), (
             "The value of the prior is not reproduced correctly.")
     elif kind == input_likelihood:
-        assert False # test chisq!!!!!
+        for lik in info[input_likelihood]:
+            assert np.allclose(-2*logps[lik],
+                               products["sample"][_chi2+separator+lik].values), (
+                "The value of the likelihood '%s' is not reproduced correctly."%lik)
     assert np.allclose(logprior_base+sum(logps[p] for p in info_logpdf),
                        -products["sample"]["minuslogpost"].values), (
         "The value of the posterior is not reproduced correctly.")
     # Test updated info -- scripted
-    assert updated_info[kind] == info[kind], (
+    assert info.get(input_prior, None) == updated_info.get(input_prior, None), (
         "The prior information has not been updated correctly.")
+    # Transform the likelihood info to the "external" convention
+    info_likelihood = info[input_likelihood]
+    for lik, value in info_likelihood.iteritems():
+        if not hasattr(value, "get"):
+            info_likelihood[lik] = {input_likelihood_external: value}
+    assert info_likelihood == updated_info[input_likelihood], (
+        "The likelihood information has not been updated correctly.")
+
+
+
     # Test updated info -- yaml (for now, only if ALL external pdfs are given as strings!)
     stringy = dict([(k,v) for k,v in info_logpdf.iteritems() if isinstance(v, basestring)])
     if stringy == info_logpdf:

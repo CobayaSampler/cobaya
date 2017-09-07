@@ -109,6 +109,7 @@ from importlib import import_module
 from collections import OrderedDict as odict
 from time import sleep
 import numpy as np
+from scipy import stats
 import inspect
 
 # Local
