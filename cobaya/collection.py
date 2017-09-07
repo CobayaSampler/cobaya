@@ -63,7 +63,7 @@ class Collection():
             self.driver = "dummy"
 
     def add(self, values, derived=None,
-                  weight=1, logpost=None, logprior=None, logliks=[]):
+                  weight=1, logpost=None, logprior=None, logliks=None):
         self.enlarge_if_needed()
         self.data[_weight][self._n] = weight
         if logpost == None:
@@ -76,7 +76,7 @@ class Collection():
         self.data[_minuslogpost][self._n] = -logpost
         if logprior != None:
             self.data[_minuslogprior][self._n] = -logprior
-        if len(logliks):
+        if logliks is not None:
             self.data[_chi2][self._n] = 0
             for name, value in zip(self.likelihood.names(), logliks):
                 chisq = -2*value
@@ -240,8 +240,8 @@ class OnePoint(Collection):
                      if len(self.likelihood.derived_all()) else None),
             logpost=-self[_minuslogpost][0], weight=self[_weight][0],
             logprior=-self[_minuslogprior][0],
-            logliks=-0.5*np.array([self[chi2][0] for chi2 in self.data.columns
-                                              if chi2.startswith("chi2")]))
+            logliks=-0.5*np.array([self[_chi2+separator+lik][0]
+                                   for lik in self.likelihood.names()]))
     
     # Make the dataframe printable (but only the filled ones!)
     def __repr__(self):
