@@ -19,7 +19,6 @@ from importlib import import_module
 import numpy as np
 import inspect
 import scipy.stats as stats
-from collections import namedtuple
 
 # Local
 from cobaya.conventions import package, subfolders, input_likelihood
@@ -53,10 +52,6 @@ def get_class(name, kind=input_likelihood):
         log.error("%s '%s' not found. Maybe check capitalisation.", kind.capitalize(), name)
         raise HandledException
 
-
-# Tuple that contains and describes an external function
-external_tuple = namedtuple("external_tuple", ("logp", "argspec"))
-
 def get_external_function(string_or_function):
     """
     Processes an external prior or likelihood, given as a string or a function.
@@ -66,7 +61,7 @@ def get_external_function(string_or_function):
     ``import_module("my_file").my_function``. You can access :module:`scipy.stats` and
     :module:`numpy` members under the handles ``stats`` and ``np`` respectively.
 
-    Returns a named tuple ``("logp": [function], "args": [list of arguments])``.
+    Returns the function.
     """
     if isinstance(string_or_function, basestring):
         try:
@@ -79,7 +74,7 @@ def get_external_function(string_or_function):
     if not callable(function):
         log.error("The external function provided is not an actual function.")
         raise HandledException
-    return external_tuple(function, inspect.getargspec(function))
+    return function
 
 def make_header(kind, module):
     """Created a header for a particular module of a particular kind."""

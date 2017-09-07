@@ -221,6 +221,7 @@ from __future__ import division
 from collections import OrderedDict as odict
 import numpy as np
 import numbers
+import inspect
 
 # Local
 from cobaya.conventions import input_prior, input_p_dist, input_p_ref, input_p_label
@@ -274,11 +275,12 @@ class Prior():
         self.external = odict()
         for name in (info_prior if info_prior else {}):
             log.debug("Loading external prior '%s' from: '%s'", name, info_prior[name])
-            self.external[name] = get_external_function(info_prior[name])
-            if not all([p in self.names() for p in self.external[name].argspec.args]):
+            self.external[name] = {"logp": get_external_function(info_prior[name])}
+            self.external[name].update({"argspec": inspect.getargspec(self.external[name]["logp"])})
+            if not all([p in self.names() for p in self.external[name]["argspec"].args]):
                 log.error(
                     "The arguments of the external prior '%s' must be known *sampled* parameters. "
-                    "Got %r", name, self.external[name].argspec.args)
+                    "Got %r", name, self.external[name]["argspec"].args)
                 raise HandledException
             log.warning("External prior '%s' loaded. Mind that it might not be normalised!", name)
 
@@ -393,7 +395,7 @@ class Prior():
         logp = 0
         index = self.indices()
         for ext in self.external.values():
-            logp += ext.logp(**dict([(param,x[index[param]]) for param in ext.argspec.args]))
+            logp += ext["logp"](**dict([(param,x[index[param]]) for param in ext["argspec"].args]))
         return logp
 
     def covmat(self):
