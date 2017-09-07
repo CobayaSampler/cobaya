@@ -10,6 +10,7 @@ from random import random
 import numpy as np
 import scipy.stats as stats
 import inspect
+from copy import deepcopy
 
 # Local
 from cobaya.conventions import input_output_prefix, input_params, input_prior
@@ -85,26 +86,29 @@ def body_of_test(info_logpdf, kind, tmpdir, manual=False):
                        -products["sample"]["minuslogpost"].values), (
         "The value of the posterior is not reproduced correctly.")
     # Test updated info -- scripted
-    assert info.get(input_prior, None) == updated_info.get(input_prior, None), (
-        "The prior information has not been updated correctly.")
-    # Transform the likelihood info to the "external" convention
-    info_likelihood = info[input_likelihood]
-    for lik, value in info_likelihood.iteritems():
-        if not hasattr(value, "get"):
-            info_likelihood[lik] = {input_likelihood_external: value}
-    assert info_likelihood == updated_info[input_likelihood], (
-        "The likelihood information has not been updated correctly.")
-
-
-
-    # Test updated info -- yaml (for now, only if ALL external pdfs are given as strings!)
+    if kind == input_prior:
+        assert info[input_prior] == updated_info[input_prior], (
+            "The prior information has not been updated correctly.")
+    elif kind == input_likelihood:
+        # Transform the likelihood info to the "external" convention
+        info_likelihood = deepcopy(info[input_likelihood])
+        for lik, value in info_likelihood.iteritems():
+            if not hasattr(value, "get"):
+                info_likelihood[lik] = {input_likelihood_external: value}
+        assert info_likelihood == updated_info[input_likelihood], (
+            "The likelihood information has not been updated correctly.")
+    # Test updated info -- yaml
+    # For now, only if ALL external pdfs are given as strings, since the YAML load fails otherwise
     stringy = dict([(k,v) for k,v in info_logpdf.iteritems() if isinstance(v, basestring)])
     if stringy == info_logpdf:
         full_output_file = os.path.join(prefix, output_full_suffix+".yaml")
         with open(full_output_file) as full:
             updated_yaml = yaml_custom_load("".join(full.readlines()))
         for k,v in stringy.iteritems():
-            assert updated_yaml[kind][k] == info_logpdf[k], (
+            to_test = updated_yaml[kind][k]
+            if kind == input_likelihood:
+                to_test = to_test[input_likelihood_external]
+            assert to_test == info_logpdf[k], (
                 "The updated external pdf info has not been written correctly.")
 
 
