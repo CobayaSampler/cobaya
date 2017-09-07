@@ -209,25 +209,28 @@ class Likelihood():
 
 class LikelihoodExternalFunction(Likelihood):
     def __init__(self, name, info, theory=None):
+        self.theory = theory
         # Updated info
         self.name = name
         self._updated_info = {
             name: getattr(info, input_likelihood_external, None) or # passed as "external"
-                  {input_likelihood_external: info}}          # passed directly
+                  {input_likelihood_external: info}}                # passed directly
         # Store the external function and its arguments
         self.external_function = get_external_function(
             self._updated_info[name][input_likelihood_external])
-        self._params_defaults = odict([(p, None) for p in self.external_function.args])
-        # Initialise
-        self.theory = theory
-        self.initialise()
+        argspec = inspect.getargspec(self.external_function)
+        self._params_defaults = odict([(p, None) for p in argspec.args if p!="derived"])
+        self.has_derived = "derived" in argspec.args
+        if self.has_derived:
+            derived_kw_index = argspec.args[-len(argspec.defaults):].index("derived")
+            self._params_defaults.update(
+                odict([[p, None] for p in argspec.defaults[derived_kw_index]]))
 
     def logp(self, **params_values):
-        # if not derived params requested, delete the "derived" argument,
-        #   so that we do not have to add it by default to all external liks
-        if params_values.get("derived") == {}:
+        # if not derived params defined in the external call, delete the "derived" argument
+        if not self.has_derived:
             params_values.pop("derived")
-        return self.external_function.logp(**params_values)
+        return self.external_function(**params_values)
 
 
 class LikelihoodCollection():

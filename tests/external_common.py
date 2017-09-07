@@ -24,6 +24,12 @@ from cobaya.yaml_custom import yaml_custom_load
 half_ring_str  = "lambda x, y: stats.norm.logpdf(np.sqrt(x**2 + y**2), loc=0.5, scale=0.1)"
 half_ring_func = lambda x, y: eval(half_ring_str)(x, y)
 
+derived_funcs = {"r": lambda x, y: np.sqrt(x**2 + y**2),
+                 "theta": lambda x, y: np.arctan2(x, y)/np.pi}
+def half_ring_func_derived(x, y=0.5, derived=["r", "theta"]):
+    derived.update(dict([[p, derived_funcs[p](x, y)] for p in ["r", "theta"]]))
+    return eval(half_ring_str)(x, y)
+
 gaussian_str  = "lambda y: stats.norm.logpdf(y, loc=0, scale=0.2)"
 gaussian_func = lambda y: eval(gaussian_str)(y)
 
@@ -33,10 +39,11 @@ info_string   = {"half_ring": half_ring_str}
 info_callable = {"half_ring": half_ring_func}
 info_mixed    = {"half_ring": half_ring_func, "gaussian_y": gaussian_str}
 info_import   = {"half_ring": "import_module('external_common').half_ring_func"}
+info_derived  = {"half_ring": half_ring_func_derived}
 
 # Common part of all tests
 
-def body_of_test(info_logpdf, kind, tmpdir, manual=False):
+def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
     # For pytest's handling of tmp dirs
     if hasattr(tmpdir, "dirpath"):
         tmpdir = tmpdir.dirname
@@ -53,6 +60,9 @@ def body_of_test(info_logpdf, kind, tmpdir, manual=False):
             "mcmc": {"max_samples": (10 if not manual else 5000),
                      "learn_proposal": False}}
     }
+    if derived:
+        info[input_params].update({"r": {"min":0, "max":1},
+                                   "theta": {"min":-0.5, "max":0.5}})
     # Complete according to kind
     if kind == input_prior:
         info.update({input_prior: info_logpdf,
@@ -85,6 +95,15 @@ def body_of_test(info_logpdf, kind, tmpdir, manual=False):
     assert np.allclose(logprior_base+sum(logps[p] for p in info_logpdf),
                        -products["sample"]["minuslogpost"].values), (
         "The value of the posterior is not reproduced correctly.")
+    # Test derived parameters, if present -- for now just for "r"
+    if derived:
+        derived_values = dict([
+            (param, func(**dict([(arg, products["sample"][arg].values) for arg in ["x","y"]])))
+             for param, func in derived_funcs.iteritems()])
+        assert np.all(
+            [np.allclose(v, products["sample"]["derived__"+p].values)
+             for p, v in derived_values.iteritems()]), (
+            "The value of the derived parameters is not reproduced correctly.")
     # Test updated info -- scripted
     if kind == input_prior:
         assert info[input_prior] == updated_info[input_prior], (
