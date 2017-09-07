@@ -55,7 +55,7 @@ def get_class(name, kind=input_likelihood):
 
 
 # Tuple that contains and describes an external function
-external_tuple = namedtuple("external_tuple", ("logp", "args"))
+external_tuple = namedtuple("external_tuple", ("logp", "argspec"))
 
 def get_external_function(string_or_function):
     """
@@ -79,7 +79,7 @@ def get_external_function(string_or_function):
     if not callable(function):
         log.error("The external function provided is not an actual function.")
         raise HandledException
-    return external_tuple(function, inspect.getargspec(function)[0])
+    return external_tuple(function, inspect.getargspec(function))
 
 def make_header(kind, module):
     """Created a header for a particular module of a particular kind."""

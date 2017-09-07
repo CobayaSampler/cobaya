@@ -275,10 +275,10 @@ class Prior():
         for name in (info_prior if info_prior else {}):
             log.debug("Loading external prior '%s' from: '%s'", name, info_prior[name])
             self.external[name] = get_external_function(info_prior[name])
-            if not all([p in self.names() for p in self.external[name].args]):
+            if not all([p in self.names() for p in self.external[name].argspec.args]):
                 log.error(
                     "The arguments of the external prior '%s' must be known *sampled* parameters. "
-                    "Got %r", name, self.external[name].args)
+                    "Got %r", name, self.external[name].argspec.args)
                 raise HandledException
             log.warning("External prior '%s' loaded. Mind that it might not be normalised!", name)
 
@@ -393,7 +393,7 @@ class Prior():
         logp = 0
         index = self.indices()
         for ext in self.external.values():
-            logp += ext.logp(**dict([(param,x[index[param]]) for param in ext.args]))
+            logp += ext.logp(**dict([(param,x[index[param]]) for param in ext.argspec.args]))
         return logp
 
     def covmat(self):
