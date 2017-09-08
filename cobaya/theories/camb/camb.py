@@ -244,7 +244,7 @@ class camb(Theory):
                     self.states[i_state]["CAMBparams"])
             # Prepare derived parameters
             if derived == {}:
-                self.get_derived(derived, i_state)
+                derived.update(self.get_derived(i_state))
                 # Careful: next step must keep the order
                 self.states[i_state]["derived"] = [derived[p] for p in self.derived]
         # make this one the current one by decreasing the antiquity of the rest
@@ -268,9 +268,12 @@ class camb(Theory):
         # Derived parameters (if some need some additional computations)
         # ...
 
-    def get_derived(self, derived, i_state):
-        """Populates a dictionary of derived parameters with their values, using the
-        state #`i_state`."""
+    def get_derived(self, i_state):
+        """
+        Returns a dictionary of derived parameters with their values, using the
+        state #`i_state`.
+        """
+        derived = {}
         params = self.states[i_state]["CAMBparams"]
         results = self.states[i_state]["CAMBresults"]
         # Create list of *general* functions to get derived parameters
@@ -300,6 +303,7 @@ class camb(Theory):
             del(self.get_derived_params)
         except AttributeError:
             pass
+        return derived
 
     def get_cl(self):
         """
