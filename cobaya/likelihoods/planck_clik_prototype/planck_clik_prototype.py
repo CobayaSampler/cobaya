@@ -130,8 +130,15 @@ class planck_clik_prototype(Likelihood):
                 "path dictionary is expected to be defined. Please make sure"
                 " it is the case in you configuration file", self.name)
             raise HandledException
-        self.theory.needs({"l_max": self.l_max,
-                           "Cl": ["TT", "TE", "EE", "BB"]})
+        # Requested spectra
+        if self.lensing:
+            raise NotImplementedError("Lensing lik not implemented!!!")
+            # For lensing, the order would be: **phiphi TT EE BB TE TB EB**
+        requested_i = [c=="1" for c in self.clik.get_has_cl()]
+        requested_cls =[cl for cl,i in
+                        zip(["TT","EE","BB","TE","TB","EB"], requested_i) if i]
+        # State requisites to the theory code
+        self.theory.needs({"Cl": requested_cls, "l_max": self.l_max})
         self.expected_params = list(self.clik.extra_parameter_names)
         # line added to deal with a bug in planck likelihood release:
         # A_planck called A_Planck in plik_lite
