@@ -135,12 +135,19 @@ log = logging.getLogger(__name__)
 
 
 # Dictionary of CAMB->CLASS names (only containing the different ones)
-camb_to_class = {"ombh2":"omega_b",
-                 "omegab": "Omega_b",
-                 "omch2":"omega_cdm",
-                 "As": "A_s",
-                 "ns": "n_s",
-                 "tau": "tau_reio"}
+camb_to_classy = {"ombh2":  "omega_b",
+                  "omegab": "Omega_b",
+                  "omch2":  "omega_cdm",
+                  "omegac": "Omega_cdm",
+                  "omegav": "Omega_Lambda",
+                  "As": "A_s",
+                  "ns": "n_s",
+                  "tau": "tau_reio",
+                  "zre": "z_reio",
+}
+
+classy_to_camb = dict([[v,k] for k,v in camb_to_classy.iteritems()])
+
 
 class classy(Theory):
     def initialise(self):
@@ -163,7 +170,7 @@ class classy(Theory):
                         break
                 # Inserting the previously found path into the list of import folders
                 sys.path.insert(0, classy_path)
-                from classy import Class    
+                from classy import Class
             except OSError:
                 log.error("Either CLASS is not in the given folder,\n"
                           "'%s',\n or you have not compiled it.", self.path)
@@ -180,13 +187,13 @@ class classy(Theory):
                     " (b) install the Python interface globally with\n"
                     "     '/path/to/class/python/python setup.py install --user'")
                 raise HandledException
-        # No output from CLASS!
+        # Default: no output -- see `needs` method.
         self.fixed["output"] = ""
         # Generate states, to avoid recomputing
         self.n_states = 3
         self.states = [{"classy": Class(), "params": None, "last": 0, "derived": None}
                        for i in range(self.n_states)]
-        
+
     def current_state(self):
        lasts = [self.states[i]["last"] for i in range(self.n_states)]
        return self.states[lasts.index(max(lasts))]
@@ -194,10 +201,10 @@ class classy(Theory):
     def set(self, params_values_dict, i_state):
         # Feed the arguments defining the cosmology to the cosmological code
         # Fixed (translate from camb naming)
-        args = dict([(camb_to_class.get(p,p),v) for p,v in self.fixed.iteritems()])
+        args = dict([(camb_to_classy.get(p,p),v) for p,v in self.fixed.iteritems()])
         # Sampled -- save the state for avoiding recomputing later
         for p,v in params_values_dict.iteritems():
-            args[camb_to_class.get(p,p)] = v
+            args[camb_to_classy.get(p,p)] = v
         # Precision (fixed at the theory block level)
         if self.precision:
             args.update(self.precision)
@@ -228,10 +235,11 @@ class classy(Theory):
             i_state = lasts.index(min(lasts))
             log.debug("Computing (state %d)", i_state)
             self.set(params_values_dict, i_state)
-            self.states[i_state]["classy"].compute(["lensing"])
+            if "Cl" in self.fixed["output"]:
+                self.states[i_state]["classy"].compute(["lensing"])
             # Prepare derived parameters
             if derived == {}:
-                self.get_derived(derived, i_state)
+                derived.update(self.get_derived(i_state))
                 # Careful: next step must keep the order
                 self.states[i_state]["derived"] = [derived[p] for p in self.derived]
         # make this one the current one by decreasing the antiquity of the rest
@@ -243,26 +251,47 @@ class classy(Theory):
         for k,v in arguments.items():
             if k == "l_max":
                 # Take the max of the requested ones
-                self.fixed["l_max_scalars"] = max(v,self.fixed.get("l_max_scalars", 0))
+                self.fixed["l_max_scalars"] = max(v, self.fixed.get("l_max_scalars", 0))
             elif k == "Cl":
-                self.fixed["output"] = "tCl pCl lCl"
+                if any([("T" in cl) for cl in v]):
+                       self.fixed["output"] += " tCl"
+                if any([(("E" in cl) or ("B" in cl)) for cl in v]):
+                       self.fixed["output"] += " pCl"
+                # For modern experiments, always lensed Cl's!
+                self.fixed["output"] += " lCl"
                 self.fixed["lensing"] = "yes"
             else:
                 log.error("'%s' does not understand the requirement '%s:%s'.",
                     self.__class__.__name__,k,v)
                 raise HandledException
+        # Derived parameters (if some need some additional computations)
+        if "sigma8" in self.derived:
+            self.fixed["output"] += " mPk"
+            self.fixed["P_k_max_h/Mpc"] = max(1, self.fixed.get("P_k_max_h/Mpc", 0))
+        # Cleanup
+        self.fixed["output"] = " ".join(set(self.fixed["output"].split()))
 
-    def get_derived(self, derived, i_state):
-        """Populates a dictionary of derived parameters with their values, using the
-        state #`i_state`."""
-        for p in self.derived:
-            p_classy = camb_to_class.get(p,p)
-            # needs standard way to get derived parameters!
-            if hasattr(self.states[i_state]["classy"], p_classy):
-                derived[p] = getattr(self.states[i_state]["classy"], p_classy)()
-            else:
-                log.error("Derived param '%s' not implemented in the CLASS interface", p)
-                raise HandledException
+    def get_derived(self, i_state):
+        """
+        Populates a dictionary of derived parameters with their values, using the
+        state #`i_state`.
+        """
+        derived = {}
+        classy = self.states[i_state]["classy"]
+        p_classy = [camb_to_classy.get(p,p) for p in self.derived]
+        derived_aux = classy.get_current_derived_parameters(p_classy)
+        derived.update(
+            dict([(classy_to_camb.get(p,p),v) for p,v in derived_aux.iteritems()]))
+        # If another method for getting derived parameters added in the future,
+        # recover "if None in derived:" from the CAMB interface
+
+        try:
+            first_None = (p for p,v in derived.iteritems() if v==None).next()
+            log.error("Derived param '%s' not working in the CLASS interface", p)
+            raise HandledException
+        except StopIteration:
+            pass # all well!
+        return derived
 
     def get_cl(self):
         """
@@ -273,7 +302,7 @@ class classy(Theory):
         cl = current_classy.lensed_cl(self.fixed["l_max_scalars"])
         # convert dimensionless C_l's to C_l in muK**2
         T = current_classy.T_cmb()
-        for key in cl.iterkeys():
+        for key in cl:
             # All quantities need to be multiplied by this factor, except the
             # phi-phi term, that is already dimensionless
             if key not in ['pp', 'ell']:
