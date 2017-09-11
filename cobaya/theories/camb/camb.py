@@ -145,6 +145,7 @@ import sys
 import os
 from copy import deepcopy
 import numpy as np
+from collections import namedtuple
 
 # Local
 from cobaya.theory import Theory
@@ -154,6 +155,8 @@ from cobaya.log import HandledException
 import logging
 log = logging.getLogger(__name__)
 
+# Result collector
+collector = namedtuple("collector", ["method", "kwargs"])
 
 class camb(Theory):
 
@@ -186,9 +189,11 @@ class camb(Theory):
         self.camb = camb
         # Generate states, to avoid recomputing
         self.n_states = 3
-        self.states = [{"CAMBparams": None, "CAMBresults": None, "powers": None, 
+        self.states = [{"CAMBparams": None, "CAMBresults": None,
                         "params": None, "derived": None, "last": 0}
                        for i in range(self.n_states)]
+        # Dict of named tuples to collect requirements and computation methods
+        self.collectors = {}
         # patch: if cosmomc_theta is used, CAMB needs to be passed explicitly "H0=None"
         if (all((p in self.sampled_params()) for p in ["H0", "cosmomc_theta"]) or
             all((p in self.fixed) for p in ["H0", "cosmomc_theta"])):
@@ -239,9 +244,12 @@ class camb(Theory):
             # Compute the necessary products
             self.states[i_state]["CAMBresults"] = \
                 self.camb.get_results(self.states[i_state]["CAMBparams"])
-            self.states[i_state]["powers"] = \
-                self.states[i_state]["CAMBresults"].get_cmb_power_spectra(
-                    self.states[i_state]["CAMBparams"])
+            # extract all requested products
+            for product in self.collectors:
+                method = getattr(self.states[i_state]["CAMBresults"],
+                                 self.collectors[product].method)
+                self.states[i_state][product] = method(
+                    self.states[i_state]["CAMBparams"], **self.collectors[product].kwargs)
             # Prepare derived parameters
             if derived == {}:
                 derived.update(self.get_derived(i_state))
@@ -259,8 +267,9 @@ class camb(Theory):
                 # Take the max of the requested ones
                 self.fixed["lmax"] = max(v,self.fixed.get("lmax",0))
             elif k == "Cl":
-#####                print "TODO: better specification of Cl's for CAMB!!!"
-                pass
+                self.collectors["powers"] = collector(
+                    method="get_cmb_power_spectra",
+                    kwargs={"spectra": ["total"], "raw_cl": True})
             else:
                 log.error("'%s' does not understand the requirement '%s:%s'.",
                           self.__class__.__name__,k,v)
@@ -316,10 +325,9 @@ class camb(Theory):
               "tt": cl_camb[:,0], "te": cl_camb[:,3], "ee": cl_camb[:,1], "bb":cl_camb[:,2]}
         # convert dimensionless C_l's to C_l in muK**2
         T = current_state["CAMBparams"].TCMB
-        ell_factor = cl["ell"]*(cl["ell"]+1)/(2*np.pi)
         for key in cl.iterkeys():
             if key not in ['pp', 'ell']:
-                cl[key][2:] = cl[key][2:] /ell_factor[2:] *(T*1.e6)**2
+                cl[key][2:] = cl[key][2:] *(T*1.e6)**2
         return cl
 
 
