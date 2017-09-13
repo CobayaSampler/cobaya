@@ -17,8 +17,8 @@ import datetime
         
 # Local
 from cobaya.yaml_custom import yaml_custom_dump
-from cobaya.conventions import input_likelihood, input_theory, input_prior, input_params
-from cobaya.conventions import input_sampler, output_input_suffix, output_full_suffix
+from cobaya.conventions import _likelihood, _theory, _prior, _params
+from cobaya.conventions import _sampler, _input_suffix, _full_suffix
 from cobaya.conventions import separator
 from cobaya.log import HandledException
 
@@ -65,19 +65,19 @@ class Output():
         """
         self.info_full = deepcopy(self.info_input)
         for lik in likelihood:
-            if self.info_full[input_likelihood][lik] == None:
-                self.info_full[input_likelihood][lik] = {}
+            if self.info_full[_likelihood][lik] == None:
+                self.info_full[_likelihood][lik] = {}
             try:
-                self.info_full[input_likelihood][lik].update(likelihood[lik])
+                self.info_full[_likelihood][lik].update(likelihood[lik])
             except AttributeError:
                 # External likelihoods given directly as a function
-                self.info_full[input_likelihood][lik] = likelihood[lik]
+                self.info_full[_likelihood][lik] = likelihood[lik]
         if theory:
-            self.info_full.update({input_theory: theory})
+            self.info_full.update({_theory: theory})
         if prior:
-            self.info_full.update({input_prior: prior})
-        self.info_full.update({input_params: params})
-        self.info_full.update({input_sampler: sampler})
+            self.info_full.update({_prior: prior})
+        self.info_full.update({_params: params})
+        self.info_full.update({_sampler: sampler})
 
     def updated_info(self):
         return deepcopy(self.info_full)
@@ -91,8 +91,8 @@ class Output():
         file_prefix = self.prefix
         if self.prefix:
             file_prefix += separator
-        file_input = os.path.join(self.folder, file_prefix+output_input_suffix+".yaml")
-        file_full = os.path.join(self.folder, file_prefix+output_full_suffix+".yaml")
+        file_input = os.path.join(self.folder, file_prefix+_input_suffix+".yaml")
+        file_full = os.path.join(self.folder, file_prefix+_full_suffix+".yaml")
         for f, info in [(file_input, self.info_input), (file_full, self.info_full)]: 
             if os.path.isfile(f):
                 log.error("Chain continuation not implemented. "

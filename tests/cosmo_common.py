@@ -3,8 +3,8 @@ import numpy as np
 import os
 from collections import OrderedDict as odict
 
-from cobaya.conventions import input_theory, input_likelihood, input_params
-from cobaya.conventions import input_sampler, _chi2, separator
+from cobaya.conventions import _theory, _likelihood, _params
+from cobaya.conventions import _sampler, _chi2, separator
 
 # Tolerance for the tests
 tolerance_chi2_abs = 0.1
@@ -94,7 +94,7 @@ baseline_cosmology = r"""
         scale: 0.004
       proposal: 0.002
       latex: n_\mathrm{s}
-"""%(input_params, input_theory)
+"""%(_params, _theory)
 
 # Derived parameters, described in
 # https://wiki.cosmos.esa.int/planckpla2015/images/b/b9/Parameter_tag_definitions_2015.pdf
@@ -186,7 +186,7 @@ params_lowl_highTT = """
   gal545_A_217:     82.9
   calib_100T: 0.99796
   calib_217T: 0.99555
-"""%(input_params, input_theory)
+"""%(_params, _theory)
 
 derived_lowl_highTT = {
     # param: [best_fit, sigma]
@@ -289,4 +289,4 @@ params_lowTEB_highTTTEEE = """
   galf_TE_A_217: 1.667
   calib_100T: 0.99818
   calib_217T: 0.99598
-"""%(input_params, input_theory)
+"""%(_params, _theory)

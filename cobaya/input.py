@@ -18,8 +18,8 @@ from numbers import Number
 from getdist import MCSamples
 
 # Local
-from cobaya.conventions import subfolders, defaults_file, input_params, input_p_label
-from cobaya.conventions import input_prior, input_theory, input_likelihood, input_sampler
+from cobaya.conventions import subfolders, _defaults_file, _params, _p_label
+from cobaya.conventions import _prior, _theory, _likelihood, _sampler
 from cobaya.tools import get_labels
 from cobaya.yaml_custom import yaml_custom_load
 from cobaya.log import HandledException
@@ -47,11 +47,11 @@ def load_input(input_file):
         raise HandledException
     return info
 
-def load_input_yaml(input_file, defaults_file=True):
+def load_input_yaml(input_file, _defaults_file=True):
     """Wrapper to load a yaml file."""
     with open(input_file,"r") as stream:
         lines = "".join(stream.readlines())
-    file_name = (input_file if not defaults_file
+    file_name = (input_file if not _defaults_file
                  else "/".join(input_file.split(os.sep)[-2:]))
     return yaml_custom_load(lines, file_name=file_name)
 
@@ -72,7 +72,7 @@ def get_modules(*infos):
     """Returns modules all requested as an odict ``{kind: set([modules])}``."""
     modules = odict()
     for info in infos:
-        for field in [input_theory, input_likelihood, input_sampler]:
+        for field in [_theory, _likelihood, _sampler]:
             if not field in modules:
                 modules[field] = set()
             modules[field] |= (lambda v: set(v) if v else set())(info.get(field))
@@ -84,7 +84,7 @@ def get_modules(*infos):
     return modules
 
 # Class initialisation using default and input info
-def load_input_and_defaults(instance, input_info, kind=None, load_defaults_file=True):
+def load_input_and_defaults(instance, input_info, kind=None, load__defaults_file=True):
     """
     Loads the default info for a class instance, updates with the input info,
     and returns the updated default+input info.
@@ -94,10 +94,10 @@ def load_input_and_defaults(instance, input_info, kind=None, load_defaults_file=
     # start with class-level-defaults, if they exist
     defaults = odict([[class_name,getattr(instance, "_parent_defaults", odict())]])
     # then load the class-specific defaults from its defaults.yaml file
-    if load_defaults_file:
+    if load__defaults_file:
         class_defaults_path = os.path.join(
-            os.path.dirname(__file__), subfolders[kind], class_name, defaults_file)
-        class_defaults = load_input_yaml(class_defaults_path, defaults_file=True)[kind]
+            os.path.dirname(__file__), subfolders[kind], class_name, _defaults_file)
+        class_defaults = load_input_yaml(class_defaults_path, _defaults_file=True)[kind]
         if not class_name in class_defaults:
             log.error(
                 "The defaults file should contain the field '%s:%s'.", kind, class_name)
@@ -105,7 +105,7 @@ def load_input_and_defaults(instance, input_info, kind=None, load_defaults_file=
         defaults[class_name].update(class_defaults[class_name])
     # 2. Update it with the input_info -- parameters dealt with later (see "load_params")
     if kind != "sampler":
-        setattr(instance, "_params_defaults", defaults[class_name].pop(input_params, odict()))
+        setattr(instance, "_params_defaults", defaults[class_name].pop(_params, odict()))
     # consistency is checked only up to first level! (i.e. subkeys may not match)
     if input_info == None:
         input_info = {}
@@ -186,9 +186,9 @@ def load_params(instance, params_info, allow_unknown_prefixes=[]):
             old_kind = kind
         # Inherit now-undefined latex label and derived parameter limits
         if old_kind in ["sampled", "derived"] and kind in ["sampled", "derived"]:
-            if not v.get(input_p_label):
-                old_label = getattr(instance, kind).get(p, {}).get(input_p_label, None)
-                v[input_p_label] = old_label
+            if not v.get(_p_label):
+                old_label = getattr(instance, kind).get(p, {}).get(_p_label, None)
+                v[_p_label] = old_label
         if old_kind == "derived" and kind in "derived":
             for lim in ["min", "max"]:
                 if not v.get(lim):

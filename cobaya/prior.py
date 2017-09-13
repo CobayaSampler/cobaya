@@ -224,7 +224,7 @@ import numbers
 import inspect
 
 # Local
-from cobaya.conventions import input_prior, input_p_dist, input_p_ref, input_p_label
+from cobaya.conventions import _prior, _p_dist, _p_ref, _p_label
 from cobaya.tools import get_labels, get_external_function, get_scipy_1d_pdf
 from cobaya.log import HandledException
 
@@ -252,14 +252,14 @@ class Prior():
         self.ref_pdf = []
         self.properties = odict()
         for p in params_info:
-            prior = params_info[p].get(input_prior)
+            prior = params_info[p].get(_prior)
             if prior == None:
                 log.error("You need to define a prior for your parameter. "
                           "Check out the syntax for that in the docs.")
                 raise HandledException
             self.pdf += [get_scipy_1d_pdf({p: prior})]
             # Get the reference (1d) pdf
-            ref = params_info[p].get(input_p_ref)
+            ref = params_info[p].get(_p_ref)
             # Cases: number, pdf (something, but not a number), nothing
             if isinstance(ref, numbers.Number):
                 self.ref_pdf += [ref]
@@ -270,7 +270,7 @@ class Prior():
             # Store the rest of the properties
             self.properties[p] = dict(
                 [(k,v) for k,v in params_info[p].iteritems()
-                 if k not in [input_prior,input_p_ref,input_p_label]])
+                 if k not in [_prior,_p_ref,_p_label]])
         # Process the external prior(s):
         self.external = odict()
         for name in (info_prior if info_prior else {}):

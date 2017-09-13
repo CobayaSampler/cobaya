@@ -10,19 +10,19 @@
 package = __name__.rpartition('.')[0]
 
 # Names for block and fields in the input
-input_likelihood = "likelihood"
-input_prior      = "prior"
-input_theory     = "theory"
-input_sampler    = "sampler"
-input_params     = "params"
-input_p_dist     = "dist"
-input_p_ref      = "ref"
-input_p_label    = "latex"
-input_debug      = "debug"
-input_debug_file = "debug_file"
-input_output_prefix = "output_prefix"
-input_path_install = "path_to_modules"
-input_likelihood_external = "external"
+_likelihood = "likelihood"
+_prior      = "prior"
+_theory     = "theory"
+_sampler    = "sampler"
+_params     = "params"
+_p_dist     = "dist"
+_p_ref      = "ref"
+_p_label    = "latex"
+_debug      = "debug"
+_debug_file = "debug_file"
+_output_prefix = "output_prefix"
+_path_install = "path_to_modules"
+_external = "external"
 
 # Separator for different names.
 # Its manual inclusion in a string anywhere else (e.g. a parameter name) is forbidden.
@@ -36,11 +36,11 @@ _chi2          = "chi2"          # chi^2 = -2 * loglik
 _derived_pre   = "derived"+separator  # prefix for derived parameters
 
 # Output files
-output_input_suffix = "input"
-output_full_suffix  = "full"
+_input_suffix = "input"
+_full_suffix  = "full"
 
 # Internal package structure
-defaults_file = "defaults.yaml"
-subfolders = {input_likelihood: "likelihoods",
-              input_sampler: "samplers",
-              input_theory: "theories"}
+_defaults_file = "defaults.yaml"
+subfolders = {_likelihood: "likelihoods",
+              _sampler: "samplers",
+              _theory: "theories"}

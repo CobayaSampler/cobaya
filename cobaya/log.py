@@ -16,7 +16,7 @@ import logging
 import traceback
 
 # Local
-from cobaya.conventions import input_debug, input_debug_file
+from cobaya.conventions import _debug, _debug_file
 from cobaya.mpi import get_mpi, get_mpi_rank
 
 
@@ -42,7 +42,7 @@ def exception_handler(exception_type, value, trace_back):
         "We recommend trying to reproduce this error with '%s:True' in the input.\n"
         "If you cannot solve it yourself and need to report it, include the debug ouput,\n"
         "which you can send it to a file setting '%s:[some_file_name]'.",
-        input_debug, input_debug_file)
+        _debug, _debug_file)
 
 def logger_setup(debug=None, debug_file=None):
     """

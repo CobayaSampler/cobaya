@@ -13,9 +13,9 @@ import inspect
 from copy import deepcopy
 
 # Local
-from cobaya.conventions import input_output_prefix, input_params, input_prior
-from cobaya.conventions import input_sampler, input_likelihood, output_full_suffix
-from cobaya.conventions import _chi2, separator, input_likelihood_external
+from cobaya.conventions import _output_prefix, _params, _prior
+from cobaya.conventions import _sampler, _likelihood, _full_suffix
+from cobaya.conventions import _chi2, separator, _external
 from cobaya.run import run
 from cobaya.yaml_custom import yaml_custom_load
 
@@ -52,43 +52,43 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
         shutil.rmtree(prefix)
     # build full info
     info = {
-        input_output_prefix: prefix,
-        input_params: {
-            "x": {input_prior: {"min":  0, "max": 1}, "proposal": 0.05},
-            "y": {input_prior: {"min": -1, "max": 1}, "proposal": 0.05}},
-        input_sampler: {
+        _output_prefix: prefix,
+        _params: {
+            "x": {_prior: {"min":  0, "max": 1}, "proposal": 0.05},
+            "y": {_prior: {"min": -1, "max": 1}, "proposal": 0.05}},
+        _sampler: {
             "mcmc": {"max_samples": (10 if not manual else 5000),
                      "learn_proposal": False}}
     }
     if derived:
-        info[input_params].update({"r": {"min":0, "max":1},
+        info[_params].update({"r": {"min":0, "max":1},
                                    "theta": {"min":-0.5, "max":0.5}})
     # Complete according to kind
-    if kind == input_prior:
-        info.update({input_prior: info_logpdf,
-                     input_likelihood: {"one": {"mock_prefix": ""}}})
-    elif kind == input_likelihood:
-        info.update({input_likelihood: info_logpdf})
+    if kind == _prior:
+        info.update({_prior: info_logpdf,
+                     _likelihood: {"one": {"mock_prefix": ""}}})
+    elif kind == _likelihood:
+        info.update({_likelihood: info_logpdf})
     else:
         raise ValueError("Kind of test not known.")
     # Run
     updated_info, products = run(info)
     # Test values
     logprior_base = - np.log(
-        (info[input_params]["x"][input_prior]["max"]-
-         info[input_params]["x"][input_prior]["min"])*
-        (info[input_params]["y"][input_prior]["max"]-
-         info[input_params]["y"][input_prior]["min"]))
+        (info[_params]["x"][_prior]["max"]-
+         info[_params]["x"][_prior]["min"])*
+        (info[_params]["y"][_prior]["max"]-
+         info[_params]["y"][_prior]["min"]))
     logps = dict([
         (name, logpdf(**dict([(arg, products["sample"][arg].values) for arg in inspect.getargspec(logpdf)[0]])))
         for name, logpdf in {"half_ring":half_ring_func, "gaussian_y":gaussian_func}.iteritems()])
     # Test #1: values of logpdf's
-    if kind == input_prior:
+    if kind == _prior:
         assert np.allclose(logprior_base+sum(logps[p] for p in info_logpdf),
                            -products["sample"]["minuslogprior"].values), (
             "The value of the prior is not reproduced correctly.")
-    elif kind == input_likelihood:
-        for lik in info[input_likelihood]:
+    elif kind == _likelihood:
+        for lik in info[_likelihood]:
             assert np.allclose(-2*logps[lik],
                                products["sample"][_chi2+separator+lik].values), (
                 "The value of the likelihood '%s' is not reproduced correctly."%lik)
@@ -105,28 +105,28 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
              for p, v in derived_values.iteritems()]), (
             "The value of the derived parameters is not reproduced correctly.")
     # Test updated info -- scripted
-    if kind == input_prior:
-        assert info[input_prior] == updated_info[input_prior], (
+    if kind == _prior:
+        assert info[_prior] == updated_info[_prior], (
             "The prior information has not been updated correctly.")
-    elif kind == input_likelihood:
+    elif kind == _likelihood:
         # Transform the likelihood info to the "external" convention
-        info_likelihood = deepcopy(info[input_likelihood])
+        info_likelihood = deepcopy(info[_likelihood])
         for lik, value in info_likelihood.iteritems():
             if not hasattr(value, "get"):
-                info_likelihood[lik] = {input_likelihood_external: value}
-        assert info_likelihood == updated_info[input_likelihood], (
+                info_likelihood[lik] = {_external: value}
+        assert info_likelihood == updated_info[_likelihood], (
             "The likelihood information has not been updated correctly.")
     # Test updated info -- yaml
     # For now, only if ALL external pdfs are given as strings, since the YAML load fails otherwise
     stringy = dict([(k,v) for k,v in info_logpdf.iteritems() if isinstance(v, basestring)])
     if stringy == info_logpdf:
-        full_output_file = os.path.join(prefix, output_full_suffix+".yaml")
+        full_output_file = os.path.join(prefix, _full_suffix+".yaml")
         with open(full_output_file) as full:
             updated_yaml = yaml_custom_load("".join(full.readlines()))
         for k,v in stringy.iteritems():
             to_test = updated_yaml[kind][k]
-            if kind == input_likelihood:
-                to_test = to_test[input_likelihood_external]
+            if kind == _likelihood:
+                to_test = to_test[_external]
             assert to_test == info_logpdf[k], (
                 "The updated external pdf info has not been written correctly.")
 

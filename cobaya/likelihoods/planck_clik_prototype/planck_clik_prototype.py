@@ -66,7 +66,7 @@ import numpy as np
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import HandledException
-from cobaya.conventions import input_likelihood, subfolders, input_path_install
+from cobaya.conventions import _likelihood, subfolders, _path_install
 
 # Logger
 import logging
@@ -83,11 +83,11 @@ class planck_clik_prototype(Likelihood):
             if not self.path:
                 if self.path_to_installation:
                     self.path = os.path.join(
-                        self.path_to_installation, subfolders[input_likelihood], common_path)
+                        self.path_to_installation, subfolders[_likelihood], common_path)
                 else:
                     log.error("No path given to the Planck likelihood. Set the likelihood "
                               "property 'path' or the common property '%s'."
-                              %input_path_install)
+                              %_path_install)
                     raise HandledException
             log.info("[%s] Importing clik from %s", self.name, self.path)
             # test and import clik
@@ -320,10 +320,10 @@ def install_clik(path):
 
 def get_product_id_and_clik_file(name):
     # get it from the defaults.yaml file
-    from cobaya.conventions import defaults_file, input_likelihood
-    path_defaults_file = os.path.join(os.path.dirname(__file__), "..", name, defaults_file)
+    from cobaya.conventions import _defaults_file, _likelihood
+    path__defaults_file = os.path.join(os.path.dirname(__file__), "..", name, _defaults_file)
     from cobaya.input import load_input_yaml
-    defaults = load_input_yaml(path_defaults_file)[input_likelihood][name]
+    defaults = load_input_yaml(path__defaults_file)[_likelihood][name]
     return defaults["product_id"], defaults["clik_file"]
 
 def is_installed(**kwargs):

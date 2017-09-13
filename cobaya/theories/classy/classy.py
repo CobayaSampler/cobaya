@@ -127,7 +127,7 @@ import numpy as np
 # Local
 from cobaya.theory import Theory
 from cobaya.log import HandledException
-from cobaya.conventions import subfolders, input_theory
+from cobaya.conventions import subfolders, _theory
 
 # Logger
 import logging
@@ -155,7 +155,7 @@ class classy(Theory):
         # If path not given, try using general path to modules
         if not self.path and self.path_to_installation:
             self.path = os.path.join(
-                self.path_to_installation, subfolders[input_theory], "CLASS")
+                self.path_to_installation, subfolders[_theory], "CLASS")
         if self.path:
             log.info("Importing *local* CLASS from "+self.path)
             if not os.path.exists(self.path):

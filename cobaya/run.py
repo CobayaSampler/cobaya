@@ -19,13 +19,13 @@ def run(info):
         "`cobaya.input.load_input`.")
 
     # Import names
-    from cobaya.conventions import input_likelihood, input_prior, input_params
-    from cobaya.conventions import input_theory, input_sampler, input_path_install
-    from cobaya.conventions import input_debug, input_debug_file, input_output_prefix
+    from cobaya.conventions import _likelihood, _prior, _params
+    from cobaya.conventions import _theory, _sampler, _path_install
+    from cobaya.conventions import _debug, _debug_file, _output_prefix
 
     # Configure the logger ASAP
     from cobaya.log import logger_setup
-    logger_setup(info.get(input_debug), info.get(input_debug_file))
+    logger_setup(info.get(_debug), info.get(_debug_file))
     
     # Debug (lazy call)
     import logging
@@ -44,7 +44,7 @@ def run(info):
     from cobaya.likelihood import LikelihoodCollection as Likelihood
 
     # Initialise output, if requiered
-    do_output = info.get(input_output_prefix)
+    do_output = info.get(_output_prefix)
     if do_output:
         Output = import_MPI(".output", "Output")
         output = Output(info)
@@ -52,13 +52,14 @@ def run(info):
         from cobaya.output import Output_dummy
         output = Output_dummy(info)
 
-    # Initialise likelihoods and prior
+    # Initialise parametrisation, likelihoods and prior
+#    with Parametrisation(info[_params)
     with Likelihood(
-            info_likelihood=info[input_likelihood], info_params=info[input_params],
-            info_prior=info.get(input_prior), info_theory=info.get(input_theory),
-            path_to_installation=info.get(input_path_install)) as likelihood:
+            info_likelihood=info[_likelihood], info_params=info[_params],
+            info_prior=info.get(_prior), info_theory=info.get(_theory),
+            path_to_installation=info.get(_path_install)) as likelihood:
         with Prior(likelihood.sampled_params(), info_prior=likelihood.updated_info_prior()) as prior:
-            with Sampler(info[input_sampler], prior, likelihood, output) as sampler:
+            with Sampler(info[_sampler], prior, likelihood, output) as sampler:
                 # Save the model info (updated by the likelihood and prior)
                 output.update_info(
                     likelihood=likelihood.updated_info(),
@@ -86,9 +87,9 @@ def run_script():
     args = parser.parse_args()
     info = load_input(args.input_file[0])
     # solve path
-    from cobaya.conventions import input_path_install
+    from cobaya.conventions import _path_install
     path_cmd = (lambda x: x[0] if x else None)(getattr(args, "path"))
-    path_input = info.get(input_path_install)
+    path_input = info.get(_path_install)
     if path_cmd:
         if path_input:
             raise ValueError("CONFLICT: "

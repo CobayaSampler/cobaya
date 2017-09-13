@@ -51,7 +51,7 @@ from __future__ import division
 from importlib import import_module
 
 # Local
-from cobaya.conventions import *
+from cobaya.conventions import _sampler, package
 from cobaya.tools import get_folder
 from cobaya.input import load_input_and_defaults
 from cobaya.log import HandledException
@@ -135,7 +135,7 @@ def get_Sampler(info_sampler, prior, likelihood, output_file):
     """
     try:
         name = info_sampler.keys()[0]
-        class_folder = get_folder(name, input_sampler, sep=".", absolute=False)
+        class_folder = get_folder(name, _sampler, sep=".", absolute=False)
         sampler_class = getattr(
             import_module(class_folder, package=package), name)
     except ImportError:

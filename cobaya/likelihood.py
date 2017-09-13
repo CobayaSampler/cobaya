@@ -113,8 +113,8 @@ from scipy import stats
 import inspect
 
 # Local
-from cobaya.conventions import input_likelihood, input_prior, input_params, input_theory
-from cobaya.conventions import input_likelihood_external
+from cobaya.conventions import _likelihood, _prior, _params, _theory
+from cobaya.conventions import _external
 from cobaya.tools import get_class, get_external_function
 from cobaya.input import load_input_and_defaults, load_params, get_updated_params_info
 from cobaya.log import HandledException
@@ -133,7 +133,7 @@ class Likelihood():
         self.path_to_installation = path_to_installation
         # Load default and input info
         self._updated_info = load_input_and_defaults(
-            self, info_likelihood, kind=input_likelihood)
+            self, info_likelihood, kind=_likelihood)
         # Initialise
         self.theory = theory
         self.initialise()
@@ -213,11 +213,11 @@ class LikelihoodExternalFunction(Likelihood):
         # Updated info
         self.name = name
         self._updated_info = {
-            name: getattr(info, input_likelihood_external, None) or # passed as "external"
-                  {input_likelihood_external: info}}                # passed directly
+            name: getattr(info, _external, None) or # passed as "external"
+                  {_external: info}}                # passed directly
         # Store the external function and its arguments
         self.external_function = get_external_function(
-            self._updated_info[name][input_likelihood_external])
+            self._updated_info[name][_external])
         argspec = inspect.getargspec(self.external_function)
         self._params_defaults = odict([(p, None) for p in argspec.args if p!="derived"])
         self.has_derived = "derived" in argspec.args
@@ -243,13 +243,13 @@ class LikelihoodCollection():
                  path_to_installation=None):
         # *IF* there is a theory code, initialise it and separate the parameters
         if info_theory:
-            info_params_theory = info_params.get(input_theory)
+            info_params_theory = info_params.get(_theory)
             name, fields = info_theory.items()[0]
-            self.theory = get_class(name, kind=input_theory)(
+            self.theory = get_class(name, kind=_theory)(
                 fields, info_params=info_params_theory,
                 path_to_installation=path_to_installation)
             self._params_input = odict([(k,v) for k,v in info_params.iteritems()
-                                        if k!=input_theory])
+                                        if k!=_theory])
         else:
             # Parameters not separated in blocks <-> There is no theory
             info_params_theory = None
@@ -297,7 +297,7 @@ class LikelihoodCollection():
         # "Externally" defined priors
         self._info_prior = {}
         for lik in self.likelihoods.values():
-            new = getattr(lik, input_prior, {})
+            new = getattr(lik, _prior, {})
             if any((k in self._info_prior) for k in new):
                 log.error("There are default priors sharing a name.")
                 raise HandledException
@@ -387,7 +387,7 @@ class LikelihoodCollection():
                 params = [p for p in self.sampled if p.startswith(lik.mock_prefix)]
             blocks[name] = params
         if self.theory:
-            blocks[input_theory] = [p for p in self.theory.sampled]
+            blocks[_theory] = [p for p in self.theory.sampled]
         return blocks
             
     def speed_blocked_params(self, as_indices=False):
@@ -399,7 +399,7 @@ class LikelihoodCollection():
         speeds = odict([[name,getattr(lik, "speed", 1)]
                         for name,lik in self.likelihoods.iteritems()])
         if self.theory:
-            speeds[input_theory] = self.theory.speed
+            speeds[_theory] = self.theory.speed
         speed_blocked = [[speed,params_blocks[name]] for name,speed in speeds.iteritems()]
         speed_blocked.sort()
         speed_blocked.reverse() # easier to look for slower ones
@@ -424,7 +424,7 @@ class LikelihoodCollection():
         updated_info = odict()
         for name, lik in self.likelihoods.iteritems():
             updated_info[name] = dict([(k,v) for k,v in lik._updated_info[name].iteritems()
-                                       if k != input_params])
+                                       if k != _params])
         return updated_info
 
     def updated_info_theory(self):
@@ -436,7 +436,7 @@ class LikelihoodCollection():
     def updated_info_params(self):
         if self.theory:
             return odict([(k,v) for k,v in zip(
-                [input_theory, input_likelihood],
+                [_theory, _likelihood],
                 [self.theory.updated_info_params(), self._updated_info_params_liks])])
         else:
             return self._updated_info_params_liks

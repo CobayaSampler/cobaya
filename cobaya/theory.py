@@ -28,7 +28,7 @@ from collections import OrderedDict as odict
 from importlib import import_module
 
 # Local
-from cobaya.conventions import input_theory
+from cobaya.conventions import _theory
 from cobaya.tools import get_folder
 from cobaya.input import load_input_and_defaults, load_params, get_updated_params_info
 from cobaya.log import HandledException
@@ -76,7 +76,7 @@ class Theory():
         # Installation path
         self.path_to_installation = path_to_installation
         # Load info of the code
-        self._updated_info = load_input_and_defaults(self, info_theory, kind=input_theory)
+        self._updated_info = load_input_and_defaults(self, info_theory, kind=_theory)
         load_params(self, info_params, allow_unknown_prefixes=[""])
         self._updated_info_params = get_updated_params_info(self)
         self.initialise()

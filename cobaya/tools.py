@@ -21,8 +21,8 @@ import inspect
 import scipy.stats as stats
 
 # Local
-from cobaya.conventions import package, subfolders, input_likelihood
-from cobaya.conventions import input_p_label, input_p_dist, input_prior, input_debug
+from cobaya.conventions import package, subfolders, _likelihood
+from cobaya.conventions import _p_label, _p_dist, _prior, _debug
 from cobaya.log import HandledException
 
 # Logger
@@ -37,7 +37,7 @@ def get_folder(name, kind, sep="/", absolute="True"):
     pre = os.path.dirname(__file__)+sep if absolute else ""+(sep if sep=="." else "")
     return pre + subfolders[kind] + sep + name
 
-def get_class(name, kind=input_likelihood):
+def get_class(name, kind=_likelihood):
     """
     Retrieves the requested likelihood (default) or theory class.
 
@@ -88,7 +88,7 @@ def get_labels(params_info):
     """
     labels = odict()
     for p in params_info:
-        label = params_info[p].get(input_p_label)
+        label = params_info[p].get(_p_label)
         if not label:
             label = p
         labels[p] = ensure_latex(label)
@@ -112,7 +112,7 @@ def get_scipy_1d_pdf(info):
     info2 = deepcopy(info[param])
     # What distribution?
     try:
-        dist = info2.pop(input_p_dist).lower()
+        dist = info2.pop(_p_dist).lower()
     # Not specified: uniform by default
     except KeyError:
         dist = "uniform"
