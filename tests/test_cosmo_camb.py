@@ -39,13 +39,15 @@ def body_of_test(modules, x):
                                   "planck_2015_plikHM_TTTEEE": None}
         info.update(yaml_custom_load(params_lowTEB_highTTTEEE))
         ref_chi2 = chi2_lowTEB_highTTTEEE
-        derived_values = derived_lowTEB_highTTTEEE
+        derived_values = derived_lowl_highTT
+        print "TODO: ~~~~~~ change previous line to correct TTTEEE derived ~~~~~~"
     else:
         raise ValueError("Test not recognised: %r"%x)
     use_H0_instead_of_theta = False
     if use_H0_instead_of_theta:
         info[input_params][input_theory].pop("cosmomc_theta")
         derived.pop("H0")
+        derived_values.pop("H0")
     else:
         info[input_params][input_theory].pop("H0")
     # Add derived

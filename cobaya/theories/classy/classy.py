@@ -80,7 +80,7 @@ shell produces an error, install it with ``pip install cython --user``.
       $ cd /path/to/cosmo/
       $ wget https://github.com/lesgourg/class_public/archive/master.zip
       $ unzip master.zip
-      $ rm master.zip       
+      $ rm master.zip
       $ mv class_public-master CLASS
       $ cd CLASS
       $ make
@@ -98,9 +98,9 @@ interface (contact CLASS' developers if you need help with that).
    At this moment, CLASS is not compatible with ``gcc`` version 5.0 and above
    (type ``gcc --version`` to check yours). This would cause an error when trying to use
    CLASS in cobaya, containing a line similar to
- 
+
    .. code::
-   
+
       /home/<username>/.local/lib/python2.7/site-packages/classy.so: undefined symbol: _ZGVbN2v_sin
 
    To solve it, open the file ``Makefile`` in the CLASS folder and add change the line
@@ -111,7 +111,7 @@ interface (contact CLASS' developers if you need help with that).
       CCFLAG = -g -fPIC -fno-tree-vectorize
 
    Finally, clean and recompile, using ``make clean ; make``.
-      
+
    **Source:** `CLASS issue #99 in github <https://github.com/lesgourg/class_public/issues/99>`_
 
 """
@@ -213,6 +213,100 @@ class classy(Theory):
         self.states[i_state]["params"] = params_values_dict
         self.states[i_state]["classy"].struct_cleanup()
         try:
+            print "TODO: Delete following block"
+            for k,v in args.iteritems():
+                print k,v
+            print "TODO: TESTING: Delete following block!"
+            if True:
+                # Halofit
+                args["non linear"] = "halofit"
+                # Halofit (twice precision) -----------------------------------
+                # args["halofit_dz"] = 0.05
+                # args["halofit_min_k_nonlinear"] = 0.001
+                # args["halofit_k_per_decade"] = 160
+                # args["halofit_sigma_precision"] = 0.025
+                # DOESN'T WORK: args["halofit_min_k_max"] = 10.
+                # Higher lensing precision -----------------------------------
+                # args["accurate_lensing"]=1
+                # args["num_mu_minus_lmax"] = 2000.
+                # args["delta_l_max"] = 1000.
+                # Other reasonable high precision params ---------------------
+                # args["tol_background_integration"] = 1.e-3
+                # args["tol_thermo_integration"] = 1.e-3
+                # args["tol_perturb_integration"] = 1.e-6
+                # args["reionization_optical_depth_tol"] = 1.e-5
+                # args["l_logstep"] = 1.08
+                # args["l_linstep"] = 25
+                # args["perturb_sampling_stepsize"] = 0.04
+                # cl_permille ------------------------------------------------
+                # args["hyper_flat_approximation_nu"] = 7000.
+                # args["transfer_neglect_delta_k_S_t0"] = 0.17
+                # args["transfer_neglect_delta_k_S_t1"] = 0.05
+                # args["transfer_neglect_delta_k_S_t2"] = 0.17
+                # args["transfer_neglect_delta_k_S_e"] = 0.13
+                # args["delta_l_max"] = 1000
+                # cl_ref ------------------------------------------------------
+                # args["tol_ncdm_bg"]= 1.e-10
+                # args["recfast_Nz0"]=100000
+                # args["tol_thermo_integration"]=1.e-5
+                # args["recfast_x_He0_trigger_delta"]= 0.01
+                # args["recfast_x_H0_trigger_delta"]= 0.01
+                # args["evolver"]=0
+                # args["k_min_tau0"]=0.002
+                # args["k_max_tau0_over_l_max"]=3.
+                # args["k_step_sub"]=0.015
+                # args["k_step_super"]=0.0001
+                # args["k_step_super_reduction"]=0.1
+                # args["start_small_k_at_tau_c_over_tau_h"]= 0.0004
+                # args["start_large_k_at_tau_h_over_tau_k"]= 0.05
+                # args["tight_coupling_trigger_tau_c_over_tau_h"]=0.005
+                # args["tight_coupling_trigger_tau_c_over_tau_k"]=0.008
+                # args["start_sources_at_tau_c_over_tau_h"]= 0.006
+                # args["l_max_g"]=50
+                # args["l_max_pol_g"]=25
+                # args["l_max_ur"]=50
+                # args["l_max_ncdm"]=50
+                # args["tol_perturb_integration"]=1.e-6
+                # args["perturb_sampling_stepsize"]=0.01
+                # args["radiation_streaming_approximation"]= 2
+                # args["radiation_streaming_trigger_tau_over_tau_k"]= 240.
+                # args["radiation_streaming_trigger_tau_c_over_tau"]= 100.
+                # args["ur_fluid_approximation"]= 2
+                # args["ur_fluid_trigger_tau_over_tau_k"]= 50.
+                # args["ncdm_fluid_approximation"]= 3
+                # args["ncdm_fluid_trigger_tau_over_tau_k"]= 51.
+                # args["tol_ncdm_synchronous"]= 1.e-10
+                # args["tol_ncdm_newtonian"]= 1.e-10
+                # args["l_logstep"]=1.026
+                # args["l_linstep"]=25
+                # args["hyper_sampling_flat"]= 12.
+                # args["hyper_sampling_curved_low_nu"]= 10.
+                # args["hyper_sampling_curved_high_nu"]= 10.
+                # args["hyper_nu_sampling_step"]= 10.
+                # args["hyper_phi_min_abs"]= 1.e-10
+                # args["hyper_x_tol"]= 1.e-4
+                # args["hyper_flat_approximation_nu"]= 1.e6
+                # args["q_linstep"]=0.20
+                # args["q_logstep_spline"]= 20.
+                # args["q_logstep_trapzd"]= 0.5
+                # args["q_numstep_transition"]= 250
+                # args["transfer_neglect_delta_k_S_t0"]= 100.
+                # args["transfer_neglect_delta_k_S_t1"]= 100.
+                # args["transfer_neglect_delta_k_S_t2"]= 100.
+                # args["transfer_neglect_delta_k_S_e"]= 100.
+                # args["transfer_neglect_delta_k_V_t1"]= 100.
+                # args["transfer_neglect_delta_k_V_t2"]= 100.
+                # args["transfer_neglect_delta_k_V_e"]= 100.
+                # args["transfer_neglect_delta_k_V_b"]= 100.
+                # args["transfer_neglect_delta_k_T_t2"]= 100.
+                # args["transfer_neglect_delta_k_T_e"]= 100.
+                # args["transfer_neglect_delta_k_T_b"]= 100.
+                # args["neglect_CMB_sources_below_visibility"]= 1.e-30
+                # args["transfer_neglect_late_source"]= 3000.
+                # args["l_switch_limber"]= 40.
+                # args["accurate_lensing"]=1
+                # args["num_mu_minus_lmax"]= 1000.
+                # args["delta_l_max"]= 1000.
             self.states[i_state]["classy"].set(**args)
         except Exception:
             log.error("Error setting CLASS parameters -- see CLASS's error trace below.\n"
@@ -284,7 +378,10 @@ class classy(Theory):
             dict([(classy_to_camb.get(p,p),v) for p,v in derived_aux.iteritems()]))
         # If another method for getting derived parameters added in the future,
         # recover "if None in derived:" from the CAMB interface
-
+        print "TODO: Delete following block!"
+        for p,v in derived.iteritems():
+            print "-*-*-*-*-*-*-*-*-*-*-*-*", p, derived[p]
+        # Check if all processes (actually does nothing here)
         try:
             first_None = (p for p,v in derived.iteritems() if v==None).next()
             log.error("Derived param '%s' not working in the CLASS interface", p)
@@ -351,9 +448,9 @@ def install(force=False, path=None ,**kwargs):
         tar.close()
         os.remove(filename)
     except:
-        log.error("Error decompressing downloaded file! Corrupt file?)")    
+        log.error("Error decompressing downloaded file! Corrupt file?)")
     os.rename(classy_path_decompressed, classy_path)
-    # Patch for gcc>=5   
+    # Patch for gcc>=5
     from subprocess import Popen, PIPE
     # patch (hopefully will be removed in the future)
     log.info("Patching for gcc>=5...")
