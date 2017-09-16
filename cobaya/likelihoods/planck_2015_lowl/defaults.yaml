@@ -6,15 +6,16 @@ likelihood:
     path:
     clik_file: plc_2.0/low_l/commander/commander_rc2_v1.1_l2_29_B.clik
     product_id: "1900"
-    params:
-      A_planck:
-        prior: 
-          dist: norm
-          loc: 1
-          scale: 0.0025
-        ref:
-          dist: norm
-          loc: 1
-          scale: 0.002
-        proposal: 0.0005
-        latex: y_\mathrm{cal}
+
+params:
+  A_planck:
+    prior: 
+      dist: norm
+      loc: 1
+      scale: 0.0025
+    ref:
+      dist: norm
+      loc: 1
+      scale: 0.002
+    proposal: 0.0005
+    latex: y_\mathrm{cal}

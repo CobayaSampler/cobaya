@@ -67,6 +67,7 @@ import numpy as np
 from cobaya.likelihood import Likelihood
 from cobaya.log import HandledException
 from cobaya.conventions import _likelihood, subfolders, _path_install
+from cobaya.tools import get_path_to_installation
 
 # Logger
 import logging
@@ -81,9 +82,10 @@ class planck_clik_prototype(Likelihood):
             clik
         except NameError:
             if not self.path:
-                if self.path_to_installation:
+                path_to_installation = get_path_to_installation()
+                if path_to_installation:
                     self.path = os.path.join(
-                        self.path_to_installation, subfolders[_likelihood], common_path)
+                        path_to_installation, subfolders[_likelihood], common_path)
                 else:
                     log.error("No path given to the Planck likelihood. Set the likelihood "
                               "property 'path' or the common property '%s'."

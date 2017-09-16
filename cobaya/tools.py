@@ -28,6 +28,14 @@ from cobaya.log import HandledException
 import logging
 log = logging.getLogger(__name__)
 
+_path_to_installation = None
+
+def set_path_to_installation(path):
+    global _path_to_installation
+    _path_to_installation = path
+
+def get_path_to_installation():
+    return _path_to_installation
 
 def get_folder(name, kind, sep="/", absolute="True"):
     """
