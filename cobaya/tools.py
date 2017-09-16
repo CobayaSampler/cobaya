@@ -11,6 +11,7 @@ from __future__ import absolute_import, division
 
 # Global
 import os
+import sys
 from collections import OrderedDict as odict
 from copy import deepcopy
 from importlib import import_module
@@ -46,12 +47,13 @@ def get_class(name, kind=_likelihood):
     class_folder = get_folder(name, kind, sep=".", absolute=False)
     try:
         return getattr(import_module(class_folder, package=package), name)
-    except ImportError as e:
-        if str(e).endswith(name):
-            log.error("%s '%s' not found. Maybe check capitalisation.", kind.capitalize(), name)
+    except:
+        if sys.exc_info()[0] == ImportError and str(sys.exc_info()[1]).endswith(name):
+            log.error("%s '%s' not found (wrong capitalisation?)", kind.capitalize(), name)
+            raise HandledException
         else:
-            log.error("There was a problem when importing %s '%s': %s.", kind, name, e)
-        raise HandledException
+            log.error("There was a problem when importing %s '%s':", kind, name)
+            raise sys.exc_info()[1]
 
 def get_external_function(string_or_function):
     """
