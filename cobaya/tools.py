@@ -7,9 +7,7 @@
 """
 
 # Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import division
+from __future__ import absolute_import, division
 
 # Global
 import os
@@ -48,8 +46,11 @@ def get_class(name, kind=_likelihood):
     class_folder = get_folder(name, kind, sep=".", absolute=False)
     try:
         return getattr(import_module(class_folder, package=package), name)
-    except ImportError:
-        log.error("%s '%s' not found. Maybe check capitalisation.", kind.capitalize(), name)
+    except ImportError as e:
+        if str(e).endswith(name):
+            log.error("%s '%s' not found. Maybe check capitalisation.", kind.capitalize(), name)
+        else:
+            log.error("There was a problem when importing %s '%s': %s.", kind, name, e)
         raise HandledException
 
 def get_external_function(string_or_function):
@@ -154,11 +155,3 @@ def get_scipy_1d_pdf(info):
             "does not recognise the parameter mentioned in the 'scipy' error above.",
             tp.message, dist)
         raise HandledException
-
-# log-uniform distribution (missing in scipy.stats), with some methods implemented
-# -- for now, not inheriting from scipy.stats.rv_continuous, since the output of
-#    most of the methods would be different.
-#from scipy.stats import uniform
-#def loguniform():
-#    def __init__(loc=1, scale=0):
-#        self.uniform =
