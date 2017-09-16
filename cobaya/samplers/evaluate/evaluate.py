@@ -65,8 +65,8 @@ class evaluate(Sampler):
         Creates a 1-point collection to store the point
         at which the posterior is evaluated.
         """ 
-        self.one_point = Collection(self.prior, self.likelihood, self.output,
-                                    initial_size=1, name="1")
+        self.one_point = Collection(self.parametrisation, self.likelihood,
+                                    self.output, initial_size=1, name="1")
         log.info("Initialised!")
         
     def run(self):
@@ -81,19 +81,16 @@ class evaluate(Sampler):
         reference_point = self.prior.reference()
         log.info("Reference point:\n   "+
                "\n   ".join(["%s = %g"%(p,reference_point[i])
-                             for i,p in enumerate(self.prior.names())]))
+                             for i,p in enumerate(self.parametrisation.sampled_params())]))
         log.info("Evaluating prior and likelihoods...")
-        logprior = self.prior.logp(reference_point)
-        derived = [] if (self.likelihood.derived or self.likelihood.theory.derived) else None
-        logliks  = self.likelihood.logps(reference_point, derived=derived)
-        logpost  = logprior + sum(logliks)
+        logpost, logprior, logliks, derived = self.logposterior(reference_point)
         self.one_point.add(reference_point, derived=derived,
                            logpost=logpost, logprior=logprior, logliks=logliks)
         log.info("log-posterior  = %g", logpost)
         log.info("log-prior      = %g", logprior)
         log.info("log-likelihood = %g", sum(logliks))
         log.info("   "+"\n   ".join(["chi2_"+name+" = %g"%(-2*logliks[i])
-                  for i,name in enumerate(self.likelihood.likelihoods)]))
+                  for i,name in enumerate(self.likelihood)]))
         log.info("Done!")
 
     def close(self):

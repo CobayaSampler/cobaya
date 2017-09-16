@@ -193,7 +193,7 @@ or even better (clearer input), change the prior so that only arguments known by
 
 Now, for the **out** reparametrisation.
 
-First, notice that if derived paremters which are given by a function were just specified by assigning them that function, they would look exactly like the fixed, function-valued parameters above, e.g. :math:`v` in the last example. We need to distinguish them from input parameters. Notice that an assignment looks more like how a fixed parameter would be specified, so we will reserve that notation for those (also, derived parameters may contain other sub-fields, such as a *range*, which are incompatible with a pure assignment). Thus, we will specify function-valued derived parameters with the key ``derived``, to which said function is assigned. E.g. if we want to sampling :math:`x` and store :math:`x^2` along the way, we would input
+First, notice that if derived parameters which are given by a function were just specified by assigning them that function, they would look exactly like the fixed, function-valued parameters above, e.g. :math:`v` in the last example. We need to distinguish them from input parameters. Notice that an assignment looks more like how a fixed parameter would be specified, so we will reserve that notation for those (also, derived parameters may contain other sub-fields, such as a *range*, which are incompatible with a pure assignment). Thus, we will specify function-valued derived parameters with the key ``derived``, to which said function is assigned. E.g. if we want to sampling :math:`x` and store :math:`x^2` along the way, we would input
 
 .. code:: yaml
 

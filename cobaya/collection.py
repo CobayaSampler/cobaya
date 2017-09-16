@@ -39,18 +39,18 @@ enlargement_factor = None
 
 class Collection():
 
-    def __init__(self, prior, likelihood, output=None,
+    def __init__(self, parametrisation, likelihood, output=None,
                  initial_size=enlargement_size, name=None):
         self.name = name
-        # Save links to the prior and likelihoods for later convenience
-        self.prior = prior
-        self.likelihood = likelihood
+        self.sampled_params = parametrisation.sampled_params().keys()
+        self.derived_params = parametrisation.derived_params().keys()
         # Create the dataframe structure
         columns = [_weight, _minuslogpost]
-        columns += [name for name in self.prior.names()]
-        columns += [_derived_pre+name for name in self.likelihood.derived_all()]
+        columns += list(self.sampled_params)
+        columns += [_derived_pre+name for name in self.derived_params]
         columns += [_minuslogprior]
-        columns += [_chi2] + [_chi2+separator+name for name in self.likelihood.names()]
+        self.chi2_names = [_chi2+separator+name for name in likelihood]
+        columns += [_chi2] + self.chi2_names
         # Create the main data frame and the tracking index
         self.data = pd.DataFrame(np.zeros((initial_size,len(columns))), columns=columns)
         self._n = 0
@@ -77,15 +77,13 @@ class Collection():
         if logprior != None:
             self.data[_minuslogprior][self._n] = -logprior
         if logliks is not None:
-            self.data[_chi2][self._n] = 0
-            for name, value in zip(self.likelihood.names(), logliks):
-                chisq = -2*value
-                self.data[_chi2+separator+name][self._n] = chisq
-                self.data[_chi2][self._n] += chisq
-        for name, value in zip(self.prior.names(), values):
+            for name, value in zip(self.chi2_names, logliks):
+                self.data[name][self._n] = -2*value
+            self.data[_chi2][self._n] = sum(self.data[self.chi2_names].values[self._n])
+        for name, value in zip(self.sampled_params, values):
             self.data[name][self._n] = value
         if derived is not None:
-            for name, value in zip(self.likelihood.derived_all(), derived):
+            for name, value in zip(self.derived_params, derived):
                 self.data[_derived_pre+name][self._n] = value
         self._n += 1
 
@@ -117,6 +115,10 @@ class Collection():
     # Make the dataframe printable (but only the filled ones!)
     def __repr__(self):
         return self.data[:self.n()].__repr__()
+
+    # Make the dataframe iterable over rows
+    def __iter__(self):
+        return self.data[:self.n()].iterrows()
 
     # Statistical computations
     def mean(self, first=None, last=None, derived=False):

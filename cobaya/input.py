@@ -16,17 +16,20 @@ import numpy as np
 import datetime
 from numbers import Number
 from getdist import MCSamples
+from copy import deepcopy
 
 # Local
 from cobaya.conventions import subfolders, _defaults_file, _params, _p_label
-from cobaya.conventions import _prior, _theory, _likelihood, _sampler
-from cobaya.tools import get_labels
-from cobaya.yaml_custom import yaml_custom_load
+from cobaya.conventions import _prior, _theory, _likelihood, _sampler, _external
+from cobaya.tools import get_labels, get_folder
+from cobaya.yaml_custom import yaml_load_file
 from cobaya.log import HandledException
+from cobaya.parametrisation import is_sampled_param, is_derived_param
 
 # Logger
 import logging
 log = logging.getLogger(__name__)
+
 
 def load_input(input_file):
     """
@@ -46,14 +49,6 @@ def load_input(input_file):
         log.error("Extension '%s' of input file '%s' not recognised.", extension, input_file)
         raise HandledException
     return info
-
-def load_input_yaml(input_file, _defaults_file=True):
-    """Wrapper to load a yaml file."""
-    with open(input_file,"r") as stream:
-        lines = "".join(stream.readlines())
-    file_name = (input_file if not _defaults_file
-                 else "/".join(input_file.split(os.sep)[-2:]))
-    return yaml_custom_load(lines, file_name=file_name)
 
 # MPI wrapper for loading the input info
 def load_input_MPI(input_file):
@@ -83,135 +78,91 @@ def get_modules(*infos):
             modules.pop(k)
     return modules
 
-# Class initialisation using default and input info
-def load_input_and_defaults(instance, input_info, kind=None, load__defaults_file=True):
+def get_full_info(info):
     """
-    Loads the default info for a class instance, updates with the input info,
-    and returns the updated default+input info.
+    Creates an updated info starting from the defaults for each module and updating it
+    with the input info.
     """
-    # 1. Loading defaults
-    class_name = instance.__class__.__name__
-    # start with class-level-defaults, if they exist
-    defaults = odict([[class_name,getattr(instance, "_parent_defaults", odict())]])
-    # then load the class-specific defaults from its defaults.yaml file
-    if load__defaults_file:
-        class_defaults_path = os.path.join(
-            os.path.dirname(__file__), subfolders[kind], class_name, _defaults_file)
-        class_defaults = load_input_yaml(class_defaults_path, _defaults_file=True)[kind]
-        if not class_name in class_defaults:
-            log.error(
-                "The defaults file should contain the field '%s:%s'.", kind, class_name)
-            raise HandledException
-        defaults[class_name].update(class_defaults[class_name])
-    # 2. Update it with the input_info -- parameters dealt with later (see "load_params")
-    if kind != "sampler":
-        setattr(instance, "_params_defaults", defaults[class_name].pop(_params, odict()))
-    # consistency is checked only up to first level! (i.e. subkeys may not match)
-    if input_info == None:
-        input_info = {}
-    for k,v in input_info.iteritems():
-        if k in defaults[class_name]:
-            defaults[class_name][k] = v
-        else:
-            log.error("'%s' does not recognise the input option '%s'. "
-                      "To see the allowed options, check out the file '%s'",
-                      class_name, k, class_defaults_path)
-            raise HandledException
-    # 3. Set the options as attibutes with the updated info
-    for k,v in defaults[class_name].iteritems():
-        setattr(instance, k, v)
-    return defaults
-
-
-def load_params(instance, params_info, allow_unknown_prefixes=[]):
-    """
-    Merges the default and input parameters, separating them into:
-    - An ordered dictionary of *fixed* parameters
-    - An ordered dictionary of *sampled* parameters
-    - An ordered dictionary of *derived* parameters
-    Use the keyword `allow_unknown_prefixes` to specify a list of prefixes for
-    parameters names such that parameters starting by these are kept even if
-    not previously defined -- use `allow_unknown_prefixes=[""]` for accepting
-    any parameter name.
-    """
-    class_name = instance.__class__.__name__
-    # Create placeholders if they are not there yet
-    params_kinds = ("fixed", "sampled", "derived")
-    for pt in params_kinds:
-        if not hasattr(instance, pt):
-            setattr(instance, pt, odict())
-    if not params_info:
-        return
-    # Safeguard for prefixes
-    if isinstance(allow_unknown_prefixes, basestring):
-        allow_unknown_prefixes = [allow_unknown_prefixes]
-    # Store params
-    for p, v in params_info.iteritems():
-# This was for parameters sharing a name and distinguished with the lik or theory class
-# as a prefix -- deprecated, waiting for an updated implementation
-#        # If it does not belong to this class, ignore
-#        if separator in param:
-#            pclass, param = param.split(separator)
-#            if pclass != class_name:
-#                log.info("Class '%s': Ignoring parameter '%s', meant for '%s' instead."%(
-#                    class_name, param, pclass))
-#                print("TODO: really do something here!")
-        # Fixed parameter: number; Derived parameter: no `prior` key; Sampled: `prior` key
-        if isinstance(v, Number):
-            kind = "fixed"
-        else:
-            if v == None:
-                v = {}
-            if v.get("prior"):
-                kind = "sampled"
-            else:
-                kind = "derived"
-        # Already there?
-        old_kind = None
-        for kind2 in params_kinds:
-            if p in getattr(instance, kind2):
-                old_kind = kind2
-        # If not there but unknown parameters matching prefix allowed, pretend it's there
-        if old_kind == None:
-            match_prefix = [p.startswith(prefix) for prefix in allow_unknown_prefixes]
-            if not any(match_prefix):
-                log.error(
-                    "The parameter '%s' defined in the input file "
-                    "is not known by '%s'. "
-                    "The only parameter names allowed are those defined "
-                    "in the 'defaults' file"+
-                    (" or those starting with "+str(allow_unknown_prefixes)+"."
-                     if allow_unknown_prefixes != None else "."), p, class_name)
+    # Creates an equivalent info using only the defaults
+    full_info = odict()
+    default_params_info = odict()
+    modules = get_modules(info)
+    for block in modules:
+        full_info[block] = odict()
+        for module in modules[block]:
+            path_to_defaults = os.path.join(get_folder(module, block), _defaults_file)
+            try:
+                default_module_info = yaml_load_file(path_to_defaults)
+            except IOError:
+                # probably an external module
+                default_module_info = {block: {module: {}}}
+                log.debug("Module %s:%s does not have a defaults file. "%(block, module)+
+                          "Maybe it is an external module.")
+            try:
+                full_info[block][module] = default_module_info[block][module] or {}
+            except KeyError:
+                log.error("The defaults file for '%s' should be structured as %s:%s:{[options]}."
+                          %(module, block, module))
                 raise HandledException
-            old_kind = kind
-        # Inherit now-undefined latex label and derived parameter limits
-        if old_kind in ["sampled", "derived"] and kind in ["sampled", "derived"]:
-            if not v.get(_p_label):
-                old_label = getattr(instance, kind).get(p, {}).get(_p_label, None)
-                v[_p_label] = old_label
-        if old_kind == "derived" and kind in "derived":
-            for lim in ["min", "max"]:
-                if not v.get(lim):
-                    old_lim = getattr(instance, kind).get(p, {}).get(lim, None)
-                    v[lim] = old_lim
-        # If same kind, change value (don't delete, to keep ordering)
-        if old_kind == kind:
-            getattr(instance, kind)[p] = v
-        else:
-            getattr(instance, old_kind).pop(p)
-            getattr(instance, kind)[p] = v
-    # Check for duplicates!
-    all_names = []
-    for kind in params_kinds:
-        all_names += list(getattr(instance, kind).keys())
-    if len(all_names) != len(set(all_names)):
-        log.error("Some parameter of '%s' has been defined twice!", class_name)
-        raise HandledException
+            # Update the options with the input file
+            # Consistency is checked only up to first level! (i.e. subkeys may not match)
+            # First deal with cases "no options" and "external function"
+            info[block][module] = info[block][module] or {}
+            if not hasattr(info[block][module], "get"):
+                info[block][module] = {_external: info[block][module]}
+            options_not_recognised = (set(info[block][module])
+                                      .difference(set([_external]))
+                                      .difference(set(full_info[block][module])))
+            if options_not_recognised:
+                log.error("'%s' does not recognise some options: '%r'. "
+                          "To see the allowed options, check out the file '%s'",
+                          module, tuple(options_not_recognised), path_to_defaults)
+                raise HandledException
+            full_info[block][module].update(info[block][module])
+            # Store default parameters within class, and save to combine later with input
+            if block == _likelihood:
+                params_info = default_module_info.get(_params, {})
+                full_info[block][module].update({_params:params_info})
+                default_params_info[module] = params_info
+    # Add parameters info, after the necessary updates and checks
+    full_info[_params] = merge_params_info(info[_params], defaults=default_params_info)
+    # Rest of the options
+    for k,v in info.iteritems():
+        if not k in full_info:
+            full_info[k] = v
+    return full_info
 
-def get_updated_params_info(instance):
-    """Re-creates the params info from the loaded, updated parameters."""
-    info = odict()
-    for kind in ("fixed", "sampled", "derived"):
-        for p, v in getattr(instance, kind).iteritems():
-            info[p] = v
-    return info
+def merge_params_info(params_info, defaults=None):
+    """
+    Merges input and default parameters info, after performing some consistency checks.
+    """
+    # First, merge defaults. Impose multiple defined (=shared) parameters have equal info
+    defaults_merged = odict()
+    for lik, params in defaults.iteritems():
+        for p, info in params.iteritems():
+            # if already there, check consistency
+            if p in defaults_merged:
+                log.debug("Parameter '%s' multiply defined.", p)
+                if info != defaults_merged[p]:
+                    log.error("Parameter '%s' multiply defined, but inconsistent info: "
+                              "For likelihood '%s' is '%r', but for some other likelihood "
+                              "it was '%r'. Check your defaults!",
+                              p, lik, info, defaults_merged[p])
+                    raise HandledException
+            defaults_merged[p] = info
+    # Combine with the input parameter info
+    info_updated = deepcopy(defaults_merged)
+    info_updated.update(params_info)
+    # Inherit labels (for sampled and derived) and min/max (just for derived params)
+    print "TODO!!!!! Test inheritance of labels and limits (for derived only!!!!) CHECK THAT IT ACTUALLY INHERITS WITH PLANCK!!!!!!!!"
+    getter = lambda info, key: getattr(info, "get", lambda x: None)
+    for p in defaults_merged:
+        default_label = getter(defaults_merged[p], _p_label)
+        if (default_label and
+            (is_sampled_param(info_updated[p]) or is_derived_param(info_updated[p]))):
+            info_updated[p][_p_label] = info_updated[p].get(_p_label) or default_label
+        limits = ["min", "max"]
+        default_limits = odict([[lim,getter(defaults_merged[p], lim)] for lim in limits])
+        if default_limits.values() != [None, None] and is_derived_param(info_updated[p]):
+            info_updated[p].update(default_limits)
+    return info_updated

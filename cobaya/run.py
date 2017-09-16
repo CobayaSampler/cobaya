@@ -10,6 +10,9 @@ from __future__ import absolute_import
 from __future__ import division
 import six
 
+# Global
+from copy import deepcopy
+
 
 def run(info):
 
@@ -52,26 +55,28 @@ def run(info):
         from cobaya.output import Output_dummy
         output = Output_dummy(info)
 
+    # Create the full input information, including defaults for each module
+    from cobaya.input import get_full_info
+    full_info = get_full_info(info)
+    output.set_full_info(full_info)
+
+    # Set the path of the installed modules, if given
+    from cobaya.tools import set_path_to_installation
+    set_path_to_installation(info.get(_path_install))
+
     # Initialise parametrisation, likelihoods and prior
-#    with Parametrisation(info[_params)
-    with Likelihood(
-            info_likelihood=info[_likelihood], info_params=info[_params],
-            info_prior=info.get(_prior), info_theory=info.get(_theory),
-            path_to_installation=info.get(_path_install)) as likelihood:
-        with Prior(likelihood.sampled_params(), info_prior=likelihood.updated_info_prior()) as prior:
-            with Sampler(info[_sampler], prior, likelihood, output) as sampler:
-                # Save the model info (updated by the likelihood and prior)
-                output.update_info(
-                    likelihood=likelihood.updated_info(),
-                    theory=likelihood.updated_info_theory(),
-                    params=likelihood.updated_info_params(),
-                    prior=likelihood.updated_info_prior(),
-                    sampler=sampler.updated_info())
-                output.dump_info()
-                # Sample!
-                sampler.run()
+    from cobaya.parametrisation import Parametrisation
+    with Parametrisation(full_info[_params]) as par:
+        with Prior(par, full_info.get(_prior)) as prior:
+            with Likelihood(par, full_info[_likelihood], full_info.get(_theory)) as lik:
+                with Sampler(info[_sampler], par, prior, lik, output) as sampler:
+                    # Save the full, defaults-populated info
+                    output.dump_info()
+                    # Sample!
+                    sampler.run()
     # For scripted calls
-    return output.updated_info(), sampler.products()
+    return deepcopy(full_info), sampler.products()
+
 
 # Command-line script
 def run_script():
@@ -96,5 +101,5 @@ def run_script():
                       "You have specified a modules folder both in the command line "
                       "('%s') and the input file ('%s'). There should only be one."%(
                           path_cmd, path_input))
-        info[input_path_auto] = path_cmd
+        info[_path_install] = path_cmd
     run(info)

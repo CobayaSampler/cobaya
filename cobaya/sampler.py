@@ -49,12 +49,17 @@ from __future__ import division
 
 # Global
 from importlib import import_module
+import numpy as np
 
 # Local
 from cobaya.conventions import _sampler, package
-from cobaya.tools import get_folder
-from cobaya.input import load_input_and_defaults
+from cobaya.tools import get_class
 from cobaya.log import HandledException
+
+# Logger
+import logging
+log = logging.getLogger(__name__)
+
 
 class Sampler(object):
     """Prototype of the sampler class."""
@@ -103,7 +108,7 @@ class Sampler(object):
         return None
     
     # Private methods: just ignore them:
-    def __init__(self, info_sampler, prior, likelihood, output):
+    def __init__(self, info_sampler, parametrisation, prior, likelihood, output):
         """
         Actual initialisation of the class. Loads the default and input information and
         call the custom ``initialise`` method.
@@ -112,16 +117,32 @@ class Sampler(object):
         """
         self.name = None
         # Load default and input info
-        self._updated_info = load_input_and_defaults(self, info_sampler, kind="sampler")
-        self.output = output
+        self.parametrisation = parametrisation
         self.prior = prior
         self.likelihood = likelihood
+        self.output = output
+        # Number of times the posterior has been evaluated
+        self.n_eval = 0
         self.initialise()
 
-    # Get updated info, to be dumped into the *full* ``yaml`` file.
-    def updated_info(self):
-        return self._updated_info
-        
+    def logposterior(self, params_values):
+        """
+        Returns (logposterior,logprior,[loglikelihoods]) for a set of parameter values.
+        If passes an empty list through ``derived``,
+        it gets populated it with the derived parameters' values.
+        """
+        logprior = self.prior.logp(params_values)
+        logpost = logprior
+        logliks = []
+        if logprior > -np.inf:
+            derived = []
+            logliks = self.likelihood.logps(
+                self.parametrisation.to_input(params_values), derived=derived)
+            logpost += sum(logliks)
+            derived_sampler = self.parametrisation.to_derived(derived)
+        self.n_eval += 1
+        return logpost, logprior, logliks, derived_sampler
+
     # Python magic for the "with" statement
     def __enter__(self):
         return self
@@ -129,16 +150,14 @@ class Sampler(object):
         self.close()
 
 
-def get_Sampler(info_sampler, prior, likelihood, output_file):
+def get_Sampler(info_sampler, parametrisation, prior, likelihood, output_file):
     """
     Auxiliary function to retrieve and initialise the requested sampler.
     """
     try:
         name = info_sampler.keys()[0]
-        class_folder = get_folder(name, _sampler, sep=".", absolute=False)
-        sampler_class = getattr(
-            import_module(class_folder, package=package), name)
-    except ImportError:
-        log.error("Could not import sampler '%s'.", name.lower())
+    except AttributeError:
+        log.error("The sampler block must be a dictionary 'sampler: {options}'.")
         raise HandledException
-    return sampler_class(info_sampler[name], prior, likelihood, output_file)
+    sampler_class = get_class(name, kind=_sampler)
+    return sampler_class(info_sampler[name], parametrisation, prior, likelihood, output_file)

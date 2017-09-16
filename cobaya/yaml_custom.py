@@ -26,7 +26,7 @@ class InputSyntaxError(Exception):
     """Syntax error in YAML input."""
 
 
-def yaml_custom_load(stream, Loader=yaml.Loader, object_pairs_hook=odict, file_name=None):
+def yaml_load(text_stream, Loader=yaml.Loader, object_pairs_hook=odict, file_name=None):
         class OrderedLoader(Loader):
             pass
         def construct_mapping(loader, node):
@@ -45,7 +45,7 @@ def yaml_custom_load(stream, Loader=yaml.Loader, object_pairs_hook=odict, file_n
             |\\.(?:nan|NaN|NAN))$''', re.X),
             list(u'-+0123456789.'))
         try:
-            return yaml.load(stream, OrderedLoader)
+            return yaml.load(text_stream, OrderedLoader)
         # Redefining the general exception to give more user-friendly information
         except yaml.YAMLError, exception:
             errstr = "Error in your input file "+("'"+file_name+"'" if file_name else "")
@@ -56,7 +56,7 @@ def yaml_custom_load(stream, Loader=yaml.Loader, object_pairs_hook=odict, file_n
                 signal_right = "    <---- "
                 sep = "|"
                 context = 4
-                lines = stream.split("\n")
+                lines = text_stream.split("\n")
                 pre = ((("\n"+" "*len(signal)+sep).
                          join([""]+lines[max(line-1-context,0):line-1])))+"\n"
                 errorline = (signal+sep+lines[line-1]
@@ -70,7 +70,13 @@ def yaml_custom_load(stream, Loader=yaml.Loader, object_pairs_hook=odict, file_n
             else:
                 raise InputSyntaxError(errstr)
 
-def yaml_custom_dump(data, stream=None, Dumper=yaml.Dumper, **kwds):
+def yaml_load_file(input_file):
+    """Wrapper to load a yaml file."""
+    with open(input_file,"r") as file:
+        lines = "".join(file.readlines())
+    return yaml_load(lines, file_name=input_file)
+
+def yaml_dump(data, stream=None, Dumper=yaml.Dumper, **kwds):
     class OrderedDumper(Dumper):
         pass
     # Dump OrderedDict's as plain dictionaries, but keeping the order
@@ -96,5 +102,3 @@ def yaml_custom_dump(data, stream=None, Dumper=yaml.Dumper, **kwds):
     OrderedDumper.add_representer(np.float64, _numpy_float_representer)
     # Dump!
     return yaml.dump(data, stream, OrderedDumper, **kwds)
-
-

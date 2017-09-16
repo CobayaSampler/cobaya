@@ -235,31 +235,27 @@ log = logging.getLogger(__name__)
 
 class Prior():
     """
-    Class managing the prior and ref pdf's, the latex labels and other properties of
-    the parameters.
+    Class managing the prior and reference pdf's.
     """
-    def __init__(self, params_info, info_prior=None):
+    def __init__(self, parametrisation, info_prior=None):
         """
         Initialises the prior and reference pdf's from the input information.
         """
-        if not params_info:
+        sampled_params_info = parametrisation.sampled_params()
+        if not sampled_params_info:
             log.warning("No sampled parameters requested! This will fail for non-mock samplers.")
-        # Labels and reference point
-        self.labels = get_labels(params_info)
         # pdf: a list of independent components
         # in principle, separable: one per parameter
+        self.name = []
         self.pdf = []
         self.ref_pdf = []
-        self.properties = odict()
-        for p in params_info:
-            prior = params_info[p].get(_prior)
-            if prior == None:
-                log.error("You need to define a prior for your parameter. "
-                          "Check out the syntax for that in the docs.")
-                raise HandledException
+        self.lims = []
+        for p in sampled_params_info:
+            self.name += [p]
+            prior = sampled_params_info[p].get(_prior)
             self.pdf += [get_scipy_1d_pdf({p: prior})]
             # Get the reference (1d) pdf
-            ref = params_info[p].get(_p_ref)
+            ref = sampled_params_info[p].get(_p_ref)
             # Cases: number, pdf (something, but not a number), nothing
             if isinstance(ref, numbers.Number):
                 self.ref_pdf += [ref]
@@ -267,51 +263,33 @@ class Prior():
                 self.ref_pdf += [get_scipy_1d_pdf({p: ref})]
             else:
                 self.ref_pdf += [np.nan]
-            # Store the rest of the properties
-            self.properties[p] = dict(
-                [(k,v) for k,v in params_info[p].iteritems()
-                 if k not in [_prior,_p_ref,_p_label]])
-        # Process the external prior(s):
-        self.external = odict()
-        for name in (info_prior if info_prior else {}):
-            log.debug("Loading external prior '%s' from: '%s'", name, info_prior[name])
-            self.external[name] = {"logp": get_external_function(info_prior[name])}
-            self.external[name].update({"argspec": inspect.getargspec(self.external[name]["logp"])})
-            if not all([p in self.names() for p in self.external[name]["argspec"].args]):
-                log.error(
-                    "The arguments of the external prior '%s' must be known *sampled* parameters. "
-                    "Got %r", name, self.external[name]["argspec"].args)
+            self.lims += [(-np.inf,np.inf)]
+            if self.pdf[-1].__class__.__name__ == "rv_frozen":
+                self.lims[-1] = self.pdf[-1].interval(1)
+            else:
+                log.error("No limits defined for parameter '%s'.", param)
                 raise HandledException
-            log.warning("External prior '%s' loaded. Mind that it might not be normalised!", name)
+#        # DOING NOTHING FOR NOW!!!!
+        print "TODO: FIX EXTERNAL PRIORS!!!!!"
+#        # Process the external prior(s):
+#        self.external = odict()
+#        for name in (info_prior if info_prior else {}):
+#            log.debug("Loading external prior '%s' from: '%s'", name, info_prior[name])
+#            self.external[name] = {"logp": get_external_function(info_prior[name])}
+#            self.external[name].update({"argspec": inspect.getargspec(self.external[name]["logp"])})
+#            if not all([p in self.names() for p in self.external[name]["argspec"].args]):
+#                log.error(
+#                    "The arguments of the external prior '%s' must be known *sampled* parameters. "
+#                    "Got %r", name, self.external[name]["argspec"].args)
+#                raise HandledException
+#            log.warning("External prior '%s' loaded. Mind that it might not be normalised!", name)
 
     def d(self):
         """
         Returns:
            Dimensionality of the parameter space.
         """
-        return len(self.labels)
-
-    def names(self):
-        """
-        Returns:
-           List of names of the sampled and derived parameters.
-        """
-        return self.labels.keys()
-
-    def indices(self):
-        """
-        Returns:
-           A dictionary ``{paramete names : index of that parameter}``
-        """
-        return dict([(p,i) for i,p in enumerate(self.labels.keys())])
-
-    def property(self, param, prop, default=None):
-        """
-        Returns:
-           The value of the field ``prop`` of in the info of parameter ``param``, it that
-           field has been defined (otherwise, the value of ``default``).
-        """
-        return self.properties[param].get(prop, default)
+        return len(self.pdf)
 
     def limits(self):
         """
@@ -323,14 +301,7 @@ class Prior():
         sub-block of that particular parameter's info may not be faithful to the externally
         defined prior.
         """
-        lims = odict([(p,(-np.inf,np.inf)) for p in self.names()])
-        for pdf,param in zip(self.pdf, self.names()):
-            if pdf.__class__.__name__ == "rv_frozen":
-                lims[param] = pdf.interval(1)
-            else:
-                log.error("No limits defined for parameter '%s'.", param)
-                raise HandledException
-        return np.array(lims.values())
+        return np.array(self.lims.values())
 
     def sample(self, n=1, external_error=True):
         """
@@ -343,60 +314,36 @@ class Prior():
         Returns:
           An array of ``n`` samples from the prior, as vectors ``[value of param 1, ...]``.
         """
-        samples = np.zeros((n,self.d()))
-        index = self.indices()
-        for pdf,param in zip(self.pdf, self.names()):
-            if pdf.__class__.__name__ == "rv_frozen":
-                samples[:,index[param]] = pdf.rvs(n)
-            else:
-                log.error("No sampling possible for parameter '%s'.", param)
-                raise HandledException
-        if external_error:
-            if self.external:
-                log.error("It is not possible to sample from an external prior.")
-                raise HandledException
-        return samples
+        if external_error and self.external:
+            log.error("It is not possible to sample from an external prior.")
+            raise HandledException
+        return np.array([pdf.rvs(n) for pdf in self.pdf]).T
 
     def p(self, x):
         """
         Returns:
            The probability density of the given point or array of points.
         """
-        prob = 1
-        index = self.indices()
-        # Compute per parameter
-        for pdf,param in zip(self.pdf, self.names()):
-            if pdf.__class__.__name__ == "rv_frozen":
-                prob *= pdf.pdf(x[index[param]])
-            else:
-                log.error("No probability density defined for parameter '%s'.", param)
-                raise HandledException
-        return prob * np.exp(self.logp_external(x))
+        return (np.prod([pdf.pdf(xi) for pdf,xi in zip(self.pdf,x)])
+                * np.exp(self.logp_external(x)))
 
     def logp(self, x):
         """
         Returns:
            The log-probability density of the given point or array of points.
         """
-        logp = 0
-        index = self.indices()
-        # Compute per parameter
-        for pdf,param in zip(self.pdf, self.names()):
-            # scipy.stats
-            if pdf.__class__.__name__ == "rv_frozen":
-                logp += pdf.logpdf(x[index[param]])
-            else:
-                log.error("No log-probability density defined for parameter '%s'.", param)
-                raise HandledException
-        return logp + self.logp_external(x)
+        return (sum([pdf.logpdf(xi) for pdf,xi in zip(self.pdf,x)])
+                + self.logp_external(x))
 
     def logp_external(self, x):
         """Evaluates the logprior using the external prior only."""
-        logp = 0
-        index = self.indices()
-        for ext in self.external.values():
-            logp += ext["logp"](**dict([(param,x[index[param]]) for param in ext["argspec"].args]))
-        return logp
+        print "TODO: FIX EXTERNAL PRIORS!!!!!!!!!!"
+        return 0
+#        logp = 0
+#        index = self.indices()
+#        for ext in self.external.values():
+#            logp += ext["logp"](**dict([(param,x[index[param]]) for param in ext["argspec"].args]))
+#        return logp
 
     def covmat(self):
         """
@@ -432,9 +379,8 @@ class Prior():
         if np.nan in self.ref_pdf:
             log.info("Reference values or pdf's for some parameters were not provided. "
                      "Sampling from the prior instead for those parameters.")
-        i = 0
-        while i < max_tries:
-            i = i+1
+        while max_tries:
+            max_tries -= 1
             ref_sample = np.array([getattr(ref_pdf, "rvs", lambda: ref_pdf.real)()
                                    for i, ref_pdf in enumerate(self.ref_pdf)])
             where_no_ref = np.isnan(ref_sample)
