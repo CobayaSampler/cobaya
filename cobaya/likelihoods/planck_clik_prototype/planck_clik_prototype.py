@@ -152,11 +152,6 @@ class planck_clik_prototype(Likelihood):
     def logp(self, **params_values):
         # get Cl's from the theory code
         cl = self.theory.get_cl()
-        print "TODO: Delete following block!"
-        with open("test.cl", "w") as test:
-            from cobaya.yaml_custom import yaml_custom_dump
-            string = yaml_custom_dump(cl)
-            test.write(string)
         # testing for lensing
         if self.lensing:
             try:

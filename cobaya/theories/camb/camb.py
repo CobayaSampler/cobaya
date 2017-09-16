@@ -194,13 +194,14 @@ class camb(Theory):
                        for i in range(self.n_states)]
         # Dict of named tuples to collect requirements and computation methods
         self.collectors = {}
+        # Additional input parameters to pass to CAMB
+        self.also = {}
         # patch: if cosmomc_theta is used, CAMB needs to be passed explicitly "H0=None"
-        if (all((p in self.sampled_params()) for p in ["H0", "cosmomc_theta"]) or
-            all((p in self.fixed) for p in ["H0", "cosmomc_theta"])):
-            log.error("Can't fix or sample simultaneously both H0 and cosmomc_theta.")
+        if all((p in self.input_params) for p in ["H0", "cosmomc_theta"]):
+            log.error("Can't pass both H0 and cosmomc_theta to Camb.")
             raise HandledException
-        if "cosmomc_theta" in self.fixed or "cosmomc_theta" in self.sampled_params():
-            self.fixed["H0"] = None
+        if "cosmomc_theta" in self.input_params or "cosmomc_theta":
+            self.also["H0"] = None
 
     def current_state(self):
        lasts = [self.states[i]["last"] for i in range(self.n_states)]
@@ -208,8 +209,8 @@ class camb(Theory):
 
     def set(self, params_values_dict, i_state):
         # Feed the arguments defining the cosmology to the cosmological code
-        # Fixed
-        args = self.fixed
+        # Additionally required input parameters
+        args = deepcopy(self.also)
         # Sampled -- save the state for avoiding recomputing later
         args.update(params_values_dict)
         # Precision (fixed at the theory block level)
@@ -234,7 +235,7 @@ class camb(Theory):
             # Get (pre-computed) derived parameters
             if derived == {}:
                 derived.update(dict([[p,v] for p,v in
-                                     zip(self.derived, self.states[i_state]["derived"])]))
+                                     zip(self.output_params, self.states[i_state]["derived"])]))
             log.debug("Re-using computed results (state %d)", i_state)
         except StopIteration:
             # update the (first) oldest one and compute
@@ -254,7 +255,7 @@ class camb(Theory):
             if derived == {}:
                 derived.update(self.get_derived(i_state))
                 # Careful: next step must keep the order
-                self.states[i_state]["derived"] = [derived[p] for p in self.derived]
+                self.states[i_state]["derived"] = [derived[p] for p in self.output_params]
         # make this one the current one by decreasing the antiquity of the rest
         for i in range(self.n_states):
             self.states[i]["last"] -= max(lasts)
@@ -265,7 +266,7 @@ class camb(Theory):
         for k,v in arguments.items():
             if k == "l_max":
                 # Take the max of the requested ones
-                self.fixed["lmax"] = max(v,self.fixed.get("lmax",0))
+                self.also["lmax"] = max(v,self.also.get("lmax",0))
             elif k == "Cl":
                 self.collectors["powers"] = collector(
                     method="get_cmb_power_spectra",
@@ -292,11 +293,11 @@ class camb(Theory):
             if p in self.camb.model.derived_names:
                 if not hasattr(self, "get_derived_params"):
                     self.get_derived_params = results.get_derived_params()
-            return self.get_derived_params.get(p, None)
+            return getattr(self, "get_derived_params", {}).get(p, None)
         def from_getter(p):
             return getattr(params, "get_"+p, lambda: None)()
         # fill the list
-        for p in self.derived:
+        for p in self.output_params:
             for f in [from_params, from_std, from_getter]:
                 derived[p] = f(p)
                 if derived[p] != None:
