@@ -4,7 +4,7 @@ from __future__ import division
 
 from cobaya.conventions import _theory, _likelihood, _sampler, _derived_pre
 from cobaya.conventions import _params, _chi2, separator, _path_install
-from cobaya.yaml_custom import yaml_custom_load
+from cobaya.yaml_custom import yaml_load
 from cobaya.run import run
 
 from cosmo_common import params_lowl_highTT, chi2_lowl_highTT, derived_lowl_highTT
@@ -31,13 +31,13 @@ def body_of_test(modules, x):
     if x == "t":
         info[_likelihood] = {"planck_2015_lowl": None,
                                   "planck_2015_plikHM_TT": None}
-        info.update(yaml_custom_load(params_lowl_highTT))
+        info.update(yaml_load(params_lowl_highTT))
         ref_chi2 = chi2_lowl_highTT
         derived_values = derived_lowl_highTT
     elif x == "p":
         info[_likelihood] = {"planck_2015_lowTEB": None,
                                   "planck_2015_plikHM_TTTEEE": None}
-        info.update(yaml_custom_load(params_lowTEB_highTTTEEE))
+        info.update(yaml_load(params_lowTEB_highTTTEEE))
         ref_chi2 = chi2_lowTEB_highTTTEEE
         derived_values = derived_lowl_highTT
         print "TODO: ~~~~~~ change previous line to correct TTTEEE derived ~~~~~~"

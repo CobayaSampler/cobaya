@@ -8,7 +8,7 @@ from cobaya.conventions import _sampler, _chi2, separator
 
 # Tolerance for the tests
 tolerance_chi2_abs = 0.1
-tolerance_derived = 0.025
+tolerance_derived = 0.022
 # this last one cannot be smaller: rounding errors in BBN abundances, bc new interp tables
 
 
@@ -73,17 +73,18 @@ baseline_cosmology = r"""
         scale: 0.01
       proposal: 0.005
       latex: \tau_\mathrm{reio}
-### Change A for log(1e10*A)! ---> param[logA] = 3.1 2 4 0.001 0.001
-    As:
+    logAs1e10:
       prior:
-        min: 0.74e-9
-        max: 5.5e-9
+        min: 2
+        max: 4
       ref:
         dist: norm
-        loc: 2.22e-9
-        scale: 0.5e-9
-      proposal: 0.5e-9
-      latex: A_\mathrm{s}
+        loc:   3.1
+        scale: 0.001
+      proposal: 0.001
+      latex: \log(10^{10} A_s)
+      drop:
+    As: lambda logAs1e10: 1e-10*np.exp(logAs1e10)
     ns:
       prior:
         min: 0.8
@@ -98,25 +99,30 @@ baseline_cosmology = r"""
 
 # Derived parameters, described in
 # https://wiki.cosmos.esa.int/planckpla2015/images/b/b9/Parameter_tag_definitions_2015.pdf
+omegam_func = lambda omegab, omegac, omegan: omegab+omegac+omegan
 derived = {
     "H0":          {"latex": r"H_0"},
     "omegav":      {"latex": r"\Omega_\Lambda"},
-#func    "omegam":      {"latex": r"\Omega_m"}, <-- b+cdm+nu
-#func "omegamh2":    {"latex": r"\Omega_m h^2"},
-#func    "omeganuh2":   {"latex": r"\Omega_\nu h^2"},
-#func    "omegamh3":    {"latex": r"\Omega_m h^3"},
+    "omegam":      {"derived": omegam_func, "latex": r"\Omega_m"},
+    "omegamh2":    {"derived": lambda omegab, omegac, omegan, H0: omegam_func(omegab, omegac, omegan)*(H0/100)**2, "latex": r"\Omega_m h^2"},
+    "omegamh3":    {"derived": lambda omegab, omegac, omegan, H0: omegam_func(omegab, omegac, omegan)*(H0/100)**3, "latex": r"\Omega_m h^3"},
+# Apparently, the baseline chains show a best fit, but no mean+sigma
+#    "omeganuh2":   {"derived": lambda omegan, H0: omegan*(H0*1e-2)**2, "latex": r"\Omega_\nu h^2"},
     "sigma8":      {"latex": r"\sigma_8"},
-#func    "s8omegamp5":  {"latex": r"\sigma_8 \Omega_m^{0.5}"},
-#func    "s8omegamp25": {"latex": r"\sigma_8 \Omega_m^{0.25}"},
-#func    "s8h5":        {"latex": r"\sigma_8/h^{0.5}"},
-#----------???    "rmsdeflect":  {"latex": r"\langle d^2\rangle^{1/2}"},
+    "s8h5":        {"derived": lambda sigma8, H0: sigma8*(H0*1e-2)**(-0.5), "latex": r"\sigma_8/h^{0.5}"},
+    "s8omegamp5":  {"derived": lambda sigma8, omegab, omegac, omegan: sigma8*omegam_func(omegab, omegac, omegan)**0.5, "latex": r"\sigma_8 \Omega_m^{0.5}"},
+    "s8omegamp25": {"derived": lambda sigma8, omegab, omegac, omegan: sigma8*omegam_func(omegab, omegac, omegan)**0.25, "latex": r"\sigma_8 \Omega_m^{0.25}"},
+# How to get this one?
+#    "rmsdeflect":  {"latex": r"\langle d^2\rangle^{1/2}"},
     "zre":         {"latex": r"z_\mathrm{re}"},
-#func??    "A":           {"latex": r"10^9 A_s"},
-#func    "clamp":       {"latex": r"10^9 A_s e^{-2\tau}"},
-#func??    "ns02":        {"latex": r"n_{s,0.002}"}, <------ invert from analytic P(k)
+# The problem with the next 2 is that ...
+#    "As1e9":       {"derived": lambda logAs1e10: 1e-1*np.exp(logAs1e10), "latex": r"10^9 A_s"},
+#    "clamp":       {"derived": lambda logAs1e10, tau: 1e9*As*np.exp(-2*tau), "latex": r"10^9 A_s e^{-2\tau}"},
+# This one should take running into account??? Otherwise, it's =ns005
+#    "ns02":        {"latex": r"n_{s,0.002}"}, <------ invert from analytic P(k)
     "YHe":         {"latex": r"Y_P"},
-    "Y_p":       {"latex": r"Y_P^\mathrm{BBN}"},
-    "DH":       {"latex": r"10^5D/H"},
+    "Y_p":         {"latex": r"Y_P^\mathrm{BBN}"},
+    "DH":          {"latex": r"10^5D/H"},
     "age":         {"latex": r"{\rm{Age}}/\mathrm{Gyr}"},
     "zstar":       {"latex": r"z_*"},
     "rstar":       {"latex": r"r_*"},
@@ -151,14 +157,15 @@ params_lowl_highTT = """
       prior:
         min: 0.005
         max: 0.1
-      ref: 0.022491
-    omch2: 0.11747
+      ref: 0.02249139
+    omch2: 0.1174684
     # only one of the next two is finally used!
-    H0: 68.44
-    cosmomc_theta: 0.0104119
-    tau: 0.1250
-    As: 2.402e-9
-    ns: 0.9742
+    H0: 68.43994
+    cosmomc_theta: 0.01041189
+    tau: 0.1249913
+#    logAs1e10: 3.179 # NOT DIRECTLY RECOGNISED: cannot be fixed!!!
+    As: 2.401687e-9
+    ns: 0.9741693
     # Derived
   # Planck likelihood
   A_planck: 1.00027
@@ -190,28 +197,28 @@ params_lowl_highTT = """
 
 derived_lowl_highTT = {
     # param: [best_fit, sigma]
-    "H0":     [68.44, 1.2],
+    "H0": [68.44, 1.2],
     "omegav": [0.6998, 0.016],
-    "omegam":     [None, None], ### [0.3002, 0.016],
-    "omegamh2":   [None, None],
-    "omeganuh2":  [None, None],
-    "omegamh3":   [None, None],
-    "sigma8":     [0.8610, 0.023],
-    "s8omegamp5": [None, None],
-    "s8omegamp25":[None, None],
-    "s8h5":       [None, None],
-    "rmsdeflect": [None, None],
+    "omegam": [0.3002, 0.016],
+    "omegamh2": [0.1406, 0.0024],
+    "omegamh3": [0.09623, 0.00046],
+    "omeganuh2": [None, None], #[0.6451439e-3, None],
+    "sigma8": [0.8610, 0.023],
+    "s8omegamp5": [0.472, 0.014],
+    "s8omegamp25":[0.637, 0.016],
+    "s8h5":       [1.041, 0.025],
+    "rmsdeflect": [None, None], #[0.2567350E+01, 0.5929468E-01],
     "zre":   [13.76, 2.5],
-    "A":      [None, None],
-    "clamp":  [None, None],
-    "ns02":   [None, None],
-    "YHe":    [0.245446, 0.00012],
-    "Y_p":  [0.246773, 0.00012],
-    "DH":  [2.569e-5, 0.051e-5],
+    "As1e9":  [None, None], #[2.40, 0.15],
+    "clamp":  [None, None], #[1.870468, 0.01535354],
+    "ns02":   [None, None], #[0.9741693E+00, 0.7949215E-02],
+    "YHe":    [0.2454462, 0.0001219630],
+    "Y_p":    [0.2467729, 0.0001224069],
+    "DH":     [2.568606e-5, 0.05098625e-5],
     "age":    [13.7664, 0.048],
     "zstar":  [1089.55, 0.52],
     "rstar":  [145.00, 0.55],
-    "thetastar": [1.04136, 0.00051],
+    "thetastar": [1.041358, 0.0005117986],
     "DAstar":  [13.924, 0.050],
     "zdrag":   [1060.05, 0.52],
     "rdrag":   [147.63, 0.53],
