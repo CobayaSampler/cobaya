@@ -295,7 +295,7 @@ class LikelihoodCollection():
             info = getattr(parametrisation, params)()
             setattr(self, params, info)
             requested = set(info)
-            known = set(chain(getattr(self.theory, params),
+            known = set(chain(getattr(self.theory, params, []),
                               *[getattr(self[lik], params) for lik in self]))
             r_not_k = requested.difference(known)
             if r_not_k:
