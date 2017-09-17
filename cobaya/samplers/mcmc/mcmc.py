@@ -201,14 +201,14 @@ class mcmc(Sampler):
         """Initialises the sampler:
         creates the proposal distribution and draws the initial sample."""
         log.info("Initialising")
-        # Total number of posterior evaluations, or steps attempts
-        self.n_eval = 0
         # Burning-in countdown -- the +1 accounts for the initial point (always accepted)
         self.burn_in_left = self.burn_in + 1
         # One collection per MPI process: `name` is the MPI rank + 1
         name = str(1 + (lambda r: r if r!=None else 0)(get_mpi_rank()))
-        self.collection = Collection(self.prior, self.likelihood, self.output, name=name)
-        self.current_point = OnePoint(self.prior, self.likelihood)
+        self.collection = Collection(self.parametrisation, self.likelihood,
+                                     self.output, name=name)
+        self.current_point = OnePoint(self.parametrisation, self.likelihood,
+                                     self.output, name=name)
         # No simultaneous fast-dragging and oversampling:
         self.oversample_fast = (1 if not self.oversample_fast else self.oversample_fast)
         if ((self.oversample_fast > 1) and
@@ -230,7 +230,9 @@ class mcmc(Sampler):
             # THIS IS WRONG, JUST TESTING CODE!!!!!!
         ##########################################################
         indices_params_sampled = range(self.prior.d())
-        speeds, blocks = zip(*self.likelihood.speed_blocked_params(as_indices=True))
+#        speeds, blocks = zip(*self.likelihood.speed_blocked_params(as_indices=True))
+        print "FIX SPEEDS IN NEXT LINE!!!!!!!"
+        speeds, blocks = [1], [range(len(self.parametrisation.sampled_params()))]
         try:
             i_last_slow_block = (i for i,speed in enumerate(list(speeds))
                                  if speed > self.max_speed_slow).next() - 1
@@ -254,13 +256,16 @@ class mcmc(Sampler):
         # Create proposal for a covariance matrix
         # defaulting to diagonal with the width given or guessed for the params
         # with priority [proposal > ref > prior]
-        params = self.prior.names()
-        sigmas = np.array([self.prior.property(p, "proposal", -1) for p in params])
-        if np.any(sigmas == -1):
+        params = self.parametrisation.sampled_params().keys()
+        print "FIX proposal given by-parameter in next line!!!!!!!!!!!!!!!!!!!!!!!"
+#        sigmas = np.array([self.prior.property(p, "proposal", np.nan) for p in params])
+        covmat = np.diag([np.nan for _ in params])
+
+        where_nan = np.isnan(covmat)
+        if np.any(where_nan):
             log.info("Default 'proposal' not given for some parameters. "
                      "Using ref's or prior's instead.")
-            sigmas = np.where(sigmas == -1, self.prior.reference_sigma(), sigmas)
-        covmat = np.diag(sigmas**2)
+            covmat[where_nan] = self.prior.reference_covmat()[where_nan]
         log.debug("Covmat from 'proposal' (or 'ref') property of parameters: %r", covmat)
         # If given update with covmat file
         if self.covmat is not None:
@@ -333,8 +338,9 @@ class mcmc(Sampler):
                 max(2, int(self.drag_nfast_times * self.proposer.fast.n) + 1))
         if self.drag_interp_steps:
             self.get_new_sample = self.get_new_sample_dragging
+            print "TODO: The [:nslow] indexing in next line is not going to work!!!!!!!!!!!"
             log.info("Using fast dragging with %d interpolating steps on parameters: %r",
-                     self.drag_interp_steps, self.prior.names()[self.n_slow:])
+                     self.drag_interp_steps, self.parametrisation.sampled_params.keys()[self.n_slow:])
         else:
             self.get_new_sample = self.get_new_sample_metropolis
 
@@ -346,14 +352,12 @@ class mcmc(Sampler):
         # Still, we need to compute derived parameters, since, as the proposal "blocked",
         # we may be saving the initial state of some block.
         initial_point = self.prior.reference(max_tries=self.max_tries)
-        derived = []
-        logpost = self.prior.logp(initial_point)
-        if logpost > -np.inf:
-            logpost += sum(self.likelihood.logps(initial_point, derived=derived))
+        logpost, _, _, derived = self.logposterior(initial_point)
         self.current_point.add(initial_point, derived=derived, logpost=logpost)
-        log.info("Initial point:\n   "+
-                 "\n   ".join(["%s = %g"%(p,self.current_point[p])
-                               for p in self.prior.names()]))
+#        log.info("Initial point:\n   "+
+#                 "\n   ".join(["%s = %g"%(p,self.current_point[p])
+#                               for p in self.prior.names()]))
+        log.info("Initial point:\n %r ",self.current_point)
         # Main loop!
         self.converged = False
         log.info("Sampling!")
@@ -382,16 +386,6 @@ class mcmc(Sampler):
         return self.collection.n() + (
             0 if not burn_in else self.burn_in - self.burn_in_left + 1)
 
-    def logposterior(self, params_values, derived=None):
-        logprior = self.prior.logp(params_values)
-        logpost = logprior
-        logliks = []
-        if logprior > -np.inf:
-            logliks = self.likelihood.logps(params_values, derived=derived)
-            logpost += sum(logliks)
-        self.n_eval += 1
-        return logpost, logprior, logliks
-
     def get_new_sample_metropolis(self):
         """
         Draws a new trial point from the proposal pdf and checks whether it is accepted:
@@ -402,10 +396,9 @@ class mcmc(Sampler):
         Returns:
            ``True`` for an accepted step, ``False`` for a rejected one.
         """
-        trial = self.current_point[self.prior.names()]
+        trial = self.current_point[self.parametrisation.sampled_params()]
         self.proposer.get_proposal(trial)
-        derived = []
-        logpost_trial, logprior_trial, logliks_trial = self.logposterior(trial, derived=derived)
+        logpost_trial, logprior_trial, logliks_trial, derived = self.logposterior(trial)
         accept = self.metropolis_accept(logpost_trial, -self.current_point["minuslogpost"])
         self.process_accept_or_reject(accept, trial, derived,
                                       logpost_trial, logprior_trial, logliks_trial)
@@ -431,9 +424,8 @@ class mcmc(Sampler):
         self.proposer.get_proposal_slow(end_slow_point)
         # Save derived paramters of delta_slow jump, in case I reject all the dragging
         # steps but accept the move in the slow direction only
-        derived = []
-        end_slow_logpost, end_slow_logprior, end_slow_logliks = (
-            self.logposterior(end_slow_point, derived=derived))
+        end_slow_logpost, end_slow_logprior, end_slow_logliks, derived = (
+            self.logposterior(end_slow_point))
         if end_slow_logpost == -np.inf:
             self.current_point.increase_weight(1)
             return False
@@ -464,11 +456,10 @@ class mcmc(Sampler):
             # point, but discard them, since they contain the starting point's fast ones,
             # not used later -- save the end point's ones.
             proposal_start_logpost = self.logposterior(proposal_start_point)[0]
-            derived_proposal_end = []
-            proposal_end_logpost, proposal_end_logprior, proposal_end_logliks = (
-                self.logposterior(proposal_end_point, derived=derived_proposal_end)
+            proposal_end_logpost, proposal_end_logprior, proposal_end_logliks, derived_proposal_end = (
+                self.logposterior(proposal_end_point)
                 if proposal_start_logpost > -np.inf
-                else (-np.inf, None, []))
+                else (-np.inf, None, [], []))
             if proposal_start_logpost > -np.inf and proposal_end_logpost > -np.inf:
                 # create the interpolated probability and do a Metropolis test
                 frac = i_step / self.drag_interp_steps

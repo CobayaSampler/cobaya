@@ -189,7 +189,7 @@ class Collection():
                              first=None, last=None):
         # get names and labels (n.b.: getdist forcefully adds its own $'s)
         # sampled
-        names = list(self.prior.names())
+        names = self.sampled_params
         labels = [ensure_nolatex(l) for l in self.prior.labels.values()]
         ranges = dict([(p,ls) for p,ls in zip(self.prior.names(),self.prior.limits())])
         # derived
@@ -237,13 +237,12 @@ class OnePoint(Collection):
     def add_to_collection(self, collection):
         """Adds this point at the end of a given collection."""
         collection.add(
-            self[self.prior.names()],
-            derived=(self[[_derived_pre+p for p in self.likelihood.derived_all()]]
-                     if len(self.likelihood.derived_all()) else None),
+            self[self.sampled_params],
+            derived=(self[[_derived_pre+p for p in self.derived_params]]
+                     if self.derived_params else None),
             logpost=-self[_minuslogpost][0], weight=self[_weight][0],
             logprior=-self[_minuslogprior][0],
-            logliks=-0.5*np.array([self[_chi2+separator+lik][0]
-                                   for lik in self.likelihood.names()]))
+            logliks=-0.5*np.array(self[self.chi2_names]))
     
     # Make the dataframe printable (but only the filled ones!)
     def __repr__(self):

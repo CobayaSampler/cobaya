@@ -126,12 +126,12 @@ class Likelihood():
     """Likelihood class prototype."""
 
     # Generic initialisation -- do not touch
-    def __init__(self, parametrisation, info, theory=None):
+    def __init__(self, info, parametrisation, theory=None):
         self.input_params = odict(
             [(p,p_info) for p,p_info in parametrisation.input_params().iteritems() if p in info[_params]])
         self.output_params = odict(
             [(p,p_info) for p,p_info in parametrisation.output_params().iteritems() if p in info[_params]])
-        # Load info of the code
+        # Load info of the likelihood
         for k in info:
             setattr(self, k, info[k])
         # Initialise
@@ -234,7 +234,7 @@ class LikelihoodCollection():
     Initialises the theory code and the experimental likelihoods.
     """
 
-    def __init__(self, parametrisation, info_likelihood, info_theory=None):
+    def __init__(self, info_likelihood, parametrisation, info_theory=None):
         # Store the input/output parameters
         self.input_params = parametrisation.input_params()
         self.output_params = parametrisation.output_params()
@@ -258,7 +258,7 @@ class LikelihoodCollection():
                     name, info, theory=getattr(self, _theory, None))
             else:
                 lik_class = get_class(name)
-                self._likelihoods[name] = lik_class(parametrisation, info, theory=self.theory)
+                self._likelihoods[name] = lik_class(info, parametrisation, theory=self.theory)
 
         print "TODO!!!!! Make it work with MOCK likelihoods!!!!!"
 

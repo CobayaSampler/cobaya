@@ -36,12 +36,17 @@ a: f(c)
 b:
    derived: g(c)
 
+DECIR QUE NO SE PERMITE FIJAR UNO DEFINIDO POR FUNCION (NO PODRIA PONER EL "DROP"!)
 
 # Assume that the *un*known function arguments are likelihood output parameters
 In particular, args of COSMO derived parameters are assumed to be COSMO output parameters!
 
 Una razon para usar solo un nivel de derived: si el parametro "intermedio" es tan importante
 entonces lo propio es incorporarlo al codigo cosmologico!!!
+(Se puede hacer 2 niveles de manera simple???)
+DE TODAS MANERAS, LO IMPORTANTE ES QUE LO *PERMITE* HACER (SIN CAMBIAR CODIGO),
+AUNQUE NO SEA LO MAS COMODO! (Si lo quieres mas sencillo, te las defines aparte)
+PONER EJEMPLO DE SCRIPTED CALL PARA HACER COSAS LIGERAMENTE MAS COMPLICADAS.
 
 """
 

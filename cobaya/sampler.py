@@ -121,6 +121,9 @@ class Sampler(object):
         self.prior = prior
         self.likelihood = likelihood
         self.output = output
+        # Load info of the sampler
+        for k in info_sampler:
+            setattr(self, k, info_sampler[k])
         # Number of times the posterior has been evaluated
         self.n_eval = 0
         self.initialise()
@@ -140,6 +143,8 @@ class Sampler(object):
                 self.parametrisation.to_input(params_values), derived=derived)
             logpost += sum(logliks)
             derived_sampler = self.parametrisation.to_derived(derived)
+        else:
+            derived_sampler = []
         self.n_eval += 1
         return logpost, logprior, logliks, derived_sampler
 

@@ -345,22 +345,15 @@ class Prior():
 #            logp += ext["logp"](**dict([(param,x[index[param]]) for param in ext["argspec"].args]))
 #        return logp
 
-    def covmat(self):
+    def covmat(self, external_error=True):
         """
         Returns:
            The covariance matrix of the prior.
         """
-        index = self.indices()
-        covmat = np.identity(len(index))
-        # Compute per parameter
-        for pdf,param in zip(self.pdf, self.names()):
-            # scipy.stats -- a single parameter
-            if pdf.__class__.__name__ == "rv_frozen":
-                covmat[index[param],index[param]] = pdf.var()
-            # External
-            else:
-                NotImplementedError("Not implemented getting covmat from external prior.")
-        return covmat
+        if external_error and self.external:
+            log.error("It is not possible to get the covariance matrix from an external prior.")
+            raise HandledException
+        return np.diag([pdf.var() for pdf in self.pdf]).T
 
     def reference(self, max_tries=np.inf):
         """
@@ -395,21 +388,21 @@ class Prior():
                   "null-defined in the domain of the prior.", max_tries)
         raise HandledException
 
-    def reference_sigma(self):
+    def reference_covmat(self):
         """
         Returns:
           The standard deviation of the 1d ref pdf's. For those parameters that do not have
           a ref pdf defined, the standard deviation of the prior is taken instead.
         """
-        sigma = np.array([getattr(ref_pdf, "std", lambda: np.nan)()
+        print "TURN ME INTO REFERENCE_COVMAT!!!!!"
+        covmat = np.diag([getattr(ref_pdf, "var", lambda: np.nan)()
                           for i, ref_pdf in enumerate(self.ref_pdf)])
-        where_no_ref_sigma = np.isnan(sigma)
-        if None in self.ref_pdf or np.any(where_no_ref_sigma):
+        where_no_ref = np.isnan(covmat)
+        if np.any(where_no_ref):
             log.warning("Reference pdf not defined or improper for some parameters. "
                         "Using prior's sigma instead for them.")
-            sigma_prior = np.sqrt(np.diag(self.covmat()))
-            sigma[where_no_ref_sigma] = sigma_prior[where_no_ref_sigma]
-        return sigma
+            covmat[where_no_ref] = self.covmat(external_error=False)[where_no_ref]
+        return covmat
 
     # Python magic for the "with" statement
     def __enter__(self):

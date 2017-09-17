@@ -81,7 +81,7 @@ class Output():
                 # This is the error we should be raising when chain continuation is implem.
                 raise OSError("Dumping the info: The file '%s' exists!", f)
             with open(f, "w") as f_out:
-                f_out.write(yaml_custom_dump(info, default_flow_style=False))
+                f_out.write(yaml_dump(info, default_flow_style=False))
 
     def prepare_collection(self, name=None):
         if not name:

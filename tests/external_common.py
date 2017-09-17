@@ -17,7 +17,7 @@ from cobaya.conventions import _output_prefix, _params, _prior
 from cobaya.conventions import _sampler, _likelihood, _full_suffix
 from cobaya.conventions import _chi2, separator, _external
 from cobaya.run import run
-from cobaya.yaml_custom import yaml_custom_load
+from cobaya.yaml_custom import yaml_load
 
 # Definition of external (log)pdf's
 

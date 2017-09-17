@@ -68,8 +68,8 @@ def run(info):
     from cobaya.parametrisation import Parametrisation
     with Parametrisation(full_info[_params]) as par:
         with Prior(par, full_info.get(_prior)) as prior:
-            with Likelihood(par, full_info[_likelihood], full_info.get(_theory)) as lik:
-                with Sampler(info[_sampler], par, prior, lik, output) as sampler:
+            with Likelihood(full_info[_likelihood], par, full_info.get(_theory)) as lik:
+                with Sampler(full_info[_sampler], par, prior, lik, output) as sampler:
                     # Save the full, defaults-populated info
                     output.dump_info()
                     # Sample!
