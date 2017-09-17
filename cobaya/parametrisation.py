@@ -37,7 +37,11 @@ b:
    derived: g(c)
 
 
-        # Assume that the *un*known function arguments are likelihood output parameters
+# Assume that the *un*known function arguments are likelihood output parameters
+In particular, args of COSMO derived parameters are assumed to be COSMO output parameters!
+
+Una razon para usar solo un nivel de derived: si el parametro "intermedio" es tan importante
+entonces lo propio es incorporarlo al codigo cosmologico!!!
 
 """
 
@@ -92,7 +96,8 @@ class Parametrisation(object):
         self._derived = odict()
         self._derived_funcs = dict()
         self._derived_args = dict()
-        self._theory_params = info_params.get(_theory,{}).keys()
+        self._theory_params = set(info_params.get(_theory,{}).keys())
+        self._theory_args = dict()
         info_params_flat = odict([(p,info_params[_theory][p]) for p in self._theory_params])
         info_params_flat.update(odict([(p,info_params[p]) for p in info_params if p!=_theory]))
         for p, info in info_params_flat.iteritems():
@@ -119,6 +124,13 @@ class Parametrisation(object):
             if p in args:
                 args.remove(p)
         self._output.update({p:None for p in args})
+        # if arguments of a cosmo parameter, assume it's a cosmo parameter
+        args_theory = (
+            set(chain(
+                *[v for p,v in self._input_args.iteritems() if p in self._theory_params]))
+            .union(chain(
+                *[v for p,v in self._derived_args.iteritems() if p in self._theory_params])))
+        self._theory_params = self._theory_params.union(args_theory)
         # Useful sets: directly-sampled input parameters and directly "output-ed" derived
         self._directly_sampled = [p for p in self._input if p in self._sampled]
         self._directly_output = [p for p in self._derived if p in self._output]
