@@ -86,6 +86,7 @@ def get_full_info(info):
     # Creates an equivalent info using only the defaults
     full_info = odict()
     default_params_info = odict()
+    default_prior_info = odict()
     modules = get_modules(info)
     for block in modules:
         full_info[block] = odict()
@@ -119,11 +120,21 @@ def get_full_info(info):
                           module, tuple(options_not_recognised), path_to_defaults)
                 raise HandledException
             full_info[block][module].update(info[block][module])
-            # Store default parameters within class, and save to combine later with input
+            # Store default parameters and priors of class, and save to combine later
             if block == _likelihood:
                 params_info = default_module_info.get(_params, {})
                 full_info[block][module].update({_params:params_info})
                 default_params_info[module] = params_info
+                default_prior_info[module] = default_module_info.get(_prior, {})
+    # Add priors info, after the necessary checks
+    if any(default_prior_info.values()):
+        full_info[_prior] = odict()
+    for prior_info in default_prior_info.values():
+        for name, prior in prior_info:
+            if full_info[_prior].get(name, None) != prior:
+                log.error("Two different priors have been defined with the same name: '%s'.",name)
+                raise HandledException
+            full_info[_prior][name] = prior
     # Add parameters info, after the necessary updates and checks
     full_info[_params] = merge_params_info(info[_params], defaults=default_params_info)
     # Rest of the options
@@ -154,7 +165,6 @@ def merge_params_info(params_info, defaults=None):
     info_updated = deepcopy(defaults_merged)
     info_updated.update(params_info)
     # Inherit labels (for sampled and derived) and min/max (just for derived params)
-    print "TODO!!!!! Test inheritance of labels and limits (for derived only!!!!) CHECK THAT IT ACTUALLY INHERITS WITH PLANCK!!!!!!!!"
     getter = lambda info, key: getattr(info, "get", lambda x: None)
     for p in defaults_merged:
         default_label = getter(defaults_merged[p], _p_label)

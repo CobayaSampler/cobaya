@@ -127,13 +127,18 @@ class Likelihood():
 
     # Generic initialisation -- do not touch
     def __init__(self, info, parametrisation, theory=None):
+        # Load info of the likelihood
+        for k in info:
+            setattr(self, k, info[k])
+        # Mock likelihoods: gather all parameters starting with `mock_prefix`
+        if self.is_mock():
+            all_params = list(parametrisation.input_params())+list(parametrisation.output_params())
+            info[_params] = [p for p in all_params if p.startswith(self.mock_prefix)]
+        # Load parameters
         self.input_params = odict(
             [(p,p_info) for p,p_info in parametrisation.input_params().iteritems() if p in info[_params]])
         self.output_params = odict(
             [(p,p_info) for p,p_info in parametrisation.output_params().iteritems() if p in info[_params]])
-        # Load info of the likelihood
-        for k in info:
-            setattr(self, k, info[k])
         # Initialise
         self.theory = theory
         self.initialise()
@@ -174,37 +179,16 @@ class Likelihood():
 
     # Other general methods
 
-    def params_defaults(self):
-        return self._params_defaults
-
     def wait(self):
         if self.delay:
             log.debug("Sleeping for %f seconds.", self.delay)
         sleep(self.delay)
-    
-    # def data_folder(self):
-    #     """
-    #     Default data folder: "data" under the likelihood folder.
-    #     Creates it if it does not exist.
-    #     Can be overriden in your likelihood if a different, external folder is needed.
-    #     """
-    #     data_folder = os.path.join(
-    #         os.path.dirname(sys.modules[self.__module__].__file__), "data")
-    #     if not os.path.exists(data_folder):
-    #         os.makedirs(data_folder)
-    #     return data_folder
+
+    def d(self):
+        return len(self.input_params)
 
     def is_mock(self):
         return hasattr(self, "mock_prefix")
-    
-    # def mock_set_params(self, fixed=None, sampled=None, derived=None):
-    #     """
-    #     Set parameters of a mock likelihood after initialisation (does nothing for non-mock
-    #     likelihoods).
-
-    #     Takes a list of parameter names.
-    #     """
-    #     self.fixed, self.sampled, self.derived = fixed, sampled, derived
 
 
 class LikelihoodExternalFunction(Likelihood):
@@ -259,37 +243,6 @@ class LikelihoodCollection():
             else:
                 lik_class = get_class(name)
                 self._likelihoods[name] = lik_class(info, parametrisation, theory=self.theory)
-
-        print "TODO!!!!! Make it work with MOCK likelihoods!!!!!"
-
-## TO TOOLS!!!!
-#        # Parameters: first check consistency through likelihoods. Then load.
-#        mock_prefixes = [
-#            p for p in [getattr(lik, "mock_prefix", None)
-#                        for lik in self.likelihoods.values()] if p != None]
-#        load_params(self, params_info=self._params_defaults, allow_unknown_prefixes=[""])
-#        load_params(self, params_info=self._params_input,    allow_unknown_prefixes=mock_prefixes)
-##        self._updated_info_params_liks = get_updated_params_info(self)
-#        # Tell the the mock likelihoods their respective parameters read
-#        for lik in self.likelihoods.values():
-#            if lik.is_mock():
-#                lik.mock_set_params(
-#                    [p for p in self.fixed   if p.startswith(lik.mock_prefix)],
-#                    [p for p in self.sampled if p.startswith(lik.mock_prefix)],
-#                    [p for p in self.derived if p.startswith(lik.mock_prefix)])
-
-# PASS ALL NEXT BLOCK TO THE NEW TOOL!
-#        # "Externally" defined priors
-#        self._info_prior = {}
-#        for lik in self.likelihoods.values():
-#            new = getattr(lik, _prior, {})
-#            if any((k in self._info_prior) for k in new):
-#                log.error("There are default priors sharing a name.")
-#                raise HandledException
-#            self._info_prior.update(new)
-#        if info_prior:
-#            self._info_prior.update(info_prior)
-
         # Check that all are recognised
         for params in ("input_params", "output_params"):
             info = getattr(parametrisation, params)()
@@ -302,6 +255,9 @@ class LikelihoodCollection():
                 log.error("Some of the requested %s parameters were not recognised "
                           "by any likelihood: %r.", params.split("_")[0], r_not_k)
                 raise HandledException
+        # Pop the per-likelihood parameters info, that was auxiliary
+        for lik in info_likelihood:
+            info_likelihood[lik].pop(_params)
 
     # "get" and iteration operate over the dictionary of likelihoods
     def __getitem__(self, key):
@@ -329,9 +285,6 @@ class LikelihoodCollection():
         logps = []
         for lik in self:
             this_params_dict = {p: input_params[p] for p in self[lik].input_params}
-            #,v in .iteritems() if
-            #    ((p in self[lik].params_defaults()) or
-            #     (p.startswith(self[lik].mock_prefix) if hasattr(self[lik], "mock_prefix") else False))])
             if derived != None:
                 this_derived_dict = {}
             logps += [self[lik].logp(derived=this_derived_dict, **this_params_dict)]
@@ -355,41 +308,17 @@ class LikelihoodCollection():
         log.error("Marginal not implemented for >1 likelihoods. Sorry!")
         raise HandledException
 
-    # def sampled_params(self):
-    #     params = odict()
-    #     if self.theory:
-    #         params.update(self.theory.sampled_params())
-    #     params.update(self.sampled)
-    #     return params
+    def d(self):
+        return sum([self[lik].d() for lik in self])
 
-    # def derived_all(self):
-    #     """Returns all derived params (theory ones always go first)."""
-    #     return (list(self.theory.derived) if self.theory else []) + list(self.derived)
-
-    # def sampled_params_names(self):
-    #     return self.sampled_params().keys()
-
-    # def d(self):
-    #     return len(self.sampled_params())
-
-    # def sampled_params_by_likelihood(self):
-    #     blocks = odict()
-    #     for lik in self:
-    #         params = [p for p in self[lik].params_defaults() if p in self.sampled]
-    #         # mock likelihoods -- identify params by prefix
-    #         if not params and hasattr(self[lik], "mock_prefix"):
-    #             params = [p for p in self.sampled if p.startswith(self[lik].mock_prefix)]
-    #         blocks[lik] = params
-    #     if self.theory:
-    #         blocks[_theory] = [p for p in self.theory.sampled]
-    #     return blocks
-            
     def speed_blocked_params(self, as_indices=False):
         """
         Blocks the parameters by likelihood, and sorts the blocks by speed.
         Parameters recognised by more than one likelihood are blocked in the slowest one.
         """
         print "TODO: UPDATE THIS ONE!!!"
+
+    
         params_blocks = self.sampled_params_by_likelihood()
         speeds = odict([[lik,getattr(self[lik], "speed", 1)] for lik in self])
         if self.theory:
@@ -413,27 +342,6 @@ class LikelihoodCollection():
             names = self.sampled_params().keys()
             return [[speed,[names.index(p) for p in block]]
                     for speed,block in speed_blocked]
-
-#    def updated_info(self):
-#        updated_info = odict()
-#        for name, lik in self.likelihoods.iteritems():
-#            updated_info[name] = dict([(k,v) for k,v in lik._updated_info[name].iteritems()
-#                                       if k != _params])
-#        return updated_info
-
-    # def updated_info_theory(self):
-    #     if self.theory:
-    #         return self.theory.updated_info()
-    #     else:
-    #         return odict()
-    
-#    def updated_info_params(self):
-#        if self.theory:
-#            return odict([(k,v) for k,v in zip(
-#                [_theory, _likelihood],
-#                [self.theory.updated_info_params(), self._updated_info_params_liks])])
-#        else:
-#            return self._updated_info_params_liks
 
     # Python magic for the "with" statement
     def __enter__(self):

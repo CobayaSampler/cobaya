@@ -122,7 +122,7 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
     if stringy == info_logpdf:
         full_output_file = os.path.join(prefix, _full_suffix+".yaml")
         with open(full_output_file) as full:
-            updated_yaml = yaml_custom_load("".join(full.readlines()))
+            updated_yaml = yaml_load("".join(full.readlines()))
         for k,v in stringy.iteritems():
             to_test = updated_yaml[kind][k]
             if kind == _likelihood:

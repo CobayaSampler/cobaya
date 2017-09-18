@@ -269,20 +269,21 @@ class Prior():
             else:
                 log.error("No limits defined for parameter '%s'.", param)
                 raise HandledException
-#        # DOING NOTHING FOR NOW!!!!
-        print "TODO: FIX EXTERNAL PRIORS!!!!!"
-#        # Process the external prior(s):
-#        self.external = odict()
-#        for name in (info_prior if info_prior else {}):
-#            log.debug("Loading external prior '%s' from: '%s'", name, info_prior[name])
-#            self.external[name] = {"logp": get_external_function(info_prior[name])}
-#            self.external[name].update({"argspec": inspect.getargspec(self.external[name]["logp"])})
-#            if not all([p in self.names() for p in self.external[name]["argspec"].args]):
-#                log.error(
-#                    "The arguments of the external prior '%s' must be known *sampled* parameters. "
-#                    "Got %r", name, self.external[name]["argspec"].args)
-#                raise HandledException
-#            log.warning("External prior '%s' loaded. Mind that it might not be normalised!", name)
+        # Process the external prior(s):
+        self.external = odict()
+        for name in (info_prior if info_prior else {}):
+            log.debug("Loading external prior '%s' from: '%s'", name, info_prior[name])
+            self.external[name] = {"logp": get_external_function(info_prior[name])}
+            self.external[name]["argspec"] = inspect.getargspec(self.external[name]["logp"])
+            try:
+                self.external[name]["indices"] = [list(sampled_params_info).index(p)
+                                                  for p in self.external[name]["argspec"].args]
+            except ValueError:
+                log.error(
+                    "The arguments of the external prior '%s' must be known *sampled* parameters. "
+                    "Got %r", name, self.external[name]["argspec"].args)
+                raise HandledException
+            log.warning("External prior '%s' loaded. Mind that it might not be normalised!", name)
 
     def d(self):
         """
@@ -337,13 +338,7 @@ class Prior():
 
     def logp_external(self, x):
         """Evaluates the logprior using the external prior only."""
-        print "TODO: FIX EXTERNAL PRIORS!!!!!!!!!!"
-        return 0
-#        logp = 0
-#        index = self.indices()
-#        for ext in self.external.values():
-#            logp += ext["logp"](**dict([(param,x[index[param]]) for param in ext["argspec"].args]))
-#        return logp
+        return sum([ext["logp"](*x[ext["indices"]]) for ext in self.external.values()])
 
     def covmat(self, external_error=True):
         """
@@ -394,7 +389,6 @@ class Prior():
           The standard deviation of the 1d ref pdf's. For those parameters that do not have
           a ref pdf defined, the standard deviation of the prior is taken instead.
         """
-        print "TURN ME INTO REFERENCE_COVMAT!!!!!"
         covmat = np.diag([getattr(ref_pdf, "var", lambda: np.nan)()
                           for i, ref_pdf in enumerate(self.ref_pdf)])
         where_no_ref = np.isnan(covmat)
