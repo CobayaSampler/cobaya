@@ -106,7 +106,18 @@ class gaussian(Likelihood):
                 log.error(
                     "The numbers of modes guessed from mean(s) and cov(s) do not match!")
                 raise HandledException
-            self.dim, self.n_modes = mean_dim, mean_n_modes
+            if mean_dim != self.d():
+                log.error(
+                    "The dimensionality is %d (guessed from given means and covmats) "
+                    "but was given %d mock parameters instead.", self.d(), len(self.sampled))
+                raise HandledException
+            self.n_modes = mean_n_modes
+            if len(self.output_params) != self.d()*self.n_modes:
+                log.error(
+                    "The number of derived parameters must be equal to the dimensionality times "
+                    "the number of modes, i.e. %d x %d = %d, but was given %d derived parameters.",
+                    self.d(), self.n_modes, self.d()*self.n_modes, len(self.output_params))
+                raise HandledException
         else:
             log.error("You must specify both a mean (or a list of them) and a "
                       "covariance matrix, or a list of them.")
@@ -116,36 +127,21 @@ class gaussian(Likelihood):
         # Prepare the transformation(s) for the derived parameters
         self.choleskyL = [np.linalg.cholesky(cov) for cov in self.cov]
 
-    # Wrapper of the original one, to check the correct dimensionality at the end
-    def mock_set_params(self, *args, **kwargs):
-        Likelihood.mock_set_params(self, *args, **kwargs)
-        if len(self.sampled) != self.dim:
-            log.error(
-                "The dimensionality is %d (guessed from given means and covmats) "
-                "but was given %d mock parameters instead.", self.dim, len(self.sampled))
-            raise HandledException
-        if len(self.derived) != self.dim*self.n_modes:
-            log.error(
-                "The number of derived parameters must be equal to the dimensionality times "
-                "the number of modes, i.e. %d x %d = %d, but was given %d derived parameters.",
-                self.dim, self.n_modes, self.dim*self.n_modes, len(self.derived))
-            raise HandledException
-        
     def logp(self, **params_values):
         """
         Computes the log-likelihood for a given set of parameters.
         """
         self.wait()
         # Prepare the vector of sampled parameter values
-        x = np.array([params_values[p] for p in self.sampled])
+        x = np.array([params_values[p] for p in self.input_params])
         # Fill the derived parameters
         derived = params_values.get("derived")
         if derived != None:
             for i in range(self.n_modes):
                 standard = np.linalg.inv(self.choleskyL[i]).dot((x-self.mean[i]))
-                derived.update(
-                    dict([(p,v) for p,v in zip(self.derived[i*self.dim:(i+1)*self.dim],
-                                               standard)]))
+                derived.update(dict(
+                    [(p,v) for p,v in
+                     zip(self.output_params.keys()[i*self.d():(i+1)*self.d()],standard)]))
         # Compute the likelihood and return
         return (-np.log(self.n_modes) +
                  np.log(sum([gauss.pdf(x) for gauss in self.gaussians])))
