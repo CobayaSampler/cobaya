@@ -99,27 +99,28 @@ baseline_cosmology = r"""
 
 # Derived parameters, described in
 # https://wiki.cosmos.esa.int/planckpla2015/images/b/b9/Parameter_tag_definitions_2015.pdf
-omegam_func = lambda omegab, omegac, omegan: omegab+omegac+omegan
 derived = {
     "H0":          {"latex": r"H_0"},
     "omegav":      {"latex": r"\Omega_\Lambda"},
-    "omegam":      {"derived": omegam_func, "latex": r"\Omega_m"},
-    "omegamh2":    {"derived": lambda omegab, omegac, omegan, H0: omegam_func(omegab, omegac, omegan)*(H0/100)**2, "latex": r"\Omega_m h^2"},
-    "omegamh3":    {"derived": lambda omegab, omegac, omegan, H0: omegam_func(omegab, omegac, omegan)*(H0/100)**3, "latex": r"\Omega_m h^3"},
+    "omegam":      {"derived": lambda omegab, omegac, omegan: omegab+omegac+omegan, "latex": r"\Omega_m"},
+    "omegamh2":    {"derived": lambda omegab, omegac, omegan, H0: (omegab+omegac+omegan)*(H0/100)**2, "latex": r"\Omega_m h^2"},
+    "omegamh3":    {"derived": lambda omegab, omegac, omegan, H0: (omegab+omegac+omegan)*(H0/100)**3, "latex": r"\Omega_m h^3"},
 # Apparently, the baseline chains show a best fit, but no mean+sigma
-#    "omeganuh2":   {"derived": lambda omegan, H0: omegan*(H0*1e-2)**2, "latex": r"\Omega_\nu h^2"},
+# Curiosamente si lo muestran para ns02.
+    #    "omeganuh2":   {"derived": lambda omegan, H0: omegan*(H0*1e-2)**2, "latex": r"\Omega_\nu h^2"},
     "sigma8":      {"latex": r"\sigma_8"},
     "s8h5":        {"derived": lambda sigma8, H0: sigma8*(H0*1e-2)**(-0.5), "latex": r"\sigma_8/h^{0.5}"},
-    "s8omegamp5":  {"derived": lambda sigma8, omegab, omegac, omegan: sigma8*omegam_func(omegab, omegac, omegan)**0.5, "latex": r"\sigma_8 \Omega_m^{0.5}"},
-    "s8omegamp25": {"derived": lambda sigma8, omegab, omegac, omegan: sigma8*omegam_func(omegab, omegac, omegan)**0.25, "latex": r"\sigma_8 \Omega_m^{0.25}"},
+    "s8omegamp5":  {"derived": lambda sigma8, omegab, omegac, omegan: sigma8*(omegab+omegac+omegan)**0.5, "latex": r"\sigma_8 \Omega_m^{0.5}"},
+    "s8omegamp25": {"derived": lambda sigma8, omegab, omegac, omegan: sigma8*(omegab+omegac+omegan)**0.25, "latex": r"\sigma_8 \Omega_m^{0.25}"},
 # How to get this one?
-#    "rmsdeflect":  {"latex": r"\langle d^2\rangle^{1/2}"},
+    #    "rmsdeflect":  {"latex": r"\langle d^2\rangle^{1/2}"},
     "zre":         {"latex": r"z_\mathrm{re}"},
-# The problem with the next 2 is that ...
-#    "As1e9":       {"derived": lambda logAs1e10: 1e-1*np.exp(logAs1e10), "latex": r"10^9 A_s"},
-#    "clamp":       {"derived": lambda logAs1e10, tau: 1e9*As*np.exp(-2*tau), "latex": r"10^9 A_s e^{-2\tau}"},
+# The problem with the next 2 is related to whether a function-defined sampled param
+# can be fixed. It would not make much sense, right?
+    #    "As1e9":       {"derived": lambda logAs1e10: 1e-1*np.exp(logAs1e10), "latex": r"10^9 A_s"},
+    #    "clamp":       {"derived": lambda logAs1e10, tau: 1e9*As*np.exp(-2*tau), "latex": r"10^9 A_s e^{-2\tau}"},
 # This one should take running into account??? Otherwise, it's =ns005
-#    "ns02":        {"latex": r"n_{s,0.002}"}, <------ invert from analytic P(k)
+    #    "ns02":        {"latex": r"n_{s,0.002}"},
     "YHe":         {"latex": r"Y_P"},
     "Y_p":         {"latex": r"Y_P^\mathrm{BBN}"},
     "DH":          {"latex": r"10^5D/H"},
