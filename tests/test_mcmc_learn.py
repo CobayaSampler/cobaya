@@ -6,18 +6,18 @@ from mpi4py import MPI
 import os
 import tempfile
 
-from cobaya.conventions import input_likelihood, input_params, input_sampler
+from cobaya.conventions import _likelihood, _params, _sampler
 from cobaya.likelihoods.gaussian import random_mean, random_cov
 
 # Kullback-Leibler divergence between 2 gaussians
 def KL_norm(m1=None, S1=np.array([]), m2=None, S2=np.array([])):
     assert S1.shape[0], "Must give at least S1"
     dim = S1.shape[0]
-    if m1 == None:
+    if m1 is None:
         m1 = np.zeros(dim)
     if not S2.shape[0]:
         S2 = np.identity(dim)
-    if m2 == None:
+    if m2 is None:
         m2 = np.zeros(dim)
     S2inv = np.linalg.inv(S2)
     KL = 0.5*(np.trace(S2inv.dot(S1)) + (m1-m2).dot(S2inv).dot(m1-m2)
@@ -37,9 +37,9 @@ def info_gaussian(ranges, n_modes=1, mock_prefix=""):
     mean = comm.bcast(mean, root=0)
     cov  = comm.bcast(cov, root=0)
     dimension = len(ranges)
-    info = {input_likelihood: {"gaussian": {
+    info = {_likelihood: {"gaussian": {
         "mean": mean, "cov": cov, "mock_prefix": mock_prefix}}}
-    info[input_params] = odict(
+    info[_params] = odict(
         # sampled
         [[mock_prefix+"%d"%i,
           {"prior": {"min":ranges[i][0], "max":ranges[i][1]},
@@ -74,7 +74,7 @@ def test_gaussian_mcmc():
                      S2=sampler_instance.proposer.get_covariance())
         print KL
     # Mcmc info
-    info[input_sampler] = {"mcmc":
+    info[_sampler] = {"mcmc":
         # Bad guess for covmat, so big burn in and max_tries
         {"max_tries": 1000, "burn_in": 100,
         # Learn proposal
@@ -107,12 +107,12 @@ def test_gaussian_mcmc():
         gdsamples = products["sample"].as_getdist_mcsamples(first=int(products["sample"].n()/2))
         cov_sample, mean_sample = gdsamples.getCov(), gdsamples.getMeans()
         print mean_sample
-        KL_final = KL_norm(m1=info[input_likelihood]["gaussian"]["mean"],
-                           S1=info[input_likelihood]["gaussian"]["cov"],
+        KL_final = KL_norm(m1=info[_likelihood]["gaussian"]["mean"],
+                           S1=info[_likelihood]["gaussian"]["cov"],
                            m2 = mean_sample[:dimension],
                            S2=cov_sample[:dimension,:dimension])
         np.set_printoptions(linewidth=np.inf)
-        print "Likelihood covmat:  \n", info[input_likelihood]["gaussian"]["cov"]
+        print "Likelihood covmat:  \n", info[_likelihood]["gaussian"]["cov"]
         print "Sample covmat:      \n", cov_sample[:dimension,:dimension]
         print "Sample covmat (std):\n", cov_sample[dimension:-dimension,dimension:-dimension]
         print "Final KL: ", KL_norm(S1=info["likelihood"]["gaussian"]["cov"], S2=cov_sample[:dimension,:dimension])

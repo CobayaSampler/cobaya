@@ -206,7 +206,7 @@ class Collection():
 #                                for p in self.likelihood.derived]))
         # prior and likelihood
         if prior_and_lik:
-            names += [_minuslogprior+"*"] + [_chi2+"*"] + list(self._chi2_names)
+            names += [_minuslogprior+"*"] + [_chi2+"*"] + list(self.chi2_names)
             print "getdist: AND THIS!"
 #            labels += ([r"-\log\pi", r"\chi^2"] +
 #                       [r"\chi^2_\mathrm{"+name+r"}" for name in self.likelihood.names()])
