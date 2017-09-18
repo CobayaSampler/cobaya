@@ -128,8 +128,8 @@ class Collection():
         optionally including derived parameters if `derived=True` (default `False`).
         """
         return np.average(
-            self[list(self.likelihood.sampled.keys())
-                 +(list(self.likelihood.derived.keys()) if derived else [])]
+            self[list(self.sampled_params)
+                 +(list(self.derived_params) if derived else [])]
                 [first:last].T,
             weights=self[_weight][first:last], axis=-1)
 
@@ -140,8 +140,8 @@ class Collection():
         optionally including derived parameters if `derived=True` (default `False`).
         """
         return np.cov(
-            self[list(self.likelihood.sampled.keys())
-                 +(list(self.likelihood.derived.keys()) if derived else [])]
+            self[list(self.sampled_params)
+                 +(list(self.derived_params) if derived else [])]
                 [first:last].T,
             fweights=self[_weight][first:last])
 
@@ -190,24 +190,28 @@ class Collection():
         # get names and labels (n.b.: getdist forcefully adds its own $'s)
         # sampled
         names = self.sampled_params
-        labels = [ensure_nolatex(l) for l in self.prior.labels.values()]
-        ranges = dict([(p,ls) for p,ls in zip(self.prior.names(),self.prior.limits())])
+        print "getdist: FIX THIS IN COLLECTION!!!!!"
+        labels = []
+        ranges = {}
+#        labels = [ensure_nolatex(l) for l in self.prior.labels.values()]
+#        ranges = dict([(p,ls) for p,ls in zip(self.prior.names(),self.prior.limits())])
         # derived
         if derived:
-            names += [p+"*" for p in self.likelihood.derived]
-            labels += [ensure_nolatex(self.likelihood.updated_info_params()[p].get("latex"))
-                       for p in self.likelihood.derived]
-            ranges.update(dict([(p,(self.likelihood.updated_info_params()[p].get("min"),
-                                    self.likelihood.updated_info_params()[p].get("max")))
-                                for p in self.likelihood.derived]))
+            names += [p+"*" for p in self.derived_params]
+            print "getdist: FIX THIS TOO!!!!"
+#            labels += [ensure_nolatex(self.likelihood.updated_info_params()[p].get("latex"))
+#                       for p in self.likelihood.derived]
+#            ranges.update(dict([(p,(self.likelihood.updated_info_params()[p].get("min"),
+#                                    self.likelihood.updated_info_params()[p].get("max")))
+#                                for p in self.likelihood.derived]))
         # prior and likelihood
         if prior_and_lik:
-            names += ([_minuslogprior+"*"] + [_chi2+"*"] + 
-                      [_chi2+separator+name+"*" for name in self.likelihood.names()])
-            labels += ([r"-\log\pi", r"\chi^2"] +
-                       [r"\chi^2_\mathrm{"+name+r"}" for name in self.likelihood.names()])
+            names += [_minuslogprior+"*"] + [_chi2+"*"] + list(self._chi2_names)
+            print "getdist: AND THIS!"
+#            labels += ([r"-\log\pi", r"\chi^2"] +
+#                       [r"\chi^2_\mathrm{"+name+r"}" for name in self.likelihood.names()])
         # gather samples and create the getdist sample
-        columns = [(("" if n.rstrip("*") not in self.likelihood.derived else _derived_pre)+
+        columns = [(("" if n.rstrip("*") not in self.derived_params else _derived_pre)+
                     n.rstrip("*")) for n in names]
         samples = self.data[:self.n()].as_matrix(columns=columns)
         return MCSamples(samples=samples[first:last],
