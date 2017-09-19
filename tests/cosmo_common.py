@@ -84,7 +84,7 @@ baseline_cosmology = r"""
       proposal: 0.001
       latex: \log(10^{10} A_s)
       drop:
-    As: lambda logAs1e10: 1e-10*np.exp(logAs1e10)
+    As: "lambda logAs1e10: 1e-10*np.exp(logAs1e10)"
     ns:
       prior:
         min: 0.8
@@ -140,15 +140,18 @@ derived = {
     }
 
 
-# Best fit Temperature ####################################################################
+# Temperature only ########################################################################
 
 # NB: A_sz and ksz_norm need to have a prior defined, though "evaluate" will ignore it in
 # favour of the fixed "ref" value. This needs to be so since, at the time of writing this
 # test, explicit multiparameter priors need to be functions of *sampled* parameters.
 # Hopefully this requirement can be dropped in the near future.
 
+lik_info_lowl_highTT = {"planck_2015_lowl": None, "planck_2015_plikHM_TT": None}
+
 chi2_lowl_highTT = {"planck_2015_lowl": 15.39,
                       "planck_2015_plikHM_TT": 761.09}
+
 params_lowl_highTT = """
 %s:
   %s:
@@ -239,8 +242,12 @@ derived_lowl_highTT = {
 # test, explicit multiparameter priors need to be functions of *sampled* parameters.
 # Hopefully this requirement can be dropped in the near future.
 
+lik_info_lowTEB_highTTTEEE = {"planck_2015_lowTEB": {"speed": 0.25},
+                              "planck_2015_plikHM_TTTEEE": None}
+
 chi2_lowTEB_highTTTEEE = {"planck_2015_lowTEB": 10496.93,
                           "planck_2015_plikHM_TTTEEE": 2431.65}
+
 params_lowTEB_highTTTEEE = """
 %s:
   %s:

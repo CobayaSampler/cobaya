@@ -1,13 +1,13 @@
 if __name__ == "__main__":
     from cobaya.log import logger_setup
     logger_setup()
-    from cobaya.conventions import input_likelihood, input_theory
+    from cobaya.conventions import _likelihood, _theory
     info_install = {
-    input_theory: {"camb": None, "classy": None},
-    input_likelihood: {"planck_2015_lowl": None,
-                       "planck_2015_plikHM_TT": None,
-                       "planck_2015_lowTEB": None,
-                       "planck_2015_plikHM_TTTEEE": None}}
+    _theory: {"camb": None, "classy": None},
+    _likelihood: {"planck_2015_lowl": None,
+                  "planck_2015_plikHM_TT": None,
+                  "planck_2015_lowTEB": None,
+                  "planck_2015_plikHM_TTTEEE": None}}
     import sys
     path = sys.argv[1]
     import os

@@ -8,6 +8,7 @@ from cobaya.yaml_custom import yaml_load
 from cobaya.run import run
 
 from cosmo_common import params_lowl_highTT, chi2_lowl_highTT, derived_lowl_highTT
+from cosmo_common import lik_info_lowl_highTT, lik_info_lowTEB_highTTTEEE
 from cosmo_common import params_lowTEB_highTTTEEE, chi2_lowTEB_highTTTEEE#, derived_lowTEB_highTTTEEE
 from cosmo_common import derived, tolerance_chi2_abs, tolerance_derived
 
@@ -29,14 +30,12 @@ def body_of_test(modules, x):
 
     
     if x == "t":
-        info[_likelihood] = {"planck_2015_lowl": None,
-                                  "planck_2015_plikHM_TT": None}
+        info[_likelihood] = lik_info_lowl_highTT
         info.update(yaml_load(params_lowl_highTT))
         ref_chi2 = chi2_lowl_highTT
         derived_values = derived_lowl_highTT
     elif x == "p":
-        info[_likelihood] = {"planck_2015_lowTEB": None,
-                                  "planck_2015_plikHM_TTTEEE": None}
+        info[_likelihood] = lik_info_lowTEB_highTTTEEE
         info.update(yaml_load(params_lowTEB_highTTTEEE))
         ref_chi2 = chi2_lowTEB_highTTTEEE
         derived_values = derived_lowl_highTT

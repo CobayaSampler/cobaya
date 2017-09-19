@@ -2,23 +2,22 @@
 
 import pytest
 
-from cobaya.conventions import input_theory, input_likelihood, input_sampler
-from cobaya.conventions import input_params
-from cobaya.yaml_custom import yaml_custom_load, yaml_custom_dump
+from cobaya.conventions import _theory, _likelihood, _sampler, _params, _path_install
+from cobaya.yaml_custom import yaml_load, yaml_dump
 from cobaya.run import run
 
 from cosmo_common import baseline_cosmology, derived
+from cosmo_common import lik_info_lowl_highTT, lik_info_lowTEB_highTTTEEE
 
 @pytest.mark.slow
-def test_camb_planck_slow(camb_path, planck_path):
-    body_of_test(camb_path, planck_path, "p")
+def test_camb_planck_slow(modules):
+    body_of_test(modules, "p")
     
-def body_of_test(camb_path, planck_path, x):
-    assert camb_path, "I need CAMB's folder!"
-    info = yaml_custom_load(baseline_cosmology)
-    info[input_params][input_theory].update(derived)
-    info[input_theory] = {"camb": {"path": camb_path}}
-    info[input_sampler] = {"mcmc": {
+def body_of_test(modules, x):
+    assert modules, "I need a modules folder!"
+    info = yaml_load(baseline_cosmology)
+    info.update({_path_install: modules, _theory: {"camb": None}})
+    info[_sampler] = {"mcmc": {
         "burn_in": 100,
         "learn_proposal": True,
         "learn_proposal_Rminus1_max": 3.,
@@ -27,31 +26,21 @@ def body_of_test(camb_path, planck_path, x):
         "Rminus1_stop": 0.01,
         "Rminus1_cl_stop": 0.2,
         "Rminus1_cl_level": 0.95,
-        "drag_interp_steps": 3
+        "drag_interp_steps": 3,
+        "max_speed_slow": 0.5
     }}
     if x == "t":
-        info[input_likelihood] = {"planck_2015_lowl": {"path": planck_path},
-                                  "planck_2015_plikHM_TT": {"path": planck_path}}
-        info[input_sampler]["mcmc"]["covmat"] = "./base_plikHM_TT_lowTEB_0.01theta.covmat"
+        info[_likelihood] = lik_info_lowl_highTT
+        info[_sampler]["mcmc"]["covmat"] = "./base_plikHM_TT_lowTEB_0.01theta.covmat"
     elif x == "p":
-        info[input_likelihood] = {"planck_2015_lowTEB": {"path": planck_path, "speed": 1},
-                                  "planck_2015_plikHM_TTTEEE": {"path": planck_path, "speed": 4}}
-        info[input_sampler]["mcmc"]["covmat"] = "./base_plikHM_TTTEEE_lowTEB_0.01theta.covmat"
+        info[_likelihood] = lik_info_lowTEB_highTTTEEE
+        info[_sampler]["mcmc"]["covmat"] = "./base_plikHM_TTTEEE_lowTEB_0.01theta.covmat"
     else:
         raise ValueError("Test not recognised: %r"%x)
-#    for lik in info[input_likelihood]:
-#        info[input_likelihood][lik].update({"speed": 4})
     info["output_prefix"] = "./test_planck/%s_"%x
     info["debug"] = False
 #    info["debug_file"] = "test_planck_slow.log"
     print "Input info (dumped to yaml) -------------------------------"
-    print yaml_custom_dump(info)
+    print yaml_dump(info)
     print "-----------------------------------------------------------"
     updated_info, products = run(info)
-
-# DELETE ME!!!
-if __name__ == "__main__":
-    import os
-    root = "/lustre/scratch/astro/jt386/projects/sampler/"
-    root = "/home/jesus/scratch/sampler"
-    test_camb_planck_slow(os.path.join(root, "CAMB"), os.path.join(root, "likelihoods/planck_2015"))
