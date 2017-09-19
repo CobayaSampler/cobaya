@@ -17,9 +17,10 @@ import datetime
 from numbers import Number
 from getdist import MCSamples
 from copy import deepcopy
+from importlib import import_module
 
 # Local
-from cobaya.conventions import subfolders, _defaults_file, _params, _p_label
+from cobaya.conventions import package, subfolders, _defaults_file, _params, _p_label
 from cobaya.conventions import _prior, _theory, _likelihood, _sampler, _external
 from cobaya.tools import get_labels, get_folder
 from cobaya.yaml_custom import yaml_load_file
@@ -117,6 +118,10 @@ def get_full_info(info):
             options_not_recognised = (set(input_info[block][module])
                                       .difference(set([_external]))
                                       .difference(set(full_info[block][module])))
+            # Allowed common options
+            allowed = getattr(import_module(package+"."+block, package=package),
+                              "allowed_options", [])
+            options_not_recognised = options_not_recognised.difference(set(allowed))
             if options_not_recognised:
                 log.error("'%s' does not recognise some options: '%r'. "
                           "To see the allowed options, check out the file '%s'",

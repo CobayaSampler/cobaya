@@ -121,6 +121,9 @@ from cobaya.log import HandledException
 import logging
 log = logging.getLogger(__name__)
 
+# Allowed common options
+allowed_options = ["speed"]
+
 
 class Likelihood():
     """Likelihood class prototype."""
