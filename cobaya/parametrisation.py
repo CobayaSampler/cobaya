@@ -108,7 +108,7 @@ class Parametrisation(object):
         for p, info in info_params_flat.iteritems():
             if is_fixed_param(info):
                 self._input[p] = info if isinstance(info, Number) else None
-                if not self._input[p]:
+                if self._input[p] == None:
                     self._input_funcs[p] = get_external_function(info)
                     self._input_args[p] = getargspec(self._input_funcs[p]).args
             if is_sampled_param(info):
