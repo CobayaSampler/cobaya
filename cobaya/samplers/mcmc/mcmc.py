@@ -186,7 +186,7 @@ np.set_printoptions(linewidth=np.nan)
 from cobaya.sampler import Sampler
 from cobaya.mpi import get_mpi, get_mpi_size, get_mpi_rank, get_mpi_comm
 from cobaya.collection import Collection, OnePoint
-from cobaya.conventions import _weight
+from cobaya.conventions import _weight, _p_proposal, _p_ref
 from cobaya.samplers.mcmc.proposal import BlockedProposer
 from cobaya.log import HandledException
 
@@ -256,17 +256,14 @@ class mcmc(Sampler):
         # Create proposal for a covariance matrix
         # defaulting to diagonal with the width given or guessed for the params
         # with priority [proposal > ref > prior]
-        params = self.parametrisation.sampled_params().keys()
-        print "FIX proposal given by-parameter in next line!!!!!!!!!!!!!!!!!!!!!!!"
-#        sigmas = np.array([self.prior.property(p, "proposal", np.nan) for p in params])
-        covmat = np.diag([np.nan for _ in params])
-
+        params, params_infos = zip(*[(p,i) for p,i in self.parametrisation.sampled_params().items()])
+        covmat = np.diag([info.get(_p_proposal, np.nan) for info in params_infos])
         where_nan = np.isnan(covmat)
         if np.any(where_nan):
-            log.info("Default 'proposal' not given for some parameters. "
-                     "Using ref's or prior's instead.")
+            log.info("Default '%s' not given for some parameters. "
+                     "Using ref's or prior's instead.", _p_proposal)
             covmat[where_nan] = self.prior.reference_covmat()[where_nan]
-        log.debug("Covmat from 'proposal' (or 'ref') property of parameters: %r", covmat)
+        log.debug("Covmat from '%s' (or '%s') property of parameters: %r", covmat, _p_proposal, _p_ref)
         # If given update with covmat file
         if self.covmat is not None:
             try:
