@@ -229,10 +229,11 @@ class mcmc(Sampler):
             return
             # THIS IS WRONG, JUST TESTING CODE!!!!!!
         ##########################################################
+        # Prepare speed hierarchy
         indices_params_sampled = range(self.prior.d())
-#        speeds, blocks = zip(*self.likelihood.speed_blocked_params(as_indices=True))
-        print "FIX SPEEDS IN NEXT LINE!!!!!!!"
-        speeds, blocks = [1], [range(len(self.parametrisation.sampled_params()))]
+        speeds, blocks = zip(*self.likelihood.speeds_of_params().items())
+        # Turn parameter names into indices
+        blocks = [[self.parametrisation.sampled_params().keys().index(p) for p in b] for b in blocks]
         try:
             i_last_slow_block = (i for i,speed in enumerate(list(speeds))
                                  if speed > self.max_speed_slow).next() - 1

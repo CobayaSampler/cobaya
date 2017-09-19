@@ -258,13 +258,20 @@ class LikelihoodCollection():
                 log.error("Some of the requested %s parameters were not recognised "
                           "by any likelihood: %r.", params.split("_")[0], r_not_k)
                 raise HandledException
+        # Store the input params and likelihods on which each sampled params depends
+        self.sampled_input_dependence = parametrisation.sampled_input_dependence()
+        self.sampled_lik_dependence = odict(
+            [[p,[lik for lik in list(self)+[_theory]
+                 if any([(i in self[lik].input_params) for i in (i_s or [p])])]]
+             for p,i_s in self.sampled_input_dependence.items()])
         # Pop the per-likelihood parameters info, that was auxiliary
         for lik in info_likelihood:
             info_likelihood[lik].pop(_params)
 
     # "get" and iteration operate over the dictionary of likelihoods
+    # notice that "get" can get "theory", but the iterator does not!
     def __getitem__(self, key):
-        return self._likelihoods.__getitem__(key)
+        return self._likelihoods.__getitem__(key) if key != _theory else self.theory
     def __iter__(self):
         return self._likelihoods.__iter__()
 
@@ -314,37 +321,17 @@ class LikelihoodCollection():
     def d(self):
         return sum([self[lik].d() for lik in self])
 
-    def speed_blocked_params(self, as_indices=False):
+    def speeds_of_params(self):
         """
-        Blocks the parameters by likelihood, and sorts the blocks by speed.
+        Blocks the sampled parameters by likelihood, and sorts the blocks by speed.
+        Returns an ``OrderedDict`` ``{speed: [params]}``, sorted by ascending speeds.
         Parameters recognised by more than one likelihood are blocked in the slowest one.
         """
-        print "TODO: UPDATE THIS ONE!!!"
-
-    
-        params_blocks = self.sampled_params_by_likelihood()
-        speeds = odict([[lik,getattr(self[lik], "speed", 1)] for lik in self])
-        if self.theory:
-            speeds[_theory] = self.theory.speed
-        speed_blocked = [[speed,params_blocks[name]] for name,speed in speeds.iteritems()]
-        speed_blocked.sort()
-        speed_blocked.reverse() # easier to look for slower ones
-        # remove duplicates (take lowest speed)
-        for i,(speed,params) in enumerate(speed_blocked):
-            slower_params = [params2 for speed2,params2 in speed_blocked[i+1:]]
-            slower_params = [p for ps in slower_params for p in ps] # flatten!
-            speed_blocked[i][1] = [p for p in params if p not in slower_params]
-        # remove empty blocks
-        speed_blocked = [[speed,block] for speed,block in speed_blocked if block]
-        speed_blocked.reverse()
-# TODO: add the derived at the end with speed 0!!!
-#        speed_blocked += [0, [derived!]]
-        if not as_indices:
-            return speed_blocked
-        else:
-            names = self.sampled_params().keys()
-            return [[speed,[names.index(p) for p in block]]
-                    for speed,block in speed_blocked]
+        param_with_speed = odict([[p,min([self[lik].speed for lik in liks])]
+                                  for p,liks in self.sampled_lik_dependence.items()])
+        # Invert it!
+        return odict([[speed,[p for p,speed2 in param_with_speed.items() if speed == speed2]]
+                      for speed in sorted(list(set(param_with_speed.values())))])
 
     # Python magic for the "with" statement
     def __enter__(self):
