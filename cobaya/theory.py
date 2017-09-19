@@ -31,8 +31,8 @@ from importlib import import_module
 from cobaya.conventions import _theory
 from cobaya.log import HandledException
 
-# Allowed common options
-allowed_options = ["speed"]
+# Default options for all subclasses
+class_options = {"speed": 1}
 
 
 # Theory code prototype

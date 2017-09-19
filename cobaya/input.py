@@ -95,6 +95,10 @@ def get_full_info(info):
     for block in modules:
         full_info[block] = odict()
         for module in modules[block]:
+            # Start with the default class options
+            full_info[block][module] = deepcopy(getattr(
+                import_module(package+"."+block, package=package), "class_options", {}))
+            # Go on with defaults
             path_to_defaults = os.path.join(get_folder(module, block), _defaults_file)
             try:
                 default_module_info = yaml_load_file(path_to_defaults)
@@ -104,7 +108,7 @@ def get_full_info(info):
                 log.debug("Module %s:%s does not have a defaults file. "%(block, module)+
                           "Maybe it is an external module.")
             try:
-                full_info[block][module] = default_module_info[block][module] or {}
+                full_info[block][module].update(default_module_info[block][module] or {})
             except KeyError:
                 log.error("The defaults file for '%s' should be structured as %s:%s:{[options]}."
                           %(module, block, module))
@@ -118,10 +122,6 @@ def get_full_info(info):
             options_not_recognised = (set(input_info[block][module])
                                       .difference(set([_external]))
                                       .difference(set(full_info[block][module])))
-            # Allowed common options
-            allowed = getattr(import_module(package+"."+block, package=package),
-                              "allowed_options", [])
-            options_not_recognised = options_not_recognised.difference(set(allowed))
             if options_not_recognised:
                 log.error("'%s' does not recognise some options: '%r'. "
                           "To see the allowed options, check out the file '%s'",
