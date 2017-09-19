@@ -33,9 +33,9 @@ def run(info):
     # Debug (lazy call)
     import logging
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
-        from cobaya.yaml_custom import yaml_custom_dump
+        from cobaya.yaml_custom import yaml_dump
         logging.getLogger(__name__).debug(
-            "Input (dumped to YAML):\n%s", yaml_custom_dump(info))
+            "Input info (dumped to YAML):\n%s", yaml_dump(info))
     
     # Import general classes
     from cobaya.prior import Prior
@@ -59,6 +59,9 @@ def run(info):
     from cobaya.input import get_full_info
     full_info = get_full_info(info)
     output.set_full_info(full_info)
+    if logging.root.getEffectiveLevel() <= logging.DEBUG:
+        logging.getLogger(__name__).debug(
+            "Updated info (dumped to YAML):\n%s", yaml_dump(full_info))
 
     # Set the path of the installed modules, if given
     from cobaya.tools import set_path_to_installation
