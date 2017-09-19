@@ -64,7 +64,8 @@ def load_input_MPI(input_file):
     return info
 
 def get_modules(*infos):
-    """Returns modules all requested as an odict ``{kind: set([modules])}``."""
+    """Returns modules all requested as an odict ``{kind: set([modules])}``.
+    Priors are not included."""
     modules = odict()
     for info in infos:
         for field in [_theory, _likelihood, _sampler]:
@@ -83,11 +84,13 @@ def get_full_info(info):
     Creates an updated info starting from the defaults for each module and updating it
     with the input info.
     """
+    # Don't modify the original input!
+    input_info = deepcopy(info)
     # Creates an equivalent info using only the defaults
     full_info = odict()
     default_params_info = odict()
     default_prior_info = odict()
-    modules = get_modules(info)
+    modules = get_modules(input_info)
     for block in modules:
         full_info[block] = odict()
         for module in modules[block]:
@@ -108,10 +111,10 @@ def get_full_info(info):
             # Update the options with the input file
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
             # First deal with cases "no options" and "external function"
-            info[block][module] = info[block][module] or {}
-            if not hasattr(info[block][module], "get"):
-                info[block][module] = {_external: info[block][module]}
-            options_not_recognised = (set(info[block][module])
+            input_info[block][module] = input_info[block][module] or {}
+            if not hasattr(input_info[block][module], "get"):
+                input_info[block][module] = {_external: input_info[block][module]}
+            options_not_recognised = (set(input_info[block][module])
                                       .difference(set([_external]))
                                       .difference(set(full_info[block][module])))
             if options_not_recognised:
@@ -119,7 +122,7 @@ def get_full_info(info):
                           "To see the allowed options, check out the file '%s'",
                           module, tuple(options_not_recognised), path_to_defaults)
                 raise HandledException
-            full_info[block][module].update(info[block][module])
+            full_info[block][module].update(input_info[block][module])
             # Store default parameters and priors of class, and save to combine later
             if block == _likelihood:
                 params_info = default_module_info.get(_params, {})
@@ -127,18 +130,18 @@ def get_full_info(info):
                 default_params_info[module] = params_info
                 default_prior_info[module] = default_module_info.get(_prior, {})
     # Add priors info, after the necessary checks
-    if any(default_prior_info.values()):
-        full_info[_prior] = odict()
+    if _prior in input_info or any(default_prior_info.values()):
+        full_info[_prior] = input_info.get(_prior, odict())
     for prior_info in default_prior_info.values():
-        for name, prior in prior_info:
-            if full_info[_prior].get(name, None) != prior:
+        for name, prior in prior_info.iteritems():
+            if full_info[_prior].get(name, prior) != prior:
                 log.error("Two different priors have been defined with the same name: '%s'.",name)
                 raise HandledException
             full_info[_prior][name] = prior
     # Add parameters info, after the necessary updates and checks
-    full_info[_params] = merge_params_info(info[_params], defaults=default_params_info)
+    full_info[_params] = merge_params_info(input_info.get(_params, {}), defaults=default_params_info)
     # Rest of the options
-    for k,v in info.iteritems():
+    for k,v in input_info.iteritems():
         if not k in full_info:
             full_info[k] = v
     return full_info
@@ -165,7 +168,7 @@ def merge_params_info(params_info, defaults=None):
     info_updated = deepcopy(defaults_merged)
     info_updated.update(params_info)
     # Inherit labels (for sampled and derived) and min/max (just for derived params)
-    getter = lambda info, key: getattr(info, "get", lambda x: None)
+    getter = lambda info, key: getattr(info, "get", lambda x: None)(key)
     for p in defaults_merged:
         default_label = getter(defaults_merged[p], _p_label)
         if (default_label and
