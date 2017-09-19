@@ -179,8 +179,8 @@ from __future__ import division
 import os
 import sys
 from copy import deepcopy
+from itertools import chain
 import numpy as np
-np.set_printoptions(linewidth=np.nan)
 
 # Local
 from cobaya.sampler import Sampler
@@ -230,7 +230,6 @@ class mcmc(Sampler):
             # THIS IS WRONG, JUST TESTING CODE!!!!!!
         ##########################################################
         # Prepare speed hierarchy
-        indices_params_sampled = range(self.prior.d())
         speeds, blocks = zip(*self.likelihood.speeds_of_params().items())
         # Turn parameter names into indices
         blocks = [[self.parametrisation.sampled_params().keys().index(p) for p in b] for b in blocks]
@@ -249,7 +248,7 @@ class mcmc(Sampler):
                     "All blocks have the same speed, so no fast-dragging or oversampling.")
                 raise HandledException
         self.proposer = BlockedProposer(
-            blocks, indices_params_sampled, i_last_slow_block,
+            blocks, range(self.prior.d()), i_last_slow_block,
             oversample_fast=self.oversample_fast, propose_scale=self.propose_scale)
         # Save the number of slow parameters
         # -- it's the effective number of parameters for counting steps
@@ -336,9 +335,11 @@ class mcmc(Sampler):
                 max(2, int(self.drag_nfast_times * self.proposer.fast.n) + 1))
         if self.drag_interp_steps:
             self.get_new_sample = self.get_new_sample_dragging
-            print "TODO: The [:nslow] indexing in next line is not going to work!!!!!!!!!!!"
-            log.info("Using fast dragging with %d interpolating steps on parameters: %r",
-                     self.drag_interp_steps, self.parametrisation.sampled_params.keys()[self.n_slow:])
+            fast_params = [self.parametrisation.sampled_params().keys()[i]
+                           for i in chain(*blocks[1+i_last_slow_block:])]
+            log.info("Using fast dragging over %d slow parameters, "
+                     "with %d interpolating steps on fast parameters %r",
+                     self.n_slow, self.drag_interp_steps, fast_params)
         else:
             self.get_new_sample = self.get_new_sample_metropolis
 
@@ -352,9 +353,6 @@ class mcmc(Sampler):
         initial_point = self.prior.reference(max_tries=self.max_tries)
         logpost, _, _, derived = self.logposterior(initial_point)
         self.current_point.add(initial_point, derived=derived, logpost=logpost)
-#        log.info("Initial point:\n   "+
-#                 "\n   ".join(["%s = %g"%(p,self.current_point[p])
-#                               for p in self.prior.names()]))
         log.info("Initial point:\n %r ",self.current_point)
         # Main loop!
         self.converged = False
@@ -416,7 +414,7 @@ class mcmc(Sampler):
         """
         # Prepare starting and ending points *in the SLOW subspace*
         # "start_" and "end_" mean here the extremes in the SLOW subspace
-        start_slow_point   = self.current_point[self.prior.names()]
+        start_slow_point   = self.current_point[self.parametrisation.sampled_params()]
         start_slow_logpost = -self.current_point["minuslogpost"]
         end_slow_point = deepcopy(start_slow_point)
         self.proposer.get_proposal_slow(end_slow_point)
