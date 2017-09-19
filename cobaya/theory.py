@@ -31,6 +31,10 @@ from importlib import import_module
 from cobaya.conventions import _theory
 from cobaya.log import HandledException
 
+# Allowed common options
+allowed_options = ["speed"]
+
+
 # Theory code prototype
 class Theory():
     """Prototype of the theory class."""
