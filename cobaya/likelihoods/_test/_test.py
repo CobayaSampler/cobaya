@@ -1,0 +1,17 @@
+# Python 2/3 compatibility
+from __future__ import division
+
+# Global
+import numpy as np
+
+# Local
+from cobaya.likelihood import Likelihood
+
+class _test(Likelihood):
+    """
+    Likelihood that evaluates to 1.
+    """
+
+    def logp(self, **params_values):
+        self.wait()
+        return 0.
