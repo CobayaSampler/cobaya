@@ -197,6 +197,9 @@ class Likelihood():
 class LikelihoodExternalFunction(Likelihood):
     def __init__(self, name, info, theory=None):
         self.theory = theory
+        # Load info of the likelihood
+        for k in info:
+            setattr(self, k, info[k])
         # Store the external function and its arguments
         self.external_function = get_external_function(info[_external])
         argspec = inspect.getargspec(self.external_function)
@@ -261,7 +264,7 @@ class LikelihoodCollection():
         # Store the input params and likelihods on which each sampled params depends
         self.sampled_input_dependence = parametrisation.sampled_input_dependence()
         self.sampled_lik_dependence = odict(
-            [[p,[lik for lik in list(self)+[_theory]
+            [[p,[lik for lik in list(self)+([_theory] if self.theory else [])
                  if any([(i in self[lik].input_params) for i in (i_s or [p])])]]
              for p,i_s in self.sampled_input_dependence.items()])
         # Pop the per-likelihood parameters info, that was auxiliary

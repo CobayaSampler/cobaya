@@ -48,6 +48,11 @@ DE TODAS MANERAS, LO IMPORTANTE ES QUE LO *PERMITE* HACER (SIN CAMBIAR CODIGO),
 AUNQUE NO SEA LO MAS COMODO! (Si lo quieres mas sencillo, te las defines aparte)
 PONER EJEMPLO DE SCRIPTED CALL PARA HACER COSAS LIGERAMENTE MAS COMPLICADAS.
 
+Otra razon para no usar dos niveles: es mucho mas dificil reconocer a que likelihood
+pertence cada *sampled*, si pueden ser funcion de otros *sampled* que no son input.
+
+So, no, *just one level!!!*
+
 """
 
 # Python 2/3 compatibility
@@ -139,6 +144,12 @@ class Parametrisation(object):
         # Useful sets: directly-sampled input parameters and directly "output-ed" derived
         self._directly_sampled = [p for p in self._input if p in self._sampled]
         self._directly_output = [p for p in self._derived if p in self._output]
+        # Useful mapping: input params that vary if each sampled is varied
+        self._sampled_input_dependence = odict(
+            [[s,[i for i in self._input if s in self._input_args.get(i, {})]]
+             for s in self._sampled])
+        assert ([p for p,v in self._sampled_input_dependence.items() if not v]
+                == self._directly_sampled)
 
     def input_params(self):
         return self._input
@@ -154,7 +165,10 @@ class Parametrisation(object):
 
     def theory_params(self):
         return self._theory_params
-    
+
+    def sampled_input_dependence(self):
+        return self._sampled_input_dependence
+
     def to_input(self, sampled_params_values):
         as_odict = odict(zip(self.sampled_params(), sampled_params_values))
         # Fill first directly sampled input parameters
@@ -179,31 +193,11 @@ class Parametrisation(object):
 
     def labels(self):
         print "REMOVE CORRESPONDING FUNCTION OF 'prior'."
-
+        raise ValueError("re-do this function")
         # PASS NEXT 2 LINES A PARAMETRSATOR
         # Labels and reference point
 #        self.labels = get_labels(sampled_params_info)
-       
-       
 
-            # NEXT LINES SHOULD GO TO PARAMETRISATOR
-            ### # Store the rest of the properties
-            ### self.properties[p] = dict(
-            ###     [(k,v) for k,v in sampled_params_info[p].iteritems()
-            ###      if k not in [_prior,_p_ref,_p_label]])
-            # Store prior boundaries
-
-    # def property(self, param, prop, default=None):
-    #     """
-    #     Returns:
-    #        The value of the field ``prop`` of in the info of parameter ``param``, it that
-    #        field has been defined (otherwise, the value of ``default``).
-    #     """
-    #     raise NotImplementedError("DON'T CALL ME: call method from Parametrisation instead!")
-    #     return self.properties[param].get(prop, default)
-
-
-        
     # Python magic for the "with" statement
     def __enter__(self):
         return self

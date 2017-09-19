@@ -18,6 +18,7 @@ from cobaya.conventions import _sampler, _likelihood, _full_suffix
 from cobaya.conventions import _chi2, separator, _external
 from cobaya.run import run
 from cobaya.yaml_custom import yaml_load
+from cobaya.likelihood import class_options
 
 # Definition of external (log)pdf's
 
@@ -109,11 +110,13 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
         assert info[_prior] == updated_info[_prior], (
             "The prior information has not been updated correctly.")
     elif kind == _likelihood:
-        # Transform the likelihood info to the "external" convention
+        # Transform the likelihood info to the "external" convention and add defaults
         info_likelihood = deepcopy(info[_likelihood])
         for lik, value in info_likelihood.iteritems():
             if not hasattr(value, "get"):
                 info_likelihood[lik] = {_external: value}
+            info_likelihood[lik].update({k:v for k,v in class_options.items()
+                                         if not k in info_likelihood[lik]})
         assert info_likelihood == updated_info[_likelihood], (
             "The likelihood information has not been updated correctly.")
     # Test updated info -- yaml
