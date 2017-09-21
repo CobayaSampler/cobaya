@@ -16,7 +16,13 @@ def test_camb_planck_slow(modules):
 def body_of_test(modules, x):
     assert modules, "I need a modules folder!"
     info = yaml_load(baseline_cosmology)
-    info.update({_path_install: modules, _theory: {"camb": None}})
+    # Add derived
+    info[_params][_theory].update(derived)
+    print "FOR NOW, POPPING THE BBN PARAMETERS!!!!!!!"
+    info[_params][_theory].pop("DH")
+    info[_params][_theory].pop("YHe")
+    info[_params][_theory].pop("Y_p")
+    info.update({_path_install: modules, _theory: {"camb": {"speed": 0.5}}})
     info[_sampler] = {"mcmc": {
         "burn_in": 100,
         "learn_proposal": True,
