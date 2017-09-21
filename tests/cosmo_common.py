@@ -4,8 +4,10 @@ import os
 from collections import OrderedDict as odict
 from copy import deepcopy
 
-from cobaya.conventions import _theory, _likelihood, _params
-from cobaya.conventions import _sampler, _chi2, separator
+from cobaya.conventions import _theory, _likelihood, _params, _derived_pre
+from cobaya.conventions import _sampler, _chi2, separator, _path_install
+from cobaya.yaml_custom import yaml_load
+from cobaya.run import run
 
 # Tolerance for the tests
 tolerance_chi2_abs = 0.1
@@ -13,7 +15,7 @@ tolerance_derived = 0.03
 # this last one cannot be smaller: rounding errors in BBN abundances, bc new interp tables
 
 
-# Converting 100cosmomc_theta to cosmomc_theta in Planck's covmats ########################
+# Converting 100cosmomc_theta to cosmomc_theta in Planck's covmats #######################
 
 def convert_cosmomc_theta(filename):
     with open(filename, "r") as original:
@@ -27,7 +29,68 @@ def convert_cosmomc_theta(filename):
     return filename_new
 
 
-# Baseline priors #########################################################################
+# Body of the best-fit test ##############################################################
+
+def body_of_test(modules, x, theory):
+    assert modules, "I need a modules folder!"
+    info = {_path_install: modules,
+            _theory: {theory: None},
+            _sampler: {"evaluate": None}}
+    if x == "t":
+        info[_likelihood] = lik_info_lowl_highTT
+        info.update(yaml_load(params_lowl_highTT))
+        ref_chi2 = chi2_lowl_highTT
+        derived_values = derived_lowl_highTT
+    elif x == "p":
+        info[_likelihood] = lik_info_lowTEB_highTTTEEE
+        info.update(yaml_load(params_lowTEB_highTTTEEE))
+        ref_chi2 = chi2_lowTEB_highTTTEEE
+        derived_values = derived_lowTEB_highTTTEEE
+    else:
+        raise ValueError("Test not recognised: %r"%x)
+    use_H0_instead_of_theta = (theory == "classy")
+    if use_H0_instead_of_theta:
+        info[_params][_theory].pop("cosmomc_theta")
+        derived_bestfit_test.pop("H0")
+        derived_values.pop("H0")
+    else:
+        info[_params][_theory].pop("H0")
+    # Add derived
+    info[_params][_theory].update(derived_bestfit_test)
+    print "FOR NOW, POPPING THE BBN PARAMETERS!!!!!!!"
+    for p in ("YHe", "Y_p", "DH"):
+        info[_params][_theory].pop(p, None)
+        derived_values.pop(p)
+#    # CLASS' specific stuff to compute Planck's baseline LCDM
+#    info[_params][_theory].update({
+#        "N_ur": 2.0328, "N_ncdm": 1, "m_ncdm": 0.06, "T_ncdm": 0.71611,
+#        # Seems not to be necessary (but clarify, and add basestring to the fixed param check:
+#        # "sBBN file": modules+"/theories/CLASS/bbn/sBBN.dat",
+#    })
+    updated_info, products = run(info)
+    # print products["sample"]
+    # Check value of likelihoods
+    for lik in info[_likelihood]:
+        chi2 = products["sample"][_chi2+separator+lik][0]
+        assert abs(chi2-ref_chi2[lik]) < tolerance_chi2_abs, (
+            "Likelihood value for '%s' off by more than %f!"%(lik, tolerance_chi2_abs))
+    # Check value of derived parameters
+    not_tested = []
+    not_passed = []
+    for p in derived_values:
+        if derived_values[p][0] == None or p not in derived_bestfit_test:
+            not_tested += [p]
+            continue
+        rel = (abs(products["sample"][ _derived_pre+p][0]-derived_values[p][0])
+               /derived_values[p][1])
+        if rel > tolerance_derived*(2 if p in ("YHe", "Y_p", "DH") else 1):
+            not_passed += [(p, rel)]
+    print "Derived parameters not tested because not implemented: %r"%not_tested
+    assert not(not_passed), "Some derived parameters were off: %r"%not_passed
+
+
+
+# Baseline priors ########################################################################
 
 baseline_cosmology = r"""
 %s:
@@ -138,7 +201,7 @@ derived_bestfit_test["As1e9"]["derived"] = lambda As: 1e9*As
 derived_bestfit_test["clamp"]["derived"] = lambda As, tau: 1e9*As*np.exp(-2*tau)
     
 
-# Temperature only ########################################################################
+# Temperature only #######################################################################
 
 # NB: A_sz and ksz_norm need to have a prior defined, though "evaluate" will ignore it in
 # favour of the fixed "ref" value. This needs to be so since, at the time of writing this
@@ -230,7 +293,7 @@ derived_lowl_highTT = {
     }
 
 
-# Best fit Polarisation ###################################################################
+# Best fit Polarisation ##################################################################
 
 # NB: A_sz and ksz_norm need to have a prior defined, though "evaluate" will ignore it in
 # favour of the fixed "ref" value. This needs to be so since, at the time of writing this
