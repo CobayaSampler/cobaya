@@ -2,13 +2,14 @@ from __future__ import division
 import numpy as np
 import os
 from collections import OrderedDict as odict
+from copy import deepcopy
 
 from cobaya.conventions import _theory, _likelihood, _params
 from cobaya.conventions import _sampler, _chi2, separator
 
 # Tolerance for the tests
 tolerance_chi2_abs = 0.1
-tolerance_derived = 0.022
+tolerance_derived = 0.03
 # this last one cannot be smaller: rounding errors in BBN abundances, bc new interp tables
 
 
@@ -105,22 +106,14 @@ derived = {
     "omegam":      {"derived": lambda omegab, omegac, omegan: omegab+omegac+omegan, "latex": r"\Omega_m"},
     "omegamh2":    {"derived": lambda omegab, omegac, omegan, H0: (omegab+omegac+omegan)*(H0/100)**2, "latex": r"\Omega_m h^2"},
     "omegamh3":    {"derived": lambda omegab, omegac, omegan, H0: (omegab+omegac+omegan)*(H0/100)**3, "latex": r"\Omega_m h^3"},
-# Apparently, the baseline chains show a best fit, but no mean+sigma
-# Curiosamente si lo muestran para ns02.
-    #    "omeganuh2":   {"derived": lambda omegan, H0: omegan*(H0*1e-2)**2, "latex": r"\Omega_\nu h^2"},
+    "omeganuh2":   {"derived": lambda omegan, H0: omegan*(H0*1e-2)**2, "latex": r"\Omega_\nu h^2"},
     "sigma8":      {"latex": r"\sigma_8"},
     "s8h5":        {"derived": lambda sigma8, H0: sigma8*(H0*1e-2)**(-0.5), "latex": r"\sigma_8/h^{0.5}"},
     "s8omegamp5":  {"derived": lambda sigma8, omegab, omegac, omegan: sigma8*(omegab+omegac+omegan)**0.5, "latex": r"\sigma_8 \Omega_m^{0.5}"},
     "s8omegamp25": {"derived": lambda sigma8, omegab, omegac, omegan: sigma8*(omegab+omegac+omegan)**0.25, "latex": r"\sigma_8 \Omega_m^{0.25}"},
-# How to get this one?
-    #    "rmsdeflect":  {"latex": r"\langle d^2\rangle^{1/2}"},
     "zre":         {"latex": r"z_\mathrm{re}"},
-# The problem with the next 2 is related to whether a function-defined sampled param
-# can be fixed. It would not make much sense, right?
-    #    "As1e9":       {"derived": lambda logAs1e10: 1e-1*np.exp(logAs1e10), "latex": r"10^9 A_s"},
-    #    "clamp":       {"derived": lambda logAs1e10, tau: 1e9*As*np.exp(-2*tau), "latex": r"10^9 A_s e^{-2\tau}"},
-# This one should take running into account??? Otherwise, it's =ns005
-    #    "ns02":        {"latex": r"n_{s,0.002}"},
+    "As1e9":       {"derived": lambda logAs1e10: 1e-1*np.exp(logAs1e10), "latex": r"10^9 A_s"},
+    "clamp":       {"derived": lambda logAs1e10, tau: 1e-1*np.exp(logAs1e10)*np.exp(-2*tau), "latex": r"10^9 A_s e^{-2\tau}"},
     "YHe":         {"latex": r"Y_P"},
     "Y_p":         {"latex": r"Y_P^\mathrm{BBN}"},
     "DH":          {"latex": r"10^5D/H"},
@@ -139,6 +132,11 @@ derived = {
     "thetarseq":   {"latex": r"100\theta_\mathrm{s,eq}"},
     }
 
+# logAs1e10 cannot be fixed, since it's not an input parameter
+derived_bestfit_test = deepcopy(derived)
+derived_bestfit_test["As1e9"]["derived"] = lambda As: 1e9*As
+derived_bestfit_test["clamp"]["derived"] = lambda As, tau: 1e9*As*np.exp(-2*tau)
+    
 
 # Temperature only ########################################################################
 
@@ -206,16 +204,13 @@ derived_lowl_highTT = {
     "omegam": [0.3002, 0.016],
     "omegamh2": [0.1406, 0.0024],
     "omegamh3": [0.09623, 0.00046],
-    "omeganuh2": [None, None], #[0.6451439e-3, None],
     "sigma8": [0.8610, 0.023],
     "s8omegamp5": [0.472, 0.014],
     "s8omegamp25":[0.637, 0.016],
     "s8h5":       [1.041, 0.025],
-    "rmsdeflect": [None, None], #[0.2567350E+01, 0.5929468E-01],
     "zre":   [13.76, 2.5],
-    "As1e9":  [None, None], #[2.40, 0.15],
-    "clamp":  [None, None], #[1.870468, 0.01535354],
-    "ns02":   [None, None], #[0.9741693E+00, 0.7949215E-02],
+    "As1e9":  [2.40, 0.15],
+    "clamp":  [1.870468, 0.01535354],
     "YHe":    [0.2454462, 0.0001219630],
     "Y_p":    [0.2467729, 0.0001224069],
     "DH":     [2.568606e-5, 0.05098625e-5],
@@ -257,14 +252,15 @@ params_lowTEB_highTTTEEE = """
       prior:
         min: 0.005
         max: 0.1
-      ref: 0.022252
-    omch2: 0.11987
+      ref: 0.02225203
+    omch2: 0.1198657
     # only one of the next two is finally used!
     H0: 67.25
     cosmomc_theta: 0.01040778
-    As: 2.204e-9
-    ns: 0.96475
-    tau: 0.0789
+#    logAs1e10: 3.092882 # NOT DIRECTLY RECOGNISED: cannot be fixed!!!
+    As: 2.204051e-9
+    ns: 0.9647522
+    tau: 0.07888604
     # Derived
   # Planck likelihood
   A_planck: 1.00029
@@ -305,3 +301,35 @@ params_lowTEB_highTTTEEE = """
   calib_100T: 0.99818
   calib_217T: 0.99598
 """%(_params, _theory)
+
+derived_lowTEB_highTTTEEE = {
+    # param: [best_fit, sigma]
+    "H0": [67.25, 0.66],
+    "omegav": [0.6844, 0.0091],
+    "omegam": [0.3156, 0.0091],
+    "omegamh2": [0.14276, 0.0014],
+    "omegamh3": [0.096013, 0.00029],
+    "sigma8": [0.8310, 0.013],
+    "s8omegamp5": [0.4669, 0.0098],
+    "s8omegamp25":[0.6228, 0.011],
+    "s8h5":       [1.0133, 0.017],
+    "zre":   [10.07, 1.6],
+    "As1e9":  [2.204, 2.207],
+    "clamp":  [1.8824, 0.012],
+    "YHe":    [0.2453409, 0.000072],
+    "Y_p":    [0.2466672, 0.000072],
+    "DH":     [2.6136e-5, 0.030e-5],
+    "age":    [13.8133, 0.026],
+    "zstar":  [1090.057, 0.30],
+    "rstar":  [144.556, 0.32],
+    "thetastar": [1.040967, 0.00032],
+    "DAstar":  [13.8867, 0.030],
+    "zdrag":   [1059.666, 0.31],
+    "rdrag":   [147.257, 0.31],
+    "kd":      [0.140600, 0.00032],
+    "thetad":  [0.160904, 0.00018],
+    "zeq":     [3396.2, 33],
+    "keq":     [0.010365, 0.00010],
+    "thetaeq":  [0.8139, 0.0063],
+    "thetarseq": [0.44980, 0.0032],
+    }

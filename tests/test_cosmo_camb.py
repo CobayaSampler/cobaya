@@ -9,8 +9,8 @@ from cobaya.run import run
 
 from cosmo_common import params_lowl_highTT, chi2_lowl_highTT, derived_lowl_highTT
 from cosmo_common import lik_info_lowl_highTT, lik_info_lowTEB_highTTTEEE
-from cosmo_common import params_lowTEB_highTTTEEE, chi2_lowTEB_highTTTEEE#, derived_lowTEB_highTTTEEE
-from cosmo_common import derived, tolerance_chi2_abs, tolerance_derived
+from cosmo_common import params_lowTEB_highTTTEEE, chi2_lowTEB_highTTTEEE, derived_lowTEB_highTTTEEE
+from cosmo_common import derived_bestfit_test, tolerance_chi2_abs, tolerance_derived
 
 
 def test_camb_planck_t(modules):
@@ -24,11 +24,6 @@ def body_of_test(modules, x):
     info = {_path_install: modules,
             _theory: {"camb": None},
             _sampler: {"evaluate": None}}
-
-    ## TEST!!!!!! update for BBN!!!!!
-    info["theory"]["camb"] = {"path":"/home/jesus/scratch/CAMB"}
-
-    
     if x == "t":
         info[_likelihood] = lik_info_lowl_highTT
         info.update(yaml_load(params_lowl_highTT))
@@ -38,19 +33,22 @@ def body_of_test(modules, x):
         info[_likelihood] = lik_info_lowTEB_highTTTEEE
         info.update(yaml_load(params_lowTEB_highTTTEEE))
         ref_chi2 = chi2_lowTEB_highTTTEEE
-        derived_values = derived_lowl_highTT
-        print "TODO: ~~~~~~ change previous line to correct TTTEEE derived ~~~~~~"
+        derived_values = derived_lowTEB_highTTTEEE
     else:
         raise ValueError("Test not recognised: %r"%x)
     use_H0_instead_of_theta = False
     if use_H0_instead_of_theta:
         info[_params][_theory].pop("cosmomc_theta")
-        derived.pop("H0")
+        derived_bestfit_test.pop("H0")
         derived_values.pop("H0")
     else:
         info[_params][_theory].pop("H0")
     # Add derived
-    info[_params][_theory].update(derived)
+    info[_params][_theory].update(derived_bestfit_test)
+    print "FOR NOW, POPPING THE BBN PARAMETERS!!!!!!!"
+    for p in ("YHe", "Y_p", "DH"):
+        info[_params][_theory].pop(p)
+        derived_values.pop(p)
     updated_info, products = run(info)
     # print products["sample"]
     # Check value of likelihoods
@@ -67,7 +65,7 @@ def body_of_test(modules, x):
             continue
         rel = (abs(products["sample"][ _derived_pre+p][0]-derived_values[p][0])
                /derived_values[p][1])
-        if rel > tolerance_derived:
+        if rel > tolerance_derived*(2 if p in ("YHe", "Y_p", "DH") else 1):
             not_passed += [(p, rel)]
     print "Derived parameters not tested because not implemented: %r"%not_tested
     assert not(not_passed), "Some derived parameters were off: %r"%not_passed
