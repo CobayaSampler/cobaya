@@ -123,11 +123,13 @@ from __future__ import division
 import sys
 import os
 import numpy as np
+from copy import deepcopy
 
 # Local
 from cobaya.theory import Theory
 from cobaya.log import HandledException
 from cobaya.conventions import subfolders, _theory
+from cobaya.tools import get_path_to_installation
 
 # Logger
 import logging
@@ -140,6 +142,7 @@ camb_to_classy = {"ombh2":  "omega_b",
                   "omch2":  "omega_cdm",
                   "omegac": "Omega_cdm",
                   "omegav": "Omega_Lambda",
+                  "omegam": "Omega_m",
                   "As": "A_s",
                   "ns": "n_s",
                   "tau": "tau_reio",
@@ -153,9 +156,10 @@ class classy(Theory):
     def initialise(self):
         """Importing CLASS from the correct path, if given, and if not, globally."""
         # If path not given, try using general path to modules
-        if not self.path and self.path_to_installation:
+        path_to_installation = get_path_to_installation()
+        if not self.path and path_to_installation:
             self.path = os.path.join(
-                self.path_to_installation, subfolders[_theory], "CLASS")
+                path_to_installation, subfolders[_theory], "CLASS")
         if self.path:
             log.info("Importing *local* CLASS from "+self.path)
             if not os.path.exists(self.path):
@@ -187,12 +191,18 @@ class classy(Theory):
                     " (b) install the Python interface globally with\n"
                     "     '/path/to/class/python/python setup.py install --user'")
                 raise HandledException
-        # Default: no output -- see `needs` method.
-        self.fixed["output"] = ""
         # Generate states, to avoid recomputing
         self.n_states = 3
         self.states = [{"classy": Class(), "params": None, "last": 0, "derived": None}
                        for i in range(self.n_states)]
+        # Fixed input
+        # Default: no output -- see `needs` method.
+        self.input_default = {"output": ""}
+        # Precision (fixed at the theory block level)
+        if self.precision:
+            if "sBBN file" in self.precision:
+                self.precision["sBBN file"] = os.path.join(self.path, self.precision["sBBN file"])
+            self.input_default.update(self.precision)
 
     def current_state(self):
        lasts = [self.states[i]["last"] for i in range(self.n_states)]
@@ -200,117 +210,17 @@ class classy(Theory):
 
     def set(self, params_values_dict, i_state):
         # Feed the arguments defining the cosmology to the cosmological code
-        # Fixed (translate from camb naming)
-        args = dict([(camb_to_classy.get(p,p),v) for p,v in self.fixed.iteritems()])
-        # Sampled -- save the state for avoiding recomputing later
-        for p,v in params_values_dict.iteritems():
-            args[camb_to_classy.get(p,p)] = v
-        # Precision (fixed at the theory block level)
-        if self.precision:
-            args.update(self.precision)
+        self.input_default.update(dict(
+            [(camb_to_classy.get(p,p),v) for p,v in params_values_dict.items()]))
         # Generate and save
-        log.debug("Setting parameters: %r", args)
-        self.states[i_state]["params"] = params_values_dict
+        log.debug("Setting parameters: %r", self.input_default)
+        self.states[i_state]["params"] = deepcopy(self.input_default)
         self.states[i_state]["classy"].struct_cleanup()
         try:
-            print "TODO: Delete following block"
-            for k,v in args.iteritems():
-                print k,v
-            print "TODO: TESTING: Delete following block!"
-            if True:
-                # Halofit
-                args["non linear"] = "halofit"
-                # Halofit (twice precision) -----------------------------------
-                # args["halofit_dz"] = 0.05
-                # args["halofit_min_k_nonlinear"] = 0.001
-                # args["halofit_k_per_decade"] = 160
-                # args["halofit_sigma_precision"] = 0.025
-                # DOESN'T WORK: args["halofit_min_k_max"] = 10.
-                # Higher lensing precision -----------------------------------
-                # args["accurate_lensing"]=1
-                # args["num_mu_minus_lmax"] = 2000.
-                # args["delta_l_max"] = 1000.
-                # Other reasonable high precision params ---------------------
-                # args["tol_background_integration"] = 1.e-3
-                # args["tol_thermo_integration"] = 1.e-3
-                # args["tol_perturb_integration"] = 1.e-6
-                # args["reionization_optical_depth_tol"] = 1.e-5
-                # args["l_logstep"] = 1.08
-                # args["l_linstep"] = 25
-                # args["perturb_sampling_stepsize"] = 0.04
-                # cl_permille ------------------------------------------------
-                # args["hyper_flat_approximation_nu"] = 7000.
-                # args["transfer_neglect_delta_k_S_t0"] = 0.17
-                # args["transfer_neglect_delta_k_S_t1"] = 0.05
-                # args["transfer_neglect_delta_k_S_t2"] = 0.17
-                # args["transfer_neglect_delta_k_S_e"] = 0.13
-                # args["delta_l_max"] = 1000
-                # cl_ref ------------------------------------------------------
-                # args["tol_ncdm_bg"]= 1.e-10
-                # args["recfast_Nz0"]=100000
-                # args["tol_thermo_integration"]=1.e-5
-                # args["recfast_x_He0_trigger_delta"]= 0.01
-                # args["recfast_x_H0_trigger_delta"]= 0.01
-                # args["evolver"]=0
-                # args["k_min_tau0"]=0.002
-                # args["k_max_tau0_over_l_max"]=3.
-                # args["k_step_sub"]=0.015
-                # args["k_step_super"]=0.0001
-                # args["k_step_super_reduction"]=0.1
-                # args["start_small_k_at_tau_c_over_tau_h"]= 0.0004
-                # args["start_large_k_at_tau_h_over_tau_k"]= 0.05
-                # args["tight_coupling_trigger_tau_c_over_tau_h"]=0.005
-                # args["tight_coupling_trigger_tau_c_over_tau_k"]=0.008
-                # args["start_sources_at_tau_c_over_tau_h"]= 0.006
-                # args["l_max_g"]=50
-                # args["l_max_pol_g"]=25
-                # args["l_max_ur"]=50
-                # args["l_max_ncdm"]=50
-                # args["tol_perturb_integration"]=1.e-6
-                # args["perturb_sampling_stepsize"]=0.01
-                # args["radiation_streaming_approximation"]= 2
-                # args["radiation_streaming_trigger_tau_over_tau_k"]= 240.
-                # args["radiation_streaming_trigger_tau_c_over_tau"]= 100.
-                # args["ur_fluid_approximation"]= 2
-                # args["ur_fluid_trigger_tau_over_tau_k"]= 50.
-                # args["ncdm_fluid_approximation"]= 3
-                # args["ncdm_fluid_trigger_tau_over_tau_k"]= 51.
-                # args["tol_ncdm_synchronous"]= 1.e-10
-                # args["tol_ncdm_newtonian"]= 1.e-10
-                # args["l_logstep"]=1.026
-                # args["l_linstep"]=25
-                # args["hyper_sampling_flat"]= 12.
-                # args["hyper_sampling_curved_low_nu"]= 10.
-                # args["hyper_sampling_curved_high_nu"]= 10.
-                # args["hyper_nu_sampling_step"]= 10.
-                # args["hyper_phi_min_abs"]= 1.e-10
-                # args["hyper_x_tol"]= 1.e-4
-                # args["hyper_flat_approximation_nu"]= 1.e6
-                # args["q_linstep"]=0.20
-                # args["q_logstep_spline"]= 20.
-                # args["q_logstep_trapzd"]= 0.5
-                # args["q_numstep_transition"]= 250
-                # args["transfer_neglect_delta_k_S_t0"]= 100.
-                # args["transfer_neglect_delta_k_S_t1"]= 100.
-                # args["transfer_neglect_delta_k_S_t2"]= 100.
-                # args["transfer_neglect_delta_k_S_e"]= 100.
-                # args["transfer_neglect_delta_k_V_t1"]= 100.
-                # args["transfer_neglect_delta_k_V_t2"]= 100.
-                # args["transfer_neglect_delta_k_V_e"]= 100.
-                # args["transfer_neglect_delta_k_V_b"]= 100.
-                # args["transfer_neglect_delta_k_T_t2"]= 100.
-                # args["transfer_neglect_delta_k_T_e"]= 100.
-                # args["transfer_neglect_delta_k_T_b"]= 100.
-                # args["neglect_CMB_sources_below_visibility"]= 1.e-30
-                # args["transfer_neglect_late_source"]= 3000.
-                # args["l_switch_limber"]= 40.
-                # args["accurate_lensing"]=1
-                # args["num_mu_minus_lmax"]= 1000.
-                # args["delta_l_max"]= 1000.
-            self.states[i_state]["classy"].set(**args)
+            self.states[i_state]["classy"].set(**self.input_default)
         except Exception:
             log.error("Error setting CLASS parameters -- see CLASS's error trace below.\n"
-                      "The parameters were %r", args)
+                      "The parameters were %r", self.input_default)
             raise
 
     def compute(self, derived=None, **params_values_dict):
@@ -322,20 +232,20 @@ class classy(Theory):
             # Get (pre-computed) derived parameters
             if derived == {}:
                 derived.update(dict([[p,v] for p,v in
-                                     zip(self.derived, self.states[i_state]["derived"])]))
+                                     zip(self.output_params, self.states[i_state]["derived"])]))
             log.debug("Re-using computed results (state %d)", i_state)
         except StopIteration:
             # update the (first) oldest one and compute
             i_state = lasts.index(min(lasts))
             log.debug("Computing (state %d)", i_state)
             self.set(params_values_dict, i_state)
-            if "Cl" in self.fixed["output"]:
+            if "Cl" in self.input_default["output"]:
                 self.states[i_state]["classy"].compute(["lensing"])
             # Prepare derived parameters
             if derived == {}:
                 derived.update(self.get_derived(i_state))
                 # Careful: next step must keep the order
-                self.states[i_state]["derived"] = [derived[p] for p in self.derived]
+                self.states[i_state]["derived"] = [derived[p] for p in self.output_params]
         # make this one the current one by decreasing the antiquity of the rest
         for i in range(self.n_states):
             self.states[i]["last"] -= max(lasts)
@@ -345,25 +255,25 @@ class classy(Theory):
         for k,v in arguments.items():
             if k == "l_max":
                 # Take the max of the requested ones
-                self.fixed["l_max_scalars"] = max(v, self.fixed.get("l_max_scalars", 0))
+                self.input_default["l_max_scalars"] = max(v, self.input_default.get("l_max_scalars", 0))
             elif k == "Cl":
                 if any([("T" in cl) for cl in v]):
-                       self.fixed["output"] += " tCl"
+                       self.input_default["output"] += " tCl"
                 if any([(("E" in cl) or ("B" in cl)) for cl in v]):
-                       self.fixed["output"] += " pCl"
+                       self.input_default["output"] += " pCl"
                 # For modern experiments, always lensed Cl's!
-                self.fixed["output"] += " lCl"
-                self.fixed["lensing"] = "yes"
+                self.input_default["output"] += " lCl"
+                self.input_default["lensing"] = "yes"
             else:
                 log.error("'%s' does not understand the requirement '%s:%s'.",
                     self.__class__.__name__,k,v)
                 raise HandledException
         # Derived parameters (if some need some additional computations)
-        if "sigma8" in self.derived:
-            self.fixed["output"] += " mPk"
-            self.fixed["P_k_max_h/Mpc"] = max(1, self.fixed.get("P_k_max_h/Mpc", 0))
+        if "sigma8" in self.output_params:
+            self.input_default["output"] += " mPk"
+            self.input_default["P_k_max_h/Mpc"] = max(1, self.input_default.get("P_k_max_h/Mpc", 0))
         # Cleanup
-        self.fixed["output"] = " ".join(set(self.fixed["output"].split()))
+        self.input_default["output"] = " ".join(set(self.input_default["output"].split()))
 
     def get_derived(self, i_state):
         """
@@ -372,15 +282,12 @@ class classy(Theory):
         """
         derived = {}
         classy = self.states[i_state]["classy"]
-        p_classy = [camb_to_classy.get(p,p) for p in self.derived]
+        p_classy = [camb_to_classy.get(p,p) for p in self.output_params]
         derived_aux = classy.get_current_derived_parameters(p_classy)
         derived.update(
             dict([(classy_to_camb.get(p,p),v) for p,v in derived_aux.iteritems()]))
         # If another method for getting derived parameters added in the future,
         # recover "if None in derived:" from the CAMB interface
-        print "TODO: Delete following block!"
-        for p,v in derived.iteritems():
-            print "-*-*-*-*-*-*-*-*-*-*-*-*", p, derived[p]
         # Check if all processes (actually does nothing here)
         try:
             first_None = (p for p,v in derived.iteritems() if v==None).next()
@@ -396,7 +303,7 @@ class classy(Theory):
         """
         current_classy = self.current_state()["classy"]
         # get C_l^XX from the cosmological code
-        cl = current_classy.lensed_cl(self.fixed["l_max_scalars"])
+        cl = current_classy.lensed_cl(self.input_default["l_max_scalars"])
         # convert dimensionless C_l's to C_l in muK**2
         T = current_classy.T_cmb()
         for key in cl:
