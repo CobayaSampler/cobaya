@@ -48,11 +48,7 @@ def body_of_test(modules, x, theory):
         derived_values = derived_lowTEB_highTTTEEE
     else:
         raise ValueError("Test not recognised: %r"%x)
-    # Prepare derived parameters
-    # logAs1e10 cannot be fixed, since it's not an input parameter
     derived_bestfit_test = deepcopy(derived)
-    derived_bestfit_test["As1e9"]["derived"] = lambda As: 1e9*As
-    derived_bestfit_test["clamp"]["derived"] = lambda As, tau: 1e9*As*np.exp(-2*tau)
     # Adjustments for Classy
     if theory == "classy":
 #        from cosmo_common import baseline_cosmology
