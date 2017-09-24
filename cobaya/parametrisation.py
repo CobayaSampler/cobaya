@@ -69,6 +69,12 @@ from itertools import chain
 # Local
 from cobaya.conventions import _prior, _p_drop, _p_derived, _theory
 from cobaya.tools import get_external_function
+from cobaya.log import HandledException
+
+# Logger
+import logging
+log = logging.getLogger(__name__)
+
 
 def is_fixed_param(info_param):
     """
@@ -150,6 +156,24 @@ class Parametrisation(object):
              for s in self._sampled])
         assert ([p for p,v in self._sampled_input_dependence.items() if not v]
                 == self._directly_sampled)
+        # Test: input params depend on input and sampled only
+        # and derived depend of input and output, never of sampled which are not input
+        bad_input_dependencies = set(chain(*self._input_args.values())).difference(
+            set(self.input_params()).union(set(self.sampled_params())))
+        if bad_input_dependencies:
+            log.error("Input parameters defined as functions can only depend on other "
+                      "input parameters that are not defined as functions. "
+                      "In particular, an input parameter cannot depend on %r",
+                      list(bad_input_dependencies))
+            raise HandledException
+        bad_derived_dependencies = set(chain(*self._derived_args.values())).difference(
+            set(self.input_params()).union(set(self.output_params())))
+        if bad_derived_dependencies:
+            log.error("Derived parameters can only depend on input and output parameters, "
+                      "never on sampled parameters that have been defined as a function. "
+                      "In particular, a derived parameter cannot depend on %r",
+                      list(bad_derived_dependencies))
+            raise HandledException
 
     def input_params(self):
         return self._input
