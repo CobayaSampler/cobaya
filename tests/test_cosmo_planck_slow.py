@@ -11,9 +11,9 @@ from cosmo_common import lik_info_lowl_highTT, lik_info_lowTEB_highTTTEEE
 
 @pytest.mark.slow
 def test_camb_planck_slow(modules):
-    body_of_test(modules, "p")
+    body_of_test(modules, "p", debug=False)
     
-def body_of_test(modules, x):
+def body_of_test(modules, x, debug=False):
     assert modules, "I need a modules folder!"
     info = yaml_load(baseline_cosmology)
     # Add derived
@@ -44,7 +44,7 @@ def body_of_test(modules, x):
     else:
         raise ValueError("Test not recognised: %r"%x)
     info["output_prefix"] = "./test_planck/%s_"%x
-    info["debug"] = False
+    info["debug"] = debug
 #    info["debug_file"] = "test_planck_slow.log"
     print "Input info (dumped to yaml) -------------------------------"
     print yaml_dump(info)
