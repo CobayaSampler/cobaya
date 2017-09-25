@@ -359,14 +359,14 @@ def install(force=False, path=None ,**kwargs):
     os.rename(classy_path_decompressed, classy_path)
     # Patch for gcc>=5
     from subprocess import Popen, PIPE
-    # patch (hopefully will be removed in the future)
-    log.info("Patching for gcc>=5...")
-    with open(os.path.join(classy_path, "python/setup.py"), "r") as setup:
-        lines = setup.readlines()
-    i_offending = (i for i,l in enumerate(lines) if "libraries=" in l).next()
-    lines[i_offending] = "libraries=['class', 'mvec', 'm'],\n"
-    with open(os.path.join(classy_path, "python/setup.py"), "w") as setup:
-        setup.write("".join(lines))
+#    # patch (hopefully will be removed in the future)
+#    log.info("Patching for gcc>=5...")
+#    with open(os.path.join(classy_path, "python/setup.py"), "r") as setup:
+#        lines = setup.readlines()
+#    i_offending = (i for i,l in enumerate(lines) if "libraries=" in l).next()
+#    lines[i_offending] = "libraries=['class', 'mvec', 'm'],\n"
+#    with open(os.path.join(classy_path, "python/setup.py"), "w") as setup:
+#        setup.write("".join(lines))
     log.info("Compiling...")
     os.chdir(classy_path)
     process_make = Popen(["make"], stdout=PIPE, stderr=PIPE)
