@@ -1,28 +1,52 @@
 # Tries to evaluate the likelihood at LCDM's best fit of Planck 2015, with CAMB
 
+from __future__ import division
 import pytest
+import numpy as np
 
 from cobaya.conventions import _theory, _likelihood, _sampler, _params, _path_install
 from cobaya.yaml_custom import yaml_load, yaml_dump
 from cobaya.run import run
 
-from cosmo_common import baseline_cosmology, derived
-from cosmo_common import lik_info_lowl_highTT, lik_info_lowTEB_highTTTEEE
+from cosmo_common import baseline_cosmology, baseline_cosmology_classy_extra, derived
+from cosmo_common import lik_info_lowl_highTT, lik_info_lowTEB_highTTTEEE, adapt_covmat
 
 @pytest.mark.slow
-def test_camb_planck_slow(modules):
-    body_of_test(modules, "p", debug=False)
+def test_camb_planck_slow(modules, tmpdir, debug=False):
+    body_of_test(modules, tmpdir, "p", theory="camb", debug=debug)
+
+def test_classy_planck_slow(modules, tmpdir, debug=False):
+    body_of_test(modules, tmpdir, "p", theory="classy", debug=debug)
     
-def body_of_test(modules, x, debug=False):
+def body_of_test(modules, tmpdir, x, theory, debug=False):
     assert modules, "I need a modules folder!"
-    info = yaml_load(baseline_cosmology)
+    info = {_path_install: modules}
+    info.update(yaml_load(baseline_cosmology))
     # Add derived
     info[_params][_theory].update(derived)
     print "FOR NOW, POPPING THE BBN PARAMETERS!!!!!!!"
-    info[_params][_theory].pop("DH")
-    info[_params][_theory].pop("YHe")
-    info[_params][_theory].pop("Y_p")
-    info.update({_path_install: modules, _theory: {"camb": {"speed": 0.5}}})
+    for p in ("YHe", "Y_p", "DH"):
+        info[_params][_theory].pop(p, None)
+    if theory == "camb":
+        info.update({_theory: {"camb": None}})
+    elif theory == "classy":
+        info.update({_theory: {"classy": None}})
+        info[_params][_theory].update(baseline_cosmology_classy_extra)
+        info[_params][_theory].pop("cosmomc_theta")
+        info[_params][_theory]["100*theta_s"] = info[_params][_theory].pop("cosmomc_theta100")
+        info[_params][_theory]["100*theta_s"]["ref"]["loc"] = 1.0418
+        info[_params][_theory]["100*theta_s"]["latex"] = r"100*\theta_s"
+        info[_params][_theory]["100*theta_s"].pop("drop")
+        info[_params][_theory]["omegam"].pop("derived")
+        info[_params][_theory]["omegamh2"]["derived"] = "lambda omegam, H0: omegam*(H0/100)**2"
+        info[_params][_theory]["omegamh3"]["derived"] = "lambda omegam, H0: omegam*(H0/100)**3"
+        info[_params][_theory]["s8omegamp5"]["derived"] = "lambda sigma8, omegam: sigma8*omegam**0.5"
+        info[_params][_theory]["s8omegamp25"]["derived"] = "lambda sigma8, omegam: sigma8*omegam**0.25"
+        # Not yet implemented
+        for p in ["zstar", "rstar", "thetastar", "DAstar", "zdrag", "rdrag",
+                  "kd", "thetad", "zeq", "keq", "thetaeq", "thetarseq"]:
+            info[_params][_theory].pop(p)
+    info[_theory][info[_theory].keys()[0]] = {"speed": 0.5}
     info[_sampler] = {"mcmc": {
         "burn_in": 100,
         "learn_proposal": True,
@@ -37,12 +61,14 @@ def body_of_test(modules, x, debug=False):
     }}
     if x == "t":
         info[_likelihood] = lik_info_lowl_highTT
-        info[_sampler]["mcmc"]["covmat"] = "./base_plikHM_TT_lowTEB_0.01theta.covmat"
+        covmat_file = "./base_plikHM_TT_lowTEB.covmat"
     elif x == "p":
         info[_likelihood] = lik_info_lowTEB_highTTTEEE
-        info[_sampler]["mcmc"]["covmat"] = "./base_plikHM_TTTEEE_lowTEB_0.01theta.covmat"
+        covmat_file = "./base_plikHM_TTTEEE_lowTEB.covmat"
     else:
         raise ValueError("Test not recognised: %r"%x)
+    # Change Planck's official CosmoMC covmat
+    info[_sampler]["mcmc"]["covmat"] = adapt_covmat(covmat_file, tmpdir, theory)
     info["output_prefix"] = "./test_planck/%s_"%x
     info["debug"] = debug
 #    info["debug_file"] = "test_planck_slow.log"

@@ -17,14 +17,22 @@ tolerance_derived = 0.03
 
 # Converting 100cosmomc_theta to cosmomc_theta in Planck's covmats #######################
 
-def convert_cosmomc_theta(filename):
+def adapt_covmat(filename, tmpdir, theory="camb", theta_factor=100):
     with open(filename, "r") as original:
         params = original.readline()[1:].split()
-        i_theta = params.index("cosmomc_theta")
-    covmat = np.loadtxt(filename)
-    covmat[i_theta, :] /= 100
-    covmat[:, i_theta] /= 100
-    filename_new = "_0.01theta".join(os.path.splitext(filename))
+        covmat = np.loadtxt(filename)
+    i_logA  = params.index("logA")
+    params[i_logA] = "logAs1e10"
+    i_theta = params.index("cosmomc_theta")
+    if theory == "camb":
+        params[i_theta] = "cosmomc_theta100"
+    elif theory == "classy":
+        params[i_theta] = "100*theta_s"
+    # if used for cosmomc_theta or theta_s, not their multiples
+    if theta_factor != 100:
+        covmat[i_theta, :] /= (100/theta_factor)
+        covmat[:, i_theta] /= (100/theta_factor)
+    filename_new = os.path.join(tmpdir,"covmat.dat")
     np.savetxt(filename_new, covmat, fmt="%.8g", header=" ".join(params))
     return filename_new
 
@@ -51,21 +59,22 @@ def body_of_test(modules, x, theory):
     derived_bestfit_test = deepcopy(derived)
     # Adjustments for Classy
     if theory == "classy":
-#        from cosmo_common import baseline_cosmology
-#        baseline_cosmology = yaml_load(baseline_cosmology)
-#        baseline_cosmology[_params][_theory].update(baseline_cosmology_classy)
-#        baseline_cosmology[_params][_theory].pop("cosmomc_theta")
+        # Remove "cosmomc_theta100" in favour of "H0" (remove it from derived then!)
         info[_params][_theory].pop("cosmomc_theta")
-#        info[_params][_theory].update(baseline_cosmology_classy)
-#        info[_params][_theory]["sBBN file"] = modules+"/theories/CLASS/bbn/sBBN.dat",
-#        from cosmo_common import 
-
-        info[_params][_theory].update({"N_ur": 2.0328, "N_ncdm": 1, "m_ncdm": 0.06, "T_ncdm": 0.71611})
-
-
-
-
-        
+        derived_bestfit_test.pop("H0")
+        derived_values.pop("H0")
+        # Don't test those that have not been implemented yet
+        for p in ["zstar", "rstar", "thetastar", "DAstar", "zdrag", "rdrag",
+                  "kd", "thetad", "zeq", "keq", "thetaeq", "thetarseq"]:
+            derived_bestfit_test.pop(p)
+        # Adapt the definitions of some derived parameters
+        derived_bestfit_test["omegam"].pop("derived")
+        derived_bestfit_test["omegamh2"]["derived"] = "lambda omegam, H0: omegam*(H0/100)**2"
+        derived_bestfit_test["omegamh3"]["derived"] = "lambda omegam, H0: omegam*(H0/100)**3"
+        derived_bestfit_test["s8omegamp5"]["derived"] = "lambda sigma8, omegam: sigma8*omegam**0.5"
+        derived_bestfit_test["s8omegamp25"]["derived"] = "lambda sigma8, omegam: sigma8*omegam**0.25"
+        # More stuff that CLASS needs for the Planck model
+        info[_params][_theory].update(baseline_cosmology_classy_extra)
     # Add derived
     info[_params][_theory].update(derived_bestfit_test)
     print "FOR NOW, POPPING THE BBN PARAMETERS!!!!!!!"
@@ -78,7 +87,6 @@ def body_of_test(modules, x, theory):
     for lik in info[_likelihood]:
         chi2 = products["sample"][_chi2+separator+lik][0]
         tolerance = tolerance_chi2_abs + (2.1 if theory=="classy" else 0)
-        print abs(chi2-ref_chi2[lik]), tolerance
         assert abs(chi2-ref_chi2[lik]) < tolerance, (
             "Likelihood value for '%s' off by more than %f!"%(lik, tolerance_chi2_abs))
     # Check value of derived parameters
@@ -102,7 +110,6 @@ def body_of_test(modules, x, theory):
 baseline_cosmology = r"""
 %s:
   %s:
-    # Sampled
     # dummy prior for ombh2 so that the sampler does not complain
     ombh2:
       prior:
@@ -124,16 +131,19 @@ baseline_cosmology = r"""
         scale: 0.001
       proposal: 0.0005
       latex: \Omega_\mathrm{c} h^2
-    cosmomc_theta:
+    # If using CLASS, rename to "100*theta_s"!!!
+    cosmomc_theta: "lambda cosmomc_theta100: 1.e-2*cosmomc_theta100"
+    cosmomc_theta100:
       prior:
-        min: 0.005
-        max: 0.1
+        min: 0.5
+        max: 100
       ref:
         dist: norm
-        loc: 0.010411
-        scale: 0.000004
-      proposal: 0.000002
-      latex: \theta_\mathrm{MC}
+        loc: 1.0411
+        scale: 0.0004
+      proposal: 0.0002
+      latex: 100*\theta_\mathrm{MC}
+      drop:
     tau:
       prior:
         min: 0.01
@@ -168,21 +178,8 @@ baseline_cosmology = r"""
       latex: n_\mathrm{s}
 """%(_params, _theory)
 
-# def adapt_to_classy(baseline_cosmology, derived):
-#     classy = deepcopy(baseline_cosmology)
-#     classy[_params][_theory]["theta_s"] = classy.pop("cosmomc_theta")
-#     classy[_params][_theory]["theta_s"]["ref"]["loc"] = 0.010418
-#     classy[_params][_theory].update({"N_ur": 2.0328, "N_ncdm": 1, "m_ncdm": 0.06, "T_ncdm": 0.71611,})
-#     derived = deepcopy(derived)
-#     derived["omegam"].pop("derived")
-#     derived["omegamh2"]["derived"] = "lambda omegam, H0: omegam*(H0/100)**2"
-#     derived["omegamh3"]["derived"] = "lambda omegam, H0: omegam*(H0/100)**3"
-#     derived["s8omegamp5"]["derived"] = "lambda sigma8, omegam: sigma8*omegam**0.5"
-#     derived["s8omegamp25"]["derived"] = "lambda sigma8, omegam: sigma8*omegam**0.25"
-#     for p in ["zstar", "rstar", "thetastar", "DAstar", "zdrag", "rdrag",
-#               "kd", "thetad", "zeq", "keq", "thetaeq", "thetarseq"]:
-#         derived_bestfit_test.pop(p)
-# }
+baseline_cosmology_classy_extra = {"N_ur": 2.0328, "N_ncdm": 1,
+                                   "m_ncdm": 0.06, "T_ncdm": 0.71611}
 
 # Derived parameters, described in
 # https://wiki.cosmos.esa.int/planckpla2015/images/b/b9/Parameter_tag_definitions_2015.pdf
@@ -246,7 +243,6 @@ params_lowl_highTT = """
     H0: 68.43994
     cosmomc_theta: 0.01041189
     tau: 0.1249913
-#    logAs1e10: 3.179 # NOT DIRECTLY RECOGNISED: cannot be fixed!!!
     As: 2.401687e-9
     ns: 0.9741693
     # Derived
@@ -338,7 +334,6 @@ params_lowTEB_highTTTEEE = """
     # only one of the next two is finally used!
     H0: 67.25
     cosmomc_theta: 0.01040778
-#    logAs1e10: 3.092882 # NOT DIRECTLY RECOGNISED: cannot be fixed!!!
     As: 2.204051e-9
     ns: 0.9647522
     tau: 0.07888604
