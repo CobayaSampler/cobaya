@@ -1,5 +1,6 @@
 # Samples from a random Gaussian likelihood using the MCMC sampler.
 
+import pytest
 import numpy as np
 from collections import OrderedDict as odict
 from mpi4py import MPI
