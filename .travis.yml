@@ -9,7 +9,9 @@ addons:
     packages:
       - gcc-5
       - gfortran-5
-      - openmpi
+      - openmpi-bin
+      - openmpi-common
+      - libopenmpi-dev
       # numpy (and more)
       - libopenblas-base
       # Planck likelihood
