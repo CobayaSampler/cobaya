@@ -154,10 +154,17 @@ class Parametrisation(object):
         self._sampled_input_dependence = odict(
             [[s,[i for i in self._input if s in self._input_args.get(i, {})]]
              for s in self._sampled])
-        assert ([p for p,v in self._sampled_input_dependence.items() if not v]
-                == self._directly_sampled)
-        # Test: input params depend on input and sampled only
-        # and derived depend of input and output, never of sampled which are not input
+        # From here on, some error control.
+        dropped_but_never_used = (
+            set([p for p,v in self._sampled_input_dependence.items() if not v])
+            .difference(set(self._directly_sampled)))
+        if dropped_but_never_used:
+            log.error("Parameters %r are sampled but not passed to the likelihood or "
+                      "theory code, neither ever used as arguments for any parameters. "
+                      "Check that you are not using the '%s' tag unintentionally.",
+                      list(dropped_but_never_used), _p_drop)
+            raise HandledException
+        # input params depend on input and sampled only, never on output/derived
         bad_input_dependencies = set(chain(*self._input_args.values())).difference(
             set(self.input_params()).union(set(self.sampled_params())))
         if bad_input_dependencies:
@@ -166,6 +173,7 @@ class Parametrisation(object):
                       "In particular, an input parameter cannot depend on %r",
                       list(bad_input_dependencies))
             raise HandledException
+        # derived depend of input and output, never of sampled which are not input
         bad_derived_dependencies = set(chain(*self._derived_args.values())).difference(
             set(self.input_params()).union(set(self.output_params())))
         if bad_derived_dependencies:
