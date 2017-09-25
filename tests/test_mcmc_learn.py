@@ -50,6 +50,7 @@ def info_gaussian(ranges, n_modes=1, mock_prefix=""):
           {"min":-3,"max":3,"latex":r"\beta_{%i}"%i}] for i in range(dimension*n_modes)])
     return info
 
+@pytest.mark.mpi
 def test_gaussian_mcmc():
     # parameters
     dimension = 3

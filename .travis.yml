@@ -18,14 +18,19 @@ before_install:
   - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 50
   - sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-5 50
   - pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist
+  # optional, but necessary for tests
+  - pip install mpi4py
 # Tests!
 script:
   # General
   - pytest tests/test_prior_external.py
   - pytest tests/test_likelihood_external.py
   # Cosmo
-  - python tests/cosmo_install.py tests/modules
-  - pytest tests/ -k "cosmo" -m "not slow" --modules="tests/modules"
+  - python tests/cosmo_install.py ../modules
+  # Not cosmological tests
+  - pytest tests/ -k "not cosmo" -m "not slow and not mpi" --modules="../modules"
+  # Cosmological tests
+  - pytest tests/ -k "cosmo" -m "not slow and not mpi" --modules="../modules"
 # Deploying to PyPI
 # only if it buids and if the commit has been tagged
 deploy:
