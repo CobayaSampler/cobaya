@@ -9,6 +9,7 @@ addons:
     packages:
       - gcc-5
       - gfortran-5
+      - openmpi
       # numpy (and more)
       - libopenblas-base
       # Planck likelihood
@@ -19,15 +20,15 @@ before_install:
   - sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-5 50
   - pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist
   # optional, but necessary for tests
-  - pip install mpi4py
+  - pip install mpi4py pytest-xdist
 # Tests!
 script:
   # Installation
   - python tests/cosmo_install.py ../modules
   # Not cosmological tests
   - pytest tests/ -k "not cosmo" -m "not slow and not mpi" --modules="../modules"
-  # Cosmological tests
-  - pytest tests/ -k "cosmo" -m "not slow and not mpi" --modules="../modules"
+  # Cosmological tests (--boxed = 1 process per test; otherwise lowl planck lik fails!)
+  - pytest tests/ -k "cosmo" -m "not slow and not mpi" --modules="../modules" --boxed
 # Deploying to PyPI
 # only if it buids and if the commit has been tagged
 deploy:

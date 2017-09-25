@@ -15,6 +15,7 @@ from cosmo_common import lik_info_lowl_highTT, lik_info_lowTEB_highTTTEEE, adapt
 def test_camb_planck_slow(modules, tmpdir, debug=False):
     body_of_test(modules, tmpdir, "p", theory="camb", debug=debug)
 
+@pytest.mark.slow
 def test_classy_planck_slow(modules, tmpdir, debug=False):
     body_of_test(modules, tmpdir, "p", theory="classy", debug=debug)
     
