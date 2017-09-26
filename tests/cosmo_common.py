@@ -32,7 +32,7 @@ def adapt_covmat(filename, tmpdir, theory="camb", theta_factor=100):
     if theta_factor != 100:
         covmat[i_theta, :] /= (100/theta_factor)
         covmat[:, i_theta] /= (100/theta_factor)
-    filename_new = os.path.join(tmpdir,"covmat.dat")
+    filename_new = os.path.join(str(tmpdir),"covmat.dat")
     np.savetxt(filename_new, covmat, fmt="%.8g", header=" ".join(params))
     return filename_new
 

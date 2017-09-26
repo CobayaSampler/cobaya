@@ -15,8 +15,8 @@ addons:
       # numpy (and more)
       - libopenblas-base
       # Planck likelihood
-      - liblapack3
-      - liblapack-dev
+#      - liblapack3
+#      - liblapack-dev
 before_install:
   - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 50
   - sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-5 50
