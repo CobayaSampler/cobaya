@@ -7,19 +7,19 @@ addons:
     sources:
       - ubuntu-toolchain-r-test
     packages:
-      - gcc-5
-      - gfortran-5
+      - gcc-6
+      - gfortran-6
       - openmpi-bin
       - openmpi-common
       - libopenmpi-dev
       # numpy (and more)
       - libopenblas-base
       # Planck likelihood
-#      - liblapack3
-#      - liblapack-dev
+      - liblapack3
+      - liblapack-dev
 before_install:
-  - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 50
-  - sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-5 50
+  - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 50
+  - sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-6 50
   - pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist
   # optional, but necessary for tests
   - pip install mpi4py pytest-xdist
