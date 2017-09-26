@@ -296,7 +296,7 @@ def install_clik(path):
     log.info("clik: configuring... (and maybe installing dependencies...)")
     os.chdir(os.path.join(path, "plc-2.0"))
     from subprocess import Popen, PIPE
-    process = Popen(["./waf", "configure", "--install_all_deps"], stdout=PIPE, stderr=PIPE)
+    process = Popen(["./waf", "configure", "--install_all_deps", "--lapack_install"], stdout=PIPE, stderr=PIPE)
     out, err = process.communicate()
     if err != "" or not out.split("\n")[-2].startswith("'configure' finished successfully"):
         print out
