@@ -174,6 +174,7 @@ giving speeds 1,2,3 would have the same effect).
 # Python 2/3 compatibility
 from __future__ import absolute_import
 from __future__ import division
+import six
 
 # Global
 import os
@@ -189,6 +190,7 @@ from cobaya.collection import Collection, OnePoint
 from cobaya.conventions import _weight, _p_proposal, _p_ref
 from cobaya.samplers.mcmc.proposal import BlockedProposer
 from cobaya.log import HandledException
+from cobaya.tools import get_external_function
 
 # Logger
 import logging
@@ -253,77 +255,11 @@ class mcmc(Sampler):
         # Save the number of slow parameters
         # -- it's the effective number of parameters for counting steps
         self.n_slow = sum(len(blocks[i]) for i in range(1+i_last_slow_block))
-        # Create proposal for a covariance matrix
-        # defaulting to diagonal with the width given or guessed for the params
-        # with priority [proposal > ref > prior]
-        params, params_infos = zip(*[(p,i) for p,i in self.parametrisation.sampled_params().items()])
-        covmat = np.diag([info.get(_p_proposal, np.nan) for info in params_infos])
-        where_nan = np.isnan(covmat)
-        if np.any(where_nan):
-            log.info("Default '%s' not given for some parameters. "
-                     "Using ref's or prior's instead.", _p_proposal)
-            covmat[where_nan] = self.prior.reference_covmat()[where_nan]
-        log.debug("Covmat from '%s' (or '%s') property of parameters: %r", covmat, _p_proposal, _p_ref)
-        # If given update with covmat file
-        if self.covmat is not None:
-            try:
-                with open(self.covmat, "r") as file_covmat:
-                    self.loaded_params = file_covmat.readline()
-                    if self.loaded_params[0] != "#":
-                        log.error("The first line of the covmat file '%s' "
-                                  "must be one list of parameter names separated by spaces "
-                                  "and staring with '#', and the rest must be a square matrix, "
-                                  "with one row per line.", self.covmat)
-                        raise HandledException
-                    self.loaded_params = self.loaded_params.strip("#").strip().split()
-                    self.loaded_covmat = np.loadtxt(self.covmat)
-                if len(self.loaded_params) != len(set(self.loaded_params)):
-                    log.error(
-                        "There were duplicated parameters in the header of the "
-                        "covmat file '%s' ", self.covmat)
-                    raise HandledException
-                if len(self.loaded_params) != self.loaded_covmat.shape[0]:
-                    log.error(
-                        "The number of parameters in the header of '%s' "
-                        "and the dimensions of the matrix do not coincide.", self.covmat)
-                    raise HandledException
-            except TypeError:
-                log.error("The property 'covmat' must be a file name,"
-                          "but it's '%s'.", str(self.covmat))
-                raise HandledException
-            except IOError:
-                log.error("Can't open covmat file '%s'.", self.covmat)
-                raise HandledException
-            log.info("Covariance matrix loaded for params %r", self.loaded_params)
-            np.set_printoptions(linewidth=np.nan)
-            log.debug("%r", self.loaded_covmat)
-            np.set_printoptions(linewidth=75)
-            # Fill the complete covariance matrix with the loaded one or the defaults
-            loaded_params_present = [p for p in self.loaded_params if p in params]
-            loaded_params_ignored = [p for p in self.loaded_params if p not in params]
-            log.info("Used for parameters: %r", loaded_params_present)
-            if loaded_params_ignored:
-                log.info("Ignored parameters: %r", loaded_params_ignored)
-            for i, p_i in enumerate(loaded_params_present):
-                i_int = params.index(p_i)
-                i_ext = self.loaded_params.index(p_i)
-                for p_j in loaded_params_present[i:]:
-                    j_int = params.index(p_j)
-                    j_ext = self.loaded_params.index(p_j)
-                    covmat[i_int, j_int] = self.loaded_covmat[i_ext,j_ext]
-                    covmat[j_int, i_int] = covmat[i_int, j_int]
+        # Build the initial covariance matrix of the proposal
+        covmat = self.initial_proposal_covmat()
         log.info("Sampling with covariance matrix:")
         log.info("%r", covmat)
         self.proposer.set_covariance(covmat)
-        # if not learnt covmat or, of learnt, it does not contain all parameters
-        if len(getattr(self, "loaded_params", [])) < len(params):
-            # we want to start learning the covmat earlier
-            log.info(("No covariance matrix read. " if not(hasattr(self, "loaded_covmat"))
-                      else "Provided covariance matrix incomplete. ")+
-                     "We will start learning the covariance of the proposal earlier: "
-                     "R-1 = %g (was %g).", self.learn_proposal_Rminus1_max_early,
-                     self.learn_proposal_Rminus1_max)
-            self.learn_proposal_Rminus1_max = self.learn_proposal_Rminus1_max_early
         # Using fast dragging?
         if self.drag_nfast_times and self.drag_interp_steps:
             log.error(
@@ -342,6 +278,91 @@ class mcmc(Sampler):
                      self.n_slow, self.drag_interp_steps, fast_params)
         else:
             self.get_new_sample = self.get_new_sample_metropolis
+        # Prepare callback function
+        if self.callback_function != None:
+            self.callback_function_callable = get_external_function(self.callback_function)
+
+    def initial_proposal_covmat(self):
+        """
+        Build the initial covariance matrix, using the data provided, in descending order
+        of priority:
+        1. "covmat" field in the "mcmc" sampler block.
+        2. "proposal" field for each parameter.
+        3. variance of the reference pdf.
+        4. variance of the prior pdf.
+
+        The covariances between parameters when both are present in a covariance matrix
+        provided through option 1 are preserved. All other covariances are assumed to be 0.
+        """
+        params, params_infos = zip(*self.parametrisation.sampled_params().items())
+        covmat = np.diag([np.nan]*len(params))
+        # If given, load and test the covariance matrix
+        if isinstance(self.covmat, six.string_types):
+            try:
+                with open(self.covmat, "r") as file_covmat:
+                    header = file_covmat.readline()
+                loaded_covmat = np.loadtxt(self.covmat)
+            except TypeError:
+                log.error("The property 'covmat' must be a file name,"
+                          "but it's '%s'.", str(self.covmat))
+                raise HandledException
+            except IOError:
+                log.error("Can't open covmat file '%s'.", self.covmat)
+                raise HandledException
+            if header[0] != "#":
+                log.error("The first line of the covmat file '%s' "
+                          "must be one list of parameter names separated by spaces "
+                          "and staring with '#', and the rest must be a square matrix, "
+                          "with one row per line.", self.covmat)
+                raise HandledException
+            loaded_params = header.strip("#").strip().split()
+        elif hasattr(self.covmat, "__getitem__"):
+            if not self.covmat_params:
+                log.error("If a covariance matrix is passed as a numpy array, "
+                          "you also need to pass the parameters it corresponds to "
+                          "via 'covmat_params: [name1, name2, ...]'.")
+                raise HandledException
+            loaded_params = self.covmat_params
+            loaded_covmat = self.covmat
+        if self.covmat is not None:
+            if len(loaded_params) != len(set(loaded_params)):
+                log.error("There are duplicated parameters in the header of the "
+                          "covmat file '%s' ", self.covmat)
+                raise HandledException
+            if len(loaded_params) != loaded_covmat.shape[0]:
+                log.error("The number of parameters in the header of '%s' and the "
+                          "dimensions of the matrix do not coincide.", self.covmat)
+                raise HandledException
+            if not (np.allclose(loaded_covmat.T, loaded_covmat) and
+                    np.all(np.linalg.eigvals(loaded_covmat) > 0)):
+                log.error("The covmat loaded from '%s' is not a positive-definite, "
+                          "symmetric square matrix.", self.covmat)
+                raise HandledException
+            # Fill with parameters in the loaded covmat
+            loaded_params_used = set(loaded_params).intersection(set(params))
+            indices_used, indices_sampler = np.array(
+                [[loaded_params.index(p),params.index(p)]
+                 for p in loaded_params if p in loaded_params_used]).T
+            covmat[np.ix_(indices_sampler,indices_sampler)] = (
+                loaded_covmat[np.ix_(indices_used,indices_used)])
+            log.info("Covariance matrix loaded for params %r", list(loaded_params_used))
+        # Fill gaps with "proposal" property, if present, otherwise ref (or prior)
+        where_nan = np.isnan(covmat.diagonal())
+        if np.any(where_nan):
+            covmat[where_nan, where_nan] = np.array(
+                [info.get(_p_proposal, np.nan)**2 for info in params_infos])[where_nan]
+            # we want to start learning the covmat earlier
+            log.info("Covariance matrix "
+                     +("not present" if np.all(where_nan) else "not complete")+". "
+                     "We will start learning the covariance of the proposal earlier: "
+                     "R-1 = %g (was %g).", self.learn_proposal_Rminus1_max_early,
+                     self.learn_proposal_Rminus1_max)
+            self.learn_proposal_Rminus1_max = self.learn_proposal_Rminus1_max_early
+        where_nan = np.isnan(covmat.diagonal())
+        if np.any(where_nan):
+            covmat[where_nan, where_nan] = self.prior.reference_covmat().diagonal()[where_nan]
+        assert not np.any(np.isnan(covmat))
+        return covmat
 
     def run(self):
         """
@@ -360,10 +381,10 @@ class mcmc(Sampler):
         while self.n() < (self.max_samples*self.oversample_fast) and not(self.converged):
             self.get_new_sample()
             # Callback function
-            if (self.callback_function != None and
+            if (hasattr(self, "callback_function_callable") and
                 not(max(self.n(),1)%self.callback_every) and
                 self.current_point["weight"]==1):
-                self.callback_function(self)
+                self.callback_function_callable(self)
             # Checking convergence and (optionally) learning the covmat of the proposal
             if self.check_all_ready():
                 self.check_convergence_and_learn_proposal()

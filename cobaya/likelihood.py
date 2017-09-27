@@ -136,7 +136,7 @@ class Likelihood():
         # Mock likelihoods: gather all parameters starting with `mock_prefix`
         if self.is_mock():
             all_params = list(parametrisation.input_params())+list(parametrisation.output_params())
-            info[_params] = [p for p in all_params if p.startswith(self.mock_prefix)]
+            info[_params] = [p for p in all_params if p.startswith(self.mock_prefix or "")]
         # Load parameters
         self.input_params = odict(
             [(p,p_info) for p,p_info in parametrisation.input_params().iteritems() if p in info[_params]])

@@ -194,4 +194,3 @@ class BlockedProposer(CovmatProposer):
     def get_proposal_fast_delta(self,P):
         P[:]=0
         self.get_proposal_fast(P)
-
