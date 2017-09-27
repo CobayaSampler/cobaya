@@ -112,7 +112,7 @@ class Parametrisation(object):
         self._derived = odict()
         self._derived_funcs = dict()
         self._derived_args = dict()
-        self._theory_params = set(info_params.get(_theory,{}).keys())
+        self._theory_params = info_params.get(_theory,{}).keys()
         self._theory_args = dict()
         info_params_flat = odict([(p,info_params[_theory][p]) for p in self._theory_params])
         info_params_flat.update(odict([(p,info_params[p]) for p in info_params if p!=_theory]))
@@ -140,13 +140,14 @@ class Parametrisation(object):
             if p in args:
                 args.remove(p)
         self._output.update({p:None for p in args})
-        # if arguments of a cosmo parameter, assume it's a cosmo parameter
+        # if argument of a theory parameter, assume it's a theory parameter
         args_theory = (
             set(chain(
                 *[v for p,v in self._input_args.iteritems() if p in self._theory_params]))
             .union(chain(
                 *[v for p,v in self._derived_args.iteritems() if p in self._theory_params])))
-        self._theory_params = self._theory_params.union(args_theory)
+        self._theory_params = self._theory_params + [p for p in args_theory
+                                                     if not p in self._theory_params]
         # Useful sets: directly-sampled input parameters and directly "output-ed" derived
         self._directly_sampled = [p for p in self._input if p in self._sampled]
         self._directly_output = [p for p in self._derived if p in self._output]
