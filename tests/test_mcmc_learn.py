@@ -72,9 +72,14 @@ def test_gaussian_mcmc():
     # Sample info (random covariance matrices for the proposal)
     S_proposal = []
     def check(sampler_instance):
-        KL = KL_norm(S1=info["likelihood"]["gaussian"]["cov"],
-                     S2=sampler_instance.proposer.get_covariance())
-        print KL
+        KL_proposer = KL_norm(S1=info["likelihood"]["gaussian"]["cov"],
+                              S2=sampler_instance.proposer.get_covariance())
+        KL_sample   = KL_norm(m1=info["likelihood"]["gaussian"]["mean"],
+                              S1=info["likelihood"]["gaussian"]["cov"],
+                              m2=sampler_instance.collection.mean(first=int(sampler_instance.n()/2)),
+                              S2=sampler_instance.collection.cov (first=int(sampler_instance.n()/2)))
+        print KL_proposer, KL_sample
+
     # Mcmc info
     info[_sampler] = {"mcmc":
         # Bad guess for covmat, so big burn in and max_tries
@@ -82,8 +87,7 @@ def test_gaussian_mcmc():
         # Learn proposal
         "learn_proposal": True,
         # Callback to check KL divergence -- disabled in the automatic test
-        # "callback_function": check,
-        # "callback_every": 100
+#        "callback_function": check, "callback_every": 100
         }}
     covmat_file_name = os.path.join(tempfile.gettempdir(),"covmat.dat")
     if rank == 0:

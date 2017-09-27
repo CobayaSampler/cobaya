@@ -663,20 +663,24 @@ class mcmc(Sampler):
             pass
         # Do we want to learn a better proposal pdf?
         if self.learn_proposal and not self.converged:
-            # if just one chain or, if more than one, if R-1 is not too bad
-            # (or absurdly good), and if degeneracies were not known, update early
-            if (get_mpi() and
-                (self.Rminus1_last < self.learn_proposal_Rminus1_max and
-                 self.Rminus1_last > self.learn_proposal_Rminus1_min)):
+            # update iff (not MPI, or MPI and "good" Rminus1)
+            if get_mpi():
+                good_Rminus1 = (self.Rminus1_last < self.learn_proposal_Rminus1_max and
+                                self.Rminus1_last > self.learn_proposal_Rminus1_min)
+                if not good_Rminus1:
+                    if not get_mpi_rank():
+                        log.info("Bad convergence statistics: waiting until the next checkpoint.")
+                        return
+            if get_mpi():
                 if get_mpi_rank():
                     mean_of_covs = np.empty((self.prior.d(),self.prior.d()))
                 get_mpi_comm().Bcast(mean_of_covs, root=0)
             elif not get_mpi():
                 mean_of_covs = covs[0]
+            self.proposer.set_covariance(mean_of_covs)
             if not get_mpi_rank():
                 log.info("Updated covariance matrix of proposal pdf.")
                 log.debug("%r", mean_of_covs)
-            self.proposer.set_covariance(mean_of_covs)
 
     # Finally: returning the computed products ############################################
 
