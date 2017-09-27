@@ -28,6 +28,7 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - gcc-4.9
+            - gfortran-4.9
             - openmpi-bin
             - openmpi-common
             - libopenmpi-dev
@@ -44,6 +45,7 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - gcc-5
+            - gfortran-5
             - openmpi-bin
             - openmpi-common
             - libopenmpi-dev
@@ -60,6 +62,7 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - gcc-6
+            - gfortran-6
             - openmpi-bin
             - openmpi-common
             - libopenmpi-dev
@@ -73,7 +76,7 @@ matrix:
 
 before_install:
   - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-"${MATRIX_EVAL}" 90
-#  - sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-"${MATRIX_EVAL}" 90
+  - sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-"${MATRIX_EVAL}" 90
 
 
 #before_install:
