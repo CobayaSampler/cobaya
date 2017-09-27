@@ -22,40 +22,40 @@ matrix:
             - liblapack-dev
       env:
         - MATRIX_EVAL="4.9"
-    - addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - gcc-5
-            - gfortran-5
-            - openmpi-bin
-            - openmpi-common
-            - libopenmpi-dev
-            # numpy (and more)
-            - libopenblas-base
-            # Planck likelihood
-            - liblapack3
-            - liblapack-dev
-      env:
-        - MATRIX_EVAL="5"
-    - addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - gcc-6
-            - gfortran-6
-            - openmpi-bin
-            - openmpi-common
-            - libopenmpi-dev
-            # numpy (and more)
-            - libopenblas-base
-            # Planck likelihood
-            - liblapack3
-            - liblapack-dev
-      env:
-         - MATRIX_EVAL="6"
+    # - addons:
+    #     apt:
+    #       sources:
+    #         - ubuntu-toolchain-r-test
+    #       packages:
+    #         - gcc-5
+    #         - gfortran-5
+    #         - openmpi-bin
+    #         - openmpi-common
+    #         - libopenmpi-dev
+    #         # numpy (and more)
+    #         - libopenblas-base
+    #         # Planck likelihood
+    #         - liblapack3
+    #         - liblapack-dev
+    #   env:
+    #     - MATRIX_EVAL="5"
+    # - addons:
+    #     apt:
+    #       sources:
+    #         - ubuntu-toolchain-r-test
+    #       packages:
+    #         - gcc-6
+    #         - gfortran-6
+    #         - openmpi-bin
+    #         - openmpi-common
+    #         - libopenmpi-dev
+    #         # numpy (and more)
+    #         - libopenblas-base
+    #         # Planck likelihood
+    #         - liblapack3
+    #         - liblapack-dev
+    #   env:
+    #      - MATRIX_EVAL="6"
 before_install:
   - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-"${MATRIX_EVAL}" 90
   - sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-"${MATRIX_EVAL}" 90
