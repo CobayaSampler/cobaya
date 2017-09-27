@@ -65,6 +65,7 @@ from collections import OrderedDict as odict
 from numbers import Number
 from inspect import getargspec
 from itertools import chain
+from ast import parse
 
 # Local
 from cobaya.conventions import _prior, _p_drop, _p_derived, _theory
@@ -133,6 +134,26 @@ class Parametrisation(object):
                     self._derived_args[p] = getargspec(self._derived_funcs[p]).args
                 else:
                     self._output[p] = None
+        # Check that the sampled and derived params are all valid python variable names
+        def valid(name):
+            try:
+                parse("%s=None"%name)
+                return True
+            except SyntaxError:
+                return False
+        for p in chain(self.sampled_params(),self.derived_params()):
+            if not valid(p):
+                is_in = p in self.sampled_params()
+                eg_in = "  p_prime:\n    prior: ...\n  %s: 'lambda p_prime: p_prime'\n"%p
+                eg_out = "  p_prime: 'lambda %s: %s'\n"%(p,p)
+                log.error("Parameter name '%s' is not a valid Python variable name "
+                          "(it needs to start with a letter or '_').\n"
+                          "If this is an %s parameter of a likelihood or theory, "
+                          "whose name you cannot change,%s define an associated "
+                          "%s one with a valid name 'p_prime' as: \n\n%s",
+                          p, "input" if is_in else "output", "" if is_in else " remove it and",
+                          "sampled" if is_in else "derived", eg_in if is_in else eg_out)
+                raise HandledException
         # Assume that the *un*known function arguments are likelihood output parameters
         args = (set(chain(*self._input_args.values()))
                 .union(chain(*self._derived_args.values())))
