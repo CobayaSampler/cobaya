@@ -80,6 +80,8 @@ def logger_setup(debug=None, debug_file=None):
         handle_stdout.setLevel(logging.INFO)
         file_stdout.setFormatter(MyFormatter())
         logging.root.addHandler(file_stdout)
-    logging.root.addHandler(handle_stdout)
+    # Add stdout handler only once!
+    if not any(h.stream==sys.stdout for h in logging.root.handlers):
+        logging.root.addHandler(handle_stdout)
     # Configure the logger to manage exceptions
     sys.excepthook = exception_handler
