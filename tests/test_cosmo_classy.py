@@ -5,5 +5,5 @@ from cosmo_common import body_of_test
 def test_classy_planck_t(modules):
     body_of_test(modules, "t", "classy")
 
-#def test_classy_planck_p(modules):
-#    body_of_test(modules, "p", "classy")
+def test_classy_planck_p(modules):
+    body_of_test(modules, "p", "classy")

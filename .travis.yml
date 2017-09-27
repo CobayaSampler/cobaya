@@ -2,24 +2,7 @@ language: python
 dist: trusty
 python: 2.7
 # (Pre)Installation
-#addons:
-#  apt:
-#    sources:
-#      - ubuntu-toolchain-r-test
-#    packages:
-#      - gcc-6
-#      - gfortran-6
-#      - openmpi-bin
-#      - openmpi-common
-#      - libopenmpi-dev
-#      # numpy (and more)
-#      - libopenblas-base
-#      # Planck likelihood
-#      - liblapack3
-#      - liblapack-dev
-
-
-# Test matrix for different C compilers
+# Test matrix for different C & fortran compilers
 matrix:
   include:
     - addons:
@@ -73,15 +56,10 @@ matrix:
             - liblapack-dev
       env:
          - MATRIX_EVAL="6"
-
 before_install:
   - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-"${MATRIX_EVAL}" 90
   - sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-"${MATRIX_EVAL}" 90
-
-
-#before_install:
-#  - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 50
-#  - sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-6 50
+  # getdist fork (it will be an automatic requisite in the future)
   - pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist
   # optional, but necessary for tests
   - pip install mpi4py pytest-xdist
