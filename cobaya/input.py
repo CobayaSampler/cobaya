@@ -116,7 +116,12 @@ def get_full_info(info):
             # Update the options with the input file
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
             # First deal with cases "no options" and "external function"
-            input_info[block][module] = input_info[block][module] or {}
+            try:
+                input_info[block][module] = input_info[block][module] or {}
+            except TypeError:
+                log.error("Your input info is not well formatted at the '%s' block. "
+                          "It must be a dictionary {'%s':{options}, ...}. ", block, block)
+                raise HandledException
             if not hasattr(input_info[block][module], "get"):
                 input_info[block][module] = {_external: input_info[block][module]}
             options_not_recognised = (set(input_info[block][module])
