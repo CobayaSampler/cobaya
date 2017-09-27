@@ -84,6 +84,9 @@ before_install:
   - pip install mpi4py pytest-xdist
 # Tests!
 script:
+  # Check
+  - gfortran --version
+  - gcc --version
   # Installation
   - python tests/cosmo_install.py ../modules
   # Not cosmological tests
