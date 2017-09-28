@@ -109,7 +109,9 @@ class gaussian(Likelihood):
             if mean_dim != self.d():
                 log.error(
                     "The dimensionality is %d (guessed from given means and covmats) "
-                    "but was given %d mock parameters instead.", self.d(), len(self.sampled))
+                    "but was given %d mock parameters instead. "+
+                    ("Maybe you forgot to specify the prefix by which to identify them?"
+                     if self.mock_prefix else ""), mean_dim, len(self.input_params))
                 raise HandledException
             self.n_modes = mean_n_modes
             if len(self.output_params) != self.d()*self.n_modes:
@@ -186,8 +188,8 @@ def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1):
         stds = scales * 10**(uniform.rvs(size=dim, loc=np.log10(O_std_min),
                                          scale=np.log10(O_std_max/O_std_min)))
         this_cov = np.diag(stds).dot(
-                       random_correlation.rvs(dim*stds/sum(stds)).dot(
-                           np.diag(stds)))
+                   (random_correlation.rvs(dim*stds/sum(stds)) if dim>1 else np.eye(1))
+                   .dot(np.diag(stds)))
         # Symmetrise (numerical noise is usually introduced in the last step)
         cov += [(this_cov+this_cov.T)/2]
     if n_modes == 1:
