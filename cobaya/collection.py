@@ -139,11 +139,11 @@ class Collection():
         between `first` (default 0) and `last` (default last obtained),
         optionally including derived parameters if `derived=True` (default `False`).
         """
-        return np.cov(
+        return np.atleast_2d(np.cov(
             self[list(self.sampled_params)
                  +(list(self.derived_params) if derived else [])]
                 [first:last].T,
-            fweights=self[_weight][first:last])
+            fweights=self[_weight][first:last]))
 
     # Saving and updating
     def get_driver(self, method):

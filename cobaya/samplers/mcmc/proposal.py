@@ -23,6 +23,7 @@ from __future__ import division
 # Global
 import numpy as np
 import scipy
+import numpy
 
 # Local
 from cobaya.log import HandledException
@@ -64,7 +65,7 @@ class RandDirectionProposer(IndexCycler):
             if self.n > 1:
                 self.R = scipy.stats.special_ortho_group.rvs(self.n)
             else:
-                self.R = np.ones((1,1))
+                self.R = np.eye(1)*numpy.random.choice((-1,1))
         return self.R[:, self.loopix] * self.propose_r() * scale
 
     def propose_r(self):
