@@ -233,6 +233,7 @@ class mcmc(Sampler):
         ##########################################################
         # Prepare speed hierarchy
         speeds, blocks = zip(*self.likelihood.speeds_of_params().items())
+        self.max_speed_slow = max(self.max_speed_slow, min(speeds))
         # Turn parameter names into indices
         blocks = [[self.parametrisation.sampled_params().keys().index(p) for p in b] for b in blocks]
         try:
@@ -240,7 +241,7 @@ class mcmc(Sampler):
                                  if speed > self.max_speed_slow).next() - 1
         except StopIteration:
             i_last_slow_block = len(speeds) - 1
-            if self.max_speed_slow > 1:
+            if self.max_speed_slow > max(speeds):
                 log.error("`max_speed_slow` is equal or higher than the fastest speed, "
                           "so no fast-dragging or oversampling.")
                 raise HandledException
