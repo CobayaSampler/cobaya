@@ -250,9 +250,8 @@ class mcmc(Sampler):
                 log.error(
                     "All blocks have the same speed, so no fast-dragging or oversampling.")
                 raise HandledException
-        self.proposer = BlockedProposer(
-            blocks, range(self.prior.d()), i_last_slow_block,
-            oversample_fast=self.oversample_fast, propose_scale=self.propose_scale)
+        self.proposer = BlockedProposer(blocks, oversampling_factors=self.oversample_fast,
+                i_last_slow_block=i_last_slow_block, propose_scale=self.propose_scale)
         # Save the number of slow parameters
         # -- it's the effective number of parameters for counting steps
         self.n_slow = sum(len(blocks[i]) for i in range(1+i_last_slow_block))
@@ -414,7 +413,7 @@ class mcmc(Sampler):
         Returns:
            ``True`` for an accepted step, ``False`` for a rejected one.
         """
-        trial = self.current_point[self.parametrisation.sampled_params()]
+        trial = deepcopy(self.current_point[self.parametrisation.sampled_params()])
         self.proposer.get_proposal(trial)
         logpost_trial, logprior_trial, logliks_trial, derived = self.logposterior(trial)
         accept = self.metropolis_accept(logpost_trial, -self.current_point["minuslogpost"])
@@ -459,11 +458,11 @@ class mcmc(Sampler):
         start_drag_logpost_acc = start_slow_logpost
         end_drag_logpost_acc   = end_slow_logpost
         # start dragging
-        delta_fast = np.zeros(len(current_start_point))
         for i_step in range(1, 1+self.drag_interp_steps):
             log.debug("Dragging step: %d", i_step)
             # take a step in the fast direction in both slow extremes
-            self.proposer.get_proposal_fast_delta(delta_fast)
+            delta_fast = np.zeros(len(current_start_point))
+            self.proposer.get_proposal_fast(delta_fast)
             proposal_start_point = deepcopy(current_start_point)
             proposal_start_point += delta_fast
             proposal_end_point = deepcopy(current_end_point)

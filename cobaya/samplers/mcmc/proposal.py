@@ -24,6 +24,7 @@ from __future__ import division
 import numpy as np
 import scipy
 import numpy
+from itertools import chain
 
 # Local
 from cobaya.log import HandledException
@@ -36,7 +37,7 @@ log = logging.getLogger(__name__)
 class IndexCycler(object):
     def __init__(self, n):
         self.n = n
-        self.loopix = -1
+        self.loop_index = -1
 
 
 class CyclicIndexRandomizer(IndexCycler):
@@ -46,27 +47,27 @@ class CyclicIndexRandomizer(IndexCycler):
 
         :return: index
         """
-        self.loopix = (self.loopix + 1) % self.n
-        if self.loopix == 0:
+        self.loop_index = (self.loop_index + 1) % self.n
+        if self.loop_index == 0:
             self.indices = np.random.permutation(self.n)
-        return self.indices[self.loopix]
+        return self.indices[self.loop_index]
 
 
 class RandDirectionProposer(IndexCycler):
-    def propose_vec(self, scale):
+    def propose_vec(self, scale=1):
         """
         propose a random n-dimension vector
 
         :param scale: units for the distance
         :return: array with vector
         """
-        self.loopix = (self.loopix + 1) % self.n
-        if self.loopix == 0:
+        self.loop_index = (self.loop_index + 1) % self.n
+        if self.loop_index == 0:
             if self.n > 1:
                 self.R = scipy.stats.special_ortho_group.rvs(self.n)
             else:
                 self.R = np.eye(1)*numpy.random.choice((-1,1))
-        return self.R[:, self.loopix] * self.propose_r() * scale
+        return self.R[:, self.loop_index] * self.propose_r() * scale
 
     def propose_r(self):
         """
@@ -80,118 +81,125 @@ class RandDirectionProposer(IndexCycler):
             return np.linalg.norm(np.random.normal(size=min(self.n, 2)))
 
 
-class BlockProposer(RandDirectionProposer):
-    def update_params(self, params, vec):
-        params[self.params_changed] += self.mapping_matrix.dot(vec)
-
-
-class CovmatProposer(object):
-    def set_covariance(self):
-        pass
-
-
-class BlockedProposer(CovmatProposer):
-    def __init__(self, parameter_blocks, params_used, slow_block_max,
-                 oversample_fast=1, propose_scale=2.4):
-
+class BlockedProposer(object):
+    def __init__(self, parameter_blocks, oversampling_factors=None,
+                 i_last_slow_block=None, propose_scale=2.4):
         """
         Proposal density for fast and slow parameters, where parameters are
         grouped into blocks which are changed at the same time.
 
-        :param parameter_blocks: list of arrays of parameter indices in each block
-        :param params_used: array of indices of actual parameters that are varied
-        :param slow_block_max: index of block which is the last which is slow
-        :param oversample_fast: factor by which to oversample fast parameters
-        :param propose_scale: overal scale for the proposal
+        :param parameter_blocks: list of arrays of parameter indices in each block,
+            sorted by ascending speed.
+        :param oversampling_factors: list of oversampling factors for each block
+            or, if `i_last_slow_block` given, int oversampling factor for fast parameters.
+        :param i_last_slow_block: index of the last block considered slow.
+            If specified, `oversampling_factors` is interpreted as a single integer and
+            applied to the fast parameters only (default: None for no speed hierarchy).
+        :param propose_scale: overal scale for the proposal.
         """
-        self.oversample_fast = oversample_fast
         self.propose_scale = propose_scale
-        self.fast_ix = 0
-        # total number and number of slow parameters
-        n_all = 0
-        n_slow = 0
-        used_blocks_indices = []
-        for i, block in enumerate(parameter_blocks):
-            n_block = len(block)
-            if n_block:
-                used_blocks_indices.append(i)
-                n_all += n_block
-                if i <= slow_block_max:
-                    n_slow += n_block
-        self.all  = CyclicIndexRandomizer(n_all)
-        self.slow = CyclicIndexRandomizer(n_slow)
-        self.fast = CyclicIndexRandomizer(n_all - n_slow)
-        # Creating the proposers
-        self.proposer = []
-        self.proposer_for_index = range(n_all)
-        self.used_param_indices = np.zeros(n_all, dtype=int)
-        # parameter index
-        ix = 0
-        for i_block in used_blocks_indices:
-            pars = parameter_blocks[i_block]
-            bp = BlockProposer(len(pars))
-            bp.block_start = ix
-            bp.used_param_indices = pars[:] # this is a copy
-            self.proposer.append(bp)
-            self.proposer_for_index[ix:ix + bp.n] = [bp for _ in range(bp.n)]
-            self.used_param_indices[ix:ix + bp.n] = pars
-            ix += bp.n
-        for i_block, bp in enumerate(self.proposer):
-            bp.used_params_changed = self.used_param_indices[bp.block_start:]
-            # ensuring params_used is an array, to be able to select with list of indices
-            bp.params_changed = np.array(params_used)[bp.used_params_changed]
+        if i_last_slow_block == None:
+            i_last_slow_block = len(parameter_blocks)-1
+            if oversampling_factors == None:
+                self.oversampling_factors = [1 for _ in parameter_blocks]
+            else:
+                if len(oversampling_factors) != len(parameter_blocks):
+                    log.error("List of oversampling factors has a different length that "
+                              "list of blocks: %d vs %d.",
+                              len(oversampling_factors), len(parameter_blocks))
+                    raise HandledException
+                self.oversampling_factors = [min(1,int(f)) for f in oversampling_factors]
+        else:
+            if i_last_slow_block > len(parameter_blocks)-1:
+                log.error("The index given for the last slow block, %d, is not valid: "
+                          "there are only %d blocks.", i_last_slow_block, len(parameter_blocks))
+                raise HandledException
+            self.oversampling_factors = (
+                [1]*(1+i_last_slow_block) +
+                [int(oversampling_factors)]*(len(parameter_blocks)-(1+i_last_slow_block)))
+        n_all = sum([len(b) for b in parameter_blocks])
+        n_slow = sum([len(b) for b in parameter_blocks[:1+i_last_slow_block]])
+        if set(list(chain(*parameter_blocks))) != set(range(n_all)):
+            log.error("The blocks do not contain all the parameter indices.")
+            raise HandledException
+        # Mapping between internal indices, sampler parameter indices and blocks:
+        # let i=0,1,... be the indices of the parameters for the sampler,
+        # and j=0,1,... be the indices of the parameters *as given to the proposal*
+        # i.e. if passed blocks=[[1,2],[0]] (those are the i's),
+        # then the j's are [0 (for 1), 1 (for 2), 2 (for 0)].
+        # iblock is the index of the blocks
+        self.i_of_j = np.array(list(chain(*parameter_blocks)))
+        self.iblock_of_j = list(
+            chain(*[[iblock]*len(b) for iblock,b in enumerate(parameter_blocks)]))
+        # Creating the blocked proposers
+        self.proposer = [RandDirectionProposer(len(b)) for b in parameter_blocks]
+        # Starting j index of each block
+        self.j_start = [len(list(chain(*parameter_blocks[:iblock])))
+                        for iblock,b in enumerate(parameter_blocks)]
+        # Parameter cyclers, cycling over the j's
+        self.cycler_all  = CyclicIndexRandomizer(n_all)
+        # These ones are used by fast dragging only
+        self.cycler_slow = CyclicIndexRandomizer(n_slow)
+        self.cycler_fast = CyclicIndexRandomizer(n_all - n_slow)
+        # Samples left to draw from the current block
+        self.samples_left = 0
+
+    def d(self):
+        return len(self.i_of_j)
+
+    def get_proposal(self, P):
+        # if a block has been chosen
+        if self.samples_left:
+            self.get_block_proposal(P, self.current_iblock)
+            self.samples_left -= 1
+        # otherwise, choose a block
+        else:
+            self.current_iblock = self.iblock_of_j[self.cycler_all.next()]
+            self.samples_left = self.oversampling_factors[self.current_iblock]
+            self.get_proposal(P)
+
+    # Methods to be used in fast-dragging only
+    def get_proposal_slow(self, P):
+        current_iblock_slow = self.iblock_of_j[self.cycler_slow.next()]
+        self.get_block_proposal(P, current_iblock_slow)
+    def get_proposal_fast(self, P):
+        current_iblock_fast = self.iblock_of_j[self.cycler_slow.n + self.cycler_fast.next()]
+        self.get_block_proposal(P, current_iblock_fast)
+
+    def get_block_proposal(self, P, iblock):
+        vec_standarised = self.proposer[iblock].propose_vec(self.propose_scale)
+        P[self.i_of_j[self.j_start[iblock]:]] += self.transform[iblock].dot(vec_standarised)
 
     def set_covariance(self, propose_matrix):
         """
-        Take covariance of used parameters (propose_matrix), and construct orthonormal parameters
+        Take covariance of sampled parameters (propose_matrix), and construct orthonormal parameters
         where orthonormal parameters are grouped in blocks by speed, so changes in slowest block
         changes slow and fast parameters, but changes in the fastest block only changes fast parameters
 
-        :param propose_matrix: covariance matrix for used parameters
+        :param propose_matrix: covariance matrix for the sampled parameters.
         """
+        if propose_matrix.shape[0] != self.d():
+            log.error("The covariance matrix does not have the correct dimension: "
+                      "it's %d, but it should be %d.",
+                      propose_matrix.shape[0], self.d())
+            raise HandledException
         if not (np.allclose(propose_matrix.T,propose_matrix) and
                 np.all(np.linalg.eigvals(propose_matrix) > 0)):
             log.error("The given covmat is not a positive-definite, "
                       "symmetric square matrix.")
             raise HandledException
         self.propose_matrix = propose_matrix.copy()
-        sigmas = np.sqrt(np.diag(propose_matrix))
-        corr = propose_matrix[np.ix_(self.used_param_indices, self.used_param_indices)]
-        # before: "in range(self.size)", UNDEFINED!!!
-        for i in range(len(self.used_param_indices)):
-            s = np.sqrt(corr[i, i])
-            corr[i, :] /= s
-            corr[:, i] /= s
+        propose_matrix_j_sorted = self.propose_matrix[np.ix_(self.i_of_j,self.i_of_j)]
+        sigmas_diag = np.diag(np.sqrt(np.diag(propose_matrix_j_sorted)))
+        invsigmas_diag = np.linalg.inv(sigmas_diag)
+        corr = invsigmas_diag.dot(propose_matrix_j_sorted).dot(invsigmas_diag)
         L = np.linalg.cholesky(corr)
-        for i, bp in enumerate(self.proposer):
-            bp.mapping_matrix = np.empty((len(bp.used_params_changed), bp.n))
-            for j, par in enumerate(bp.used_params_changed):
-                bp.mapping_matrix[j, :] = (sigmas[par] *
-                                           L[bp.block_start + j, bp.block_start:bp.block_start+bp.n])
+        # Store the basis as transformation matrices
+        self.transform = []
+        for iblock, bp in enumerate(self.proposer):
+            j_start = self.j_start[iblock]
+            j_end = j_start + bp.n
+            self.transform += [sigmas_diag[j_start:,j_start:].dot(L[j_start:,j_start:j_end])]
 
     def get_covariance(self):
         return self.propose_matrix.copy()
-
-    def get_block_proposal(self, P, bp):
-        bp.update_params(P, bp.propose_vec(self.propose_scale))
-
-    def get_proposal(self, P):
-        if self.fast_ix:
-            self.get_proposal_fast(P)
-            self.fast_ix -= 1
-        else:
-            if self.all.next() > (self.slow.n - 1):
-                self.get_proposal_fast(P)
-                self.fast_ix = self.oversample_fast - 1
-            else:
-                self.get_proposal_slow(P)
-
-    def get_proposal_slow(self, P):
-        self.get_block_proposal(P, self.proposer_for_index[self.slow.next()])
-
-    def get_proposal_fast(self, P):
-        self.get_block_proposal(P, self.proposer_for_index[self.slow.n + self.fast.next()])
-
-    def get_proposal_fast_delta(self,P):
-        P[:]=0
-        self.get_proposal_fast(P)
