@@ -34,7 +34,7 @@ def body_of_test(modules, tmpdir, x, theory, debug=False):
         info.update({_theory: {"classy": None}})
         info[_params][_theory].update(baseline_cosmology_classy_extra)
         info[_params][_theory].pop("cosmomc_theta")
-        info[_params][_theory]["theta_s_100"] = info[_params][_theory].pop("cosmomc_theta100")
+        info[_params][_theory]["theta_s_100"] = info[_params][_theory].pop("cosmomc_theta_100")
         info[_params][_theory]["theta_s_100"]["ref"]["loc"] = 1.0418
         info[_params][_theory]["theta_s_100"]["latex"] = r"100*\theta_s"
         info[_params][_theory]["100*theta_s"] = "lambda theta_s_100: theta_s_100"

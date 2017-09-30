@@ -25,9 +25,9 @@ def adapt_covmat(filename, tmpdir, theory="camb", theta_factor=100):
     params[i_logA] = "logAs1e10"
     i_theta = params.index("cosmomc_theta")
     if theory == "camb":
-        params[i_theta] = "cosmomc_theta100"
+        params[i_theta] = "cosmomc_theta_100"
     elif theory == "classy":
-        params[i_theta] = "100*theta_s"
+        params[i_theta] = "theta_s_100"
     # if used for cosmomc_theta or theta_s, not their multiples
     if theta_factor != 100:
         covmat[i_theta, :] /= (100/theta_factor)
@@ -59,7 +59,7 @@ def body_of_test(modules, x, theory):
     derived_bestfit_test = deepcopy(derived)
     # Adjustments for Classy
     if theory == "classy":
-        # Remove "cosmomc_theta100" in favour of "H0" (remove it from derived then!)
+        # Remove "cosmomc_theta" in favour of "H0" (remove it from derived then!)
         info[_params][_theory].pop("cosmomc_theta")
         derived_bestfit_test.pop("H0")
         derived_values.pop("H0")
@@ -132,8 +132,8 @@ baseline_cosmology = r"""
       proposal: 0.0005
       latex: \Omega_\mathrm{c} h^2
     # If using CLASS, rename to "100*theta_s"!!!
-    cosmomc_theta: "lambda cosmomc_theta100: 1.e-2*cosmomc_theta100"
-    cosmomc_theta100:
+    cosmomc_theta: "lambda cosmomc_theta_100: 1.e-2*cosmomc_theta_100"
+    cosmomc_theta_100:
       prior:
         min: 0.5
         max: 100
