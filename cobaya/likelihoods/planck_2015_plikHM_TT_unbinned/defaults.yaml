@@ -103,7 +103,7 @@ params:
       min: 0
       max: 10
     ref:
-      dist: norm
+      dist: halfnorm
       loc: 0
       scale: 3
     proposal: 1
