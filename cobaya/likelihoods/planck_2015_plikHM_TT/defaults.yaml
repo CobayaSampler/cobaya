@@ -37,7 +37,7 @@ params:
       min: 0
       max: 1
     ref:
-      dist: norm
+      dist: halfnorm
       loc: 0
       scale: 0.1
     proposal: 0.1
