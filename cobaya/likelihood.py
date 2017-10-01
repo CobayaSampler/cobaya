@@ -292,8 +292,12 @@ class LikelihoodCollection():
         # If theory code present, compute the necessary products
         if self.theory:
             this_params_dict = {p: input_params[p] for p in self.theory.input_params}
-            self.theory.compute(derived=(derived_dict if derived != None else None),
-                                **this_params_dict)
+            success = self.theory.compute(
+                derived=(derived_dict if derived != None else None), **this_params_dict)
+            if not success:
+                if derived != None:
+                    derived += [np.nan]*len(self.output_params)
+                return np.array([-np.inf for _ in self])
         # Compute each log-likelihood, and optionally get the respective derived params
         logps = []
         for lik in self:

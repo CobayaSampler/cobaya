@@ -174,7 +174,7 @@ class classy(Theory):
                         break
                 # Inserting the previously found path into the list of import folders
                 sys.path.insert(0, classy_path)
-                from classy import Class
+                from classy import Class, CosmoSevereError, CosmoComputationError
             except OSError:
                 log.error("Either CLASS is not in the given folder,\n"
                           "'%s',\n or you have not compiled it.", self.path)
@@ -182,7 +182,7 @@ class classy(Theory):
         else:
             log.info("Importing *global* CLASS.")
             try:
-                from classy import Class
+                from classy import Class, CosmoSevereError, CosmoComputationError
             except ImportError:
                 log.error(
                     "Couldn't find the CLASS python interface.\n"
@@ -191,6 +191,9 @@ class classy(Theory):
                     " (b) install the Python interface globally with\n"
                     "     '/path/to/class/python/python setup.py install --user'")
                 raise HandledException
+        # Propate errors up
+        global CosmoComputationError
+        global CosmoSevereError
         # Generate states, to avoid recomputing
         self.n_states = 3
         self.states = [{"classy": Class(), "params": None, "last": 0, "derived": None}
@@ -239,8 +242,18 @@ class classy(Theory):
             i_state = lasts.index(min(lasts))
             log.debug("Computing (state %d)", i_state)
             self.set(params_values_dict, i_state)
-            if "Cl" in self.input_default["output"]:
-                self.states[i_state]["classy"].compute(["lensing"])
+            try:
+                if "Cl" in self.input_default["output"]:
+                    self.states[i_state]["classy"].compute(["lensing"])
+            # "Valid" failure of CLASS: parameters too extreme -> log and report
+            except CosmoComputationError:
+                log.exception("CLASS computation failed. Assigning null likelihood. "
+                              "See error information below.")
+                return False
+            # CLASS not correctly initialised, or input parameters not correct
+            except CosmoSevereError:
+                log.error("Error computig CLASS results -- see CLASS's error trace below.\n")
+                raise
             # Prepare derived parameters
             if derived == {}:
                 derived.update(self.get_derived(i_state))
@@ -250,6 +263,7 @@ class classy(Theory):
         for i in range(self.n_states):
             self.states[i]["last"] -= max(lasts)
         self.states[i_state]["last"] = 1
+        return True
 
     def needs(self, arguments):
         for k,v in arguments.items():

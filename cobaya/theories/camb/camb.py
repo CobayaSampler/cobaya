@@ -260,6 +260,7 @@ class camb(Theory):
         for i in range(self.n_states):
             self.states[i]["last"] -= max(lasts)
         self.states[i_state]["last"] = 1
+        return True
 
     def needs(self, arguments):
         # Computed quantities required by the likelihood
