@@ -670,7 +670,7 @@ class mcmc(Sampler):
                 if not good_Rminus1:
                     if not get_mpi_rank():
                         log.info("Bad convergence statistics: waiting until the next checkpoint.")
-                        return
+                    return
             if get_mpi():
                 if get_mpi_rank():
                     mean_of_covs = np.empty((self.prior.d(),self.prior.d()))
