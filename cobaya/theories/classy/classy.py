@@ -219,12 +219,7 @@ class classy(Theory):
         log.debug("Setting parameters: %r", self.input_default)
         self.states[i_state]["params"] = deepcopy(self.input_default)
         self.states[i_state]["classy"].struct_cleanup()
-        try:
-            self.states[i_state]["classy"].set(**self.input_default)
-        except Exception:
-            log.error("Error setting CLASS parameters -- see CLASS's error trace below.\n"
-                      "The parameters were %r", self.input_default)
-            raise
+        self.states[i_state]["classy"].set(**self.input_default)
 
     def compute(self, derived=None, **params_values_dict):
         lasts = [self.states[i]["last"] for i in range(self.n_states)]
@@ -252,7 +247,8 @@ class classy(Theory):
                 return False
             # CLASS not correctly initialised, or input parameters not correct
             except CosmoSevereError:
-                log.error("Error computig CLASS results -- see CLASS's error trace below.\n")
+                log.error("Error setting parameters or computig results -- "
+                          "see CLASS's error trace below.\n")
                 raise
             # Prepare derived parameters
             if derived == {}:
