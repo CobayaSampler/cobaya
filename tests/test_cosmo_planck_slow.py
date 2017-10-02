@@ -70,7 +70,7 @@ def body_of_test(modules, tmpdir, x, theory, debug=False):
         raise ValueError("Test not recognised: %r"%x)
     # Change Planck's official CosmoMC covmat
     info[_sampler]["mcmc"]["covmat"] = adapt_covmat(covmat_file, tmpdir, theory)
-    info["output_prefix"] = "./chains_planck_%s_%s_/"%(theory, x)
+    info["output_prefix"] = "./chains_planck_%s_%s/"%(theory, x)
     info["debug"] = debug
 #    info["debug_file"] = "test_planck_slow.log"
     print "Input info (dumped to yaml) -------------------------------"

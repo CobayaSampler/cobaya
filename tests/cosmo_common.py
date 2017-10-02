@@ -142,7 +142,7 @@ baseline_cosmology = r"""
         loc: 1.0411
         scale: 0.0004
       proposal: 0.0002
-      latex: 100*\theta_\mathrm{MC}
+      latex: 100\theta_\mathrm{MC}
       drop:
     tau:
       prior:
