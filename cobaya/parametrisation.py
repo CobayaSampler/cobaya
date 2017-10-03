@@ -251,8 +251,9 @@ class Parametrisation(object):
         
         Uses the parameter name of no label has been given.
         """
-        return odict([[p,ensure_nolatex(info.get(_p_label, p))] for p, info
-                in list(self.sampled_params().items())+list(self.derived_params().items())])
+        get_label = lambda p,info: ensure_nolatex((info if info else {}).get(_p_label,p))
+        return odict([[p,get_label(p,info)] for p, info in
+                      list(self.sampled_params().items())+list(self.derived_params().items())])
 
     # Python magic for the "with" statement
     def __enter__(self):
