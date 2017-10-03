@@ -22,7 +22,7 @@ from importlib import import_module
 # Local
 from cobaya.conventions import package, subfolders, _defaults_file, _params, _p_label
 from cobaya.conventions import _prior, _theory, _likelihood, _sampler, _external
-from cobaya.tools import get_labels, get_folder
+from cobaya.tools import get_folder
 from cobaya.yaml_custom import yaml_load_file
 from cobaya.log import HandledException
 from cobaya.parametrisation import is_sampled_param, is_derived_param
@@ -39,7 +39,7 @@ def load_input(input_file):
     file_name, extension = os.path.splitext(input_file)
     file_name = os.path.basename(file_name)
     if extension in (".yaml",".yml"):
-        info = load_input_yaml(input_file)
+        info = yaml_load_file(input_file)
         # if output_prefix not defined, default to input_file name (sans ext.) as prefix;
         if "output_prefix" not in info:
             info["output_prefix"] = file_name

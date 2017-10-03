@@ -225,7 +225,7 @@ import inspect
 
 # Local
 from cobaya.conventions import _prior, _p_dist, _p_ref, _p_label
-from cobaya.tools import get_labels, get_external_function, get_scipy_1d_pdf
+from cobaya.tools import get_external_function, get_scipy_1d_pdf
 from cobaya.log import HandledException
 
 # Logger

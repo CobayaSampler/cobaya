@@ -23,7 +23,6 @@ from getdist import MCSamples
 # Local
 from cobaya.conventions import _weight, _chi2, _minuslogpost, _minuslogprior, _derived_pre
 from cobaya.conventions import separator
-from cobaya.tools import ensure_nolatex
 from cobaya.log import HandledException
 
 # Logger
@@ -54,6 +53,13 @@ class Collection():
         # Create the main data frame and the tracking index
         self.data = pd.DataFrame(np.zeros((initial_size,len(columns))), columns=columns)
         self._n = 0
+        # Prepare labels and ranges for interfacing with GetDist
+        self.labels = parametrisation.labels()
+
+
+        # RANGES HERE!!!!
+        
+
         # OUTPUT: Driver, file_name, index to track last sample written
         if output:
             self._n_last_out = 0
@@ -189,27 +195,18 @@ class Collection():
                              first=None, last=None):
         # get names and labels (n.b.: getdist forcefully adds its own $'s)
         # sampled
-        names = self.sampled_params
-        print "getdist: FIX THIS IN COLLECTION!!!!!"
-        labels = []
-        ranges = {}
-#        labels = [ensure_nolatex(l) for l in self.prior.labels.values()]
+        names = self.sampled_params + [p+"*" for p in self.derived_params]
+        labels = self.labels.values()
+        ranges = []
 #        ranges = dict([(p,ls) for p,ls in zip(self.prior.names(),self.prior.limits())])
-        # derived
-        if derived:
-            names += [p+"*" for p in self.derived_params]
-            print "getdist: FIX THIS TOO!!!!"
-#            labels += [ensure_nolatex(self.likelihood.updated_info_params()[p].get("latex"))
-#                       for p in self.likelihood.derived]
-#            ranges.update(dict([(p,(self.likelihood.updated_info_params()[p].get("min"),
+#         ranges.update(dict([(p,(self.likelihood.updated_info_params()[p].get("min"),
 #                                    self.likelihood.updated_info_params()[p].get("max")))
 #                                for p in self.likelihood.derived]))
         # prior and likelihood
         if prior_and_lik:
             names += [_minuslogprior+"*"] + [_chi2+"*"] + list(self.chi2_names)
-            print "getdist: AND THIS!"
-#            labels += ([r"-\log\pi", r"\chi^2"] +
-#                       [r"\chi^2_\mathrm{"+name+r"}" for name in self.likelihood.names()])
+            labels += ([r"-\log\pi", r"\chi^2"] +
+                       [r"\chi^2_\mathrm{"+name+r"}" for name in self.chi2_names])
         # gather samples and create the getdist sample
         columns = [(("" if n.rstrip("*") not in self.derived_params else _derived_pre)+
                     n.rstrip("*")) for n in names]

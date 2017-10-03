@@ -91,20 +91,6 @@ def make_header(kind, module):
     """Created a header for a particular module of a particular kind."""
     return ("="*80).join(["", "\n %s : %s \n"%(kind.title(), module), "\n"])
 
-def get_labels(params_info):
-    """
-    Extract labels from input info (sampled and derived).
-    Uses parameter name if label not defined.
-    Ensures LaTeX notation.
-    """
-    labels = odict()
-    for p in params_info:
-        label = params_info[p].get(_p_label)
-        if not label:
-            label = p
-        labels[p] = ensure_latex(label)
-    return labels
-
 def ensure_latex(string):
     """Inserts $'s at the beginning and end of the string, if necessary."""
     if string.strip()[0] != r"$":

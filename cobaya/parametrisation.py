@@ -68,8 +68,8 @@ from itertools import chain
 from ast import parse
 
 # Local
-from cobaya.conventions import _prior, _p_drop, _p_derived, _theory
-from cobaya.tools import get_external_function
+from cobaya.conventions import _prior, _p_drop, _p_derived, _p_label, _theory
+from cobaya.tools import get_external_function, ensure_nolatex
 from cobaya.log import HandledException
 
 # Logger
@@ -246,11 +246,13 @@ class Parametrisation(object):
         return self.derived_params().values()
 
     def labels(self):
-        print "REMOVE CORRESPONDING FUNCTION OF 'prior'."
-        raise ValueError("re-do this function")
-        # PASS NEXT 2 LINES A PARAMETRSATOR
-        # Labels and reference point
-#        self.labels = get_labels(sampled_params_info)
+        """
+        Returns a dictionary of LaTeX labels of the sampled and derived parameters.
+        
+        Uses the parameter name of no label has been given.
+        """
+        return odict([[p,ensure_nolatex(info.get(_p_label, p))] for p, info
+                in list(self.sampled_params().items())+list(self.derived_params().items())])
 
     # Python magic for the "with" statement
     def __enter__(self):
