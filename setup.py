@@ -13,7 +13,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 from cobaya import __author__, __version__, __url__
 
 setup(
-    name='cobaya-sampler',
+    name='cobaya',
     version=__version__,
     description='Bayesian Analysis in Cosmology',
     long_description=long_description,
