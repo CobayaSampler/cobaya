@@ -340,6 +340,11 @@ class mcmc(Sampler):
                 raise HandledException
             # Fill with parameters in the loaded covmat
             loaded_params_used = set(loaded_params).intersection(set(params))
+            if not loaded_params_used:
+                log.error("A proposal covariance matrix has been loaded, but none of its "
+                          "parameters are actually sampled here. Maybe a mismatch between"
+                          " parameter names in the covariance matrix and the input file?")
+                raise HandledException
             indices_used, indices_sampler = np.array(
                 [[loaded_params.index(p),params.index(p)]
                  for p in loaded_params if p in loaded_params_used]).T
