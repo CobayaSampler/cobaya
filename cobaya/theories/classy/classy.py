@@ -367,33 +367,50 @@ def install(force=False, path=None ,**kwargs):
     except:
         log.error("Error decompressing downloaded file! Corrupt file?)")
     os.rename(classy_path_decompressed, classy_path)
-    # Patch for gcc>=5
     from subprocess import Popen, PIPE
-#    # patch (hopefully will be removed in the future)
-#    log.info("Patching for gcc>=5...")
-#    with open(os.path.join(classy_path, "python/setup.py"), "r") as setup:
-#        lines = setup.readlines()
-#    i_offending = (i for i,l in enumerate(lines) if "libraries=" in l).next()
-#    lines[i_offending] = "libraries=['class', 'mvec', 'm'],\n"
-#    with open(os.path.join(classy_path, "python/setup.py"), "w") as setup:
-#        setup.write("".join(lines))
-    log.info("Compiling...")
-    os.chdir(classy_path)
-    process_make = Popen(["make"], stdout=PIPE, stderr=PIPE)
-    out, err = process_make.communicate()
-    if process_make.returncode:
-        log.info(out)
-        log.info(err)
-        log.error("Compilation failed!")
-        return False
-    log.info("Installing python package...")
-    os.chdir("./python")
-    process_install = Popen(["python", "setup.py", "install"] + user_flag_if_needed(),
-                            stdout=PIPE, stderr=PIPE)
-    out, err = process_install.communicate()
-    if process_install.returncode:
-        log.info(out)
-        log.info(err)
-        log.error("Installation failed!")
-        return False
+    working = False
+    patch = False
+    # Patch for gcc>=5
+    while not working:
+        os.chdir(classy_path)
+        if patch:
+            # patch (hopefully will be removed in the future)
+            log.info("TRYING AGAIN: Patching for gcc>=5...")
+            process_makeclean = Popen(["make", "clean"], stdout=PIPE, stderr=PIPE)
+            out, err = process_makeclean.communicate()
+            os.chdir("./python")
+            process_pythonclean = Popen(["python", "setup.py", "clean"], stdout=PIPE, stderr=PIPE)
+            out, err = process_pythonclean.communicate()
+            os.chdir("..")
+            with open(os.path.join(classy_path, "python/setup.py"), "r") as setup:
+                lines = setup.readlines()
+                i_offending = (i for i,l in enumerate(lines) if "libraries=" in l).next()
+                lines[i_offending] = "libraries=['class', 'mvec', 'm'],\n"
+            with open(os.path.join(classy_path, "python/setup.py"), "w") as setup:
+                setup.write("".join(lines))
+        log.info("Compiling...")
+        process_make = Popen(["make"], stdout=PIPE, stderr=PIPE)
+        out, err = process_make.communicate()
+        if process_make.returncode:
+            log.info(out)
+            log.info(err)
+            log.error("Compilation failed!")
+            return False
+        log.info("Installing python package...")
+        os.chdir("./python")
+        process_install = Popen(["python", "setup.py", "install"] + user_flag_if_needed(),
+                                stdout=PIPE, stderr=PIPE)
+        out, err = process_install.communicate()
+        if process_install.returncode:
+            log.info(out)
+            log.info(err)
+            log.error("Installation failed!")
+            return False
+        # If installed but not importable, patch and try again
+        if not is_installed():
+            if patch:
+                break
+            patch = True
+        else:
+            working = True
     return True
