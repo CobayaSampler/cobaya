@@ -81,24 +81,22 @@ def test_gaussian_mcmc():
         print KL_proposer, KL_sample
 
     # Mcmc info
-    info[_sampler] = {"mcmc":
+    if rank == 0:
+        S0 = random_cov(ranges, n_modes=1, O_std_min=0.01, O_std_max=0.5)
+    else:
+        S0 = None
+    S0 = comm.bcast(S0, root=0)
+    # First KL distance
+    print "*** 1st KL: ", KL_norm(S1=info["likelihood"]["gaussian"]["cov"], S2=S0)
+    info[_sampler] = {"mcmc": {
         # Bad guess for covmat, so big burn in and max_tries
-        {"max_tries": 1000, "burn_in": 100,
+        "max_tries": 1000, "burn_in": 100,
         # Learn proposal
         "learn_proposal": True,
         # Callback to check KL divergence -- disabled in the automatic test
-#        "callback_function": check, "callback_every": 100
+        "callback_function": check, "callback_every": 100,
+        "covmat": S0, "covmat_params": info["params"].keys()[:dimension]
         }}
-    covmat_file_name = os.path.join(tempfile.gettempdir(),"covmat.dat")
-    if rank == 0:
-        S0 = random_cov(ranges, n_modes=1, O_std_min=0.01, O_std_max=0.5)
-        # perfect one: S0 = info["likelihood"]["gaussian"]["cov"]
-        # First KL distance
-        print "*** 1st KL: ", KL_norm(S1=info["likelihood"]["gaussian"]["cov"], S2=S0)
-        np.savetxt(covmat_file_name, S0,
-                   header=" ".join(info["params"].keys()[:dimension]))
-    comm.barrier()
-    info["sampler"]["mcmc"]["covmat"] = covmat_file_name
     # Run!!!
     info["debug"] = False
     info["debug_file"] = None
