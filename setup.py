@@ -30,7 +30,7 @@ setup(
     ],
     keywords='montecarlo sampling cosmology',
     packages=find_packages(exclude=['docs', 'tests']),
-    install_requires=['numpy>=1.7.1', 'scipy >= 0.18', 'pandas', 'pyaml', 'wget'],
+    install_requires=['numpy>=1.7.1', 'scipy >= 0.18', 'pandas>=0.17.1', 'pyaml', 'wget'],
     python_requires='>=2.7, <3',
     entry_points={
         'console_scripts': [

@@ -1,6 +1,7 @@
 language: python
 dist: trusty
 python: 2.7
+env: NUMPY=1.7.1 SCIPY=0.18 PANDAS=0.17.1
 # (Pre)Installation
 # Test matrix for different C & fortran compilers
 matrix:
