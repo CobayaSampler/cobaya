@@ -11,6 +11,7 @@ from __future__ import division
 
 # Global
 import os
+import sys
 import logging
 from cobaya.log import logger_setup, HandledException
 from importlib import import_module
@@ -39,7 +40,7 @@ def install(*infos, **kwargs):
             module_folder = get_folder(module, kind, sep=".", absolute=False)
             imported_module = import_module(module_folder, package=package)
             is_installed = getattr(imported_module, "is_installed", None)
-            if is_installed == None:
+            if is_installed is None:
                 print "Not and external module: nothing to do.\n"
                 continue
             if is_installed(path=installpath):
@@ -63,6 +64,15 @@ def install(*infos, **kwargs):
                           " test failed! Look at the error messages above. "
                           "Solve them and try again, or, if you are unable to solve, "
                           "install this module manually.")
+
+# Add --user flag to pip, if needed: when not in TRAVIS, Anaconda or a virtual env
+def user_flag_if_needed():
+    if ("TRAVIS" not in os.environ and  # Travis
+        and not any([(s in sys.version) for s in ["conda", "Continuum"]])  # Anaconda
+        and not hasattr(sys, 'real_prefix')  # Virtual environment (virtualenv)
+        and getattr(sys, 'base_prefix', sys.prefix) == sys.prefix):  # Idem (pyvenv)
+        return "--user"
+    return ""
 
 # Command-line script
 def install_script():

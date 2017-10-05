@@ -130,6 +130,7 @@ from cobaya.theory import Theory
 from cobaya.log import HandledException
 from cobaya.conventions import subfolders, _theory
 from cobaya.tools import get_path_to_installation
+from cobaya.install import user_flag_if_needed
 
 # Logger
 import logging
@@ -336,8 +337,7 @@ def is_installed(**kwargs):
 def install(force=False, path=None ,**kwargs):
     log.info("Installing pre-requisites...")
     import pip
-    exit_status = pip.main(["install", "cython", "--upgrade"]+
-                           (["--user"] if not "TRAVIS" in os.environ else []))
+    exit_status = pip.main(["install", "cython", "--upgrade", user_flag_if_needed()])
     if exit_status:
         log.error("Could not install pre-requisite: cython")
         return False

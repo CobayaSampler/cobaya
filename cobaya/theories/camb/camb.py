@@ -150,6 +150,7 @@ from collections import namedtuple
 # Local
 from cobaya.theory import Theory
 from cobaya.log import HandledException
+from cobaya.install import user_flag_if_needed
 
 # Logger
 import logging
@@ -343,11 +344,9 @@ def is_installed(**kwargs):
     return True
 
 def install(force=False, **kwargs):
-    import os
     import pip
-    exit_status = pip.main(["install", "camb", "--upgrade"]+
-                           (["--user"] if not "TRAVIS" in os.environ else [])+
-                           (["--force-reinstall"] if force else []))
+    exit_status = pip.main(["install", "camb", "--upgrade", user_flag_if_needed(),
+                            ("--force-reinstall" if force else "")])
     if exit_status:
         return False
     return True
