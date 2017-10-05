@@ -67,7 +67,7 @@ def install(*infos, **kwargs):
 
 # Add --user flag to pip, if needed: when not in TRAVIS, Anaconda or a virtual env
 def user_flag_if_needed():
-    if ("TRAVIS" not in os.environ and  # Travis
+    if ("TRAVIS" not in os.environ  # Travis
         and not any([(s in sys.version) for s in ["conda", "Continuum"]])  # Anaconda
         and not hasattr(sys, 'real_prefix')  # Virtual environment (virtualenv)
         and getattr(sys, 'base_prefix', sys.prefix) == sys.prefix):  # Idem (pyvenv)
