@@ -345,8 +345,8 @@ def is_installed(**kwargs):
 
 def install(force=False, **kwargs):
     import pip
-    exit_status = pip.main(["install", "camb", "--upgrade", user_flag_if_needed(),
-                            ("--force-reinstall" if force else "")])
+    exit_status = pip.main(["install", "camb", "--upgrade"] + user_flag_if_needed() +
+                            (["--force-reinstall"] if force else []))
     if exit_status:
         return False
     return True

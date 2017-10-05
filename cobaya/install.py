@@ -71,8 +71,8 @@ def user_flag_if_needed():
         and not any([(s in sys.version) for s in ["conda", "Continuum"]])  # Anaconda
         and not hasattr(sys, 'real_prefix')  # Virtual environment (virtualenv)
         and getattr(sys, 'base_prefix', sys.prefix) == sys.prefix):  # Idem (pyvenv)
-        return "--user"
-    return ""
+        return ["--user"]
+    return []
 
 # Command-line script
 def install_script():

@@ -337,7 +337,7 @@ def is_installed(**kwargs):
 def install(force=False, path=None ,**kwargs):
     log.info("Installing pre-requisites...")
     import pip
-    exit_status = pip.main(["install", "cython", "--upgrade", user_flag_if_needed()])
+    exit_status = pip.main(["install", "cython", "--upgrade"] + user_flag_if_needed())
     if exit_status:
         log.error("Could not install pre-requisite: cython")
         return False
@@ -388,8 +388,7 @@ def install(force=False, path=None ,**kwargs):
         return False
     log.info("Installing python package...")
     os.chdir("./python")
-    process_install = Popen(["python", "setup.py", "install"]+
-                            (["--user"] if not "TRAVIS" in os.environ else []),
+    process_install = Popen(["python", "setup.py", "install"] + user_flag_if_needed(),
                             stdout=PIPE, stderr=PIPE)
     out, err = process_install.communicate()
     if process_install.returncode:
