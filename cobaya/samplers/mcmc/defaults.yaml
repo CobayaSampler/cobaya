@@ -37,9 +37,9 @@ sampler:
     Rminus1_cl_level: 0.95
     # Fast-slow hierarchy
     # -------------------
-    # Maximum speed that is considered "slow"
-    max_speed_slow: 1
     # Method I: Dragging
+    #    Maximum speed that is considered "slow"
+    max_speed_slow: 1
     #    Number of interpolating steps,
     #    as a factor times the number of fast directions,
     #    or directly as the number of interpolating steps.
@@ -47,15 +47,12 @@ sampler:
     drag_nfast_times: null
     drag_interp_steps: null
     # Method II: Oversampling
-    #    Factor (>1) by which to oversample the fast parameters.
-    #    This produces *many* samples: this number times `max_samples`
-    oversample_fast: null
+    #    If True, oversamples each likelihood proportionally to
+    #    the ratio of its speed with respect to the slowest speed.
+    oversample: False
+    # NB.: Oversampled and fast-dragged samples do not count towards
+    #      `max_samples` and checkpoints.
     # Callback function
     # -----------------
     callback_function: null
     callback_every: 1000
-
-      
-    # testing!
-    external: null
-

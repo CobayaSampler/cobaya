@@ -14,14 +14,17 @@ from cobaya.conventions import _likelihood, _prior, _sampler, _params
 from cobaya.conventions import _p_ref, _p_proposal, _p_dist
 from cobaya.run import run
 
+
 def test_mcmc_initial_covmat_interactive():
     dim = 40
     body_of_test(dim)
-    
+
+
 def test_mcmc_initial_covmat_yaml(tmpdir):
     dim = 40
     body_of_test(dim, tmpdir=tmpdir)
-    
+
+
 def body_of_test(dim, tmpdir=None):
     mindim = 4
     assert dim > mindim, "Needs dimension>%d for the test."%mindim
@@ -33,7 +36,7 @@ def body_of_test(dim, tmpdir=None):
     i_ref = i_s[n_altered:2*n_altered]
     i_prior = i_s[2*n_altered:3*n_altered]
     removed = list(chain(*(i_proposal,i_ref,i_prior)))
-    i_covmat = [i for i in range(dim) if not i in removed]
+    i_covmat = [i for i in range(dim) if i not in removed]
     for i in removed:
         diag = initial_random_covmat[i,i]
         initial_random_covmat[:,i] = 0

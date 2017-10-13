@@ -4,8 +4,6 @@ import pytest
 import numpy as np
 from collections import OrderedDict as odict
 from mpi4py import MPI
-import os
-import tempfile
 
 from cobaya.conventions import _likelihood, _params, _sampler
 from cobaya.likelihoods.gaussian import random_mean, random_cov
@@ -25,6 +23,7 @@ def KL_norm(m1=None, S1=np.array([]), m2=None, S2=np.array([])):
               -dim+np.log(np.linalg.det(S2)/np.linalg.det(S1)))
     return KL
 
+
 # Prepares the likelihood and prior parts of the info
 def info_gaussian(ranges, n_modes=1, mock_prefix=""):
     """MPI-aware: only draws the random stuff once!"""
@@ -32,7 +31,7 @@ def info_gaussian(ranges, n_modes=1, mock_prefix=""):
     rank = comm.Get_rank()
     if rank == 0:
         mean = random_mean(ranges, n_modes=n_modes)
-        cov =  random_cov(ranges, n_modes=n_modes, O_std_min=0.05, O_std_max=0.1)
+        cov = random_cov(ranges, n_modes=n_modes, O_std_min=0.05, O_std_max=0.1)
     elif rank != 0:
         mean, cov = None, None
     mean = comm.bcast(mean, root=0)
@@ -43,13 +42,14 @@ def info_gaussian(ranges, n_modes=1, mock_prefix=""):
     info[_params] = odict(
         # sampled
         [[mock_prefix+"%d"%i,
-          {"prior": {"min":ranges[i][0], "max":ranges[i][1]},
+          {"prior":{"min": ranges[i][0], "max": ranges[i][1]},
            "latex": r"\alpha_{%i}"%i}]
          for i in range(dimension)] +
         # derived
         [[mock_prefix+"derived_%d"%i,
-          {"min":-3,"max":3,"latex":r"\beta_{%i}"%i}] for i in range(dimension*n_modes)])
+          {"min": -3,"max": 3,"latex": r"\beta_{%i}"%i}] for i in range(dimension*n_modes)])
     return info
+
 
 @pytest.mark.mpi
 def test_gaussian_mcmc():

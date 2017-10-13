@@ -206,80 +206,69 @@ class mcmc(Sampler):
         # Burning-in countdown -- the +1 accounts for the initial point (always accepted)
         self.burn_in_left = self.burn_in + 1
         # One collection per MPI process: `name` is the MPI rank + 1
-        name = str(1 + (lambda r: r if r!=None else 0)(get_mpi_rank()))
-        self.collection = Collection(self.parametrisation, self.likelihood,
-                                     self.output, name=name)
-        self.current_point = OnePoint(self.parametrisation, self.likelihood,
-                                     self.output, name=name)
-        # No simultaneous fast-dragging and oversampling:
-        self.oversample_fast = (1 if not self.oversample_fast else self.oversample_fast)
-        if ((self.oversample_fast > 1) and
-            (self.drag_nfast_times or self.drag_interp_steps)):
-            log.error(
-                "Not possible to do oversampling and fast-dragging at the same time.")
-            raise HandledException
-        # Create proposer
-        # If externally, defined, use and ignore the rest
-        ##########################################################
-        if getattr(self, "external", None):
-            proposal = self.external
-            class proposer():
-                def get_proposal(self, trial):
-                    proposal(trial)
-            self.proposer = proposer()
-            self.get_new_sample = self.get_new_sample_metropolis
-            return
-            # THIS IS WRONG, JUST TESTING CODE!!!!!!
-        ##########################################################
-        # Prepare speed hierarchy
+        name = str(1 + (lambda r: r if r is not None else 0)(get_mpi_rank()))
+        self.collection = Collection(
+            self.parametrisation, self.likelihood, self.output, name=name)
+        self.current_point = OnePoint(
+            self.parametrisation, self.likelihood, self.output, name=name)
+        # Use the standard steps by default
+        self.get_new_sample = self.get_new_sample_metropolis
+        # Create proposer -- speeds, fast-dragging/oversampling and initial covmat
         speeds, blocks = zip(*self.likelihood.speeds_of_params().items())
-        self.max_speed_slow = max(self.max_speed_slow, min(speeds))
         # Turn parameter names into indices
-        blocks = [[self.parametrisation.sampled_params().keys().index(p) for p in b] for b in blocks]
-        try:
-            i_last_slow_block = (i for i,speed in enumerate(list(speeds))
-                                 if speed > self.max_speed_slow).next() - 1
-        except StopIteration:
-            i_last_slow_block = len(speeds) - 1
-            if self.max_speed_slow > max(speeds):
-                log.error("`max_speed_slow` is equal or higher than the fastest speed, "
-                          "so no fast-dragging or oversampling.")
+        blocks = [[self.parametrisation.sampled_params().keys().index(p) for p in b]
+                  for b in blocks]
+        if self.oversample and (self.drag_nfast_times or self.drag_interp_steps):
+            log.error("Choose either oversampling or fast-dragging, not both.")
+            raise HandledException
+        if self.oversample:
+            self.oversampling_factors = [np.round(s/speeds[0]) for s in speeds]
+            if len(set(self.oversampling_factors)) == 1:
+                log.error("All likelihoods have a similar speed: no oversampling possible.")
                 raise HandledException
-            elif (self.oversample_fast > 1 or
-                  (self.drag_nfast_times or self.drag_interp_steps)):
-                log.error(
-                    "All blocks have the same speed, so no fast-dragging or oversampling.")
+            self.effective_max_samples = (
+                sum([len(b)*f for b,f in zip(blocks,self.oversampling_factors)]) /
+                len(self.parametrisation.sampled_params()))
+            self.n_slow = len(blocks[0])
+        elif self.drag_interp_steps or self.drag_nfast_times:
+            if len(set(speeds)) == 1:
+                log.error("All likelihoods have the same speed: no fast_dragging possible.")
                 raise HandledException
-        self.proposer = BlockedProposer(blocks, oversampling_factors=self.oversample_fast,
-                i_last_slow_block=i_last_slow_block, propose_scale=self.propose_scale)
-        # Save the number of slow parameters
-        # -- it's the effective number of parameters for counting steps
-        self.n_slow = sum(len(blocks[i]) for i in range(1+i_last_slow_block))
+            if self.drag_nfast_times and self.drag_interp_steps:
+                log.error("To specify the number of dragging interpolating steps, use "
+                          "*either* `drag_nfast_times` or `drag_interp_steps`, not both.")
+                raise HandledException
+            if self.max_speed_slow > min(speeds) or self.max_speed_slow <= max(speeds):
+                log.error("The maximum speed considered slow, `max_speed_slow`, must be "
+                          "%g <= `max_speed_slow < %g, and is %g",
+                          min(speeds), max(speeds), self.max_speed_slow)
+                raise HandledException
+            self.i_last_slow_block = (i for i,speed in enumerate(list(speeds))
+                                      if speed > self.max_speed_slow).next() - 1
+            fast_params = [self.parametrisation.sampled_params().keys()[i]
+                           for i in chain(*blocks[1+self.i_last_slow_block:])]
+            self.effective_max_samples = self.max_samples
+            self.n_slow = sum(len(blocks[i]) for i in range(1+self.i_last_slow_block))
+            if self.drag_nfast_times:
+                self.drag_interp_steps = max(2, int(self.drag_nfast_times*len(fast_params))+1)
+            self.get_new_sample = self.get_new_sample_dragging
+            log.info("Using fast dragging over %d slow parameters, "
+                     "with %d interpolating steps on fast parameters %r",
+                     self.n_slow, self.drag_interp_steps, fast_params)
+        else:
+            self.effective_max_samples = self.max_samples
+            self.n_slow = len(self.parametrisation.sampled_params())
+        self.proposer = BlockedProposer(
+            blocks, oversampling_factors=getattr(self, "oversampling_factors", None),
+            i_last_slow_block=getattr(self, "i_last_slow_block", None),
+            propose_scale=self.propose_scale)
         # Build the initial covariance matrix of the proposal
         covmat = self.initial_proposal_covmat()
         log.info("Sampling with covariance matrix:")
         log.info("%r", covmat)
         self.proposer.set_covariance(covmat)
-        # Using fast dragging?
-        if self.drag_nfast_times and self.drag_interp_steps:
-            log.error(
-                "To specify the number of dragging interpolating steps, "
-                "use *either* `drag_nfast_times` or `drag_interp_steps`, not both.")
-            raise HandledException
-        if self.drag_nfast_times:
-            self.drag_interp_steps = (
-                max(2, int(self.drag_nfast_times * self.proposer.fast.n) + 1))
-        if self.drag_interp_steps:
-            self.get_new_sample = self.get_new_sample_dragging
-            fast_params = [self.parametrisation.sampled_params().keys()[i]
-                           for i in chain(*blocks[1+i_last_slow_block:])]
-            log.info("Using fast dragging over %d slow parameters, "
-                     "with %d interpolating steps on fast parameters %r",
-                     self.n_slow, self.drag_interp_steps, fast_params)
-        else:
-            self.get_new_sample = self.get_new_sample_metropolis
         # Prepare callback function
-        if self.callback_function != None:
+        if self.callback_function is not None:
             self.callback_function_callable = get_external_function(self.callback_function)
 
     def initial_proposal_covmat(self):
@@ -383,12 +372,12 @@ class mcmc(Sampler):
         # Main loop!
         self.converged = False
         log.info("Sampling!")
-        while self.n() < (self.max_samples*self.oversample_fast) and not(self.converged):
+        while self.n() < (self.effective_max_samples) and not(self.converged):
             self.get_new_sample()
             # Callback function
             if (hasattr(self, "callback_function_callable") and
-                not(max(self.n(),1)%self.callback_every) and
-                self.current_point["weight"]==1):
+                    not(max(self.n(),1)%self.callback_every) and
+                    self.current_point["weight"] == 1):
                 self.callback_function_callable(self)
             # Checking convergence and (optionally) learning the covmat of the proposal
             if self.check_all_ready():
@@ -397,8 +386,6 @@ class mcmc(Sampler):
         self.collection.out_update()
         if not get_mpi_rank():
             log.info("Sampling complete after %d accepted steps.", self.n())
-        if self.oversample_fast > 1:
-            log.info("(Including an oversampling factor of '%d'.)", self.oversample_fast)
 
     def n(self, burn_in=False):
         """

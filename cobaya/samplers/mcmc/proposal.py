@@ -71,8 +71,10 @@ class RandDirectionProposer(IndexCycler):
 
     def propose_r(self):
         """
-        Radial proposal. By default a mixture of an exponential and 2D Gaussian radial proposal
-        (to make wider tails and more mass near zero, so more robust to scale misestimation)
+        Radial proposal. By default a mixture of an exponential and 2D Gaussian radial
+        proposal (to make wider tails and more mass near zero, so more robust to scale
+        misestimation)
+
         :return: random distance (unit scale)
         """
         if np.random.uniform() < 0.33:
@@ -98,9 +100,9 @@ class BlockedProposer(object):
         :param propose_scale: overal scale for the proposal.
         """
         self.propose_scale = propose_scale
-        if i_last_slow_block == None:
+        if i_last_slow_block is None:
             i_last_slow_block = len(parameter_blocks)-1
-            if oversampling_factors == None:
+            if oversampling_factors is None:
                 self.oversampling_factors = [1 for _ in parameter_blocks]
             else:
                 if len(oversampling_factors) != len(parameter_blocks):
@@ -112,7 +114,8 @@ class BlockedProposer(object):
         else:
             if i_last_slow_block > len(parameter_blocks)-1:
                 log.error("The index given for the last slow block, %d, is not valid: "
-                          "there are only %d blocks.", i_last_slow_block, len(parameter_blocks))
+                          "there are only %d blocks.",
+                          i_last_slow_block, len(parameter_blocks))
                 raise HandledException
             self.oversampling_factors = (
                 [1]*(1+i_last_slow_block) +
@@ -137,7 +140,7 @@ class BlockedProposer(object):
         self.j_start = [len(list(chain(*parameter_blocks[:iblock])))
                         for iblock,b in enumerate(parameter_blocks)]
         # Parameter cyclers, cycling over the j's
-        self.cycler_all  = CyclicIndexRandomizer(n_all)
+        self.cycler_all = CyclicIndexRandomizer(n_all)
         # These ones are used by fast dragging only
         self.cycler_slow = CyclicIndexRandomizer(n_slow)
         self.cycler_fast = CyclicIndexRandomizer(n_all - n_slow)
@@ -158,23 +161,26 @@ class BlockedProposer(object):
             self.samples_left = self.oversampling_factors[self.current_iblock]
             self.get_proposal(P)
 
-    # Methods to be used in fast-dragging only
     def get_proposal_slow(self, P):
         current_iblock_slow = self.iblock_of_j[self.cycler_slow.next()]
         self.get_block_proposal(P, current_iblock_slow)
+
     def get_proposal_fast(self, P):
-        current_iblock_fast = self.iblock_of_j[self.cycler_slow.n + self.cycler_fast.next()]
+        current_iblock_fast = self.iblock_of_j[
+            self.cycler_slow.n + self.cycler_fast.next()]
         self.get_block_proposal(P, current_iblock_fast)
 
     def get_block_proposal(self, P, iblock):
         vec_standarised = self.proposer[iblock].propose_vec(self.propose_scale)
-        P[self.i_of_j[self.j_start[iblock]:]] += self.transform[iblock].dot(vec_standarised)
+        P[self.i_of_j[self.j_start[iblock]:]] += (self.transform[iblock]
+                                                  .dot(vec_standarised))
 
     def set_covariance(self, propose_matrix):
         """
-        Take covariance of sampled parameters (propose_matrix), and construct orthonormal parameters
-        where orthonormal parameters are grouped in blocks by speed, so changes in slowest block
-        changes slow and fast parameters, but changes in the fastest block only changes fast parameters
+        Take covariance of sampled parameters (propose_matrix), and construct orthonormal
+        parameters where orthonormal parameters are grouped in blocks by speed, so changes
+        in slowest block changes slow and fast parameters, but changes in the fastest
+        block only changes fast parameters
 
         :param propose_matrix: covariance matrix for the sampled parameters.
         """
@@ -199,7 +205,8 @@ class BlockedProposer(object):
         for iblock, bp in enumerate(self.proposer):
             j_start = self.j_start[iblock]
             j_end = j_start + bp.n
-            self.transform += [sigmas_diag[j_start:,j_start:].dot(L[j_start:,j_start:j_end])]
+            self.transform += [sigmas_diag[j_start:,j_start:]
+                               .dot(L[j_start:,j_start:j_end])]
 
     def get_covariance(self):
         return self.propose_matrix.copy()
