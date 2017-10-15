@@ -110,7 +110,7 @@ class BlockedProposer(object):
                               "list of blocks: %d vs %d.",
                               len(oversampling_factors), len(parameter_blocks))
                     raise HandledException
-                self.oversampling_factors = [min(1,int(f)) for f in oversampling_factors]
+                self.oversampling_factors = [max(1,int(f)) for f in oversampling_factors]
         else:
             if i_last_slow_block > len(parameter_blocks)-1:
                 log.error("The index given for the last slow block, %d, is not valid: "

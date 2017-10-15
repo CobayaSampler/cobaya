@@ -222,7 +222,7 @@ class mcmc(Sampler):
             log.error("Choose either oversampling or fast-dragging, not both.")
             raise HandledException
         if self.oversample:
-            self.oversampling_factors = [np.round(s/speeds[0]) for s in speeds]
+            self.oversampling_factors = [int(np.round(s/speeds[0])) for s in speeds]
             if len(set(self.oversampling_factors)) == 1:
                 log.error("All likelihoods have a similar speed: no oversampling possible.")
                 raise HandledException

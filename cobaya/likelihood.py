@@ -336,6 +336,9 @@ class LikelihoodCollection():
         """
         param_with_speed = odict([[p,min([self[lik].speed for lik in liks])]
                                   for p,liks in self.sampled_lik_dependence.items()])
+        if 0 in param_with_speed.values():
+            log.error("No likelihood can have 0 speed.")
+            raise HandledException
         # Invert it!
         return odict([[speed,[p for p,speed2 in param_with_speed.items() if speed == speed2]]
                       for speed in sorted(list(set(param_with_speed.values())))])
