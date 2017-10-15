@@ -95,7 +95,7 @@ can automatically access it as an attribute of your class: ``[your_likelihood].t
 Use the :doc:`Planck likelihood <likelihood_planck>` as a guide to create your own
 cosmological likelihood.
 
-.. note:: ``theory`` and ``derived`` are reserved parameter names: you cannot use them! 
+.. note:: ``theory`` and ``derived`` are reserved parameter names: you cannot use them!
 
 """
 # Python 2/3 compatibility
@@ -103,8 +103,7 @@ from __future__ import absolute_import, division
 
 # Global
 import sys
-import os
-from importlib import import_module
+import traceback
 from collections import OrderedDict as odict
 from time import sleep
 import numpy as np
@@ -135,13 +134,17 @@ class Likelihood():
             setattr(self, k, info[k])
         # Mock likelihoods: gather all parameters starting with `mock_prefix`
         if self.is_mock():
-            all_params = list(parametrisation.input_params())+list(parametrisation.output_params())
-            info[_params] = [p for p in all_params if p.startswith(self.mock_prefix or "")]
+            all_params = (list(parametrisation.input_params()) +
+                          list(parametrisation.output_params()))
+            info[_params] = [p for p in all_params
+                             if p.startswith(self.mock_prefix or "")]
         # Load parameters
         self.input_params = odict(
-            [(p,p_info) for p,p_info in parametrisation.input_params().iteritems() if p in info[_params]])
+            [(p,p_info) for p,p_info in parametrisation.input_params().iteritems()
+             if p in info[_params]])
         self.output_params = odict(
-            [(p,p_info) for p,p_info in parametrisation.output_params().iteritems() if p in info[_params]])
+            [(p,p_info) for p,p_info in parametrisation.output_params().iteritems()
+             if p in info[_params]])
         # Initialise
         self.theory = theory
         self.initialise()
@@ -196,6 +199,7 @@ class Likelihood():
 
 class LikelihoodExternalFunction(Likelihood):
     def __init__(self, name, info, theory=None):
+        self.name = name
         self.theory = theory
         # Load info of the likelihood
         for k in info:
@@ -203,7 +207,7 @@ class LikelihoodExternalFunction(Likelihood):
         # Store the external function and its arguments
         self.external_function = get_external_function(info[_external])
         argspec = inspect.getargspec(self.external_function)
-        self.input_params = odict([(p, None) for p in argspec.args if p!="derived"])
+        self.input_params = odict([(p, None) for p in argspec.args if p != "derived"])
         self.has_derived = "derived" in argspec.args
         if self.has_derived:
             derived_kw_index = argspec.args[-len(argspec.defaults):].index("derived")
@@ -212,10 +216,18 @@ class LikelihoodExternalFunction(Likelihood):
             self.output_params = []
 
     def logp(self, **params_values):
-        # if not derived params defined in the external call, delete the "derived" argument
+        # if no derived params defined in the external call, delete the "derived" argument
         if not self.has_derived:
             params_values.pop("derived")
-        return self.external_function(**params_values)
+        try:
+            return self.external_function(**params_values)
+        except:
+            log.error("".join(
+                ["-"]*16 + ["\n\n"] + list(traceback.format_exception(*sys.exc_info())) +
+                ["\n"] + ["-"]*37))
+            log.error("The external likelihood '%s' failed at evaluation. "
+                      "See traceback on top of this message.", self.name)
+            raise HandledException
 
 
 class LikelihoodCollection():
@@ -248,7 +260,8 @@ class LikelihoodCollection():
                     name, info, theory=getattr(self, _theory, None))
             else:
                 lik_class = get_class(name)
-                self._likelihoods[name] = lik_class(info, parametrisation, theory=self.theory)
+                self._likelihoods[name] = lik_class(
+                    info, parametrisation, theory=self.theory)
         # Check that all are recognised
         for params in ("input_params", "output_params"):
             info = getattr(parametrisation, params)()
@@ -275,6 +288,7 @@ class LikelihoodCollection():
     # notice that "get" can get "theory", but the iterator does not!
     def __getitem__(self, key):
         return self._likelihoods.__getitem__(key) if key != _theory else self.theory
+
     def __iter__(self):
         return self._likelihoods.__iter__()
 
@@ -293,21 +307,22 @@ class LikelihoodCollection():
         if self.theory:
             this_params_dict = {p: input_params[p] for p in self.theory.input_params}
             success = self.theory.compute(
-                derived=(derived_dict if derived != None else None), **this_params_dict)
+                derived=(derived_dict if derived is not None else None),
+                **this_params_dict)
             if not success:
-                if derived != None:
+                if derived is not None:
                     derived += [np.nan]*len(self.output_params)
                 return np.array([-np.inf for _ in self])
         # Compute each log-likelihood, and optionally get the respective derived params
         logps = []
         for lik in self:
             this_params_dict = {p: input_params[p] for p in self[lik].input_params}
-            if derived != None:
+            if derived is not None:
                 this_derived_dict = {}
             logps += [self[lik].logp(derived=this_derived_dict, **this_params_dict)]
             derived_dict.update(this_derived_dict)
         # Turn the derived params dict into a list and return
-        if derived != None:
+        if derived is not None:
             derived += [derived_dict[p] for p in self.output_params]
         return np.array(logps)
 
@@ -340,12 +355,14 @@ class LikelihoodCollection():
             log.error("No likelihood can have 0 speed.")
             raise HandledException
         # Invert it!
-        return odict([[speed,[p for p,speed2 in param_with_speed.items() if speed == speed2]]
+        return odict([[speed,[p for p,speed2 in param_with_speed.items()
+                              if speed == speed2]]
                       for speed in sorted(list(set(param_with_speed.values())))])
 
     # Python magic for the "with" statement
     def __enter__(self):
         return self
+
     def __exit__(self, exception_type, exception_value, traceback):
         for lik in self:
             self[lik].close()
