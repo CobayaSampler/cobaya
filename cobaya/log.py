@@ -26,24 +26,27 @@ class HandledException(Exception):
     has been cleanly handled and logged.
     """
 
+
 def exception_handler(exception_type, value, trace_back):
     # Do nothing (just exit) if the exception has been handled and logged
     if exception_type == HandledException:
         return
     log = logging.getLogger("exception handler")
     line = "------------------------------------------------\n"
-    log.critical(line[6:]+"\n"+
-        "".join(traceback.format_exception(exception_type, value, trace_back))+line)
+    log.critical(line[6:] + "\n" +
+                 "".join(traceback.format_exception(exception_type, value, trace_back)) +
+                 line)
     if exception_type == KeyboardInterrupt:
         log.critical("Interrupted by the user.")
         return
     log.critical(
         "Some unexpected ERROR ocurred. You can see the exception information above.\n"
         "We recommend trying to reproduce this error with '%s:True' in the input.\n"
-        "If you cannot solve it yourself and need to report it, include the debug ouput,\n"
-        "which you can send it to a file setting '%s:[some_file_name]'.",
+        "If you cannot solve it yourself and need to report it, include the debug ouput,"
+        "\nwhich you can send it to a file setting '%s:[some_file_name]'.",
         _debug, _debug_file)
 
+    
 def logger_setup(debug=None, debug_file=None):
     """
     Configuring the root logger, for its childs to inherit level, format and handlers.
@@ -51,7 +54,7 @@ def logger_setup(debug=None, debug_file=None):
     Level: if debug=True, take DEBUG. If numerical, use "logging"'s corresponding level.
     Default: INFO
     """
-    if debug == True:
+    if debug is True:
         level = logging.DEBUG
     elif debug in (False, None):
         level = logging.INFO
@@ -63,10 +66,10 @@ def logger_setup(debug=None, debug_file=None):
     class MyFormatter(logging.Formatter):
         def format(self, record):
             self._fmt = (
-                ("[%d]"%get_mpi_rank() if get_mpi() else "")+
-                "[%(module)s] "+
+                ("[%d]"%get_mpi_rank() if get_mpi() else "") +
+                "[%(module)s] " +
                 {logging.ERROR: "*ERROR* ",
-                 logging.WARNING: "*WARNING* "}.get(record.levelno, "")+
+                 logging.WARNING: "*WARNING* "}.get(record.levelno, "") +
                 "%(message)s")
             return logging.Formatter.format(self, record)
     # Configure stdout handler
@@ -81,7 +84,7 @@ def logger_setup(debug=None, debug_file=None):
         file_stdout.setFormatter(MyFormatter())
         logging.root.addHandler(file_stdout)
     # Add stdout handler only once!
-    if not any(h.stream==sys.stdout for h in logging.root.handlers):
+    if not any(h.stream == sys.stdout for h in logging.root.handlers):
         logging.root.addHandler(handle_stdout)
     # Configure the logger to manage exceptions
     sys.excepthook = exception_handler

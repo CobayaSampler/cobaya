@@ -109,16 +109,17 @@ class gaussian(Likelihood):
             if mean_dim != self.d():
                 log.error(
                     "The dimensionality is %d (guessed from given means and covmats) "
-                    "but was given %d mock parameters instead. "+
+                    "but was given %d mock parameters instead. " +
                     ("Maybe you forgot to specify the prefix by which to identify them?"
                      if self.mock_prefix else ""), mean_dim, len(self.input_params))
                 raise HandledException
             self.n_modes = mean_n_modes
             if len(self.output_params) != self.d()*self.n_modes:
                 log.error(
-                    "The number of derived parameters must be equal to the dimensionality times "
-                    "the number of modes, i.e. %d x %d = %d, but was given %d derived parameters.",
-                    self.d(), self.n_modes, self.d()*self.n_modes, len(self.output_params))
+                    "The number of derived parameters must be equal to the dimensionality"
+                    " times the number of modes, i.e. %d x %d = %d, but was given %d "
+                    "derived parameters.", self.d(), self.n_modes, self.d()*self.n_modes,
+                    len(self.output_params))
                 raise HandledException
         else:
             log.error("You must specify both a mean (or a list of them) and a "
@@ -138,7 +139,7 @@ class gaussian(Likelihood):
         x = np.array([params_values[p] for p in self.input_params])
         # Fill the derived parameters
         derived = params_values.get("derived")
-        if derived != None:
+        if derived is not None:
             for i in range(self.n_modes):
                 standard = np.linalg.inv(self.choleskyL[i]).dot((x-self.mean[i]))
                 derived.update(dict(
@@ -149,7 +150,7 @@ class gaussian(Likelihood):
                  np.log(sum([gauss.pdf(x) for gauss in self.gaussians])))
 
 
-# Scripts to generate random means and covariances ########################################
+# Scripts to generate random means and covariances #######################################
 
 def random_mean(ranges, n_modes=1):
     """
@@ -161,12 +162,15 @@ def random_mean(ranges, n_modes=1):
     If `n_modes>1`, returns an array of such points.
     """
     if get_mpi_size():
-        print "WARNING! Using with MPI: different process will produce different random results."
-    mean = np.array([uniform.rvs(loc=r[0], scale=r[1]-r[0], size=n_modes) for r in ranges])
+        print ("WARNING! "
+               "Using with MPI: different process will produce different random results.")
+    mean = np.array([uniform.rvs(loc=r[0], scale=r[1]-r[0], size=n_modes)
+                     for r in ranges])
     mean = mean.T
     if n_modes == 1:
         mean = mean[0]
     return mean
+
 
 def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1):
     """
@@ -180,7 +184,8 @@ def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1):
     If `n_modes>1`, returns a list of such matrices.
     """
     if get_mpi_size():
-        print "WARNING! Using with MPI: different process will produce different random results."
+        print ("WARNING! "
+               "Using with MPI: different process will produce different random results.")
     dim = len(ranges)
     scales = np.array([r[1]-r[0] for r in ranges])
     cov = []
@@ -188,8 +193,8 @@ def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1):
         stds = scales * 10**(uniform.rvs(size=dim, loc=np.log10(O_std_min),
                                          scale=np.log10(O_std_max/O_std_min)))
         this_cov = np.diag(stds).dot(
-                   (random_correlation.rvs(dim*stds/sum(stds)) if dim>1 else np.eye(1))
-                   .dot(np.diag(stds)))
+            (random_correlation.rvs(dim*stds/sum(stds)) if dim > 1 else np.eye(1))
+            .dot(np.diag(stds)))
         # Symmetrise (numerical noise is usually introduced in the last step)
         cov += [(this_cov+this_cov.T)/2]
     if n_modes == 1:
