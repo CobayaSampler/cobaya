@@ -177,8 +177,6 @@ from __future__ import division
 import six
 
 # Global
-import os
-import sys
 from copy import deepcopy
 from itertools import chain
 import numpy as np
@@ -187,7 +185,7 @@ import numpy as np
 from cobaya.sampler import Sampler
 from cobaya.mpi import get_mpi, get_mpi_size, get_mpi_rank, get_mpi_comm
 from cobaya.collection import Collection, OnePoint
-from cobaya.conventions import _weight, _p_proposal, _p_ref
+from cobaya.conventions import _weight, _p_proposal
 from cobaya.samplers.mcmc.proposal import BlockedProposer
 from cobaya.log import HandledException
 from cobaya.tools import get_external_function
@@ -224,7 +222,7 @@ class mcmc(Sampler):
         if self.oversample:
             self.oversampling_factors = [int(np.round(s/speeds[0])) for s in speeds]
             if len(set(self.oversampling_factors)) == 1:
-                log.error("All likelihoods have a similar speed: no oversampling possible.")
+                log.error("All likelihood speeds are similar: no oversampling possible.")
                 raise HandledException
             self.effective_max_samples = (
                 sum([len(b)*f for b,f in zip(blocks,self.oversampling_factors)]) /
@@ -232,13 +230,13 @@ class mcmc(Sampler):
             self.n_slow = len(blocks[0])
         elif self.drag_interp_steps or self.drag_nfast_times:
             if len(set(speeds)) == 1:
-                log.error("All likelihoods have the same speed: no fast_dragging possible.")
+                log.error("All likelihoods speeds are equal: no fast_dragging possible.")
                 raise HandledException
             if self.drag_nfast_times and self.drag_interp_steps:
                 log.error("To specify the number of dragging interpolating steps, use "
                           "*either* `drag_nfast_times` or `drag_interp_steps`, not both.")
                 raise HandledException
-            if self.max_speed_slow > min(speeds) or self.max_speed_slow <= max(speeds):
+            if self.max_speed_slow < min(speeds) or self.max_speed_slow >= max(speeds):
                 log.error("The maximum speed considered slow, `max_speed_slow`, must be "
                           "%g <= `max_speed_slow < %g, and is %g",
                           min(speeds), max(speeds), self.max_speed_slow)
@@ -250,7 +248,8 @@ class mcmc(Sampler):
             self.effective_max_samples = self.max_samples
             self.n_slow = sum(len(blocks[i]) for i in range(1+self.i_last_slow_block))
             if self.drag_nfast_times:
-                self.drag_interp_steps = max(2, int(self.drag_nfast_times*len(fast_params))+1)
+                self.drag_interp_steps = max(
+                    2, int(self.drag_nfast_times*len(fast_params))+1)
             self.get_new_sample = self.get_new_sample_dragging
             log.info("Using fast dragging over %d slow parameters, "
                      "with %d interpolating steps on fast parameters %r",
@@ -269,7 +268,8 @@ class mcmc(Sampler):
         self.proposer.set_covariance(covmat)
         # Prepare callback function
         if self.callback_function is not None:
-            self.callback_function_callable = get_external_function(self.callback_function)
+            self.callback_function_callable = (
+                get_external_function(self.callback_function))
 
     def initial_proposal_covmat(self):
         """
@@ -281,7 +281,7 @@ class mcmc(Sampler):
         4. variance of the prior pdf.
 
         The covariances between parameters when both are present in a covariance matrix
-        provided through option 1 are preserved. All other covariances are assumed to be 0.
+        provided through option 1 are preserved. All other covariances are assumed 0.
         """
         params, params_infos = zip(*self.parametrisation.sampled_params().items())
         covmat = np.diag([np.nan]*len(params))
@@ -346,15 +346,16 @@ class mcmc(Sampler):
             covmat[where_nan, where_nan] = np.array(
                 [info.get(_p_proposal, np.nan)**2 for info in params_infos])[where_nan]
             # we want to start learning the covmat earlier
-            log.info("Covariance matrix "
-                     +("not present" if np.all(where_nan) else "not complete")+". "
+            log.info("Covariance matrix " +
+                     ("not present" if np.all(where_nan) else "not complete") + ". "
                      "We will start learning the covariance of the proposal earlier: "
                      "R-1 = %g (was %g).", self.learn_proposal_Rminus1_max_early,
                      self.learn_proposal_Rminus1_max)
             self.learn_proposal_Rminus1_max = self.learn_proposal_Rminus1_max_early
         where_nan = np.isnan(covmat.diagonal())
         if np.any(where_nan):
-            covmat[where_nan, where_nan] = self.prior.reference_covmat().diagonal()[where_nan]
+            covmat[where_nan, where_nan] = (
+                self.prior.reference_covmat().diagonal()[where_nan])
         assert not np.any(np.isnan(covmat))
         return covmat
 
@@ -377,7 +378,7 @@ class mcmc(Sampler):
             # Callback function
             if (hasattr(self, "callback_function_callable") and
                     not(max(self.n(),1)%self.callback_every) and
-                    self.current_point["weight"] == 1):
+                    self.current_point[_weight] == 1):
                 self.callback_function_callable(self)
             # Checking convergence and (optionally) learning the covmat of the proposal
             if self.check_all_ready():
@@ -427,7 +428,7 @@ class mcmc(Sampler):
         """
         # Prepare starting and ending points *in the SLOW subspace*
         # "start_" and "end_" mean here the extremes in the SLOW subspace
-        start_slow_point   = self.current_point[self.parametrisation.sampled_params()]
+        start_slow_point = self.current_point[self.parametrisation.sampled_params()]
         start_slow_logpost = -self.current_point["minuslogpost"]
         end_slow_point = deepcopy(start_slow_point)
         self.proposer.get_proposal_slow(end_slow_point)
@@ -457,18 +458,19 @@ class mcmc(Sampler):
             self.proposer.get_proposal_fast(delta_fast)
             proposal_start_point = deepcopy(current_start_point)
             proposal_start_point += delta_fast
-            proposal_end_point = deepcopy(current_end_point)
-            proposal_end_point += delta_fast
+            proposal_end_point    = deepcopy(current_end_point)
+            proposal_end_point   += delta_fast
             # get the new extremes for the interpolated probability
             # (reject if any of them = -inf; avoid evaluating both if just one fails)
             # Force the computation of the (slow blocks) derived params at the starting
             # point, but discard them, since they contain the starting point's fast ones,
             # not used later -- save the end point's ones.
             proposal_start_logpost = self.logposterior(proposal_start_point)[0]
-            proposal_end_logpost, proposal_end_logprior, proposal_end_logliks, derived_proposal_end = (
-                self.logposterior(proposal_end_point)
-                if proposal_start_logpost > -np.inf
-                else (-np.inf, None, [], []))
+            proposal_end_logpost, proposal_end_logprior, \
+                proposal_end_logliks, derived_proposal_end = (
+                    self.logposterior(proposal_end_point)
+                    if proposal_start_logpost > -np.inf
+                    else (-np.inf, None, [], []))
             if proposal_start_logpost > -np.inf and proposal_end_logpost > -np.inf:
                 # create the interpolated probability and do a Metropolis test
                 frac = i_step / self.drag_interp_steps
@@ -538,7 +540,7 @@ class mcmc(Sampler):
         else: # not accepted
             self.current_point.increase_weight(1)
             # Failure criterion: chain stuck!
-            if self.current_point["weight"] > self.max_tries:
+            if self.current_point[_weight] > self.max_tries:
                 self.collection.out_update()
                 log.error(
                     "The chain has been stuck for %d attempts. "
@@ -558,7 +560,7 @@ class mcmc(Sampler):
                      (" and" if get_mpi() and self.learn_proposal else "") +
                      (" learn a new proposal covmat" if self.learn_proposal else ""))
         # If *just* (weight==1) got ready to check+learn
-        if (self.n() > 0 and self.current_point["weight"]==1 and
+        if (self.n() > 0 and self.current_point[_weight]==1 and
             not (self.n()%(self.check_every_dimension_times*self.n_slow))):
             log.info("Checkpoint: %d samples accepted.", self.n())
             # If not MPI, we are ready

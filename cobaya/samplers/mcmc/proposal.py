@@ -91,35 +91,30 @@ class BlockedProposer(object):
         grouped into blocks which are changed at the same time.
 
         :param parameter_blocks: list of arrays of parameter indices in each block,
-            sorted by ascending speed.
-        :param oversampling_factors: list of oversampling factors for each block
-            or, if `i_last_slow_block` given, int oversampling factor for fast parameters.
+            with blocks sorted by ascending speed.
+        :param oversampling_factors: list of oversampling factors for each block.
         :param i_last_slow_block: index of the last block considered slow.
-            If specified, `oversampling_factors` is interpreted as a single integer and
-            applied to the fast parameters only (default: None for no speed hierarchy).
+            By default, all blocks are considered slow.
         :param propose_scale: overal scale for the proposal.
         """
         self.propose_scale = propose_scale
+        if oversampling_factors is None:
+            self.oversampling_factors = [1 for _ in parameter_blocks]
+        else:
+            if len(oversampling_factors) != len(parameter_blocks):
+                log.error("List of oversampling factors has a different length that "
+                          "list of blocks: %d vs %d.",
+                          len(oversampling_factors), len(parameter_blocks))
+                raise HandledException
+            self.oversampling_factors = [max(1,int(f)) for f in oversampling_factors]
         if i_last_slow_block is None:
             i_last_slow_block = len(parameter_blocks)-1
-            if oversampling_factors is None:
-                self.oversampling_factors = [1 for _ in parameter_blocks]
-            else:
-                if len(oversampling_factors) != len(parameter_blocks):
-                    log.error("List of oversampling factors has a different length that "
-                              "list of blocks: %d vs %d.",
-                              len(oversampling_factors), len(parameter_blocks))
-                    raise HandledException
-                self.oversampling_factors = [max(1,int(f)) for f in oversampling_factors]
         else:
             if i_last_slow_block > len(parameter_blocks)-1:
                 log.error("The index given for the last slow block, %d, is not valid: "
                           "there are only %d blocks.",
                           i_last_slow_block, len(parameter_blocks))
                 raise HandledException
-            self.oversampling_factors = (
-                [1]*(1+i_last_slow_block) +
-                [int(oversampling_factors)]*(len(parameter_blocks)-(1+i_last_slow_block)))
         n_all = sum([len(b) for b in parameter_blocks])
         n_slow = sum([len(b) for b in parameter_blocks[:1+i_last_slow_block]])
         if set(list(chain(*parameter_blocks))) != set(range(n_all)):

@@ -12,15 +12,11 @@ from __future__ import division
 # Global
 import os
 from collections import OrderedDict as odict
-import numpy as np
-import datetime
-from numbers import Number
-from getdist import MCSamples
 from copy import deepcopy
 from importlib import import_module
 
 # Local
-from cobaya.conventions import package, subfolders, _defaults_file, _params, _p_label
+from cobaya.conventions import package, _defaults_file, _params, _p_label
 from cobaya.conventions import _prior, _theory, _likelihood, _sampler, _external
 from cobaya.tools import get_folder
 from cobaya.yaml_custom import yaml_load_file
@@ -44,12 +40,13 @@ def load_input(input_file):
         if "output_prefix" not in info:
             info["output_prefix"] = file_name
         # warn if no output, since we are in shell-invocation mode.
-        elif info["output_prefix"] == None:
+        elif info["output_prefix"] is None:
             log.warning("WARNING: Output explicitly supressed with 'ouput_prefix: null'")
     else:
-        log.error("Extension '%s' of input file '%s' not recognised.", extension, input_file)
+        log.error("Extension of input file '%s' not recognised.", input_file)
         raise HandledException
     return info
+
 
 # MPI wrapper for loading the input info
 def load_input_MPI(input_file):
@@ -57,12 +54,13 @@ def load_input_MPI(input_file):
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     # Load input (only one process does read the input file)
-    if rank == 0: 
+    if rank == 0:
         info = load_input(input_file)
     else:
         info = None
     info = comm.bcast(info, root=0)
     return info
+
 
 def get_modules(*infos):
     """Returns modules all requested as an odict ``{kind: set([modules])}``.
@@ -70,7 +68,7 @@ def get_modules(*infos):
     modules = odict()
     for info in infos:
         for field in [_theory, _likelihood, _sampler]:
-            if not field in modules:
+            if field not in modules:
                 modules[field] = set()
             modules[field] |= (lambda v: set(v) if v else set())(info.get(field))
             modules[field] = modules[field].difference(set([None]))
@@ -79,6 +77,7 @@ def get_modules(*infos):
         if not v:
             modules.pop(k)
     return modules
+
 
 def get_full_info(info):
     """
@@ -105,13 +104,13 @@ def get_full_info(info):
             except IOError:
                 # probably an external module
                 default_module_info = {block: {module: {}}}
-                log.debug("Module %s:%s does not have a defaults file. "%(block, module)+
+                log.debug("Module %s:%s does not have a defaults file. "%(block, module) +
                           "Maybe it is an external module.")
             try:
                 full_info[block][module].update(default_module_info[block][module] or {})
             except KeyError:
-                log.error("The defaults file for '%s' should be structured as %s:%s:{[options]}."
-                          %(module, block, module))
+                log.error("The defaults file for '%s' should be structured "
+                          "as %s:%s:{[options]}.", module, block, module)
                 raise HandledException
             # Update the options with the input file
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
@@ -145,16 +144,18 @@ def get_full_info(info):
     for prior_info in default_prior_info.values():
         for name, prior in prior_info.iteritems():
             if full_info[_prior].get(name, prior) != prior:
-                log.error("Two different priors have been defined with the same name: '%s'.",name)
+                log.error("Two different priors cannot have the same name: '%s'.", name)
                 raise HandledException
             full_info[_prior][name] = prior
     # Add parameters info, after the necessary updates and checks
-    full_info[_params] = merge_params_info(input_info.get(_params, {}), defaults=default_params_info)
+    full_info[_params] = merge_params_info(input_info.get(_params, {}),
+                                           defaults=default_params_info)
     # Rest of the options
     for k,v in input_info.iteritems():
-        if not k in full_info:
+        if k not in full_info:
             full_info[k] = v
     return full_info
+
 
 def merge_params_info(params_info, defaults=None):
     """
@@ -169,8 +170,8 @@ def merge_params_info(params_info, defaults=None):
                 log.debug("Parameter '%s' multiply defined.", p)
                 if info != defaults_merged[p]:
                     log.error("Parameter '%s' multiply defined, but inconsistent info: "
-                              "For likelihood '%s' is '%r', but for some other likelihood "
-                              "it was '%r'. Check your defaults!",
+                              "For likelihood '%s' is '%r', but for some other likelihood"
+                              " it was '%r'. Check your defaults!",
                               p, lik, info, defaults_merged[p])
                     raise HandledException
             defaults_merged[p] = info
@@ -187,7 +188,7 @@ def merge_params_info(params_info, defaults=None):
     for p in defaults_merged:
         default_label = getter(defaults_merged[p], _p_label)
         if (default_label and
-            (is_sampled_param(info_updated[p]) or is_derived_param(info_updated[p]))):
+                (is_sampled_param(info_updated[p]) or is_derived_param(info_updated[p]))):
             info_updated[p][_p_label] = info_updated[p].get(_p_label) or default_label
         limits = ["min", "max"]
         default_limits = odict([[lim,getter(defaults_merged[p], lim)] for lim in limits])
