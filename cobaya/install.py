@@ -94,6 +94,11 @@ def install_script():
                             help="Force re-installation of apparently installed modules.")
         arguments = parser.parse_args()
         from cobaya.input import load_input
-        infos = [load_input(f) for f in arguments.files]
+        try:
+            infos = [load_input(f) for f in arguments.files]
+        except HandledException:
+            log.error("Maybe you meant to pass an installation path? "
+                      "In that case, use '--path=/path/to/modules'.")
+            raise HandledException
         # Launch installer
         install(*infos, path=arguments.path[0], force=arguments.force)
