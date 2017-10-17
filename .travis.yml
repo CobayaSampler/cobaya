@@ -22,40 +22,40 @@ matrix:
             - liblapack-dev
       env:
         - MATRIX_EVAL="4.9"
-    - addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - gcc-5
-            - gfortran-5
-            - openmpi-bin
-            - openmpi-common
-            - libopenmpi-dev
-            # numpy (and more)
-            - libopenblas-base
-            # Planck likelihood
-            - liblapack3
-            - liblapack-dev
-      env:
-        - MATRIX_EVAL="5"
-    - addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - gcc-6
-            - gfortran-6
-            - openmpi-bin
-            - openmpi-common
-            - libopenmpi-dev
-            # numpy (and more)
-            - libopenblas-base
-            # Planck likelihood
-            - liblapack3
-            - liblapack-dev
-      env:
-         - MATRIX_EVAL="6"
+    # - addons:
+    #     apt:
+    #       sources:
+    #         - ubuntu-toolchain-r-test
+    #       packages:
+    #         - gcc-5
+    #         - gfortran-5
+    #         - openmpi-bin
+    #         - openmpi-common
+    #         - libopenmpi-dev
+    #         # numpy (and more)
+    #         - libopenblas-base
+    #         # Planck likelihood
+    #         - liblapack3
+    #         - liblapack-dev
+    #   env:
+    #     - MATRIX_EVAL="5"
+    # - addons:
+    #     apt:
+    #       sources:
+    #         - ubuntu-toolchain-r-test
+    #       packages:
+    #         - gcc-6
+    #         - gfortran-6
+    #         - openmpi-bin
+    #         - openmpi-common
+    #         - libopenmpi-dev
+    #         # numpy (and more)
+    #         - libopenblas-base
+    #         # Planck likelihood
+    #         - liblapack3
+    #         - liblapack-dev
+    #   env:
+    #      - MATRIX_EVAL="6"
 ###############################################################################    
 before_install:
   - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-"${MATRIX_EVAL}" 90
@@ -85,8 +85,6 @@ deploy:
 ###############################################################################
 notifications:
   email:
-    on_success: always # default: change
-    on_failure: always # default: always
     recipients:
       - secure: "A9QN+FT0GPqj7CBJFJwg00apoo0OV+oc7gE1PRgmpoRP9h7NHsVCAdg6+GRL05IuzF51R+Z76akTGUEf0KBYRQhk9O3XLpTBto6jb0Vp1RmxfPYnujh8c1pu9bxU/YTHVg/tGa8kAxR8KzBrVDGwmZaCDx8bY1Qg0Z7D1nNv5hlnEOyPLuppMf/3yd4Mv+sdkg7SzoPBG5y8AluCPfMcUy1LqklXYAlFAx6CSBs6P2J2CJCgjL1Gh/RHlQswtH9EVoLVKchtIuLu3abLxfOA8/QTc3YIRRyUyL5FcvuGjJnG5BCyOieJJXVWo2WPgSD9i6kyu81XzjG22MuMXVHp87m70sznpFz2sao8/dpAOFWVL82qABfcs6PfKPXIEy7uGsDzZiML92xBiguXoeOCqTNdLIgYsVtCIwhrGOLfoFH/0cxyf59l8LJmycq72Ahsq2SN6kgH+/KOO0XTg/QNjZOJsCoV2c9DJoogOTxW5xbZ52vWZUXMY/NMYyejx/xSryBogrx6cA5yB1T/Th0muXDKspATDAzBD0G55mLJBlE26LzmD1UJRW0l6wNgVEY1tqTcjtb4qOV074nhmGTeejwEDOOBmwfLsTRPAq+GX4LOh/9psMWHAAShY552Wg8W2/F7AhRkDZl446E4gmNGxkIQrklMmJOhUJRseZIe5Nk="
 
