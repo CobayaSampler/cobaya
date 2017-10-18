@@ -47,7 +47,7 @@ def install(*infos, **kwargs):
                 continue
             if is_installed(path=installpath, **kwargs_install):
                 print "External module already installed or not requested."
-                if kwargs["force"]:
+                if kwargs_install["force"]:
                     print "Forcing re-installation, as requested."
                 else:
                     print "Doing nothing.\n"
