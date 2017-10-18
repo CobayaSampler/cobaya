@@ -338,15 +338,21 @@ class camb(Theory):
 
 def is_installed(**kwargs):
     try:
-        import camb
+        if kwargs["code"]:
+            import camb
     except:
         return False
     return True
 
-def install(force=False, **kwargs):
+
+def install(force=False, code=True, **kwargs):
+    if not code:
+        log.info("Code not requested. Nothing to do.")
+        return True
     import pip
-    exit_status = pip.main(["install", "camb", "--upgrade"] + user_flag_if_needed() +
-                            (["--force-reinstall"] if force else []))
+    exit_status = pip.main(
+        ["install", "camb", "--upgrade"] + user_flag_if_needed() +
+        (["--force-reinstall"] if force else []))
     if exit_status:
         return False
     return True

@@ -160,7 +160,7 @@ class classy(Theory):
         path_to_installation = get_path_to_installation()
         if not self.path and path_to_installation:
             self.path = os.path.join(
-                path_to_installation, subfolders[_theory], "CLASS")
+                path_to_installation, "code", "CLASS")
         if self.path:
             log.info("Importing *local* CLASS from "+self.path)
             if not os.path.exists(self.path):
@@ -325,16 +325,21 @@ class classy(Theory):
         return cl
 
 
-# Installation routines ###################################################################
+# Installation routines ##################################################################
 
 def is_installed(**kwargs):
     try:
-        import classy
+        if kwargs["code"]:
+            import classy
     except:
         return False
     return True
 
-def install(force=False, path=None ,**kwargs):
+
+def install(path=None, force=False, code=True, **kwargs):
+    if not code:
+        log.info("Code not requested. Nothing to do.")
+        return True
     log.info("Installing pre-requisites...")
     import pip
     exit_status = pip.main(["install", "cython", "--upgrade"] + user_flag_if_needed())
@@ -342,17 +347,18 @@ def install(force=False, path=None ,**kwargs):
         log.error("Could not install pre-requisite: cython")
         return False
     log.info("Downloading...")
-    parent_path = os.path.abspath(os.path.join(path, ".."))
+    parent_path = os.path.abspath(os.path.join(path, "..", "code"))
     from wget import download, bar_thermometer
     try:
-        filename = download("https://github.com/lesgourg/class_public/archive/v2.6.1.tar.gz",
-                            out=parent_path, bar=bar_thermometer)
+        filename = download(
+            "https://github.com/lesgourg/class_public/archive/v2.6.1.tar.gz",
+            out=parent_path, bar=bar_thermometer)
     except:
         log.error("Error downloading the latest release of CLASS.")
         return False
     print ""
-    classy_path_decompressed = os.path.join(parent_path,
-        os.path.splitext(os.path.splitext(os.path.basename(filename))[0])[0])
+    classy_path_decompressed = os.path.join(
+        parent_path, os.path.splitext(os.path.splitext(os.path.basename(filename))[0])[0])
     classy_path = os.path.join(parent_path, "CLASS")
     if force and os.path.exists(classy_path):
         from shutil import rmtree
@@ -379,7 +385,8 @@ def install(force=False, path=None ,**kwargs):
             process_makeclean = Popen(["make", "clean"], stdout=PIPE, stderr=PIPE)
             out, err = process_makeclean.communicate()
             os.chdir("./python")
-            process_pythonclean = Popen(["python", "setup.py", "clean"], stdout=PIPE, stderr=PIPE)
+            process_pythonclean = Popen(
+                ["python", "setup.py", "clean"], stdout=PIPE, stderr=PIPE)
             out, err = process_pythonclean.communicate()
             os.chdir("..")
             with open(os.path.join(classy_path, "python/setup.py"), "r") as setup:

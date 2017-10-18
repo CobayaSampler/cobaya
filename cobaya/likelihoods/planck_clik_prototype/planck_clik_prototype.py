@@ -62,21 +62,26 @@ from __future__ import division
 import os
 import sys
 import numpy as np
+import logging
 
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import HandledException
-from cobaya.conventions import _likelihood, subfolders, _path_install
+from cobaya.conventions import _path_install
 from cobaya.tools import get_path_to_installation
 
-# Logger
-import logging
-log = logging.getLogger(__name__)
+
+# Making sure that the logger has the name of the likelihood, not the prototype
+def set_logger(name):
+    global log
+    log = logging.getLogger(name)
+
 
 class planck_clik_prototype(Likelihood):
 
     def initialise(self):
         self.name = self.__class__.__name__
+        set_logger(self.name)
         # Importing Planck's clik library (only once!)
         try:
             clik
@@ -84,19 +89,21 @@ class planck_clik_prototype(Likelihood):
             if not self.path:
                 path_to_installation = get_path_to_installation()
                 if path_to_installation:
-                    self.path = os.path.join(
-                        path_to_installation, subfolders[_likelihood], common_path)
+                    self.path_clik = os.path.join(
+                        path_to_installation, "code", common_path)
+                    self.path_data = os.path.join(
+                        path_to_installation, "data", common_path)
                 else:
-                    log.error("No path given to the Planck likelihood. Set the likelihood "
-                              "property 'path' or the common property '%s'."
-                              %_path_install)
+                    log.error("No path given to the Planck likelihood. Set the likelihood"
+                              " property 'path' or the common property '%s'.",
+                              _path_install)
                     raise HandledException
-            log.info("[%s] Importing clik from %s", self.name, self.path)
+            log.info("[%s] Importing clik from %s", self.name, self.path_clik)
             # test and import clik
-            is_installed_clik(self.path, log_and_fail=True, import_it=False)
+            is_installed_clik(self.path_clik, log_and_fail=True, import_it=False)
             import clik
         # Loading the likelihood data
-        clik_file = os.path.join(self.path, self.clik_file)
+        clik_file = os.path.join(self.path_data, self.clik_file)
         # for lensing, some routines change. Intializing a flag for easier
         # testing of this condition
         if 'lensing' in self.name and 'Planck' in self.name:
@@ -236,10 +243,11 @@ class planck_clik_prototype(Likelihood):
         # Actually, it does not work for low-l likelihoods, which is quite dangerous!
 
 
-# Installation routines ###################################################################
+# Installation routines ##################################################################
 
 # path to be shared by all Planck likelihoods
 common_path = "planck_2015"
+
 
 def download_from_planck(product_id, path):
     try:
@@ -251,7 +259,7 @@ def download_from_planck(product_id, path):
         log.error("Error downloading!")
         return False
     finally:
-        print "" # force newline after wget
+        print ""  # force newline after wget
     # uncompress
     import os
     import tarfile
@@ -265,6 +273,7 @@ def download_from_planck(product_id, path):
     except:
         log.error("Error decompressing downloaded file! Corrupt file?)")
         return False
+
 
 def is_installed_clik(path, log_and_fail=False, import_it=True):
     clik_path = os.path.join(path, "plc-2.0")
@@ -288,6 +297,7 @@ def is_installed_clik(path, log_and_fail=False, import_it=True):
     except:
         return False
 
+
 def install_clik(path):
     log.info("clik: downlowading...")
     if not download_from_planck("1904", path):
@@ -296,9 +306,10 @@ def install_clik(path):
     log.info("clik: configuring... (and maybe installing dependencies...)")
     os.chdir(os.path.join(path, "plc-2.0"))
     from subprocess import Popen, PIPE
-    process = Popen(["./waf", "configure", "--install_all_deps"], stdout=PIPE, stderr=PIPE)
+    process = Popen(
+        ["./waf", "configure", "--install_all_deps"], stdout=PIPE, stderr=PIPE)
     out, err = process.communicate()
-    if err != "" or not out.split("\n")[-2].startswith("'configure' finished successfully"):
+    if err or not out.split("\n")[-2].startswith("'configure' finished successfully"):
         print out
         print err
         log.error("Configuration failed!")
@@ -315,36 +326,52 @@ def install_clik(path):
     log.info("clik: finished!")
     return True
 
+
 def get_product_id_and_clik_file(name):
     # get it from the defaults.yaml file
     from cobaya.conventions import _defaults_file, _likelihood
-    path__defaults_file = os.path.join(os.path.dirname(__file__), "..", name, _defaults_file)
+    path__defaults_file = os.path.join(
+        os.path.dirname(__file__), "..", name, _defaults_file)
     from cobaya.yaml_custom import yaml_load_file
     defaults = yaml_load_file(path__defaults_file)[_likelihood][name]
     return defaults["product_id"], defaults["clik_file"]
 
-def is_installed(**kwargs):
-    _, filename = get_product_id_and_clik_file(kwargs["name"])
-    return os.path.exists(os.path.realpath(
-        os.path.join(kwargs["path"], "..", common_path, filename)))
 
-def install(force=False, path=None, name=None):
-    # Create common folder: all planck likelihoods share install folder
-    common_full_path = os.path.realpath(os.path.join(path, "..", common_path))
-    if not os.path.exists(common_full_path):
-        os.makedirs(common_full_path)
+def is_installed(**kwargs):
+    set_logger(kwargs["name"])
+    result = True
+    if kwargs["code"]:
+        result &= is_installed_clik(os.path.realpath(
+            os.path.join(kwargs["path"], "..", "code", common_path)))
+    if kwargs["data"]:
+        _, filename = get_product_id_and_clik_file(kwargs["name"])
+        result &= os.path.exists(os.path.realpath(
+            os.path.join(kwargs["path"], "..", "data", common_path, filename)))
+    return result
+
+
+def install(path=None, name=None, force=False, code=True, data=True):
+    set_logger(name)
+    # Create common folders: all planck likelihoods share install folder for code and data
+    paths = {}
+    for s in ("code", "data"):
+        if eval(s):
+            paths[s] = os.path.realpath(os.path.join(path, "..", s, common_path))
+            if not os.path.exists(paths[s]):
+                os.makedirs(paths[s])
     # Install clik
-    if not is_installed_clik(common_full_path) or force:
-        log.info("Installing the clik code first!")
-        success = install_clik(common_full_path)
+    if code and (not is_installed_clik(paths["code"]) or force):
+        log.info("Installing the clik code.")
+        success = install_clik(paths["code"])
         if not success:
             return False
-    # Extract product_id
-    product_id, _ = get_product_id_and_clik_file(name)
-    # Download and uncompress the particular likelihood
-    log.info("Downloading likelihood data...")
-    if not download_from_planck(product_id, common_full_path):
-        log.error("Not possible to download this likelihood.")
-        return False
-    log.info("Likelihood data downloaded and uncompressed correctly.")
+    if data:
+        # Extract product_id
+        product_id, _ = get_product_id_and_clik_file(name)
+        # Download and uncompress the particular likelihood
+        log.info("Downloading likelihood data...")
+        if not download_from_planck(product_id, paths["data"]):
+            log.error("Not possible to download this likelihood.")
+            return False
+        log.info("Likelihood data downloaded and uncompressed correctly.")
     return True
