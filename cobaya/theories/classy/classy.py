@@ -414,7 +414,7 @@ def install(path=None, force=False, code=True, **kwargs):
             log.error("Installation failed!")
             return False
         # If installed but not importable, patch and try again
-        if not is_installed():
+        if not is_installed(code=True):
             if patch:
                 break
             patch = True
