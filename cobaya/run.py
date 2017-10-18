@@ -8,7 +8,6 @@
 # Python 2/3 compatibility
 from __future__ import absolute_import
 from __future__ import division
-import six
 
 # Global
 from copy import deepcopy
@@ -29,14 +28,14 @@ def run(info):
     # Configure the logger ASAP
     from cobaya.log import logger_setup
     logger_setup(info.get(_debug), info.get(_debug_file))
-    
+
     # Debug (lazy call)
     import logging
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
         from cobaya.yaml_custom import yaml_dump
         logging.getLogger(__name__).debug(
             "Input info (dumped to YAML):\n%s", yaml_dump(info))
-    
+
     # Import general classes
     from cobaya.prior import Prior
     from cobaya.sampler import get_Sampler as Sampler
@@ -95,14 +94,15 @@ def run_script():
     args = parser.parse_args()
     info = load_input(args.input_file[0])
     # solve path
+    import os
     from cobaya.conventions import _path_install
+    path_env = os.environ.get("COBAYA_MODULES", None)
     path_cmd = (lambda x: x[0] if x else None)(getattr(args, "path"))
     path_input = info.get(_path_install)
-    if path_cmd:
-        if path_input:
-            raise ValueError("CONFLICT: "
-                      "You have specified a modules folder both in the command line "
-                      "('%s') and the input file ('%s'). There should only be one."%(
-                          path_cmd, path_input))
-        info[_path_install] = path_cmd
+    if path_cmd and path_input:
+        raise ValueError(
+            "*CONFLICT* You have specified a modules folder both in the command line "
+            "('%s') and the input file ('%s'). There should only be one." %
+            (path_cmd, path_input))
+    info[_path_install] = path_input or (path_cmd or path_env)
     run(info)
