@@ -69,10 +69,10 @@ def get_modules(*infos):
     for info in infos:
         for field in [_theory, _likelihood, _sampler]:
             if field not in modules:
-                modules[field] = set()
-            modules[field] |= (lambda v: set(v) if v else set())(info.get(field))
-            modules[field] = modules[field].difference(set([None]))
-    # pop empty fields
+                modules[field] = []
+            modules[field] += [a for a in (info.get(field) or [])
+                               if a not in modules[field]]
+    # pop empty blocks
     for k,v in modules.iteritems():
         if not v:
             modules.pop(k)
