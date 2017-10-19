@@ -13,10 +13,10 @@ from __future__ import division
 import os
 import sys
 import logging
-from cobaya.log import logger_setup, HandledException
 from importlib import import_module
 
 # Local
+from cobaya.log import logger_setup, HandledException
 from cobaya.tools import get_folder, make_header
 from cobaya.input import get_modules
 from cobaya.conventions import package
@@ -98,15 +98,12 @@ def install_script():
                             help="Desired path where to install external modules.")
         parser.add_argument("-f", "--force", action="store_true", default=False,
                             help="Force re-installation of apparently installed modules.")
-        parser.add_argument("-c", "--just-code", action="store_false", default=True,
-                            help="Install code of the modules.", dest="data")
-        parser.add_argument("-d", "--just-data", action="store_false", default=True,
-                            help="Install data of the modules.", dest="code")
+        group_just = parser.add_mutually_exclusive_group(required=False)
+        group_just.add_argument("-c", "--just-code", action="store_false", default=True,
+                                help="Install code of the modules.", dest="data")
+        group_just.add_argument("-d", "--just-data", action="store_false", default=True,
+                                help="Install data of the modules.", dest="code")
         arguments = parser.parse_args()
-        if not arguments.code and not arguments.data:
-            log.error("You are not asking either for code or data. "
-                      "Use: one of '--just-code' or '--just-data', not both.")
-            raise HandledException
         from cobaya.input import load_input
         try:
             infos = [load_input(f) for f in arguments.files]
