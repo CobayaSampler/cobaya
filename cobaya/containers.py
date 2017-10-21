@@ -39,20 +39,21 @@ RUN \
     libopenblas-base liblapack3 liblapack-dev libcfitsio-dev \
     python python-pip \
     git wget
-# COBAYA  --------------------------------------------------------------------
-# getdist fork (it will be an automatic requisite in the future)
-RUN pip install pip --upgrade
-RUN pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist
-RUN pip install matplotlib # necessary for getdist, but not installed automatically yet
-RUN pip install cobaya
-ENV CONTAINED=TRUE
-# FOR TESTS ------------------------------------------------------------------
-RUN pip install pytest-xdist
 # Prepare tree for modules ---------------------------------------------------
 ENV COBAYA_MODULES /modules
 RUN mkdir $COBAYA_MODULES
 ENV COBAYA_PRODUCTS /products
 RUN mkdir $COBAYA_PRODUCTS
+# COBAYA  --------------------------------------------------------------------
+# getdist fork (it will be an automatic requisite in the future)
+RUN pip install pip --upgrade
+RUN pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist
+RUN pip install matplotlib # necessary for getdist, but not installed automatically yet
+RUN cd /modules && git clone https://github.com/JesusTorrado/cobaya.git
+RUN cd /modules/cobaya && pip install -e .
+ENV CONTAINED=TRUE
+# FOR TESTS ------------------------------------------------------------------
+RUN pip install pytest-xdist
 # Compatibility with singularity ---------------------------------------------
 RUN ldconfig
 RUN echo "Base image created."
@@ -84,7 +85,7 @@ def create_base_image():
     log.info("Creating base image...")
     dc = get_docker_client()
     stream = StringIO(base_recipe)
-    dc.images.build(fileobj=stream, tag="cobaya_base")
+    dc.images.build(fileobj=stream, tag="cobaya/base:latest")
     stream.close()
     log.info("Base image created!")
 
