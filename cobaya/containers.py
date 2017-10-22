@@ -70,9 +70,7 @@ MPI_recipe = {
       && tar xvzf mpich-3.2.tar.gz && cd /tmp/mpich-3.2 \
       && ./configure && make -j4 && make install && make clean && rm /tmp/mpich-3.2.tar.gz
     """,
-    "singularity": u"""
-    apt-get install openmpi-bin
-    """}
+    "singularity": u"""apt-get install openmpi-bin -y"""}
 
 
 def get_docker_client():
@@ -115,16 +113,14 @@ def create_docker_image(filenames):
 def create_singularity_image(*filenames):
     log.info("Creating Singularity image...")
     modules = yaml_dump(get_modules(*[load_input(f) for f in filenames]))
-    echos = "\n".join(['echo "%s" >> /tmp/modules.yaml'%s
+    echos = "\n".join(['  echo "%s" >> /tmp/modules.yaml'%s
                        for s in modules.split("\n")])
-    recipe = (
-        ur"""Bootstrap: docker
-        From: cobaya/base:latest
-        %%post
-        %s
-        %s
-        cobaya-install /tmp/modules.yaml --path /modules --just-code
-        """ % (MPI_recipe["singularity"], echos))
+    recipe = ("Bootstrap: docker\n"
+              "From: cobaya/base:latest\n"
+              "%%post\n"
+              "  %s\n"%MPI_recipe["singularity"]+
+              "%s\n"%echos+
+              "  cobaya-install /tmp/modules.yaml --path /modules --just-code\n")
     with NamedTemporaryFile(delete=False) as recipe_file:
         recipe_file.write(recipe)
         recipe_file_name = recipe_file.name
