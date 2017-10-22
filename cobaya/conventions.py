@@ -42,6 +42,13 @@ _derived_pre   = "derived"+separator  # prefix for derived parameters
 _input_suffix = "input"
 _full_suffix  = "full"
 
+# Installation and container definitions
+_modules_path =  "/modules"
+_code = "code"
+_data = "data"
+_products_path = "/products"
+_requirements_file = "requirements.yaml"
+
 # Internal package structure
 _defaults_file = "defaults.yaml"
 subfolders = {_likelihood: "likelihoods",

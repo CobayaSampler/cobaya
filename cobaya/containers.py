@@ -11,6 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 
 # Global
+import os
 import logging
 from io import StringIO
 from tempfile import NamedTemporaryFile
@@ -21,10 +22,13 @@ import uuid
 from cobaya.log import logger_setup, HandledException
 from cobaya.input import get_modules, load_input
 from cobaya.yaml_custom import yaml_dump
+from cobaya.conventions import _modules_path, _products_path
+from cobaya.conventions import _requirements_file
 
 logger_setup()
 log = logging.getLogger(__name__)
 
+requirements_file_path = os.path.join(_modules_path, _requirements_file)
 
 base_recipe = ur"""
 # OS -------------------------------------------------------------------------
@@ -40,19 +44,19 @@ RUN sed -i 's/# \(.*multiverse$\)/\1/g' /etc/apt/sources.list && \
 RUN pip install pip pytest-xdist matplotlib --upgrade
 # Prepare environment and tree for modules -----------------------------------
 ENV CONTAINED=TRUE
-ENV COBAYA_MODULES /modules
-ENV COBAYA_PRODUCTS /products
+ENV COBAYA_MODULES %s
+ENV COBAYA_PRODUCTS %s
 RUN mkdir $COBAYA_MODULES && \
     mkdir $COBAYA_PRODUCTS
 # COBAYA  --------------------------------------------------------------------
 # getdist fork (it will be an automatic requisite in the future)
 RUN pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist
-RUN cd /modules && git clone https://github.com/JesusTorrado/cobaya.git && \
-    cd /modules/cobaya && pip install -e .
+RUN cd $COBAYA_MODULES && git clone https://github.com/JesusTorrado/cobaya.git && \
+    cd $COBAYA_MODULES/cobaya && pip install -e .
 # Compatibility with singularity ---------------------------------------------
 RUN ldconfig
 RUN echo "Base image created."
-"""
+"""%(_modules_path, _products_path)
 
 MPI_recipe = {
     "docker": u"""
@@ -86,14 +90,15 @@ def create_docker_image(filenames):
     log.info("Creating Docker image...")
     dc = get_docker_client()
     modules = yaml_dump(get_modules(*[load_input(f) for f in filenames])).strip()
-    echos = "RUN "+" && \\ \n    ".join([r'echo "%s" >> /modules/requirements.yaml'%block
-                                         for block in modules.split("\n")])
+    echos = "RUN "+" && \\ \n    ".join(
+        [r'echo "%s" >> %s'%(block, requirements_file_path)
+         for block in modules.split("\n")])
     recipe = ur"""
     FROM cobaya/base:latest
     %s
     %s
-    RUN cobaya-install /modules/requirements.yaml --path /modules --just-code
-    """ % (MPI_recipe["docker"], echos)
+    RUN cobaya-install %s --path %s --just-code
+    """ % (MPI_recipe["docker"], echos, requirements_file_path, _modules_path)
     image_name = "cobaya:"+uuid.uuid4().hex[:6]
     stream = StringIO(recipe)
     dc.images.build(fileobj=stream, tag=image_name)
@@ -104,14 +109,15 @@ def create_docker_image(filenames):
 def create_singularity_image(*filenames):
     log.info("Creating Singularity image...")
     modules = yaml_dump(get_modules(*[load_input(f) for f in filenames])).strip()
-    echos = "\n".join(['  echo "%s" >> /modules/requirements.yaml'%s
-                       for s in modules.split("\n")])
+    echos = "\n".join(['  echo "%s" >> %s'%(block, requirements_file_path)
+                       for block in modules.split("\n")])
     recipe = ("Bootstrap: docker\n"
               "From: cobaya/base:latest\n"
               "%%post\n"
               "  %s\n"%MPI_recipe["singularity"] +
               "%s\n"%echos +
-              "  cobaya-install /modules/requirements.yaml --path /modules --just-code\n")
+              "  cobaya-install %s --path %s --just-code\n" %
+              (requirements_file_path, _modules_path))
     with NamedTemporaryFile(delete=False) as recipe_file:
         recipe_file.write(recipe)
         recipe_file_name = recipe_file.name

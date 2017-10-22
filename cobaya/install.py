@@ -19,7 +19,7 @@ from importlib import import_module
 from cobaya.log import logger_setup, HandledException
 from cobaya.tools import get_folder, make_header
 from cobaya.input import get_modules
-from cobaya.conventions import package
+from cobaya.conventions import package, _code, _data
 
 
 def install(*infos, **kwargs):
@@ -30,10 +30,10 @@ def install(*infos, **kwargs):
         log.error("The given path, %s, must exist, but it doesn't."%abspath)
         raise HandledException
     kwargs_install = {"force": kwargs.get("force", False)}
-    for s in ("code", "data"):
-        kwargs_install[s] = kwargs.get(s, True)
-        spath = os.path.join(abspath, s)
-        if kwargs_install[s] and not os.path.exists(spath):
+    for what in (_code, _data):
+        kwargs_install[what] = kwargs.get(what, True)
+        spath = os.path.join(abspath, what)
+        if kwargs_install[what] and not os.path.exists(spath):
             os.makedirs(spath)
     for kind, modules in get_modules(*infos).iteritems():
         for module in modules:
@@ -100,9 +100,9 @@ def install_script():
                             help="Force re-installation of apparently installed modules.")
         group_just = parser.add_mutually_exclusive_group(required=False)
         group_just.add_argument("-c", "--just-code", action="store_false", default=True,
-                                help="Install code of the modules.", dest="data")
+                                help="Install code of the modules.", dest=_data)
         group_just.add_argument("-d", "--just-data", action="store_false", default=True,
-                                help="Install data of the modules.", dest="code")
+                                help="Install data of the modules.", dest=_code)
         arguments = parser.parse_args()
         from cobaya.input import load_input
         try:
@@ -113,4 +113,4 @@ def install_script():
             raise HandledException
         # Launch installer
         install(*infos, path=arguments.path[0],
-                **{arg: getattr(arguments, arg) for arg in ["force", "code", "data"]})
+                **{arg: getattr(arguments, arg) for arg in ["force", _code, _data]})
