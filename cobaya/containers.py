@@ -76,22 +76,24 @@ def image_help(engine):
     e = engine.lower()
     assert e in ("singularity", "docker"), e + " not valid."
     mount_data = {"docker": "-v [/cluster/path/to/data]:/modules/data:rw",
-                  "singularity": "???"}
+                  "singularity": "--bind [/cluster/path/to/data]:/modules/data"}
     mount_products = {"docker": "-v [/cluster/path/to/products]:/products:rw",
-                      "singularity": "???"}
+                      "singularity": "--bind [/cluster/path/to/producs]:/products"}
     mount_tmp = {"docker": "-v /tmp:/products:rw",
-                 "singularity": "???"}
+                 "singularity": "--bind /tmp:/products"}
     pre_prepare = {"docker": " ".join(["?????", mount_data[e]]),
-                   "sngularity": " ".join(["?????", mount_data[e]])}
+                   "singularity": " ".join(
+                       ["singularity exec", mount_data[e], "[image_file]"])}
     pre_run = {"docker": " ".join(["?????", mount_data[e], mount_products[e]]),
-               "sngularity": " ".join(["?????", mount_data[e], mount_products[e]])}
+               "singularity": " ".join(
+                   [mount_data[e], mount_products[e], "[image_file]"])}
     pre_shell = {"docker": " ".join(["?????", mount_data[e], mount_tmp[e]]),
                  "singularity": " ".join(
-                     ["singularity shell", mount_data[e], mount_tmp[e]])}
+                     ["singularity shell", mount_data[e], mount_tmp[e], "[image_file]"])}
     return dedent("""
         This is a %s image for Cobaya.
 
-        To check the modules installed in the container, take a look at the '%s' file.
+        To check the modules installed in the container, take a look at '%s'.
 
         Make sure that you have created a 'data' and a 'products' folder in your cluster.
 
@@ -105,7 +107,7 @@ def image_help(engine):
 
         To open a terminal in the container, for testing purposes do:
 
-            $ %s cobaya-run somename.yaml
+            $ %s
 
         Have fun!
         """%(engine.title(), requirements_file_path, pre_prepare[engine.lower()],
@@ -145,7 +147,7 @@ def create_docker_image(filenames):
     %s
     RUN cobaya-install %s --path %s --just-code
     %s
-    ENTRYPOINT ["cat", "%s"]
+    CMD ["cat", "%s"]
     """ % (MPI_recipe["docker"], echos_reqs, requirements_file_path, _modules_path,
            echos_help, help_file_path)
     image_name = "cobaya:"+uuid.uuid4().hex[:6]
@@ -158,8 +160,8 @@ def create_docker_image(filenames):
 def create_singularity_image(*filenames):
     log.info("Creating Singularity image...")
     modules = yaml_dump(get_modules(*[load_input(f) for f in filenames])).strip()
-    echos = "\n".join(['  echo "%s" >> %s'%(block, requirements_file_path)
-                       for block in modules.split("\n")])
+    echos_reqs = "\n".join(['        echo "%s" >> %s'%(block, requirements_file_path)
+                            for block in modules.split("\n")])
     recipe = dedent("""
         Bootstrap: docker
         From: cobaya/base:latest
@@ -167,10 +169,14 @@ def create_singularity_image(*filenames):
           %s
           %s
           cobaya-install %s --path %s --just-code
+          mkdir %s
         %%help
         %s
-        """ % (MPI_recipe["singularity"], echos, requirements_file_path, _modules_path,
-               image_help("singularity")))
+        """ % (MPI_recipe["singularity"], echos_reqs, requirements_file_path,
+               _modules_path, os.path.join(_modules_path, _data),
+               "\n        ".join(image_help("singularity").split("\n")[1:])))
+    print image_help("singularity")
+    exit()
     with NamedTemporaryFile(delete=False) as recipe_file:
         recipe_file.write(recipe)
         recipe_file_name = recipe_file.name
