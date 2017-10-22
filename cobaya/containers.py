@@ -151,10 +151,11 @@ def create_docker_image(filenames):
     """ % (MPI_recipe["docker"], echos_reqs, requirements_file_path, _modules_path,
            echos_help, help_file_path)
     image_name = "cobaya:"+uuid.uuid4().hex[:6]
-    stream = StringIO(recipe)
-    dc.images.build(fileobj=stream, tag=image_name)
-    stream.close()
-    log.info("Docker image '%s' created!", image_name)
+    with StringIO(recipe) as stream:
+        dc.images.build(fileobj=stream, tag=image_name)
+    log.info("Docker image '%s' created! "
+             "Do 'docker save %s | gzip > some_name.tar.gz'"
+             "to save it to the current folder.", image_name, image_name)
 
 
 def create_singularity_image(*filenames):
