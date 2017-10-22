@@ -105,10 +105,11 @@ def create_docker_image(filenames):
     %s
     RUN cobaya-install /tmp/modules.yaml --path /modules --just-code
     """ % (MPI_recipe["docker"], echos)
+    image_name = "cobaya:"+uuid.uuid4().hex[:6]
     stream = StringIO(recipe)
-    dc.images.build(fileobj=stream)
+    dc.images.build(fileobj=stream, tag=image_name)
     stream.close()
-    log.info("Docker image created!")
+    log.info("Docker image '%s' created!", image_name)
 
 
 def create_singularity_image(*filenames):
@@ -127,7 +128,7 @@ def create_singularity_image(*filenames):
     with NamedTemporaryFile(delete=False) as recipe_file:
         recipe_file.write(recipe)
         recipe_file_name = recipe_file.name
-    image_name = "image_"+uuid.uuid4().hex[:6]+".simg"
+    image_name = "cobaya_"+uuid.uuid4().hex[:6]+".simg"
     process_build = Popen(["singularity", "build", image_name, recipe_file_name],
                           stdout=PIPE, stderr=PIPE)
     out, err = process_build.communicate()
