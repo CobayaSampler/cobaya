@@ -35,18 +35,20 @@ def load_input(input_file):
     """
     file_name, extension = os.path.splitext(input_file)
     file_name = os.path.basename(file_name)
-    if extension in (".yaml",".yml"):
-        info = yaml_load_file(input_file)
-        # if output_prefix not defined, default to input_file name (sans ext.) as prefix;
-        if _output_prefix not in info:
-            info[_output_prefix] = os.path.join(
-                (_products_path if "CONTAINED" in os.environ else ""), file_name)
-        # warn if no output, since we are in shell-invocation mode.
-        elif info[_output_prefix] is None:
-            log.warning("WARNING: Output explicitly supressed with 'ouput_prefix: null'")
-    else:
+    if extension not in (".yaml",".yml"):
         log.error("Extension of input file '%s' not recognised.", input_file)
         raise HandledException
+    info = yaml_load_file(input_file)
+    # if output_prefix not defined, default to input_file name (sans ext.) as prefix;
+    if _output_prefix not in info:
+        info[_output_prefix] = file_name
+    # warn if no output, since we are in shell-invocation mode.
+    elif info[_output_prefix] is None:
+        log.warning("WARNING: Output explicitly supressed with 'ouput_prefix: null'")
+    # contained? Ensure that output is sent where it should
+    if "CONTAINED" in os.environ and info[_output_prefix]:
+        if not info[_output_prefix].startswith("/"):
+            info[_output_prefix] = os.path.join(_products_path, info[_output_prefix])
     return info
 
 
