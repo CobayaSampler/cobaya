@@ -18,6 +18,7 @@ from tempfile import NamedTemporaryFile
 from subprocess import Popen, PIPE
 import uuid
 import argparse
+from textwrap import dedent
 
 # Local
 from cobaya.log import logger_setup, HandledException
@@ -25,12 +26,13 @@ from cobaya.input import get_modules, load_input
 from cobaya.yaml_custom import yaml_dump
 from cobaya.install import install
 from cobaya.conventions import _modules_path, _products_path, _code, _data
-from cobaya.conventions import _requirements_file
+from cobaya.conventions import _requirements_file, _help_file
 
 logger_setup()
 log = logging.getLogger(__name__)
 
 requirements_file_path = os.path.join(_modules_path, _requirements_file)
+help_file_path = os.path.join(_modules_path, _help_file)
 
 base_recipe = ur"""
 # OS -------------------------------------------------------------------------
@@ -61,13 +63,53 @@ RUN echo "Base image created."
 """%(_modules_path, _products_path)
 
 MPI_recipe = {
-    "docker": u"""
+    "docker": dedent(u"""
     # MPI -- NERSC: must be MPICH installed in user space
     # http://www.nersc.gov/users/software/using-shifter-and-docker/using-shifter-at-nersc/
     RUN cd /tmp && wget http://www.mpich.org/static/downloads/3.2/mpich-3.2.tar.gz && \
         tar xvzf mpich-3.2.tar.gz && cd /tmp/mpich-3.2 && ./configure && make -j4 && \
-        make install && make clean && rm /tmp/mpich-3.2.tar.gz""",
+        make install && make clean && rm /tmp/mpich-3.2.tar.gz"""),
     "singularity": u"""apt-get install -y openmpi-bin"""}
+
+
+def image_help(engine):
+    e = engine.lower()
+    assert e in ("singularity", "docker"), e + " not valid."
+    mount_data = {"docker": "-v [/cluster/path/to/data]:/modules/data:rw",
+                  "singularity": "???"}
+    mount_products = {"docker": "-v [/cluster/path/to/products]:/products:rw",
+                      "singularity": "???"}
+    mount_tmp = {"docker": "-v /tmp:/products:rw",
+                 "singularity": "???"}
+    pre_prepare = {"docker": " ".join(["?????", mount_data[e]]),
+                   "sngularity": " ".join(["?????", mount_data[e]])}
+    pre_run = {"docker": " ".join(["?????", mount_data[e], mount_products[e]]),
+               "sngularity": " ".join(["?????", mount_data[e], mount_products[e]])}
+    pre_shell = {"docker": " ".join(["?????", mount_data[e], mount_tmp[e]]),
+                 "singularity": " ".join(
+                     ["singularity shell", mount_data[e], mount_tmp[e]])}
+    return dedent("""
+        This is a %s image for Cobaya.
+
+        To check the modules installed in the container, take a look at the '%s' file.
+
+        Make sure that you have created a 'data' and a 'products' folder in your cluster.
+
+        To prepare the data needed for the container, while in the cluster, run:
+
+            $ %s cobaya-prepare-data  # --force
+
+        To run a sample with an input file 'somename.yaml', send to you cluster scheduler:
+
+            $ mpi[run|exec] [mpi options] %s cobaya-run somename.yaml
+
+        To open a terminal in the container, for testing purposes do:
+
+            $ %s cobaya-run somename.yaml
+
+        Have fun!
+        """%(engine.title(), requirements_file_path, pre_prepare[engine.lower()],
+             pre_run[engine.lower()], pre_shell[engine.lower()]))
 
 
 def get_docker_client():
@@ -82,9 +124,8 @@ def get_docker_client():
 def create_base_image():
     log.info("Creating base image...")
     dc = get_docker_client()
-    stream = StringIO(base_recipe)
-    dc.images.build(fileobj=stream, tag="cobaya/base:latest")
-    stream.close()
+    with StringIO(base_recipe) as stream:
+        dc.images.build(fileobj=stream, tag="cobaya/base:latest", nocache=True)
     log.info("Base image created!")
 
 
@@ -92,15 +133,21 @@ def create_docker_image(filenames):
     log.info("Creating Docker image...")
     dc = get_docker_client()
     modules = yaml_dump(get_modules(*[load_input(f) for f in filenames])).strip()
-    echos = "RUN "+" && \\ \n    ".join(
+    echos_reqs = "RUN "+" && \\ \n    ".join(
         [r'echo "%s" >> %s'%(block, requirements_file_path)
          for block in modules.split("\n")])
+    echos_help = "RUN "+" && \\ \n    ".join(
+        [r'echo "%s" >> %s'%(line, help_file_path)
+         for line in image_help("docker").split("\n")])
     recipe = ur"""
     FROM cobaya/base:latest
     %s
     %s
     RUN cobaya-install %s --path %s --just-code
-    """ % (MPI_recipe["docker"], echos, requirements_file_path, _modules_path)
+    %s
+    ENTRYPOINT ["cat", "%s"]
+    """ % (MPI_recipe["docker"], echos_reqs, requirements_file_path, _modules_path,
+           echos_help, help_file_path)
     image_name = "cobaya:"+uuid.uuid4().hex[:6]
     stream = StringIO(recipe)
     dc.images.build(fileobj=stream, tag=image_name)
@@ -113,13 +160,17 @@ def create_singularity_image(*filenames):
     modules = yaml_dump(get_modules(*[load_input(f) for f in filenames])).strip()
     echos = "\n".join(['  echo "%s" >> %s'%(block, requirements_file_path)
                        for block in modules.split("\n")])
-    recipe = ("Bootstrap: docker\n"
-              "From: cobaya/base:latest\n"
-              "%%post\n"
-              "  %s\n"%MPI_recipe["singularity"] +
-              "%s\n"%echos +
-              "  cobaya-install %s --path %s --just-code\n" %
-              (requirements_file_path, _modules_path))
+    recipe = dedent("""
+        Bootstrap: docker
+        From: cobaya/base:latest
+        %%post
+          %s
+          %s
+          cobaya-install %s --path %s --just-code
+        %%help
+        %s
+        """ % (MPI_recipe["singularity"], echos, requirements_file_path, _modules_path,
+               image_help("singularity")))
     with NamedTemporaryFile(delete=False) as recipe_file:
         recipe_file.write(recipe)
         recipe_file_name = recipe_file.name

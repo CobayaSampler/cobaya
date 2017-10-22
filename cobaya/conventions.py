@@ -48,6 +48,7 @@ _code = "code"
 _data = "data"
 _products_path = "/products"
 _requirements_file = "requirements.yaml"
+_help_file = "readme.md"
 
 # Internal package structure
 _defaults_file = "defaults.yaml"
