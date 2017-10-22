@@ -30,33 +30,25 @@ base_recipe = ur"""
 # OS -------------------------------------------------------------------------
 FROM ubuntu:xenial
 # POST -----------------------------------------------------------------------
-RUN echo "Booting up container -- installing dependencies"
-RUN \
-  sed -i 's/# \(.*multiverse$\)/\1/g' /etc/apt/sources.list && \
-  apt-get update && \
-  apt-get -y upgrade
-RUN \
-  apt-get install -y \
-    autoconf automake make \
-    gcc-6-base \
-    libopenblas-base liblapack3 liblapack-dev libcfitsio-dev \
-    python python-pip \
-    git wget
-# Prepare tree for modules ---------------------------------------------------
+RUN sed -i 's/# \(.*multiverse$\)/\1/g' /etc/apt/sources.list && \
+    apt-get update && \
+    apt-get -y upgrade && \
+    apt-get install -y \
+      autoconf automake make gcc-6-base \
+      libopenblas-base liblapack3 liblapack-dev libcfitsio-dev \
+      python python-pip git wget
+RUN pip install pip pytest-xdist matplotlib --upgrade
+# Prepare environment and tree for modules -----------------------------------
+ENV CONTAINED=TRUE
 ENV COBAYA_MODULES /modules
-RUN mkdir $COBAYA_MODULES
 ENV COBAYA_PRODUCTS /products
-RUN mkdir $COBAYA_PRODUCTS
+RUN mkdir $COBAYA_MODULES && \
+    mkdir $COBAYA_PRODUCTS
 # COBAYA  --------------------------------------------------------------------
 # getdist fork (it will be an automatic requisite in the future)
-RUN pip install pip --upgrade
 RUN pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist
-RUN pip install matplotlib # necessary for getdist, but not installed automatically yet
-RUN cd /modules && git clone https://github.com/JesusTorrado/cobaya.git
-RUN cd /modules/cobaya && pip install -e .
-ENV CONTAINED=TRUE
-# FOR TESTS ------------------------------------------------------------------
-RUN pip install pytest-xdist
+RUN cd /modules && git clone https://github.com/JesusTorrado/cobaya.git && \
+    cd /modules/cobaya && pip install -e .
 # Compatibility with singularity ---------------------------------------------
 RUN ldconfig
 RUN echo "Base image created."
@@ -66,11 +58,10 @@ MPI_recipe = {
     "docker": u"""
     # MPI -- NERSC: must be MPICH installed in user space
     # http://www.nersc.gov/users/software/using-shifter-and-docker/using-shifter-at-nersc/
-    RUN cd /tmp && wget http://www.mpich.org/static/downloads/3.2/mpich-3.2.tar.gz \
-      && tar xvzf mpich-3.2.tar.gz && cd /tmp/mpich-3.2 \
-      && ./configure && make -j4 && make install && make clean && rm /tmp/mpich-3.2.tar.gz
-    """,
-    "singularity": u"""apt-get install openmpi-bin -y"""}
+    RUN cd /tmp && wget http://www.mpich.org/static/downloads/3.2/mpich-3.2.tar.gz && \
+        tar xvzf mpich-3.2.tar.gz && cd /tmp/mpich-3.2 && ./configure && make -j4 && \
+        make install && make clean && rm /tmp/mpich-3.2.tar.gz""",
+    "singularity": u"""apt-get install -y openmpi-bin"""}
 
 
 def get_docker_client():
@@ -94,14 +85,14 @@ def create_base_image():
 def create_docker_image(filenames):
     log.info("Creating Docker image...")
     dc = get_docker_client()
-    modules = yaml_dump(get_modules(*[load_input(f) for f in filenames]))
-    echos = "\n".join(['RUN echo "%s" >> /tmp/modules.yaml'%s
-                       for s in modules.split("\n")])
+    modules = yaml_dump(get_modules(*[load_input(f) for f in filenames])).strip()
+    echos = "RUN "+" && \\ \n    ".join([r'echo "%s" >> /modules/requirements.yaml'%block
+                                         for block in modules.split("\n")])
     recipe = ur"""
     FROM cobaya/base:latest
     %s
     %s
-    RUN cobaya-install /tmp/modules.yaml --path /modules --just-code
+    RUN cobaya-install /modules/requirements.yaml --path /modules --just-code
     """ % (MPI_recipe["docker"], echos)
     image_name = "cobaya:"+uuid.uuid4().hex[:6]
     stream = StringIO(recipe)
@@ -112,15 +103,15 @@ def create_docker_image(filenames):
 
 def create_singularity_image(*filenames):
     log.info("Creating Singularity image...")
-    modules = yaml_dump(get_modules(*[load_input(f) for f in filenames]))
-    echos = "\n".join(['  echo "%s" >> /tmp/modules.yaml'%s
+    modules = yaml_dump(get_modules(*[load_input(f) for f in filenames])).strip()
+    echos = "\n".join(['  echo "%s" >> /modules/requirements.yaml'%s
                        for s in modules.split("\n")])
     recipe = ("Bootstrap: docker\n"
               "From: cobaya/base:latest\n"
               "%%post\n"
-              "  %s\n"%MPI_recipe["singularity"]+
-              "%s\n"%echos+
-              "  cobaya-install /tmp/modules.yaml --path /modules --just-code\n")
+              "  %s\n"%MPI_recipe["singularity"] +
+              "%s\n"%echos +
+              "  cobaya-install /modules/requirements.yaml --path /modules --just-code\n")
     with NamedTemporaryFile(delete=False) as recipe_file:
         recipe_file.write(recipe)
         recipe_file_name = recipe_file.name
