@@ -16,7 +16,7 @@ from copy import deepcopy
 from importlib import import_module
 
 # Local
-from cobaya.conventions import package, _defaults_file, _params, _p_label
+from cobaya.conventions import package, _defaults_file, _params, _p_label, _products_path
 from cobaya.conventions import _prior, _theory, _likelihood, _sampler, _external
 from cobaya.tools import get_folder
 from cobaya.yaml_custom import yaml_load_file
@@ -38,7 +38,8 @@ def load_input(input_file):
         info = yaml_load_file(input_file)
         # if output_prefix not defined, default to input_file name (sans ext.) as prefix;
         if "output_prefix" not in info:
-            info["output_prefix"] = file_name
+            info["output_prefix"] = os.path.join(
+                (_products_path if "CONTAINED" in os.environ else ""), file_name)
         # warn if no output, since we are in shell-invocation mode.
         elif info["output_prefix"] is None:
             log.warning("WARNING: Output explicitly supressed with 'ouput_prefix: null'")

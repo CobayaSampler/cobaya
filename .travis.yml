@@ -74,8 +74,7 @@ script:
   # Cosmological tests (--boxed = 1 process per test; otherwise lowl planck lik fails!)
   - pytest tests/ -k "cosmo" -m "not slow and not mpi" --modules="../modules" --boxed
 ###############################################################################
-# Deploy only if it buids and if the commit has been tagged
-deploy:
+deploy: # only if it buids and if the commit has been tagged
   provider: pypi
   user: JesusTorrado
   password:

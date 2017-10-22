@@ -40,6 +40,7 @@ setup(
         'console_scripts': [
             'cobaya-install=cobaya.install:install_script',
             'cobaya-create-image=cobaya.containers:create_image_script',
+            'cobaya-prepare-data=cobaya.containers:prepare_data_script',
             'cobaya-run=cobaya.run:run_script',
             'cobaya-citation=cobaya.citation:citation_script',
         ],

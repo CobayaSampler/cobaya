@@ -27,7 +27,9 @@ def install(*infos, **kwargs):
     path = kwargs.get("path", ".")
     abspath = os.path.abspath(path)
     if not os.path.exists(abspath):
-        log.error("The given path, %s, must exist, but it doesn't."%abspath)
+        log.error("The given path, %s, must exist, but it doesn't."%abspath +
+                  (" Are you sure you have mounted the data folder in the container?"
+                   if "CONTAINED" in os.environ else ""))
         raise HandledException
     kwargs_install = {"force": kwargs.get("force", False)}
     for what in (_code, _data):
@@ -80,7 +82,8 @@ def user_flag_if_needed():
     return []
 
 
-# Command-line script
+# Command-line script ####################################################################
+
 def install_script():
     from cobaya.mpi import get_mpi_rank
     if not get_mpi_rank():

@@ -17,12 +17,14 @@ from io import StringIO
 from tempfile import NamedTemporaryFile
 from subprocess import Popen, PIPE
 import uuid
+import argparse
 
 # Local
 from cobaya.log import logger_setup, HandledException
 from cobaya.input import get_modules, load_input
 from cobaya.yaml_custom import yaml_dump
-from cobaya.conventions import _modules_path, _products_path
+from cobaya.install import install
+from cobaya.conventions import _modules_path, _products_path, _code, _data
 from cobaya.conventions import _requirements_file
 
 logger_setup()
@@ -133,13 +135,11 @@ def create_singularity_image(*filenames):
     log.info("Singularity image '%s' created!", image_name)
 
 
-# Command-line script
+# Command-line scripts ###################################################################
+
 def create_image_script():
-    # Parse arguments
-    import argparse
-    parser = argparse.ArgumentParser(
-        description=("Cobaya's tool for preparing Docker (for Shifter) "
-                     "and Singularity images."))
+    parser = argparse.ArgumentParser(description=(
+        "Cobaya's tool for preparing Docker (for Shifter) and Singularity images."))
     parser.add_argument("files", action="store", nargs="+", metavar="input_file.yaml",
                         help="One or more input files.")
     group_type = parser.add_mutually_exclusive_group(required=True)
@@ -152,3 +152,22 @@ def create_image_script():
         create_docker_image(arguments.files)
     elif arguments.type == "singularity":
         create_singularity_image(*arguments.files)
+
+
+def prepare_data_script():
+    if "CONTAINED" not in os.environ:
+        log.error("This command should only be run within a container. "
+                  "Run 'cobaya-install' instead.")
+        raise HandledException
+    parser = argparse.ArgumentParser(
+        description="Cobaya's installation tool for the data needed by a container.")
+    parser.add_argument("-f", "--force", action="store_true", default=False,
+                        help="Force re-installation of apparently installed modules.")
+    arguments = parser.parse_args()
+    try:
+        info = load_input(requirements_file_path)
+    except IOError:
+        log.error("Cannot find the requiremets file. This should not be happening.")
+        raise HandledException
+    install(info, path=os.path.join(_modules_path, _data), force=arguments.force,
+            **{_code: False, _data: True})
