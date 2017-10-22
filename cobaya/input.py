@@ -18,7 +18,7 @@ from importlib import import_module
 # Local
 from cobaya.conventions import package, _defaults_file, _params, _p_label, _products_path
 from cobaya.conventions import _prior, _theory, _likelihood, _sampler, _external
-from cobaya.conventions import _output_prefix
+from cobaya.conventions import _output_prefix, _debug_file
 from cobaya.tools import get_folder
 from cobaya.yaml_custom import yaml_load_file
 from cobaya.log import HandledException
@@ -46,9 +46,11 @@ def load_input(input_file):
     elif info[_output_prefix] is None:
         log.warning("WARNING: Output explicitly supressed with 'ouput_prefix: null'")
     # contained? Ensure that output is sent where it should
-    if "CONTAINED" in os.environ and info[_output_prefix]:
-        if not info[_output_prefix].startswith("/"):
-            info[_output_prefix] = os.path.join(_products_path, info[_output_prefix])
+    if "CONTAINED" in os.environ:
+        for out in [_output_prefix, _debug_file]:
+            if info.get(out):
+                if not info[out].startswith("/"):
+                    info[out] = os.path.join(_products_path, info[out])
     return info
 
 
