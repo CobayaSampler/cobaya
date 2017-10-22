@@ -169,5 +169,5 @@ def prepare_data_script():
     except IOError:
         log.error("Cannot find the requiremets file. This should not be happening.")
         raise HandledException
-    install(info, path=os.path.join(_modules_path, _data), force=arguments.force,
+    install(info, path=_modules_path, force=arguments.force,
             **{_code: False, _data: True})
