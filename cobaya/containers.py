@@ -176,8 +176,6 @@ def create_singularity_image(*filenames):
         """ % (MPI_recipe["singularity"], echos_reqs, requirements_file_path,
                _modules_path, os.path.join(_modules_path, _data),
                "\n        ".join(image_help("singularity").split("\n")[1:])))
-    print image_help("singularity")
-    exit()
     with NamedTemporaryFile(delete=False) as recipe_file:
         recipe_file.write(recipe)
         recipe_file_name = recipe_file.name
