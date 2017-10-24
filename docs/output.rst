@@ -74,7 +74,8 @@ Specifying the output folder and/or prefix
 You can tell cobaya to write the samples into a particular folder, or to name the output files in a certain way. To do that, use the option ``output_prefix`` at the top level of the input file (i.e. not inside any block):
 
 - ``output_prefix: something``: the output will be written into the current folder, and all output files names will start with ``something``.
-- ``output_prefix: somefolder/something``: similar to the last case, but writes into the folder ``somefolder``, which is created at that point and must not exist before.
+- ``output_prefix: somefolder/something``: similar to the last case, but writes into the folder ``somefolder``, which is created at that point if necessary.
+- ``output_prefix: somefolder/``: writes into the folder ``somefolder``, which is created at that point if necessary, with no prefix for the file names.
 - ``output_prefix: null``: will produce no output files whatsoever.
 
 .. note::

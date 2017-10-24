@@ -12,52 +12,56 @@ from __future__ import division
 
 # Global
 import os
+import sys
+import traceback
 from copy import deepcopy
 import datetime
         
 # Local
 from cobaya.yaml_custom import yaml_dump
-from cobaya.conventions import _likelihood, _theory, _prior, _params
-from cobaya.conventions import _sampler, _input_suffix, _full_suffix
-from cobaya.conventions import separator
+from cobaya.conventions import _input_suffix, _full_suffix, separator, _yaml_extension
 from cobaya.log import HandledException
 
 # Logger
 import logging
 log = logging.getLogger(__name__)
 
+
 class Output():
     def __init__(self, info):
         output_prefix = str(info["output_prefix"])
-        if os.sep in output_prefix:
-            self.folder = os.sep.join(output_prefix.split(os.sep)[:-1])
-            self.prefix = output_prefix.split(os.sep)[-1]
+        self.folder = os.sep.join(output_prefix.split(os.sep)[:-1]) or "."
+        self.prefix = (lambda x: x if x != "." else "")(output_prefix.split(os.sep)[-1])
+        if not os.path.exists(self.folder):
             log.debug("Creating output folder '%s'", self.folder)
-            # Notice that the folder cannot exist already.
-            # If we are continuing a sample, that is dealt with by the invocation script.
             try:
                 os.makedirs(self.folder)
             except OSError:
-                log.error("Chain continuation not implemented. "
-                          "If testing, delete the chain folder '%s' before invoking again.",
-                          self.folder)
+                log.error("".join(["-"]*20 + ["\n\n"] +
+                                  list(traceback.format_exception(*sys.exc_info())) +
+                                  ["\n"] + ["-"]*37))
+                log.error("Could not create folder '%s'. "
+                          "See traceback on top of this message.", self.folder)
                 raise HandledException
-                # The exception that should be raised when this is implemented.
-                raise OSError("Cannot create folder '%s'. Check your 'output_prefix'.", self.folder)
-        else:
-            self.folder = "."
-            # safeguard against calling from chain folder
-            if output_prefix == ".":
-                output_prefix = ""
-            self.prefix = output_prefix
-        log.info("The output folder is '%s', and the output prefix is '%s'", 
+        log.info("Products to be written into folder '%s', with prefix '%s'.",
                  self.folder, self.prefix)
+        # Prepare file names, and check if chain exists
+        self.file_prefix = self.prefix + (separator if self.prefix else "")
+        self.file_input = os.path.join(
+            self.folder, self.file_prefix+_input_suffix+_yaml_extension)
+        self.file_full = os.path.join(
+            self.folder, self.file_prefix+_full_suffix+_yaml_extension)
+        if os.path.isfile(self.file_full):
+            log.error("Chain continuation not implemented, sorry. "
+                      "Delete the previous chain and try again, "
+                      "or choose a different output prefix.")
+            raise HandledException
         # Save the updated name and output_prefix: now relative to output folder
         self.info_input = deepcopy(info)
         self.info_input["output_prefix"] = self.prefix if self.prefix else "."
         # Output kind and collection extension
         self.kind = "txt"
-        self.ext  = "txt"
+        self.ext = "txt"
 
     def set_full_info(self, full_info):
         self._full_info = full_info
@@ -68,12 +72,8 @@ class Output():
            - the input info.
            - idem, populated with the modules' defaults.
         """
-        file_prefix = self.prefix
-        if self.prefix:
-            file_prefix += separator
-        file_input = os.path.join(self.folder, file_prefix+_input_suffix+".yaml")
-        file_full = os.path.join(self.folder, file_prefix+_full_suffix+".yaml")
-        for f, info in [(file_input, self.info_input), (file_full, self._full_info)]:
+        for f, info in [(self.file_input, self.info_input),
+                        (self.file_full, self._full_info)]:
             if os.path.isfile(f):
                 log.error("Chain continuation not implemented. "
                           "If testing, delete the relevant chain folder.")
@@ -128,7 +128,7 @@ class Output_dummy(Output):
         exclude = ["__nonzero__", "nullfunc", "update_info", "updated_info"]
         for attrname,attr in Output.__dict__.items():
             func_name = getattr(attr, "func_name", None)
-            if func_name and not func_name in exclude:
+            if func_name and func_name not in exclude:
                 setattr(self, attrname, self.nullfunc)
 
     def nullfunc(self, *args, **kwargs):

@@ -41,6 +41,7 @@ _derived_pre   = "derived"+separator  # prefix for derived parameters
 # Output files
 _input_suffix = "input"
 _full_suffix  = "full"
+_yaml_extension = ".yaml"
 
 # Installation and container definitions
 _modules_path =  "/modules"
