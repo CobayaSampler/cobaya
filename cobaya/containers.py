@@ -19,6 +19,7 @@ from subprocess import Popen, PIPE
 import uuid
 import argparse
 from textwrap import dedent
+from requests import head
 
 # Local
 from cobaya.log import logger_setup, HandledException
@@ -45,8 +46,9 @@ RUN sed -i 's/# \(.*multiverse$\)/\1/g' /etc/apt/sources.list && \
       autoconf automake make gcc-6-base \
       libopenblas-base liblapack3 liblapack-dev libcfitsio-dev \
       python python-pip git wget
-RUN pip install pip pytest-xdist matplotlib --upgrade
+RUN pip install pip pytest-xdist matplotlib
 # Prepare environment and tree for modules -----------------------------------
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 ENV CONTAINED=TRUE
 ENV COBAYA_MODULES %s
 ENV COBAYA_PRODUCTS %s
@@ -54,22 +56,34 @@ RUN mkdir $COBAYA_MODULES && \
     mkdir $COBAYA_PRODUCTS
 # COBAYA  --------------------------------------------------------------------
 # getdist fork (it will be an automatic requisite in the future)
-RUN pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist
+RUN pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist --force
 RUN cd $COBAYA_MODULES && git clone https://github.com/JesusTorrado/cobaya.git && \
-    cd $COBAYA_MODULES/cobaya && pip install -e .
-# Compatibility with singularity ---------------------------------------------
-RUN ldconfig
-RUN echo "Base image created."
+    cd $COBAYA_MODULES/cobaya && pip install -e . --force
 """%(_modules_path, _products_path)
 
+MPI_URL = {
+    "mpich": "http://www.mpich.org/static/downloads/_VER_/mpich-_VER_.tar.gz",
+    "openmpi": ("https://www.open-mpi.org/software/ompi/v_VER_/downloads/"
+                "openmpi-_VER__DOT_SUB_.tar.gz")}
+
+MPI_versions = {"mpich": {"3.2": None},
+                "openmpi": {"2.1": ["1", "2"]}}
+
 MPI_recipe = {
-    "docker": dedent(u"""
-    # MPI -- NERSC: must be MPICH installed in user space
+    "mpich": """
+    # NERSC: must be MPICH >= 3.2
     # http://www.nersc.gov/users/software/using-shifter-and-docker/using-shifter-at-nersc/
-    RUN cd /tmp && wget http://www.mpich.org/static/downloads/3.2/mpich-3.2.tar.gz && \
-        tar xvzf mpich-3.2.tar.gz && cd /tmp/mpich-3.2 && ./configure && make -j4 && \
-        make install && make clean && rm /tmp/mpich-3.2.tar.gz"""),
-    "singularity": u"""apt-get install -y openmpi-bin"""}
+    RUN cd /tmp && wget _URL_ && tar xvzf mpich-_VER_.tar.gz && cd /tmp/mpich-_VER_ && \
+      ./configure --prefix=/usr/local && make -j4 && make install && make clean && cd .. \
+      rm -rf /tmp/mpich-* """,
+    "openmpi": """
+    # HPC: must be OpenMPI >= 2.1
+    RUN cd /tmp && wget _URL_ && gunzip -c openmpi-_VER__DOT_SUB_.tar.gz | tar xf - && \
+      cd /tmp/openmpi-_VER__DOT_SUB_ && ./configure --prefix=/usr/local && make -j4 && \
+      make install && make clean && cd .. && rm -rf /tmp/openmpi-_VER__DOT_SUB_ """}
+
+MPI_epilogue = """&& export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/ && \
+                  ldconfig && pip install mpi4py --no-binary :all:"""
 
 
 def image_help(engine):
@@ -123,16 +137,53 @@ def get_docker_client():
     return docker.from_env(version="auto")
 
 
-def create_base_image():
-    log.info("Creating base image...")
+def create_base_image(mpi=None, version=None, sub=None):
+    """
+    `mpi` : MPI library to compile: OpenMPI or MPICH.
+    `ver` : major.minor, as a string.
+    `sub` : (optional) the subversion of the major.minor version
+    """
+    if version is None:
+        log.error("Needs a major.minor version!")
+        raise HandledException
+    sub = sub or ""
+    if sub:
+        sub = "." + sub
+    try:
+        tag = "cobaya/base_%s_%s:latest"%(mpi.lower(), version+sub)
+    except KeyError():
+        log.error("MPI library '%s' not recognised.")
+        raise HandledException
+    URL = MPI_URL[mpi.lower()].replace("_VER_", str(version)).replace("_DOT_SUB_", sub)
+    if head(URL).status_code >= 400:
+        log.error("Failed to download %s %s: couldn't reach URL: '%s'",
+                  mpi.lower(), version+sub, URL)
+        raise HandledException
+    log.info("Creating base image %s v%s..."%(mpi.lower(), version+sub))
+    this_MPI_recipe = dedent(MPI_recipe[mpi.lower()].replace("_VER_", version)
+                             .replace("_DOT_SUB_", sub).replace("_URL_", URL))
     dc = get_docker_client()
-    with StringIO(base_recipe) as stream:
-        dc.images.build(fileobj=stream, tag="cobaya/base:latest", nocache=True)
-    log.info("Base image created!")
+    with StringIO(base_recipe + this_MPI_recipe + MPI_epilogue) as stream:
+        dc.images.build(fileobj=stream, tag=tag, nocache=False)
+    log.info("Base image '%s' created!"%tag)
 
 
-def create_docker_image(filenames):
+def create_all_base_images():
+    log.info("Creating all base images. This will take a while.")
+    for mpi in MPI_recipe:
+        for version, subs in MPI_versions[mpi.lower()].items():
+            for sub in (subs or [None]):
+                create_base_image(mpi, version, sub)
+    log.info("All base images created.")
+
+
+def create_docker_image(filenames, MPI_version=None):
     log.info("Creating Docker image...")
+    if not MPI_version:
+        MPI_version = "3.2"
+        log.warn("You have not specified an MPICH version. "
+                 "It is strongly encouraged to request the one installed in your cluster,"
+                 " using '--mpi-version X.Y'. Defaulting to MPICH v%s.", MPI_version)
     dc = get_docker_client()
     modules = yaml_dump(get_modules(*[load_input(f) for f in filenames])).strip()
     echos_reqs = "RUN "+" && \\ \n    ".join(
@@ -142,13 +193,12 @@ def create_docker_image(filenames):
         [r'echo "%s" >> %s'%(line, help_file_path)
          for line in image_help("docker").split("\n")])
     recipe = ur"""
-    FROM cobaya/base:latest
+    FROM cobaya/base_mpich_%s:latest
     %s
-    %s
-    RUN cobaya-install %s --path %s --just-code
+    RUN cobaya-install %s --path %s --just-code --force
     %s
     CMD ["cat", "%s"]
-    """ % (MPI_recipe["docker"], echos_reqs, requirements_file_path, _modules_path,
+    """ % (MPI_version, echos_reqs, requirements_file_path, _modules_path,
            echos_help, help_file_path)
     image_name = "cobaya:"+uuid.uuid4().hex[:6]
     with StringIO(recipe) as stream:
@@ -158,24 +208,32 @@ def create_docker_image(filenames):
              "to save it to the current folder.", image_name, image_name)
 
 
-def create_singularity_image(*filenames):
+def create_singularity_image(filenames, MPI_version=None):
     log.info("Creating Singularity image...")
+    if not MPI_version:
+        MPI_version = "2.1.1"
+        log.warn("You have not specified an OpenMPI version. "
+                 "It is strongly encouraged to request the one installed in your cluster,"
+                 " using '--mpi-version X.Y.Z'. Defaulting to OpenMPI v%s.", MPI_version)
     modules = yaml_dump(get_modules(*[load_input(f) for f in filenames])).strip()
-    echos_reqs = "\n".join(['        echo "%s" >> %s'%(block, requirements_file_path)
-                            for block in modules.split("\n")])
-    recipe = dedent("""
+    echos_reqs = "\n    " + "\n    ".join(
+        [""] + ['echo "%s" >> %s'%(block, requirements_file_path)
+                for block in modules.split("\n")])
+    recipe = (
+        dedent("""
         Bootstrap: docker
-        From: cobaya/base:latest
-        %%post
-          %s
-          %s
-          cobaya-install %s --path %s --just-code
-          mkdir %s
+        From: cobaya/base_openmpi_%s:latest\n
+        %%post\n"""%MPI_version) +
+        dedent(echos_reqs) + dedent("""
+        cobaya-install %s --path %s --just-code --force
+        mkdir %s
+
         %%help
+
         %s
-        """ % (MPI_recipe["singularity"], echos_reqs, requirements_file_path,
+        """ % (requirements_file_path,
                _modules_path, os.path.join(_modules_path, _data),
-               "\n        ".join(image_help("singularity").split("\n")[1:])))
+               "\n        ".join(image_help("singularity").split("\n")[1:]))))
     with NamedTemporaryFile(delete=False) as recipe_file:
         recipe_file.write(recipe)
         recipe_file_name = recipe_file.name
@@ -198,6 +256,8 @@ def create_image_script():
         "Cobaya's tool for preparing Docker (for Shifter) and Singularity images."))
     parser.add_argument("files", action="store", nargs="+", metavar="input_file.yaml",
                         help="One or more input files.")
+    parser.add_argument("-v", "--mpi-version", action="store", nargs=1, default=None,
+                        metavar="X.Y(.Z)", dest="version", help="Version of the MPI lib.")
     group_type = parser.add_mutually_exclusive_group(required=True)
     group_type.add_argument("-d", "--docker", action="store_const", const="docker",
                             help="Create a Docker image (for Shifter).", dest="type")
@@ -205,9 +265,9 @@ def create_image_script():
                             const="singularity", help="Create a Singularity image.")
     arguments = parser.parse_args()
     if arguments.type == "docker":
-        create_docker_image(arguments.files)
+        create_docker_image(arguments.files, MPI_version=arguments.version)
     elif arguments.type == "singularity":
-        create_singularity_image(*arguments.files)
+        create_singularity_image(arguments.files, MPI_version=arguments.version)
 
 
 def prepare_data_script():
