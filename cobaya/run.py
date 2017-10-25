@@ -54,10 +54,10 @@ def run(info):
         from cobaya.output import Output_dummy
         output = Output_dummy(info)
 
-    # Create the full input information, including defaults for each module
+    # Create and dump the full input information, including defaults for each module
     from cobaya.input import get_full_info
     full_info = get_full_info(info)
-    output.set_full_info(full_info)
+    output.dump_info(info, full_info)
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
         logging.getLogger(__name__).debug(
             "Updated info (dumped to YAML):\n%s", yaml_dump(full_info))
@@ -72,18 +72,15 @@ def run(info):
         with Prior(par, full_info.get(_prior)) as prior:
             with Likelihood(full_info[_likelihood], par, full_info.get(_theory)) as lik:
                 with Sampler(full_info[_sampler], par, prior, lik, output) as sampler:
-                    # Save the full, defaults-populated info
-                    output.dump_info()
-                    # Sample!
                     sampler.run()
+
     # For scripted calls
     return deepcopy(full_info), sampler.products()
 
 
 # Command-line script
 def run_script():
-    from cobaya.mpi import import_MPI
-    load_input = import_MPI(".input", "load_input")
+    import os
     import argparse
     parser = argparse.ArgumentParser(description="Cobaya's run script.")
     parser.add_argument("input_file", nargs=1, action="store", metavar="input_file.yaml",
@@ -92,6 +89,11 @@ def run_script():
                         action="store", nargs="+", metavar=("/some/path"),
                         help="Path where modules were automatically installed.")
     args = parser.parse_args()
+    if any([(os.path.splitext(f)[0] in ("input", "full")) for f in args.input_file]):
+        raise ValueError("'input' and 'full' are reserved file names. "
+                         "Please, use a different one.")
+    from cobaya.mpi import import_MPI
+    load_input = import_MPI(".input", "load_input")
     info = load_input(args.input_file[0])
     # solve path
     import os

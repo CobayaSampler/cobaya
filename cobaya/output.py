@@ -20,6 +20,7 @@ import datetime
 # Local
 from cobaya.yaml_custom import yaml_dump
 from cobaya.conventions import _input_suffix, _full_suffix, separator, _yaml_extension
+from cobaya.conventions import _output_prefix
 from cobaya.log import HandledException
 
 # Logger
@@ -29,7 +30,7 @@ log = logging.getLogger(__name__)
 
 class Output():
     def __init__(self, info):
-        output_prefix = str(info["output_prefix"])
+        output_prefix = str(info[_output_prefix])
         self.folder = os.sep.join(output_prefix.split(os.sep)[:-1]) or "."
         self.prefix = (lambda x: x if x != "." else "")(output_prefix.split(os.sep)[-1])
         if not os.path.exists(self.folder):
@@ -56,30 +57,20 @@ class Output():
                       "Delete the previous chain and try again, "
                       "or choose a different output prefix.")
             raise HandledException
-        # Save the updated name and output_prefix: now relative to output folder
-        self.info_input = deepcopy(info)
-        self.info_input["output_prefix"] = self.prefix if self.prefix else "."
+        # Save the updated output_prefix: now relative to output folder
+        info[_output_prefix] = self.prefix or "."
         # Output kind and collection extension
         self.kind = "txt"
         self.ext = "txt"
 
-    def set_full_info(self, full_info):
-        self._full_info = full_info
-
-    def dump_info(self, likelihood=None, theory=None, sampler=None, params=None):
+    def dump_info(self, input_info, full_info):
         """
         Saves the info in the chain folder twice:
            - the input info.
            - idem, populated with the modules' defaults.
         """
-        for f, info in [(self.file_input, self.info_input),
-                        (self.file_full, self._full_info)]:
-            if os.path.isfile(f):
-                log.error("Chain continuation not implemented. "
-                          "If testing, delete the relevant chain folder.")
-                raise HandledException
-                # This is the error we should be raising when chain continuation is implem.
-                raise OSError("Dumping the info: The file '%s' exists!", f)
+        for f, info in [(self.file_input, input_info),
+                        (self.file_full, full_info)]:
             with open(f, "w") as f_out:
                 f_out.write(yaml_dump(info, default_flow_style=False))
 
@@ -100,7 +91,7 @@ class Output_MPI(Output):
         from mpi4py import MPI
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
-        to_broadcast = ("folder", "prefix", "kind", "ext", "info_input")
+        to_broadcast = ("folder", "prefix", "kind", "ext")
         if rank == 0:
             Output.__init__(self, info)
         else:
@@ -123,7 +114,6 @@ class Output_dummy(Output):
     """
     def __init__(self, info):
         log.info("No output requested. Doing nothing (or returning in scripted call).")
-        self.info_input = deepcopy(info)
         # override all methods
         exclude = ["__nonzero__", "nullfunc", "update_info", "updated_info"]
         for attrname,attr in Output.__dict__.items():
