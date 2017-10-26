@@ -61,6 +61,7 @@ def install(*infos, **kwargs):
                 log.error("Installation failed! Look at the error messages above. "
                           "Solve them and try again, or, if you are unable to solve, "
                           "install this module manually.")
+                exit()
                 continue
             # test installation
             if not is_installed(path=installpath, **kwargs_install):
