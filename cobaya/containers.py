@@ -46,10 +46,13 @@ RUN sed -i 's/# \(.*multiverse$\)/\1/g' /etc/apt/sources.list && \
       autoconf automake make gcc-6-base \
       libopenblas-base liblapack3 liblapack-dev libcfitsio-dev \
       python python-pip git wget
-RUN pip install pip pytest-xdist matplotlib
+# Python requisites -- LC_ALL=C: Necessary just for pip <= 8.1.2 (Xenial version)
+ENV LC_ALL C
+RUN pip install --upgrade pip
+RUN pip install pytest-xdist matplotlib cython --upgrade
 # Prepare environment and tree for modules -----------------------------------
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
-ENV CONTAINED=TRUE
+ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/lib
+ENV CONTAINED TRUE
 ENV COBAYA_MODULES %s
 ENV COBAYA_PRODUCTS %s
 RUN mkdir $COBAYA_MODULES && \
@@ -58,7 +61,7 @@ RUN mkdir $COBAYA_MODULES && \
 # getdist fork (it will be an automatic requisite in the future)
 RUN pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist --force
 RUN cd $COBAYA_MODULES && git clone https://github.com/JesusTorrado/cobaya.git && \
-    cd $COBAYA_MODULES/cobaya && pip install -e . --force
+    cd $COBAYA_MODULES/cobaya && pip install -e .
 """%(_modules_path, _products_path)
 
 MPI_URL = {
@@ -164,7 +167,7 @@ def create_base_image(mpi=None, version=None, sub=None):
                              .replace("_DOT_SUB_", sub).replace("_URL_", URL))
     dc = get_docker_client()
     with StringIO(base_recipe + this_MPI_recipe + MPI_epilogue) as stream:
-        dc.images.build(fileobj=stream, tag=tag, nocache=False)
+        dc.images.build(fileobj=stream, tag=tag, nocache=True)
     log.info("Base image '%s' created!"%tag)
 
 
@@ -256,7 +259,7 @@ def create_image_script():
         "Cobaya's tool for preparing Docker (for Shifter) and Singularity images."))
     parser.add_argument("files", action="store", nargs="+", metavar="input_file.yaml",
                         help="One or more input files.")
-    parser.add_argument("-v", "--mpi-version", action="store", nargs=1, default=None,
+    parser.add_argument("-v", "--mpi-version", action="store", nargs=1, default=[None],
                         metavar="X.Y(.Z)", dest="version", help="Version of the MPI lib.")
     group_type = parser.add_mutually_exclusive_group(required=True)
     group_type.add_argument("-d", "--docker", action="store_const", const="docker",
@@ -265,9 +268,9 @@ def create_image_script():
                             const="singularity", help="Create a Singularity image.")
     arguments = parser.parse_args()
     if arguments.type == "docker":
-        create_docker_image(arguments.files, MPI_version=arguments.version)
+        create_docker_image(arguments.files, MPI_version=arguments.version[0])
     elif arguments.type == "singularity":
-        create_singularity_image(arguments.files, MPI_version=arguments.version)
+        create_singularity_image(arguments.files, MPI_version=arguments.version[0])
 
 
 def prepare_data_script():
