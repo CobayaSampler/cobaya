@@ -37,6 +37,7 @@ def install(*infos, **kwargs):
         spath = os.path.join(abspath, what)
         if kwargs_install[what] and not os.path.exists(spath):
             os.makedirs(spath)
+    failed_modules = []
     for kind, modules in get_modules(*infos).iteritems():
         for module in modules:
             print make_header(kind, module)
@@ -61,6 +62,7 @@ def install(*infos, **kwargs):
                 log.error("Installation failed! Look at the error messages above. "
                           "Solve them and try again, or, if you are unable to solve, "
                           "install this module manually.")
+                failed_modules += ["%s:%s"%(kind,module)]
                 continue
             # test installation
             if not is_installed(path=installpath, **kwargs_install):
@@ -69,6 +71,11 @@ def install(*infos, **kwargs):
                           "Look at the error messages above. "
                           "Solve them and try again, or, if you are unable to solve, "
                           "install this module manually.")
+                failed_modules += ["%s:%s"%(kind,module)]
+    if failed_modules:
+        log.error("The instalation (or installation test) of some module(s) has failed: "
+                  "%r. Check output above.", failed_modules)
+        raise HandledException
 
 
 # Add --user flag to pip, if needed: when not in Travis, Docker, Anaconda or a virtual env

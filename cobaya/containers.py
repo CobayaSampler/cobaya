@@ -43,13 +43,13 @@ RUN sed -i 's/# \(.*multiverse$\)/\1/g' /etc/apt/sources.list && \
     apt-get update && \
     apt-get -y upgrade && \
     apt-get install -y \
-      autoconf automake make gcc-6-base \
+      autoconf automake make gcc-6-base nano \
       libopenblas-base liblapack3 liblapack-dev libcfitsio-dev \
       python python-pip git wget
 # Python requisites -- LC_ALL=C: Necessary just for pip <= 8.1.2 (Xenial version)
 ENV LC_ALL C
 RUN pip install --upgrade pip
-RUN pip install pytest-xdist matplotlib cython --upgrade
+RUN pip install pytest-xdist matplotlib cython pyfits --upgrade
 # Prepare environment and tree for modules -----------------------------------
 ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/lib
 ENV CONTAINED TRUE
@@ -228,6 +228,7 @@ def create_singularity_image(filenames, MPI_version=None):
         From: cobaya/base_openmpi_%s:latest\n
         %%post\n"""%MPI_version) +
         dedent(echos_reqs) + dedent("""
+        export CONTAINED=TRUE
         cobaya-install %s --path %s --just-code --force
         mkdir %s
 

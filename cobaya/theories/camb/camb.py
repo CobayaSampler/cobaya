@@ -353,6 +353,7 @@ def install(force=False, code=True, **kwargs):
     exit_status = pip.main(
         ["install", "camb", "--upgrade"] + user_flag_if_needed() +
         (["--force-reinstall"] if force else []))
+    # Notice that --force-reinstall only works when --upgrade is present too!
     if exit_status:
         return False
     return True
