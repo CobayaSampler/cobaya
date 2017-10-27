@@ -177,7 +177,7 @@ def create_all_base_images():
         for version, subs in MPI_versions[mpi.lower()].items():
             for sub in (subs or [None]):
                 create_base_image(mpi, version, sub)
-    log.info("All base images created.")
+    log.info("All base images created. Don't forget to *PUSH*!")
 
 
 def create_docker_image(filenames, MPI_version=None):
