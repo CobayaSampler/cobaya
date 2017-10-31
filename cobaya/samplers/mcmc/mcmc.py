@@ -248,8 +248,7 @@ class mcmc(Sampler):
             self.effective_max_samples = self.max_samples
             self.n_slow = sum(len(blocks[i]) for i in range(1+self.i_last_slow_block))
             if self.drag_nfast_times:
-                self.drag_interp_steps = max(
-                    2, int(self.drag_nfast_times*len(fast_params))+1)
+                self.drag_interp_steps = np.round(self.drag_nfast_times*len(fast_params))
             self.get_new_sample = self.get_new_sample_dragging
             log.info("Using fast dragging over %d slow parameters, "
                      "with %d interpolating steps on fast parameters %r",
@@ -409,7 +408,8 @@ class mcmc(Sampler):
         trial = deepcopy(self.current_point[self.parametrisation.sampled_params()])
         self.proposer.get_proposal(trial)
         logpost_trial, logprior_trial, logliks_trial, derived = self.logposterior(trial)
-        accept = self.metropolis_accept(logpost_trial, -self.current_point["minuslogpost"])
+        accept = self.metropolis_accept(logpost_trial,
+                                        -self.current_point["minuslogpost"])
         self.process_accept_or_reject(accept, trial, derived,
                                       logpost_trial, logprior_trial, logliks_trial)
         return accept
@@ -432,6 +432,7 @@ class mcmc(Sampler):
         start_slow_logpost = -self.current_point["minuslogpost"]
         end_slow_point = deepcopy(start_slow_point)
         self.proposer.get_proposal_slow(end_slow_point)
+        log.debug("Proposed slow end-point: %r", end_slow_point)
         # Save derived paramters of delta_slow jump, in case I reject all the dragging
         # steps but accept the move in the slow direction only
         end_slow_logpost, end_slow_logprior, end_slow_logliks, derived = (
@@ -449,14 +450,15 @@ class mcmc(Sampler):
         # accumulators for the "dragging" probabilities to be metropolist-tested
         # at the end of the interpolation
         start_drag_logpost_acc = start_slow_logpost
-        end_drag_logpost_acc   = end_slow_logpost
+        end_drag_logpost_acc = end_slow_logpost
         # start dragging
         for i_step in range(1, 1+self.drag_interp_steps):
             log.debug("Dragging step: %d", i_step)
             # take a step in the fast direction in both slow extremes
             delta_fast = np.zeros(len(current_start_point))
             self.proposer.get_proposal_fast(delta_fast)
-            proposal_start_point = deepcopy(current_start_point)
+            log.debug("Proposed fast step delta: %r", delta_fast)
+            proposal_start_point  = deepcopy(current_start_point)
             proposal_start_point += delta_fast
             proposal_end_point    = deepcopy(current_end_point)
             proposal_end_point   += delta_fast
@@ -473,7 +475,7 @@ class mcmc(Sampler):
                     else (-np.inf, None, [], []))
             if proposal_start_logpost > -np.inf and proposal_end_logpost > -np.inf:
                 # create the interpolated probability and do a Metropolis test
-                frac = i_step / self.drag_interp_steps
+                frac = i_step / (1 + self.drag_interp_steps)
                 proposal_interp_logpost = ((1-frac)*proposal_start_logpost
                                              +frac *proposal_end_logpost)
                 current_interp_logpost  = ((1-frac)*current_start_logpost
@@ -503,7 +505,7 @@ class mcmc(Sampler):
             current_end_logpost, current_end_logprior, current_end_logliks)
         log.debug("TOTAL step: %s", ("accepted" if accept else "rejected"))
         return accept
-    
+
     def metropolis_accept(self, logp_trial, logp_current):
         """
         Symmetric-proposal Metropolis-Hastings test.
@@ -537,7 +539,7 @@ class mcmc(Sampler):
             # set the new point as the current one, with weight one
             self.current_point.add(trial, derived=derived, weight=1, logpost=logpost_trial,
                                    logprior=logprior_trial, logliks=logliks_trial)
-        else: # not accepted
+        else:  # not accepted
             self.current_point.increase_weight(1)
             # Failure criterion: chain stuck!
             if self.current_point[_weight] > self.max_tries:
@@ -560,8 +562,8 @@ class mcmc(Sampler):
                      (" and" if get_mpi() and self.learn_proposal else "") +
                      (" learn a new proposal covmat" if self.learn_proposal else ""))
         # If *just* (weight==1) got ready to check+learn
-        if (self.n() > 0 and self.current_point[_weight]==1 and
-            not (self.n()%(self.check_every_dimension_times*self.n_slow))):
+        if (    self.n() > 0 and self.current_point[_weight] == 1 and
+                not (self.n()%(self.check_every_dimension_times*self.n_slow))):
             log.info("Checkpoint: %d samples accepted.", self.n())
             # If not MPI, we are ready
             if not get_mpi():
@@ -570,7 +572,7 @@ class mcmc(Sampler):
                 return True
             # If MPI, tell the rest that we are ready -- we use a "gather"
             # ("reduce" was problematic), but we are in practice just pinging
-            if not hasattr(self, "req"): # just once!
+            if not hasattr(self, "req"):  # just once!
                 self.all_ready = np.empty(get_mpi_size())
                 self.req = get_mpi_comm().Iallgather(
                     np.array([1.]), self.all_ready)
@@ -597,7 +599,7 @@ class mcmc(Sampler):
         # Compute and gather means, covs and cl limits of last half of chains
         mean = self.collection.mean(first=int(self.n()/2))
         cov  = self.collection.cov (first=int(self.n()/2))
-        # Turn off logging of warnings momentarily, so getdist won't complain innecessarily
+        # Turn off logging of warnings temporarily, so getdist won't complain innecessarily
         logging.disable(logging.WARNING)
         mcsamples = self.collection.as_getdist_mcsamples(
             derived=False, prior_and_lik=False, first=int(self.n()/2))
@@ -616,7 +618,7 @@ class mcmc(Sampler):
                 # "Between" or "B" term
                 # We don't weight with the number of samples in the chains here:
                 # shorter chains will likely be outliers, and we want to notice them
-                cov_of_means = np.cov(means.T) #, fweights=Ns)
+                cov_of_means = np.cov(means.T)  # , fweights=Ns)
                 # For numerical stability, we turn mean_of_covs into correlation matrix:
                 #   rho = (diag(Sigma))^(-1/2) * Sigma * (diag(Sigma))^(-1/2)
                 # and apply the same transformation to the mean of covs (same eigenvals!)
@@ -626,7 +628,7 @@ class mcmc(Sampler):
                 # Cholesky of (normalised) mean of covs and eigvals of Linv*cov_of_means*L
                 L = np.linalg.cholesky(norm_mean_of_covs)
                 Linv = np.linalg.inv(L)
-                eigvals = np.linalg.eigvalsh(Linv.dot(corr_of_means).dot(Linv.T))                
+                eigvals = np.linalg.eigvalsh(Linv.dot(corr_of_means).dot(Linv.T))
                 Rminus1 = max(np.abs(eigvals))
                 # For real square matrices, a possible def of the cond number is:
                 condition_number = Rminus1/min(np.abs(eigvals))
@@ -643,17 +645,17 @@ class mcmc(Sampler):
                     # in units of the mean standard deviation of the chains
                     Rminus1_cl = np.std(limits, axis=0).T/np.sqrt(np.diag(mean_of_covs))
                     log.debug("Normalised std's of limits = %r", Rminus1_cl)
-                    log.info("Convergence of limits: R-1 = %f after %d samples", 
+                    log.info("Convergence of limits: R-1 = %f after %d samples",
                              np.max(Rminus1_cl), self.n())
                     if np.max(Rminus1_cl) < self.Rminus1_cl_stop:
-                        self.converged=True
+                        self.converged = True
                         log.info("The run has converged!")
             # Broadcast and save the convergence status and the last R-1 of means
             self.Rminus1_last = get_mpi_comm().bcast(
                 (Rminus1 if not get_mpi_rank() else None), root=0)
             self.converged = get_mpi_comm().bcast(
                 (self.converged if not get_mpi_rank() else None), root=0)
-        else: # No MPI
+        else:  # No MPI
             pass
         # Do we want to learn a better proposal pdf?
         if self.learn_proposal and not self.converged:
@@ -663,7 +665,8 @@ class mcmc(Sampler):
                                 self.Rminus1_last > self.learn_proposal_Rminus1_min)
                 if not good_Rminus1:
                     if not get_mpi_rank():
-                        log.info("Bad convergence statistics: waiting until the next checkpoint.")
+                        log.info("Bad convergence statistics: "
+                                 "waiting until the next checkpoint.")
                     return
             if get_mpi():
                 if get_mpi_rank():
@@ -676,7 +679,7 @@ class mcmc(Sampler):
                 log.info("Updated covariance matrix of proposal pdf.")
                 log.debug("%r", mean_of_covs)
 
-    # Finally: returning the computed products ############################################
+    # Finally: returning the computed products ###########################################
 
     def products(self):
         """

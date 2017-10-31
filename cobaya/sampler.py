@@ -50,6 +50,7 @@ from __future__ import division
 # Global
 from importlib import import_module
 import numpy as np
+from copy import deepcopy
 
 # Local
 from cobaya.conventions import _sampler, package
@@ -135,7 +136,7 @@ class Sampler(object):
         it gets populated it with the derived parameters' values.
         """
         logprior = self.prior.logp(params_values)
-        logpost = logprior
+        logpost = deepcopy(logprior)
         logliks = []
         if logprior > -np.inf:
             derived = []

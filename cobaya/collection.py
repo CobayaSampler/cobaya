@@ -134,8 +134,8 @@ class Collection():
         optionally including derived parameters if `derived=True` (default `False`).
         """
         return np.average(
-            self[list(self.sampled_params)
-                 +(list(self.derived_params) if derived else [])]
+            self[list(self.sampled_params) +
+                 (list(self.derived_params) if derived else [])]
                 [first:last].T,
             weights=self[_weight][first:last], axis=-1)
 
@@ -146,8 +146,8 @@ class Collection():
         optionally including derived parameters if `derived=True` (default `False`).
         """
         return np.atleast_2d(np.cov(
-            self[list(self.sampled_params)
-                 +(list(self.derived_params) if derived else [])]
+            self[list(self.sampled_params) +
+                 (list(self.derived_params) if derived else [])]
                 [first:last].T,
             fweights=self[_weight][first:last]))
 
@@ -208,14 +208,15 @@ class Collection():
             labels += ([r"-\log\pi", r"\chi^2"] +
                        [r"\chi^2_\mathrm{"+name+r"}" for name in self.chi2_names])
         # gather samples and create the getdist sample
-        columns = [(("" if n.rstrip("*") not in self.derived_params else _derived_pre)+
+        columns = [(("" if n.rstrip("*") not in self.derived_params else _derived_pre) +
                     n.rstrip("*")) for n in names]
         samples = self.data[:self.n()].as_matrix(columns=columns)
         return MCSamples(samples=samples[first:last],
                          weights=self.data[:self.n()][_weight].values[first:last],
                          loglikes=self.data[:self.n()][_minuslogpost].values[first:last],
                          names=names, labels=labels, ranges=ranges)
-        
+
+
 class OnePoint(Collection):
     """Wrapper of Collection to hold a single point, e.g. the current point of an MCMC."""
     def __init__(self, *args, **kwargs):
@@ -225,7 +226,10 @@ class OnePoint(Collection):
     def __getitem__(self, columns):
         if isinstance(columns, basestring):
             columns = [columns]
-        return self.data.as_matrix(columns=columns)[0]
+            i = (0,0)
+        else:
+            i = (0,)
+        return self.data.as_matrix(columns=columns)[i]
 
     # Resets the counter, so the dataframe never fills up!
     def add(self, *args, **kwargs):
@@ -241,8 +245,8 @@ class OnePoint(Collection):
             self[self.sampled_params],
             derived=(self[[_derived_pre+p for p in self.derived_params]]
                      if self.derived_params else None),
-            logpost=-self[_minuslogpost][0], weight=self[_weight][0],
-            logprior=-self[_minuslogprior][0],
+            logpost=-self[_minuslogpost], weight=self[_weight],
+            logprior=-self[_minuslogprior],
             logliks=-0.5*np.array(self[self.chi2_names]))
     
     # Make the dataframe printable (but only the filled ones!)
