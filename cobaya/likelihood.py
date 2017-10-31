@@ -205,7 +205,7 @@ class LikelihoodExternalFunction(Likelihood):
         for k in info:
             setattr(self, k, info[k])
         # Store the external function and its arguments
-        self.external_function = get_external_function(info[_external])
+        self.external_function = get_external_function(info[_external], name=self.name)
         argspec = inspect.getargspec(self.external_function)
         self.input_params = odict([(p, None) for p in argspec.args if p != "derived"])
         self.has_derived = "derived" in argspec.args

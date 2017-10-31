@@ -273,7 +273,7 @@ class Prior():
         self.external = odict()
         for name in (info_prior if info_prior else {}):
             log.debug("Loading external prior '%s' from: '%s'", name, info_prior[name])
-            self.external[name] = {"logp": get_external_function(info_prior[name])}
+            self.external[name] = {"logp": get_external_function(info_prior[name], name=name)}
             self.external[name]["argspec"] = inspect.getargspec(self.external[name]["logp"])
             try:
                 self.external[name]["indices"] = [list(sampled_params_info).index(p)

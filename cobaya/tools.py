@@ -63,7 +63,7 @@ def get_class(name, kind=_likelihood):
             log.error("There was a problem when importing %s '%s':", kind, name)
             raise sys.exc_info()[1]
 
-def get_external_function(string_or_function):
+def get_external_function(string_or_function, name=None):
     """
     Processes an external prior or likelihood, given as a string or a function.
 
@@ -78,7 +78,8 @@ def get_external_function(string_or_function):
         try:
             function = eval(string_or_function)
         except Exception, e:
-            log.error("Failed to load external function: '%r'", e)
+            log.error("Failed to load external function%s: '%r'",
+                      " '%s'"%name if name else "", e)
             raise HandledException
     else:
         function = string_or_function
