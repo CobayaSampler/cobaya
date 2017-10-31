@@ -376,6 +376,9 @@ def install(path=None, name=None, force=False, code=True, data=True):
         if not success:
             return False
     if data:
+        # 2nd test, in case the code wasn't there but the data is:
+        if not force and is_installed(path=path, name=name, code=False, data=True):
+            return True
         # Extract product_id
         product_id, _ = get_product_id_and_clik_file(name)
         # Download and uncompress the particular likelihood
