@@ -325,8 +325,11 @@ class camb(Theory):
         current_state = self.current_state()
         # get C_l^XX from the cosmological code
         cl_camb = deepcopy(current_state["powers"]["total"])
-        cl = {"ell": np.arange(cl_camb.shape[0]),
-              "tt": cl_camb[:,0], "te": cl_camb[:,3], "ee": cl_camb[:,1], "bb":cl_camb[:,2]}
+        mapping = {"tt": 0, "te": 3, "ee": 1, "bb": 2}
+        cl = {"ell": np.arange(cl_camb.shape[0])}
+        cl.update({sp: cl_camb[:,i] for sp,i in mapping.items()})
+        # Lensing -- TODO!
+        # pp <-- camb_results.get_lens_potential_cls(lmax)[:, 0]
         # convert dimensionless C_l's to C_l in muK**2
         T = current_state["CAMBparams"].TCMB
         for key in cl.iterkeys():
