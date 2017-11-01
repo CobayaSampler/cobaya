@@ -347,7 +347,7 @@ def install(path=None, force=False, code=True, **kwargs):
         log.error("Could not install pre-requisite: cython")
         return False
     log.info("Downloading...")
-    parent_path = os.path.abspath(os.path.join(path, "..", "code"))
+    parent_path = os.path.abspath(os.path.join(path, "code"))
     from wget import download, bar_thermometer
     try:
         filename = download(

@@ -1,1 +1,0 @@
-from planck_clik_prototype import planck_clik_prototype, install, is_installed

@@ -41,37 +41,36 @@ def install(*infos, **kwargs):
     for kind, modules in get_modules(*infos).iteritems():
         for module in modules:
             print make_header(kind, module)
-            installpath = os.path.join(abspath, module)
             module_folder = get_folder(module, kind, sep=".", absolute=False)
             imported_module = import_module(module_folder, package=package)
             is_installed = getattr(imported_module, "is_installed", None)
             if is_installed is None:
                 print "Not and external module: nothing to do.\n"
                 continue
-            if is_installed(path=installpath, **kwargs_install):
+            if is_installed(path=abspath, **kwargs_install):
                 print "External module already installed or not requested."
                 if kwargs_install["force"]:
                     print "Forcing re-installation, as requested."
                 else:
                     print "Doing nothing.\n"
                     continue
-            success = imported_module.install(path=installpath, **kwargs_install)
+            success = imported_module.install(path=abspath, **kwargs_install)
             if success:
                 print "Successfully installed!\n"
             else:
                 log.error("Installation failed! Look at the error messages above. "
                           "Solve them and try again, or, if you are unable to solve, "
                           "install this module manually.")
-                failed_modules += ["%s:%s"%(kind,module)]
+                failed_modules += ["%s:%s"%(kind, module)]
                 continue
             # test installation
-            if not is_installed(path=installpath, **kwargs_install):
+            if not is_installed(path=abspath, **kwargs_install):
                 log.error("Installation apparently worked, "
                           "but the subsequent installation test failed! "
                           "Look at the error messages above. "
                           "Solve them and try again, or, if you are unable to solve, "
                           "install this module manually.")
-                failed_modules += ["%s:%s"%(kind,module)]
+                failed_modules += ["%s:%s"%(kind, module)]
     if failed_modules:
         log.error("The instalation (or installation test) of some module(s) has failed: "
                   "%r. Check output above.", failed_modules)

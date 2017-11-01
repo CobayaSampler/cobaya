@@ -1,5 +1,5 @@
 """
-.. module:: planck_clik_prototype
+.. module:: _planck_clik_prototype
 
 :Synopsis: Definition of the clik code based likelihoods
 :Author: Julien Lesgourgues and Benjamin Audren (and Jesus Torrado for small compatibility changes only)
@@ -77,7 +77,7 @@ def set_logger(name):
     log = logging.getLogger(name)
 
 
-class planck_clik_prototype(Likelihood):
+class _planck_clik_prototype(Likelihood):
 
     def initialise(self):
         self.name = self.__class__.__name__
@@ -113,7 +113,7 @@ class planck_clik_prototype(Likelihood):
         try:
             if self.lensing:
                 self.clik = clik.clik_lensing(clik_file)
-                try: 
+                try:
                     self.l_max = max(self.clik.get_lmax())
                 # following 2 lines for compatibility with lensing likelihoods of 2013 and before
                 # (then, clik.get_lmax() just returns an integer for lensing likelihoods;
@@ -352,11 +352,11 @@ def is_installed(**kwargs):
     result = True
     if kwargs["code"]:
         result &= is_installed_clik(os.path.realpath(
-            os.path.join(kwargs["path"], "..", "code", common_path)))
+            os.path.join(kwargs["path"], "code", common_path)))
     if kwargs["data"]:
         _, filename = get_product_id_and_clik_file(kwargs["name"])
         result &= os.path.exists(os.path.realpath(
-            os.path.join(kwargs["path"], "..", "data", common_path, filename)))
+            os.path.join(kwargs["path"], "data", common_path, filename)))
     return result
 
 
@@ -366,7 +366,7 @@ def install(path=None, name=None, force=False, code=True, data=True):
     paths = {}
     for s in ("code", "data"):
         if eval(s):
-            paths[s] = os.path.realpath(os.path.join(path, "..", s, common_path))
+            paths[s] = os.path.realpath(os.path.join(path, s, common_path))
             if not os.path.exists(paths[s]):
                 os.makedirs(paths[s])
     # Install clik
