@@ -7,7 +7,8 @@ if __name__ == "__main__":
         _likelihood: {"planck_2015_lowl": None,
                       "planck_2015_plikHM_TT": None,
                       "planck_2015_lowTEB": None,
-                      "planck_2015_plikHM_TTTEEE": None}}
+                      "planck_2015_plikHM_TTTEEE": None,
+                      "bicep_keck_2015": None}}
     import sys
     path = sys.argv[1]
     import os

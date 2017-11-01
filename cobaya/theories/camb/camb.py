@@ -318,23 +318,24 @@ class camb(Theory):
                 raise HandledException
         return derived
 
-    def get_cl(self):
+    def get_cl(self, ell_factor=False):
         """
         Returns the power spectra in microK^2.
         """
         current_state = self.current_state()
         # get C_l^XX from the cosmological code
         cl_camb = deepcopy(current_state["powers"]["total"])
-        mapping = {"tt": 0, "te": 3, "ee": 1, "bb": 2}
+        mapping = {"tt": 0, "ee": 1, "bb": 2, "te": 3}
         cl = {"ell": np.arange(cl_camb.shape[0])}
         cl.update({sp: cl_camb[:,i] for sp,i in mapping.items()})
         # Lensing -- TODO!
         # pp <-- camb_results.get_lens_potential_cls(lmax)[:, 0]
+        ell_factor = ((cl["ell"]+1)*cl["ell"]/(2*np.pi))[2:] if ell_factor else 1
         # convert dimensionless C_l's to C_l in muK**2
         T = current_state["CAMBparams"].TCMB
-        for key in cl.iterkeys():
+        for key in cl.keys():
             if key not in ['pp', 'ell']:
-                cl[key][2:] = cl[key][2:] *(T*1.e6)**2
+                cl[key][2:] = cl[key][2:] * (T*1.e6)**2 * ell_factor
         return cl
 
 
