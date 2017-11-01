@@ -81,8 +81,10 @@ def is_fixed_param(info_param):
     """
     Returns True if `info_param` is a number, a string or a function.
     """
-    return (isinstance(info_param, Number) or isinstance(info_param, string_types)
-            or callable(info_param))
+    return (isinstance(info_param, Number) or
+            isinstance(info_param, string_types) or
+            callable(info_param))
+
 
 def is_sampled_param(info_param):
     """
@@ -90,18 +92,22 @@ def is_sampled_param(info_param):
     """%_prior
     return _prior in (info_param if hasattr(info_param, "get") else {})
 
+
 def is_derived_param(info_param):
     """
     Returns False if `info_param` is "fixed" or "sampled".
     """
     return not(is_fixed_param(info_param) or is_sampled_param(info_param))
 
+
 class Parametrisation(object):
     """
-    Class managing parametrisation. Translates parameter between sampler+prior and likelihood
+    Class managing parametrisation.
+    Translates parameter between sampler+prior and likelihood
     """
     def __init__(self, info_params):
-        # First, we load the parameters, not caring about whether they are understood by any likelihood
+        # First, we load the parameters,
+        # not caring about whether they are understood by any likelihood.
         # `input` contains the parameters (expected to be) understood by the likelihood,
         #   with its fixed value, its fixing function, or None if their value is given
         #   directly by the sampler.
@@ -115,17 +121,19 @@ class Parametrisation(object):
         self._derived_args = dict()
         self._theory_params = info_params.get(_theory,{}).keys()
         self._theory_args = dict()
-        info_params_flat = odict([(p,info_params[_theory][p]) for p in self._theory_params])
-        info_params_flat.update(odict([(p,info_params[p]) for p in info_params if p!=_theory]))
+        info_params_flat = odict(
+            [(p,info_params[_theory][p]) for p in self._theory_params])
+        info_params_flat.update(odict(
+            [(p,info_params[p]) for p in info_params if p != _theory]))
         for p, info in info_params_flat.iteritems():
             if is_fixed_param(info):
                 self._input[p] = info if isinstance(info, Number) else None
-                if self._input[p] == None:
+                if self._input[p] is None:
                     self._input_funcs[p] = get_external_function(info)
                     self._input_args[p] = getargspec(self._input_funcs[p]).args
             if is_sampled_param(info):
                 self._sampled[p] = info
-                if not _p_drop in info:
+                if _p_drop not in info:
                     self._input[p] = None
             if is_derived_param(info):
                 self._derived[p] = info
@@ -151,8 +159,10 @@ class Parametrisation(object):
                           "If this is an %s parameter of a likelihood or theory, "
                           "whose name you cannot change,%s define an associated "
                           "%s one with a valid name 'p_prime' as: \n\n%s",
-                          p, "input" if is_in else "output", "" if is_in else " remove it and",
-                          "sampled" if is_in else "derived", eg_in if is_in else eg_out)
+                          p, "input" if is_in else "output",
+                          "" if is_in else " remove it and",
+                          "sampled" if is_in else "derived",
+                          eg_in if is_in else eg_out)
                 raise HandledException
         # Assume that the *un*known function arguments are likelihood output parameters
         args = (set(chain(*self._input_args.values()))
@@ -166,9 +176,10 @@ class Parametrisation(object):
             set(chain(
                 *[v for p,v in self._input_args.iteritems() if p in self._theory_params]))
             .union(chain(
-                *[v for p,v in self._derived_args.iteritems() if p in self._theory_params])))
+                *[v for p,v in self._derived_args.iteritems()
+                  if p in self._theory_params])))
         self._theory_params = self._theory_params + [p for p in args_theory
-                                                     if not p in self._theory_params]
+                                                     if p not in self._theory_params]
         # Useful sets: directly-sampled input parameters and directly "output-ed" derived
         self._directly_sampled = [p for p in self._input if p in self._sampled]
         self._directly_output = [p for p in self._derived if p in self._output]
@@ -199,9 +210,9 @@ class Parametrisation(object):
         bad_derived_dependencies = set(chain(*self._derived_args.values())).difference(
             set(self.input_params()).union(set(self.output_params())))
         if bad_derived_dependencies:
-            log.error("Derived parameters can only depend on input and output parameters, "
-                      "never on sampled parameters that have been defined as a function. "
-                      "In particular, a derived parameter cannot depend on %r",
+            log.error("Derived parameters can only depend on input and output parameters,"
+                      " never on sampled parameters that have been defined as a function."
+                      " In particular, a derived parameter cannot depend on %r",
                       list(bad_derived_dependencies))
             raise HandledException
 
@@ -252,11 +263,13 @@ class Parametrisation(object):
         Uses the parameter name of no label has been given.
         """
         get_label = lambda p,info: ensure_nolatex((info if info else {}).get(_p_label,p))
-        return odict([[p,get_label(p,info)] for p, info in
-                      list(self.sampled_params().items())+list(self.derived_params().items())])
+        return odict(
+            [[p,get_label(p,info)] for p, info in list(self.sampled_params().items()) +
+                                                  list(self.derived_params().items())])
 
     # Python magic for the "with" statement
     def __enter__(self):
         return self
+
     def __exit__(self, exception_type, exception_value, traceback):
         return

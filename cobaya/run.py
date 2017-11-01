@@ -54,13 +54,14 @@ def run(info):
         from cobaya.output import Output_dummy
         output = Output_dummy(info)
 
-    # Create and dump the full input information, including defaults for each module
+    # Create the full input information, including defaults for each module.
     from cobaya.input import get_full_info
     full_info = get_full_info(info)
-    output.dump_info(info, full_info)
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
         logging.getLogger(__name__).debug(
             "Updated info (dumped to YAML):\n%s", yaml_dump(full_info))
+    # We dump the info now, before modules initialisation, lest it is accidentaly modified
+    output.dump_info(info, full_info)
 
     # Set the path of the installed modules, if given
     from cobaya.tools import set_path_to_installation

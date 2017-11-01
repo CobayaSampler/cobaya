@@ -6,8 +6,10 @@
 
 Customisation of YAML's loaded and dumper:
 
-1. Matches 1e2 as 100 (no need for dot, or sign after e), from http://stackoverflow.com/a/30462009
-2. Wrapper to load mappings as OrderedDict (for likelihoods and params), from http://stackoverflow.com/a/21912744
+1. Matches 1e2 as 100 (no need for dot, or sign after e),
+   from http://stackoverflow.com/a/30462009
+2. Wrapper to load mappings as OrderedDict (for likelihoods and params),
+   from http://stackoverflow.com/a/21912744
 
 """
 
@@ -20,6 +22,7 @@ import yaml
 import re
 from collections import OrderedDict as odict
 import numpy as np
+
 
 # Exceptions
 class InputSyntaxError(Exception):
@@ -50,25 +53,27 @@ def yaml_load(text_stream, Loader=yaml.Loader, object_pairs_hook=odict, file_nam
         except yaml.YAMLError, exception:
             errstr = "Error in your input file "+("'"+file_name+"'" if file_name else "")
             if hasattr(exception, "problem_mark"):
-                line   = 1+exception.problem_mark.line
-                column = 1+exception.problem_mark.column
+                line = 1 + exception.problem_mark.line
+                column = 1 + exception.problem_mark.column
                 signal = " --> "
                 signal_right = "    <---- "
                 sep = "|"
                 context = 4
                 lines = text_stream.split("\n")
-                pre = ((("\n"+" "*len(signal)+sep).
-                         join([""]+lines[max(line-1-context,0):line-1])))+"\n"
-                errorline = (signal+sep+lines[line-1]
-                             + signal_right + "column %s"%column)
-                post = ((("\n"+" "*len(signal)+sep).
-                         join([""]+lines[line+1-1:min(line+1+context-1,len(lines))])))+"\n"
+                pre = ((("\n"+" "*len(signal)+sep).join(
+                    [""]+lines[max(line-1-context,0):line-1])))+"\n"
+                errorline = (signal+sep+lines[line-1] +
+                             signal_right + "column %s"%column)
+                post = ((("\n"+" "*len(signal)+sep).join(
+                    [""]+lines[line+1-1:min(line+1+context-1,len(lines))])))+"\n"
                 raise InputSyntaxError(
-                    errstr + " at line %d, column %d."%(line, column)+pre+errorline+post+
+                    errstr + " at line %d, column %d."%(line, column) +
+                    pre + errorline + post +
                     "Maybe inconsistent indentation, '=' instead of ':', "
                     "no space after ':', or a missing ':' on an empty group?")
             else:
                 raise InputSyntaxError(errstr)
+
 
 def yaml_load_file(input_file):
     """Wrapper to load a yaml file."""
@@ -76,7 +81,8 @@ def yaml_load_file(input_file):
         lines = "".join(file.readlines())
     return yaml_load(lines, file_name=input_file)
 
-def yaml_dump(data, stream=None, Dumper=yaml.Dumper, **kwds):
+
+def yaml_dump(data, trim_params_info=False, stream=None, Dumper=yaml.Dumper, **kwds):
     class OrderedDumper(Dumper):
         pass
     # Dump OrderedDict's as plain dictionaries, but keeping the order
@@ -84,7 +90,7 @@ def yaml_dump(data, stream=None, Dumper=yaml.Dumper, **kwds):
         return dumper.represent_mapping(
             yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, data.items())
     OrderedDumper.add_representer(odict, _dict_representer)
-    # Dump tuples as ymal "sequences"
+    # Dump tuples as yaml "sequences"
     def _tuple_representer(dumper, data):
         return dumper.represent_sequence(
             yaml.resolver.BaseResolver.DEFAULT_SEQUENCE_TAG, list(data))
@@ -100,5 +106,12 @@ def yaml_dump(data, stream=None, Dumper=yaml.Dumper, **kwds):
     def _numpy_float_representer(dumper, data):
         return dumper.represent_float(data)
     OrderedDumper.add_representer(np.float64, _numpy_float_representer)
+    # For full infos: trim known params of each likelihood: for internal use only
+    if trim_params_info:
+        from copy import deepcopy
+        from cobaya.conventions import _likelihood, _params
+        data = deepcopy(data)
+        for lik_info in data.get(_likelihood, {}).values():
+            (lik_info or {_params: None}).pop(_params, None)
     # Dump!
     return yaml.dump(data, stream, OrderedDumper, **kwds)

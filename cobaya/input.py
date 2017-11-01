@@ -141,7 +141,7 @@ def get_full_info(info):
             # Store default parameters and priors of class, and save to combine later
             if block == _likelihood:
                 params_info = default_module_info.get(_params, {})
-                full_info[block][module].update({_params:params_info})
+                full_info[block][module].update({_params:params_info.keys()})
                 default_params_info[module] = params_info
                 default_prior_info[module] = default_module_info.get(_prior, {})
     # Add priors info, after the necessary checks

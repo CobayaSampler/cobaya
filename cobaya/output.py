@@ -14,7 +14,6 @@ from __future__ import division
 import os
 import sys
 import traceback
-from copy import deepcopy
 import datetime
         
 # Local
@@ -72,7 +71,8 @@ class Output():
         for f, info in [(self.file_input, input_info),
                         (self.file_full, full_info)]:
             with open(f, "w") as f_out:
-                f_out.write(yaml_dump(info, default_flow_style=False))
+                f_out.write(
+                    yaml_dump(info, default_flow_style=False, trim_params_info=True))
 
     def prepare_collection(self, name=None):
         if not name:

@@ -115,7 +115,7 @@ class _planck_clik_prototype(Likelihood):
                 self.clik = clik.clik_lensing(clik_file)
                 try:
                     self.l_max = max(self.clik.get_lmax())
-                # following 2 lines for compatibility with lensing likelihoods of 2013 and before
+                # following 2 lines for compatibility with lensing likelihoods <= 2013
                 # (then, clik.get_lmax() just returns an integer for lensing likelihoods;
                 # this behavior was for clik versions < 10)
                 except:
@@ -143,9 +143,9 @@ class _planck_clik_prototype(Likelihood):
         if self.lensing:
             raise NotImplementedError("Lensing lik not implemented!!!")
             # For lensing, the order would be: **phiphi TT EE BB TE TB EB**
-        requested_i = [c=="1" for c in self.clik.get_has_cl()]
-        requested_cls =[cl for cl,i in
-                        zip(["TT","EE","BB","TE","TB","EB"], requested_i) if i]
+        requested_i = [c == "1" for c in self.clik.get_has_cl()]
+        requested_cls = [
+            cl for cl,i in zip(["TT","EE","BB","TE","TB","EB"], requested_i) if i]
         # State requisites to the theory code
         self.theory.needs({"Cl": requested_cls, "l_max": self.l_max})
         self.expected_params = list(self.clik.extra_parameter_names)
@@ -154,8 +154,12 @@ class _planck_clik_prototype(Likelihood):
         if "plikHM_lite" in self.name:
             i = self.expected_params.index('A_Planck')
             self.expected_params[i] = 'A_planck'
-            log.info("In %s, corrected nuisance parameter name A_Planck to A_planck" % self.name)
-        
+            log.info("In %s, corrected nuisance parameter name A_Planck to A_planck" %
+                     self.name)
+        # Check that the parameters are the right ones
+        assert set(self.input_params.keys()) == set(self.expected_params), (
+            "Likelihoods parameters do not coincide with the ones clik understands.")
+
     def logp(self, **params_values):
         # get Cl's from the theory code
         cl = self.theory.get_cl()
@@ -166,7 +170,7 @@ class _planck_clik_prototype(Likelihood):
                 tot = np.zeros(
                     np.sum(self.clik.get_lmax()) + length +
                     len(self.params()))
-            # following 3 lines for compatibility with lensing likelihoods of 2013 and before
+            # following 3 lines for compatibility with lensing likelihoods <= 2013
             # (then, clik.get_lmax() just returns an integer for lensing likelihoods,
             # and the length is always 2 for cl['pp'], cl['tt'])
             except:
@@ -217,7 +221,7 @@ class _planck_clik_prototype(Likelihood):
                                 tot[index+j] = 0 #cl['eb'][j] class does not compute eb
 
                         index += self.clik.get_lmax()[i]+1
-            # following 8 lines for compatibility with lensing likelihoods of 2013 and before
+            # following 8 lines for compatibility with lensing likelihoods <= 2013
             # (then, clik.get_lmax() just returns an integer for lensing likelihoods,
             # and the length is always 2 for cl['pp'], cl['tt'])
             except:
@@ -239,7 +243,7 @@ class _planck_clik_prototype(Likelihood):
         return self.clik(tot)[0]
 
     def close(self):
-        del(self.clik) # MANDATORY: forces deallocation of the Cython class
+        del(self.clik)  # MANDATORY: forces deallocation of the Cython class
         # Actually, it does not work for low-l likelihoods, which is quite dangerous!
 
 
