@@ -254,7 +254,7 @@ class camb(Theory):
                     self.states[i_state]["CAMBparams"], **self.collectors[product].kwargs)
             # Prepare derived parameters
             if derived == {}:
-                derived.update(self.get_derived(i_state))
+                derived.update(self.get_derived_all(i_state))
                 # Careful: next step must keep the order
                 self.states[i_state]["derived"] = [derived[p] for p in self.output_params]
         # make this one the current one by decreasing the antiquity of the rest
@@ -280,41 +280,42 @@ class camb(Theory):
         # Derived parameters (if some need some additional computations)
         # ...
 
-    def get_derived(self, i_state):
+    def get_derived_from_params(self, p, i_state=None):
+        return getattr((self.current_state() if i_state is None else self.states[i_state])
+                       ["CAMBparams"], p, None)
+
+    def get_derived_from_std(self, p, i_state=None):
+        return ((self.current_state() if i_state is None else self.states[i_state])
+                ["CAMBresults"].get_derived_params().get(p, None))
+
+    def get_derived_from_getter(self, p, i_state=None):
+        return getattr((self.current_state() if i_state is None else self.states[i_state])
+                       ["CAMBparams"], "get_"+p, lambda: None)()
+
+    def get_derived(self, p, i_state=None):
+        """General function to get a derived parameter. Use this one."""
+        # specific calls, if general ones above failed:
+        if p == "sigma8":
+            return ((self.current_state() if i_state is None else self.states[i_state])
+                    ["CAMBresults"].get_sigma8()[0])
+        for f in [self.get_derived_from_params,
+                  self.get_derived_from_std,
+                  self.get_derived_from_getter]:
+            derived = f(p)
+            if derived is not None:
+                return derived
+
+    def get_derived_all(self, i_state):
         """
         Returns a dictionary of derived parameters with their values, using the
         state #`i_state`.
         """
         derived = {}
-        params = self.states[i_state]["CAMBparams"]
-        results = self.states[i_state]["CAMBresults"]
-        # Create list of *general* functions to get derived parameters
-        def from_params(p):
-            return getattr(params, p, None)
-        def from_std(p):
-            if p in self.camb.model.derived_names:
-                if not hasattr(self, "get_derived_params"):
-                    self.get_derived_params = results.get_derived_params()
-            return getattr(self, "get_derived_params", {}).get(p, None)
-        def from_getter(p):
-            return getattr(params, "get_"+p, lambda: None)()
-        # fill the list
         for p in self.output_params:
-            for f in [from_params, from_std, from_getter]:
-                derived[p] = f(p)
-                if derived[p] != None:
-                    break
-            # specific calls, if general ones above failed:
-            if p == "sigma8":
-                derived[p] = results.get_sigma8()[0]
-            if derived[p] == None:
+            derived[p] = self.get_derived(p, i_state)
+            if derived[p] is None:
                 log.error("Derived param '%s' not implemented in the CAMB interface", p)
                 raise HandledException
-        # Cleanup (necessary!)
-        try:
-            del(self.get_derived_params)
-        except AttributeError:
-            pass
         return derived
 
     def get_cl(self):
