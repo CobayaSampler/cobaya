@@ -124,7 +124,7 @@ log = logging.getLogger(__name__)
 class_options = {"speed": 1}
 
 
-class Likelihood():
+class Likelihood(object):
     """Likelihood class prototype."""
 
     # Generic initialisation -- do not touch
@@ -148,7 +148,7 @@ class Likelihood():
         # Initialise
         self.theory = theory
         self.initialise()
-    
+
     # What you *must* implement to create your own likelihood:
 
     # Optional
@@ -230,7 +230,7 @@ class LikelihoodExternalFunction(Likelihood):
             raise HandledException
 
 
-class LikelihoodCollection():
+class LikelihoodCollection(object):
     """
     Likelihood manager:
     Initialises the theory code and the experimental likelihoods.

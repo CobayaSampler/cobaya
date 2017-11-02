@@ -1,7 +1,6 @@
 from __future__ import division
 import numpy as np
 import os
-from collections import OrderedDict as odict
 from copy import deepcopy
 
 from cobaya.conventions import _theory, _likelihood, _params, _derived_pre
@@ -21,7 +20,7 @@ def adapt_covmat(filename, tmpdir, theory="camb", theta_factor=100):
     with open(filename, "r") as original:
         params = original.readline()[1:].split()
         covmat = np.loadtxt(filename)
-    i_logA  = params.index("logA")
+    i_logA = params.index("logA")
     params[i_logA] = "logAs1e10"
     i_theta = params.index("cosmomc_theta")
     if theory == "camb":
@@ -86,18 +85,18 @@ def body_of_test(modules, x, theory):
     # Check value of likelihoods
     for lik in info[_likelihood]:
         chi2 = products["sample"][_chi2+separator+lik][0]
-        tolerance = tolerance_chi2_abs + (2.1 if theory=="classy" else 0)
+        tolerance = tolerance_chi2_abs + (2.1 if theory == "classy" else 0)
         assert abs(chi2-ref_chi2[lik]) < tolerance, (
             "Likelihood value for '%s' off by more than %f!"%(lik, tolerance_chi2_abs))
     # Check value of derived parameters
     not_tested = []
     not_passed = []
     for p in derived_values:
-        if derived_values[p][0] == None or p not in derived_bestfit_test:
+        if derived_values[p][0] is None or p not in derived_bestfit_test:
             not_tested += [p]
             continue
-        rel = (abs(products["sample"][ _derived_pre+p][0]-derived_values[p][0])
-               /derived_values[p][1])
+        rel = (abs(products["sample"][_derived_pre+p][0]-derived_values[p][0])
+               / derived_values[p][1])
         if rel > tolerance_derived*(
                 2 if p in ("YHe", "Y_p", "DH", "sigma8", "s8omegamp5") else 1):
             not_passed += [(p, rel)]

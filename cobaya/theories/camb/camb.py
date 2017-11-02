@@ -159,6 +159,7 @@ log = logging.getLogger(__name__)
 # Result collector
 collector = namedtuple("collector", ["method", "kwargs"])
 
+
 class camb(Theory):
 
     def initialise(self):
@@ -170,8 +171,8 @@ class camb(Theory):
                 raise HandledException
             pycamb_path = os.path.join(self.path, "pycamb")
             if not os.path.exists(pycamb_path):
-                log.error("Either CAMB is not in the given folder, '%s', or you are "
-                          "using a very old version without the `pycamb` Python interface.",
+                log.error("Either CAMB is not in the given folder, '%s', or you are using"
+                          " a very old version without the `pycamb` Python interface.",
                           self.path)
                 raise HandledException
             sys.path.insert(0, pycamb_path)
@@ -205,8 +206,8 @@ class camb(Theory):
             self.also["H0"] = None
 
     def current_state(self):
-       lasts = [self.states[i]["last"] for i in range(self.n_states)]
-       return self.states[lasts.index(max(lasts))]
+        lasts = [self.states[i]["last"] for i in range(self.n_states)]
+        return self.states[lasts.index(max(lasts))]
 
     def set(self, params_values_dict, i_state):
         # Feed the arguments defining the cosmology to the cosmological code
@@ -235,8 +236,8 @@ class camb(Theory):
                        if self.states[i]["params"] == params_values_dict).next()
             # Get (pre-computed) derived parameters
             if derived == {}:
-                derived.update(dict([[p,v] for p,v in
-                                     zip(self.output_params, self.states[i_state]["derived"])]))
+                derived.update({p: v for p,v in zip(self.output_params,
+                                                    self.states[i_state]["derived"])})
             log.debug("Re-using computed results (state %d)", i_state)
         except StopIteration:
             # update the (first) oldest one and compute
@@ -339,7 +340,7 @@ class camb(Theory):
         return cl
 
 
-# Installation routines ###################################################################
+# Installation routines ##################################################################
 
 def is_installed(**kwargs):
     try:
