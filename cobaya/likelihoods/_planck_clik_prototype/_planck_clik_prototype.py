@@ -303,15 +303,17 @@ def is_installed_clik(path, log_and_fail=False, import_it=True):
 
 
 def install_clik(path):
-    try:
-        import cython
-    except ImportError:
-        log.info("clik: installing requisite 'cython'...")
-        import pip
-        from cobaya.install import user_flag_if_needed
-        exit_status = pip.main(["install", "cython", "--upgrade"] + user_flag_if_needed())
+    for req in ("cython", "pyfits"):
+        from importlib import import_module
+        try:
+            import_module(req)
+        except ImportError:
+            log.info("clik: installing requisite '%s'...", req)
+            import pip
+            from cobaya.install import user_flag_if_needed
+        exit_status = pip.main(["install", req, "--upgrade"] + user_flag_if_needed())
         if exit_status:
-            log.error("Failed installing requisite 'cython'.")
+            log.error("Failed installing requisite '%s'.", req)
             raise HandledException
     log.info("clik: downlowading...")
     if not download_from_planck("1904", path):
