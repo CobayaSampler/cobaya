@@ -248,7 +248,7 @@ class classy(Theory):
                 return False
             # CLASS not correctly initialised, or input parameters not correct
             except CosmoSevereError:
-                log.error("Error setting parameters or computig results -- "
+                log.error("Error setting parameters or computing results -- "
                           "see CLASS's error trace below.\n")
                 raise
             # Prepare derived parameters
@@ -308,20 +308,21 @@ class classy(Theory):
             pass # all well!
         return derived
 
-    def get_cl(self):
+    def get_cl(self, ell_factor=False):
         """
         Returns the :math:`C_{\ell}` from the cosmological code in :math:`\mu {\\rm K}^2`
         """
         current_classy = self.current_state()["classy"]
         # get C_l^XX from the cosmological code
         cl = current_classy.lensed_cl(self.input_default["l_max_scalars"])
+        ell_factor = ((cl["ell"]+1)*cl["ell"]/(2*np.pi))[2:] if ell_factor else 1
         # convert dimensionless C_l's to C_l in muK**2
         T = current_classy.T_cmb()
         for key in cl:
             # All quantities need to be multiplied by this factor, except the
             # phi-phi term, that is already dimensionless
             if key not in ['pp', 'ell']:
-                cl[key] *= (T*1.e6)**2
+                cl[key][2:] *= (T*1.e6)**2 * ell_factor
         return cl
 
 
