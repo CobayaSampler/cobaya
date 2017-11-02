@@ -112,6 +112,7 @@ def yaml_dump(data, trim_params_info=False, stream=None, Dumper=yaml.Dumper, **k
         from cobaya.conventions import _likelihood, _params
         data = deepcopy(data)
         for lik_info in data.get(_likelihood, {}).values():
-            (lik_info or {_params: None}).pop(_params, None)
+            if hasattr(lik_info, "pop"):
+                lik_info.pop(_params, None)
     # Dump!
     return yaml.dump(data, stream, OrderedDumper, **kwds)
