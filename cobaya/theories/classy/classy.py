@@ -301,11 +301,11 @@ class classy(Theory):
         # recover "if None in derived:" from the CAMB interface
         # Check if all processes (actually does nothing here)
         try:
-            first_None = (p for p,v in derived.iteritems() if v==None).next()
+            (p for p,v in derived.iteritems() if v is None).next()
             log.error("Derived param '%s' not working in the CLASS interface", p)
             raise HandledException
         except StopIteration:
-            pass # all well!
+            pass  # all well!
         return derived
 
     def get_cl(self, ell_factor=False):

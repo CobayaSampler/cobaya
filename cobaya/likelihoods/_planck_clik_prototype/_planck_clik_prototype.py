@@ -297,8 +297,7 @@ def is_installed_clik(path, log_and_fail=False, import_it=True):
     sys.path.insert(0, clik_path)
     try:
         if import_it:
-            from importlib import import_module
-            import_module("clik")
+            import clik
         return True
     except:
         return False

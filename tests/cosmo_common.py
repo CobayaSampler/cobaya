@@ -95,8 +95,8 @@ def body_of_test(modules, x, theory):
         if derived_values[p][0] is None or p not in derived_bestfit_test:
             not_tested += [p]
             continue
-        rel = (abs(products["sample"][_derived_pre+p][0]-derived_values[p][0])
-               / derived_values[p][1])
+        rel = (abs(products["sample"][_derived_pre+p][0]-derived_values[p][0]) /
+               derived_values[p][1])
         if rel > tolerance_derived*(
                 2 if p in ("YHe", "Y_p", "DH", "sigma8", "s8omegamp5") else 1):
             not_passed += [(p, rel)]
