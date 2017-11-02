@@ -27,6 +27,8 @@ likelihood:
       use_max: 9
     field_names: [T, E, B, P]
     map_separator: x
+    # Actually computed l_max (takes into account the lensing window function)
+    l_max: 1500
 
 params:
   # dust power at ell=80, nu=353 GHz [uK^2]

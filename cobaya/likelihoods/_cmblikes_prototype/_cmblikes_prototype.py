@@ -73,7 +73,15 @@ class _cmblikes_prototype(Likelihood):
         # State requisites to the theory code
         requested_cls = [self.field_names[i]+self.field_names[j]
                          for i,j in zip(*np.where(self.cl_lmax != 0))]
-        self.theory.needs({"Cl": requested_cls, "l_max": int(np.max(self.cl_lmax))})
+        # l_max has to take into account the window function of the lensing
+        # so we check the computed l_max ("l_max" option) is higher than the requested one
+        requested_l_max = int(np.max(self.cl_lmax))
+        if self.l_max <= requested_l_max:
+            log.error("[%s] You are setting a very low l_max. "
+                      "The likelihood value will probably not be correct. "
+                      "Make sure to make 'l_max'>>%d", self.name, requested_l_max)
+            raise HandledException
+        self.theory.needs({"Cl": requested_cls, "l_max": self.l_max})
 
     def typeIndex(self, field):
         return self.field_names.index(field)
