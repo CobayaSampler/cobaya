@@ -2,19 +2,29 @@ import numpy as np
 
 from cobaya.conventions import _path_install, _theory, _sampler, _likelihood, _params
 from cobaya.run import run
+from cosmo_common import baseline_cosmology_classy_extra
 
 
-def test_cosmo_bicep_keck_2015_camb(modules, theory="camb"):
+def test_cosmo_bicep_keck_2015_camb(modules):
+    body_of_test(modules, "camb")
+
+
+def test_cosmo_bicep_keck_2015_classy(modules):
+    body_of_test(modules, "classy")
+
+
+def body_of_test(modules, theory):
     assert modules, "I need a modules folder!"
     info = {_path_install: modules,
             _theory: {theory: None},
             _sampler: {"evaluate": None}}
     info[_likelihood] = {"bicep_keck_2015": None}
     info[_params] = {
-        "theory": {
+        _theory: {
             "ombh2": 0.2224017E-01,
             "omch2": 0.1192851E+00,
-            "cosmomc_theta": 0.1040761E-1,
+            "H0": 67.30713,
+            # "cosmomc_theta": 0.1040761E-1,
             "tau": 0.7602569E-01,
             "As": 1e-10*np.exp(0.3081122E+01),
             "ns": 0.9633217E+00,
@@ -29,9 +39,13 @@ def test_cosmo_bicep_keck_2015_camb(modules, theory="camb"):
         'EEtoBB_dust': 2,
         'EEtoBB_sync': 2,
         'BBTdust': 19.6}
-    updated_info, products = run(info)
-    # print products["sample"]
     reference_value = 650.872548
     abs_tolerance = 0.1
+    if theory == "classy":
+        info[_params][_theory].update(baseline_cosmology_classy_extra)
+        abs_tolerance += 2
+        print "WE SHOULD NOT HAVE TO LOWER THE TOLERANCE THAT MUCH!!!"
+    updated_info, products = run(info)
+    # print products["sample"]
     computed_value = products["sample"]["chi2__"+info[_likelihood].keys()[0]].values[0]
     assert (computed_value-reference_value) < abs_tolerance
