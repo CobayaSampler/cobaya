@@ -253,10 +253,11 @@ class _planck_clik_prototype(Likelihood):
 common_path = "planck_2015"
 
 
-def download_from_planck(product_id, path):
+def download_from_planck(product_id, path, no_progress_bars=False):
     try:
         from wget import download, bar_thermometer
-        wget_kwargs = {"out": path, "bar": bar_thermometer}
+        wget_kwargs = {"out": path, "bar":
+                       (bar_thermometer if not no_progress_bars else None)}
         prefix = r"http://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLOGY_OID="
         filename = download(prefix+product_id, **wget_kwargs)
     except:
@@ -296,13 +297,14 @@ def is_installed_clik(path, log_and_fail=False, import_it=True):
     sys.path.insert(0, clik_path)
     try:
         if import_it:
-            import clik
+            from importlib import import_module
+            import_module("clik")
         return True
     except:
         return False
 
 
-def install_clik(path):
+def install_clik(path, no_progress_bars=False):
     for req in ("cython", "pyfits"):
         from importlib import import_module
         try:
@@ -311,12 +313,12 @@ def install_clik(path):
             log.info("clik: installing requisite '%s'...", req)
             import pip
             from cobaya.install import user_flag_if_needed
-            exit_status = pip.main(["install", req, "--upgrade"] + user_flag_if_needed())
+            exit_status = pip.main(["install", req] + user_flag_if_needed())
             if exit_status:
                 log.error("Failed installing requisite '%s'.", req)
                 raise HandledException
     log.info("clik: downlowading...")
-    if not download_from_planck("1904", path):
+    if not download_from_planck("1904", path, no_progress_bars=no_progress_bars):
         log.error("Not possible to download clik.")
         return False
     log.info("clik: configuring... (and maybe installing dependencies...)")
@@ -366,7 +368,8 @@ def is_installed(**kwargs):
     return result
 
 
-def install(path=None, name=None, force=False, code=True, data=True):
+def install(path=None, name=None, force=False, code=True, data=True,
+            no_progress_bars=False):
     set_logger(name)
     # Create common folders: all planck likelihoods share install folder for code and data
     paths = {}
@@ -378,7 +381,7 @@ def install(path=None, name=None, force=False, code=True, data=True):
     # Install clik
     if code and (not is_installed_clik(paths["code"]) or force):
         log.info("Installing the clik code.")
-        success = install_clik(paths["code"])
+        success = install_clik(paths["code"], no_progress_bars=no_progress_bars)
         if not success:
             return False
     if data:
@@ -389,7 +392,8 @@ def install(path=None, name=None, force=False, code=True, data=True):
         product_id, _ = get_product_id_and_clik_file(name)
         # Download and uncompress the particular likelihood
         log.info("Downloading likelihood data...")
-        if not download_from_planck(product_id, paths["data"]):
+        if not download_from_planck(product_id, paths["data"],
+                                    no_progress_bars=no_progress_bars):
             log.error("Not possible to download this likelihood.")
             return False
         log.info("Likelihood data downloaded and uncompressed correctly.")

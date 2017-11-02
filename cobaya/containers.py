@@ -198,7 +198,7 @@ def create_docker_image(filenames, MPI_version=None):
     recipe = ur"""
     FROM cobaya/base_mpich_%s:latest
     %s
-    RUN cobaya-install %s --path %s --just-code --force
+    RUN cobaya-install %s --path %s --just-code --force --no-progress-bars
     %s
     CMD ["cat", "%s"]
     """ % (MPI_version, echos_reqs, requirements_file_path, _modules_path,
@@ -229,7 +229,7 @@ def create_singularity_image(filenames, MPI_version=None):
         %%post\n"""%MPI_version) +
         dedent(echos_reqs) + dedent("""
         export CONTAINED=TRUE
-        cobaya-install %s --path %s --just-code --force
+        cobaya-install %s --path %s --just-code --force --no-progress-bars
         mkdir %s
 
         %%help

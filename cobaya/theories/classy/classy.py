@@ -337,7 +337,7 @@ def is_installed(**kwargs):
     return True
 
 
-def install(path=None, force=False, code=True, **kwargs):
+def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs):
     if not code:
         log.info("Code not requested. Nothing to do.")
         return True
@@ -353,7 +353,7 @@ def install(path=None, force=False, code=True, **kwargs):
     try:
         filename = download(
             "https://github.com/lesgourg/class_public/archive/v2.6.1.tar.gz",
-            out=parent_path, bar=bar_thermometer)
+            out=parent_path, bar=(bar_thermometer if not no_progress_bars else None))
     except:
         log.error("Error downloading the latest release of CLASS.")
         return False

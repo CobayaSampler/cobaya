@@ -15,4 +15,4 @@ if __name__ == "__main__":
     if not os.path.exists(path):
         os.makedirs(path)
     from cobaya.install import install
-    install(info_install, path=path)
+    install(info_install, path=path, no_progress_bars=True)

@@ -31,7 +31,8 @@ def install(*infos, **kwargs):
                   (" Are you sure you have mounted the data folder in the container?"
                    if "CONTAINED" in os.environ else ""))
         raise HandledException
-    kwargs_install = {"force": kwargs.get("force", False)}
+    kwargs_install = {"force": kwargs.get("force", False),
+                      "no_progress_bars": kwargs.get("no_progress_bars")}
     for what in (_code, _data):
         kwargs_install[what] = kwargs.get(what, True)
         spath = os.path.join(abspath, what)
@@ -77,8 +78,11 @@ def install(*infos, **kwargs):
         raise HandledException
 
 
-# Add --user flag to pip, if needed: when not in Travis, Docker, Anaconda or a virtual env
 def user_flag_if_needed():
+    """
+    Adds --user flag to pip, if needed:
+    when not in Travis, Docker, Anaconda or a virtual env.
+    """
     if (    "TRAVIS" not in os.environ and  # Travis
             "CONTAINED" not in os.environ and  # Docker, Shifter, Singularity
             not any([(s in sys.version) for s in ["conda", "Continuum"]]) and  # Anaconda
@@ -107,6 +111,8 @@ def install_script():
                             help="Desired path where to install external modules.")
         parser.add_argument("-f", "--force", action="store_true", default=False,
                             help="Force re-installation of apparently installed modules.")
+        parser.add_argument("--no-progress-bars", action="store_true", default=False,
+                            help="No progress bars shown. Shorter logs (use in Travis.")
         group_just = parser.add_mutually_exclusive_group(required=False)
         group_just.add_argument("-c", "--just-code", action="store_false", default=True,
                                 help="Install code of the modules.", dest=_data)
@@ -122,4 +128,5 @@ def install_script():
             raise HandledException
         # Launch installer
         install(*infos, path=arguments.path[0],
-                **{arg: getattr(arguments, arg) for arg in ["force", _code, _data]})
+                **{arg: getattr(arguments, arg)
+                   for arg in ["force", _code, _data, "no_progress_bars"]})
