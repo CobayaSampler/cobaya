@@ -135,7 +135,7 @@ baseline_cosmology = r"""
     cosmomc_theta_100:
       prior:
         min: 0.5
-        max: 100
+        max: 10
       ref:
         dist: norm
         loc: 1.0411
