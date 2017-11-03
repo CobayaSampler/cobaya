@@ -96,7 +96,7 @@ best adapts to your needs:
       $ wget https://github.com/cmbant/CAMB/archive/master.zip
       $ unzip master.zip
       $ rm master.zip
-      $ mv CAMB-master CAMB       
+      $ mv CAMB-master CAMB
       $ cd CAMB/pycamb
       $ python setup.py build
 
@@ -189,6 +189,9 @@ class camb(Theory):
                 "     '/path/to/camb/pycamb/python setup.py install --user'")
             raise HandledException
         self.camb = camb
+        # Prepare errors
+        from camb.baseconfig import CAMBParamRangeError
+        global CAMBParamRangeError
         # Generate states, to avoid recomputing
         self.n_states = 3
         self.states = [{"CAMBparams": None, "CAMBresults": None,
@@ -223,7 +226,10 @@ class camb(Theory):
         self.states[i_state]["params"] = params_values_dict
         try:
             self.states[i_state]["CAMBparams"] = self.camb.set_params(**args)
-        except Exception:
+            return True
+        except CAMBParamRangeError:
+            return False
+        except:
             log.error("Error setting CAMB parameters -- see CAMB's error trace below.\n"
                       "The parameters were %r", args)
             raise
