@@ -222,6 +222,7 @@ from collections import OrderedDict as odict
 import numpy as np
 import numbers
 import inspect
+from copy import deepcopy
 
 # Local
 from cobaya.conventions import _prior, _p_ref
@@ -250,8 +251,8 @@ class Prior():
         self.name = []
         self.pdf = []
         self.ref_pdf = []
-        self.lims = []
-        for p in sampled_params_info:
+        self.lims = np.zeros((len(sampled_params_info), 2))
+        for i, p in enumerate(sampled_params_info):
             self.name += [p]
             prior = sampled_params_info[p].get(_prior)
             self.pdf += [get_scipy_1d_pdf({p: prior})]
@@ -264,11 +265,12 @@ class Prior():
                 self.ref_pdf += [get_scipy_1d_pdf({p: ref})]
             else:
                 self.ref_pdf += [np.nan]
-            self.lims += [(-np.inf,np.inf)]
-            if self.pdf[-1].__class__.__name__ == "rv_frozen":
-                self.lims[-1] = self.pdf[-1].interval(1)
-            else:
-                log.error("No limits defined for parameter '%s'.", p)
+            self.lims[i] = [-np.inf, np.inf]
+            try:
+                self.lims[i] = self.pdf[-1].interval(1)
+            except AttributeError:
+                log.error("No limits defined for parameter '%s' "
+                          "(maybe not a scipy 1d pdf).", p)
                 raise HandledException
         # Process the external prior(s):
         self.external = odict()
@@ -297,8 +299,12 @@ class Prior():
         """
         return len(self.pdf)
 
-    def limits(self):
+    def limits(self, confidence_for_unbounded=1):
         """
+        For unbounded parameters, if ``confidence_for_unbounded < 1`` given, the
+        returned interval contains the requested confidence level interval with equal
+        areas around the median.
+
         Returns:
            An array of limits ``[min,max]`` for the parameters, in the order given by the
            input.
@@ -307,7 +313,20 @@ class Prior():
         sub-block of that particular parameter's info may not be faithful to the
         externally defined prior.
         """
-        return np.array(self.lims)
+        if confidence_for_unbounded >= 1:
+            return self.lims
+        try:
+            infs = list(set(np.argwhere(abs(self.lims) == np.inf).T[0]))
+            if infs:
+                log.warn("There are unbounded parameters. Prior limits are given at %s "
+                         "confidence level. Beware of likelihood modes at the edge of "
+                         "the prior", confidence_for_unbounded)
+            lims = deepcopy(self.lims)
+            lims[infs] = [self.pdf[i].interval(confidence_for_unbounded) for i in infs]
+            return lims
+        except AttributeError:
+            log.error("Some parameter names (positions %r) have no limits defined.", infs)
+            raise HandledException
 
     def sample(self, n=1, external_error=True):
         """
@@ -343,7 +362,8 @@ class Prior():
 
     def logp_external(self, x):
         """Evaluates the logprior using the external prior only."""
-        return sum([ext["logp"](*x[ext["indices"]]) for ext in self.external.values()])
+        return sum([ext["logp"](*[x[i] for i in ext["indices"]])
+                    for ext in self.external.values()])
 
     def covmat(self, external_error=True):
         """
@@ -399,8 +419,8 @@ class Prior():
                           for i, ref_pdf in enumerate(self.ref_pdf)])
         where_no_ref = np.isnan(covmat)
         if np.any(where_no_ref):
-            log.warning("Reference pdf not defined or improper for some parameters. "
-                        "Using prior's sigma instead for them.")
+            log.warn("Reference pdf not defined or improper for some parameters. "
+                     "Using prior's sigma instead for them.")
             covmat[where_no_ref] = self.covmat(external_error=False)[where_no_ref]
         return covmat
 
