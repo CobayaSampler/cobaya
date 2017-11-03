@@ -224,7 +224,7 @@ import numbers
 import inspect
 
 # Local
-from cobaya.conventions import _prior, _p_dist, _p_ref, _p_label
+from cobaya.conventions import _prior, _p_ref
 from cobaya.tools import get_external_function, get_scipy_1d_pdf
 from cobaya.log import HandledException
 
@@ -243,7 +243,8 @@ class Prior():
         """
         sampled_params_info = parametrisation.sampled_params()
         if not sampled_params_info:
-            log.warning("No sampled parameters requested! This will fail for non-mock samplers.")
+            log.warning("No sampled parameters requested! "
+                        "This will fail for non-mock samplers.")
         # pdf: a list of independent components
         # in principle, separable: one per parameter
         self.name = []
@@ -259,7 +260,7 @@ class Prior():
             # Cases: number, pdf (something, but not a number), nothing
             if isinstance(ref, numbers.Number):
                 self.ref_pdf += [ref]
-            elif ref != None:
+            elif ref is not None:
                 self.ref_pdf += [get_scipy_1d_pdf({p: ref})]
             else:
                 self.ref_pdf += [np.nan]
@@ -267,23 +268,27 @@ class Prior():
             if self.pdf[-1].__class__.__name__ == "rv_frozen":
                 self.lims[-1] = self.pdf[-1].interval(1)
             else:
-                log.error("No limits defined for parameter '%s'.", param)
+                log.error("No limits defined for parameter '%s'.", p)
                 raise HandledException
         # Process the external prior(s):
         self.external = odict()
         for name in (info_prior if info_prior else {}):
             log.debug("Loading external prior '%s' from: '%s'", name, info_prior[name])
-            self.external[name] = {"logp": get_external_function(info_prior[name], name=name)}
-            self.external[name]["argspec"] = inspect.getargspec(self.external[name]["logp"])
+            self.external[name] = (
+                {"logp": get_external_function(info_prior[name], name=name)})
+            self.external[name]["argspec"] = (
+                inspect.getargspec(self.external[name]["logp"]))
             try:
-                self.external[name]["indices"] = [list(sampled_params_info).index(p)
-                                                  for p in self.external[name]["argspec"].args]
+                self.external[name]["indices"] = [
+                    list(sampled_params_info).index(p)
+                    for p in self.external[name]["argspec"].args]
             except ValueError:
-                log.error(
-                    "The arguments of the external prior '%s' must be known *sampled* parameters. "
-                    "Got %r", name, self.external[name]["argspec"].args)
+                log.error("The arguments of the external prior '%s' "
+                          "must be known *sampled* parameters. "
+                          "Got %r1", name, self.external[name]["argspec"].args)
                 raise HandledException
-            log.warning("External prior '%s' loaded. Mind that it might not be normalised!", name)
+            log.warning("External prior '%s' loaded. "
+                        "Mind that it might not be normalised!", name)
 
     def d(self):
         """
@@ -299,10 +304,10 @@ class Prior():
            input.
 
         NB: If an external prior has been defined, the limits given in the 'prior'
-        sub-block of that particular parameter's info may not be faithful to the externally
-        defined prior.
+        sub-block of that particular parameter's info may not be faithful to the
+        externally defined prior.
         """
-        return np.array(self.lims.values())
+        return np.array(self.lims)
 
     def sample(self, n=1, external_error=True):
         """
@@ -313,7 +318,7 @@ class Prior():
         ignoring the external prior), set `external_error` to `False`.
 
         Returns:
-          An array of ``n`` samples from the prior, as vectors ``[value of param 1, ...]``.
+          Array of ``n`` samples from the prior, as vectors ``[value of param 1, ...]``.
         """
         if external_error and self.external:
             log.error("It is not possible to sample from an external prior.")
@@ -325,16 +330,16 @@ class Prior():
         Returns:
            The probability density of the given point or array of points.
         """
-        return (np.prod([pdf.pdf(xi) for pdf,xi in zip(self.pdf,x)])
-                * np.exp(self.logp_external(x)))
+        return (np.prod([pdf.pdf(xi) for pdf,xi in zip(self.pdf,x)]) *
+                np.exp(self.logp_external(x)))
 
     def logp(self, x):
         """
         Returns:
            The log-probability density of the given point or array of points.
         """
-        return (sum([pdf.logpdf(xi) for pdf,xi in zip(self.pdf,x)])
-                + self.logp_external(x))
+        return (sum([pdf.logpdf(xi) for pdf,xi in zip(self.pdf,x)]) +
+                self.logp_external(x))
 
     def logp_external(self, x):
         """Evaluates the logprior using the external prior only."""
@@ -346,7 +351,8 @@ class Prior():
            The covariance matrix of the prior.
         """
         if external_error and self.external:
-            log.error("It is not possible to get the covariance matrix from an external prior.")
+            log.error("It is not possible to get the covariance matrix "
+                      "from an external prior.")
             raise HandledException
         return np.diag([pdf.var() for pdf in self.pdf]).T
 
@@ -386,8 +392,8 @@ class Prior():
     def reference_covmat(self):
         """
         Returns:
-          The standard deviation of the 1d ref pdf's. For those parameters that do not have
-          a ref pdf defined, the standard deviation of the prior is taken instead.
+          The standard deviation of the 1d ref pdf's. For those parameters that do not
+          have a ref pdf defined, the standard deviation of the prior is taken instead.
         """
         covmat = np.diag([getattr(ref_pdf, "var", lambda: np.nan)()
                           for i, ref_pdf in enumerate(self.ref_pdf)])
@@ -399,7 +405,9 @@ class Prior():
         return covmat
 
     # Python magic for the "with" statement
+
     def __enter__(self):
         return self
+
     def __exit__(self, exception_type, exception_value, traceback):
         pass
