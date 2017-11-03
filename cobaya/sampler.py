@@ -150,8 +150,10 @@ class Sampler(object):
         return logpost, logprior, logliks, derived_sampler
 
     # Python magic for the "with" statement
+
     def __enter__(self):
         return self
+
     def __exit__(self, exception_type, exception_value, traceback):
         self.close()
 

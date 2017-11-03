@@ -58,6 +58,12 @@ parameters related to the output). The speed hierarchy, specified as described i
    because ``PolyChord`` samples uniformly from a bounded *hypercube*, defined by a
    non-trivial transformation for general unbounded priors.
 
+   The option ``confidence_for_unbounded`` will automatically bind the priors at 5-sigma
+   c.l., but this may cause problems with likelihood modes at the edge of the prior.
+   In those cases, check for stability with respect to increasing that parameter.
+   Of course, if ``confidence_for_unbounded`` is too small, the resulting evidence may be
+   biased towards a lower value.
+
 The main output is the Monte Carlo sample of sequentially discarded *live points*, saved
 in the standard sample format together with the ``input.yaml`` and ``full.yaml``
 files (see :doc:`output`). The raw ``PolyChord`` products are saved in a 
@@ -225,7 +231,7 @@ class polychord(Sampler):
 #            log.warning("Some speed blocks are not contiguous: PolyChord cannot deal "
 #                        "with the speed hierarchy. Not exploting it.")
         # prior conversion from the hypercube
-        limits = self.prior.limits()
+        limits = self.prior.limits(confidence_for_unbounded=self.confidence_for_unbounded)
         # Check if priors are bounded (nan's to inf)
         inf = np.where(np.isfinite(limits) is False)
         if len(inf[0]):
