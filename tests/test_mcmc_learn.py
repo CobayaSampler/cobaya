@@ -107,6 +107,9 @@ def test_gaussian_mcmc():
     # Run!!!
     info["debug"] = False
     info["debug_file"] = None
+#    info["output_prefix"] = "./poly/"
+#    info["sampler"] = {"polychord": {"path":"/home/jesus/scratch/PolyChord",
+#                                     "nlive": 25}}
     # Delay to one chain to check that the MPI communication of the sampler is non-blocking
     #    if rank == 1:
     #        info["likelihood"]["gaussian"]["delay"] = 0.1
@@ -115,12 +118,16 @@ def test_gaussian_mcmc():
     # Done! --> Tests
     if rank == 0:
         import getdist as gd
-        gdsamples = products["sample"].as_getdist_mcsamples(first=int(products["sample"].n()/2))
+        if info[_sampler] == "mcmc":
+            first = int(products["sample"].n()/2)
+        else:
+            first = 0
+        gdsamples = products["sample"].as_getdist_mcsamples(first=first)
         cov_sample, mean_sample = gdsamples.getCov(), gdsamples.getMeans()
         print mean_sample
         KL_final = KL_norm(m1=info[_likelihood]["gaussian"]["mean"],
                            S1=info[_likelihood]["gaussian"]["cov"],
-                           m2 = mean_sample[:dimension],
+                           m2=mean_sample[:dimension],
                            S2=cov_sample[:dimension,:dimension])
         np.set_printoptions(linewidth=np.inf)
         print "Likelihood covmat:  \n", info[_likelihood]["gaussian"]["cov"]

@@ -64,6 +64,10 @@ files (see :doc:`output`). The raw ``PolyChord`` products are saved in a
 subfolder of the output folder
 (determined by the option ``base_dir`` -- default: ``polychord_output``).
 
+.. note::
+
+   Getting a `Segmentation fault`? Try to evaluate your likelihood before calling
+   `PolyChord`: change to the `evaluate` sampler to test it.
 
 .. _pc_installation:
 
@@ -128,18 +132,19 @@ log = logging.getLogger(__name__)
 # attributes that need to be broadcasted
 to_broadcast = ["pc_args"]
 
+
 class polychord(Sampler):
     def initialise(self):
         """Imports the PolyChord sampler and prepares its arguments."""
-        if not get_mpi_rank(): # rank = 0 (MPI master) or None (no MPI)
+        if not get_mpi_rank():  # rank = 0 (MPI master) or None (no MPI)
             log.info("Initialising")
         # Importing PolyChord from the correct path
         if self.path:
             if not get_mpi_rank():
                 log.info("Importing PolyChord from %s", self.path)
                 if not os.path.exists(self.path):
-                    log.error(
-                    "The path you indicated for PolyChord does not exist: "+self.path)
+                    log.error("The path you indicated for PolyChord does not exist: %s",
+                              self.path)
                     raise HandledException
             sys.path.insert(0, self.path)
             from PyPolyChord import PyPolyChord
@@ -159,22 +164,23 @@ class polychord(Sampler):
             #     raise HandledException
         self.pc = PyPolyChord
         # Prepare arguments - get just the PolyChord arguments
-        self.pc_args = dict([(p, getattr(self,p)) for p in
-                        ["nlive", "num_repeats", "do_clustering", "precision_criterion",
-                         "max_ndead", "boost_posterior", "feedback", "update_files",
-                         "posteriors", "equals", "cluster_posteriors", "write_resume",
-                         "read_resume", "write_stats", "write_live", "write_dead",
-                         "base_dir", "grade_frac", "grade_dims"]])
+        self.pc_args = dict(
+            [(p, getattr(self,p))
+             for p in ["nlive", "num_repeats", "do_clustering", "precision_criterion",
+                       "max_ndead", "boost_posterior", "feedback", "update_files",
+                       "posteriors", "equals", "cluster_posteriors", "write_resume",
+                       "read_resume", "write_stats", "write_live", "write_dead",
+                       "base_dir", "grade_frac", "grade_dims"]])
         # Ignore null-defined ones, so PolyChord sets them to the defaults
-        self.pc_args = dict([(k,v) for k,v in self.pc_args.iteritems() if not v is None])
+        self.pc_args = dict([(k,v) for k,v in self.pc_args.iteritems() if v is not None])
         # Fill the automatic ones
-        if not "feedback" in self.pc_args:
+        if "feedback" not in self.pc_args:
             values = {logging.CRITICAL: 0, logging.ERROR: 0, logging.WARNING: 0,
                       logging.INFO: 1, logging.DEBUG: 2}
             self.pc_args["feedback"] = values[log.getEffectiveLevel()]
         self.pc_args["nDims"] = self.prior.d()
-        self.pc_args["nDerived"] = (
-            1 + len(self.likelihood.derived) + len(self.likelihood.names()))
+        self.pc_args["nDerived"] = (len(self.parametrisation.derived_params()) + 1 +
+                                    len(self.likelihood._likelihoods))
         try:
             output_folder = getattr(self.output, "folder")
             output_prefix = getattr(self.output, "prefix")
@@ -196,47 +202,48 @@ class polychord(Sampler):
             if self.pc_args.get("do_clustering") is not False:
                 try:
                     os.makedirs(os.path.join(self.pc_args["base_dir"], "clusters"))
-                except OSError: # exists!
+                except OSError:  # exists!
                     pass
             log.info("Storing raw PolyChord output in '%s'.", self.pc_args["base_dir"])
         # explotining the speed hierarchy
         # sort blocks by paramters order and check contiguity (required by PolyChord!!!)
-        speeds, blocks = zip(*self.likelihood.speed_blocked_params(as_indices=True))
-        speeds, blocks = np.array(speeds), np.array(blocks)
+#        speeds, blocks = zip(*self.likelihood.speed_blocked_params(as_indices=True))
+#        speeds, blocks = np.array(speeds), np.array(blocks)
         # weird behaviour of np.argsort with there is only 1 block
-        if len(blocks) > 1:
-            sorting_indices = np.argsort(blocks, axis=0)
-        else:
-            sorting_indices = [0]
-        speeds, blocks = speeds[sorting_indices], blocks[sorting_indices]
-        if np.all([np.all(block==range(block[0], block[-1]+1)) for block in blocks]):
-            log.warning("TODO: SPEED HIERARCHY EXPLOITATION DISABLED FOR NOW!!!")
+#        if len(blocks) > 1:
+#            sorting_indices = np.argsort(blocks, axis=0)
+#        else:
+#            sorting_indices = [0]
+#        speeds, blocks = speeds[sorting_indices], blocks[sorting_indices]
+#        if np.all([np.all(block==range(block[0], block[-1]+1)) for block in blocks]):
+        log.warning("TODO: SPEED HIERARCHY EXPLOITATION DISABLED FOR NOW!!!")
 #            self.pc_args["grade_frac"] = list(speeds)
 #            self.pc_args["grade_dims"] = [len(block) for block in blocks]
 #            log.info("Exploiting a speed hierarchy with speeds %r and blocks %r",
 #                     speeds, blocks)
-        else:
-            log.warning("Some speed blocks are not contiguous: PolyChord cannot deal "
-                        "with the speed hierarchy. Not exploting it.")
+#        else:
+#            log.warning("Some speed blocks are not contiguous: PolyChord cannot deal "
+#                        "with the speed hierarchy. Not exploting it.")
         # prior conversion from the hypercube
         limits = self.prior.limits()
         # Check if priors are bounded (nan's to inf)
-        inf = np.where(np.isfinite(limits)==False)
+        inf = np.where(np.isfinite(limits) is False)
         if len(inf[0]):
             params_names = self.prior.names()
             params = [params_names[i] for i in sorted(list(set(inf[0])))]
-            log.error("PolyChord needs bounded priors, but the parameter(s) '"+
+            log.error("PolyChord needs bounded priors, but the parameter(s) '"
                       "', '".join(params)+"' is(are) unbounded.")
             raise HandledException
         locs = limits[:,0]
         scales = limits[:,1] - limits[:,0]
         self.pc_args["prior"] = lambda x: (locs + np.array(x)*scales).tolist()
         # We will need the volume of the prior domain, since PolyChord divides by it
-        self.volume = np.prod(scales)
+        self.logvolume = np.log(np.prod(scales))
         # Done!
         if not get_mpi_rank():
-            log.info("Calling PolyChord with arguments"+
-                     "\n  ".join([""]+["%s : "%p+str(v) for p,v in self.pc_args.iteritems()]))
+            log.info("Calling PolyChord with arguments"
+                     "\n  ".join([""] +
+                                 ["%s : "%p+str(v) for p,v in self.pc_args.iteritems()]))
 
     def run(self):
         """
@@ -245,49 +252,41 @@ class polychord(Sampler):
         # Prepare the posterior
         # Don't forget to multiply by the volume of the physical hypercube,
         # since PolyChord divides by it
-        def logpost(p):
-            logprior = self.prior.logp(p)
-            logpost = logprior + np.log(self.volume)
-            if logprior > -np.inf:
-                derived = []
-                logliks = self.likelihood.logps(p, derived=derived)
-                logpost += sum(logliks)
-            else:
-                logliks = np.array([np.nan]*len(self.likelihoods))
-            # derived parameters -- add physical ones!!!
-            derived += [-logprior] + (-2*logliks).tolist()
-            log.debug("logpost=%r, derived=%r", logpost, derived)
-            return logpost, derived
+        def logpost(params_values):
+            logposterior, logprior, logliks, derived = self.logposterior(params_values)
+            derived = list(derived) + [logprior] + list(logliks)
+            return logposterior+self.logvolume, derived
         log.info("Sampling!")
         self.pc.run_nested_sampling(logpost, **self.pc_args)
-        
+
     def close(self):
         """
         Loads the sample of live points from ``PolyChord``'s raw output and writes it
         (if ``txt`` output requested).
         """
-        if not get_mpi_rank(): # process 0 or single (non-MPI process)
+        if not get_mpi_rank():  # process 0 or single (non-MPI process)
             log.info("Loading PolyChord's resuts: samples and evidences.")
             prefix = os.path.join(self.pc_args["base_dir"], self.pc_args["file_root"])
             sample = np.loadtxt(prefix+".txt")
-            self.collection = Collection(self.prior, self.likelihood, self.output, name="1")
-            n_sampled = len(self.prior.names())
-            n_derived = len(self.likelihood.derived)
-            n_liks = len(self.likelihood.names())
+            self.collection = Collection(
+                self.parametrisation, self.likelihood, self.output, name="1")
+            n_sampled = len(self.parametrisation.sampled_params())
+            n_derived = len(self.parametrisation.derived_params())
+            n_liks = len(self.likelihood._likelihoods)
             for row in sample:
                 self.collection.add(row[2:2+n_sampled],
                                     derived=row[2+n_sampled:2+n_sampled+n_derived+1],
                                     weight=row[0], logpost=-row[1],
-                                    logprior=-row[-(1+n_liks)],
-                                    logliks=[-0.5*lik for lik in row[-n_liks:]])
+                                    logprior=row[-(1+n_liks)],
+                                    logliks=row[-n_liks:])
             # make sure that the points are written
             self.collection.out_update()
             # Prepare the evidence
             with open(prefix+".stats", "r") as statsfile:
                 line = ""
-                while not "Global evidence:" in line:
+                while "Global evidence:" not in line:
                     line = statsfile.readline()
-                while not "log(Z)" in line:
+                while "log(Z)" not in line:
                     line = statsfile.readline()
                 self.logZ, self.logZstd = [
                     float(n) for n in line.split("=")[-1].split("+/-")]
@@ -297,8 +296,8 @@ class polychord(Sampler):
 #            bcast_from_0 = lambda attrname: setattr(self, attrname,
 #                get_mpi_comm().bcast(getattr(self, attrname, None), root=0))
 #            map(bcast_from_0, ["collection", "logZ", "logZstd"])
-        if not get_mpi_rank(): # process 0 or single (non-MPI process)
-            log.info("Finished! "+
+        if not get_mpi_rank():  # process 0 or single (non-MPI process)
+            log.info("Finished! "
                      "Raw PolyChord output stored in '%s'.", self.pc_args["base_dir"])
 
     def products(self):
