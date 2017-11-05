@@ -247,7 +247,7 @@ class polychord(Sampler):
         self.logvolume = np.log(np.prod(scales))
         # Done!
         if not get_mpi_rank():
-            log.info("Calling PolyChord with arguments"
+            log.info("Calling PolyChord with arguments" +
                      "\n  ".join([""] +
                                  ["%s : "%p+str(v) for p,v in self.pc_args.iteritems()]))
 
