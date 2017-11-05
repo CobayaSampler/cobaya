@@ -316,13 +316,13 @@ class Prior():
         if confidence_for_unbounded >= 1:
             return self.lims
         try:
-            infs = list(set(np.argwhere(abs(self.lims) == np.inf).T[0]))
+            lims = deepcopy(self.lims)
+            infs = list(set(np.argwhere(abs(lims) == np.inf).T[0]))
             if infs:
                 log.warn("There are unbounded parameters. Prior limits are given at %s "
                          "confidence level. Beware of likelihood modes at the edge of "
                          "the prior", confidence_for_unbounded)
-            lims = deepcopy(self.lims)
-            lims[infs] = [self.pdf[i].interval(confidence_for_unbounded) for i in infs]
+                lims[infs] = [self.pdf[i].interval(confidence_for_unbounded) for i in infs]
             return lims
         except AttributeError:
             log.error("Some parameter names (positions %r) have no limits defined.", infs)
