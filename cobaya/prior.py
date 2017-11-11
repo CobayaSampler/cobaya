@@ -123,6 +123,9 @@ As general rules, when trying to redefine anything in a parameter, everything no
 is inherited, except for the prior, which must not be inheritable in order to allow
 re-defining sampled parameters into something else.
 
+
+.. _prior_external:
+
 Custom, multidimensional priors
 -------------------------------
 

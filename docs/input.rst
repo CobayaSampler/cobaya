@@ -1,7 +1,7 @@
 Input and invocation
 ====================
 
-The input of cobaya consists of a collection of Python dictionaries specifying the different parts of the code to use (likelihoods, theory codes and samplers) and which parameters to sample and how. This information is often provided as a text file in the `YAML <https://en.wikipedia.org/wiki/YAML>`_ language, which is so simple that you don't even have to learn it.
+The input of **cobaya** consists of a collection of Python dictionaries specifying the different parts of the code to use (likelihoods, theory codes and samplers) and which parameters to sample and how. This information is often provided as a text file in the `YAML <https://en.wikipedia.org/wiki/YAML>`_ language, which is so simple that you don't even have to learn it.
 
 .. _in_example:
 
@@ -28,20 +28,27 @@ An example input file
          max: 4
        latex: \beta
        proposal: 0.5
-
+     mock_derived_a:
+       latex: \alpha^prime
+     mock_derived_b:
+       latex: \beta^prime
+     
    sampler:
      mcmc:
        burn_in: 100
        max_samples: 1000
 
+   output_prefix: chains/
 
 That input structure above contains three *blocks*:
        
 - ``likelihood``: Specifies a list of likelihoods to sample, with their corresponding options -- here a Gaussian likelihood with the mean and covariance specified under it.
-- ``params``: lists the parameters to be explored, and for each its prior and a LaTeX label to be used when producing plots.
+- ``params``: lists the parameters to be explored, and for each its prior and a LaTeX label to be used when producing plots. The parameters ``mock_a`` and ``mock_b`` will be sampled (they have a prior specified under them), whereas ``mock_derived_a`` and ``mock_derived_b`` are derived quantities computed by the likelihood (they don't have a prior).
 - ``sampler``: specifies which sampler to use, here the internal MCMC sampler, and some options for it: the number of burn-in samples and the total number of samples to be drawn.
 
-You can save that text as is into a file name ``example_gaussian.yaml``, and run cobaya as
+The *top-level option* ``output_prefix: chains/gaussian`` indicates that the resulting output files will be placed in a folder called ``chains`` (which will be created if necessary), and the corresponding output files will start with ``gaussian``.
+  
+You can save that piece of text as is into a file, e.g. ``example_gaussian.yaml``, and run **cobaya** as
 
 .. code:: bash
 
@@ -57,28 +64,26 @@ For a more accurate description of the blocks and their usage continue reading b
 Basic input structure
 ---------------------
 
-There are 3 different input blocks (and an additional, optional one), which can be specified in any order:
+There are 5 different input blocks (two of them optional), which can be specified in any order:
 
-- ``likelihood``: contains the likelihoods that are going to be explored, and specific options for each -- see :doc:`likelihoods`
+- ``likelihood``: contains the likelihoods that are going to be explored, and their respective options -- see :doc:`likelihoods`
 
-- ``params``: contains a list of parameters to be *fixed*, *sampled* or *derived* -- see :doc:`params_prior`.
-     
-- ``sampler``: contains the sampler as a single entry, and under it its options -- see :doc:`sampler`.
+- ``params``: contains a list of parameters to be *fixed*, *sampled* or *derived*, their priors, LaTeX labels, etc. -- see :doc:`params_prior`.
+
+- ``prior``: (optional) contains additional priors to be imposed, whenever they are complex or non-separable -- see :ref:`prior_external`.
+  
+- ``sampler``: contains the sampler as a single entry, and its options -- see :doc:`sampler`.
     
-- ``theory`` (optional): has only one entry, which specifies the theory code with which to compute the observables used by the likelihoods, and options for it. Also, if a ``theory`` is specified, the ``params`` block may contain a ``theory`` sub-block specifying the parameters belonging to the theory code -- see :doc:`theory` and also :doc:`examples_planck` for a usage example.
+- ``theory`` (optional): has only one entry, which specifies the theory code with which to compute the observables used by the likelihoods, and options for it. Also, if a ``theory`` is specified, the ``params`` block may contain a ``theory`` sub-block containing the parameters belonging to the theory code -- see :doc:`theory` and also :doc:`examples_planck` for a usage example.
 
-The modules specified above (i.e. likelihoods, samplers, theories...) can have any number of options, but you don't need to specify all of them every time you use them: if an option is not specified, its **default** value is used. The default values for each module are described in their respective section of the documentation, and in a ``defaults.yaml`` file in the folder of ``cobaya`` where that module is defined, e.g. ``cobaya/cobaya/likelihoods/gaussian/defaults.yaml`` for the defaults of the ``gaussian`` likelihood.
-
-.. todo::
-
-   Create script to print them for a module.
+The modules specified above (i.e. likelihoods, samplers, theories...) can have any number of options, but you don't need to specify all of them every time you use them: if an option is not specified, its **default** value is used. The default values for each module are described in their respective section of the documentation, and in a ``defaults.yaml`` file in the folder of **cobaya** where that module is defined, e.g. ``cobaya/cobaya/likelihoods/gaussian/defaults.yaml`` for the defaults of the ``gaussian`` likelihood.
 
 In addition, there are some *top level* options (i.e. defined outside any block):
 
-- ``debug``: sets the verbosity level of the output. By default (undefined or ``False``), it produces a rather informative output, reporting on initialisation, overall progress and results. If ``True``, it produces a very verbose output (a few lines per sample) that can be used for debugging. You can also set it directly to a particular `integer level of the Python logger <https://docs.python.org/2/library/logging.html#logging-levels>`_, e.g. 40 to produce error output only.
-- ``debug_file``: a file name, with a relative or absolute path if desired, to which to send all logged output. When used, only basic progress info is printed on-screen, and the full debug output (if ``debug: True``) will be sent to this file instead 
-- ``output_prefix``: determines where the output files are written and/or a prefix for their names -- see :ref:`output_prefix`.
-
++ ``output_prefix``: determines where the output files are written and/or a prefix for their names -- see :ref:`output_prefix`.
++ ``path_to_modules``: path where the external modules have been automatically installed -- see :doc:`installation_ext`.
++ ``debug``: sets the verbosity level of the output. By default (undefined or ``False``), it produces a rather informative output, reporting on initialisation, overall progress and results. If ``True``, it produces a very verbose output (a few lines per sample) that can be used for debugging. You can also set it directly to a particular `integer level of the Python logger <https://docs.python.org/2/library/logging.html#logging-levels>`_, e.g. 40 to produce error output only.
++ ``debug_file``: a file name, with a relative or absolute path if desired, to which to send all logged output. When used, only basic progress info is printed on-screen, and the full debug output (if ``debug: True``) will be sent to this file instead 
 
 Some common YAML *gotchas*
 --------------------------
@@ -127,7 +132,7 @@ Some common YAML *gotchas*
 Scripted input -- Python dictionaries
 -------------------------------------
 
-You can invoke cobaya directly from a Python interpreter or the Jupyter notebook. If you have saved the example above in a file named ``example_gaussian.yaml`` in Python's working directoy:
+You can invoke **cobaya** directly from a Python interpreter or the Jupyter notebook. If you have saved the example above in a file named ``example_gaussian.yaml`` in Python's working directory:
 
 .. code:: python
 
@@ -136,7 +141,7 @@ You can invoke cobaya directly from a Python interpreter or the Jupyter notebook
     input_file = "example_gaussian.yaml"
     info = load_input(input_file)
     info.pop("output_prefix", None)  # suppresses external output
-    updated_info, collection = run(info)
+    updated_info, products = run(info)
 
 But, actually, the YAML file is simply parsed as a Python dictionary, so you could as well have defined it by hand:
 
@@ -147,20 +152,22 @@ But, actually, the YAML file is simply parsed as a Python dictionary, so you cou
     info = {"params": odict([
                ("mock_a", {"prior": {"min": -0.5, "max": 3}, "latex": r"\alpha"}),
                ("mock_b", {"prior": {"min": -1,   "max": 4}, "latex": r"\beta",
-                          "ref":0.5, "proposal":0.5})]),
+                          "ref":0.5, "proposal":0.5}),
+               ("mock_derived_a", {"latex": r"\alpha^prime"}),
+               ("mock_derived_b", {"latex": r"\beta^prime"})]),
             "likelihood": {"gaussian": {
                "mean": [0.2, 0],
                "cov": [[0.1, 0.05],
                        [0.05,0.2]]}},
             "sampler": {"mcmc": {"burn_in": 100, "max_samples": 1000}}}
     # run the sampler
-    updated_info, collection = run(info)
+    updated_info, products = run(info)
 
 The analysis of this sample in an scripted way is discussed in :ref:`out_example_scripted`.
 
 .. note::
 
-   Notice that the parameters are defined in an `OrderedDict <https://docs.python.org/2/library/collections.html#ordereddict-examples-and-recipes>`_, instead of a normal dictionary. This is being done keep the order consistent between their order in the input and the output. Same goes for the likelihoods, when there is more than one.
+   Notice that the parameters are defined here using an `OrderedDict <https://docs.python.org/2/library/collections.html#ordereddict-examples-and-recipes>`_, instead of a normal dictionary. This is optional (a normal dictionary can be used), but recommended: it keeps the order consistent between input and output. Same goes for the likelihoods, when there is more than one.
 
 .. _input_cont:
 
@@ -172,7 +179,7 @@ Continuing a sample
    Sample continuation is not implemented yet.
 
 .. 
-  cobaya can also be invoked with a folder as an argument (including ``.``). In that case, the folder is searched for a single ``.yaml`` file (the pattern ``*__full.yaml`` is ignored, see :ref:`out_files`). If there is only one, cobaya uses it to re-launch the sampling that generated that folder.
+  **cobaya** can also be invoked with a folder as an argument (including ``.``). In that case, the folder is searched for a single ``.yaml`` file (the pattern ``*__full.yaml`` is ignored, see :ref:`out_files`). If there is only one, **cobaya** uses it to re-launch the sampling that generated that folder.
 
   .. todo::
 
@@ -181,7 +188,7 @@ Continuing a sample
   IF CALLED WITH YAML, COMPLAINT IF IT WOULD CONTINUE
   USE THE __full AND CREATE A COMMAND LINE OPTION TO CONTINUE!!!!!!! (--continue, or -c)
 
-  ISN'T IT INCONSISTENT TO CALL WITH FOLDER AND CONTINUE BY DEFAULT, BUT NOT IF ONVIKED WITH YAML???
+  ISN'T IT INCONSISTENT TO CALL WITH FOLDER AND CONTINUE BY DEFAULT, BUT NOT IF INVOKED WITH YAML???
 
   THE CONTINUATION MUST BE IMPLEMENTED AT THE SAMPLER LEVEL (e.g. make polychord use resume=TRUE)
 

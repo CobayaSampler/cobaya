@@ -10,10 +10,10 @@ To check if you have Python installed, type ``python --version`` in the shell, a
 
 .. _install_mpi:
 
-Optional: MPI parallellisation
-------------------------------
+Optional: MPI parallelisation
+-----------------------------
 
-Enabling MPI parallellisation is optional but highly recommended: it will allow you to better utilise the size of your cluster. MPI enables inter-process communication, of which many samplers can take advantage, e.g. for achieving a faster convergence of an MCMC proposal distribution, or a higher acceptance rate in a nested sampler.
+Enabling MPI parallelisation is optional but highly recommended: it will allow you to better utilise the size of your cluster. MPI enables inter-process communication, of which many samplers can take advantage, e.g. for achieving a faster convergence of an MCMC proposal distribution, or a higher acceptance rate in a nested sampler.
 
 First, you need to install an MPI implementation in your system. We recommend `OpenMPI <https://www.open-mpi.org/>`_. Install it using your system's package manager (``sudo apt install libopenmpi`` in Debian-based systems) or contact your local IT service.
 
@@ -35,7 +35,7 @@ If you have a working MPI implementation in your system, this should produce no 
 Optional: make cobaya faster with OpenBLAS
 ------------------------------------------
 
-BLAS is a collection of algorithms for linear algebra computations. There will most likely be a BLAS library installed already in your system. It is recommended to make sure that it is an efficient one, preferably the highly-parallellised OpenBLAS.
+BLAS is a collection of algorithms for linear algebra computations. There will most likely be a BLAS library installed already in your system. It is recommended to make sure that it is an efficient one, preferably the highly-parallelised OpenBLAS.
 
 To check if OpenBLAS is installed, in Debian-like systems, type
 
@@ -51,7 +51,7 @@ Installing and updating cobaya
 
 .. warning::
       
-   Fro now, during beta testing, there is an additional pre-requisite: a ``git`` installation. Type ``git`` in the shell and check that you get usage instructions instead of a ``command not found``. In the latter case, in a Debian-like system, install it with a ``sudo apt intall git``.
+   Fro now, during beta testing, there is an additional pre-requisite: a ``git`` installation. Type ``git`` in the shell and check that you get usage instructions instead of a ``command not found``. In the latter case, in a Debian-like system, install it with a ``sudo apt install git``.
 
 
 To install **cobaya** or upgrade it to the last release, simply type in a terminal
@@ -109,9 +109,9 @@ Use this method if you want to make modifications to the code, either for yourse
 Method 1: Using ``git`` (recommended!)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To download and install **cobaya** in *development mode* you will need ``git`` (`learn how to use git <https://git-scm.com/book/en/v2>`_). Type ``git`` in the shell and check that you get usage instructions instead of a ``command not found`` error. In the later case, in a Debian-like system, install it with a ``sudo apt intall git``.
+To download and install **cobaya** in *development mode* you will need ``git`` (`learn how to use git <https://git-scm.com/book/en/v2>`_). Type ``git`` in the shell and check that you get usage instructions instead of a ``command not found`` error. In the later case, in a Debian-like system, install it with a ``sudo apt install git``.
 
-The recommended way is to get a `Github <https://github.com>`_ user and `fork the cobaya repo <https://help.github.com/articles/fork-a-repo/>`_. Then clone you fork and install it as a Python package in *development mode* (i.e. your changes to the code will have an immediate effect, without needing to update the Python package):
+The recommended way is to get a `GitHub <https://github.com>`_ user and `fork the cobaya repo <https://help.github.com/articles/fork-a-repo/>`_. Then clone you fork and install it as a Python package in *development mode* (i.e. your changes to the code will have an immediate effect, without needing to update the Python package):
 
 .. code:: bash
 
@@ -147,7 +147,7 @@ Method 2: Simplest, no ``git`` (not recommended!)
 
    This method is not recommended: you will not be able to keep track of your changes to the code! We really encourage you to use ``git`` (see method 1).
 
-Download the latest release (the one on top) from **cobaya**'s `Github Releases page <https://github.com/JesusTorrado/cobaya/releases>`_. Uncompress it in some folder, e.g. ``/path/to/cobaya/``, and install it as a python package:
+Download the latest release (the one on top) from **cobaya**'s `GitHub Releases page <https://github.com/JesusTorrado/cobaya/releases>`_. Decompress it in some folder, e.g. ``/path/to/cobaya/``, and install it as a python package:
 
 .. code-block:: bash
 

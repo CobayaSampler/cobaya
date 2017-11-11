@@ -18,7 +18,7 @@ You will need an internet connection with a decent bandwidth (don't use your pho
 Using the automatic installer
 -----------------------------
 
-The automatic installation script takes one or more input files that you will want to run, makes a list of the external modules that you will need, and downloads and installs them one by one.
+The automatic installation script takes one or more input files that you intend to run, makes a list of the external modules that you will need, and downloads and installs them one by one.
 
 You need to specify a folder where the resulting files will be placed, which for the purposes of this instructions will be called ``/path/to/modules``. This does not need to be the folder in which you will run your samples.
 
@@ -47,7 +47,7 @@ Within ``/path/to/modules``, the following file structure will be created, conta
             └── data
                 ├── planck_2015
                 ├── bicep_keck_2015
-                └── bicep_keck_2015
+                └── [...]
 
 .. note::
 

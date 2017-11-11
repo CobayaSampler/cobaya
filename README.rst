@@ -3,7 +3,7 @@ cobaya, a code for Bayesian analysis in Cosmology
 
 :Author: `Jesus Torrado`_ and `Antony Lewis`_
 
-:Source: `Source code at Github <https://github.com/JesusTorrado/cobaya>`_
+:Source: `Source code at GitHub <https://github.com/JesusTorrado/cobaya>`_
 
 :Documentation: `Documentation at Readthedocs <https://cobaya.readthedocs.org>`_
          
@@ -17,13 +17,13 @@ Though **cobaya** is a general purpose statistical framework, it includes interf
 
 **cobaya** has been conceived from the beginning to be highly and effortlessly extensible: without touching **cobaya**'s source code, you can define your own priors and likelihoods, use modified versions of a theory code (just pass **cobaya** their folder!), create new parameters as function of other parameters... You can also us **cobaya** simply as a wrapper for cosmological likelihoods to integrate them in your analysis pipeline.
 
-In addition, it downloads and install requirements automatically (samplers, theory codes and likelihoods); it supports MPI parallellisation and HPC containerisation (Singularity and Docker+Shifter; the later is WIP); and it can be run either from the shell or from a Python interpreter/notebook, and takes input either as YAML_ files or Python dictionaries.
+In addition, it downloads and install requirements automatically (samplers, theory codes and likelihoods); it supports MPI parallelisation and HPC containerisation (Singularity and Docker+Shifter; the later is WIP); and it can be run either from the shell or from a Python interpreter/notebook, and takes input either as YAML_ files or Python dictionaries.
 
 
 How to cite us
 --------------
 
-As of this version, there is no scientific publication yet associated to this software, so simply mention its Github repository (see above).
+As of this version, there is no scientific publication yet associated to this software, so simply mention its GitHub repository (see above).
 
 To appropriately cite the modules (samplers, theory codes, likelihoods) that you have used, simply run the script `cobaya-citation` with your input file(s) as argument(s), and you will get *bibtex* references and a short suggested text snippet for each module mentioned in your input file. 
 
