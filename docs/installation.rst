@@ -4,7 +4,7 @@ Installing cobaya
 Pre-requisites
 --------------
 
-The only pre-requisites are **Python** (version ≥ 2.7) and the Python package manager **pip**.
+The only pre-requisites are **Python** (version ≥ 2.7) and the Python package manager **pip** (external modules may have additional dependencies).
 
 To check if you have Python installed, type ``python --version`` in the shell, and you should get ``Python 2.7.[whatever]``. Then, type ``pip`` in the shell, and if you get usage instructions instead of a ``command not found`` message, you are golden. If you don't have any of those two installed, use your system's package manager or contact your local IT service.
 
@@ -21,14 +21,13 @@ Next install Python's ``mpi4py``:
 
 .. code:: bash
 
-   $ pip install mpi4py --user --upgrade
+   $ pip install mpi4py --upgrade
 
 Now try
 
 .. code:: bash
 
-   $ python
-   >>> from mpi4py import MPI
+   $ python -c "from mpi4py import MPI"
 
 If you have a working MPI implementation in your system, this should produce no output. If you don't, the error would look something like ``ImportError: libmpi.so.12: cannot open shared object file``.
 
@@ -52,15 +51,15 @@ Installing and updating cobaya
 
 .. warning::
       
-   Until the final release, there is an additional pre-requisite: a ``git`` installation. Type ``git`` in the shell and check that you get usage instructions instead of a ``command not found``. In the latter case, in a Debian-like system, install it with a ``sudo apt intall git``.
+   Fro now, during beta testing, there is an additional pre-requisite: a ``git`` installation. Type ``git`` in the shell and check that you get usage instructions instead of a ``command not found``. In the latter case, in a Debian-like system, install it with a ``sudo apt intall git``.
 
 
 To install **cobaya** or upgrade it to the last release, simply type in a terminal
 
 .. code:: bash
 
-   $ pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist --user --upgrade
-   $ pip install cobaya-sampler --user --upgrade
+   $ pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist --upgrade
+   $ pip install cobaya --upgrade
 
 
 .. _install_check:
@@ -72,10 +71,9 @@ If everything went well, you should be able to import **cobaya** in Python from 
 
 .. code-block:: bash
 
-   $ python
-   >>> import cobaya
+   $ python -c "import cobaya"
 
-If you get an error message after the ``import`` statement, something went wrong. Check twice the instructions above, try again, or contact us or your local Python guru.
+If you get an error message, something went wrong. Check twice the instructions above, try again, or contact us or your local Python guru.
 
 **cobaya** also installs some shell scripts. If everything went well, if you try to run in the shell ``cobaya-run``, you should get a message asking you for an input file, instead of a ``command not found`` error.
 
@@ -95,7 +93,7 @@ Troubleshooting
 
 .. note::
 
-   This section will be filled with the most common problems that our users encounter, so if you followed the instructions and still something failed (or if you think that the instructions were not clear enough), don't hesitate to contact us!
+   This section will be filled with the most common problems that our users encounter, so if you followed the instructions above and still something failed (or if you think that the instructions were not clear enough), don't hesitate to contact us!
 
 
 Installing cobaya in development mode
@@ -105,27 +103,27 @@ Use this method if you want to make modifications to the code, either for yourse
 
 .. note::
 
-   Notice that you don't need to modify **cobaya**'s source to use your own priors, likelihoods, etc. Take a look at the corresponding sections.
+   Notice that you don't need to modify **cobaya**'s source to use your own priors, likelihoods, etc. Take a look at the documentation of the modules that you would like to modify.
 
 
 Method 1: Using ``git`` (recommended!)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To download and install **cobaya** in *development mode* you will need ``git`` (`learn how to use git <https://git-scm.com/book/en/v2>`_). Type ``git`` in the shell and check that you get usage instructions instead of a ``command not found``. In the latter case, in a Debian-like system, install it with a ``sudo apt intall git``.
+To download and install **cobaya** in *development mode* you will need ``git`` (`learn how to use git <https://git-scm.com/book/en/v2>`_). Type ``git`` in the shell and check that you get usage instructions instead of a ``command not found`` error. In the later case, in a Debian-like system, install it with a ``sudo apt intall git``.
 
 The recommended way is to get a `Github <https://github.com>`_ user and `fork the cobaya repo <https://help.github.com/articles/fork-a-repo/>`_. Then clone you fork and install it as a Python package in *development mode* (i.e. your changes to the code will have an immediate effect, without needing to update the Python package):
 
 .. code:: bash
 
    $ git clone https://YOUR_USERNAME@github.com/YOUR_USERNAME/cobaya.git
-   $ pip install --editable cobaya --user --upgrade
+   $ pip install --editable cobaya --upgrade
 
 Alternatively, you can clone from the official **cobaya** repo (but this way you won't be able to upload your changes!).
 
 .. code:: bash
 
    $ git clone https://github.com/JesusTorrado/cobaya.git
-   $ pip install --editable cobaya --user --upgrade
+   $ pip install --editable cobaya --upgrade
 
 In any of both cases, this puts you in the last commit of **cobaya**. If you want to start from the last release, say version 1.0, do, from the cobaya folder,
 
@@ -137,9 +135,9 @@ Finally, install **GetDist**:
    
 .. code:: bash
 
-   $ pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist --user --upgrade
+   $ pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist --upgrade
 
-and :ref:`install_check`.
+and finally :ref:`install_check`.
 
 
 Method 2: Simplest, no ``git`` (not recommended!)
@@ -154,7 +152,7 @@ Download the latest release (the one on top) from **cobaya**'s `Github Releases 
 .. code-block:: bash
 
    $ cd /path/to/cobaya/
-   $ pip install --editable cobaya --user
+   $ pip install --editable cobaya
 
 Then install **GetDist**:
 
@@ -163,23 +161,21 @@ Then install **GetDist**:
       $ wget https://github.com/JesusTorrado/getdist/archive/master.zip
       $ unzip master.zip ; rm master.zip
       $ mv getdist-master getdist
-      $ pip install getdist --user
+      $ pip install getdist
       $ rm -rf getdist
 
 Finally, :ref:`install_check`.  
 
 
-Uninstalling cobaya (and GetDist, in the alpha)
-------------------------------------------------
+Uninstalling cobaya
+-------------------
 
 Simply do, from anywhere
 
 .. code-block:: bash
 
-   $ pip uninstall cobaya-sampler getdist
-
-(and delete the corresponding folders, if you installed it in development mode.)
+   $ pip uninstall cobaya getdist
 
 .. note::
 
-   As of this version, the scripts installed in the local ``bin`` folder (in Linux ``~/.local/bin``) are not deleted automatically by the command above. You have to delete them manually: just get rid of the files in that folder that start with ``cobaya`` or ``GetDist``.
+   If you installed **cobaya** in development mode, you will also have to delete its folder manually, as well as the scripts installed in the local ``bin`` folder (the files starting with ``cobaya`` and ``GetDist``, which in Linux should be in ``~/.local/bin``).

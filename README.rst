@@ -9,13 +9,16 @@ cobaya, a code for Bayesian analysis in Cosmology
          
 :License: `LGPL <https://www.gnu.org/licenses/lgpl-3.0.en.html>`_ for the code (except otherwise stated in a docstring) and `GFDL <https://www.gnu.org/licenses/fdl-1.3.en.html>`_ for the documentation (see `LICENSE.txt <https://github.com/JesusTorrado/cobaya/blob/master/LICENSE.txt>`_).
                  
-**cobaya** (Guinea Pig, in Spanish) is a framework for sampling and statistical modelling: it allows you explore any prior or posterior using a range of Monte Carlo samplers (including the advanced MCMC sampler from CosmoMC_, and the advanced nested sampler PolyChord_). The results of the sampling can be analysed with GetDist_.
+**cobaya** (COde for BAYesian Analysis; Guinea Pig, in Spanish) is a framework for sampling and statistical modelling: it allows you to explore any prior or posterior using a range of Monte Carlo samplers (including the advanced MCMC sampler from CosmoMC_, and the advanced nested sampler PolyChord_). The results of the sampling can be analysed with GetDist_.
 
-Its authors are `Jesus Torrado`_ and `Antony Lewis`_, and some ideas and modules (at least in the current version) have been adapted from `Monte Python`_, by `Julien Lesgourgues`_ and `Benjamin Audren`_ (in particular, the interface to the Planck 2015 likelihoods, without much modification, and pieces of the interface to the CLASS cosmological code).
+Its authors are `Jesus Torrado`_ and `Antony Lewis`_. Some ideas and modules have been adapted from `Monte Python`_, by `Julien Lesgourgues`_ and `Benjamin Audren`_ (in particular, the interface to the Planck 2015 likelihoods).
 
-Though **cobaya** is a general purpose code, it includes interfaces to cosmological *theory codes* (CAMB_ and CLASS_) and *experimental likelihoods* (Planck 2015 for now only). The interfaces to most cosmological likelihoods are agnostic as to which theory code is used to compute the observables, which facilitates comparison between those codes.
+Though **cobaya** is a general purpose statistical framework, it includes interfaces to cosmological *theory codes* (CAMB_ and CLASS_) and *experimental likelihoods* (in this version, Planck 2015 and Bicep-Keck 2015). The interfaces to most cosmological likelihoods are agnostic as to which theory code is used to compute the observables, which facilitates comparison between those codes.
 
-**cobaya** has been conceived from the beginning to be highly and quickly extensible -- without touching **cobaya**'s source, you can define your own priors and likelihoods, and modify your theory code. With a little more work, you can experiment with new sampling techniques. It supports MPI parallellisation, it can be run either from the shell or from a Python interpreter/notebook, and takes input either as YAML_ files or Python dictionaries.
+**cobaya** has been conceived from the beginning to be highly and effortlessly extensible: without touching **cobaya**'s source code, you can define your own priors and likelihoods, use modified versions of a theory code (just pass **cobaya** their folder!), create new parameters as function of other parameters... You can also us **cobaya** simply as a wrapper for cosmological likelihoods to integrate them in your analysis pipeline.
+
+In addition, it downloads and install requirements automatically (samplers, theory codes and likelihoods); it supports MPI parallellisation and HPC containerisation (Singularity and Docker+Shifter; the later is WIP); and it can be run either from the shell or from a Python interpreter/notebook, and takes input either as YAML_ files or Python dictionaries.
+
 
 How to cite us
 --------------

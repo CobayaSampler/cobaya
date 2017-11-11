@@ -40,15 +40,14 @@ Within ``/path/to/modules``, the following file structure will be created, conta
 .. code-block:: bash
 
    /path/to/modules
-            ├── likelihoods
+            ├── code
             │   ├── planck_2015
-            │   └── [...]
-            ├── theories
             │   ├── CLASS
             │   └── [...]
-            └── samplers
-                ├── PolyChord
-                └── [...]
+            └── data
+                ├── planck_2015
+                ├── bicep_keck_2015
+                └── bicep_keck_2015
 
 .. note::
 
@@ -61,13 +60,14 @@ Take note of that folder in your case, here ``/path/to/modules``, and include it
 
    path_to_modules: /path/to/modules
 
+or specify it using the flat ``--path /path/to/modules`` when invoking from the shell.
 
 .. _install_manual:
    
 Installing modules manually
 ---------------------------
 
-The automatic installation process above installs each module in the simplest way possible, avoiding version control and placing as much code as possible in system folders (e.g. modules that can be installed as Python packages).
+The automatic installation process above installs each module in the simplest way possible and places as much code as possible in system folders (e.g. modules that can be installed as Python packages).
 
 If you want to modify one of the modules (e.g. one of the theory codes) you will probably prefer to install them manually. Each module's documentation has a section on manual installation, and on how to specify your installation folder at run time. Check the relevant section of the documentation of each module.
 

@@ -131,7 +131,7 @@ class Sampler(object):
 
     def logposterior(self, params_values):
         """
-        Returns (logposterior,logprior,[loglikelihoods]) for a set of parameter values.
+        Returns (logposterior,logprior,[loglikelihoods]) for an array of parameter values.
         If passes an empty list through ``derived``,
         it gets populated it with the derived parameters' values.
         """
