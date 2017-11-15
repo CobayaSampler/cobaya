@@ -6,40 +6,55 @@
 
 The ``params`` block contains all the information intrinsic
 to the parameters of the model: their prior pdf and reference pdf, their latex labels,
-or useful properties for particular samplers (e.g. with of a proposal pdf in and MCMC
--- see the docs section for each sampler). All this information is stored and managed by
-the :class:`Prior` class.
+and useful properties for particular samplers (e.g. width of a proposal pdf in and MCMC
+-- see the documentation for each sampler).
+The prior and reference pdf are managed by the :class:`Prior` class.
 
 You can specify three different kinds of parameters:
 
 + **Fixed** parameters are specified by assigning them a value, and are passed directly to
   the likelihood or theory code.
 + **Sampled** parameters need a ``prior`` pdf definition and, optionally,
-  a reference pdf or value (``ref``), a LaTeX label to be used when producing plots,
+  a reference pdf (``ref``),
+  a LaTeX label to be used when producing plots,
   and additional properties to aid particular samplers.
-+ **Derived** parameters do **not** have a prior definition (neither a reference value or pdf),
-  but can have a LaTeX label and a ``min`` and/or ``max`` to be used in the sample analysis
++ **Derived** parameters do **not** have a prior definition
+  (neither a reference value or pdf),
+  but can have a LaTeX label and a ``min`` and/or ``max``
+  to be used in the sample analysis
   (e.g. to guess the pdf tails correctly if the derived quantity needs to be positive or
   negative -- defaulted to ``-inf``, ``inf`` resp.).
 
-The (optional) **reference** pdf (``ref``) defines the region of the prior which is of most
-interest (e.g. where most of the prior mass is expected); samplers needing an initial point
+The (optional) **reference** pdf (``ref``) for **sampled** parameters
+defines the region of the prior which is of most
+interest (e.g. where most of the prior mass is expected);
+samplers needing an initial point
 for a chain will attempt to draw it from the ``ref`` if it has been defined (otherwise
 from the prior). A good reference pdf will avoid a long *burn-in* stage during the
-sampling.
+sampling. If you assign a single value to ``ref``, samplers will always start from
+that value.
 
-The syntax for priors and ref's has three fields:
+
+The syntax for priors and ref's has the following fields:
 
 + ``dist`` (default: ``uniform``): any 1-dimensional continuous distribution from
-  `scipy.stats <https://docs.scipy.org/doc/scipy/reference/stats.html#continuous-distributions>`_.
+  `scipy.stats <https://docs.scipy.org/doc/scipy/reference/stats.html#continuous-distributions>`_;
+  e.g. ``uniform``, ``[log]norm`` for a [log-]gaussian,
+  or ``halfnorm`` for a half-gaussian.
 + ``loc`` and ``scale`` (default: 0 and 1, resp.): the *location* and *scale* of the pdf,
-  as they are understood for each particular pdf in :class:`scipy.stats` (e.g. for a
+  as they are understood for each particular pdf in :class:`scipy.stats`; e.g. for a
   ``uniform`` pdf, ``loc`` is the lower bound and ``scale`` is the length of the domain,
-  whereas in a Gaussian ``norm`` pdf ``loc`` is the centre and ``scale`` is the standard
+  whereas in a gaussian (``norm``) ``loc`` is the mean and ``scale`` is the standard
   deviation).
-+ (alternatively) ``min`` and ``max`` (default: 0 and 1 resp.): the boundaries of the pdf
-  for a bounded distribution (``uniform``, ``beta``, etc. -- unexpected behaviour for an
-  unbounded one).
++ Additional specific parameters of the distribution, e.g. ``a`` and ``b`` as the powers
+  of a Beta pdf.
+
+.. note::
+
+   For bounded distributions (e.g. ``uniform``, ``beta``...), you can use the more
+   intuitive arguments ``min`` and ``max`` (default: 0 and 1 resp.) instead of ``loc`` and
+   ``scale`` (NB: unexpected behaviour for an unbounded pdf).
+
 
 The order of the parameters is conserved in the table of samples, except the fact that
 derived parameters are always moved to the last places.
@@ -78,50 +93,23 @@ An example ``params`` block:
 
 .. note:: ``theory`` is a reserved parameter name!
 
-.. warning::
 
-   Improper priors will produce unexpected errors. So don't try
 
-   .. code-block:: yaml
+Prior normalisation for evidence computation
+--------------------------------------------
 
-      params:
-        a:
-          prior:
-            min: -inf
-            max:  inf
+As defined above, the priors are automatically normalised, so any sampler that computes
+the evidence will produce the right results.
 
-Changing and redefining parameters -- inheritance
--------------------------------------------------
+Improper priors will produce unexpected errors. So don't try
 
-When mentioning a likelihood, the parameters that appear in its ``defaults.yaml`` file are
-inherited without needing to re-state them. Still, you may want to re-define their type or
-some of their properties in your input file:
+.. code-block:: yaml
 
-* Re-defining **fixed** into:
-
- - **fixed**: simply assign it a new value
- - **sampled**: define a prior for it (and optionally reference, label, etc.)
- - **derived**: mention the parameter and assign nothing to it (you may define a
-   min, max or latex label, but *not a prior*)
-
-* Re-defining **sampled** into:
-
- - **fixed**: simply assign it a value
- - **sampled**: change any of prior/ref/latex, etc, to your taste; the rest are inherited
-   from the defaults
- - **derived**: mention the parameter and assign nothing to it (you may define a
-   min, max or latex label, but *not a prior*; the label is inherited from the defaults)
-
-* Re-defining **derived** into:
-
- - **fixed**: simply assign it a value
- - **sampled**: define a prior for it (and optionally reference, label, etc.)
- - **derived**: change any of prior/ref/latex, etc, to your taste; the rest are inherited
-   from the defaults
-
-As general rules, when trying to redefine anything in a parameter, everything not re-defined
-is inherited, except for the prior, which must not be inheritable in order to allow
-re-defining sampled parameters into something else.
+    params:
+      a:
+        prior:
+          min: -inf
+          max:  inf
 
 
 .. _prior_external:
@@ -214,6 +202,54 @@ YOU MUST STLL SPECIFY THE LIMITS!!!
 
 
 .. image:: img_prior_ring.svg
+
+
+.. Poner el alguna parte que no se usen lambdas anonimas: no se pueden pickle -> falla MPI. No pasa nada: si llamado con yaml, es texto, que s'i funciona, y si se llama scripted, no cuesta nada darles nombre. --> poner un error en get_external_fnction!!! Si es string q empieza por "lambda" y uso MPI, fallar!!!
+.. Naming: para los derived de likelihood (no los del sampler), les cambio en nombre a "output"?
+-- PRIORS:
+..  - make compatible with boundaries and per-parameter priors. --> DECIMOS QUE SE MULTIPLICA
+..  - inherit from defaults (no duplicated names!!!)
+..  - actualizar ejemplos de scripted i/o
+..  - para reproducibilidad con salida de texto, recomendar import_module
+..             limits (prior's min and max) are inherited (-inf,inf) as default.
+..  - usamos eval, pero no nos llevemos las manos a la cabeza, que tb importamos modulos de usuario, q es igual.
+..  - QUE LO HEREDA DE DEFAULTS!!!!! (documentar en la parte de likelihood)
+
+
+
+Changing and redefining parameters -- inheritance
+-------------------------------------------------
+
+When mentioning a likelihood, the parameters that appear in its ``defaults.yaml`` file are
+inherited without needing to re-state them. Still, you may want to re-define their type or
+some of their properties in your input file:
+
+* Re-defining **fixed** into:
+
+ - **fixed**: simply assign it a new value
+ - **sampled**: define a prior for it (and optionally reference, label, etc.)
+ - **derived**: mention the parameter and assign nothing to it (you may define a
+   min, max or latex label, but *not a prior*)
+
+* Re-defining **sampled** into:
+
+ - **fixed**: simply assign it a value
+ - **sampled**: change any of prior/ref/latex, etc, to your taste; the rest are inherited
+   from the defaults
+ - **derived**: mention the parameter and assign nothing to it (you may define a
+   min, max or latex label, but *not a prior*; the label is inherited from the defaults)
+
+* Re-defining **derived** into:
+
+ - **fixed**: simply assign it a value
+ - **sampled**: define a prior for it (and optionally reference, label, etc.)
+ - **derived**: change any of prior/ref/latex, etc, to your taste; the rest are inherited
+   from the defaults
+
+As general rules, when trying to redefine anything in a parameter, everything not re-defined
+is inherited, except for the prior, which must not be inheritable in order to allow
+re-defining sampled parameters into something else.
+
 
 """
 # Python 2/3 compatibility
