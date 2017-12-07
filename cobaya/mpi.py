@@ -22,6 +22,7 @@ _mpi_size = -1
 _mpi_comm = -1
 _mpi_rank = -1
 
+
 def get_mpi():
     """
     Import and returns the MPI object, or None of not running with MPI.
@@ -30,12 +31,14 @@ def get_mpi():
     """
     global _mpi
     if _mpi == -1:
-        if os.environ.get("OMPI_COMM_WORLD_SIZE"):
+        if (os.environ.get("OMPI_COMM_WORLD_SIZE") or  # OpenMPI
+            os.environ.get("I_MPI_CMD")):              # Intel
             from mpi4py import MPI
             _mpi = MPI
         else:
             _mpi = None
     return _mpi
+
 
 def get_mpi_size():
     """
@@ -44,8 +47,9 @@ def get_mpi_size():
     """
     global _mpi_size
     if _mpi_size == -1:
-        _mpi_size = int(os.environ.get("OMPI_COMM_WORLD_SIZE", 0))
+        _mpi_size = getattr(get_mpi_comm(), "Get_size", lambda: 0)()
     return _mpi_size
+
 
 def get_mpi_comm():
     """
@@ -55,6 +59,7 @@ def get_mpi_comm():
     if _mpi_comm == -1:
         _mpi_comm = getattr(get_mpi(), "COMM_WORLD", None)
     return _mpi_comm
+
 
 def get_mpi_rank():
     """
@@ -70,6 +75,7 @@ def get_mpi_rank():
     if _mpi_rank == -1:
         _mpi_rank = getattr(get_mpi_comm(), "Get_rank", lambda: None)()
     return _mpi_rank
+
 
 def import_MPI(module, target):
     """Import helper for MPI wrappers."""
