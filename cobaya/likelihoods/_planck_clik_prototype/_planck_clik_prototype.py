@@ -98,6 +98,8 @@ class _planck_clik_prototype(Likelihood):
                               " property 'path' or the common property '%s'.",
                               _path_install)
                     raise HandledException
+            else:
+                self.path_clik = self.path
             log.info("[%s] Importing clik from %s", self.name, self.path_clik)
             # test and import clik
             is_installed_clik(self.path_clik, log_and_fail=True, import_it=False)
