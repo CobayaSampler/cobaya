@@ -39,3 +39,12 @@ To appropriately cite the modules (samplers, theory codes, likelihoods) that you
 .. _GetDist: https://github.com/cmbant/getdist
 .. _YAML: https://en.wikipedia.org/wiki/YAML
 .. _PolyChord: http://ccpforge.cse.rl.ac.uk/gf/project/polychord
+
+
+===================
+
+.. raw:: html
+
+    <a href="http://www.sussex.ac.uk/astronomy/"><img src="https://cdn.cosmologist.info/antony/Sussex.png" height="170px"></a>
+    <a href="http://erc.europa.eu/"><img src="https://erc.europa.eu/sites/default/files/content/erc_banner-vertical.jpg" height="200px"></a>
+    
