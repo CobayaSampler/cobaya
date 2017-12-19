@@ -159,7 +159,7 @@ class Likelihood(object):
     # Mandatory
     def logp(self, **params_values):
         """
-        Computes and returns the likelihood value.
+        Computes and returns the log likelihood value.
         Takes as keyword arguments the parameters values.
         To get the derived parameters, pass a `derived` keyword with an empty dictionary.
         """
