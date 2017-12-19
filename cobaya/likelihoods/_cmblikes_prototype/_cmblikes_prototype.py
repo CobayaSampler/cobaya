@@ -2,12 +2,10 @@
 .. module:: _CMBlikes_prototype
 
 :Synopsis: Definition of the CMBlikes class for some ground-based CMB experiments.
-:Author: ??????????????????
+:Author: Antony Lewis and Jesus Torrado
 
-# Load CosmoMC format .dataset files with lensing likelihood data
-# AL July 2014
-# note this is not well tested with final published versions of likelihoods
-# Does not handle calibration parameter
+# Load CosmoMC format .dataset files
+# AL July 2014 - Dec 2017
 
 Contains ...
 
@@ -56,12 +54,12 @@ class _cmblikes_prototype(Likelihood):
             if path_to_installation:
                 from importlib import import_module
                 self.path = getattr(
-                    import_module(package+".likelihoods."+self.name, package=package),
+                    import_module(package + ".likelihoods." + self.name, package=package),
                     "get_path")(path_to_installation)
             else:
-                log.error("No path given to the Bicep-Keck likelihood. Set the likelihood"
+                log.error("No path given to the %s likelihood. Set the likelihood"
                           " property 'path' or the common property '%s'.",
-                          _path_install)
+                          self.dataset_file, _path_install)
                 raise HandledException
         self.dataset_file_path = os.path.join(self.path, self.dataset_file)
         log.info("[%s] Reading data from %s", self.name, self.dataset_file_path)
@@ -71,8 +69,8 @@ class _cmblikes_prototype(Likelihood):
             raise HandledException
         self.loadDataset(self.dataset_file_path, self.dataset_params)
         # State requisites to the theory code
-        requested_cls = [self.field_names[i]+self.field_names[j]
-                         for i,j in zip(*np.where(self.cl_lmax != 0))]
+        requested_cls = [self.field_names[i] + self.field_names[j]
+                         for i, j in zip(*np.where(self.cl_lmax != 0))]
         # l_max has to take into account the window function of the lensing
         # so we check the computed l_max ("l_max" option) is higher than the requested one
         requested_l_max = int(np.max(self.cl_lmax))
@@ -179,21 +177,12 @@ class _cmblikes_prototype(Likelihood):
             ix += i
             M[i, i] = X[ix]
             ix += 1
-            #            for j in range(i):
-            #                M[i, j] = X[ix]
-            #                M[j, i] = M[i, j]
-            #                ix += 1
-            #            M[i, i] = X[ix]
-            #            ix += 1
 
     def matrix_to_elements(self, M, X):
         ix = 0
         for i in range(self.nmaps):
             X[ix:ix + i + 1] = M[i, 0:i + 1]
             ix += i + 1
-            # for j in range(i + 1):
-            #   X[ix] = M[i, j]
-            #  ix += 1
 
     def ReadClArr(self, ini, file_stem, return_full=False):
         # read file of CL or bins (indexed by L)
@@ -259,8 +248,10 @@ class _cmblikes_prototype(Likelihood):
         if nmaps != len(order):
             log.error('CMBLikes init_map_cls: size mismatch')
             raise HandledException
+
         class CrossPowerSpectrum(object):
             pass
+
         cls = np.empty((nmaps, nmaps), dtype=object)
         for i in range(nmaps):
             for j in range(i + 1):
@@ -443,6 +434,10 @@ class _cmblikes_prototype(Likelihood):
             self.calibration_param = self.nuisance_params.list()[0]
         else:
             self.calibration_param = None
+        if ini.hasKey('log_calibration_prior'):
+            log.warning('log_calibration_prior in .dataset ignored, set separately in .yaml file')
+        self.aberration_coeff = ini.float('aberration_coeff', 0.0)
+
         self.map_cls = self.init_map_cls(self.nmaps_required, self.required_order)
 
     def ReadCovmat(self, ini):
@@ -469,10 +464,10 @@ class _cmblikes_prototype(Likelihood):
             for binx in range(self.nbins_used):
                 for biny in range(self.nbins_used):
                     pcov[binx * self.ncl_used: (binx + 1) * self.ncl_used,
-                         biny * self.ncl_used: (biny + 1) * self.ncl_used] = (
-                             covmat_scale * self.full_cov[
-                                 np.ix_((binx + self.bin_min) * num_in + cov_cl_used,
-                                        (biny + self.bin_min) * num_in + cov_cl_used)])
+                    biny * self.ncl_used: (biny + 1) * self.ncl_used] = (
+                            covmat_scale * self.full_cov[
+                        np.ix_((binx + self.bin_min) * num_in + cov_cl_used,
+                               (biny + self.bin_min) * num_in + cov_cl_used)])
         else:
             log.error('unbinned covariance not implemented yet')
             raise HandledException
@@ -502,6 +497,8 @@ class _cmblikes_prototype(Likelihood):
         return np.sqrt(np.diag(self.full_cov))
 
     def plot(self, column='PP', ClArray=None, ls=None, ax=None):
+        log.warning("TODO: plot not implemented for Cobyaya")
+        raise HandledException
         import matplotlib.pyplot as plt
         lbin = self.full_bandpowers[:, self.full_bandpower_headers.index('L_av')]
         binned_phicl_err = self.diag_sigma()
@@ -543,6 +540,7 @@ class _cmblikes_prototype(Likelihood):
         self.adapt_theory_for_maps(self.map_cls, data_params)
 
     def adapt_theory_for_maps(self, cls, data_params):
+        if self.aberration_coeff: self.add_aberration(cls)
         self.add_foregrounds(cls, data_params)
         if self.calibration_param is not None and self.calibration_param in data_params:
             for i in range(self.nmaps_required):
@@ -554,6 +552,29 @@ class _cmblikes_prototype(Likelihood):
 
     def add_foregrounds(self, cls, data_params):
         pass
+
+    def add_aberration(self, cls):
+        # adapted from CosmoMC function by Christian Reichardt
+        ells = np.arange(self.pcl_lmin, self.pcl_lmax + 1)
+        cl_norm = ells * (ells + 1)
+        for i in range(self.nmaps_required):
+            for j in range(i + 1):
+                CL = cls[i, j]
+                if CL is not None:
+                    if CL.theory_ij[0] <= 2 and CL.theory_ij[1] <= 2:
+                        # first get Cl instead of Dl
+                        cl_deriv = CL.CL / cl_norm
+                        # second take derivative dCl/dl
+                        cl_deriv[1:-1] = (cl_deriv[2:] - cl_deriv[:-2]) / 2
+                        # handle endpoints approximately
+                        cl_deriv[0] = cl_deriv[1]
+                        cl_deriv[-1] = cl_deriv[-2]
+                        # reapply to Dl's.
+                        # note never took 2pi out, so not putting it back either
+                        cl_deriv *= cl_norm
+                        # also multiply by ell since really wanted ldCl/dl
+                        cl_deriv *= ells
+                        CL.CL += self.aberration_coeff * cl_deriv
 
     def write_likelihood_data(self, filename, data_params={}):
         cls = self.init_map_cls(self.nmaps_required, self.required_order)
@@ -640,8 +661,8 @@ class _cmblikes_prototype(Likelihood):
             self.matrix_to_elements(C, vecp)
             bigX[bin * self.ncl_used:(bin + 1) * self.ncl_used] = vecp[self.cl_used_index]
         if self.like_approx == 'exact':
-            return -0.5*chisq
-        return -0.5*np.dot(bigX, np.dot(self.covinv, bigX))
+            return -0.5 * chisq
+        return -0.5 * np.dot(bigX, np.dot(self.covinv, bigX))
 
 
 class BinWindows(object):
