@@ -87,7 +87,7 @@ def run_script():
     parser.add_argument("input_file", nargs=1, action="store", metavar="input_file.yaml",
                         help="An input file to run.")
     parser.add_argument("-p", "--path",
-                        action="store", nargs="+", metavar=("/some/path"),
+                        action="store", nargs="+", metavar="/some/path",
                         help="Path where modules were automatically installed.")
     args = parser.parse_args()
     if any([(os.path.splitext(f)[0] in ("input", "full")) for f in args.input_file]):

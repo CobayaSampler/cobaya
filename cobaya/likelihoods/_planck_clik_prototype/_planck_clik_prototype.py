@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 """
 .. module:: _planck_clik_prototype
 
@@ -187,39 +189,39 @@ class _planck_clik_prototype(Likelihood):
         index = 0
         if not self.lensing:
             for i in range(length):
-                if (self.clik.get_lmax()[i] > -1):
+                if self.clik.get_lmax()[i] > -1:
                     for j in range(self.clik.get_lmax()[i]+1):
-                        if (i == 0):
+                        if i == 0:
                             tot[index+j] = cl['tt'][j]
-                        if (i == 1):
+                        if i == 1:
                             tot[index+j] = cl['ee'][j]
-                        if (i == 2):
+                        if i == 2:
                             tot[index+j] = cl['bb'][j]
-                        if (i == 3):
+                        if i == 3:
                             tot[index+j] = cl['te'][j]
-                        if (i == 4):
+                        if i == 4:
                             tot[index+j] = 0 #cl['tb'][j] class does not compute tb
-                        if (i == 5):
+                        if i == 5:
                             tot[index+j] = 0 #cl['eb'][j] class does not compute eb
                     index += self.clik.get_lmax()[i]+1
         else:
             try:
                 for i in range(length):
-                    if (self.clik.get_lmax()[i] > -1):
+                    if self.clik.get_lmax()[i] > -1:
                         for j in range(self.clik.get_lmax()[i]+1):
-                            if (i == 0):
+                            if i == 0:
                                 tot[index+j] = cl['pp'][j]
-                            if (i == 1):
+                            if i == 1:
                                 tot[index+j] = cl['tt'][j]
-                            if (i == 2):
+                            if i == 2:
                                 tot[index+j] = cl['ee'][j]
-                            if (i == 3):
+                            if i == 3:
                                 tot[index+j] = cl['bb'][j]
-                            if (i == 4):
+                            if i == 4:
                                 tot[index+j] = cl['te'][j]
-                            if (i == 5):
+                            if i == 5:
                                 tot[index+j] = 0 #cl['tb'][j] class does not compute tb
-                            if (i == 6):
+                            if i == 6:
                                 tot[index+j] = 0 #cl['eb'][j] class does not compute eb
 
                         index += self.clik.get_lmax()[i]+1
@@ -229,9 +231,9 @@ class _planck_clik_prototype(Likelihood):
             except:
                 for i in range(length):
                     for j in range(self.l_max):
-                        if (i == 0):
+                        if i == 0:
                             tot[index+j] = cl['pp'][j]
-                        if (i == 1):
+                        if i == 1:
                             tot[index+j] = cl['tt'][j]
                     index += self.l_max+1
         # fill with likelihood parameters
@@ -245,7 +247,7 @@ class _planck_clik_prototype(Likelihood):
         return self.clik(tot)[0]
 
     def close(self):
-        del(self.clik)  # MANDATORY: forces deallocation of the Cython class
+        del self.clik  # MANDATORY: forces deallocation of the Cython class
         # Actually, it does not work for low-l likelihoods, which is quite dangerous!
 
 
@@ -266,7 +268,7 @@ def download_from_planck(product_id, path, no_progress_bars=False):
         log.error("Error downloading!")
         return False
     finally:
-        print ""  # force newline after wget
+        print("")
     # uncompress
     import os
     import tarfile
@@ -329,8 +331,8 @@ def install_clik(path, no_progress_bars=False):
         ["./waf", "configure", "--install_all_deps"], stdout=PIPE, stderr=PIPE)
     out, err = process.communicate()
     if err or not out.split("\n")[-2].startswith("'configure' finished successfully"):
-        print out
-        print err
+        print(out)
+        print(err)
         log.error("Configuration failed!")
         return False
     log.info("clik: compiling...")
@@ -338,8 +340,8 @@ def install_clik(path, no_progress_bars=False):
     out2, err2 = process2.communicate()
     # We don't check that err2" is empty, because harmless warnings are included there.
     if not out2.split("\n")[-2].startswith("'install' finished successfully"):
-        print out2
-        print err2
+        print(out2)
+        print(err2)
         log.error("Compilation failed!")
         return False
     log.info("clik: finished!")

@@ -12,12 +12,10 @@ from __future__ import absolute_import, division
 # Global
 import os
 import sys
-from collections import OrderedDict as odict
 from copy import deepcopy
 from importlib import import_module
 import numpy as np
-import inspect
-import scipy.stats as stats
+import six
 
 # Local
 from cobaya.conventions import package, subfolders, _likelihood
@@ -74,10 +72,10 @@ def get_external_function(string_or_function, name=None):
 
     Returns the function.
     """
-    if isinstance(string_or_function, basestring):
+    if isinstance(string_or_function, six.string_types):
         try:
             function = eval(string_or_function)
-        except Exception, e:
+        except Exception as e:
             log.error("Failed to load external function%s: '%r'",
                       " '%s'"%name if name else "", e)
             raise HandledException

@@ -18,14 +18,14 @@ def test_camb_planck_slow(modules, tmpdir, debug=False):
 @pytest.mark.slow
 def test_classy_planck_slow(modules, tmpdir, debug=False):
     body_of_test(modules, tmpdir, "p", theory="classy", debug=debug)
-    
+
 def body_of_test(modules, tmpdir, x, theory, debug=False):
     assert modules, "I need a modules folder!"
     info = {_path_install: modules}
     info.update(yaml_load(baseline_cosmology))
     # Add derived
     info[_params][_theory].update(derived)
-    print "FOR NOW, POPPING THE BBN PARAMETERS!!!!!!!"
+    print("FOR NOW, POPPING THE BBN PARAMETERS!!!!!!!")
     for p in ("YHe", "Y_p", "DH"):
         info[_params][_theory].pop(p, None)
     if theory == "camb":
@@ -73,7 +73,7 @@ def body_of_test(modules, tmpdir, x, theory, debug=False):
     info["output_prefix"] = "./chains_planck_%s_%s/"%(theory, x)
     info["debug"] = debug
 #    info["debug_file"] = "test_planck_slow.log"
-    print "Input info (dumped to yaml) -------------------------------"
-    print yaml_dump(info)
-    print "-----------------------------------------------------------"
+    print("Input info (dumped to yaml) -------------------------------")
+    print(yaml_dump(info))
+    print("-----------------------------------------------------------")
     updated_info, products = run(info)

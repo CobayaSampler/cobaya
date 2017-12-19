@@ -273,7 +273,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-class Prior():
+class Prior(object):
     """
     Class managing the prior and reference pdf's.
     """

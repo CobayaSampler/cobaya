@@ -15,7 +15,7 @@ import os
 import sys
 import traceback
 import datetime
-        
+
 # Local
 from cobaya.yaml_custom import yaml_dump
 from cobaya.conventions import _input_suffix, _full_suffix, separator, _yaml_extension
@@ -27,7 +27,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-class Output():
+class Output(object):
     def __init__(self, info):
         output_prefix = str(info[_output_prefix])
         self.folder = os.sep.join(output_prefix.split(os.sep)[:-1]) or "."

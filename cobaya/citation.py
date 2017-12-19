@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 """
 .. module:: citation
 
@@ -33,12 +35,12 @@ def get_citation_info(module, kind):
     return lines+"\n"
 
 def citation(*infos):
-    print make_header("This framework", "")
-    print "[Paper in preparation]\n"
-    for kind, modules in get_modules(*infos).iteritems():
+    print(make_header("This framework", ""))
+    print("[Paper in preparation]\n")
+    for kind, modules in get_modules(*infos).items():
         for module in modules:
-            print make_header(kind, module)
-            print get_citation_info(module, kind)
+            print(make_header(kind, module))
+            print(get_citation_info(module, kind))
 
 # Command-line script
 def citation_script():

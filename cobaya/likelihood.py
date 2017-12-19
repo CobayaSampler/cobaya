@@ -36,7 +36,7 @@ source tree. In that folder, there must be at least *three* files:
 
 - A trivial ``__init__.py`` file containing a single line: ``from [name] import [name]``,
   where ``name`` is the name of the likelihood, and it's folder.
-- A ``name.py`` file, containing the particular class definition of the likelihood, 
+- A ``name.py`` file, containing the particular class definition of the likelihood,
   inheriting from the :class:`Likelihood` class (see below).
 - A ``defaults.yaml`` containing a block:
 
@@ -56,7 +56,7 @@ source tree. In that folder, there must be at least *three* files:
   likelihood, and they are loaded automatically with their default values (options) and
   priors (parameters) by simply mentioning the likelihood in the input file, where one can
   re-define any of those options with a different value. The same parameter may be
-  defined by different likelihoods -- in those cases, it needs to have the same default 
+  defined by different likelihoods -- in those cases, it needs to have the same default
   information (prior, label, etc.) in the defaults file of those likelihoods.
 
 .. note::
@@ -76,9 +76,9 @@ Creating your own likelihood
 ----------------------------
 
 Since cobaya was created to be flexible, creating your own likelihood is very easy: simply
-create a folder with its name under ``likelihoods`` in the source tree and follow the 
+create a folder with its name under ``likelihoods`` in the source tree and follow the
 conventions explained above. Inside the class definition of your function, you can use any
-of the attributes defined in the ``defaults.yaml`` file directly, and you only need to 
+of the attributes defined in the ``defaults.yaml`` file directly, and you only need to
 specify one, or at most three, functions
 (see the :class:`Likelihood` class documentation below):
 
@@ -140,10 +140,10 @@ class Likelihood(object):
                              if p.startswith(self.mock_prefix or "")]
         # Load parameters
         self.input_params = odict(
-            [(p,p_info) for p,p_info in parametrisation.input_params().iteritems()
+            [(p,p_info) for p,p_info in parametrisation.input_params().items()
              if p in info[_params]])
         self.output_params = odict(
-            [(p,p_info) for p,p_info in parametrisation.output_params().iteritems()
+            [(p,p_info) for p,p_info in parametrisation.output_params().items()
              if p in info[_params]])
         # Initialise
         self.theory = theory
@@ -253,7 +253,7 @@ class LikelihoodCollection(object):
             self.theory = None
         # Initialise individual Likelihoods
         self._likelihoods = odict()
-        for name, info in info_likelihood.iteritems():
+        for name, info in info_likelihood.items():
             # If it does "external" key, wrap it up. Else, load it up
             if _external in info:
                 self._likelihoods[name] = LikelihoodExternalFunction(

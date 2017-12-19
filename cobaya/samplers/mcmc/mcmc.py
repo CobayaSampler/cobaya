@@ -23,8 +23,8 @@
    (arXiv:math/0502099) <https://arxiv.org/abs/math/0502099>`_
 
 
-This is the Markov Chain Monte Carlo Metropolis sampler used by CosmoMC, and described in 
-`Lewis, "Efficient sampling of fast and slow cosmological parameters" (arXiv:1304.4473) 
+This is the Markov Chain Monte Carlo Metropolis sampler used by CosmoMC, and described in
+`Lewis, "Efficient sampling of fast and slow cosmological parameters" (arXiv:1304.4473)
 <https://arxiv.org/abs/1304.4473>`_.
 
 The proposal pdf is a gaussian mixed with an exponential pdf in random directions, which is
@@ -72,7 +72,7 @@ Example *parameters* block:
       ref:
         dist: norm
         loc: 0
-        scale: 0.2        
+        scale: 0.2
       prior:
         min: -1
         max:  1
@@ -83,7 +83,7 @@ Example *parameters* block:
 + ``b`` -- the initial point of the chain is always 2,
   and its proposal width is 0.25.
 + ``c`` -- the initial point of the chain is drawn from a gaussian centred at 0
-  with standard deviation 0.2; its proposal width is not specified, so it is taken to be 
+  with standard deviation 0.2; its proposal width is not specified, so it is taken to be
   that of the reference pdf, 0.2.
 
 A good initial covariance matrix for the proposal is critical for convergence.
@@ -92,7 +92,7 @@ above, or thorugh ``mcmc``'s property ``covmat``, as a file name (including path
 if not located at the invocation folder).
 The first line of the ``covamt`` file must start with ``#``, followed by a list of parameter
 names, separated by a space. The rest of the file must contain the covariance matrix,
-one row per line. It does not need to contain the same parameters as the sampled ones: 
+one row per line. It does not need to contain the same parameters as the sampled ones:
 it overrides the ``proposal``'s (and adds covariances) for the sampled parameters,
 and ignores the non-sampled ones.
 
@@ -109,14 +109,14 @@ In this case, internally, the final covariance matrix of the proposal would be::
      0.01  0.2   0
      0     0     0.04
 
-If the option `learn_proposal` is set to ``True``, the covariance matrix will be updated 
+If the option `learn_proposal` is set to ``True``, the covariance matrix will be updated
 once in a while to accelerate convergence
 (nb. convergence testing is only implemented for paralel chains right now).
 
 If you are not sure that your posterior has one single mode, or if its shape is very
 irregular, you should probably set ``learn_proposal: False``.
 
-If you don't know how good your initial guess for starting point and covariance of the 
+If you don't know how good your initial guess for starting point and covariance of the
 proposal are, it is a good idea to allow for a number of initial *burn in* samples,
 e.g. 10 per dimension. This can be specified with the parameter ``burn_in``.
 These samples will be ignored for all purposes (output, covergence, proposal learning...)
@@ -372,7 +372,7 @@ class mcmc(Sampler):
         # Main loop!
         self.converged = False
         log.info("Sampling!")
-        while self.n() < (self.effective_max_samples) and not(self.converged):
+        while self.n() < self.effective_max_samples and not self.converged:
             self.get_new_sample()
             # Callback function
             if (hasattr(self, "callback_function_callable") and
@@ -578,7 +578,7 @@ class mcmc(Sampler):
                     np.array([1.]), self.all_ready)
                 log.info(msg_ready + " (waiting for the rest...)")
         # If all processes are ready to learn (= communication finished)
-        if (self.req.Test() if hasattr(self, "req") else False):
+        if self.req.Test() if hasattr(self, "req") else False:
             # Sanity check: actually all processes have finished
             assert np.all(self.all_ready == 1), (
                 "This should not happen! Notify the developers. (Got %r)", self.all_ready)
@@ -639,7 +639,7 @@ class mcmc(Sampler):
 #                    "Negative eigenvectors. This should not happen. "
 #                    "Check the condition number of the diagonalised matrix.")
                 # Have we converged in means? (criterion must be fulfilled twice in a row)
-                if (max(Rminus1, getattr(self, "Rminus1_last", np.inf)) < self.Rminus1_stop):
+                if max(Rminus1, getattr(self, "Rminus1_last", np.inf)) < self.Rminus1_stop:
                     # Check the convergence of the limits of the confidence intervals
                     # Same as R-1, but with the rms deviation from the mean limit
                     # in units of the mean standard deviation of the chains
@@ -661,8 +661,7 @@ class mcmc(Sampler):
         if self.learn_proposal and not self.converged:
             # update iff (not MPI, or MPI and "good" Rminus1)
             if get_mpi():
-                good_Rminus1 = (self.Rminus1_last < self.learn_proposal_Rminus1_max and
-                                self.Rminus1_last > self.learn_proposal_Rminus1_min)
+                good_Rminus1 = (self.Rminus1_last < self.learn_proposal_Rminus1_max > self.learn_proposal_Rminus1_min)
                 if not good_Rminus1:
                     if not get_mpi_rank():
                         log.info("Bad convergence statistics: "

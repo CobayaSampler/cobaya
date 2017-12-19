@@ -13,9 +13,9 @@ Basically, a wrapper around a `pandas.DataFrame`.
 # Python 2/3 compatibility
 from __future__ import absolute_import
 from __future__ import division
+import six
 
 # Global
-import os
 import numpy as np
 import pandas as pd
 from getdist import MCSamples
@@ -36,7 +36,7 @@ log = logging.getLogger(__name__)
 enlargement_size = 100
 enlargement_factor = None
 
-class Collection():
+class Collection(object):
 
     def __init__(self, parametrisation, likelihood, output=None,
                  initial_size=enlargement_size, name=None):
@@ -58,7 +58,7 @@ class Collection():
 
 
         # RANGES HERE!!!!
-        
+
 
         # OUTPUT: Driver, file_name, index to track last sample written
         if output:
@@ -72,7 +72,7 @@ class Collection():
                   weight=1, logpost=None, logprior=None, logliks=None):
         self.enlarge_if_needed()
         self.data[_weight][self._n] = weight
-        if logpost == None:
+        if logpost is None:
             try:
                 logpost = logprior + sum(logliks)
             except ValueError:
@@ -80,7 +80,7 @@ class Collection():
                           "a log-likelihood and a log-prior.")
                 raise HandledException
         self.data[_minuslogpost][self._n] = -logpost
-        if logprior != None:
+        if logprior is not None:
             self.data[_minuslogprior][self._n] = -logprior
         if logliks is not None:
             for name, value in zip(self.chi2_names, logliks):
@@ -100,10 +100,10 @@ class Collection():
             else:
                 enlarge_by = enlargement_size
             self.data = pd.concat([self.data,
-                pd.DataFrame(np.zeros((enlarge_by, self.data.shape[1])), 
+                pd.DataFrame(np.zeros((enlarge_by, self.data.shape[1])),
                              columns=self.data.columns,
                              index=np.arange(self.n(),self.n()+enlarge_by))])
-        
+
     # Retrieve-like methods
     def n(self):
         return self._n
@@ -175,7 +175,7 @@ class Collection():
     def update__txt(self):
         self.dump_slice__txt(self.n_last_out(), self.n())
     def dump_slice__txt(self, n_min=None, n_max=None):
-        if n_min == None or n_max == None:
+        if n_min is None or n_max is None:
             log.error("Needs to specify the limit n's to dump.")
             raise HandledException
         self._n_last_out = n_max
@@ -224,7 +224,7 @@ class OnePoint(Collection):
         Collection.__init__(self, *args, **kwargs)
 
     def __getitem__(self, columns):
-        if isinstance(columns, basestring):
+        if isinstance(columns, six.string_types):
             columns = [columns]
             i = (0,0)
         else:
@@ -238,7 +238,7 @@ class OnePoint(Collection):
 
     def increase_weight(self, increase):
         self.data["weight"] += increase
-        
+
     def add_to_collection(self, collection):
         """Adds this point at the end of a given collection."""
         collection.add(
@@ -248,7 +248,7 @@ class OnePoint(Collection):
             logpost=-self[_minuslogpost], weight=self[_weight],
             logprior=-self[_minuslogprior],
             logliks=-0.5*np.array(self[self.chi2_names]))
-    
+
     # Make the dataframe printable (but only the filled ones!)
     def __repr__(self):
         return self.data[:1].__repr__()

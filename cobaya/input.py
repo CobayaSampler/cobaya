@@ -79,7 +79,7 @@ def get_modules(*infos):
             modules[field] += [a for a in (info.get(field) or [])
                                if a not in modules[field]]
     # pop empty blocks
-    for k,v in modules.iteritems():
+    for k,v in modules.items():
         if not v:
             modules.pop(k)
     return modules
@@ -148,7 +148,7 @@ def get_full_info(info):
     if _prior in input_info or any(default_prior_info.values()):
         full_info[_prior] = input_info.get(_prior, odict())
     for prior_info in default_prior_info.values():
-        for name, prior in prior_info.iteritems():
+        for name, prior in prior_info.items():
             if full_info[_prior].get(name, prior) != prior:
                 log.error("Two different priors cannot have the same name: '%s'.", name)
                 raise HandledException
@@ -157,7 +157,7 @@ def get_full_info(info):
     full_info[_params] = merge_params_info(input_info.get(_params, {}),
                                            defaults=default_params_info)
     # Rest of the options
-    for k,v in input_info.iteritems():
+    for k,v in input_info.items():
         if k not in full_info:
             full_info[k] = v
     return full_info
@@ -169,8 +169,8 @@ def merge_params_info(params_info, defaults=None):
     """
     # First, merge defaults. Impose multiple defined (=shared) parameters have equal info
     defaults_merged = odict()
-    for lik, params in defaults.iteritems():
-        for p, info in params.iteritems():
+    for lik, params in defaults.items():
+        for p, info in params.items():
             # if already there, check consistency
             if p in defaults_merged:
                 log.debug("Parameter '%s' multiply defined.", p)

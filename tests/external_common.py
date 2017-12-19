@@ -8,8 +8,8 @@ import os
 import shutil
 from random import random
 import numpy as np
-import scipy.stats as stats
 import inspect
+import six
 from copy import deepcopy
 
 # Local
@@ -82,7 +82,7 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
          info[_params]["y"][_prior]["min"]))
     logps = dict([
         (name, logpdf(**dict([(arg, products["sample"][arg].values) for arg in inspect.getargspec(logpdf)[0]])))
-        for name, logpdf in {"half_ring":half_ring_func, "gaussian_y":gaussian_func}.iteritems()])
+        for name, logpdf in {"half_ring":half_ring_func, "gaussian_y":gaussian_func}.items()])
     # Test #1: values of logpdf's
     if kind == _prior:
         assert np.allclose(logprior_base+sum(logps[p] for p in info_logpdf),
@@ -100,10 +100,10 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
     if derived:
         derived_values = dict([
             (param, func(**dict([(arg, products["sample"][arg].values) for arg in ["x","y"]])))
-             for param, func in derived_funcs.iteritems()])
+             for param, func in derived_funcs.items()])
         assert np.all(
             [np.allclose(v, products["sample"]["derived__"+p].values)
-             for p, v in derived_values.iteritems()]), (
+             for p, v in derived_values.items()]), (
             "The value of the derived parameters is not reproduced correctly.")
     # Test updated info -- scripted
     if kind == _prior:
@@ -112,7 +112,7 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
     elif kind == _likelihood:
         # Transform the likelihood info to the "external" convention and add defaults
         info_likelihood = deepcopy(info[_likelihood])
-        for lik, value in info_likelihood.iteritems():
+        for lik, value in info_likelihood.items():
             if not hasattr(value, "get"):
                 info_likelihood[lik] = {_external: value}
             info_likelihood[lik].update({k:v for k,v in class_options.items()
@@ -121,12 +121,12 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
             "The likelihood information has not been updated correctly.")
     # Test updated info -- yaml
     # For now, only if ALL external pdfs are given as strings, since the YAML load fails otherwise
-    stringy = dict([(k,v) for k,v in info_logpdf.iteritems() if isinstance(v, basestring)])
+    stringy = dict([(k,v) for k,v in info_logpdf.items() if isinstance(v, six.string_types)])
     if stringy == info_logpdf:
         full_output_file = os.path.join(prefix, _full_suffix+".yaml")
         with open(full_output_file) as full:
             updated_yaml = yaml_load("".join(full.readlines()))
-        for k,v in stringy.iteritems():
+        for k,v in stringy.items():
             to_test = updated_yaml[kind][k]
             if kind == _likelihood:
                 to_test = to_test[_external]

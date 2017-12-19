@@ -76,7 +76,7 @@ def body_of_test(modules, x, theory):
         info[_params][_theory].update(baseline_cosmology_classy_extra)
     # Add derived
     info[_params][_theory].update(derived_bestfit_test)
-    print "FOR NOW, POPPING THE BBN PARAMETERS!!!!!!!"
+    print("FOR NOW, POPPING THE BBN PARAMETERS!!!!!!!")
     for p in ("YHe", "Y_p", "DH"):
         info[_params][_theory].pop(p, None)
         derived_values.pop(p, None)
@@ -100,8 +100,8 @@ def body_of_test(modules, x, theory):
         if rel > tolerance_derived*(
                 2 if p in ("YHe", "Y_p", "DH", "sigma8", "s8omegamp5") else 1):
             not_passed += [(p, rel)]
-    print "Derived parameters not tested because not implemented: %r"%not_tested
-    assert not(not_passed), "Some derived parameters were off: %r"%not_passed
+    print("Derived parameters not tested because not implemented: %r" % not_tested)
+    assert not not_passed, "Some derived parameters were off: %r" % not_passed
 
 
 # Baseline priors ########################################################################

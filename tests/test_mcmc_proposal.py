@@ -88,7 +88,7 @@ def body_of_test(dim, covariances=True, oversample=False, fast_slow=False):
         for i in range(dim_slow*times):
             x = np.zeros(dim)
             sampler.proposer.get_proposal_slow(x)
-            print x, speeds, max_speed_slow
+            print(x, speeds, max_speed_slow)
             punchcard[np.where((x != 0))] += 1
         expected = ([i+1 for i in range(dim_slow)] +
                     [dim_slow] * dim_fast)

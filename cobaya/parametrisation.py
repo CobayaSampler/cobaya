@@ -125,7 +125,7 @@ class Parametrisation(object):
             [(p,info_params[_theory][p]) for p in self._theory_params])
         info_params_flat.update(odict(
             [(p,info_params[p]) for p in info_params if p != _theory]))
-        for p, info in info_params_flat.iteritems():
+        for p, info in info_params_flat.items():
             if is_fixed_param(info):
                 self._input[p] = info if isinstance(info, Number) else None
                 if self._input[p] is None:
@@ -174,9 +174,9 @@ class Parametrisation(object):
         # if argument of a theory parameter, assume it's a theory parameter
         args_theory = (
             set(chain(
-                *[v for p,v in self._input_args.iteritems() if p in self._theory_params]))
+                *[v for p,v in self._input_args.items() if p in self._theory_params]))
             .union(chain(
-                *[v for p,v in self._derived_args.iteritems()
+                *[v for p,v in self._derived_args.items()
                   if p in self._theory_params])))
         self._theory_params = self._theory_params + [p for p in args_theory
                                                      if p not in self._theory_params]
@@ -259,7 +259,7 @@ class Parametrisation(object):
     def labels(self):
         """
         Returns a dictionary of LaTeX labels of the sampled and derived parameters.
-        
+
         Uses the parameter name of no label has been given.
         """
         get_label = lambda p,info: (
