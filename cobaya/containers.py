@@ -155,7 +155,7 @@ def create_base_image(mpi=None, version=None, sub=None):
     try:
         tag = "cobaya/base_%s_%s:latest"%(mpi.lower(), version+sub)
     except KeyError():
-        log.error("MPI library '%s' not recognised.")
+        log.error("MPI library '%s' not recognized.")
         raise HandledException
     URL = MPI_URL[mpi.lower()].replace("_VER_", str(version)).replace("_DOT_SUB_", sub)
     if head(URL).status_code >= 400:

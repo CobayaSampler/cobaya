@@ -36,7 +36,7 @@ def load_input(input_file):
     file_name, extension = os.path.splitext(input_file)
     file_name = os.path.basename(file_name)
     if extension not in (".yaml",".yml"):
-        log.error("Extension of input file '%s' not recognised.", input_file)
+        log.error("Extension of input file '%s' not recognized.", input_file)
         raise HandledException
     info = yaml_load_file(input_file)
     # if output_prefix not defined, default to input_file name (sans ext.) as prefix;
@@ -129,13 +129,13 @@ def get_full_info(info):
                 raise HandledException
             if not hasattr(input_info[block][module], "get"):
                 input_info[block][module] = {_external: input_info[block][module]}
-            options_not_recognised = (set(input_info[block][module])
+            options_not_recognized = (set(input_info[block][module])
                                       .difference(set([_external]))
                                       .difference(set(full_info[block][module])))
-            if options_not_recognised:
-                log.error("'%s' does not recognise some options: '%r'. "
+            if options_not_recognized:
+                log.error("'%s' does not recognize some options: '%r'. "
                           "To see the allowed options, check out the file '%s'",
-                          module, tuple(options_not_recognised), path_to_defaults)
+                          module, tuple(options_not_recognized), path_to_defaults)
                 raise HandledException
             full_info[block][module].update(input_info[block][module])
             # Store default parameters and priors of class, and save to combine later

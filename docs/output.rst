@@ -12,13 +12,13 @@ Output files
 - ``[prefix__]full.yaml``: a file containing the input information plus the default values used by each module.
 - ``[prefix_][number].txt``: one or more sample files, containing one sample per line, with values separated by spaces. The first line specifies the columns.
 
-.. note:: 
+.. note::
 
    Some samplers produce additional output, e.g. :doc:`PolyChord <sampler_polychord>`. In those cases, the resulting output is translated into **cobaya**'s output format, but the sampler's native output is kept too, usually under sub-folder within the output folder indicated with ``output_prefix`` (see the documentation for the particular sampler that you are using).
 
 
 .. _out_example:
-  
+
 An example output and its analysis
 ----------------------------------
 
@@ -37,19 +37,19 @@ If you inspect the ``.txt`` file, the first lines will look like
 
    # weight minuslogpost mock_a mock_b derived__mock_derived_a derived__mock_derived_b minuslogprior chi2 chi2__gaussian
    14 3.7928475 -0.041594155 0.41613663 -0.7639878 1.2835171 2.8622009 1.8612931 1.8612931
-   3 4.2508064 -0.30329058 0.076149634 -1.5915446 0.78357974 2.8622009 2.777211 2.777211   
+   3 4.2508064 -0.30329058 0.076149634 -1.5915446 0.78357974 2.8622009 2.777211 2.777211
    [...]
 
-You can use `GetDist <http://getdist.readthedocs.io/en/latest/index.html>`_ to analyse the results of this sample: get marginalised statistics, convergence diagnostics and some plots. We recommend (and for now **only** support) the `graphical user interface <http://getdist.readthedocs.io/en/latest/gui.html>`_. Simply run ``GetDistGUI.py`` from any folder, press the green ``+`` button, navigate in the pop-up window into the folder containing the chains (here ``chains``) and click ``choose``. Now you can get some result statistics from the ``Data`` menu, or generate some plots like this one (just mark the the options in the red boxes and hit ``Make plot``):
+You can use `GetDist <http://getdist.readthedocs.io/en/latest/index.html>`_ to analyse the results of this sample: get marginalized statistics, convergence diagnostics and some plots. We recommend (and for now **only** support) the `graphical user interface <http://getdist.readthedocs.io/en/latest/gui.html>`_. Simply run ``GetDistGUI.py`` from any folder, press the green ``+`` button, navigate in the pop-up window into the folder containing the chains (here ``chains``) and click ``choose``. Now you can get some result statistics from the ``Data`` menu, or generate some plots like this one (just mark the the options in the red boxes and hit ``Make plot``):
 
 .. image:: img_output_getdistgui.png
 
 .. note::
-              
+
    For a detailed user manual and many more examples, check out the `GetDist documentation <http://getdist.readthedocs.io/en/latest/index.html>`_!
 
 .. _out_example_scripted:
-   
+
 Scripted analysis
 -----------------
 
@@ -69,7 +69,7 @@ For example, assuming that you have just run the example in :ref:`in_example_scr
 
 
 .. _output_prefix:
-   
+
 Specifying the output folder and/or prefix
 ------------------------------------------
 

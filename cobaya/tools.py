@@ -147,6 +147,6 @@ def get_scipy_1d_pdf(info):
         log.error(
             "'scipy.stats' produced an error: <<%r>>. "
             "This probably means that the distribution '%s' "
-            "does not recognise the parameter mentioned in the 'scipy' error above.",
+            "does not recognize the parameter mentioned in the 'scipy' error above.",
             tp.message, dist)
         raise HandledException

@@ -52,7 +52,7 @@ source tree. In that folder, there must be at least *three* files:
              [prior info]
            [label, ref, etc.]
 
-  The options and parameters defined in this file are the only ones recognised by the
+  The options and parameters defined in this file are the only ones recognized by the
   likelihood, and they are loaded automatically with their default values (options) and
   priors (parameters) by simply mentioning the likelihood in the input file, where one can
   re-define any of those options with a different value. The same parameter may be
@@ -262,7 +262,7 @@ class LikelihoodCollection(object):
                 lik_class = get_class(name)
                 self._likelihoods[name] = lik_class(
                     info, parametrization, theory=self.theory)
-        # Check that all are recognised
+        # Check that all are recognized
         for params in ("input_params", "output_params"):
             info = getattr(parametrization, params)()
             setattr(self, params, info)
@@ -271,7 +271,7 @@ class LikelihoodCollection(object):
                               *[getattr(self[lik], params) for lik in self]))
             r_not_k = requested.difference(known)
             if r_not_k:
-                log.error("Some of the requested %s parameters were not recognised "
+                log.error("Some of the requested %s parameters were not recognized "
                           "by any likelihood: %r.", params.split("_")[0], r_not_k)
                 raise HandledException
         # Store the input params and likelihods on which each sampled params depends
@@ -347,7 +347,7 @@ class LikelihoodCollection(object):
         """
         Blocks the sampled parameters by likelihood, and sorts the blocks by speed.
         Returns an ``OrderedDict`` ``{speed: [params]}``, sorted by ascending speeds.
-        Parameters recognised by more than one likelihood are blocked in the slowest one.
+        Parameters recognized by more than one likelihood are blocked in the slowest one.
         """
         param_with_speed = odict([[p,min([self[lik].speed for lik in liks])]
                                   for p,liks in self.sampled_lik_dependence.items()])

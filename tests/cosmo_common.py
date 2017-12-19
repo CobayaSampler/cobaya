@@ -54,7 +54,7 @@ def body_of_test(modules, x, theory):
         ref_chi2 = chi2_lowTEB_highTTTEEE
         derived_values = derived_lowTEB_highTTTEEE
     else:
-        raise ValueError("Test not recognised: %r"%x)
+        raise ValueError("Test not recognized: %r"%x)
     derived_bestfit_test = deepcopy(derived)
     # Adjustments for Classy
     if theory == "classy":

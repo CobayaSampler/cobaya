@@ -625,7 +625,7 @@ class mcmc(Sampler):
                 diagSinvsqrt = np.diag(np.power(np.diag(cov_of_means), -0.5))
                 corr_of_means     = diagSinvsqrt.dot(cov_of_means).dot(diagSinvsqrt)
                 norm_mean_of_covs = diagSinvsqrt.dot(mean_of_covs).dot(diagSinvsqrt)
-                # Cholesky of (normalised) mean of covs and eigvals of Linv*cov_of_means*L
+                # Cholesky of (normalized) mean of covs and eigvals of Linv*cov_of_means*L
                 L = np.linalg.cholesky(norm_mean_of_covs)
                 Linv = np.linalg.inv(L)
                 eigvals = np.linalg.eigvalsh(Linv.dot(corr_of_means).dot(Linv.T))
@@ -644,7 +644,7 @@ class mcmc(Sampler):
                     # Same as R-1, but with the rms deviation from the mean limit
                     # in units of the mean standard deviation of the chains
                     Rminus1_cl = np.std(limits, axis=0).T/np.sqrt(np.diag(mean_of_covs))
-                    log.debug("Normalised std's of limits = %r", Rminus1_cl)
+                    log.debug("normalized std's of limits = %r", Rminus1_cl)
                     log.info("Convergence of limits: R-1 = %f after %d samples",
                              np.max(Rminus1_cl), self.n())
                     if np.max(Rminus1_cl) < self.Rminus1_cl_stop:

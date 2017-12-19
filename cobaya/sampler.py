@@ -73,7 +73,7 @@ class Sampler(object):
         prepares the output, deals with MPI scheduling, imports an external sampler, etc.
 
         Options defined in the ``defaults.yaml`` file in the sampler's folder are
-        automatically recognised as attributes, with the value given in the input file,
+        automatically recognized as attributes, with the value given in the input file,
         if redefined there.
 
         The prior and likelihood are also accesible through the attributes with the same

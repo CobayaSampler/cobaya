@@ -67,7 +67,7 @@ def body_of_test(modules, tmpdir, x, theory, debug=False):
         info[_likelihood] = lik_info_lowTEB_highTTTEEE
         covmat_file = "./base_plikHM_TTTEEE_lowTEB.covmat"
     else:
-        raise ValueError("Test not recognised: %r"%x)
+        raise ValueError("Test not recognized: %r"%x)
     # Change Planck's official CosmoMC covmat
     info[_sampler]["mcmc"]["covmat"] = adapt_covmat(covmat_file, tmpdir, theory)
     info["output_prefix"] = "./chains_planck_%s_%s/"%(theory, x)

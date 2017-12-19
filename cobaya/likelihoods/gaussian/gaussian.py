@@ -10,7 +10,7 @@ The mean and covariance matrix for one or more modes must be specified with the 
 ``mean`` and ``covmat`` respectively. The dimensionality of the likelihood and the number
 of modes are guessed from this options (if they are consistent to each other).
 
-The pdf is normalised to 1 when integrated over an infinite domain,
+The pdf is normalized to 1 when integrated over an infinite domain,
 regardless of the number of modes.
 
 The following example defines 3 modes in 2 dimensions, and expects two parameters whose

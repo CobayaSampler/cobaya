@@ -87,10 +87,10 @@ How parameters are passed around
 The sampler (MCMC, PolyChord, etc.) does not need to know about to which likelihood understands and make use of each particular parameter. It is the :class:`likelihood.LikelihoodCollection` class who is responsible for passing the parameters around to the likelihoods (and to the theory code). Since, as we said above, more than one likelihood may share a parameter, the parameters cannot be separated in blocks trivially. Thus, we have to choose between
 
 a) blocking the parameters per likelihood (blocks could have a non-trivial intersection),
-b) pass all the parameters to each likelihoods, and let each likelihood recognise their own parameters.
+b) pass all the parameters to each likelihoods, and let each likelihood recognize their own parameters.
 
 .. note::
-   Whatever the choice, we need each likelihood to be able to recognise its own parameters. But they do, since they have been defined in the respective ``defaults.yaml`` file (or for external likelihoods, they can be extracted using Python's *introspection* capabilities).
+   Whatever the choice, we need each likelihood to be able to recognize its own parameters. But they do, since they have been defined in the respective ``defaults.yaml`` file (or for external likelihoods, they can be extracted using Python's *introspection* capabilities).
 
 The complicated bits that could make us decide between one approach or the other are:
 

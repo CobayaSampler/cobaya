@@ -98,7 +98,7 @@ An example ``params`` block:
 Prior normalization for evidence computation
 --------------------------------------------
 
-As defined above, the priors are automatically normalised, so any sampler that computes
+As defined above, the priors are automatically normalized, so any sampler that computes
 the evidence will produce the right results.
 
 Improper priors will produce unexpected errors. So don't try
@@ -194,7 +194,7 @@ dictionary containing all the information, before calling ``cobaya.run.run``:
 
 
 
-decir que no estan normalised (link a seccion (TODO) sobre normalizar posteriors)
+decir que no estan normalized (link a seccion (TODO) sobre normalizar posteriors)
 
 TEST EXAMPLES!!!
 
@@ -329,7 +329,7 @@ class Prior(object):
                           "Got %r1", name, self.external[name]["argspec"].args)
                 raise HandledException
             log.warning("External prior '%s' loaded. "
-                        "Mind that it might not be normalised!", name)
+                        "Mind that it might not be normalized!", name)
 
     def d(self):
         """
