@@ -95,7 +95,7 @@ An example ``params`` block:
 
 
 
-Prior normalisation for evidence computation
+Prior normalization for evidence computation
 --------------------------------------------
 
 As defined above, the priors are automatically normalised, so any sampler that computes

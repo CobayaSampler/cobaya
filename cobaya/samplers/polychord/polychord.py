@@ -143,7 +143,7 @@ class polychord(Sampler):
     def initialise(self):
         """Imports the PolyChord sampler and prepares its arguments."""
         if not get_mpi_rank():  # rank = 0 (MPI master) or None (no MPI)
-            log.info("Initialising")
+            log.info("Initializing")
         # Importing PolyChord from the correct path
         if self.path:
             if not get_mpi_rank():

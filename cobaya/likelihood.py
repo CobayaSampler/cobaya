@@ -127,7 +127,7 @@ class_options = {"speed": 1}
 class Likelihood(object):
     """Likelihood class prototype."""
 
-    # Generic initialisation -- do not touch
+    # Generic initialization -- do not touch
     def __init__(self, info, parametrization, theory=None):
         # Load info of the likelihood
         for k in info:

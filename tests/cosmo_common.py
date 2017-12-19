@@ -306,7 +306,7 @@ derived_lowl_highTT = {
     }
 
 
-# Best fit Polarisation ##################################################################
+# Best fit Polarization ##################################################################
 
 # NB: A_sz and ksz_norm need to have a prior defined, though "evaluate" will ignore it in
 # favour of the fixed "ref" value. This needs to be so since, at the time of writing this

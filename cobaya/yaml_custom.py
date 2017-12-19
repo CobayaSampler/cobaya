@@ -4,7 +4,7 @@
 :Synopsis: Custom YAML loader and dumper
 :Author: Jesus Torrado (parts of the code comes from stackoverflow user's)
 
-Customisation of YAML's loaded and dumper:
+Customization of YAML's loaded and dumper:
 
 1. Matches 1e2 as 100 (no need for dot, or sign after e),
    from http://stackoverflow.com/a/30462009

@@ -38,7 +38,7 @@ class Theory(object):
 
     def needs(self, arguments):
         """
-        Function to be called by the likelihoods at their initialisation,
+        Function to be called by the likelihoods at their initialization,
         to specify their requests.
         Its specific behaviour for a code must be defined.
         """

@@ -111,7 +111,7 @@ class Sampler(object):
     # Private methods: just ignore them:
     def __init__(self, info_sampler, parametrization, prior, likelihood, output):
         """
-        Actual initialisation of the class. Loads the default and input information and
+        Actual initialization of the class. Loads the default and input information and
         call the custom ``initialise`` method.
 
         [Do not modify this one.]

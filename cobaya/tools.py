@@ -55,7 +55,7 @@ def get_class(name, kind=_likelihood):
         return getattr(import_module(class_folder, package=package), name)
     except:
         if sys.exc_info()[0] == ImportError and str(sys.exc_info()[1]).endswith(name):
-            log.error("%s '%s' not found (wrong capitalisation?)", kind.capitalize(), name)
+            log.error("%s '%s' not found (wrong capitalization?)", kind.capitalize(), name)
             raise HandledException
         else:
             log.error("There was a problem when importing %s '%s':", kind, name)

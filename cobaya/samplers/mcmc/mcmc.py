@@ -200,7 +200,7 @@ class mcmc(Sampler):
     def initialise(self):
         """Initialises the sampler:
         creates the proposal distribution and draws the initial sample."""
-        log.info("Initialising")
+        log.info("Initializing")
         # Burning-in countdown -- the +1 accounts for the initial point (always accepted)
         self.burn_in_left = self.burn_in + 1
         # One collection per MPI process: `name` is the MPI rank + 1

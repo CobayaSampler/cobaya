@@ -32,7 +32,7 @@ An example input file
        latex: \alpha^prime
      mock_derived_b:
        latex: \beta^prime
-     
+
    sampler:
      mcmc:
        burn_in: 100
@@ -41,13 +41,13 @@ An example input file
    output_prefix: chains/
 
 That input structure above contains three *blocks*:
-       
+
 - ``likelihood``: Specifies a list of likelihoods to sample, with their corresponding options -- here a Gaussian likelihood with the mean and covariance specified under it.
 - ``params``: lists the parameters to be explored, and for each its prior and a LaTeX label to be used when producing plots. The parameters ``mock_a`` and ``mock_b`` will be sampled (they have a prior specified under them), whereas ``mock_derived_a`` and ``mock_derived_b`` are derived quantities computed by the likelihood (they don't have a prior).
 - ``sampler``: specifies which sampler to use, here the internal MCMC sampler, and some options for it: the number of burn-in samples and the total number of samples to be drawn.
 
 The *top-level option* ``output_prefix: chains/gaussian`` indicates that the resulting output files will be placed in a folder called ``chains`` (which will be created if necessary), and the corresponding output files will start with ``gaussian``.
-  
+
 You can save that piece of text as is into a file, e.g. ``example_gaussian.yaml``, and run **cobaya** as
 
 .. code:: bash
@@ -71,9 +71,9 @@ There are 5 different input blocks (two of them optional), which can be specifie
 - ``params``: contains a list of parameters to be *fixed*, *sampled* or *derived*, their priors, LaTeX labels, etc. -- see :doc:`params_prior`.
 
 - ``prior``: (optional) contains additional priors to be imposed, whenever they are complex or non-separable -- see :ref:`prior_external`.
-  
+
 - ``sampler``: contains the sampler as a single entry, and its options -- see :doc:`sampler`.
-    
+
 - ``theory`` (optional): has only one entry, which specifies the theory code with which to compute the observables used by the likelihoods, and options for it. Also, if a ``theory`` is specified, the ``params`` block may contain a ``theory`` sub-block containing the parameters belonging to the theory code -- see :doc:`theory` and also :doc:`examples_planck` for a usage example.
 
 The modules specified above (i.e. likelihoods, samplers, theories...) can have any number of options, but you don't need to specify all of them every time you use them: if an option is not specified, its **default** value is used. The default values for each module are described in their respective section of the documentation, and in a ``defaults.yaml`` file in the folder of **cobaya** where that module is defined, e.g. ``cobaya/cobaya/likelihoods/gaussian/defaults.yaml`` for the defaults of the ``gaussian`` likelihood.
@@ -82,8 +82,8 @@ In addition, there are some *top level* options (i.e. defined outside any block)
 
 + ``output_prefix``: determines where the output files are written and/or a prefix for their names -- see :ref:`output_prefix`.
 + ``path_to_modules``: path where the external modules have been automatically installed -- see :doc:`installation_ext`.
-+ ``debug``: sets the verbosity level of the output. By default (undefined or ``False``), it produces a rather informative output, reporting on initialisation, overall progress and results. If ``True``, it produces a very verbose output (a few lines per sample) that can be used for debugging. You can also set it directly to a particular `integer level of the Python logger <https://docs.python.org/2/library/logging.html#logging-levels>`_, e.g. 40 to produce error output only.
-+ ``debug_file``: a file name, with a relative or absolute path if desired, to which to send all logged output. When used, only basic progress info is printed on-screen, and the full debug output (if ``debug: True``) will be sent to this file instead 
++ ``debug``: sets the verbosity level of the output. By default (undefined or ``False``), it produces a rather informative output, reporting on initialization, overall progress and results. If ``True``, it produces a very verbose output (a few lines per sample) that can be used for debugging. You can also set it directly to a particular `integer level of the Python logger <https://docs.python.org/2/library/logging.html#logging-levels>`_, e.g. 40 to produce error output only.
++ ``debug_file``: a file name, with a relative or absolute path if desired, to which to send all logged output. When used, only basic progress info is printed on-screen, and the full debug output (if ``debug: True``) will be sent to this file instead
 
 Some common YAML *gotchas*
 --------------------------
@@ -112,23 +112,23 @@ Some common YAML *gotchas*
        mcmc:
          burn_in: 10
           max_samples: 100 # ERROR: misaligned!
-         
+
      params:
-       mock_a:       
+       mock_a:
          prior:
            min: 0
            max: 1
           latex: \alpha # ERROR: misaligned!
 
   Above, ``max_samples`` should be aligned to ``burn_in``, because both belong into ``mcmc``. In the same way, ``latex`` should be aligned to ``prior``, since both belong into the definition of the parameter ``mock_a``.
-        
+
 .. note::
 
    For the YAML *connoisseur*, notice that the YAML parser used here has been modified to simplify the input/output notation: it now retains the ordering of parameters and likelihoods (loads mappings as `OrderedDict <https://docs.python.org/2/library/collections.html#ordereddict-examples-and-recipes>`_) and prints arrays as lists.
 
-   
+
 .. _in_example_script:
-   
+
 Scripted input -- Python dictionaries
 -------------------------------------
 
@@ -178,7 +178,7 @@ Continuing a sample
 
    Sample continuation is not implemented yet.
 
-.. 
+..
   **cobaya** can also be invoked with a folder as an argument (including ``.``). In that case, the folder is searched for a single ``.yaml`` file (the pattern ``*__full.yaml`` is ignored, see :ref:`out_files`). If there is only one, **cobaya** uses it to re-launch the sampling that generated that folder.
 
   .. todo::

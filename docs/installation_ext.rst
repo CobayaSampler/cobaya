@@ -1,7 +1,7 @@
 Installing external modules (incl. Cosmology!)
 ==============================================
 
-To keep it light and maintainable, and to allow for maximum customisation, **cobaya** only includes some of the samplers it uses, and none the cosmological likelihoods, data or theory codes. Nonetheless, they can be downloaded and installed automatically when needed.
+To keep it light and maintainable, and to allow for maximum customization, **cobaya** only includes some of the samplers it uses, and none the cosmological likelihoods, data or theory codes. Nonetheless, they can be downloaded and installed automatically when needed.
 
 .. _install_ext_pre:
 
@@ -63,7 +63,7 @@ Take note of that folder in your case, here ``/path/to/modules``, and include it
 or specify it using the flat ``--path /path/to/modules`` when invoking from the shell.
 
 .. _install_manual:
-   
+
 Installing modules manually
 ---------------------------
 

@@ -6,7 +6,7 @@
 
 Gaussian *mock* likelihoods, aimed for tests.
 
-The mean and covariance matrix for one or more modes must be specified with the options 
+The mean and covariance matrix for one or more modes must be specified with the options
 ``mean`` and ``covmat`` respectively. The dimensionality of the likelihood and the number
 of modes are guessed from this options (if they are consistent to each other).
 
@@ -82,7 +82,7 @@ class gaussian(Likelihood):
         """
         Initialises the gaussian distributions.
         """
-        log.info("Initialising")
+        log.info("Initializing")
         # Load mean and cov, and check consistency of n_modes and dimensionality
         if self.mean is not None and self.cov is not None:
             # Wrap them in the right arrays (n_mode, param) and check consistency
