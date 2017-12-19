@@ -6,9 +6,9 @@ cobaya, a code for Bayesian analysis in Cosmology
 :Source: `Source code at GitHub <https://github.com/JesusTorrado/cobaya>`_
 
 :Documentation: `Documentation at Readthedocs <https://cobaya.readthedocs.org>`_
-         
-:License: `LGPL <https://www.gnu.org/licenses/lgpl-3.0.en.html>`_ for the code (except otherwise stated in a docstring) and `GFDL <https://www.gnu.org/licenses/fdl-1.3.en.html>`_ for the documentation (see `LICENSE.txt <https://github.com/JesusTorrado/cobaya/blob/master/LICENSE.txt>`_).
-                 
+
+:Licensing: `LGPL <https://www.gnu.org/licenses/lgpl-3.0.en.html>`_ for the code (except otherwise stated in a docstring) and `GFDL <https://www.gnu.org/licenses/fdl-1.3.en.html>`_ for the documentation (see `LICENCE.txt <https://github.com/JesusTorrado/cobaya/blob/master/LICENCE.txt>`_).
+
 **cobaya** (COde for BAYesian Analysis; Guinea Pig, in Spanish) is a framework for sampling and statistical modelling: it allows you to explore any prior or posterior using a range of Monte Carlo samplers (including the advanced MCMC sampler from CosmoMC_, and the advanced nested sampler PolyChord_). The results of the sampling can be analysed with GetDist_.
 
 Its authors are `Jesus Torrado`_ and `Antony Lewis`_. Some ideas and modules have been adapted from `Monte Python`_, by `Julien Lesgourgues`_ and `Benjamin Audren`_ (in particular, the interface to the Planck 2015 likelihoods).
@@ -25,7 +25,7 @@ How to cite us
 
 As of this version, there is no scientific publication yet associated to this software, so simply mention its GitHub repository (see above).
 
-To appropriately cite the modules (samplers, theory codes, likelihoods) that you have used, simply run the script `cobaya-citation` with your input file(s) as argument(s), and you will get *bibtex* references and a short suggested text snippet for each module mentioned in your input file. 
+To appropriately cite the modules (samplers, theory codes, likelihoods) that you have used, simply run the script `cobaya-citation` with your input file(s) as argument(s), and you will get *bibtex* references and a short suggested text snippet for each module mentioned in your input file.
 
 .. _`Jesus Torrado`: http://astronomy.sussex.ac.uk/~jt386
 .. _`Antony Lewis`: http://cosmologist.info
