@@ -38,11 +38,11 @@ enlargement_factor = None
 
 class Collection(object):
 
-    def __init__(self, parametrisation, likelihood, output=None,
+    def __init__(self, parametrization, likelihood, output=None,
                  initial_size=enlargement_size, name=None):
         self.name = name
-        self.sampled_params = parametrisation.sampled_params().keys()
-        self.derived_params = parametrisation.derived_params().keys()
+        self.sampled_params = parametrization.sampled_params().keys()
+        self.derived_params = parametrization.derived_params().keys()
         # Create the dataframe structure
         columns = [_weight, _minuslogpost]
         columns += list(self.sampled_params)
@@ -54,7 +54,7 @@ class Collection(object):
         self.data = pd.DataFrame(np.zeros((initial_size,len(columns))), columns=columns)
         self._n = 0
         # Prepare labels and ranges for interfacing with GetDist
-        self.labels = parametrisation.labels()
+        self.labels = parametrization.labels()
 
 
         # RANGES HERE!!!!

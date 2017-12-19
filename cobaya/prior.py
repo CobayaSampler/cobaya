@@ -277,11 +277,11 @@ class Prior(object):
     """
     Class managing the prior and reference pdf's.
     """
-    def __init__(self, parametrisation, info_prior=None):
+    def __init__(self, parametrization, info_prior=None):
         """
         Initialises the prior and reference pdf's from the input information.
         """
-        sampled_params_info = parametrisation.sampled_params()
+        sampled_params_info = parametrization.sampled_params()
         if not sampled_params_info:
             log.warning("No sampled parameters requested! "
                         "This will fail for non-mock samplers.")

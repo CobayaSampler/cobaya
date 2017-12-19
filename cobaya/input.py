@@ -22,7 +22,7 @@ from cobaya.conventions import _output_prefix, _debug_file
 from cobaya.tools import get_folder
 from cobaya.yaml_custom import yaml_load_file
 from cobaya.log import HandledException
-from cobaya.parametrisation import is_sampled_param, is_derived_param
+from cobaya.parametrization import is_sampled_param, is_derived_param
 
 # Logger
 import logging

@@ -1,5 +1,5 @@
 """
-Tests different aspects of the reparametrisation layer, using an external (to force hard
+Tests different aspects of the reparametrization layer, using an external (to force hard
 parameter names) gaussian likelihood.
 """
 
@@ -50,7 +50,7 @@ info = {
          derived: "%s"
     """%(b_func, e_func, f_func))}
 
-def test_parametrisation():
+def test_parametrization():
     updated_info, products = run(info)
     sample = products["sample"]
     for i, point in sample:

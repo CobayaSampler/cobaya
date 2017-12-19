@@ -185,7 +185,7 @@ class polychord(Sampler):
                       logging.INFO: 1, logging.DEBUG: 2}
             self.pc_args["feedback"] = values[log.getEffectiveLevel()]
         self.pc_args["nDims"] = self.prior.d()
-        self.pc_args["nDerived"] = (len(self.parametrisation.derived_params()) + 1 +
+        self.pc_args["nDerived"] = (len(self.parametrization.derived_params()) + 1 +
                                     len(self.likelihood._likelihoods))
         try:
             output_folder = getattr(self.output, "folder")
@@ -275,9 +275,9 @@ class polychord(Sampler):
             prefix = os.path.join(self.pc_args["base_dir"], self.pc_args["file_root"])
             sample = np.loadtxt(prefix+".txt")
             self.collection = Collection(
-                self.parametrisation, self.likelihood, self.output, name="1")
-            n_sampled = len(self.parametrisation.sampled_params())
-            n_derived = len(self.parametrisation.derived_params())
+                self.parametrization, self.likelihood, self.output, name="1")
+            n_sampled = len(self.parametrization.sampled_params())
+            n_derived = len(self.parametrization.derived_params())
             n_liks = len(self.likelihood._likelihoods)
             for row in sample:
                 self.collection.add(row[2:2+n_sampled],

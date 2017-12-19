@@ -64,24 +64,24 @@ class evaluate(Sampler):
         """
         Creates a 1-point collection to store the point
         at which the posterior is evaluated.
-        """ 
-        self.one_point = Collection(self.parametrisation, self.likelihood,
+        """
+        self.one_point = Collection(self.parametrization, self.likelihood,
                                     self.output, initial_size=1, name="1")
         log.info("Initialised!")
-        
+
     def run(self):
         """
         First gets a reference point. If a single reference point is not given,
         the point is sampled from the reference pdf, and if that one is not defined either,
         the point is sampled from the prior.
 
-        Then it evaluates the prior and likelihood(s) and stores them in the one-member 
+        Then it evaluates the prior and likelihood(s) and stores them in the one-member
         sample collection.
         """
         reference_point = self.prior.reference()
-        log.info("Reference point:\n   "+
-               "\n   ".join(["%s = %g"%(p,reference_point[i])
-                             for i,p in enumerate(self.parametrisation.sampled_params())]))
+        log.info("Reference point:\n   " +
+               "\n   ".join(["%s = %g" % (p,reference_point[i])
+                             for i,p in enumerate(self.parametrization.sampled_params())]))
         log.info("Evaluating prior and likelihoods...")
         logpost, logprior, logliks, derived = self.logposterior(reference_point)
         self.one_point.add(reference_point, derived=derived,

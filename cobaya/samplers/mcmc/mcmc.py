@@ -206,15 +206,15 @@ class mcmc(Sampler):
         # One collection per MPI process: `name` is the MPI rank + 1
         name = str(1 + (lambda r: r if r is not None else 0)(get_mpi_rank()))
         self.collection = Collection(
-            self.parametrisation, self.likelihood, self.output, name=name)
+            self.parametrization, self.likelihood, self.output, name=name)
         self.current_point = OnePoint(
-            self.parametrisation, self.likelihood, self.output, name=name)
+            self.parametrization, self.likelihood, self.output, name=name)
         # Use the standard steps by default
         self.get_new_sample = self.get_new_sample_metropolis
         # Create proposer -- speeds, fast-dragging/oversampling and initial covmat
         speeds, blocks = zip(*self.likelihood.speeds_of_params().items())
         # Turn parameter names into indices
-        blocks = [[self.parametrisation.sampled_params().keys().index(p) for p in b]
+        blocks = [[self.parametrization.sampled_params().keys().index(p) for p in b]
                   for b in blocks]
         if self.oversample and (self.drag_nfast_times or self.drag_interp_steps):
             log.error("Choose either oversampling or fast-dragging, not both.")
@@ -226,7 +226,7 @@ class mcmc(Sampler):
                 raise HandledException
             self.effective_max_samples = (
                 sum([len(b)*f for b,f in zip(blocks,self.oversampling_factors)]) /
-                len(self.parametrisation.sampled_params()))
+                len(self.parametrization.sampled_params()))
             self.n_slow = len(blocks[0])
         elif self.drag_interp_steps or self.drag_nfast_times:
             if len(set(speeds)) == 1:
@@ -243,7 +243,7 @@ class mcmc(Sampler):
                 raise HandledException
             self.i_last_slow_block = (i for i,speed in enumerate(list(speeds))
                                       if speed > self.max_speed_slow).next() - 1
-            fast_params = [self.parametrisation.sampled_params().keys()[i]
+            fast_params = [self.parametrization.sampled_params().keys()[i]
                            for i in chain(*blocks[1+self.i_last_slow_block:])]
             self.effective_max_samples = self.max_samples
             self.n_slow = sum(len(blocks[i]) for i in range(1+self.i_last_slow_block))
@@ -255,7 +255,7 @@ class mcmc(Sampler):
                      self.n_slow, self.drag_interp_steps, fast_params)
         else:
             self.effective_max_samples = self.max_samples
-            self.n_slow = len(self.parametrisation.sampled_params())
+            self.n_slow = len(self.parametrization.sampled_params())
         self.proposer = BlockedProposer(
             blocks, oversampling_factors=getattr(self, "oversampling_factors", None),
             i_last_slow_block=getattr(self, "i_last_slow_block", None),
@@ -282,7 +282,7 @@ class mcmc(Sampler):
         The covariances between parameters when both are present in a covariance matrix
         provided through option 1 are preserved. All other covariances are assumed 0.
         """
-        params, params_infos = zip(*self.parametrisation.sampled_params().items())
+        params, params_infos = zip(*self.parametrization.sampled_params().items())
         covmat = np.diag([np.nan]*len(params))
         # If given, load and test the covariance matrix
         if isinstance(self.covmat, six.string_types):
@@ -405,7 +405,7 @@ class mcmc(Sampler):
         Returns:
            ``True`` for an accepted step, ``False`` for a rejected one.
         """
-        trial = deepcopy(self.current_point[self.parametrisation.sampled_params()])
+        trial = deepcopy(self.current_point[self.parametrization.sampled_params()])
         self.proposer.get_proposal(trial)
         logpost_trial, logprior_trial, logliks_trial, derived = self.logposterior(trial)
         accept = self.metropolis_accept(logpost_trial,
@@ -428,7 +428,7 @@ class mcmc(Sampler):
         """
         # Prepare starting and ending points *in the SLOW subspace*
         # "start_" and "end_" mean here the extremes in the SLOW subspace
-        start_slow_point = self.current_point[self.parametrisation.sampled_params()]
+        start_slow_point = self.current_point[self.parametrization.sampled_params()]
         start_slow_logpost = -self.current_point["minuslogpost"]
         end_slow_point = deepcopy(start_slow_point)
         self.proposer.get_proposal_slow(end_slow_point)

@@ -10,10 +10,10 @@ To check if you have Python installed, type ``python --version`` in the shell, a
 
 .. _install_mpi:
 
-Optional: MPI parallelisation
+Optional: MPI parallelization
 -----------------------------
 
-Enabling MPI parallelisation is optional but highly recommended: it will allow you to better utilise the size of your cluster. MPI enables inter-process communication, of which many samplers can take advantage, e.g. for achieving a faster convergence of an MCMC proposal distribution, or a higher acceptance rate in a nested sampler.
+Enabling MPI parallelization is optional but highly recommended: it will allow you to better utilise the size of your cluster. MPI enables inter-process communication, of which many samplers can take advantage, e.g. for achieving a faster convergence of an MCMC proposal distribution, or a higher acceptance rate in a nested sampler.
 
 First, you need to install an MPI implementation in your system. We recommend `OpenMPI <https://www.open-mpi.org/>`_. Install it using your system's package manager (``sudo apt install libopenmpi`` in Debian-based systems) or contact your local IT service.
 
@@ -35,7 +35,7 @@ If you have a working MPI implementation in your system, this should produce no 
 Optional: make cobaya faster with OpenBLAS
 ------------------------------------------
 
-BLAS is a collection of algorithms for linear algebra computations. There will most likely be a BLAS library installed already in your system. It is recommended to make sure that it is an efficient one, preferably the highly-parallelised OpenBLAS.
+BLAS is a collection of algorithms for linear algebra computations. There will most likely be a BLAS library installed already in your system. It is recommended to make sure that it is an efficient one, preferably the highly-parallelized OpenBLAS.
 
 To check if OpenBLAS is installed, in Debian-like systems, type
 
@@ -50,7 +50,7 @@ Installing and updating cobaya
 ------------------------------
 
 .. warning::
-      
+
    Fro now, during beta testing, there is an additional pre-requisite: a ``git`` installation. Type ``git`` in the shell and check that you get usage instructions instead of a ``command not found``. In the latter case, in a Debian-like system, install it with a ``sudo apt install git``.
 
 
@@ -63,10 +63,10 @@ To install **cobaya** or upgrade it to the last release, simply type in a termin
 
 
 .. _install_check:
-   
+
 Make sure that cobaya is installed
-----------------------------------   
-   
+----------------------------------
+
 If everything went well, you should be able to import **cobaya** in Python from anywhere in your directory structure:
 
 .. code-block:: bash
@@ -132,7 +132,7 @@ In any of both cases, this puts you in the last commit of **cobaya**. If you wan
    $ git checkout v1.0
 
 Finally, install **GetDist**:
-   
+
 .. code:: bash
 
    $ pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist --upgrade
@@ -164,7 +164,7 @@ Then install **GetDist**:
       $ pip install getdist
       $ rm -rf getdist
 
-Finally, :ref:`install_check`.  
+Finally, :ref:`install_check`.
 
 
 Uninstalling cobaya

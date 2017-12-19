@@ -100,9 +100,9 @@ def is_derived_param(info_param):
     return not(is_fixed_param(info_param) or is_sampled_param(info_param))
 
 
-class Parametrisation(object):
+class Parametrization(object):
     """
-    Class managing parametrisation.
+    Class managing parametrization.
     Translates parameter between sampler+prior and likelihood
     """
     def __init__(self, info_params):

@@ -67,9 +67,9 @@ def run(info):
     from cobaya.tools import set_path_to_installation
     set_path_to_installation(info.get(_path_install))
 
-    # Initialise parametrisation, likelihoods and prior
-    from cobaya.parametrisation import Parametrisation
-    with Parametrisation(full_info[_params]) as par:
+    # Initialise parametrization, likelihoods and prior
+    from cobaya.parametrization import Parametrization
+    with Parametrization(full_info[_params]) as par:
         with Prior(par, full_info.get(_prior)) as prior:
             with Likelihood(full_info[_likelihood], par, full_info.get(_theory)) as lik:
                 with Sampler(full_info[_sampler], par, prior, lik, output) as sampler:

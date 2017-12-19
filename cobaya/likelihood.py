@@ -128,22 +128,22 @@ class Likelihood(object):
     """Likelihood class prototype."""
 
     # Generic initialisation -- do not touch
-    def __init__(self, info, parametrisation, theory=None):
+    def __init__(self, info, parametrization, theory=None):
         # Load info of the likelihood
         for k in info:
             setattr(self, k, info[k])
         # Mock likelihoods: gather all parameters starting with `mock_prefix`
         if self.is_mock():
-            all_params = (list(parametrisation.input_params()) +
-                          list(parametrisation.output_params()))
+            all_params = (list(parametrization.input_params()) +
+                          list(parametrization.output_params()))
             info[_params] = [p for p in all_params
                              if p.startswith(self.mock_prefix or "")]
         # Load parameters
         self.input_params = odict(
-            [(p,p_info) for p,p_info in parametrisation.input_params().items()
+            [(p,p_info) for p,p_info in parametrization.input_params().items()
              if p in info[_params]])
         self.output_params = odict(
-            [(p,p_info) for p,p_info in parametrisation.output_params().items()
+            [(p,p_info) for p,p_info in parametrization.output_params().items()
              if p in info[_params]])
         # Initialise
         self.theory = theory
@@ -236,16 +236,16 @@ class LikelihoodCollection(object):
     Initialises the theory code and the experimental likelihoods.
     """
 
-    def __init__(self, info_likelihood, parametrisation, info_theory=None):
+    def __init__(self, info_likelihood, parametrization, info_theory=None):
         # Store the input/output parameters
-        self.input_params = parametrisation.input_params()
-        self.output_params = parametrisation.output_params()
+        self.input_params = parametrization.input_params()
+        self.output_params = parametrization.output_params()
         # *IF* there is a theory code, initialise it
         if info_theory:
             input_params_theory = self.input_params.fromkeys(
-                [k for k in self.input_params if k in parametrisation.theory_params()])
+                [k for k in self.input_params if k in parametrization.theory_params()])
             output_params_theory = self.output_params.fromkeys(
-                [k for k in self.output_params if k in parametrisation.theory_params()])
+                [k for k in self.output_params if k in parametrization.theory_params()])
             name, fields = info_theory.items()[0]
             theory_class = get_class(name, kind=_theory)
             self.theory = theory_class(input_params_theory, output_params_theory, fields)
@@ -261,10 +261,10 @@ class LikelihoodCollection(object):
             else:
                 lik_class = get_class(name)
                 self._likelihoods[name] = lik_class(
-                    info, parametrisation, theory=self.theory)
+                    info, parametrization, theory=self.theory)
         # Check that all are recognised
         for params in ("input_params", "output_params"):
-            info = getattr(parametrisation, params)()
+            info = getattr(parametrization, params)()
             setattr(self, params, info)
             requested = set(info)
             known = set(chain(getattr(self.theory, params, []),
@@ -275,7 +275,7 @@ class LikelihoodCollection(object):
                           "by any likelihood: %r.", params.split("_")[0], r_not_k)
                 raise HandledException
         # Store the input params and likelihods on which each sampled params depends
-        self.sampled_input_dependence = parametrisation.sampled_input_dependence()
+        self.sampled_input_dependence = parametrization.sampled_input_dependence()
         self.sampled_lik_dependence = odict(
             [[p,[lik for lik in list(self)+([_theory] if self.theory else [])
                  if any([(i in self[lik].input_params) for i in (i_s or [p])])]]
