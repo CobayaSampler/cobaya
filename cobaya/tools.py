@@ -16,6 +16,8 @@ from copy import deepcopy
 from importlib import import_module
 import numpy as np
 import six
+import inspect
+import scipy.stats as stats
 
 # Local
 from cobaya.conventions import package, subfolders, _likelihood

@@ -10,8 +10,8 @@ from random import random
 import numpy as np
 import inspect
 import six
-from copy import deepcopy
 import scipy.stats as stats
+from copy import deepcopy
 
 # Local
 from cobaya.conventions import _output_prefix, _params, _prior
