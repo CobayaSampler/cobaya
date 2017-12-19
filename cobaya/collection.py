@@ -192,12 +192,12 @@ class Collection(object):
 
     # Interface with getdist
     def as_getdist_mcsamples(self, derived=True, prior_and_lik=True,
-                             first=None, last=None):
+                             first=None, last=None, **kwargs):
         # get names and labels (n.b.: getdist forcefully adds its own $'s)
         # sampled
         names = self.sampled_params + [p+"*" for p in self.derived_params]
         labels = self.labels.values()
-        ranges = []
+#        ranges = []
 #        ranges = dict([(p,ls) for p,ls in zip(self.prior.names(),self.prior.limits())])
 #         ranges.update(dict([(p,(self.likelihood.updated_info_params()[p].get("min"),
 #                                    self.likelihood.updated_info_params()[p].get("max")))
@@ -214,7 +214,7 @@ class Collection(object):
         return MCSamples(samples=samples[first:last],
                          weights=self.data[:self.n()][_weight].values[first:last],
                          loglikes=self.data[:self.n()][_minuslogpost].values[first:last],
-                         names=names, labels=labels, ranges=ranges)
+                         names=names, labels=labels, **kwargs)
 
 
 class OnePoint(Collection):
