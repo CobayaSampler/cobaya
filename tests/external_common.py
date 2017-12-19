@@ -11,6 +11,7 @@ import numpy as np
 import inspect
 import six
 from copy import deepcopy
+import scipy.stats as stats
 
 # Local
 from cobaya.conventions import _output_prefix, _params, _prior
