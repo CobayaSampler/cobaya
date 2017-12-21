@@ -9,7 +9,6 @@
 # Python 2/3 compatibility
 from __future__ import absolute_import
 from __future__ import division
-import six
 
 # Global
 import os
@@ -117,8 +116,12 @@ class Output_dummy(Output):
         log.info("No output requested. Doing nothing (or returning in scripted call).")
         # override all methods
         exclude = ["__nonzero__", "nullfunc", "update_info", "updated_info"]
+        if sys.version_info < (3,):
+            _func_name = "func_name"
+        else:
+            _func_name = "__name__"
         for attrname,attr in list(Output.__dict__.items()):
-            func_name = getattr(attr, six.func_name, None)
+            func_name = getattr(attr, _func_name, None)
             if func_name and func_name not in exclude:
                 setattr(self, attrname, self.nullfunc)
 
