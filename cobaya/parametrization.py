@@ -119,7 +119,7 @@ class Parametrization(object):
         self._derived = odict()
         self._derived_funcs = dict()
         self._derived_args = dict()
-        self._theory_params = info_params.get(_theory,{}).keys()
+        self._theory_params = list(info_params.get(_theory,{}).keys())
         self._theory_args = dict()
         info_params_flat = odict(
             [(p,info_params[_theory][p]) for p in self._theory_params])
