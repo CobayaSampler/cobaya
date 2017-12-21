@@ -115,14 +115,14 @@ class Output_dummy(Output):
     def __init__(self, info):
         log.info("No output requested. Doing nothing (or returning in scripted call).")
         # override all methods
-        exclude = ["__nonzero__", "nullfunc", "update_info", "updated_info"]
+        exclude = ["nullfunc", "update_info", "updated_info"]
         if sys.version_info < (3,):
             _func_name = "func_name"
         else:
             _func_name = "__name__"
         for attrname,attr in list(Output.__dict__.items()):
             func_name = getattr(attr, _func_name, None)
-            if func_name and func_name not in exclude:
+            if func_name and func_name not in exclude and not '__' in func_name:
                 setattr(self, attrname, self.nullfunc)
 
     def nullfunc(self, *args, **kwargs):
