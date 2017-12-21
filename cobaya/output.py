@@ -27,7 +27,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-class Output():
+class Output(object):
     def __init__(self, info):
         output_prefix = str(info[_output_prefix])
         self.folder = os.sep.join(output_prefix.split(os.sep)[:-1]) or "."
@@ -117,6 +117,7 @@ class Output_dummy(Output):
         # override all methods
         exclude = ["__nonzero__", "nullfunc", "update_info", "updated_info"]
         for attrname,attr in list(Output.__dict__.items()):
+            print(attrname,attr)
             func_name = getattr(attr, "func_name", None)
             if func_name and func_name not in exclude:
                 setattr(self, attrname, self.nullfunc)
