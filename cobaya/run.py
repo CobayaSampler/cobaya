@@ -60,16 +60,16 @@ def run(info):
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
         logging.getLogger(__name__).debug(
             "Updated info (dumped to YAML):\n%s", yaml_dump(full_info))
-    # We dump the info now, before modules initialisation, lest it is accidentaly modified
+    # We dump the info now, before modules initialization, lest it is accidentaly modified
     output.dump_info(info, full_info)
 
     # Set the path of the installed modules, if given
     from cobaya.tools import set_path_to_installation
     set_path_to_installation(info.get(_path_install))
 
-    # Initialise parametrisation, likelihoods and prior
-    from cobaya.parametrisation import Parametrisation
-    with Parametrisation(full_info[_params]) as par:
+    # Initialise parametrization, likelihoods and prior
+    from cobaya.parametrization import Parametrization
+    with Parametrization(full_info[_params]) as par:
         with Prior(par, full_info.get(_prior)) as prior:
             with Likelihood(full_info[_likelihood], par, full_info.get(_theory)) as lik:
                 with Sampler(full_info[_sampler], par, prior, lik, output) as sampler:
@@ -87,7 +87,7 @@ def run_script():
     parser.add_argument("input_file", nargs=1, action="store", metavar="input_file.yaml",
                         help="An input file to run.")
     parser.add_argument("-p", "--path",
-                        action="store", nargs="+", metavar=("/some/path"),
+                        action="store", nargs="+", metavar="/some/path",
                         help="Path where modules were automatically installed.")
     args = parser.parse_args()
     if any([(os.path.splitext(f)[0] in ("input", "full")) for f in args.input_file]):

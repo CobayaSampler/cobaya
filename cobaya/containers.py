@@ -35,7 +35,7 @@ log = logging.getLogger(__name__)
 requirements_file_path = os.path.join(_modules_path, _requirements_file)
 help_file_path = os.path.join(_modules_path, _help_file)
 
-base_recipe = ur"""
+base_recipe = r"""
 # OS -------------------------------------------------------------------------
 FROM ubuntu:xenial
 # POST -----------------------------------------------------------------------
@@ -155,7 +155,7 @@ def create_base_image(mpi=None, version=None, sub=None):
     try:
         tag = "cobaya/base_%s_%s:latest"%(mpi.lower(), version+sub)
     except KeyError():
-        log.error("MPI library '%s' not recognised.")
+        log.error("MPI library '%s' not recognized.")
         raise HandledException
     URL = MPI_URL[mpi.lower()].replace("_VER_", str(version)).replace("_DOT_SUB_", sub)
     if head(URL).status_code >= 400:
@@ -195,7 +195,7 @@ def create_docker_image(filenames, MPI_version=None):
     echos_help = "RUN "+" && \\ \n    ".join(
         [r'echo "%s" >> %s'%(line, help_file_path)
          for line in image_help("docker").split("\n")])
-    recipe = ur"""
+    recipe = r"""
     FROM cobaya/base_mpich_%s:latest
     %s
     RUN cobaya-install %s --path %s --just-code --force --no-progress-bars

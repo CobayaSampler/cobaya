@@ -150,7 +150,7 @@ camb_to_classy = {"ombh2":  "omega_b",
                   "zre": "z_reio",
 }
 
-classy_to_camb = dict([[v,k] for k,v in camb_to_classy.iteritems()])
+classy_to_camb = dict([[v,k] for k,v in camb_to_classy.items()])
 
 
 class classy(Theory):
@@ -296,12 +296,12 @@ class classy(Theory):
         p_classy = [camb_to_classy.get(p,p) for p in self.output_params]
         derived_aux = classy.get_current_derived_parameters(p_classy)
         derived.update(
-            dict([(classy_to_camb.get(p,p),v) for p,v in derived_aux.iteritems()]))
+            dict([(classy_to_camb.get(p,p),v) for p,v in derived_aux.items()]))
         # If another method for getting derived parameters added in the future,
         # recover "if None in derived:" from the CAMB interface
         # Check if all processes (actually does nothing here)
         try:
-            (p for p,v in derived.iteritems() if v is None).next()
+            (p for p,v in derived.items() if v is None).next()
             log.error("Derived param '%s' not working in the CLASS interface", p)
             raise HandledException
         except StopIteration:
@@ -357,7 +357,7 @@ def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs)
     except:
         log.error("Error downloading the latest release of CLASS.")
         return False
-    print ""
+    print("")
     classy_path_decompressed = os.path.join(
         parent_path, os.path.splitext(os.path.splitext(os.path.basename(filename))[0])[0])
     classy_path = os.path.join(parent_path, "CLASS")

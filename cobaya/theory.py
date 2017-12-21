@@ -21,34 +21,24 @@ code.
 # Python 2/3 compatibility
 from __future__ import division
 
-# Global
-import sys
-import os
-from collections import OrderedDict as odict
-from importlib import import_module
-
-# Local
-from cobaya.conventions import _theory
-from cobaya.log import HandledException
-
 # Default options for all subclasses
 class_options = {"speed": 1}
 
 
 # Theory code prototype
-class Theory():
+class Theory(object):
     """Prototype of the theory class."""
-    
+
     def initialise(self):
         """
-        Initialises the theory code: imports the theory code, if it is an external one, 
+        Initialises the theory code: imports the theory code, if it is an external one,
         and makes any necessary preparations.
         """
         pass
 
     def needs(self, arguments):
         """
-        Function to be called by the likelihoods at their initialisation,
+        Function to be called by the likelihoods at their initialization,
         to specify their requests.
         Its specific behaviour for a code must be defined.
         """
@@ -63,7 +53,7 @@ class Theory():
         values.
         """
         pass
-    
+
     def close(self):
         """Finalises the theory code, if something needs to be done
         (releasing memory, etc.)"""

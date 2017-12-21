@@ -22,7 +22,7 @@ from cobaya.conventions import _output_prefix, _debug_file
 from cobaya.tools import get_folder
 from cobaya.yaml_custom import yaml_load_file
 from cobaya.log import HandledException
-from cobaya.parametrisation import is_sampled_param, is_derived_param
+from cobaya.parametrization import is_sampled_param, is_derived_param
 
 # Logger
 import logging
@@ -36,7 +36,7 @@ def load_input(input_file):
     file_name, extension = os.path.splitext(input_file)
     file_name = os.path.basename(file_name)
     if extension not in (".yaml",".yml"):
-        log.error("Extension of input file '%s' not recognised.", input_file)
+        log.error("Extension of input file '%s' not recognized.", input_file)
         raise HandledException
     info = yaml_load_file(input_file)
     # if output_prefix not defined, default to input_file name (sans ext.) as prefix;
@@ -79,7 +79,7 @@ def get_modules(*infos):
             modules[field] += [a for a in (info.get(field) or [])
                                if a not in modules[field]]
     # pop empty blocks
-    for k,v in modules.iteritems():
+    for k,v in list(modules.items()):
         if not v:
             modules.pop(k)
     return modules
@@ -129,13 +129,13 @@ def get_full_info(info):
                 raise HandledException
             if not hasattr(input_info[block][module], "get"):
                 input_info[block][module] = {_external: input_info[block][module]}
-            options_not_recognised = (set(input_info[block][module])
+            options_not_recognized = (set(input_info[block][module])
                                       .difference(set([_external]))
                                       .difference(set(full_info[block][module])))
-            if options_not_recognised:
-                log.error("'%s' does not recognise some options: '%r'. "
+            if options_not_recognized:
+                log.error("'%s' does not recognize some options: '%r'. "
                           "To see the allowed options, check out the file '%s'",
-                          module, tuple(options_not_recognised), path_to_defaults)
+                          module, tuple(options_not_recognized), path_to_defaults)
                 raise HandledException
             full_info[block][module].update(input_info[block][module])
             # Store default parameters and priors of class, and save to combine later
@@ -148,7 +148,7 @@ def get_full_info(info):
     if _prior in input_info or any(default_prior_info.values()):
         full_info[_prior] = input_info.get(_prior, odict())
     for prior_info in default_prior_info.values():
-        for name, prior in prior_info.iteritems():
+        for name, prior in prior_info.items():
             if full_info[_prior].get(name, prior) != prior:
                 log.error("Two different priors cannot have the same name: '%s'.", name)
                 raise HandledException
@@ -157,7 +157,7 @@ def get_full_info(info):
     full_info[_params] = merge_params_info(input_info.get(_params, {}),
                                            defaults=default_params_info)
     # Rest of the options
-    for k,v in input_info.iteritems():
+    for k,v in input_info.items():
         if k not in full_info:
             full_info[k] = v
     return full_info
@@ -169,8 +169,8 @@ def merge_params_info(params_info, defaults=None):
     """
     # First, merge defaults. Impose multiple defined (=shared) parameters have equal info
     defaults_merged = odict()
-    for lik, params in defaults.iteritems():
-        for p, info in params.iteritems():
+    for lik, params in defaults.items():
+        for p, info in params.items():
             # if already there, check consistency
             if p in defaults_merged:
                 log.debug("Parameter '%s' multiply defined.", p)

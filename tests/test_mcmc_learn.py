@@ -1,5 +1,6 @@
 # Samples from a random Gaussian likelihood using the MCMC sampler.
 
+from __future__ import print_function
 from __future__ import division
 import pytest
 import numpy as np
@@ -72,10 +73,10 @@ def test_gaussian_mcmc():
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     if rank == 0:
-        print "Original mean of the gaussian mode:"
-        print info["likelihood"]["gaussian"]["mean"]
-        print "Original covmat of the gaussian mode:"
-        print info["likelihood"]["gaussian"]["cov"]
+        print("Original mean of the gaussian mode:")
+        print(info["likelihood"]["gaussian"]["mean"])
+        print("Original covmat of the gaussian mode:")
+        print(info["likelihood"]["gaussian"]["cov"])
     # Sample info (random covariance matrices for the proposal)
     S_proposal = []
     def check(sampler_instance):
@@ -85,7 +86,7 @@ def test_gaussian_mcmc():
                               S1=info["likelihood"]["gaussian"]["cov"],
                               m2=sampler_instance.collection.mean(first=int(sampler_instance.n()/2)),
                               S2=sampler_instance.collection.cov (first=int(sampler_instance.n()/2)))
-        print KL_proposer, KL_sample
+        print(KL_proposer, KL_sample)
 
     # Mcmc info
     if rank == 0:
@@ -94,7 +95,7 @@ def test_gaussian_mcmc():
         S0 = None
     S0 = comm.bcast(S0, root=0)
     # First KL distance
-    print "*** 1st KL: ", KL_norm(S1=info["likelihood"]["gaussian"]["cov"], S2=S0)
+    print("*** 1st KL: ", KL_norm(S1=info["likelihood"]["gaussian"]["cov"], S2=S0))
     info[_sampler] = {"mcmc": {
         # Bad guess for covmat, so big burn in and max_tries
         "max_tries": 1000, "burn_in": 100,
@@ -124,16 +125,16 @@ def test_gaussian_mcmc():
             first = 0
         gdsamples = products["sample"].as_getdist_mcsamples(first=first)
         cov_sample, mean_sample = gdsamples.getCov(), gdsamples.getMeans()
-        print mean_sample
+        print(mean_sample)
         KL_final = KL_norm(m1=info[_likelihood]["gaussian"]["mean"],
                            S1=info[_likelihood]["gaussian"]["cov"],
                            m2=mean_sample[:dimension],
                            S2=cov_sample[:dimension,:dimension])
         np.set_printoptions(linewidth=np.inf)
-        print "Likelihood covmat:  \n", info[_likelihood]["gaussian"]["cov"]
-        print "Sample covmat:      \n", cov_sample[:dimension,:dimension]
-        print "Sample covmat (std):\n", cov_sample[dimension:-dimension,dimension:-dimension]
-        print "Final KL: ", KL_norm(S1=info["likelihood"]["gaussian"]["cov"], S2=cov_sample[:dimension,:dimension])
+        print("Likelihood covmat:  \n", info[_likelihood]["gaussian"]["cov"])
+        print("Sample covmat:      \n", cov_sample[:dimension, :dimension])
+        print("Sample covmat (std):\n", cov_sample[dimension:-dimension, dimension:-dimension])
+        print("Final KL: ", KL_norm(S1=info["likelihood"]["gaussian"]["cov"], S2=cov_sample[:dimension, :dimension]))
         assert KL_final <= 0.05, "KL not small enough. Got %g."%KL_final
 
 if __name__ == "__main__":

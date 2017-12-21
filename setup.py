@@ -7,20 +7,23 @@ from os import path
 from cobaya import __author__, __version__, __url__
 from cobaya.conventions import subfolders, _defaults_file
 
-here = path.abspath(path.dirname(__file__))
-
 # Get the long description from the README file
-with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
-    long_description = f.read()
+def get_long_description():
+    with open(path.join(path.abspath(path.dirname(__file__)), 'README.rst'), encoding='utf-8') as f:
+        lines = f.readlines()
+        i = -1
+        while not '=====' in lines[i]: i -= 1
+        return "".join(lines[:i])
 
 setup(
     name='cobaya',
     version=__version__,
     description='Bayesian Analysis in Cosmology',
-    long_description=long_description,
+    long_description=get_long_description(),
     url=__url__,
     author=__author__,
     license='LGPL',
+    zip_safe = False,
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Console',

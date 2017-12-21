@@ -1,1 +1,1 @@
-from classy import classy, is_installed, install
+from .classy import classy, is_installed, install

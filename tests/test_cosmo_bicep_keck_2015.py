@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 
 from cobaya.conventions import _path_install, _theory, _sampler, _likelihood, _params
@@ -44,7 +45,7 @@ def body_of_test(modules, theory):
     if theory == "classy":
         info[_params][_theory].update(baseline_cosmology_classy_extra)
         abs_tolerance += 2
-        print "WE SHOULD NOT HAVE TO LOWER THE TOLERANCE THAT MUCH!!!"
+        print("WE SHOULD NOT HAVE TO LOWER THE TOLERANCE THAT MUCH!!!")
     updated_info, products = run(info)
     # print products["sample"]
     computed_value = products["sample"]["chi2__"+info[_likelihood].keys()[0]].values[0]

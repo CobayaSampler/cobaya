@@ -8,7 +8,7 @@ cobaya includes by default an
 :doc:`advanced Monte Carlo Markov Chain (MCMC) sampler <sampler_mcmc>`
 (a direct translation from `CosmoMC <http://cosmologist.info/cosmomc/>`_ and a dummy
 :doc:`evaluate <sampler_evaluate>` sampler, that simply evaluates the posterior at a given
-(or sampled) reference point. It also includes an interface to the 
+(or sampled) reference point. It also includes an interface to the
 :doc:`PolyChord sampler <sampler_polychord>` (needs to be installed separately).
 
 The sampler to use is specified by a `sampler` block in the input file, whose only member
@@ -20,7 +20,7 @@ is the sampler used, containing some options, if necessary.
      mcmc:
        max_samples: 1000
 
-or 
+or
 
 .. code-block:: yaml
 
@@ -31,8 +31,8 @@ or
 Samplers can in general be swapped in the input file without needing to modify any other
 block of the input.
 
-In the cobaya code tree, each sampler is placed in its own folder, containing a file 
-defining the sampler's class, which inherits from the :class:`cobaya.Sampler`, and a 
+In the cobaya code tree, each sampler is placed in its own folder, containing a file
+defining the sampler's class, which inherits from the :class:`cobaya.Sampler`, and a
 ``defaults.yaml`` file, containing all possible user-specified options for the sampler and
 their default value. Whatever option is defined in this file becomes automatically an
 attibute of the sampler's instance.
@@ -66,14 +66,14 @@ class Sampler(object):
     """Prototype of the sampler class."""
 
     # What you *must* implement to create your own sampler:
-    
+
     def initialise(self):
         """
         Initialises the sampler: prepares the samples' collection,
         prepares the output, deals with MPI scheduling, imports an external sampler, etc.
 
         Options defined in the ``defaults.yaml`` file in the sampler's folder are
-        automatically recognised as attributes, with the value given in the input file, 
+        automatically recognized as attributes, with the value given in the input file,
         if redefined there.
 
         The prior and likelihood are also accesible through the attributes with the same
@@ -87,7 +87,7 @@ class Sampler(object):
         Normally, it looks somewhat like
 
         .. code-block:: python
-           
+
            while not [convergence criterion]:
                [do one more step]
                [update the collection of samples]
@@ -107,18 +107,18 @@ class Sampler(object):
         (e.g. a collection of smaples or a list of them).
         """
         return None
-    
+
     # Private methods: just ignore them:
-    def __init__(self, info_sampler, parametrisation, prior, likelihood, output):
+    def __init__(self, info_sampler, parametrization, prior, likelihood, output):
         """
-        Actual initialisation of the class. Loads the default and input information and
+        Actual initialization of the class. Loads the default and input information and
         call the custom ``initialise`` method.
-        
+
         [Do not modify this one.]
         """
         self.name = None
         # Load default and input info
-        self.parametrisation = parametrisation
+        self.parametrization = parametrization
         self.prior = prior
         self.likelihood = likelihood
         self.output = output
@@ -141,9 +141,9 @@ class Sampler(object):
         if logprior > -np.inf:
             derived = []
             logliks = self.likelihood.logps(
-                self.parametrisation.to_input(params_values), derived=derived)
+                self.parametrization.to_input(params_values), derived=derived)
             logpost += sum(logliks)
-            derived_sampler = self.parametrisation.to_derived(derived)
+            derived_sampler = self.parametrization.to_derived(derived)
         else:
             derived_sampler = []
         self.n_eval += 1
@@ -158,14 +158,14 @@ class Sampler(object):
         self.close()
 
 
-def get_Sampler(info_sampler, parametrisation, prior, likelihood, output_file):
+def get_Sampler(info_sampler, parametrization, prior, likelihood, output_file):
     """
     Auxiliary function to retrieve and initialise the requested sampler.
     """
     try:
-        name = info_sampler.keys()[0]
+        name = list(info_sampler.keys())[0]
     except AttributeError:
         log.error("The sampler block must be a dictionary 'sampler: {options}'.")
         raise HandledException
     sampler_class = get_class(name, kind=_sampler)
-    return sampler_class(info_sampler[name], parametrisation, prior, likelihood, output_file)
+    return sampler_class(info_sampler[name], parametrization, prior, likelihood, output_file)

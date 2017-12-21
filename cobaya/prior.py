@@ -95,10 +95,10 @@ An example ``params`` block:
 
 
 
-Prior normalisation for evidence computation
+Prior normalization for evidence computation
 --------------------------------------------
 
-As defined above, the priors are automatically normalised, so any sampler that computes
+As defined above, the priors are automatically normalized, so any sampler that computes
 the evidence will produce the right results.
 
 Improper priors will produce unexpected errors. So don't try
@@ -194,7 +194,7 @@ dictionary containing all the information, before calling ``cobaya.run.run``:
 
 
 
-decir que no estan normalised (link a seccion (TODO) sobre normalizar posteriors)
+decir que no estan normalized (link a seccion (TODO) sobre normalizar posteriors)
 
 TEST EXAMPLES!!!
 
@@ -273,15 +273,15 @@ import logging
 log = logging.getLogger(__name__)
 
 
-class Prior():
+class Prior(object):
     """
     Class managing the prior and reference pdf's.
     """
-    def __init__(self, parametrisation, info_prior=None):
+    def __init__(self, parametrization, info_prior=None):
         """
         Initialises the prior and reference pdf's from the input information.
         """
-        sampled_params_info = parametrisation.sampled_params()
+        sampled_params_info = parametrization.sampled_params()
         if not sampled_params_info:
             log.warning("No sampled parameters requested! "
                         "This will fail for non-mock samplers.")
@@ -329,7 +329,7 @@ class Prior():
                           "Got %r1", name, self.external[name]["argspec"].args)
                 raise HandledException
             log.warning("External prior '%s' loaded. "
-                        "Mind that it might not be normalised!", name)
+                        "Mind that it might not be normalized!", name)
 
     def d(self):
         """

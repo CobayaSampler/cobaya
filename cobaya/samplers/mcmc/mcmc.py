@@ -23,8 +23,8 @@
    (arXiv:math/0502099) <https://arxiv.org/abs/math/0502099>`_
 
 
-This is the Markov Chain Monte Carlo Metropolis sampler used by CosmoMC, and described in 
-`Lewis, "Efficient sampling of fast and slow cosmological parameters" (arXiv:1304.4473) 
+This is the Markov Chain Monte Carlo Metropolis sampler used by CosmoMC, and described in
+`Lewis, "Efficient sampling of fast and slow cosmological parameters" (arXiv:1304.4473)
 <https://arxiv.org/abs/1304.4473>`_.
 
 The proposal pdf is a gaussian mixed with an exponential pdf in random directions, which is
@@ -72,7 +72,7 @@ Example *parameters* block:
       ref:
         dist: norm
         loc: 0
-        scale: 0.2        
+        scale: 0.2
       prior:
         min: -1
         max:  1
@@ -83,7 +83,7 @@ Example *parameters* block:
 + ``b`` -- the initial point of the chain is always 2,
   and its proposal width is 0.25.
 + ``c`` -- the initial point of the chain is drawn from a gaussian centred at 0
-  with standard deviation 0.2; its proposal width is not specified, so it is taken to be 
+  with standard deviation 0.2; its proposal width is not specified, so it is taken to be
   that of the reference pdf, 0.2.
 
 A good initial covariance matrix for the proposal is critical for convergence.
@@ -92,7 +92,7 @@ above, or thorugh ``mcmc``'s property ``covmat``, as a file name (including path
 if not located at the invocation folder).
 The first line of the ``covamt`` file must start with ``#``, followed by a list of parameter
 names, separated by a space. The rest of the file must contain the covariance matrix,
-one row per line. It does not need to contain the same parameters as the sampled ones: 
+one row per line. It does not need to contain the same parameters as the sampled ones:
 it overrides the ``proposal``'s (and adds covariances) for the sampled parameters,
 and ignores the non-sampled ones.
 
@@ -109,14 +109,14 @@ In this case, internally, the final covariance matrix of the proposal would be::
      0.01  0.2   0
      0     0     0.04
 
-If the option `learn_proposal` is set to ``True``, the covariance matrix will be updated 
+If the option `learn_proposal` is set to ``True``, the covariance matrix will be updated
 once in a while to accelerate convergence
 (nb. convergence testing is only implemented for paralel chains right now).
 
 If you are not sure that your posterior has one single mode, or if its shape is very
 irregular, you should probably set ``learn_proposal: False``.
 
-If you don't know how good your initial guess for starting point and covariance of the 
+If you don't know how good your initial guess for starting point and covariance of the
 proposal are, it is a good idea to allow for a number of initial *burn in* samples,
 e.g. 10 per dimension. This can be specified with the parameter ``burn_in``.
 These samples will be ignored for all purposes (output, covergence, proposal learning...)
@@ -200,21 +200,21 @@ class mcmc(Sampler):
     def initialise(self):
         """Initialises the sampler:
         creates the proposal distribution and draws the initial sample."""
-        log.info("Initialising")
+        log.info("Initializing")
         # Burning-in countdown -- the +1 accounts for the initial point (always accepted)
         self.burn_in_left = self.burn_in + 1
         # One collection per MPI process: `name` is the MPI rank + 1
         name = str(1 + (lambda r: r if r is not None else 0)(get_mpi_rank()))
         self.collection = Collection(
-            self.parametrisation, self.likelihood, self.output, name=name)
+            self.parametrization, self.likelihood, self.output, name=name)
         self.current_point = OnePoint(
-            self.parametrisation, self.likelihood, self.output, name=name)
+            self.parametrization, self.likelihood, self.output, name=name)
         # Use the standard steps by default
         self.get_new_sample = self.get_new_sample_metropolis
         # Create proposer -- speeds, fast-dragging/oversampling and initial covmat
         speeds, blocks = zip(*self.likelihood.speeds_of_params().items())
         # Turn parameter names into indices
-        blocks = [[self.parametrisation.sampled_params().keys().index(p) for p in b]
+        blocks = [[list(self.parametrization.sampled_params().keys()).index(p) for p in b]
                   for b in blocks]
         if self.oversample and (self.drag_nfast_times or self.drag_interp_steps):
             log.error("Choose either oversampling or fast-dragging, not both.")
@@ -226,7 +226,7 @@ class mcmc(Sampler):
                 raise HandledException
             self.effective_max_samples = (
                 sum([len(b)*f for b,f in zip(blocks,self.oversampling_factors)]) /
-                len(self.parametrisation.sampled_params()))
+                len(self.parametrization.sampled_params()))
             self.n_slow = len(blocks[0])
         elif self.drag_interp_steps or self.drag_nfast_times:
             if len(set(speeds)) == 1:
@@ -243,7 +243,7 @@ class mcmc(Sampler):
                 raise HandledException
             self.i_last_slow_block = (i for i,speed in enumerate(list(speeds))
                                       if speed > self.max_speed_slow).next() - 1
-            fast_params = [self.parametrisation.sampled_params().keys()[i]
+            fast_params = [self.parametrization.sampled_params().keys()[i]
                            for i in chain(*blocks[1+self.i_last_slow_block:])]
             self.effective_max_samples = self.max_samples
             self.n_slow = sum(len(blocks[i]) for i in range(1+self.i_last_slow_block))
@@ -255,7 +255,7 @@ class mcmc(Sampler):
                      self.n_slow, self.drag_interp_steps, fast_params)
         else:
             self.effective_max_samples = self.max_samples
-            self.n_slow = len(self.parametrisation.sampled_params())
+            self.n_slow = len(self.parametrization.sampled_params())
         self.proposer = BlockedProposer(
             blocks, oversampling_factors=getattr(self, "oversampling_factors", None),
             i_last_slow_block=getattr(self, "i_last_slow_block", None),
@@ -282,7 +282,7 @@ class mcmc(Sampler):
         The covariances between parameters when both are present in a covariance matrix
         provided through option 1 are preserved. All other covariances are assumed 0.
         """
-        params, params_infos = zip(*self.parametrisation.sampled_params().items())
+        params, params_infos = zip(*self.parametrization.sampled_params().items())
         covmat = np.diag([np.nan]*len(params))
         # If given, load and test the covariance matrix
         if isinstance(self.covmat, six.string_types):
@@ -372,7 +372,7 @@ class mcmc(Sampler):
         # Main loop!
         self.converged = False
         log.info("Sampling!")
-        while self.n() < (self.effective_max_samples) and not(self.converged):
+        while self.n() < self.effective_max_samples and not self.converged:
             self.get_new_sample()
             # Callback function
             if (hasattr(self, "callback_function_callable") and
@@ -405,7 +405,7 @@ class mcmc(Sampler):
         Returns:
            ``True`` for an accepted step, ``False`` for a rejected one.
         """
-        trial = deepcopy(self.current_point[self.parametrisation.sampled_params()])
+        trial = deepcopy(self.current_point[self.parametrization.sampled_params()])
         self.proposer.get_proposal(trial)
         logpost_trial, logprior_trial, logliks_trial, derived = self.logposterior(trial)
         accept = self.metropolis_accept(logpost_trial,
@@ -428,7 +428,7 @@ class mcmc(Sampler):
         """
         # Prepare starting and ending points *in the SLOW subspace*
         # "start_" and "end_" mean here the extremes in the SLOW subspace
-        start_slow_point = self.current_point[self.parametrisation.sampled_params()]
+        start_slow_point = self.current_point[self.parametrization.sampled_params()]
         start_slow_logpost = -self.current_point["minuslogpost"]
         end_slow_point = deepcopy(start_slow_point)
         self.proposer.get_proposal_slow(end_slow_point)
@@ -578,7 +578,7 @@ class mcmc(Sampler):
                     np.array([1.]), self.all_ready)
                 log.info(msg_ready + " (waiting for the rest...)")
         # If all processes are ready to learn (= communication finished)
-        if (self.req.Test() if hasattr(self, "req") else False):
+        if self.req.Test() if hasattr(self, "req") else False:
             # Sanity check: actually all processes have finished
             assert np.all(self.all_ready == 1), (
                 "This should not happen! Notify the developers. (Got %r)", self.all_ready)
@@ -625,7 +625,7 @@ class mcmc(Sampler):
                 diagSinvsqrt = np.diag(np.power(np.diag(cov_of_means), -0.5))
                 corr_of_means     = diagSinvsqrt.dot(cov_of_means).dot(diagSinvsqrt)
                 norm_mean_of_covs = diagSinvsqrt.dot(mean_of_covs).dot(diagSinvsqrt)
-                # Cholesky of (normalised) mean of covs and eigvals of Linv*cov_of_means*L
+                # Cholesky of (normalized) mean of covs and eigvals of Linv*cov_of_means*L
                 L = np.linalg.cholesky(norm_mean_of_covs)
                 Linv = np.linalg.inv(L)
                 eigvals = np.linalg.eigvalsh(Linv.dot(corr_of_means).dot(Linv.T))
@@ -639,12 +639,12 @@ class mcmc(Sampler):
 #                    "Negative eigenvectors. This should not happen. "
 #                    "Check the condition number of the diagonalised matrix.")
                 # Have we converged in means? (criterion must be fulfilled twice in a row)
-                if (max(Rminus1, getattr(self, "Rminus1_last", np.inf)) < self.Rminus1_stop):
+                if max(Rminus1, getattr(self, "Rminus1_last", np.inf)) < self.Rminus1_stop:
                     # Check the convergence of the limits of the confidence intervals
                     # Same as R-1, but with the rms deviation from the mean limit
                     # in units of the mean standard deviation of the chains
                     Rminus1_cl = np.std(limits, axis=0).T/np.sqrt(np.diag(mean_of_covs))
-                    log.debug("Normalised std's of limits = %r", Rminus1_cl)
+                    log.debug("normalized std's of limits = %r", Rminus1_cl)
                     log.info("Convergence of limits: R-1 = %f after %d samples",
                              np.max(Rminus1_cl), self.n())
                     if np.max(Rminus1_cl) < self.Rminus1_cl_stop:
@@ -661,8 +661,7 @@ class mcmc(Sampler):
         if self.learn_proposal and not self.converged:
             # update iff (not MPI, or MPI and "good" Rminus1)
             if get_mpi():
-                good_Rminus1 = (self.Rminus1_last < self.learn_proposal_Rminus1_max and
-                                self.Rminus1_last > self.learn_proposal_Rminus1_min)
+                good_Rminus1 = (self.Rminus1_last < self.learn_proposal_Rminus1_max > self.learn_proposal_Rminus1_min)
                 if not good_Rminus1:
                     if not get_mpi_rank():
                         log.info("Bad convergence statistics: "

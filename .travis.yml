@@ -1,6 +1,8 @@
 language: python
 dist: trusty
-python: 2.7
+python:
+  - 2.7
+  - 3.6
 # (Pre)Installation
 # Test matrix for different C & fortran compilers
 matrix:

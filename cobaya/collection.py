@@ -13,9 +13,9 @@ Basically, a wrapper around a `pandas.DataFrame`.
 # Python 2/3 compatibility
 from __future__ import absolute_import
 from __future__ import division
+import six
 
 # Global
-import os
 import numpy as np
 import pandas as pd
 from getdist import MCSamples
@@ -36,13 +36,13 @@ log = logging.getLogger(__name__)
 enlargement_size = 100
 enlargement_factor = None
 
-class Collection():
+class Collection(object):
 
-    def __init__(self, parametrisation, likelihood, output=None,
+    def __init__(self, parametrization, likelihood, output=None,
                  initial_size=enlargement_size, name=None):
         self.name = name
-        self.sampled_params = parametrisation.sampled_params().keys()
-        self.derived_params = parametrisation.derived_params().keys()
+        self.sampled_params = parametrization.sampled_params().keys()
+        self.derived_params = parametrization.derived_params().keys()
         # Create the dataframe structure
         columns = [_weight, _minuslogpost]
         columns += list(self.sampled_params)
@@ -54,11 +54,11 @@ class Collection():
         self.data = pd.DataFrame(np.zeros((initial_size,len(columns))), columns=columns)
         self._n = 0
         # Prepare labels and ranges for interfacing with GetDist
-        self.labels = parametrisation.labels()
+        self.labels = parametrization.labels()
 
 
         # RANGES HERE!!!!
-        
+
 
         # OUTPUT: Driver, file_name, index to track last sample written
         if output:
@@ -72,7 +72,7 @@ class Collection():
                   weight=1, logpost=None, logprior=None, logliks=None):
         self.enlarge_if_needed()
         self.data[_weight][self._n] = weight
-        if logpost == None:
+        if logpost is None:
             try:
                 logpost = logprior + sum(logliks)
             except ValueError:
@@ -80,7 +80,7 @@ class Collection():
                           "a log-likelihood and a log-prior.")
                 raise HandledException
         self.data[_minuslogpost][self._n] = -logpost
-        if logprior != None:
+        if logprior is not None:
             self.data[_minuslogprior][self._n] = -logprior
         if logliks is not None:
             for name, value in zip(self.chi2_names, logliks):
@@ -100,10 +100,10 @@ class Collection():
             else:
                 enlarge_by = enlargement_size
             self.data = pd.concat([self.data,
-                pd.DataFrame(np.zeros((enlarge_by, self.data.shape[1])), 
+                pd.DataFrame(np.zeros((enlarge_by, self.data.shape[1])),
                              columns=self.data.columns,
                              index=np.arange(self.n(),self.n()+enlarge_by))])
-        
+
     # Retrieve-like methods
     def n(self):
         return self._n
@@ -175,7 +175,7 @@ class Collection():
     def update__txt(self):
         self.dump_slice__txt(self.n_last_out(), self.n())
     def dump_slice__txt(self, n_min=None, n_max=None):
-        if n_min == None or n_max == None:
+        if n_min is None or n_max is None:
             log.error("Needs to specify the limit n's to dump.")
             raise HandledException
         self._n_last_out = n_max
@@ -192,12 +192,12 @@ class Collection():
 
     # Interface with getdist
     def as_getdist_mcsamples(self, derived=True, prior_and_lik=True,
-                             first=None, last=None):
+                             first=None, last=None, **kwargs):
         # get names and labels (n.b.: getdist forcefully adds its own $'s)
         # sampled
-        names = self.sampled_params + [p+"*" for p in self.derived_params]
-        labels = self.labels.values()
-        ranges = []
+        names = list(self.sampled_params) + [p+"*" for p in self.derived_params]
+        labels = list(self.labels.values())
+#        ranges = []
 #        ranges = dict([(p,ls) for p,ls in zip(self.prior.names(),self.prior.limits())])
 #         ranges.update(dict([(p,(self.likelihood.updated_info_params()[p].get("min"),
 #                                    self.likelihood.updated_info_params()[p].get("max")))
@@ -214,7 +214,7 @@ class Collection():
         return MCSamples(samples=samples[first:last],
                          weights=self.data[:self.n()][_weight].values[first:last],
                          loglikes=self.data[:self.n()][_minuslogpost].values[first:last],
-                         names=names, labels=labels, ranges=ranges)
+                         names=names, labels=labels, **kwargs)
 
 
 class OnePoint(Collection):
@@ -224,12 +224,10 @@ class OnePoint(Collection):
         Collection.__init__(self, *args, **kwargs)
 
     def __getitem__(self, columns):
-        if isinstance(columns, basestring):
-            columns = [columns]
-            i = (0,0)
+        if isinstance(columns, six.string_types):
+            return self.data.values[0, self.data.columns.get_loc(columns)]
         else:
-            i = (0,)
-        return self.data.as_matrix(columns=columns)[i]
+            return np.array([self.data.values[0,self.data.columns.get_loc(c)] for c in columns])
 
     # Resets the counter, so the dataframe never fills up!
     def add(self, *args, **kwargs):
@@ -238,7 +236,7 @@ class OnePoint(Collection):
 
     def increase_weight(self, increase):
         self.data["weight"] += increase
-        
+
     def add_to_collection(self, collection):
         """Adds this point at the end of a given collection."""
         collection.add(
@@ -248,7 +246,7 @@ class OnePoint(Collection):
             logpost=-self[_minuslogpost], weight=self[_weight],
             logprior=-self[_minuslogprior],
             logliks=-0.5*np.array(self[self.chi2_names]))
-    
+
     # Make the dataframe printable (but only the filled ones!)
     def __repr__(self):
         return self.data[:1].__repr__()

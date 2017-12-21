@@ -12,10 +12,10 @@ from __future__ import absolute_import, division
 # Global
 import os
 import sys
-from collections import OrderedDict as odict
 from copy import deepcopy
 from importlib import import_module
 import numpy as np
+import six
 import inspect
 import scipy.stats as stats
 
@@ -57,7 +57,7 @@ def get_class(name, kind=_likelihood):
         return getattr(import_module(class_folder, package=package), name)
     except:
         if sys.exc_info()[0] == ImportError and str(sys.exc_info()[1]).endswith(name):
-            log.error("%s '%s' not found (wrong capitalisation?)", kind.capitalize(), name)
+            log.error("%s '%s' not found (wrong capitalization?)", kind.capitalize(), name)
             raise HandledException
         else:
             log.error("There was a problem when importing %s '%s':", kind, name)
@@ -74,10 +74,10 @@ def get_external_function(string_or_function, name=None):
 
     Returns the function.
     """
-    if isinstance(string_or_function, basestring):
+    if isinstance(string_or_function, six.string_types):
         try:
             function = eval(string_or_function)
-        except Exception, e:
+        except Exception as e:
             log.error("Failed to load external function%s: '%r'",
                       " '%s'"%name if name else "", e)
             raise HandledException
@@ -106,7 +106,7 @@ def ensure_nolatex(string):
 
 def get_scipy_1d_pdf(info):
     """Generates 1d priors from scipy's pdf's from input info."""
-    param = info.keys()[0]
+    param = list(info.keys())[0]
     info2 = deepcopy(info[param])
     # What distribution?
     try:
@@ -149,6 +149,6 @@ def get_scipy_1d_pdf(info):
         log.error(
             "'scipy.stats' produced an error: <<%r>>. "
             "This probably means that the distribution '%s' "
-            "does not recognise the parameter mentioned in the 'scipy' error above.",
+            "does not recognize the parameter mentioned in the 'scipy' error above.",
             tp.message, dist)
         raise HandledException

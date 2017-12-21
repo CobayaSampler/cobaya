@@ -14,7 +14,7 @@ Development flow
 5. Pull requests, cloning, etc.
 6. etc.
 
-   
+
 Release checklist
 -----------------
 
@@ -22,13 +22,13 @@ Release checklist
 + Pypi upload
 + ...
 
-  
+
 New features
 ------------
 
 1. Document
 2. Add test
-      
+
 
 Design choices
 --------------
@@ -72,7 +72,7 @@ Different likelihoods may share part of the same experimental model, and so they
 + Two likelihood parameters with the same name are considered by default to be the same parameter. Thus, when defining custom likelihoods or creating new interfaces for external likelihoods, use preferably non-trivial names, e.g. instead of ``A``, use ``amplitude``, or even better, ``amplitude_of_something``.
 + Parameters priors, labels, etc. are inherited from the definitions in the ``defaults.yaml`` of each likelihood, which are gathered at execution time. If there is a conflict between the priors (or fixed value, or derived state) defined in each of the defaults file, an error will be produced, unless the user settles the conflict by specifying the desired behaviour for said parameter in the input file.
 
-   
+
 Mock likelihoods
 """"""""""""""""
 
@@ -87,14 +87,14 @@ How parameters are passed around
 The sampler (MCMC, PolyChord, etc.) does not need to know about to which likelihood understands and make use of each particular parameter. It is the :class:`likelihood.LikelihoodCollection` class who is responsible for passing the parameters around to the likelihoods (and to the theory code). Since, as we said above, more than one likelihood may share a parameter, the parameters cannot be separated in blocks trivially. Thus, we have to choose between
 
 a) blocking the parameters per likelihood (blocks could have a non-trivial intersection),
-b) pass all the parameters to each likelihoods, and let each likelihood recognise their own parameters.
+b) pass all the parameters to each likelihoods, and let each likelihood recognize their own parameters.
 
 .. note::
-   Whatever the choice, we need each likelihood to be able to recognise its own parameters. But they do, since they have been defined in the respective ``defaults.yaml`` file (or for external likelihoods, they can be extracted using Python's *introspection* capabilities).
-  
+   Whatever the choice, we need each likelihood to be able to recognize its own parameters. But they do, since they have been defined in the respective ``defaults.yaml`` file (or for external likelihoods, they can be extracted using Python's *introspection* capabilities).
+
 The complicated bits that could make us decide between one approach or the other are:
 
-*Pythonicity* and information compartmentalisation
+*Pythonicity* and information compartmentalization
   Method (a) makes likelihood calls more natural and *pythonic*: the arguments of the method to get the log-likelihood are simply the parameters. The price is more overhead on the side of the main code, in particular the :class:`likelihood.LikelihoodCollection` class, that has to block the parameters by likelihood, and manage possible overlaps between blocks. In contrast, method (b) is simpler to code and more manageable, since we don't need to know beforehand which parameters to pass to which likelihood; but it is less pythonic since the arguments of the log-likelihood calls are not explicit, but a dictionary.
 
 How to deal with derived parameters?
@@ -106,7 +106,7 @@ What if two likelihoods had the same name for a *different* parameter?
 We have chosen method **(a)**. From here one, any implementation details described depend on this choice.
 
 Dealing with derived parameters
-"""""""""""""""""""""""""""""""  
+"""""""""""""""""""""""""""""""
 
 Computing derived parameters may be expensive, and we won't need them for samples that are not going to be stored (e.g. they are rejected, only used just to perform *fast-dragging*, or just to train a model). Thus, their computation must be **optional**.
 
@@ -126,14 +126,14 @@ From the sampler point of view, the dictionary above becomes a list in the call 
 Unfortunately, for many samplers, such as basic MH-MCMC, we do not know a priori if we are going to save a particular point, so we are forced to compute derived parameters even when they are not necessary. In those case, if their computation is prohibitively expensive, it may be faster to run the sample without derived parameters, and add them after the sampling process is finished.
 
 
-Reparametrisation layer
+Reparametrization layer
 """""""""""""""""""""""
 
 **Statistical parameters** are specified according to their rôles for the **sampler**: as *fixed*, *sampled* and *derived*. On the other hand, the **likelihood** (and the **theory code**, if present) cares only about input and output arguments. In a trivial case, those would correspond respectively to *fixed+sampled* and *derived* parameters.
 
-Actually, this needs not be the case in general, e.g. one may want to fix one or more likelihood arguments to a function of the value of a sampled parameter, or sample from some function or scaling of a likelihood argument, instead of from the likelihood argument directly. The **reparametrisation layers** allow us to specify this non-trivial behaviour at run-time (i.e. in the *input*), instead of  having to change the likelihood code to make it understand different parametrisations or impose certain conditions as fixed input arguments.
+Actually, this needs not be the case in general, e.g. one may want to fix one or more likelihood arguments to a function of the value of a sampled parameter, or sample from some function or scaling of a likelihood argument, instead of from the likelihood argument directly. The **reparametrization layers** allow us to specify this non-trivial behaviour at run-time (i.e. in the *input*), instead of  having to change the likelihood code to make it understand different parametrizations or impose certain conditions as fixed input arguments.
 
-In general, we would distinguish between two different reparametrisation blocks:
+In general, we would distinguish between two different reparametrization blocks:
 
 * The **in** block: :math:`f(\text{fixed and sampled params})\,\Longrightarrow \text{input args}`.
 * The **out** block: :math:`f(\text{output [and maybe input] args})\,\Longrightarrow \text{derived params}`.
@@ -151,7 +151,7 @@ In principle, we would have to specify in one block our statistical parameters, 
      logx:
        prior: ...  # whatever prior, over logx, not x!
        ref: ...    # whatever reference pdf, over logx, not x!
-     
+
    arguments:
      x: lambda logx: numpy.exp(logx)
 
@@ -191,7 +191,7 @@ or even better (clearer input), change the prior so that only arguments known by
   The arguments of the functions defining the *understood* arguments should be statistical parameters for now. At the point of writing this notes, we have not implemented multi-level dependencies.
 
 
-Now, for the **out** reparametrisation.
+Now, for the **out** reparametrization.
 
 First, notice that if derived parameters which are given by a function were just specified by assigning them that function, they would look exactly like the fixed, function-valued parameters above, e.g. :math:`v` in the last example. We need to distinguish them from input parameters. Notice that an assignment looks more like how a fixed parameter would be specified, so we will reserve that notation for those (also, derived parameters may contain other sub-fields, such as a *range*, which are incompatible with a pure assignment). Thus, we will specify function-valued derived parameters with the key ``derived``, to which said function is assigned. E.g. if we want to sampling :math:`x` and store :math:`x^2` along the way, we would input
 
@@ -207,7 +207,7 @@ First, notice that if derived parameters which are given by a function were just
 
 As in the **in** case, for now we avoid multilevel dependencies, by making derived parameters functions of input and output arguments only, not of other derived parameters.
 
-Notice that if a non trivial reparametrisation layer is present, we need to change the way we check at initialisation that the likelihoods undestand the parameters specified in the input: now, the list of parameters to check will include the fixed and sampled parameters, but applying the **substitutions** given by the ``subs`` fields. Also, since derived parameters may depend on output arguments that are not explicitly requested (i.e. only appear as arguments of the function defining the derived parameters), one needs to check that the likelihood understands both the derived parameters which are **not** specified by a function, and the **arguments** of the functions specifying derived parameters, whenever those arguments are not input arguments.
+Notice that if a non trivial reparametrization layer is present, we need to change the way we check at initialization that the likelihoods undestand the parameters specified in the input: now, the list of parameters to check will include the fixed and sampled parameters, but applying the **substitutions** given by the ``subs`` fields. Also, since derived parameters may depend on output arguments that are not explicitly requested (i.e. only appear as arguments of the function defining the derived parameters), one needs to check that the likelihood understands both the derived parameters which are **not** specified by a function, and the **arguments** of the functions specifying derived parameters, whenever those arguments are not input arguments.
 
 .. note::
 
@@ -222,7 +222,7 @@ Notice that if a non trivial reparametrisation layer is present, we need to chan
         V:
           derived: lambda v: v
 
-      
+
 About the ``theory`` module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -263,7 +263,7 @@ Models would have their own ``defaults.yaml`` file. All codes considered compati
 The distinction between theory and likelihood also has a consequence here. As, in practise, we may use different codes to compute the observables given by the same theoretical model, models and codes are separated in the source.
 
 * **Models** are defined by a yaml file containing parameters (in the sense described above, as opposed to options.
-* **Codes** are defined as a python object with methods for initialising, computing and closing, and also `get`-methods for the observables that the likelihoods may request.
+* **Codes** are defined as a python object with methods for initializing, computing and closing, and also `get`-methods for the observables that the likelihoods may request.
 
 The model to be inherited is mentioned in the `theory` block. Its parameters, fixed, sampled and derived, are automatically added to the `params` block internally.
 
@@ -274,7 +274,7 @@ If one wants to sample a modification of a code, simply state the differences (a
    NB: we may want to include code-specific options in a model, e.g. to ensure precision. They would be something like `camb__accuracy: 2`, where the double underscore would serve as a separator between the name of the code to be passes to, and the name of the parameter.
 
 .. code-block:: yaml
-                   
+
    theory:
      model: lcdm_planck
        code: camb
@@ -314,5 +314,5 @@ If one wants to sample a modification of a code, simply state the differences (a
       ...
       # derived:
       d_1:
-      ...      
+      ...
 

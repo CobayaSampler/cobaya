@@ -1,7 +1,7 @@
 """
 .. module:: mpi
 
-:Synopsis: Manages MPI parallelisation transparently
+:Synopsis: Manages MPI parallelization transparently
 :Author: Jesus Torrado
 
 """

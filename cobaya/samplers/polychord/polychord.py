@@ -49,7 +49,7 @@ file (reproduced below).
 
 The wrapper for ``PolyChord`` deals automatically with some of ``PolyChord``'s original
 input parameters (e.g. the number of dimensions and of derived parameters, and the
-parameters related to the output). The speed hierarchy, specified as described in 
+parameters related to the output). The speed hierarchy, specified as described in
 :ref:`mcmc_speed_hierarchy`, is exploited by default.
 
 .. warning::
@@ -66,7 +66,7 @@ parameters related to the output). The speed hierarchy, specified as described i
 
 The main output is the Monte Carlo sample of sequentially discarded *live points*, saved
 in the standard sample format together with the ``input.yaml`` and ``full.yaml``
-files (see :doc:`output`). The raw ``PolyChord`` products are saved in a 
+files (see :doc:`output`). The raw ``PolyChord`` products are saved in a
 subfolder of the output folder
 (determined by the option ``base_dir`` -- default: ``polychord_output``).
 
@@ -97,7 +97,7 @@ Uncompress the file you just downloaded in the folder where you are installing t
 samplers, and follow the instructions in the ``README`` file.
 
 .. note::
-   The fast way, assuming that you are in a GNU/Linux system, that you are following the 
+   The fast way, assuming that you are in a GNU/Linux system, that you are following the
    directory structure described in :ref:`directory_structure`, and the PolyChord file
    downloaded is called ``PolyChord_v1.9.tar.gz``:
 
@@ -109,7 +109,7 @@ samplers, and follow the instructions in the ``README`` file.
       $ cd PolyChord
       $ make PyPolyChord
       $ echo -e "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:$PWD/lib" >> ~/.bashrc
-      $ source ~/.bashrc       
+      $ source ~/.bashrc
 
 If PolyChord has been compiled with MPI, you **must** call cobaya with ``mpirun`` if you
 want to use PolyChord as a sampler.
@@ -143,7 +143,7 @@ class polychord(Sampler):
     def initialise(self):
         """Imports the PolyChord sampler and prepares its arguments."""
         if not get_mpi_rank():  # rank = 0 (MPI master) or None (no MPI)
-            log.info("Initialising")
+            log.info("Initializing")
         # Importing PolyChord from the correct path
         if self.path:
             if not get_mpi_rank():
@@ -178,14 +178,14 @@ class polychord(Sampler):
                        "read_resume", "write_stats", "write_live", "write_dead",
                        "base_dir", "grade_frac", "grade_dims"]])
         # Ignore null-defined ones, so PolyChord sets them to the defaults
-        self.pc_args = dict([(k,v) for k,v in self.pc_args.iteritems() if v is not None])
+        self.pc_args = dict([(k,v) for k,v in self.pc_args.items() if v is not None])
         # Fill the automatic ones
         if "feedback" not in self.pc_args:
             values = {logging.CRITICAL: 0, logging.ERROR: 0, logging.WARNING: 0,
                       logging.INFO: 1, logging.DEBUG: 2}
             self.pc_args["feedback"] = values[log.getEffectiveLevel()]
         self.pc_args["nDims"] = self.prior.d()
-        self.pc_args["nDerived"] = (len(self.parametrisation.derived_params()) + 1 +
+        self.pc_args["nDerived"] = (len(self.parametrization.derived_params()) + 1 +
                                     len(self.likelihood._likelihoods))
         try:
             output_folder = getattr(self.output, "folder")
@@ -249,7 +249,7 @@ class polychord(Sampler):
         if not get_mpi_rank():
             log.info("Calling PolyChord with arguments" +
                      "\n  ".join([""] +
-                                 ["%s : "%p+str(v) for p,v in self.pc_args.iteritems()]))
+                                 ["%s : "%p+str(v) for p,v in self.pc_args.items()]))
 
     def run(self):
         """
@@ -275,9 +275,9 @@ class polychord(Sampler):
             prefix = os.path.join(self.pc_args["base_dir"], self.pc_args["file_root"])
             sample = np.loadtxt(prefix+".txt")
             self.collection = Collection(
-                self.parametrisation, self.likelihood, self.output, name="1")
-            n_sampled = len(self.parametrisation.sampled_params())
-            n_derived = len(self.parametrisation.derived_params())
+                self.parametrization, self.likelihood, self.output, name="1")
+            n_sampled = len(self.parametrization.sampled_params())
+            n_derived = len(self.parametrization.derived_params())
             n_liks = len(self.likelihood._likelihoods)
             for row in sample:
                 self.collection.add(row[2:2+n_sampled],

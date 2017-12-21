@@ -6,6 +6,7 @@
 
 """
 # Python 2/3 compatibility
+from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
 
@@ -39,25 +40,25 @@ def install(*infos, **kwargs):
         if kwargs_install[what] and not os.path.exists(spath):
             os.makedirs(spath)
     failed_modules = []
-    for kind, modules in get_modules(*infos).iteritems():
+    for kind, modules in get_modules(*infos).items():
         for module in modules:
-            print make_header(kind, module)
+            print(make_header(kind, module))
             module_folder = get_folder(module, kind, sep=".", absolute=False)
             imported_module = import_module(module_folder, package=package)
             is_installed = getattr(imported_module, "is_installed", None)
             if is_installed is None:
-                print "Not and external module: nothing to do.\n"
+                print("Not and external module: nothing to do.\n")
                 continue
             if is_installed(path=abspath, **kwargs_install):
-                print "External module already installed or not requested."
+                print("External module already installed or not requested.")
                 if kwargs_install["force"]:
-                    print "Forcing re-installation, as requested."
+                    print("Forcing re-installation, as requested.")
                 else:
-                    print "Doing nothing.\n"
+                    print("Doing nothing.\n")
                     continue
             success = imported_module.install(path=abspath, **kwargs_install)
             if success:
-                print "Successfully installed!\n"
+                print("Successfully installed!\n")
             else:
                 log.error("Installation failed! Look at the error messages above. "
                           "Solve them and try again, or, if you are unable to solve, "
@@ -107,7 +108,7 @@ def install_script():
         parser.add_argument("files", action="store", nargs="+", metavar="input_file.yaml",
                             help="One or more input files.")
         parser.add_argument("-p", "--path",
-                            action="store", nargs=1, default=".", metavar=("/some/path"),
+                            action="store", nargs=1, default=".", metavar="/some/path",
                             help="Desired path where to install external modules.")
         parser.add_argument("-f", "--force", action="store_true", default=False,
                             help="Force re-installation of apparently installed modules.")

@@ -6,18 +6,18 @@ cobaya, a code for Bayesian analysis in Cosmology
 :Source: `Source code at GitHub <https://github.com/JesusTorrado/cobaya>`_
 
 :Documentation: `Documentation at Readthedocs <https://cobaya.readthedocs.org>`_
-         
-:License: `LGPL <https://www.gnu.org/licenses/lgpl-3.0.en.html>`_ for the code (except otherwise stated in a docstring) and `GFDL <https://www.gnu.org/licenses/fdl-1.3.en.html>`_ for the documentation (see `LICENSE.txt <https://github.com/JesusTorrado/cobaya/blob/master/LICENSE.txt>`_).
-                 
+
+:Licensing: `LGPL <https://www.gnu.org/licenses/lgpl-3.0.en.html>`_ for the code (except otherwise stated in a docstring) and `GFDL <https://www.gnu.org/licenses/fdl-1.3.en.html>`_ for the documentation (see `LICENCE.txt <https://github.com/JesusTorrado/cobaya/blob/master/LICENCE.txt>`_).
+
 **cobaya** (COde for BAYesian Analysis; Guinea Pig, in Spanish) is a framework for sampling and statistical modelling: it allows you to explore any prior or posterior using a range of Monte Carlo samplers (including the advanced MCMC sampler from CosmoMC_, and the advanced nested sampler PolyChord_). The results of the sampling can be analysed with GetDist_.
 
 Its authors are `Jesus Torrado`_ and `Antony Lewis`_. Some ideas and modules have been adapted from `Monte Python`_, by `Julien Lesgourgues`_ and `Benjamin Audren`_ (in particular, the interface to the Planck 2015 likelihoods).
 
 Though **cobaya** is a general purpose statistical framework, it includes interfaces to cosmological *theory codes* (CAMB_ and CLASS_) and *experimental likelihoods* (in this version, Planck 2015 and Bicep-Keck 2015). The interfaces to most cosmological likelihoods are agnostic as to which theory code is used to compute the observables, which facilitates comparison between those codes.
 
-**cobaya** has been conceived from the beginning to be highly and effortlessly extensible: without touching **cobaya**'s source code, you can define your own priors and likelihoods, use modified versions of a theory code (just pass **cobaya** their folder!), create new parameters as function of other parameters... You can also us **cobaya** simply as a wrapper for cosmological likelihoods to integrate them in your analysis pipeline.
+**cobaya** has been conceived from the beginning to be highly and effortlessly extensible: without touching **cobaya**'s source code, you can define your own priors and likelihoods, use modified versions of a theory code (just pass **cobaya** their folder!), create new parameters as function of other parameters... You can also use **cobaya** simply as a wrapper for cosmological likelihoods to integrate them in your analysis pipeline.
 
-In addition, it downloads and install requirements automatically (samplers, theory codes and likelihoods); it supports MPI parallelisation and HPC containerisation (Singularity and Docker+Shifter; the later is WIP); and it can be run either from the shell or from a Python interpreter/notebook, and takes input either as YAML_ files or Python dictionaries.
+In addition, it downloads and install requirements automatically (samplers, theory codes and likelihoods); it supports MPI parallelization and HPC containerization (Singularity and Docker+Shifter; the later is WIP); and it can be run either from the shell or from a Python interpreter/notebook, and takes input either as YAML_ files or Python dictionaries.
 
 
 How to cite us
@@ -25,7 +25,7 @@ How to cite us
 
 As of this version, there is no scientific publication yet associated to this software, so simply mention its GitHub repository (see above).
 
-To appropriately cite the modules (samplers, theory codes, likelihoods) that you have used, simply run the script `cobaya-citation` with your input file(s) as argument(s), and you will get *bibtex* references and a short suggested text snippet for each module mentioned in your input file. 
+To appropriately cite the modules (samplers, theory codes, likelihoods) that you have used, simply run the script `cobaya-citation` with your input file(s) as argument(s), and you will get *bibtex* references and a short suggested text snippet for each module mentioned in your input file.
 
 .. _`Jesus Torrado`: http://astronomy.sussex.ac.uk/~jt386
 .. _`Antony Lewis`: http://cosmologist.info
@@ -39,3 +39,12 @@ To appropriately cite the modules (samplers, theory codes, likelihoods) that you
 .. _GetDist: https://github.com/cmbant/getdist
 .. _YAML: https://en.wikipedia.org/wiki/YAML
 .. _PolyChord: http://ccpforge.cse.rl.ac.uk/gf/project/polychord
+
+
+===================
+
+.. raw:: html
+
+    <a href="http://www.sussex.ac.uk/astronomy/"><img src="https://cdn.cosmologist.info/antony/Sussex.png" height="170px"></a>
+    <a href="http://erc.europa.eu/"><img src="https://erc.europa.eu/sites/default/files/content/erc_banner-vertical.jpg" height="200px"></a>
+    

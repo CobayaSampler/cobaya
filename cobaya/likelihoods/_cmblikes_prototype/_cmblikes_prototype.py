@@ -1,7 +1,7 @@
 """
 .. module:: _CMBlikes_prototype
 
-:Synopsis: Definition of the CMBlikes class for some ground-based CMB experiments.
+:Synopsis: Definition of the CMBlikes class for CMB real or simulated data.
 :Author: Antony Lewis and Jesus Torrado
 
 # Load CosmoMC format .dataset files
@@ -202,7 +202,7 @@ class _cmblikes_prototype(Likelihood):
         if self.binned:
             Ls -= 1
         for i, L in enumerate(Ls):
-            if L >= self.bin_min and L <= self.bin_max:
+            if self.bin_min <= L <= self.bin_max:
                 for ix in range(self.ncl):
                     if cols[ix] != -1:
                         cl[ix, L - self.bin_min] = data[i, cols[ix]]

@@ -36,7 +36,7 @@ source tree. In that folder, there must be at least *three* files:
 
 - A trivial ``__init__.py`` file containing a single line: ``from [name] import [name]``,
   where ``name`` is the name of the likelihood, and it's folder.
-- A ``name.py`` file, containing the particular class definition of the likelihood, 
+- A ``name.py`` file, containing the particular class definition of the likelihood,
   inheriting from the :class:`Likelihood` class (see below).
 - A ``defaults.yaml`` containing a block:
 
@@ -52,11 +52,11 @@ source tree. In that folder, there must be at least *three* files:
              [prior info]
            [label, ref, etc.]
 
-  The options and parameters defined in this file are the only ones recognised by the
+  The options and parameters defined in this file are the only ones recognized by the
   likelihood, and they are loaded automatically with their default values (options) and
   priors (parameters) by simply mentioning the likelihood in the input file, where one can
   re-define any of those options with a different value. The same parameter may be
-  defined by different likelihoods -- in those cases, it needs to have the same default 
+  defined by different likelihoods -- in those cases, it needs to have the same default
   information (prior, label, etc.) in the defaults file of those likelihoods.
 
 .. note::
@@ -76,9 +76,9 @@ Creating your own likelihood
 ----------------------------
 
 Since cobaya was created to be flexible, creating your own likelihood is very easy: simply
-create a folder with its name under ``likelihoods`` in the source tree and follow the 
+create a folder with its name under ``likelihoods`` in the source tree and follow the
 conventions explained above. Inside the class definition of your function, you can use any
-of the attributes defined in the ``defaults.yaml`` file directly, and you only need to 
+of the attributes defined in the ``defaults.yaml`` file directly, and you only need to
 specify one, or at most three, functions
 (see the :class:`Likelihood` class documentation below):
 
@@ -127,23 +127,23 @@ class_options = {"speed": 1}
 class Likelihood(object):
     """Likelihood class prototype."""
 
-    # Generic initialisation -- do not touch
-    def __init__(self, info, parametrisation, theory=None):
+    # Generic initialization -- do not touch
+    def __init__(self, info, parametrization, theory=None):
         # Load info of the likelihood
         for k in info:
             setattr(self, k, info[k])
         # Mock likelihoods: gather all parameters starting with `mock_prefix`
         if self.is_mock():
-            all_params = (list(parametrisation.input_params()) +
-                          list(parametrisation.output_params()))
+            all_params = (list(parametrization.input_params()) +
+                          list(parametrization.output_params()))
             info[_params] = [p for p in all_params
                              if p.startswith(self.mock_prefix or "")]
         # Load parameters
         self.input_params = odict(
-            [(p,p_info) for p,p_info in parametrisation.input_params().iteritems()
+            [(p,p_info) for p,p_info in parametrization.input_params().items()
              if p in info[_params]])
         self.output_params = odict(
-            [(p,p_info) for p,p_info in parametrisation.output_params().iteritems()
+            [(p,p_info) for p,p_info in parametrization.output_params().items()
              if p in info[_params]])
         # Initialise
         self.theory = theory
@@ -236,16 +236,16 @@ class LikelihoodCollection(object):
     Initialises the theory code and the experimental likelihoods.
     """
 
-    def __init__(self, info_likelihood, parametrisation, info_theory=None):
+    def __init__(self, info_likelihood, parametrization, info_theory=None):
         # Store the input/output parameters
-        self.input_params = parametrisation.input_params()
-        self.output_params = parametrisation.output_params()
+        self.input_params = parametrization.input_params()
+        self.output_params = parametrization.output_params()
         # *IF* there is a theory code, initialise it
         if info_theory:
             input_params_theory = self.input_params.fromkeys(
-                [k for k in self.input_params if k in parametrisation.theory_params()])
+                [k for k in self.input_params if k in parametrization.theory_params()])
             output_params_theory = self.output_params.fromkeys(
-                [k for k in self.output_params if k in parametrisation.theory_params()])
+                [k for k in self.output_params if k in parametrization.theory_params()])
             name, fields = info_theory.items()[0]
             theory_class = get_class(name, kind=_theory)
             self.theory = theory_class(input_params_theory, output_params_theory, fields)
@@ -253,7 +253,7 @@ class LikelihoodCollection(object):
             self.theory = None
         # Initialise individual Likelihoods
         self._likelihoods = odict()
-        for name, info in info_likelihood.iteritems():
+        for name, info in info_likelihood.items():
             # If it does "external" key, wrap it up. Else, load it up
             if _external in info:
                 self._likelihoods[name] = LikelihoodExternalFunction(
@@ -261,21 +261,21 @@ class LikelihoodCollection(object):
             else:
                 lik_class = get_class(name)
                 self._likelihoods[name] = lik_class(
-                    info, parametrisation, theory=self.theory)
-        # Check that all are recognised
+                    info, parametrization, theory=self.theory)
+        # Check that all are recognized
         for params in ("input_params", "output_params"):
-            info = getattr(parametrisation, params)()
+            info = getattr(parametrization, params)()
             setattr(self, params, info)
             requested = set(info)
             known = set(chain(getattr(self.theory, params, []),
                               *[getattr(self[lik], params) for lik in self]))
             r_not_k = requested.difference(known)
             if r_not_k:
-                log.error("Some of the requested %s parameters were not recognised "
+                log.error("Some of the requested %s parameters were not recognized "
                           "by any likelihood: %r.", params.split("_")[0], r_not_k)
                 raise HandledException
         # Store the input params and likelihods on which each sampled params depends
-        self.sampled_input_dependence = parametrisation.sampled_input_dependence()
+        self.sampled_input_dependence = parametrization.sampled_input_dependence()
         self.sampled_lik_dependence = odict(
             [[p,[lik for lik in list(self)+([_theory] if self.theory else [])
                  if any([(i in self[lik].input_params) for i in (i_s or [p])])]]
@@ -347,7 +347,7 @@ class LikelihoodCollection(object):
         """
         Blocks the sampled parameters by likelihood, and sorts the blocks by speed.
         Returns an ``OrderedDict`` ``{speed: [params]}``, sorted by ascending speeds.
-        Parameters recognised by more than one likelihood are blocked in the slowest one.
+        Parameters recognized by more than one likelihood are blocked in the slowest one.
         """
         param_with_speed = odict([[p,min([self[lik].speed for lik in liks])]
                                   for p,liks in self.sampled_lik_dependence.items()])
