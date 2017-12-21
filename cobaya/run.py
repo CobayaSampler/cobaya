@@ -60,8 +60,9 @@ def run(info):
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
         logging.getLogger(__name__).debug(
             "Updated info (dumped to YAML):\n%s", yaml_dump(full_info))
-    # We dump the info now, before modules initialization, lest it is accidentaly modified
-    output.dump_info(info, full_info)
+    if do_output: #TODO: AL changed, check
+        # We dump the info now, before modules initialization, lest it is accidentaly modified
+        output.dump_info(info, full_info)
 
     # Set the path of the installed modules, if given
     from cobaya.tools import set_path_to_installation

@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 """
 .. module:: citation
 
@@ -13,6 +11,7 @@ Inspired by a similar characteristic of
 # Python 2/3 compatibility
 from __future__ import absolute_import
 from __future__ import division
+from __future__ import print_function
 
 # Global
 import os

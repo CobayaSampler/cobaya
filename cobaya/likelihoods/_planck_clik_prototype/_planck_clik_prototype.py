@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 """
 .. module:: _planck_clik_prototype
 
@@ -14,7 +12,7 @@ the `MontePython <http://baudren.github.io/montepython.html>`_ code by Julien Le
 and Benjamin Audren.
 
 .. note::
-  
+
   An older, `MIT-licensed <https://opensource.org/licenses/MIT>`_ version of this module by
   Julien Lesgourgues and Benjamin Audren can be found in the `source of
   MontePython <https://github.com/baudren/montepython_public>`_.
@@ -59,6 +57,7 @@ length.
 # Python 2/3 compatibility
 from __future__ import absolute_import
 from __future__ import division
+from __future__ import print_function
 
 # Global
 import os
