@@ -167,7 +167,7 @@ class Parametrization(object):
         # Assume that the *un*known function arguments are likelihood output parameters
         args = (set(chain(*self._input_args.values()))
                 .union(chain(*self._derived_args.values())))
-        for p in self._input.keys() + self._sampled.keys() + self._output.keys():
+        for p in list(self._input.keys()) + list(self._sampled.keys()) + list(self._output.keys()):
             if p in args:
                 args.remove(p)
         self._output.update({p:None for p in args})
