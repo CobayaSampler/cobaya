@@ -106,7 +106,7 @@ def ensure_nolatex(string):
 
 def get_scipy_1d_pdf(info):
     """Generates 1d priors from scipy's pdf's from input info."""
-    param = info.keys()[0]
+    param = list(info.keys())[0]
     info2 = deepcopy(info[param])
     # What distribution?
     try:
