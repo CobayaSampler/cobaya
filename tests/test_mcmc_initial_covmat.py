@@ -29,7 +29,7 @@ def body_of_test(dim, tmpdir=None):
     mindim = 4
     assert dim > mindim, "Needs dimension>%d for the test."%mindim
     initial_random_covmat = random_cov(dim*[[0,1]])
-    i_s = range(dim)
+    i_s = list(range(dim))
     shuffle(i_s)
     n_altered = int(dim/4)
     i_proposal = i_s[:n_altered]

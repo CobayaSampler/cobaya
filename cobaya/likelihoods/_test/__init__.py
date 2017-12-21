@@ -1,1 +1,1 @@
-from _test import _test
+from ._test import _test
