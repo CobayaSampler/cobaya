@@ -225,11 +225,9 @@ class OnePoint(Collection):
 
     def __getitem__(self, columns):
         if isinstance(columns, six.string_types):
-            columns = [columns]
-            i = (0,0)
+            return self.data.values[0, self.data.columns.get_loc(columns)]
         else:
-            i = (0,)
-        return self.data.as_matrix(columns=columns)[i]
+            return np.array([self.data.values[0,self.data.columns.get_loc(c)] for c in columns])
 
     # Resets the counter, so the dataframe never fills up!
     def add(self, *args, **kwargs):
