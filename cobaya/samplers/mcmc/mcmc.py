@@ -214,7 +214,7 @@ class mcmc(Sampler):
         # Create proposer -- speeds, fast-dragging/oversampling and initial covmat
         speeds, blocks = zip(*self.likelihood.speeds_of_params().items())
         # Turn parameter names into indices
-        blocks = [[self.parametrization.sampled_params().keys().index(p) for p in b]
+        blocks = [[list(self.parametrization.sampled_params().keys()).index(p) for p in b]
                   for b in blocks]
         if self.oversample and (self.drag_nfast_times or self.drag_interp_steps):
             log.error("Choose either oversampling or fast-dragging, not both.")
