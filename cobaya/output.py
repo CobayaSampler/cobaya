@@ -122,11 +122,14 @@ class Output_dummy(Output):
             _func_name = "__name__"
         for attrname,attr in list(Output.__dict__.items()):
             func_name = getattr(attr, _func_name, None)
-            if func_name and func_name not in exclude and not '__' in func_name:
+            if func_name and func_name not in exclude and '__' not in func_name:
                 setattr(self, attrname, self.nullfunc)
 
     def nullfunc(self, *args, **kwargs):
         pass
 
     def __nonzero__(self):
+        return False
+
+    def __bool__(self):
         return False
