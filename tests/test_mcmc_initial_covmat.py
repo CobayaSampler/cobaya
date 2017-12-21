@@ -44,7 +44,7 @@ def body_of_test(dim, tmpdir=None):
         initial_random_covmat[i,i] = diag
     # Prepare info, including refs, priors and reduced covmat
     prefix = "a_"
-    input_order = range(dim)
+    input_order = list(range(dim))
     shuffle(input_order)
     info = {_likelihood: {"one": {"mock_prefix": None}}, _params: odict()}
     for i in input_order:
