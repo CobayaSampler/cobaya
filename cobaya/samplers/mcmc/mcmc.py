@@ -661,7 +661,7 @@ class mcmc(Sampler):
         if self.learn_proposal and not self.converged:
             # update iff (not MPI, or MPI and "good" Rminus1)
             if get_mpi():
-                good_Rminus1 = (self.Rminus1_last < self.learn_proposal_Rminus1_max > self.learn_proposal_Rminus1_min)
+                good_Rminus1 = (self.learn_proposal_Rminus1_max > self.Rminus1_last > self.learn_proposal_Rminus1_min)
                 if not good_Rminus1:
                     if not get_mpi_rank():
                         log.info("Bad convergence statistics: "
