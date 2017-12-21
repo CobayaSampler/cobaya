@@ -195,7 +195,7 @@ class Collection(object):
                              first=None, last=None, **kwargs):
         # get names and labels (n.b.: getdist forcefully adds its own $'s)
         # sampled
-        names = self.sampled_params + [p+"*" for p in self.derived_params]
+        names = list(self.sampled_params) + [p+"*" for p in self.derived_params]
         labels = self.labels.values()
 #        ranges = []
 #        ranges = dict([(p,ls) for p,ls in zip(self.prior.names(),self.prior.limits())])
