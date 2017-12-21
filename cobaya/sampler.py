@@ -163,7 +163,7 @@ def get_Sampler(info_sampler, parametrization, prior, likelihood, output_file):
     Auxiliary function to retrieve and initialise the requested sampler.
     """
     try:
-        name = info_sampler.keys()[0]
+        name = list(info_sampler.keys())[0]
     except AttributeError:
         log.error("The sampler block must be a dictionary 'sampler: {options}'.")
         raise HandledException
