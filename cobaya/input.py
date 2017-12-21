@@ -79,7 +79,7 @@ def get_modules(*infos):
             modules[field] += [a for a in (info.get(field) or [])
                                if a not in modules[field]]
     # pop empty blocks
-    for k,v in modules.items():
+    for k,v in list(modules.items()):
         if not v:
             modules.pop(k)
     return modules
