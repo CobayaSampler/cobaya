@@ -144,7 +144,7 @@ class gaussian(Likelihood):
                 standard = np.linalg.inv(self.choleskyL[i]).dot((x-self.mean[i]))
                 derived.update(dict(
                     [(p,v) for p,v in
-                     zip(self.output_params.keys()[i*self.d():(i+1)*self.d()],standard)]))
+                     zip(list(self.output_params.keys())[i*self.d():(i+1)*self.d()],standard)]))
         # Compute the likelihood and return
         return (-np.log(self.n_modes) +
                  np.log(sum([gauss.pdf(x) for gauss in self.gaussians])))

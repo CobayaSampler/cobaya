@@ -246,7 +246,7 @@ class LikelihoodCollection(object):
                 [k for k in self.input_params if k in parametrization.theory_params()])
             output_params_theory = self.output_params.fromkeys(
                 [k for k in self.output_params if k in parametrization.theory_params()])
-            name, fields = info_theory.items()[0]
+            name, fields = list(info_theory.items())[0]
             theory_class = get_class(name, kind=_theory)
             self.theory = theory_class(input_params_theory, output_params_theory, fields)
         else:

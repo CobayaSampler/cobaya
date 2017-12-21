@@ -47,7 +47,7 @@ def body_of_test(modules, tmpdir, x, theory, debug=False):
         for p in ["zstar", "rstar", "thetastar", "DAstar", "zdrag", "rdrag",
                   "kd", "thetad", "zeq", "keq", "thetaeq", "thetarseq"]:
             info[_params][_theory].pop(p)
-    info[_theory][info[_theory].keys()[0]] = {"speed": 0.5}
+    info[_theory][list(info[_theory].keys())[0]] = {"speed": 0.5}
     info[_sampler] = {"mcmc": {
         "burn_in": 100,
         "learn_proposal": True,

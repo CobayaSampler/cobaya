@@ -1,8 +1,6 @@
 language: python
 dist: trusty
-python:
-  - 2.7
-  - 3.6
+
 # (Pre)Installation
 # Test matrix for different C & fortran compilers
 matrix:
@@ -24,6 +22,26 @@ matrix:
             - liblapack-dev
       env:
         - MATRIX_EVAL="4.9"
+      python: "2.7"
+    - addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - gcc-5
+            - gfortran-5
+            - openmpi-bin
+            - openmpi-common
+            - libopenmpi-dev
+            # numpy (and more)
+            - libopenblas-base
+            # Planck likelihood
+            - liblapack3
+            - liblapack-dev
+      env:
+        - MATRIX_EVAL="5"
+      python: "3.6"
+
     # - addons:
     #     apt:
     #       sources:
@@ -62,8 +80,7 @@ matrix:
 before_install:
   - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-"${MATRIX_EVAL}" 90
   - sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-"${MATRIX_EVAL}" 90
-  # getdist fork (it will be an automatic requisite in the future)
-  - pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist
+  - pip install getdist
   - pip install matplotlib # necessary for getdist, but not installed automatically for now
   # optional, but necessary for tests
   - pip install mpi4py pytest-xdist
