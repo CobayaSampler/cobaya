@@ -9,6 +9,7 @@
 # Python 2/3 compatibility
 from __future__ import absolute_import
 from __future__ import division
+import six
 
 # Global
 import os
@@ -117,8 +118,7 @@ class Output_dummy(Output):
         # override all methods
         exclude = ["__nonzero__", "nullfunc", "update_info", "updated_info"]
         for attrname,attr in list(Output.__dict__.items()):
-            print(attrname,attr)
-            func_name = getattr(attr, "func_name", None)
+            func_name = getattr(attr, six.func_name, None)
             if func_name and func_name not in exclude:
                 setattr(self, attrname, self.nullfunc)
 
