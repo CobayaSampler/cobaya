@@ -48,5 +48,5 @@ def body_of_test(modules, theory):
         print("WE SHOULD NOT HAVE TO LOWER THE TOLERANCE THAT MUCH!!!")
     updated_info, products = run(info)
     # print products["sample"]
-    computed_value = products["sample"]["chi2__"+info[_likelihood].keys()[0]].values[0]
+    computed_value = products["sample"]["chi2__"+list(info[_likelihood].keys())[0]].values[0]
     assert (computed_value-reference_value) < abs_tolerance

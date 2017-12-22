@@ -243,8 +243,8 @@ class mcmc(Sampler):
                 raise HandledException
             self.i_last_slow_block = (i for i,speed in enumerate(list(speeds))
                                       if speed > self.max_speed_slow).next() - 1
-            fast_params = [self.parametrization.sampled_params().keys()[i]
-                           for i in chain(*blocks[1+self.i_last_slow_block:])]
+            _keys = list(self.parametrization.sampled_params().keys())
+            fast_params = [_keys[i] for i in chain(*blocks[1+self.i_last_slow_block:])]
             self.effective_max_samples = self.max_samples
             self.n_slow = sum(len(blocks[i]) for i in range(1+self.i_last_slow_block))
             if self.drag_nfast_times:
@@ -661,7 +661,7 @@ class mcmc(Sampler):
         if self.learn_proposal and not self.converged:
             # update iff (not MPI, or MPI and "good" Rminus1)
             if get_mpi():
-                good_Rminus1 = (self.Rminus1_last < self.learn_proposal_Rminus1_max > self.learn_proposal_Rminus1_min)
+                good_Rminus1 = (self.learn_proposal_Rminus1_max > self.Rminus1_last > self.learn_proposal_Rminus1_min)
                 if not good_Rminus1:
                     if not get_mpi_rank():
                         log.info("Bad convergence statistics: "

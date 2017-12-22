@@ -29,7 +29,7 @@ def body_of_test(dim, tmpdir=None):
     mindim = 4
     assert dim > mindim, "Needs dimension>%d for the test."%mindim
     initial_random_covmat = random_cov(dim*[[0,1]])
-    i_s = range(dim)
+    i_s = list(range(dim))
     shuffle(i_s)
     n_altered = int(dim/4)
     i_proposal = i_s[:n_altered]
@@ -44,7 +44,7 @@ def body_of_test(dim, tmpdir=None):
         initial_random_covmat[i,i] = diag
     # Prepare info, including refs, priors and reduced covmat
     prefix = "a_"
-    input_order = range(dim)
+    input_order = list(range(dim))
     shuffle(input_order)
     info = {_likelihood: {"one": {"mock_prefix": None}}, _params: odict()}
     for i in input_order:

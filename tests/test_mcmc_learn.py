@@ -103,7 +103,7 @@ def test_gaussian_mcmc():
         "learn_proposal": True,
         # Callback to check KL divergence -- disabled in the automatic test
         "callback_function": check, "callback_every": 100,
-        "covmat": S0, "covmat_params": info["params"].keys()[:dimension]
+        "covmat": S0, "covmat_params": list(info["params"].keys())[:dimension]
         }}
     # Run!!!
     info["debug"] = False

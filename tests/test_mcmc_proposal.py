@@ -34,7 +34,7 @@ def body_of_test(dim, covariances=True, oversample=False, fast_slow=False):
     assert not (oversample and fast_slow), (
         "Not possible to test oversampling and fast_slow hierarchy simultaneously.")
     # Shuffle the parameters
-    i_p = range(dim)
+    i_p = list(range(dim))
     shuffle(i_p)
     info = {_likelihood: odict([["l%.2d"%i,
                                  {"external": "lambda a%.2d: 1"%i, "speed": (i+1)/dim}]

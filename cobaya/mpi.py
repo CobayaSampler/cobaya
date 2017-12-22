@@ -81,6 +81,6 @@ def import_MPI(module, target):
     """Import helper for MPI wrappers."""
     from importlib import import_module
     target_name = target
-    if get_mpi_rank() >= 0:
+    if get_mpi_rank() is not None:
         target_name = target+"_MPI"
     return getattr(import_module(module, package=package), target_name)
