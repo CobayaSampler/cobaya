@@ -37,7 +37,7 @@ def set_path_to_installation(path):
 def get_path_to_installation():
     return _path_to_installation
 
-def get_folder(name, kind, sep="/", absolute="True"):
+def get_folder(name, kind, sep=os.sep, absolute="True"):
     """
     Gets folder, relative to the package source, of a likelihood, theory or sampler.
     """

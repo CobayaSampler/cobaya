@@ -49,7 +49,7 @@ def load_input(input_file):
     if "CONTAINED" in os.environ:
         for out in [_output_prefix, _debug_file]:
             if info.get(out):
-                if not info[out].startswith("/"):
+                if not info[out].startswith("/") and not info[out].startswith(os.sep):
                     info[out] = os.path.join(_products_path, info[out])
     return info
 
