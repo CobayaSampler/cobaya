@@ -49,7 +49,7 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
     # For pytest's handling of tmp dirs
     if hasattr(tmpdir, "dirpath"):
         tmpdir = tmpdir.dirname
-    prefix = os.path.join(tmpdir, "%d"%round(1e8*random()))+"/"
+    prefix = os.path.join(tmpdir, "%d"%round(1e8*random()))+os.sep
     if os.path.exists(prefix):
         shutil.rmtree(prefix)
     # build full info
