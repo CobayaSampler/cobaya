@@ -1,1 +1,1 @@
-from one import one
+from .one import one

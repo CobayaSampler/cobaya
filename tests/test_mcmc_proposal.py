@@ -54,7 +54,7 @@ def body_of_test(dim, covariances=True, oversample=False, fast_slow=False):
         ranges = [[i["prior"]["min"],i["prior"]["max"]] for i in info[_params].values()]
         cov = random_cov(ranges, O_std_min=1e-2, O_std_max=1e-1)
         info[_sampler]["mcmc"].update(
-            {"covmat": cov, "covmat_params": info[_params].keys()})
+            {"covmat": cov, "covmat_params": list(info[_params].keys())})
     def callback_oversampling(sampler):
         # Resetting the proposer
         sampler.proposer.cycler_all.loop_index = -1
