@@ -114,8 +114,8 @@ class Output_dummy(Output):
     """
     def __init__(self, info):
         log.info("No output requested. Doing nothing (or returning in scripted call).")
-        # override all methods
-        exclude = ["nullfunc", "update_info", "updated_info"]
+        # override all methods that actually produce output
+        exclude = ["nullfunc"]
         if sys.version_info < (3,):
             _func_name = "func_name"
         else:

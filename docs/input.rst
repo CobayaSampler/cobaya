@@ -29,9 +29,9 @@ An example input file
        latex: \beta
        proposal: 0.5
      mock_derived_a:
-       latex: \alpha^prime
+       latex: \alpha^\prime
      mock_derived_b:
-       latex: \beta^prime
+       latex: \beta^\prime
 
    sampler:
      mcmc:
