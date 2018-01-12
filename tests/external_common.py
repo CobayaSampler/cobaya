@@ -49,7 +49,7 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
     # For pytest's handling of tmp dirs
     if hasattr(tmpdir, "dirpath"):
         tmpdir = tmpdir.dirname
-    prefix = os.path.join(tmpdir, "%d"%round(1e8*random()))+"/"
+    prefix = os.path.join(tmpdir, "%d"%round(1e8*random()))+os.sep
     if os.path.exists(prefix):
         shutil.rmtree(prefix)
     # build full info
@@ -117,7 +117,7 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
     elif kind == _likelihood:
         # Transform the likelihood info to the "external" convention and add defaults
         info_likelihood = deepcopy(info[_likelihood])
-        for lik, value in info_likelihood.items():
+        for lik, value in list(info_likelihood.items()):
             if not hasattr(value, "get"):
                 info_likelihood[lik] = {_external: value}
             info_likelihood[lik].update({k:v for k,v in class_options.items()

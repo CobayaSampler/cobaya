@@ -1,1 +1,1 @@
-from polychord import polychord
+from .polychord import polychord

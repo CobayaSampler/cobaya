@@ -49,7 +49,7 @@ def load_input(input_file):
     if "CONTAINED" in os.environ:
         for out in [_output_prefix, _debug_file]:
             if info.get(out):
-                if not info[out].startswith("/"):
+                if not info[out].startswith("/") and not info[out].startswith(os.sep):
                     info[out] = os.path.join(_products_path, info[out])
     return info
 
@@ -141,7 +141,7 @@ def get_full_info(info):
             # Store default parameters and priors of class, and save to combine later
             if block == _likelihood:
                 params_info = default_module_info.get(_params, {})
-                full_info[block][module].update({_params:params_info.keys()})
+                full_info[block][module].update({_params:list(params_info.keys())})
                 default_params_info[module] = params_info
                 default_prior_info[module] = default_module_info.get(_prior, {})
     # Add priors info, after the necessary checks

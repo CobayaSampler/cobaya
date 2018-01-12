@@ -241,8 +241,8 @@ class mcmc(Sampler):
                           "%g <= `max_speed_slow < %g, and is %g",
                           min(speeds), max(speeds), self.max_speed_slow)
                 raise HandledException
-            self.i_last_slow_block = (i for i,speed in enumerate(list(speeds))
-                                      if speed > self.max_speed_slow).next() - 1
+            self.i_last_slow_block = next((i for i,speed in enumerate(list(speeds))
+                                      if speed > self.max_speed_slow)) - 1
             _keys = list(self.parametrization.sampled_params().keys())
             fast_params = [_keys[i] for i in chain(*blocks[1+self.i_last_slow_block:])]
             self.effective_max_samples = self.max_samples

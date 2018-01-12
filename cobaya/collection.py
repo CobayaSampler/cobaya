@@ -42,8 +42,8 @@ class Collection(object):
     def __init__(self, parametrization, likelihood, output=None,
                  initial_size=enlargement_size, name=None):
         self.name = name
-        self.sampled_params = parametrization.sampled_params().keys()
-        self.derived_params = parametrization.derived_params().keys()
+        self.sampled_params = list(parametrization.sampled_params().keys())
+        self.derived_params = list(parametrization.derived_params().keys())
         # Create the dataframe structure
         columns = [_weight, _minuslogpost]
         columns += list(self.sampled_params)
