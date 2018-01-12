@@ -598,14 +598,14 @@ class mcmc(Sampler):
         """
         # Compute and gather means, covs and cl limits of last half of chains
         mean = self.collection.mean(first=int(self.n()/2))
-        cov  = self.collection.cov (first=int(self.n()/2))
-        # Turn off logging of warnings temporarily, so getdist won't complain innecessarily
+        cov = self.collection.cov(first=int(self.n()/2))
+        # No logging of warnings temporarily, so getdist won't complain innecessarily
         logging.disable(logging.WARNING)
-        mcsamples = self.collection.as_getdist_mcsamples(
-            derived=False, prior_and_lik=False, first=int(self.n()/2))
+        mcsamples = self.collection.sampled_to_getdist_mcsamples(first=int(self.n()/2))
         logging.disable(logging.NOTSET)
-        limit = np.array([[mcsamples.confidence(i, limfrac=self.Rminus1_cl_level/2., upper=lim)
-                            for i in range(self.prior.d())] for lim in [False, True]]).T
+        limit = np.array(
+            [[mcsamples.confidence(i, limfrac=self.Rminus1_cl_level/2., upper=lim)
+              for i in range(self.prior.d())] for lim in [False, True]]).T
         Ns, means, covs, limits = map(
             lambda x: np.array((get_mpi_comm().gather(x) if get_mpi() else [x])),
             [self.n(), mean, cov, limit])

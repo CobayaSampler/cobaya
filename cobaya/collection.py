@@ -36,6 +36,7 @@ log = logging.getLogger(__name__)
 enlargement_size = 100
 enlargement_factor = None
 
+
 class Collection(object):
 
     def __init__(self, parametrization, likelihood, output=None,
@@ -46,20 +47,13 @@ class Collection(object):
         # Create the dataframe structure
         columns = [_weight, _minuslogpost]
         columns += list(self.sampled_params)
-        columns += [_derived_pre+name for name in self.derived_params]
+        columns += [_derived_pre+pname for pname in self.derived_params]
         columns += [_minuslogprior]
-        self.chi2_names = [_chi2+separator+name for name in likelihood]
+        self.chi2_names = [_chi2+separator+likname for likname in likelihood]
         columns += [_chi2] + self.chi2_names
         # Create the main data frame and the tracking index
         self.data = pd.DataFrame(np.zeros((initial_size,len(columns))), columns=columns)
         self._n = 0
-        # Prepare labels and ranges for interfacing with GetDist
-        self.labels = parametrization.labels()
-
-
-        # RANGES HERE!!!!
-
-
         # OUTPUT: Driver, file_name, index to track last sample written
         if output:
             self._n_last_out = 0
@@ -99,10 +93,10 @@ class Collection(object):
                 enlarge_by = self.data.shape[0]*enlargement_factor
             else:
                 enlarge_by = enlargement_size
-            self.data = pd.concat([self.data,
-                pd.DataFrame(np.zeros((enlarge_by, self.data.shape[1])),
-                             columns=self.data.columns,
-                             index=np.arange(self.n(),self.n()+enlarge_by))])
+            self.data = pd.concat(
+                [self.data, pd.DataFrame(np.zeros((enlarge_by, self.data.shape[1])),
+                                         columns=self.data.columns,
+                                         index=np.arange(self.n(),self.n()+enlarge_by))])
 
     # Retrieve-like methods
     def n(self):
@@ -151,6 +145,18 @@ class Collection(object):
                 [first:last].T,
             fweights=self[_weight][first:last]))
 
+    def sampled_to_getdist_mcsamples(self, first=None, last=None):
+        """
+        Basic interface with getdist -- internal use only!
+        (For analysis and plotting use `getdist.mcsamples.loadCobayaSamples`.)
+        """
+        names = list(self.sampled_params)
+        samples = self.data[:self.n()].as_matrix(columns=names)
+        return MCSamples(samples=samples[first:last],
+                         weights=self.data[:self.n()][_weight].values[first:last],
+                         loglikes=self.data[:self.n()][_minuslogpost].values[first:last],
+                         names=names)
+
     # Saving and updating
     def get_driver(self, method):
         return getattr(self, method+separator+self.driver)
@@ -190,32 +196,6 @@ class Collection(object):
     def update__dummy(self):
         pass
 
-    # Interface with getdist
-    def as_getdist_mcsamples(self, derived=True, prior_and_lik=True,
-                             first=None, last=None, **kwargs):
-        # get names and labels (n.b.: getdist forcefully adds its own $'s)
-        # sampled
-        names = list(self.sampled_params) + [p+"*" for p in self.derived_params]
-        labels = list(self.labels.values())
-#        ranges = []
-#        ranges = dict([(p,ls) for p,ls in zip(self.prior.names(),self.prior.limits())])
-#         ranges.update(dict([(p,(self.likelihood.updated_info_params()[p].get("min"),
-#                                    self.likelihood.updated_info_params()[p].get("max")))
-#                                for p in self.likelihood.derived]))
-        # prior and likelihood
-        if prior_and_lik:
-            names += [_minuslogprior+"*"] + [_chi2+"*"] + list(self.chi2_names)
-            labels += ([r"-\log\pi", r"\chi^2"] +
-                       [r"\chi^2_\mathrm{"+name+r"}" for name in self.chi2_names])
-        # gather samples and create the getdist sample
-        columns = [(("" if n.rstrip("*") not in self.derived_params else _derived_pre) +
-                    n.rstrip("*")) for n in names]
-        samples = self.data[:self.n()].as_matrix(columns=columns)
-        return MCSamples(samples=samples[first:last],
-                         weights=self.data[:self.n()][_weight].values[first:last],
-                         loglikes=self.data[:self.n()][_minuslogpost].values[first:last],
-                         names=names, labels=labels, **kwargs)
-
 
 class OnePoint(Collection):
     """Wrapper of Collection to hold a single point, e.g. the current point of an MCMC."""
@@ -227,7 +207,8 @@ class OnePoint(Collection):
         if isinstance(columns, six.string_types):
             return self.data.values[0, self.data.columns.get_loc(columns)]
         else:
-            return np.array([self.data.values[0,self.data.columns.get_loc(c)] for c in columns])
+            return np.array(
+                [self.data.values[0,self.data.columns.get_loc(c)] for c in columns])
 
     # Resets the counter, so the dataframe never fills up!
     def add(self, *args, **kwargs):
