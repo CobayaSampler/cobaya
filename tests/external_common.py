@@ -73,6 +73,10 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
         info.update({_likelihood: info_logpdf})
     else:
         raise ValueError("Kind of test not known.")
+    # If there is an ext function that is not a string, don't write output!
+    stringy = dict([(k,v) for k,v in info_logpdf.items() if isinstance(v, six.string_types)])
+    if stringy != info_logpdf:
+        info.pop(_output_prefix)
     # Run
     updated_info, products = run(info)
     # Test values
@@ -122,7 +126,6 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
             "The likelihood information has not been updated correctly.")
     # Test updated info -- yaml
     # For now, only if ALL external pdfs are given as strings, since the YAML load fails otherwise
-    stringy = dict([(k,v) for k,v in info_logpdf.items() if isinstance(v, six.string_types)])
     if stringy == info_logpdf:
         full_output_file = os.path.join(prefix, _full_suffix+".yaml")
         with open(full_output_file) as full:
