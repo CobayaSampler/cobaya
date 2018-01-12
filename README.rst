@@ -1,4 +1,4 @@
-cobaya, a code for Bayesian analysis in Cosmology
+*cobaya*, a code for Bayesian analysis in Cosmology
 =================================================
 
 :Author: `Jesus Torrado`_ and `Antony Lewis`_
@@ -43,8 +43,12 @@ To appropriately cite the modules (samplers, theory codes, likelihoods) that you
 
 ===================
 
-.. raw:: html
+.. image:: https://cdn.cosmologist.info/antony/Sussex.png
+   :alt: University of Sussex
+   :width: 170px
+   :align: right
 
-    <a href="http://www.sussex.ac.uk/astronomy/"><img src="https://cdn.cosmologist.info/antony/Sussex.png" height="170px"></a>
-    <a href="http://erc.europa.eu/"><img src="https://erc.europa.eu/sites/default/files/content/erc_banner-vertical.jpg" height="200px"></a>
-    
+.. image:: https://erc.europa.eu/sites/default/files/content/erc_banner-vertical.jpg
+   :alt: European Research Council
+   :width: 170px
+   :align: right
