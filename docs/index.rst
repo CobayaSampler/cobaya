@@ -1,10 +1,18 @@
+.. include:: ../README.rst
+
+Structure of the code
+---------------------
+
+.. image:: ../structure.svg
+   :width: 300px
+   :align: center
+
 Table of contents
 =================
 
 .. toctree::
    :maxdepth: 2
 
-   intro
    installation
    installation_ext
    input
