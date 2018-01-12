@@ -27,6 +27,8 @@ import numpy as np
 # Exceptions
 class InputSyntaxError(Exception):
     """Syntax error in YAML input."""
+class OutputError(Exception):
+    """Error when dumping YAML info."""
 
 
 def yaml_load(text_stream, Loader=yaml.Loader, object_pairs_hook=odict, file_name=None):
@@ -106,6 +108,19 @@ def yaml_dump(data, trim_params_info=False, stream=None, Dumper=yaml.Dumper, **k
     def _numpy_float_representer(dumper, data):
         return dumper.represent_float(data)
     OrderedDumper.add_representer(np.float64, _numpy_float_representer)
+    # Dummy representer that raises an error if object has no explicit representer
+    # e.g. useful to avoid dumping a python function (makes loading impossible later)
+    # NB: Necessary in pyyaml = 3.12, but apparently in later versions they would produce
+    #     a `yaml.representer.RepresenterError` without needing to do this.
+    #     Update (and also required version in setup.py) when next pyyaml version is out
+    def _fail_representer(dumper, data):
+        raise OutputError("You are probably trying to dump a function into YAML, "
+                          "and that's not possible. If you are using an external prior "
+                          "or likelihood, try writing it as a string instead -- "
+                          "see the documentation about user-defined priors/likelihoods.")
+    OrderedDumper.add_representer(type(lambda: None), _fail_representer)
+    OrderedDumper.add_multi_representer(object, _fail_representer)
+
     # For full infos: trim known params of each likelihood: for internal use only
     if trim_params_info:
         from copy import deepcopy
