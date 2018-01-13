@@ -10,8 +10,9 @@ To check if you have Python installed, type ``python --version`` in the shell, a
 
 .. _install_mpi:
 
-Optional: MPI parallelization
------------------------------
+
+MPI parallelization (optional but encouraged!)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Enabling MPI parallelization is optional but highly recommended: it will allow you to better utilise the size of your cluster. MPI enables inter-process communication, of which many samplers can take advantage, e.g. for achieving a faster convergence of an MCMC proposal distribution, or a higher acceptance rate in a nested sampler.
 
@@ -31,9 +32,8 @@ Now try
 
 If you have a working MPI implementation in your system, this should produce no output. If you don't, the error would look something like ``ImportError: libmpi.so.12: cannot open shared object file``.
 
-
-Optional: make cobaya faster with OpenBLAS
-------------------------------------------
+OpenBLAS (optional but encouraged!)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 BLAS is a collection of algorithms for linear algebra computations. There will most likely be a BLAS library installed already in your system. It is recommended to make sure that it is an efficient one, preferably the highly-parallelized OpenBLAS.
 
@@ -83,9 +83,23 @@ If you get an error message, something went wrong. Check twice the instructions 
 
    .. code-block:: bash
 
-      export PATH=$PATH:"~/.local/bin/"
+      $ export PATH=$PATH:"~/.local/bin/"
 
    at the end of your ``~/.bashrc`` file, and restart the terminal (or do ``source ~/.bashrc``).
+
+
+Uninstalling cobaya
+-------------------
+
+Simply do, from anywhere
+
+.. code-block:: bash
+
+   $ pip uninstall cobaya getdist
+
+.. note::
+
+   If you installed **cobaya** in development mode (see below), you will also have to delete its folder manually, as well as the scripts installed in the local ``bin`` folder (the files starting with ``cobaya`` and ``GetDist``, which in Linux should be in ``~/.local/bin``).
 
 
 Troubleshooting
@@ -165,17 +179,3 @@ Then install **GetDist**:
       $ rm -rf getdist
 
 Finally, :ref:`install_check`.
-
-
-Uninstalling cobaya
--------------------
-
-Simply do, from anywhere
-
-.. code-block:: bash
-
-   $ pip uninstall cobaya getdist
-
-.. note::
-
-   If you installed **cobaya** in development mode, you will also have to delete its folder manually, as well as the scripts installed in the local ``bin`` folder (the files starting with ``cobaya`` and ``GetDist``, which in Linux should be in ``~/.local/bin``).

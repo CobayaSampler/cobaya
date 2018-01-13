@@ -10,35 +10,6 @@ An example input file
 
 .. code:: yaml
 
-   likelihood:
-     gaussian:
-       mean: [0.2, 0]
-       cov: [[0.1, 0.05], [0.05,0.2]]
-
-   params:
-     mock_a:
-       prior:
-         min: -0.5
-         max: 3
-       latex: \alpha
-     mock_b:
-       ref: 0.5
-       prior:
-         min: -1
-         max: 4
-       latex: \beta
-       proposal: 0.5
-     mock_derived_a:
-       latex: \alpha^\prime
-     mock_derived_b:
-       latex: \beta^\prime
-
-   sampler:
-     mcmc:
-       burn_in: 100
-       max_samples: 1000
-
-   output_prefix: chains/
 
 That input structure above contains three *blocks*:
 
@@ -102,7 +73,7 @@ Some common YAML *gotchas*
   .. code:: yaml
 
      sampler:
-       mcmc # ERROR: no colon!
+       mcmc  # ERROR: no colon!
 
 + **indentation!** Block indentation must be *coherent*, i.e. everything within the same block must be the same number of spaces to the right; e.g. the following input would produce two errors
 
@@ -111,14 +82,14 @@ Some common YAML *gotchas*
      sampler:
        mcmc:
          burn_in: 10
-          max_samples: 100 # ERROR: misaligned!
+          max_samples: 100  # ERROR: misaligned!
 
      params:
        mock_a:
          prior:
            min: 0
            max: 1
-          latex: \alpha # ERROR: misaligned!
+          latex: \alpha  # ERROR: misaligned!
 
   Above, ``max_samples`` should be aligned to ``burn_in``, because both belong into ``mcmc``. In the same way, ``latex`` should be aligned to ``prior``, since both belong into the definition of the parameter ``mock_a``.
 
@@ -152,9 +123,9 @@ But, actually, the YAML file is simply parsed as a Python dictionary, so you cou
     info = {"params": odict([
                ("mock_a", {"prior": {"min": -0.5, "max": 3}, "latex": r"\alpha"}),
                ("mock_b", {"prior": {"min": -1,   "max": 4}, "latex": r"\beta",
-                          "ref":0.5, "proposal":0.5}),
-               ("mock_derived_a", {"latex": r"\alpha^prime"}),
-               ("mock_derived_b", {"latex": r"\beta^prime"})]),
+                           "ref":0.5, "proposal":0.5}),
+               ("mock_derived_a", {"latex": r"\alpha^\prime"}),
+               ("mock_derived_b", {"latex": r"\beta^\prime"})]),
             "likelihood": {"gaussian": {
                "mean": [0.2, 0],
                "cov": [[0.1, 0.05],
@@ -169,6 +140,7 @@ The analysis of this sample in an scripted way is discussed in :ref:`out_example
 
    Notice that the parameters are defined here using an `OrderedDict <https://docs.python.org/2/library/collections.html#ordereddict-examples-and-recipes>`_, instead of a normal dictionary. This is optional (a normal dictionary can be used), but recommended: it keeps the order consistent between input and output. Same goes for the likelihoods, when there is more than one.
 
+
 .. _input_cont:
 
 Continuing a sample
@@ -177,18 +149,4 @@ Continuing a sample
 .. todo::
 
    Sample continuation is not implemented yet.
-
-..
-  **cobaya** can also be invoked with a folder as an argument (including ``.``). In that case, the folder is searched for a single ``.yaml`` file (the pattern ``*__full.yaml`` is ignored, see :ref:`out_files`). If there is only one, **cobaya** uses it to re-launch the sampling that generated that folder.
-
-  .. todo::
-
-     Implement a test for the ``__full.yaml`` file, comparing the standards of when it was generated with the current ones.
-
-  IF CALLED WITH YAML, COMPLAINT IF IT WOULD CONTINUE
-  USE THE __full AND CREATE A COMMAND LINE OPTION TO CONTINUE!!!!!!! (--continue, or -c)
-
-  ISN'T IT INCONSISTENT TO CALL WITH FOLDER AND CONTINUE BY DEFAULT, BUT NOT IF INVOKED WITH YAML???
-
-  THE CONTINUATION MUST BE IMPLEMENTED AT THE SAMPLER LEVEL (e.g. make polychord use resume=TRUE)
 

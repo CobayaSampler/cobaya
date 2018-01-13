@@ -1,5 +1,5 @@
-Installing external modules (incl. Cosmology!)
-==============================================
+Installing cosmological codes and data
+======================================
 
 To keep it light and maintainable, and to allow for maximum customization, **cobaya** only includes some of the samplers it uses, and none the cosmological likelihoods, data or theory codes. Nonetheless, they can be downloaded and installed automatically when needed.
 

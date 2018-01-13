@@ -6,7 +6,7 @@ sampler:
     burn_in: 100
     # Error criterion: max attempts (= weight-1) before deciding the chain is stuck
     max_tries: 100
-    # File name (including path) or numpy defininf a covariance matrix for the proposal
+    # File name (including path) or numpy defining a covariance matrix for the proposal
     # If numpy matrix, pass a list of the parameters in the matrix through covmat_params
     covmat: null
     covmat_params: null

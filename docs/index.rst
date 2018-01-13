@@ -4,10 +4,17 @@ Table of contents
 =================
 
 .. toctree::
-   :maxdepth: 2
+   :caption: Installation and quickstart
+   :maxdepth: 1
 
    installation
-   installation_ext
+   example
+   example_advanced
+
+.. toctree::
+   :caption: General topics and modules
+   :maxdepth: 1
+
    input
    output
    params_prior
@@ -18,12 +25,24 @@ Table of contents
    likelihoods
    likelihood_one
    likelihood_gaussian           
-   likelihood_planck
    theory
-   theory_camb           
-   theory_class           
+
+.. toctree::
+   :caption: Cosmology!
+   :maxdepth: 1
+
+   installation_cosmo
+   theory_camb
+   theory_class
+   likelihood_planck
    examples_planck
-   devel.rst
+
+.. toctree::
+   :caption: For developes
+   :maxdepth: 1
+
+   devel
+
    
 Indices and tables
 ==================
