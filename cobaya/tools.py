@@ -111,7 +111,7 @@ def is_equal_info(info1, info2):
     """
     myname = "is_equal_info"
     if set(info1.keys()) != set(info2.keys()):
-        log.info(myname+": different blocks")
+        log.info(myname+": different blocks or options")
         return False
     for block_name in info1.keys():
         block1, block2 = info1[block_name], info2[block_name]
