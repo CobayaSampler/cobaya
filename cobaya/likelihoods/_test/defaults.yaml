@@ -6,7 +6,7 @@ likelihood:
     # 1. artificial delay in lik computation  
     delay: 0  # seconds
     # 2. prefix of the parameters names
-    mock_prefix: ""
+    prefix: ""
 
 params:
   a1:

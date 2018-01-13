@@ -62,7 +62,7 @@ source tree. In that folder, there must be at least *three* files:
 .. note::
 
    Some *mock* likelihoods can have any number of non-predefined parameters, as long as
-   they start with a certain prefix specified by the user with the option ``mock_prefix``
+   they start with a certain prefix specified by the user with the option ``prefix``
    of said likelihood.
 
 .. note::
@@ -132,12 +132,12 @@ class Likelihood(object):
         # Load info of the likelihood
         for k in info:
             setattr(self, k, info[k])
-        # Mock likelihoods: gather all parameters starting with `mock_prefix`
+        # *Mock* likelihoods: gather all parameters starting with `prefix`
         if self.is_mock():
             all_params = (list(parametrization.input_params()) +
                           list(parametrization.output_params()))
             info[_params] = [p for p in all_params
-                             if p.startswith(self.mock_prefix or "")]
+                             if p.startswith(self.prefix or "")]
         # Load parameters
         self.input_params = odict(
             [(p,p_info) for p,p_info in parametrization.input_params().items()
@@ -170,11 +170,11 @@ class Likelihood(object):
         """Finalises the likelihood, if something needs to be done."""
         pass
 
-    # What you *can* implement to create your own *mock* likelihood:
+    # What you *can* implement to create your own likelihood:
 
     def marginal(self, directions=None, params_values=None):
         """
-        (For mock likelihoods only.)
+        (For analytic likelihoods only.)
         Computes the marginal likelihood.
         If nothing is specified, returns the total marginal likelihood.
         If some directions are specified (as a list, tuple or array), returns the marginal
@@ -194,7 +194,7 @@ class Likelihood(object):
         return len(self.input_params)
 
     def is_mock(self):
-        return hasattr(self, "mock_prefix")
+        return hasattr(self, "prefix")
 
 
 class LikelihoodExternalFunction(Likelihood):

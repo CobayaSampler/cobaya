@@ -141,8 +141,8 @@ Using option **(a)** above, we would simply add another block to the input file:
 .. code-block:: yaml
 
    prior:
-     ring: "lambda mock_a, mock_b: stats.norm.logpdf(np.sqrt(mock_a**2 + mock_b**2), loc=0.5, scale=0.1)"
-     linear: "lambda y: stats.norm.logpdf(mock_a + mock_b, loc=0.5, scale=0.2)"
+     ring: "lambda a, b: stats.norm.logpdf(np.sqrt(a**2 + b**2), loc=0.5, scale=0.1)"
+     linear: "lambda y: stats.norm.logpdf(a + b, loc=0.5, scale=0.2)"
 
 .. warning::
    Use quotation marks, ``"`` or ``'``, to enclose the prior! Otherwise, the colon of the
@@ -156,12 +156,12 @@ so we may prefer to code it in a separate file, say ``myprior.py`` in the same f
    from scipy.stats import norm
    import numpy as np
 
-   def gaussian_ring(mock_a, mock_b):
-       r = np.sqrt(mock_a**2 + mock_b**2)
+   def gaussian_ring(a, b):
+       r = np.sqrt(a**2 + b**2)
        return norm.logpdf(r, loc=0.5, scale=0.1)
 
-   def linear_combination(mock_a, mock_b):
-       return norm.logpdf(mock_a + mock_b, loc=0.5, scale=0.2)
+   def linear_combination(a, b):
+       return norm.logpdf(a + b, loc=0.5, scale=0.2)
 
 In this case, which corresponds to option **(c)**, the prior block would look like:
 

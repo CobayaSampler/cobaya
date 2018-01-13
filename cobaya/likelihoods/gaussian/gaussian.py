@@ -1,10 +1,10 @@
 """
 .. module:: likelihoods.gaussian
 
-:Synopsis: Gaussian mock likelihood, for tests
+:Synopsis: Gaussian likelihood
 :Author: Jesus Torrado
 
-Gaussian *mock* likelihoods, aimed for tests.
+Gaussian likelihood, aimed for tests.
 
 The mean and covariance matrix for one or more modes must be specified with the options
 ``mean`` and ``covmat`` respectively. The dimensionality of the likelihood and the number
@@ -20,7 +20,7 @@ names start with ``test_`` and must be defined in the ``params`` block:
 
    likelihood:
      gaussian:
-       mock_prefix: test_
+       prefix: test_
        mean: [ [0.1,0.1],
                [0.3,0.3],
                [0.4,0.5] ]
@@ -76,7 +76,7 @@ log = logging.getLogger(__name__)
 
 class gaussian(Likelihood):
     """
-    Gaussian *mock* likelihood.
+    Gaussian likelihood.
     """
     def initialise(self):
         """
@@ -109,9 +109,9 @@ class gaussian(Likelihood):
             if mean_dim != self.d():
                 log.error(
                     "The dimensionality is %d (guessed from given means and covmats) "
-                    "but was given %d mock parameters instead. " +
+                    "but was passed %d parameters instead. " +
                     ("Maybe you forgot to specify the prefix by which to identify them?"
-                     if self.mock_prefix else ""), mean_dim, len(self.input_params))
+                     if self.prefix else ""), mean_dim, len(self.input_params))
                 raise HandledException
             self.n_modes = mean_n_modes
             if len(self.output_params) != self.d()*self.n_modes:
