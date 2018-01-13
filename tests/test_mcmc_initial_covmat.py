@@ -46,7 +46,7 @@ def body_of_test(dim, tmpdir=None):
     prefix = "a_"
     input_order = list(range(dim))
     shuffle(input_order)
-    info = {_likelihood: {"one": {"mock_prefix": None}}, _params: odict()}
+    info = {_likelihood: {"one": {"prefix": None}}, _params: odict()}
     for i in input_order:
         p = prefix+str(i)
         info[_params][p] = {_prior: {_p_dist:"norm", "loc": 0, "scale": 1000}}

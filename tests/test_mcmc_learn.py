@@ -27,7 +27,7 @@ def KL_norm(m1=None, S1=np.array([]), m2=None, S2=np.array([])):
 
 
 # Prepares the likelihood and prior parts of the info
-def info_gaussian(ranges, n_modes=1, mock_prefix=""):
+def info_gaussian(ranges, n_modes=1, prefix=""):
     """MPI-aware: only draws the random stuff once!"""
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
@@ -46,15 +46,15 @@ def info_gaussian(ranges, n_modes=1, mock_prefix=""):
     cov  = comm.bcast(cov, root=0)
     dimension = len(ranges)
     info = {_likelihood: {"gaussian": {
-        "mean": mean, "cov": cov, "mock_prefix": mock_prefix}}}
+        "mean": mean, "cov": cov, "prefix": prefix}}}
     info[_params] = odict(
         # sampled
-        [[mock_prefix+"%d"%i,
+        [[prefix+"%d"%i,
           {"prior":{"min": ranges[i][0], "max": ranges[i][1]},
            "latex": r"\alpha_{%i}"%i}]
          for i in range(dimension)] +
         # derived
-        [[mock_prefix+"derived_%d"%i,
+        [[prefix+"derived_%d"%i,
           {"min": -3,"max": 3,"latex": r"\beta_{%i}"%i}] for i in range(dimension*n_modes)])
     return info
 
@@ -69,7 +69,7 @@ def test_gaussian_mcmc():
     rank = comm.Get_rank()
     # Info of likelihood and prior
     ranges = np.array([[0,1] for i in range(dimension)])
-    info = info_gaussian(ranges=ranges, n_modes=n_modes, mock_prefix="a_")
+    info = info_gaussian(ranges=ranges, n_modes=n_modes, prefix="a_")
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     if rank == 0:
