@@ -5,7 +5,7 @@ import pytest
 import numpy as np
 
 from cobaya.conventions import _theory, _likelihood, _sampler, _params, _path_install
-from cobaya.yaml_custom import yaml_load, yaml_dump
+from cobaya.yaml import yaml_load, yaml_dump
 from cobaya.run import run
 
 from cosmo_common import baseline_cosmology, baseline_cosmology_classy_extra, derived

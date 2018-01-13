@@ -20,7 +20,7 @@ from cobaya.conventions import package, _defaults_file, _params, _p_label, _prod
 from cobaya.conventions import _prior, _theory, _likelihood, _sampler, _external
 from cobaya.conventions import _output_prefix, _debug_file
 from cobaya.tools import get_folder
-from cobaya.yaml_custom import yaml_load_file
+from cobaya.yaml import yaml_load_file
 from cobaya.log import HandledException
 from cobaya.parametrization import is_sampled_param, is_derived_param
 

@@ -32,7 +32,7 @@ def run(info):
     # Debug (lazy call)
     import logging
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
-        from cobaya.yaml_custom import yaml_dump
+        from cobaya.yaml import yaml_dump
         logging.getLogger(__name__).debug(
             "Input info (dumped to YAML):\n%s", yaml_dump(info))
 

@@ -17,7 +17,7 @@ import traceback
 import datetime
 
 # Local
-from cobaya.yaml_custom import yaml_dump
+from cobaya.yaml import yaml_dump
 from cobaya.conventions import _input_suffix, _full_suffix, separator, _yaml_extension
 from cobaya.conventions import _output_prefix
 from cobaya.log import HandledException

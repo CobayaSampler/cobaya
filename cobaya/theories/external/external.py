@@ -33,7 +33,7 @@ import inspect
 
 # Local
 from cobaya.theory import Theory
-from cobaya.tools import yaml_custom_load
+from cobaya.tools import yaml_load
 
 class external(Theory):
 

@@ -5,7 +5,7 @@ from copy import deepcopy
 
 from cobaya.conventions import _theory, _likelihood, _params, _derived_pre
 from cobaya.conventions import _sampler, _chi2, separator, _path_install
-from cobaya.yaml_custom import yaml_load
+from cobaya.yaml import yaml_load
 from cobaya.run import run
 
 # Tolerance for the tests

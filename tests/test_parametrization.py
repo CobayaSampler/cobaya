@@ -12,7 +12,7 @@ import numpy as np
 
 # Local
 from cobaya.conventions import _likelihood, _params, _sampler, _derived_pre
-from cobaya.yaml_custom import yaml_load
+from cobaya.yaml import yaml_load
 from cobaya.run import run
 from cobaya.tools import get_external_function
 

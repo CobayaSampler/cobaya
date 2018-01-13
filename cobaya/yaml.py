@@ -1,5 +1,5 @@
 """
-.. module:: yaml_custom
+.. module:: yaml
 
 :Synopsis: Custom YAML loader and dumper
 :Author: Jesus Torrado (parts of the code comes from stackoverflow user's)

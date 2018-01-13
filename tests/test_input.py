@@ -9,7 +9,7 @@ import pytest
 # Local
 from cobaya.conventions import _defaults_file, _likelihood, _sampler, _prior
 from cobaya.tools import get_folder
-from cobaya.yaml_custom import yaml_load_file
+from cobaya.yaml import yaml_load_file
 from cobaya.run import run
 from cobaya.log import HandledException
 

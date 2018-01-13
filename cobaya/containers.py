@@ -24,7 +24,7 @@ from requests import head
 # Local
 from cobaya.log import logger_setup, HandledException
 from cobaya.input import get_modules, load_input
-from cobaya.yaml_custom import yaml_dump
+from cobaya.yaml import yaml_dump
 from cobaya.install import install
 from cobaya.conventions import _modules_path, _products_path, _code, _data
 from cobaya.conventions import _requirements_file, _help_file
