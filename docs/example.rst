@@ -49,7 +49,7 @@ The third file, ending in ``.txt``, contains the MCMC sample, and its first line
 
 You can use `GetDist <http://getdist.readthedocs.io/en/latest/index.html>`_ to analyse the results of this sample: get marginalized statistics, convergence diagnostics and some plots. We recommend using the `graphical user interface <http://getdist.readthedocs.io/en/latest/gui.html>`_. Simply run ``GetDistGUI.py`` from anywhere, press the green ``+`` button, navigate in the pop-up window into the folder containing the chains (here ``chains``) and click ``choose``. Now you can get some result statistics from the ``Data`` menu, or generate some plots like this one (just mark the the options in the red boxes and hit ``Make plot``):
 
-.. image:: img_output_getdistgui.png
+.. image:: img/example_quickstart_getdistgui.png
 
 .. note::
 
@@ -66,51 +66,40 @@ The actual input information of **cobaya** are Python *dictionaries* (a ``yaml``
 .. literalinclude:: ./src_examples/quickstart/create_info.py
    :language: python
 
-This may look much more complicated than the corresponding ``yaml`` one, but in exchange it is much more flexible, allowing you to quick modify and swap different parts of it.
+The code above may look more complicated than the corresponding ``yaml`` one, but in exchange it is much more flexible, allowing you to quick modify and swap different parts of it.
+
+Notice that here we supress the creation of the chain files by not including the field ``output_prefix``, since this is a very basic example. The chains will thus only be loaded in memory.
 
 Alternatively, we can load the input from a ``yaml`` file like the one above:
 
 .. literalinclude:: ./src_examples/quickstart/load_info.py
    :language: python
 
-And the variables ``info`` and ``info_from_yaml`` should contain the same information.
+And ``info``, ``info_from_yaml`` and the file ``gaussian.yaml`` should contain the same information (minus the ``output_prefix``).
 
+Now, let's run the example.
 
+.. literalinclude:: ./src_examples/quickstart/run.py
+   :language: python
 
+The ``run`` function returns two variables:
 
+- An information dictionary updated with the defaults, equivalent to the ``full`` yaml file produced by the shell invocation.
+- A dictionary of ``products``, which for the ``mcmc`` sampler contains only one chain under the key ``sample``.
 
-- NEEDS TESTING FOR CONSISTENCY!!!
+Let's now analyse the chain and get some plots, using the interactive interface to GetDist instead of the GUI used above:
 
---------
-  
-- comment of lack of output_prefix
+.. literalinclude:: ./src_examples/quickstart/analyze.py
+   :language: python
 
-De hecho, desde aquí hacer dos vías: DiscoDuro y MEMory
-- recomendar NO usarlo si son muestras peque~nas!!!!!
+Output:
 
+.. code::
 
-# run the sampler
-from cobaya.run import run
-info.pop("output_prefix")  # if we want the chains only loaded in memory
-updated_info, products = run(info)
+   Mean:
+    [ 0.22222499,  0.00442988]
+   Covariace matrix:
+    [[ 0.08568336,  0.0288126 ]
+    [ 0.0288126 ,  0.15002506]]
 
-decir qué son las dos vars de output
-
-
-You can also do your analysis in a Python terminal or notebook, using either your own tools or the methods in GetDist.
-
-For example, assuming that you have just run the example in :ref:`in_example_script`, to generate a similar plot to the one above and some statistics, simply do:
-
-.. code:: python
-
-   %matplotlib inline
-   import getdist as gd
-   import getdist.plots as gdplt
-   gdsamples = products["sample"].as_getdist_mcsamples()
-   gdplot = gdplt.getSubplotPlotter()
-   gdplot.triangle_plot(gdsamples, ["mock_a", "mock_b"], filled=True)
-   print "Covariace matrix:\n", gdsamples.getCovMat().matrix[:2,:2]
-
-COMMENT ON LOADING CHAINS FROM HDD IF WRITTEN THERE!!!
-
-
+.. image:: img/example_quickstart_plot.png

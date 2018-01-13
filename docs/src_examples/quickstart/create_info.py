@@ -19,5 +19,4 @@ info = {
         ("derived_b", {
             "latex": r"\beta^\prime"})]),
     "sampler": {
-        "mcmc": {"burn_in": 100, "max_samples": 1000, "learn_proposal": True}},
-    "output_prefix": "chains/gaussian"}
+        "mcmc": {"burn_in": 100, "max_samples": 1000, "learn_proposal": True}}}
