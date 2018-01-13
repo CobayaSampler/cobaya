@@ -66,26 +66,35 @@ The actual input information of **cobaya** are Python *dictionaries* (a ``yaml``
 .. literalinclude:: ./src_examples/quickstart/create_info.py
    :language: python
 
+This may look much more complicated than the corresponding ``yaml`` one, but in exchange it is much more flexible, allowing you to quick modify and swap different parts of it.
+
+Alternatively, we can load the input from a ``yaml`` file like the one above:
+
+.. literalinclude:: ./src_examples/quickstart/load_info.py
+   :language: python
+
+And the variables ``info`` and ``info_from_yaml`` should contain the same information.
+
+
+
+
 
 - NEEDS TESTING FOR CONSISTENCY!!!
 
-.. code:: python
-
-    from cobaya.input import load_input
-    info = load_input("gaussian.yaml")
-    info.pop("output_prefix")  # suppresses external output
-
+--------
   
 - comment of lack of output_prefix
 
+De hecho, desde aquí hacer dos vías: DiscoDuro y MEMory
+- recomendar NO usarlo si son muestras peque~nas!!!!!
+
+
 # run the sampler
 from cobaya.run import run
+info.pop("output_prefix")  # if we want the chains only loaded in memory
 updated_info, products = run(info)
 
-
-.. note::
-
-   Notice that the parameters are defined here using an `OrderedDict <https://docs.python.org/2/library/collections.html#ordereddict-examples-and-recipes>`_, instead of a normal dictionary. This is optional (a normal dictionary can be used), but recommended: it keeps the order consistent between input and output. Same goes for the likelihoods, when there is more than one.
+decir qué son las dos vars de output
 
 
 You can also do your analysis in a Python terminal or notebook, using either your own tools or the methods in GetDist.
