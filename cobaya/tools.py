@@ -43,9 +43,8 @@ def get_folder(name, kind, sep=os.sep, absolute="True"):
     """
     Gets folder, relative to the package source, of a likelihood, theory or sampler.
     """
-    pre = (os.path.dirname(__file__) +
-           (sep if absolute else "") +
-           (sep if sep == "." else ""))
+    pre = (os.path.dirname(__file__)+sep if absolute
+           else "" + (sep if sep == "." else ""))
     return pre + subfolders[kind] + sep + name
 
 
