@@ -5,6 +5,8 @@ to make sure it remains up to date.
 
 from __future__ import division
 import os
+from contextlib import contextmanager
+import sys
 import numpy as np
 from scipy.misc import imread
 
@@ -18,6 +20,22 @@ docs_img_folder = os.path.join(docs_folder, "img")
 
 # Number of possible different pixels
 pixel_tolerance = 0.995
+
+# Capture stdout in string
+if (sys.version_info > (3, 0)):
+    from io import StringIO
+else:
+    from StringIO import StringIO
+
+
+@contextmanager
+def stdout_redirector(stream):
+    old_stdout = sys.stdout
+    sys.stdout = stream
+    try:
+        yield
+    finally:
+        sys.stdout = old_stdout
 
 
 def test_example(tmpdir):
@@ -37,13 +55,23 @@ def test_example(tmpdir):
     # Run the chain -- constant seed so results are the same!
     np.random.seed(0)
     exec(open(os.path.join(docs_src_folder, "run.py")).read(), globals_example)
-    # Plot
-    exec(open(os.path.join(docs_src_folder, "analyze.py")).read(), globals_example)
+    # Analyze and plot -- capture print output
+    stream = StringIO()
+    with stdout_redirector(stream):
+        exec(open(os.path.join(docs_src_folder, "analyze.py")).read(), globals_example)
+    # Comparing text output
+    out_filename = "analyze_out.txt"
+    contents = "".join(open(os.path.join(docs_src_folder, out_filename)).readlines())
+    docs = [l.strip(" \n") for l in contents.split("\n")]
+    test = [l.strip(" \n") for l in stream.getvalue().split("\n")]
+    assert docs == test, (
+        "Text output does not coincide:\nwas\n%s\nand now it's\n%sstream.getvalue()"%(
+            contents, stream.getvalue()))
+    # Comparing plot
     plot_filename = "example_quickstart_plot.png"
     test_filename = tmpdir.join(plot_filename)
     globals_example["gdplot"].export(str(test_filename))
-    print("Plot created at '%s'", str(test_filename))
-    # Comparing the plot
+    print("Plot created at '%s'"%str(test_filename))
     test_img = imread(str(test_filename)).astype(float)
     docs_img = imread(os.path.join(docs_img_folder, plot_filename)).astype(float)
     npixels = test_img.shape[0]*test_img.shape[1]

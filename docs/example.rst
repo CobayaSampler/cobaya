@@ -94,12 +94,7 @@ Let's now analyse the chain and get some plots, using the interactive interface 
 
 Output:
 
-.. code::
-
-   Mean:
-    [ 0.22222499,  0.00442988]
-   Covariace matrix:
-    [[ 0.08568336,  0.0288126 ]
-    [ 0.0288126 ,  0.15002506]]
+.. literalinclude:: ./src_examples/quickstart/analyze_out.txt
+   :language: python
 
 .. image:: img/example_quickstart_plot.png
