@@ -6,6 +6,8 @@ Let us present here a simple example, without explaining much about it — each 
 We will run it first from the **shell**, and later from a **Python interpreter** (or a Jupyter notebook).
 
 
+.. _example_quickstart_shell:
+
 From the shell
 --------------
 
@@ -56,6 +58,8 @@ You can use `GetDist <http://getdist.readthedocs.io/en/latest/index.html>`_ to a
    For a detailed user manual and many more examples, check out the `GetDist documentation <http://getdist.readthedocs.io/en/latest/index.html>`_!
 
 
+.. _example_quickstart_interactive:
+
 From a Python interpreter
 -------------------------
 
@@ -67,6 +71,12 @@ The actual input information of **cobaya** are Python *dictionaries* (a ``yaml``
    :language: python
 
 The code above may look more complicated than the corresponding ``yaml`` one, but in exchange it is much more flexible, allowing you to quick modify and swap different parts of it.
+
+.. note::
+
+   Most often the ``params`` block is defined using an `OrderedDict <https://docs.python.org/2/library/collections.html#ordereddict-examples-and-recipes>`_, instead of a normal Python dictionary. Using an ``OrderedDict`` instead of a normal dictionary is optional but highly recommended: it keeps the order of the parameters consistent between input and output.
+
+   Same goes for the likelihoods, when one can use an ``OrderedDict`` to preserve the order of the likelihoods.
 
 Notice that here we supress the creation of the chain files by not including the field ``output_prefix``, since this is a very basic example. The chains will thus only be loaded in memory.
 

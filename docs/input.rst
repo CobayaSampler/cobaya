@@ -1,33 +1,9 @@
 Input and invocation
 ====================
 
-The input of **cobaya** consists of a collection of Python dictionaries specifying the different parts of the code to use (likelihoods, theory codes and samplers) and which parameters to sample and how. This information is often provided as a text file in the `YAML <https://en.wikipedia.org/wiki/YAML>`_ language, which is so simple that you don't even have to learn it.
+The input of **cobaya** consists of a collection of Python dictionaries specifying the different parts of the code to use (likelihoods, theory codes and samplers) and which parameters to sample and how. The contents of that dictionary are describe below.
 
-.. _in_example:
-
-An example input file
----------------------
-
-.. code:: yaml
-
-
-That input structure above contains three *blocks*:
-
-- ``likelihood``: Specifies a list of likelihoods to sample, with their corresponding options -- here a Gaussian likelihood with the mean and covariance specified under it.
-- ``params``: lists the parameters to be explored, and for each its prior and a LaTeX label to be used when producing plots. The parameters ``mock_a`` and ``mock_b`` will be sampled (they have a prior specified under them), whereas ``mock_derived_a`` and ``mock_derived_b`` are derived quantities computed by the likelihood (they don't have a prior).
-- ``sampler``: specifies which sampler to use, here the internal MCMC sampler, and some options for it: the number of burn-in samples and the total number of samples to be drawn.
-
-The *top-level option* ``output_prefix: chains/gaussian`` indicates that the resulting output files will be placed in a folder called ``chains`` (which will be created if necessary), and the corresponding output files will start with ``gaussian``.
-
-You can save that piece of text as is into a file, e.g. ``example_gaussian.yaml``, and run **cobaya** as
-
-.. code:: bash
-
-   $ cobaya-run example_gaussian.yaml
-
-It will be finished in a few seconds. The result of that sample is discussed in the :ref:`next section <out_example>`.
-
-For a more accurate description of the blocks and their usage continue reading below -- :ref:`input_blocks`.
+This information if often provided as a text file in the `YAML <https://en.wikipedia.org/wiki/YAML>`_ format. The basics of YAML are better learnt with an example, so go back to :doc:`example` if you have not read it yet. If you are havig trouble making your input in YAML work, take a look at the :ref:`common_yaml_errors` at the bottom of this page.
 
 
 .. _input_blocks:
@@ -56,6 +32,44 @@ In addition, there are some *top level* options (i.e. defined outside any block)
 + ``debug``: sets the verbosity level of the output. By default (undefined or ``False``), it produces a rather informative output, reporting on initialization, overall progress and results. If ``True``, it produces a very verbose output (a few lines per sample) that can be used for debugging. You can also set it directly to a particular `integer level of the Python logger <https://docs.python.org/2/library/logging.html#logging-levels>`_, e.g. 40 to produce error output only.
 + ``debug_file``: a file name, with a relative or absolute path if desired, to which to send all logged output. When used, only basic progress info is printed on-screen, and the full debug output (if ``debug: True``) will be sent to this file instead
 
+
+Running **cobaya**
+------------------
+
+You can invoke **cobaya** either from the shell or from a Python script (or notebook).
+
+To run **cobaya** from the shell, use the command ``cobaya-run``, followed by your input file.
+
+.. code:: bash
+
+   $ cobaya-run your_input.yaml
+
+To use MPI, simply run it using the appropriate MPI run script in your system (usually ``mpirun -n [#processes]``).
+
+To run **cobaya** from a Python interpreter, simply do
+
+.. code:: python
+
+    from cobaya.run import run
+    updated_info, products = run(your_input)
+
+where your input is a Python dictionary (for how to create one, see :ref:`example_quickstart_interactive`).
+
+To run **cobaya** with MPI in this case, save your script to some file and run ``python your_script.py`` with your MPI run script.
+
+
+.. _input_cont:
+
+Continuing a sample
+-------------------
+
+.. todo::
+
+   Sample continuation is not implemented yet.
+
+
+.. _common_yaml_errors:
+
 Some common YAML *gotchas*
 --------------------------
 
@@ -82,14 +96,14 @@ Some common YAML *gotchas*
      sampler:
        mcmc:
          burn_in: 10
-          max_samples: 100  # ERROR: misaligned!
+          max_samples: 100  # ERROR: should be aligned with 'burn_in'
 
      params:
        mock_a:
          prior:
            min: 0
            max: 1
-          latex: \alpha  # ERROR: misaligned!
+          latex: \alpha  # ERROR:  should be aligned with 'prior'
 
   Above, ``max_samples`` should be aligned to ``burn_in``, because both belong into ``mcmc``. In the same way, ``latex`` should be aligned to ``prior``, since both belong into the definition of the parameter ``mock_a``.
 
@@ -98,55 +112,4 @@ Some common YAML *gotchas*
    For the YAML *connoisseur*, notice that the YAML parser used here has been modified to simplify the input/output notation: it now retains the ordering of parameters and likelihoods (loads mappings as `OrderedDict <https://docs.python.org/2/library/collections.html#ordereddict-examples-and-recipes>`_) and prints arrays as lists.
 
 
-.. _in_example_script:
-
-Scripted input -- Python dictionaries
--------------------------------------
-
-You can invoke **cobaya** directly from a Python interpreter or the Jupyter notebook. If you have saved the example above in a file named ``example_gaussian.yaml`` in Python's working directory:
-
-.. code:: python
-
-    from cobaya.run import run
-    from cobaya.input import load_input
-    input_file = "example_gaussian.yaml"
-    info = load_input(input_file)
-    info.pop("output_prefix", None)  # suppresses external output
-    updated_info, products = run(info)
-
-But, actually, the YAML file is simply parsed as a Python dictionary, so you could as well have defined it by hand:
-
-.. code:: python
-
-    from collections import OrderedDict as odict
-    from cobaya.run import run
-    info = {"params": odict([
-               ("mock_a", {"prior": {"min": -0.5, "max": 3}, "latex": r"\alpha"}),
-               ("mock_b", {"prior": {"min": -1,   "max": 4}, "latex": r"\beta",
-                           "ref":0.5, "proposal":0.5}),
-               ("mock_derived_a", {"latex": r"\alpha^\prime"}),
-               ("mock_derived_b", {"latex": r"\beta^\prime"})]),
-            "likelihood": {"gaussian": {
-               "mean": [0.2, 0],
-               "cov": [[0.1, 0.05],
-                       [0.05,0.2]]}},
-            "sampler": {"mcmc": {"burn_in": 100, "max_samples": 1000}}}
-    # run the sampler
-    updated_info, products = run(info)
-
-The analysis of this sample in an scripted way is discussed in :ref:`out_example_scripted`.
-
-.. note::
-
-   Notice that the parameters are defined here using an `OrderedDict <https://docs.python.org/2/library/collections.html#ordereddict-examples-and-recipes>`_, instead of a normal dictionary. This is optional (a normal dictionary can be used), but recommended: it keeps the order consistent between input and output. Same goes for the likelihoods, when there is more than one.
-
-
-.. _input_cont:
-
-Continuing a sample
--------------------
-
-.. todo::
-
-   Sample continuation is not implemented yet.
 
