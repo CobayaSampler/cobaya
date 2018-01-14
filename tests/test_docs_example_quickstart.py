@@ -8,7 +8,7 @@ import os
 from contextlib import contextmanager
 import sys
 import numpy as np
-from scipy.misc import imread
+from imageio import imread
 
 from cobaya.yaml import yaml_load_file
 from cobaya.tools import is_equal_info
