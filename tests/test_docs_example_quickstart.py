@@ -62,9 +62,8 @@ def test_example(tmpdir):
     # Comparing text output
     out_filename = "analyze_out.txt"
     contents = "".join(open(os.path.join(docs_src_folder, out_filename)).readlines())
-    docs = [l.strip(" \n") for l in contents.split("\n")]
-    test = [l.strip(" \n") for l in stream.getvalue().split("\n")]
-    assert docs == test, (
+    assert (contents.replace("\n","").replace(" ", "") ==
+            stream.getvalue().replace("\n","").replace(" ", "")), (
         "Text output does not coincide:\nwas\n%s\nand now it's\n%sstream.getvalue()"%(
             contents, stream.getvalue()))
     # Comparing plot

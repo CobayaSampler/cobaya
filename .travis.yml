@@ -82,7 +82,7 @@ matrix:
 before_install:
   - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-"${MATRIX_EVAL}" 90
   - sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-"${MATRIX_EVAL}" 90
-  - pip install getdist
+  - pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist --upgrade
   - pip install matplotlib # necessary for getdist, but not installed automatically for now
   # optional, but necessary for tests
   - pip install mpi4py pytest-xdist
