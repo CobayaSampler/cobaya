@@ -13,22 +13,22 @@ Basic input structure
 
 There are 5 different input blocks (two of them optional), which can be specified in any order:
 
-- ``likelihood``: contains the likelihoods that are going to be explored, and their respective options -- see :doc:`likelihoods`
+- ``likelihood``: contains the likelihoods that are going to be explored, and their respective options — see :doc:`likelihoods`
 
-- ``params``: contains a list of parameters to be *fixed*, *sampled* or *derived*, their priors, LaTeX labels, etc. -- see :doc:`params_prior`.
+- ``params``: contains a list of parameters to be *fixed*, *sampled* or *derived*, their priors, LaTeX labels, etc. — see :doc:`params_prior`.
 
-- ``prior``: (optional) contains additional priors to be imposed, whenever they are complex or non-separable -- see :ref:`prior_external`.
+- ``prior``: (optional) contains additional priors to be imposed, whenever they are complex or non-separable — see :ref:`prior_external`.
 
-- ``sampler``: contains the sampler as a single entry, and its options -- see :doc:`sampler`.
+- ``sampler``: contains the sampler as a single entry, and its options — see :doc:`sampler`.
 
-- ``theory`` (optional): has only one entry, which specifies the theory code with which to compute the observables used by the likelihoods, and options for it. Also, if a ``theory`` is specified, the ``params`` block may contain a ``theory`` sub-block containing the parameters belonging to the theory code -- see :doc:`theory` and also :doc:`examples_planck` for a usage example.
+- ``theory`` (optional): has only one entry, which specifies the theory code with which to compute the observables used by the likelihoods, and options for it. Also, if a ``theory`` is specified, the ``params`` block may contain a ``theory`` sub-block containing the parameters belonging to the theory code — see :doc:`theory` and also :doc:`examples_planck` for a usage example.
 
 The modules specified above (i.e. likelihoods, samplers, theories...) can have any number of options, but you don't need to specify all of them every time you use them: if an option is not specified, its **default** value is used. The default values for each module are described in their respective section of the documentation, and in a ``defaults.yaml`` file in the folder of **cobaya** where that module is defined, e.g. ``cobaya/cobaya/likelihoods/gaussian/defaults.yaml`` for the defaults of the ``gaussian`` likelihood.
 
 In addition, there are some *top level* options (i.e. defined outside any block):
 
-+ ``output_prefix``: determines where the output files are written and/or a prefix for their names -- see :ref:`output_prefix`.
-+ ``path_to_modules``: path where the external modules have been automatically installed -- see :doc:`installation_ext`.
++ ``output_prefix``: determines where the output files are written and/or a prefix for their names — see :ref:`output_shell`.
++ ``path_to_modules``: path where the external modules have been automatically installed — see :doc:`installation_ext`.
 + ``debug``: sets the verbosity level of the output. By default (undefined or ``False``), it produces a rather informative output, reporting on initialization, overall progress and results. If ``True``, it produces a very verbose output (a few lines per sample) that can be used for debugging. You can also set it directly to a particular `integer level of the Python logger <https://docs.python.org/2/library/logging.html#logging-levels>`_, e.g. 40 to produce error output only.
 + ``debug_file``: a file name, with a relative or absolute path if desired, to which to send all logged output. When used, only basic progress info is printed on-screen, and the full debug output (if ``debug: True``) will be sent to this file instead
 
