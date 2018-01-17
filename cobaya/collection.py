@@ -37,6 +37,13 @@ enlargement_size = 100
 enlargement_factor = None
 
 
+# Make sure that we don't reach the empty part of the dataframe
+def check_slice(slice, imax):
+    if slice.stop > imax:
+        raise ValueError("Trying to access a sample index larger than "
+                         "the amount of samples (%d)!"%imax)
+
+
 class Collection(object):
 
     def __init__(self, parametrization, likelihood, output=None,
@@ -52,7 +59,7 @@ class Collection(object):
         self.chi2_names = [_chi2+separator+likname for likname in likelihood]
         columns += [_chi2] + self.chi2_names
         # Create the main data frame and the tracking index
-        self.data = pd.DataFrame(np.zeros((initial_size,len(columns))), columns=columns)
+        self.data = pd.DataFrame(np.nan, columns=columns, index=range(initial_size))
         self._n = 0
         # OUTPUT: Driver, file_name, index to track last sample written
         if output:
@@ -62,10 +69,10 @@ class Collection(object):
         else:
             self.driver = "dummy"
 
-    def add(self, values, derived=None,
-                  weight=1, logpost=None, logprior=None, logliks=None):
+    def add(self,
+            values, derived=None, weight=1, logpost=None, logprior=None, logliks=None):
         self.enlarge_if_needed()
-        self.data[_weight][self._n] = weight
+        self.data.at[self._n, _weight] = weight
         if logpost is None:
             try:
                 logpost = logprior + sum(logliks)
@@ -73,18 +80,18 @@ class Collection(object):
                 log.error("If a log-posterior is not specified, you need to pass "
                           "a log-likelihood and a log-prior.")
                 raise HandledException
-        self.data[_minuslogpost][self._n] = -logpost
+        self.data.at[self._n, _minuslogpost] = -logpost
         if logprior is not None:
-            self.data[_minuslogprior][self._n] = -logprior
+            self.data.at[self._n, _minuslogprior] = -logprior
         if logliks is not None:
             for name, value in zip(self.chi2_names, logliks):
-                self.data[name][self._n] = -2*value
-            self.data[_chi2][self._n] = sum(self.data[self.chi2_names].values[self._n])
+                self.data.at[self._n, name] = -2*value
+            self.data.at[self._n, _chi2] = -2*sum(logliks)
         for name, value in zip(self.sampled_params, values):
-            self.data[name][self._n] = value
+            self.data.at[self._n, name] = value
         if derived is not None:
             for name, value in zip(self.derived_params, derived):
-                self.data[_derived_pre+name][self._n] = value
+                self.data.at[self._n, _derived_pre+name] = value
         self._n += 1
 
     def enlarge_if_needed(self):
@@ -93,10 +100,9 @@ class Collection(object):
                 enlarge_by = self.data.shape[0]*enlargement_factor
             else:
                 enlarge_by = enlargement_size
-            self.data = pd.concat(
-                [self.data, pd.DataFrame(np.zeros((enlarge_by, self.data.shape[1])),
-                                         columns=self.data.columns,
-                                         index=np.arange(self.n(),self.n()+enlarge_by))])
+            self.data = pd.concat([
+                self.data, pd.DataFrame(np.nan, columns=self.data.columns,
+                                        index=np.arange(self.n(),self.n()+enlarge_by))])
 
     # Retrieve-like methods
     def n(self):
@@ -108,10 +114,6 @@ class Collection(object):
     def n_last_out(self):
         return self._n_last_out
 
-    # Make the dataframe accesible directly
-    def __getitem__(self, *args):
-        return self.data[:self.n()].__getitem__(*args)
-
     # Make the dataframe printable (but only the filled ones!)
     def __repr__(self):
         return self.data[:self.n()].__repr__()
@@ -119,6 +121,35 @@ class Collection(object):
     # Make the dataframe iterable over rows
     def __iter__(self):
         return self.data[:self.n()].iterrows()
+
+    # Accessing the dataframe
+    def __getitem__(self, *args):
+        """
+        This is a hack of the DataFrame __getitem__ in order to never go
+        beyond the number of samples.
+
+        NB: returns *views*, not *copies*, so careful when assigning and modifying
+        the returned values.
+
+        Errors are ValueError because this is not for internal use in this class,
+        but an external interface to other classes and the user.
+        """
+        if len(args) > 1:
+            raise ValueError("Use just one index/column, or use .loc[row, column]. "
+                             "(Notice that slices in .loc *include* the last point.)")
+        if isinstance(args[0], six.string_types):
+            return self.data.iloc[:self._n, self.data.columns.get_loc(args[0])]
+        elif hasattr(args[0], "__len__"):
+            try:
+                return self.data.iloc[:self._n,
+                                      [self.data.columns.get_loc(c) for c in args[0]]]
+            except KeyError:
+                raise ValueError("Some of the indices are not valid columns.")
+        elif isinstance(args[0], slice):
+            check_slice(args[0], self._n)
+            return self.data.iloc[args[0]]
+        else:
+            raise ValueError("Index type not recognised: use column names or slices.")
 
     # Statistical computations
     def mean(self, first=None, last=None, derived=False):
@@ -207,8 +238,10 @@ class OnePoint(Collection):
         if isinstance(columns, six.string_types):
             return self.data.values[0, self.data.columns.get_loc(columns)]
         else:
-            return np.array(
-                [self.data.values[0,self.data.columns.get_loc(c)] for c in columns])
+            try:
+                return self.data.values[0, [self.data.columns.get_loc(c) for c in columns]]
+            except KeyError:
+                raise ValueError("Some of the indices are not valid columns.")
 
     # Resets the counter, so the dataframe never fills up!
     def add(self, *args, **kwargs):
@@ -216,7 +249,8 @@ class OnePoint(Collection):
         self._n = 0
 
     def increase_weight(self, increase):
-        self.data["weight"] += increase
+        # For some reason, faster than `self.data[_weight] += increase`
+        self.data.at[0, _weight] += increase
 
     def add_to_collection(self, collection):
         """Adds this point at the end of a given collection."""
