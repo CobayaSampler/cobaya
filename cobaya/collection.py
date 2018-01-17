@@ -262,6 +262,6 @@ class OnePoint(Collection):
             logprior=-self[_minuslogprior],
             logliks=-0.5*np.array(self[self.chi2_names]))
 
-    # Make the dataframe printable (but only the filled ones!)
+    # Restore original __repr__ (here, there is only 1 sample)
     def __repr__(self):
-        return self.data[:1].__repr__()
+        return self.data.__repr__()
