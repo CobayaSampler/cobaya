@@ -76,5 +76,6 @@ def test_example(tmpdir):
     npixels = test_img.shape[0]*test_img.shape[1]
     assert np.count_nonzero(test_img == docs_img)/(4*npixels) >= pixel_tolerance, (
         "Images are too different. Maybe GetDist conventions changed?")
-    # Back to the working directory of the tests, just in case
+    # Back to the working directory of the tests, just in case, and restart the rng
     os.chdir(cwd)
+    np.random.seed()

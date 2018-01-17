@@ -19,7 +19,7 @@ The input of **cobaya** usually looks like this:
 You can see the following *blocks* up there:
               
 - A ``likelihood`` block, listing the likelihood pdf's to be explored, here a gaussian with the mean and covariance stated.
-- A ``params`` block, stating the parameters that are going to be explored (or derived), their ``prior``, the the Latex label that will be used in the plots, the `ref`erence starting point for the chains (optional), and the initial spread of the MCMC covariance matrix ``proposal``.
+- A ``params`` block, stating the parameters that are going to be explored (or derived), their ``prior``, the the Latex label that will be used in the plots, the reference (``ref``) starting point for the chains (optional), and the initial spread of the MCMC covariance matrix ``proposal``.
 - A ``sampler`` block stating that we will use the ``mcmc`` sampler to explore the prior+likelihood described above, stating the maximum number of samples used, how many initial samples to ignore, and that we will sequentially refine our initiall guess for a covariance matrix.
 - An ``output_prefix``, indicating where the products will be written and a prefix for their name.
 
