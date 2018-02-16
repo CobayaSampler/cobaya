@@ -32,7 +32,7 @@ def get_mpi():
     global _mpi
     if _mpi == -1:
         if (os.environ.get("OMPI_COMM_WORLD_SIZE") or  # OpenMPI
-            os.environ.get("I_MPI_CMD")):              # Intel
+            os.environ.get("MPIR_CVAR_CH3_INTERFACE_HOSTNAME")):  # MPICH
             from mpi4py import MPI
             _mpi = MPI
         else:
