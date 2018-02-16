@@ -11,7 +11,7 @@ We will run it first from the **shell**, and later from a **Python interpreter**
 From the shell
 --------------
 
-The input of **cobaya** usually looks like this:
+The input of **cobaya** consists of a text file that usually looks like this:
 
 .. literalinclude:: ./src_examples/quickstart/gaussian.yaml
    :language: yaml

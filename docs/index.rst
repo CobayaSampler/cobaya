@@ -38,7 +38,7 @@ Table of contents
    examples_planck
 
 .. toctree::
-   :caption: For developes
+   :caption: For developers
    :maxdepth: 1
 
    devel
