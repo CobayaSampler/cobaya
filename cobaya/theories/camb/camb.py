@@ -194,9 +194,8 @@ class camb(Theory):
         global CAMBParamRangeError
         # Generate states, to avoid recomputing
         self.n_states = 3
-        self.states = [{"CAMBparams": None, "CAMBresults": None,
-                        "params": None, "derived": None, "last": 0}
-                       for i in range(self.n_states)]
+        self.states = [{"params": None, "derived": None, "derived_extra": None,
+                        "last": 0} for i in range(self.n_states)]
         # Dict of named tuples to collect requirements and computation methods
         self.collectors = {}
         # Additional input parameters to pass to CAMB
@@ -207,12 +206,49 @@ class camb(Theory):
             raise HandledException
         if "cosmomc_theta" in self.input_params or "cosmomc_theta":
             self.also["H0"] = None
+        # Derived parameters that may not have been requested, but will be necessary later
+        self.derived_extra = []
 
     def current_state(self):
         lasts = [self.states[i]["last"] for i in range(self.n_states)]
         return self.states[lasts.index(max(lasts))]
 
+    def needs(self, arguments):
+        # Computed quantities required by the likelihood
+        for k,v in arguments.items():
+            # Precision parameters and boundaries (in general, take max of all requested)
+            if k == "l_max":
+                self.also["lmax"] = max(v, self.also.get("lmax",0))
+            elif k == "k_max":
+                self.also["kmax"] = max(v, self.also.get("kmax",0))
+            elif k == "z_max":
+                self.also["zmax"] = max(v, self.also.get("zmax",0))
+            # Products and other computations
+            elif k == "Cl":
+                self.collectors["Cl"] = collector(
+                    method="CAMBdata.get_cmb_power_spectra",
+                    kwargs={"spectra": ["total"], "raw_cl": True})
+                self.derived_extra += ["TCMB"]
+            elif k == "Pk_interpolator":
+                vars_pairs = v.pop("vars_pairs", None)
+                vars_pairs = vars_pairs or [["total", "total"]]
+                for pair in vars_pairs:
+                    name = "Pk_interpolator_%s_%s"%(pair[0],pair[1])
+                    kwargs = deepcopy(v)
+                    kwargs.update(dict(zip(["var1", "var2"], pair)))
+                    self.collectors[name] = collector(
+                        method="CAMBdata.get_matter_power_interpolator",
+                        kwargs=kwargs)
+            else:
+                log.error("'%s' does not understand the requirement '%s:%s'.",
+                          self.__class__.__name__,k,v)
+                raise HandledException
+        # Derived parameters (if some need some additional computations)
+        # ...
+
     def set(self, params_values_dict, i_state):
+        # Store them, to use them later to identify the state
+        self.states[i_state]["params"] = params_values_dict
         # Feed the arguments defining the cosmology to the cosmological code
         # Additionally required input parameters
         args = deepcopy(self.also)
@@ -223,16 +259,15 @@ class camb(Theory):
             args.update(self.precision)
         # Generate and save
         log.debug("Setting parameters: %r", args)
-        self.states[i_state]["params"] = params_values_dict
         try:
-            self.states[i_state]["CAMBparams"] = self.camb.set_params(**args)
-            return True
+            return self.camb.set_params(**args)
         except CAMBParamRangeError:
-            return False
+            print("CAMBParamRangeError!!! It should fail here!")
+            return None
         except:
             log.error("Error setting CAMB parameters -- see CAMB's error trace below.\n"
                       "The parameters were %r", args)
-            raise
+            raise  # No HandledException, so that CAMB traceback gets printed
 
     def compute(self, derived=None, **params_values_dict):
         lasts = [self.states[i]["last"] for i in range(self.n_states)]
@@ -249,77 +284,61 @@ class camb(Theory):
             # update the (first) oldest one and compute
             i_state = lasts.index(min(lasts))
             log.debug("Computing (state %d)", i_state)
-            self.set(params_values_dict, i_state)
+            intermediates = {
+                "CAMBparams": {"result": self.set(params_values_dict, i_state)},
+                "CAMBdata": {"method": "get_results", "result": None}}
             # Compute the necessary products
-            self.states[i_state]["CAMBresults"] = \
-                self.camb.get_results(self.states[i_state]["CAMBparams"])
-            # extract all requested products
-            for product in self.collectors:
-                method = getattr(self.states[i_state]["CAMBresults"],
-                                 self.collectors[product].method)
-                self.states[i_state][product] = method(
-                    self.states[i_state]["CAMBparams"], **self.collectors[product].kwargs)
+            for product, collector in self.collectors.items():
+                parent, method = collector.method.split(".")
+                if intermediates[parent]["result"] is None:
+                    intermediates[parent]["result"] = getattr(
+                        self.camb, intermediates[parent]["method"])(
+                            intermediates["CAMBparams"]["result"])
+                method = getattr(intermediates[parent]["result"], method)
+                self.states[i_state][product] = method(**self.collectors[product].kwargs)
             # Prepare derived parameters
             if derived == {}:
-                derived.update(self.get_derived_all(i_state))
+                derived.update(self.get_derived_all(intermediates))
                 # Careful: next step must keep the order
                 self.states[i_state]["derived"] = [derived[p] for p in self.output_params]
+            # Prepare necessary extra derived parameters
+            self.states[i_state]["derived_extra"] = {
+                p:self.get_derived(p, intermediates) for p in self.derived_extra}
         # make this one the current one by decreasing the antiquity of the rest
         for i in range(self.n_states):
             self.states[i]["last"] -= max(lasts)
         self.states[i_state]["last"] = 1
         return True
 
-    def needs(self, arguments):
-        # Computed quantities required by the likelihood
-        for k,v in arguments.items():
-            if k == "l_max":
-                # Take the max of the requested ones
-                self.also["lmax"] = max(v,self.also.get("lmax",0))
-            elif k == "Cl":
-                self.collectors["powers"] = collector(
-                    method="get_cmb_power_spectra",
-                    kwargs={"spectra": ["total"], "raw_cl": True})
-            else:
-                log.error("'%s' does not understand the requirement '%s:%s'.",
-                          self.__class__.__name__,k,v)
-                raise HandledException
-        # Derived parameters (if some need some additional computations)
-        # ...
+    def get_derived_from_params(self, p, intermediates):
+        return getattr(intermediates["CAMBparams"]["result"], p, None)
 
-    def get_derived_from_params(self, p, i_state=None):
-        return getattr((self.current_state() if i_state is None else self.states[i_state])
-                       ["CAMBparams"], p, None)
+    def get_derived_from_std(self, p, intermediates):
+        return intermediates["CAMBdata"]["result"].get_derived_params().get(p, None)
 
-    def get_derived_from_std(self, p, i_state=None):
-        return ((self.current_state() if i_state is None else self.states[i_state])
-                ["CAMBresults"].get_derived_params().get(p, None))
+    def get_derived_from_getter(self, p, intermediates):
+        return getattr(intermediates["CAMBparams"]["result"], "get_"+p, lambda: None)()
 
-    def get_derived_from_getter(self, p, i_state=None):
-        return getattr((self.current_state() if i_state is None else self.states[i_state])
-                       ["CAMBparams"], "get_"+p, lambda: None)()
-
-    def get_derived(self, p, i_state=None):
+    def get_derived(self, p, intermediates):
         """General function to get a derived parameter. Use this one."""
         # specific calls, if general ones above failed:
         if p == "sigma8":
-            return ((self.current_state() if i_state is None else self.states[i_state])
-                    ["CAMBresults"].get_sigma8()[0])
+            return intermediates["CAMBdata"]["result"].get_sigma8()[0]
         for f in [self.get_derived_from_params,
                   self.get_derived_from_std,
                   self.get_derived_from_getter]:
-            derived = f(p)
+            derived = f(p, intermediates)
             if derived is not None:
                 return derived
 
-    def get_derived_all(self, i_state):
+    def get_derived_all(self, intermediates):
         """
-        Returns a dictionary of derived parameters with their values, using the
-        state #`i_state`.
+        Returns a dictionary of derived parameters with their values,
+        using the *current* state.
         """
         derived = {}
         for p in self.output_params:
-            derived[p] = self.get_derived(p, i_state)
+            derived[p] = self.get_derived(p, intermediates)
             if derived[p] is None:
                 log.error("Derived param '%s' not implemented in the CAMB interface", p)
                 raise HandledException
@@ -327,11 +346,12 @@ class camb(Theory):
 
     def get_cl(self, ell_factor=False):
         """
-        Returns the power spectra in microK^2.
+        Returns the power spectra in microK^2,
+        using the *current* state.
         """
         current_state = self.current_state()
         # get C_l^XX from the cosmological code
-        cl_camb = deepcopy(current_state["powers"]["total"])
+        cl_camb = deepcopy(current_state["Cl"]["total"])
         mapping = {"tt": 0, "ee": 1, "bb": 2, "te": 3}
         cl = {"ell": np.arange(cl_camb.shape[0])}
         cl.update({sp: cl_camb[:,i] for sp,i in mapping.items()})
@@ -339,11 +359,15 @@ class camb(Theory):
         # pp <-- camb_results.get_lens_potential_cls(lmax)[:, 0]
         ell_factor = ((cl["ell"]+1)*cl["ell"]/(2*np.pi))[2:] if ell_factor else 1
         # convert dimensionless C_l's to C_l in muK**2
-        T = current_state["CAMBparams"].TCMB
+        T = current_state["derived_extra"]["TCMB"]
         for key in cl.keys():
             if key not in ['pp', 'ell']:
                 cl[key][2:] = cl[key][2:] * (T*1.e6)**2 * ell_factor
         return cl
+
+    def get_Pk_interpolator(self):
+        current_state = self.current_state()
+        return {k:v for k,v in current_state if v.startswith("Pk_interpolator_")}
 
 
 # Installation routines ##################################################################
