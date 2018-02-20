@@ -226,7 +226,7 @@ class camb(Theory):
                     np.unique(np.concatenate((v, self.also.get("redshifts",[])))))
             # Products and other computations
             elif k == "Cl":
-                self.collectors["Cl"] = collector(
+                self.collectors[k] = collector(
                     method="CAMBdata.get_cmb_power_spectra",
                     kwargs={"spectra": ["total"], "raw_cl": True})
                 self.derived_extra += ["TCMB"]
@@ -240,6 +240,14 @@ class camb(Theory):
                     self.collectors[name] = collector(
                         method="CAMBdata.get_matter_power_interpolator",
                         kwargs=kwargs)
+            elif k == "comoving_radial_distance":
+                self.collectors[k] = collector(
+                    method="CAMBdata.comoving_radial_distance",
+                    kwargs={"z": v["redshifts"]})
+            elif k == "h_of_z":
+                self.collectors[k] = collector(
+                    method="CAMBdata.h_of_z",
+                    kwargs={"z": v["redshifts"]})
             else:
                 # Extra derived parameters
                 if v is None:
@@ -391,6 +399,12 @@ class camb(Theory):
         current_state = self.current_state()
         prefix = "Pk_interpolator_"
         return {k[len(prefix):]:v for k,v in current_state.items() if k.startswith(prefix)}
+
+    def get_comoving_radial_distance(self):
+        return self.current_state()["comoving_radial_distance"]
+
+    def get_h_of_z(self):
+        return self.current_state()["h_of_z"]
 
 
 # Installation routines ##################################################################
