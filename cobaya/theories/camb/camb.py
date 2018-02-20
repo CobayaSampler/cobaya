@@ -145,7 +145,7 @@ import sys
 import os
 from copy import deepcopy
 import numpy as np
-from collections import namedtuple
+from collections import namedtuple, OrderedDict as odict
 
 # Local
 from cobaya.theory import Theory
@@ -278,8 +278,7 @@ class camb(Theory):
                        if self.states[i]["params"] == params_values_dict).next()
             # Get (pre-computed) derived parameters
             if derived == {}:
-                derived.update({p: v for p,v in zip(self.output_params,
-                                                    self.states[i_state]["derived"])})
+                derived.update(self.states[i_state]["derived"])
             log.debug("Re-using computed results (state %d)", i_state)
         except StopIteration:
             # update the (first) oldest one and compute
@@ -300,8 +299,8 @@ class camb(Theory):
             # Prepare derived parameters
             if derived == {}:
                 derived.update(self.get_derived_all(intermediates))
-                # Careful: next step must keep the order
-                self.states[i_state]["derived"] = [derived[p] for p in self.output_params]
+                self.states[i_state]["derived"] = odict(
+                    [[p,derived[p]] for p in self.output_params])
             # Prepare necessary extra derived parameters
             self.states[i_state]["derived_extra"] = {
                 p:self.get_derived(p, intermediates) for p in self.derived_extra}
@@ -321,8 +320,12 @@ class camb(Theory):
         return getattr(intermediates["CAMBparams"]["result"], "get_"+p, lambda: None)()
 
     def get_derived(self, p, intermediates):
-        """General function to get a derived parameter. Use this one."""
-        # specific calls, if general ones above failed:
+        """
+        General function to extract a single derived parameter.
+
+        To get a parameter *from a likelihood* use `get_param` instead.
+        """
+        # Specific calls, if general ones fail:
         if p == "sigma8":
             return intermediates["CAMBdata"]["result"].get_sigma8()[0]
         for f in [self.get_derived_from_params,
@@ -336,6 +339,8 @@ class camb(Theory):
         """
         Returns a dictionary of derived parameters with their values,
         using the *current* state.
+
+        To get a parameter *from a likelihood* use `get_param` instead.
         """
         derived = {}
         for p in self.output_params:
@@ -344,6 +349,18 @@ class camb(Theory):
                 log.error("Derived param '%s' not implemented in the CAMB interface", p)
                 raise HandledException
         return derived
+
+    def get_param(self, p):
+        """
+        Interface function for likelihoods to get sampled and derived parameters.
+        """
+        current_state = self.current_state()
+        for pool in ["params", "derived", "derived_extra"]:
+            value = current_state[pool].get(p, None)
+            if value is not None:
+                return value
+        log.error("Parameter not known: '%s'", p)
+        raise HandledException
 
     def get_cl(self, ell_factor=False):
         """
