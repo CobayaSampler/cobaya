@@ -241,9 +241,13 @@ class camb(Theory):
                         method="CAMBdata.get_matter_power_interpolator",
                         kwargs=kwargs)
             else:
-                log.error("'%s' does not understand the requirement '%s:%s'.",
-                          self.__class__.__name__,k,v)
-                raise HandledException
+                # Extra derived parameters
+                if v is None:
+                    self.derived_extra += [k]
+                else:
+                    log.error("'%s' does not understand the requirement '%s:%s'.",
+                              self.__class__.__name__,k,v)
+                    raise HandledException
         # Derived parameters (if some need some additional computations)
         # ...
 
