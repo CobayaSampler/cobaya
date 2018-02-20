@@ -221,8 +221,9 @@ class camb(Theory):
                 self.also["lmax"] = max(v, self.also.get("lmax",0))
             elif k == "k_max":
                 self.also["kmax"] = max(v, self.also.get("kmax",0))
-            elif k == "z_max":
-                self.also["zmax"] = max(v, self.also.get("zmax",0))
+            elif k == "redshifts":
+                self.also["redshifts"] = np.sort(
+                    np.unique(np.concatenate((v, self.also.get("redshifts",[])))))
             # Products and other computations
             elif k == "Cl":
                 self.collectors["Cl"] = collector(
@@ -367,7 +368,8 @@ class camb(Theory):
 
     def get_Pk_interpolator(self):
         current_state = self.current_state()
-        return {k:v for k,v in current_state if v.startswith("Pk_interpolator_")}
+        prefix = "Pk_interpolator_"
+        return {k[len(prefix):]:v for k,v in current_state.items() if k.startswith(prefix)}
 
 
 # Installation routines ##################################################################
