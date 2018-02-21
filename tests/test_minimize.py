@@ -5,6 +5,7 @@ from __future__ import division
 
 import numpy as np
 from mpi4py import MPI
+from scipy.stats import multivariate_normal
 
 from cobaya.conventions import _likelihood, _sampler
 from cobaya.likelihoods.gaussian import info_random_gaussian
@@ -21,22 +22,19 @@ def test_minimize_gaussian():
     ranges = np.array([[0,1] for i in range(dimension)])
     prefix = "a_"
     info = info_random_gaussian(ranges=ranges, n_modes=n_modes, prefix=prefix)
+    mean = info[_likelihood]["gaussian"]["mean"]
+    cov = info[_likelihood]["gaussian"]["cov"]
+    maxloglik = multivariate_normal.logpdf(mean, mean=mean, cov=cov)
     if rank == 0:
         print("Maximim of the gaussian mode to be found:")
-        print(info["likelihood"]["gaussian"]["mean"])
-    info[_sampler] = {"minimize": {"tol": None, "maxiter": None, "ignore_prior": True}}
+        print(mean)
+    info[_sampler] = {"minimize": {"ignore_prior": True}}
     info["debug"] = False
     info["debug_file"] = None
-    info["output_prefix"] = "./minigauss/"
+#    info["output_prefix"] = "./minigauss/"
     from cobaya.run import run
     updated_info, products = run(info)
     # Done! --> Tests
     if rank == 0:
-        print(products["maximum"])
-        print("----------------------------------------------------------------")
-        target = np.array(info["likelihood"]["gaussian"]["mean"])
-        target_length = np.sqrt(np.diag(info["likelihood"]["gaussian"]["cov"]))
-        found = np.array(products["maximum"][products["maximum"].sampled_params])
-        worse_relative_error = np.max(abs(target-found)/target_length)
-        print(target)
-        print(found, "-->", worse_relative_error)
+        rel_error = abs(maxloglik--products["maximum"]["minuslogpost"])/abs(maxloglik)
+        assert rel_error < updated_info[_sampler]["minimize"]["tol"]

@@ -59,6 +59,10 @@ class minimize(Sampler):
             if not get_mpi_rank():
                 self.result = results[np.argmin([r.fun for r in results])]
         if not get_mpi_rank():
+            if not self.result.success:
+                log.error("Maximization failed! Here is the `scipy` raw result: %r",
+                          self.result)
+                raise HandledException
             log.info("log%s maximised at %g",
                      "likelihood" if self.ignore_prior else "posterior",
                      -self.result.fun)
@@ -73,8 +77,8 @@ class minimize(Sampler):
                 extension=("likelihood" if self.ignore_prior else "posterior"))
             self.maximum.add(self.result.x, derived=derived, logpost=logpost,
                              logprior=logprior, logliks=logliks)
+            log.info("Parameter values at maximum: %r", self.maximum)
             self.maximum.out_update()
-            log.info("Result written in '%s'", self.maximum.file_name)
 
     def products(self):
         """
