@@ -24,12 +24,16 @@ class minimize(Sampler):
             log.info("Initializing")
         self.kwargs = {
             "fun": lambda x: -self.logposterior(x, ignore_prior=self.ignore_prior)[0],
-            "x0": self.prior.reference(),
             "bounds": self.prior.limits(),
             "tol": self.tol,
             "options": {
                 "maxiter": self.maxiter,
                 "disp": (log.getEffectiveLevel() == logging.DEBUG)}}
+        # Initial point: sample from reference and make sure that it has finite lik/post
+        logp = -np.inf
+        while not np.isfinite(logp):
+            self.kwargs["x0"] = self.prior.reference()
+            logp, _, _, _ = self.logposterior(self.kwargs["x0"])
         self.kwargs.update(self.override or {})
 
     def run(self):
@@ -51,7 +55,7 @@ class minimize(Sampler):
         if get_mpi_size():
             results = get_mpi_comm().gather(self.result, root=0)
             if not get_mpi_rank():
-                self.result = results[np.argmin([r.fun for r in results])[0]]
+                self.result = results[np.argmin([r.fun for r in results])]
         if not get_mpi_rank():
             log.info("log%s maximised at %g",
                      "likelihood" if self.ignore_prior else "posterior",
