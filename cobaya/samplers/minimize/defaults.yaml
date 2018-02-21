@@ -1,0 +1,13 @@
+# Default arguments for the -logposterior minimizer
+
+sampler:
+  minimize:
+    # Minimizes the full posterior (False) or just the likelihood (True)
+    ignore_prior: False
+    # Tolerance for termination
+    tol:
+    # Maximum number of iterations
+    maxiter:
+    # Override keyword arguments for `scipy.minize`,
+    # e.g. `override: {"method": BFGS}
+    override:
