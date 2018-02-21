@@ -51,6 +51,7 @@ class minimize(Sampler):
                 "maxiter": self.maxiter,
                 "disp": (log.getEffectiveLevel() == logging.DEBUG)}}
         self.kwargs.update(self.override or {})
+        log.debug("Arguments for scipy.optimize.minimize:\n%r", self.kwargs)
 
     def run(self):
         """
@@ -68,6 +69,9 @@ class minimize(Sampler):
         Determines success (or not), chooses best (if MPI)
         and produces output (if requested).
         """
+        # If something failed
+        if not hasattr(self, "result"):
+            return
         if get_mpi_size():
             results = get_mpi_comm().gather(self.result, root=0)
             if not get_mpi_rank():

@@ -135,6 +135,9 @@ class Sampler(object):
         If passes an empty list through ``derived``,
         it gets populated it with the derived parameters' values.
         """
+        if not np.all(np.isfinite(params_values)):
+            log.error("Got non-finite parameter values: %r", params_values)
+            raise HandledException
         if not ignore_prior:
             logprior = self.prior.logp(params_values)
         else:
