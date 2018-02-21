@@ -37,4 +37,4 @@ def test_minimize_gaussian():
     # Done! --> Tests
     if rank == 0:
         rel_error = abs(maxloglik--products["maximum"]["minuslogpost"])/abs(maxloglik)
-        assert rel_error < updated_info[_sampler]["minimize"]["tol"]
+        assert rel_error < 10*updated_info[_sampler]["minimize"]["tol"]
