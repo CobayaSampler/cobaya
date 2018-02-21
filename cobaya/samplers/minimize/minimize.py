@@ -23,7 +23,6 @@ class minimize(Sampler):
         if not get_mpi_rank():
             log.info("Initializing")
         self.kwargs = {
-            "fun": lambda x: -self.logposterior(x, ignore_prior=self.ignore_prior)[0],
             "bounds": self.prior.limits(),
             "tol": self.tol,
             "options": {
@@ -33,7 +32,12 @@ class minimize(Sampler):
         logp = -np.inf
         while not np.isfinite(logp):
             self.kwargs["x0"] = self.prior.reference()
-            logp, _, _, _ = self.logposterior(self.kwargs["x0"])
+            logp = self.logposterior(self.kwargs["x0"], ignore_prior=self.ignore_prior)[0]
+        # Fixing (negative) infinities: take a multiple of the obtained value
+        self.inf_factor = 10
+        self.kwargs["fun"] = (
+            lambda x: min(-self.logposterior(x, ignore_prior=self.ignore_prior)[0],
+                          abs(self.inf_factor*logp)))
         self.kwargs.update(self.override or {})
 
     def run(self):
@@ -62,7 +66,7 @@ class minimize(Sampler):
                      -self.result.fun)
             logpost, logprior, logliks, derived = self.logposterior(self.result.x)
             recomputed_max = sum(logliks) if self.ignore_prior else logpost
-            if -self.result.fun != recomputed_max:
+            if not np.allclose(-self.result.fun, recomputed_max):
                 log.error("Cannot reproduce result. Something bad happened. "
                           "Recomputed max: %g at %r", recomputed_max, self.result.x)
                 raise HandledException
