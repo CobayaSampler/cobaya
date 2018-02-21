@@ -22,6 +22,7 @@ Table of contents
    sampler_evaluate
    sampler_mcmc
    sampler_polychord
+   sampler_minimize
    likelihoods
    likelihood_one
    likelihood_gaussian           

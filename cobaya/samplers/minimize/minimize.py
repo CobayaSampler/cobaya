@@ -1,3 +1,17 @@
+"""
+.. module:: samplers.minimize
+
+:Synopsis: Posterior/likelihood *maximization* (i.e. chi^2 minimization).
+:Author: Jesus Torrado (though it's just a wrapper of ``scipy.optimize.minimize``)
+
+This is a **maximizator** for posteriors or likelihoods, using
+`scipy.optimize.minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
+
+It is pretty self-explanatory: just look at the comments on the defaults below.
+
+It is recommended to run a couple of parallel MPI processes:
+it will finally pick the best among the results.
+"""
 # Python 2/3 compatibility
 from __future__ import absolute_import
 from __future__ import division
@@ -85,8 +99,10 @@ class minimize(Sampler):
         Auxiliary function to define what should be returned in a scripted call.
 
         Returns:
-           The ``OnePoint`` that maximises the posterior or likelihood (depending on
-           `ignore_prior`), and the ``scipy.optimize.OptimizeResult`` instance.
+           The :class:`OnePoint` that maximises the posterior or likelihood (depending on
+           ``ignore_prior``), and the `scipy.optimize.OptimizeResult
+           <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.OptimizeResult.html>`_
+           instance.
         """
         if not get_mpi_rank():
             return {"maximum": self.maximum, "OptimizeResult": self.result}
