@@ -63,6 +63,7 @@ from __future__ import division
 # Global
 import numpy as np
 from scipy.stats import multivariate_normal, uniform, random_correlation
+from scipy.special import logsumexp
 from mpi4py import MPI
 from collections import OrderedDict as odict
 
@@ -150,7 +151,7 @@ class gaussian(Likelihood):
                      zip(list(self.output_params.keys())[i*self.d():(i+1)*self.d()],standard)]))
         # Compute the likelihood and return
         return (-np.log(self.n_modes) +
-                 np.log(sum([gauss.pdf(x) for gauss in self.gaussians])))
+                logsumexp([gauss.logpdf(x) for gauss in self.gaussians]))
 
 
 # Scripts to generate random means and covariances #######################################
