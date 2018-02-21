@@ -129,13 +129,16 @@ class Sampler(object):
         self.n_eval = 0
         self.initialise()
 
-    def logposterior(self, params_values):
+    def logposterior(self, params_values, ignore_prior=False):
         """
         Returns (logposterior,logprior,[loglikelihoods]) for an array of parameter values.
         If passes an empty list through ``derived``,
         it gets populated it with the derived parameters' values.
         """
-        logprior = self.prior.logp(params_values)
+        if not ignore_prior:
+            logprior = self.prior.logp(params_values)
+        else:
+            logprior = 0
         logpost = deepcopy(logprior)
         logliks = []
         if logprior > -np.inf:
