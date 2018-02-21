@@ -22,22 +22,20 @@ class minimize(Sampler):
         """Prepares the arguments for `scipy.minimize`."""
         if not get_mpi_rank():
             log.info("Initializing")
+        # Initial point: sample from reference and make sure that it has finite lik/post
+        logp = -np.inf
+        while not np.isfinite(logp):
+            initial_point = self.prior.reference()
+            logp = self.logposterior(initial_point, ignore_prior=self.ignore_prior)[0]
         self.kwargs = {
+            "fun": (lambda x: -self.logposterior(
+                x, ignore_prior=self.ignore_prior, make_finite=True)[0]),
+            "x0": initial_point,
             "bounds": self.prior.limits(),
             "tol": self.tol,
             "options": {
                 "maxiter": self.maxiter,
                 "disp": (log.getEffectiveLevel() == logging.DEBUG)}}
-        # Initial point: sample from reference and make sure that it has finite lik/post
-        logp = -np.inf
-        while not np.isfinite(logp):
-            self.kwargs["x0"] = self.prior.reference()
-            logp = self.logposterior(self.kwargs["x0"], ignore_prior=self.ignore_prior)[0]
-        # Fixing (negative) infinities: take a multiple of the obtained value
-        self.inf_factor = 10
-        self.kwargs["fun"] = (
-            lambda x: min(-self.logposterior(x, ignore_prior=self.ignore_prior)[0],
-                          abs(self.inf_factor*logp)))
         self.kwargs.update(self.override or {})
 
     def run(self):
