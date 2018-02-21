@@ -1,5 +1,6 @@
 from __future__ import print_function
 import numpy as np
+import pytest
 
 from cobaya.conventions import _path_install, _theory, _sampler, _likelihood, _params
 from cobaya.run import run
