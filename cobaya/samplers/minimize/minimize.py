@@ -74,7 +74,7 @@ class minimize(Sampler):
                 self.result = results[np.argmin([r.fun for r in results])]
         if not get_mpi_rank():
             if not self.result.success:
-                log.error("Maximization failed! Here is the `scipy` raw result: %r",
+                log.error("Maximization failed! Here is the `scipy` raw result:\n%r",
                           self.result)
                 raise HandledException
             log.info("log%s maximised at %g",
