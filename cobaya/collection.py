@@ -47,7 +47,7 @@ def check_slice(slice, imax):
 class Collection(object):
 
     def __init__(self, parametrization, likelihood, output=None,
-                 initial_size=enlargement_size, name=None):
+                 initial_size=enlargement_size, name=None, extension=None):
         self.name = name
         self.sampled_params = list(parametrization.sampled_params().keys())
         self.derived_params = list(parametrization.derived_params().keys())
@@ -64,7 +64,8 @@ class Collection(object):
         # OUTPUT: Driver, file_name, index to track last sample written
         if output:
             self._n_last_out = 0
-            self.file_name, self.driver = output.prepare_collection(name=self.name)
+            self.file_name, self.driver = output.prepare_collection(
+                name=self.name, extension=extension)
             self.out_prepare()
         else:
             self.driver = "dummy"

@@ -74,12 +74,13 @@ class Output(object):
                 f_out.write(
                     yaml_dump(info, default_flow_style=False, trim_params_info=True))
 
-    def prepare_collection(self, name=None):
+    def prepare_collection(self, name=None, extension=None):
         if not name:
             name = (datetime.datetime.now().isoformat()
                     .replace("T","_").replace(":","-").replace(".","-"))
         file_name = os.path.join(
-            self.folder, self.prefix+("_" if self.prefix else "")+name+"."+self.ext)
+            self.folder,
+            self.prefix+("_" if self.prefix else "")+name+"."+(extension or self.ext))
         return file_name, self.kind
 
 
