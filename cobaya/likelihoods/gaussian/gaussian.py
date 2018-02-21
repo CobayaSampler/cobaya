@@ -63,11 +63,14 @@ from __future__ import division
 # Global
 import numpy as np
 from scipy.stats import multivariate_normal, uniform, random_correlation
-from cobaya.mpi import get_mpi_size
+from mpi4py import MPI
+from collections import OrderedDict as odict
 
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import HandledException
+from cobaya.mpi import get_mpi_size
+from cobaya.conventions import _likelihood, _params
 
 # Logger
 import logging
@@ -200,3 +203,41 @@ def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1):
     if n_modes == 1:
         cov = cov[0]
     return cov
+
+
+def info_random_gaussian(ranges, n_modes=1, prefix="", O_std_min=1e-2, O_std_max=1):
+    """
+    Wrapper around ``random_mean`` and ``random_cov`` to generate the likelihood and
+    parameter info for a random Gaussian.
+
+    MPI-aware: only draws the random stuff once!
+    """
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    if rank == 0:
+        cov = random_cov(ranges, n_modes=n_modes,
+                         O_std_min=O_std_min, O_std_max=O_std_max)
+        # Make sure it stays away from the edges
+        std = np.sqrt(cov.diagonal())
+        factor = 3
+        ranges_mean = [[l[0]+factor*s,l[1]-+factor*s] for l,s in zip(ranges,std)]
+        # If this implies min>max, take the centre
+        ranges_mean = [(l if l[0] <= l[1] else 2*[(l[0]+l[1])/2]) for l in ranges_mean]
+        mean = random_mean(ranges_mean, n_modes=n_modes)
+    elif rank != 0:
+        mean, cov = None, None
+    mean = comm.bcast(mean, root=0)
+    cov  = comm.bcast(cov, root=0)
+    dimension = len(ranges)
+    info = {_likelihood: {"gaussian": {
+        "mean": mean, "cov": cov, "prefix": prefix}}}
+    info[_params] = odict(
+        # sampled
+        [[prefix+"%d"%i,
+          {"prior":{"min": ranges[i][0], "max": ranges[i][1]},
+           "latex": r"\alpha_{%i}"%i}]
+         for i in range(dimension)] +
+        # derived
+        [[prefix+"derived_%d"%i,
+          {"min": -3,"max": 3,"latex": r"\beta_{%i}"%i}] for i in range(dimension*n_modes)])
+    return info

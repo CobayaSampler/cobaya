@@ -8,7 +8,7 @@ from collections import OrderedDict as odict
 from mpi4py import MPI
 
 from cobaya.conventions import _likelihood, _params, _sampler
-from cobaya.likelihoods.gaussian import random_mean, random_cov
+from cobaya.likelihoods.gaussian import random_cov, info_random_gaussian
 
 # Kullback-Leibler divergence between 2 gaussians
 def KL_norm(m1=None, S1=np.array([]), m2=None, S2=np.array([])):
@@ -26,39 +26,6 @@ def KL_norm(m1=None, S1=np.array([]), m2=None, S2=np.array([])):
     return KL
 
 
-# Prepares the likelihood and prior parts of the info
-def info_gaussian(ranges, n_modes=1, prefix=""):
-    """MPI-aware: only draws the random stuff once!"""
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    if rank == 0:
-        cov = random_cov(ranges, n_modes=n_modes, O_std_min=0.05, O_std_max=0.1)
-        # Make sure it stays away from the edges
-        std = np.sqrt(cov.diagonal())
-        factor = 3
-        ranges_mean = [[l[0]+factor*s,l[1]-+factor*s] for l,s in zip(ranges,std)]
-        # If this implies min>max, take the centre
-        ranges_mean = [(l if l[0] <= l[1] else 2*[(l[0]+l[1])/2]) for l in ranges_mean]
-        mean = random_mean(ranges_mean, n_modes=n_modes)
-    elif rank != 0:
-        mean, cov = None, None
-    mean = comm.bcast(mean, root=0)
-    cov  = comm.bcast(cov, root=0)
-    dimension = len(ranges)
-    info = {_likelihood: {"gaussian": {
-        "mean": mean, "cov": cov, "prefix": prefix}}}
-    info[_params] = odict(
-        # sampled
-        [[prefix+"%d"%i,
-          {"prior":{"min": ranges[i][0], "max": ranges[i][1]},
-           "latex": r"\alpha_{%i}"%i}]
-         for i in range(dimension)] +
-        # derived
-        [[prefix+"derived_%d"%i,
-          {"min": -3,"max": 3,"latex": r"\beta_{%i}"%i}] for i in range(dimension*n_modes)])
-    return info
-
-
 @pytest.mark.mpi
 def test_gaussian_mcmc():
     # parameters
@@ -69,7 +36,8 @@ def test_gaussian_mcmc():
     rank = comm.Get_rank()
     # Info of likelihood and prior
     ranges = np.array([[0,1] for i in range(dimension)])
-    info = info_gaussian(ranges=ranges, n_modes=n_modes, prefix="a_")
+    info = info_random_gaussian(ranges=ranges, n_modes=n_modes, prefix="a_",
+                                O_std_min=0.05, O_std_max=0.1)
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     if rank == 0:
