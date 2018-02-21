@@ -38,8 +38,6 @@ def test_gaussian_mcmc():
     ranges = np.array([[0,1] for i in range(dimension)])
     info = info_random_gaussian(ranges=ranges, n_modes=n_modes, prefix="a_",
                                 O_std_min=0.05, O_std_max=0.1)
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
     if rank == 0:
         print("Original mean of the gaussian mode:")
         print(info["likelihood"]["gaussian"]["mean"])
