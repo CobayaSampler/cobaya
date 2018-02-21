@@ -266,3 +266,7 @@ class OnePoint(Collection):
     # Restore original __repr__ (here, there is only 1 sample)
     def __repr__(self):
         return self.data.__repr__()
+
+    # Dumper changed: since we have made self._n=0, it would print nothing
+    def update__txt(self):
+        self.dump_slice__txt(0, 1)
