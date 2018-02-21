@@ -300,6 +300,7 @@ class LikelihoodCollection(object):
         To compute the derived parameters, it takes an optional keyword `derived` as an
         empty list, which is then populated with the derived parameters values.
         """
+        log.debug("Got input parameters: %r", input_params)
         # Prepare the likelihood-defined derived parameters (only computed if requested)
         # Notice that they are in general different from the sampler-defined ones.
         derived_dict = {}
@@ -321,6 +322,8 @@ class LikelihoodCollection(object):
                 this_derived_dict = {}
             logps += [self[lik].logp(derived=this_derived_dict, **this_params_dict)]
             derived_dict.update(this_derived_dict)
+            log.debug("'%s' evaluated to logp=%g with params %r, and got derived %r",
+                      lik, logps[-1], this_params_dict, this_derived_dict)
         # Turn the derived params dict into a list and return
         if derived is not None:
             derived += [derived_dict[p] for p in self.output_params]
