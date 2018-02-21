@@ -129,7 +129,7 @@ class Sampler(object):
         self.n_eval = 0
         self.initialise()
 
-    def logposterior(self, params_values, ignore_prior=False):
+    def logposterior(self, params_values, ignore_prior=False, make_finite=False):
         """
         Returns (logposterior,logprior,[loglikelihoods]) for an array of parameter values.
         If passes an empty list through ``derived``,
@@ -150,6 +150,8 @@ class Sampler(object):
         else:
             derived_sampler = []
         self.n_eval += 1
+        if make_finite:
+            logpost = np.nan_to_num(logpost)
         return logpost, logprior, logliks, derived_sampler
 
     # Python magic for the "with" statement
