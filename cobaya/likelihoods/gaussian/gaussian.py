@@ -158,7 +158,7 @@ class gaussian(Likelihood):
 
 def random_mean(ranges, n_modes=1):
     """
-    Returns a uniformly sampled point (as an array) within a list of limits `ranges`.
+    Returns a uniformly sampled point (as an array) within a list of bounds `ranges`.
 
     The output of this function can be used directly as the value of the option `mean` of
     the :class:`likelihoods.gaussian`.

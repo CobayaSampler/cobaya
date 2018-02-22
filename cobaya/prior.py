@@ -198,7 +198,7 @@ decir que no estan normalized (link a seccion (TODO) sobre normalizar posteriors
 
 TEST EXAMPLES!!!
 
-YOU MUST STLL SPECIFY THE LIMITS!!!
+YOU MUST STLL SPECIFY THE BOUNDS!!!
 
 
 .. image:: img_prior_ring.svg
@@ -211,7 +211,7 @@ YOU MUST STLL SPECIFY THE LIMITS!!!
 ..  - inherit from defaults (no duplicated names!!!)
 ..  - actualizar ejemplos de scripted i/o
 ..  - para reproducibilidad con salida de texto, recomendar import_module
-..             limits (prior's min and max) are inherited (-inf,inf) as default.
+..             bounds (prior's min and max) are inherited (-inf,inf) as default.
 ..  - usamos eval, pero no nos llevemos las manos a la cabeza, que tb importamos modulos de usuario, q es igual.
 ..  - QUE LO HEREDA DE DEFAULTS!!!!! (documentar en la parte de likelihood)
 
@@ -290,7 +290,7 @@ class Prior(object):
         self.name = []
         self.pdf = []
         self.ref_pdf = []
-        self.lims = np.zeros((len(sampled_params_info), 2))
+        self._bounds = np.zeros((len(sampled_params_info), 2))
         for i, p in enumerate(sampled_params_info):
             self.name += [p]
             prior = sampled_params_info[p].get(_prior)
@@ -304,11 +304,11 @@ class Prior(object):
                 self.ref_pdf += [get_scipy_1d_pdf({p: ref})]
             else:
                 self.ref_pdf += [np.nan]
-            self.lims[i] = [-np.inf, np.inf]
+            self._bounds[i] = [-np.inf, np.inf]
             try:
-                self.lims[i] = self.pdf[-1].interval(1)
+                self._bounds[i] = self.pdf[-1].interval(1)
             except AttributeError:
-                log.error("No limits defined for parameter '%s' "
+                log.error("No bounds defined for parameter '%s' "
                           "(maybe not a scipy 1d pdf).", p)
                 raise HandledException
         # Process the external prior(s):
@@ -338,33 +338,33 @@ class Prior(object):
         """
         return len(self.pdf)
 
-    def limits(self, confidence_for_unbounded=1):
+    def bounds(self, confidence_for_unbounded=1):
         """
         For unbounded parameters, if ``confidence_for_unbounded < 1`` given, the
         returned interval contains the requested confidence level interval with equal
         areas around the median.
 
         Returns:
-           An array of limits ``[min,max]`` for the parameters, in the order given by the
+           An array of bounds ``[min,max]`` for the parameters, in the order given by the
            input.
 
-        NB: If an external prior has been defined, the limits given in the 'prior'
+        NB: If an external prior has been defined, the bounds given in the 'prior'
         sub-block of that particular parameter's info may not be faithful to the
         externally defined prior.
         """
         if confidence_for_unbounded >= 1:
-            return self.lims
+            return self._bounds
         try:
-            lims = deepcopy(self.lims)
-            infs = list(set(np.argwhere(abs(lims) == np.inf).T[0]))
+            bounds = deepcopy(self._bounds)
+            infs = list(set(np.argwhere(np.isinf(bounds)).T[0]))
             if infs:
-                log.warn("There are unbounded parameters. Prior limits are given at %s "
+                log.warn("There are unbounded parameters. Prior bounds are given at %s "
                          "confidence level. Beware of likelihood modes at the edge of "
                          "the prior", confidence_for_unbounded)
-                lims[infs] = [self.pdf[i].interval(confidence_for_unbounded) for i in infs]
-            return lims
+                bounds[infs] = [self.pdf[i].interval(confidence_for_unbounded) for i in infs]
+            return bounds
         except AttributeError:
-            log.error("Some parameter names (positions %r) have no limits defined.", infs)
+            log.error("Some parameter names (positions %r) have no bounds defined.", infs)
             raise HandledException
 
     def sample(self, n=1, external_error=True):

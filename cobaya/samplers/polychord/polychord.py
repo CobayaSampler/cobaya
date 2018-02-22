@@ -231,17 +231,17 @@ class polychord(Sampler):
 #            log.warning("Some speed blocks are not contiguous: PolyChord cannot deal "
 #                        "with the speed hierarchy. Not exploting it.")
         # prior conversion from the hypercube
-        limits = self.prior.limits(confidence_for_unbounded=self.confidence_for_unbounded)
+        bounds = self.prior.bounds(confidence_for_unbounded=self.confidence_for_unbounded)
         # Check if priors are bounded (nan's to inf)
-        inf = np.where(np.isfinite(limits) is False)
+        inf = np.where(np.isinf(bounds))
         if len(inf[0]):
             params_names = self.prior.names()
             params = [params_names[i] for i in sorted(list(set(inf[0])))]
             log.error("PolyChord needs bounded priors, but the parameter(s) '"
                       "', '".join(params)+"' is(are) unbounded.")
             raise HandledException
-        locs = limits[:,0]
-        scales = limits[:,1] - limits[:,0]
+        locs = bounds[:,0]
+        scales = bounds[:,1] - bounds[:,0]
         self.pc_args["prior"] = lambda x: (locs + np.array(x)*scales).tolist()
         # We will need the volume of the prior domain, since PolyChord divides by it
         self.logvolume = np.log(np.prod(scales))

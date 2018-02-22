@@ -196,8 +196,9 @@ def merge_params_info(params_info, defaults=None):
         if (default_label and
                 (is_sampled_param(info_updated[p]) or is_derived_param(info_updated[p]))):
             info_updated[p][_p_label] = info_updated[p].get(_p_label) or default_label
-        limits = ["min", "max"]
-        default_limits = odict([[lim,getter(defaults_merged[p], lim)] for lim in limits])
-        if default_limits.values() != [None, None] and is_derived_param(info_updated[p]):
-            info_updated[p].update(default_limits)
+        bounds = ["min", "max"]
+        default_bounds = odict(
+            [[bound, getter(defaults_merged[p], bound)] for bound in bounds])
+        if default_bounds.values() != [None, None] and is_derived_param(info_updated[p]):
+            info_updated[p].update(default_bounds)
     return info_updated

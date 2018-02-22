@@ -596,19 +596,19 @@ class mcmc(Sampler):
         learns a new covariance matrix for the proposal distribution from the covariance
         of the last samples.
         """
-        # Compute and gather means, covs and cl limits of last half of chains
+        # Compute and gather means, covs and CL intervals of last half of chains
         mean = self.collection.mean(first=int(self.n()/2))
         cov = self.collection.cov(first=int(self.n()/2))
         # No logging of warnings temporarily, so getdist won't complain innecessarily
         logging.disable(logging.WARNING)
         mcsamples = self.collection.sampled_to_getdist_mcsamples(first=int(self.n()/2))
         logging.disable(logging.NOTSET)
-        limit = np.array(
-            [[mcsamples.confidence(i, limfrac=self.Rminus1_cl_level/2., upper=lim)
-              for i in range(self.prior.d())] for lim in [False, True]]).T
-        Ns, means, covs, limits = map(
+        bound = np.array(
+            [[mcsamples.confidence(i, limfrac=self.Rminus1_cl_level/2., upper=which)
+              for i in range(self.prior.d())] for which in [False, True]]).T
+        Ns, means, covs, bounds = map(
             lambda x: np.array((get_mpi_comm().gather(x) if get_mpi() else [x])),
-            [self.n(), mean, cov, limit])
+            [self.n(), mean, cov, bound])
         # Compute convergence diagnostics
         if get_mpi():
             if get_mpi_rank() == 0:
@@ -640,12 +640,12 @@ class mcmc(Sampler):
 #                    "Check the condition number of the diagonalised matrix.")
                 # Have we converged in means? (criterion must be fulfilled twice in a row)
                 if max(Rminus1, getattr(self, "Rminus1_last", np.inf)) < self.Rminus1_stop:
-                    # Check the convergence of the limits of the confidence intervals
-                    # Same as R-1, but with the rms deviation from the mean limit
+                    # Check the convergence of the bounds of the confidence intervals
+                    # Same as R-1, but with the rms deviation from the mean bound
                     # in units of the mean standard deviation of the chains
-                    Rminus1_cl = np.std(limits, axis=0).T/np.sqrt(np.diag(mean_of_covs))
-                    log.debug("normalized std's of limits = %r", Rminus1_cl)
-                    log.info("Convergence of limits: R-1 = %f after %d samples",
+                    Rminus1_cl = np.std(bounds, axis=0).T/np.sqrt(np.diag(mean_of_covs))
+                    log.debug("normalized std's of bounds = %r", Rminus1_cl)
+                    log.info("Convergence of bounds: R-1 = %f after %d samples",
                              np.max(Rminus1_cl), self.n())
                     if np.max(Rminus1_cl) < self.Rminus1_cl_stop:
                         self.converged = True
