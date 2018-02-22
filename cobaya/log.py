@@ -46,7 +46,7 @@ def exception_handler(exception_type, value, trace_back):
         "\nwhich you can send it to a file setting '%s:[some_file_name]'.",
         _debug, _debug_file)
 
-    
+
 def logger_setup(debug=None, debug_file=None):
     """
     Configuring the root logger, for its childs to inherit level, format and handlers.
