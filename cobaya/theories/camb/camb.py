@@ -275,8 +275,7 @@ class camb(Theory):
         try:
             return self.camb.set_params(**args)
         except CAMBParamRangeError:
-            print("CAMBParamRangeError!!! It should fail here!")
-            return None
+            return False
         except:
             log.error("Error setting CAMB parameters -- see CAMB's error trace below.\n"
                       "The parameters were %r", args)
@@ -299,6 +298,9 @@ class camb(Theory):
             intermediates = {
                 "CAMBparams": {"result": self.set(params_values_dict, i_state)},
                 "CAMBdata": {"method": "get_results", "result": None}}
+            # Failed to set parameters (e.g. out of computationally feasible range): lik=0
+            if not intermediates["CAMBparams"]["result"]:
+                return False
             # Compute the necessary products
             for product, collector in self.collectors.items():
                 parent, method = collector.method.split(".")
