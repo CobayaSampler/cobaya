@@ -45,7 +45,7 @@ class minimize(Sampler):
             "fun": (lambda x: -self.logposterior(
                 x, ignore_prior=self.ignore_prior, make_finite=True)[0]),
             "x0": initial_point,
-            "bounds": self.prior.limits(),
+            "bounds": self.prior.bounds(confidence_for_unbounded=0.999),
             "tol": self.tol,
             "options": {
                 "maxiter": self.maxiter,
@@ -95,7 +95,7 @@ class minimize(Sampler):
                 extension=("likelihood" if self.ignore_prior else "posterior"))
             self.maximum.add(self.result.x, derived=derived, logpost=logpost,
                              logprior=logprior, logliks=logliks)
-            log.info("Parameter values at maximum: %r", self.maximum)
+            log.info("Parameter values at maximum:\n%r", self.maximum)
             self.maximum.out_update()
 
     def products(self):
