@@ -13,8 +13,8 @@ and Benjamin Audren.
 
 .. note::
 
-  An older, `MIT-licensed <https://opensource.org/licenses/MIT>`_ version of this module by
-  Julien Lesgourgues and Benjamin Audren can be found in the `source of
+  An older, `MIT-licensed <https://opensource.org/licenses/MIT>`_ version of this module
+  by Julien Lesgourgues and Benjamin Audren can be found in the `source of
   MontePython <https://github.com/baudren/montepython_public>`_.
 
 
@@ -243,7 +243,10 @@ class _planck_clik_prototype(Likelihood):
         # if derived != None:
         #     derived["whatever"] = [...]
         # Compute the likelihood
-        return self.clik(tot)[0]
+        loglik = self.clik(tot)[0]
+        if np.allclose(loglik, -1e30):
+            loglik = -np.inf
+        return loglik
 
     def close(self):
         del self.clik  # MANDATORY: forces deallocation of the Cython class
