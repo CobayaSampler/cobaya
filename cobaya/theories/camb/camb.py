@@ -230,6 +230,8 @@ class camb(Theory):
                     method="CAMBdata.get_cmb_power_spectra",
                     kwargs={"spectra": ["total"], "raw_cl": True})
                 self.derived_extra += ["TCMB"]
+                # Needed for Planck: 0.1 chi^2 precision
+                self.also["lens_potential_accuracy"] = 1
             elif k == "Pk_interpolator":
                 vars_pairs = v.pop("vars_pairs", None)
                 vars_pairs = vars_pairs or [["total", "total"]]
