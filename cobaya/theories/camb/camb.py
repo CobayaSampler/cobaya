@@ -248,7 +248,12 @@ class camb(Theory):
                     kwargs={"z": v["redshifts"]})
             elif k == "h_of_z":
                 self.collectors[k] = collector(
-                    method="CAMBdata.h_of_z",
+                    method={"/Mpc": "CAMBdata.h_of_z",
+                            "km/s/Mpc": "CAMBdata.hubble_parameter"}[v["units"]],
+                    kwargs={"z": v["redshifts"]})
+            elif k == "angular_diameter_distance":
+                self.collectors[k] = collector(
+                    method="CAMBdata.angular_diameter_distance",
                     kwargs={"z": v["redshifts"]})
             else:
                 # Extra derived parameters
@@ -404,11 +409,17 @@ class camb(Theory):
         prefix = "Pk_interpolator_"
         return {k[len(prefix):]:v for k,v in current_state.items() if k.startswith(prefix)}
 
-    def get_comoving_radial_distance(self):
-        return self.current_state()["comoving_radial_distance"]
+    def get_comoving_radial_distance(self, z):
+        return self.current_state()["comoving_radial_distance"][
+            np.where(self.collectors["comoving_radial_distance"].kwargs["z"]==z)]
 
-    def get_h_of_z(self):
-        return self.current_state()["h_of_z"]
+    def get_h_of_z(self, z):
+        return self.current_state()["h_of_z"][
+            np.where(self.collectors["h_of_z"].kwargs["z"]==z)]
+
+    def get_angular_diameter_distance(self, z):
+        return self.current_state()["angular_diameter_distance"][
+            np.where(self.collectors["angular_diameter_distance"].kwargs["z"]==z)]
 
 
 # Installation routines ##################################################################
