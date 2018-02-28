@@ -1,0 +1,10 @@
+# BAO-only consensus results, Alam et al. 2016
+# https://arxiv.org/abs/1607.03155
+
+likelihood:
+  sdss_dr12_consensus_bao:
+    path: null
+    measurements_file: sdss_DR12Consensus_bao.dat
+    cov_file: BAO_consensus_covtot_dM_Hz.txt
+    #stored values are actually scaled by r_fid, so include that here
+    rs_rescale: 6.766815537e-3  # = 1/147.78
