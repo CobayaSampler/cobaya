@@ -1,0 +1,15 @@
+# Riess et al (2016) value of H0 = 73.00 +- 1.75 km/s/Mpc
+# Riess et al: http://arxiv.org/abs/1604.01424
+
+likelihood:
+  hst_riess2016:
+    zeff: 0.04
+    # angconversion converts inverse of the angular diameter
+    # distance at z = zeff to H0 or the fiducial cosmology
+    # (omega_k = 0, omega_lambda = 0.7, w = -1).
+    # Likelihood is in terms of inverse of the angular
+    # diameter distance, so includes the tiny cosmological
+    # dependence of the measurement (primarily on w) correctly.
+    angconversion: 11425.8
+    H0: 73.0
+    H0_err: 1.75
