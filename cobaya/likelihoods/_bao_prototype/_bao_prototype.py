@@ -7,11 +7,9 @@ from __future__ import print_function
 # Global
 import os
 import numpy as np
-import scipy
-from scipy.interpolate import UnivariateSpline
+from scipy.stats import multivariate_normal
 import pandas as pd
 import logging
-import copy
 
 # Local
 from cobaya.likelihood import Likelihood
@@ -57,29 +55,40 @@ class _bao_prototype(Likelihood):
         # Covariance --> read and re-sort as self.data
         try:
             if hasattr(self, "cov_file"):
-                cov = np.loadtxt(os.path.join(data_file_path, self.cov_file))
-                self.invcov = np.linalg.inv(cov)
+                self.cov = np.loadtxt(os.path.join(data_file_path, self.cov_file))
             elif hasattr(self, "invcov_file"):
-                self.invcov = np.loadtxt(os.path.join(data_file_path, self.invcov_file))
+                invcov = np.loadtxt(os.path.join(data_file_path, self.invcov_file))
+                self.cov = np.linalg.inv(invcov)
             else:
                 raise NotImplementedError("Manual errors not implemented yet.")
-                # self.invcov = np.diag(1/ERROR_HERE**2)
+                # self.cov = np.diag(ERROR_HERE**2)
         except IOError:
             log.error("Couldn't find (inv)cov file '%s' in folder '%s'. "%(
                 getattr(self, "cov_file", getattr(self, "invcov_file", None)),
                 data_file_path) + "Check your paths.")
             raise HandledException
+        self.norm = multivariate_normal(mean=self.data["value"].values, cov=self.cov)
         # Functions to get the corresponding theoretical prediction
         self.theory_fun = lambda z, observable: ({
-            "DM_over_rs": (1+z)*self.theory.get_angular_diameter_distance(z)/self.rs(),
-            "Hz_rs": self.theory.get_h_of_z(z)*self.rs(),
-#            "DV_over_rs": "this%Calculator%BAO_D_v"(z)/self.rs(),
-#            "Hz_rs_103": "this%Calculator%Hofz_Hunit"(z)*self.rs()*1e-3,
-#            "rs_over_DV": self.rs()/"this%Calculator%BAO_D_v"(z),
-#            "Az": "this%Acoustic(CMB,z)",
-#            "DA_over_rs": "this%Calculator%AngularDiameterDistance"(z)/self.rs(),
-#            "F_AP": (1+z)*"this%Calculator%AngularDiameterDistance"(z)*"this%Calculator%Hofz"(z),
-#            "f_sigma8": "Theory%growth_z%Value"(z)
+            "DM_over_rs":
+                (1+z)*self.theory.get_angular_diameter_distance(z)/self.rs(),
+            "Hz_rs":
+                self.theory.get_h_of_z(z)*self.rs(),
+#            "DV_over_rs":
+#                "this%Calculator%BAO_D_v"(z)/self.rs(),
+#            "Hz_rs_103":
+#                self.theory.get_h_of_z(z)*self.rs()*1e-3,
+#            "rs_over_DV":
+#                self.rs()/"this%Calculator%BAO_D_v"(z),
+#            "Az":
+#                "this%Acoustic(CMB,z)",
+#            "DA_over_rs":
+#                self.theory.get_angular_diameter_distance(z)/self.rs(),
+#            "F_AP":
+#                ((1+z)*self.theory.get_angular_diameter_distance(z)*
+#                 self.theory.get_h_of_z(z)),
+#            "f_sigma8":
+#                "Theory%growth_z%Value"(z)
         }[observable])
         # Requisites
         zs = {obs:self.data.loc[self.data["observable"] == obs, "z"].values
@@ -94,7 +103,8 @@ class _bao_prototype(Likelihood):
             "DV_over_rs": {
                 "BAO_D_v(z)": None, "rdrag": None},
             "Hz_rs_103": {
-                "h_of_z": {"redshifts": zs.get("Hz_rs_103", None)}, "rdrag": None},
+                "h_of_z": {"redshifts": zs.get("Hz_rs_103", None), "units": "km/s/Mpc"},
+                "rdrag": None},
             "rs_over_DV": {
                 "BAO_D_v(z)": None},
             "Az": {
@@ -104,7 +114,7 @@ class _bao_prototype(Likelihood):
                 "rdrag": None},
             "F_AP": {
                 "angular_diameter_distance": {"redshifts": zs.get("F_AP", None)},
-                "h_of_z": {"redshifts": zs.get("F_AP", None)}},
+                "h_of_z": {"redshifts": zs.get("F_AP", None), "units": "km/s/Mpc"}},
             "f_sigma8": {
                 "growth_z%Value(z)"}}
         #    this%needs_powerspectra =  any(this%type_bao == f_sigma8)
@@ -123,7 +133,6 @@ class _bao_prototype(Likelihood):
         return self.theory.get_param("rdrag") * self.rs_rescale
 
     def logp(self, **params_values):
-        theory = np.array([self.theory_fun(z,obs)
-                           for z, obs in zip(self.data["z"], self.data["observable"])])
-        diff = theory.T[0] - self.data["value"].values
-        return - diff.dot(self.invcov).dot(diff)/2
+        theory = np.array([self.theory_fun(z,obs) for z, obs
+                           in zip(self.data["z"], self.data["observable"])]).T[0]
+        return self.norm.logpdf(theory)
