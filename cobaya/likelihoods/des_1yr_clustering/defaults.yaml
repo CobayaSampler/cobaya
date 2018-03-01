@@ -1,7 +1,7 @@
 # DES 1YR -- Clustering data
 
 likelihood:
-  des_1yr_shear:
+  des_1yr_clustering:
     # Path to the installation folder
     path: null
     # .dataset (or original .fits file) to read

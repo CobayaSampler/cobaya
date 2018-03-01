@@ -127,7 +127,7 @@ class _des_prototype(Likelihood):
                       self.data_file, data_file_path)
             raise HandledException
         self.initialize_postload()
-        
+
     def load_dataset(self, filename, dataset_params):
         from getdist import IniFile
         ini = IniFile(filename)
@@ -357,7 +357,7 @@ class _des_prototype(Likelihood):
                 "vars_pairs": ([["delta_tot","delta_tot"]] +
                                ([["weyl","weyl"]] if self.use_Weyl else []))},
             "comoving_radial_distance": {"redshifts": self.zs},
-            "h_of_z": {"redshifts": self.zs}})
+            "h_of_z": {"redshifts": self.zs, "units": "km/s/Mpc"}})
 
     def get_theory(self, PKdelta, PK, bin_bias, shear_calibration_parameters,
                    intrinsic_alignment_A, intrinsic_alignment_alpha,
@@ -365,8 +365,8 @@ class _des_prototype(Likelihood):
         h2 = (self.theory.get_param("H0") / 100) ** 2
         omm = ((self.theory.get_param("ombh2") + self.theory.get_param("omch2"))/h2 +
                self.theory.get_param("omegan"))
-        chis = self.theory.get_comoving_radial_distance()
-        Hs = self.theory.get_h_of_z()
+        chis = self.theory.get_comoving_radial_distance(self.zs)
+        Hs = self.theory.get_h_of_z(self.zs)
         dchis = np.hstack(
             ((chis[1] + chis[0]) / 2, (chis[2:] - chis[:-2]) / 2, (chis[-1] - chis[-2])))
         D_growth = PKdelta.P(self.zs, 0.001)
