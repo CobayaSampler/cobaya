@@ -1,5 +1,5 @@
 # Riess et al (2018) value of H0 = 73.45 +- 1.66 km/s/Mpc
-# Riess et al: https://arxiv.org/abs/1801.01120
+# https://arxiv.org/abs/1801.01120
 
 likelihood:
   hst_riess2018:

@@ -35,6 +35,7 @@ Table of contents
    installation_cosmo
    theory_camb
    theory_class
+   likelihood_hst
    likelihood_planck
    examples_planck
 

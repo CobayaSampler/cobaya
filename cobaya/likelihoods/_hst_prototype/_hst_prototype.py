@@ -1,8 +1,24 @@
 """
 .. module:: likelihoods._hst_prototype
 
-:Synopsis: Hubble measurement constraint, based on corresponding angular diamter distance value and error
-:Author: Antony Lewis
+:Synopsis: Hubble measurement constraint,
+           based on corresponding angular diamter distance value and error
+:Author: Antony Lewis (translated to Python by Jesus Torrado)
+
+.. |br| raw:: html
+
+   <br />
+
+This is a simple gaussian likelihood using the latest :math:`H_0` measurement from the
+Hubble Space telescope.
+
+.. note::
+
+   If you use this likelihood, please cite it as:
+   |br|
+   A. Riess et al, *"New Parallaxes of Galactic Cepheids from Spatially Scanning the
+   Hubble Space Telescope: Implications for the Hubble Constant"*
+   `(arXiv:1801.01120) <https://arxiv.org/abs/1801.01120>`_
 
 """
 
