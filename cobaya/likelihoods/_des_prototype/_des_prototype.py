@@ -274,7 +274,7 @@ class _des_prototype(Likelihood):
             self.zbin_w_sp += [UnivariateSpline(self.zmid,
                                                 hdulist['NZ_LENS'].data.field(b+3), s=0)]
         self.zmax = self.zmid[351]  # last non-zero
-        
+
     def initialize_postload(self):
         self.covmat = self.fullcov[np.ix_(self.used_indices, self.used_indices)]
         self.covinv = np.linalg.inv(self.covmat)
