@@ -245,16 +245,16 @@ class camb(Theory):
             elif k == "comoving_radial_distance":
                 self.collectors[k] = collector(
                     method="CAMBdata.comoving_radial_distance",
-                    kwargs={"z": v["redshifts"]})
+                    kwargs={"z": np.atleast_1d(v["redshifts"])})
             elif k == "h_of_z":
                 self.collectors[k] = collector(
                     method={"/Mpc": "CAMBdata.h_of_z",
                             "km/s/Mpc": "CAMBdata.hubble_parameter"}[v["units"]],
-                    kwargs={"z": v["redshifts"]})
+                    kwargs={"z": np.atleast_1d(v["redshifts"])})
             elif k == "angular_diameter_distance":
                 self.collectors[k] = collector(
                     method="CAMBdata.angular_diameter_distance",
-                    kwargs={"z": v["redshifts"]})
+                    kwargs={"z": np.atleast_1d(v["redshifts"])})
             else:
                 # Extra derived parameters
                 if v is None:
