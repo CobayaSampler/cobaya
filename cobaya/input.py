@@ -154,8 +154,8 @@ def get_full_info(info):
                 raise HandledException
             full_info[_prior][name] = prior
     # Add parameters info, after the necessary updates and checks
-    full_info[_params] = merge_params_info(input_info.get(_params, {}),
-                                           defaults=default_params_info)
+    defaults_merged = merge_default_params_info(default_params_info)
+    full_info[_params] = merge_params_info(defaults_merged, input_info.get(_params, {}))
     # Rest of the options
     for k,v in input_info.items():
         if k not in full_info:
@@ -163,11 +163,11 @@ def get_full_info(info):
     return full_info
 
 
-def merge_params_info(params_info, defaults=None):
+def merge_default_params_info(defaults):
     """
-    Merges input and default parameters info, after performing some consistency checks.
+    Merges default parameters info for all likelihoods.
+    Checks that multiple defined (=shared) parameters have equal info.
     """
-    # First, merge defaults. Impose multiple defined (=shared) parameters have equal info
     defaults_merged = odict()
     for lik, params in defaults.items():
         for p, info in params.items():
@@ -181,21 +181,37 @@ def merge_params_info(params_info, defaults=None):
                               p, lik, info, defaults_merged[p])
                     raise HandledException
             defaults_merged[p] = info
-    # Combine with the input parameter info (make sure the theory parameters come first)
-    info_updated = defaults_merged
-    info_updated.update(deepcopy(params_info))
-    # Inherit labels (for sampled and derived) and min/max (just for derived params)
+    return defaults_merged
+
+
+def merge_params_info(*params_info):
+    """
+    Merges parameter infos, starting from the first one
+    and updating with each additional one.
+    Labels (for sampled and derived) and min/max
+    (just for derived params) are inherited from defaults.
+    """
     getter = lambda info, key: getattr(info, "get", lambda x: None)(key)
-    for p in defaults_merged:
-        default_label = getter(defaults_merged[p], _p_label)
-        if (default_label and
-                (is_sampled_param(info_updated[p]) or is_derived_param(info_updated[p]))):
-            info_updated[p][_p_label] = info_updated[p].get(_p_label) or default_label
-        bounds = ["min", "max"]
-        default_bounds = odict(
-            [[bound, getter(defaults_merged[p], bound)] for bound in bounds])
-        if default_bounds.values() != [None, None] and is_derived_param(info_updated[p]):
-            if info_updated[p] is None:
-                info_updated[p] = {}
-            info_updated[p].update(default_bounds)
-    return info_updated
+    previous_info = deepcopy(params_info[0])
+    for new_info in params_info[1:]:
+        current_info = deepcopy(previous_info)
+        if not new_info:
+            continue
+        current_info.update(deepcopy(new_info))
+        # inherit labels and bounds
+        for p in previous_info:
+            default_label = getter(previous_info[p], _p_label)
+            if (default_label and (is_sampled_param(new_info[p]) or
+                                   is_derived_param(new_info[p]))):
+                current_info[p][_p_label] = new_info[p].get(_p_label) or default_label
+            bounds = ["min", "max"]
+            default_bounds = odict(
+                [[bound, getter(previous_info[p], bound)] for bound in bounds])
+            if (default_bounds.values() != [None, None] and
+                    is_derived_param(new_info.get(p))):
+                if current_info.get(p) is None:
+                    current_info[p] = {}
+                for bound, value in default_bounds.items():
+                    current_info[p][bound] = new_info.get(p, {}).get(bound) or value
+        previous_info = deepcopy(current_info)
+    return current_info
