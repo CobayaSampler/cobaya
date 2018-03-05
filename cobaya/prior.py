@@ -91,8 +91,6 @@ An example ``params`` block:
          min: 0
          latex: \mathcal{C}
 
-.. note:: ``theory`` is a reserved parameter name!
-
 
 
 Prior normalization for evidence computation
