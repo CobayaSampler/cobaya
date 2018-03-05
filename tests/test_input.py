@@ -8,6 +8,7 @@ import pytest
 
 # Local
 from cobaya.conventions import _defaults_file, _likelihood, _sampler, _prior
+from cobaya.conventions import _params, _p_label
 from cobaya.tools import get_folder
 from cobaya.yaml import yaml_load_file
 from cobaya.run import run
@@ -45,6 +46,20 @@ def test_prior_inherit_samegiven_differentdefinition():
     test_info[_prior] = {name: "this is not a prior"}
     with pytest.raises(HandledException):
         updated_info, products = run(test_info)
+
+
+def test_inherit_label_and_bounds():
+    test_info == deepcopy(test_info)
+    default_info_params = _get_default_info(test_info[_likelihood], _likelihood)[_params]
+    test_info[_params] = deepcopy(default_info_params)
+    test_info[_params]["a1"].pop(_p_label, None)
+    test_info[_params]["b1"].pop("min")
+    new_max = 2
+    test_info[_params]["b1"]["max"] = new_max
+    updated_info, products = run(test_info)
+    assert updated_info[_params]["a1"] == default_info_params["a1"]
+    assert updated_info[_params]["b1"]["min"] == default_info_params["b1"]["min"]
+    assert updated_info[_params]["b1"]["max"] == new_max
 
 
 # Aux definitions and functions

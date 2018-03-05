@@ -13,10 +13,16 @@ params:
     prior:
       min: 0
       max: 1
+    latex: \alpha_1
   a2:
     prior:
       min: 0
       max: 1
+    latex: \alpha_2
+  b1:
+    min: 0
+    max: 1
+    latex: \beta_1
       
 
 prior:
