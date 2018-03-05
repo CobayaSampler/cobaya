@@ -20,10 +20,7 @@ def body_of_test(data, theory):
     lik_name = "hst_"+data
     info[_likelihood] = {lik_name: None}
     fiducial_H0 = 70
-    info[_params] = {
-        _theory: {
-            "H0": fiducial_H0,
-        }}
+    info[_params] = {"H0": fiducial_H0}
     updated_info, products = run(info)
     mean = updated_info[_likelihood][lik_name]["H0"]
     std = updated_info[_likelihood][lik_name]["H0_err"]

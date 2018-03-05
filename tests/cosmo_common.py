@@ -59,7 +59,7 @@ def body_of_test(modules, x, theory):
     # Adjustments for Classy
     if theory == "classy":
         # Remove "cosmomc_theta" in favour of "H0" (remove it from derived then!)
-        info[_params][_theory].pop("cosmomc_theta")
+        info[_params].pop("cosmomc_theta")
         derived_bestfit_test.pop("H0")
         derived_values.pop("H0")
         # Don't test those that have not been implemented yet
@@ -73,12 +73,12 @@ def body_of_test(modules, x, theory):
         derived_bestfit_test["s8omegamp5"]["derived"] = "lambda sigma8, omegam: sigma8*omegam**0.5"
         derived_bestfit_test["s8omegamp25"]["derived"] = "lambda sigma8, omegam: sigma8*omegam**0.25"
         # More stuff that CLASS needs for the Planck model
-        info[_params][_theory].update(baseline_cosmology_classy_extra)
+        info[_params].update(baseline_cosmology_classy_extra)
     # Add derived
-    info[_params][_theory].update(derived_bestfit_test)
+    info[_params].update(derived_bestfit_test)
     print("FOR NOW, POPPING THE BBN PARAMETERS!!!!!!!")
     for p in ("YHe", "Y_p", "DH"):
-        info[_params][_theory].pop(p, None)
+        info[_params].pop(p, None)
         derived_values.pop(p, None)
     updated_info, products = run(info)
     # print products["sample"]
@@ -108,74 +108,73 @@ def body_of_test(modules, x, theory):
 
 baseline_cosmology = r"""
 %s:
-  %s:
-    # dummy prior for ombh2 so that the sampler does not complain
-    ombh2:
-      prior:
-        min: 0.005
-        max: 0.1
-      ref:
-        dist: norm
-        loc: 0.0221
-        scale: 0.0001
-      proposal: 0.0001
-      latex: \Omega_\mathrm{b} h^2
-    omch2:
-      prior:
-        min: 0.001
-        max: 0.99
-      ref:
-        dist: norm
-        loc: 0.12
-        scale: 0.001
-      proposal: 0.0005
-      latex: \Omega_\mathrm{c} h^2
-    # If using CLASS, rename to "100*theta_s"!!!
-    cosmomc_theta: "lambda cosmomc_theta_100: 1.e-2*cosmomc_theta_100"
-    cosmomc_theta_100:
-      prior:
-        min: 0.5
-        max: 10
-      ref:
-        dist: norm
-        loc: 1.0411
-        scale: 0.0004
-      proposal: 0.0002
-      latex: 100\theta_\mathrm{MC}
-      drop:
-    tau:
-      prior:
-        min: 0.01
-        max: 0.8
-      ref:
-        dist: norm
-        loc: 0.09
-        scale: 0.01
-      proposal: 0.005
-      latex: \tau_\mathrm{reio}
-    logAs1e10:
-      prior:
-        min: 2
-        max: 4
-      ref:
-        dist: norm
-        loc:   3.1
-        scale: 0.001
-      proposal: 0.001
-      latex: \log(10^{10} A_s)
-      drop:
-    As: "lambda logAs1e10: 1e-10*np.exp(logAs1e10)"
-    ns:
-      prior:
-        min: 0.8
-        max: 1.2
-      ref:
-        dist: norm
-        loc: 0.96
-        scale: 0.004
-      proposal: 0.002
-      latex: n_\mathrm{s}
-"""%(_params, _theory)
+  # dummy prior for ombh2 so that the sampler does not complain
+  ombh2:
+    prior:
+      min: 0.005
+      max: 0.1
+    ref:
+      dist: norm
+      loc: 0.0221
+      scale: 0.0001
+    proposal: 0.0001
+    latex: \Omega_\mathrm{b} h^2
+  omch2:
+    prior:
+      min: 0.001
+      max: 0.99
+    ref:
+      dist: norm
+      loc: 0.12
+      scale: 0.001
+    proposal: 0.0005
+    latex: \Omega_\mathrm{c} h^2
+  # If using CLASS, rename to "100*theta_s"!!!
+  cosmomc_theta: "lambda cosmomc_theta_100: 1.e-2*cosmomc_theta_100"
+  cosmomc_theta_100:
+    prior:
+      min: 0.5
+      max: 10
+    ref:
+      dist: norm
+      loc: 1.0411
+      scale: 0.0004
+    proposal: 0.0002
+    latex: 100\theta_\mathrm{MC}
+    drop:
+  tau:
+    prior:
+      min: 0.01
+      max: 0.8
+    ref:
+      dist: norm
+      loc: 0.09
+      scale: 0.01
+    proposal: 0.005
+    latex: \tau_\mathrm{reio}
+  logAs1e10:
+    prior:
+      min: 2
+      max: 4
+    ref:
+      dist: norm
+      loc:   3.1
+      scale: 0.001
+    proposal: 0.001
+    latex: \log(10^{10} A_s)
+    drop:
+  As: "lambda logAs1e10: 1e-10*np.exp(logAs1e10)"
+  ns:
+    prior:
+      min: 0.8
+      max: 1.2
+    ref:
+      dist: norm
+      loc: 0.96
+      scale: 0.004
+    proposal: 0.002
+    latex: n_\mathrm{s}
+"""%(_params)
 
 baseline_cosmology_classy_extra = {"N_ur": 2.0328, "N_ncdm": 1,
                                    "m_ncdm": 0.06, "T_ncdm": 0.71611}
@@ -229,22 +228,21 @@ chi2_lowl_highTT = {"planck_2015_lowl": 15.39,
 
 params_lowl_highTT = """
 %s:
-  %s:
-    # Sampled
-    # dummy prior for ombh2 so that the sampler does not complain
-    ombh2:
-      prior:
-        min: 0.005
-        max: 0.1
-      ref: 0.02249139
-    omch2: 0.1174684
-    # only one of the next two is finally used!
-    H0: 68.43994
-    cosmomc_theta: 0.01041189
-    tau: 0.1249913
-    As: 2.401687e-9
-    ns: 0.9741693
-    # Derived
+  # Sampled
+  # dummy prior for ombh2 so that the sampler does not complain
+  ombh2:
+    prior:
+      min: 0.005
+      max: 0.1
+    ref: 0.02249139
+  omch2: 0.1174684
+  # only one of the next two is finally used!
+  H0: 68.43994
+  cosmomc_theta: 0.01041189
+  tau: 0.1249913
+  As: 2.401687e-9
+  ns: 0.9741693
+  # Derived
   # Planck likelihood
   A_planck: 1.00027
   A_cib_217: 61.1
@@ -271,7 +269,7 @@ params_lowl_highTT = """
   gal545_A_217:     82.9
   calib_100T: 0.99796
   calib_217T: 0.99555
-"""%(_params, _theory)
+"""%(_params)
 
 derived_lowl_highTT = {
     # param: [best_fit, sigma]
@@ -321,22 +319,21 @@ chi2_lowTEB_highTTTEEE = {"planck_2015_lowTEB": 10496.93,
 
 params_lowTEB_highTTTEEE = """
 %s:
-  %s:
-    # Sampled
-    # dummy prior for ombh2 so that the sampler does not complain
-    ombh2:
-      prior:
-        min: 0.005
-        max: 0.1
-      ref: 0.02225203
-    omch2: 0.1198657
-    # only one of the next two is finally used!
-    H0: 67.25
-    cosmomc_theta: 0.01040778
-    As: 2.204051e-9
-    ns: 0.9647522
-    tau: 0.07888604
-    # Derived
+  # Sampled
+  # dummy prior for ombh2 so that the sampler does not complain
+  ombh2:
+    prior:
+      min: 0.005
+      max: 0.1
+    ref: 0.02225203
+  omch2: 0.1198657
+  # only one of the next two is finally used!
+  H0: 67.25
+  cosmomc_theta: 0.01040778
+  As: 2.204051e-9
+  ns: 0.9647522
+  tau: 0.07888604
+  # Derived
   # Planck likelihood
   A_planck: 1.00029
   A_cib_217: 66.4
@@ -375,7 +372,7 @@ params_lowTEB_highTTTEEE = """
   galf_TE_A_217: 1.667
   calib_100T: 0.99818
   calib_217T: 0.99598
-"""%(_params, _theory)
+"""%(_params)
 
 derived_lowTEB_highTTTEEE = {
     # param: [best_fit, sigma]

@@ -25,9 +25,6 @@ class _bao_prototype(Likelihood):
 
     def initialise(self):
         self.name = self.__class__.__name__
-        if self.theory.__class__ == "classy":
-            log.error("BAO likelihood not yet compatible with CLASS (help appreciated!)")
-            raise HandledException
         # If no path specified, use the modules path
         data_file_path = (self.path or
                           os.path.join(get_path_to_installation(), "data/sdss_dr12"))
@@ -68,6 +65,11 @@ class _bao_prototype(Likelihood):
                 data_file_path) + "Check your paths.")
             raise HandledException
         self.norm = multivariate_normal(mean=self.data["value"].values, cov=self.cov)
+
+    def add_theory(self):
+        if self.theory.__class__ == "classy":
+            log.error("BAO likelihood not yet compatible with CLASS (help appreciated!)")
+            raise HandledException
         # Functions to get the corresponding theoretical prediction
         self.theory_fun = lambda z, observable: ({
             "DM_over_rs":

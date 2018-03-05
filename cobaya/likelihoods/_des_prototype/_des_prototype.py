@@ -101,9 +101,6 @@ def get_def_cuts():
 class _des_prototype(Likelihood):
     def initialise(self):
         self.name = self.__class__.__name__
-        if self.theory.__class__ == "classy":
-            log.error("DES likelihood not yet compatible with CLASS (help appreciated!)")
-            raise HandledException
         self.l_max = self.l_max or int(50000 * self.acc)
         # If no path specified, use the modules path
         data_file_path = (self.path or
@@ -345,6 +342,11 @@ class _des_prototype(Likelihood):
         # Interpolator z sampling
         assert self.zmax <= 5, "z max too large!"
         self.zs_interp = np.linspace(0, self.zmax, 100)
+
+    def add_theory(self):
+        if self.theory.__class__ == "classy":
+            log.error("DES likelihood not yet compatible with CLASS (help appreciated!)")
+            raise HandledException
         # Requisites for the theory code
         self.theory.needs({
             "l_max": self.l_max,

@@ -182,13 +182,8 @@ def merge_params_info(params_info, defaults=None):
                     raise HandledException
             defaults_merged[p] = info
     # Combine with the input parameter info (make sure the theory parameters come first)
-    params_info_copy = deepcopy(params_info)
-    theory_params = params_info_copy.pop(_theory, None)
-    info_updated = odict()
-    if theory_params:
-        info_updated.update({_theory: theory_params})
-    info_updated.update(defaults_merged)
-    info_updated.update(params_info)
+    info_updated = defaults_merged
+    info_updated.update(deepcopy(params_info))
     # Inherit labels (for sampled and derived) and min/max (just for derived params)
     getter = lambda info, key: getattr(info, "get", lambda x: None)(key)
     for p in defaults_merged:

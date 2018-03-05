@@ -146,11 +146,6 @@ class _planck_clik_prototype(Likelihood):
         if self.lensing:
             raise NotImplementedError("Lensing lik not implemented!!!")
             # For lensing, the order would be: **phiphi TT EE BB TE TB EB**
-        requested_i = [c == "1" for c in self.clik.get_has_cl()]
-        requested_cls = [
-            cl for cl,i in zip(["TT","EE","BB","TE","TB","EB"], requested_i) if i]
-        # State requisites to the theory code
-        self.theory.needs({"Cl": requested_cls, "l_max": self.l_max})
         self.expected_params = list(self.clik.extra_parameter_names)
         # line added to deal with a bug in planck likelihood release:
         # A_planck called A_Planck in plik_lite
@@ -162,6 +157,13 @@ class _planck_clik_prototype(Likelihood):
         # Check that the parameters are the right ones
         assert set(self.input_params.keys()) == set(self.expected_params), (
             "Likelihoods parameters do not coincide with the ones clik understands.")
+
+    def add_theory(self):
+        # State requisites to the theory code
+        requested_i = [c == "1" for c in self.clik.get_has_cl()]
+        requested_cls = [
+            cl for cl,i in zip(["TT","EE","BB","TE","TB","EB"], requested_i) if i]
+        self.theory.needs({"Cl": requested_cls, "l_max": self.l_max})
 
     def logp(self, **params_values):
         # get Cl's from the theory code

@@ -1,7 +1,7 @@
 from __future__ import print_function
 import numpy as np
 
-from cobaya.conventions import _path_install, _theory, _sampler, _likelihood, _params
+from cobaya.conventions import _path_install, _sampler, _likelihood, _params, _theory
 from cobaya.run import run
 from cosmo_common import baseline_cosmology_classy_extra
 
@@ -21,15 +21,15 @@ def body_of_test(modules, theory):
             _sampler: {"evaluate": None}}
     info[_likelihood] = {"bicep_keck_2015": None}
     info[_params] = {
-        _theory: {
-            "ombh2": 0.2224017E-01,
-            "omch2": 0.1192851E+00,
-            "H0": 67.30713,
-            # "cosmomc_theta": 0.1040761E-1,
-            "tau": 0.7602569E-01,
-            "As": 1e-10*np.exp(0.3081122E+01),
-            "ns": 0.9633217E+00,
-        },
+        # Theory
+        "ombh2": 0.2224017E-01,
+        "omch2": 0.1192851E+00,
+        "H0": 67.30713,
+        # "cosmomc_theta": 0.1040761E-1,
+        "tau": 0.7602569E-01,
+        "As": 1e-10*np.exp(0.3081122E+01),
+        "ns": 0.9633217E+00,
+        # Experimental
         'BBdust': 3,
         'BBsync': 1,
         'BBalphadust': -0.42,
@@ -43,7 +43,7 @@ def body_of_test(modules, theory):
     reference_value = 650.872548
     abs_tolerance = 0.1
     if theory == "classy":
-        info[_params][_theory].update(baseline_cosmology_classy_extra)
+        info[_params].update(baseline_cosmology_classy_extra)
         abs_tolerance += 2
         print("WE SHOULD NOT HAVE TO LOWER THE TOLERANCE THAT MUCH!!!")
     updated_info, products = run(info)

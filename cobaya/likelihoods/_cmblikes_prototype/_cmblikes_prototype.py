@@ -68,6 +68,8 @@ class _cmblikes_prototype(Likelihood):
                       "cannot find the file '%s'.", self.name, self.dataset_file_path)
             raise HandledException
         self.loadDataset(self.dataset_file_path, self.dataset_params)
+
+    def add_theory(self):
         # State requisites to the theory code
         requested_cls = [self.field_names[i] + self.field_names[j]
                          for i, j in zip(*np.where(self.cl_lmax != 0))]

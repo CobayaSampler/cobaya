@@ -128,7 +128,7 @@ class Likelihood(object):
     """Likelihood class prototype."""
 
     # Generic initialization -- do not touch
-    def __init__(self, info, parametrization, theory=None):
+    def __init__(self, info, parametrization):
         # Load info of the likelihood
         for k in info:
             setattr(self, k, info[k])
@@ -146,7 +146,6 @@ class Likelihood(object):
             [(p,p_info) for p,p_info in parametrization.output_params().items()
              if p in info[_params]])
         # Initialise
-        self.theory = theory
         self.initialise()
 
     # What you *must* implement to create your own likelihood:
@@ -154,6 +153,12 @@ class Likelihood(object):
     # Optional
     def initialise(self):
         """Initialises the specifics of this likelihood."""
+        pass
+
+    # Optional
+    def add_theory(self):
+        """Performs any necessary initialisation on the theory side,
+        e.g. requests observables"""
         pass
 
     # Mandatory
@@ -200,7 +205,6 @@ class Likelihood(object):
 class LikelihoodExternalFunction(Likelihood):
     def __init__(self, name, info, theory=None):
         self.name = name
-        self.theory = theory
         # Load info of the likelihood
         for k in info:
             setattr(self, k, info[k])
@@ -240,17 +244,6 @@ class LikelihoodCollection(object):
         # Store the input/output parameters
         self.input_params = parametrization.input_params()
         self.output_params = parametrization.output_params()
-        # *IF* there is a theory code, initialise it
-        if info_theory:
-            input_params_theory = self.input_params.fromkeys(
-                [k for k in self.input_params if k in parametrization.theory_params()])
-            output_params_theory = self.output_params.fromkeys(
-                [k for k in self.output_params if k in parametrization.theory_params()])
-            name, fields = list(info_theory.items())[0]
-            theory_class = get_class(name, kind=_theory)
-            self.theory = theory_class(input_params_theory, output_params_theory, fields)
-        else:
-            self.theory = None
         # Initialise individual Likelihoods
         self._likelihoods = odict()
         for name, info in info_likelihood.items():
@@ -260,20 +253,39 @@ class LikelihoodCollection(object):
                     name, info, theory=getattr(self, _theory, None))
             else:
                 lik_class = get_class(name)
-                self._likelihoods[name] = lik_class(
-                    info, parametrization, theory=self.theory)
+                self._likelihoods[name] = lik_class(info, parametrization)
         # Check that all are recognized
+        requested_not_known = {}
         for params in ("input_params", "output_params"):
             info = getattr(parametrization, params)()
             setattr(self, params, info)
             requested = set(info)
-            known = set(chain(getattr(self.theory, params, []),
-                              *[getattr(self[lik], params) for lik in self]))
-            r_not_k = requested.difference(known)
-            if r_not_k:
-                log.error("Some of the requested %s parameters were not recognized "
-                          "by any likelihood: %r.", params.split("_")[0], r_not_k)
-                raise HandledException
+            known = set(chain(*[getattr(self[lik], params) for lik in self]))
+            requested_not_known[params] = requested.difference(known)
+            if requested_not_known[params]:
+                if info_theory:
+                    log.debug("The following %s parameters are not recognised by any "
+                              "likelihood, and will be passed to the theory code: %r",
+                              params.split("_")[0], requested_not_known[params])
+                else:
+                    log.error("Some of the requested %s parameters were not recognized "
+                              "by any likelihood: %",
+                              params.split("_")[0], requested_not_known[params])
+                    raise HandledException
+        # *IF* there is a theory code, initialise it
+        if info_theory:
+            input_params_theory = self.input_params.fromkeys(
+                requested_not_known["input_params"])
+            output_params_theory = self.output_params.fromkeys(
+                requested_not_known["output_params"])
+            name, fields = list(info_theory.items())[0]
+            theory_class = get_class(name, kind=_theory)
+            self.theory = theory_class(input_params_theory, output_params_theory, fields)
+        else:
+            self.theory = None
+        for lik in self:
+            self[lik].theory = self.theory
+            self[lik].add_theory()
         # Store the input params and likelihods on which each sampled params depends
         self.sampled_input_dependence = parametrization.sampled_input_dependence()
         self.sampled_lik_dependence = odict(

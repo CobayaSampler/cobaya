@@ -68,7 +68,7 @@ from itertools import chain
 from ast import parse
 
 # Local
-from cobaya.conventions import _prior, _p_drop, _p_derived, _p_label, _theory
+from cobaya.conventions import _prior, _p_drop, _p_derived, _p_label
 from cobaya.tools import get_external_function, ensure_nolatex
 from cobaya.log import HandledException
 
@@ -119,13 +119,7 @@ class Parametrization(object):
         self._derived = odict()
         self._derived_funcs = dict()
         self._derived_args = dict()
-        self._theory_params = list(info_params.get(_theory,{}).keys())
-        self._theory_args = dict()
-        info_params_flat = odict(
-            [(p,info_params[_theory][p]) for p in self._theory_params])
-        info_params_flat.update(odict(
-            [(p,info_params[p]) for p in info_params if p != _theory]))
-        for p, info in info_params_flat.items():
+        for p, info in info_params.items():
             if is_fixed_param(info):
                 self._input[p] = info if isinstance(info, Number) else None
                 if self._input[p] is None:
@@ -171,15 +165,6 @@ class Parametrization(object):
             if p in args:
                 args.remove(p)
         self._output.update({p:None for p in args})
-        # if argument of a theory parameter, assume it's a theory parameter
-        args_theory = (
-            set(chain(
-                *[v for p,v in self._input_args.items() if p in self._theory_params]))
-            .union(chain(
-                *[v for p,v in self._derived_args.items()
-                  if p in self._theory_params])))
-        self._theory_params = self._theory_params + [p for p in args_theory
-                                                     if p not in self._theory_params]
         # Useful sets: directly-sampled input parameters and directly "output-ed" derived
         self._directly_sampled = [p for p in self._input if p in self._sampled]
         self._directly_output = [p for p in self._derived if p in self._output]
@@ -227,9 +212,6 @@ class Parametrization(object):
 
     def derived_params(self):
         return self._derived
-
-    def theory_params(self):
-        return self._theory_params
 
     def sampled_input_dependence(self):
         return self._sampled_input_dependence
