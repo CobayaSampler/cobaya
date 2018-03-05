@@ -195,5 +195,7 @@ def merge_params_info(params_info, defaults=None):
         default_bounds = odict(
             [[bound, getter(defaults_merged[p], bound)] for bound in bounds])
         if default_bounds.values() != [None, None] and is_derived_param(info_updated[p]):
+            if info_updated[p] is None:
+                info_updated[p] = {}
             info_updated[p].update(default_bounds)
     return info_updated
