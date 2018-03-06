@@ -184,16 +184,18 @@ def merge_default_params_info(defaults):
     return defaults_merged
 
 
-def merge_params_info(*params_info):
+def merge_params_info(*params_infos):
     """
     Merges parameter infos, starting from the first one
     and updating with each additional one.
     Labels (for sampled and derived) and min/max
-    (just for derived params) are inherited from defaults.
+    (just for derived params) are inherited from defaults
+    (but not if one of min/max is re-defined: in that case,
+    to avoid surprises, the other one is set to None=+/-inf)
     """
     getter = lambda info, key: getattr(info, "get", lambda x: None)(key)
-    previous_info = deepcopy(params_info[0])
-    for new_info in params_info[1:]:
+    previous_info = deepcopy(params_infos[0])
+    for new_info in params_infos[1:]:
         current_info = deepcopy(previous_info)
         if not new_info:
             continue
@@ -201,17 +203,22 @@ def merge_params_info(*params_info):
         # inherit labels and bounds
         for p in previous_info:
             default_label = getter(previous_info[p], _p_label)
-            if (default_label and (is_sampled_param(new_info[p]) or
-                                   is_derived_param(new_info[p]))):
-                current_info[p][_p_label] = new_info[p].get(_p_label) or default_label
+            if (default_label and (is_sampled_param(current_info[p]) or
+                                   is_derived_param(current_info[p]))):
+                current_info[p][_p_label] = (
+                    new_info.get(p, {}).get(_p_label) or default_label)
             bounds = ["min", "max"]
             default_bounds = odict(
                 [[bound, getter(previous_info[p], bound)] for bound in bounds])
             if (default_bounds.values() != [None, None] and
-                    is_derived_param(new_info.get(p))):
+                    is_derived_param(current_info.get(p))):
                 if current_info.get(p) is None:
                     current_info[p] = {}
-                for bound, value in default_bounds.items():
-                    current_info[p][bound] = new_info.get(p, {}).get(bound) or value
-        previous_info = deepcopy(current_info)
+                new_bounds = {bound:new_info.get(p, {}).get(bound) for bound in bounds}
+                if new_bounds.values() == [None, None]:
+                    for bound, value in default_bounds.items():
+                        current_info[p][bound] = value
+        previous_info = current_info
+    return current_info
+
     return current_info

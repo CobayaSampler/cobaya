@@ -53,13 +53,21 @@ def test_inherit_label_and_bounds():
     default_info_params = _get_default_info(test_info[_likelihood], _likelihood)[_params]
     test_info[_params] = deepcopy(default_info_params)
     test_info[_params]["a1"].pop(_p_label, None)
+    # First, change one limit (so no inheritance at all)
     test_info[_params]["b1"].pop("min")
     new_max = 2
     test_info[_params]["b1"]["max"] = new_max
     updated_info, products = run(test_info)
     assert updated_info[_params]["a1"] == default_info_params["a1"]
-    assert updated_info[_params]["b1"]["min"] == default_info_params["b1"]["min"]
+    assert updated_info[_params]["b1"].get("min") is None
     assert updated_info[_params]["b1"]["max"] == new_max
+    # Second, remove limits, so they are inherited
+    test_info[_params] = deepcopy(default_info_params)
+    test_info[_params]["b1"].pop("min")
+    test_info[_params]["b1"].pop("max")
+    updated_info, products = run(test_info)
+    assert updated_info[_params]["b1"]["min"] == default_info_params["b1"]["min"]
+    assert updated_info[_params]["b1"]["max"] == default_info_params["b1"]["max"]
 
 
 # Aux definitions and functions
