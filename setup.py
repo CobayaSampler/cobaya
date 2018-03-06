@@ -23,7 +23,7 @@ setup(
     url=__url__,
     author=__author__,
     license='LGPL',
-    zip_safe = False,
+    zip_safe=False,
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Console',
@@ -45,6 +45,8 @@ setup(
             'cobaya-prepare-data=cobaya.containers:prepare_data_script',
             'cobaya-run=cobaya.run:run_script',
             'cobaya-citation=cobaya.citation:citation_script',
+            'cobaya-grid-create=cobaya.grid_tools:MakeGridScript',
+            'cobaya-grid-run=cobaya.grid_tools.runbatch:run',
         ],
     },
 )

@@ -1,0 +1,44 @@
+#!/bin/bash
+
+###Sample job template for Univa Grid Engine cluster (e.g. Apollo in Sussex)
+###Python script replace ##..## placeholders with values given python script
+
+
+#$ -l h_rt=##WALLTIME## # wall clock time required
+#$ -jc ##JOBCLASS##
+#$ -cwd
+#$ -V
+#$ -N  ##JOBNAME##
+#$ -q ##QUEUE##
+#$ -pe openmpi_mixed_##PPN## ##NUMSLOTS##
+
+
+cd ##ROOTDIR##
+
+echo Running on host `hostname`
+echo Time is `date`
+echo Directory is `pwd`
+echo Job ID is $PBS_JOBID
+
+#for PICO runs also need python (check path also set correctly)
+#not needed otherwise
+#module load python/2.7.3
+
+export OMP_NUM_THREADS=##OMP##
+
+
+###set things to be used by the python script, which extracts text from here with ##XX: ... ##
+### command to use for each run in the batch
+##RUN: time mpirun -np ##NUMMPI## ##PROGRAM## ##INI## > ./scripts/##INIBASE##.log 2>&1 ##
+### qsub command to use when submitting
+##DEFAULT_qsub: qsub ##
+##DEFAULT_qdel: qdel ##
+#These defaults specific to Sussex apollo
+##DEFAULT_queue: mps.q ##
+##DEFAULT_jobclass: mps.medium ##
+
+###put the generated run commands here
+##COMMAND##
+
+#wait for processes to finish
+wait
