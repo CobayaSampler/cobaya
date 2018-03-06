@@ -11,7 +11,7 @@ from __future__ import division
 
 # Global
 import os
-from collections import OrderedDict as odict
+from collections import Mapping, OrderedDict as odict
 from copy import deepcopy
 from importlib import import_module
 
@@ -221,4 +221,30 @@ def merge_params_info(*params_infos):
         previous_info = current_info
     return current_info
 
+
+def recursive_update_yaml(d, u):
+    """
+    Recursive dictionary update, from `this stackoverflow question
+    <https://stackoverflow.com/questions/3232943>`_.
+    Modified for yaml input, where None and {} are almost equivalent
+    """
+    for k, v in u.items():
+        v = v or {}
+        d = d or {}
+        if isinstance(v, Mapping):
+            d[k] = recursive_update_yaml(d.get(k, {}), v)
+        else:
+            d[k] = v
+    return d
+
+
+def merge_info(*infos):
+    previous_info = deepcopy(infos[0])
+    for new_info in infos[1:]:
+        previous_params_info = deepcopy(previous_info.pop(_params, {}) or {})
+        new_params_info = deepcopy(new_info).pop(_params, {}) or {}
+        # NS: params have been popped, since they have their own merge function
+        current_info = recursive_update_yaml(deepcopy(previous_info), new_info)
+        current_info[_params] = merge_params_info(previous_params_info, new_params_info)
+        previous_info = current_info
     return current_info
