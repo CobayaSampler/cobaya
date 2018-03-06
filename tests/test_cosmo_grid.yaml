@@ -53,11 +53,11 @@ grid:
     plikHM_TT_lowTEB:
       likelihood:
         planck_2015_plikHM_TT:
-        planck_2015_plikHM_lowTEB:
+        planck_2015_lowTEB:
     plikHM_TT_lowl:
       likelihood:
         planck_2015_plikHM_TT:
-        planck_2015_plikHM_lowl:
+        planck_2015_lowl:
 
 #cov
 #    dir:  # where to look for covariance matrices

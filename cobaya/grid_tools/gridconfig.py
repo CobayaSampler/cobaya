@@ -2,7 +2,7 @@
 .. module:: cobaya.grid_tools.gridconfig
 
 :Synopsis: Grid creator (Cobaya version)
-:Author: Jesus Torrado and Antony Lewis (based on Antony Lewis' CosmoMC version of the same code)
+:Author: Antony Lewis and Jesus Torrado (based on Antony Lewis' CosmoMC version of the same code)
 
 """
 # Python 2/3 compatibility
@@ -12,17 +12,17 @@ from __future__ import print_function
 # Global
 import os
 import copy
+import argparse
 
 # Local
-from cobaya.grid_tools import batchjob_args
-from cobaya.grid_tools.gridconfig_cosmomc import makeGrid as makeGrid_CosmoMC
 from cobaya.yaml import yaml_load_file, yaml_dump_file
-from cobaya.conventions import _output_prefix
-from cobaya.input import merge_info
+from cobaya.conventions import _output_prefix, _path_install
+from cobaya.input import get_modules, merge_info
+from cobaya.install import install as install_reqs
 
 
 def getArgs(vals=None):
-    parser = batchjob_args.argParser('Initialize grid using settings file')
+    parser = argparse.ArgumentParser('Initialize grid using settings file')
     parser.add_argument('batchPath', help=(
         'root directory containing/to contain the grid '
         '(e.g. ./PLA where directories base, base_xx etc are under ./PLA)'))
@@ -31,28 +31,22 @@ def getArgs(vals=None):
         'usually found as python/settingName.py'))
     parser.add_argument('--readOnly', action='store_true', help=(
         'option to configure an already-run existing grid'))
-    parser.add_argument('--CosmoMC', action='store_true', default=False, help=(
-        'use old CosmoMC syntax (will eventually be deprecated; '
-        'please updated to the new format)'))
+    # Arguments related to installation of requisites
+    parser.add_argument('--install-reqs-at', help=(
+        'install required code and data for the grid in the given folder.'))
+    parser.add_argument("--install-reqs-force", action="store_true", default=False,
+                        help="Force re-installation of apparently installed modules.")
     return parser.parse_args(vals)
 
 
 def MakeGridScript():
     args = getArgs()
     args.interactive = True
-    CosmoMC = args.CosmoMC
-    delattr(args, "CosmoMC")
-    if CosmoMC:
-# STILL NEEDS A WAY TO DISTINGUISH WITHOUT AN ARG!!!
-#        print("Running in legacy CosmoMC mode. This will be eventually deprecated. "
-#              "Please update your settings file to the new format.")
-        makeGrid_CosmoMC(**args.__dict__)
-    else:
-        makeGrid(**args.__dict__)
+    makeGrid(**args.__dict__)
 
 
-def makeGrid(batchPath, settingName=None, settings=None,
-             readOnly=False, interactive=False):
+def makeGrid(batchPath, settingName=None, settings=None, readOnly=False,
+             interactive=False, install_reqs_at=None, install_reqs_force=None):
     batchPath = os.path.abspath(batchPath) + os.sep
 #    # 0: chains, 1: importance sampling, 2: best-fit, 3: best-fit and Hessian
 #    cosmomcAction = 0
@@ -90,10 +84,12 @@ def makeGrid(batchPath, settingName=None, settings=None,
 # WHY THE DIR OF settings AND NOT THE GRID DIR GIVEN???
         batch.makeDirectories(setting_file=None)
         batch.save()
-    # priors and widths for parameters which are varied
+
 # NOT IMPLEMENTED YET: start at best fit!!!
-    start_at_bestfit = getattr(settings, 'start_at_bestfit', False)
+#    start_at_bestfit = getattr(settings, 'start_at_bestfit', False)
+
     defaults = copy.deepcopy(settings)
+    modules_used = {}
     grid_definition = defaults.pop("grid")
     models_definitions = grid_definition["models"]
     datasets_definitions = grid_definition["datasets"]
@@ -169,8 +165,12 @@ def makeGrid(batchPath, settingName=None, settings=None,
 
 #        ini.params['action'] = cosmomcAction
 
-        yaml_dump_file(combined_info, jobItem.iniFile())
+        # requisites
+        modules_used = get_modules(modules_used, combined_info)
+        if install_reqs_at:
+            combined_info[_path_install] = install_reqs_at
 
+        yaml_dump_file(combined_info, jobItem.iniFile())
 
         # if not start_at_bestfit:
         #     setMinimize(jobItem, ini)
@@ -203,6 +203,10 @@ def makeGrid(batchPath, settingName=None, settings=None,
         #         ini.saveFile(imp.iniFile(variant))
         #         if cosmomcAction != 0: break
 
+    # Installing requisites
+    print("Installing required code and data for the grid.")
+    if install_reqs_at:
+        install_reqs(modules_used, path=install_reqs_at, force=install_reqs_force)
     if not interactive:
         return batch
     print('Done... to run do: cobaya-grid-run %s'%batchPath)

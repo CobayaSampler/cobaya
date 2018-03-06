@@ -4,16 +4,7 @@ import fnmatch
 import sys
 import six
 
-try:
-    import argparse
-except:
-    print('use "module load" to load python 2.7+')
-    sys.exit()
-from paramgrid import batchjob
-
-
-def argParser(desc=''):
-    return argparse.ArgumentParser(description=desc)
+from cobaya.grid_tools import batchjob
 
 
 class batchArgs(object):
