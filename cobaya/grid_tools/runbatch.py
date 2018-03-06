@@ -4,7 +4,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 import hashlib
 import os
-import argparse
 
 from cobaya.grid_tools import batchjob_args, jobqueue
 

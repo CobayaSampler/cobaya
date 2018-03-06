@@ -113,7 +113,7 @@ class jobSettings(object):
                 self.runsPerJob, self.nchains, self.nodes, self.chainsPerNode, self.omp, self.coresPerNode))
         self.mem_per_node = getDefaulted('mem_per_node', 63900, tp=int, template=template, **kwargs)
         self.walltime = getDefaulted('walltime', '24:00:00', template=template, **kwargs)
-        self.program = getDefaulted('program', './cobaya-run', template=template, **kwargs)
+        self.program = getDefaulted('program', 'cobaya-run', template=template, **kwargs)
         self.queue = getDefaulted('queue', '', template=template, **kwargs)
         self.jobclass = getDefaulted('jobclass', '', template=template, **kwargs)
         self.gridEngine = getDefaulted('GridEngine', grid_engine, template=template, **kwargs)
