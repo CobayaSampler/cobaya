@@ -18,6 +18,7 @@ from __future__ import absolute_import
 from __future__ import division
 
 # Global
+import os
 import yaml
 import re
 from collections import OrderedDict as odict
@@ -77,11 +78,11 @@ def yaml_load(text_stream, Loader=yaml.Loader, object_pairs_hook=odict, file_nam
                 raise InputSyntaxError(errstr)
 
 
-def yaml_load_file(input_file):
+def yaml_load_file(file_name):
     """Wrapper to load a yaml file."""
-    with open(input_file,"r") as file:
+    with open(file_name,"r") as file:
         lines = "".join(file.readlines())
-    return yaml_load(lines, file_name=input_file)
+    return yaml_load(lines, file_name=file_name)
 
 
 def yaml_dump(data, trim_params_info=False, stream=None, Dumper=yaml.Dumper, **kwds):
@@ -120,7 +121,6 @@ def yaml_dump(data, trim_params_info=False, stream=None, Dumper=yaml.Dumper, **k
                           "see the documentation about user-defined priors/likelihoods.")
     OrderedDumper.add_representer(type(lambda: None), _fail_representer)
     OrderedDumper.add_multi_representer(object, _fail_representer)
-
     # For full infos: trim known params of each likelihood: for internal use only
     if trim_params_info:
         from copy import deepcopy
@@ -131,3 +131,10 @@ def yaml_dump(data, trim_params_info=False, stream=None, Dumper=yaml.Dumper, **k
                 lik_info.pop(_params, None)
     # Dump!
     return yaml.dump(data, stream, OrderedDumper, **kwds)
+
+
+def yaml_dump_file(data, file_name):
+    if os.path.isfile(file_name):
+        raise ValueError("File exists: '%s'"%file_name)
+    with open(file_name, "w") as f:
+        f.write(yaml_dump(data))
