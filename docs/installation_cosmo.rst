@@ -26,7 +26,7 @@ You need to specify a folder where the resulting files will be placed, which for
 
    This folder will be accessed whenever you call **cobaya**, and may take several gigabytes; so, if you are in a **cluster**, make sure that said folder is placed in a *scratch* file system with rapid access from the nodes and a generous quota (this normally means that you should avoid your cluster's ``home`` folder).
 
-When you have prepared the interesting input files and *created* the desired folder, call the automatic installation script as
+When you have prepared the relevant input files, call the automatic installation script as
 
 .. code:: bash
 

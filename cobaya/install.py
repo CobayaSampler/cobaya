@@ -31,18 +31,17 @@ def install(*infos, **kwargs):
     log = logging.getLogger(__name__)
     path = kwargs.get("path", ".")
     abspath = os.path.abspath(path)
-    if not os.path.exists(abspath):
-        log.error("The given path, %s, must exist, but it doesn't."%abspath +
-                  (" Are you sure you have mounted the data folder in the container?"
-                   if "CONTAINED" in os.environ else ""))
-        raise HandledException
     kwargs_install = {"force": kwargs.get("force", False),
                       "no_progress_bars": kwargs.get("no_progress_bars")}
     for what in (_code, _data):
         kwargs_install[what] = kwargs.get(what, True)
         spath = os.path.join(abspath, what)
         if kwargs_install[what] and not os.path.exists(spath):
-            os.makedirs(spath)
+            try:
+                os.makedirs(spath)
+            except OSError:
+                log.error("Could not create the desired installation folder '%s'", spath)
+                raise HandledException
     failed_modules = []
     for kind, modules in get_modules(*infos).items():
         for module in modules:
