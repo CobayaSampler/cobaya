@@ -32,6 +32,14 @@ Now try
 
 If you have a working MPI implementation in your system, this should produce no output. If you don't, the error would look something like ``ImportError: libmpi.so.12: cannot open shared object file``.
 
+Finally, try
+
+.. code:: bash
+
+   $ mpirun -n 4 python -c "from mpi4py import MPI; print(MPI.COMM_WORLD.Get_rank())"
+
+If it prints the numbers 0 to 3 in no particular order, everything is working correctly. If it prints 0 four times, try installing ``mpi4py`` with ``pip`` again, now adding the flag ``--no-binary :all:``.
+
 OpenBLAS (optional but encouraged!)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

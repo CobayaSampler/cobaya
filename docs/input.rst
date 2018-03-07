@@ -44,8 +44,21 @@ To run **cobaya** from the shell, use the command ``cobaya-run``, followed by yo
 
    $ cobaya-run your_input.yaml
 
-To use MPI, simply run it using the appropriate MPI run script in your system (usually ``mpirun -n [#processes]``).
+.. note::
 
+   To use **MPI**, simply run it using the appropriate MPI run script in your system, e.g.
+
+   .. code:: bash
+
+      $ mpirun -n [#processes] cobaya-run your_input.yaml
+
+   If you get an error of the kind ``mpirun was unable to find the specified executable file [...]``, you will need to specify the full path to the ``cobaya-run`` script, e.g.
+
+   .. code:: bash
+
+      $ mpirun -n [#processes] $HOME/.local/bin/cobaya-run your_input.yaml
+
+   
 To run **cobaya** from a Python interpreter, simply do
 
 .. code:: python
@@ -53,7 +66,7 @@ To run **cobaya** from a Python interpreter, simply do
     from cobaya.run import run
     updated_info, products = run(your_input)
 
-where your input is a Python dictionary (for how to create one, see :ref:`example_quickstart_interactive`).
+where ``your_input`` is a Python dictionary (for how to create one, see :ref:`example_quickstart_interactive`).
 
 To run **cobaya** with MPI in this case, save your script to some file and run ``python your_script.py`` with your MPI run script.
 
