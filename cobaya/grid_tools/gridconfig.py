@@ -96,7 +96,10 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
     for jobItem in batch.items(wantSubItems=False):
         jobItem.makeChainPath()
         base_info = copy.deepcopy(defaults)
-        model_info = models_definitions.get(jobItem.param_set, {}) or {}
+        try:
+            model_info = models_definitions[jobItem.param_set] or {}
+        except KeyError:
+            raise ValueError("Model '%s' must be defined."%jobItem.param_set)
 
         # COVMATS NOT IMPLEMENTED YET!!!
         # cov_dir_name = getattr(settings, 'cov_dir', 'planck_covmats')
@@ -153,9 +156,11 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         ##        ini.params['start_at_bestfit'] = start_at_bestfit
 
 
-        dataset_info = datasets_definitions[jobItem.data_set.tag]
+        try:
+            dataset_info = datasets_definitions[jobItem.data_set.tag]
+        except KeyError:
+            raise ValueError("Data set '%s' must be defined."%jobItem.data_set.tag)
         combined_info = merge_info(base_info, model_info, dataset_info)
-
         combined_info[_output_prefix] = jobItem.chainRoot
 
 # ???
