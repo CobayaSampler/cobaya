@@ -54,10 +54,12 @@ grid:
       likelihood:
         planck_2015_plikHM_TT:
         planck_2015_lowTEB:
+          speed: 0.25
     plikHM_TT_lowl:
       likelihood:
         planck_2015_plikHM_TT:
         planck_2015_lowl:
+          speed: 0.5
 
 #cov
 #    dir:  # where to look for covariance matrices
@@ -196,12 +198,6 @@ params:
   clamp:
     derived: "lambda As, tau: 1e9*As*np.exp(-2*tau)"
     latex: 10^9 A_s e^{-2\tau}
-  YHe:
-    latex: Y_P
-  Y_p:
-    latex: Y_P^\mathrm{BBN}
-  DH:
-    latex: 10^5D/H
   age:
     latex: \mathrm{Age}/\mathrm{Gyr}
   zstar:
