@@ -51,7 +51,7 @@ To specify the folder where the output files will be written and their name, use
 
 In all cases, the output folder is based on the invocation folder if **cobaya** is called from the command line, or the *current working directory* (i.e. the output of ``import os; os.getcwd()``) if invoked within a Python script or a Jupyter notebook.
 
-Whatever the prefix for the output files, the (potential) output files must not already exist, unless you are resuming from a previous sample (see :ref:`input_cont`).
+If **cobaya** output files already exist with the prefix given, a continuation of the sampling process will be attempted (see :ref:`input_cont`).
 
 .. note::
 
