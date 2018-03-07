@@ -25,9 +25,6 @@ from cobaya.log import HandledException
 from cobaya.conventions import _path_install
 from cobaya.tools import get_path_to_installation
 
-# Logging
-log = logging.getLogger(__name__)
-
 # DES data types
 def_DES_types = ['xip', 'xim', 'gammat', 'wtheta']
 
@@ -101,27 +98,28 @@ def get_def_cuts():
 class _des_prototype(Likelihood):
     def initialise(self):
         self.name = self.__class__.__name__
+        self.log = logging.getLogger(self.name)
         self.l_max = self.l_max or int(50000 * self.acc)
         # If no path specified, use the modules path
         data_file_path = (self.path or
                           os.path.join(get_path_to_installation(), "data/des_1yr"))
         if not data_file_path:
-            log.error("No path given to the DES data. Set the likelihood property 'path' "
-                      "or the common property '%s'.", _path_install)
+            self.log.error("No path given to the DES data. Set the likelihood property "
+                           "'path' or the common property '%s'.", _path_install)
             raise HandledException
         data_file = os.path.join(data_file_path, self.data_file)
         try:
             if data_file.endswith(".fits"):
                 if self.dataset_params:
-                    log.error("'dataset_params' can only be specified "
-                              "for .dataset (not .fits) file.")
+                    self.log.error("'dataset_params' can only be specified "
+                                   "for .dataset (not .fits) file.")
                     raise HandledException
                 self.load_fits_data(data_file)
             else:
                 self.load_dataset(data_file, self.dataset_params)
         except IOError:
-            log.error("The data file '%s' could not be found at '%s'. Check your paths!",
-                      self.data_file, data_file_path)
+            self.log.error("The data file '%s' could not be found at '%s'. "
+                           "Check your paths!", self.data_file, data_file_path)
             raise HandledException
         self.initialize_postload()
 
@@ -345,7 +343,8 @@ class _des_prototype(Likelihood):
 
     def add_theory(self):
         if self.theory.__class__ == "classy":
-            log.error("DES likelihood not yet compatible with CLASS (help appreciated!)")
+            self.log.error(
+                "DES likelihood not yet compatible with CLASS (help appreciated!)")
             raise HandledException
         # Requisites for the theory code
         self.theory.needs({

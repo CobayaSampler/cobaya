@@ -33,16 +33,16 @@ import logging
 from cobaya.likelihood import Likelihood
 from cobaya.log import HandledException
 
-# Logging
-log = logging.getLogger(__name__)
-
 
 class _hst_prototype(Likelihood):
 
     def initialise(self):
+        self.name = self.__class__.__name__
+        self.log = logging.getLogger(self.name)
         if getattr(self, "zeff", 0) != 0:
             if not hasattr(self, "angconversion"):
-                log.error("'angconversion' must be given of effective z is non zero.")
+                self.log.error(
+                    "'angconversion' must be given of effective z is non zero.")
                 raise HandledException
             self.theory.needs({"angular_diameter_distance": {"redshifts": self.zeff}})
         else:

@@ -17,27 +17,25 @@ from cobaya.log import HandledException
 from cobaya.conventions import _path_install
 from cobaya.tools import get_path_to_installation
 
-# Logging
-log = logging.getLogger(__name__)
-
 
 class _bao_prototype(Likelihood):
 
     def initialise(self):
         self.name = self.__class__.__name__
+        self.log = logging.getLogger(self.name)
         # If no path specified, use the modules path
         data_file_path = (self.path or
                           os.path.join(get_path_to_installation(), "data/sdss_dr12"))
         if not data_file_path:
-            log.error("No path given to BAO data. Set the likelihood property 'path' "
-                      "or the common property '%s'.", _path_install)
+            self.log.error("No path given to BAO data. Set the likelihood property "
+                           "'path' or the common property '%s'.", _path_install)
             raise HandledException
         # Load "measurements file" and covmat of requested
         try:
             self.data = pd.read_csv(os.path.join(data_file_path, self.measurements_file),
                                     header=None, index_col=None, sep="\s+")
         except IOError:
-            log.error("Couldn't find measurements file '%s' in folder '%s'. "%(
+            self.log.error("Couldn't find measurements file '%s' in folder '%s'. "%(
                 self.measurements_file, data_file_path) + "Check your paths.")
             raise HandledException
         # Colums: z value [err] [type]
@@ -60,7 +58,7 @@ class _bao_prototype(Likelihood):
                 raise NotImplementedError("Manual errors not implemented yet.")
                 # self.cov = np.diag(ERROR_HERE**2)
         except IOError:
-            log.error("Couldn't find (inv)cov file '%s' in folder '%s'. "%(
+            self.log.error("Couldn't find (inv)cov file '%s' in folder '%s'. "%(
                 getattr(self, "cov_file", getattr(self, "invcov_file", None)),
                 data_file_path) + "Check your paths.")
             raise HandledException
@@ -68,7 +66,8 @@ class _bao_prototype(Likelihood):
 
     def add_theory(self):
         if self.theory.__class__ == "classy":
-            log.error("BAO likelihood not yet compatible with CLASS (help appreciated!)")
+            self.log.error(
+                "BAO likelihood not yet compatible with CLASS (help appreciated!)")
             raise HandledException
         # Functions to get the corresponding theoretical prediction
         self.theory_fun = lambda z, observable: ({

@@ -35,17 +35,11 @@ from cobaya.log import HandledException
 from cobaya.tools import get_path_to_installation
 
 
-# Making sure that the logger has the name of the likelihood, not the prototype
-def set_logger(name):
-    global log
-    log = logging.getLogger(name)
-
-
 class _cmblikes_prototype(Likelihood):
 
     def initialise(self):
         self.name = self.__class__.__name__
-        set_logger(self.name)
+        self.log = logging.getLogger(self.name)
         self.tot_theory_fields = len(self.field_names)
         assert self.dataset_file.endswith('.dataset'), (
             "Make sure you are passing a .dataset file!")
@@ -57,15 +51,15 @@ class _cmblikes_prototype(Likelihood):
                     import_module(package + ".likelihoods." + self.name, package=package),
                     "get_path")(path_to_installation)
             else:
-                log.error("No path given to the %s likelihood. Set the likelihood"
-                          " property 'path' or the common property '%s'.",
-                          self.dataset_file, _path_install)
+                self.log.error("No path given to the %s likelihood. Set the likelihood"
+                               " property 'path' or the common property '%s'.",
+                               self.dataset_file, _path_install)
                 raise HandledException
         self.dataset_file_path = os.path.join(self.path, self.dataset_file)
-        log.info("[%s] Reading data from %s", self.name, self.dataset_file_path)
+        self.log.info("Reading data from %s", self.dataset_file_path)
         if not os.path.exists(self.dataset_file_path):
-            log.error("[%s] The likelihood is not installed in the given path: "
-                      "cannot find the file '%s'.", self.name, self.dataset_file_path)
+            self.log.error("The likelihood is not installed in the given path: "
+                           "cannot find the file '%s'.", self.dataset_file_path)
             raise HandledException
         self.loadDataset(self.dataset_file_path, self.dataset_params)
 
@@ -77,9 +71,9 @@ class _cmblikes_prototype(Likelihood):
         # so we check the computed l_max ("l_max" option) is higher than the requested one
         requested_l_max = int(np.max(self.cl_lmax))
         if self.l_max <= requested_l_max:
-            log.error("[%s] You are setting a very low l_max. "
-                      "The likelihood value will probably not be correct. "
-                      "Make sure to make 'l_max'>>%d", self.name, requested_l_max)
+            self.log.error("You are setting a very low l_max. "
+                           "The likelihood value will probably not be correct. "
+                           "Make sure to make 'l_max'>>%d", requested_l_max)
             raise HandledException
         self.theory.needs({"Cl": requested_cls, "l_max": self.l_max})
 
@@ -89,14 +83,14 @@ class _cmblikes_prototype(Likelihood):
     def PairStringToMapIndices(self, S):
         if len(S) == 2:
             if self.has_map_names:
-                log.error('CMBlikes: CL names must use MAP1xMAP2 names')
+                self.log.error('CL names must use MAP1xMAP2 names')
                 raise HandledException
             return self.map_names.index(S[0]), self.map_names.index(S[1])
         else:
             try:
                 i = S.index(self.map_separator)
             except ValueError:
-                log.error('CMBLikes: invalid spectrum name %s' % S)
+                self.log.error('invalid spectrum name %s' % S)
                 raise HandledException
             return self.map_names.index(S[0:i]), self.map_names.index(S[i + 1:])
 
@@ -165,7 +159,7 @@ class _cmblikes_prototype(Likelihood):
                     name = self.Cl_used_i_j_name([j, i])
                 if name in names:
                     if cols[ix] != -1:
-                        log.error('GetColsFromOrder: duplicate CL type')
+                        self.log.error('GetColsFromOrder: duplicate CL type')
                         raise HandledException
                     cols[ix] = names.index(name)
                 ix += 1
@@ -194,7 +188,7 @@ class _cmblikes_prototype(Likelihood):
         if not order:
             incols = lastTopComment(filename)
             if not incols:
-                log.error('No column order given for ' + filename)
+                self.log.error('No column order given for ' + filename)
                 raise HandledException
         else:
             incols = 'L ' + order
@@ -209,8 +203,8 @@ class _cmblikes_prototype(Likelihood):
                     if cols[ix] != -1:
                         cl[ix, L - self.bin_min] = data[i, cols[ix]]
         if L < self.bin_max:
-            log.error('CMBLikes_ReadClArr: C_l file does not go up to maximum used: %s',
-                      self.bin_max)
+            self.log.error('CMBLikes_ReadClArr: C_l file does not go up to maximum used: '
+                           '%s', self.bin_max)
             raise HandledException
         if return_full:
             return incols.split(), data, cl
@@ -225,7 +219,7 @@ class _cmblikes_prototype(Likelihood):
         bins.cols_out = self.UseString_to_cols(out_cl)
         norder = bins.cols_in.shape[1]
         if norder != bins.cols_out.shape[0]:
-            log.error('_in_order and _out_order must have same number of entries')
+            self.log.error('_in_order and _out_order must have same number of entries')
             raise HandledException
         bins.binning_matrix = np.zeros(
             (norder, self.nbins_used, self.pcl_lmax - self.pcl_lmin + 1))
@@ -239,16 +233,16 @@ class _cmblikes_prototype(Likelihood):
                 else:
                     Err = Err or any(window[i, 1:] != 0)
             if Err:
-                log.warn('WARNING: %s %u outside pcl_lmin-cl_max range: %s' %
-                         (file_stem, b, windows % (b + 1)))
+                self.log.warn('%s %u outside pcl_lmin-cl_max range: %s' %
+                              (file_stem, b, windows % (b + 1)))
         if ini.hasKey(file_stem + '_fix_cl_file'):
-            log.error('fix_cl_file not implemented yet')
+            self.log.error('fix_cl_file not implemented yet')
             raise HandledException
         return bins
 
     def init_map_cls(self, nmaps, order):
         if nmaps != len(order):
-            log.error('CMBLikes init_map_cls: size mismatch')
+            self.log.error('init_map_cls: size mismatch')
             raise HandledException
 
         class CrossPowerSpectrum(object):
@@ -278,7 +272,7 @@ class _cmblikes_prototype(Likelihood):
             # e.g. have multiple frequencies for given field measurement
             map_fields = ini.split('map_fields')
             if len(map_fields) != len(self.map_names):
-                log.error('CMBLikes: number of map_fields does not match map_names')
+                self.log.error('number of map_fields does not match map_names')
                 raise HandledException
             self.map_fields = [self.typeIndex(f) for f in map_fields]
         else:
@@ -290,19 +284,19 @@ class _cmblikes_prototype(Likelihood):
             use_theory_field = [i in index_use for i in range(self.tot_theory_fields)]
         else:
             if not self.has_map_names:
-                log.error('CMBlikes: must have fields_use or map_names')
+                self.log.error('must have fields_use or map_names')
                 raise HandledException
             use_theory_field = [True] * self.tot_theory_fields
         maps_use = ini.split('maps_use', [])
         if len(maps_use):
             if np.any([not i for i in use_theory_field]):
-                log.warn('CMBlikes WARNING: maps_use overrides fields_use')
+                self.log.warn('maps_use overrides fields_use')
             self.use_map = np.zeros(len(self.map_names), dtype=bool)
             for j, map_used in enumerate(maps_use):
                 if map_used in self.map_names:
                     self.use_map[self.map_names.index(map_used)] = True
                 else:
-                    log.error('CMBlikes: maps_use item not found - %s' % map_used)
+                    self.log.error('maps_use item not found - %s' % map_used)
                     raise HandledException
         else:
             self.use_map = [use_theory_field[self.map_fields[i]]
@@ -312,7 +306,7 @@ class _cmblikes_prototype(Likelihood):
         self.require_map = self.use_map[:]
         if self.has_map_names:
             if ini.hasKey('fields_required'):
-                log.error('CMBLikes: use maps_required not fields_required')
+                self.log.error('use maps_required not fields_required')
                 raise HandledException
             maps_use = ini.split('maps_required', [])
         else:
@@ -322,7 +316,7 @@ class _cmblikes_prototype(Likelihood):
                 if map_used in self.map_names:
                     self.require_map[self.map_names.index(map_used)] = True
                 else:
-                    log.error('CMBlikes: required item not found %s' % map_used)
+                    self.log.error('required item not found %s' % map_used)
                     raise HandledException
         self.required_theory_field = [False for _ in self.field_names]
         for i in range(len(self.map_names)):
@@ -354,7 +348,7 @@ class _cmblikes_prototype(Likelihood):
         self.binned = ini.bool('binned', True)
         if self.binned:
             if self.nmaps != self.nmaps_required:
-                log.error('CMBlikes: unbinned likelihood must have nmaps==nmaps_required')
+                self.log.error('unbinned likelihood must have nmaps==nmaps_required')
                 raise HandledException
             self.nbins = ini.int('nbins')
             self.bin_min = ini.int('use_min', 1) - 1
@@ -364,7 +358,7 @@ class _cmblikes_prototype(Likelihood):
         else:
             self.nbins = self.pcl_lmax - self.pcl_lmin + 1
             if self.like_approx != 'exact':
-                log.warn('WARNING: Unbinned likelihoods untested in this version')
+                self.log.warn('Unbinned likelihoods untested in this version')
             self.bin_min = ini.int('use_min', self.pcl_lmin)
             self.bin_max = ini.int('use_max', self.pcl_lmax)
             self.nbins_used = self.bin_max - self.bin_min + 1
@@ -421,23 +415,24 @@ class _cmblikes_prototype(Likelihood):
             if ini.hasKey('calibration_param'):
                 self.calibration_param = ini.string('calibration_param')
                 if '.paramnames' in self.calibration_param:
-                    log.error('calibration_param should be name of parameter '
-                              'in nuisance_params')
+                    self.log.error('calibration_param should be name of parameter '
+                                   'in nuisance_params')
                     raise HandledException
             else:
                 self.calibration_param = None
         elif ini.hasKey('calibration_param'):
             s = ini.relativeFileName('calibration_param')
             if '.paramnames' not in s:
-                log.error('calibration_param must be paramnames file unless '
-                          'nuisance_params also specified')
+                self.log.error('calibration_param must be paramnames file unless '
+                               'nuisance_params also specified')
                 raise HandledException
             self.nuisance_params = ParamNames(s)
             self.calibration_param = self.nuisance_params.list()[0]
         else:
             self.calibration_param = None
         if ini.hasKey('log_calibration_prior'):
-            log.warning('log_calibration_prior in .dataset ignored, set separately in .yaml file')
+            self.log.warning('log_calibration_prior in .dataset ignored, '
+                             'set separately in .yaml file')
         self.aberration_coeff = ini.float('aberration_coeff', 0.0)
 
         self.map_cls = self.init_map_cls(self.nmaps_required, self.required_order)
@@ -471,7 +466,7 @@ class _cmblikes_prototype(Likelihood):
                         np.ix_((binx + self.bin_min) * num_in + cov_cl_used,
                                (biny + self.bin_min) * num_in + cov_cl_used)])
         else:
-            log.error('unbinned covariance not implemented yet')
+            self.log.error('unbinned covariance not implemented yet')
             raise HandledException
         return pcov
 
@@ -499,7 +494,7 @@ class _cmblikes_prototype(Likelihood):
         return np.sqrt(np.diag(self.full_cov))
 
     def plot(self, column='PP', ClArray=None, ls=None, ax=None):
-        log.warning("TODO: plot not implemented for Cobyaya")
+        self.log.warning("TODO: plot not implemented for Cobyaya")
         raise HandledException
         import matplotlib.pyplot as plt
         lbin = self.full_bandpowers[:, self.full_bandpower_headers.index('L_av')]

@@ -72,17 +72,11 @@ from cobaya.conventions import _path_install
 from cobaya.tools import get_path_to_installation
 
 
-# Making sure that the logger has the name of the likelihood, not the prototype
-def set_logger(name):
-    global log
-    log = logging.getLogger(name)
-
-
 class _planck_clik_prototype(Likelihood):
 
     def initialise(self):
         self.name = self.__class__.__name__
-        set_logger(self.name)
+        self.log = logging.getLogger(self.name)
         # Importing Planck's clik library (only once!)
         try:
             clik
@@ -95,13 +89,13 @@ class _planck_clik_prototype(Likelihood):
                     self.path_data = os.path.join(
                         path_to_installation, "data", common_path)
                 else:
-                    log.error("No path given to the Planck likelihood. Set the likelihood"
-                              " property 'path' or the common property '%s'.",
-                              _path_install)
+                    self.log.error("No path given to the Planck likelihood. Set the "
+                                   "likelihood property 'path' or the common property "
+                                   "'%s'.", _path_install)
                     raise HandledException
             else:
                 self.path_clik = self.path
-            log.info("[%s] Importing clik from %s", self.name, self.path_clik)
+            self.log.info("Importing clik from %s", self.path_clik)
             # test and import clik
             is_installed_clik(self.path_clik, log_and_fail=True, import_it=False)
             import clik
@@ -127,7 +121,7 @@ class _planck_clik_prototype(Likelihood):
                 self.clik = clik.clik(clik_file)
                 self.l_max = max(self.clik.get_lmax())
         except clik.lkl.CError:
-            log.error(
+            self.log.error(
                 "The path to the .clik file for the likelihood "
                 "%s was not found where indicated."
                 " Note that the default path to search for it is"
@@ -137,7 +131,7 @@ class _planck_clik_prototype(Likelihood):
                 "or alternatively, move your .clik files to this place.", self.name)
             raise HandledException
         except KeyError:
-            log.error(
+            self.log.error(
                 "In the %s.data file, the field 'clik' of the "
                 "path dictionary is expected to be defined. Please make sure"
                 " it is the case in you configuration file", self.name)
@@ -152,8 +146,7 @@ class _planck_clik_prototype(Likelihood):
         if "plikHM_lite" in self.name:
             i = self.expected_params.index('A_Planck')
             self.expected_params[i] = 'A_planck'
-            log.info("In %s, corrected nuisance parameter name A_Planck to A_planck" %
-                     self.name)
+            self.log.info("Corrected nuisance parameter name A_Planck to A_planck")
         # Check that the parameters are the right ones
         assert set(self.input_params.keys()) == set(self.expected_params), (
             "Likelihoods parameters do not coincide with the ones clik understands.")
@@ -262,6 +255,7 @@ common_path = "planck_2015"
 
 
 def download_from_planck(product_id, path, no_progress_bars=False):
+    log = logging.getLogger(__name__)
     try:
         from wget import download, bar_thermometer
         wget_kwargs = {"out": path, "bar":
@@ -289,6 +283,7 @@ def download_from_planck(product_id, path, no_progress_bars=False):
 
 
 def is_installed_clik(path, log_and_fail=False, import_it=True):
+    log = logging.getLogger(__name__)
     clik_path = os.path.join(path, "plc-2.0")
     if not os.path.exists(clik_path):
         if log_and_fail:
@@ -312,6 +307,7 @@ def is_installed_clik(path, log_and_fail=False, import_it=True):
 
 
 def install_clik(path, no_progress_bars=False):
+    log = logging.getLogger(__name__)
     for req in ("cython", "pyfits"):
         from importlib import import_module
         try:
@@ -363,7 +359,6 @@ def get_product_id_and_clik_file(name):
 
 
 def is_installed(**kwargs):
-    set_logger(kwargs["name"])
     result = True
     if kwargs["code"]:
         result &= is_installed_clik(os.path.realpath(
@@ -377,7 +372,7 @@ def is_installed(**kwargs):
 
 def install(path=None, name=None, force=False, code=True, data=True,
             no_progress_bars=False):
-    set_logger(name)
+    log = logging.getLogger(name)
     # Create common folders: all planck likelihoods share install folder for code and data
     paths = {}
     for s in ("code", "data"):

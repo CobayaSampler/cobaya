@@ -8,7 +8,6 @@ from cobaya.likelihoods._cmblikes_prototype import _cmblikes_prototype
 
 # Logger
 import logging
-log = logging.getLogger(__name__)
 
 # Physical constants
 T_CMB = 2.7255  # CMB temperature
@@ -130,6 +129,7 @@ def is_installed(**kwargs):
 
 def install(path=None, name=None, force=False, code=False, data=True,
             no_progress_bars=False):
+    log = logging.getLogger(__name__)
     # Create common folders: all planck likelihoods share install folder for code and data
     full_path = get_path(path)
     if not os.path.exists(full_path):

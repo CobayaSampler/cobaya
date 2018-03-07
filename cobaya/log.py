@@ -67,7 +67,7 @@ def logger_setup(debug=None, debug_file=None):
         def format(self, record):
             self._fmt = (
                 ("[%d]"%get_mpi_rank() if get_mpi() else "") +
-                "[%(module)s] " +
+                "[%(name)s] " +
                 {logging.ERROR: "*ERROR* ",
                  logging.WARNING: "*WARNING* "}.get(record.levelno, "") +
                 "%(message)s")
