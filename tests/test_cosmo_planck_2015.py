@@ -1,5 +1,7 @@
 # Tries to evaluate the likelihood at LCDM's best fit of Planck 2015, with CAMB and CLASS
 
+from copy import deepcopy
+
 from cobaya.yaml import yaml_load
 
 from cosmo_common import body_of_test
@@ -23,24 +25,27 @@ def test_planck_2015_p_camb(modules):
                  chi2_lowTEB_highTTTEEE, derived_values)
 
 
-def test_camb_planck_p(modules):
-    body_of_test(modules, "p", "camb")
+def test_planck_2015_t_classy(modules):
+    info_best_fit = yaml_load(params_lowl_highTT)
+    info_likelihood = lik_info_lowl_highTT
+    info_theory = {"classy": None}
+    derived_values = derived_lowl_highTT
+    chi2_lowl_highTT_classy = deepcopy(chi2_lowl_highTT)
+    chi2_lowl_highTT_classy["tolerance"] += 2.1
+    body_of_test(modules, info_best_fit, info_likelihood, info_theory,
+                 chi2_lowl_highTT_classy, derived_values)
 
 
-def test_classy_planck_t(modules):
+def test_planck_2015_p_classy(modules):
+    info_best_fit = yaml_load(params_lowTEB_highTTTEEE)
+    info_likelihood = lik_info_lowTEB_highTTTEEE
+    info_theory = {"classy": None}
+    derived_values = derived_lowTEB_highTTTEEE
+    chi2_lowTEB_highTTTEEE_classy = deepcopy(chi2_lowTEB_highTTTEEE)
+    chi2_lowTEB_highTTTEEE_classy["tolerance"] += 2.1
+    body_of_test(modules, info_best_fit, info_likelihood, info_theory,
+                 chi2_lowTEB_highTTTEEE_classy, derived_values)
 
-###        tolerance = tolerance_chi2_abs + (2.1 if theory == "classy" else 0)
-    
-    body_of_test(modules, "t", "classy")
-
-
-def test_classy_planck_p(modules):
-    body_of_test(modules, "p", "classy")
-
-
-## QUITAR EL DUMMY PRIOR!!!!!
-
-    
 
 # Temperature only #######################################################################
 

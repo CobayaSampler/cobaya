@@ -5,7 +5,7 @@ grid:
   groups:
     main:
       models:  # was `params`
-#        - default
+        - default
         - mnu
         - nnu
         - mnu_nnu
@@ -19,7 +19,7 @@ grid:
 #        [['BAO'], ['BAO.ini']]
   # Definitions of the models used
   models:
-#    default:
+    default:
     mnu:
       # In here, it's normal Cobaya input notation
       params:
