@@ -45,7 +45,7 @@ def MakeGridScript():
     makeGrid(**args.__dict__)
 
 
-def makeGrid(batchPath, settingName=None, settings=None, readOnly=False,
+def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
              interactive=False, install_reqs_at=None, install_reqs_force=None):
     batchPath = os.path.abspath(batchPath) + os.sep
 #    # 0: chains, 1: importance sampling, 2: best-fit, 3: best-fit and Hessian
@@ -56,7 +56,7 @@ def makeGrid(batchPath, settingName=None, settings=None, readOnly=False,
 #            if not pathIsGrid(batchPath):
 #                raise Exception('Need to give name of setting file if batchPath/config '
 #                                'does not exist')
-#            readOnly = True
+#            read_only = True
 #            sys.path.insert(0, batchPath + 'config')
 #            sys.modules['batchJob'] = batchjob  # old name
 #            settings = __import__(IniFile(batchPath + 'config/config.ini').params['setting_file'].replace('.py', ''))
@@ -71,8 +71,8 @@ def makeGrid(batchPath, settingName=None, settings=None, readOnly=False,
 ###    batch.skip = settings.get("skip", False)
     if "skip" in settings:
         raise NotImplementedError("Skipping not implemented yet.")
-    batch.makeItems(settings, messages=not readOnly)
-    if readOnly:
+    batch.makeItems(settings, messages=not read_only)
+    if read_only:
         for jobItem in [b for b in batch.jobItems]:
             if not jobItem.chainExists():
                 batch.jobItems.remove(jobItem)
