@@ -26,6 +26,10 @@ echo Job ID is $PBS_JOBID
 
 export OMP_NUM_THREADS=##OMP##
 
+# Your GCC + MPI + Python here
+module load python/2.7.11
+module load gcc/6.2.0
+module load openmpi/gcc-6.2/2.1.1
 
 ###set things to be used by the python script, which extracts text from here with ##XX: ... ##
 ### command to use for each run in the batch
