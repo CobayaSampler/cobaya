@@ -158,18 +158,17 @@ def makeGrid(batchPath, settingName=None, settings=None, readOnly=False,
 
         combined_info[_output_prefix] = jobItem.chainRoot
 
+# ???
 #        for deffile in settings.defaults:
 #            ini.defaults.append(batch.commonPath + deffile)
 #        if hasattr(settings, 'override_defaults'):
 #            ini.defaults = [batch.commonPath + deffile for deffile in settings.override_defaults] + ini.defaults
 
-#        ini.params['action'] = cosmomcAction
-
         # requisites
         modules_used = get_modules(modules_used, combined_info)
         if install_reqs_at:
-            combined_info[_path_install] = install_reqs_at
-
+            combined_info[_path_install] = os.path.abspath(install_reqs_at)
+        # Write the info for this job
         yaml_dump_file(combined_info, jobItem.iniFile())
 
         # if not start_at_bestfit:

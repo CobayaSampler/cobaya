@@ -291,7 +291,7 @@ def submitJob(jobName, paramFiles, sequential=False, msg=False, **kwargs):
 
     commands = []
     for param, name in zip(paramFiles, j.names):
-        ini = param + '.ini'
+        ini = param + '.yaml'
         if j.runCommand is not None:
             vals['INI'] = ini
             vals['INIBASE'] = name
