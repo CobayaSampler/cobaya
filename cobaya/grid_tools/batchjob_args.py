@@ -42,14 +42,14 @@ class batchArgs(object):
         self.parser.add_argument('--data', nargs='+', default=None, help='runs including specific data only (data1)')
         self.parser.add_argument('--datatag', nargs='+', default=None,
                                  help='runs with specific data tag only (data1_data2)')
-        self.parser.add_argument('--musthave_data', nargs='+', default=None,
+        self.parser.add_argument('--musthave-data', nargs='+', default=None,
                                  help='include only runs that include specific data (data1)')
-        self.parser.add_argument('--skip_data', nargs='+', default=None,
+        self.parser.add_argument('--skip-data', nargs='+', default=None,
                                  help='skip runs containing specific data (data1)')
-        self.parser.add_argument('--skip_param', nargs='+', default=None,
+        self.parser.add_argument('--skip-param', nargs='+', default=None,
                                  help='skip runs containing specific parameter (paramx)')
         self.parser.add_argument('--group', default=None, nargs='+', help='include only runs with given group names')
-        self.parser.add_argument('--skip_group', default=None, nargs='+', help='exclude runs with given group names')
+        self.parser.add_argument('--skip-group', default=None, nargs='+', help='exclude runs with given group names')
 
         if self.notExist:
             self.parser.add_argument('--notexist', action='store_true',
@@ -58,7 +58,7 @@ class batchArgs(object):
             self.parser.add_argument('--notall', type=int, default=None,
                                      help='only include chains where all N chains don\'t already exist on disk')
         if self.doplots:
-            self.parser.add_argument('--plot_data', nargs='*', default=None,
+            self.parser.add_argument('--plot-data', nargs='*', default=None,
                                      help='directory/ies containing getdist output plot_data')
             self.parser.add_argument('--paramNameFile', default='clik_latex.paramnames',
                                      help=".paramnames file for custom labels for parameters")

@@ -29,7 +29,7 @@ def getArgs(vals=None):
     parser.add_argument('settingName', nargs='?', help=(
         'python setting file (without .py) for making or updating a grid, '
         'usually found as python/settingName.py'))
-    parser.add_argument('--readOnly', action='store_true', help=(
+    parser.add_argument('--read-only', action='store_true', help=(
         'option to configure an already-run existing grid'))
     # Arguments related to installation of requisites
     parser.add_argument('--install-reqs-at', help=(
