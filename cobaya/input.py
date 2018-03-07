@@ -210,12 +210,12 @@ def merge_params_info(*params_infos):
             bounds = ["min", "max"]
             default_bounds = odict(
                 [[bound, getter(previous_info[p], bound)] for bound in bounds])
-            if (default_bounds.values() != [None, None] and
+            if (list(default_bounds.values()) != [None, None] and
                     is_derived_param(current_info.get(p))):
                 if current_info.get(p) is None:
                     current_info[p] = {}
                 new_bounds = {bound:new_info.get(p, {}).get(bound) for bound in bounds}
-                if new_bounds.values() == [None, None]:
+                if list(new_bounds.values()) == [None, None]:
                     for bound, value in default_bounds.items():
                         current_info[p][bound] = value
         previous_info = current_info
