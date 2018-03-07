@@ -254,8 +254,8 @@ class _planck_clik_prototype(Likelihood):
 common_path = "planck_2015"
 
 
-def download_from_planck(product_id, path, no_progress_bars=False):
-    log = logging.getLogger(__name__)
+def download_from_planck(product_id, path, no_progress_bars=False, name=None):
+    log = logging.getLogger(name or __name__)
     try:
         from wget import download, bar_thermometer
         wget_kwargs = {"out": path, "bar":
@@ -283,11 +283,11 @@ def download_from_planck(product_id, path, no_progress_bars=False):
 
 
 def is_installed_clik(path, log_and_fail=False, import_it=True):
-    log = logging.getLogger(__name__)
+    log = logging.getLogger("clik")
     clik_path = os.path.join(path, "plc-2.0")
     if not os.path.exists(clik_path):
         if log_and_fail:
-            log.error("The given folder does not exist: '%s'",clik_path)
+            log.error("The given folder does not exist: '%s'", clik_path)
             raise HandledException
         return False
     clik_path = os.path.join(clik_path, "lib/python2.7/site-packages")
@@ -307,7 +307,7 @@ def is_installed_clik(path, log_and_fail=False, import_it=True):
 
 
 def install_clik(path, no_progress_bars=False):
-    log = logging.getLogger(__name__)
+    log = logging.getLogger("clik")
     for req in ("cython", "pyfits"):
         from importlib import import_module
         try:
@@ -321,7 +321,8 @@ def install_clik(path, no_progress_bars=False):
                 log.error("Failed installing requisite '%s'.", req)
                 raise HandledException
     log.info("clik: downlowading...")
-    if not download_from_planck("1904", path, no_progress_bars=no_progress_bars):
+    if not download_from_planck("1904", path,
+                                no_progress_bars=no_progress_bars, name="clik"):
         log.error("Not possible to download clik.")
         return False
     log.info("clik: configuring... (and maybe installing dependencies...)")
@@ -395,7 +396,7 @@ def install(path=None, name=None, force=False, code=True, data=True,
         # Download and uncompress the particular likelihood
         log.info("Downloading likelihood data...")
         if not download_from_planck(product_id, paths["data"],
-                                    no_progress_bars=no_progress_bars):
+                                    no_progress_bars=no_progress_bars, name=name):
             log.error("Not possible to download this likelihood.")
             return False
         log.info("Likelihood data downloaded and uncompressed correctly.")
