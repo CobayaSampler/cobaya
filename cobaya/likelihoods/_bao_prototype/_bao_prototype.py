@@ -9,7 +9,6 @@ import os
 import numpy as np
 from scipy.stats import multivariate_normal
 import pandas as pd
-import logging
 
 # Local
 from cobaya.likelihood import Likelihood
@@ -21,8 +20,6 @@ from cobaya.tools import get_path_to_installation
 class _bao_prototype(Likelihood):
 
     def initialise(self):
-        self.name = self.__class__.__name__
-        self.log = logging.getLogger(self.name)
         # If no path specified, use the modules path
         data_file_path = (self.path or
                           os.path.join(get_path_to_installation(), "data/sdss_dr12"))

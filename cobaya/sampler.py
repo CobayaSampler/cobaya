@@ -60,8 +60,7 @@ from cobaya.tools import get_class
 from cobaya.log import HandledException
 
 # Logger
-import logging
-log = logging.getLogger(__name__)
+log = logging.getLogger(__name__.split(".")[-1])
 
 
 class Sampler(object):
@@ -139,7 +138,7 @@ class Sampler(object):
         it gets populated it with the derived parameters' values.
         """
         if not np.all(np.isfinite(params_values)):
-            log.error("Got non-finite parameter values: %r", params_values)
+            self.log.error("Got non-finite parameter values: %r", params_values)
             raise HandledException
         if not ignore_prior:
             logprior = self.prior.logp(params_values)

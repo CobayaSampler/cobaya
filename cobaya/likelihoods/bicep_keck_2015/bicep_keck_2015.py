@@ -129,7 +129,7 @@ def is_installed(**kwargs):
 
 def install(path=None, name=None, force=False, code=False, data=True,
             no_progress_bars=False):
-    log = logging.getLogger(__name__)
+    log = logging.getLogger(__name__.split(".")[-1])
     # Create common folders: all planck likelihoods share install folder for code and data
     full_path = get_path(path)
     if not os.path.exists(full_path):

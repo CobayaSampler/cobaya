@@ -24,11 +24,10 @@ from cobaya.conventions import package, _code, _data
 
 # Configure the logger ASAP
 logger_setup()
-log = logging.getLogger(__name__)
+log = logging.getLogger(__name__.split(".")[-1])
 
 
 def install(*infos, **kwargs):
-    log = logging.getLogger(__name__)
     path = kwargs.get("path", ".")
     abspath = os.path.abspath(path)
     kwargs_install = {"force": kwargs.get("force", False),
@@ -103,7 +102,7 @@ def install_script():
     if not get_mpi_rank():
         # Configure the logger ASAP
         logger_setup()
-        log = logging.getLogger(__name__)
+        log = logging.getLogger(__name__.split(".")[-1])
         # Parse arguments
         import argparse
         parser = argparse.ArgumentParser(

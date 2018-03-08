@@ -30,7 +30,7 @@ from cobaya.conventions import _modules_path, _products_path, _code, _data
 from cobaya.conventions import _requirements_file, _help_file
 
 logger_setup()
-log = logging.getLogger(__name__)
+log = logging.getLogger(__name__.split(".")[-1])
 
 requirements_file_path = os.path.join(_modules_path, _requirements_file)
 help_file_path = os.path.join(_modules_path, _help_file)

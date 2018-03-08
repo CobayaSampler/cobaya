@@ -24,7 +24,6 @@ from __future__ import division
 # Global
 import os
 import numpy as np
-import logging
 from getdist import IniFile, ParamNames
 from scipy.linalg import sqrtm
 
@@ -38,8 +37,6 @@ from cobaya.tools import get_path_to_installation
 class _cmblikes_prototype(Likelihood):
 
     def initialise(self):
-        self.name = self.__class__.__name__
-        self.log = logging.getLogger(self.name)
         self.tot_theory_fields = len(self.field_names)
         assert self.dataset_file.endswith('.dataset'), (
             "Make sure you are passing a .dataset file!")

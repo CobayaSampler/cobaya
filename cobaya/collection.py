@@ -19,15 +19,12 @@ import six
 import numpy as np
 import pandas as pd
 from getdist import MCSamples
+import logging
 
 # Local
 from cobaya.conventions import _weight, _chi2, _minuslogpost, _minuslogprior, _derived_pre
 from cobaya.conventions import separator
 from cobaya.log import HandledException
-
-# Logger
-import logging
-log = logging.getLogger(__name__)
 
 
 # Default chunk size for enlarging collections more efficiently
@@ -49,6 +46,7 @@ class Collection(object):
     def __init__(self, parametrization, likelihood, output=None,
                  initial_size=enlargement_size, name=None, extension=None):
         self.name = name
+        self.log = logging.getLogger(__name__)
         self.sampled_params = list(parametrization.sampled_params().keys())
         self.derived_params = list(parametrization.derived_params().keys())
         # Create the dataframe structure
@@ -78,8 +76,8 @@ class Collection(object):
             try:
                 logpost = logprior + sum(logliks)
             except ValueError:
-                log.error("If a log-posterior is not specified, you need to pass "
-                          "a log-likelihood and a log-prior.")
+                self.log.error("If a log-posterior is not specified, you need to pass "
+                               "a log-likelihood and a log-prior.")
                 raise HandledException
         self.data.at[self._n, _minuslogpost] = -logpost
         if logprior is not None:
@@ -204,7 +202,7 @@ class Collection(object):
 
     # txt driver
     def prepare__txt(self):
-        log.info("Sample collection to be written on '%s'", self.file_name)
+        self.log.info("Sample collection to be written on '%s'", self.file_name)
         header = "#" + self.data[:0].to_csv(sep=" ", header=True)
         with open(self.file_name, "w") as out:
             out.write(header)
@@ -214,7 +212,7 @@ class Collection(object):
         self.dump_slice__txt(self.n_last_out(), self.n())
     def dump_slice__txt(self, n_min=None, n_max=None):
         if n_min is None or n_max is None:
-            log.error("Needs to specify the limit n's to dump.")
+            self.log.error("Needs to specify the limit n's to dump.")
             raise HandledException
         self._n_last_out = n_max
         self.data[n_min:n_max].to_csv(self.file_name, sep=" ", na_rep="nan", header=False,

@@ -36,7 +36,7 @@ def run(info):
         # May be fixed in the future if we find a way to serialize external functions
         if info.get(_output_prefix):
             from cobaya.yaml import yaml_dump
-            logging.getLogger(__name__).debug(
+            logging.getLogger(__name__.split(".")[-1]).debug(
                 "Input info (dumped to YAML):\n%s", yaml_dump(info))
 
     # Import general classes
@@ -64,7 +64,7 @@ def run(info):
         # Don't dump unless we are doing output, just in case something not serializable
         # May be fixed in the future if we find a way to serialize external functions
         if info.get(_output_prefix):
-            logging.getLogger(__name__).debug(
+            logging.getLogger(__name__.split(".")[-1]).debug(
                 "Updated info (dumped to YAML):\n%s", yaml_dump(full_info))
     # We dump the info now, before modules initialization, lest it is accidentaly modified
     output.dump_info(info, full_info)

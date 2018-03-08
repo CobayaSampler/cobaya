@@ -27,7 +27,6 @@ from __future__ import division
 
 # Global
 from scipy.stats import norm
-import logging
 
 # Local
 from cobaya.likelihood import Likelihood
@@ -37,8 +36,6 @@ from cobaya.log import HandledException
 class _hst_prototype(Likelihood):
 
     def initialise(self):
-        self.name = self.__class__.__name__
-        self.log = logging.getLogger(self.name)
         if getattr(self, "zeff", 0) != 0:
             if not hasattr(self, "angconversion"):
                 self.log.error(

@@ -26,7 +26,7 @@ from cobaya.parametrization import is_sampled_param, is_derived_param
 
 # Logger
 import logging
-log = logging.getLogger(__name__)
+log = logging.getLogger(__name__.split(".")[-1])
 
 
 def load_input(input_file):

@@ -16,7 +16,6 @@ import os
 import numpy as np
 import scipy
 from scipy.interpolate import UnivariateSpline
-import logging
 import copy
 
 # Local
@@ -97,8 +96,6 @@ def get_def_cuts():
 
 class _des_prototype(Likelihood):
     def initialise(self):
-        self.name = self.__class__.__name__
-        self.log = logging.getLogger(self.name)
         self.l_max = self.l_max or int(50000 * self.acc)
         # If no path specified, use the modules path
         data_file_path = (self.path or

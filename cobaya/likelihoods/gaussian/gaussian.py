@@ -73,10 +73,6 @@ from cobaya.log import HandledException
 from cobaya.mpi import get_mpi_size
 from cobaya.conventions import _likelihood, _params
 
-# Logger
-import logging
-log = logging.getLogger(__name__)
-
 
 class gaussian(Likelihood):
     """
@@ -86,7 +82,7 @@ class gaussian(Likelihood):
         """
         Initialises the gaussian distributions.
         """
-        log.info("Initializing")
+        self.log.info("Initializing")
         # Load mean and cov, and check consistency of n_modes and dimensionality
         if self.mean is not None and self.cov is not None:
             # Wrap them in the right arrays (n_mode, param) and check consistency
@@ -99,19 +95,19 @@ class gaussian(Likelihood):
                 self.cov = np.array([self.cov])
             cov_n_modes, cov_dim, cov_dim_2 = self.cov.shape
             if cov_dim != cov_dim_2:
-                log.error("The covariance matrix(/ces) do not appear to be square!\n"
-                          "Got %r", self.cov)
+                self.log.error("The covariance matrix(/ces) do not appear to be square!\n"
+                               "Got %r", self.cov)
                 raise HandledException
             if mean_dim != cov_dim:
-                log.error(
+                self.log.error(
                     "The dimensionalities guessed from mean(s) and cov(s) do not match!")
                 raise HandledException
             if mean_n_modes != cov_n_modes:
-                log.error(
+                self.log.error(
                     "The numbers of modes guessed from mean(s) and cov(s) do not match!")
                 raise HandledException
             if mean_dim != self.d():
-                log.error(
+                self.log.error(
                     "The dimensionality is %d (guessed from given means and covmats) "
                     "but was passed %d parameters instead. " +
                     ("Maybe you forgot to specify the prefix by which to identify them?"
@@ -119,15 +115,15 @@ class gaussian(Likelihood):
                 raise HandledException
             self.n_modes = mean_n_modes
             if len(self.output_params) != self.d()*self.n_modes:
-                log.error(
+                self.log.error(
                     "The number of derived parameters must be equal to the dimensionality"
                     " times the number of modes, i.e. %d x %d = %d, but was given %d "
                     "derived parameters.", self.d(), self.n_modes, self.d()*self.n_modes,
                     len(self.output_params))
                 raise HandledException
         else:
-            log.error("You must specify both a mean (or a list of them) and a "
-                      "covariance matrix, or a list of them.")
+            self.log.error("You must specify both a mean (or a list of them) and a "
+                           "covariance matrix, or a list of them.")
             raise HandledException
         self.gaussians = [multivariate_normal(mean=mean, cov=cov)
                           for mean, cov in zip(self.mean, self.cov)]

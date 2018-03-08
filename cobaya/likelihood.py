@@ -118,7 +118,7 @@ from cobaya.log import HandledException
 
 # Logger
 import logging
-log = logging.getLogger(__name__)
+log = logging.getLogger(__name__.split(".")[-1])
 
 # Default options for all subclasses
 class_options = {"speed": 1}
@@ -129,6 +129,8 @@ class Likelihood(object):
 
     # Generic initialization -- do not touch
     def __init__(self, info, parametrization):
+        self.name = self.__class__.__name__
+        self.log = logging.getLogger(self.name)
         # Load info of the likelihood
         for k in info:
             setattr(self, k, info[k])

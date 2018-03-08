@@ -75,8 +75,6 @@ from cobaya.tools import get_path_to_installation
 class _planck_clik_prototype(Likelihood):
 
     def initialise(self):
-        self.name = self.__class__.__name__
-        self.log = logging.getLogger(self.name)
         # Importing Planck's clik library (only once!)
         try:
             clik
