@@ -85,6 +85,24 @@ def get_modules(*infos):
     return modules
 
 
+def get_default_info(module, kind):
+    path_to_defaults = os.path.join(get_folder(module, kind), _defaults_file)
+    try:
+        default_module_info = yaml_load_file(path_to_defaults)
+    except IOError:
+        # probably an external module
+        default_module_info = {kind: {module: {}}}
+        log.debug("Module %s:%s does not have a defaults file. "%(kind, module) +
+                  "Maybe it is an external module.")
+    try:
+        default_module_info[kind][module]
+    except KeyError:
+        log.error("The defaults file for '%s' should be structured "
+                  "as %s:%s:{[options]}.", module, kind, module)
+        raise HandledException
+    return default_module_info
+
+
 def get_full_info(info):
     """
     Creates an updated info starting from the defaults for each module and updating it
@@ -104,20 +122,8 @@ def get_full_info(info):
             full_info[block][module] = deepcopy(getattr(
                 import_module(package+"."+block, package=package), "class_options", {}))
             # Go on with defaults
-            path_to_defaults = os.path.join(get_folder(module, block), _defaults_file)
-            try:
-                default_module_info = yaml_load_file(path_to_defaults)
-            except IOError:
-                # probably an external module
-                default_module_info = {block: {module: {}}}
-                log.debug("Module %s:%s does not have a defaults file. "%(block, module) +
-                          "Maybe it is an external module.")
-            try:
-                full_info[block][module].update(default_module_info[block][module] or {})
-            except KeyError:
-                log.error("The defaults file for '%s' should be structured "
-                          "as %s:%s:{[options]}.", module, block, module)
-                raise HandledException
+            default_module_info = get_default_info(module, block)
+            full_info[block][module].update(default_module_info[block][module] or {})
             # Update the options with the input file
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
             # First deal with cases "no options" and "external function"
@@ -134,8 +140,8 @@ def get_full_info(info):
                                       .difference(set(full_info[block][module])))
             if options_not_recognized:
                 log.error("'%s' does not recognize some options: '%r'. "
-                          "To see the allowed options, check out the file '%s'",
-                          module, tuple(options_not_recognized), path_to_defaults)
+                          "To see the allowed options, check out the documentation of "
+                          "this module", module, tuple(options_not_recognized))
                 raise HandledException
             full_info[block][module].update(input_info[block][module])
             # Store default parameters and priors of class, and save to combine later

@@ -2,17 +2,15 @@
 
 # Global
 from __future__ import division
-import os
 from copy import deepcopy
 import pytest
 
 # Local
-from cobaya.conventions import _defaults_file, _likelihood, _sampler, _prior
+from cobaya.conventions import _likelihood, _sampler, _prior
 from cobaya.conventions import _params, _p_label
-from cobaya.tools import get_folder
-from cobaya.yaml import yaml_load_file
 from cobaya.run import run
 from cobaya.log import HandledException
+from cobaya.input import get_default_info
 
 # Aux definitions and functions
 
@@ -21,15 +19,10 @@ test_info_common = {
     _sampler: {"evaluate": None}}
 
 
-def _get_default_info(like_info, kind):
-    path_to_defaults = os.path.join(
-        get_folder(list(like_info.keys())[0], kind), _defaults_file)
-    return yaml_load_file(path_to_defaults)
-
-
 def test_prior_inherit_nonegiven():
     updated_info, products = run(test_info_common)
-    default_info = _get_default_info(test_info_common[_likelihood], _likelihood)
+    likname = test_info_common[_likelihood].keys()[0]
+    default_info = get_default_info(likname, _likelihood)
     assert updated_info[_prior] == default_info[_prior]
 
 
@@ -37,14 +30,16 @@ def test_prior_inherit_differentgiven():
     test_info = deepcopy(test_info_common)
     test_info[_prior] = {"third": "lambda a1: 1"}
     updated_info, products = run(test_info)
-    default_info = _get_default_info(test_info[_likelihood], _likelihood)
+    likname = test_info_common[_likelihood].keys()[0]
+    default_info = get_default_info(likname, _likelihood)
     default_info[_prior].update(test_info[_prior])
     assert updated_info[_prior] == default_info[_prior]
 
 
 def test_prior_inherit_samegiven():
     test_info = deepcopy(test_info_common)
-    default_info = _get_default_info(test_info[_likelihood], _likelihood)
+    likname = test_info_common[_likelihood].keys()[0]
+    default_info = get_default_info(likname, _likelihood)
     name, prior = deepcopy(default_info[_prior]).popitem()
     test_info[_prior] = {name: prior}
     updated_info, products = run(test_info)
@@ -53,7 +48,8 @@ def test_prior_inherit_samegiven():
 
 def test_prior_inherit_samegiven_differentdefinition():
     test_info = deepcopy(test_info_common)
-    default_info = _get_default_info(test_info[_likelihood], _likelihood)
+    likname = test_info_common[_likelihood].keys()[0]
+    default_info = get_default_info(likname, _likelihood)
     name, prior = deepcopy(default_info[_prior]).popitem()
     test_info[_prior] = {name: "this is not a prior"}
     with pytest.raises(HandledException):
@@ -62,7 +58,8 @@ def test_prior_inherit_samegiven_differentdefinition():
 
 def test_inherit_label_and_bounds():
     test_info = deepcopy(test_info_common)
-    default_info_params = _get_default_info(test_info[_likelihood], _likelihood)[_params]
+    likname = test_info_common[_likelihood].keys()[0]
+    default_info_params = get_default_info(likname, _likelihood)[_params]
     test_info[_params] = deepcopy(default_info_params)
     test_info[_params]["a1"].pop(_p_label, None)
     # First, change one limit (so no inheritance at all)
