@@ -1,5 +1,6 @@
 # Tries to evaluate the likelihood at LCDM's best fit of Planck 2015, with CAMB and CLASS
 
+import pytest
 from copy import deepcopy
 
 from cosmo_common import body_of_test
@@ -23,10 +24,20 @@ def test_planck_2015_p_camb(modules):
                  chi2_lowTEB_highTTTEEE, best_fit_derived)
 
 
+def test_planck_2015_l_camb(modules):
+    best_fit = params_lensing
+    info_likelihood = lik_info_lensing
+    info_theory = {"camb": None}
+    best_fit_derived = derived_lensing
+    body_of_test(modules, best_fit, info_likelihood, info_theory,
+                 chi2_lensing, best_fit_derived)
+
+
+@pytest.mark.skip
 def test_planck_2015_t_classy(modules):
     best_fit = params_lowl_highTT
     info_likelihood = lik_info_lowl_highTT
-    info_theory = {"camb": None}
+    info_theory = {"classy": None}
     best_fit_derived = derived_lowl_highTT
     chi2_lowl_highTT_classy = deepcopy(chi2_lowl_highTT)
     chi2_lowl_highTT_classy["tolerance"] += 2.1
@@ -34,10 +45,11 @@ def test_planck_2015_t_classy(modules):
                  chi2_lowl_highTT_classy, best_fit_derived)
 
 
+@pytest.mark.skip
 def test_planck_2015_p_classy(modules):
     best_fit = params_lowTEB_highTTTEEE
     info_likelihood = lik_info_lowTEB_highTTTEEE
-    info_theory = {"camb": None}
+    info_theory = {"classy": None}
     best_fit_derived = derived_lowTEB_highTTTEEE
     chi2_lowTEB_highTTTEEE_classy = deepcopy(chi2_lowTEB_highTTTEEE)
     chi2_lowTEB_highTTTEEE_classy["tolerance"] += 2.1
@@ -45,12 +57,19 @@ def test_planck_2015_p_classy(modules):
                  chi2_lowTEB_highTTTEEE_classy, best_fit_derived)
 
 
-# Temperature only #######################################################################
+@pytest.mark.skip
+def test_planck_2015_l_classy(modules):
+    best_fit = params_lensing
+    info_likelihood = lik_info_lensing
+    info_theory = {"classy": None}
+    best_fit_derived = derived_lensing
+    chi2_lensing_classy = deepcopy(chi2_lensing)
+#    chi2_lowTEB_lensing_classy["tolerance"] += 2.1
+    body_of_test(modules, best_fit, info_likelihood, info_theory,
+                 chi2_lensing, best_fit_derived)
 
-# NB: A_sz and ksz_norm need to have a prior defined, though "evaluate" will ignore it in
-# favour of the fixed "ref" value. This needs to be so since, at the time of writing this
-# test, explicit multiparameter priors need to be functions of *sampled* parameters.
-# Hopefully this requirement can be dropped in the near future.
+
+# Temperature only #######################################################################
 
 lik_info_lowl_highTT = {"planck_2015_lowl": None, "planck_2015_plikHM_TT": None}
 
@@ -63,8 +82,8 @@ params_lowl_highTT = {
     "ombh2": 0.02249139,
     "omch2": 0.1174684,
     # only one of the next two is finally used!
-    "H0": 68.43994,
-    "cosmomc_theta_100": 1.041189,
+    "H0": 68.43994,  # will be ignored in the CAMB case
+    "cosmomc_theta_100": 1.041189,  # will be ignored in the CLASS case
     "tau": 0.1249913,
     "logAs1e10": 3.179,
     "ns": 0.9741693,
@@ -120,11 +139,6 @@ derived_lowl_highTT = {
 
 # Best fit Polarization ##################################################################
 
-# NB: A_sz and ksz_norm need to have a prior defined, though "evaluate" will ignore it in
-# favour of the fixed "ref" value. This needs to be so since, at the time of writing this
-# test, explicit multiparameter priors need to be functions of *sampled* parameters.
-# Hopefully this requirement can be dropped in the near future.
-
 lik_info_lowTEB_highTTTEEE = {"planck_2015_lowTEB": None,
                               "planck_2015_plikHM_TTTEEE": None}
 
@@ -138,7 +152,7 @@ params_lowTEB_highTTTEEE = {
     "omch2": 0.1198657,
     # only one of the next two is finally used!
     "H0": 67.25,  # will be ignored in the CAMB case
-    "cosmomc_theta_100": 1.040778,
+    "cosmomc_theta_100": 1.040778,  # will be ignored in the CLASS case
     "logAs1e10": 3.0929,
     "ns": 0.9647522,
     "tau": 0.07888604,
@@ -183,7 +197,7 @@ derived_lowTEB_highTTTEEE = {
     "s8omegamp25":[0.6228, 0.011],
     "s8h5":       [1.0133, 0.017],
     "zre":   [10.07, 1.6],
-    "As1e9":  [2.204, 2.207],
+    "As1e9":  [2.204, 0.074],
     "clamp":  [1.8824, 0.012],
     "YHe":    [0.2453409, 0.000072],
     "Y_p":    [0.2466672, 0.000072],
@@ -201,4 +215,56 @@ derived_lowTEB_highTTTEEE = {
     "keq":     [0.010365, 0.00010],
     "thetaeq":  [0.8139, 0.0063],
     "thetarseq": [0.44980, 0.0032],
+    }
+
+
+# Best fit lensing (from best combination with lowTEB+_highTTTEEE ########################
+
+lik_info_lensing = {"planck_2015_lensing": None}
+
+chi2_lensing = {"planck_2015_lensing": 9.78, "tolerance": 0.1}
+
+params_lensing = {
+    # Sampled
+    "ombh2": 0.022274,
+    "omch2": 0.11913,
+    # only one of the next two is finally used!
+    "H0": 67.56,  # will be ignored in the CAMB case
+    "cosmomc_theta_100": 1.040867,  # will be ignored in the CLASS case
+    "logAs1e10": 3.0600,
+    "ns": 0.96597,
+    "tau": 0.0639,
+    # Planck likelihood
+    "A_planck": 0.99995}
+
+derived_lensing = {
+    # param: [best_fit, sigma]
+    "H0": [67.56, 0.64],
+    "omegav": [0.6888, 0.0087],
+    "omegam": [0.3112, 0.0087],
+    "omegamh2": [0.14205, 0.0013],
+    "omegamh3": [0.095971, 0.00030],
+    "sigma8": [0.8153, 0.0087],
+    "s8omegamp5": [0.4548, 0.0068],
+    "s8omegamp25":[0.6089, 0.0067],
+    "s8h5":       [0.9919, 0.010],
+    "zre":    [8.64, 1.3],
+    "As1e9":  [2.133, 0.053],
+    "clamp":  [1.8769, 0.011],
+    "YHe":    [0.245350, 0.000071],
+    "Y_p":    [0.246677, 0.000072],
+    "DH":     [2.6095e-5, 0.030e-5],
+    "age":    [13.8051, 0.026],
+    "zstar":  [1089.966, 0.29],
+    "rstar":  [144.730, 0.31],
+    "thetastar": [1.041062, 0.00031],
+    "DAstar":  [13.9022, 0.029],
+    "zdrag":   [1059.666, 0.31],
+    "rdrag":   [147.428, 0.30],
+    "kd":      [0.140437, 0.00032],
+    "thetad":  [0.160911, 0.00018],
+    "zeq":     [3379.1, 32],
+    "keq":     [0.010313, 0.000096],
+    "thetaeq":  [0.8171, 0.0060],
+    "thetarseq": [0.45146, 0.0031],
     }

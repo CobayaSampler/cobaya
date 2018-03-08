@@ -58,6 +58,8 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
     if info[_theory].keys()[0] == "classy":
         # Remove "cosmomc_theta" in favour of "H0" (remove it from derived then!)
         info[_params].pop("cosmomc_theta")
+        info[_params].pop("cosmomc_theta_100")
+        info[_params]["H0"] = {_prior: {"min": 0, "max": 100}, _p_ref: best_fit["H0"]}
         derived.pop("H0")
         best_fit_derived.pop("H0")
         # Don't test those that have not been implemented yet
