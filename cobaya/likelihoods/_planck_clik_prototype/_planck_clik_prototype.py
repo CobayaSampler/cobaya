@@ -1,14 +1,14 @@
 """
 .. module:: _planck_clik_prototype
 
-:Synopsis: Definition of the clik code based likelihoods
+:Synopsis: Definition of the clik-based likelihoods
 :Author: Jesus Torrado (based on MontePython's version by Julien Lesgourgues and Benjamin Audren)
 
-Contains the definition of the base clik 2.0 likelihoods, from which all Planck 2015
-likelihoods inherit.
+Family of Planck 2015 CMB likelihoods, based on the ``clik 2.0`` code.
 
 The Planck 2015 likelihoods defined here are:
 
+- ``planck_2015_lensing``
 - ``planck_2015_lowl``
 - ``planck_2015_lowTEB``
 - ``planck_2015_plikHM_TT``
@@ -16,33 +16,105 @@ The Planck 2015 likelihoods defined here are:
 - ``planck_2015_plikHM_TTTEEE_unbinned``
 - ``planck_2015_plikHM_TT_unbinned``
 
+You can read a description of the different likelihoods in the
+`Planck wiki <https://wiki.cosmos.esa.int/planckpla2015/index.php/CMB_spectrum_%26_Likelihood_Code>`_.
+
+.. |br| raw:: html
+
+   <br />
+
+.. note::
+
+   **If you use any of these likelihoods, please cite them as:**
+   |br|
+   N. Aghanim et al,
+   `Planck 2015 results. XI. CMB power spectra, likelihoods, and robustness of parameters`
+   `(arXiv:1507.02704) <https://arxiv.org/abs/1507.02704>`_
+
 
 Usage
 -----
 
-To use the Planck likelihoods, you simply need to mention them in the likelihood blocks,
-specifying the path where you have installed them, for example:
+To use any of the Planck likelihoods, you simply need to mention them in the
+``likelihood`` block. The corresponding nuisance parameters will be added automatically,
+so you don't have to care about listing them in the ``params`` block.
+
+The nuisance parameters and their default priors can be found in the ``defaults.yaml``
+files in the folder corresponding to each likelihood.
+They are not reproduced here because of their length.
+
+An example of usage can be found in :doc:`examples_planck`.
+
+
+Installation
+------------
+
+
+This likelihood can be installed automatically as explained in :doc:`installation_cosmo`.
+If are following the instructions there (you should!), you don't need to read the rest
+of this section.
+
+.. note::
+   
+   By default, the ``gfortran`` compiler will be used, and the ``cfitsio`` library will be
+   downloaded and compiled automatically.
+   
+   If the installation fails, make sure that the packages ``liblapack3`` and
+   ``liblapack-dev`` are installed in the system (in Debian/Ubuntu, simply do
+   ``sudo apt install liblapack3 liblapack-dev``).
+
+   If you want to re-compile the Planck likelihood to your liking (e.g. with MKL), simply
+   go into the chosen modules installation folder and re-run the ``./waf configure`` and
+   ``./waf install`` with the desired options.
+
+However, if you wish to install it manually or have a previous installation already in
+your system, simply take note of the path to the ``plc-2.0`` and ``plc_2.0`` folders and
+mention it below each Planck likelihood as
 
 .. code-block:: yaml
 
    likelihood:
      planck_2015_lowTEB:
-       path: /path/to/cosmo/likelihoods/planck2015/
+       path: /path/to/planck_2015
      planck_2015_plikHM_TTTEEE:
-       path: /path/to/cosmo/likelihoods/planck2015/
+       path: /path/to/planck_2015
 
-This automatically pulls the likelihood parameters into the sampling, with their default
-priors. The parameters can be fixed or their priors modified by re-defining them in the
-``params: likelihood:`` block.
+Manual installation of Planck 2015 likelihoods
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The default parameter and priors can be found in the ``defaults.yaml`` files in the
-folder corresponding to each likelihood. They are not reproduced here because of their
-length.
+Assuming you are installing all your likelihoods under ``/path/to/likelihoods``:
 
-.. [The installation instructions are in the corresponding doc file because they need
-..  some unicode characters to show some directory structure]
+.. code:: bash
 
+   $ cd /path/to/likelihoods
+   $ mkdir planck_2015
+   $ cd planck_2015
+   $ wget http://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLOGY_OID=1904
+   $ tar xvjf data-action?COSMOLOGY.COSMOLOGY_OID=1904
+   $ rm data-action?COSMOLOGY.COSMOLOGY_OID=1904
+   $ cd plc-2.0
+   $ ./waf configure # options
+
+If the last step failed, try adding the option ``--install_all_deps``.
+It it doesn't solve it, follow the instructions in the ``readme.md``
+file in the ``plc-2.0`` folder.
+
+If you have Intel's compiler and Math Kernel Library (MKL), you may want to also add the
+option ``--lapack_mkl=${MKLROOT}`` in the last line to make use of it.
+
+If ``./waf configure`` ended successfully run ``./waf install`` in the same folder.
+You do **not** need to run ``clik_profile.sh``, as advised.
+
+Now, download the required likelihood files from the
+`Planck Legacy Archive <http://pla.esac.esa.int/pla/#cosmology>`_ (Europe) or the
+`NASA/IPAC Archive <http://irsa.ipac.caltech.edu/data/Planck/release_2/software/>`_ (US).
+
+For instance, if you want to reproduce the baseline Planck 2015 results,
+download the file ``COM_Likelihood_Data-baseline_R2.00.tar.gz``
+from any of the two links above, and uncompress it under the ``planck_2015`` folder
+that you created above.
 """
+
 # Python 2/3 compatibility
 from __future__ import absolute_import
 from __future__ import division
