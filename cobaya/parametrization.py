@@ -74,7 +74,7 @@ from cobaya.log import HandledException
 
 # Logger
 import logging
-log = logging.getLogger(__name__)
+log = logging.getLogger(__name__.split(".")[-1])
 
 
 def is_fixed_param(info_param):
