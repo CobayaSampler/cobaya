@@ -103,10 +103,7 @@ class _planck_clik_prototype(Likelihood):
         clik_file = os.path.join(self.path_data, self.clik_file)
         # for lensing, some routines change. Intializing a flag for easier
         # testing of this condition
-        if 'lensing' in self.name and 'Planck' in self.name:
-            self.lensing = True
-        else:
-            self.lensing = False
+        self.lensing = "lensing" in self.name
         try:
             if self.lensing:
                 self.clik = clik.clik_lensing(clik_file)
@@ -122,24 +119,11 @@ class _planck_clik_prototype(Likelihood):
                 self.l_max = max(self.clik.get_lmax())
         except clik.lkl.CError:
             self.log.error(
-                "The path to the .clik file for the likelihood "
-                "%s was not found where indicated."
-                " Note that the default path to search for it is"
-                " one directory above the path['clik'] field. You"
-                " can change this behaviour in all the "
-                "Planck_something.data, to reflect your local configuration, "
-                "or alternatively, move your .clik files to this place.", self.name)
+                "The .clik file was not found where specified in the 'clik_file' field "
+                "of the settings of this likelihood. Maybe the 'path' given is not "
+                "correct? The full path where the .clik file was searched for is '%s'",
+                clik_file)
             raise HandledException
-        except KeyError:
-            self.log.error(
-                "In the %s.data file, the field 'clik' of the "
-                "path dictionary is expected to be defined. Please make sure"
-                " it is the case in you configuration file", self.name)
-            raise HandledException
-        # Requested spectra
-        if self.lensing:
-            raise NotImplementedError("Lensing lik not implemented!!!")
-            # For lensing, the order would be: **phiphi TT EE BB TE TB EB**
         self.expected_params = list(self.clik.extra_parameter_names)
         # line added to deal with a bug in planck likelihood release:
         # A_planck called A_Planck in plik_lite
@@ -153,9 +137,13 @@ class _planck_clik_prototype(Likelihood):
 
     def add_theory(self):
         # State requisites to the theory code
-        requested_i = [c == "1" for c in self.clik.get_has_cl()]
-        requested_cls = [
-            cl for cl,i in zip(["TT","EE","BB","TE","TB","EB"], requested_i) if i]
+        requested_cls = ["tt","ee","bb","te","tb","eb"]
+        if self.lensing:
+            has_cl = [lmax != -1 for lmax in self.clik.get_lmax()]
+            requested_cls = ["pp"] + requested_cls
+        else:
+            has_cl = self.clik.get_has_cl()
+        requested_cls = [cl for cl,i in zip(requested_cls, has_cl) if i]
         self.theory.needs({"Cl": requested_cls, "l_max": self.l_max})
 
     def logp(self, **params_values):
@@ -163,17 +151,15 @@ class _planck_clik_prototype(Likelihood):
         cl = self.theory.get_cl()
         # testing for lensing
         if self.lensing:
-            try:
-                length = len(self.clik.get_lmax())
-                tot = np.zeros(
-                    np.sum(self.clik.get_lmax()) + length +
-                    len(self.params()))
+            length = len(self.clik.get_lmax())
+            tot = np.zeros(
+                np.sum(self.clik.get_lmax()) + length + len(self.expected_params))
             # following 3 lines for compatibility with lensing likelihoods <= 2013
             # (then, clik.get_lmax() just returns an integer for lensing likelihoods,
             # and the length is always 2 for cl['pp'], cl['tt'])
-            except:
-                length = 2
-                tot = np.zeros(2*self.l_max+length + len(self.params()))
+            # except:
+            #    length = 2
+            #    tot = np.zeros(2*self.l_max+length + len(self.params()))
         else:
             length = len(self.clik.get_has_cl())
             tot = np.zeros(
@@ -199,37 +185,35 @@ class _planck_clik_prototype(Likelihood):
                             tot[index+j] = 0 #cl['eb'][j] class does not compute eb
                     index += self.clik.get_lmax()[i]+1
         else:
-            try:
-                for i in range(length):
-                    if self.clik.get_lmax()[i] > -1:
-                        for j in range(self.clik.get_lmax()[i]+1):
-                            if i == 0:
-                                tot[index+j] = cl['pp'][j]
-                            if i == 1:
-                                tot[index+j] = cl['tt'][j]
-                            if i == 2:
-                                tot[index+j] = cl['ee'][j]
-                            if i == 3:
-                                tot[index+j] = cl['bb'][j]
-                            if i == 4:
-                                tot[index+j] = cl['te'][j]
-                            if i == 5:
-                                tot[index+j] = 0 #cl['tb'][j] class does not compute tb
-                            if i == 6:
-                                tot[index+j] = 0 #cl['eb'][j] class does not compute eb
-
-                        index += self.clik.get_lmax()[i]+1
-            # following 8 lines for compatibility with lensing likelihoods <= 2013
-            # (then, clik.get_lmax() just returns an integer for lensing likelihoods,
-            # and the length is always 2 for cl['pp'], cl['tt'])
-            except:
-                for i in range(length):
-                    for j in range(self.l_max):
+            for i in range(length):
+                if self.clik.get_lmax()[i] > -1:
+                    for j in range(self.clik.get_lmax()[i]+1):
                         if i == 0:
                             tot[index+j] = cl['pp'][j]
                         if i == 1:
                             tot[index+j] = cl['tt'][j]
-                    index += self.l_max+1
+                        if i == 2:
+                            tot[index+j] = cl['ee'][j]
+                        if i == 3:
+                            tot[index+j] = cl['bb'][j]
+                        if i == 4:
+                            tot[index+j] = cl['te'][j]
+                        if i == 5:
+                            tot[index+j] = 0 #cl['tb'][j] class does not compute tb
+                        if i == 6:
+                            tot[index+j] = 0 #cl['eb'][j] class does not compute eb
+                    index += self.clik.get_lmax()[i]+1
+            # following 8 lines for compatibility with lensing likelihoods <= 2013
+            # (then, clik.get_lmax() just returns an integer for lensing likelihoods,
+            # and the length is always 2 for cl['pp'], cl['tt'])
+            # except:
+            #     for i in range(length):
+            #         for j in range(self.l_max):
+            #             if i == 0:
+            #                 tot[index+j] = cl['pp'][j]
+            #             if i == 1:
+            #                 tot[index+j] = cl['tt'][j]
+            #         index += self.l_max+1
         # fill with likelihood parameters
         for i,p in enumerate(self.expected_params):
             tot[index+i] = params_values[p]
