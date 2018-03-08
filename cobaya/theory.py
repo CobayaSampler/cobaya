@@ -21,6 +21,9 @@ code.
 # Python 2/3 compatibility
 from __future__ import division
 
+# Global
+import logging
+
 # Default options for all subclasses
 class_options = {"speed": 1}
 
@@ -62,6 +65,8 @@ class Theory(object):
     # Generic methods: do not touch these
 
     def __init__(self, info_input_params, info_output_params, info_theory):
+        self.name = self.__class__.__name__
+        self.log = logging.getLogger(self.name)
         self.input_params = info_input_params
         self.output_params = info_output_params
         # Load info of the code

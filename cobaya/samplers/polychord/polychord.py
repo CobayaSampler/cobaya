@@ -123,16 +123,13 @@ from __future__ import division
 import os
 import sys
 import numpy as np
+import logging
 
 # Local
 from cobaya.sampler import Sampler
 from cobaya.mpi import get_mpi_rank
 from cobaya.collection import Collection
 from cobaya.log import HandledException
-
-# Logger
-import logging
-log = logging.getLogger(__name__)
 
 
 # attributes that need to be broadcasted
@@ -143,26 +140,26 @@ class polychord(Sampler):
     def initialise(self):
         """Imports the PolyChord sampler and prepares its arguments."""
         if not get_mpi_rank():  # rank = 0 (MPI master) or None (no MPI)
-            log.info("Initializing")
+            self.log.info("Initializing")
         # Importing PolyChord from the correct path
         if self.path:
             if not get_mpi_rank():
-                log.info("Importing PolyChord from %s", self.path)
+                self.log.info("Importing PolyChord from %s", self.path)
                 if not os.path.exists(self.path):
-                    log.error("The path you indicated for PolyChord does not exist: %s",
-                              self.path)
+                    self.log.error("The path you indicated for PolyChord "
+                                   "does not exist: %s", self.path)
                     raise HandledException
             sys.path.insert(0, self.path)
             from PyPolyChord import PyPolyChord
         else:
             # Currently, not installable as a python package! This will ALWAYS fail
-            log.error("You need to specify PolyChord's path.")
+            self.log.error("You need to specify PolyChord's path.")
             raise HandledException
-            # log.info("Importing *global* PolyChord")
+            # self.log.info("Importing *global* PolyChord")
             # try:
             #     import PyPolyChord
             # except ImportError:
-            #     log.error(
+            #     self.log.error(
             #         "Couldn't find PolyChord's python interface.\n"
             #         "Make sure that you have compiled it, and that you either\n"
             #         " (a) specify a path (you didn't) or\n"
@@ -183,7 +180,7 @@ class polychord(Sampler):
         if "feedback" not in self.pc_args:
             values = {logging.CRITICAL: 0, logging.ERROR: 0, logging.WARNING: 0,
                       logging.INFO: 1, logging.DEBUG: 2}
-            self.pc_args["feedback"] = values[log.getEffectiveLevel()]
+            self.pc_args["feedback"] = values[self.log.getEffectiveLevel()]
         self.pc_args["nDims"] = self.prior.d()
         self.pc_args["nDerived"] = (len(self.parametrization.derived_params()) + 1 +
                                     len(self.likelihood._likelihoods))
@@ -210,7 +207,8 @@ class polychord(Sampler):
                     os.makedirs(os.path.join(self.pc_args["base_dir"], "clusters"))
                 except OSError:  # exists!
                     pass
-            log.info("Storing raw PolyChord output in '%s'.", self.pc_args["base_dir"])
+            self.log.info("Storing raw PolyChord output in '%s'.",
+                          self.pc_args["base_dir"])
         # explotining the speed hierarchy
         # sort blocks by paramters order and check contiguity (required by PolyChord!!!)
 #        speeds, blocks = zip(*self.likelihood.speed_blocked_params(as_indices=True))
@@ -222,13 +220,13 @@ class polychord(Sampler):
 #            sorting_indices = [0]
 #        speeds, blocks = speeds[sorting_indices], blocks[sorting_indices]
 #        if np.all([np.all(block==range(block[0], block[-1]+1)) for block in blocks]):
-        log.warning("TODO: SPEED HIERARCHY EXPLOITATION DISABLED FOR NOW!!!")
+        self.log.warning("TODO: SPEED HIERARCHY EXPLOITATION DISABLED FOR NOW!!!")
 #            self.pc_args["grade_frac"] = list(speeds)
 #            self.pc_args["grade_dims"] = [len(block) for block in blocks]
-#            log.info("Exploiting a speed hierarchy with speeds %r and blocks %r",
+#            self.log.info("Exploiting a speed hierarchy with speeds %r and blocks %r",
 #                     speeds, blocks)
 #        else:
-#            log.warning("Some speed blocks are not contiguous: PolyChord cannot deal "
+#            self.log.warning("Some speed blocks are not contiguous: PolyChord cannot deal "
 #                        "with the speed hierarchy. Not exploting it.")
         # prior conversion from the hypercube
         bounds = self.prior.bounds(confidence_for_unbounded=self.confidence_for_unbounded)
@@ -237,8 +235,8 @@ class polychord(Sampler):
         if len(inf[0]):
             params_names = self.prior.names()
             params = [params_names[i] for i in sorted(list(set(inf[0])))]
-            log.error("PolyChord needs bounded priors, but the parameter(s) '"
-                      "', '".join(params)+"' is(are) unbounded.")
+            self.log.error("PolyChord needs bounded priors, but the parameter(s) '"
+                           "', '".join(params)+"' is(are) unbounded.")
             raise HandledException
         locs = bounds[:,0]
         scales = bounds[:,1] - bounds[:,0]
@@ -247,9 +245,9 @@ class polychord(Sampler):
         self.logvolume = np.log(np.prod(scales))
         # Done!
         if not get_mpi_rank():
-            log.info("Calling PolyChord with arguments" +
-                     "\n  ".join([""] +
-                                 ["%s : "%p+str(v) for p,v in self.pc_args.items()]))
+            self.log.info("Calling PolyChord with arguments" +
+                          "\n  ".join([""] +
+                                      ["%s : "%p+str(v) for p,v in self.pc_args.items()]))
 
     def run(self):
         """
@@ -262,7 +260,7 @@ class polychord(Sampler):
             logposterior, logprior, logliks, derived = self.logposterior(params_values)
             derived = list(derived) + [logprior] + list(logliks)
             return logposterior+self.logvolume, derived
-        log.info("Sampling!")
+        self.log.info("Sampling!")
         self.pc.run_nested_sampling(logpost, **self.pc_args)
 
     def close(self):
@@ -271,7 +269,7 @@ class polychord(Sampler):
         (if ``txt`` output requested).
         """
         if not get_mpi_rank():  # process 0 or single (non-MPI process)
-            log.info("Loading PolyChord's resuts: samples and evidences.")
+            self.log.info("Loading PolyChord's resuts: samples and evidences.")
             prefix = os.path.join(self.pc_args["base_dir"], self.pc_args["file_root"])
             sample = np.loadtxt(prefix+".txt")
             self.collection = Collection(
@@ -303,8 +301,8 @@ class polychord(Sampler):
 #                get_mpi_comm().bcast(getattr(self, attrname, None), root=0))
 #            map(bcast_from_0, ["collection", "logZ", "logZstd"])
         if not get_mpi_rank():  # process 0 or single (non-MPI process)
-            log.info("Finished! "
-                     "Raw PolyChord output stored in '%s'.", self.pc_args["base_dir"])
+            self.log.info("Finished! "
+                          "Raw PolyChord output stored in '%s'.", self.pc_args["base_dir"])
 
     def products(self):
         """

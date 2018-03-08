@@ -152,10 +152,6 @@ from cobaya.theory import Theory
 from cobaya.log import HandledException
 from cobaya.install import user_flag_if_needed
 
-# Logger
-import logging
-log = logging.getLogger(__name__)
-
 # Result collector
 collector = namedtuple("collector", ["method", "kwargs"])
 
@@ -165,23 +161,23 @@ class camb(Theory):
     def initialise(self):
         """Importing CAMB from the correct path, if given."""
         if self.path:
-            log.info("Importing *local* CAMB from "+self.path)
+            self.log.info("Importing *local* CAMB from "+self.path)
             if not os.path.exists(self.path):
-                log.error("The given folder does not exist: '%s'", self.path)
+                self.log.error("The given folder does not exist: '%s'", self.path)
                 raise HandledException
             pycamb_path = os.path.join(self.path, "pycamb")
             if not os.path.exists(pycamb_path):
-                log.error("Either CAMB is not in the given folder, '%s', or you are using"
-                          " a very old version without the `pycamb` Python interface.",
-                          self.path)
+                self.log.error(
+                    "Either CAMB is not in the given folder, '%s', or you are using a "
+                    "very old version without the `pycamb` Python interface.", self.path)
                 raise HandledException
             sys.path.insert(0, pycamb_path)
         else:
-            log.info("Importing *global* CAMB.")
+            self.log.info("Importing *global* CAMB.")
         try:
             import camb
         except ImportError:
-            log.error(
+            self.log.error(
                 "Couldn't find the CAMB python interface.\n"
                 "Make sure that you have compiled it, and that you either\n"
                 " (a) specify a path (you didn't) or\n"
@@ -202,7 +198,7 @@ class camb(Theory):
         self.also = {}
         # patch: if cosmomc_theta is used, CAMB needs to be passed explicitly "H0=None"
         if all((p in self.input_params) for p in ["H0", "cosmomc_theta"]):
-            log.error("Can't pass both H0 and cosmomc_theta to Camb.")
+            self.log.error("Can't pass both H0 and cosmomc_theta to Camb.")
             raise HandledException
         if "cosmomc_theta" in self.input_params or "cosmomc_theta":
             self.also["H0"] = None
@@ -260,8 +256,8 @@ class camb(Theory):
                 if v is None:
                     self.derived_extra += [k]
                 else:
-                    log.error("'%s' does not understand the requirement '%s:%s'.",
-                              self.__class__.__name__,k,v)
+                    self.log.error("'%s' does not understand the requirement '%s:%s'.",
+                                   self.__class__.__name__,k,v)
                     raise HandledException
         # Derived parameters (if some need some additional computations)
         # ...
@@ -278,14 +274,15 @@ class camb(Theory):
         if self.precision:
             args.update(self.precision)
         # Generate and save
-        log.debug("Setting parameters: %r", args)
+        self.log.debug("Setting parameters: %r", args)
         try:
             return self.camb.set_params(**args)
         except CAMBParamRangeError:
             return False
         except:
-            log.error("Error setting CAMB parameters -- see CAMB's error trace below.\n"
-                      "The parameters were %r", args)
+            self.log.error("Error setting CAMB parameters -- "
+                           "see CAMB's error trace below.\n"
+                           "The parameters were %r", args)
             raise  # No HandledException, so that CAMB traceback gets printed
 
     def compute(self, derived=None, **params_values_dict):
@@ -297,11 +294,11 @@ class camb(Theory):
             # Get (pre-computed) derived parameters
             if derived == {}:
                 derived.update(self.states[i_state]["derived"])
-            log.debug("Re-using computed results (state %d)", i_state)
+            self.log.debug("Re-using computed results (state %d)", i_state)
         except StopIteration:
             # update the (first) oldest one and compute
             i_state = lasts.index(min(lasts))
-            log.debug("Computing (state %d)", i_state)
+            self.log.debug("Computing (state %d)", i_state)
             intermediates = {
                 "CAMBparams": {"result": self.set(params_values_dict, i_state)},
                 "CAMBdata": {"method": "get_results", "result": None}}
@@ -367,7 +364,8 @@ class camb(Theory):
         for p in self.output_params:
             derived[p] = self.get_derived(p, intermediates)
             if derived[p] is None:
-                log.error("Derived param '%s' not implemented in the CAMB interface", p)
+                self.log.error(
+                    "Derived param '%s' not implemented in the CAMB interface", p)
                 raise HandledException
         return derived
 
@@ -380,7 +378,7 @@ class camb(Theory):
             value = current_state[pool].get(p, None)
             if value is not None:
                 return value
-        log.error("Parameter not known: '%s'", p)
+        self.log.error("Parameter not known: '%s'", p)
         raise HandledException
 
     def get_cl(self, ell_factor=False):
@@ -434,6 +432,7 @@ def is_installed(**kwargs):
 
 
 def install(force=False, code=True, **kwargs):
+    log = logging.getLogger("camb")
     if not code:
         log.info("Code not requested. Nothing to do.")
         return True

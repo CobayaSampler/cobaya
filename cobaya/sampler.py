@@ -46,11 +46,13 @@ implement only the methods ``initialise``, ``run``, ``close``, and ``products``.
 # Python 2/3 compatibility
 from __future__ import absolute_import
 from __future__ import division
+from __future__ import print_function
 
 # Global
 from importlib import import_module
 import numpy as np
 from copy import deepcopy
+import logging
 
 # Local
 from cobaya.conventions import _sampler, package
@@ -116,7 +118,8 @@ class Sampler(object):
 
         [Do not modify this one.]
         """
-        self.name = None
+        self.name = self.__class__.__name__
+        self.log = logging.getLogger(self.name)
         # Load default and input info
         self.parametrization = parametrization
         self.prior = prior

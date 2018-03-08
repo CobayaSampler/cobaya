@@ -124,17 +124,13 @@ import sys
 import os
 import numpy as np
 from copy import deepcopy
+import logging
 
 # Local
 from cobaya.theory import Theory
 from cobaya.log import HandledException
-from cobaya.conventions import subfolders, _theory
 from cobaya.tools import get_path_to_installation
 from cobaya.install import user_flag_if_needed
-
-# Logger
-import logging
-log = logging.getLogger(__name__)
 
 
 # Dictionary of CAMB->CLASS names (only containing the different ones)
@@ -162,9 +158,9 @@ class classy(Theory):
             self.path = os.path.join(
                 path_to_installation, "code", "CLASS")
         if self.path:
-            log.info("Importing *local* CLASS from "+self.path)
+            self.log.info("Importing *local* CLASS from "+self.path)
             if not os.path.exists(self.path):
-                log.error("The given folder does not exist: '%s'", self.path)
+                self.log.error("The given folder does not exist: '%s'", self.path)
                 raise HandledException
             try:
                 classy_path = ''
@@ -177,15 +173,15 @@ class classy(Theory):
                 sys.path.insert(0, classy_path)
                 from classy import Class, CosmoSevereError, CosmoComputationError
             except OSError:
-                log.error("Either CLASS is not in the given folder,\n"
+                self.log.error("Either CLASS is not in the given folder,\n"
                           "'%s',\n or you have not compiled it.", self.path)
                 raise HandledException
         else:
-            log.info("Importing *global* CLASS.")
+            self.log.info("Importing *global* CLASS.")
             try:
                 from classy import Class, CosmoSevereError, CosmoComputationError
             except ImportError:
-                log.error(
+                self.log.error(
                     "Couldn't find the CLASS python interface.\n"
                     "Make sure that you have compiled it, and that you either\n"
                     " (a) specify a path (you didn't) or\n"
@@ -217,7 +213,7 @@ class classy(Theory):
         self.input_default.update(dict(
             [(camb_to_classy.get(p,p),v) for p,v in params_values_dict.items()]))
         # Generate and save
-        log.debug("Setting parameters: %r", self.input_default)
+        self.log.debug("Setting parameters: %r", self.input_default)
         self.states[i_state]["params"] = deepcopy(self.input_default)
         self.states[i_state]["classy"].struct_cleanup()
         self.states[i_state]["classy"].set(**self.input_default)
@@ -232,23 +228,23 @@ class classy(Theory):
             if derived == {}:
                 derived.update(dict([[p,v] for p,v in
                                      zip(self.output_params, self.states[i_state]["derived"])]))
-            log.debug("Re-using computed results (state %d)", i_state)
+            self.log.debug("Re-using computed results (state %d)", i_state)
         except StopIteration:
             # update the (first) oldest one and compute
             i_state = lasts.index(min(lasts))
-            log.debug("Computing (state %d)", i_state)
+            self.log.debug("Computing (state %d)", i_state)
             self.set(params_values_dict, i_state)
             try:
                 if "Cl" in self.input_default["output"]:
                     self.states[i_state]["classy"].compute(["lensing"])
             # "Valid" failure of CLASS: parameters too extreme -> log and report
             except CosmoComputationError:
-                log.exception("CLASS computation failed. Assigning null likelihood. "
+                self.log.exception("CLASS computation failed. Assigning null likelihood. "
                               "See error information below.")
                 return False
             # CLASS not correctly initialised, or input parameters not correct
             except CosmoSevereError:
-                log.error("Error setting parameters or computing results -- "
+                self.log.error("Error setting parameters or computing results -- "
                           "see CLASS's error trace below.\n")
                 raise
             # Prepare derived parameters
@@ -276,7 +272,7 @@ class classy(Theory):
                 self.input_default["output"] += " lCl"
                 self.input_default["lensing"] = "yes"
             else:
-                log.error("'%s' does not understand the requirement '%s:%s'.",
+                self.log.error("'%s' does not understand the requirement '%s:%s'.",
                     self.__class__.__name__,k,v)
                 raise HandledException
         # Derived parameters (if some need some additional computations)
@@ -302,7 +298,7 @@ class classy(Theory):
         # Check if all processes (actually does nothing here)
         try:
             (p for p,v in derived.items() if v is None).next()
-            log.error("Derived param '%s' not working in the CLASS interface", p)
+            self.log.error("Derived param '%s' not working in the CLASS interface", p)
             raise HandledException
         except StopIteration:
             pass  # all well!
@@ -338,6 +334,7 @@ def is_installed(**kwargs):
 
 
 def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs):
+    log = logging.getLogger("classy")
     if not code:
         log.info("Code not requested. Nothing to do.")
         return True

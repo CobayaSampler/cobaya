@@ -53,10 +53,6 @@ from __future__ import division
 from cobaya.sampler import Sampler
 from cobaya.collection import Collection
 
-# Logger
-import logging
-log = logging.getLogger(__name__)
-
 
 class evaluate(Sampler):
 
@@ -67,7 +63,7 @@ class evaluate(Sampler):
         """
         self.one_point = Collection(self.parametrization, self.likelihood,
                                     self.output, initial_size=1, name="1")
-        log.info("Initialised!")
+        self.log.info("Initialised!")
 
     def run(self):
         """
@@ -79,19 +75,19 @@ class evaluate(Sampler):
         sample collection.
         """
         reference_point = self.prior.reference()
-        log.info("Reference point:\n   " +
-               "\n   ".join(["%s = %g" % (p,reference_point[i])
-                             for i,p in enumerate(self.parametrization.sampled_params())]))
-        log.info("Evaluating prior and likelihoods...")
+        self.log.info("Reference point:\n   " +
+                      "\n   ".join(["%s = %g" % (p,reference_point[i])
+                                    for i,p in enumerate(self.parametrization.sampled_params())]))
+        self.log.info("Evaluating prior and likelihoods...")
         logpost, logprior, logliks, derived = self.logposterior(reference_point)
         self.one_point.add(reference_point, derived=derived,
                            logpost=logpost, logprior=logprior, logliks=logliks)
-        log.info("log-posterior  = %g", logpost)
-        log.info("log-prior      = %g", logprior)
-        log.info("log-likelihood = %g", sum(logliks))
-        log.info("   "+"\n   ".join(["chi2_"+name+" = %g"%(-2*logliks[i])
-                  for i,name in enumerate(self.likelihood)]))
-        log.info("Done!")
+        self.log.info("log-posterior  = %g", logpost)
+        self.log.info("log-prior      = %g", logprior)
+        self.log.info("log-likelihood = %g", sum(logliks))
+        self.log.info("   "+"\n   ".join(["chi2_"+name+" = %g"%(-2*logliks[i])
+                                          for i,name in enumerate(self.likelihood)]))
+        self.log.info("Done!")
 
     def close(self):
         """
