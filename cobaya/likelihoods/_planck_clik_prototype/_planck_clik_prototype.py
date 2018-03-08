@@ -2,21 +2,10 @@
 .. module:: _planck_clik_prototype
 
 :Synopsis: Definition of the clik code based likelihoods
-:Author: Julien Lesgourgues and Benjamin Audren (and Jesus Torrado for small compatibility changes only)
+:Author: Jesus Torrado (based on MontePython's version by Julien Lesgourgues and Benjamin Audren)
 
 Contains the definition of the base clik 2.0 likelihoods, from which all Planck 2015
 likelihoods inherit.
-
-The treatment on Planck 2015 likelihoods has been adapted without much modification from
-the `MontePython <http://baudren.github.io/montepython.html>`_ code by Julien Lesgourgues
-and Benjamin Audren.
-
-.. note::
-
-  An older, `MIT-licensed <https://opensource.org/licenses/MIT>`_ version of this module
-  by Julien Lesgourgues and Benjamin Audren can be found in the `source of
-  MontePython <https://github.com/baudren/montepython_public>`_.
-
 
 The Planck 2015 likelihoods defined here are:
 
@@ -103,18 +92,8 @@ class _planck_clik_prototype(Likelihood):
         # testing of this condition
         self.lensing = "lensing" in self.name
         try:
-            if self.lensing:
-                self.clik = clik.clik_lensing(clik_file)
-                try:
-                    self.l_max = max(self.clik.get_lmax())
-                # following 2 lines for compatibility with lensing likelihoods <= 2013
-                # (then, clik.get_lmax() just returns an integer for lensing likelihoods;
-                # this behavior was for clik versions < 10)
-                except:
-                    self.l_max = self.clik.get_lmax()
-            else:
-                self.clik = clik.clik(clik_file)
-                self.l_max = max(self.clik.get_lmax())
+            self.clik = (
+                clik.clik_lensing(clik_file) if self.lensing else clik.clik(clik_file))
         except clik.lkl.CError:
             self.log.error(
                 "The .clik file was not found where specified in the 'clik_file' field "
@@ -132,95 +111,36 @@ class _planck_clik_prototype(Likelihood):
         # Check that the parameters are the right ones
         assert set(self.input_params.keys()) == set(self.expected_params), (
             "Likelihoods parameters do not coincide with the ones clik understands.")
+        # Placeholder for vector passed to clik
+        self.l_maxs = self.clik.get_lmax()
+        length = (len(self.l_maxs) if self.lensing else len(self.clik.get_has_cl()))
+        self.vector = np.zeros(np.sum(self.l_maxs) + length + len(self.expected_params))
 
     def add_theory(self):
         # State requisites to the theory code
         requested_cls = ["tt","ee","bb","te","tb","eb"]
         if self.lensing:
-            has_cl = [lmax != -1 for lmax in self.clik.get_lmax()]
+            has_cl = [lmax != -1 for lmax in self.l_maxs]
             requested_cls = ["pp"] + requested_cls
         else:
             has_cl = self.clik.get_has_cl()
-        requested_cls = [cl for cl,i in zip(requested_cls, has_cl) if i]
-        self.theory.needs({"Cl": requested_cls, "l_max": self.l_max})
+        self.requested_cls = [cl for cl,i in zip(requested_cls, has_cl) if i]
+        self.l_maxs_cls = [lmax for lmax,i in zip(self.l_maxs, has_cl) if i]
+        self.theory.needs({"Cl": self.requested_cls, "l_max": max(self.l_maxs)})
 
     def logp(self, **params_values):
         # get Cl's from the theory code
         cl = self.theory.get_cl()
-        # testing for lensing
-        if self.lensing:
-            length = len(self.clik.get_lmax())
-            tot = np.zeros(
-                np.sum(self.clik.get_lmax()) + length + len(self.expected_params))
-            # following 3 lines for compatibility with lensing likelihoods <= 2013
-            # (then, clik.get_lmax() just returns an integer for lensing likelihoods,
-            # and the length is always 2 for cl['pp'], cl['tt'])
-            # except:
-            #    length = 2
-            #    tot = np.zeros(2*self.l_max+length + len(self.params()))
-        else:
-            length = len(self.clik.get_has_cl())
-            tot = np.zeros(
-                np.sum(self.clik.get_lmax()) + length +
-                len(self.expected_params))
         # fill with Cl's
-        index = 0
-        if not self.lensing:
-            for i in range(length):
-                if self.clik.get_lmax()[i] > -1:
-                    for j in range(self.clik.get_lmax()[i]+1):
-                        if i == 0:
-                            tot[index+j] = cl['tt'][j]
-                        if i == 1:
-                            tot[index+j] = cl['ee'][j]
-                        if i == 2:
-                            tot[index+j] = cl['bb'][j]
-                        if i == 3:
-                            tot[index+j] = cl['te'][j]
-                        if i == 4:
-                            tot[index+j] = 0 #cl['tb'][j] class does not compute tb
-                        if i == 5:
-                            tot[index+j] = 0 #cl['eb'][j] class does not compute eb
-                    index += self.clik.get_lmax()[i]+1
-        else:
-            for i in range(length):
-                if self.clik.get_lmax()[i] > -1:
-                    for j in range(self.clik.get_lmax()[i]+1):
-                        if i == 0:
-                            tot[index+j] = cl['pp'][j]
-                        if i == 1:
-                            tot[index+j] = cl['tt'][j]
-                        if i == 2:
-                            tot[index+j] = cl['ee'][j]
-                        if i == 3:
-                            tot[index+j] = cl['bb'][j]
-                        if i == 4:
-                            tot[index+j] = cl['te'][j]
-                        if i == 5:
-                            tot[index+j] = 0 #cl['tb'][j] class does not compute tb
-                        if i == 6:
-                            tot[index+j] = 0 #cl['eb'][j] class does not compute eb
-                    index += self.clik.get_lmax()[i]+1
-            # following 8 lines for compatibility with lensing likelihoods <= 2013
-            # (then, clik.get_lmax() just returns an integer for lensing likelihoods,
-            # and the length is always 2 for cl['pp'], cl['tt'])
-            # except:
-            #     for i in range(length):
-            #         for j in range(self.l_max):
-            #             if i == 0:
-            #                 tot[index+j] = cl['pp'][j]
-            #             if i == 1:
-            #                 tot[index+j] = cl['tt'][j]
-            #         index += self.l_max+1
+        self.vector[:-len(self.expected_params)] = np.concatenate(
+            [(cl[spectrum][:1+lmax] if spectrum not in ["tb", "eb"]
+              else np.zeros(1+lmax))
+             for spectrum, lmax in zip(self.requested_cls, self.l_maxs_cls)])
         # fill with likelihood parameters
-        for i,p in enumerate(self.expected_params):
-            tot[index+i] = params_values[p]
-        # In case there are derived parameters in the future:
-        # derived = params_values.get("derived")
-        # if derived != None:
-        #     derived["whatever"] = [...]
-        # Compute the likelihood
-        loglik = self.clik(tot)[0]
+        self.vector[-len(self.expected_params):] = (
+            [params_values[p] for p in self.expected_params])
+        loglik = self.clik(self.vector)[0]
+        # "zero" of clik
         if np.allclose(loglik, -1e30):
             loglik = -np.inf
         return loglik

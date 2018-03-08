@@ -2,8 +2,6 @@ Copyright 2017-2018 Jesus Torrado and Antony Lewis
 
 Exceptions:
 -----------
-- For the interface to the Planck 2015 likelihood:
-  Copyright 2015 Julien Lesgourgues and Benjamin Audren
 - The copyright of the logos of the supporting institutions belong to the institutions themselves
 
 This program is free software: you can redistribute it and/or modify
