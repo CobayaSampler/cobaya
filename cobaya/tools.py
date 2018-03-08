@@ -160,6 +160,9 @@ def get_scipy_1d_pdf(info):
     """Generates 1d priors from scipy's pdf's from input info."""
     param = list(info.keys())[0]
     info2 = deepcopy(info[param])
+    if not info2:
+        log.error("No specific prior info given for sampler parameter '%s'."%param)
+        raise HandledException
     # What distribution?
     try:
         dist = info2.pop(_p_dist).lower()
