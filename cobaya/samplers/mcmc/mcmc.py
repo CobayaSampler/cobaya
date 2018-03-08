@@ -180,6 +180,7 @@ import six
 from copy import deepcopy
 from itertools import chain
 import numpy as np
+import logging
 
 # Local
 from cobaya.sampler import Sampler
