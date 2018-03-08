@@ -2,49 +2,47 @@
 
 from copy import deepcopy
 
-from cobaya.yaml import yaml_load
-
 from cosmo_common import body_of_test
 
 
 def test_planck_2015_t_camb(modules):
-    info_best_fit = yaml_load(params_lowl_highTT)
+    best_fit = params_lowl_highTT
     info_likelihood = lik_info_lowl_highTT
     info_theory = {"camb": None}
-    derived_values = derived_lowl_highTT
-    body_of_test(modules, info_best_fit, info_likelihood, info_theory,
-                 chi2_lowl_highTT, derived_values)
+    best_fit_derived = derived_lowl_highTT
+    body_of_test(modules, best_fit, info_likelihood, info_theory,
+                 chi2_lowl_highTT, best_fit_derived)
 
 
 def test_planck_2015_p_camb(modules):
-    info_best_fit = yaml_load(params_lowTEB_highTTTEEE)
+    best_fit = params_lowTEB_highTTTEEE
     info_likelihood = lik_info_lowTEB_highTTTEEE
     info_theory = {"camb": None}
-    derived_values = derived_lowTEB_highTTTEEE
-    body_of_test(modules, info_best_fit, info_likelihood, info_theory,
-                 chi2_lowTEB_highTTTEEE, derived_values)
+    best_fit_derived = derived_lowTEB_highTTTEEE
+    body_of_test(modules, best_fit, info_likelihood, info_theory,
+                 chi2_lowTEB_highTTTEEE, best_fit_derived)
 
 
 def test_planck_2015_t_classy(modules):
-    info_best_fit = yaml_load(params_lowl_highTT)
+    best_fit = params_lowl_highTT
     info_likelihood = lik_info_lowl_highTT
-    info_theory = {"classy": None}
-    derived_values = derived_lowl_highTT
+    info_theory = {"camb": None}
+    best_fit_derived = derived_lowl_highTT
     chi2_lowl_highTT_classy = deepcopy(chi2_lowl_highTT)
     chi2_lowl_highTT_classy["tolerance"] += 2.1
-    body_of_test(modules, info_best_fit, info_likelihood, info_theory,
-                 chi2_lowl_highTT_classy, derived_values)
+    body_of_test(modules, best_fit, info_likelihood, info_theory,
+                 chi2_lowl_highTT_classy, best_fit_derived)
 
 
 def test_planck_2015_p_classy(modules):
-    info_best_fit = yaml_load(params_lowTEB_highTTTEEE)
+    best_fit = params_lowTEB_highTTTEEE
     info_likelihood = lik_info_lowTEB_highTTTEEE
-    info_theory = {"classy": None}
-    derived_values = derived_lowTEB_highTTTEEE
+    info_theory = {"camb": None}
+    best_fit_derived = derived_lowTEB_highTTTEEE
     chi2_lowTEB_highTTTEEE_classy = deepcopy(chi2_lowTEB_highTTTEEE)
     chi2_lowTEB_highTTTEEE_classy["tolerance"] += 2.1
-    body_of_test(modules, info_best_fit, info_likelihood, info_theory,
-                 chi2_lowTEB_highTTTEEE_classy, derived_values)
+    body_of_test(modules, best_fit, info_likelihood, info_theory,
+                 chi2_lowTEB_highTTTEEE_classy, best_fit_derived)
 
 
 # Temperature only #######################################################################
@@ -60,49 +58,32 @@ chi2_lowl_highTT = {"planck_2015_lowl": 15.39,
                     "planck_2015_plikHM_TT": 761.09,
                     "tolerance": 0.1}
 
-params_lowl_highTT = """
-# Sampled
-# dummy prior for ombh2 so that the sampler does not complain
-ombh2:
-  prior:
-    min: 0.005
-    max: 0.1
-  ref: 0.02249139
-omch2: 0.1174684
-# only one of the next two is finally used!
-H0: 68.43994
-cosmomc_theta: 0.01041189
-tau: 0.1249913
-As: 2.401687e-9
-ns: 0.9741693
-# Derived
-# Planck likelihood
-A_planck: 1.00027
-A_cib_217: 61.1
-xi_sz_cib: 0.56
-A_sz:
-  prior:
-    dist: uniform
-    min: 0
-    max: 10
-  ref: 6.84
-ps_A_100_100: 242.9
-ps_A_143_143:  43.0
-ps_A_143_217:  46.1
-ps_A_217_217: 104.1
-ksz_norm:
-  prior:
-    dist: uniform
-    min: 0
-    max: 10
-  ref: 0.00
-gal545_A_100:      7.31
-gal545_A_143:      9.07
-gal545_A_143_217: 17.99
-gal545_A_217:     82.9
-calib_100T: 0.99796
-calib_217T: 0.99555
-"""
+params_lowl_highTT = {
+    # Sampled
+    "ombh2": 0.02249139,
+    "omch2": 0.1174684,
+    # only one of the next two is finally used!
+    "H0": 68.43994,
+    "cosmomc_theta_100": 1.041189,
+    "tau": 0.1249913,
+    "logAs1e10": 3.179,
+    "ns": 0.9741693,
+    # Planck likelihood
+    "A_planck": 1.00027,
+    "A_cib_217": 61.1,
+    "xi_sz_cib": 0.56,
+    "A_sz": 6.84,
+    "ps_A_100_100": 242.9,
+    "ps_A_143_143":  43.0,
+    "ps_A_143_217":  46.1,
+    "ps_A_217_217": 104.1,
+    "ksz_norm": 0.00,
+    "gal545_A_100":      7.31,
+    "gal545_A_143":      9.07,
+    "gal545_A_143_217": 17.99,
+    "gal545_A_217":     82.9,
+    "calib_100T": 0.99796,
+    "calib_217T": 0.99555}
 
 derived_lowl_highTT = {
     # param: [best_fit, sigma]
@@ -144,68 +125,51 @@ derived_lowl_highTT = {
 # test, explicit multiparameter priors need to be functions of *sampled* parameters.
 # Hopefully this requirement can be dropped in the near future.
 
-lik_info_lowTEB_highTTTEEE = {"planck_2015_lowTEB": {"speed": 0.25},
+lik_info_lowTEB_highTTTEEE = {"planck_2015_lowTEB": None,
                               "planck_2015_plikHM_TTTEEE": None}
 
 chi2_lowTEB_highTTTEEE = {"planck_2015_lowTEB": 10496.93,
                           "planck_2015_plikHM_TTTEEE": 2431.65,
                           "tolerance": 0.1}
 
-params_lowTEB_highTTTEEE = """
-# Sampled
-# dummy prior for ombh2 so that the sampler does not complain
-ombh2:
-  prior:
-    min: 0.005
-    max: 0.1
-  ref: 0.02225203
-omch2: 0.1198657
-# only one of the next two is finally used!
-H0: 67.25
-cosmomc_theta: 0.01040778
-As: 2.204051e-9
-ns: 0.9647522
-tau: 0.07888604
-# Derived
-# Planck likelihood
-A_planck: 1.00029
-A_cib_217: 66.4
-xi_sz_cib: 0.13
-A_sz:
-  prior:
-    dist: uniform
-    min: 0
-    max: 10
-  ref: 7.17
-ps_A_100_100: 255.0
-ps_A_143_143: 40.1
-ps_A_143_217: 36.4
-ps_A_217_217: 98.7
-ksz_norm:
-  prior:
-    dist: uniform
-    min: 0
-    max: 10
-  ref: 0.00
-gal545_A_100: 7.34
-gal545_A_143: 8.97
-gal545_A_143_217: 17.56
-gal545_A_217: 81.9
-galf_EE_A_100: 0.0813
-galf_EE_A_100_143: 0.0488
-galf_EE_A_100_217: 0.0995
-galf_EE_A_143: 0.1002
-galf_EE_A_143_217: 0.2236
-galf_EE_A_217: 0.645
-galf_TE_A_100: 0.1417
-galf_TE_A_100_143: 0.1321
-galf_TE_A_100_217: 0.307
-galf_TE_A_143: 0.155
-galf_TE_A_143_217: 0.338
-galf_TE_A_217: 1.667
-calib_100T: 0.99818
-calib_217T: 0.99598
-"""
+params_lowTEB_highTTTEEE = {
+    # Sampled
+    "ombh2": 0.02225203,
+    "omch2": 0.1198657,
+    # only one of the next two is finally used!
+    "H0": 67.25,  # will be ignored in the CAMB case
+    "cosmomc_theta_100": 1.040778,
+    "logAs1e10": 3.0929,
+    "ns": 0.9647522,
+    "tau": 0.07888604,
+    # Planck likelihood
+    "A_planck": 1.00029,
+    "A_cib_217": 66.4,
+    "xi_sz_cib": 0.13,
+    "A_sz": 7.17,
+    "ps_A_100_100": 255.0,
+    "ps_A_143_143": 40.1,
+    "ps_A_143_217": 36.4,
+    "ps_A_217_217": 98.7,
+    "ksz_norm": 0.00,
+    "gal545_A_100": 7.34,
+    "gal545_A_143": 8.97,
+    "gal545_A_143_217": 17.56,
+    "gal545_A_217": 81.9,
+    "galf_EE_A_100": 0.0813,
+    "galf_EE_A_100_143": 0.0488,
+    "galf_EE_A_100_217": 0.0995,
+    "galf_EE_A_143": 0.1002,
+    "galf_EE_A_143_217": 0.2236,
+    "galf_EE_A_217": 0.645,
+    "galf_TE_A_100": 0.1417,
+    "galf_TE_A_100_143": 0.1321,
+    "galf_TE_A_100_217": 0.307,
+    "galf_TE_A_143": 0.155,
+    "galf_TE_A_143_217": 0.338,
+    "galf_TE_A_217": 1.667,
+    "calib_100T": 0.99818,
+    "calib_217T": 0.99598}
 
 derived_lowTEB_highTTTEEE = {
     # param: [best_fit, sigma]

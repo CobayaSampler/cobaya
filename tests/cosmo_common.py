@@ -3,9 +3,12 @@ import numpy as np
 import os
 from copy import deepcopy
 
-from cobaya.conventions import _theory, _likelihood, _params, _derived_pre
-from cobaya.conventions import _sampler, _chi2, separator, _path_install
+from cobaya.conventions import _theory, _likelihood, _params, _derived_pre, _prior
+from cobaya.conventions import _sampler, _chi2, separator, _path_install, _p_ref, _p_drop
 from cobaya.run import run
+from cobaya.yaml import yaml_load
+from cobaya.input import get_default_info, merge_params_info
+
 
 # Tolerance for the tests of the derived parameters
 tolerance_derived = 0.03
@@ -35,18 +38,23 @@ def adapt_covmat(filename, tmpdir, theory="camb", theta_factor=100):
 
 # Body of the best-fit test ##############################################################
 
-def body_of_test(modules, info_best_fit, info_likelihood, info_theory, ref_chi2,
+def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
                  best_fit_derived=None):
     assert modules, "I need a modules folder!"
     info = {_path_install: modules,
             _theory: info_theory,
             _likelihood: info_likelihood,
-            _params: info_best_fit,
             _sampler: {"evaluate": None}}
+    # Add best fit
+    info[_params] = merge_params_info(*(
+        [yaml_load(baseline_cosmology)] +
+        [get_default_info(lik, _likelihood)[_params] for lik in info[_likelihood]]))
+    for p in best_fit:
+        if _prior in info[_params].get(p, {}):
+            info[_params][p]["ref"] = best_fit[p]
     # We'll pop some derived parameters, so copy
     derived = deepcopy(baseline_cosmology_derived)
     best_fit_derived = deepcopy(best_fit_derived)
-    # Adjustments for Classy
     if info[_theory].keys()[0] == "classy":
         # Remove "cosmomc_theta" in favour of "H0" (remove it from derived then!)
         info[_params].pop("cosmomc_theta")
@@ -76,7 +84,8 @@ def body_of_test(modules, info_best_fit, info_likelihood, info_theory, ref_chi2,
     for lik in info[_likelihood]:
         chi2 = products["sample"][_chi2+separator+lik][0]
         assert abs(chi2-ref_chi2[lik]) < ref_chi2["tolerance"], (
-            "Likelihood value for '%s' off by more than %f!"%(lik, ref_chi2["tolerance"]))
+            "Testing likelihood '%s': | %g - %g | = %g >= %g"%(
+                lik, chi2, ref_chi2[lik], abs(chi2-ref_chi2[lik]), ref_chi2["tolerance"]))
     # Check value of derived parameters
     not_tested = []
     not_passed = []
@@ -96,73 +105,72 @@ def body_of_test(modules, info_best_fit, info_likelihood, info_theory, ref_chi2,
 # Baseline priors ########################################################################
 
 baseline_cosmology = r"""
-%s:
-  ombh2:
-    prior:
-      min: 0.005
-      max: 0.1
-    ref:
-      dist: norm
-      loc: 0.0221
-      scale: 0.0001
-    proposal: 0.0001
-    latex: \Omega_\mathrm{b} h^2
-  omch2:
-    prior:
-      min: 0.001
-      max: 0.99
-    ref:
-      dist: norm
-      loc: 0.12
-      scale: 0.001
-    proposal: 0.0005
-    latex: \Omega_\mathrm{c} h^2
-  # If using CLASS, rename to "100*theta_s"!!!
-  cosmomc_theta: "lambda cosmomc_theta_100: 1.e-2*cosmomc_theta_100"
-  cosmomc_theta_100:
-    prior:
-      min: 0.5
-      max: 10
-    ref:
-      dist: norm
-      loc: 1.0411
-      scale: 0.0004
-    proposal: 0.0002
-    latex: 100\theta_\mathrm{MC}
-    drop:
-  tau:
-    prior:
-      min: 0.01
-      max: 0.8
-    ref:
-      dist: norm
-      loc: 0.09
-      scale: 0.01
-    proposal: 0.005
-    latex: \tau_\mathrm{reio}
-  logAs1e10:
-    prior:
-      min: 2
-      max: 4
-    ref:
-      dist: norm
-      loc:   3.1
-      scale: 0.001
-    proposal: 0.001
-    latex: \log(10^{10} A_s)
-    drop:
-  As: "lambda logAs1e10: 1e-10*np.exp(logAs1e10)"
-  ns:
-    prior:
-      min: 0.8
-      max: 1.2
-    ref:
-      dist: norm
-      loc: 0.96
-      scale: 0.004
-    proposal: 0.002
-    latex: n_\mathrm{s}
-"""%(_params)
+ombh2:
+  prior:
+    min: 0.005
+    max: 0.1
+  ref:
+    dist: norm
+    loc: 0.0221
+    scale: 0.0001
+  proposal: 0.0001
+  latex: \Omega_\mathrm{b} h^2
+omch2:
+  prior:
+    min: 0.001
+    max: 0.99
+  ref:
+    dist: norm
+    loc: 0.12
+    scale: 0.001
+  proposal: 0.0005
+  latex: \Omega_\mathrm{c} h^2
+# If using CLASS, rename to "100*theta_s"!!!
+cosmomc_theta: "lambda cosmomc_theta_100: 1.e-2*cosmomc_theta_100"
+cosmomc_theta_100:
+  prior:
+    min: 0.5
+    max: 10
+  ref:
+    dist: norm
+    loc: 1.0411
+    scale: 0.0004
+  proposal: 0.0002
+  latex: 100\theta_\mathrm{MC}
+  drop:
+tau:
+  prior:
+    min: 0.01
+    max: 0.8
+  ref:
+    dist: norm
+    loc: 0.09
+    scale: 0.01
+  proposal: 0.005
+  latex: \tau_\mathrm{reio}
+logAs1e10:
+  prior:
+    min: 2
+    max: 4
+  ref:
+    dist: norm
+    loc:   3.1
+    scale: 0.001
+  proposal: 0.001
+  latex: \log(10^{10} A_s)
+  drop:
+As: "lambda logAs1e10: 1e-10*np.exp(logAs1e10)"
+ns:
+  prior:
+    min: 0.8
+    max: 1.2
+  ref:
+    dist: norm
+    loc: 0.96
+    scale: 0.004
+  proposal: 0.002
+  latex: n_\mathrm{s}
+"""
 
 baseline_cosmology_classy_extra = {"N_ur": 2.0328, "N_ncdm": 1,
                                    "m_ncdm": 0.06, "T_ncdm": 0.71611}
