@@ -143,6 +143,7 @@ from __future__ import division
 # Global
 import sys
 import os
+import logging
 from copy import deepcopy
 import numpy as np
 from collections import namedtuple, OrderedDict as odict
