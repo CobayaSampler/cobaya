@@ -225,7 +225,9 @@ class camb(Theory):
             elif k == "Cl":
                 self.collectors[k] = collector(
                     method="CAMBdata.get_cmb_power_spectra",
-                    kwargs={"spectra": ["total"], "raw_cl": True})
+                    kwargs={
+                        "spectra": ["total"]+(["lens_potential"] if "pp" in v else []),
+                        "raw_cl": True})
                 self.derived_extra += ["TCMB"]
                 # Needed for Planck: 0.1 chi^2 precision
                 self.also["lens_potential_accuracy"] = 1
@@ -393,8 +395,8 @@ class camb(Theory):
         mapping = {"tt": 0, "ee": 1, "bb": 2, "te": 3}
         cl = {"ell": np.arange(cl_camb.shape[0])}
         cl.update({sp: cl_camb[:,i] for sp,i in mapping.items()})
-        # Lensing -- TODO!
-        # pp <-- camb_results.get_lens_potential_cls(lmax)[:, 0]
+        if "lens_potential" in current_state["Cl"]:
+            cl.update({"pp": current_state["Cl"]["lens_potential"][:,0]})
         ell_factor = ((cl["ell"]+1)*cl["ell"]/(2*np.pi))[2:] if ell_factor else 1
         # convert dimensionless C_l's to C_l in muK**2
         T = current_state["derived_extra"]["TCMB"]
