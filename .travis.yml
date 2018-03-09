@@ -89,7 +89,7 @@ before_install:
 ###############################################################################
 script:
   # pre-install CAMB from git (TO BE REMOVED BEFORE 1.0 RELEASE!)
-  - export CURRPWD=$(pwd); git clone https://github.com/cmbant/CAMB.git .. ; cd ../CAMB/pycamb ; setup.py install ; cd $CURRPWD
+  - export CURRPWD=$(pwd); git clone https://github.com/cmbant/CAMB.git .. ; cd ../CAMB/pycamb ; setup.py build ; pip install -e . ; cd $CURRPWD
   # Installation
   - python tests/cosmo_install.py ../modules
   # Not cosmological tests
