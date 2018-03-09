@@ -4,7 +4,7 @@ import os
 from copy import deepcopy
 
 from cobaya.conventions import _theory, _likelihood, _params, _derived_pre, _prior
-from cobaya.conventions import _sampler, _chi2, separator, _path_install, _p_ref, _p_drop
+from cobaya.conventions import _sampler, _chi2, separator, _path_install, _p_ref
 from cobaya.run import run
 from cobaya.yaml import yaml_load
 from cobaya.input import get_default_info, merge_params_info
@@ -67,12 +67,6 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
                   "kd", "thetad", "zeq", "keq", "thetaeq", "thetarseq"]:
             derived.pop(p)
             best_fit_derived.pop(p)
-        # Adapt the definitions of some derived parameters
-        derived["omegam"].pop("derived")
-        derived["omegamh2"]["derived"] = "lambda omegam, H0: omegam*(H0/100)**2"
-        derived["omegamh3"]["derived"] = "lambda omegam, H0: omegam*(H0/100)**3"
-        derived["s8omegamp5"]["derived"] = "lambda sigma8, omegam: sigma8*omegam**0.5"
-        derived["s8omegamp25"]["derived"] = "lambda sigma8, omegam: sigma8*omegam**0.25"
         # More stuff that CLASS needs for the Planck model
         info[_params].update(baseline_cosmology_classy_extra)
     # Add derived
@@ -182,14 +176,13 @@ baseline_cosmology_classy_extra = {"N_ur": 2.0328, "N_ncdm": 1,
 baseline_cosmology_derived = {
     "H0":          {"latex": r"H_0"},
     "omegav":      {"latex": r"\Omega_\Lambda"},
-    "omegam":      {"derived": "lambda omegab, omegac, omegan: omegab+omegac+omegan", "latex": r"\Omega_m"},
-    "omegamh2":    {"derived": "lambda omegab, omegac, omegan, H0: (omegab+omegac+omegan)*(H0/100)**2", "latex": r"\Omega_m h^2"},
-    "omegamh3":    {"derived": "lambda omegab, omegac, omegan, H0: (omegab+omegac+omegan)*(H0/100)**3", "latex": r"\Omega_m h^3"},
-#    "omeganuh2":   {"derived": "lambda omegan, H0: omegan*(H0*1e-2)**2", "latex": r"\Omega_\nu h^2"},
+    "omegam":      {"latex": r"\Omega_m"},
+    "omegamh2":    {"derived": "lambda omegam, H0: omegam*(H0/100)**2", "latex": r"\Omega_m h^2"},
+    "omegamh3":    {"derived": "lambda omegam, H0: omegam*(H0/100)**3", "latex": r"\Omega_m h^3"},
     "sigma8":      {"latex": r"\sigma_8"},
     "s8h5":        {"derived": "lambda sigma8, H0: sigma8*(H0*1e-2)**(-0.5)", "latex": r"\sigma_8/h^{0.5}"},
-    "s8omegamp5":  {"derived": "lambda sigma8, omegab, omegac, omegan: sigma8*(omegab+omegac+omegan)**0.5", "latex": r"\sigma_8 \Omega_m^{0.5}"},
-    "s8omegamp25": {"derived": "lambda sigma8, omegab, omegac, omegan: sigma8*(omegab+omegac+omegan)**0.25", "latex": r"\sigma_8 \Omega_m^{0.25}"},
+    "s8omegamp5":  {"derived": "lambda sigma8, omegam: sigma8*omegam**0.5", "latex": r"\sigma_8 \Omega_m^{0.5}"},
+    "s8omegamp25": {"derived": "lambda sigma8, omegam: sigma8*omegam**0.25", "latex": r"\sigma_8 \Omega_m^{0.25}"},
     "zre":         {"latex": r"z_\mathrm{re}"},
     "As1e9":       {"derived": "lambda As: 1e9*As", "latex": r"10^9 A_s"},
     "clamp":       {"derived": "lambda As, tau: 1e9*As*np.exp(-2*tau)", "latex": r"10^9 A_s e^{-2\tau}"},
