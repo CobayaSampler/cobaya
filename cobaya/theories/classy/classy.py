@@ -219,6 +219,7 @@ class classy(Theory):
                 # For modern experiments, always lensed Cl's!
                 self.extra_args["output"] += " lCl"
                 self.extra_args["lensing"] = "yes"
+                self.extra_args["non linear"] = "halofit"
                 self.collectors[k] = collector(method="lensed_cl", kwargs={})
                 self.collectors["TCMB"] = collector(method="T_cmb", kwargs={})
             else:
