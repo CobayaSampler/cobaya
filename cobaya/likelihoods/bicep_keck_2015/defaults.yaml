@@ -18,7 +18,7 @@
 
 likelihood:
   bicep_keck_2015:
-    # Path to the BK14_cosmomc folder
+    # Path to the BK14_cosmomc folder under the official data distribution
     path: null
     dataset_file: BK14_cosmomc/data/BK14/BK14_dust.dataset
     dataset_params:
