@@ -88,10 +88,10 @@ before_install:
   - pip install mpi4py pytest-xdist
 ###############################################################################
 script:
-  # pre-install CAMB from git (TO BE REMOVED BEFORE 1.0 RELEASE!)
-  - export CURRPWD=$(pwd); git clone https://github.com/cmbant/CAMB.git .. ; cd ../CAMB/pycamb ; setup.py build ; pip install -e . ; cd $CURRPWD
   # Installation
   - python tests/cosmo_install.py ../modules
+  # re-install CAMB from git (TO BE REMOVED BEFORE 1.0 RELEASE!)
+  - export CURRPWD=$(pwd); git clone https://github.com/cmbant/CAMB.git .. ; cd ../CAMB/pycamb ; setup.py build ; pip install -e . ; cd $CURRPWD
   # Not cosmological tests
   - pytest tests/ -k "not cosmo" -m "not slow and not mpi" --modules="../modules"
   # Cosmological tests (--boxed = 1 process per test; otherwise lowl planck lik fails!). Planck currently does not support py3.

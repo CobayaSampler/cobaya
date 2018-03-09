@@ -260,17 +260,13 @@ class camb(Theory):
                 if v is None:
                     self.derived_extra += [k]
                 else:
-                    self.log.error("'%s' does not understand the requirement '%s:%s'.",
-                                   self.__class__.__name__,k,v)
+                    self.log.error("Unknown required product: '%s:%s'.", k, v)
                     raise HandledException
-        # Derived parameters (if some need some additional computations)
-        # ...
 
     def set(self, params_values_dict, i_state):
         # Store them, to use them later to identify the state
         self.states[i_state]["params"] = deepcopy(params_values_dict)
-        # Feed the arguments defining the cosmology to the cosmological code
-        # Additionally required input parameters
+        # Prepare parameters to be passed: this-iteration + extra
         args = deepcopy(params_values_dict)
         args.update(self.extra_args)
         # Generate and save
@@ -278,6 +274,8 @@ class camb(Theory):
         try:
             return self.camb.set_params(**args)
         except CAMBParamRangeError:
+            self.log.debug("Out of bounds parameters. "
+                           "Assigning 0 likelihood and going on.")
             return False
         except:
             self.log.error("Error setting CAMB parameters -- "
@@ -299,6 +297,7 @@ class camb(Theory):
             # update the (first) oldest one and compute
             i_state = lasts.index(min(lasts))
             self.log.debug("Computing (state %d)", i_state)
+            # Set parameters
             intermediates = {
                 "CAMBparams": {"result": self.set(params_values_dict, i_state)},
                 "CAMBdata": {"method": "get_results", "result": None}}
@@ -368,7 +367,8 @@ class camb(Theory):
     def get_derived_all(self, intermediates):
         """
         Returns a dictionary of derived parameters with their values,
-        using the *current* state.
+        using the *current* state (i.e. it should only be called from
+        the ``compute`` method).
 
         To get a parameter *from a likelihood* use `get_param` instead.
         """
