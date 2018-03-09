@@ -11,7 +11,7 @@ from cobaya.input import get_default_info, merge_params_info
 
 
 # Tolerance for the tests of the derived parameters
-tolerance_derived = 0.03
+tolerance_derived = 0.055
 
 
 # Converting 100cosmomc_theta to cosmomc_theta in Planck's covmats #######################
@@ -71,10 +71,6 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
         info[_params].update(baseline_cosmology_classy_extra)
     # Add derived
     info[_params].update(derived)
-    print("FOR NOW, POPPING THE BBN PARAMETERS!!!!!!!")
-    for p in ("YHe", "Y_p", "DH"):
-        info[_params].pop(p, None)
-        best_fit_derived.pop(p, None)
     updated_info, products = run(info)
     # Check value of likelihoods
     for lik in info[_likelihood]:
