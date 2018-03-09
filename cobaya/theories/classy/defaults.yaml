@@ -1,8 +1,9 @@
 theory:
   classy:
     path: null
-    precision:
-      # Planck precision
+    # Other precision parameters to be passed to CLASS
+    # e.g. precision parameters or non-numerical parameters
+    extra_args:
       non linear: halofit
       sBBN file: bbn/sBBN.dat # will be prefixed with path to CLASS used
       # Halofit (twice precision
@@ -92,3 +93,17 @@ theory:
       # accurate_lensing: 1
       # num_mu_minus_lmax: 1000.
       # delta_l_max: 1000.
+    use_camb_names: False
+    # Dictionary of CAMB->CLASS names (only containing the different ones)
+    # (in principle, no need to modify)
+    camb_to_classy:
+      ombh2: omega_b
+      omegab: Omega_b
+      omch2: omega_cdm
+      omegac: Omega_cdm
+      omegav: Omega_Lambda
+      omegam: Omega_m
+      As: A_s
+      ns: n_s
+      tau: tau_reio
+      zre: z_reio

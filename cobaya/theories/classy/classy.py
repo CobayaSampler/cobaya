@@ -125,6 +125,7 @@ import os
 import numpy as np
 from copy import deepcopy
 import logging
+from collections import namedtuple, OrderedDict as odict
 
 # Local
 from cobaya.theory import Theory
@@ -133,23 +134,12 @@ from cobaya.tools import get_path_to_installation
 from cobaya.install import user_flag_if_needed
 
 
-# Dictionary of CAMB->CLASS names (only containing the different ones)
-camb_to_classy = {"ombh2":  "omega_b",
-                  "omegab": "Omega_b",
-                  "omch2":  "omega_cdm",
-                  "omegac": "Omega_cdm",
-                  "omegav": "Omega_Lambda",
-                  "omegam": "Omega_m",
-                  "As": "A_s",
-                  "ns": "n_s",
-                  "tau": "tau_reio",
-                  "zre": "z_reio",
-}
-
-classy_to_camb = dict([[v,k] for k,v in camb_to_classy.items()])
+# Result collector
+collector = namedtuple("collector", ["method", "kwargs"])
 
 
 class classy(Theory):
+
     def initialise(self):
         """Importing CLASS from the correct path, if given, and if not, globally."""
         # If path not given, try using general path to modules
@@ -174,7 +164,7 @@ class classy(Theory):
                 from classy import Class, CosmoSevereError, CosmoComputationError
             except OSError:
                 self.log.error("Either CLASS is not in the given folder,\n"
-                          "'%s',\n or you have not compiled it.", self.path)
+                               "'%s',\n or you have not compiled it.", self.path)
                 raise HandledException
         else:
             self.log.info("Importing *global* CLASS.")
@@ -188,35 +178,82 @@ class classy(Theory):
                     " (b) install the Python interface globally with\n"
                     "     '/path/to/class/python/python setup.py install --user'")
                 raise HandledException
-        # Propate errors up
-        global CosmoComputationError
-        global CosmoSevereError
+        self.classy = Class()
+        # Propagate errors up
+        global CosmoComputationError, CosmoSevereError
         # Generate states, to avoid recomputing
         self.n_states = 3
-        self.states = [{"classy": Class(), "params": None, "last": 0, "derived": None}
-                       for i in range(self.n_states)]
-        # Fixed input
-        # Default: no output -- see `needs` method.
-        self.input_default = {"output": ""}
-        # Precision (fixed at the theory block level)
-        if self.precision:
-            if "sBBN file" in self.precision:
-                self.precision["sBBN file"] = os.path.join(self.path, self.precision["sBBN file"])
-            self.input_default.update(self.precision)
+        self.states = [{"params": None, "derived": None, "derived_extra": None,
+                        "last": 0} for i in range(self.n_states)]
+        # Dict of named tuples to collect requirements and computation methods
+        self.collectors = {}
+        # Additional input parameters to pass to CAMB
+        self.extra_args = self.extra_args or {}
+        self.extra_args["output"] = self.extra_args.get("output", "")
+        if "sBBN file" in self.extra_args:
+            self.extra_args["sBBN file"] = (
+                os.path.join(self.path, self.extra_args["sBBN file"]))
+        # Derived parameters that may not have been requested, but will be necessary later
+        self.derived_extra = []
 
     def current_state(self):
-       lasts = [self.states[i]["last"] for i in range(self.n_states)]
-       return self.states[lasts.index(max(lasts))]
+        lasts = [self.states[i]["last"] for i in range(self.n_states)]
+        return self.states[lasts.index(max(lasts))]
+
+    def needs(self, arguments):
+        # Computed quantities requiered by the likelihood
+        for k,v in arguments.items():
+            # Precision parameters and boundaries (in general, take max of all requested)
+            if k == "l_max":
+                self.extra_args["l_max_scalars"] = (
+                    max(v, self.extra_args.get("l_max_scalars", 0)))
+            elif k == "k_max":
+                self.extra_args["P_k_max_h/Mpc"] = (
+                    max(v, self.extra_args.get("P_k_max_h/Mpc", 0)))
+            # Products and other computations
+            elif k == "Cl":
+                if any([("t" in cl.lower()) for cl in v]):
+                    self.extra_args["output"] += " tCl"
+                if any([(("e" in cl.lower()) or ("b" in cl.lower())) for cl in v]):
+                    self.extra_args["output"] += " pCl"
+                # For modern experiments, always lensed Cl's!
+                self.extra_args["output"] += " lCl"
+                self.extra_args["lensing"] = "yes"
+                self.collectors[k] = collector(method="lensed_cl", kwargs={})
+                self.collectors["TCMB"] = collector(method="T_cmb", kwargs={})
+            else:
+                # Extra derived parameters
+                if v is None:
+                    self.derived_extra += [k]
+                else:
+                    self.log.error("Unknown required product: '%s:%s'.", k, v)
+                    raise HandledException
+        # Derived parameters (if some need some additional computations)
+        if "sigma8" in self.output_params:
+            self.extra_args["output"] += " mPk"
+            self.extra_args["P_k_max_h/Mpc"] = (
+                max(1, self.extra_args.get("P_k_max_h/Mpc", 0)))
+        # Since the Cl collector needs lmax, update it now, in case it has increased
+        # *after* declaring the Cl collector
+        self.collectors["Cl"].kwargs.update({"lmax": self.extra_args["l_max_scalars"]})
+        # Cleanup of products string
+        self.extra_args["output"] = " ".join(set(self.extra_args["output"].split()))
+
+    def translate_param(self, p):
+        if self.use_camb_names:
+            return self.camb_to_classy.get(p,p)
+        return p
 
     def set(self, params_values_dict, i_state):
-        # Feed the arguments defining the cosmology to the cosmological code
-        self.input_default.update(dict(
-            [(camb_to_classy.get(p,p),v) for p,v in params_values_dict.items()]))
+        # Store them, to use them later to identify the state
+        self.states[i_state]["params"] = deepcopy(params_values_dict)
+        # Prepare parameters to be passed: this-iteration + extra
+        args = {self.translate_param(p):v for p,v in params_values_dict.items()}
+        args.update(self.extra_args)
         # Generate and save
-        self.log.debug("Setting parameters: %r", self.input_default)
-        self.states[i_state]["params"] = deepcopy(self.input_default)
-        self.states[i_state]["classy"].struct_cleanup()
-        self.states[i_state]["classy"].set(**self.input_default)
+        self.log.debug("Setting parameters: %r", args)
+        self.classy.struct_cleanup()
+        self.classy.set(**args)
 
     def compute(self, derived=None, **params_values_dict):
         lasts = [self.states[i]["last"] for i in range(self.n_states)]
@@ -226,94 +263,90 @@ class classy(Theory):
                        if self.states[i]["params"] == params_values_dict).next()
             # Get (pre-computed) derived parameters
             if derived == {}:
-                derived.update(dict([[p,v] for p,v in
-                                     zip(self.output_params, self.states[i_state]["derived"])]))
+                derived.update(self.states[i_state]["derived"])
             self.log.debug("Re-using computed results (state %d)", i_state)
         except StopIteration:
             # update the (first) oldest one and compute
             i_state = lasts.index(min(lasts))
             self.log.debug("Computing (state %d)", i_state)
+            # Set parameters
             self.set(params_values_dict, i_state)
+            # Compute!
             try:
-                if "Cl" in self.input_default["output"]:
-                    self.states[i_state]["classy"].compute(["lensing"])
+                self.classy.compute()
             # "Valid" failure of CLASS: parameters too extreme -> log and report
             except CosmoComputationError:
-                self.log.exception("CLASS computation failed. Assigning null likelihood. "
-                              "See error information below.")
+                self.log.debug("Computation of cosmological products failed. "
+                               "Assigning 0 likelihood and going on.")
                 return False
             # CLASS not correctly initialised, or input parameters not correct
             except CosmoSevereError:
-                self.log.error("Error setting parameters or computing results -- "
-                          "see CLASS's error trace below.\n")
-                raise
+                self.log.error("Serious error setting parameters or computing results. "
+                               "The parameters passed were %r and %r. "
+                               "See original CLASS's error traceback below.\n",
+                               self.states[i_state]["params"], self.extra_args)
+                raise  # No HandledException, so that CLASS traceback gets printed
+            # Gather products
+            for product, collector in self.collectors.items():
+                method = getattr(self.classy, collector.method)
+                self.states[i_state][product] = method(**self.collectors[product].kwargs)
             # Prepare derived parameters
-            if derived == {}:
-                derived.update(self.get_derived(i_state))
-                # Careful: next step must keep the order
-                self.states[i_state]["derived"] = [derived[p] for p in self.output_params]
+            d, d_extra = self.get_derived_all(derived_requested=(derived == {}))
+            derived.update(d)
+            self.states[i_state]["derived"] = odict(
+                [[p,derived.get(p)] for p in self.output_params])
+            # Prepare necessary extra derived parameters
+            self.states[i_state]["derived_extra"] = deepcopy(d_extra)
         # make this one the current one by decreasing the antiquity of the rest
         for i in range(self.n_states):
             self.states[i]["last"] -= max(lasts)
         self.states[i_state]["last"] = 1
         return True
 
-    def needs(self, arguments):
-        for k,v in arguments.items():
-            if k == "l_max":
-                # Take the max of the requested ones
-                self.input_default["l_max_scalars"] = max(v, self.input_default.get("l_max_scalars", 0))
-            elif k == "Cl":
-                if any([("T" in cl) for cl in v]):
-                       self.input_default["output"] += " tCl"
-                if any([(("E" in cl) or ("B" in cl)) for cl in v]):
-                       self.input_default["output"] += " pCl"
-                # For modern experiments, always lensed Cl's!
-                self.input_default["output"] += " lCl"
-                self.input_default["lensing"] = "yes"
-            else:
-                self.log.error("'%s' does not understand the requirement '%s:%s'.",
-                    self.__class__.__name__,k,v)
-                raise HandledException
-        # Derived parameters (if some need some additional computations)
-        if "sigma8" in self.output_params:
-            self.input_default["output"] += " mPk"
-            self.input_default["P_k_max_h/Mpc"] = max(1, self.input_default.get("P_k_max_h/Mpc", 0))
-        # Cleanup
-        self.input_default["output"] = " ".join(set(self.input_default["output"].split()))
+    def get_derived_all(self, derived_requested=True):
+        """
+        Returns a dictionary of derived parameters with their values,
+        using the *current* state (i.e. it should only be called from
+        the ``compute`` method).
 
-    def get_derived(self, i_state):
+        To get a parameter *from a likelihood* use `get_param` instead.
         """
-        Populates a dictionary of derived parameters with their values, using the
-        state #`i_state`.
-        """
-        derived = {}
-        classy = self.states[i_state]["classy"]
-        p_classy = [camb_to_classy.get(p,p) for p in self.output_params]
-        derived_aux = classy.get_current_derived_parameters(p_classy)
-        derived.update(
-            dict([(classy_to_camb.get(p,p),v) for p,v in derived_aux.items()]))
-        # If another method for getting derived parameters added in the future,
-        # recover "if None in derived:" from the CAMB interface
-        # Check if all processes (actually does nothing here)
+        list_requested_derived = self.output_params if derived_requested else []
+        de_translated = {self.translate_param(p):p for p in list_requested_derived}
+        derived_aux = self.classy.get_current_derived_parameters(
+            list(de_translated.keys())+list(self.derived_extra))
+        derived = {de_translated[p]:derived_aux[p] for p in list_requested_derived}
+        derived_extra = {p:derived_aux[p] for p in self.derived_extra}
         try:
             (p for p,v in derived.items() if v is None).next()
             self.log.error("Derived param '%s' not working in the CLASS interface", p)
             raise HandledException
         except StopIteration:
             pass  # all well!
-        return derived
+        return derived, derived_extra
 
+    def get_param(self, p):
+        """
+        Interface function for likelihoods to get sampled and derived parameters.
+        """
+        current_state = self.current_state()
+        for pool in ["params", "derived", "derived_extra"]:
+            value = current_state[pool].get(p, None)
+            if value is not None:
+                return value
+        self.log.error("Parameter not known: '%s'", p)
+        raise HandledException
+    
     def get_cl(self, ell_factor=False):
         """
         Returns the :math:`C_{\ell}` from the cosmological code in :math:`\mu {\\rm K}^2`
         """
-        current_classy = self.current_state()["classy"]
+        current_state = self.current_state()
         # get C_l^XX from the cosmological code
-        cl = current_classy.lensed_cl(self.input_default["l_max_scalars"])
+        cl = current_state["Cl"]
         ell_factor = ((cl["ell"]+1)*cl["ell"]/(2*np.pi))[2:] if ell_factor else 1
         # convert dimensionless C_l's to C_l in muK**2
-        T = current_classy.T_cmb()
+        T = current_state["TCMB"]
         for key in cl:
             # All quantities need to be multiplied by this factor, except the
             # phi-phi term, that is already dimensionless
