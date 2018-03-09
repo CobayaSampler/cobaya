@@ -37,6 +37,7 @@ Table of contents
    theory_class
    likelihood_hst
    likelihood_planck
+   likelihood_bk
    examples_planck
 
 .. toctree::
