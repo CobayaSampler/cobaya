@@ -37,7 +37,7 @@ def test_planck_2015_l_camb(modules):
 def test_planck_2015_t_classy(modules):
     best_fit = params_lowl_highTT
     info_likelihood = lik_info_lowl_highTT
-    info_theory = {"classy": None}
+    info_theory = {"classy": {"use_camb_names": True}}
     best_fit_derived = derived_lowl_highTT
     chi2_lowl_highTT_classy = deepcopy(chi2_lowl_highTT)
     chi2_lowl_highTT_classy["tolerance"] += 2.1
@@ -49,7 +49,7 @@ def test_planck_2015_t_classy(modules):
 def test_planck_2015_p_classy(modules):
     best_fit = params_lowTEB_highTTTEEE
     info_likelihood = lik_info_lowTEB_highTTTEEE
-    info_theory = {"classy": None}
+    info_theory = {"classy": {"use_camb_names": True}}
     best_fit_derived = derived_lowTEB_highTTTEEE
     chi2_lowTEB_highTTTEEE_classy = deepcopy(chi2_lowTEB_highTTTEEE)
     chi2_lowTEB_highTTTEEE_classy["tolerance"] += 2.1
@@ -61,7 +61,7 @@ def test_planck_2015_p_classy(modules):
 def test_planck_2015_l_classy(modules):
     best_fit = params_lensing
     info_likelihood = lik_info_lensing
-    info_theory = {"classy": None}
+    info_theory = {"classy": {"use_camb_names": True}}
     best_fit_derived = derived_lensing
     chi2_lensing_classy = deepcopy(chi2_lensing)
 #    chi2_lowTEB_lensing_classy["tolerance"] += 2.1

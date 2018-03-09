@@ -343,7 +343,7 @@ class classy(Theory):
         """
         current_state = self.current_state()
         # get C_l^XX from the cosmological code
-        cl = current_state["Cl"]
+        cl = deepcopy(current_state["Cl"])
         ell_factor = ((cl["ell"]+1)*cl["ell"]/(2*np.pi))[2:] if ell_factor else 1
         # convert dimensionless C_l's to C_l in muK**2
         T = current_state["TCMB"]
@@ -351,7 +351,7 @@ class classy(Theory):
             # All quantities need to be multiplied by this factor, except the
             # phi-phi term, that is already dimensionless
             if key not in ['pp', 'ell']:
-                cl[key][2:] *= (T*1.e6)**2 * ell_factor
+                cl[key][2:] = cl[key][2:] * (T*1.e6)**2 * ell_factor
         return cl
 
 

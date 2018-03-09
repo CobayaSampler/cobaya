@@ -409,7 +409,7 @@ class camb(Theory):
         ell_factor = ((cl["ell"]+1)*cl["ell"]/(2*np.pi))[2:] if ell_factor else 1
         # convert dimensionless C_l's to C_l in muK**2
         T = current_state["derived_extra"]["TCMB"]
-        for key in cl.keys():
+        for key in cl:
             if key not in ['pp', 'ell']:
                 cl[key][2:] = cl[key][2:] * (T*1.e6)**2 * ell_factor
         return cl
