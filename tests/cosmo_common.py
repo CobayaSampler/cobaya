@@ -50,12 +50,18 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
         [yaml_load(baseline_cosmology)] +
         [get_default_info(lik, _likelihood)[_params] for lik in info[_likelihood]]))
     for p in best_fit:
-        if _prior in info[_params].get(p, {}):
-            info[_params][p]["ref"] = best_fit[p]
+        try:
+            if _prior in info[_params].get(p, {}):
+                info[_params][p]["ref"] = best_fit[p]
+        except:  # was fixed or derived
+            info[_params][p] = best_fit[p]
+    from cobaya.yaml import yaml_dump
     # We'll pop some derived parameters, so copy
     derived = deepcopy(baseline_cosmology_derived)
     best_fit_derived = deepcopy(best_fit_derived)
     if info[_theory].keys()[0] == "classy":
+        # More stuff that CLASS needs for the Planck model
+        info[_params].update(baseline_cosmology_classy_extra)
         # Remove "cosmomc_theta" in favour of "H0" (remove it from derived then!)
         info[_params].pop("cosmomc_theta")
         info[_params].pop("cosmomc_theta_100")
@@ -68,9 +74,7 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
                   # BBN!!!
                   "DH", "Y_p", "YHe"]:
             derived.pop(p)
-            best_fit_derived.pop(p)
-        # More stuff that CLASS needs for the Planck model
-        info[_params].update(baseline_cosmology_classy_extra)
+            best_fit_derived.pop(p, None)
     # Add derived
     info[_params].update(derived)
     updated_info, products = run(info)
@@ -83,7 +87,7 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
     # Check value of derived parameters
     not_tested = []
     not_passed = []
-    for p in best_fit_derived:
+    for p in best_fit_derived or {}:
         if best_fit_derived[p][0] is None or p not in best_fit_derived:
             not_tested += [p]
             continue

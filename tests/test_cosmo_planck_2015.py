@@ -101,7 +101,7 @@ params_lowl_highTT = {
 
 derived_lowl_highTT = {
     # param: [best_fit, sigma]
-    "H0": [68.44, 1.2],
+    "H0": [params_lowl_highTT["H0"], 1.2],
     "omegav": [0.6998, 0.016],
     "omegam": [0.3002, 0.016],
     "omegamh2": [0.1406, 0.0024],
@@ -182,7 +182,7 @@ params_lowTEB_highTTTEEE = {
 
 derived_lowTEB_highTTTEEE = {
     # param: [best_fit, sigma]
-    "H0": [67.25, 0.66],
+    "H0": [params_lowTEB_highTTTEEE["H0"], 0.66],
     "omegav": [0.6844, 0.0091],
     "omegam": [0.3156, 0.0091],
     "omegamh2": [0.14276, 0.0014],
@@ -234,7 +234,7 @@ params_lensing = {
 
 derived_lensing = {
     # param: [best_fit, sigma]
-    "H0": [67.56, 0.64],
+    "H0": [params_lensing["H0"], 0.64],
     "omegav": [0.6888, 0.0087],
     "omegam": [0.3112, 0.0087],
     "omegamh2": [0.14205, 0.0013],
