@@ -187,8 +187,8 @@ class camb(Theory):
             raise HandledException
         self.camb = camb
         # Prepare errors
-        from camb.baseconfig import CAMBParamRangeError
-        global CAMBParamRangeError
+        from camb.baseconfig import CAMBParamRangeError, CAMBError
+        global CAMBParamRangeError, CAMBError
         # Generate states, to avoid recomputing
         self.n_states = 3
         self.states = [{"params": None, "derived": None, "derived_extra": None,
@@ -196,13 +196,14 @@ class camb(Theory):
         # Dict of named tuples to collect requirements and computation methods
         self.collectors = {}
         # Additional input parameters to pass to CAMB
-        self.also = {}
-        # patch: if cosmomc_theta is used, CAMB needs to be passed explicitly "H0=None"
+        self.extra_args = self.extra_args or {}
+        # Patch: if cosmomc_theta is used, CAMB needs to be passed explicitly "H0=None"
+        # This is *not* going to change on CAMB's side.
         if all((p in self.input_params) for p in ["H0", "cosmomc_theta"]):
             self.log.error("Can't pass both H0 and cosmomc_theta to Camb.")
             raise HandledException
-        if "cosmomc_theta" in self.input_params or "cosmomc_theta":
-            self.also["H0"] = None
+        if "cosmomc_theta" in self.input_params:
+            self.extra_args["H0"] = None
         # Derived parameters that may not have been requested, but will be necessary later
         self.derived_extra = []
 
@@ -215,12 +216,12 @@ class camb(Theory):
         for k,v in arguments.items():
             # Precision parameters and boundaries (in general, take max of all requested)
             if k == "l_max":
-                self.also["lmax"] = max(v, self.also.get("lmax",0))
+                self.extra_args["lmax"] = max(v, self.extra_args.get("lmax",0))
             elif k == "k_max":
-                self.also["kmax"] = max(v, self.also.get("kmax",0))
+                self.extra_args["kmax"] = max(v, self.extra_args.get("kmax",0))
             elif k == "redshifts":
-                self.also["redshifts"] = np.sort(
-                    np.unique(np.concatenate((v, self.also.get("redshifts",[])))))
+                self.extra_args["redshifts"] = np.sort(
+                    np.unique(np.concatenate((v, self.extra_args.get("redshifts",[])))))
             # Products and other computations
             elif k == "Cl":
                 self.collectors[k] = collector(
@@ -230,7 +231,7 @@ class camb(Theory):
                         "raw_cl": True})
                 self.derived_extra += ["TCMB"]
                 # Needed for Planck: 0.1 chi^2 precision
-                self.also["lens_potential_accuracy"] = 1
+                self.extra_args["lens_potential_accuracy"] = 1
             elif k == "Pk_interpolator":
                 vars_pairs = v.pop("vars_pairs", None)
                 vars_pairs = vars_pairs or [["total", "total"]]
@@ -267,15 +268,11 @@ class camb(Theory):
 
     def set(self, params_values_dict, i_state):
         # Store them, to use them later to identify the state
-        self.states[i_state]["params"] = params_values_dict
+        self.states[i_state]["params"] = deepcopy(params_values_dict)
         # Feed the arguments defining the cosmology to the cosmological code
         # Additionally required input parameters
-        args = deepcopy(self.also)
-        # Sampled -- save the state for avoiding recomputing later
-        args.update(params_values_dict)
-        # Precision (fixed at the theory block level)
-        if self.precision:
-            args.update(self.precision)
+        args = deepcopy(params_values_dict)
+        args.update(self.extra_args)
         # Generate and save
         self.log.debug("Setting parameters: %r", args)
         try:
@@ -308,15 +305,27 @@ class camb(Theory):
             # Failed to set parameters (e.g. out of computationally feasible range): lik=0
             if not intermediates["CAMBparams"]["result"]:
                 return False
-            # Compute the necessary products
+            # Compute the necessary products (incl. any intermediate result, if needed)
             for product, collector in self.collectors.items():
                 parent, method = collector.method.split(".")
-                if intermediates[parent]["result"] is None:
-                    intermediates[parent]["result"] = getattr(
-                        self.camb, intermediates[parent]["method"])(
-                            intermediates["CAMBparams"]["result"])
-                method = getattr(intermediates[parent]["result"], method)
-                self.states[i_state][product] = method(**self.collectors[product].kwargs)
+                try:
+                    if intermediates[parent]["result"] is None:
+                        intermediates[parent]["result"] = getattr(
+                            self.camb, intermediates[parent]["method"])(
+                                intermediates["CAMBparams"]["result"])
+                    method = getattr(intermediates[parent]["result"], method)
+                    self.states[i_state][product] = method(
+                        **self.collectors[product].kwargs)
+                except CAMBError:
+                    if self.stop_at_error:
+                        self.log.error(
+                            "Computation error! Parameters sent to CAMB: %r and %r.\n"
+                            "To ignore this kind of errors, make 'stop_at_error: False'.",
+                            self.states[i_state]["params"], self.extra_args)
+                        raise HandledException
+                    else:
+                        # Assumed to be a "parameter out of range" error.
+                        return False
             # Prepare derived parameters
             if derived == {}:
                 derived.update(self.get_derived_all(intermediates))
