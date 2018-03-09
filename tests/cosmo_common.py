@@ -64,7 +64,9 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
         best_fit_derived.pop("H0")
         # Don't test those that have not been implemented yet
         for p in ["zstar", "rstar", "thetastar", "DAstar", "zdrag", "rdrag",
-                  "kd", "thetad", "zeq", "keq", "thetaeq", "thetarseq"]:
+                  "kd", "thetad", "zeq", "keq", "thetaeq", "thetarseq",
+                  # BBN!!!
+                  "DH", "Y_p", "YHe"]:
             derived.pop(p)
             best_fit_derived.pop(p)
         # More stuff that CLASS needs for the Planck model

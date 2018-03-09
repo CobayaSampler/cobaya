@@ -33,7 +33,6 @@ def test_planck_2015_l_camb(modules):
                  chi2_lensing, best_fit_derived)
 
 
-@pytest.mark.skip
 def test_planck_2015_t_classy(modules):
     best_fit = params_lowl_highTT
     info_likelihood = lik_info_lowl_highTT
@@ -45,7 +44,6 @@ def test_planck_2015_t_classy(modules):
                  chi2_lowl_highTT_classy, best_fit_derived)
 
 
-@pytest.mark.skip
 def test_planck_2015_p_classy(modules):
     best_fit = params_lowTEB_highTTTEEE
     info_likelihood = lik_info_lowTEB_highTTTEEE
@@ -57,7 +55,6 @@ def test_planck_2015_p_classy(modules):
                  chi2_lowTEB_highTTTEEE_classy, best_fit_derived)
 
 
-@pytest.mark.skip
 def test_planck_2015_l_classy(modules):
     best_fit = params_lensing
     info_likelihood = lik_info_lensing

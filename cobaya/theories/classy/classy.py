@@ -315,7 +315,7 @@ class classy(Theory):
         de_translated = {self.translate_param(p):p for p in list_requested_derived}
         derived_aux = self.classy.get_current_derived_parameters(
             list(de_translated.keys())+list(self.derived_extra))
-        derived = {de_translated[p]:derived_aux[p] for p in list_requested_derived}
+        derived = {de_translated[p]:v for p,v in derived_aux.items()}
         derived_extra = {p:derived_aux[p] for p in self.derived_extra}
         try:
             (p for p,v in derived.items() if v is None).next()
