@@ -2,7 +2,7 @@
 .. module:: _CMBlikes_prototype
 
 :Synopsis: Definition of the CMBlikes class for CMB real or simulated data.
-:Author: Antony Lewis and Jesus Torrado
+:Author: Antony Lewis (small modifications by Jesus Torrado)
 
 # Load CosmoMC format .dataset files
 # AL July 2014 - Dec 2017
@@ -344,15 +344,15 @@ class _cmblikes_prototype(Likelihood):
         self.pcl_lmin = ini.int('cl_lmin')
         self.binned = ini.bool('binned', True)
         if self.binned:
-            if self.nmaps != self.nmaps_required:
-                self.log.error('unbinned likelihood must have nmaps==nmaps_required')
-                raise HandledException
             self.nbins = ini.int('nbins')
             self.bin_min = ini.int('use_min', 1) - 1
             self.bin_max = ini.int('use_max', self.nbins) - 1
             self.nbins_used = self.bin_max - self.bin_min + 1  # needed by readBinWindows
             self.bins = self.readBinWindows(ini, 'bin_window')
         else:
+            if self.nmaps != self.nmaps_required:
+                self.log.error('unbinned likelihood must have nmaps==nmaps_required')
+                raise HandledException
             self.nbins = self.pcl_lmax - self.pcl_lmin + 1
             if self.like_approx != 'exact':
                 self.log.warn('Unbinned likelihoods untested in this version')
@@ -458,10 +458,10 @@ class _cmblikes_prototype(Likelihood):
             for binx in range(self.nbins_used):
                 for biny in range(self.nbins_used):
                     pcov[binx * self.ncl_used: (binx + 1) * self.ncl_used,
-                    biny * self.ncl_used: (biny + 1) * self.ncl_used] = (
-                            covmat_scale * self.full_cov[
-                        np.ix_((binx + self.bin_min) * num_in + cov_cl_used,
-                               (biny + self.bin_min) * num_in + cov_cl_used)])
+                         biny * self.ncl_used: (biny + 1) * self.ncl_used] = (
+                             covmat_scale * self.full_cov[
+                                 np.ix_((binx + self.bin_min) * num_in + cov_cl_used,
+                                        (biny + self.bin_min) * num_in + cov_cl_used)])
         else:
             self.log.error('unbinned covariance not implemented yet')
             raise HandledException
@@ -526,7 +526,7 @@ class _cmblikes_prototype(Likelihood):
             for j in range(i + 1):
                 CL = self.map_cls[i, j]
                 combination = "".join([self.field_names[k] for k in CL.theory_ij]).lower()
-                cls = Cls[combination]
+                cls = Cls.get(combination)
                 if cls is not None:
                     CL.CL[:] = cls[self.pcl_lmin:self.pcl_lmax + 1]
                 else:
@@ -534,7 +534,8 @@ class _cmblikes_prototype(Likelihood):
         self.adapt_theory_for_maps(self.map_cls, data_params)
 
     def adapt_theory_for_maps(self, cls, data_params):
-        if self.aberration_coeff: self.add_aberration(cls)
+        if self.aberration_coeff:
+            self.add_aberration(cls)
         self.add_foregrounds(cls, data_params)
         if self.calibration_param is not None and self.calibration_param in data_params:
             for i in range(self.nmaps_required):
