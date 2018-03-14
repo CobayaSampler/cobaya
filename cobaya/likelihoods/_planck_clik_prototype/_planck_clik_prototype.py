@@ -89,7 +89,7 @@ Assuming you are installing all your likelihoods under ``/path/to/likelihoods``:
    $ cd /path/to/likelihoods
    $ mkdir planck_2015
    $ cd planck_2015
-   $ wget http://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLOGY_OID=1904
+   $ wget https://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLOGY_OID=1904
    $ tar xvjf data-action?COSMOLOGY.COSMOLOGY_OID=1904
    $ rm data-action?COSMOLOGY.COSMOLOGY_OID=1904
    $ cd plc-2.0
@@ -234,7 +234,7 @@ def download_from_planck(product_id, path, no_progress_bars=False, name=None):
         from wget import download, bar_thermometer
         wget_kwargs = {"out": path, "bar":
                        (bar_thermometer if not no_progress_bars else None)}
-        prefix = r"http://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLOGY_OID="
+        prefix = r"https://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLOGY_OID="
         filename = download(prefix+product_id, **wget_kwargs)
     except:
         log.error("Error downloading!")
