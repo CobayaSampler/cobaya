@@ -295,47 +295,64 @@ class mcmc(Sampler):
                 self.log.error("Can't open covmat file '%s'.", self.covmat)
                 raise HandledException
             if header[0] != "#":
-                self.log.error("The first line of the covmat file '%s' "
-                          "must be one list of parameter names separated by spaces "
-                          "and staring with '#', and the rest must be a square matrix, "
-                          "with one row per line.", self.covmat)
+                self.log.error(
+                    "The first line of the covmat file '%s' "
+                    "must be one list of parameter names separated by spaces "
+                    "and staring with '#', and the rest must be a square matrix, "
+                    "with one row per line.", self.covmat)
                 raise HandledException
             loaded_params = header.strip("#").strip().split()
         elif hasattr(self.covmat, "__getitem__"):
             if not self.covmat_params:
-                self.log.error("If a covariance matrix is passed as a numpy array, "
-                          "you also need to pass the parameters it corresponds to "
-                          "via 'covmat_params: [name1, name2, ...]'.")
+                self.log.error(
+                    "If a covariance matrix is passed as a numpy array, "
+                    "you also need to pass the parameters it corresponds to "
+                    "via 'covmat_params: [name1, name2, ...]'.")
                 raise HandledException
             loaded_params = self.covmat_params
             loaded_covmat = self.covmat
         if self.covmat is not None:
             if len(loaded_params) != len(set(loaded_params)):
-                self.log.error("There are duplicated parameters in the header of the "
-                          "covmat file '%s' ", self.covmat)
+                self.log.error(
+                    "There are duplicated parameters in the header of the "
+                    "covmat file '%s' ", self.covmat)
                 raise HandledException
             if len(loaded_params) != loaded_covmat.shape[0]:
-                self.log.error("The number of parameters in the header of '%s' and the "
-                          "dimensions of the matrix do not coincide.", self.covmat)
+                self.log.error(
+                    "The number of parameters in the header of '%s' and the "
+                    "dimensions of the matrix do not coincide.", self.covmat)
                 raise HandledException
             if not (np.allclose(loaded_covmat.T, loaded_covmat) and
                     np.all(np.linalg.eigvals(loaded_covmat) > 0)):
-                self.log.error("The covmat loaded from '%s' is not a positive-definite, "
-                          "symmetric square matrix.", self.covmat)
+                self.log.error(
+                    "The covmat loaded from '%s' is not a positive-definite, "
+                    "symmetric square matrix.", self.covmat)
                 raise HandledException
             # Fill with parameters in the loaded covmat
             loaded_params_used = set(loaded_params).intersection(set(params))
             if not loaded_params_used:
-                self.log.error("A proposal covariance matrix has been loaded, but none of its "
-                          "parameters are actually sampled here. Maybe a mismatch between"
-                          " parameter names in the covariance matrix and the input file?")
+                self.log.error(
+                    "A proposal covariance matrix has been loaded, but none of its "
+                    "parameters are actually sampled here. Maybe a mismatch between"
+                    " parameter names in the covariance matrix and the input file?")
                 raise HandledException
             indices_used, indices_sampler = np.array(
                 [[loaded_params.index(p),params.index(p)]
                  for p in loaded_params if p in loaded_params_used]).T
             covmat[np.ix_(indices_sampler,indices_sampler)] = (
                 loaded_covmat[np.ix_(indices_used,indices_used)])
-            self.log.info("Covariance matrix loaded for params %r", list(loaded_params_used))
+            self.log.info(
+                "Covariance matrix loaded for params %r",
+                [p for p in self.parametrization.sampled_params()
+                 if p in loaded_params_used])
+            missing_params = set(params).difference(set(loaded_params))
+            if missing_params:
+                self.log.info(
+                    "Missing proposal covarince for params %r",
+                    [p for p in self.parametrization.sampled_params()
+                     if p in missing_params])
+            else:
+                self.log.info("All parameters' covariance loaded from given covmat.")
         # Fill gaps with "proposal" property, if present, otherwise ref (or prior)
         where_nan = np.isnan(covmat.diagonal())
         if np.any(where_nan):
