@@ -1,0 +1,44 @@
+# CMBlikes version of the Planck 2015 likelihood
+
+likelihood:
+  planck_2015_lensing_cmblikes:
+    # Path to the data: where the planck_supp_data_and_covmats has been cloned
+    path: null
+    dataset_file: lensing/smica_g30_ftl_full_pp.dataset
+    dataset_params:
+      # override of .dataset parameters
+      like_approx: gaussian
+      fields_use: P
+      fields_required: [T, E, P]
+      binned: T
+      nbins: 8
+      use_min: 1
+      use_max: 8
+      cl_lmin: 2
+      cl_lmax: 2048
+      cl_hat_file: smica_g30_ftl_full_pp_bandpowers.dat
+      bin_window_files: smica_g30_ftl_full_pp_window/window%u.dat
+      bin_window_in_order: PP
+      bin_window_out_order: PP
+      covmat_cl: PP
+      covmat_fiducial: smica_g30_ftl_full_pp_cov.dat
+      linear_correction_fiducial_file: smica_g30_ftl_full_pp_lensing_fiducial_correction.dat
+      linear_correction_bin_window_files: smica_g30_ftl_full_pp_lens_delta_window/window%u.dat
+      linear_correction_bin_window_in_order: TT EE TE PP
+      linear_correction_bin_window_out_order:  PP PP PP PP
+    field_names: [T, E, B, P]
+    l_max: 2700
+
+
+params:
+  A_planck:
+    prior: 
+      dist: norm
+      loc: 1
+      scale: 0.0025
+    ref:
+      dist: norm
+      loc: 1
+      scale: 0.002
+    proposal: 0.0005
+    latex: y_\mathrm{cal}

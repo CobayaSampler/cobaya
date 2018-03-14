@@ -33,6 +33,20 @@ def test_planck_2015_l_camb(modules):
                  chi2_lensing, best_fit_derived)
 
 
+def test_planck_2015_l2_camb(modules):
+    best_fit = params_lensing
+    lik_name = "planck_2015_lensing_cmblikes"
+    clik_name = "planck_2015_lensing"
+    info_likelihood = {lik_name: lik_info_lensing[clik_name]}
+    info_likelihood[lik_name] = {"path": "/home/jesus/scratch/planck_supp_data_and_covmats"}
+    chi2_lensing_cmblikes = deepcopy(chi2_lensing)
+    chi2_lensing_cmblikes[lik_name] = chi2_lensing[clik_name]
+    info_theory = {"camb": None}
+    best_fit_derived = derived_lensing
+    body_of_test(modules, best_fit, info_likelihood, info_theory,
+                 chi2_lensing_cmblikes, best_fit_derived)
+
+
 def test_planck_2015_t_classy(modules):
     best_fit = params_lowl_highTT
     info_likelihood = lik_info_lowl_highTT
