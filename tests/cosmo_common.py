@@ -76,7 +76,8 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
             derived.pop(p)
             best_fit_derived.pop(p, None)
     # Add derived
-    info[_params].update(derived)
+    if best_fit_derived is not None:
+        info[_params].update(derived)
     updated_info, products = run(info)
     # Check value of likelihoods
     for lik in info[_likelihood]:
