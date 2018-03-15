@@ -2,7 +2,7 @@
 .. module:: _CMBlikes_prototype
 
 :Synopsis: Definition of the CMBlikes class for CMB real or simulated data.
-:Author: Antony Lewis (small modifications by Jesus Torrado)
+:Author: Antony Lewis (adapted to Cobaya by Jesus Torrado with little modification)
 
 # Load CosmoMC format .dataset files
 # AL July 2014 - Dec 2017
@@ -473,7 +473,7 @@ class _cmblikes_prototype(Likelihood):
         #             cols=['TT', 'EE', 'TE', 'PP'])
         with open(froot + '_bandpowers.dat', 'w') as f:
             f.write("#%4s %5s %5s %8s %12s %10s %7s\n" %
-                    ('bin', 'L_min', 'L_max', 'L_av', 'PP', 'Error', 'Ahat'))
+                   ('bin', 'L_min', 'L_max', 'L_av', 'PP', 'Error', 'Ahat'))
             for b in range(self.nbins):
                 f.write("%5u %5u %5u %8.2f %12.5e %10.3e %7.3f\n" %
                         (b + 1, self.lmin[b], self.lmax[b], self.lav[b],
@@ -701,19 +701,14 @@ def lastTopComment(fname):
 
 
 def readTextCommentColumns(fname, cols):
-    with open(fname) as f:
-        x = f.readline().strip()
-        if x[0] != '#':
-            raise Exception('No Comment')
-    incols = x[1:].split()
+    incols = lastTopComment(fname).split()
     colnums = [incols.index(col) for col in cols]
     return np.loadtxt(fname, usecols=colnums, unpack=True)
 
 
 def readWithHeader(fname):
-    with open(fname) as f:
-        x = f.readline().strip()
-        if x[0] != '#':
-            raise Exception('No Comment')
-        x = x[1:].split()
-    return x, np.loadtxt(fname)
+    x = lastTopComment(fname)
+    if not x:
+        raise Exception('No Comment')
+    return x.split(), np.loadtxt(fname)
+
