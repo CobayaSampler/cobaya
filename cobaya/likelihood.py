@@ -271,7 +271,7 @@ class LikelihoodCollection(object):
                               params.split("_")[0], requested_not_known[params])
                 else:
                     log.error("Some of the requested %s parameters were not recognized "
-                              "by any likelihood: %",
+                              "by any likelihood: %r",
                               params.split("_")[0], requested_not_known[params])
                     raise HandledException
         # *IF* there is a theory code, initialise it
