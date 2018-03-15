@@ -78,6 +78,18 @@ def test_planck_2015_l_classy(modules):
                  chi2_lensing, best_fit_derived)
 
 
+def test_planck_2015_l2_classy(modules):
+    best_fit = params_lensing
+    lik_name = "planck_2015_lensing_cmblikes"
+    clik_name = "planck_2015_lensing"
+    info_likelihood = {lik_name: lik_info_lensing[clik_name]}
+    chi2_lensing_cmblikes = deepcopy(chi2_lensing)
+    chi2_lensing_cmblikes[lik_name] = chi2_lensing[clik_name]
+    info_theory = {"classy": {"use_camb_names": True}}
+    best_fit_derived = derived_lensing
+    body_of_test(modules, best_fit, info_likelihood, info_theory,
+                 chi2_lensing_cmblikes, best_fit_derived)
+
 # Temperature only #######################################################################
 
 lik_info_lowl_highTT = {"planck_2015_lowl": None, "planck_2015_plikHM_TT": None}
