@@ -337,10 +337,12 @@ class classy(Theory):
                 return value
         self.log.error("Parameter not known: '%s'", p)
         raise HandledException
-    
+
     def get_cl(self, ell_factor=False):
         """
-        Returns the :math:`C_{\ell}` from the cosmological code in :math:`\mu {\\rm K}^2`
+        Returns the power spectra in microK^2
+        (unitless for lensing potential),
+        using the *current* state.
         """
         current_state = self.current_state()
         # get C_l^XX from the cosmological code
@@ -352,7 +354,9 @@ class classy(Theory):
             # All quantities need to be multiplied by this factor, except the
             # phi-phi term, that is already dimensionless
             if key not in ['pp', 'ell']:
-                cl[key][2:] = cl[key][2:] * (T*1.e6)**2 * ell_factor
+                cl[key][2:] *= (T*1.e6)**2 * ell_factor
+        if "pp" in cl and ell_factor is not 1:
+            cl['pp'][2:] *= ell_factor**2 * (2*np.pi)
         return cl
 
 

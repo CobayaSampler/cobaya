@@ -224,10 +224,11 @@ class camb(Theory):
                     np.unique(np.concatenate((v, self.extra_args.get("redshifts",[])))))
             # Products and other computations
             elif k == "Cl":
+                v2 = [a.lower() for a in v]
                 self.collectors[k] = collector(
                     method="CAMBdata.get_cmb_power_spectra",
                     kwargs={
-                        "spectra": ["total"]+(["lens_potential"] if "pp" in v else []),
+                        "spectra": ["total"]+(["lens_potential"] if "pp" in v2 else []),
                         "raw_cl": True})
                 self.derived_extra += ["TCMB"]
                 # Needed for Planck: 0.1 chi^2 precision
@@ -395,7 +396,8 @@ class camb(Theory):
 
     def get_cl(self, ell_factor=False):
         """
-        Returns the power spectra in microK^2,
+        Returns the power spectra in microK^2
+        (unitless for lensing potential),
         using the *current* state.
         """
         current_state = self.current_state()
@@ -411,7 +413,9 @@ class camb(Theory):
         T = current_state["derived_extra"]["TCMB"]
         for key in cl:
             if key not in ['pp', 'ell']:
-                cl[key][2:] = cl[key][2:] * (T*1.e6)**2 * ell_factor
+                cl[key][2:] *= (T*1.e6)**2 * ell_factor
+        if 'pp' in cl and ell_factor is not 1:
+            cl['pp'][2:] *= ell_factor**2 * (2*np.pi)
         return cl
 
     def get_Pk_interpolator(self):
