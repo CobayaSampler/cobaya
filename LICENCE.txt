@@ -4,6 +4,13 @@ Exceptions:
 -----------
 - The copyright of the logos of the supporting institutions belong to the institutions themselves
 
+Re-licensing of specific files:
+-------------------------------
+Files mcmc.py, proposal.py _sn_prototype.py, _cmblikes_prototype.py , _bao_prototype and most of the files under grid_tools/ have been translated (some with large modification) and re-licensed from the more liberally licensed CosmoMC: https://github.com/cmbant/CosmoMC
+
+For this code, with the exceptions listed above:
+------------------------------------------------
+
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as
 published by the Free Software Foundation, either version 3 of the
