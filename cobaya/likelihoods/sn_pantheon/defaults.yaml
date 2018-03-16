@@ -1,3 +1,5 @@
+# Settings for the Pantheon SN Ia sample, based on Pan-STARRS1 MDS.
+
 likelihood:
   sn_pantheon:
     # Path to the data: where the sn_data has been cloned

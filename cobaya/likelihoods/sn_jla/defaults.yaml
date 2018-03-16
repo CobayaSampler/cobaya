@@ -1,4 +1,4 @@
-# Settings for the joint SNLS/SDSS data analysis
+# Settings for JLA supernova sample (joint SNLS/SDSS SN Ia data)
 # (For the marginalised version, use 'sn_jla_lite')
 
 likelihood:

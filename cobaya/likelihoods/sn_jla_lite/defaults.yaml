@@ -1,5 +1,6 @@
-# Settings for the joint SNLS/SDSS data analysis
-# - Marginalised version (useful e.g. for importance sampling)
+# Settings for JLA supernova sample (joint SNLS/SDSS SN Ia data)
+# Marginalised version (useful e.g. for importance sampling)
+# NB: different chi2 normalisation from the non-normalised version
 
 likelihood:
   sn_jla_lite:
