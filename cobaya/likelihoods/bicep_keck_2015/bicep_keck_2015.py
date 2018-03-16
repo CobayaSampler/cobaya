@@ -2,7 +2,7 @@
 .. module:: bicep_keck_2015
 
 :Synopsis: Likelihood of BICEP2/Keck-Array, October 2015
-:Author: Antony Lewis
+:Author: Antony Lewis (for the ``CMBLikes`` code)
 
 .. |br| raw:: html
 
@@ -65,7 +65,7 @@ After this, mention the path to this likelihood when you include it in an input 
 .. code-block:: yaml
 
    likelihood:
-     bicep_keck_2015
+     bicep_keck_2015:
        path: /path/to/likelihoods/bicep_keck_2015
 
 """

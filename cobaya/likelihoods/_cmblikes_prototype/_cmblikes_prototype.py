@@ -7,15 +7,6 @@
 # Load CosmoMC format .dataset files
 # AL July 2014 - Dec 2017
 
-Contains ...
-
-(Re)Licensing...
-
-Usage
------
-
-...
-
 """
 # Python 2/3 compatibility
 from __future__ import absolute_import

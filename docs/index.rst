@@ -25,7 +25,7 @@ Table of contents
    sampler_minimize
    likelihoods
    likelihood_one
-   likelihood_gaussian           
+   likelihood_gaussian
    theory
 
 .. toctree::
@@ -38,6 +38,7 @@ Table of contents
    likelihood_hst
    likelihood_planck
    likelihood_bk
+   likelihood_sn
    examples_planck
 
 .. toctree::
@@ -46,11 +47,10 @@ Table of contents
 
    devel
 
-   
+
 Indices and tables
 ==================
 
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

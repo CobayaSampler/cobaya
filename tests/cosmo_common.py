@@ -10,7 +10,7 @@ from cobaya.yaml import yaml_load
 from cobaya.input import get_default_info, merge_params_info
 
 
-# Tolerance for the tests of the derived parameters
+# Tolerance for the tests of the derived parameters, in units of the sigma of Planck 2015
 tolerance_derived = 0.055
 
 

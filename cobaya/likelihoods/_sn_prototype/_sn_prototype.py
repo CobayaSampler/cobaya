@@ -1,3 +1,89 @@
+"""
+.. module:: _sn_prototype
+
+:Synopsis: Supernovae likelihood, from CosmoMC's JLA module, for Pantheon and JLA samples.
+:Author: Alex Conley, Marc Betoule, Antony Lewis (see source for more specific authorship)
+
+This code provides the following likelihoods:
+
+- ``sn_pantheon``, for the Pantheon SN Ia sample, based on Pan-STARRS1 MDS
+- ``sn_jla``, for the JLA SN Ia sample, based on joint SNLS/SDSS SN Ia data
+- ``sn_jla_lite``, an alternative version of ``sn_jla``, marginalised over
+  nuisance parameters
+
+.. |br| raw:: html
+
+   <br />
+
+.. note::
+
+   - If you use ``sn_pantheon``, please cite:|br|
+     Scolnic, D. M. et al,
+     `The Complete Light-curve Sample of Spectroscopically
+     Confirmed Type Ia Supernovae from Pan-STARRS1 and
+     Cosmological Constraints from The Combined Pantheon Sample`
+     `(arXiv:1710.00845) <https://arxiv.org/abs/1710.00845>`_
+   - If you use ``sn_jla`` or ``sn_jla_lite``, please cite:|br|
+     Betoule, M. et al,
+     `Improved cosmological constraints from a joint analysis
+     of the SDSS-II and SNLS supernova samples`
+     `(arXiv:1401.4064) <https://arxiv.org/abs/1401.4064>`_
+
+
+Usage
+-----
+
+To use any of this likelihoods, simply mention them in the theory block
+(do not use ``sn_jla`` and its `lite` version simultaneously).
+
+An example of usage can be found in :doc:`examples_sn`.
+
+The settings for each likelihood, as well as the nuisance parameters and their default
+priors (in the ``sn_jla`` case only) can be found in the ``defaults.yaml``
+files in the folder for the source code of each of these likelihoods,
+and are reproduced below.
+
+You shouldn't need to modify any of the options of these likelihoods,
+but if you really need to, just copy the ``likelihood`` block into your input ``yaml``
+file and modify whatever options you want (you can delete the rest).
+
+.. literalinclude:: ../cobaya/likelihoods/sn_pantheon/defaults.yaml
+   :language: yaml
+
+.. literalinclude:: ../cobaya/likelihoods/sn_jla/defaults.yaml
+   :language: yaml
+
+.. literalinclude:: ../cobaya/likelihoods/sn_jla_lite/defaults.yaml
+   :language: yaml
+
+
+Installation
+------------
+
+This likelihood can be installed automatically as explained in :doc:`installation_cosmo`.
+If are following the instructions there (you should!), you don't need to read the rest
+of this section.
+
+Manual installation of the SN Ia likelihoods
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Assuming you are installing all your
+likelihoods under ``/path/to/likelihoods``, simply do
+
+.. code:: bash
+
+   $ cd /path/to/likelihoods
+   $ git clone https://github.com/JesusTorrado/sn_data.git
+
+After this, mention the path to this likelihood when you include it in an input file as
+
+.. code-block:: yaml
+
+   likelihood:
+     sn_[pantheon|jla|jla_lite]:
+       path: /path/to/likelihoods/sn_data
+
+"""
 
 # Supernovae likelihood, from CosmoMC's JLA module. For Pantheon and JLA Supernovae,
 #  History:
@@ -14,6 +100,7 @@
 #   AL, Mar 2014: updates for latest CosmoMC structure
 #   AL, June 2014: updated JLA_marginalize=T handling so it should work
 #   AL, March 2018: this python version
+
 
 from __future__ import division, print_function
 import numpy as np

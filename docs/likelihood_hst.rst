@@ -1,5 +1,5 @@
-Likelihood: :math:`H_0` from HST (``hst_riess2018``)
-====================================================
+Likelihood – *H*:sub:`0` from HST
+=================================
 
 .. automodule:: cobaya.likelihoods._hst_prototype._hst_prototype
    :noindex:
