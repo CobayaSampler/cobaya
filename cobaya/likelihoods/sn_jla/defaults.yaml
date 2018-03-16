@@ -1,0 +1,57 @@
+# Settings for the joint SNLS/SDSS data analysis
+# (For the marginalised version, use 'sn_jla_lite')
+
+likelihood:
+  sn_jla:
+    # Path to the data: where the sn_data has been cloned
+    path: null
+    # .dataset file with settings
+    dataset_file: JLA/jla.dataset
+    # Dictionary of any parameter to override in the .dataset file    
+    dataset_params:
+      data_file: JLA/jla_lcparams.txt
+      pecz: 0
+      intrinsicdisp: 0
+      intrinsicdisp0: 0
+      intrinsicdisp1: 0
+      intrinsicdisp2: 0
+      intrinsicdisp3: 0
+      twoscriptmfit: True
+      scriptmcut: 10.0
+      has_mag_covmat: True
+      mag_covmat_file: JLA/jla_v0_covmatrix.dat
+      has_stretch_covmat: True
+      stretch_covmat_file: JLA/jla_va_covmatrix.dat
+      has_colour_covmat: True
+      colour_covmat_file: JLA/jla_vb_covmatrix.dat
+      has_mag_stretch_covmat: True
+      mag_stretch_covmat_file: JLA/jla_v0a_covmatrix.dat
+      has_mag_colour_covmat: True
+      mag_colour_covmat_file: JLA/jla_v0b_covmatrix.dat
+      has_stretch_colour_covmat: True
+      stretch_colour_covmat_file: JLA/jla_vab_covmatrix.dat
+    # Names of alpha and beta parameters if used and varied
+    alpha_beta_names: ['alpha_jla', 'beta_jla']
+
+
+params:
+  alpha_jla:
+    prior:
+      min: 0.01
+      max: 2
+    ref:
+      dist: norm
+      loc: 0.14
+      scale: 0.005
+    proposal: 0.005
+    latex: \alpha_\mathrm{JLA}
+  beta_jla:
+    prior:
+      min: 0.9
+      max: 4.6
+    ref:
+      dist: norm
+      loc: 3.1
+      scale: 0.05
+    proposal: 0.05
+    latex: \beta_\mathrm{JLA}

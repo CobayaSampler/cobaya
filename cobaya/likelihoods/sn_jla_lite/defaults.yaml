@@ -1,0 +1,45 @@
+# Settings for the joint SNLS/SDSS data analysis
+# - Marginalised version (useful e.g. for importance sampling)
+
+likelihood:
+  sn_jla_lite:
+    # Path to the data: where the sn_data has been cloned
+    path: null
+    # .dataset file with settings
+    dataset_file: JLA/jla.dataset
+    # dictionary of any parameter to override in the .dataset file    
+    dataset_params:
+      data_file: JLA/jla_lcparams.txt
+      pecz: 0
+      intrinsicdisp: 0
+      intrinsicdisp0: 0
+      intrinsicdisp1: 0
+      intrinsicdisp2: 0
+      intrinsicdisp3: 0
+      twoscriptmfit: True
+      scriptmcut: 10.0
+      has_mag_covmat: True
+      mag_covmat_file: JLA/jla_v0_covmatrix.dat
+      has_stretch_covmat: True
+      stretch_covmat_file: JLA/jla_va_covmatrix.dat
+      has_colour_covmat: True
+      colour_covmat_file: JLA/jla_vb_covmatrix.dat
+      has_mag_stretch_covmat: True
+      mag_stretch_covmat_file: JLA/jla_v0a_covmatrix.dat
+      has_mag_colour_covmat: True
+      mag_colour_covmat_file: JLA/jla_v0b_covmatrix.dat
+      has_stretch_colour_covmat: True
+      stretch_colour_covmat_file: JLA/jla_vab_covmatrix.dat
+    # Marginalise over nuisance parameters
+    # (slow, but useful for importance sampling)
+    marginalize: True
+    # If marginalizing, pre-compute covariance inverses.
+    # Faster, at expense of memory (~600MB).
+    precompute_covmats: True
+    # Options for the grid marginalization
+    marginalize_params:
+      marge_steps: 7
+      alpha_centre: 0.14
+      beta_centre: 3.123
+      step_width_alpha: 0.003
+      step_width_beta: 0.04

@@ -18,29 +18,3 @@ likelihood:
       has_mag_stretch_covmat: False
       has_mag_colour_covmat: False
       has_stretch_colour_covmat: False
-    # names of alpha and beta parameters if used and varied
-    alpha_beta_names: ['alpha', 'beta']
-    # Marginalise over nuisance parameters
-    # (slow, but useful for importance sampling)
-    marginalize: False
-    # if marginalizing, pre-compute covariance inverses
-    # at expense of memory (~600MB).
-    precompute_covmats: True
-    # Options for the grid marginalization
-    marginalize_params:
-      marge_steps: 7
-      alpha_centre: 0.14
-      beta_centre: 3.123
-      step_width_alpha: 0.003
-      step_width_beta: 0.04
-
-
-params:
-  alpha:
-    prior:
-      min: -10
-      max: 10
-  beta:
-    prior:
-      min: -10
-      max: 10

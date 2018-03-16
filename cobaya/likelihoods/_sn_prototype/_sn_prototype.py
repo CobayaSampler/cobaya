@@ -60,7 +60,7 @@ class _sn_prototype(Likelihood):
         if self.twoscriptmfit:
             scriptmcut = ini.float('scriptmcut', 10.)
         assert not ini.float('intrinsicdisp', 0) and not ini.float('intrinsicdisp0', 0)
-        if self.alpha_beta_names is not None:
+        if hasattr(self, "alpha_beta_names"):
             self.alpha_name = self.alpha_beta_names[0]
             self.beta_name = self.alpha_beta_names[1]
         self.pecz = ini.float('pecz', 0.001)
@@ -123,14 +123,12 @@ class _sn_prototype(Likelihood):
             if ini.bool('has_%s_covmat' % name):
                 self.log.debug('Reading covmat for: %s ' % name)
                 self.covs[name] = self._read_covmat(
-                    os.path.join(self.path, self.dataset_params["mag_covmat_file"]))
+                    os.path.join(self.path, self.dataset_params['%s_covmat_file'%name]))
         self.alphabeta_covmat = (len(self.covs.items()) > 1 or
                                  self.covs.get('mag', None) is None)
         self._last_alpha = np.inf
         self._last_beta = np.inf
-        if self.alpha_beta_names is None and not self.marginalize:
-            self.log.error('Must give alpha, beta')
-            raise HandledException
+        self.marginalize = getattr(self, "marginalize", False)
         assert self.covs
         # jla_prep
         zfacsq = 25.0 / np.log(10.0) ** 2
@@ -153,11 +151,9 @@ class _sn_prototype(Likelihood):
             self.A1 = A1
             self.A2 = A2
         if self.marginalize:
-            self.marge_params = self.marge_params.copy()
-            self.marge_params.update(self.marginalize_params)
-            self.step_width_alpha = self.marge_params['step_width_alpha']
-            self.step_width_beta = self.marge_params['step_width_beta']
-            _marge_steps = self.marge_params['marge_steps']
+            self.step_width_alpha = self.marginalize_params['step_width_alpha']
+            self.step_width_beta = self.marginalize_params['step_width_beta']
+            _marge_steps = self.marginalize_params['marge_steps']
             self.alpha_grid = np.empty((2 * _marge_steps + 1) ** 2)
             self.beta_grid = self.alpha_grid.copy()
             _int_points = 0
@@ -165,10 +161,10 @@ class _sn_prototype(Likelihood):
                 for beta_i in range(-_marge_steps, _marge_steps + 1):
                     if alpha_i ** 2 + beta_i ** 2 <= _marge_steps ** 2:
                         self.alpha_grid[_int_points] = (
-                            self.marge_params['alpha_centre'] +
+                            self.marginalize_params['alpha_centre'] +
                             alpha_i * self.step_width_alpha)
                         self.beta_grid[_int_points] = (
-                            self.marge_params['beta_centre'] +
+                            self.marginalize_params['beta_centre'] +
                             beta_i * self.step_width_beta)
                         _int_points += 1
             self.log.debug('Marignalizing alpha, beta over %s points' % _int_points)
@@ -217,16 +213,16 @@ class _sn_prototype(Likelihood):
             if 'stretch_colour' in self.covs:
                 invcovmat -= 2 * alphabeta * self.covs['stretch_colour']
             delta = (self.pre_vars + alphasq * self.stretch_var +
-                     betasq * self.colour_var + 2.0 * alpha * self.cov_mag_stretch -
-                     2.0 * beta * self.cov_mag_colour -
-                     2.0 * alphabeta * self.cov_stretch_colour)
+                     betasq * self.colour_var + 2.0 * alpha * self.cov_mag_stretch +
+                     -2.0 * beta * self.cov_mag_colour +
+                     -2.0 * alphabeta * self.cov_stretch_colour)
         else:
             delta = self.pre_vars
         np.fill_diagonal(invcovmat, invcovmat.diagonal() + delta)
         self.invcov = np.linalg.inv(invcovmat)
         return self.invcov
 
-    def alpha_beta_like(self, lumdists, alpha=0, beta=0, invcovmat=None):
+    def alpha_beta_logp(self, lumdists, alpha=0, beta=0, invcovmat=None):
         if self.alphabeta_covmat:
             alphasq = alpha * alpha
             betasq = beta * beta
@@ -269,7 +265,7 @@ class _sn_prototype(Likelihood):
             amarg_B = np.sum(invvars)
             amarg_E = np.sum(invcovmat)
             chi2 = amarg_A + np.log(amarg_E / _twopi) - amarg_B ** 2 / amarg_E
-        return chi2 / 2
+        return - chi2 / 2
 
     def logp(self, **params_values):
         angular_diameter_distances = self.theory.get_angular_diameter_distance(self.zcmb)
@@ -282,16 +278,22 @@ class _sn_prototype(Likelihood):
         if self.marginalize:
             # Should parallelize this loop
             for i in range(self.int_points):
-                self.marge_grid[i] = self.alpha_beta_like(
+                self.marge_grid[i] = - self.alpha_beta_logp(
                     lumdists, self.alpha_grid[i],
-                    self.beta_grid[i], nvcovmat=self.invcovs[i])
+                    self.beta_grid[i], invcovmat=self.invcovs[i])
             grid_best = np.min(self.marge_grid)
-            return grid_best - np.log(np.sum(np.exp(
-                - self.marge_grid[self.marge_grid != np.inf] + grid_best)) *
+            return - grid_best + np.log(
+                np.sum(np.exp(- self.marge_grid[self.marge_grid != np.inf] + grid_best)) *
                 self.step_width_alpha * self.step_width_beta)
         else:
             if self.alphabeta_covmat:
-                return - self.alpha_beta_like(lumdists, params_values[self.alpha_name],
-                                              params_values[self.beta_name])
+                return self.alpha_beta_logp(lumdists, params_values[self.alpha_name],
+                                            params_values[self.beta_name])
             else:
-                return - self.alpha_beta_like(lumdists)
+                return self.alpha_beta_logp(lumdists)
+
+
+# Installation routines ##################################################################
+
+def get_path(path):
+    return os.path.realpath(os.path.join(path, "data", "sn_data"))
