@@ -269,10 +269,6 @@ class _sn_prototype(Likelihood):
 
     def logp(self, **params_values):
         angular_diameter_distances = self.theory.get_angular_diameter_distance(self.zcmb)
-        # For tests
-        # angular_diameter_distances = (
-        #     lambda z: (-338.65487197 * z ** 4 + 1972.59141641 * z ** 3 -
-        #                4310.60442428 * z ** 2 + 4357.72542145 * z))(self.zcmb)
         lumdists = (5 * np.log10((1 + self.zhel) * (1 + self.zcmb) *
                                  angular_diameter_distances))
         if self.marginalize:
