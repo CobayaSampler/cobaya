@@ -48,7 +48,8 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
     # Add best fit
     info[_params] = merge_params_info(*(
         [yaml_load(baseline_cosmology)] +
-        [get_default_info(lik, _likelihood)[_params] for lik in info[_likelihood]]))
+        [get_default_info(lik, _likelihood).get(_params, {})
+         for lik in info[_likelihood]]))
     for p in best_fit:
         try:
             if _prior in info[_params].get(p, {}):
