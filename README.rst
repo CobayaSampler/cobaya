@@ -7,7 +7,7 @@
 
 :Documentation: `Documentation at Readthedocs <https://cobaya.readthedocs.org>`_
 
-:Licensing: `LGPL <https://www.gnu.org/licenses/lgpl-3.0.en.html>`_ for the code (except otherwise stated in a docstring) and `GFDL <https://www.gnu.org/licenses/fdl-1.3.en.html>`_ for the documentation (see `LICENCE.txt <https://github.com/JesusTorrado/cobaya/blob/master/LICENCE.txt>`_).
+:Licensing: `LGPL <https://www.gnu.org/licenses/lgpl-3.0.en.html>`_ for the code and `GFDL <https://www.gnu.org/licenses/fdl-1.3.en.html>`_ for the documentation (with exceptions; see `LICENCE.txt <https://github.com/JesusTorrado/cobaya/blob/master/LICENCE.txt>`_).
 
 **cobaya** (COde for BAYesian Analysis; Guinea Pig, in Spanish) is a framework for sampling and statistical modelling: it allows you to explore any prior or posterior using a range of Monte Carlo samplers (including the advanced MCMC sampler from CosmoMC_, and the advanced nested sampler PolyChord_). The results of the sampling can be analysed with GetDist_.
 
