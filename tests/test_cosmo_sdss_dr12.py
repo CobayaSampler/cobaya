@@ -58,5 +58,5 @@ best_fit_base.update({k:v for k,v in params_lowTEB_highTTTEEE.items()
                       if k in baseline_cosmology})
 
 chi2_sdss_dr12_consensus_bao = {"sdss_dr12_consensus_bao": 40.8, "tolerance": 0.1}
-chi2_sdss_dr12_consensus_full_shape = {"sdss_dr12_consensus_full_shape": 10, "tolerance": 0.1}
-chi2_sdss_dr12_consensus_final = {"sdss_dr12_consensus_final": 10, "tolerance": 0.1}
+chi2_sdss_dr12_consensus_full_shape = {"sdss_dr12_consensus_full_shape": 30.0831, "tolerance": 0.1}
+chi2_sdss_dr12_consensus_final = {"sdss_dr12_consensus_final": 27.3596, "tolerance": 0.1}

@@ -66,28 +66,6 @@ class _bao_prototype(Likelihood):
             self.log.error(
                 "BAO likelihood not yet compatible with CLASS (help appreciated!)")
             raise HandledException
-        # Functions to get the corresponding theoretical prediction
-        self.theory_fun = lambda z, observable: ({
-            "DM_over_rs":
-                (1+z)*self.theory.get_angular_diameter_distance(z)/self.rs(),
-            "Hz_rs":
-                self.theory.get_h_of_z(z)*self.rs(),
-            "f_sigma8":
-                self.theory.get_fsigma8(z),
-            # "DV_over_rs":
-            #     "this%Calculator%BAO_D_v"(z)/self.rs(),
-            # "Hz_rs_103":
-            #     self.theory.get_h_of_z(z)*self.rs()*1e-3,
-            # "rs_over_DV":
-            #     self.rs()/"this%Calculator%BAO_D_v"(z),
-            # "Az":
-            #     "this%Acoustic(CMB,z)",
-            # "DA_over_rs":
-            #     self.theory.get_angular_diameter_distance(z)/self.rs(),
-            # "F_AP":
-            #     ((1+z)*self.theory.get_angular_diameter_distance(z)*
-            #      self.theory.get_h_of_z(z)),
-        }[observable])
         obs_not_implemented = [
             "DV_over_rs", "Hz_rs_103", "rs_over_DV", "Az", "DA_over_rs", "F_AP"]
         obs_not_implemented_used = np.array([
@@ -131,6 +109,29 @@ class _bao_prototype(Likelihood):
             for obs in self.data["observable"].unique():
                 requisites.update(theory_reqs[obs])
         self.theory.needs(requisites)
+
+    def theory_fun(self, z, observable):
+        # Functions to get the corresponding theoretical prediction
+        if observable == "DM_over_rs":
+            return (1+z)*self.theory.get_angular_diameter_distance(z)/self.rs()
+        elif observable == "Hz_rs":
+            return self.theory.get_h_of_z(z)*self.rs()
+        elif observable == "f_sigma8":
+            return self.theory.get_fsigma8(z)
+        # Not implemented yet:
+        # "DV_over_rs":
+        #     "this%Calculator%BAO_D_v"(z)/self.rs(),
+        # "Hz_rs_103":
+        #     self.theory.get_h_of_z(z)*self.rs()*1e-3,
+        # "rs_over_DV":
+        #     self.rs()/"this%Calculator%BAO_D_v"(z),
+        # "Az":
+        #     "this%Acoustic(CMB,z)",
+        # "DA_over_rs":
+        #     self.theory.get_angular_diameter_distance(z)/self.rs(),
+        # "F_AP":
+        #     ((1+z)*self.theory.get_angular_diameter_distance(z)*
+        #      self.theory.get_h_of_z(z)),
 
     def rs(self):
         return self.theory.get_param("rdrag") * self.rs_rescale
