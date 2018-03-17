@@ -214,9 +214,11 @@ class camb(Theory):
     def needs(self, arguments):
         # Computed quantities required by the likelihood
         # Note that redshifts below are treated differently for background quantities,
-        # were no additional transfer computation is needed (e.g. H(z)),
-        # and matter-power-related quantities, that require additional computation
-        # and need the redshifts to be passed at CAMBParams instantiation.
+        #   were no additional transfer computation is needed (e.g. H(z)),
+        #   and matter-power-related quantities, that require additional computation
+        #   and need the redshifts to be passed at CAMBParams instantiation.
+        #   Also, we always make sure that those redshifts are sorted in descending order,
+        #   since all CAMB related functions return quantities in that implicit order
         for k,v in arguments.items():
             # Precision parameters and boundaries (in general, take max of all requested)
             if k == "l_max":
@@ -250,8 +252,8 @@ class camb(Theory):
                         kwargs=kwargs)
             elif k == "fsigma8":
                 redshifts = v.pop("redshifts")
-                self.extra_args["redshifts"] = np.sort(np.unique(np.concatenate(
-                    (np.atleast_1d(redshifts), self.extra_args.get("redshifts",[])))))
+                self.extra_args["redshifts"] = np.flip(np.sort(np.unique(np.concatenate(
+                    (np.atleast_1d(redshifts), self.extra_args.get("redshifts",[]))))), 0)
                 self.collectors[k] = collector(
                     method="CAMBdata.get_fsigma8",
                     kwargs=v)
