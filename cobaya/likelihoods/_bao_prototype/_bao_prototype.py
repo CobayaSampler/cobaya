@@ -72,22 +72,31 @@ class _bao_prototype(Likelihood):
                 (1+z)*self.theory.get_angular_diameter_distance(z)/self.rs(),
             "Hz_rs":
                 self.theory.get_h_of_z(z)*self.rs(),
-#            "DV_over_rs":
-#                "this%Calculator%BAO_D_v"(z)/self.rs(),
-#            "Hz_rs_103":
-#                self.theory.get_h_of_z(z)*self.rs()*1e-3,
-#            "rs_over_DV":
-#                self.rs()/"this%Calculator%BAO_D_v"(z),
-#            "Az":
-#                "this%Acoustic(CMB,z)",
-#            "DA_over_rs":
-#                self.theory.get_angular_diameter_distance(z)/self.rs(),
-#            "F_AP":
-#                ((1+z)*self.theory.get_angular_diameter_distance(z)*
-#                 self.theory.get_h_of_z(z)),
-#            "f_sigma8":
-#                "Theory%growth_z%Value"(z)
+            "f_sigma8":
+                self.theory.get_fsigma8(z),
+            # "DV_over_rs":
+            #     "this%Calculator%BAO_D_v"(z)/self.rs(),
+            # "Hz_rs_103":
+            #     self.theory.get_h_of_z(z)*self.rs()*1e-3,
+            # "rs_over_DV":
+            #     self.rs()/"this%Calculator%BAO_D_v"(z),
+            # "Az":
+            #     "this%Acoustic(CMB,z)",
+            # "DA_over_rs":
+            #     self.theory.get_angular_diameter_distance(z)/self.rs(),
+            # "F_AP":
+            #     ((1+z)*self.theory.get_angular_diameter_distance(z)*
+            #      self.theory.get_h_of_z(z)),
         }[observable])
+        obs_not_implemented = [
+            "DV_over_rs", "Hz_rs_103", "rs_over_DV", "Az", "DA_over_rs", "F_AP"]
+        obs_not_implemented_used = np.array([
+            (obs in self.data["observable"]) for obs in obs_not_implemented])
+        if np.any(obs_not_implemented_used):
+            self.log.error("This likelihood refers to observables '%s' that have not been"
+                           " implemented yet. Please, open an issue in github.",
+                           self.data["observable"].values[obs_not_implemented_used])
+            raise HandledException
         # Requisites
         zs = {obs:self.data.loc[self.data["observable"] == obs, "z"].values
               for obs in self.data["observable"].unique()}
@@ -98,29 +107,25 @@ class _bao_prototype(Likelihood):
             "Hz_rs": {
                 "h_of_z": {"redshifts": zs.get("Hz_rs", None), "units": "km/s/Mpc"},
                 "rdrag": None},
-            "DV_over_rs": {
-                "BAO_D_v(z)": None, "rdrag": None},
-            "Hz_rs_103": {
-                "h_of_z": {"redshifts": zs.get("Hz_rs_103", None), "units": "km/s/Mpc"},
-                "rdrag": None},
-            "rs_over_DV": {
-                "BAO_D_v(z)": None},
-            "Az": {
-                "Acoustic(CMB,z)": None},
-            "DA_over_rs": {
-                "angular_diameter_distance": {"redshifts": zs.get("DA_over_rs", None)},
-                "rdrag": None},
-            "F_AP": {
-                "angular_diameter_distance": {"redshifts": zs.get("F_AP", None)},
-                "h_of_z": {"redshifts": zs.get("F_AP", None), "units": "km/s/Mpc"}},
             "f_sigma8": {
-                "growth_z%Value(z)"}}
-        #    this%needs_powerspectra =  any(this%type_bao == f_sigma8)
-        #    if (this%needs_powerspectra) then
-        #        this%needs_exact_z =  .true.
-        #        allocate(this%exact_z(this%num_bao))
-        #        this%exact_z = this%bao_z
-        #    end if
+                "fsigma8": {"redshifts": zs.get("f_sigma8", None)},
+                "h_of_z": {"redshifts": zs.get("Hz_rs", None), "units": "km/s/Mpc"}},
+            # "DV_over_rs": {
+            #     "BAO_D_v(z)": None, "rdrag": None},
+            # "Hz_rs_103": {
+            #     "h_of_z": {"redshifts": zs.get("Hz_rs_103", None), "units": "km/s/Mpc"},
+            #     "rdrag": None},
+            # "rs_over_DV": {
+            #     "BAO_D_v(z)": None},
+            # "Az": {
+            #     "Acoustic(CMB,z)": None},
+            # "DA_over_rs": {
+            #     "angular_diameter_distance": {"redshifts": zs.get("DA_over_rs", None)},
+            #     "rdrag": None},
+            # "F_AP": {
+            #     "angular_diameter_distance": {"redshifts": zs.get("F_AP", None)},
+            #     "h_of_z": {"redshifts": zs.get("F_AP", None), "units": "km/s/Mpc"}},
+            }
         requisites = {}
         if self.has_type:
             for obs in self.data["observable"].unique():
