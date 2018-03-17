@@ -1,7 +1,6 @@
 from __future__ import print_function
 import numpy as np
 from scipy.stats import norm
-import pytest
 
 from cobaya.conventions import _theory, _sampler, _likelihood, _params
 from cobaya.run import run
@@ -11,7 +10,6 @@ def test_cosmo_hst_riess2018_camb():
     body_of_test("riess2018", "camb")
 
 
-@pytest.mark.skip()
 def test_cosmo_hst_riess2018_classy():
     body_of_test("riess2018", "classy")
 
