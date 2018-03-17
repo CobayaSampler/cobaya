@@ -213,15 +213,16 @@ class camb(Theory):
 
     def needs(self, arguments):
         # Computed quantities required by the likelihood
+        # Note that redshifts below are treated differently for background quantities,
+        # were no additional transfer computation is needed (e.g. H(z)),
+        # and matter-power-related quantities, that require additional computation
+        # and need the redshifts to be passed at CAMBParams instantiation.
         for k,v in arguments.items():
             # Precision parameters and boundaries (in general, take max of all requested)
             if k == "l_max":
                 self.extra_args["lmax"] = max(v, self.extra_args.get("lmax",0))
             elif k == "k_max":
                 self.extra_args["kmax"] = max(v, self.extra_args.get("kmax",0))
-            elif k == "redshifts":
-                self.extra_args["redshifts"] = np.sort(
-                    np.unique(np.concatenate((v, self.extra_args.get("redshifts",[])))))
             # Products and other computations
             elif k == "Cl":
                 v2 = [a.lower() for a in v]
@@ -232,8 +233,12 @@ class camb(Theory):
                         "raw_cl": True})
                 self.derived_extra += ["TCMB"]
                 # Needed for Planck: 0.1 chi^2 precision
-                self.extra_args["lens_potential_accuracy"] = 1
+                self.extra_args["lens_potential_accuracy"] = max(
+                    1, self.extra_args.get("lens_potential_accuracy", 1))
             elif k == "Pk_interpolator":
+                redshifts = v.pop("redshifts")
+                self.extra_args["redshifts"] = np.sort(np.unique(np.concatenate(
+                    (np.atleast_1d(redshifts), self.extra_args.get("redshifts",[])))))
                 vars_pairs = v.pop("vars_pairs", None)
                 vars_pairs = vars_pairs or [["total", "total"]]
                 for pair in vars_pairs:
@@ -243,6 +248,13 @@ class camb(Theory):
                     self.collectors[name] = collector(
                         method="CAMBdata.get_matter_power_interpolator",
                         kwargs=kwargs)
+            elif k == "fsigma8":
+                redshifts = v.pop("redshifts")
+                self.extra_args["redshifts"] = np.sort(np.unique(np.concatenate(
+                    (np.atleast_1d(redshifts), self.extra_args.get("redshifts",[])))))
+                self.collectors[k] = collector(
+                    method="CAMBdata.get_fsigma8",
+                    kwargs=v)
             elif k == "comoving_radial_distance":
                 self.collectors[k] = collector(
                     method="CAMBdata.comoving_radial_distance",
@@ -418,10 +430,18 @@ class camb(Theory):
             cl['pp'][2:] *= ell_factor**2 * (2*np.pi)
         return cl
 
-    def get_Pk_interpolator(self):
+    def get_Pk_interpolator(self, z):
+        raise ValueError("NEED TO SORT WITH Z (there may be more z's than those!!!) CHECK OUT f_sigma8")
         current_state = self.current_state()
         prefix = "Pk_interpolator_"
         return {k[len(prefix):]:v for k,v in current_state.items() if k.startswith(prefix)}
+
+    def get_fsigma8(self, zs):
+        values = np.array(self.current_state()["fsigma8"])
+        # Now sorted in descending z, and may contain more z's. Select and sort as kwarg z
+        i_kwarg_z = np.concatenate(
+            [np.where(self.extra_args["redshifts"] == z)[0] for z in np.atleast_1d(zs)])
+        return values[i_kwarg_z]
 
     def get_comoving_radial_distance(self, z):
         return self.current_state()["comoving_radial_distance"][
