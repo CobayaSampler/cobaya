@@ -68,14 +68,15 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
         info[_params].pop("cosmomc_theta_100")
         info[_params]["H0"] = {_prior: {"min": 0, "max": 100}, _p_ref: best_fit["H0"]}
         derived.pop("H0")
-        best_fit_derived.pop("H0")
-        # Don't test those that have not been implemented yet
-        for p in ["zstar", "rstar", "thetastar", "DAstar", "zdrag", "rdrag",
-                  "kd", "thetad", "zeq", "keq", "thetaeq", "thetarseq",
-                  # BBN!!!
-                  "DH", "Y_p", "YHe"]:
-            derived.pop(p)
-            best_fit_derived.pop(p, None)
+        if best_fit_derived is not None:
+            best_fit_derived.pop("H0", None)
+            # Don't test those that have not been implemented yet
+            for p in ["zstar", "rstar", "thetastar", "DAstar", "zdrag",
+                      "kd", "thetad", "zeq", "keq", "thetaeq", "thetarseq",
+                      # BBN!!!
+                      "DH", "Y_p", "YHe"]:
+                derived.pop(p)
+                best_fit_derived.pop(p, None)
     # Add derived
     if best_fit_derived is not None:
         info[_params].update(derived)

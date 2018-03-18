@@ -373,14 +373,12 @@ class classy(Theory):
         derived_aux.update(
             self.classy.get_current_derived_parameters(requested_derived_with_extra))
         # Fill return dictionaries
-        derived = {de_translated[p]:derived_aux[p] for p in self.output_params}
+        derived = {de_translated[p]:derived_aux[self.translate_param(p)]
+                   for p in de_translated}
         derived_extra = {p:derived_aux[p] for p in self.derived_extra}
-        try:
-            (p for p,v in derived.items() if v is None).next()
-            self.log.error("Derived param '%s' not working in the CLASS interface", p)
-            raise HandledException
-        except StopIteration:
-            pass  # all well!
+        # No need for error control: classy.get_current_derived_parameters is passed
+        # every derived parameter not excluded before, and cause an error if if founds a
+        # parameter that it does not recognise
         return derived, derived_extra
 
     def get_param(self, p):
