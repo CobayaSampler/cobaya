@@ -64,8 +64,8 @@ This likelihood can be installed automatically as explained in :doc:`installatio
 If are following the instructions there (you should!), you don't need to read the rest
 of this section.
 
-Manual installation of the SN Ia likelihoods
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Manual installation of the SN Ia likelihoods data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Assuming you are installing all your
 likelihoods under ``/path/to/likelihoods``, simply do

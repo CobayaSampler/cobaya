@@ -4,7 +4,8 @@
 :Synopsis: BAO, f_sigma8 and other measurements at single redshifts, with correlations
 :Author: Antony Lewis (adapted to Cobaya by Jesus Torrado, with little modification)
 
-This code provides a template for BAO, :math:`H` and other redshift dependent functions.
+This code provides a template for BAO, :math:`f_{\sigma_8}`, :math:`H`
+and other redshift dependent functions.
 
 The datasets implemented at this moment are:
 
@@ -51,7 +52,16 @@ To do that, create a file containing the data points, e.g. ``myBAO.dat``, as
 
 where you can use as many different quantities and redshifts as you like.
 
-[TODO: QUANTITIES...]
+The available quantities are
+
+- ``DV_over_rs``: Spherically-averaged distance, over sound horizon radius
+- ``rs_over_DV``: Idem, inverse
+- ``DM_over_rs``: Comoving angular diameter distance, over sound horizon radius
+- ``DA_over_rs``: Physical angular diameter distance, over sound horizon radius
+- ``Hz_rs``: Hubble parameter, times sound horizon radius
+- ``f_sigma8``: Differential matter linear growth rate,
+  times amplitude of present-day fuctuations
+- ``F_AP``: Anisotropy (Alcock-Paczynski) parameter
 
 In addition create a file, e.g. ``myBAO.cov``, containing the covariance matrix for those
 data, with the same row order as the data file.
@@ -69,8 +79,8 @@ This likelihood can be installed automatically as explained in :doc:`installatio
 If are following the instructions there (you should!), you don't need to read the rest
 of this section.
 
-Manual installation of the SN Ia likelihoods
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Manual installation of the SDSS likelihood data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Assuming you are installing all your
 likelihoods under ``/path/to/likelihoods``, simply do
@@ -78,15 +88,15 @@ likelihoods under ``/path/to/likelihoods``, simply do
 .. code:: bash
 
    $ cd /path/to/likelihoods
-   $ git clone https://github.com/JesusTorrado/sn_data.git
+   $ git clone https://github.com/JesusTorrado/sdss_data.git
 
 After this, mention the path to this likelihood when you include it in an input file as
 
 .. code-block:: yaml
 
    likelihood:
-     sn_[pantheon|jla|jla_lite]:
-       path: /path/to/likelihoods/sn_data
+     sdss_dr12_consensus_[bao|full_shape|final|...]:
+       path: /path/to/likelihoods/sdss_data
 
 
 """
@@ -110,11 +120,15 @@ from cobaya.conventions import _path_install
 from cobaya.tools import get_path_to_installation
 
 
+# light speed
+_c = 299792.458  # km/s
+
+
 class _bao_prototype(Likelihood):
 
     def initialise(self):
         # If no path specified, use the modules path
-        data_file_path = (self.path or
+        data_file_path = (getattr(self, "path", None) or
                           os.path.join(get_path_to_installation(), "data/sdss_dr12"))
         if not data_file_path:
             self.log.error("No path given to BAO data. Set the likelihood property "
@@ -126,7 +140,7 @@ class _bao_prototype(Likelihood):
         # Load "measurements file" and covmat of requested
         try:
             self.data = pd.read_csv(os.path.join(data_file_path, self.measurements_file),
-                                    header=None, index_col=None, sep="\s+")
+                                    header=None, index_col=None, sep="\s+", comment="#")
         except IOError:
             self.log.error("Couldn't find measurements file '%s' in folder '%s'. "%(
                 self.measurements_file, data_file_path) + "Check your paths.")
@@ -166,8 +180,19 @@ class _bao_prototype(Likelihood):
         zs = {obs:self.data.loc[self.data["observable"] == obs, "z"].values
               for obs in self.data["observable"].unique()}
         theory_reqs = {
+            "DV_over_rs": {
+                "angular_diameter_distance": {"redshifts": zs.get("DV_over_rs", None)},
+                "h_of_z": {"redshifts": zs.get("DV_over_rs", None), "units": "km/s/Mpc"},
+                "rdrag": None},
+            "rs_over_DV": {
+                "angular_diameter_distance": {"redshifts": zs.get("rs_over_DV", None)},
+                "h_of_z": {"redshifts": zs.get("rs_over_DV", None), "units": "km/s/Mpc"},
+                "rdrag": None},
             "DM_over_rs": {
                 "angular_diameter_distance": {"redshifts": zs.get("DM_over_rs", None)},
+                "rdrag": None},
+            "DA_over_rs": {
+                "angular_diameter_distance": {"redshifts": zs.get("DA_over_rs", None)},
                 "rdrag": None},
             "Hz_rs": {
                 "h_of_z": {"redshifts": zs.get("Hz_rs", None), "units": "km/s/Mpc"},
@@ -175,27 +200,14 @@ class _bao_prototype(Likelihood):
             "f_sigma8": {
                 "fsigma8": {"redshifts": zs.get("f_sigma8", None)},
                 "h_of_z": {"redshifts": zs.get("Hz_rs", None), "units": "km/s/Mpc"}},
-            # "DV_over_rs": {
-            #     "BAO_D_v(z)": None, "rdrag": None},
-            # "Hz_rs_103": {
-            #     "h_of_z": {"redshifts": zs.get("Hz_rs_103", None), "units": "km/s/Mpc"},
-            #     "rdrag": None},
-            # "rs_over_DV": {
-            #     "BAO_D_v(z)": None},
-            # "Az": {
-            #     "Acoustic(CMB,z)": None},
-            # "DA_over_rs": {
-            #     "angular_diameter_distance": {"redshifts": zs.get("DA_over_rs", None)},
-            #     "rdrag": None},
-            # "F_AP": {
-            #     "angular_diameter_distance": {"redshifts": zs.get("F_AP", None)},
-            #     "h_of_z": {"redshifts": zs.get("F_AP", None), "units": "km/s/Mpc"}},
-            }
-        obs_used_not_implemented = [obs for obs in self.data["observable"]
-                                    if obs not in theory_reqs]
-        if obs_used_not_implemented:
+            "F_AP": {
+                "angular_diameter_distance": {"redshifts": zs.get("F_AP", None)},
+                "h_of_z": {"redshifts": zs.get("F_AP", None), "units": "km/s/Mpc"}}}
+        obs_used_not_implemented = np.unique([obs for obs in self.data["observable"]
+                                              if obs not in theory_reqs])
+        if len(obs_used_not_implemented):
             self.log.error("This likelihood refers to observables '%s' that have not been"
-                           " implemented yet. Did you mean any of '%s'? "
+                           " implemented yet. Did you mean any of %s? "
                            "If you didn't, please, open an issue in github.",
                            obs_used_not_implemented, list(theory_reqs.keys()))
             raise HandledException
@@ -207,27 +219,31 @@ class _bao_prototype(Likelihood):
         self.theory.needs(requisites)
 
     def theory_fun(self, z, observable):
-        # Functions to get the corresponding theoretical prediction
-        if observable == "DM_over_rs":
+        # Functions to get the corresponding theoretical prediction:
+        # Spherically-averaged distance, over sound horizon radius
+        if observable == "DV_over_rs":
+            return np.cbrt(((1+z)*self.theory.get_angular_diameter_distance(z))**2 *
+                           _c*z/self.theory.get_h_of_z(z))/self.rs()
+        # Idem, inverse
+        elif observable == "rs_over_DV":
+            return np.cbrt(((1+z)*self.theory.get_angular_diameter_distance(z))**2 *
+                           _c*z/self.theory.get_h_of_z(z))**(-1)*self.rs()
+        # Comoving angular diameter distance, over sound horizon radius
+        elif observable == "DM_over_rs":
             return (1+z)*self.theory.get_angular_diameter_distance(z)/self.rs()
+        # Physical angular diameter distance, over sound horizon radius
+        elif observable == "DA_over_rs":
+            return self.theory.get_angular_diameter_distance(z)/self.rs()
+        # Hubble parameter, times sound horizon radius
         elif observable == "Hz_rs":
             return self.theory.get_h_of_z(z)*self.rs()
+        # Diff Linear Growth Rate times present amplitude
         elif observable == "f_sigma8":
             return self.theory.get_fsigma8(z)
-        # Not implemented yet:
-        # "DV_over_rs":
-        #     "this%Calculator%BAO_D_v"(z)/self.rs(),
-        # "Hz_rs_103":
-        #     self.theory.get_h_of_z(z)*self.rs()*1e-3,
-        # "rs_over_DV":
-        #     self.rs()/"this%Calculator%BAO_D_v"(z),
-        # "Az":
-        #     "this%Acoustic(CMB,z)",
-        # "DA_over_rs":
-        #     self.theory.get_angular_diameter_distance(z)/self.rs(),
-        # "F_AP":
-        #     ((1+z)*self.theory.get_angular_diameter_distance(z)*
-        #      self.theory.get_h_of_z(z)),
+        # Anisotropy (Alcock-Paczynski) parameter
+        elif observable == "F_AP":
+            return ((1+z) * self.theory.get_angular_diameter_distance(z) *
+                    self.theory.get_h_of_z(z))/_c
 
     def rs(self):
         return self.theory.get_param("rdrag") / self.rs_fid
