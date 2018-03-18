@@ -228,13 +228,17 @@ class classy(Theory):
                     method="scale_independent_growth_factor_f",
                     args=[np.atleast_1d(v["redshifts"])],
                     arg_array=0)
-                self.collectors["sigma"] = collector(
+                self.collectors["sigma8"] = collector(
                     method="sigma",
-                    args=[8/70*100, np.atleast_1d(v["redshifts"])],
+                    # Notice: Needs H0 for 1st arg (R), so added later
+                    args=[None, np.atleast_1d(v["redshifts"])],
                     arg_array=1)
+                if "H0" not in self.input_params:
+                    self.derived_extra += ["H0"]
                 self.extra_args["output"] += " mPk"
                 self.extra_args["P_k_max_h/Mpc"] = (
                     max(1, self.extra_args.get("P_k_max_h/Mpc", 0)))
+                self.add_z_for_matter_power(v["redshifts"])
             elif k == "h_of_z":
                 self.collectors[k] = collector(
                     method="Hubble",
@@ -264,6 +268,13 @@ class classy(Theory):
             self.collectors["Cl"].kwargs["lmax"] = self.extra_args["l_max_scalars"]
         # Cleanup of products string
         self.extra_args["output"] = " ".join(set(self.extra_args["output"].split()))
+
+    def add_z_for_matter_power(self, z):
+        if not hasattr(self, "z_for_matter_power"):
+            self.z_for_matter_power = np.empty((0))
+        self.z_for_matter_power = np.flip(np.sort(np.unique(np.concatenate(
+            [self.z_for_matter_power, np.atleast_1d(z)]))), axis=0)
+        self.extra_args["z_pk"] = " ".join(["%g"%zi for zi in self.z_for_matter_power])
 
     def translate_param(self, p):
         if self.use_camb_names:
@@ -314,6 +325,9 @@ class classy(Theory):
                 raise  # No HandledException, so that CLASS traceback gets printed
             # Gather products
             for product, collector in self.collectors.items():
+                # Special case: sigma8 needs H0, which cannot be known beforehand:
+                if "sigma8" in self.collectors:
+                    self.collectors["sigma8"].args[0] = 8/self.classy.h()
                 method = getattr(self.classy, collector.method)
                 if self.collectors[product].arg_array is None:
                     self.states[i_state][product] = method(
@@ -401,6 +415,11 @@ class classy(Theory):
         if "pp" in cl and ell_factor is not 1:
             cl['pp'][2:] *= ell_factor**2 * (2*np.pi)
         return cl
+
+    def get_fsigma8(self, z):
+        indices = np.where(self.z_for_matter_power == z)
+        return (self.current_state()["growth_factor_f"][indices] *
+                self.current_state()["sigma8"][indices])
 
     def get_h_of_z(self, z):
         return self.current_state()["h_of_z"][
