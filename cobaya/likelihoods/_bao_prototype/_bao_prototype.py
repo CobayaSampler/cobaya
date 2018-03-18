@@ -4,7 +4,7 @@
 :Synopsis: BAO, f_sigma8 and other measurements at single redshifts, with correlations
 :Author: Antony Lewis (adapted to Cobaya by Jesus Torrado, with little modification)
 
-This code provides a template for BAO, :math:`f_{\sigma_8}`, :math:`H`
+This code provides a template for BAO, :math:`f\sigma_8`, :math:`H`
 and other redshift dependent functions.
 
 The datasets implemented at this moment are:
@@ -116,12 +116,8 @@ import pandas as pd
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import HandledException
-from cobaya.conventions import _path_install
+from cobaya.conventions import _path_install, _c
 from cobaya.tools import get_path_to_installation
-
-
-# light speed
-_c = 299792.458  # km/s
 
 
 class _bao_prototype(Likelihood):

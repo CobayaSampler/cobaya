@@ -132,7 +132,7 @@ from cobaya.theory import Theory
 from cobaya.log import HandledException
 from cobaya.tools import get_path_to_installation
 from cobaya.install import user_flag_if_needed
-
+from cobaya.conventions import _c
 
 # Result collector
 collector = namedtuple("collector", ["method", "args", "kwargs", "arg_array"])
@@ -223,14 +223,33 @@ class classy(Theory):
                 self.extra_args["non linear"] = "halofit"
                 self.collectors[k] = collector(method="lensed_cl", kwargs={})
                 self.collectors["TCMB"] = collector(method="T_cmb", kwargs={})
+            elif k == "fsigma8":
+                self.collectors["growth_factor_f"] = collector(
+                    method="scale_independent_growth_factor_f",
+                    args=[np.atleast_1d(v["redshifts"])],
+                    arg_array=0)
+                self.collectors["sigma"] = collector(
+                    method="sigma",
+                    args=[8/70*100, np.atleast_1d(v["redshifts"])],
+                    arg_array=1)
+                self.extra_args["output"] += " mPk"
+                self.extra_args["P_k_max_h/Mpc"] = (
+                    max(1, self.extra_args.get("P_k_max_h/Mpc", 0)))
+            elif k == "h_of_z":
+                self.collectors[k] = collector(
+                    method="Hubble",
+                    args=[np.atleast_1d(v["redshifts"])],
+                    arg_array=0)
+                self.H_units_conv_factor = {"/Mpc": 1, "km/s/Mpc": _c}[v["units"]]
             elif k == "angular_diameter_distance":
                 self.collectors[k] = collector(
                     method="angular_distance",
-                    arg_array=np.atleast_1d(v["redshifts"]))
+                    args=[np.atleast_1d(v["redshifts"])],
+                    arg_array=0)
             else:
                 # Extra derived parameters
                 if v is None:
-                    self.derived_extra += [k]
+                    self.derived_extra += [self.translate_param(k)]
                 else:
                     self.log.error("Unknown required product: '%s:%s'.", k, v)
                     raise HandledException
@@ -300,9 +319,14 @@ class classy(Theory):
                     self.states[i_state][product] = method(
                         *self.collectors[product].args, **self.collectors[product].kwargs)
                 else:
-                    self.states[i_state][product] = np.array(
-                        [method(v, **self.collectors[product].kwargs)
-                         for v in self.collectors[product].arg_array])
+                    i_array = self.collectors[product].arg_array
+                    self.states[i_state][product] = np.zeros(
+                        len(self.collectors[product].args[i_array]))
+                    for i,v in enumerate(self.collectors[product].args[i_array]):
+                        args = (list(self.collectors[product].args[:i_array]) + [v] +
+                                list(self.collectors[product].args[i_array+1:]))
+                        self.states[i_state][product][i] = method(
+                            *args, **self.collectors[product].kwargs)
             # Prepare derived parameters
             d, d_extra = self.get_derived_all(derived_requested=(derived == {}))
             derived.update(d)
@@ -326,9 +350,16 @@ class classy(Theory):
         """
         list_requested_derived = self.output_params if derived_requested else []
         de_translated = {self.translate_param(p):p for p in list_requested_derived}
-        derived_aux = self.classy.get_current_derived_parameters(
-            list(de_translated.keys())+list(self.derived_extra))
-        derived = {de_translated[p]:v for p,v in derived_aux.items()}
+        requested_derived_with_extra = list(de_translated.keys())+list(self.derived_extra)
+        derived_aux = {}
+        # Exceptions
+        if "rs_drag" in requested_derived_with_extra:
+            requested_derived_with_extra.remove("rs_drag")
+            derived_aux["rs_drag"] = self.classy.rs_drag()
+        derived_aux.update(
+            self.classy.get_current_derived_parameters(requested_derived_with_extra))
+        # Fill return dictionaries
+        derived = {de_translated[p]:derived_aux[p] for p in self.output_params}
         derived_extra = {p:derived_aux[p] for p in self.derived_extra}
         try:
             (p for p,v in derived.items() if v is None).next()
@@ -344,7 +375,7 @@ class classy(Theory):
         """
         current_state = self.current_state()
         for pool in ["params", "derived", "derived_extra"]:
-            value = current_state[pool].get(p, None)
+            value = current_state[pool].get(self.translate_param(p), None)
             if value is not None:
                 return value
         self.log.error("Parameter not known: '%s'", p)
@@ -371,9 +402,15 @@ class classy(Theory):
             cl['pp'][2:] *= ell_factor**2 * (2*np.pi)
         return cl
 
+    def get_h_of_z(self, z):
+        return self.current_state()["h_of_z"][
+            np.where(self.collectors["h_of_z"].args[
+                self.collectors["h_of_z"].arg_array] == z)]*self.H_units_conv_factor
+
     def get_angular_diameter_distance(self, z):
         return self.current_state()["angular_diameter_distance"][
-            np.where(self.collectors["angular_diameter_distance"].arg_array == z)]
+            np.where(self.collectors["angular_diameter_distance"].args[
+                self.collectors["angular_diameter_distance"].arg_array] == z)]
 
 
 # Installation routines ##################################################################

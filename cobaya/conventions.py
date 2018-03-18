@@ -1,7 +1,8 @@
 """
 .. module:: conventions
 
-:Synopsis: Some naming conventions to make the life of the maintainer easier.
+:Synopsis: Some physical constants and naming conventions
+           to make the life of the maintainer easier.
 :Author: Jesus Torrado
 
 """
@@ -56,3 +57,9 @@ _defaults_file = "defaults.yaml"
 subfolders = {_likelihood: "likelihoods",
               _sampler: "samplers",
               _theory: "theories"}
+
+
+# Physical constants
+
+# Light speed
+_c = 299792.458  # km/s

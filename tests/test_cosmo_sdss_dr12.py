@@ -55,10 +55,10 @@ def test_sdss_dr12_consensus_final_classy(modules):
 
 best_fit_base = yaml_load(baseline_cosmology)
 best_fit_base.update({k:v for k,v in params_lowTEB_highTTTEEE.items()
-                      if k in baseline_cosmology})
+                      if k in baseline_cosmology or k == "H0"})
 
 chi2_sdss_dr12_consensus_bao = {
-    "sdss_dr12_consensus_bao": 40.868, "tolerance": 0.02}
+    "sdss_dr12_consensus_bao": 40.868, "tolerance": 0.04}
 chi2_sdss_dr12_consensus_full_shape = {
     "sdss_dr12_consensus_full_shape": 28.782, "tolerance": 0.02}
 chi2_sdss_dr12_consensus_final = {

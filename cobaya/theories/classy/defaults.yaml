@@ -19,3 +19,4 @@ theory:
       ns: n_s
       tau: tau_reio
       zre: z_reio
+      rdrag: rs_drag
