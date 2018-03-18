@@ -154,7 +154,8 @@ from cobaya.log import HandledException
 from cobaya.install import user_flag_if_needed
 
 # Result collector
-collector = namedtuple("collector", ["method", "kwargs"])
+collector = namedtuple("collector", ["method", "args", "kwargs"])
+collector.__new__.__defaults__ = (None, [], {})
 
 
 class camb(Theory):
@@ -329,7 +330,7 @@ class camb(Theory):
                                 intermediates["CAMBparams"]["result"])
                     method = getattr(intermediates[parent]["result"], method)
                     self.states[i_state][product] = method(
-                        **self.collectors[product].kwargs)
+                        *self.collectors[product].args, **self.collectors[product].kwargs)
                 except CAMBError:
                     if self.stop_at_error:
                         self.log.error(

@@ -61,7 +61,7 @@ def test_sn_jla_lite_slow_camb(modules):
 
 best_fit_base = yaml_load(baseline_cosmology)
 best_fit_base.update({k:v for k,v in params_lowTEB_highTTTEEE.items()
-                      if k in baseline_cosmology})
+                      if k in baseline_cosmology or k == "H0"})
 best_fit_sn = {"alpha_jla": 0.1325237, "beta_jla": 2.959805}
 
 chi2_sn_pantheon = {"sn_pantheon": 1036.6, "tolerance": 0.1}

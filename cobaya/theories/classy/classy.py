@@ -135,7 +135,8 @@ from cobaya.install import user_flag_if_needed
 
 
 # Result collector
-collector = namedtuple("collector", ["method", "kwargs"])
+collector = namedtuple("collector", ["method", "args", "kwargs", "arg_array"])
+collector.__new__.__defaults__ = (None, [], {}, None)
 
 
 class classy(Theory):
@@ -222,6 +223,10 @@ class classy(Theory):
                 self.extra_args["non linear"] = "halofit"
                 self.collectors[k] = collector(method="lensed_cl", kwargs={})
                 self.collectors["TCMB"] = collector(method="T_cmb", kwargs={})
+            elif k == "angular_diameter_distance":
+                self.collectors[k] = collector(
+                    method="angular_distance",
+                    arg_array=np.atleast_1d(v["redshifts"]))
             else:
                 # Extra derived parameters
                 if v is None:
@@ -236,7 +241,8 @@ class classy(Theory):
                 max(1, self.extra_args.get("P_k_max_h/Mpc", 0)))
         # Since the Cl collector needs lmax, update it now, in case it has increased
         # *after* declaring the Cl collector
-        self.collectors["Cl"].kwargs.update({"lmax": self.extra_args["l_max_scalars"]})
+        if "Cl" in self.collectors:
+            self.collectors["Cl"].kwargs["lmax"] = self.extra_args["l_max_scalars"]
         # Cleanup of products string
         self.extra_args["output"] = " ".join(set(self.extra_args["output"].split()))
 
@@ -290,7 +296,13 @@ class classy(Theory):
             # Gather products
             for product, collector in self.collectors.items():
                 method = getattr(self.classy, collector.method)
-                self.states[i_state][product] = method(**self.collectors[product].kwargs)
+                if self.collectors[product].arg_array is None:
+                    self.states[i_state][product] = method(
+                        *self.collectors[product].args, **self.collectors[product].kwargs)
+                else:
+                    self.states[i_state][product] = np.array(
+                        [method(v, **self.collectors[product].kwargs)
+                         for v in self.collectors[product].arg_array])
             # Prepare derived parameters
             d, d_extra = self.get_derived_all(derived_requested=(derived == {}))
             derived.update(d)
@@ -358,6 +370,10 @@ class classy(Theory):
         if "pp" in cl and ell_factor is not 1:
             cl['pp'][2:] *= ell_factor**2 * (2*np.pi)
         return cl
+
+    def get_angular_diameter_distance(self, z):
+        return self.current_state()["angular_diameter_distance"][
+            np.where(self.collectors["angular_diameter_distance"].arg_array == z)]
 
 
 # Installation routines ##################################################################
