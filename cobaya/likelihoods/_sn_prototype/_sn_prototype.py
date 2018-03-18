@@ -33,7 +33,7 @@ This code provides the following likelihoods:
 Usage
 -----
 
-To use any of this likelihoods, simply mention them in the theory block
+To use any of these likelihoods, simply mention them in the theory block
 (do not use ``sn_jla`` and its `lite` version simultaneously).
 
 An example of usage can be found in :doc:`examples_sn`.

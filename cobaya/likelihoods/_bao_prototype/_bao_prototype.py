@@ -1,3 +1,96 @@
+"""
+.. module:: _bao_prototype
+
+:Synopsis: BAO, f_sigma8 and other measurements at single redshifts, with correlations
+:Author: Antony Lewis (adapted to Cobaya by Jesus Torrado, with little modification)
+
+This code provides a template for BAO, :math:`H` and other redshift dependent functions.
+
+The datasets implemented at this moment are:
+
+- ``sdss_dr12_consensus_bao``
+- ``sdss_dr12_consensus_full_shape``
+- ``sdss_dr12_consensus_final`` (combined data of the previous two)
+
+.. |br| raw:: html
+
+   <br />
+
+.. note::
+
+   If you use any of the likelihoods above, please cite:
+   |br|
+   S. Alam el at,
+   `The clustering of galaxies in the completed SDSS-III Baryon Oscillation Spectroscopic
+   Survey: cosmological analysis of the DR12 galaxy sample`
+   `(arXiv:1607.03155) <https://arxiv.org/abs/1607.03155>`_
+
+
+Usage
+-----
+
+To use any of these likelihoods, simply mention them in the theory block.
+
+An example of usage can be found in :doc:`examples_bao`.
+
+These likelihoods have no nuisance parameters or particular settings that you may want
+to change (except for the installation path; see below)
+
+
+Defining your own BAO likelihood
+--------------------------------
+
+You can use the likelihood ``bao_generic`` as a template for any BAO data.
+
+To do that, create a file containing the data points, e.g. ``myBAO.dat``, as
+
+.. code::
+
+   [z] [value at z] [quantity]
+   ...
+
+where you can use as many different quantities and redshifts as you like.
+
+[TODO: QUANTITIES...]
+
+In addition create a file, e.g. ``myBAO.cov``, containing the covariance matrix for those
+data, with the same row order as the data file.
+
+Now, add to your likelihood block:
+
+.. literalinclude:: ../cobaya/likelihoods/bao_generic/defaults.yaml
+   :language: yaml
+
+
+Installation
+------------
+
+This likelihood can be installed automatically as explained in :doc:`installation_cosmo`.
+If are following the instructions there (you should!), you don't need to read the rest
+of this section.
+
+Manual installation of the SN Ia likelihoods
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Assuming you are installing all your
+likelihoods under ``/path/to/likelihoods``, simply do
+
+.. code:: bash
+
+   $ cd /path/to/likelihoods
+   $ git clone https://github.com/JesusTorrado/sn_data.git
+
+After this, mention the path to this likelihood when you include it in an input file as
+
+.. code-block:: yaml
+
+   likelihood:
+     sn_[pantheon|jla|jla_lite]:
+       path: /path/to/likelihoods/sn_data
+
+
+"""
+
 
 # Python 2/3 compatibility
 from __future__ import absolute_import
@@ -27,6 +120,9 @@ class _bao_prototype(Likelihood):
             self.log.error("No path given to BAO data. Set the likelihood property "
                            "'path' or the common property '%s'.", _path_install)
             raise HandledException
+        # Rescaling by a fiducial value of the sound horizon
+        if self.rs_fid is None:
+            self.rs_fid = 1
         # Load "measurements file" and covmat of requested
         try:
             self.data = pd.read_csv(os.path.join(data_file_path, self.measurements_file),
@@ -66,15 +162,6 @@ class _bao_prototype(Likelihood):
             self.log.error(
                 "BAO likelihood not yet compatible with CLASS (help appreciated!)")
             raise HandledException
-        obs_not_implemented = [
-            "DV_over_rs", "Hz_rs_103", "rs_over_DV", "Az", "DA_over_rs", "F_AP"]
-        obs_not_implemented_used = np.array([
-            (obs in self.data["observable"]) for obs in obs_not_implemented])
-        if np.any(obs_not_implemented_used):
-            self.log.error("This likelihood refers to observables '%s' that have not been"
-                           " implemented yet. Please, open an issue in github.",
-                           self.data["observable"].values[obs_not_implemented_used])
-            raise HandledException
         # Requisites
         zs = {obs:self.data.loc[self.data["observable"] == obs, "z"].values
               for obs in self.data["observable"].unique()}
@@ -104,6 +191,15 @@ class _bao_prototype(Likelihood):
             #     "angular_diameter_distance": {"redshifts": zs.get("F_AP", None)},
             #     "h_of_z": {"redshifts": zs.get("F_AP", None), "units": "km/s/Mpc"}},
             }
+        obs_used_not_implemented = [obs for obs in self.data["observable"]
+                                    if obs not in theory_reqs]
+        if obs_used_not_implemented:
+            self.log.error("This likelihood refers to observables '%s' that have not been"
+                           " implemented yet. Did you mean any of '%s'? "
+                           "If you didn't, please, open an issue in github.",
+                           obs_used_not_implemented, list(theory_reqs.keys()))
+            raise HandledException
+
         requisites = {}
         if self.has_type:
             for obs in self.data["observable"].unique():
@@ -134,7 +230,7 @@ class _bao_prototype(Likelihood):
         #      self.theory.get_h_of_z(z)),
 
     def rs(self):
-        return self.theory.get_param("rdrag") * self.rs_rescale
+        return self.theory.get_param("rdrag") / self.rs_fid
 
     def logp(self, **params_values):
         theory = np.array([self.theory_fun(z,obs) for z, obs

@@ -38,6 +38,7 @@ Table of contents
    likelihood_hst
    likelihood_planck
    likelihood_bk
+   likelihood_bao
    likelihood_sn
    examples_planck
 
