@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from test_cosmo_planck_2015 import params_lowTEB_highTTTEEE
 from cosmo_common import body_of_test, baseline_cosmology
 from cobaya.yaml import yaml_load
@@ -31,8 +33,10 @@ def test_sdss_dr12_consensus_full_shape_classy(modules):
     lik = "sdss_dr12_consensus_full_shape"
     info_likelihood = {lik: {}}
     info_theory = {"classy": {"use_camb_names": True}}
+    chi2_classy = deepcopy(chi2_sdss_dr12_consensus_full_shape)
+    chi2_classy["tolerance"] += 1.2
     body_of_test(modules, best_fit_base, info_likelihood, info_theory,
-                 chi2_sdss_dr12_consensus_full_shape)
+                 chi2_classy)
 
 
 def test_sdss_dr12_consensus_final_camb(modules):
@@ -47,8 +51,10 @@ def test_sdss_dr12_consensus_final_classy(modules):
     lik = "sdss_dr12_consensus_final"
     info_likelihood = {lik: {}}
     info_theory = {"classy": {"use_camb_names": True}}
+    chi2_classy = deepcopy(chi2_sdss_dr12_consensus_final)
+    chi2_classy["tolerance"] += 1.2
     body_of_test(modules, best_fit_base, info_likelihood, info_theory,
-                 chi2_sdss_dr12_consensus_final)
+                 chi2_classy)
 
 
 # BEST FIT AND REFERENCE VALUES ##########################################################
