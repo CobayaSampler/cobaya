@@ -17,7 +17,7 @@ import traceback
 
 # Local
 from cobaya.conventions import _debug, _debug_file
-from cobaya.mpi import get_mpi, get_mpi_rank
+from cobaya.mpi import get_mpi, get_mpi_rank, get_mpi_comm
 
 
 class HandledException(Exception):
@@ -30,7 +30,8 @@ class HandledException(Exception):
 def exception_handler(exception_type, value, trace_back):
     # Do nothing (just exit) if the exception has been handled and logged
     if exception_type == HandledException:
-        return
+        # Exit all MPI processes
+        getattr(get_mpi_comm(), "Abort", lambda: None)()
     log = logging.getLogger("exception handler")
     line = "------------------------------------------------\n"
     log.critical(line[6:] + "\n" +
@@ -45,6 +46,8 @@ def exception_handler(exception_type, value, trace_back):
         "If you cannot solve it yourself and need to report it, include the debug ouput,"
         "\nwhich you can send it to a file setting '%s:[some_file_name]'.",
         _debug, _debug_file)
+    # Exit all MPI processes
+    getattr(get_mpi_comm(), "Abort", lambda: None)()
 
 
 def logger_setup(debug=None, debug_file=None):
