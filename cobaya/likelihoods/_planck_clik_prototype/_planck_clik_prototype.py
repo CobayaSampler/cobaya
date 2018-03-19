@@ -299,6 +299,17 @@ def install_clik(path, no_progress_bars=False):
                                 no_progress_bars=no_progress_bars, name="clik"):
         log.error("Not possible to download clik.")
         return False
+    log.info("clik: patching origin of cfitsio")
+    cfitsio_filename = os.path.join(path, "plc-2.0/waf_tools/cfitsio.py")
+    with open(cfitsio_filename, "r") as cfitsio_file:
+        lines = cfitsio_file.readlines()
+        i_offending = (i for i,l in enumerate(lines) if ".tar.gz" in l).next()
+        lines[i_offending] = (
+            "  atl.installsmthg_pre(ctx,"
+            "'http://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio3280.tar.gz',"
+            "'cfitsio3280.tar.gz')\n")
+    with open(cfitsio_filename, "w") as cfitsio_file:
+        cfitsio_file.write("".join(lines))
     log.info("clik: configuring... (and maybe installing dependencies...)")
     os.chdir(os.path.join(path, "plc-2.0"))
     from subprocess import Popen, PIPE
