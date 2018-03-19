@@ -640,46 +640,61 @@ class mcmc(Sampler):
                 corr_of_means     = diagSinvsqrt.dot(cov_of_means).dot(diagSinvsqrt)
                 norm_mean_of_covs = diagSinvsqrt.dot(mean_of_covs).dot(diagSinvsqrt)
                 # Cholesky of (normalized) mean of covs and eigvals of Linv*cov_of_means*L
-                L = np.linalg.cholesky(norm_mean_of_covs)
-                Linv = np.linalg.inv(L)
-                eigvals = np.linalg.eigvalsh(Linv.dot(corr_of_means).dot(Linv.T))
-                Rminus1 = max(np.abs(eigvals))
-                # For real square matrices, a possible def of the cond number is:
-                condition_number = Rminus1/min(np.abs(eigvals))
-                self.log.debug("Condition number = %g", condition_number)
-                self.log.debug("Eigenvalues = %r", eigvals)
-                self.log.info("Convergence of means: R-1 = %f after %d samples", Rminus1, self.n())
-#                assert np.all(eigvals >= 0), (
-#                    "Negative eigenvectors. This should not happen. "
-#                    "Check the condition number of the diagonalised matrix.")
-                # Have we converged in means? (criterion must be fulfilled twice in a row)
-                if max(Rminus1, getattr(self, "Rminus1_last", np.inf)) < self.Rminus1_stop:
-                    # Check the convergence of the bounds of the confidence intervals
-                    # Same as R-1, but with the rms deviation from the mean bound
-                    # in units of the mean standard deviation of the chains
-                    Rminus1_cl = np.std(bounds, axis=0).T/np.sqrt(np.diag(mean_of_covs))
-                    self.log.debug("normalized std's of bounds = %r", Rminus1_cl)
-                    self.log.info("Convergence of bounds: R-1 = %f after %d samples",
-                             np.max(Rminus1_cl), self.n())
-                    if np.max(Rminus1_cl) < self.Rminus1_cl_stop:
-                        self.converged = True
-                        self.log.info("The run has converged!")
+                try:
+                    L = np.linalg.cholesky(norm_mean_of_covs)
+                except np.linalg.LinAlgError:
+                    self.log.warning(
+                        "Negative covariance eigenvectors. "
+                        "This may mean that the covariance of the samples does not "
+                        "contain enough information at this point. "
+                        "Skipping this checkpoint")
+                    success = False
+                else:
+                    Linv = np.linalg.inv(L)
+                    eigvals = np.linalg.eigvalsh(Linv.dot(corr_of_means).dot(Linv.T))
+                    Rminus1 = max(np.abs(eigvals))
+                    # For real square matrices, a possible def of the cond number is:
+                    condition_number = Rminus1/min(np.abs(eigvals))
+                    self.log.debug("Condition number = %g", condition_number)
+                    self.log.debug("Eigenvalues = %r", eigvals)
+                    self.log.info("Convergence of means: R-1 = %f after %d samples",
+                                  Rminus1, self.n())
+                    success = True
+                    # Have we converged in means?
+                    # (criterion must be fulfilled twice in a row)
+                    if (max(Rminus1,
+                            getattr(self, "Rminus1_last", np.inf)) < self.Rminus1_stop):
+                        # Check the convergence of the bounds of the confidence intervals
+                        # Same as R-1, but with the rms deviation from the mean bound
+                        # in units of the mean standard deviation of the chains
+                        Rminus1_cl = (np.std(bounds, axis=0).T /
+                                      np.sqrt(np.diag(mean_of_covs)))
+                        self.log.debug("normalized std's of bounds = %r", Rminus1_cl)
+                        self.log.info("Convergence of bounds: R-1 = %f after %d samples",
+                                      np.max(Rminus1_cl), self.n())
+                        if np.max(Rminus1_cl) < self.Rminus1_cl_stop:
+                            self.converged = True
+                            self.log.info("The run has converged!")
             # Broadcast and save the convergence status and the last R-1 of means
-            self.Rminus1_last = get_mpi_comm().bcast(
-                (Rminus1 if not get_mpi_rank() else None), root=0)
-            self.converged = get_mpi_comm().bcast(
-                (self.converged if not get_mpi_rank() else None), root=0)
+            success = get_mpi_comm().bcast(
+                (success if not get_mpi_rank() else None), root=0)
+            if success:
+                self.Rminus1_last = get_mpi_comm().bcast(
+                    (Rminus1 if not get_mpi_rank() else None), root=0)
+                self.converged = get_mpi_comm().bcast(
+                    (self.converged if not get_mpi_rank() else None), root=0)
         else:  # No MPI
             pass
         # Do we want to learn a better proposal pdf?
         if self.learn_proposal and not self.converged:
             # update iff (not MPI, or MPI and "good" Rminus1)
             if get_mpi():
-                good_Rminus1 = (self.learn_proposal_Rminus1_max > self.Rminus1_last > self.learn_proposal_Rminus1_min)
+                good_Rminus1 = (self.learn_proposal_Rminus1_max >
+                                self.Rminus1_last > self.learn_proposal_Rminus1_min)
                 if not good_Rminus1:
                     if not get_mpi_rank():
                         self.log.info("Bad convergence statistics: "
-                                 "waiting until the next checkpoint.")
+                                      "waiting until the next checkpoint.")
                     return
             if get_mpi():
                 if get_mpi_rank():
