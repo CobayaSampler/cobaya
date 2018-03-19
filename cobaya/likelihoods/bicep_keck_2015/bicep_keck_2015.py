@@ -212,7 +212,8 @@ def install(path=None, name=None, force=False, code=False, data=True,
         from wget import download, bar_thermometer
         wget_kwargs = {"out": full_path,
                        "bar": (bar_thermometer if not no_progress_bars else None)}
-        filename = download(r"https://bicepkeck.org/BK14_datarelease/BK14_cosmomc.tgz",
+        # Refuses http[S]!
+        filename = download(r"http://bicepkeck.org/BK14_datarelease/BK14_cosmomc.tgz",
                             **wget_kwargs)
         print("")  # force newline after wget
     except:
