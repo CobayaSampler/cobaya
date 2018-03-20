@@ -95,6 +95,41 @@ def user_flag_if_needed():
     return []
 
 
+def download_github_release(directory, repo_name, release_name, no_progress_bars=False):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    try:
+        from wget import download, bar_thermometer
+        wget_kwargs = {"out": directory,
+                       "bar": (bar_thermometer if not no_progress_bars else None)}
+        filename = download(
+            r"https://github.com/CobayaSampler/" + repo_name +
+            "/archive/" + release_name + ".tar.gz", **wget_kwargs)
+        print("")  # force newline after wget
+    except:
+        print("")  # force newline after wget
+        log.error("Error downloading!")
+        return False
+    import tarfile
+    extension = os.path.splitext(filename)[-1][1:]
+    if extension == "tgz":
+        extension = "gz"
+    tar = tarfile.open(filename, "r:"+extension)
+    try:
+        tar.extractall(directory)
+        tar.close()
+        os.remove(filename)
+    except:
+        log.error("Error decompressing downloaded file! Corrupt file?)")
+        return False
+    # Remove version number from directory name
+    w_version = (d for d in os.listdir(directory) if d.startswith(repo_name)).next()
+    os.rename(os.path.join(directory, w_version),
+              os.path.join(directory, repo_name))
+    log.info("%s %s downloaded and uncompressed correctly.", repo_name, release_name)
+    return True
+
+
 # Command-line script ####################################################################
 
 def install_script():

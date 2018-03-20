@@ -9,6 +9,8 @@ Family of Planck 2015 CMB likelihoods, based on the ``clik 2.0`` code.
 The Planck 2015 likelihoods defined here are:
 
 - ``planck_2015_lensing``
+- ``planck_2015_lensing_cmblikes``
+  (an alternative, more customizable version of the previous one)
 - ``planck_2015_lowl``
 - ``planck_2015_lowTEB``
 - ``planck_2015_plikHM_TT``
@@ -113,6 +115,10 @@ For instance, if you want to reproduce the baseline Planck 2015 results,
 download the file ``COM_Likelihood_Data-baseline_R2.00.tar.gz``
 from any of the two links above, and uncompress it under the ``planck_2015`` folder
 that you created above.
+
+Finally, download and uncompress in the ``planck_2015`` folder the last release at
+`this repo <https://github.com/CobayaSampler/planck_supp_data_and_covmats/releases>`_.
+
 """
 
 # Python 2/3 compatibility
@@ -341,7 +347,7 @@ def get_product_id_and_clik_file(name):
         os.path.dirname(__file__), "..", name, _defaults_file)
     from cobaya.yaml import yaml_load_file
     defaults = yaml_load_file(path__defaults_file)[_likelihood][name]
-    return defaults["product_id"], defaults["clik_file"]
+    return defaults.get("product_id"), defaults.get("clik_file")
 
 
 def is_installed(**kwargs):
@@ -353,6 +359,9 @@ def is_installed(**kwargs):
         _, filename = get_product_id_and_clik_file(kwargs["name"])
         result &= os.path.exists(os.path.realpath(
             os.path.join(kwargs["path"], "data", common_path, filename)))
+        from cobaya.likelihoods.planck_2015_lensing_cmblikes import \
+            is_installed as is_installed_supp
+        result &= is_installed_supp(**kwargs)
     return result
 
 
@@ -384,5 +393,9 @@ def install(path=None, name=None, force=False, code=True, data=True,
                                     no_progress_bars=no_progress_bars, name=name):
             log.error("Not possible to download this likelihood.")
             return False
-        log.info("Likelihood data downloaded and uncompressed correctly.")
+        # Additional data and covmats
+        from cobaya.likelihoods.planck_2015_lensing_cmblikes import \
+            install as install_supp
+        return install_supp(path=path, force=False, code=True, data=True,
+                            no_progress_bars=False)
     return True

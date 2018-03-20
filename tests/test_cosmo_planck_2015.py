@@ -1,6 +1,5 @@
 # Tries to evaluate the likelihood at LCDM's best fit of Planck 2015, with CAMB and CLASS
 
-import pytest
 from copy import deepcopy
 
 from cosmo_common import body_of_test
@@ -38,7 +37,6 @@ def test_planck_2015_l2_camb(modules):
     lik_name = "planck_2015_lensing_cmblikes"
     clik_name = "planck_2015_lensing"
     info_likelihood = {lik_name: lik_info_lensing[clik_name]}
-    info_likelihood[lik_name] = {"path": "/home/jesus/scratch/planck_supp_data_and_covmats"}
     chi2_lensing_cmblikes = deepcopy(chi2_lensing)
     chi2_lensing_cmblikes[lik_name] = chi2_lensing[clik_name]
     info_theory = {"camb": None}
@@ -89,6 +87,7 @@ def test_planck_2015_l2_classy(modules):
     best_fit_derived = derived_lensing
     body_of_test(modules, best_fit, info_likelihood, info_theory,
                  chi2_lensing_cmblikes, best_fit_derived)
+
 
 # Temperature only #######################################################################
 
