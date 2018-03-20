@@ -124,6 +124,7 @@ import os
 import sys
 import numpy as np
 import logging
+import inspect
 
 # Local
 from cobaya.sampler import Sampler
@@ -133,29 +134,28 @@ from cobaya.log import HandledException
 from cobaya.install import download_github_release
 
 
-# attributes that need to be broadcasted
-to_broadcast = ["pc_args"]
-
-
 class polychord(Sampler):
     def initialise(self):
         """Imports the PolyChord sampler and prepares its arguments."""
         if not get_mpi_rank():  # rank = 0 (MPI master) or None (no MPI)
             self.log.info("Initializing")
         # Importing PolyChord from the correct path
-        if self.path:
-            if not get_mpi_rank():
-                self.log.info("Importing PolyChord from %s", self.path)
-                if not os.path.exists(self.path):
-                    self.log.error("The path you indicated for PolyChord "
-                                   "does not exist: %s", self.path)
-                    raise HandledException
-            sys.path.insert(0, self.path)
-            from PyPolyChord import PyPolyChord
-        else:
-            # Currently, not installable as a python package! This will ALWAYS fail
-            self.log.error("You need to specify PolyChord's path.")
-            raise HandledException
+        # THIS NEEDS UPDATE WHEN NEW INTERFACE IS DONE!
+        import PyPolyChord
+        from PyPolyChord.settings import PolyChordSettings
+#        if self.path:
+#            if not get_mpi_rank():
+#                self.log.info("Importing PolyChord from %s", self.path)
+#                if not os.path.exists(self.path):
+#                    self.log.error("The path you indicated for PolyChord "
+#                                   "does not exist: %s", self.path)
+#                    raise HandledException
+#            sys.path.insert(0, self.path)
+#            from PyPolyChord import PyPolyChord
+#        else:
+#            # Currently, not installable as a python package! This will ALWAYS fail
+#            self.log.error("You need to specify PolyChord's path.")
+#            raise HandledException
             # self.log.info("Importing *global* PolyChord")
             # try:
             #     import PyPolyChord
@@ -167,24 +167,24 @@ class polychord(Sampler):
             #         " (b) install PolyChord's python interface globally with ... ???\n")
             #     raise HandledException
         self.pc = PyPolyChord
-        # Prepare arguments - get just the PolyChord arguments
-        self.pc_args = dict(
-            [(p, getattr(self,p))
-             for p in ["nlive", "num_repeats", "do_clustering", "precision_criterion",
-                       "max_ndead", "boost_posterior", "feedback", "update_files",
-                       "posteriors", "equals", "cluster_posteriors", "write_resume",
-                       "read_resume", "write_stats", "write_live", "write_dead",
-                       "base_dir", "grade_frac", "grade_dims"]])
-        # Ignore null-defined ones, so PolyChord sets them to the defaults
-        self.pc_args = dict([(k,v) for k,v in self.pc_args.items() if v is not None])
+        # Prepare arguments and settings
+        self.nDims = self.prior.d()
+        self.nDerived = (len(self.parametrization.derived_params()) + 1 +
+                         len(self.likelihood._likelihoods))
+        self.pc_settings = PolyChordSettings(self.nDims, self.nDerived)
+        for p in ["nlive", "num_repeats", "nprior", "do_clustering",
+                  "precision_criterion", "max_ndead", "boost_posterior", "feedback",
+                  "update_files", "posteriors", "equals", "cluster_posteriors",
+                  "write_resume", "read_resume", "write_stats", "write_live",
+                  "write_dead", "base_dir", "grade_frac", "grade_dims"]:
+            v = getattr(self,p)
+            if v:
+                setattr(self.pc_settings, p, v)
         # Fill the automatic ones
-        if "feedback" not in self.pc_args:
+        if getattr(self, "feedback", None) is None:
             values = {logging.CRITICAL: 0, logging.ERROR: 0, logging.WARNING: 0,
                       logging.INFO: 1, logging.DEBUG: 2}
-            self.pc_args["feedback"] = values[self.log.getEffectiveLevel()]
-        self.pc_args["nDims"] = self.prior.d()
-        self.pc_args["nDerived"] = (len(self.parametrization.derived_params()) + 1 +
-                                    len(self.likelihood._likelihoods))
+            self.pc_settings.feedback = values[self.log.getEffectiveLevel()]
         try:
             output_folder = getattr(self.output, "folder")
             output_prefix = getattr(self.output, "prefix")
@@ -194,22 +194,22 @@ class polychord(Sampler):
             output_folder = gettempdir()
             from random import random
             output_prefix = hex(int(random()*16**6))[2:]
-            self.pc_args["read_resume"] = False
-        self.pc_args["base_dir"] = os.path.join(output_folder, self.pc_args["base_dir"])
-        self.pc_args["file_root"] = output_prefix
+            self.pc_settings.read_resume = False
+        self.pc_settings.base_dir = os.path.join(output_folder, self.pc_settings.base_dir)
+        self.pc_settings.file_root = output_prefix
         if not get_mpi_rank():
             # Creating output folder, if it does not exist (just one process)
-            if not os.path.exists(self.pc_args["base_dir"]):
-                os.makedirs(self.pc_args["base_dir"])
+            if not os.path.exists(self.pc_settings.base_dir):
+                os.makedirs(self.pc_settings.base_dir)
             # Idem, a clusters folder if needed -- notice that PolyChord's default
             # is "True", here "None", hence the funny condition below
-            if self.pc_args.get("do_clustering") is not False:
+            if self.pc_settings.do_clustering is not False:
                 try:
-                    os.makedirs(os.path.join(self.pc_args["base_dir"], "clusters"))
+                    os.makedirs(os.path.join(self.pc_settings.base_dir, "clusters"))
                 except OSError:  # exists!
                     pass
             self.log.info("Storing raw PolyChord output in '%s'.",
-                          self.pc_args["base_dir"])
+                          self.pc_settings.base_dir)
         # explotining the speed hierarchy
         # sort blocks by paramters order and check contiguity (required by PolyChord!!!)
 #        speeds, blocks = zip(*self.likelihood.speed_blocked_params(as_indices=True))
@@ -241,14 +241,15 @@ class polychord(Sampler):
             raise HandledException
         locs = bounds[:,0]
         scales = bounds[:,1] - bounds[:,0]
-        self.pc_args["prior"] = lambda x: (locs + np.array(x)*scales).tolist()
+        self.pc_prior = lambda x: (locs + np.array(x)*scales).tolist()
         # We will need the volume of the prior domain, since PolyChord divides by it
         self.logvolume = np.log(np.prod(scales))
         # Done!
         if not get_mpi_rank():
-            self.log.info("Calling PolyChord with arguments" +
-                          "\n  ".join([""] +
-                                      ["%s : "%p+str(v) for p,v in self.pc_args.items()]))
+            self.log.info("Calling PolyChord with arguments:")
+            for p,v in inspect.getmembers(self.pc_settings, lambda a: not(callable(a))):
+                if not p.startswith("_"):
+                    self.log.info("  %s: %s", p, v)
 
     def run(self):
         """
@@ -262,7 +263,8 @@ class polychord(Sampler):
             derived = list(derived) + [logprior] + list(logliks)
             return logposterior+self.logvolume, derived
         self.log.info("Sampling!")
-        self.pc.run_nested_sampling(logpost, **self.pc_args)
+        self.pc.run_polychord(logpost, self.nDims, self.nDerived,
+                              self.pc_settings, self.pc_prior)
 
     def close(self):
         """
@@ -271,7 +273,7 @@ class polychord(Sampler):
         """
         if not get_mpi_rank():  # process 0 or single (non-MPI process)
             self.log.info("Loading PolyChord's resuts: samples and evidences.")
-            prefix = os.path.join(self.pc_args["base_dir"], self.pc_args["file_root"])
+            prefix = os.path.join(self.pc_settings.base_dir, self.pc_settings.file_root)
             sample = np.loadtxt(prefix+".txt")
             self.collection = Collection(
                 self.parametrization, self.likelihood, self.output, name="1")
@@ -295,6 +297,7 @@ class polychord(Sampler):
                     line = statsfile.readline()
                 self.logZ, self.logZstd = [
                     float(n) for n in line.split("=")[-1].split("+/-")]
+# TODO: that's not true anymore!!!
 # THE RESULTS CANNOT BE BROADCASTED BECAUSE POLYCHORD KILLS MPI!
 #        # Broadcast results
 #        if get_mpi():
@@ -303,7 +306,7 @@ class polychord(Sampler):
 #            map(bcast_from_0, ["collection", "logZ", "logZstd"])
         if not get_mpi_rank():  # process 0 or single (non-MPI process)
             self.log.info("Finished! "
-                          "Raw PolyChord output stored in '%s'.", self.pc_args["base_dir"])
+                          "Raw PolyChord output stored in '%s'.", self.pc_settings.base_dir)
 
     def products(self):
         """
