@@ -130,6 +130,7 @@ from cobaya.sampler import Sampler
 from cobaya.mpi import get_mpi_rank
 from cobaya.collection import Collection
 from cobaya.log import HandledException
+from cobaya.install import download_github_release
 
 
 # attributes that need to be broadcasted
@@ -313,3 +314,47 @@ class polychord(Sampler):
         """
         if not get_mpi_rank():
             return {"sample": self.collection, "logZ": self.logZ, "logZstd": self.logZstd}
+
+
+# Installation routines ##################################################################
+
+# name of the PolyChord repo and version to download
+pc_repo_name = "PolyChord"
+pc_repo_version = "v0.9"
+
+
+def get_path(path):
+    return os.path.realpath(os.path.join(path, "code", pc_repo_name))
+
+
+def is_installed(**kwargs):
+    return os.path.isfile(os.path.realpath(
+        os.path.join(kwargs["path"], "code", pc_repo_name, "lib/libchord.so")))
+
+
+def install(path=None, force=False, code=False, data=False, no_progress_bars=False):
+    if not code:
+        return True
+    log = logging.getLogger(__name__.split(".")[-1])
+    log.info("Downloading PolyChord...")
+    success = download_github_release(os.path.join(path, "code"), pc_repo_name,
+                                      pc_repo_version, no_progress_bars=no_progress_bars)
+    if not success:
+        log.error("Could not download PolyChord.")
+        return False
+    log.info("Compiling (Py)PolyChord...")
+    from subprocess import Popen, PIPE
+    # Needs to re-define os' PWD,
+    # because MakeFile calls it and is not affected by the cwd of Popen
+    cwd = os.path.join(path, "code", pc_repo_name)
+    my_env = os.environ.copy()
+    my_env["PWD"] = cwd
+    process_make = Popen(["make", "PyPolyChord", "MPI=1"], cwd=cwd, env=my_env,
+                         stdout=PIPE, stderr=PIPE)
+    out, err = process_make.communicate()
+    if process_make.returncode:
+        log.info(out)
+        log.info(err)
+        log.error("Compilation failed!")
+        return False
+    return True
