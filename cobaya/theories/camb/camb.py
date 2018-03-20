@@ -303,8 +303,8 @@ class camb(Theory):
         lasts = [self.states[i]["last"] for i in range(self.n_states)]
         try:
             # are the parameter values there already?
-            i_state = (i for i in range(self.n_states)
-                       if self.states[i]["params"] == params_values_dict).next()
+            i_state = next(i for i in range(self.n_states)
+                           if self.states[i]["params"] == params_values_dict)
             # Get (pre-computed) derived parameters
             if derived == {}:
                 derived.update(self.states[i_state]["derived"])

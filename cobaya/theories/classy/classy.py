@@ -296,8 +296,8 @@ class classy(Theory):
         lasts = [self.states[i]["last"] for i in range(self.n_states)]
         try:
             # are the parameter values there already?
-            i_state = (i for i in range(self.n_states)
-                       if self.states[i]["params"] == params_values_dict).next()
+            i_state = next(i for i in range(self.n_states)
+                           if self.states[i]["params"] == params_values_dict)
             # Get (pre-computed) derived parameters
             if derived == {}:
                 derived.update(self.states[i_state]["derived"])
@@ -497,7 +497,7 @@ def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs)
             os.chdir("..")
             with open(os.path.join(classy_path, "python/setup.py"), "r") as setup:
                 lines = setup.readlines()
-                i_offending = (i for i,l in enumerate(lines) if "libraries=" in l).next()
+                i_offending = next(i for i,l in enumerate(lines) if "libraries=" in l)
                 lines[i_offending] = "libraries=['class', 'mvec', 'm'],\n"
             with open(os.path.join(classy_path, "python/setup.py"), "w") as setup:
                 setup.write("".join(lines))

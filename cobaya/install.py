@@ -123,7 +123,7 @@ def download_github_release(directory, repo_name, release_name, no_progress_bars
         log.error("Error decompressing downloaded file! Corrupt file?)")
         return False
     # Remove version number from directory name
-    w_version = (d for d in os.listdir(directory) if d.startswith(repo_name)).next()
+    w_version = next(d for d in os.listdir(directory) if d.startswith(repo_name))
     os.rename(os.path.join(directory, w_version),
               os.path.join(directory, repo_name))
     log.info("%s %s downloaded and uncompressed correctly.", repo_name, release_name)
