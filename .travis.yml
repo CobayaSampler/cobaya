@@ -96,6 +96,7 @@ script:
   - pytest tests/ -k "not cosmo" -m "not slow and not mpi" --modules="../modules"
   # Cosmological tests (--boxed = 1 process per test; otherwise lowl planck lik fails!). Planck currently does not support py3.
   - if [[ "$PYVER" = "2" ]]; then pytest tests/ -k "cosmo" -m "not slow and not mpi" --modules="../modules" --boxed; fi
+  - if [[ "$PYVER" = "3" ]]; then pytest tests/ -k "cosmo" -m "not slow and not mpi and not py3incompatible" --modules="../modules" --boxed; fi
 ###############################################################################
 deploy: # only if it buids and if the commit has been tagged
   provider: pypi
