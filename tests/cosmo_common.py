@@ -60,7 +60,7 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
     # We'll pop some derived parameters, so copy
     derived = deepcopy(baseline_cosmology_derived)
     best_fit_derived = deepcopy(best_fit_derived)
-    if info[_theory].keys()[0] == "classy":
+    if list(info[_theory].keys())[0] == "classy":
         # More stuff that CLASS needs for the Planck model
         info[_params].update(baseline_cosmology_classy_extra)
         # Remove "cosmomc_theta" in favour of "H0" (remove it from derived then!)
