@@ -32,6 +32,7 @@ def exception_handler(exception_type, value, trace_back):
     if exception_type == HandledException:
         # Exit all MPI processes
         getattr(get_mpi_comm(), "Abort", lambda: None)()
+        return  # so that no traceback is printed
     log = logging.getLogger("exception handler")
     line = "------------------------------------------------\n"
     log.critical(line[6:] + "\n" +
