@@ -18,7 +18,7 @@ if __name__ == "__main__":
             "sn_jla_lite": None}}
     # Ignore Planck clik in Python 3
     if sys.version_info.major >= 3:
-        for lik in info_install:
+        for lik in info_install[_likelihood]:
             if lik.startswith("planck_2015") and not lik.endswith("cmblikes"):
                 info_install[_likelihood].pop(lik)
     path = sys.argv[1]
