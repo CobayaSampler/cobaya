@@ -112,10 +112,10 @@ def download_github_release(directory, repo_name, release_name, no_progress_bars
         return False
     import tarfile
     extension = os.path.splitext(filename)[-1][1:]
-    if extension == "tgz":
-        extension = "gz"
-    tar = tarfile.open(filename, "r:"+extension)
     try:
+        if extension == "tgz":
+            extension = "gz"
+        tar = tarfile.open(filename, "r:"+extension)
         tar.extractall(directory)
         tar.close()
         os.remove(filename)

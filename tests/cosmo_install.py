@@ -15,7 +15,10 @@ if __name__ == "__main__":
             "bicep_keck_2015": None,
             "sn_pantheon": None,
             "sn_jla": None,
-            "sn_jla_lite": None}}
+            "sn_jla_lite": None,
+            "sdss_dr12_consensus_bao": None,
+            "sdss_dr12_consensus_full_shape": None,
+            "sdss_dr12_consensus_final": None}}
     # Ignore Planck clik in Python 3
     if sys.version_info.major >= 3:
         popliks = [lik for lik in info_install[_likelihood]
