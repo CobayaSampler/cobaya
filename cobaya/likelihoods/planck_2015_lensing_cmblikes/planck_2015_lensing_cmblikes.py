@@ -22,9 +22,15 @@ class planck_2015_lensing_cmblikes(_cmblikes_prototype):
     pass
 
 
+# Installation routines ##################################################################
+
 # name of the supplementary data and covmats repo/folder
 supp_data_name = "planck_supp_data_and_covmats"
 supp_data_version = "v1.0"
+
+
+def get_path(path):
+    return os.path.realpath(os.path.join(path, "data", supp_data_name))
 
 
 def is_installed(**kwargs):
