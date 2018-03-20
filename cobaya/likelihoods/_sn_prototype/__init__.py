@@ -1,1 +1,1 @@
-from ._sn_prototype import _sn_prototype, get_path
+from ._sn_prototype import _sn_prototype, is_installed, install, get_path

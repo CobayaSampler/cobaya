@@ -12,7 +12,10 @@ if __name__ == "__main__":
             "planck_2015_plikHM_TTTEEE": None,
             "planck_2015_lensing": None,
             "planck_2015_lensing_cmblikes": None,
-            "bicep_keck_2015": None}}
+            "bicep_keck_2015": None,
+            "sn_pantheon": None,
+            "sn_jla": None,
+            "sn_jla_lite": None}}
     # Ignore Planck clik in Python 3
     if sys.version_info.major >= 3:
         for lik in info_install:
