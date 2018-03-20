@@ -88,7 +88,7 @@ likelihoods under ``/path/to/likelihoods``, simply do
 .. code:: bash
 
    $ cd /path/to/likelihoods
-   $ git clone https://github.com/JesusTorrado/sdss_data.git
+   $ git clone https://github.com/JesusTorrado/sdss_dr12.git
 
 After this, mention the path to this likelihood when you include it in an input file as
 
@@ -96,7 +96,7 @@ After this, mention the path to this likelihood when you include it in an input 
 
    likelihood:
      sdss_dr12_consensus_[bao|full_shape|final|...]:
-       path: /path/to/likelihoods/sdss_data
+       path: /path/to/likelihoods/sdss_dr12
 
 
 """
