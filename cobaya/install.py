@@ -58,7 +58,10 @@ def install(*infos, **kwargs):
                 else:
                     print("Doing nothing.\n")
                     continue
-            success = imported_module.install(path=abspath, **kwargs_install)
+            try:
+                success = imported_module.install(path=abspath, **kwargs_install)
+            except:
+                success = False
             if success:
                 print("Successfully installed!\n")
             else:
