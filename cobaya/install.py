@@ -15,6 +15,7 @@ import os
 import sys
 import logging
 from importlib import import_module
+import shutil
 
 # Local
 from cobaya.log import logger_setup, HandledException
@@ -61,6 +62,8 @@ def install(*infos, **kwargs):
             try:
                 success = imported_module.install(path=abspath, **kwargs_install)
             except:
+                log.error("An unknown error occurred. Delete the modules folder and try "
+                          "again. Notify the developers if this error persists.")
                 success = False
             if success:
                 print("Successfully installed!\n")
@@ -127,8 +130,10 @@ def download_github_release(directory, repo_name, release_name, no_progress_bars
         return False
     # Remove version number from directory name
     w_version = next(d for d in os.listdir(directory) if d.startswith(repo_name))
-    os.rename(os.path.join(directory, w_version),
-              os.path.join(directory, repo_name))
+    repo_path = os.path.join(directory, repo_name)
+    if os.path.exists(repo_path):
+        shutil.rmtree(repo_path)
+    os.rename(os.path.join(directory, w_version), repo_path)
     log.info("%s %s downloaded and uncompressed correctly.", repo_name, release_name)
     return True
 
