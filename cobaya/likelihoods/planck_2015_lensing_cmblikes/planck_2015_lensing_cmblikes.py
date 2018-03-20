@@ -13,7 +13,6 @@ import logging
 
 # Local
 from cobaya.likelihoods._cmblikes_prototype import _cmblikes_prototype
-from cobaya.likelihoods._planck_clik_prototype import common_path
 from cobaya.install import download_github_release
 
 
@@ -35,7 +34,7 @@ def get_path(path):
 
 def is_installed(**kwargs):
     return os.path.exists(os.path.realpath(
-        os.path.join(kwargs["path"], "data", common_path, supp_data_name)))
+        os.path.join(kwargs["path"], "data", supp_data_name)))
 
 
 def install(path=None, force=False, code=False, data=True, no_progress_bars=False):
@@ -43,7 +42,5 @@ def install(path=None, force=False, code=False, data=True, no_progress_bars=Fals
         return True
     log = logging.getLogger(__name__.split(".")[-1])
     log.info("Downloading supplementary likelihood data and covmats...")
-    # Create common planck folder
-    planck_data_path = os.path.realpath(os.path.join(path, "data", common_path))
-    return download_github_release(planck_data_path, supp_data_name, supp_data_version,
-                                   no_progress_bars=no_progress_bars)
+    return download_github_release(os.path.join(path, "data"), supp_data_name,
+                                   supp_data_version, no_progress_bars=no_progress_bars)
