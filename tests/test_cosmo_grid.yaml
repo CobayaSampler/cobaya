@@ -5,25 +5,72 @@ grid:
   groups:
     main:
       models:  # was `params`
-        - default
-        - mnu
-        - nnu
-        - mnu_nnu
+        - camb_LCDM
+        - classy_LCDM
+        - camb_mnu
+        - classy_nnu
+        - camb_r
+        - classy_r
+#        - mnu_nnu
 #        meffsterile: {'param[mnu]': '0.06', 'param[nnu]': '3.1 3.046 10 0.05 0.05', 'num_massive_neutrinos': 1,
 #                    'accuracy_level': 1.2},
       # NB: datasets infos are added *after* models info, so the former overwrite the latter in case of conflict.
       datasets:
-        - plikHM_TT_lowTEB
-        - plikHM_TT_lowl
+        - planckT
+        - planckP
+        - planckL
+        - planckLalt
+        - bkp
+        - planckP_BAO
+        - planckP_H
+        - planckP_sn
 #      importance_runs:
 #        [['BAO'], ['BAO.ini']]
   # Definitions of the models used
   models:
-    default:
-    mnu:
-      # In here, it's normal Cobaya input notation
+    camb_LCDM:
+      theory: &camb
+        camb:
+      params: &camb_params
+        cosmomc_theta: "lambda cosmomc_theta_100: 1.e-2*cosmomc_theta_100"
+        cosmomc_theta_100:
+          prior:
+            min: 0.5
+            max: 10
+          ref:
+            dist: norm
+            loc: 1.0411
+            scale: 0.0004
+            proposal: 0.0002
+          latex: 100\theta_\mathrm{MC}
+          drop:
+    classy_LCDM:
+      theory: &classy
+        classy:
+          use_camb_names: True
+          extra_args:
+            N_ncdm: 1
+            m_ncdm: 0.06
+            T_ncdm: 0.71611
+            N_ur: 2.0328
+      params: &classy_params
+        100*theta_s: 'lambda theta_s_100: theta_s_100'
+        theta_s_100:
+          prior:
+            min: 0.5
+            max: 10
+          ref:
+            dist: norm
+            loc: 1.0418
+            scale: 0.0004
+          proposal: 0.0002
+          latex: 100*\theta_s
+          drop:
+    camb_mnu:
+      theory: *camb
       params:
-        mnu: &id_mnuinfo
+        <<: *camb_params
+        mnu: &mnu_info
           prior:
             min: 0
             max: 5
@@ -32,9 +79,16 @@ grid:
             loc: 0.02
             scale: 0.1
           proposal: 0.03
-    nnu:
+    classy_mnu:
+      theory: *classy
       params:
-        nnu: &id_nnuinfo
+        <<: *classy_params
+        mnu: &mnu_info
+    camb_nnu:
+      theory: *camb
+      params:
+        <<: *camb_params
+        nnu: &nnu_info
           prior:
             min: 0.05
             max: 10
@@ -43,24 +97,68 @@ grid:
             loc: 3.046
             scale: 0.05
           proposal: 0.05
-    mnu_nnu:
+    classy_mnu:
+      theory: *classy
       params:
-        mnu: *id_mnuinfo
-        nnu: *id_nnuinfo
-    # other models...
+        <<: *classy_params
+        mnu: &nnu_info
+    camb_r:
+      theory: *camb
+      params:
+        <<: *camb_params
+        r: &r_info
+          prior:
+            min: 0
+            max: 3
+          ref:
+            dist: norm
+            loc: 0
+            scale: 0.03
+          proposal: 0.03
+    classy_r:
+      theory: *classy
+      params:
+        <<: *classy_params
+        r: &r_info
   # Definitions of datasets used
   datasets:
-    plikHM_TT_lowTEB:
+    planckT:
       likelihood:
         planck_2015_plikHM_TT:
         planck_2015_lowTEB:
           speed: 0.25
-    plikHM_TT_lowl:
-      likelihood:
+    planckP:
+      likelihood: &planckP
         planck_2015_plikHM_TT:
         planck_2015_lowl:
           speed: 0.5
+    planckL:
+      likelihood:
+        <<: *planckP
+        planck_2015_lensing:
+    planckLalt:
+      likelihood:
+        <<: *planckP
+        planck_2015_lensing_cmblikes:
+    bkp:
+      likelihood:
+        <<: *planckP
+        bicep_keck_2015:
+    planckP_BAO:
+      likelihood:
+        <<: *planckP
+        sdss_dr12_consensus_final:
+    planckP_H:
+      likelihood:
+        <<: *planckP
+        hst_riess2018:
+    planckP_sn:
+      likelihood:
+        <<: *planckP
+        sn_pantheon:
 
+
+        
 #cov
 #    dir:  # where to look for covariance matrices
     # try to match each new run name to exisitng covmat (covariance matrix for efficient exploration)
@@ -84,21 +182,20 @@ grid:
 
 # Below this line, defaults ###################################################
 
-theory:
-  camb:
-
 sampler:
-  mcmc:
-    burn_in: 100
-    learn_proposal: True
-    learn_proposal_Rminus1_max: 3.
-    learn_proposal_Rminus1_max_early: 50.
-    learn_proposal_Rminus1_min: 0.
-    Rminus1_stop: 0.01
-    Rminus1_cl_stop: 0.2
-    Rminus1_cl_level: 0.95
-    drag_interp_steps: 3
-    max_speed_slow: 0.5
+  polychord:
+    nlive: 500
+#  mcmc:
+#    burn_in: 100
+#    learn_proposal: True
+#    learn_proposal_Rminus1_max: 3.
+#    learn_proposal_Rminus1_max_early: 50.
+#    learn_proposal_Rminus1_min: 0.
+#    Rminus1_stop: 0.01
+#    Rminus1_cl_stop: 0.2
+#    Rminus1_cl_level: 0.95
+#    drag_interp_steps: 3
+#    max_speed_slow: 0.5
 
 params:
   ombh2:
@@ -121,18 +218,6 @@ params:
       scale: 0.001
     proposal: 0.0005
     latex: \Omega_\mathrm{c} h^2
-  cosmomc_theta: "lambda cosmomc_theta_100: 1.e-2*cosmomc_theta_100"
-  cosmomc_theta_100:
-    prior:
-      min: 0.5
-      max: 10
-    ref:
-      dist: norm
-      loc: 1.0411
-      scale: 0.0004
-    proposal: 0.0002
-    latex: 100\theta_\mathrm{MC}
-    drop:
   tau:
     prior:
       min: 0.01
@@ -200,27 +285,5 @@ params:
     latex: 10^9 A_s e^{-2\tau}
   age:
     latex: \mathrm{Age}/\mathrm{Gyr}
-  zstar:
-    latex: z_*
-  rstar:
-    latex: r_*
-  thetastar:
-    latex: 100\theta_*
-  DAstar:
-    latex: D_\mathrm{A}/\mathrm{Gpc}
-  zdrag:
-    latex: z_\mathrm{drag}
   rdrag:
     latex: r_\mathrm{drag}
-  kd:
-    latex: k_\mathrm{D}
-  thetad:
-    latex: 100\theta_\mathrm{D}
-  zeq:
-    latex: z_\mathrm{eq}
-  keq:
-    latex: k_\mathrm{eq}
-  thetaeq:
-    latex: 100\theta_\mathrm{eq}
-  thetarseq:
-    latex: 100\theta_\mathrm{s,eq}
