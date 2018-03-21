@@ -8,6 +8,8 @@ grid:
         - camb_LCDM
         - classy_LCDM
         - camb_mnu
+        - classy_mnu
+        - camb_nnu
         - classy_nnu
         - camb_r
         - classy_r
@@ -83,7 +85,7 @@ grid:
       theory: *classy
       params:
         <<: *classy_params
-        mnu: &mnu_info
+        mnu: *mnu_info
     camb_nnu:
       theory: *camb
       params:
@@ -101,7 +103,7 @@ grid:
       theory: *classy
       params:
         <<: *classy_params
-        mnu: &nnu_info
+        mnu: *nnu_info
     camb_r:
       theory: *camb
       params:
@@ -119,7 +121,7 @@ grid:
       theory: *classy
       params:
         <<: *classy_params
-        r: &r_info
+        r: *r_info
   # Definitions of datasets used
   datasets:
     planckT:
