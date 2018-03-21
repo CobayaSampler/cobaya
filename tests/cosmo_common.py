@@ -74,7 +74,7 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
             for p in ["zstar", "rstar", "thetastar", "DAstar", "zdrag",
                       "kd", "thetad", "zeq", "keq", "thetaeq", "thetarseq",
                       # BBN!!!
-                      "DH", "Y_p", "YHe"]:
+                      "DH", "Y_p"]:
                 derived.pop(p)
                 best_fit_derived.pop(p, None)
     # Add derived
