@@ -53,7 +53,7 @@ def install(*infos, **kwargs):
                 print("Not and external module: nothing to do.\n")
                 continue
             if is_installed(path=abspath, **kwargs_install):
-                print("External module already installed or not requested.")
+                print("External module already installed.")
                 if kwargs_install["force"]:
                     print("Forcing re-installation, as requested.")
                 else:
@@ -101,7 +101,8 @@ def user_flag_if_needed():
     return []
 
 
-def download_github_release(directory, repo_name, release_name, no_progress_bars=False):
+def download_github_release(directory, repo_name, release_name, repo_rename=None,
+                            github_user="CobayaSampler", no_progress_bars=False):
     if not os.path.exists(directory):
         os.makedirs(directory)
     try:
@@ -109,7 +110,7 @@ def download_github_release(directory, repo_name, release_name, no_progress_bars
         wget_kwargs = {"out": directory,
                        "bar": (bar_thermometer if not no_progress_bars else None)}
         filename = download(
-            r"https://github.com/CobayaSampler/" + repo_name +
+            r"https://github.com/" + github_user + "/" + repo_name +
             "/archive/" + release_name + ".tar.gz", **wget_kwargs)
         print("")  # force newline after wget
     except:
@@ -130,7 +131,8 @@ def download_github_release(directory, repo_name, release_name, no_progress_bars
         return False
     # Remove version number from directory name
     w_version = next(d for d in os.listdir(directory) if d.startswith(repo_name))
-    repo_path = os.path.join(directory, repo_name)
+    repo_rename = repo_rename or repo_name
+    repo_path = os.path.join(directory, repo_rename)
     if os.path.exists(repo_path):
         shutil.rmtree(repo_path)
     os.rename(os.path.join(directory, w_version), repo_path)

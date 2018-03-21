@@ -13,7 +13,7 @@ def test_bicep_keck_2015_camb(modules):
 def test_bicep_keck_2015_classy(modules):
     info_theory = {"classy": {"use_camb_names": True}}
     chi2_classy = deepcopy(chi2)
-    chi2_classy["tolerance"] = 2.1
+    chi2_classy["tolerance"] += 2.0
     body_of_test(modules, params, lik_info, info_theory, chi2_classy, derived)
 
 

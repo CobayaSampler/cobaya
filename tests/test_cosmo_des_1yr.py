@@ -42,27 +42,27 @@ params:
   DES_b5: 2.0
 """
 
-@pytest.mark.slow
+@pytest.mark.skip
 def test_cosmo_des_1yr_shear_camb(modules):
     body_of_test(modules, "shear", "camb")
 
-@pytest.mark.slow
+@pytest.mark.skip
 def test_cosmo_des_1yr_ggl_camb(modules):
     body_of_test(modules, "galaxy_galaxylensing", "camb")
 
-@pytest.mark.slow
+@pytest.mark.skip
 def test_cosmo_des_1yr_clustering_camb(modules):
     body_of_test(modules, "clustering", "camb")
 
-@pytest.mark.slow
+@pytest.mark.skip
 def test_cosmo_des_1yr_shear_classy(modules):
     body_of_test(modules, "shear", "classy")
 
-@pytest.mark.slow
+@pytest.mark.skip
 def test_cosmo_des_1yr_ggl_classy(modules):
     body_of_test(modules, "galaxy_galaxylensing", "classy")
 
-@pytest.mark.slow
+@pytest.mark.skip
 def test_cosmo_des_1yr_clustering_classy(modules):
     body_of_test(modules, "clustering", "classy")
 

@@ -56,7 +56,7 @@ def test_planck_2015_t_classy(modules):
     info_theory = {"classy": {"use_camb_names": True}}
     best_fit_derived = derived_lowl_highTT
     chi2_lowl_highTT_classy = deepcopy(chi2_lowl_highTT)
-    chi2_lowl_highTT_classy["tolerance"] += 1.6
+    chi2_lowl_highTT_classy["tolerance"] += 0.2
     body_of_test(modules, best_fit, info_likelihood, info_theory,
                  chi2_lowl_highTT_classy, best_fit_derived)
 
@@ -68,7 +68,7 @@ def test_planck_2015_p_classy(modules):
     info_theory = {"classy": {"use_camb_names": True}}
     best_fit_derived = derived_lowTEB_highTTTEEE
     chi2_lowTEB_highTTTEEE_classy = deepcopy(chi2_lowTEB_highTTTEEE)
-    chi2_lowTEB_highTTTEEE_classy["tolerance"] += 1.5
+    chi2_lowTEB_highTTTEEE_classy["tolerance"] += 0.2
     body_of_test(modules, best_fit, info_likelihood, info_theory,
                  chi2_lowTEB_highTTTEEE_classy, best_fit_derived)
 

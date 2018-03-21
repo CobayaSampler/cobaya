@@ -93,27 +93,6 @@ If you modify CLASS and add new variables, you don't need to let cobaya now, but
 sure that the variables you create are exposed in the Python
 interface (contact CLASS' developers if you need help with that).
 
-.. warning::
-
-   At this moment, CLASS is not compatible with ``gcc`` version 5.0 and above
-   (type ``gcc --version`` to check yours). This would cause an error when trying to use
-   CLASS in cobaya, containing a line similar to
-
-   .. code::
-
-      /home/<username>/.local/lib/python2.7/site-packages/classy.so: undefined symbol: _ZGVbN2v_sin
-
-   To solve it, open the file ``Makefile`` in the CLASS folder and add change the line
-   stating ``CCFLAG = -g -fPIC`` to
-
-   .. code:: make
-
-      CCFLAG = -g -fPIC -fno-tree-vectorize
-
-   Finally, clean and recompile, using ``make clean ; make``.
-
-   **Source:** `CLASS issue #99 in github <https://github.com/lesgourg/class_public/issues/99>`_
-
 """
 # Python 2/3 compatibility
 from __future__ import absolute_import
@@ -131,7 +110,7 @@ from collections import namedtuple, OrderedDict as odict
 from cobaya.theory import Theory
 from cobaya.log import HandledException
 from cobaya.tools import get_path_to_installation
-from cobaya.install import user_flag_if_needed
+from cobaya.install import user_flag_if_needed, download_github_release
 from cobaya.conventions import _c
 
 # Result collector
@@ -147,38 +126,30 @@ class classy(Theory):
         path_to_installation = get_path_to_installation()
         if not self.path and path_to_installation:
             self.path = os.path.join(
-                path_to_installation, "code", "CLASS")
+                path_to_installation, "code", classy_repo_rename)
         if self.path:
-            self.log.info("Importing *local* CLASS from "+self.path)
-            if not os.path.exists(self.path):
-                self.log.error("The given folder does not exist: '%s'", self.path)
+            self.log.info("Importing *local* classy from "+self.path)
+            classy_build_path = os.path.join(self.path, "python", "build")
+            post = next(d for d in os.listdir(classy_build_path) if d.startswith("lib."))
+            classy_build_path = os.path.join(classy_build_path, post)
+            if not os.path.exists(classy_build_path):
+                self.log.error("Either CLASS is not in the given folder, "
+                               "'%s', or you have not compiled it.", self.path)
                 raise HandledException
-            try:
-                classy_path = ''
-                classy_build_path = os.path.join(self.path, "python", "build")
-                for elem in os.listdir(classy_build_path):
-                    if elem.find("lib.") != -1:
-                        classy_path = os.path.join(classy_build_path, elem)
-                        break
-                # Inserting the previously found path into the list of import folders
-                sys.path.insert(0, classy_path)
-                from classy import Class, CosmoSevereError, CosmoComputationError
-            except OSError:
-                self.log.error("Either CLASS is not in the given folder,\n"
-                               "'%s',\n or you have not compiled it.", self.path)
-                raise HandledException
+            # Inserting the previously found path into the list of import folders
+            sys.path.insert(0, classy_build_path)
         else:
             self.log.info("Importing *global* CLASS.")
-            try:
-                from classy import Class, CosmoSevereError, CosmoComputationError
-            except ImportError:
-                self.log.error(
-                    "Couldn't find the CLASS python interface.\n"
-                    "Make sure that you have compiled it, and that you either\n"
-                    " (a) specify a path (you didn't) or\n"
-                    " (b) install the Python interface globally with\n"
-                    "     '/path/to/class/python/python setup.py install --user'")
-                raise HandledException
+        try:
+            from classy import Class, CosmoSevereError, CosmoComputationError
+        except ImportError:
+            self.log.error(
+                "Couldn't find the CLASS python interface. "
+                "Make sure that you have compiled it, and that you either\n"
+                " (a) specify a path (you didn't) or\n"
+                " (b) install the Python interface globally with\n"
+                "     '/path/to/class/python/python setup.py install --user'")
+            raise HandledException
         self.classy = Class()
         # Propagate errors up
         global CosmoComputationError, CosmoSevereError
@@ -432,98 +403,46 @@ class classy(Theory):
 
 # Installation routines ##################################################################
 
+# Name of the Class repo/folder and version to download
+classy_repo_name = "class_public"
+classy_repo_rename = "classy"
+classy_repo_user = "lesgourg"
+classy_repo_version = "v2.6.3"
+
+
 def is_installed(**kwargs):
-    try:
-        if kwargs["code"]:
-            import classy
-    except:
-        return False
-    return True
+    if not kwargs["code"]:
+        return True
+    return os.path.isfile(os.path.realpath(
+        os.path.join(kwargs["path"], "code", classy_repo_rename, "libclass.a")))
 
 
 def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs):
-    log = logging.getLogger("classy")
     if not code:
-        log.info("Code not requested. Nothing to do.")
         return True
+    log = logging.getLogger(__name__.split(".")[-1])
     log.info("Installing pre-requisites...")
     import pip
     exit_status = pip.main(["install", "cython", "--upgrade"] + user_flag_if_needed())
     if exit_status:
         log.error("Could not install pre-requisite: cython")
         return False
-    log.info("Downloading...")
-    parent_path = os.path.abspath(os.path.join(path, "code"))
-    from wget import download, bar_thermometer
-    try:
-        filename = download(
-            "https://github.com/lesgourg/class_public/archive/v2.6.1.tar.gz",
-            out=parent_path, bar=(bar_thermometer if not no_progress_bars else None))
-    except:
-        log.error("Error downloading the latest release of CLASS.")
+    log.info("Downloading classy...")
+    success = download_github_release(
+        os.path.join(path, "code"), classy_repo_name,classy_repo_version,
+        github_user=classy_repo_user, repo_rename=classy_repo_rename,
+        no_progress_bars=no_progress_bars)
+    if not success:
+        log.error("Could not download classy.")
         return False
-    print("")
-    classy_path_decompressed = os.path.join(
-        parent_path, os.path.splitext(os.path.splitext(os.path.basename(filename))[0])[0])
-    classy_path = os.path.join(parent_path, "CLASS")
-    if force and os.path.exists(classy_path):
-        from shutil import rmtree
-        rmtree(classy_path)
-    log.info("Uncompressing...")
-    import tarfile
-    tar = tarfile.open(filename, "r:gz")
-    try:
-        tar.extractall(parent_path)
-        tar.close()
-        os.remove(filename)
-    except:
-        log.error("Error decompressing downloaded file! Corrupt file?)")
-    os.rename(classy_path_decompressed, classy_path)
+    classy_path = os.path.join(path, "code", classy_repo_rename)
+    log.info("Compiling classy...")
     from subprocess import Popen, PIPE
-    working = False
-    patch = False
-    # Patch for gcc>=5
-    while not working:
-        os.chdir(classy_path)
-        if patch:
-            # patch (hopefully will be removed in the future)
-            log.info("TRYING AGAIN: Patching for gcc>=5...")
-            process_makeclean = Popen(["make", "clean"], stdout=PIPE, stderr=PIPE)
-            out, err = process_makeclean.communicate()
-            os.chdir("./python")
-            process_pythonclean = Popen(
-                ["python", "setup.py", "clean"], stdout=PIPE, stderr=PIPE)
-            out, err = process_pythonclean.communicate()
-            os.chdir("..")
-            with open(os.path.join(classy_path, "python/setup.py"), "r") as setup:
-                lines = setup.readlines()
-                i_offending = next(i for i,l in enumerate(lines) if "libraries=" in l)
-                lines[i_offending] = "libraries=['class', 'mvec', 'm'],\n"
-            with open(os.path.join(classy_path, "python/setup.py"), "w") as setup:
-                setup.write("".join(lines))
-        log.info("Compiling...")
-        process_make = Popen(["make"], stdout=PIPE, stderr=PIPE)
-        out, err = process_make.communicate()
-        if process_make.returncode:
-            log.info(out)
-            log.info(err)
-            log.error("Compilation failed!")
-            return False
-        log.info("Installing python package...")
-        os.chdir("./python")
-        process_install = Popen(["python", "setup.py", "install"] + user_flag_if_needed(),
-                                stdout=PIPE, stderr=PIPE)
-        out, err = process_install.communicate()
-        if process_install.returncode:
-            log.info(out)
-            log.info(err)
-            log.error("Installation failed!")
-            return False
-        # If installed but not importable, patch and try again
-        if not is_installed(code=True):
-            if patch:
-                break
-            patch = True
-        else:
-            working = True
+    process_make = Popen(["make"], cwd=classy_path, stdout=PIPE, stderr=PIPE)
+    out, err = process_make.communicate()
+    if process_make.returncode:
+        log.info(out)
+        log.info(err)
+        log.error("Compilation failed!")
+        return False
     return True

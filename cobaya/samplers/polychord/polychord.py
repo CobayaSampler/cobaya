@@ -321,7 +321,7 @@ class polychord(Sampler):
 
 # Installation routines ##################################################################
 
-# name of the PolyChord repo and version to download
+# Name of the PolyChord repo and version to download
 pc_repo_name = "PolyChord"
 pc_repo_version = "v0.91"
 
@@ -331,6 +331,8 @@ def get_path(path):
 
 
 def is_installed(**kwargs):
+    if not kwargs["code"]:
+        return True
     return os.path.isfile(os.path.realpath(
         os.path.join(kwargs["path"], "code", pc_repo_name, "lib/libchord.so")))
 
