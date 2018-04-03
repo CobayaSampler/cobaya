@@ -317,14 +317,21 @@ class Prior(object):
                 {"logp": get_external_function(info_prior[name], name=name)})
             self.external[name]["argspec"] = (
                 inspect.getargspec(self.external[name]["logp"]))
-            try:
-                self.external[name]["indices"] = [
-                    list(sampled_params_info).index(p)
-                    for p in self.external[name]["argspec"].args]
-            except ValueError:
-                log.error("The arguments of the external prior '%s' "
-                          "must be known *sampled* parameters. "
-                          "Got %r.", name, self.external[name]["argspec"].args)
+            self.external[name]["params"] = {
+                p:list(sampled_params_info).index(p)
+                for p in self.external[name]["argspec"].args if p in sampled_params_info}
+            if self.external[name]["params"] == {}:
+                log.error("None of the arguments of the external prior '%s' "
+                          "are known *sampled* parameters. This prior recognises: %r",
+                          name, self.external[name]["argspec"].args)
+                raise HandledException
+            params_without_default = self.external[name]["argspec"].args[:-len(
+                self.external[name]["argspec"].defaults or [])]
+            if not all([(p in self.external[name]["params"])
+                        for p in params_without_default]):
+                log.error("Some of the arguments of the external prior '%s' "
+                          "cannot be found and don't have a default value either: %s",
+                          name, params_without_default)
                 raise HandledException
             log.warning("External prior '%s' loaded. "
                         "Mind that it might not be normalized!", name)
@@ -359,7 +366,8 @@ class Prior(object):
                 log.warn("There are unbounded parameters. Prior bounds are given at %s "
                          "confidence level. Beware of likelihood modes at the edge of "
                          "the prior", confidence_for_unbounded)
-                bounds[infs] = [self.pdf[i].interval(confidence_for_unbounded) for i in infs]
+                bounds[infs] = [
+                    self.pdf[i].interval(confidence_for_unbounded) for i in infs]
             return bounds
         except AttributeError:
             log.error("Some parameter names (positions %r) have no bounds defined.", infs)
@@ -399,7 +407,7 @@ class Prior(object):
 
     def logp_external(self, x):
         """Evaluates the logprior using the external prior only."""
-        return sum([ext["logp"](*[x[i] for i in ext["indices"]])
+        return sum([ext["logp"](**{p:x[i] for p,i in ext["params"].items()})
                     for ext in self.external.values()])
 
     def covmat(self, external_error=True):
