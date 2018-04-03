@@ -297,7 +297,7 @@ class Prior(object):
             ref = sampled_params_info[p].get(_p_ref)
             # Cases: number, pdf (something, but not a number), nothing
             if isinstance(ref, numbers.Number):
-                self.ref_pdf += [ref]
+                self.ref_pdf += [float(ref)]
             elif ref is not None:
                 self.ref_pdf += [get_scipy_1d_pdf({p: ref})]
             else:
