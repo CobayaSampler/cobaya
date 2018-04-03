@@ -324,7 +324,7 @@ class Prior(object):
             except ValueError:
                 log.error("The arguments of the external prior '%s' "
                           "must be known *sampled* parameters. "
-                          "Got %r1", name, self.external[name]["argspec"].args)
+                          "Got %r.", name, self.external[name]["argspec"].args)
                 raise HandledException
             log.warning("External prior '%s' loaded. "
                         "Mind that it might not be normalized!", name)

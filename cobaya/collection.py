@@ -46,7 +46,8 @@ class Collection(object):
     def __init__(self, parametrization, likelihood, output=None,
                  initial_size=enlargement_size, name=None, extension=None):
         self.name = name
-        self.log = logging.getLogger(__name__)
+        self.log = logging.getLogger(
+            "collection:"+name if name else self.__class__.__name__)
         self.sampled_params = list(parametrization.sampled_params().keys())
         self.derived_params = list(parametrization.derived_params().keys())
         # Create the dataframe structure
