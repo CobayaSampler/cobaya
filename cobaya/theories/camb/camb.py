@@ -356,7 +356,16 @@ class camb(Theory):
         return True
 
     def get_derived_from_params(self, p, intermediates):
-        return getattr(intermediates["CAMBparams"]["result"], p, None)
+        try:
+            return getattr(intermediates["CAMBparams"]["result"], p)
+        except AttributeError:
+            for mod in ["InitPower", "Reion", "Recomb", "Transfer", "ReionHist"]:
+                try:
+                    return getattr(
+                        getattr(intermediates["CAMBparams"]["result"], mod), p)
+                except AttributeError:
+                    pass
+            return None
 
     def get_derived_from_std(self, p, intermediates):
         return intermediates["CAMBdata"]["result"].get_derived_params().get(p, None)
@@ -437,7 +446,8 @@ class camb(Theory):
         raise ValueError("NEED TO SORT WITH Z (there may be more z's than those!!!) CHECK OUT f_sigma8")
         current_state = self.current_state()
         prefix = "Pk_interpolator_"
-        return {k[len(prefix):]:v for k,v in current_state.items() if k.startswith(prefix)}
+        return {k[len(prefix):]:v
+                for k,v in current_state.items() if k.startswith(prefix)}
 
     def get_fsigma8(self, zs):
         values = np.array(self.current_state()["fsigma8"])
@@ -448,15 +458,15 @@ class camb(Theory):
 
     def get_comoving_radial_distance(self, z):
         return self.current_state()["comoving_radial_distance"][
-            np.where(self.collectors["comoving_radial_distance"].kwargs["z"]==z)]
+            np.where(self.collectors["comoving_radial_distance"].kwargs["z"] == z)]
 
     def get_h_of_z(self, z):
         return self.current_state()["h_of_z"][
-            np.where(self.collectors["h_of_z"].kwargs["z"]==z)]
+            np.where(self.collectors["h_of_z"].kwargs["z"] == z)]
 
     def get_angular_diameter_distance(self, z):
         return self.current_state()["angular_diameter_distance"][
-            np.where(self.collectors["angular_diameter_distance"].kwargs["z"]==z)]
+            np.where(self.collectors["angular_diameter_distance"].kwargs["z"] == z)]
 
 
 # Installation routines ##################################################################
