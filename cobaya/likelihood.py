@@ -332,10 +332,9 @@ class LikelihoodCollection(object):
         logps = []
         for lik in self:
             this_params_dict = {p: input_params[p] for p in self[lik].input_params}
-            if derived is not None:
-                this_derived_dict = {}
+            this_derived_dict = {} if derived is not None else None
             logps += [self[lik].logp(derived=this_derived_dict, **this_params_dict)]
-            derived_dict.update(this_derived_dict)
+            derived_dict.update(this_derived_dict or {})
             log.debug("'%s' evaluated to logp=%g with params %r, and got derived %r",
                       lik, logps[-1], this_params_dict, this_derived_dict)
         # Turn the derived params dict into a list and return
