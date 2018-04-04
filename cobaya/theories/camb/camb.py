@@ -314,12 +314,17 @@ class camb(Theory):
             i_state = lasts.index(min(lasts))
             self.log.debug("Computing (state %d)", i_state)
             # Set parameters
-            intermediates = {
-                "CAMBparams": {"result": self.set(params_values_dict, i_state)},
-                "CAMBdata": {"method": "get_results", "result": None}}
-            # Failed to set parameters (e.g. out of computationally feasible range): lik=0
-            if not intermediates["CAMBparams"]["result"]:
+            try:
+                result = self.set(params_values_dict, i_state)
+                # Failed to set parameters but no error raised
+                # (e.g. out of computationally feasible range): lik=0
+                if not result:
+                    raise CAMBError
+            except CAMBError:
                 return False
+            intermediates = {
+                "CAMBparams": {"result": result},
+                "CAMBdata": {"method": "get_results", "result": None}}
             # Compute the necessary products (incl. any intermediate result, if needed)
             for product, collector in self.collectors.items():
                 parent, method = collector.method.split(".")
