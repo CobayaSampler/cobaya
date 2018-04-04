@@ -260,6 +260,12 @@ class polychord(Sampler):
         # since PolyChord divides by it
         def logpost(params_values):
             logposterior, logprior, logliks, derived = self.logposterior(params_values)
+            if len(derived) != len(self.parametrization.derived_params()):
+                derived = np.full(
+                    len(self.parametrization.derived_params()), np.nan)
+            if len(logliks) != len(self.likelihood._likelihoods):
+                logliks = np.full(
+                    len(self.likelihood._likelihoods), np.nan)
             derived = list(derived) + [logprior] + list(logliks)
             return logposterior+self.logvolume, derived
         self.log.info("Sampling!")
@@ -272,7 +278,7 @@ class polychord(Sampler):
         (if ``txt`` output requested).
         """
         if not get_mpi_rank():  # process 0 or single (non-MPI process)
-            self.log.info("Loading PolyChord's resuts: samples and evidences.")
+            self.log.info("Loading PolyChord's results: samples and evidences.")
             prefix = os.path.join(self.pc_settings.base_dir, self.pc_settings.file_root)
             sample = np.loadtxt(prefix+".txt")
             self.collection = Collection(
