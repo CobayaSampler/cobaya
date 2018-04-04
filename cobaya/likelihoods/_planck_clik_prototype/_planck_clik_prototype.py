@@ -396,6 +396,6 @@ def install(path=None, name=None, force=False, code=True, data=True,
         # Additional data and covmats
         from cobaya.likelihoods.planck_2015_lensing_cmblikes import \
             install as install_supp
-        return install_supp(path=path, force=False, code=True, data=True,
-                            no_progress_bars=False)
+        return install_supp(path=path, force=force, code=code, data=data,
+                            no_progress_bars=no_progress_bars)
     return True

@@ -13,6 +13,7 @@ from __future__ import division
 # Global
 import os
 import sys
+import traceback
 import logging
 from importlib import import_module
 import shutil
@@ -62,6 +63,7 @@ def install(*infos, **kwargs):
             try:
                 success = imported_module.install(path=abspath, **kwargs_install)
             except:
+                traceback.print_exception(*sys.exc_info(), file=sys.stdout)
                 log.error("An unknown error occurred. Delete the modules folder and try "
                           "again. Notify the developers if this error persists.")
                 success = False
