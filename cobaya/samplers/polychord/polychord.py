@@ -141,17 +141,17 @@ class polychord(Sampler):
             self.log.info("Initializing")
         # Importing PolyChord from the correct path
         # THIS NEEDS UPDATE WHEN NEW INTERFACE IS DONE!
-        import PyPolyChord
-        from PyPolyChord.settings import PolyChordSettings
-#        if self.path:
-#            if not get_mpi_rank():
-#                self.log.info("Importing PolyChord from %s", self.path)
-#                if not os.path.exists(self.path):
-#                    self.log.error("The path you indicated for PolyChord "
-#                                   "does not exist: %s", self.path)
-#                    raise HandledException
-#            sys.path.insert(0, self.path)
-#            from PyPolyChord import PyPolyChord
+#        import PyPolyChord
+        if self.path:
+            if not get_mpi_rank():
+                self.log.info("Importing PolyChord from %s", self.path)
+                if not os.path.exists(self.path):
+                    self.log.error("The path you indicated for PolyChord "
+                                   "does not exist: %s", self.path)
+                    raise HandledException
+            sys.path.insert(0, self.path)
+            import PyPolyChord_ctypes as PyPolyChord
+            from PyPolyChord_ctypes.settings import PolyChordSettings
 #        else:
 #            # Currently, not installable as a python package! This will ALWAYS fail
 #            self.log.error("You need to specify PolyChord's path.")
