@@ -4,7 +4,7 @@
 likelihood:
   planck_2015_plikHM_TT_unbinned:
     path:
-    clik_file: plc_2.0/hi_l/plik_unbinned/plik_dx11dr2_HM_v18_TT_bin1.clik
+    clik_file: plik_unbinned/plik_dx11dr2_HM_v18_TT_bin1.clik
     product_id: "1903"
 
 params:
