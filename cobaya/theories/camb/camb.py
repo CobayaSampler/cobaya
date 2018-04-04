@@ -292,12 +292,18 @@ class camb(Theory):
         except CAMBParamRangeError:
             self.log.debug("Out of bounds parameters. "
                            "Assigning 0 likelihood and going on.")
-            return False
         except:
-            self.log.error("Error setting CAMB parameters -- "
-                           "see CAMB's error trace below.\n"
-                           "The parameters were %r", args)
-            raise  # No HandledException, so that CAMB traceback gets printed
+            if self.stop_at_error:
+                self.log.error(
+                    "Error setting parameters (see traceback below)! "
+                    "Parameters sent to CAMB: %r and %r.\n"
+                    "To ignore this kind of errors, make 'stop_at_error: False'.",
+                    self.states[i_state]["params"], self.extra_args)
+                raise
+            else:
+                self.log.debug("Error setting CAMB parameters. "
+                               "Assigning 0 likelihood and going on.")
+        return False
 
     def compute(self, derived=None, **params_values_dict):
         lasts = [self.states[i]["last"] for i in range(self.n_states)]
@@ -314,22 +320,11 @@ class camb(Theory):
             i_state = lasts.index(min(lasts))
             self.log.debug("Computing (state %d)", i_state)
             # Set parameters
-            try:
-                result = self.set(params_values_dict, i_state)
-                # Failed to set parameters but no error raised
-                # (e.g. out of computationally feasible range): lik=0
-                if not result:
-                    raise CAMBError
-            except CAMBError:
-                if self.stop_at_error:
-                    self.log.error(
-                        "Computation error! Parameters sent to CAMB: %r and %r.\n"
-                        "To ignore this kind of errors, make 'stop_at_error: False'.",
-                        self.states[i_state]["params"], self.extra_args)
-                    raise HandledException
-                else:
-                    # Assumed to be a "parameter out of range" error.
-                    return False
+            result = self.set(params_values_dict, i_state)
+            # Failed to set parameters but no error raised
+            # (e.g. out of computationally feasible range): lik=0
+            if not result:
+                return False
             intermediates = {
                 "CAMBparams": {"result": result},
                 "CAMBdata": {"method": "get_results", "result": None}}
