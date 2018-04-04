@@ -321,7 +321,15 @@ class camb(Theory):
                 if not result:
                     raise CAMBError
             except CAMBError:
-                return False
+                if self.stop_at_error:
+                    self.log.error(
+                        "Computation error! Parameters sent to CAMB: %r and %r.\n"
+                        "To ignore this kind of errors, make 'stop_at_error: False'.",
+                        self.states[i_state]["params"], self.extra_args)
+                    raise HandledException
+                else:
+                    # Assumed to be a "parameter out of range" error.
+                    return False
             intermediates = {
                 "CAMBparams": {"result": result},
                 "CAMBdata": {"method": "get_results", "result": None}}
