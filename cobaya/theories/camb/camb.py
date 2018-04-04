@@ -232,7 +232,10 @@ class camb(Theory):
                 self.collectors[k] = collector(
                     method="CAMBdata.get_cmb_power_spectra",
                     kwargs={
-                        "spectra": ["total"]+(["lens_potential"] if "pp" in v2 else []),
+                        "spectra": list(set(
+                            (self.collectors[k].kwargs.get("spectra", [])
+                             if k in self.collectors else []) +
+                            ["total"] + (["lens_potential"] if "pp" in v2 else []))),
                         "raw_cl": True})
                 self.derived_extra += ["TCMB"]
                 # Needed for Planck: 0.1 chi^2 precision
