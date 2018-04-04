@@ -157,9 +157,9 @@ class polychord(Sampler):
                 self.log.error("The path you indicated for PolyChord "
                                "does not exist: %s", self.path)
                 raise HandledException
-            sys.path.insert(0, self.path)
-            import PyPolyChord_ctypes as PyPolyChord
-            from PyPolyChord_ctypes.settings import PolyChordSettings
+        sys.path.insert(0, self.path)
+        import PyPolyChord_ctypes as PyPolyChord
+        from PyPolyChord_ctypes.settings import PolyChordSettings
         self.pc = PyPolyChord
         # Prepare arguments and settings
         self.nDims = self.prior.d()
