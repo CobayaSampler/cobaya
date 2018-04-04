@@ -87,9 +87,6 @@ def run(info):
 
 # Command-line script
 def run_script():
-    # Configure the logger ASAP
-    from cobaya.log import logger_setup
-    logger_setup()
     import os
     import argparse
     parser = argparse.ArgumentParser(description="Cobaya's run script.")
