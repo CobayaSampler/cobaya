@@ -127,6 +127,8 @@ import logging
 import inspect
 
 # Local
+from cobaya.conventions import _path_install
+from cobaya.tools import get_path_to_installation
 from cobaya.sampler import Sampler
 from cobaya.mpi import get_mpi_rank
 from cobaya.collection import Collection
@@ -139,33 +141,25 @@ class polychord(Sampler):
         """Imports the PolyChord sampler and prepares its arguments."""
         if not get_mpi_rank():  # rank = 0 (MPI master) or None (no MPI)
             self.log.info("Initializing")
-        # Importing PolyChord from the correct path
-        # THIS NEEDS UPDATE WHEN NEW INTERFACE IS DONE!
-#        import PyPolyChord
-        if self.path:
-            if not get_mpi_rank():
-                self.log.info("Importing PolyChord from %s", self.path)
-                if not os.path.exists(self.path):
-                    self.log.error("The path you indicated for PolyChord "
-                                   "does not exist: %s", self.path)
-                    raise HandledException
+        if not self.path:
+            path_to_installation = get_path_to_installation()
+            if path_to_installation:
+                self.path = os.path.join(
+                    path_to_installation, "code", pc_repo_name)
+        if self.path is None:
+            self.log.error("No path given for PolyChord. Set the "
+                           "likelihood property 'path' or the common property "
+                           "'%s'.", _path_install)
+            raise HandledException
+        if not get_mpi_rank():
+            self.log.info("Importing PolyChord from %s", self.path)
+            if not os.path.exists(self.path):
+                self.log.error("The path you indicated for PolyChord "
+                               "does not exist: %s", self.path)
+                raise HandledException
             sys.path.insert(0, self.path)
             import PyPolyChord_ctypes as PyPolyChord
             from PyPolyChord_ctypes.settings import PolyChordSettings
-#        else:
-#            # Currently, not installable as a python package! This will ALWAYS fail
-#            self.log.error("You need to specify PolyChord's path.")
-#            raise HandledException
-            # self.log.info("Importing *global* PolyChord")
-            # try:
-            #     import PyPolyChord
-            # except ImportError:
-            #     self.log.error(
-            #         "Couldn't find PolyChord's python interface.\n"
-            #         "Make sure that you have compiled it, and that you either\n"
-            #         " (a) specify a path (you didn't) or\n"
-            #         " (b) install PolyChord's python interface globally with ... ???\n")
-            #     raise HandledException
         self.pc = PyPolyChord
         # Prepare arguments and settings
         self.nDims = self.prior.d()
