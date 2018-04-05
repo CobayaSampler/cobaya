@@ -385,7 +385,9 @@ class mcmc(Sampler):
         self.log.info("Initial point:\n %r ",self.current_point)
         # Main loop!
         self.converged = False
-        self.log.info("Sampling!")
+        self.log.info("Sampling!" + (
+            "(NB: nothing will be printed until %d burn-in samples "%self.burn_in +
+            "have been obtained)" if self.burn_in else 0))
         while self.n() < self.effective_max_samples and not self.converged:
             self.get_new_sample()
             # Callback function
@@ -549,7 +551,7 @@ class mcmc(Sampler):
                 self.log.debug("Burn-in sample:\n   %r", self.current_point)
                 if self.burn_in_left == 0:
                     self.log.info("Finished burn-in phase: discarded %d accepted steps.",
-                             self.burn_in)
+                                  self.burn_in)
             # set the new point as the current one, with weight one
             self.current_point.add(trial, derived=derived, weight=1, logpost=logpost_trial,
                                    logprior=logprior_trial, logliks=logliks_trial)
