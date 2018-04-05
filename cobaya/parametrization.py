@@ -115,16 +115,19 @@ class Parametrization(object):
         self._input_funcs = dict()
         self._input_args = dict()
         self._output = odict()
+        self._fixed = odict()
         self._sampled = odict()
         self._derived = odict()
         self._derived_funcs = dict()
         self._derived_args = dict()
         for p, info in info_params.items():
             if is_fixed_param(info):
-                self._input[p] = info if isinstance(info, Number) else None
+                self._input[p] = float(info) if isinstance(info, Number) else None
                 if self._input[p] is None:
                     self._input_funcs[p] = get_external_function(info)
                     self._input_args[p] = getargspec(self._input_funcs[p]).args
+                else:
+                    self._fixed[p] = self._input[p]
             if is_sampled_param(info):
                 self._sampled[p] = info
                 if _p_drop not in info:
@@ -206,6 +209,9 @@ class Parametrization(object):
 
     def output_params(self):
         return self._output
+
+    def fixed_params(self):
+        return self._fixed
 
     def sampled_params(self):
         return self._sampled

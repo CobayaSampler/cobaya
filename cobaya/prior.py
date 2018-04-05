@@ -279,6 +279,7 @@ class Prior(object):
         """
         Initialises the prior and reference pdf's from the input information.
         """
+        fixed_params_info = parametrization.fixed_params()
         sampled_params_info = parametrization.sampled_params()
         if not sampled_params_info:
             log.warning("No sampled parameters requested! "
@@ -320,9 +321,14 @@ class Prior(object):
             self.external[name]["params"] = {
                 p:list(sampled_params_info).index(p)
                 for p in self.external[name]["argspec"].args if p in sampled_params_info}
-            if self.external[name]["params"] == {}:
+            self.external[name]["fixed_params"] = {
+                p:fixed_params_info[p]
+                for p in self.external[name]["argspec"].args if p in fixed_params_info}
+            if (not (len(self.external[name]["params"]) +
+                     len(self.external[name]["fixed_params"]))):
                 log.error("None of the arguments of the external prior '%s' "
-                          "are known *sampled* parameters. This prior recognises: %r",
+                          "are known *fixed* or *sampled* parameters. "
+                          "This prior recognises: %r",
                           name, self.external[name]["argspec"].args)
                 raise HandledException
             params_without_default = self.external[name]["argspec"].args[:-len(
@@ -410,7 +416,8 @@ class Prior(object):
 
     def logp_external(self, x):
         """Evaluates the logprior using the external prior only."""
-        return sum([ext["logp"](**{p:x[i] for p,i in ext["params"].items()})
+        return sum([ext["logp"](**dict({p:x[i] for p,i in ext["params"].items()},
+                                       **ext["fixed_params"]))
                     for ext in self.external.values()])
 
     def covmat(self, external_error=True):
