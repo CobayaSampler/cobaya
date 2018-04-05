@@ -24,8 +24,6 @@ from cobaya.tools import get_folder, make_header
 from cobaya.input import get_modules
 from cobaya.conventions import package, _code, _data
 
-# Configure the logger ASAP
-logger_setup()
 log = logging.getLogger(__name__.split(".")[-1])
 
 

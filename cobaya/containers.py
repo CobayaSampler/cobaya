@@ -29,7 +29,6 @@ from cobaya.install import install
 from cobaya.conventions import _modules_path, _products_path, _code, _data
 from cobaya.conventions import _requirements_file, _help_file
 
-logger_setup()
 log = logging.getLogger(__name__.split(".")[-1])
 
 requirements_file_path = os.path.join(_modules_path, _requirements_file)
@@ -256,6 +255,7 @@ def create_singularity_image(filenames, MPI_version=None):
 # Command-line scripts ###################################################################
 
 def create_image_script():
+    logger_setup()
     parser = argparse.ArgumentParser(description=(
         "Cobaya's tool for preparing Docker (for Shifter) and Singularity images."))
     parser.add_argument("files", action="store", nargs="+", metavar="input_file.yaml",
@@ -275,6 +275,7 @@ def create_image_script():
 
 
 def prepare_data_script():
+    logger_setup()
     if "CONTAINED" not in os.environ:
         log.error("This command should only be run within a container. "
                   "Run 'cobaya-install' instead.")
