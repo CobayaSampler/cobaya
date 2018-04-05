@@ -402,8 +402,11 @@ class Prior(object):
         Returns:
            The log-probability density of the given point or array of points.
         """
-        return (sum([pdf.logpdf(xi) for pdf,xi in zip(self.pdf,x)]) +
+        log.debug("Evaluating prior at %r", x)
+        logp = (sum([pdf.logpdf(xi) for pdf,xi in zip(self.pdf,x)]) +
                 self.logp_external(x))
+        log.debug("Got logprior = %g", logp)
+        return logp
 
     def logp_external(self, x):
         """Evaluates the logprior using the external prior only."""

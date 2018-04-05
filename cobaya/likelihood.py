@@ -340,6 +340,7 @@ class LikelihoodCollection(object):
         # Turn the derived params dict into a list and return
         if derived is not None:
             derived += [derived_dict[p] for p in self.output_params]
+            log.debug("Produced derived parameters: %r", derived_dict)
         return np.array(logps)
 
     def logp(self, input_params, derived=None):
