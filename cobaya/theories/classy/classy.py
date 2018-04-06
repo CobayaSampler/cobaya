@@ -418,9 +418,10 @@ def is_installed(**kwargs):
 
 
 def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs):
-    if not code:
-        return True
     log = logging.getLogger(__name__.split(".")[-1])
+    if not code:
+        log.info("Code not requested. Nothing to do.")
+        return True
     log.info("Installing pre-requisites...")
     import pip
     exit_status = pip.main(["install", "cython", "--upgrade"] + user_flag_if_needed())

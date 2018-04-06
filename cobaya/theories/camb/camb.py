@@ -151,7 +151,9 @@ from collections import namedtuple, OrderedDict as odict
 # Local
 from cobaya.theory import Theory
 from cobaya.log import HandledException
-from cobaya.install import user_flag_if_needed
+from cobaya.tools import get_path_to_installation
+from cobaya.install import download_github_release
+
 
 # Result collector
 collector = namedtuple("collector", ["method", "args", "kwargs"])
@@ -162,6 +164,10 @@ class camb(Theory):
 
     def initialise(self):
         """Importing CAMB from the correct path, if given."""
+        path_to_installation = get_path_to_installation()
+        if not self.path and path_to_installation:
+            self.path = os.path.join(
+                path_to_installation, "code", camb_repo_name)
         if self.path:
             self.log.info("Importing *local* CAMB from "+self.path)
             if not os.path.exists(self.path):
@@ -482,25 +488,40 @@ class camb(Theory):
 
 # Installation routines ##################################################################
 
+# Name of the Class repo/folder and version to download
+camb_repo_name = "CAMB"
+camb_repo_user = "cmbant"
+camb_repo_version = "6a0b45118b49d7c0e19f3749bfcf305fa145e143"
+
+
 def is_installed(**kwargs):
-    try:
-        if kwargs["code"]:
-            import camb
-    except:
-        return False
-    return True
+    if not kwargs["code"]:
+        return True
+    return os.path.isfile(os.path.realpath(
+        os.path.join(kwargs["path"], "code", camb_repo_name, "pycamb/camb/camblib.so")))
 
 
-def install(force=False, code=True, **kwargs):
-    log = logging.getLogger("camb")
+def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs):
+    log = logging.getLogger(__name__.split(".")[-1])
     if not code:
         log.info("Code not requested. Nothing to do.")
         return True
-    import pip
-    exit_status = pip.main(
-        ["install", "camb", "--upgrade"] + user_flag_if_needed() +
-        (["--force-reinstall"] if force else []))
-    # Notice that --force-reinstall only works when --upgrade is present too!
-    if exit_status:
+    log.info("Downloading camb...")
+    success = download_github_release(
+        os.path.join(path, "code"), camb_repo_name,camb_repo_version,
+        github_user=camb_repo_user, no_progress_bars=no_progress_bars)
+    if not success:
+        log.error("Could not download camb.")
+        return False
+    camb_path = os.path.join(path, "code", camb_repo_name)
+    log.info("Compiling camb...")
+    from subprocess import Popen, PIPE
+    process_make = Popen(["python", "pycamb/setup.py", "build_cluster"],
+                         cwd=camb_path, stdout=PIPE, stderr=PIPE)
+    out, err = process_make.communicate()
+    if process_make.returncode:
+        log.info(out)
+        log.info(err)
+        log.error("Compilation failed!")
         return False
     return True
