@@ -49,8 +49,8 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - gcc-4.9
-            - gfortran-4.9
+            - gcc-6
+            - gfortran-6
             - openmpi-bin
             - openmpi-common
             - libopenmpi-dev
@@ -69,8 +69,8 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - gcc-5
-            - gfortran-5
+            - gcc-6
+            - gfortran-6
             - openmpi-bin
             - openmpi-common
             - libopenmpi-dev
