@@ -21,7 +21,7 @@ matrix:
             - liblapack3
             - liblapack-dev
       env:
-        - MATRIX_EVAL="4.9"
+        - GCC_VERSION="4.9"
         - PYVER="2"
       python: "2.7"
     - addons:
@@ -40,8 +40,49 @@ matrix:
             - liblapack3
             - liblapack-dev
       env:
-        - MATRIX_EVAL="5"
+        - GCC_VERSION="5"
         - PYVER="3"
+      python: "3.6"
+    # BELOW: CAMB devel #################################################
+    - addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - gcc-4.9
+            - gfortran-4.9
+            - openmpi-bin
+            - openmpi-common
+            - libopenmpi-dev
+            # numpy (and more)
+            - libopenblas-base
+            # Planck likelihood
+            - liblapack3
+            - liblapack-dev
+      env:
+        - GCC_VERSION="4.9"
+        - PYVER="2"
+        - CAMB_BRANCH="devel"
+      python: "2.7"
+    - addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - gcc-5
+            - gfortran-5
+            - openmpi-bin
+            - openmpi-common
+            - libopenmpi-dev
+            # numpy (and more)
+            - libopenblas-base
+            # Planck likelihood
+            - liblapack3
+            - liblapack-dev
+      env:
+        - GCC_VERSION="5"
+        - PYVER="3"
+        - CAMB_BRANCH="devel"
       python: "3.6"
 
     # - addons:
@@ -60,7 +101,7 @@ matrix:
     #         - liblapack3
     #         - liblapack-dev
     #   env:
-    #     - MATRIX_EVAL="5"
+    #     - GCC_VERSION="5"
     # - addons:
     #     apt:
     #       sources:
@@ -77,11 +118,11 @@ matrix:
     #         - liblapack3
     #         - liblapack-dev
     #   env:
-    #      - MATRIX_EVAL="6"
+    #      - GCC_VERSION="6"
 ###############################################################################
 before_install:
-  - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-"${MATRIX_EVAL}" 90
-  - sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-"${MATRIX_EVAL}" 90
+  - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-"${GCC_VERSION}" 90
+  - sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-"${GCC_VERSION}" 90
   - pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist --upgrade
   - pip install matplotlib # necessary for getdist, but not installed automatically for now
   # optional, but necessary for tests
@@ -90,6 +131,8 @@ before_install:
 script:
   # Installation
   - python tests/cosmo_install.py ../modules
+  # CAMB devel?
+  - if [ -z ${CAMB_BRANCH+false} ]; then rm -rf ../modules/code/CAMB ; git clone -b $CAMB_BRANCH https://github.com/cmbant/CAMB ../modules/code/CAMB ; python ../modules/code/CAMB/pycamb/setup.py build ; fi
   # Non-cosmological tests
   - pytest tests/ -k "not cosmo" -m "not slow and not mpi" --modules="../modules"
   # Cosmological tests (--boxed = 1 process per test; otherwise lowl planck lik fails!). Planck currently does not support py3.
