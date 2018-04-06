@@ -155,13 +155,13 @@ def install_script():
             description="Cobaya's installation tool for external modules.")
         parser.add_argument("files", action="store", nargs="+", metavar="input_file.yaml",
                             help="One or more input files.")
-        parser.add_argument("-p", "--path",
-                            action="store", nargs=1, default=".", metavar="/some/path",
+        parser.add_argument("-p", "--path", action="store", nargs=1, required=True,
+                            metavar="/install/path",
                             help="Desired path where to install external modules.")
         parser.add_argument("-f", "--force", action="store_true", default=False,
                             help="Force re-installation of apparently installed modules.")
         parser.add_argument("--no-progress-bars", action="store_true", default=False,
-                            help="No progress bars shown. Shorter logs (use in Travis.")
+                            help="No progress bars shown. Shorter logs (used in Travis).")
         group_just = parser.add_mutually_exclusive_group(required=False)
         group_just.add_argument("-c", "--just-code", action="store_false", default=True,
                                 help="Install code of the modules.", dest=_data)
