@@ -60,7 +60,7 @@ matrix:
             - liblapack3
             - liblapack-dev
       env:
-        - GCC_VERSION="4.9"
+        - GCC_VERSION="6"
         - PYVER="2"
         - CAMB_BRANCH="devel"
       python: "2.7"
@@ -80,7 +80,7 @@ matrix:
             - liblapack3
             - liblapack-dev
       env:
-        - GCC_VERSION="5"
+        - GCC_VERSION="6"
         - PYVER="3"
         - CAMB_BRANCH="devel"
       python: "3.6"
