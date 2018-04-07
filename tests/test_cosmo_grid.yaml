@@ -181,7 +181,7 @@ grid:
 
 # Below this line, defaults ###################################################
 
-debug: True
+debug: False
 
 sampler:
   polychord:
