@@ -4,8 +4,8 @@
 ###Python script replace ##..## placeholders with values given python script
 
 
-#$ -l h_rt=##WALLTIME## # wall clock time required
-#$ -jc ##JOBCLASS##
+##$ -l h_rt=##WALLTIME## # wall clock time required
+##$ -jc ##JOBCLASS##
 #$ -cwd
 #$ -V
 #$ -N  ##JOBNAME##
