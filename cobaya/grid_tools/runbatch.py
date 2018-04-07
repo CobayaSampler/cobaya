@@ -60,9 +60,9 @@ def run():
         else:
             args.noimportance = True
     isMinimize = args.importance_minimize or args.minimize
-    if args.combineOneJobName:
+    if args.combine_one_job_name:
         print('Combining multiple (hopefully fast) into single job script: ' +
-              args.combineOneJobName)
+              args.combine_one_job_name)
     global iniFiles
     iniFiles = []
     jobqueue.checkArguments(**args.__dict__)
@@ -82,10 +82,10 @@ def run():
         else:
             print('... ' + ini)
         iniFiles.append(ini)
-        if args.combineOneJobName:
+        if args.combine_one_job_name:
             return
-        if len(iniFiles) >= args.runsPerJob:
-            if args.runsPerJob > 1:
+        if len(iniFiles) >= args.runs_per_job:
+            if args.runs_per_job > 1:
                 print('--> jobName: ', jobName())
             jobqueue.submitJob(jobName(), iniFiles, **args.__dict__)
             iniFiles = []
@@ -112,6 +112,6 @@ def run():
                                 submitJob(jobItem.iniFile(variant))
 
     if len(iniFiles) > 0:
-        if args.runsPerJob > 1: print('--> jobName: ', jobName())
-        jobqueue.submitJob(args.combineOneJobName or jobName(), iniFiles, sequential=args.combineOneJobName is not None,
+        if args.runs_per_job > 1: print('--> jobName: ', jobName())
+        jobqueue.submitJob(args.combine_one_job_name or jobName(), iniFiles, sequential=args.combine_one_job_name is not None,
                            **args.__dict__)

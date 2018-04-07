@@ -79,7 +79,7 @@ class jobSettings(object):
 
         self.job_template = getDefaulted('job_template', 'job_script', **kwargs)
         if not kwargs.get("job_template"):
-            raise ValueError("You must provide a script template with '--job_template'.")
+            raise ValueError("You must provide a script template with '--job-template'.")
         try:
             with open(self.job_template, 'r') as f:
                 template = f.read()
@@ -92,7 +92,7 @@ class jobSettings(object):
                 cores = 8
         except:
             cores = 8
-        self.coresPerNode = getDefaulted('coresPerNode', cores, tp=int, template=template, **kwargs)
+        self.cores_per_node = getDefaulted('cores_per_node', cores, tp=int, template=template, **kwargs)
         if cores == 4:
             perNode = 2
         elif cores % 4 == 0:
@@ -101,16 +101,16 @@ class jobSettings(object):
             perNode = cores // 3
         else:
             perNode = 1
-        self.chainsPerNode = getDefaulted('chainsPerNode', perNode, tp=int, template=template, **kwargs)
+        self.chains_per_node = getDefaulted('chains_per_node', perNode, tp=int, template=template, **kwargs)
         self.nodes = getDefaulted('nodes', max(1, 4 // perNode), tp=int, template=template, **kwargs)
-        self.nchains = self.nodes * self.chainsPerNode
+        self.nchains = self.nodes * self.chains_per_node
         self.runsPerJob = getDefaulted('runsPerJob', 1, tp=int, template=template, **kwargs)
         # also defaulted at input so should be set here unless called programmatically
-        self.omp = self.coresPerNode / (self.chainsPerNode * self.runsPerJob)
+        self.omp = self.cores_per_node / (self.chains_per_node * self.runsPerJob)
         if self.omp != np.floor(self.omp): raise Exception('Chains must each have equal number of cores')
         if msg:
             print('Job parameters: %i cosmomc runs of %i chains on %i nodes, each node with %i MPI chains, each chain using %i OpenMP cores (%i cores per node)' % (
-                self.runsPerJob, self.nchains, self.nodes, self.chainsPerNode, self.omp, self.coresPerNode))
+                self.runsPerJob, self.nchains, self.nodes, self.chains_per_node, self.omp, self.cores_per_node))
         self.mem_per_node = getDefaulted('mem_per_node', 63900, tp=int, template=template, **kwargs)
         self.walltime = getDefaulted('walltime', '24:00:00', template=template, **kwargs)
         self.program = getDefaulted('program', 'cobaya-run', template=template, **kwargs)
@@ -263,7 +263,7 @@ def submitJob(jobName, paramFiles, sequential=False, msg=False, **kwargs):
 
     j.runsPerJob = (len(paramFiles), 1)[sequential]
     # adjust omp for the actual number (may not be equal to input runsPerJob because of non-integer multiple)
-    j.omp = j.coresPerNode // (j.chainsPerNode * j.runsPerJob)
+    j.omp = j.cores_per_node // (j.chains_per_node * j.runsPerJob)
 
     j.path = os.getcwd()
     j.onerun = (0, 1)[len(paramFiles) == 1 or sequential]
@@ -275,9 +275,9 @@ def submitJob(jobName, paramFiles, sequential=False, msg=False, **kwargs):
     vals['NUMNODES'] = j.nodes
     vals['NUMRUNS'] = j.runsPerJob
     vals['NUMMPI'] = j.nchains
-    vals['CHAINSPERNODE'] = j.chainsPerNode
-    vals['PPN'] = j.chainsPerNode * j.runsPerJob * j.omp
-    vals['MPIPERNODE'] = j.chainsPerNode * j.runsPerJob
+    vals['CHAINSPERNODE'] = j.chains_per_node
+    vals['PPN'] = j.chains_per_node * j.runsPerJob * j.omp
+    vals['MPIPERNODE'] = j.chains_per_node * j.runsPerJob
     vals['NUMTASKS'] = j.nchains * j.runsPerJob
     vals['NUMSLOTS'] = vals['PPN'] * j.nodes
     vals['ROOTDIR'] = j.path
