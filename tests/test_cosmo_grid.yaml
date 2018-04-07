@@ -7,24 +7,19 @@ grid:
       models:  # was `params`
         - camb_LCDM
         - classy_LCDM
-        - camb_mnu
         - classy_mnu
         - camb_nnu
-        - classy_nnu
         - camb_r
-        - classy_r
 #        - mnu_nnu
 #        meffsterile: {'param[mnu]': '0.06', 'param[nnu]': '3.1 3.046 10 0.05 0.05', 'num_massive_neutrinos': 1,
 #                    'accuracy_level': 1.2},
       # NB: datasets infos are added *after* models info, so the former overwrite the latter in case of conflict.
       datasets:
-        - planckT
-        - planckP
         - planckL
         - planckLalt
         - bkp
         - planckP_BAO
-        - planckP_H
+#        - planckP_H
         - planckP_sn
 #      importance_runs:
 #        [['BAO'], ['BAO.ini']]
@@ -43,7 +38,7 @@ grid:
             dist: norm
             loc: 1.0411
             scale: 0.0004
-            proposal: 0.0002
+          proposal: 0.0002
           latex: 100\theta_\mathrm{MC}
           drop:
     classy_LCDM:
@@ -85,7 +80,7 @@ grid:
       theory: *classy
       params:
         <<: *classy_params
-        mnu: *mnu_info
+        m_ncdm: *mnu_info
     camb_nnu:
       theory: *camb
       params:
@@ -99,11 +94,6 @@ grid:
             loc: 3.046
             scale: 0.05
           proposal: 0.05
-    classy_mnu:
-      theory: *classy
-      params:
-        <<: *classy_params
-        mnu: *nnu_info
     camb_r:
       theory: *camb
       params:
@@ -127,38 +117,45 @@ grid:
     planckT:
       likelihood:
         planck_2015_plikHM_TT:
+          speed: 4
         planck_2015_lowTEB:
-          speed: 0.25
+          speed: 4
     planckP:
       likelihood: &planckP
-        planck_2015_plikHM_TT:
-        planck_2015_lowl:
-          speed: 0.5
+        planck_2015_plikHM_TTTEEE:
+          speed: 4
+        planck_2015_lowTEB:
+          speed: 4
     planckL:
       likelihood:
         <<: *planckP
         planck_2015_lensing:
+          speed: 4
     planckLalt:
       likelihood:
         <<: *planckP
         planck_2015_lensing_cmblikes:
+          speed: 4
     bkp:
       likelihood:
         <<: *planckP
         bicep_keck_2015:
+          speed: 4
     planckP_BAO:
       likelihood:
         <<: *planckP
         sdss_dr12_consensus_final:
+          speed: 4
     planckP_H:
       likelihood:
         <<: *planckP
         hst_riess2018:
+          speed: 4          
     planckP_sn:
       likelihood:
         <<: *planckP
         sn_pantheon:
-
+          speed: 4
 
         
 #cov
@@ -184,9 +181,12 @@ grid:
 
 # Below this line, defaults ###################################################
 
+debug: True
+
 sampler:
   polychord:
     nlive: 500
+    precision_criterion: 0.01
 #  mcmc:
 #    burn_in: 100
 #    learn_proposal: True
@@ -257,26 +257,26 @@ params:
     latex: H_0
   omegav:
     latex: \Omega_\Lambda
-  omegam:
-    derived: "lambda omegab, omegac, omegan: omegab+omegac+omegan"
-    latex: \Omega_m
-  omegamh2:
-    derived: "lambda omegab, omegac, omegan, H0: (omegab+omegac+omegan)*(H0/100)**2"
-    latex: \Omega_m h^2
-  omegamh3:
-    derived: "lambda omegab, omegac, omegan, H0: (omegab+omegac+omegan)*(H0/100)**3"
-    latex: \Omega_m h^3
+#  omegam:
+#    derived: "lambda omegab, omegac, omegan: omegab+omegac+omegan"
+#    latex: \Omega_m
+#  omegamh2:
+#    derived: "lambda omegab, omegac, omegan, H0: (omegab+omegac+omegan)*(H0/100)**2"
+#    latex: \Omega_m h^2
+#  omegamh3:
+#    derived: "lambda omegab, omegac, omegan, H0: (omegab+omegac+omegan)*(H0/100)**3"
+#    latex: \Omega_m h^3
   sigma8:
     latex: \sigma_8
   s8h5:
     derived: "lambda sigma8, H0: sigma8*(H0*1e-2)**(-0.5)"
     latex: \sigma_8/h^{0.5}
-  s8omegamp5:
-    derived: "lambda sigma8, omegab, omegac, omegan: sigma8*(omegab+omegac+omegan)**0.5"
-    latex: \sigma_8 \Omega_m^{0.5}
-  s8omegamp25:
-    derived: "lambda sigma8, omegab, omegac, omegan: sigma8*(omegab+omegac+omegan)**0.25"
-    latex: \sigma_8 \Omega_m^{0.25}
+#  s8omegamp5:
+#    derived: "lambda sigma8, omegab, omegac, omegan: sigma8*(omegab+omegac+omegan)**0.5"
+#    latex: \sigma_8 \Omega_m^{0.5}
+#  s8omegamp25:
+#    derived: "lambda sigma8, omegab, omegac, omegan: sigma8*(omegab+omegac+omegan)**0.25"
+#    latex: \sigma_8 \Omega_m^{0.25}
   zre:
     latex: z_\mathrm{re}
   As1e9:

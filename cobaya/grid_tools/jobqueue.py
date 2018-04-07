@@ -15,17 +15,17 @@ import six
 
 def addArguments(parser, combinedJobs=False):
     parser.add_argument('--nodes', type=int)
-    parser.add_argument('--chainsPerNode', type=int)
-    parser.add_argument('--coresPerNode', type=int)
-    parser.add_argument('--mem_per_node', type=int, help="Memory in MB per node")
+    parser.add_argument('--chains-per-node', type=int)
+    parser.add_argument('--cores-per-node', type=int)
+    parser.add_argument('--mem-per-node', type=int, help="Memory in MB per node")
     parser.add_argument('--walltime')
     if combinedJobs:
-        parser.add_argument('--combineOneJobName',
+        parser.add_argument('--combine-one-job-name',
                             help='run all one after another, under one job submission (good for many fast operations)')
-        parser.add_argument('--runsPerJob', type=int, default=int(os.environ.get('COSMOMC_runsPerJob', '1')),
+        parser.add_argument('--runs-per-job', type=int, default=int(os.environ.get('COSMOMC_runsPerJob', '1')),
                             help='submit multiple mpi runs at once from each job script (e.g. to get more than one run per node)')
 
-    parser.add_argument('--job_template', help="template file for the job submission script")
+    parser.add_argument('--job-template', help="template file for the job submission script")
     parser.add_argument('--program', help='actual program to run (default: ./cosmomc)')
     parser.add_argument('--queue', help='name of queue to submit to')
     parser.add_argument('--jobclass', help='any class name of the job')
