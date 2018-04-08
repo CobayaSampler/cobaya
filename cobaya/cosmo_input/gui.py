@@ -6,7 +6,9 @@ from PySide.QtGui import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroup
 from PySide.QtGui import QComboBox, QPushButton, QTextEdit
 from PySide.QtCore import Slot
 
-from input_database import _desc, theory, primordial, reionization
+from input_database import _desc, theory, primordial, hubble, barions, dark_matter
+from input_database import neutrinos, reionization
+from input_database import cmb, sampler
 from create_input import create_input
 
 _separator = " -- "
@@ -36,10 +38,18 @@ class MainWindow(QWidget):
         self.presets_combo = QComboBox()
         self.layout_presets.addWidget(self.presets_combo)
         self.atoms = odict()
-        titles = {"theory": "Theory code",
-                  "primordial": "Primordial perturbations",
-                  "reionization": "Reionization history"}
-        for a in ["theory", "primordial", "reionization"]:
+        titles = odict([
+            ["theory", "Theory code"],
+            ["primordial", "Primordial perturbations"],
+            ["hubble", "Constaint on hubble parameter"],
+            ["barions", "Barion sector"],
+            ["dark_matter", "Dark matter"],
+            ["neutrinos", "Neutrinos and other extra matter"],
+            ["reionization", "Reionization history"],
+            ["cmb", "CMB experiments"],
+            ["sampler", "Samplers"],
+            ])
+        for a in titles:
             self.atoms[a] = {
                 "group": QGroupBox(titles[a]),
                 "combo": QComboBox()}
@@ -47,7 +57,6 @@ class MainWindow(QWidget):
             self.atoms[a]["layout"] = QVBoxLayout(self.atoms[a]["group"])
             self.atoms[a]["layout"].addWidget(self.atoms[a]["combo"])
             self.atoms[a]["combo"].currentIndexChanged.connect(self.refresh)
-
         # Buttons
         self.buttons = QHBoxLayout()
         self.buttons.addStretch(1)
@@ -72,15 +81,34 @@ class MainWindow(QWidget):
         # POPULATING ################################################
         self.atoms["theory"]["combo"].addItems(list(theory.keys()))
         self.atoms["primordial"]["combo"].addItems(
-            ["%s%s%s"%(k,_separator,v[_desc]) for k,v in primordial.items()])
-        self.atoms["reionization"]["combo"].addItems(list(reionization.keys()))
+            ["%s%s%s"%(k,_separator,v.get(_desc)) for k,v in primordial.items()])
+        self.atoms["hubble"]["combo"].addItems(
+            ["%s%s%s"%(k,_separator,v.get(_desc)) for k,v in hubble.items()])
+        self.atoms["barions"]["combo"].addItems(
+            ["%s%s%s"%(k,_separator,v.get(_desc)) for k,v in barions.items()])
+        self.atoms["dark_matter"]["combo"].addItems(
+            ["%s%s%s"%(k,_separator,v.get(_desc)) for k,v in dark_matter.items()])
+        self.atoms["neutrinos"]["combo"].addItems(
+            ["%s%s%s"%(k,_separator,v.get(_desc)) for k,v in neutrinos.items()])
+        self.atoms["reionization"]["combo"].addItems(
+            ["%s%s%s"%(k,_separator,v.get(_desc)) for k,v in reionization.items()])
+        self.atoms["cmb"]["combo"].addItems(
+            ["%s%s%s"%(k,_separator,v.get(_desc)) for k,v in cmb.items()])
+        self.atoms["sampler"]["combo"].addItems(
+            ["%s%s%s"%(k,_separator,v.get(_desc)) for k,v in sampler.items()])
 
     @Slot()
     def refresh(self):
         info = create_input(
             str(self.atoms["theory"]["combo"].currentText().split(_separator)[0]),
             self.atoms["primordial"]["combo"].currentText().split(_separator)[0],
-            self.atoms["reionization"]["combo"].currentText().split(_separator)[0])
+            self.atoms["hubble"]["combo"].currentText().split(_separator)[0],
+            self.atoms["barions"]["combo"].currentText().split(_separator)[0],
+            self.atoms["dark_matter"]["combo"].currentText().split(_separator)[0],
+            self.atoms["neutrinos"]["combo"].currentText().split(_separator)[0],
+            self.atoms["reionization"]["combo"].currentText().split(_separator)[0],
+            self.atoms["cmb"]["combo"].currentText().split(_separator)[0],
+            self.atoms["sampler"]["combo"].currentText().split(_separator)[0])
         from cobaya.yaml import yaml_dump
         self.display.setText(yaml_dump(info))
 
