@@ -41,7 +41,7 @@ class MainWindow(QWidget):
             ["theory", "Theory code"],
             ["primordial", "Primordial perturbations"],
             ["hubble", "Constaint on hubble parameter"],
-            ["barions", "Barion sector"],
+            ["baryons", "Baryon sector"],
             ["dark_matter", "Dark matter"],
             ["neutrinos", "Neutrinos and other extra matter"],
             ["reionization", "Reionization history"],
