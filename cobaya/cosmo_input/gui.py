@@ -1,11 +1,13 @@
 #!/usr/bin/python
 
+import os
 import sys
 import signal
 from collections import OrderedDict as odict
 from pprint import pformat
 from PySide.QtGui import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
 from PySide.QtGui import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
+from PySide.QtGui import QFileDialog
 from PySide.QtCore import Slot
 
 from cobaya.yaml import yaml_dump
@@ -79,17 +81,10 @@ class MainWindow(QWidget):
                     self.refresh_preset)
                 continue
             self.atoms[a]["combo"].currentIndexChanged.connect(self.refresh)
-        # Buttons
-        self.buttons = QHBoxLayout()
-        self.save_button = QPushButton('Save', self)
-        self.copy_button = QPushButton('Copy', self)
-        self.buttons.addWidget(self.save_button)
-        self.buttons.addWidget(self.copy_button)
-        self.layout_left.addLayout(self.buttons)
-        # RIGHT: Output
+        # RIGHT: Output + buttons
         self.display_tabs = QTabWidget()
         self.display = {}
-        for k in ["yaml", "py"]:
+        for k in ["yaml", "python"]:
             self.display[k] = QTextEdit()
             self.display[k].setLineWrapMode(QTextEdit.NoWrap)
             self.display[k].setFontFamily("mono")
@@ -97,6 +92,18 @@ class MainWindow(QWidget):
             self.display[k].setReadOnly(True)
             self.display_tabs.addTab(self.display[k], k)
         self.layout_output.addWidget(self.display_tabs)
+        # Buttons
+        self.buttons = QHBoxLayout()
+        self.save_button = QPushButton('Save', self)
+        self.copy_button = QPushButton('Copy to clipboard', self)
+        self.buttons.addWidget(self.save_button)
+        self.buttons.addWidget(self.copy_button)
+        self.save_button.released.connect(self.save_file)
+        self.copy_button.released.connect(self.copy_clipb)
+        self.layout_output.addLayout(self.buttons)
+        self.save_dialog = QFileDialog()
+        self.save_dialog.setFileMode(QFileDialog.AnyFile)
+        self.save_dialog.setAcceptMode(QFileDialog.AcceptSave)
         # Select first preset, by default
 #        print(self.atoms["preset"]["combo"].itemText(0))
 
@@ -121,12 +128,31 @@ class MainWindow(QWidget):
                     text(v,getattr(input_database, k).get(v))))
 
     def refresh_display(self, info):
-        self.display["py"].setText(
+        self.display["python"].setText(
             pformat(info) + "\n # Sorry! I haven't found a way to pretty-print odicts.")
         self.display["yaml"].setText(yaml_dump(info))
+
+    @Slot()
+    def save_file(self):
+        ftype = next(k for k,w in self.display.items()
+                     if w is self.display_tabs.currentWidget())
+        ffilter = {"yaml": "Yaml files (*.yaml *.yml)", "python": "(*.py)"}[ftype]
+        fsuffix = {"yaml": ".yaml", "python": ".py"}[ftype]
+        fname, path = self.save_dialog.getSaveFileName(
+            self.save_dialog, "Save input file", fsuffix, ffilter, os.getcwd())
+        if not fname.endswith(fsuffix):
+            fname += fsuffix
+        with open(fname, "w+") as f:
+            f.write(self.display_tabs.currentWidget().toPlainText())
+
+    @Slot()
+    def copy_clipb(self):
+        self.clipboard.setText(self.display_tabs.currentWidget().toPlainText())
 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+    clip = app.clipboard()
     window = MainWindow()
+    window.clipboard = clip
     sys.exit(app.exec_())
