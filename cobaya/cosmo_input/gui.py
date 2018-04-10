@@ -99,7 +99,7 @@ class MainWindow(QWidget):
     @Slot()
     def refresh(self):
         info = create_input(**{
-            k:self.atoms[k]["combo"].currentText().split(_separator)[0]
+            k:str(self.atoms[k]["combo"].currentText().split(_separator)[0])
             for k in self.atoms if k is not "preset"})
         self.refresh_display(info)
 
