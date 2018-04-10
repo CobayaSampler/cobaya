@@ -3,7 +3,7 @@
 import sys
 from collections import OrderedDict as odict
 from PySide.QtGui import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
-from PySide.QtGui import QComboBox, QPushButton, QTextEdit
+from PySide.QtGui import QScrollArea, QComboBox, QPushButton, QTextEdit
 from PySide.QtCore import Slot
 
 from cobaya.yaml import yaml_dump
@@ -30,11 +30,18 @@ class MainWindow(QWidget):
         # Main layout
         self.layout = QHBoxLayout()
         self.setLayout(self.layout)
-        self.layout_options = QVBoxLayout()
+        self.layout_left = QVBoxLayout()
+        self.layout.addLayout(self.layout_left)
         self.layout_output = QVBoxLayout()
-        self.layout.addLayout(self.layout_options)
         self.layout.addLayout(self.layout_output)
         # LEFT: Options
+        self.options = QWidget()
+        self.layout_options = QVBoxLayout()
+        self.options.setLayout(self.layout_options)
+        self.options_scroll = QScrollArea()
+        self.options_scroll.setWidget(self.options)
+        self.options_scroll.setWidgetResizable(True)
+        self.layout_left.addWidget(self.options_scroll)
         self.atoms = odict()
         titles = odict([
             ["preset", "Presets"],
@@ -69,14 +76,11 @@ class MainWindow(QWidget):
             self.atoms[a]["combo"].currentIndexChanged.connect(self.refresh)
         # Buttons
         self.buttons = QHBoxLayout()
-        self.buttons.addStretch(1)
         self.save_button = QPushButton('Save', self)
         self.copy_button = QPushButton('Copy', self)
         self.buttons.addWidget(self.save_button)
         self.buttons.addWidget(self.copy_button)
-        # Put buttonts on the bottom-right
-        self.layout_options.addStretch(1)
-        self.layout_options.addLayout(self.buttons)
+        self.layout_left.addLayout(self.buttons)
         # RIGHT: Output
         self.display = QTextEdit()
         self.display.setLineWrapMode(QTextEdit.NoWrap)
