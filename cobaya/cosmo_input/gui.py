@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 import os
 import sys
 import signal
@@ -150,7 +148,7 @@ class MainWindow(QWidget):
         self.clipboard.setText(self.display_tabs.currentWidget().toPlainText())
 
 
-if __name__ == '__main__':
+def gui_script():
     app = QApplication(sys.argv)
     clip = app.clipboard()
     window = MainWindow()
