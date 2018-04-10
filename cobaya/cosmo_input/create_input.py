@@ -6,8 +6,12 @@ import input_database
 
 
 def create_input(
-        theory, primordial, hubble, barions, dark_matter, neutrinos, reionization,
-        cmb, sampler):
+        theory=None, primordial=None, hubble=None, barions=None, dark_matter=None, neutrinos=None, reionization=None,
+        cmb=None, sampler=None, preset=None):
+    if preset:
+        info = deepcopy(input_database.preset[preset])
+        info.pop(input_database._desc, None)
+        return create_input(**info)
     # Need to copy to select theory
     infos_model = [deepcopy(info) for info in [
         input_database.primordial[primordial], input_database.hubble[hubble],

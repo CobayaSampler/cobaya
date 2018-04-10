@@ -111,19 +111,20 @@ reionization = odict([
 
 # EXPERIMENTS ############################################################################
 cmb = odict([
-    ["planck 2015", {
+    ["planck_2015_lensing", {
         _desc: "",
         _likelihood: odict([
             ["planck_2015_lowTEB", None],
             ["planck_2015_plikHM", None],
             ["planck_2015_lensing", None]])}],
-#     ["bkp oct 2015", {
-#        _desc: "",
-#        _likelihood: odict([
-#            ["planck_2015_lowTEB", None],
-#            ["planck_2015_plikHM", None],
-#            ["planck_2015_lensing", None]])},
- ])
+     ["planck_2015_lensing_bkp", {
+        _desc: "",
+        _likelihood: odict([
+            ["planck_2015_lowTEB", None],
+            ["planck_2015_plikHM", None],
+            ["planck_2015_lensing", None],
+            ["bicep_keck_2015", None]])}],
+])
             
 # SAMPLERS ###############################################################################
 sampler = odict([
@@ -134,4 +135,40 @@ sampler = odict([
         _desc: "Nested sampler, affine invariant and multi-modal.",
         _sampler: {"polychord": None}}],
     ])
-        
+
+# PRESETS ################################################################################
+preset = odict([
+    ["planck_2015_lensing_camb", {
+        _desc: "Planck 2015 (Polarised CMB + lensing) with CAMB",
+        "theory": "camb",
+        "primordial": "SFSR",
+        "hubble": "cosmomc_theta",
+        "barions": "omegab_h2",
+        "dark_matter": "omegac_h2",
+        "neutrinos": "one_heavy_nu",
+        "reionization": "std",
+        "cmb": "planck_2015_lensing",
+        "sampler": "MCMC"}],
+    ["planck_2015_lensing_classy", {
+        _desc: "Planck 2015 (Polarised CMB + lensing) with CLASS",
+        "theory": "classy",
+        "primordial": "SFSR",
+        "hubble": "theta_s",
+        "barions": "omegab_h2",
+        "dark_matter": "omegac_h2",
+        "neutrinos": "one_heavy_nu",
+        "reionization": "std",
+        "cmb": "planck_2015_lensing",
+        "sampler": "MCMC"}],
+    ["planck_2015_lensing_bicep_camb", {
+        _desc: "Planck 2015 + lensing + BKP with CAMB",
+        "theory": "camb",
+        "primordial": "SFSRt",
+        "hubble": "cosmomc_theta",
+        "barions": "omegab_h2",
+        "dark_matter": "omegac_h2",
+        "neutrinos": "one_heavy_nu",
+        "reionization": "std",
+        "cmb": "planck_2015_lensing_bkp",
+        "sampler": "MCMC"}],
+    ])

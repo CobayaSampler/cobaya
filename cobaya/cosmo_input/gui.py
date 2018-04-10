@@ -6,12 +6,16 @@ from PySide.QtGui import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroup
 from PySide.QtGui import QComboBox, QPushButton, QTextEdit
 from PySide.QtCore import Slot
 
-from input_database import _desc, theory, primordial, hubble, barions, dark_matter
-from input_database import neutrinos, reionization
-from input_database import cmb, sampler
+from cobaya.yaml import yaml_dump
+import input_database
 from create_input import create_input
 
 _separator = " -- "
+
+
+def text(key, contents):
+    desc = (contents or {}).get(input_database._desc)
+    return "%s"%key + (_separator+str(desc) if desc else "")
 
 
 class MainWindow(QWidget):
@@ -31,14 +35,9 @@ class MainWindow(QWidget):
         self.layout.addLayout(self.layout_options)
         self.layout.addLayout(self.layout_output)
         # LEFT: Options
-        # Presets
-        self.group_presets = QGroupBox("Presets")
-        self.layout_options.addWidget(self.group_presets)
-        self.layout_presets = QVBoxLayout(self.group_presets)
-        self.presets_combo = QComboBox()
-        self.layout_presets.addWidget(self.presets_combo)
         self.atoms = odict()
         titles = odict([
+            ["preset", "Presets"],
             ["theory", "Theory code"],
             ["primordial", "Primordial perturbations"],
             ["hubble", "Constaint on hubble parameter"],
@@ -47,8 +46,7 @@ class MainWindow(QWidget):
             ["neutrinos", "Neutrinos and other extra matter"],
             ["reionization", "Reionization history"],
             ["cmb", "CMB experiments"],
-            ["sampler", "Samplers"],
-            ])
+            ["sampler", "Samplers"]])
         for a in titles:
             self.atoms[a] = {
                 "group": QGroupBox(titles[a]),
@@ -56,6 +54,14 @@ class MainWindow(QWidget):
             self.layout_options.addWidget(self.atoms[a]["group"])
             self.atoms[a]["layout"] = QVBoxLayout(self.atoms[a]["group"])
             self.atoms[a]["layout"].addWidget(self.atoms[a]["combo"])
+            self.atoms[a]["combo"].addItems(
+                [text(k,v) for k,v in getattr(input_database, a).items()])
+        # Connect to refreshers -- needs to be after adding all elements
+        for a in self.atoms:
+            if a == "preset":
+                self.atoms["preset"]["combo"].currentIndexChanged.connect(
+                    self.refresh_preset)
+                continue
             self.atoms[a]["combo"].currentIndexChanged.connect(self.refresh)
         # Buttons
         self.buttons = QHBoxLayout()
@@ -74,42 +80,28 @@ class MainWindow(QWidget):
         self.display.setCursorWidth(0)
         self.display.setReadOnly(True)
         self.layout_output.addWidget(self.display)
-#        # EXAMPLE TEXT #######################
-#        with open("../tests/test_cosmo_grid.yaml", "r") as f:
-#            text = "".join(f.readlines())
-#        self.display.setText(text)
-        # POPULATING ################################################
-        self.atoms["theory"]["combo"].addItems(list(theory.keys()))
-        self.atoms["primordial"]["combo"].addItems(
-            ["%s%s%s"%(k,_separator,v.get(_desc)) for k,v in primordial.items()])
-        self.atoms["hubble"]["combo"].addItems(
-            ["%s%s%s"%(k,_separator,v.get(_desc)) for k,v in hubble.items()])
-        self.atoms["barions"]["combo"].addItems(
-            ["%s%s%s"%(k,_separator,v.get(_desc)) for k,v in barions.items()])
-        self.atoms["dark_matter"]["combo"].addItems(
-            ["%s%s%s"%(k,_separator,v.get(_desc)) for k,v in dark_matter.items()])
-        self.atoms["neutrinos"]["combo"].addItems(
-            ["%s%s%s"%(k,_separator,v.get(_desc)) for k,v in neutrinos.items()])
-        self.atoms["reionization"]["combo"].addItems(
-            ["%s%s%s"%(k,_separator,v.get(_desc)) for k,v in reionization.items()])
-        self.atoms["cmb"]["combo"].addItems(
-            ["%s%s%s"%(k,_separator,v.get(_desc)) for k,v in cmb.items()])
-        self.atoms["sampler"]["combo"].addItems(
-            ["%s%s%s"%(k,_separator,v.get(_desc)) for k,v in sampler.items()])
 
     @Slot()
     def refresh(self):
-        info = create_input(
-            str(self.atoms["theory"]["combo"].currentText().split(_separator)[0]),
-            self.atoms["primordial"]["combo"].currentText().split(_separator)[0],
-            self.atoms["hubble"]["combo"].currentText().split(_separator)[0],
-            self.atoms["barions"]["combo"].currentText().split(_separator)[0],
-            self.atoms["dark_matter"]["combo"].currentText().split(_separator)[0],
-            self.atoms["neutrinos"]["combo"].currentText().split(_separator)[0],
-            self.atoms["reionization"]["combo"].currentText().split(_separator)[0],
-            self.atoms["cmb"]["combo"].currentText().split(_separator)[0],
-            self.atoms["sampler"]["combo"].currentText().split(_separator)[0])
-        from cobaya.yaml import yaml_dump
+        info = create_input(**{
+            k:self.atoms[k]["combo"].currentText().split(_separator)[0]
+            for k in self.atoms if k is not "preset"})
+        self.refresh_display(info)
+
+    @Slot()
+    def refresh_preset(self):
+        preset = self.atoms["preset"]["combo"].currentText().split(_separator)[0]
+        info = create_input(preset=preset)
+        self.refresh_display(info)
+        # Update combo boxes to reflect the preset values
+        for k,v in input_database.preset[preset].items():
+            if k == input_database._desc:
+                continue
+            self.atoms[k]["combo"].setCurrentIndex(
+                self.atoms[k]["combo"].findText(
+                    text(v,getattr(input_database, k).get(v))))
+
+    def refresh_display(self, info):
         self.display.setText(yaml_dump(info))
 
 
