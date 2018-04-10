@@ -74,7 +74,8 @@ hubble = odict([
             ["theta", {
                 _prior: {"min": 0.5, "max": 10}, _p_drop: True,
                 _p_ref: {_p_dist: "norm", "loc": 1.0411, "scale": 0.0004},
-                _p_proposal: 0.0002, _p_label: r"100\theta_\mathrm{MC}"}]])}],
+                _p_proposal: 0.0002, _p_label: r"100\theta_\mathrm{MC}"}],
+            ["H0", {"latex": r"H_0"}]])}],
     ["theta_s", {
         _desc: "Angular size of sound horizon (CLASS only)",
         _theory: {_classy: None},
@@ -83,7 +84,8 @@ hubble = odict([
             ["theta_s_100", {
                 _prior: {"min": 0.5, "max": 10}, _p_drop: True,
                 _p_ref: {_p_dist: "norm", "loc": 1.0418, "scale": 0.0004},
-                _p_proposal: 0.0002, _p_label: r"100\theta_s"}]])}]])
+                _p_proposal: 0.0002, _p_label: r"100\theta_s"}],
+            ["H0", {"latex": r"H_0"}]])}]])
 
 # Baryons
 baryons = odict([
@@ -109,7 +111,8 @@ dark_matter = odict([
 dark_energy = odict([
     ["lambda", {
         _desc: "Cosmological constant (w=-1)",
-        _theory: {_camb: None, _classy: None}}],
+        _theory: {_camb: None, _classy: None},
+        _params: {"omegav": {"latex": r"\Omega_\Lambda"}}}],
     ["de_w", {
         _desc: "Varying constant eq of state",
         _theory: {_camb: None, _classy: None},
@@ -171,12 +174,13 @@ neutrinos = odict([
 bbn = odict([
     ["consistency", {
         _desc: "Primordial Helium fraction inferred from BBN consistency",
-        _theory: {_camb: None, _classy: None}}],
-    ["yHe", {
+        _theory: {_camb: None, _classy: None},
+        _params: {"YHe": {"latex": r"Y_P"}}}],
+    ["YHe", {
         _desc: "Varying primordial Helium fraction",
         _theory: {_camb: None, _classy: None},
         _params: odict([
-            ["yHe", {
+            ["YHe", {
                 _prior: {"min": 0.1, "max": 0.5},
                 _p_ref: {_p_dist: "norm", "loc": 0.245, "scale": 0.006},
                 _p_proposal: 0.006, _p_label: r"y_\mathrm{He}"}]])}],])
@@ -190,7 +194,8 @@ reionization = odict([
             ["tau", {
                 _prior: {"min": 0.01, "max": 0.8},
                 _p_ref: {_p_dist: "norm", "loc": 0.09, "scale": 0.01},
-                _p_proposal: 0.005, _p_label: r"\tau_\mathrm{reio}"}]])}],
+                _p_proposal: 0.005, _p_label: r"\tau_\mathrm{reio}"}],
+            ["zre", {"latex": r"z_\mathrm{re}"}]])}],
     ["gauss_prior", {
         _desc: "Standard reio, lasting delta_z=0.5, gaussian prior around tau=0.07",
         _theory: {_camb: None, _classy: None},
@@ -198,7 +203,8 @@ reionization = odict([
             ["tau", {
                 _prior: {_p_dist: "norm", "loc": 0.07, "scale": 0.02},
                 _p_ref: {_p_dist: "norm", "loc": 0.07, "scale": 0.01},
-                _p_proposal: 0.005, _p_label: r"\tau_\mathrm{reio}"}]])}],])
+                _p_proposal: 0.005, _p_label: r"\tau_\mathrm{reio}"}],
+            ["zre", {"latex": r"z_\mathrm{re}"}]])}],])
 
 # CMB lensing
 cmb_lensing = odict([
@@ -213,7 +219,6 @@ cmb_lensing = odict([
                 _prior: {"min": 0, "max": 10},
                 _p_ref: {_p_dist: "norm", "loc": 1, "scale": 0.05},
                 _p_proposal: 0.05, _p_label: r"A_\mathrm{L}"}]])}],])
-
 
 # EXPERIMENTS ############################################################################
 cmb = odict([
@@ -231,7 +236,7 @@ cmb = odict([
             ["planck_2015_lensing", None],
             ["bicep_keck_2015", None]])}],
 ])
-            
+
 # SAMPLERS ###############################################################################
 sampler = odict([
     ["MCMC", {
