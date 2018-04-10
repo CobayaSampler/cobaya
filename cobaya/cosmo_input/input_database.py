@@ -43,8 +43,18 @@ primordial.update(odict([
                      _p_ref: {_p_dist: "norm", "loc": 0, "scale": 0.03},
                      _p_proposal: 0.03, _p_label: r"r_{0.05}"}]]))}]]))
 
-#- r -- params['r'] = '0 0 3 0.03 0.03' --     'r': {'compute_tensors': True},
-
+# Geometry
+geometry = odict([
+    ["flat", {
+        _desc: "Flat FLRW universe",
+        _theory: {_camb: None, _classy: None}}],
+    ["omegak", {
+        _desc: "FLRW model with varying curvature (prior on Omega_k)",
+        _theory: {_camb: None, _classy: None},
+        _params: odict([
+            ["omegak", {_prior: {"min": -0.3, "max": 0.3},
+                        _p_ref: {_p_dist: "norm", "loc": -0.0008, "scale": 0.001},
+                        _p_proposal: 0.001, _p_label: r"\Omega_k"}]])}],])
 
 # Hubble parameter constraints
 hubble = odict([
@@ -61,8 +71,8 @@ hubble = odict([
         _theory: {_camb: None},
         _params: odict([
             ["cosmomc_theta", "lambda cosmomc_theta_100: 1.e-2*cosmomc_theta_100"],
-            ["theta", {_p_drop: True,
-                _prior: {"min": 0.5, "max": 10},
+            ["theta", {
+                _prior: {"min": 0.5, "max": 10}, _p_drop: True,
                 _p_ref: {_p_dist: "norm", "loc": 1.0411, "scale": 0.0004},
                 _p_proposal: 0.0002, _p_label: r"100\theta_\mathrm{MC}"}]])}],
     ["theta_s", {
@@ -70,11 +80,10 @@ hubble = odict([
         _theory: {_classy: None},
         _params: odict([
             ["100*theta_s", "lambda theta_s_100: theta_s_100"],
-            ["theta_s_100", {_p_drop: True,
-                _prior: {"min": 0.5, "max": 10},
+            ["theta_s_100", {
+                _prior: {"min": 0.5, "max": 10}, _p_drop: True,
                 _p_ref: {_p_dist: "norm", "loc": 1.0418, "scale": 0.0004},
                 _p_proposal: 0.0002, _p_label: r"100\theta_s"}]])}]])
-#param[theta] = 1.0411 0.5 10 0.0004 0.0002
 
 # Baryons
 baryons = odict([
@@ -96,16 +105,86 @@ dark_matter = odict([
                 _p_ref: {_p_dist: "norm", "loc": 0.12, "scale": 0.001},
                 _p_proposal: 0.0005, _p_label: r"\Omega_\mathrm{c} h^2"}]])}]])
 
+# Dark Energy
+dark_energy = odict([
+    ["lambda", {
+        _desc: "Cosmological constant (w=-1)",
+        _theory: {_camb: None, _classy: None}}],
+    ["de_w", {
+        _desc: "Varying constant eq of state",
+        _theory: {_camb: None, _classy: None},
+        _params: odict([
+            ["w", {
+                _prior: {"min": -3, "max": 1},
+                _p_ref: {_p_dist: "norm", "loc": -0.99, "scale": 0.02},
+                _p_proposal: 0.02, _p_label: r"w_\Lambda"}]])}]])
+# w_a only for CAMB devel?
+# - w+wa -- params['wa'] = '0 -3 2 0.05 0.05'
+
+
 # Neutrinos and other extra matter
 neutrinos = odict([
-    ["one_heavy_nu", {
-        _theory: {_camb: None,
-                  _classy: {"N_ur": 2.0328, "N_ncdm": 1,
-                            "m_ncdm": 0.06, "T_ncdm": 0.71611}}}],])
+    ["one_heavy_planck", {
+        _desc: "Two massless nu and one with m=0.06. Neff=3.046",
+        _theory: {
+            _camb: {"extra_params":
+                {"num_massive_neutrinos": 1, "mnu": 0.06, "nnu": 3.046}},
+            _classy: {"extra_params":
+                {"N_ur": 2.0328, "N_ncdm": 1, "m_ncdm": 0.06, "T_ncdm": 0.71611}}}}],
+    ["varying_mnu", {
+        _desc: "Varying m_nu of 3 degenerate nu's, with N_eff=3.046",
+        _theory: {
+            _camb: {"extra_params":
+                {"num_massive_neutrinos": 1, "nnu": 3.046}}},
+        _params: odict([
+            ["mnu", {
+                _prior: {"min": 0, "max": 5},
+                _p_ref: {_p_dist: "norm", "loc": 0.02, "scale": 0.1},
+                _p_proposal: 0.03, _p_label: r"m_\nu"}]])}],
+    ["varying_Neff", {
+        _desc: "Varying Neff with two massless nu and one with m=0.06",
+        _theory: {
+            _camb: {"extra_params":
+                {"num_massive_neutrinos": 1, "mnu": 0.06}}},
+        _params: odict([
+            ["nnu", {
+                _prior: {"min": 0.05, "max": 10},
+                _p_ref: {_p_dist: "norm", "loc": 3.046, "scale": 0.05},
+                _p_proposal: 0.05, _p_label: r"N_\mathrm{eff}"}]])}],
+    ["varying_Neff+1sterile", {
+        _desc: "Varying Neff plus 1 sterile neutrino (SM nu's with m=0,0,0.06)",
+        _theory: {
+            _camb: {"extra_params":
+                {"num_massive_neutrinos": 1, "mnu": 0.06, "accuracy_level": 1.2}}},
+        _params: odict([
+            ["nnu", {
+                _prior: {"min": 3.046, "max": 10},
+                _p_ref: {_p_dist: "norm", "loc": 3.046, "scale": 0.05},
+                _p_proposal: 0.05, _p_label: r"N_\mathrm{eff}"}],
+            ["meffsterile", {
+                _prior: {"min": 0, "max": 3},
+                _p_ref: {_p_dist: "norm", "loc": 0.1, "scale": 0.1},
+                _p_proposal: 0.03,
+                _p_label: r"m_{\nu,\mathrm{sterile}}}^{\mathrm{eff}}"}]])}],])
+
+# BBN
+bbn = odict([
+    ["consistency", {
+        _desc: "Primordial Helium fraction inferred from BBN consistency",
+        _theory: {_camb: None, _classy: None}}],
+    ["yHe", {
+        _desc: "Varying primordial Helium fraction",
+        _theory: {_camb: None, _classy: None},
+        _params: odict([
+            ["yHe", {
+                _prior: {"min": 0.1, "max": 0.5},
+                _p_ref: {_p_dist: "norm", "loc": 0.245, "scale": 0.006},
+                _p_proposal: 0.006, _p_label: r"y_\mathrm{He}"}]])}],])
 
 # Reionization
 reionization = odict([
     ["std", {
+        _desc: "Standard reio, lasting delta_z=0.5",
         _theory: {_camb: None, _classy: None},
         _params: odict([
             ["tau", {
@@ -121,6 +200,21 @@ reionization = odict([
                 _p_ref: {_p_dist: "norm", "loc": 0.07, "scale": 0.01},
                 _p_proposal: 0.005, _p_label: r"\tau_\mathrm{reio}"}]])}],])
 
+# CMB lensing
+cmb_lensing = odict([
+    ["consistency", {
+        _desc: "Standard CMB lensing",
+        _theory: {_camb: None, _classy: None}}],
+    ["Alens", {
+        _desc: "Varying CMB lensing amplitude",
+        _theory: {_camb: None, _classy: None},
+        _params: odict([
+            ["Alens", {
+                _prior: {"min": 0, "max": 10},
+                _p_ref: {_p_dist: "norm", "loc": 1, "scale": 0.05},
+                _p_proposal: 0.05, _p_label: r"A_\mathrm{L}"}]])}],])
+
+
 # EXPERIMENTS ############################################################################
 cmb = odict([
     ["planck_2015_lensing", {
@@ -129,7 +223,7 @@ cmb = odict([
             ["planck_2015_lowTEB", None],
             ["planck_2015_plikHM", None],
             ["planck_2015_lensing", None]])}],
-     ["planck_2015_lensing_bkp", {
+    ["planck_2015_lensing_bkp", {
         _desc: "",
         _likelihood: odict([
             ["planck_2015_lowTEB", None],
@@ -145,8 +239,7 @@ sampler = odict([
         _sampler: {"mcmc": None}}],
     ["PolyChord", {
         _desc: "Nested sampler, affine invariant and multi-modal.",
-        _sampler: {"polychord": None}}],
-    ])
+        _sampler: {"polychord": None}}],])
 
 # PRESETS ################################################################################
 preset = odict([
@@ -154,33 +247,45 @@ preset = odict([
         _desc: "Planck 2015 (Polarised CMB + lensing) with CAMB",
         "theory": "camb",
         "primordial": "SFSR",
+        "geometry": "flat",
         "hubble": "cosmomc_theta",
         "baryons": "omegab_h2",
         "dark_matter": "omegac_h2",
-        "neutrinos": "one_heavy_nu",
+        "dark_energy": "lambda",
+        "neutrinos": "one_heavy_planck",
+        "bbn": "consistency",
         "reionization": "std",
+        "cmb_lensing": "consistency",
         "cmb": "planck_2015_lensing",
         "sampler": "MCMC"}],
     ["planck_2015_lensing_classy", {
         _desc: "Planck 2015 (Polarised CMB + lensing) with CLASS",
         "theory": "classy",
         "primordial": "SFSR",
+        "geometry": "flat",
         "hubble": "theta_s",
         "baryons": "omegab_h2",
         "dark_matter": "omegac_h2",
-        "neutrinos": "one_heavy_nu",
+        "dark_energy": "lambda",
+        "neutrinos": "one_heavy_planck",
+        "bbn": "consistency",
         "reionization": "std",
+        "cmb_lensing": "consistency",
         "cmb": "planck_2015_lensing",
         "sampler": "MCMC"}],
     ["planck_2015_lensing_bicep_camb", {
         _desc: "Planck 2015 + lensing + BKP with CAMB",
         "theory": "camb",
         "primordial": "SFSR_t",
+        "geometry": "flat",
         "hubble": "cosmomc_theta",
         "baryons": "omegab_h2",
         "dark_matter": "omegac_h2",
-        "neutrinos": "one_heavy_nu",
+        "dark_energy": "lambda",
+        "neutrinos": "one_heavy_planck",
+        "bbn": "consistency",
         "reionization": "std",
+        "cmb_lensing": "consistency",
         "cmb": "planck_2015_lensing_bkp",
         "sampler": "MCMC"}],
     ])

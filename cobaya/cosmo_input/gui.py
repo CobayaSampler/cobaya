@@ -40,11 +40,15 @@ class MainWindow(QWidget):
             ["preset", "Presets"],
             ["theory", "Theory code"],
             ["primordial", "Primordial perturbations"],
+            ["geometry", "Geometry"],
             ["hubble", "Constaint on hubble parameter"],
             ["baryons", "Baryon sector"],
             ["dark_matter", "Dark matter"],
+            ["dark_energy", "Lambda / Dark energy"],
             ["neutrinos", "Neutrinos and other extra matter"],
+            ["bbn", "BBN"],
             ["reionization", "Reionization history"],
+            ["cmb_lensing", "CMB lensing"],
             ["cmb", "CMB experiments"],
             ["sampler", "Samplers"]])
         for a in titles:
