@@ -2,8 +2,9 @@
 
 import sys
 from collections import OrderedDict as odict
+from pprint import pformat
 from PySide.QtGui import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
-from PySide.QtGui import QScrollArea, QComboBox, QPushButton, QTextEdit
+from PySide.QtGui import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
 from PySide.QtCore import Slot
 
 from cobaya.yaml import yaml_dump
@@ -82,12 +83,18 @@ class MainWindow(QWidget):
         self.buttons.addWidget(self.copy_button)
         self.layout_left.addLayout(self.buttons)
         # RIGHT: Output
-        self.display = QTextEdit()
-        self.display.setLineWrapMode(QTextEdit.NoWrap)
-        self.display.setFontFamily("mono")
-        self.display.setCursorWidth(0)
-        self.display.setReadOnly(True)
-        self.layout_output.addWidget(self.display)
+        self.display_tabs = QTabWidget()
+        self.display = {}
+        for k in ["yaml", "py"]:
+            self.display[k] = QTextEdit()
+            self.display[k].setLineWrapMode(QTextEdit.NoWrap)
+            self.display[k].setFontFamily("mono")
+            self.display[k].setCursorWidth(0)
+            self.display[k].setReadOnly(True)
+            self.display_tabs.addTab(self.display[k], k)
+        self.layout_output.addWidget(self.display_tabs)
+        # Select first preset, by default
+#        print(self.atoms["preset"]["combo"].itemText(0))
 
     @Slot()
     def refresh(self):
@@ -110,7 +117,9 @@ class MainWindow(QWidget):
                     text(v,getattr(input_database, k).get(v))))
 
     def refresh_display(self, info):
-        self.display.setText(yaml_dump(info))
+        self.display["py"].setText(
+            pformat(info) + "\n # Sorry! I haven't found a way to pretty-print odicts.")
+        self.display["yaml"].setText(yaml_dump(info))
 
 
 if __name__ == '__main__':
