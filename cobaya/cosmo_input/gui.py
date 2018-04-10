@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import sys
+import signal
 from collections import OrderedDict as odict
 from pprint import pformat
 from PySide.QtGui import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
@@ -12,6 +13,9 @@ import input_database
 from create_input import create_input
 
 _separator = " -- "
+
+# Quit with C-c
+signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
 def text(key, contents):
