@@ -211,11 +211,11 @@ cmb_lensing = odict([
     ["consistency", {
         _desc: "Standard CMB lensing",
         _theory: {_camb: None, _classy: None}}],
-    ["Alens", {
-        _desc: "Varying CMB lensing amplitude",
+    ["ALens", {
+        _desc: "Varying CMB lensing potential (scaled by sqrt(ALens)",
         _theory: {_camb: None, _classy: None},
         _params: odict([
-            ["Alens", {
+            ["ALens", {
                 _prior: {"min": 0, "max": 10},
                 _p_ref: {_p_dist: "norm", "loc": 1, "scale": 0.05},
                 _p_proposal: 0.05, _p_label: r"A_\mathrm{L}"}]])}],])
@@ -246,6 +246,35 @@ sampler = odict([
         _desc: "Nested sampler, affine invariant and multi-modal.",
         _sampler: {"polychord": None}}],])
 
+# DERIVED ################################################################################
+
+derived = {
+    "null": {_theory: {_camb: None, _classy: None},},
+    "planck": {  # just the safe (re CLASS) ones
+        _theory: {_camb: None, _classy: None},
+        _params: odict([
+        ["omegam", {"latex": r"\Omega_m"}],
+        ["omegamh2",
+         {"derived": "lambda omegam, H0: omegam*(H0/100)**2", "latex": r"\Omega_m h^2"}],
+        ["omegamh3",
+         {"derived": "lambda omegam, H0: omegam*(H0/100)**3", "latex": r"\Omega_m h^3"}],
+        ["sigma8", {"latex": r"\sigma_8"}],
+        ["s8h5",
+         {"derived": "lambda sigma8, H0: sigma8*(H0*1e-2)**(-0.5)",
+          "latex": r"\sigma_8/h^{0.5}"}],
+        ["s8omegamp5",
+         {"derived": "lambda sigma8, omegam: sigma8*omegam**0.5",
+          "latex": r"\sigma_8 \Omega_m^{0.5}"}],
+        ["s8omegamp25",
+         {"derived": "lambda sigma8, omegam: sigma8*omegam**0.25",
+          "latex": r"\sigma_8 \Omega_m^{0.25}"}],
+        ["A", {"derived": "lambda As: 1e9*As", "latex": r"10^9 A_s"}],
+        ["clamp",
+         {"derived": "lambda As, tau: 1e9*As*np.exp(-2*tau)",
+          "latex": r"10^9 A_s e^{-2\tau}"}],
+        ["age", {"latex": r"{\rm{Age}}/\mathrm{Gyr}"}],
+        ["rdrag", {"latex": r"r_\mathrm{drag}"}]])}}
+
 # PRESETS ################################################################################
 preset = odict([
     ["planck_2015_lensing_camb", {
@@ -262,7 +291,8 @@ preset = odict([
         "reionization": "std",
         "cmb_lensing": "consistency",
         "cmb": "planck_2015_lensing",
-        "sampler": "MCMC"}],
+        "sampler": "MCMC",
+        "derived": "planck"}],
     ["planck_2015_lensing_classy", {
         _desc: "Planck 2015 (Polarised CMB + lensing) with CLASS",
         "theory": "classy",
@@ -277,7 +307,8 @@ preset = odict([
         "reionization": "std",
         "cmb_lensing": "consistency",
         "cmb": "planck_2015_lensing",
-        "sampler": "MCMC"}],
+        "sampler": "MCMC",
+        "derived": "planck"}],
     ["planck_2015_lensing_bicep_camb", {
         _desc: "Planck 2015 + lensing + BKP with CAMB",
         "theory": "camb",
@@ -292,5 +323,6 @@ preset = odict([
         "reionization": "std",
         "cmb_lensing": "consistency",
         "cmb": "planck_2015_lensing_bkp",
-        "sampler": "MCMC"}],
+        "sampler": "MCMC",
+        "derived": "planck"}],
     ])

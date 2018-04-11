@@ -117,13 +117,15 @@ class MainWindow(QWidget):
         preset = self.atoms["preset"]["combo"].currentText().split(_separator)[0]
         info = create_input(preset=preset)
         self.refresh_display(info)
-        # Update combo boxes to reflect the preset values
+        # Update combo boxes to reflect the preset values, without triggering update
         for k,v in input_database.preset[preset].items():
-            if k == input_database._desc:
+            if k in [input_database._desc, "derived"]:
                 continue
+            self.atoms[k]["combo"].blockSignals(True)
             self.atoms[k]["combo"].setCurrentIndex(
                 self.atoms[k]["combo"].findText(
                     text(v,getattr(input_database, k).get(v))))
+            self.atoms[k]["combo"].blockSignals(False)
 
     def refresh_display(self, info):
         self.display["python"].setText(
