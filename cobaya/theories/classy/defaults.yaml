@@ -8,17 +8,33 @@ theory:
     extra_args:
     # Use CAMB parameter names, for fast switching CLASS<-->CAMB
     use_camb_names: False
-    # Dictionary of CAMB->CLASS names (only containing the different ones)
-    # (in principle, no need to modify)
+    # Dictionary of CAMB->CLASS names
+    # (Add missing ones in your input file, and please send them to us!)
     camb_to_classy:
+      # Inflation
+      As: A_s
+      ns: n_s
+      nrun: alpha_s
+      nt: n_t
+      ntrun: alpha_t
+      # Background/geometry/Lambda
+      rdrag: rs_drag
+      omk: Omega_k
+      omegav: Omega_Lambda
+      w: w0_fld
+      wa: wa_fld
+      # Matter content
       ombh2: omega_b
       omegab: Omega_b
       omch2: omega_cdm
       omegac: Omega_cdm
-      omegav: Omega_Lambda
       omegam: Omega_m
-      As: A_s
-      ns: n_s
+      omegan: Omega_ncdm
+      mnu: m_ncdm
+      nnu: N_ur
+      # Thermodynamics
       tau: tau_reio
       zre: z_reio
-      rdrag: rs_drag
+      deltazrei: reionization_width
+      helium_redshift: helium_fullreio_redshift
+      helium_delta_redshift: helium_fullreio_width
