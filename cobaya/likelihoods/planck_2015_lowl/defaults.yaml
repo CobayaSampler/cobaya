@@ -6,6 +6,8 @@ likelihood:
     path:
     clik_file: plc_2.0/low_l/commander/commander_rc2_v1.1_l2_29_B.clik
     product_id: "1900"
+    # Speed in evaluations/second
+    speed: 3500
 
 params:
   A_planck:

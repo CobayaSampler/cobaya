@@ -20,3 +20,5 @@ likelihood:
       has_mag_stretch_covmat: False
       has_mag_colour_covmat: False
       has_stretch_colour_covmat: False
+    # Speed in evaluations/second
+    speed: 500

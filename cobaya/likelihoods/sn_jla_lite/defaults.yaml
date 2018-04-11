@@ -44,3 +44,5 @@ likelihood:
       beta_centre: 3.123
       step_width_alpha: 0.003
       step_width_beta: 0.04
+    # Speed in evaluations/second
+    speed: 4

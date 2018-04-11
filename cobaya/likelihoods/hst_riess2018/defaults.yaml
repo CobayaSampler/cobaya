@@ -15,3 +15,5 @@ likelihood:
     # dependence of the measurement (primarily on w) correctly.
     # Obviously, it's not used if zeff = 0
     angconversion: 11425.8  # for zeff = 0.04, ignored for zeff = 0
+    # Speed in evaluations/second
+    speed: 6500

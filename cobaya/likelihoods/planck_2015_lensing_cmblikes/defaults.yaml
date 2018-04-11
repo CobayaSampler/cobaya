@@ -28,7 +28,8 @@ likelihood:
       linear_correction_bin_window_out_order:  PP PP PP PP
     field_names: [T, E, B, P]
     l_max: 2700
-
+    # Speed in evaluations/second
+    speed: 2000
 
 params:
   A_planck:

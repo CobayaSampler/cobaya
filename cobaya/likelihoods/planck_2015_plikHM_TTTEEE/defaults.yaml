@@ -7,6 +7,8 @@ likelihood:
     path:
     clik_file: plc_2.0/hi_l/plik/plik_dx11dr2_HM_v18_TTTEEE.clik
     product_id: "1900"
+    # Speed in evaluations/second
+    speed: 35
 
 params:
   A_pol: 1

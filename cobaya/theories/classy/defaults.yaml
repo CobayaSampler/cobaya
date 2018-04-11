@@ -1,6 +1,8 @@
 theory:
   classy:
     path: null
+    # Speed in evaluations/second
+    speed: 0.2
     # Other precision parameters to be passed to CLASS
     # e.g. precision parameters or non-numerical parameters
     extra_args:

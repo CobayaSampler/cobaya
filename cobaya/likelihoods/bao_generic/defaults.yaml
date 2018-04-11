@@ -4,3 +4,5 @@ likelihood:
     cov_file: /full/path/to/myBAO.cov
     # Fiducial sound horizon with which data have been stored
     rs_fid:  #  in Mpc
+    # Speed in evaluations/second
+    speed: 2500

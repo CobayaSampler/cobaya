@@ -32,7 +32,8 @@ likelihood:
       stretch_colour_covmat_file: JLA/jla_vab_covmatrix.dat
     # Names of alpha and beta parameters if used and varied
     alpha_beta_names: ['alpha_jla', 'beta_jla']
-
+    # Speed in evaluations/second
+    speed: 15
 
 params:
   alpha_jla:

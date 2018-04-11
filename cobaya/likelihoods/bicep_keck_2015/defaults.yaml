@@ -29,6 +29,8 @@ likelihood:
     map_separator: x
     # Actually computed l_max (takes into account the lensing window function)
     l_max: 1500
+    # Speed in evaluations/second
+    speed: 100
 
 params:
   # dust power at ell=80, nu=353 GHz [uK^2]
