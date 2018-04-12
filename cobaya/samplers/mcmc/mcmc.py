@@ -387,7 +387,7 @@ class mcmc(Sampler):
         self.converged = False
         self.log.info("Sampling!" + (
             "(NB: nothing will be printed until %d burn-in samples "%self.burn_in +
-            "have been obtained)" if self.burn_in else 0))
+            "have been obtained)" if self.burn_in else ""))
         while self.n() < self.effective_max_samples and not self.converged:
             self.get_new_sample()
             # Callback function
