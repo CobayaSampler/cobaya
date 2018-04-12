@@ -34,7 +34,7 @@ setup(
     ],
     keywords='montecarlo sampling cosmology',
     packages=find_packages(exclude=['docs', 'tests']),
-    install_requires=['numpy>=1.7.1', 'scipy >= 0.18', 'pandas>=0.17.1',
+    install_requires=['numpy>=1.12.0', 'scipy >= 0.18', 'pandas>=0.17.1',
                       'PyYAML>=3.12', 'wget>=3.2', 'imageio>=2.2.0'],
     package_data={
         'cobaya': ['%s/*/%s'%(folder, _defaults_file) for folder in subfolders.values()]},
@@ -47,6 +47,7 @@ setup(
             'cobaya-citation=cobaya.citation:citation_script',
             'cobaya-grid-create=cobaya.grid_tools:MakeGridScript',
             'cobaya-grid-run=cobaya.grid_tools.runbatch:run',
+            'cobaya-cosmo-generator=cobaya.cosmo_input:gui_script',
         ],
     },
 )
