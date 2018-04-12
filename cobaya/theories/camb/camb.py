@@ -491,7 +491,7 @@ class camb(Theory):
 # Name of the Class repo/folder and version to download
 camb_repo_name = "CAMB"
 camb_repo_user = "cmbant"
-camb_repo_version = "6a0b45118b49d7c0e19f3749bfcf305fa145e143"
+camb_repo_version = "edf6096c1cb72a00dd65a7b013a7fffbb69531e9"
 
 
 def is_installed(**kwargs):
