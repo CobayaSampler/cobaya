@@ -640,8 +640,12 @@ class _cmblikes_prototype(Likelihood):
                     C, self.bandpower_matrix[bin], self.bin_min + bin)
                 continue
             elif self.like_approx == 'HL':
-                self.transform(
-                    C, self.bandpower_matrix[bin], self.fiducial_sqrt_matrix[bin])
+                try:
+                    self.transform(
+                        C, self.bandpower_matrix[bin], self.fiducial_sqrt_matrix[bin])
+                except np.linalg.LinAlgError:
+                    self.log.debug("Likelihood computation failed.")
+                    return -np.inf
             elif self.like_approx == 'gaussian':
                 C -= self.bandpower_matrix[bin]
             self.matrix_to_elements(C, vecp)
