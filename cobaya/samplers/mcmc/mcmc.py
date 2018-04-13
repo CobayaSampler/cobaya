@@ -127,9 +127,9 @@ These samples will be ignored for all purposes (output, covergence, proposal lea
 Taking advantage of a speed hierarchy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The proposal pdf is *blocked* by speeds, i.e. it allows for efficient sampling of a mixture
-of *fast* and *slow* parameters, such that we can avoid recomputing the parts of the
-likelihood determined by slow parameters when sampling along the fast directions only.
+The proposal pdf is *blocked* by speeds, i.e. it allows for efficient sampling of a
+mixture of *fast* and *slow* parameters, such that we can avoid recomputing the slowest
+parts of the likelihood when sampling along the fast directions only.
 
 Two different sampling schemes are available to take additional advantage from a speed
 hierarchy:
@@ -147,9 +147,10 @@ For a thorough description of both methods, see
 `A. Lewis, "Efficient sampling of fast and slow cosmological parameters" (arXiv:1304.4473) <https://arxiv.org/abs/1304.4473>`_.
 
 The relative speeds can be specified per likelihood/theory, with the option ``speed``.
-It is given as factors of the speed of the slowest part, which is not specified.
-If two or more likelihoods with different speeds share a parameter, said parameter is
-assigned the slowest of their speeds.
+If the speed has not been specified for a likelihood, it is assigned the slowest one in
+the set. If two or more likelihoods with different speeds share a parameter,
+said parameter is assigned to a separate block with a speed that takes into account the
+computation time of all the likelihoods it belongs to.
 
 For example:
 
@@ -164,10 +165,8 @@ For example:
      lik_b:
        speed: 4
 
-Here, evaluating the likelihood ``lik_a`` is the slowest step, while the theory code and
-the likelihood ``lik_b`` are both faster, with ``lik_b`` being faster than the theory code
-(the absolute values of the speeds are ignored, only the relative ranking matters:
-giving speeds 1,2,3 would have the same effect).
+Here, evaluating the theory code is the slowest step, while the ``lik_b`` is faster.
+Likelihood ``lik_a`` is assumed to be as slow as the theory code.
 
 """
 

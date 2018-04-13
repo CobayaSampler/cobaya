@@ -120,9 +120,6 @@ from cobaya.log import HandledException
 import logging
 log = logging.getLogger(__name__.split(".")[-1])
 
-# Default options for all subclasses
-class_options = {"speed": 1}
-
 
 class Likelihood(object):
     """Likelihood class prototype."""
@@ -366,6 +363,16 @@ class LikelihoodCollection(object):
         Returns an ``OrderedDict`` ``{speed: [params]}``, sorted by ascending speeds.
         Parameters recognized by more than one likelihood are blocked in the slowest one.
         """
+        # Fill the unknown speeds with the value of the slowest one
+        speeds = np.array([getattr(self[lik], "speed", -np.inf) for lik in self] +
+                          [getattr(self.theory, "speed", -np.inf)])
+        min_speed = min(speeds[speeds>0])
+        speeds = np.clip(speeds, min_speed, None)
+        for i,lik in enumerate(self):
+            self[lik].speed = speeds[i]
+        if self.theory:
+            self.theory.speed = speeds[-1]
+        # Block the parameters by speed
         param_with_speed = odict([[p,min([self[lik].speed for lik in liks])]
                                   for p,liks in self.sampled_lik_dependence.items()])
         if 0 in param_with_speed.values():

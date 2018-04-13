@@ -24,9 +24,6 @@ from __future__ import division
 # Global
 import logging
 
-# Default options for all subclasses
-class_options = {"speed": 1}
-
 
 # Theory code prototype
 class Theory(object):
