@@ -111,7 +111,7 @@ params:
       loc: 0.2
       scale: 0.01
     proposal: 0.01
-    latex: 
+    latex: \epsilon_{\mathrm{dust,sync}}
   # EE/BB ratios -- fixed / only used if E-modes are turned on
   EEtoBB_dust: 2
   #   latex: 2EE_{\mathrm{dust}}/BB_{\mathrm{dust}}
