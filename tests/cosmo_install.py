@@ -27,13 +27,10 @@ if __name__ == "__main__":
     try:
         version = [line for line in err.split("\n") if line.startswith(prefix)]
         version = version[0][len(prefix):].split()[0]
-        gcc_major = version.split(".")[0]
-        print("_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_", gcc_major)
+        gcc_major = int(version.split(".")[0])
     except:
-        print("_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_-------", gcc_major)
         gcc_major = 0
     if sys.version_info.major >= 3 or gcc_major > 5:
-        print("________))))))))_________))))))))))__________)))))))))_________")
         popliks = [lik for lik in info_install[_likelihood]
                    if lik.startswith("planck_2015") and not lik.endswith("cmblikes")]
         for lik in popliks:
