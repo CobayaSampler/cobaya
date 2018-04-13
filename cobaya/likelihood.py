@@ -288,12 +288,20 @@ class LikelihoodCollection(object):
         for lik in self:
             self[lik].theory = self.theory
             self[lik].add_theory()
-        # Store the input params and likelihods on which each sampled params depends
+        # Store the input params and likelihods on which each sampled params depends.
+        # Theory parameters "depend" on every likelihood, since re-computing the theory
+        # code forces recomputation of the likelihoods
         self.sampled_input_dependence = parametrization.sampled_input_dependence()
         self.sampled_lik_dependence = odict(
             [[p,[lik for lik in list(self)+([_theory] if self.theory else [])
                  if any([(i in self[lik].input_params) for i in (i_s or [p])])]]
              for p,i_s in self.sampled_input_dependence.items()])
+        # Theory parameters "depend" on every likelihood, since re-computing the theory
+        # code forces recomputation of the likelihoods
+        for p, ls in self.sampled_lik_dependence.items():
+            if _theory in ls:
+                self.sampled_lik_dependence[p] = ([_theory] +
+                                                  list(self._likelihoods.keys()))
         # Pop the per-likelihood parameters info, that was auxiliary
         for lik in info_likelihood:
             info_likelihood[lik].pop(_params)
@@ -379,7 +387,8 @@ class LikelihoodCollection(object):
         if self.theory:
             self.theory.speed = speeds[-1]
         # Block the parameters by speed
-        param_with_speed = odict([[p,min([self[lik].speed for lik in liks])]
+        invsum = lambda *a: sum(b**-1 for b in a)**-1
+        param_with_speed = odict([[p,invsum(*[self[lik].speed for lik in liks])]
                                   for p,liks in self.sampled_lik_dependence.items()])
         if 0 in param_with_speed.values():
             log.error("No likelihood can have 0 speed.")
