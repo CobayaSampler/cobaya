@@ -120,6 +120,9 @@ from cobaya.log import HandledException
 import logging
 log = logging.getLogger(__name__.split(".")[-1])
 
+# Default options for all subclasses
+class_options = {"speed": np.inf}
+
 
 class Likelihood(object):
     """Likelihood class prototype."""
@@ -366,7 +369,10 @@ class LikelihoodCollection(object):
         # Fill the unknown speeds with the value of the slowest one
         speeds = np.array([getattr(self[lik], "speed", -np.inf) for lik in self] +
                           [getattr(self.theory, "speed", -np.inf)])
-        min_speed = min(speeds[speeds>0])
+        try:
+            min_speed = min(speeds[speeds > 0])
+        except ValueError:
+            min_speed = 1
         speeds = np.clip(speeds, min_speed, None)
         for i,lik in enumerate(self):
             self[lik].speed = speeds[i]
