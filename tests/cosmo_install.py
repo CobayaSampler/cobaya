@@ -19,8 +19,18 @@ if __name__ == "__main__":
             "sdss_dr12_consensus_bao": None,
             "sdss_dr12_consensus_full_shape": None,
             "sdss_dr12_consensus_final": None}}
-    # Ignore Planck clik in Python 3
-    if sys.version_info.major >= 3:
+    # Ignore Planck clik in Python 3 or GCC > 5
+    from subprocess import Popen, PIPE
+    process = Popen(["gcc", "-v"], stdout=PIPE, stderr=PIPE)
+    out, err = process.communicate()
+    prefix = "gcc version"
+    try:
+        version = [line for line in err.split("\n") if line.startswith(prefix)]
+        version = version[0][len(prefix):].split()[0]
+        gcc_major = version.split(".")[0]
+    except:
+        gcc_major = 0
+    if sys.version_info.major >= 3 or gcc_major > 5:
         popliks = [lik for lik in info_install[_likelihood]
                    if lik.startswith("planck_2015") and not lik.endswith("cmblikes")]
         for lik in popliks:
