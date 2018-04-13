@@ -300,8 +300,7 @@ class LikelihoodCollection(object):
         # code forces recomputation of the likelihoods
         for p, ls in self.sampled_lik_dependence.items():
             if _theory in ls:
-                self.sampled_lik_dependence[p] = ([_theory] +
-                                                  list(self._likelihoods.keys()))
+                self.sampled_lik_dependence[p] = ([_theory] + list(self._likelihoods))
         # Pop the per-likelihood parameters info, that was auxiliary
         for lik in info_likelihood:
             info_likelihood[lik].pop(_params)
@@ -394,9 +393,10 @@ class LikelihoodCollection(object):
             log.error("No likelihood can have 0 speed.")
             raise HandledException
         # Invert it!
-        return odict([[speed,[p for p,speed2 in param_with_speed.items()
-                              if speed == speed2]]
-                      for speed in sorted(list(set(param_with_speed.values())))])
+        speed_blocks = odict([[speed,[p for p,speed2 in param_with_speed.items()
+                                      if np.allclose(speed, speed2)]]
+                              for speed in sorted(list(set(param_with_speed.values())))])
+        return speed_blocks
 
     # Python magic for the "with" statement
     def __enter__(self):
