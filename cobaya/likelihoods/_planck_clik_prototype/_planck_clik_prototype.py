@@ -33,6 +33,11 @@ You can read a description of the different likelihoods in the
    `Planck 2015 results. XI. CMB power spectra, likelihoods, and robustness of parameters`
    `(arXiv:1507.02704) <https://arxiv.org/abs/1507.02704>`_
 
+.. warning::
+
+   Unfortunately, ``planck_2015_lowTEB`` does not work with ``gcc`` version 6 or higher,
+   and cannot be instantiated more than once.
+
 
 Usage
 -----
@@ -288,6 +293,21 @@ def is_installed_clik(path, log_and_fail=False, import_it=True):
 
 def install_clik(path, no_progress_bars=False):
     log = logging.getLogger("clik")
+    # Checking gcc < 6
+    from subprocess import Popen, PIPE
+    process = Popen(["gcc", "-v"], stdout=PIPE, stderr=PIPE)
+    out, err = process.communicate()
+    prefix = "gcc version"
+    try:
+        version = [line for line in err.split("\n") if line.startswith(prefix)]
+        version = version[0][len(prefix):].split()[0]
+        major = version.split(".")[0]
+        if int(major) > 5:
+            log.error("GCC version >5: unfortunately, the Planck likelihood won't work!")
+            return False
+    except:
+        log.error("Could not identify the GCC version. Notice that the Planck likelihood "
+                  "works for GCC <= 5 only.")
     for req in ("cython", "pyfits"):
         from importlib import import_module
         try:
@@ -318,7 +338,6 @@ def install_clik(path, no_progress_bars=False):
         cfitsio_file.write("".join(lines))
     log.info("clik: configuring... (and maybe installing dependencies...)")
     os.chdir(os.path.join(path, "plc-2.0"))
-    from subprocess import Popen, PIPE
     process = Popen(
         ["./waf", "configure", "--install_all_deps"], stdout=PIPE, stderr=PIPE)
     out, err = process.communicate()
