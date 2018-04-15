@@ -24,6 +24,9 @@ import re
 from collections import OrderedDict as odict
 import numpy as np
 
+# Local
+from cobaya.conventions import _force_reproducible
+
 
 # Exceptions
 class InputSyntaxError(Exception):
@@ -85,7 +88,8 @@ def yaml_load_file(file_name):
     return yaml_load(lines, file_name=file_name)
 
 
-def yaml_dump(data, trim_params_info=False, stream=None, Dumper=yaml.Dumper, **kwds):
+def yaml_dump(data, trim_params_info=False, force_reproducible=True,
+              stream=None, Dumper=yaml.Dumper, **kwds):
     class OrderedDumper(Dumper):
         pass
     # Dump OrderedDict's as plain dictionaries, but keeping the order
@@ -115,12 +119,18 @@ def yaml_dump(data, trim_params_info=False, stream=None, Dumper=yaml.Dumper, **k
     #     a `yaml.representer.RepresenterError` without needing to do this.
     #     Update (and also required version in setup.py) when next pyyaml version is out
     def _fail_representer(dumper, data):
-        raise OutputError("You are probably trying to dump a function into YAML, "
-                          "and that's not possible. If you are using an external prior "
-                          "or likelihood, try writing it as a string instead -- "
-                          "see the documentation about user-defined priors/likelihoods.")
-    OrderedDumper.add_representer(type(lambda: None), _fail_representer)
-    OrderedDumper.add_multi_representer(object, _fail_representer)
+        raise OutputError(
+            "You are probably trying to dump a function into YAML, "
+            "and that's not possible. If you are using an external prior "
+            "or likelihood, try writing it as a string instead -- there is always a way: "
+            "see the documentation about user-defined priors/likelihoods. "
+            "If you *really* need to generate output, "
+            "set '%s: False'"%_force_reproducible +
+            " in your input, but mind that the 'full' yaml file generated cannot be "
+            "called again, since it will contain unknown symbols.")
+    if force_reproducible:
+        OrderedDumper.add_representer(type(lambda: None), _fail_representer)
+        OrderedDumper.add_multi_representer(object, _fail_representer)
     # For full infos: trim known params of each likelihood: for internal use only
     if trim_params_info:
         from copy import deepcopy

@@ -27,6 +27,7 @@ _debug_file = "debug_file"
 _output_prefix = "output_prefix"
 _path_install = "path_to_modules"
 _external = "external"
+_force_reproducible = "force_reproducible"
 
 # Separator for different names.
 # Its manual inclusion in a string anywhere else (e.g. a parameter name) is forbidden.

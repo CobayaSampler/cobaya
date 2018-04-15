@@ -19,7 +19,7 @@ import datetime
 # Local
 from cobaya.yaml import yaml_dump
 from cobaya.conventions import _input_suffix, _full_suffix, separator, _yaml_extension
-from cobaya.conventions import _output_prefix
+from cobaya.conventions import _output_prefix, _force_reproducible
 from cobaya.log import HandledException
 
 # Logger
@@ -30,6 +30,7 @@ log = logging.getLogger(__name__.split(".")[-1])
 class Output(object):
     def __init__(self, info):
         output_prefix = str(info[_output_prefix])
+        self.force_reproducible = info.get(_force_reproducible, True)
         self.folder = os.sep.join(output_prefix.split(os.sep)[:-1]) or "."
         self.prefix = (lambda x: x if x != "." else "")(output_prefix.split(os.sep)[-1])
         if not os.path.exists(self.folder):
@@ -72,7 +73,8 @@ class Output(object):
                         (self.file_full, full_info)]:
             with open(f, "w") as f_out:
                 f_out.write(
-                    yaml_dump(info, default_flow_style=False, trim_params_info=True))
+                    yaml_dump(info, default_flow_style=False, trim_params_info=True,
+                              force_reproducible=self.force_reproducible))
 
     def prepare_collection(self, name=None, extension=None):
         if not name:
