@@ -15,9 +15,3 @@ LikelihoodCollection class
    
 .. autoclass:: likelihood.LikelihoodCollection
    :members:
-
-LikelihoodCollection_MPI class
-------------------------------
-   
-.. autoclass:: likelihood.LikelihoodCollection_MPI
-   :members:

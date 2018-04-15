@@ -1,5 +1,5 @@
-Parameters info and priors
-==========================
+Parameters and priors
+=====================
 
 .. automodule:: cobaya.prior
    :noindex:
