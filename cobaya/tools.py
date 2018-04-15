@@ -82,6 +82,8 @@ def get_external_function(string_or_function, name=None):
     """
     if isinstance(string_or_function, six.string_types):
         try:
+            if "import_module" in string_or_function:
+                sys.path.append(os.path.realpath(os.curdir))
             function = eval(string_or_function)
         except Exception as e:
             log.error("Failed to load external function%s: '%r'",
@@ -90,7 +92,9 @@ def get_external_function(string_or_function, name=None):
     else:
         function = string_or_function
     if not callable(function):
-        log.error("The external function provided is not an actual function.")
+        log.error("The external function provided " +
+                  ("for '%s'x "%name if name else "") +
+                  "is not an actual function.")
         raise HandledException
     return function
 
