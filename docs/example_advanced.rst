@@ -9,7 +9,7 @@ In this example, we will see how to sample from priors and likelihoods given as 
 From a Python interpreter
 -------------------------
 
-Our likelihood will be a Gaussian ring centred at 0 with radius 1. We define it with the following Python function and add it to the information dictionary like this:
+Our likelihood will be a gaussian ring centred at 0 with radius 1. We define it with the following Python function and add it to the information dictionary like this:
 
 .. code:: python
 
@@ -38,7 +38,7 @@ Our likelihood will be a Gaussian ring centred at 0 with radius 1. We define it 
         ["y", {"prior": {"min": -2, "max": 2}, "ref": 0, "proposal": 0.2}]])
 
 
-Now, let's assume that we want to track the radius of the ring, whose posterior will be approximately Gaussian, and the angle, whose posterior will be uniform. We can define them as function of known input parameters:
+Now, let's assume that we want to track the radius of the ring, whose posterior will be approximately gaussian, and the angle, whose posterior will be uniform. We can define them as function of known input parameters:
 
 .. code:: python
 
@@ -100,6 +100,32 @@ Let's run with the same configuration and analyse the output:
 
 
 .. image:: img/example_adv_half.png
+
+
+.. _example_advanced_rtheta:
+
+Alternative: sampling from ``r`` and ``theta`` directly
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The posterior on the radius and the angle is a gaussian times a uniform, much simpler than that on ``x`` and ``y``. So we should probably sample on ``r`` and ``theta`` instead, where we would get a more accurate result with the same number of samples, since now we don't have the problem of having to go around the ring.
+
+This can be done in a simple way at the level of the parameters, i.e. without needing to modify the parameters that the likelihood takes, as explained in :ref:`repar`.
+
+.. code:: yaml
+
+    from copy import deepcopy
+    info_rtheta = deepcopy(info)
+    info_rtheta["params"] = odict([
+        ["r", {"prior": {"min": 0, "max": 2}, "ref": 1,
+               "proposal": 0.5, "drop": True}],
+        ["theta", {"prior": {"min": -0.75*np.pi, "max": np.pi/4}, "ref": 0,
+                   "proposal": 0.5, "latex": r"\theta", "drop": True}],
+        ["x", "lambda r,theta: r*np.cos(theta)"],
+        ["y", "lambda r,theta: r*np.sin(theta)"],
+        ["xprime", {"derived": "lambda x: x"}],
+        ["yprime", {"derived": "lambda y: y"}]])
+    # The x>y condition is already incorporated in the prior of theta
+    info_rtheta["prior"].pop("xGTy")
 
 
 .. _example_advanced_shell:

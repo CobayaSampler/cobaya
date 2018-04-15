@@ -4,6 +4,10 @@
 :Synopsis: Class containing the prior and reference pdf, and other parameter information.
 :Author: Jesus Torrado
 
+
+Basic parameter specification
+-----------------------------
+
 The ``params`` block contains all the information intrinsic
 to the parameters of the model: their prior pdf and reference pdf, their latex labels,
 and useful properties for particular samplers (e.g. width of a proposal pdf in and MCMC
@@ -51,7 +55,7 @@ The syntax for priors and ref's has the following fields:
 
 .. note::
 
-   For bounded distributions (e.g. ``uniform``, ``beta``...), you can use the more
+   For bound distributions (e.g. ``uniform``, ``beta``...), you can use the more
    intuitive arguments ``min`` and ``max`` (default: 0 and 1 resp.) instead of ``loc`` and
    ``scale`` (NB: unexpected behaviour for an unbounded pdf).
 
@@ -91,15 +95,63 @@ An example ``params`` block:
          min: 0
          latex: \mathcal{C}
 
+You can find another basic example :ref:`here <example_quickstart_shell>`.
+
+
+.. _prior_external:
+
+Multidimensional priors and custom functions
+--------------------------------------------
+
+The priors described above are
+obviously 1-dimensional. You can also define more complicated, multidimensional priors
+using a ``prior`` block at the base level (i.e. not indented), as in the
+:ref:`the advanced example <example_advanced_shell>`. All the details below also apply to
+the definition of :ref:`custom likelihoods <likelihood_external>`.
+
+Inside the ``prior`` block, list a pair of priors as ``[name]: [function]``, where the
+functions must return **log**-priors. This priors will be multiplied by the
+one-dimensional ones defined above. Even if you define a custom prior for a parameter
+in the ``prior`` block, you still have to specify its bounds in the ``params`` block.
+
+A prior function can be specified in two different ways:
+
+a) **As a function**, either assigning a function defined with ``def``, or a ``lambda``.
+   Its arguments must be known parameter names. This option is not compatible with shell
+   invocation, since the ``yaml`` output cannot store python objects.
+
+b) **As a string,** which will be passed to ``eval()``. The string can be a
+   ``lambda`` function definition with known parameters as its arguments (you can
+   use ``scipy.stats`` and  ``numpy`` as ``stats`` and ``np`` resp.), or an
+   ``import_module('filename').function`` statement if your function is defined in a
+   separate file ``filename`` `in the current folder` and is named ``function``
+   (see e.g. :ref:`the advanced example <example_advanced_shell>`).
+
+.. note::
+
+   If you don't want to write your function definition in a separate file and don't care
+   about reproducibility of the run (you should!), there is a workaround: add
+   ``force_reproducible: False`` at the top of your input.
+
+.. note::
+
+   At this moment, custom priors can only be functions of sampled and fixed parameters.
+   Extending it to derived parameters is WIP.
 
 
 Prior normalization for evidence computation
 --------------------------------------------
 
-As defined above, the priors are automatically normalized, so any sampler that computes
-the evidence will produce the right results.
+The one-dimensional priors defined within the ``params`` block are automatically
+normalized, so any sampler that computes the evidence will produce the right results as
+long as no custom priors have been defined, whose normalisation is unknown.
 
-Improper priors will produce unexpected errors. So don't try
+To get the prior normalisation if using custom functions as priors, you can substitute
+your likelihood by the :doc:`dummy unit likelihood <likelihood_one>`, and make an initial
+run with :doc:`PolyChord <sampler_polychord>` to get the prior volume.
+
+
+In general, avoid improper priors, since they will produce unexpected errors, e.g.
 
 .. code-block:: yaml
 
@@ -109,118 +161,105 @@ Improper priors will produce unexpected errors. So don't try
           min: -inf
           max:  inf
 
+.. _repar:
 
-.. _prior_external:
-
-Custom, multidimensional priors
+Defining parameters dynamically
 -------------------------------
 
-The priors described above are
-obviously 1-dimensional. You can also define more complicated, multidimensional priors
-using a ``prior`` block at the base level (i.e. not indented).
+We may want to sample in a paramter space different than the one understood by the
+likelihood, e.g. because we expect the posterior to be simpler on the alternative
+parameters.
 
-Inside the ``prior`` block, list a pair of priors as ``[name]: [function]``, where the
-functions must return **log-priors**.
-A prior function can be specified in three different ways:
+For instance, in the :doc:`advanced example <example_advanced>`, the posterior on the
+radius and the angle is a gaussian times a uniform, instead of a more complicated
+gaussian ring. This is done in a simple way at
+:ref:`the end of the example <example_advanced_rtheta>`.
+Let us discuss the general case here.
 
-a) **As a string:** If a string is given, it will be passed to Python's ``eval()`` function. In this case, use Python's ``lambda`` to describe the function, using known parameter names as its arguments. In your string you can access ``scipy.stats`` and  ``numpy`` members under ``stats`` and ``np`` respectively.
-
-b) **As a function:** If your function is more complicated (it takes more than a line of code) and cannot be written as a ``lambda``, you can pass a *function object* directly, whose arguments must be known parameter names. This option is of course not compatible with shell invocation, since a ``yaml`` file can only contain text.
-
-c) **As an import statement:** If your function cannot be written as a ``lambda`` but you  would still like to have your input as a ``yaml`` file, you can code your function into a separate file and use ``import_module`` to load it on the fly.
-
-Let us apply this to the example in section :ref:`in_example`. We will add a
-*gaussian ring* prior on both parameters, centred at the origin, with radius 0.5 and sigma of 0.1;
-and a simple *gaussian* prior on the sum of both parameters,
-centred at 0.5 and with sigma of 0.2.
-
-Using option **(a)** above, we would simply add another block to the input file:
-
-.. code-block:: yaml
-
-   prior:
-     ring: "lambda a, b: stats.norm.logpdf(np.sqrt(a**2 + b**2), loc=0.5, scale=0.1)"
-     linear: "lambda y: stats.norm.logpdf(a + b, loc=0.5, scale=0.2)"
-
-.. warning::
-   Use quotation marks, ``"`` or ``'``, to enclose the prior! Otherwise, the colon of the
-   ``lambda`` will be wrongly interpreted by ``yaml``.
-
-We may consider that these priors, or any other, are too complicated for a one-liner,
-so we may prefer to code it in a separate file, say ``myprior.py`` in the same folder:
-
-.. code-block:: python
-
-   from scipy.stats import norm
-   import numpy as np
-
-   def gaussian_ring(a, b):
-       r = np.sqrt(a**2 + b**2)
-       return norm.logpdf(r, loc=0.5, scale=0.1)
-
-   def linear_combination(a, b):
-       return norm.logpdf(a + b, loc=0.5, scale=0.2)
-
-In this case, which corresponds to option **(c)**, the prior block would look like:
+To enble this, **cobaya** creates a `re-parametrisation` layer between the `sampled`
+parameters, and the `input` paramters of the likelihood. E.g. if we want to **sample**
+from the logarithm of an **input** parameter of the likelihood, we would do:
 
 .. code:: yaml
 
-   prior:
-     ring: import_module("myprior").gaussian_ring
-     linear: import_module("myprior").linear_combination
+    params:
+      logx:
+        prior: [...]
+        drop: True
+      x: "lambda logx: np.exp(x)"
+      y:
+        derived: "lambda x: x**2"
 
-This way, you can invoke `cobaya` from the command line with the corresponding ``yaml``
-file as input, provided that ``myprior.py`` is in the same folder. It is the most
-*portable* version, in case you want to pass your sample around, or archive it for future
-reference.
+When that information is loaded **cobaya** will create an interface between two sets of
+parameters:
 
-CHECK IF DIFFERENT FOLDERS WORK!!!
++ **Sampled** parameters, i.e. those that have a prior, including ``logx`` but not ``x``
+  (it does not have a prior: it's fixed by a function). Those are the ones with which the
+  **sampler** interacts. Since the likelihood does not understand them, they must be
+  **dropped** with ``drop: True``.
 
-If you are running `cobaya` within a Python script or a Jupyter notebook, you can
-simply pass a dictionary of functions and their names in under
-the ``prior`` key of the *information* dicctionary that is passed to ``cobaya.run.run``,
-as described in case **(b)**.
++ Likelihood **input** parameters: those that will be passed to the likelihood
+  (or theory), indentified because they are **not derived** (see below) and have not been
+  **dropped**. Here, that would be ``x``, but not ``logx``.
 
-Following the example in section :ref:`in_example_script` and using the priors above,
-now using case , simply define the ``gaussian_ring`` and
-``linear_combination`` functions somewhere early in the script and assign them to the
-dictionary containing all the information, before calling ``cobaya.run.run``:
-
-.. code:: python
-
-   info["prior"] = {"ring": gaussian_ring, "linear": linear_combination}
-
+We can use a similar approach to define dynamical **derived** paramters. To distinguish
+them from the input paramters, we insert the functions defining them under a ``derived``
+property (see the paramater ``y`` in the example above).
 
 
-decir que no estan normalized (link a seccion (TODO) sobre normalizar posteriors)
+.. note::
 
-TEST EXAMPLES!!!
+   For now, **dynamical derived** parameters must be functions of **input** but not
+   **dynamical sampled** parameters. They can also be functions of yet-undefined params.
+   In that case, those parameters will be automatically requested to the likelihood and
+   theory code.
 
-YOU MUST STLL SPECIFY THE BOUNDS!!!
+.. note::
+
+   For now, the values for the samples of input parameters which are not directly sampled
+   (e.g. ``x`` above) are not saved into the output products. If you want to track their
+   value, create new dummy derived parameter for each one, e.g.
+   ``xprime: {derived: "lamdba x: x"}``
+
+.. note::
+
+   There is only **one level** of re-parametrisation, i.e. a dynamically-defined parameter
+   cannot be a function of another dynamically-defined parameter: ``y=f(x)`` and
+   ``z=g(y)`` is not allowed. This is so for the sake
+   of keeping **cobaya**'s overhead as small as possible, and because it would complicate
+   the task of finding the `owner` of each parameter. But this may change in the future.
+
+   For now, a workaround is repeating the definition of one of the dynamical parameters
+   inside the definition of the other, so that both depend on the same original parameter,
+   i.e. instead of ``y=f(x)`` and ``z=g(y)``, define ``y=f(x)`` and
+   ``z=g[f(xx)]``.
+
+.. note::
+
+   It is not possible to **fix** the value of a dynamically defined parameter
+   (there would be no way to indicate that we want to drop it). Fix the corresponding
+   likelihood parameters instead.
+   [But let us know if this is a feature that you'd really, really like.]
 
 
-.. image:: img_prior_ring.svg
 
+Changing and redefining parameters; inheritance
+-----------------------------------------------
 
-.. Poner el alguna parte que no se usen lambdas anonimas: no se pueden pickle -> falla MPI. No pasa nada: si llamado con yaml, es texto, que s'i funciona, y si se llama scripted, no cuesta nada darles nombre. --> poner un error en get_external_fnction!!! Si es string q empieza por "lambda" y uso MPI, fallar!!!
-.. Naming: para los derived de likelihood (no los del sampler), les cambio en nombre a "output"?
--- PRIORS:
-..  - make compatible with boundaries and per-parameter priors. --> DECIMOS QUE SE MULTIPLICA
-..  - inherit from defaults (no duplicated names!!!)
-..  - actualizar ejemplos de scripted i/o
-..  - para reproducibilidad con salida de texto, recomendar import_module
-..             bounds (prior's min and max) are inherited (-inf,inf) as default.
-..  - usamos eval, pero no nos llevemos las manos a la cabeza, que tb importamos modulos de usuario, q es igual.
-..  - QUE LO HEREDA DE DEFAULTS!!!!! (documentar en la parte de likelihood)
+As we will see in the :doc:`likelihoods documentation <likelihoods>`, just by mentioning a
+likelihood, the parameters of its default experimental model are
+inherited without needing to re-state them.
 
+But you may want to fix their value, re-define their prior or some other property in
+your input file. To do that, simply state you new parameter definition as you would
+normally do. For your convenience, if you do that, you don't need to re-state all of the
+properties of the parameters (e.g. the latex label if just changing the prior).
 
+As a general rule, when trying to redefine anything in a parameter, everything not
+re-defined is inherited, except for the prior, which must not be inheritable in order to
+allow re-defining sampled parameters into something else.
 
-Changing and redefining parameters -- inheritance
--------------------------------------------------
-
-When mentioning a likelihood, the parameters that appear in its ``defaults.yaml`` file are
-inherited without needing to re-state them. Still, you may want to re-define their type or
-some of their properties in your input file:
+Just give it a try and it should work fine, but, in case you need the details:
 
 * Re-defining **fixed** into:
 
@@ -244,12 +283,9 @@ some of their properties in your input file:
  - **derived**: change any of prior/ref/latex, etc, to your taste; the rest are inherited
    from the defaults
 
-As general rules, when trying to redefine anything in a parameter, everything not re-defined
-is inherited, except for the prior, which must not be inheritable in order to allow
-re-defining sampled parameters into something else.
-
-
 """
+
+
 # Python 2/3 compatibility
 from __future__ import absolute_import
 from __future__ import division
