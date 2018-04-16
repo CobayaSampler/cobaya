@@ -108,19 +108,19 @@ You can use the :doc:`Gaussian likelihood <likelihood_gaussian>` as a guide. If 
 
 
 Likelihood module
-=================
+-----------------
 
 .. automodule:: likelihood
    :noindex:
 
 Likelihood class
-----------------
+^^^^^^^^^^^^^^^^
    
 .. autoclass:: likelihood.Likelihood
    :members:
 
 LikelihoodCollection class
----------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^
    
 .. autoclass:: likelihood.LikelihoodCollection
    :members:
