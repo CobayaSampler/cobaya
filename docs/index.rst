@@ -18,15 +18,15 @@ Table of contents
    input
    output
    params_prior
+   likelihoods
+   likelihood_one
+   likelihood_gaussian
+   theory
    sampler
    sampler_evaluate
    sampler_mcmc
    sampler_polychord
    sampler_minimize
-   likelihoods
-   likelihood_one
-   likelihood_gaussian
-   theory
 
 .. toctree::
    :caption: Cosmology!

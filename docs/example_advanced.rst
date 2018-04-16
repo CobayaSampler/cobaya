@@ -102,6 +102,37 @@ Let's run with the same configuration and analyse the output:
 .. image:: img/example_adv_half.png
 
 
+.. _example_advanced_likderived:
+
+Alternative: ``r`` and ``theta`` defined within the likelihood
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Custom likelihoods also allow for the definition of derived parameters. In this example, it would make sense for ``r`` and ``theta`` to be computed inside the likelihood. To do that, we would redefine the likelihood as (see details at :ref:`likelihood_external`):
+
+.. code:: python
+
+   # List available derived paramters in the default value of the `derived` keyword
+   def gauss_ring_logp_with_derived(x, y, derived=["r", "theta"]):
+       r = np.sqrt(x**2+y**2)
+       # Assuming `derived` is passed at runtime as a dictionary to be filled
+       derived["r"] = r
+       derived["theta"] = np.arctan(y/x)
+       return stats.norm.logpdf(r, loc=1, scale=0.2)
+
+   info_alt = {"likelihood": {"ring": gauss_ring_logp_with_derived}}
+
+And remove the definition (but not the mention!) of ``r`` and ``theta`` in the ``params`` block:
+
+.. code:: python
+
+   info_alt["params"] = odict([
+       ["x", {"prior": {"min": -2, "max": 2}, "ref": 1, "proposal": 0.2}],
+       ["y", {"prior": {"min": -2, "max": 2}, "ref": 0, "proposal": 0.2}],
+       ["r", None],
+       ["theta", {"latex": r"\theta"}]])
+   info_alt["prior"] = {"xGTy": lambda x,y: np.log(x>y)}
+
+
 .. _example_advanced_rtheta:
 
 Alternative: sampling from ``r`` and ``theta`` directly
@@ -114,6 +145,9 @@ This can be done in a simple way at the level of the parameters, i.e. without ne
 * We give a prior to the parameters over which we want to sample, here ``r`` and ``theta``, and give them the property ``drop: True`` if they are not understood by the likelihood.
 * We define the parameters taken by the likelihood, here ``x`` and ``y``, by a function of sampled and fixed parameters, here ``r`` and ``theta``.
 * If we want to have those likelihood parameters showing up as derived, we add a dummy derived parameter for each of them, here ``xprime`` and ``yprime``, with trivial definitions in terms of the original likelihood parameters.
+
+[We start from the original example, not the alternative above, since we cannot sample from ``r`` and ``theta`` and define them as derived paramters at the same time.]
+
 
 .. code:: yaml
 

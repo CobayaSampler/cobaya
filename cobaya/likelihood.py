@@ -6,96 +6,7 @@
 
 This module defines the main :class:`Likelihood` class, from which every likelihood
 inherits, and the :class:`LikelihoodCollection` class, which groups and manages all the
-individual likelihoods and is the actual instance passed to the sampler. Additionally, it
-defines an MPI wrapper for the last one, that initialises the likelihoods once and passes
-a copy to each MPI slave (rank>1) process.
-
-Input: specifying likelihoods to explore
-----------------------------------------
-
-Likelihoods are specified under the `likelihood` block, together with their options:
-
-.. code-block:: yaml
-
-   likelihood:
-     [likelihood 1]:
-        [likelihood 1 option 1]: [value 1]
-        [...]
-     [likelihood 2]:
-        [likelihood 2 option 2]: [value 2]
-        [...]
-
-Likelihood parameters are specified within the ``params`` block, as explained in
-:doc:`params_prior`.
-
-Code conventions and defauls
-----------------------------
-
-Each likelihood *lives* in a folder with its name under the ``likelihoods`` folder of the
-source tree. In that folder, there must be at least *three* files:
-
-- A trivial ``__init__.py`` file containing a single line: ``from [name] import [name]``,
-  where ``name`` is the name of the likelihood, and it's folder.
-- A ``name.py`` file, containing the particular class definition of the likelihood,
-  inheriting from the :class:`Likelihood` class (see below).
-- A ``defaults.yaml`` containing a block:
-
-  .. code-block:: yaml
-
-     likelihood:
-       [name]:
-         [option 1]: [value 1]
-         [...]
-       params:
-         [param 1]:
-           prior:
-             [prior info]
-           [label, ref, etc.]
-
-  The options and parameters defined in this file are the only ones recognized by the
-  likelihood, and they are loaded automatically with their default values (options) and
-  priors (parameters) by simply mentioning the likelihood in the input file, where one can
-  re-define any of those options with a different value. The same parameter may be
-  defined by different likelihoods -- in those cases, it needs to have the same default
-  information (prior, label, etc.) in the defaults file of those likelihoods.
-
-.. note::
-
-   Some *mock* likelihoods can have any number of non-predefined parameters, as long as
-   they start with a certain prefix specified by the user with the option ``prefix``
-   of said likelihood.
-
-.. note::
-
-   Actually, there are some user-defined options that are common to all likelihoods and
-   do not need to be specified in the ``defaults.yaml`` file, such as the computational
-   ``speed`` of the likelihood (see :ref:`mcmc_speed_hierarchy`).
-
-
-Creating your own likelihood
-----------------------------
-
-Since cobaya was created to be flexible, creating your own likelihood is very easy: simply
-create a folder with its name under ``likelihoods`` in the source tree and follow the
-conventions explained above. Inside the class definition of your function, you can use any
-of the attributes defined in the ``defaults.yaml`` file directly, and you only need to
-specify one, or at most three, functions
-(see the :class:`Likelihood` class documentation below):
-
-- A ``logp`` function taking a dictionary of (sampled) parameter values and returning a
-  log-likelihood.
-- An (optional) ``initialise`` function preparing any computation, importing any necessary
-  code, etc.
-- An (optional) ``close`` function doing whatever needs to be done at the end of the
-  sampling (e.g. releasing memory).
-
-You can use the :doc:`Gaussian likelihood <likelihood_gaussian>` as a guide.
-If your likelihood needs a cosmological code, just define one in the input file and you
-can automatically access it as an attribute of your class: ``[your_likelihood].theory``.
-Use the :doc:`Planck likelihood <likelihood_planck>` as a guide to create your own
-cosmological likelihood.
-
-.. note:: ``theory`` and ``derived`` are reserved parameter names: you cannot use them!
+individual likelihoods and is the actual instance passed to the sampler.
 
 """
 # Python 2/3 compatibility
@@ -107,7 +18,6 @@ import traceback
 from collections import OrderedDict as odict
 from time import sleep
 import numpy as np
-from scipy import stats
 import inspect
 from itertools import chain
 

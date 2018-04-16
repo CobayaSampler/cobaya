@@ -47,8 +47,8 @@ To use any of the Planck likelihoods, you simply need to mention them in the
 so you don't have to care about listing them in the ``params`` block.
 
 The nuisance parameters and their default priors can be found in the ``defaults.yaml``
-files in the folder corresponding to each likelihood.
-They are not reproduced here because of their length.
+files in the folder corresponding to each likelihood. They are not reproduced here because
+of their length.
 
 An example of usage can be found in :doc:`examples_planck`.
 

@@ -242,6 +242,7 @@ property (see the paramater ``y`` in the example above).
    [But let us know if this is a feature that you'd really, really like.]
 
 
+.. _prior_inheritance:
 
 Changing and redefining parameters; inheritance
 -----------------------------------------------
