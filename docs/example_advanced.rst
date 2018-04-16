@@ -109,7 +109,11 @@ Alternative: sampling from ``r`` and ``theta`` directly
 
 The posterior on the radius and the angle is a gaussian times a uniform, much simpler than that on ``x`` and ``y``. So we should probably sample on ``r`` and ``theta`` instead, where we would get a more accurate result with the same number of samples, since now we don't have the problem of having to go around the ring.
 
-This can be done in a simple way at the level of the parameters, i.e. without needing to modify the parameters that the likelihood takes, as explained in :ref:`repar`.
+This can be done in a simple way at the level of the parameters, i.e. without needing to modify the parameters that the likelihood takes, as explained in :ref:`repar`. In essence:
+
+* We give a prior to the parameters over which we want to sample, here ``r`` and ``theta``, and give them the property ``drop: True`` if they are not understood by the likelihood.
+* We define the parameters taken by the likelihood, here ``x`` and ``y``, by a function of sampled and fixed parameters, here ``r`` and ``theta``.
+* If we want to have those likelihood parameters showing up as derived, we add a dummy derived parameter for each of them, here ``xprime`` and ``yprime``, with trivial definitions in terms of the original likelihood parameters.
 
 .. code:: yaml
 
