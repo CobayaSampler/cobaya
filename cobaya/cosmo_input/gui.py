@@ -129,7 +129,7 @@ class MainWindow(QWidget):
 
     def refresh_display(self, info):
         self.display["python"].setText(
-            pformat(info) + "\n # Sorry! I haven't found a way to pretty-print odicts.")
+            "from collections import OrderedDict\n\ninfo = " + pformat(info))
         self.display["yaml"].setText(yaml_dump(info))
 
     @Slot()
