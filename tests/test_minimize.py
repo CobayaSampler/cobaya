@@ -6,11 +6,13 @@ from __future__ import division
 import numpy as np
 from mpi4py import MPI
 from scipy.stats import multivariate_normal
+from flaky import flaky
 
 from cobaya.conventions import _likelihood, _sampler
 from cobaya.likelihoods.gaussian import info_random_gaussian
 
 
+@flaky(max_runs=2, min_passes=1)
 def test_minimize_gaussian():
     # parameters
     dimension = 3

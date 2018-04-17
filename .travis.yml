@@ -110,7 +110,7 @@ before_install:
   - pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist --upgrade
   - pip install matplotlib # necessary for getdist, but not installed automatically for now
   # optional, but necessary for tests
-  - pip install mpi4py pytest-xdist
+  - pip install mpi4py pytest-xdist flaky
 ###############################################################################
 script:
   # Installation
