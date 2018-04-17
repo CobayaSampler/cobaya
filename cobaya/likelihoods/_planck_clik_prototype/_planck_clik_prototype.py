@@ -140,8 +140,9 @@ import logging
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import HandledException
-from cobaya.conventions import _path_install
+from cobaya.conventions import _path_install, _likelihood
 from cobaya.tools import get_path_to_installation
+from cobaya.input import get_default_info
 
 
 class _planck_clik_prototype(Likelihood):
@@ -360,12 +361,8 @@ def install_clik(path, no_progress_bars=False):
 
 
 def get_product_id_and_clik_file(name):
-    # get it from the defaults.yaml file
-    from cobaya.conventions import _defaults_file, _likelihood
-    path__defaults_file = os.path.join(
-        os.path.dirname(__file__), "..", name, _defaults_file)
-    from cobaya.yaml import yaml_load_file
-    defaults = yaml_load_file(path__defaults_file)[_likelihood][name]
+    """Gets the PLA product info from the defaults file."""
+    defaults = get_default_info(name, _likelihood)[_likelihood][name]
     return defaults.get("product_id"), defaults.get("clik_file")
 
 
