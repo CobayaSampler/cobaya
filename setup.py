@@ -5,7 +5,7 @@ from codecs import open
 from os import path
 # Package data and conventions
 from cobaya import __author__, __version__, __url__
-from cobaya.conventions import subfolders, _defaults_file
+from cobaya.conventions import subfolders
 
 # Get the long description from the README file
 def get_long_description():
@@ -37,7 +37,7 @@ setup(
     install_requires=['numpy>=1.12.0', 'scipy >= 0.18', 'pandas>=0.17.1',
                       'PyYAML>=3.12', 'wget>=3.2', 'imageio>=2.2.0'],
     package_data={
-        'cobaya': ['%s/*/%s'%(folder, _defaults_file) for folder in subfolders.values()]},
+        'cobaya': ['%s/*/*.yaml'%folder for folder in subfolders.values()]},
     entry_points={
         'console_scripts': [
             'cobaya-install=cobaya.install:install_script',
