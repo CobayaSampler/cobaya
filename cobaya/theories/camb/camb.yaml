@@ -2,7 +2,7 @@ theory:
   camb:
     path: null
     # Speed in evaluations/second
-    speed: 0.3
+    speed: 0.5
     # False to fail and stop sampling on *any* computation error
     # (it also prints debug info)
     stop_at_error: False

@@ -54,7 +54,6 @@ _requirements_file = "requirements.yaml"
 _help_file = "readme.md"
 
 # Internal package structure
-_defaults_file = "defaults.yaml"
 subfolders = {_likelihood: "likelihoods",
               _sampler: "samplers",
               _theory: "theories"}

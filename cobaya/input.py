@@ -16,7 +16,7 @@ from copy import deepcopy
 from importlib import import_module
 
 # Local
-from cobaya.conventions import package, _defaults_file, _params, _p_label, _products_path
+from cobaya.conventions import package, _params, _p_label, _products_path
 from cobaya.conventions import _prior, _theory, _likelihood, _sampler, _external
 from cobaya.conventions import _output_prefix, _debug_file
 from cobaya.tools import get_folder
@@ -86,7 +86,7 @@ def get_modules(*infos):
 
 
 def get_default_info(module, kind):
-    path_to_defaults = os.path.join(get_folder(module, kind), _defaults_file)
+    path_to_defaults = os.path.join(get_folder(module, kind), module+".yaml")
     try:
         default_module_info = yaml_load_file(path_to_defaults)
     except IOError:
