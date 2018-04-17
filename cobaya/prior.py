@@ -138,6 +138,11 @@ b) **As a string,** which will be passed to ``eval()``. The string can be a
    At this moment, custom priors can only be functions of sampled and fixed parameters.
    Extending it to derived parameters is WIP.
 
+.. note::
+
+   In your function definition, you can use keyword arguments that aren't known parameter
+   names. They will simply be left to their default.
+
 
 Prior normalization for evidence computation
 --------------------------------------------

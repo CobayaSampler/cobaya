@@ -115,7 +115,7 @@ class Likelihood(object):
 
 
 class LikelihoodExternalFunction(Likelihood):
-    def __init__(self, name, info, theory=None):
+    def __init__(self, name, info, parametrization, theory=None):
         self.name = name
         # Load info of the likelihood
         for k in info:
@@ -124,7 +124,8 @@ class LikelihoodExternalFunction(Likelihood):
         self.external_function = get_external_function(info[_external], name=self.name)
         argspec = inspect.getargspec(self.external_function)
         self.input_params = odict(
-            [(p, None) for p in argspec.args if p not in ["derived", "theory"]])
+            [(p, None) for p in argspec.args
+             if p not in ["derived", "theory"] and p in parametrization.input_params()])
         self.has_derived = "derived" in argspec.args
         if self.has_derived:
             derived_kw_index = argspec.args[-len(argspec.defaults):].index("derived")
@@ -173,7 +174,7 @@ class LikelihoodCollection(object):
             # If it does "external" key, wrap it up. Else, load it up
             if _external in info:
                 self._likelihoods[name] = LikelihoodExternalFunction(
-                    name, info, theory=getattr(self, _theory, None))
+                    name, info, parametrization, theory=getattr(self, _theory, None))
             else:
                 lik_class = get_class(name)
                 self._likelihoods[name] = lik_class(info, parametrization)

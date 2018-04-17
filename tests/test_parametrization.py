@@ -38,7 +38,7 @@ info = {
          prior:
            min: -1
            max:  1
-         drop:
+         drop: True
        c:
          prior:
            min: -1
