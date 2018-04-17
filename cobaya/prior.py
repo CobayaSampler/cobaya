@@ -368,13 +368,17 @@ class Prior(object):
                           "This prior recognises: %r",
                           name, self.external[name]["argspec"].args)
                 raise HandledException
-            params_without_default = self.external[name]["argspec"].args[:-len(
-                self.external[name]["argspec"].defaults or [])]
-            if not all([(p in self.external[name]["params"])
+            params_without_default = self.external[name]["argspec"].args[
+                :(len(self.external[name]["argspec"].args) -
+                  len(self.external[name]["argspec"].defaults or []))]
+            if not all([(p in self.external[name]["params"] or
+                         p in self.external[name]["fixed_params"])
                         for p in params_without_default]):
                 log.error("Some of the arguments of the external prior '%s' "
                           "cannot be found and don't have a default value either: %s",
-                          name, params_without_default)
+                          name, list(set(params_without_default)
+                                .difference(self.external[name]["params"])
+                                .difference(self.external[name]["fixed_params"])))
                 raise HandledException
             log.warning("External prior '%s' loaded. "
                         "Mind that it might not be normalized!", name)
