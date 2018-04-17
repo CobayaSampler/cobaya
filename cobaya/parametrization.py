@@ -73,7 +73,7 @@ class Parametrization(object):
                     self._fixed[p] = self._input[p]
             if is_sampled_param(info):
                 self._sampled[p] = info
-                if _p_drop not in info:
+                if not info.get(_p_drop, False):
                     self._input[p] = None
             if is_derived_param(info):
                 self._derived[p] = info
