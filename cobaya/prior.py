@@ -103,8 +103,8 @@ You can find another basic example :ref:`here <example_quickstart_shell>`.
 Multidimensional priors and custom functions
 --------------------------------------------
 
-The priors described above are
-obviously 1-dimensional. You can also define more complicated, multidimensional priors
+The priors described above are obviously 1-dimensional.
+You can also define more complicated, multidimensional priors
 using a ``prior`` block at the base level (i.e. not indented), as in the
 :ref:`the advanced example <example_advanced_shell>`. All the details below also apply to
 the definition of :ref:`custom likelihoods <likelihood_external>`.
