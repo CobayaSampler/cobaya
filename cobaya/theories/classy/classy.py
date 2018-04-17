@@ -174,6 +174,7 @@ class classy(Theory):
 
     def needs(self, arguments):
         # Computed quantities requiered by the likelihood
+        arguments = arguments or {}
         for k,v in arguments.items():
             # Precision parameters and boundaries (in general, take max of all requested)
             if k == "l_max":
@@ -372,7 +373,12 @@ class classy(Theory):
         """
         current_state = self.current_state()
         # get C_l^XX from the cosmological code
-        cl = deepcopy(current_state["Cl"])
+        try:
+            cl = deepcopy(current_state["Cl"])
+        except:
+            self.log.error(
+                "No Cl's were computed. Are you sure that you have requested them?")
+            raise HandledException
         ell_factor = ((cl["ell"]+1)*cl["ell"]/(2*np.pi))[2:] if ell_factor else 1
         # convert dimensionless C_l's to C_l in muK**2
         T = current_state["TCMB"]

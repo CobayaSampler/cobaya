@@ -226,6 +226,7 @@ class camb(Theory):
         #   and need the redshifts to be passed at CAMBParams instantiation.
         #   Also, we always make sure that those redshifts are sorted in descending order,
         #   since all CAMB related functions return quantities in that implicit order
+        arguments = arguments or {}
         for k,v in arguments.items():
             # Precision parameters and boundaries (in general, take max of all requested)
             if k == "l_max":
@@ -443,7 +444,12 @@ class camb(Theory):
         """
         current_state = self.current_state()
         # get C_l^XX from the cosmological code
-        cl_camb = deepcopy(current_state["Cl"]["total"])
+        try:
+            cl_camb = deepcopy(current_state["Cl"]["total"])
+        except:
+            self.log.error(
+                "No Cl's were computed. Are you sure that you have requested them?")
+            raise HandledException
         mapping = {"tt": 0, "ee": 1, "bb": 2, "te": 3}
         cl = {"ell": np.arange(cl_camb.shape[0])}
         cl.update({sp: cl_camb[:,i] for sp,i in mapping.items()})
