@@ -138,7 +138,7 @@ cosmomc_theta_100:
     scale: 0.0004
   proposal: 0.0002
   latex: 100\theta_\mathrm{MC}
-  drop:
+  drop: True
 tau:
   prior:
     min: 0.01
@@ -159,7 +159,7 @@ logAs1e10:
     scale: 0.001
   proposal: 0.001
   latex: \log(10^{10} A_s)
-  drop:
+  drop: True
 As: "lambda logAs1e10: 1e-10*np.exp(logAs1e10)"
 ns:
   prior:
