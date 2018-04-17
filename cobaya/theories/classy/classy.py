@@ -230,7 +230,7 @@ class classy(Theory):
                     self.log.error("Unknown required product: '%s:%s'.", k, v)
                     raise HandledException
         # Derived parameters (if some need some additional computations)
-        if "sigma8" in self.output_params:
+        if "sigma8" in self.output_params or arguments:
             self.extra_args["output"] += " mPk"
             self.extra_args["P_k_max_h/Mpc"] = (
                 max(1, self.extra_args.get("P_k_max_h/Mpc", 0)))
