@@ -20,6 +20,7 @@ from time import sleep
 import numpy as np
 import inspect
 from itertools import chain
+from fractions import gcd
 
 # Local
 from cobaya.conventions import _external, _theory, _params, _overhead
@@ -286,14 +287,17 @@ class LikelihoodCollection(object):
         log.error("Marginal not implemented for >1 likelihoods. Sorry!")
         raise HandledException
 
-    def speeds_of_params(self):
+    def speeds_of_params(self, oversampling_factors=True):
         """
         Separates the sampled parameters in blocks according to the likelihood (or theory)
         re-evaluation that changing each one of them involves. Using the appoximate speed
         (i.e. inverse evaluation time in seconds) of each likelihood, sorts the blocks in
         a nearly optimal way, in ascending order of speed *per step/parameter*.
 
-        Returns an ``OrderedDict`` ``{speed: [params]}``, sorted by ascending speeds.
+        Returns tuples of ``(speeds), (params_inblock)``, sorted by ascending speeds.
+
+        If ``oversampling_factors=True``, returns integer oversampling factors instead of
+        speeds in 1/s.
 
         TODO: take into account "mixing towards fastest" introduced by the Cholesky
         transformation, and sort fully optimally.
@@ -323,7 +327,16 @@ class LikelihoodCollection(object):
                         for fpblock in different_footprints]
         blocks_speeds = np.array([1/c for c in blocks_costs])
         # Sort *naively*: less cost per paramter first
-        return odict([[blocks_speeds[i],blocks[i]] for i in np.argsort(blocks_speeds)])
+        isort = np.argsort(blocks_speeds)
+        if oversampling_factors:
+            # Oversampling precision: smallest difference in oversampling to be ignored.
+            oversampling_precision = 1/20
+            factors = np.array(np.round(np.array(
+                blocks_speeds)/min(blocks_speeds)/oversampling_precision), dtype=int)
+            factors = np.array(
+                factors/np.ufunc.reduce(np.frompyfunc(gcd, 2, 1), factors), dtype=int)
+            blocks_speeds = factors
+        return zip(*[[blocks_speeds[i], blocks[i]] for i in isort])
 
     # Python magic for the "with" statement
     def __enter__(self):
