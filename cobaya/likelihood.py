@@ -22,7 +22,7 @@ import inspect
 from itertools import chain
 
 # Local
-from cobaya.conventions import _external, _theory, _params
+from cobaya.conventions import _external, _theory, _params, _overhead
 from cobaya.tools import get_class, get_external_function
 from cobaya.log import HandledException
 
@@ -31,7 +31,7 @@ import logging
 log = logging.getLogger(__name__.split(".")[-1])
 
 # Default options for all subclasses
-class_options = {"speed": np.inf}
+class_options = {"speed": -1}
 
 
 class Likelihood(object):
@@ -286,39 +286,44 @@ class LikelihoodCollection(object):
         log.error("Marginal not implemented for >1 likelihoods. Sorry!")
         raise HandledException
 
-    def d(self):
-        return sum([self[lik].d() for lik in self])
-
     def speeds_of_params(self):
         """
-        Blocks the sampled parameters by likelihood, and sorts the blocks by speed.
+        Separates the sampled parameters in blocks according to the likelihood (or theory)
+        re-evaluation that changing each one of them involves. Using the appoximate speed
+        (i.e. inverse evaluation time in seconds) of each likelihood, sorts the blocks in
+        a nearly optimal way, in ascending order of speed *per step/parameter*.
+
         Returns an ``OrderedDict`` ``{speed: [params]}``, sorted by ascending speeds.
-        Parameters recognized by more than one likelihood are blocked in the slowest one.
+
+        TODO: take into account "mixing towards fastest" introduced by the Cholesky
+        transformation, and sort fully optimally.
         """
-        # Fill the unknown speeds with the value of the slowest one
-        speeds = np.array([getattr(self[lik], "speed", -np.inf) for lik in self] +
-                          [getattr(self.theory, "speed", -np.inf)])
+        # Fill unknown speeds with the value of the slowest one, and clip with overhead
+        speeds = np.array([getattr(self[lik], "speed", -1) for lik in self] +
+                          ([getattr(self.theory, "speed", -1)] if self.theory else []))
         try:
-            min_speed = min(speeds[speeds > 0])
+            speeds = np.clip(
+                speeds, min(1/_overhead, min(speeds[speeds > 0])), 1/_overhead)
         except ValueError:
-            min_speed = 1
-        speeds = np.clip(speeds, min_speed, None)
-        for i,lik in enumerate(self):
+            # No speeds specified
+            speeds = np.ones(len(speeds))
+        liks = list(self) + ([_theory] if self.theory else [])
+        for i, lik in enumerate(liks):
             self[lik].speed = speeds[i]
-        if self.theory:
-            self.theory.speed = speeds[-1]
-        # Block the parameters by speed
-        invsum = lambda *a: sum(b**-1 for b in a)**-1
-        param_with_speed = odict([[p,invsum(*[self[lik].speed for lik in liks])]
-                                  for p,liks in self.sampled_lik_dependence.items()])
-        if 0 in param_with_speed.values():
-            log.error("No likelihood can have 0 speed.")
-            raise HandledException
-        # Invert it!
-        speed_blocks = odict([[speed,[p for p,speed2 in param_with_speed.items()
-                                      if np.allclose(speed, speed2)]]
-                              for speed in sorted(list(set(param_with_speed.values())))])
-        return speed_blocks
+        # Group params by "footprint"
+        footprints = np.zeros((len(self.sampled_lik_dependence), len(liks)), dtype=int)
+        for i, ls in enumerate(self.sampled_lik_dependence.values()):
+            for j, lik in enumerate(liks):
+                footprints[i,j] = lik in ls
+        different_footprints = list(set([tuple(row) for row in footprints.tolist()]))
+        blocks = [[p for ip, p in enumerate(self.sampled_lik_dependence)
+                   if all(footprints[ip] == fp)] for fp in different_footprints]
+        # Compute "intrinsic" time cost of block (i.e. before mixing towards fastest)
+        blocks_costs = [sum([i*s**-1 for i,s in zip(fpblock,speeds)])
+                        for fpblock in different_footprints]
+        blocks_speeds = np.array([1/c for c in blocks_costs])
+        # Sort *naively*: less cost per paramter first
+        return odict([[blocks_speeds[i],blocks[i]] for i in np.argsort(blocks_speeds)])
 
     # Python magic for the "with" statement
     def __enter__(self):

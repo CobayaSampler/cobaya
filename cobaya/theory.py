@@ -23,10 +23,10 @@ from __future__ import division
 
 # Global
 import logging
-import numpy as np
+
 
 # Default options for all subclasses
-class_options = {"speed": np.inf}
+class_options = {"speed": -1}
 
 
 # Theory code prototype

@@ -58,8 +58,10 @@ subfolders = {_likelihood: "likelihoods",
               _sampler: "samplers",
               _theory: "theories"}
 
+# Approximate overhead of cobaya per posterior evaluation. Useful for blocking speeds
+_overhead = 5e-4
 
 # Physical constants
-
+# ------------------
 # Light speed
 _c = 299792.458  # km/s
