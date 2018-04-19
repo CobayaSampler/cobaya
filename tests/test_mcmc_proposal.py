@@ -7,6 +7,7 @@ from __future__ import division
 from collections import OrderedDict as odict
 from random import shuffle, choice
 import numpy as np
+import pytest
 
 from cobaya.conventions import _likelihood, _params, _sampler
 from cobaya.likelihoods.gaussian import random_cov
@@ -19,12 +20,13 @@ dim = 4  # < 100
 def test_mcmc_proposal_blocking_simple():
     body_of_test(dim, covariances=True)
 
-
+@pytest.mark.skip
 def test_mcmc_proposal_oversampling():
     body_of_test(dim, covariances=True, oversample=True)
 
 
 # named this way because we use "slow" for slow test
+@pytest.mark.skip
 def test_mcmc_proposal_fastSlow():
     body_of_test(dim, covariances=True, fast_slow=True)
 
@@ -42,7 +44,7 @@ def body_of_test(dim, covariances=True, oversample=False, fast_slow=False):
             _params: odict([["a%.2d"%i, {"prior": {"min": 0, "max": 1}}] for i in i_p]),
             _sampler: {"mcmc": {"callback_every": 1, "max_samples": 10, "burn_in": 0,
                                 "learn_proposal": False, "oversample": oversample,
-                                "drag_nfast_times": (1 if fast_slow else None)}}}
+                                "drag": (True if fast_slow else None)}}}
     speeds = [v["speed"] for v in info[_likelihood].values()]
     oversampling_factors = np.array([1+(i if oversample else 0) for i in range(dim)])
     if fast_slow:
