@@ -214,17 +214,21 @@ def info_random_gaussian(ranges, n_modes=1, prefix="", O_std_min=1e-2, O_std_max
     if rank == 0:
         cov = random_cov(ranges, n_modes=n_modes,
                          O_std_min=O_std_min, O_std_max=O_std_max)
+        if n_modes == 1:
+            cov = [cov]
         # Make sure it stays away from the edges
-        std = np.sqrt(cov.diagonal())
-        factor = 3
-        ranges_mean = [[l[0]+factor*s,l[1]-+factor*s] for l,s in zip(ranges,std)]
-        # If this implies min>max, take the centre
-        ranges_mean = [(l if l[0] <= l[1] else 2*[(l[0]+l[1])/2]) for l in ranges_mean]
-        mean = random_mean(ranges_mean, n_modes=n_modes)
+        mean = [[]]*n_modes
+        for i in range(n_modes):
+            std = np.sqrt(cov[i].diagonal())
+            factor = 3
+            ranges_mean = [[l[0]+factor*s,l[1]-+factor*s] for l,s in zip(ranges,std)]
+            # If this implies min>max, take the centre
+            ranges_mean = [
+                (l if l[0] <= l[1] else 2*[(l[0]+l[1])/2]) for l in ranges_mean]
+            mean[i] = random_mean(ranges_mean, n_modes=1)
     elif rank != 0:
         mean, cov = None, None
-    mean = comm.bcast(mean, root=0)
-    cov  = comm.bcast(cov, root=0)
+    mean, cov = comm.bcast(mean, root=0), comm.bcast(cov, root=0)
     dimension = len(ranges)
     info = {_likelihood: {"gaussian": {
         "mean": mean, "cov": cov, "prefix": prefix}}}
@@ -235,6 +239,6 @@ def info_random_gaussian(ranges, n_modes=1, prefix="", O_std_min=1e-2, O_std_max
            "latex": r"\alpha_{%i}"%i}]
          for i in range(dimension)] +
         # derived
-        [[prefix+"derived_%d"%i,
-          {"min": -3,"max": 3,"latex": r"\beta_{%i}"%i}] for i in range(dimension*n_modes)])
+        [[prefix+"derived_%d"%i, {"min": -3,"max": 3,"latex": r"\beta_{%i}"%i}]
+         for i in range(dimension*n_modes)])
     return info
