@@ -92,7 +92,10 @@ class BlockedProposer(object):
 
         :param parameter_blocks: list of arrays of parameter indices in each block,
             with blocks sorted by ascending speed.
-        :param oversampling_factors: list of oversampling factors for each block.
+        :param oversampling_factors: list of oversampling factors *per block*, i.e. a
+            factor of n for a block of dimension d would mean n*d jumps for that block
+            per full cycle, whereas a factor of 1 for all blocks (default) means that all
+            directions are treated equally.
         :param i_last_slow_block: index of the last block considered slow.
             By default, all blocks are considered slow.
         :param propose_scale: overal scale for the proposal.
