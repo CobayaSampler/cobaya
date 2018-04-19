@@ -307,7 +307,8 @@ class LikelihoodCollection(object):
         """
         # Fill unknown speeds with the value of the slowest one, and clip with overhead
         speeds = np.array([getattr(self[lik], "speed", -1) for lik in self] +
-                          ([getattr(self.theory, "speed", -1)] if self.theory else []))
+                          ([getattr(self.theory, "speed", -1)] if self.theory else []),
+                          dtype=float)
         # Add overhead to the defined ones, and clip to the slowest the undefined ones
         speeds[speeds > 0] = (speeds[speeds > 0]**-1 + _overhead)**-1
         try:
