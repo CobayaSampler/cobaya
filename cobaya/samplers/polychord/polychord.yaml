@@ -33,7 +33,7 @@ sampler:
     confidence_for_unbounded: 0.9999995  # 5 sigmas
     # Raw output of PolyChord (no need to change them, normally)
     # ----------------------------------------------------------
-    base_dir: polychord_output
+    base_dir: raw_polychord_output
     update_files:
     file_root:
     posteriors: True

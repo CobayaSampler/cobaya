@@ -68,7 +68,7 @@ The main output is the Monte Carlo sample of sequentially discarded *live points
 in the standard sample format together with the ``input.yaml`` and ``full.yaml``
 files (see :doc:`output`). The raw ``PolyChord`` products are saved in a
 subfolder of the output folder
-(determined by the option ``base_dir`` -- default: ``polychord_output``).
+(determined by the option ``base_dir`` -- default: ``raw_polychord_output``).
 
 .. note::
 
@@ -130,10 +130,12 @@ import inspect
 from cobaya.conventions import _path_install
 from cobaya.tools import get_path_to_installation
 from cobaya.sampler import Sampler
-from cobaya.mpi import get_mpi_rank
+from cobaya.mpi import get_mpi, get_mpi_comm, get_mpi_rank
 from cobaya.collection import Collection
 from cobaya.log import HandledException
 from cobaya.install import download_github_release
+
+clusters = "clusters"
 
 
 class polychord(Sampler):
@@ -181,7 +183,7 @@ class polychord(Sampler):
             self.pc_settings.feedback = values[self.log.getEffectiveLevel()]
         try:
             output_folder = getattr(self.output, "folder")
-            output_prefix = getattr(self.output, "prefix")
+            output_prefix = getattr(self.output, "prefix") or "pc"
         except AttributeError:
             # dummy output -- no resume!
             from tempfile import gettempdir
@@ -197,9 +199,9 @@ class polychord(Sampler):
                 os.makedirs(self.pc_settings.base_dir)
             # Idem, a clusters folder if needed -- notice that PolyChord's default
             # is "True", here "None", hence the funny condition below
-            if self.pc_settings.do_clustering is not False:
+            if self.pc_settings.do_clustering is not False:  # None here means "default"
                 try:
-                    os.makedirs(os.path.join(self.pc_settings.base_dir, "clusters"))
+                    os.makedirs(os.path.join(self.pc_settings.base_dir, clusters))
                 except OSError:  # exists!
                     pass
             self.log.info("Storing raw PolyChord output in '%s'.",
@@ -215,7 +217,7 @@ class polychord(Sampler):
 #            sorting_indices = [0]
 #        speeds, blocks = speeds[sorting_indices], blocks[sorting_indices]
 #        if np.all([np.all(block==range(block[0], block[-1]+1)) for block in blocks]):
-        self.log.warning("TODO: SPEED HIERARCHY EXPLOITATION DISABLED FOR NOW!!!")
+        self.log.warning("Speed hierarchy exploitation disabled for now!")
 #            self.pc_args["grade_frac"] = list(speeds)
 #            self.pc_args["grade_dims"] = [len(block) for block in blocks]
 #            self.log.info("Exploiting a speed hierarchy with speeds %r and blocks %r",
@@ -266,6 +268,20 @@ class polychord(Sampler):
         self.pc.run_polychord(logpost, self.nDims, self.nDerived,
                               self.pc_settings, self.pc_prior)
 
+    def save_sample(self, fname, name):
+        sample = np.loadtxt(fname)
+        collection = Collection(
+            self.parametrization, self.likelihood, self.output, name=str(name))
+        for row in sample:
+            collection.add(
+                row[2:2+self.n_sampled],
+                derived=row[2+self.n_sampled:2+self.n_sampled+self.n_derived+1],
+                weight=row[0], logpost=-row[1], logprior=row[-(1+self.n_liks)],
+                logliks=row[-self.n_liks:])
+        # make sure that the points are written
+        collection.out_update()
+        return collection
+
     def close(self):
         """
         Loads the sample of live points from ``PolyChord``'s raw output and writes it
@@ -273,40 +289,47 @@ class polychord(Sampler):
         """
         if not get_mpi_rank():  # process 0 or single (non-MPI process)
             self.log.info("Loading PolyChord's results: samples and evidences.")
+            self.n_sampled = len(self.parametrization.sampled_params())
+            self.n_derived = len(self.parametrization.derived_params())
+            self.n_liks = len(self.likelihood._likelihoods)
             prefix = os.path.join(self.pc_settings.base_dir, self.pc_settings.file_root)
-            sample = np.loadtxt(prefix+".txt")
-            self.collection = Collection(
-                self.parametrization, self.likelihood, self.output, name="1")
-            n_sampled = len(self.parametrization.sampled_params())
-            n_derived = len(self.parametrization.derived_params())
-            n_liks = len(self.likelihood._likelihoods)
-            for row in sample:
-                self.collection.add(row[2:2+n_sampled],
-                                    derived=row[2+n_sampled:2+n_sampled+n_derived+1],
-                                    weight=row[0], logpost=-row[1],
-                                    logprior=row[-(1+n_liks)],
-                                    logliks=row[-n_liks:])
-            # make sure that the points are written
-            self.collection.out_update()
+            self.collection = self.save_sample(prefix+".txt", "1")
+            if self.pc_settings.do_clustering is not False:  # None here means "default"
+                self.clusters = {}
+                cluster_folder = os.path.join(
+                    self.output.folder, self.output.prefix + "_" + clusters)
+                for f in os.listdir(os.path.join(self.pc_settings.base_dir, clusters)):
+                    if not os.path.exists(cluster_folder):
+                        os.mkdir(cluster_folder)
+                    try:
+                        i = int(f[len(self.pc_settings.file_root)+1:-len(".txt")])
+                    except ValueError:
+                        continue
+                    old_folder = self.output.folder
+                    self.output.folder = cluster_folder
+                    fname = os.path.join(self.pc_settings.base_dir, clusters, f)
+                    self.clusters[i] = {"sample": self.save_sample(fname, str(i))}
+                    self.output.folder = old_folder
             # Prepare the evidence
+            pre = "log(Z"
+            lines = []
             with open(prefix+".stats", "r") as statsfile:
-                line = ""
-                while "Global evidence:" not in line:
-                    line = statsfile.readline()
-                while "log(Z)" not in line:
-                    line = statsfile.readline()
-                self.logZ, self.logZstd = [
-                    float(n) for n in line.split("=")[-1].split("+/-")]
-# TODO: that's not true anymore!!!
-# THE RESULTS CANNOT BE BROADCASTED BECAUSE POLYCHORD KILLS MPI!
-#        # Broadcast results
+                lines = [l for l in statsfile.readlines() if l.startswith(pre)]
+            for l in lines:
+                logZ, logZstd = [float(n) for n in l.split("=")[-1].split("+/-")]
+                component = l.split("=")[0].lstrip(pre+"_").rstrip(") ")
+                if not component:
+                    self.logZ, self.logZstd = logZ, logZstd
+                else:
+                    i = int(component)
+                    self.clusters[i]["logZ"], self.clusters[i]["logZstd"] = logZ, logZstd
 #        if get_mpi():
-#            bcast_from_0 = lambda attrname: setattr(self, attrname,
-#                get_mpi_comm().bcast(getattr(self, attrname, None), root=0))
-#            map(bcast_from_0, ["collection", "logZ", "logZstd"])
+#            bcast_from_0 = lambda attrname: setattr(self,
+#                attrname, get_mpi_comm().bcast(getattr(self, attrname, None), root=0))
+#            map(bcast_from_0, ["collection", "logZ", "logZstd", "clusters"])
         if not get_mpi_rank():  # process 0 or single (non-MPI process)
-            self.log.info("Finished! "
-                          "Raw PolyChord output stored in '%s'.", self.pc_settings.base_dir)
+            self.log.info("Finished! Raw PolyChord output stored in '%s'.",
+                          self.pc_settings.base_dir)
 
     def products(self):
         """
@@ -316,7 +339,10 @@ class polychord(Sampler):
            The sample ``Collection`` containing the sequentially discarded live points.
         """
         if not get_mpi_rank():
-            return {"sample": self.collection, "logZ": self.logZ, "logZstd": self.logZstd}
+            return {"sample": self.collection, "logZ": self.logZ, "logZstd": self.logZstd,
+                    "clusters": self.clusters}
+        else:
+            return {}
 
 
 # Installation routines ##################################################################
