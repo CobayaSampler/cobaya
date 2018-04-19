@@ -15,6 +15,8 @@ Its authors are `Jesus Torrado`_ and `Antony Lewis`_. Some ideas and modules hav
 
 Though **cobaya** is a general purpose statistical framework, it includes interfaces to cosmological *theory codes* (CAMB_ and CLASS_) and *experimental likelihoods* (in this version, Planck 2015 and Bicep-Keck 2015). The interfaces to most cosmological likelihoods are agnostic as to which theory code is used to compute the observables, which facilitates comparison between those codes.
 
+**cobaya** has an overhead ~0.5ms per posterior evaluation, which makes it suitable for most cosmological applications (CAMB_ and CLASS_ take seconds to run), but not necessarily for more general statistical applications, if the evaluation time per pdf involved is of that order or smaller.
+
 **cobaya** has been conceived from the beginning to be highly and effortlessly extensible: without touching **cobaya**'s source code, you can define your own priors and likelihoods, use modified versions of a theory code (just pass **cobaya** their folder!), create new parameters as function of other parameters... You can also use **cobaya** simply as a wrapper for cosmological likelihoods to integrate them in your analysis pipeline.
 
 In addition, it downloads and install requirements automatically (samplers, theory codes and likelihoods); it supports MPI parallelization and HPC containerization (Singularity and Docker+Shifter; the later is WIP); and it can be run either from the shell or from a Python interpreter/notebook, and takes input either as YAML_ files or Python dictionaries.
