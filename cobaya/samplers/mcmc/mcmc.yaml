@@ -35,23 +35,13 @@ sampler:
     # Gelman-Rubin R-1 on std deviations (requires MPI!)
     Rminus1_cl_stop: 0.3
     Rminus1_cl_level: 0.95
-    # Fast-slow hierarchy
-    # -------------------
-    # Method I: Dragging
-    #    Maximum speed that is considered "slow"
-    max_speed_slow: 1
-    #    Number of interpolating steps,
-    #    as a factor times the number of fast directions,
-    #    or directly as the number of interpolating steps.
-    #    Define just one of them, or none to turn off fast dragging
-    drag_nfast_times: null
-    drag_interp_steps: null
-    # Method II: Oversampling
-    #    If True, oversamples each likelihood proportionally to
-    #    the ratio of its speed with respect to the slowest speed.
-    oversample: False
-    # NB.: Oversampled and fast-dragged samples do not count towards
-    #      `max_samples` and checkpoints.
+    # Exploiting speed hierarchy
+    # --------------------------
+    # Method I: Oversampling of each parameters block relative to it speed
+    oversample: False  # NB: still WIP in the beta version!
+    # Method II: Dragging: simulates jumps on slow params when varying fast ones
+    # Set to True, or a factor of the time of a jump on the slow block
+    drag: False
     # Callback function
     # -----------------
     callback_function: null

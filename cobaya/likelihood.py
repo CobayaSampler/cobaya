@@ -287,7 +287,7 @@ class LikelihoodCollection(object):
         log.error("Marginal not implemented for >1 likelihoods. Sorry!")
         raise HandledException
 
-    def speeds_of_params(self, oversampling_factors=True):
+    def speeds_of_params(self, int_speeds=False, fast_slow=False):
         """
         Separates the sampled parameters in blocks according to the likelihood (or theory)
         re-evaluation that changing each one of them involves. Using the appoximate speed
@@ -296,8 +296,11 @@ class LikelihoodCollection(object):
 
         Returns tuples of ``(speeds), (params_inblock)``, sorted by ascending speeds.
 
-        If ``oversampling_factors=True``, returns integer oversampling factors instead of
-        speeds in 1/s.
+        If ``int_speeds=True``, returns integer speeds (i.e. oversampling factors
+        *per param* -- not per block) instead of speeds in 1/s.
+
+        If ``fast_slow=True``, returns just 2 blocks: a fast and a slow one, each one
+        assigned its slowest speed.
 
         TODO: take into account "mixing towards fastest" introduced by the Cholesky
         transformation, and sort fully optimally.
@@ -305,9 +308,10 @@ class LikelihoodCollection(object):
         # Fill unknown speeds with the value of the slowest one, and clip with overhead
         speeds = np.array([getattr(self[lik], "speed", -1) for lik in self] +
                           ([getattr(self.theory, "speed", -1)] if self.theory else []))
+        # Add overhead to the defined ones, and clip to the slowest the undefined ones
+        speeds[speeds > 0] = (speeds[speeds > 0]**-1 + _overhead)**-1
         try:
-            speeds = np.clip(
-                speeds, min(1/_overhead, min(speeds[speeds > 0])), 1/_overhead)
+            speeds = np.clip(speeds, min(speeds[speeds > 0]), None)
         except ValueError:
             # No speeds specified
             speeds = np.ones(len(speeds))
@@ -326,16 +330,32 @@ class LikelihoodCollection(object):
         blocks_costs = [sum([i*s**-1 for i,s in zip(fpblock,speeds)])
                         for fpblock in different_footprints]
         blocks_speeds = np.array([1/c for c in blocks_costs])
+        # Separate fast-slow
+        # WIP: just theory vs non-theory yet
+        if fast_slow and self.theory:
+            blocks_fs = [[], []]
+            speeds_fs = [[], []]
+            for i in range(len(blocks)):
+                if different_footprints[i][-1]:  # is theory param
+                    blocks_fs[0] += [blocks[i]]
+                    speeds_fs[0] += [blocks_speeds[i]]
+                else:
+                    blocks_fs[1] += [blocks[i]]
+                    speeds_fs[1] += [blocks_speeds[i]]
+            blocks = blocks_fs[0] + blocks_fs[1]
+            blocks_speeds = speeds_fs[0] + speeds_fs[1]
         # Sort *naively*: less cost per paramter first
         isort = np.argsort(blocks_speeds)
-        if oversampling_factors:
+        # WIP: ideally, when likelihoods have states, one would sort even *inside* each of
+        # the fast-slow blocks!
+        if int_speeds:
             # Oversampling precision: smallest difference in oversampling to be ignored.
-            oversampling_precision = 1/20
-            factors = np.array(np.round(np.array(
-                blocks_speeds)/min(blocks_speeds)/oversampling_precision), dtype=int)
-            factors = np.array(
-                factors/np.ufunc.reduce(np.frompyfunc(gcd, 2, 1), factors), dtype=int)
-            blocks_speeds = factors
+            speed_precision = 1/20
+            speeds = np.array(np.round(np.array(
+                blocks_speeds)/min(blocks_speeds)/speed_precision), dtype=int)
+            speeds = np.array(
+                speeds/np.ufunc.reduce(np.frompyfunc(gcd, 2, 1), speeds), dtype=int)
+            blocks_speeds = speeds
         return zip(*[[blocks_speeds[i], blocks[i]] for i in isort])
 
     # Python magic for the "with" statement

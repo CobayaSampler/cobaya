@@ -207,51 +207,61 @@ class mcmc(Sampler):
             self.parametrization, self.likelihood, self.output, name=name)
         # Use the standard steps by default
         self.get_new_sample = self.get_new_sample_metropolis
-        # Create proposer -- speeds, fast-dragging/oversampling and initial covmat
-        speeds, blocks = zip(*self.likelihood.speeds_of_params().items())
+        # Prepare oversampling / fast-dragging if applicable
+        self.effective_max_samples = self.max_samples
+
+        if self.oversample and self.drag:
+            self.log.error("Choose either oversampling or fast-dragging, not both.")
+            raise HandledException
+#        if (self.oversample or self.drag) and len(set(factors)) == 1:
+#            self.log.error("All block speeds are similar: "
+#                           "no dragging or oversampling possible.")
+#            raise HandledException
+        if self.oversample:
+            factors, blocks = self.likelihood.speeds_of_params(oversampling_factors=True)
+            self.oversampling_factors = factors
+            # WIP: actually, we would have to re-normalise to the dimension of the blocks.
+            self.log.info(
+                "Oversampling with factors:\n" +
+                "\n".join(["   %d : %r"%(f,b)
+                           for f,b in zip(self.oversampling_factors, blocks)]))
+            # WIP: useless until likelihoods have STATES!
+            self.log.error("Sorry, oversampling is WIP")
+            raise HandledException
+        elif self.drag:
+            # WIP: for now, can only separate between theory and likelihoods
+            # until likelihoods have states
+            if not self.likelihood.theory:
+                self.log.error("WIP: dragging disabled for now when no theory code present.")
+                raise HandledException
+#            if self.max_speed_slow < min(speeds) or self.max_speed_slow >= max(speeds):
+#                self.log.error("The maximum speed considered slow, `max_speed_slow`, must be "
+#                          "%g <= `max_speed_slow < %g, and is %g",
+#                          min(speeds), max(speeds), self.max_speed_slow)
+#                raise HandledException
+            speeds, blocks = self.likelihood.speeds_of_params(
+                int_speeds=True, fast_slow=True)
+            if np.all(speeds==speeds[0]):
+                self.log.error("All speeds are equal: cannot drag! Make sure to define, "
+                               "especially, the speed of the fastest likelihoods.")
+            self.i_last_slow_block = 0  # just theory can be slow for now
+            fast_params = list(chain(*blocks[1+self.i_last_slow_block:]))
+            self.n_slow = sum(len(blocks[i]) for i in range(1+self.i_last_slow_block))
+            from cobaya.conventions import _overhead
+            self.drag_interp_steps = int(self.drag*np.round(min(speeds[1:])/speeds[0]))
+            self.log.info(
+                "Dragging with oversampling per step:\n" +
+                "\n".join(["   %d : %r"%(f,b)
+                           for f,b in zip([1, self.drag_interp_steps],
+                                          [blocks[0], fast_params])]))
+            self.get_new_sample = self.get_new_sample_dragging
+        else:
+            _, blocks = self.likelihood.speeds_of_params()
+            self.oversampling_factors = [1 for b in blocks]
+            self.n_slow = len(self.parametrization.sampled_params())
         # Turn parameter names into indices
         blocks = [[list(self.parametrization.sampled_params().keys()).index(p) for p in b]
                   for b in blocks]
-        if self.oversample and (self.drag_nfast_times or self.drag_interp_steps):
-            self.log.error("Choose either oversampling or fast-dragging, not both.")
-            raise HandledException
-        if self.oversample:
-            self.oversampling_factors = [int(np.round(s/speeds[0])) for s in speeds]
-            if len(set(self.oversampling_factors)) == 1:
-                self.log.error("All likelihood speeds are similar: no oversampling possible.")
-                raise HandledException
-            self.effective_max_samples = (
-                sum([len(b)*f for b,f in zip(blocks,self.oversampling_factors)]) /
-                len(self.parametrization.sampled_params()))
-            self.n_slow = len(blocks[0])
-        elif self.drag_interp_steps or self.drag_nfast_times:
-            if len(set(speeds)) == 1:
-                self.log.error("All likelihoods speeds are equal: no fast_dragging possible.")
-                raise HandledException
-            if self.drag_nfast_times and self.drag_interp_steps:
-                self.log.error("To specify the number of dragging interpolating steps, use "
-                          "*either* `drag_nfast_times` or `drag_interp_steps`, not both.")
-                raise HandledException
-            if self.max_speed_slow < min(speeds) or self.max_speed_slow >= max(speeds):
-                self.log.error("The maximum speed considered slow, `max_speed_slow`, must be "
-                          "%g <= `max_speed_slow < %g, and is %g",
-                          min(speeds), max(speeds), self.max_speed_slow)
-                raise HandledException
-            self.i_last_slow_block = next((i for i,speed in enumerate(list(speeds))
-                                      if speed > self.max_speed_slow)) - 1
-            _keys = list(self.parametrization.sampled_params().keys())
-            fast_params = [_keys[i] for i in chain(*blocks[1+self.i_last_slow_block:])]
-            self.effective_max_samples = self.max_samples
-            self.n_slow = sum(len(blocks[i]) for i in range(1+self.i_last_slow_block))
-            if self.drag_nfast_times:
-                self.drag_interp_steps = np.round(self.drag_nfast_times*len(fast_params))
-            self.get_new_sample = self.get_new_sample_dragging
-            self.log.info("Using fast dragging over %d slow parameters, "
-                     "with %d interpolating steps on fast parameters %r",
-                     self.n_slow, self.drag_interp_steps, fast_params)
-        else:
-            self.effective_max_samples = self.max_samples
-            self.n_slow = len(self.parametrization.sampled_params())
         self.proposer = BlockedProposer(
             blocks, oversampling_factors=getattr(self, "oversampling_factors", None),
             i_last_slow_block=getattr(self, "i_last_slow_block", None),
