@@ -33,9 +33,9 @@ block of the input.
 
 In the cobaya code tree, each sampler is placed in its own folder, containing a file
 defining the sampler's class, which inherits from the :class:`cobaya.Sampler`, and a
-``defaults.yaml`` file, containing all possible user-specified options for the sampler and
-their default value. Whatever option is defined in this file becomes automatically an
-attibute of the sampler's instance.
+``[sampler_name].yaml`` file, containing all possible user-specified options for the
+sampler and their default values. Whatever option is defined in this file becomes
+automatically an attibute of the sampler's instance.
 
 To implement your own sampler, or an interface to an external one, simply create a folder
 under the ``cobaya/cobaya/samplers/`` folder and include the two files described above.
