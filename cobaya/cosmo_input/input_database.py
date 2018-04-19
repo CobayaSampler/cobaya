@@ -7,6 +7,7 @@ from cobaya.conventions import _prior, _p_ref, _p_proposal, _p_label, _p_dist, _
 _camb = "camb"
 _classy = "classy"
 _desc = "desc"
+_extra_args = "extra_args"
 
 # Theory codes
 theory = odict([[_camb, None], [_classy, None]])
@@ -21,7 +22,7 @@ primordial = odict([
                       _p_ref: {_p_dist: "norm", "loc": 3.1, "scale": 0.001},
                       _p_proposal: 0.001, _p_label: r"\log(10^{10} A_s",
                       _p_drop: True}],
-            ["As", "lambda logA: 1e-10*np.exp(logAs1e10)"],
+            ["As", "lambda logA: 1e-10*np.exp(logA)"],
             ["ns", {_prior: {"min": 0.8, "max": 1.2},
                     _p_ref: {_p_dist: "norm", "loc": 0.96, "scale": 0.004},
                     _p_proposal: 0.002, _p_label: r"n_s"}]])}]])
@@ -70,7 +71,7 @@ hubble = odict([
         _desc: "CosmoMC's approx. angular size of sound horizon (CAMB only)",
         _theory: {_camb: None},
         _params: odict([
-            ["cosmomc_theta", "lambda cosmomc_theta_100: 1.e-2*cosmomc_theta_100"],
+            ["cosmomc_theta", "lambda theta: 1.e-2*theta"],
             ["theta", {
                 _prior: {"min": 0.5, "max": 10}, _p_drop: True,
                 _p_ref: {_p_dist: "norm", "loc": 1.0411, "scale": 0.0004},
@@ -130,14 +131,14 @@ neutrinos = odict([
     ["one_heavy_planck", {
         _desc: "Two massless nu and one with m=0.06. Neff=3.046",
         _theory: {
-            _camb: {"extra_params":
+            _camb: {_extra_args:
                 {"num_massive_neutrinos": 1, "mnu": 0.06, "nnu": 3.046}},
-            _classy: {"extra_params":
+            _classy: {_extra_args:
                 {"N_ur": 2.0328, "N_ncdm": 1, "m_ncdm": 0.06, "T_ncdm": 0.71611}}}}],
     ["varying_mnu", {
         _desc: "Varying m_nu of 3 degenerate nu's, with N_eff=3.046",
         _theory: {
-            _camb: {"extra_params":
+            _camb: {_extra_args:
                 {"num_massive_neutrinos": 1, "nnu": 3.046}}},
         _params: odict([
             ["mnu", {
@@ -147,7 +148,7 @@ neutrinos = odict([
     ["varying_Neff", {
         _desc: "Varying Neff with two massless nu and one with m=0.06",
         _theory: {
-            _camb: {"extra_params":
+            _camb: {_extra_args:
                 {"num_massive_neutrinos": 1, "mnu": 0.06}}},
         _params: odict([
             ["nnu", {
@@ -157,7 +158,7 @@ neutrinos = odict([
     ["varying_Neff+1sterile", {
         _desc: "Varying Neff plus 1 sterile neutrino (SM nu's with m=0,0,0.06)",
         _theory: {
-            _camb: {"extra_params":
+            _camb: {_extra_args:
                 {"num_massive_neutrinos": 1, "mnu": 0.06, "accuracy_level": 1.2}}},
         _params: odict([
             ["nnu", {
@@ -226,13 +227,13 @@ cmb = odict([
         _desc: "",
         _likelihood: odict([
             ["planck_2015_lowTEB", None],
-            ["planck_2015_plikHM", None],
+            ["planck_2015_plikHM_TTTEEE", None],
             ["planck_2015_lensing", None]])}],
     ["planck_2015_lensing_bkp", {
         _desc: "",
         _likelihood: odict([
             ["planck_2015_lowTEB", None],
-            ["planck_2015_plikHM", None],
+            ["planck_2015_plikHM_TTTEEE", None],
             ["planck_2015_lensing", None],
             ["bicep_keck_2015", None]])}],
 ])
@@ -241,7 +242,7 @@ cmb = odict([
 sampler = odict([
     ["MCMC", {
         _desc: "MCMC sampler with covmat learning, and fast dragging.",
-        _sampler: {"mcmc": None}}],
+        _sampler: {"mcmc": {"drag": True, "learn_proposal": True}}}],
     ["PolyChord", {
         _desc: "Nested sampler, affine invariant and multi-modal.",
         _sampler: {"polychord": None}}],])
