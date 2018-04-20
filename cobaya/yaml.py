@@ -29,8 +29,11 @@ from cobaya.conventions import _force_reproducible
 
 
 # Exceptions
+
 class InputSyntaxError(Exception):
     """Syntax error in YAML input."""
+
+
 class OutputError(Exception):
     """Error when dumping YAML info."""
 
