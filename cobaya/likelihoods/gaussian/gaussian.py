@@ -4,57 +4,6 @@
 :Synopsis: Gaussian likelihood
 :Author: Jesus Torrado
 
-Gaussian likelihood, aimed for tests.
-
-The mean and covariance matrix for one or more modes must be specified with the options
-``mean`` and ``covmat`` respectively. The dimensionality of the likelihood and the number
-of modes are guessed from this options (if they are consistent to each other).
-
-The pdf is normalized to 1 when integrated over an infinite domain,
-regardless of the number of modes.
-
-The following example defines 3 modes in 2 dimensions, and expects two parameters whose
-names start with ``test_`` and must be defined in the ``params`` block:
-
-.. code-block:: yaml
-
-   likelihood:
-     gaussian:
-       prefix: test_
-       mean: [ [0.1,0.1],
-               [0.3,0.3],
-               [0.4,0.5] ]
-       cov:  [ [[0.01, 0],
-                [0,    0.05]],
-               [[0.02,  0.003],
-                [0.003, 0.01]],
-               [[0.01, 0],
-                [0,    0.01]] ]
-
-
-Derived parameters can be tracked, as many as sampled parameters times the number of modes,
-and they represent the standarised parameters of each of the modes, i.e. those distributed
-as :math:`\mathcal{N}(0,I)` around each mode (notice that if a mode is close to the
-boundary of the prior, you should not expect to recoved a unit covariance matrix from the
-sample).
-
-A delay (in seconds) in the likelihood evaluation can be specified with the keyword
-``delay``.
-
-.. note::
-
-   This module also provides functions to generate random means and covariances
-   -- see automatic documentation below.
-
-Options and defaults
---------------------
-
-Simply copy this block in your input ``yaml`` file and modify whatever options you want
-(you can delete the rest).
-
-.. literalinclude:: ../cobaya/likelihoods/gaussian/defaults.yaml
-   :language: yaml
-
 """
 
 # Python 2/3 compatibility
@@ -152,16 +101,16 @@ class gaussian(Likelihood):
 
 # Scripts to generate random means and covariances #######################################
 
-def random_mean(ranges, n_modes=1):
+def random_mean(ranges, n_modes=1, mpi_warn=True):
     """
-    Returns a uniformly sampled point (as an array) within a list of bounds `ranges`.
+    Returns a uniformly sampled point (as an array) within a list of bounds ``ranges``.
 
-    The output of this function can be used directly as the value of the option `mean` of
-    the :class:`likelihoods.gaussian`.
+    The output of this function can be used directly as the value of the option ``mean``
+    of the :class:`likelihoods.gaussian`.
 
-    If `n_modes>1`, returns an array of such points.
+    If ``n_modes>1``, returns an array of such points.
     """
-    if get_mpi_size():
+    if get_mpi_size() and mpi_warn:
         print ("WARNING! "
                "Using with MPI: different process will produce different random results.")
     mean = np.array([uniform.rvs(loc=r[0], scale=r[1]-r[0], size=n_modes)
@@ -172,18 +121,18 @@ def random_mean(ranges, n_modes=1):
     return mean
 
 
-def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1):
+def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1, mpi_warn=True):
     """
     Returns a random covariance matrix, with standard deviations sampled log-uniformly
-    from the lenght of the parameter ranges times `O_std_min` and `O_std_max`, and
-    uniformly sampled correlation coefficients betweem `rho_min` and `rho_max`.
+    from the lenght of the parameter ranges times ``O_std_min`` and ``O_std_max``, and
+    uniformly sampled correlation coefficients betweem ``rho_min`` and ``rho_max``.
 
-    The output of this function can be used directly as the value of the option `cov` of
+    The output of this function can be used directly as the value of the option ``cov`` of
     the :class:`likelihoods.gaussian`.
 
-    If `n_modes>1`, returns a list of such matrices.
+    If ``n_modes>1``, returns a list of such matrices.
     """
-    if get_mpi_size():
+    if get_mpi_size() and mpi_warn:
         print ("WARNING! "
                "Using with MPI: different process will produce different random results.")
     dim = len(ranges)
@@ -202,18 +151,20 @@ def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1):
     return cov
 
 
-def info_random_gaussian(ranges, n_modes=1, prefix="", O_std_min=1e-2, O_std_max=1):
+def info_random_gaussian(ranges, n_modes=1, prefix="", O_std_min=1e-2, O_std_max=1,
+                         mpi_aware=True):
     """
     Wrapper around ``random_mean`` and ``random_cov`` to generate the likelihood and
     parameter info for a random Gaussian.
 
-    MPI-aware: only draws the random stuff once!
+    If ``mpi_aware=True``, it draws the random stuff only once, and communicates it to
+    the rest of the MPI processes.
     """
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
-    if rank == 0:
+    if rank == 0 or not mpi_aware:
         cov = random_cov(ranges, n_modes=n_modes,
-                         O_std_min=O_std_min, O_std_max=O_std_max)
+                         O_std_min=O_std_min, O_std_max=O_std_max, mpi_warn=False)
         if n_modes == 1:
             cov = [cov]
         # Make sure it stays away from the edges
@@ -225,10 +176,11 @@ def info_random_gaussian(ranges, n_modes=1, prefix="", O_std_min=1e-2, O_std_max
             # If this implies min>max, take the centre
             ranges_mean = [
                 (l if l[0] <= l[1] else 2*[(l[0]+l[1])/2]) for l in ranges_mean]
-            mean[i] = random_mean(ranges_mean, n_modes=1)
-    elif rank != 0:
+            mean[i] = random_mean(ranges_mean, n_modes=1, mpi_warn=False)
+    elif rank != 0 and mpi_aware:
         mean, cov = None, None
-    mean, cov = comm.bcast(mean, root=0), comm.bcast(cov, root=0)
+    if mpi_aware:
+        mean, cov = comm.bcast(mean, root=0), comm.bcast(cov, root=0)
     dimension = len(ranges)
     info = {_likelihood: {"gaussian": {
         "mean": mean, "cov": cov, "prefix": prefix}}}

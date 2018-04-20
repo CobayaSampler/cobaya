@@ -53,11 +53,15 @@ Likelihood parameters are specified within the ``params`` block, as explained in
 
 .. note::
 
-   Some *mock* likelihoods can have any number of non-predefined parameters, as long as they start with a certain prefix specified by the user with the option ``prefix`` of said likelihood.
-
-.. note::
-
    Actually, there are some user-defined options that are common to all likelihoods and do not need to be specified in the defaults ``[name].yaml`` file, such as the computational ``speed`` of the likelihood (see :ref:`mcmc_speed_hierarchy`).
+
+
+.. _likehood_mock_params:
+
+Parameter names for mock likelihoods
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+*Mock* likelihoods can have any number of non-predefined parameters, as long as they start with a certain prefix specified by the user with the option ``prefix`` of said likelihood. If said prefix is not defined (or defined to an empty string), the likelihood will understand all parameter as theirs.
 
 
 .. _likelihood_external:
