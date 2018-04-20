@@ -174,7 +174,7 @@ class polychord(Sampler):
                   "write_resume", "read_resume", "write_stats", "write_live",
                   "write_dead", "base_dir", "grade_frac", "grade_dims"]:
             v = getattr(self,p)
-            if v:
+            if v is not None:
                 setattr(self.pc_settings, p, v)
         # Fill the automatic ones
         if getattr(self, "feedback", None) is None:
