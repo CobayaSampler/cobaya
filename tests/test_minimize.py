@@ -24,8 +24,8 @@ def test_minimize_gaussian():
     ranges = np.array([[0,1] for i in range(dimension)])
     prefix = "a_"
     info = info_random_gaussian(ranges=ranges, n_modes=n_modes, prefix=prefix)
-    mean = info[_likelihood]["gaussian"]["mean"]
-    cov = info[_likelihood]["gaussian"]["cov"]
+    mean = info[_likelihood]["gaussian"]["mean"][0]
+    cov = info[_likelihood]["gaussian"]["cov"][0]
     maxloglik = multivariate_normal.logpdf(mean, mean=mean, cov=cov)
     if rank == 0:
         print("Maximim of the gaussian mode to be found:")
