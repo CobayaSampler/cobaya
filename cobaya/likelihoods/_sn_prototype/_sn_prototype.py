@@ -47,13 +47,13 @@ You shouldn't need to modify any of the options of these likelihoods,
 but if you really need to, just copy the ``likelihood`` block into your input ``yaml``
 file and modify whatever options you want (you can delete the rest).
 
-.. literalinclude:: ../cobaya/likelihoods/sn_pantheon/defaults.yaml
+.. literalinclude:: ../cobaya/likelihoods/sn_pantheon/sn_pantheon.yaml
    :language: yaml
 
-.. literalinclude:: ../cobaya/likelihoods/sn_jla/defaults.yaml
+.. literalinclude:: ../cobaya/likelihoods/sn_jla/sn_jla.yaml
    :language: yaml
 
-.. literalinclude:: ../cobaya/likelihoods/sn_jla_lite/defaults.yaml
+.. literalinclude:: ../cobaya/likelihoods/sn_jla_lite/sn_jla_lite.yaml
    :language: yaml
 
 

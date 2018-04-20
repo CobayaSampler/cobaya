@@ -34,7 +34,7 @@ You shouldn't need to modify any of the options of this simple likelihood,
 but if you really need to, just copy the ``likelihood`` block into your input ``yaml``
 file and modify whatever options you want (you can delete the rest).
 
-.. literalinclude:: ../cobaya/likelihoods/bicep_keck_2015/defaults.yaml
+.. literalinclude:: ../cobaya/likelihoods/bicep_keck_2015/bicep_keck_2015.yaml
    :language: yaml
 
 

@@ -56,7 +56,6 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
                 info[_params][p]["ref"] = best_fit[p]
         except:  # was fixed or derived
             info[_params][p] = best_fit[p]
-    from cobaya.yaml import yaml_dump
     # We'll pop some derived parameters, so copy
     derived = deepcopy(baseline_cosmology_derived)
     best_fit_derived = deepcopy(best_fit_derived)

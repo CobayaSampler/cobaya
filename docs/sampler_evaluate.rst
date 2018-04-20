@@ -38,6 +38,10 @@ In this case, the posterior will be evaluated at ``a=0.5``, ``b`` sampled from a
 pdf centred at ``0`` with standard deviation ``0.1``, and ``c`` will be sampled uniformly
 between ``-1`` and ``1``.
 
+.. note::
+
+   If using this sampler **cobaya** appears to be stuck, this normally means that it cannot sample a point with finite posterior value. Check that your prior/likelihood definitions leave room for some finite posterior density, e.g. don't define an external prior that imposes that :math:`x>2` if the range allowed for :math:`x` is just :math:`[0,1]`.
+
 
 Sampler class
 -------------

@@ -68,7 +68,7 @@ data, with the same row order as the data file.
 
 Now, add to your likelihood block:
 
-.. literalinclude:: ../cobaya/likelihoods/bao_generic/defaults.yaml
+.. literalinclude:: ../cobaya/likelihoods/bao_generic/bao_generic.yaml
    :language: yaml
 
 

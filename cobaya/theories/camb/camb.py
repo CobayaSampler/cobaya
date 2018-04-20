@@ -62,7 +62,7 @@ Automatic installation
 ^^^^^^^^^^^^^^^^^^^^^^
 
 If you do not plan to modify CAMB, the easiest way to install it is using the
-:doc:`automatic installation script <installation_ext>`. Just make sure that
+:doc:`automatic installation script <installation_cosmo>`. Just make sure that
 ``theory: camb:`` appears in one of the files passed as arguments to the installation
 script.
 
@@ -427,6 +427,8 @@ class camb(Theory):
     def get_param(self, p):
         """
         Interface function for likelihoods to get sampled and derived parameters.
+
+        It makes sure that it corresponds to the right input parameter state.
         """
         current_state = self.current_state()
         for pool in ["params", "derived", "derived_extra"]:

@@ -29,6 +29,13 @@ As of this version, there is no scientific publication yet associated to this so
 
 To appropriately cite the modules (samplers, theory codes, likelihoods) that you have used, simply run the script `cobaya-citation` with your input file(s) as argument(s), and you will get *bibtex* references and a short suggested text snippet for each module mentioned in your input file.
 
+
+Acknowledgements
+----------------
+
+Thanks to `Guadalupe Cañas Herrera`_ for extensive and somewhat painful testing.
+
+
 .. _`Jesus Torrado`: http://astronomy.sussex.ac.uk/~jt386
 .. _`Antony Lewis`: http://cosmologist.info
 .. _CosmoMC: http://cosmologist.info/cosmomc/
@@ -41,7 +48,7 @@ To appropriately cite the modules (samplers, theory codes, likelihoods) that you
 .. _GetDist: https://github.com/cmbant/getdist
 .. _YAML: https://en.wikipedia.org/wiki/YAML
 .. _PolyChord: http://ccpforge.cse.rl.ac.uk/gf/project/polychord
-
+.. _`Guadalupe Cañas Herrera`: https://gcanasherrera.github.io/pages/about-me.html#about-me
 
 ===================
 
