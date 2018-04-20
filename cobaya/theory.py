@@ -13,8 +13,8 @@ code.
 .. note::
 
    At this moment, of all modules of cobaya, this is the one with the least fixed
-   structure. Don't pay much attention to it for now. Just go on to the installation
-   instructions for :doc:`CAMB <theory_camb>` and :doc:`CLASS <theory_class>`.
+   structure. Don't pay much attention to it for now. Just go on to the documentation of
+   :doc:`CAMB <theory_camb>` and :doc:`CLASS <theory_class>`.
 
 """
 
