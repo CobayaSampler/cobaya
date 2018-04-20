@@ -186,20 +186,24 @@ class polychord(Sampler):
             self.collection = self.save_sample(prefix+".txt", "1")
             if self.pc_settings.do_clustering is not False:  # None here means "default"
                 self.clusters = {}
-                cluster_folder = os.path.join(
-                    self.output.folder, self.output.prefix + "_" + clusters)
+                do_output = hasattr(self.output, "folder")
                 for f in os.listdir(os.path.join(self.pc_settings.base_dir, clusters)):
-                    if not os.path.exists(cluster_folder):
-                        os.mkdir(cluster_folder)
+                    if do_output:
+                        cluster_folder = os.path.join(
+                            self.output.folder, self.output.prefix + "_" + clusters)
+                        if not os.path.exists(cluster_folder):
+                            os.mkdir(cluster_folder)
                     try:
                         i = int(f[len(self.pc_settings.file_root)+1:-len(".txt")])
                     except ValueError:
                         continue
-                    old_folder = self.output.folder
-                    self.output.folder = cluster_folder
+                    if do_output:
+                        old_folder = self.output.folder
+                        self.output.folder = cluster_folder
                     fname = os.path.join(self.pc_settings.base_dir, clusters, f)
                     self.clusters[i] = {"sample": self.save_sample(fname, str(i))}
-                    self.output.folder = old_folder
+                    if do_output:
+                        self.output.folder = old_folder
             # Prepare the evidence
             pre = "log(Z"
             lines = []
