@@ -8,8 +8,8 @@ The only pre-requisites are **Python** (version ≥ 2.7) and the Python package 
 
 To check if you have Python installed, type ``python --version`` in the shell, and you should get ``Python 2.7.[whatever]``. Then, type ``pip`` in the shell, and if you get usage instructions instead of a ``command not found`` message, you are golden. If you don't have any of those two installed, use your system's package manager or contact your local IT service.
 
-.. _install_mpi:
 
+.. _install_mpi:
 
 MPI parallelization (optional but encouraged!)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

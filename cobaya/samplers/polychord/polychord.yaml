@@ -1,9 +1,9 @@
-# Default arguments for the PolyChord sampler, v1.9
+# Default arguments for the PolyChord sampler
 
 sampler:
   polychord:
     # Path to the PolyChord installation folder
-    path:  # disabled for now!
+    path:  # use only if installed manually!
     # Optional parameters for the sampler:
     # (if not defined, they are left to their defaults)
     # -------------------------------------------------

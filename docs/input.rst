@@ -29,7 +29,7 @@ In addition, there are some *top level* options (i.e. defined outside any block)
 
 + ``output_prefix``: determines where the output files are written and/or a prefix for their names — see :ref:`output_shell`.
 + ``path_to_modules``: path where the external modules have been automatically installed — see :doc:`installation_cosmo`.
-+ ``debug``: sets the verbosity level of the output. By default (undefined or ``False``), it produces a rather informative output, reporting on initialization, overall progress and results. If ``True``, it produces a very verbose output (a few lines per sample) that can be used for debugging. You can also set it directly to a particular `integer level of the Python logger <https://docs.python.org/2/library/logging.html#logging-levels>`_, e.g. 40 to produce error output only.
++ ``debug``: sets the verbosity level of the output. By default (undefined or ``False``), it produces a rather informative output, reporting on initialization, overall progress and results. If ``True``, it produces a very verbose output (a few lines per sample) that can be used for debugging. You can also set it directly to a particular `integer level of the Python logger <https://docs.python.org/2/library/logging.html#logging-levels>`_, e.g. 40 to produce error output only (alternatively, ``cobaya-run`` can take the flag ``--debug`` to produce debug output, that you can pipe to a file with ``>file``).
 + ``debug_file``: a file name, with a relative or absolute path if desired, to which to send all logged output. When used, only basic progress info is printed on-screen, and the full debug output (if ``debug: True``) will be sent to this file instead
 
 
