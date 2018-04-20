@@ -89,12 +89,15 @@ def run(info):
 def run_script():
     import os
     import argparse
+    from cobaya.conventions import _path_install, _debug
     parser = argparse.ArgumentParser(description="Cobaya's run script.")
     parser.add_argument("input_file", nargs=1, action="store", metavar="input_file.yaml",
                         help="An input file to run.")
     parser.add_argument("-p", "--path",
                         action="store", nargs="+", metavar="/some/path",
                         help="Path where modules were automatically installed.")
+    parser.add_argument("--"+_debug, action="store_true",
+                        help="Set this flag for debug output.")
     args = parser.parse_args()
     if any([(os.path.splitext(f)[0] in ("input", "full")) for f in args.input_file]):
         raise ValueError("'input' and 'full' are reserved file names. "
@@ -103,8 +106,6 @@ def run_script():
     load_input = import_MPI(".input", "load_input")
     info = load_input(args.input_file[0])
     # solve path
-    import os
-    from cobaya.conventions import _path_install
     path_env = os.environ.get("COBAYA_MODULES", None)
     path_cmd = (lambda x: x[0] if x else None)(getattr(args, "path"))
     path_input = info.get(_path_install)
@@ -114,4 +115,6 @@ def run_script():
             "('%s') and the input file ('%s'). There should only be one." %
             (path_cmd, path_input))
     info[_path_install] = path_input or (path_cmd or path_env)
+    if getattr(args, _debug):
+        info[_debug] = True
     run(info)
