@@ -42,7 +42,9 @@ Within ``/path/to/modules``, the following file structure will be created, conta
    /path/to/modules
             ├── code
             │   ├── planck_2015
-            │   ├── CLASS
+            │   ├── CAMB
+            │   ├── classy
+            │   ├── PolyChord
             │   └── [...]
             └── data
                 ├── planck_2015
