@@ -6,3 +6,5 @@ likelihood:
     delay: 0  # seconds
     # 2. prefix of the parameters names
     prefix: ""
+    # Noise (to aide computation of flat prior volume)
+    noise:  # set to a small number (e.g. 1e-50) if desired
