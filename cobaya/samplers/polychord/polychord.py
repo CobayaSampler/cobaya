@@ -320,7 +320,7 @@ class polychord(Sampler):
                 component = l.split("=")[0].lstrip(pre+"_").rstrip(") ")
                 if not component:
                     self.logZ, self.logZstd = logZ, logZstd
-                else:
+                elif self.pc_settings.do_clustering:
                     i = int(component)
                     self.clusters[i]["logZ"], self.clusters[i]["logZstd"] = logZ, logZstd
 #        if get_mpi():
@@ -339,8 +339,11 @@ class polychord(Sampler):
            The sample ``Collection`` containing the sequentially discarded live points.
         """
         if not get_mpi_rank():
-            return {"sample": self.collection, "logZ": self.logZ, "logZstd": self.logZstd,
-                    "clusters": self.clusters}
+            products = {
+                "sample": self.collection, "logZ": self.logZ, "logZstd": self.logZstd}
+            if self.pc_settings.do_clustering:
+                products.update({"clusters": self.clusters})
+            return products
         else:
             return {}
 
