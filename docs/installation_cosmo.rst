@@ -64,6 +64,36 @@ Take note of that folder in your case, here ``/path/to/modules``, and include it
 
 or specify it using the flat ``--path /path/to/modules`` when invoking from the shell.
 
+
+.. _basic_requisites:
+
+Installing a basic set of codes and likelihoods
+-----------------------------------------------
+
+To install a comprehensive set of cosmology requirements, copy the next to a file named ``reqs.yaml``
+
+.. code:: yaml
+
+   # Basic list of requisites
+   theory:
+     camb:
+     classy:
+   likelihood:
+     planck_2015_lowl:
+     planck_2015_lensing_cmblikes:
+     bicep_keck_2015:
+     sn_pantheon:
+     sdss_dr12_consensus_final:
+   sampler:
+     polychord:
+
+and run, with some path ``/path/to/modules`` of your choice:
+
+.. code:: bash
+
+   $ cobaya-install reqs.yaml -p [/path/to/modules]
+
+
 .. _install_manual:
 
 Installing modules manually

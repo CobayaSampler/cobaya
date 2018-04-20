@@ -4,9 +4,9 @@ Installing cobaya
 Pre-requisites
 --------------
 
-The only pre-requisites are **Python** (version ≥ 2.7) and the Python package manager **pip** (external modules may have additional dependencies).
+The only pre-requisites are **Python** (version ≥ 2.7 or 3) and the Python package manager **pip** (external modules may have additional dependencies).
 
-To check if you have Python installed, type ``python --version`` in the shell, and you should get ``Python 2.7.[whatever]``. Then, type ``pip`` in the shell, and if you get usage instructions instead of a ``command not found`` message, you are golden. If you don't have any of those two installed, use your system's package manager or contact your local IT service.
+To check if you have Python installed, type ``python --version`` in the shell, and you should get ``Python 2.7.[whatever]`` or ``Python 3.[whatever]``. Then, type ``pip`` in the shell, and if you get usage instructions instead of a ``command not found`` message, you are golden. If you don't have any of those two installed, use your system's package manager or contact your local IT service.
 
 
 .. _install_mpi:
@@ -53,6 +53,14 @@ To check if OpenBLAS is installed, in Debian-like systems, type
 
 The output should end in ``install ok installed``. If you don't have it installed, in a Debian-like system, type ``sudo apt install libopenblas-base`` or ask your local IT service.
 
+To check whether ``numpy`` is actually using OpenBLAS, do
+
+.. code:: bash
+
+   $ python -c "from numpy import show_config; show_config()" | grep openblas_info
+
+and you should get at least one line of output.
+
 
 Installing and updating cobaya
 ------------------------------
@@ -72,8 +80,8 @@ To install **cobaya** or upgrade it to the last release, simply type in a termin
 
 .. _install_check:
 
-Make sure that cobaya is installed
-----------------------------------
+Making sure that cobaya is installed
+------------------------------------
 
 If everything went well, you should be able to import **cobaya** in Python from anywhere in your directory structure:
 
