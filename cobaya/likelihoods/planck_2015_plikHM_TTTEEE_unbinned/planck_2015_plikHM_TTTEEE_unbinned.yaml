@@ -89,6 +89,7 @@ params:
       scale: 0.002
     proposal: 0.0005
     latex: y_\mathrm{cal}
+    alias: calPlanck
   A_cib_217:
     prior:
       dist: uniform
@@ -100,6 +101,7 @@ params:
       scale: 10
     proposal: 1.2
     latex: A^\mathrm{CIB}_{217}
+    alias: acib217
   xi_sz_cib:
     prior:
       dist: uniform
@@ -111,6 +113,7 @@ params:
       scale: 0.1
     proposal: 0.1
     latex: \xi^{\mathrm{tSZ}\times\mathrm{CIB}}
+    alias: xi
   A_sz:
     prior:
       dist: uniform
@@ -122,6 +125,7 @@ params:
       scale: 2
     proposal: 0.6
     latex: A^\mathrm{tSZ}_{143}
+    alias: asz143
   ps_A_100_100:
     prior:
       dist: uniform
@@ -133,6 +137,7 @@ params:
       scale: 24
     proposal: 17
     latex: A^\mathrm{PS}_{100}
+    alias: aps100
   ps_A_143_143:
     prior:
       dist: uniform
@@ -144,6 +149,7 @@ params:
       scale: 10
     proposal: 3
     latex: A^\mathrm{PS}_{143}
+    alias: aps143
   ps_A_143_217:
     prior:
       dist: uniform
@@ -155,6 +161,7 @@ params:
       scale: 12
     proposal: 2
     latex: A^\mathrm{PS}_{\mathrm{143}\times\mathrm{217}}
+    alias: aps143217
   ps_A_217_217:
     prior:
       dist: uniform
@@ -166,6 +173,7 @@ params:
       scale: 13
     proposal: 2.5
     latex: A^\mathrm{PS}_{217}
+    alias: aps217
   ksz_norm:
     prior:
       dist: uniform
@@ -177,6 +185,7 @@ params:
       scale: 3
     proposal: 1
     latex: A^\mathrm{kSZ}
+    alias: aksz
   gal545_A_100:
     prior:
       dist: norm
@@ -188,6 +197,7 @@ params:
       scale: 2
     proposal: 1
     latex: A^\mathrm{dustTT}_{100}
+    alias: kgal100
   gal545_A_143:
     prior:
       dist: norm
@@ -199,6 +209,7 @@ params:
       scale: 2
     proposal: 1
     latex: A^\mathrm{dustTT}_{143}
+    alias: kgal143
   gal545_A_143_217:
     prior:
       dist: norm
@@ -210,6 +221,7 @@ params:
       scale: 4
     proposal: 1.5
     latex: A^\mathrm{dustTT}_{\mathrm{143}\times\mathrm{217}}
+    alias: kgal143217
   gal545_A_217:
     prior:
       dist: norm
@@ -221,6 +233,7 @@ params:
       scale: 15
     proposal: 2
     latex: A^\mathrm{dustTT}_{217}
+    alias: kgal217
   galf_EE_A_100:
     prior:
       dist: norm
@@ -232,6 +245,7 @@ params:
       scale: 0.012
     proposal: 0.006
     latex: A^\mathrm{dustEE}_{100}
+    alias: galfEE100
   galf_EE_A_100_143:
     prior:
       dist: norm
@@ -243,6 +257,7 @@ params:
       scale: 0.015
     proposal: 0.007
     latex: A^\mathrm{dustEE}_{\mathrm{100}\times\mathrm{143}}
+    alias: galfEE100143
   galf_EE_A_100_217:
     prior:
       dist: norm
@@ -254,6 +269,7 @@ params:
       scale: 0.03
     proposal: 0.02
     latex: A^\mathrm{dustEE}_{\mathrm{100}\times\mathrm{217}}
+    alias: galfEE100217
   galf_EE_A_143:
     prior:
       dist: norm
@@ -265,6 +281,7 @@ params:
       scale: 0.02
     proposal: 0.01
     latex: A^\mathrm{dustEE}_{143}
+    alias: galfEE143
   galf_EE_A_143_217:
     prior:
       dist: norm
@@ -276,6 +293,7 @@ params:
       scale: 0.05
     proposal: 0.03
     latex: A^\mathrm{dustEE}_{\mathrm{143}\times\mathrm{217}}
+    alias: galfEE143217
   galf_EE_A_217:
     prior:
       dist: norm
@@ -287,6 +305,7 @@ params:
       scale: 0.15
     proposal: 0.07
     latex: A^\mathrm{dustEE}_{217}
+    alias: galfEE217
   galf_TE_A_100:
     prior:
       dist: norm
@@ -298,6 +317,7 @@ params:
       scale: 0.04
     proposal: 0.02
     latex: A^\mathrm{dustTE}_{100}
+    alias: galfTE100
   galf_TE_A_100_143:
     prior:
       dist: norm
@@ -309,6 +329,7 @@ params:
       scale: 0.04
     proposal: 0.02
     latex: A^\mathrm{dustTE}_{\mathrm{100}\times\mathrm{143}}
+    alias: galfTE100143
   galf_TE_A_100_217:
     prior:
       dist: norm
@@ -320,6 +341,7 @@ params:
       scale: 0.09
     proposal: 0.05
     latex: A^\mathrm{dustTE}_{\mathrm{100}\times\mathrm{217}}
+    alias: galfTE100217
   galf_TE_A_143:
     prior:
       dist: norm
@@ -331,6 +353,7 @@ params:
       scale: 0.07
     proposal: 0.04
     latex: A^\mathrm{dustTE}_{143}
+    alias: galfTE143
   galf_TE_A_143_217:
     prior:
       dist: norm
@@ -342,6 +365,7 @@ params:
       scale: 0.18
     proposal: 0.1
     latex: A^\mathrm{dustTE}_{\mathrm{143}\times\mathrm{217}}
+    alias: galfTE143217
   galf_TE_A_217:
     prior:
       dist: norm
@@ -353,6 +377,7 @@ params:
       scale: 0.5
     proposal: 0.3
     latex: A^\mathrm{dustTE}_{217}
+    alias: galfTE217
   calib_100T:
     prior:
       dist: norm
@@ -364,6 +389,7 @@ params:
       scale: 0.001
     proposal: 0.0005
     latex: c_{100}
+    alias: cal0
   calib_217T:
     prior:
       dist: norm
@@ -375,6 +401,7 @@ params:
       scale: 0.002
     proposal: 0.001
     latex: c_{217}
+    alias: cal2
 
 prior:
   SZ: "lambda ksz_norm, A_sz: stats.norm.logpdf(ksz_norm+1.6*A_sz, loc=9.5, scale=3.0)"

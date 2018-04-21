@@ -43,3 +43,4 @@ params:
       scale: 0.002
     proposal: 0.0005
     latex: y_\mathrm{cal}
+    alias: calPlanck
