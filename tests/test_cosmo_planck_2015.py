@@ -10,7 +10,7 @@ from cosmo_common import body_of_test
 def test_planck_2015_t_camb(modules):
     best_fit = params_lowl_highTT
     info_likelihood = lik_info_lowl_highTT
-    info_theory = {"camb": None}
+    info_theory = {"camb": {"use_planck_names": True}}
     best_fit_derived = derived_lowl_highTT
     body_of_test(modules, best_fit, info_likelihood, info_theory,
                  chi2_lowl_highTT, best_fit_derived)
@@ -20,7 +20,7 @@ def test_planck_2015_t_camb(modules):
 def test_planck_2015_p_camb(modules):
     best_fit = params_lowTEB_highTTTEEE
     info_likelihood = lik_info_lowTEB_highTTTEEE
-    info_theory = {"camb": None}
+    info_theory = {"camb": {"use_planck_names": True}}
     best_fit_derived = derived_lowTEB_highTTTEEE
     body_of_test(modules, best_fit, info_likelihood, info_theory,
                  chi2_lowTEB_highTTTEEE, best_fit_derived)
@@ -30,7 +30,7 @@ def test_planck_2015_p_camb(modules):
 def test_planck_2015_l_camb(modules):
     best_fit = params_lensing
     info_likelihood = lik_info_lensing
-    info_theory = {"camb": None}
+    info_theory = {"camb": {"use_planck_names": True}}
     best_fit_derived = derived_lensing
     body_of_test(modules, best_fit, info_likelihood, info_theory,
                  chi2_lensing, best_fit_derived)
@@ -43,7 +43,7 @@ def test_planck_2015_l2_camb(modules):
     info_likelihood = {lik_name: lik_info_lensing[clik_name]}
     chi2_lensing_cmblikes = deepcopy(chi2_lensing)
     chi2_lensing_cmblikes[lik_name] = chi2_lensing[clik_name]
-    info_theory = {"camb": None}
+    info_theory = {"camb": {"use_planck_names": True}}
     best_fit_derived = derived_lensing
     body_of_test(modules, best_fit, info_likelihood, info_theory,
                  chi2_lensing_cmblikes, best_fit_derived)
@@ -53,7 +53,7 @@ def test_planck_2015_l2_camb(modules):
 def test_planck_2015_t_classy(modules):
     best_fit = params_lowl_highTT
     info_likelihood = lik_info_lowl_highTT
-    info_theory = {"classy": {"use_camb_names": True}}
+    info_theory = {"classy": {"use_planck_names": True}}
     best_fit_derived = derived_lowl_highTT
     chi2_lowl_highTT_classy = deepcopy(chi2_lowl_highTT)
     chi2_lowl_highTT_classy["tolerance"] += 0.2
@@ -65,7 +65,7 @@ def test_planck_2015_t_classy(modules):
 def test_planck_2015_p_classy(modules):
     best_fit = params_lowTEB_highTTTEEE
     info_likelihood = lik_info_lowTEB_highTTTEEE
-    info_theory = {"classy": {"use_camb_names": True}}
+    info_theory = {"classy": {"use_planck_names": True}}
     best_fit_derived = derived_lowTEB_highTTTEEE
     chi2_lowTEB_highTTTEEE_classy = deepcopy(chi2_lowTEB_highTTTEEE)
     chi2_lowTEB_highTTTEEE_classy["tolerance"] += 0.2
@@ -77,7 +77,7 @@ def test_planck_2015_p_classy(modules):
 def test_planck_2015_l_classy(modules):
     best_fit = params_lensing
     info_likelihood = lik_info_lensing
-    info_theory = {"classy": {"use_camb_names": True}}
+    info_theory = {"classy": {"use_planck_names": True}}
     best_fit_derived = derived_lensing
     body_of_test(modules, best_fit, info_likelihood, info_theory,
                  chi2_lensing, best_fit_derived)
@@ -90,7 +90,7 @@ def test_planck_2015_l2_classy(modules):
     info_likelihood = {lik_name: lik_info_lensing[clik_name]}
     chi2_lensing_cmblikes = deepcopy(chi2_lensing)
     chi2_lensing_cmblikes[lik_name] = chi2_lensing[clik_name]
-    info_theory = {"classy": {"use_camb_names": True}}
+    info_theory = {"classy": {"use_planck_names": True}}
     best_fit_derived = derived_lensing
     body_of_test(modules, best_fit, info_likelihood, info_theory,
                  chi2_lensing_cmblikes, best_fit_derived)
@@ -106,13 +106,13 @@ chi2_lowl_highTT = {"planck_2015_lowl": 15.39,
 
 params_lowl_highTT = {
     # Sampled
-    "ombh2": 0.02249139,
-    "omch2": 0.1174684,
+    "omegabh2": 0.02249139,
+    "omegach2": 0.1174684,
     # only one of the next two is finally used!
     "H0": 68.43994,  # will be ignored in the CAMB case
-    "cosmomc_theta_100": 1.041189,  # will be ignored in the CLASS case
+    "theta": 1.041189,  # will be ignored in the CLASS case
     "tau": 0.1249913,
-    "logAs1e10": 3.179,
+    "logA": 3.179,
     "ns": 0.9741693,
     # Planck likelihood
     "A_planck": 1.00027,
@@ -134,7 +134,7 @@ params_lowl_highTT = {
 derived_lowl_highTT = {
     # param: [best_fit, sigma]
     "H0": [params_lowl_highTT["H0"], 1.2],
-    "omegav": [0.6998, 0.016],
+    "omegal": [0.6998, 0.016],
     "omegam": [0.3002, 0.016],
     "omegamh2": [0.1406, 0.0024],
     "omegamh3": [0.09623, 0.00046],
@@ -142,7 +142,7 @@ derived_lowl_highTT = {
     "s8omegamp5": [0.472, 0.014],
     "s8omegamp25":[0.637, 0.016],
     "s8h5": [1.041, 0.025],
-    "zre": [13.76, 2.5],
+    "zrei": [13.76, 2.5],
     "As1e9": [2.40, 0.15],
     "clamp": [1.870468, 0.01535354],
     "YHe": [0.2454462, 0.0001219630],
@@ -174,12 +174,12 @@ chi2_lowTEB_highTTTEEE = {"planck_2015_lowTEB": 10496.93,
 
 params_lowTEB_highTTTEEE = {
     # Sampled
-    "ombh2": 0.02225203,
-    "omch2": 0.1198657,
+    "omegabh2": 0.02225203,
+    "omegach2": 0.1198657,
     # only one of the next two is finally used!
     "H0": 67.25,  # will be ignored in the CAMB case
-    "cosmomc_theta_100": 1.040778,  # will be ignored in the CLASS case
-    "logAs1e10": 3.0929,
+    "theta": 1.040778,  # will be ignored in the CLASS case
+    "logA": 3.0929,
     "ns": 0.9647522,
     "tau": 0.07888604,
     # Planck likelihood
@@ -214,7 +214,7 @@ params_lowTEB_highTTTEEE = {
 derived_lowTEB_highTTTEEE = {
     # param: [best_fit, sigma]
     "H0": [params_lowTEB_highTTTEEE["H0"], 0.66],
-    "omegav": [0.6844, 0.0091],
+    "omegal": [0.6844, 0.0091],
     "omegam": [0.3156, 0.0091],
     "omegamh2": [0.14276, 0.0014],
     "omegamh3": [0.096013, 0.00029],
@@ -222,7 +222,7 @@ derived_lowTEB_highTTTEEE = {
     "s8omegamp5": [0.4669, 0.0098],
     "s8omegamp25":[0.6228, 0.011],
     "s8h5": [1.0133, 0.017],
-    "zre": [10.07, 1.6],
+    "zrei": [10.07, 1.6],
     "As1e9": [2.204, 0.074],
     "clamp": [1.8824, 0.012],
     "YHe": [0.2453409, 0.000072],
@@ -251,12 +251,12 @@ chi2_lensing = {"planck_2015_lensing": 9.78, "tolerance": 0.1}
 
 params_lensing = {
     # Sampled
-    "ombh2": 0.022274,
-    "omch2": 0.11913,
+    "omegabh2": 0.022274,
+    "omegach2": 0.11913,
     # only one of the next two is finally used!
     "H0": 67.56,  # will be ignored in the CAMB case
-    "cosmomc_theta_100": 1.040867,  # will be ignored in the CLASS case
-    "logAs1e10": 3.0600,
+    "theta": 1.040867,  # will be ignored in the CLASS case
+    "logA": 3.0600,
     "ns": 0.96597,
     "tau": 0.0639,
     # Planck likelihood
@@ -265,7 +265,7 @@ params_lensing = {
 derived_lensing = {
     # param: [best_fit, sigma]
     "H0": [params_lensing["H0"], 0.64],
-    "omegav": [0.6888, 0.0087],
+    "omegal": [0.6888, 0.0087],
     "omegam": [0.3112, 0.0087],
     "omegamh2": [0.14205, 0.0013],
     "omegamh3": [0.095971, 0.00030],
@@ -273,7 +273,7 @@ derived_lensing = {
     "s8omegamp5": [0.4548, 0.0068],
     "s8omegamp25":[0.6089, 0.0067],
     "s8h5": [0.9919, 0.010],
-    "zre": [8.64, 1.3],
+    "zrei": [8.64, 1.3],
     "As1e9": [2.133, 0.053],
     "clamp": [1.8769, 0.011],
     "YHe": [0.245350, 0.000071],

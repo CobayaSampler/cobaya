@@ -64,7 +64,7 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
         info[_params].update(baseline_cosmology_classy_extra)
         # Remove "cosmomc_theta" in favour of "H0" (remove it from derived then!)
         info[_params].pop("cosmomc_theta")
-        info[_params].pop("cosmomc_theta_100")
+        info[_params].pop("theta")
         info[_params]["H0"] = {_prior: {"min": 0, "max": 100}, _p_ref: best_fit["H0"]}
         derived.pop("H0")
         if best_fit_derived is not None:
@@ -76,6 +76,9 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
                       "DH", "Y_p"]:
                 derived.pop(p)
                 best_fit_derived.pop(p, None)
+    else:
+        info[_theory]["camb"] = info[_theory]["camb"] or {}
+        info[_theory]["camb"].update({"stop_at_error": True})
     # Add derived
     if best_fit_derived is not None:
         info[_params].update(derived)
@@ -105,7 +108,7 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
 # Baseline priors ########################################################################
 
 baseline_cosmology = r"""
-ombh2:
+omegabh2:
   prior:
     min: 0.005
     max: 0.1
@@ -115,7 +118,7 @@ ombh2:
     scale: 0.0001
   proposal: 0.0001
   latex: \Omega_\mathrm{b} h^2
-omch2:
+omegach2:
   prior:
     min: 0.001
     max: 0.99
@@ -126,8 +129,8 @@ omch2:
   proposal: 0.0005
   latex: \Omega_\mathrm{c} h^2
 # If using CLASS, rename to "100*theta_s"!!!
-cosmomc_theta: "lambda cosmomc_theta_100: 1.e-2*cosmomc_theta_100"
-cosmomc_theta_100:
+cosmomc_theta: "lambda theta: 1.e-2*theta"
+theta:
   prior:
     min: 0.5
     max: 10
@@ -148,7 +151,7 @@ tau:
     scale: 0.01
   proposal: 0.005
   latex: \tau_\mathrm{reio}
-logAs1e10:
+logA:
   prior:
     min: 2
     max: 4
@@ -159,7 +162,7 @@ logAs1e10:
   proposal: 0.001
   latex: \log(10^{10} A_s)
   drop: True
-As: "lambda logAs1e10: 1e-10*np.exp(logAs1e10)"
+As: "lambda logA: 1e-10*np.exp(logA)"
 ns:
   prior:
     min: 0.8
@@ -179,7 +182,7 @@ baseline_cosmology_classy_extra = {"N_ur": 2.0328, "N_ncdm": 1,
 # https://wiki.cosmos.esa.int/planckpla2015/images/b/b9/Parameter_tag_definitions_2015.pdf
 baseline_cosmology_derived = {
     "H0":          {"latex": r"H_0"},
-    "omegav":      {"latex": r"\Omega_\Lambda"},
+    "omegal":      {"latex": r"\Omega_\Lambda"},
     "omegam":      {"latex": r"\Omega_m"},
     "omegamh2":    {"derived": "lambda omegam, H0: omegam*(H0/100)**2", "latex": r"\Omega_m h^2"},
     "omegamh3":    {"derived": "lambda omegam, H0: omegam*(H0/100)**3", "latex": r"\Omega_m h^3"},
@@ -187,7 +190,7 @@ baseline_cosmology_derived = {
     "s8h5":        {"derived": "lambda sigma8, H0: sigma8*(H0*1e-2)**(-0.5)", "latex": r"\sigma_8/h^{0.5}"},
     "s8omegamp5":  {"derived": "lambda sigma8, omegam: sigma8*omegam**0.5", "latex": r"\sigma_8 \Omega_m^{0.5}"},
     "s8omegamp25": {"derived": "lambda sigma8, omegam: sigma8*omegam**0.25", "latex": r"\sigma_8 \Omega_m^{0.25}"},
-    "zre":         {"latex": r"z_\mathrm{re}"},
+    "zrei":        {"latex": r"z_\mathrm{re}"},
     "As1e9":       {"derived": "lambda As: 1e9*As", "latex": r"10^9 A_s"},
     "clamp":       {"derived": "lambda As, tau: 1e9*As*np.exp(-2*tau)", "latex": r"10^9 A_s e^{-2\tau}"},
     "YHe":         {"latex": r"Y_P"},

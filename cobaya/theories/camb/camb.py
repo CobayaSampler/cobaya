@@ -284,16 +284,21 @@ class camb(Theory):
             else:
                 # Extra derived parameters
                 if v is None:
-                    self.derived_extra += [k]
+                    self.derived_extra += [self.translate_param(k)]
                 else:
                     self.log.error("Unknown required product: '%s:%s'.", k, v)
                     raise HandledException
+
+    def translate_param(self, p):
+        if self.use_planck_names:
+            return self.planck_to_camb.get(p,p)
+        return p
 
     def set(self, params_values_dict, i_state):
         # Store them, to use them later to identify the state
         self.states[i_state]["params"] = deepcopy(params_values_dict)
         # Prepare parameters to be passed: this-iteration + extra
-        args = deepcopy(params_values_dict)
+        args = {self.translate_param(p):v for p,v in params_values_dict.items()}
         args.update(self.extra_args)
         # Generate and save
         self.log.debug("Setting parameters: %r", args)
@@ -417,7 +422,7 @@ class camb(Theory):
         """
         derived = {}
         for p in self.output_params:
-            derived[p] = self.get_derived(p, intermediates)
+            derived[p] = self.get_derived(self.translate_param(p), intermediates)
             if derived[p] is None:
                 self.log.error(
                     "Derived param '%s' not implemented in the CAMB interface", p)
@@ -432,7 +437,7 @@ class camb(Theory):
         """
         current_state = self.current_state()
         for pool in ["params", "derived", "derived_extra"]:
-            value = current_state[pool].get(p, None)
+            value = current_state[pool].get(self.translate_param(p), None)
             if value is not None:
                 return value
         self.log.error("Parameter not known: '%s'", p)

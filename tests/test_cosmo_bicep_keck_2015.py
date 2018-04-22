@@ -6,12 +6,12 @@ from cosmo_common import body_of_test
 
 
 def test_bicep_keck_2015_camb(modules):
-    info_theory = {"camb": None}
+    info_theory = {"camb": {"use_planck_names": True}}
     body_of_test(modules, params, lik_info, info_theory, chi2, derived)
 
 
 def test_bicep_keck_2015_classy(modules):
-    info_theory = {"classy": {"use_camb_names": True}}
+    info_theory = {"classy": {"use_planck_names": True}}
     chi2_classy = deepcopy(chi2)
     chi2_classy["tolerance"] += 2.0
     body_of_test(modules, params, lik_info, info_theory, chi2_classy, derived)
@@ -25,12 +25,12 @@ chi2 = {"bicep_keck_2015": 650.872548, "tolerance": 0.1}
 
 params = {
     # Theory
-    "ombh2": 0.02224017,
-    "omch2": 0.1192851,
+    "omegabh2": 0.02224017,
+    "omegach2": 0.1192851,
     "H0": 67.44495,  # IGNORED BY CAMB
-    "cosmomc_theta_100": 1.040761,  # IGNORED BY CLASSY
+    "theta": 1.040761,  # IGNORED BY CLASSY
     "tau": 0.7602569E-01,
-    "logAs1e10": 3.081122,
+    "logA": 3.081122,
     "ns": 0.9633217E+00,
     # Experimental
     'BBdust': 3,

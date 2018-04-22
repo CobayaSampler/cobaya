@@ -8,7 +8,7 @@ from cobaya.yaml import yaml_load
 def test_sdss_dr12_consensus_bao_camb(modules):
     lik = "sdss_dr12_consensus_bao"
     info_likelihood = {lik: {}}
-    info_theory = {"camb": None}
+    info_theory = {"camb": {"use_planck_names": True}}
     body_of_test(modules, best_fit_base, info_likelihood, info_theory,
                  chi2_sdss_dr12_consensus_bao)
 
@@ -16,7 +16,7 @@ def test_sdss_dr12_consensus_bao_camb(modules):
 def test_sdss_dr12_consensus_bao_classy(modules):
     lik = "sdss_dr12_consensus_bao"
     info_likelihood = {lik: {}}
-    info_theory = {"classy": {"use_camb_names": True}}
+    info_theory = {"classy": {"use_planck_names": True}}
     body_of_test(modules, best_fit_base, info_likelihood, info_theory,
                  chi2_sdss_dr12_consensus_bao)
 
@@ -24,7 +24,7 @@ def test_sdss_dr12_consensus_bao_classy(modules):
 def test_sdss_dr12_consensus_full_shape_camb(modules):
     lik = "sdss_dr12_consensus_full_shape"
     info_likelihood = {lik: {}}
-    info_theory = {"camb": None}
+    info_theory = {"camb": {"use_planck_names": True}}
     body_of_test(modules, best_fit_base, info_likelihood, info_theory,
                  chi2_sdss_dr12_consensus_full_shape)
 
@@ -32,7 +32,7 @@ def test_sdss_dr12_consensus_full_shape_camb(modules):
 def test_sdss_dr12_consensus_full_shape_classy(modules):
     lik = "sdss_dr12_consensus_full_shape"
     info_likelihood = {lik: {}}
-    info_theory = {"classy": {"use_camb_names": True}}
+    info_theory = {"classy": {"use_planck_names": True}}
     chi2_classy = deepcopy(chi2_sdss_dr12_consensus_full_shape)
     chi2_classy["tolerance"] += 1.2
     body_of_test(modules, best_fit_base, info_likelihood, info_theory,
@@ -42,7 +42,7 @@ def test_sdss_dr12_consensus_full_shape_classy(modules):
 def test_sdss_dr12_consensus_final_camb(modules):
     lik = "sdss_dr12_consensus_final"
     info_likelihood = {lik: {}}
-    info_theory = {"camb": None}
+    info_theory = {"camb": {"use_planck_names": True}}
     body_of_test(modules, best_fit_base, info_likelihood, info_theory,
                  chi2_sdss_dr12_consensus_final)
 
@@ -50,7 +50,7 @@ def test_sdss_dr12_consensus_final_camb(modules):
 def test_sdss_dr12_consensus_final_classy(modules):
     lik = "sdss_dr12_consensus_final"
     info_likelihood = {lik: {}}
-    info_theory = {"classy": {"use_camb_names": True}}
+    info_theory = {"classy": {"use_planck_names": True}}
     chi2_classy = deepcopy(chi2_sdss_dr12_consensus_final)
     chi2_classy["tolerance"] += 1.2
     body_of_test(modules, best_fit_base, info_likelihood, info_theory,

@@ -9,14 +9,14 @@ from cobaya.yaml import yaml_load
 def test_sn_pantheon_camb(modules):
     lik = "sn_pantheon"
     info_likelihood = {lik: {}}
-    info_theory = {"camb": None}
+    info_theory = {"camb": {"use_planck_names": True}}
     body_of_test(modules, best_fit_base, info_likelihood, info_theory, chi2_sn_pantheon)
 
 
 def test_sn_pantheon_classy(modules):
     lik = "sn_pantheon"
     info_likelihood = {lik: {}}
-    info_theory = {"classy": {"use_camb_names": True}}
+    info_theory = {"classy": {"use_planck_names": True}}
     body_of_test(modules, best_fit_base, info_likelihood, info_theory, chi2_sn_pantheon)
 
 
@@ -26,7 +26,7 @@ def test_sn_jla_camb(modules):
     best_fit.update(best_fit_sn)
     lik = "sn_jla"
     info_likelihood = {lik: {}}
-    info_theory = {"camb": None}
+    info_theory = {"camb": {"use_planck_names": True}}
     body_of_test(modules, best_fit, info_likelihood, info_theory, chi2_sn_jla)
 
 
@@ -35,7 +35,7 @@ def test_sn_jla_classy(modules):
     best_fit.update(best_fit_sn)
     lik = "sn_jla"
     info_likelihood = {lik: {}}
-    info_theory = {"classy": {"use_camb_names": True}}
+    info_theory = {"classy": {"use_planck_names": True}}
     body_of_test(modules, best_fit, info_likelihood, info_theory, chi2_sn_jla)
 
 
@@ -44,7 +44,7 @@ def test_sn_jla_lite_camb(modules):
     best_fit = deepcopy(best_fit_base)
     lik = "sn_jla_lite"
     info_likelihood = {lik: {"marginalize": True}}
-    info_theory = {"camb": None}
+    info_theory = {"camb": {"use_planck_names": True}}
     body_of_test(modules, best_fit, info_likelihood, info_theory, chi2_sn_jla_lite)
 
 
@@ -53,7 +53,7 @@ def test_sn_jla_lite_slow_camb(modules):
     best_fit = deepcopy(best_fit_base)
     lik = "sn_jla_lite"
     info_likelihood = {lik: {"marginalize": True, "precompute_covmats": False}}
-    info_theory = {"camb": None}
+    info_theory = {"camb": {"use_planck_names": True}}
     body_of_test(modules, best_fit, info_likelihood, info_theory, chi2_sn_jla_lite)
 
 
