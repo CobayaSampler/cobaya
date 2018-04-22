@@ -16,7 +16,7 @@ from copy import deepcopy
 from importlib import import_module
 
 # Local
-from cobaya.conventions import package, _params, _p_label, _products_path
+from cobaya.conventions import package, _params, _p_label, _products_path, _p_alias
 from cobaya.conventions import _prior, _theory, _likelihood, _sampler, _external
 from cobaya.conventions import _output_prefix, _debug_file
 from cobaya.tools import get_folder
@@ -206,13 +206,14 @@ def merge_params_info(*params_infos):
         if not new_info:
             continue
         current_info.update(deepcopy(new_info))
-        # inherit labels and bounds
+        # inherit labels, aliases and bounds
         for p in previous_info:
-            default_label = getter(previous_info[p], _p_label)
-            if (default_label and (is_sampled_param(current_info[p]) or
-                                   is_derived_param(current_info[p]))):
-                current_info[p][_p_label] = (
-                    new_info.get(p, {}).get(_p_label) or default_label)
+            for field in _p_label, _p_alias:
+                default_value = getter(previous_info[p], field)
+                if (default_value and (is_sampled_param(current_info[p]) or
+                                       is_derived_param(current_info[p]))):
+                    current_info[p][field] = (
+                        new_info.get(p, {}).get(field) or default_value)
             bounds = ["min", "max"]
             default_bounds = odict(
                 [[bound, getter(previous_info[p], bound)] for bound in bounds])
