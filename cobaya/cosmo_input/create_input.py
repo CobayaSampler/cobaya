@@ -9,6 +9,7 @@ from cobaya.input import get_default_info
 import input_database
 
 planck_to_classy = get_default_info("classy", _theory)[_theory]["classy"]["planck_to_classy"]
+planck_to_camb = get_default_info("camb", _theory)[_theory]["camb"]["planck_to_camb"]
 
 
 def translate(p, info=None, dictionary=None, add_alias=False):
@@ -60,9 +61,10 @@ def create_input(**kwargs):
     info_sampler = deepcopy(getattr(input_database, "sampler")[sampler])
     info_sampler.pop(input_database._desc, None)
     merged = merge_info(*(infos_model+infos_exp+[info_sampler]))
-    # Translate for CLASS
-    if "classy" in merged[_theory]:
-        merged_params_translated = odict([
-            translate(p, info, planck_to_classy, add_alias=True) for p,info in merged[_params].items()])
-        merged[_params] = merged_params_translated
+    # Translate from Planck param names
+    theo = list(merged[_theory].keys())[0]
+    merged_params_translated = odict([
+        translate(p, info, {"classy": planck_to_classy, "camb": planck_to_camb}[theo],
+                  add_alias=True) for p,info in merged[_params].items()])
+    merged[_params] = merged_params_translated
     return merged

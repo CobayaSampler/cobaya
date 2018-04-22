@@ -10,3 +10,11 @@ theory:
     # e.g. precision parameters or non-numerical parameters
     extra_args:
       # e.g AccuracyBoost: [larger than 1]
+    # Use Planck parameter names, for fast switching CLASS<-->(Planck+CAMB)
+    # use_planck_names: False  # DISABLED FOR NOW
+    # Dictionary of (Planck+CAMB)->CLASS names
+    planck_to_camb:
+      omegabh2: ombh2
+      omegach2: omch2
+      omegal: omegav
+      Alens: ALens  # corrected in CAMB/devel
