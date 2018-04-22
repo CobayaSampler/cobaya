@@ -11,19 +11,21 @@ from __future__ import division
 import six
 
 # Global
+import os
 from copy import deepcopy
 from itertools import chain
 import numpy as np
+from collections import OrderedDict as odict
 import logging
 
 # Local
 from cobaya.sampler import Sampler
 from cobaya.mpi import get_mpi, get_mpi_size, get_mpi_rank, get_mpi_comm
 from cobaya.collection import Collection, OnePoint
-from cobaya.conventions import _weight, _p_proposal
+from cobaya.conventions import _weight, _p_proposal, _p_alias
 from cobaya.samplers.mcmc.proposal import BlockedProposer
 from cobaya.log import HandledException
-from cobaya.tools import get_external_function
+from cobaya.tools import get_external_function, get_path_to_installation
 
 
 class mcmc(Sampler):
@@ -75,13 +77,12 @@ class mcmc(Sampler):
 #                raise HandledException
             speeds, blocks = self.likelihood.speeds_of_params(
                 int_speeds=True, fast_slow=True)
-            if np.all(speeds==speeds[0]):
+            if np.all(speeds == speeds[0]):
                 self.log.error("All speeds are equal: cannot drag! Make sure to define, "
                                "especially, the speed of the fastest likelihoods.")
             self.i_last_slow_block = 0  # just theory can be slow for now
             fast_params = list(chain(*blocks[1+self.i_last_slow_block:]))
             self.n_slow = sum(len(blocks[i]) for i in range(1+self.i_last_slow_block))
-            from cobaya.conventions import _overhead
             self.drag_interp_steps = int(self.drag*np.round(min(speeds[1:])/speeds[0]))
             self.log.info(
                 "Dragging with oversampling per step:\n" +
@@ -126,13 +127,17 @@ class mcmc(Sampler):
         covmat = np.diag([np.nan]*len(params))
         # If given, load and test the covariance matrix
         if isinstance(self.covmat, six.string_types):
+            covmat_pre = "MODULES:"
+            if self.covmat.startswith(covmat_pre):
+                self.covmat = os.path.join(
+                    get_path_to_installation(), self.covmat[len(covmat_pre):])
             try:
                 with open(self.covmat, "r") as file_covmat:
                     header = file_covmat.readline()
                 loaded_covmat = np.loadtxt(self.covmat)
             except TypeError:
                 self.log.error("The property 'covmat' must be a file name,"
-                          "but it's '%s'.", str(self.covmat))
+                               "but it's '%s'.", str(self.covmat))
                 raise HandledException
             except IOError:
                 self.log.error("Can't open covmat file '%s'.", self.covmat)
@@ -172,23 +177,35 @@ class mcmc(Sampler):
                     "symmetric square matrix.", self.covmat)
                 raise HandledException
             # Fill with parameters in the loaded covmat
-            loaded_params_used = set(loaded_params).intersection(set(params))
-            if not loaded_params_used:
+            aliases = [[p,v.get(_p_alias, [])] for p,v in zip(params,params_infos)]
+            aliases = odict([[a[0], (a if a[1] else a[0])] for a in aliases])
+            indices_used, indices_sampler = zip(*[
+                [loaded_params.index(p),
+                 [params.index(q) for q,a in aliases.items() if p in a]]
+                for p in loaded_params])
+            indices_used, indices_sampler = zip(*[
+                [i,j] for i,j in zip(indices_used, indices_sampler) if j])
+            if any(len(j)-1 for j in indices_sampler):
+                first = next(j for j in indices_sampler if len(j) > 1)
+                self.log.error(
+                    "The parameters %s have duplicated aliases. Can't assign them an "
+                    "element of the covariance matrix unambiguously.",
+                    ", ".join([params[i] for i in first]))
+                raise HandledException
+            indices_sampler = list(chain(*indices_sampler))
+            if not indices_used:
                 self.log.error(
                     "A proposal covariance matrix has been loaded, but none of its "
                     "parameters are actually sampled here. Maybe a mismatch between"
                     " parameter names in the covariance matrix and the input file?")
                 raise HandledException
-            indices_used, indices_sampler = np.array(
-                [[loaded_params.index(p),params.index(p)]
-                 for p in loaded_params if p in loaded_params_used]).T
             covmat[np.ix_(indices_sampler,indices_sampler)] = (
                 loaded_covmat[np.ix_(indices_used,indices_used)])
             self.log.info(
                 "Covariance matrix loaded for params %r",
-                [p for p in self.parametrization.sampled_params()
-                 if p in loaded_params_used])
-            missing_params = set(params).difference(set(loaded_params))
+                [params[i] for i in indices_sampler])
+            missing_params = set(params).difference(
+                set([params[i] for i in indices_sampler]))
             if missing_params:
                 self.log.info(
                     "Missing proposal covarince for params %r",
