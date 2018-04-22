@@ -63,8 +63,13 @@ def create_input(**kwargs):
     merged = merge_info(*(infos_model+infos_exp+[info_sampler]))
     # Translate from Planck param names
     theo = list(merged[_theory].keys())[0]
-    merged_params_translated = odict([
-        translate(p, info, {"classy": planck_to_classy, "camb": planck_to_camb}[theo],
-                  add_alias=True) for p,info in merged[_params].items()])
-    merged[_params] = merged_params_translated
+    if kwargs.get("planck_names", False):
+        theory = list(merged[_theory].keys())[0]
+        merged[_theory][theory] = merged[_theory][theory] or {}
+        merged[_theory][theory]["use_planck_names"] = True
+    else:
+        merged_params_translated = odict([
+            translate(p, info, {"classy": planck_to_classy, "camb": planck_to_camb}[theo],
+                      add_alias=True) for p,info in merged[_params].items()])
+        merged[_params] = merged_params_translated
     return merged

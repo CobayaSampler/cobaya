@@ -5,7 +5,7 @@ from collections import OrderedDict as odict
 from pprint import pformat
 from PySide.QtGui import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
 from PySide.QtGui import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
-from PySide.QtGui import QFileDialog
+from PySide.QtGui import QFileDialog, QCheckBox
 from PySide.QtCore import Slot
 
 from cobaya.yaml import yaml_dump
@@ -79,6 +79,10 @@ class MainWindow(QWidget):
                     self.refresh_preset)
                 continue
             self.atoms[a]["combo"].currentIndexChanged.connect(self.refresh)
+        # Add Planck-naming checkbox and connect to refresher too
+        self.planck_names = QCheckBox("Keep common names")
+        self.atoms["theory"]["layout"].addWidget(self.planck_names)
+        self.planck_names.stateChanged.connect(self.refresh)
         # RIGHT: Output + buttons
         self.display_tabs = QTabWidget()
         self.display = {}
@@ -107,7 +111,7 @@ class MainWindow(QWidget):
 
     @Slot()
     def refresh(self):
-        info = create_input(**{
+        info = create_input(planck_names=self.planck_names.isChecked(), **{
             k:str(self.atoms[k]["combo"].currentText().split(_separator)[0])
             for k in self.atoms if k is not "preset"})
         self.refresh_display(info)
