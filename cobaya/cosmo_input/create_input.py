@@ -1,20 +1,25 @@
 from copy import deepcopy
 from collections import OrderedDict as odict
 from six import string_types
+import numpy as np
 
 from cobaya.input import merge_info
-from cobaya.conventions import _theory, _params, _p_drop
+from cobaya.conventions import _theory, _params, _p_drop, _p_alias
 from cobaya.input import get_default_info
 import input_database
 
-camb_to_classy = get_default_info("classy", _theory)[_theory]["classy"]["camb_to_classy"]
+planck_to_classy = get_default_info("classy", _theory)[_theory]["classy"]["planck_to_classy"]
 
 
-def translate(p, info=None, dictionary=None):
+def translate(p, info=None, dictionary=None, add_alias=False):
     dictionary = dictionary or {}
     # Ignore if dropped
     if not (info if hasattr(info, "keys") else {}).get(_p_drop, False):
+        p_old = p
         p = dictionary.get(p, p)
+        if hasattr(info, "keys") and p_old != p:
+            pre_aliases = np.atleast_1d(info.get(_p_alias, [])).tolist()
+            info.update({_p_alias: pre_aliases + [p_old]})
     # Try to modify lambda parameters too!
     if isinstance(info, string_types):
         if info.startswith("lambda"):
@@ -58,6 +63,6 @@ def create_input(**kwargs):
     # Translate for CLASS
     if "classy" in merged[_theory]:
         merged_params_translated = odict([
-            translate(p, info, camb_to_classy) for p,info in merged[_params].items()])
+            translate(p, info, planck_to_classy, add_alias=True) for p,info in merged[_params].items()])
         merged[_params] = merged_params_translated
     return merged

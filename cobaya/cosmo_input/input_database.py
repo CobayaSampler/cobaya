@@ -1,8 +1,8 @@
 from __future__ import division, print_function
 from collections import OrderedDict as odict
 
-from cobaya.conventions import _theory, _params, _likelihood, _sampler
-from cobaya.conventions import _prior, _p_ref, _p_proposal, _p_label, _p_dist, _p_drop
+from cobaya.conventions import _theory, _params, _likelihood, _sampler, _prior
+from cobaya.conventions import _p_ref, _p_proposal, _p_label, _p_dist, _p_drop
 
 _camb = "camb"
 _classy = "classy"
@@ -81,8 +81,8 @@ hubble = odict([
         _desc: "Angular size of sound horizon (CLASS only)",
         _theory: {_classy: None},
         _params: odict([
-            ["100*theta_s", "lambda theta_s_100: theta_s_100"],
-            ["theta_s_100", {
+            ["100*theta_s", "lambda theta: theta"],
+            ["theta", {
                 _prior: {"min": 0.5, "max": 10}, _p_drop: True,
                 _p_ref: {_p_dist: "norm", "loc": 1.0418, "scale": 0.0004},
                 _p_proposal: 0.0002, _p_label: r"100\theta_s"}],
@@ -93,7 +93,7 @@ baryons = odict([
     ["omegab_h2", {
         _theory: {_camb: None, _classy: None},
         _params: odict([
-            ["ombh2", {
+            ["omegabh2", {
                 _prior: {"min": 0.005, "max": 0.1},
                 _p_ref: {_p_dist: "norm", "loc": 0.0221, "scale": 0.0001},
                 _p_proposal: 0.0001, _p_label: r"\Omega_\mathrm{b} h^2"}]])}]])
@@ -103,7 +103,7 @@ dark_matter = odict([
     ["omegac_h2", {
         _theory: {_camb: None, _classy: None},
         _params: odict([
-            ["omch2", {
+            ["omegach2", {
                 _prior: {"min": 0.001, "max": 0.99},
                 _p_ref: {_p_dist: "norm", "loc": 0.12, "scale": 0.001},
                 _p_proposal: 0.0005, _p_label: r"\Omega_\mathrm{c} h^2"}]])}]])
@@ -113,7 +113,7 @@ dark_energy = odict([
     ["lambda", {
         _desc: "Cosmological constant (w=-1)",
         _theory: {_camb: None, _classy: None},
-        _params: {"omegav": {"latex": r"\Omega_\Lambda"}}}],
+        _params: {"omegal": {"latex": r"\Omega_\Lambda"}}}],
     ["de_w", {
         _desc: "Varying constant eq of state",
         _theory: {_camb: None, _classy: None},
@@ -239,10 +239,12 @@ cmb = odict([
 ])
 
 # SAMPLERS ###############################################################################
+planck_covmat = "data/planck_supp_data_and_covmats/covmats/base_plikHM_TTTEEE_lowTEB_lensing.covmat"
 sampler = odict([
     ["MCMC", {
         _desc: "MCMC sampler with covmat learning, and fast dragging.",
-        _sampler: {"mcmc": {"drag": True, "learn_proposal": True}}}],
+        _sampler: {"mcmc": {"drag": True, "learn_proposal": True,
+                            "covmat": "MODULES:"+planck_covmat}}}],
     ["PolyChord", {
         _desc: "Nested sampler, affine invariant and multi-modal.",
         _sampler: {"polychord": None}}],])

@@ -159,7 +159,7 @@ class classy(Theory):
                         "last": 0} for i in range(self.n_states)]
         # Dict of named tuples to collect requirements and computation methods
         self.collectors = {}
-        # Additional input parameters to pass to CAMB
+        # Additional input parameters to pass to CLASS
         self.extra_args = self.extra_args or {}
         self.extra_args["output"] = self.extra_args.get("output", "")
         if "sBBN file" in self.extra_args:
@@ -249,8 +249,8 @@ class classy(Theory):
         self.extra_args["z_pk"] = " ".join(["%g"%zi for zi in self.z_for_matter_power])
 
     def translate_param(self, p):
-        if self.use_camb_names:
-            return self.camb_to_classy.get(p,p)
+        if self.use_planck_names:
+            return self.planck_to_classy.get(p,p)
         return p
 
     def set(self, params_values_dict, i_state):

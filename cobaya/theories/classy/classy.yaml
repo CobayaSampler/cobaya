@@ -6,11 +6,10 @@ theory:
     # Other precision parameters to be passed to CLASS
     # e.g. precision parameters or non-numerical parameters
     extra_args:
-    # Use CAMB parameter names, for fast switching CLASS<-->CAMB
-    use_camb_names: False
-    # Dictionary of CAMB->CLASS names
-    # (Add missing ones in your input file, and please send them to us!)
-    camb_to_classy:
+    # Use Planck parameter names, for fast switching CLASS<-->(Planck+CAMB)
+    use_planck_names: False
+    # Dictionary of (Planck+CAMB)->CLASS names
+    planck_to_classy:
       # Inflation
       As: A_s
       ns: n_s
@@ -20,13 +19,13 @@ theory:
       # Background/geometry/Lambda
       rdrag: rs_drag
       omk: Omega_k
-      omegav: Omega_Lambda
+      omegal: Omega_Lambda
       w: w0_fld
       wa: wa_fld
       # Matter content
-      ombh2: omega_b
+      omegabh2: omega_b
       omegab: Omega_b
-      omch2: omega_cdm
+      omegach2: omega_cdm
       omegac: Omega_cdm
       omegam: Omega_m
       omegan: Omega_ncdm

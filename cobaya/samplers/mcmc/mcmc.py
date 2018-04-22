@@ -177,8 +177,8 @@ class mcmc(Sampler):
                     "symmetric square matrix.", self.covmat)
                 raise HandledException
             # Fill with parameters in the loaded covmat
-            aliases = [[p,v.get(_p_alias, [])] for p,v in zip(params,params_infos)]
-            aliases = odict([[a[0], (a if a[1] else a[0])] for a in aliases])
+            aliases = [[p]+np.atleast_1d(v.get(_p_alias, [])).tolist() for p,v in zip(params,params_infos)]
+            aliases = odict([[a[0], a] for a in aliases])
             indices_used, indices_sampler = zip(*[
                 [loaded_params.index(p),
                  [params.index(q) for q,a in aliases.items() if p in a]]
