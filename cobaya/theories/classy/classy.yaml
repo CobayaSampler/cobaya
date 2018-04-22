@@ -33,7 +33,8 @@ theory:
       nnu: N_ur
       # Thermodynamics
       tau: tau_reio
-      zre: z_reio
+      zrei: z_reio
       deltazrei: reionization_width
       helium_redshift: helium_fullreio_redshift
       helium_delta_redshift: helium_fullreio_width
+      yhe: YHe

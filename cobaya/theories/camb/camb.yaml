@@ -18,3 +18,5 @@ theory:
       omegach2: omch2
       omegal: omegav
       Alens: ALens  # corrected in CAMB/devel
+      yhe: YHe
+      zrei: zre

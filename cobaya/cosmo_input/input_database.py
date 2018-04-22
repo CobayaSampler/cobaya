@@ -176,12 +176,12 @@ bbn = odict([
     ["consistency", {
         _desc: "Primordial Helium fraction inferred from BBN consistency",
         _theory: {_camb: None, _classy: None},
-        _params: {"YHe": {"latex": r"Y_P"}}}],
+        _params: {"yhe": {"latex": r"Y_P"}}}],
     ["YHe", {
         _desc: "Varying primordial Helium fraction",
         _theory: {_camb: None, _classy: None},
         _params: odict([
-            ["YHe", {
+            ["yhe", {
                 _prior: {"min": 0.1, "max": 0.5},
                 _p_ref: {_p_dist: "norm", "loc": 0.245, "scale": 0.006},
                 _p_proposal: 0.006, _p_label: r"y_\mathrm{He}"}]])}],])
@@ -196,7 +196,7 @@ reionization = odict([
                 _prior: {"min": 0.01, "max": 0.8},
                 _p_ref: {_p_dist: "norm", "loc": 0.09, "scale": 0.01},
                 _p_proposal: 0.005, _p_label: r"\tau_\mathrm{reio}"}],
-            ["zre", {"latex": r"z_\mathrm{re}"}]])}],
+            ["zrei", {"latex": r"z_\mathrm{re}"}]])}],
     ["gauss_prior", {
         _desc: "Standard reio, lasting delta_z=0.5, gaussian prior around tau=0.07",
         _theory: {_camb: None, _classy: None},
@@ -205,7 +205,7 @@ reionization = odict([
                 _prior: {_p_dist: "norm", "loc": 0.07, "scale": 0.02},
                 _p_ref: {_p_dist: "norm", "loc": 0.07, "scale": 0.01},
                 _p_proposal: 0.005, _p_label: r"\tau_\mathrm{reio}"}],
-            ["zre", {"latex": r"z_\mathrm{re}"}]])}],])
+            ["zrei", {"latex": r"z_\mathrm{re}"}]])}],])
 
 # CMB lensing
 cmb_lensing = odict([
