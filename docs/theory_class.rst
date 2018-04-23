@@ -1,5 +1,5 @@
-Theory code -- CLASS (``classy``)
-=================================
+Theory code – CLASS (``classy``)
+================================
 
 .. automodule:: theories.classy.classy
    :noindex:

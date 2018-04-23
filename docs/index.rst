@@ -40,7 +40,7 @@ Table of contents
    likelihood_bk
    likelihood_bao
    likelihood_sn
-   examples_planck
+..   examples_planck
 
 .. toctree::
    :caption: For developers

@@ -1,5 +1,5 @@
-Theory code -- CAMB
-===================
+Theory code – CAMB
+==================
 
 .. automodule:: theories.camb.camb
    :noindex:
