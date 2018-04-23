@@ -25,37 +25,38 @@ This module imports and manages the CLASS cosmological code.
 Usage
 -----
 
-If you are using a likelihood that requires some observable from CLASS,
-simply add it to the theory block, specifying its ``path`` if you have not installed CLASS
-globally. You can specify any parameter that CAMB or CLASS understand within the ``theory``
-sub-block of the ``params`` block:
+If you are using a likelihood that requires some observable from CLASS, simply add
+``classy`` to the theory block.
+
+You can specify any parameter that CLASS understands in the ``params`` block:
 
 .. code-block:: yaml
 
    theory:
      classy:
+       extra_args:
+         [any param that CLASS understands, for FIXED and PRECISION]
 
    params:
-     theory:
        [any param that CLASS understands, fixed, sampled or derived]
-
-.. note::
-
-   Some parameter names can be specified in CAMB nomenclature, such that the ``classy`` and
-   ``camb`` theory blocks can be swapped easily. If there is a conflict, i.e. CLASS and
-   CAMB give different parameters the same name, CAMB meaning takes priority.
-
-   .. todo:: Not ideal. Working on it.
 
 
 Installation
 ------------
 
-.. note::
+Automatic installation
+^^^^^^^^^^^^^^^^^^^^^^
 
-   If you already have your own version of CLASS, just make sure that the Python interface
-   has been compiled, take note of its installation path and specify it using the
-   ``path`` option in the ``classy`` block of the input.
+If you do not plan to modify CLASS, the easiest way to install it is using the
+:doc:`automatic installation script <installation_cosmo>`. Just make sure that
+``theory: classy:`` appears in one of the files passed as arguments to the installation
+script.
+
+Manual installation (or using your own version)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you are planning to modify CAMB or use an already modified version,
+you should not use the automatic installation script. Use the method below instead.
 
 CLASS' python interface utilises the ``cython`` compiler. If typing ``cython`` in the
 shell produces an error, install it with ``pip install cython --user``.

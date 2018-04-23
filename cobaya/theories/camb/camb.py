@@ -27,16 +27,16 @@ Usage
 If you are using a likelihood that requires some observable from CAMB, simply add CAMB
 to the theory block.
 
-You can specify any parameter that CAMB understands within the ``theory``
-sub-block of the ``params`` block:
+You can specify any parameter that CAMB understands in the ``params`` block:
 
 .. code-block:: yaml
 
    theory:
      camb:
+       extra_args:
+         [any param that CAMB understands, for FIXED and PRECISION]
 
    params:
-     theory:
        [any param that CAMB understands, fixed, sampled or derived]
 
 
