@@ -20,7 +20,7 @@ primordial = odict([
         _params: odict([
             ["logA", {_prior: {"min": 2, "max": 4},
                       _p_ref: {_p_dist: "norm", "loc": 3.1, "scale": 0.001},
-                      _p_proposal: 0.001, _p_label: r"\log(10^{10} A_s",
+                      _p_proposal: 0.001, _p_label: r"\log(10^{10} A_s)",
                       _p_drop: True}],
             ["As", "lambda logA: 1e-10*np.exp(logA)"],
             ["ns", {_prior: {"min": 0.8, "max": 1.2},
