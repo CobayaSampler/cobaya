@@ -1,0 +1,31 @@
+# CMBlikes version of the Planck 2015 likelihood
+
+likelihood:
+  planck_2015_lensing_cmblikes:
+    # Path to the data: where the planck_supp_data_and_covmats has been cloned
+    path: null
+    dataset_file: lensing/smica_g30_ftl_full_pp.dataset
+    # Overriding of .dataset parameters
+    dataset_params:
+      # field: value
+    field_names: [T, E, B, P]
+    # Overriding of the maximum ell computed
+    l_max:
+    # Aliases for automatic covariance matrix
+    renames: [lensing]
+    # Speed in evaluations/second
+    speed: 1100
+
+params:
+  A_planck:
+    prior: 
+      dist: norm
+      loc: 1
+      scale: 0.0025
+    ref:
+      dist: norm
+      loc: 1
+      scale: 0.002
+    proposal: 0.0005
+    latex: y_\mathrm{cal}
+    renames: calPlanck

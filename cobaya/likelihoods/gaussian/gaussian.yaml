@@ -1,0 +1,12 @@
+# Mock gaussian likelihood
+
+likelihood:
+  gaussian:
+    # Specify the mean(s) and covmat(s)
+    mean: null
+    cov: null
+    # Mock-likelihood properties:
+    # 1. artificial delay in lik computation  
+    delay: 0  # seconds
+    # 2. prefix of the parameters names
+    prefix: ""

@@ -1,0 +1,124 @@
+# BICEP2/Keck Array October 2015 Data Products (2014 data)
+# BICEP2/Keck Array VI: Improved Constraints on Cosmology and Foregrounds When Adding 95 GHz Data from Keck Array
+# http://bicepkeck.org/
+#
+# BICEP2/Keck Array likelihood, including external data from Planck and WMAP.
+#
+# Default settings for data selection and foreground nuisance parameters from the 
+# baseline analysis described in BICEP2/Keck VI.
+#
+#   * Includes BICEP2+KECK 95 GHz and 150 GHz maps
+#   * Additional maps are: Planck 30, 44, 70, 100, 143, 217, and 353 GHz; 
+#                          WMAP 23 GHz (K-band) and 33 GHz (Ka-band)
+#   * By default uses B-modes only.
+#   * Uses all nine ell bins.
+#   * Most foreground parameters are allowed to vary, with exception of the EE/BB
+#     ratios for dust and synchrotron (not used for B-modes only analysis) and 
+#     dust blackbody temperature, which the data are insensitive to.
+
+likelihood:
+  bicep_keck_2014:
+    # Path to the BK14_cosmomc folder under the official data distribution
+    path: null
+    dataset_file: BK14_cosmomc/data/BK14/BK14_dust.dataset
+    dataset_params:
+      maps_use: [BK14_95_B, BK14_150_B, W023_B, P030_B, W033_B, P044_B, P070_B, P100_B, P143_B, P217_B, P353_B]
+      use_min: 1
+      use_max: 9
+    field_names: [T, E, B, P]
+    map_separator: x
+    # Actually computed l_max (takes into account the lensing window function)
+    l_max: 1500
+    # Aliases for automatic covariance matrix
+    renames: [BK14]
+    # Speed in evaluations/second
+    speed: 90
+
+params:
+  # dust power at ell=80, nu=353 GHz [uK^2]
+  BBdust:
+    prior: 
+      min: 0
+      max: 15
+    ref: 
+      dist: norm
+      loc: 3
+      scale: 0.1
+    proposal: 0.1
+    latex: A_{B,\mathrm{dust}}
+  # sync power at ell=80, nu=23 GHz [uK^2]
+  BBsync:
+    prior: 
+      min: 0.0
+      max: 50.0
+    ref: 
+      dist: norm
+      loc: 1.0
+      scale: 1.0
+    proposal: 1.0
+    latex: A_{B,\mathrm{sync}}
+  # dust spatial power spectrum power law index
+  BBalphadust:
+    prior: 
+      min: -1.0
+      max: 0.0
+    ref: 
+      dist: norm
+      loc: -0.42
+      scale: 0.01
+    proposal: 0.01
+    latex: \alpha_{B,\mathrm{dust}}
+  # sync spatial power specturm power law index
+  BBalphasync:
+    prior: 
+      min: -1.0
+      max: 0.0
+    ref: 
+      dist: norm
+      loc: -0.6
+      scale: 0.01
+    proposal: 0.01
+    latex: \alpha_{B,\mathrm{sync}}
+  # dust SED power law index
+  BBbetadust:
+    prior:
+      dist: norm
+      loc: 1.59
+      scale: 0.11
+    ref: 
+      dist: norm
+      loc: 1.59
+      scale: 0.02
+    proposal: 0.02
+    latex: \beta_{B,\mathrm{dust}}
+  # sync SED power law index
+  BBbetasync:
+    prior: 
+      dist: norm
+      loc: -3.1
+      scale: 0.3
+    ref: 
+      dist: norm
+      loc: -3.1
+      scale: 0.02
+    proposal: 0.02
+    latex: \beta_{B,\mathrm{sync}}
+  # correlation between dust and sync
+  BBdustsynccorr:
+    prior: 
+      min: 0.0
+      max: 1.0
+    ref: 
+      dist: norm
+      loc: 0.2
+      scale: 0.01
+    proposal: 0.01
+    latex: \epsilon_{\mathrm{dust,sync}}
+  # EE/BB ratios -- fixed / only used if E-modes are turned on
+  EEtoBB_dust: 2
+  #   latex: 2EE_{\mathrm{dust}}/BB_{\mathrm{dust}}
+  EEtoBB_sync: 2
+  #   latex: 2EE_{\mathrm{sync}}/BB_{\mathrm{sync}} 
+  # dust blackbody temperature [K] -- fixed / very insensitive to this
+  BBTdust: 19.6
+  #   latex: T_{\mathrm{dust}}

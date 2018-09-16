@@ -1,0 +1,14 @@
+{% extends "!page.html" %}
+
+{% set css_files = css_files + ["_static/custom.css"] %}
+
+{% block footer %}
+<script type="text/javascript">
+  $(document).ready(function() {
+    $(".cosmo-example .alt").hide();
+    $(".cosmo-example .switch").click(function() {
+      $(".cosmo-example .default, .cosmo-example .alt").toggle(400)
+    });
+  });
+</script>
+{% endblock %}

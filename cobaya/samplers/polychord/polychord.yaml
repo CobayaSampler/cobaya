@@ -1,0 +1,47 @@
+# Default arguments for the PolyChord sampler
+
+sampler:
+  polychord:
+    # Path to the PolyChord installation folder
+    path:  # use only if installed manually!
+    # Optional parameters for the sampler:
+    # ('Xd' means 'X steps per dimension')
+    # -------------------------------------------------
+    # Number of live points
+    nlive: 25d
+    # Number of slice-sampling steps each new sample.
+    # Helps with curved degeneracies and thin "corners".
+    # Can be reduced to ~dimensionality ('d') if accurate evidences aren't needed.
+    num_repeats: 5d
+    # Number of prior samples drawn before starting compression
+    nprior:  # default: nlive
+    # Whether to check for and explore multi-modality on the posterior
+    do_clustering: True
+    # Stopping criterion: fraction of the total evidence contained in the live points
+    precision_criterion: 0.001
+    # Stopping criterion (alt): maximum number of nested sampling iterations
+    max_ndead: .inf
+    # Numerical value of log(0) in PolyChord's Fortran code
+    logzero: null  # default: result of `numpy.nan_to_num(-numpy.inf)`
+    # Increase number of posterior samples
+    boost_posterior: 0  # increase up to `num_repeats`
+    # Verbosity during the sampling process. Set to one of [0,1,2,3]
+    feedback:  # default: Same as global `verbosity`
+    # Treatment of unbounded parameters: confidence level to use
+    # ----------------------------------------------------------
+    # (Use with care if there are likelihood modes close to the edge of the prior)
+    confidence_for_unbounded: 0.9999995  # 5 sigmas
+    # Raw output of PolyChord (no need to change them, normally)
+    # ----------------------------------------------------------
+    base_dir: raw_polychord_output
+    update_files:
+    file_root:
+    posteriors: True
+    equals: True
+    cluster_posteriors: True
+    write_resume: True
+    read_resume: True
+    write_stats: True
+    write_live: True
+    write_dead: True
+

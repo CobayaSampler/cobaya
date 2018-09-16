@@ -1,0 +1,184 @@
+grid:
+#  yaml_dir:  # where to look for the INI files: default and of each dataset
+  # YAML file with "base" model (params + theory + sampler, +(maybe) common likelihoods)
+  defaults:
+#  importance_defaults: # defaults of importance runs?
+  groups:
+    base:
+      models:
+#        - camb
+#        - camb_r
+#        - camb_omegak
+        - camb_w
+#        - camb_mnu
+#        - camb_nnu
+#        - camb_mnu_nnu
+#        - classy
+#        - classy_r
+#        - classy_mnu_nnu
+#        - classy_sBBN_2017
+      # NB: datasets infos are added *after* models info,
+      # so the former overwrite the latter in case of conflict.
+      datasets:
+        - planck_lowl_plikHM_TTTEEE_lensing
+#        - planck_lowl_plikHM_TTTEEE_lensing_poly
+        - planck_lowl_plikHM_TTTEEE_lensing_BAO_Pantheon
+#        - planck_lowl_plikHM_TTTEEE_lensingk_BK14
+# TODO: post-processing (e.g. importance reweighting)
+#      post:
+#        - [...]
+      # Group-level skip combinations
+      skip:
+#        camb:
+#          - planck_lowl_plikHM_TTTEEE_lensing
+#          - planck_lowl_plikHM_TTTEEE_lensing_BAO_Pantheon
+#          - planck_lowl_plikHM_TTTEEE_lensingk_BK14
+#        camb_r:
+#          - planck_lowl_plikHM_TTTEEE_lensing
+#          - planck_lowl_plikHM_TTTEEE_lensing_BAO_Pantheon
+#          - planck_lowl_plikHM_TTTEEE_lensing_poly
+#        camb_omegak:
+#          - planck_lowl_plikHM_TTTEEE_lensing
+#          - planck_lowl_plikHM_TTTEEE_lensing_poly
+#          - planck_lowl_plikHM_TTTEEE_lensingk_BK14
+#        camb_w:
+#          - planck_lowl_plikHM_TTTEEE_lensing
+#          - planck_lowl_plikHM_TTTEEE_lensing_poly
+#          - planck_lowl_plikHM_TTTEEE_lensingk_BK14
+#        camb_mnu:
+#          - planck_lowl_plikHM_TTTEEE_lensing_poly
+#          - planck_lowl_plikHM_TTTEEE_lensing_BAO_Pantheon
+#          - planck_lowl_plikHM_TTTEEE_lensingk_BK14
+#        camb_nnu:
+#          - planck_lowl_plikHM_TTTEEE_lensing_poly
+#          - planck_lowl_plikHM_TTTEEE_lensing_BAO_Pantheon
+#          - planck_lowl_plikHM_TTTEEE_lensingk_BK14
+        camb_mnu_nnu:
+#          - planck_lowl_plikHM_TTTEEE_lensing_poly
+          - planck_lowl_plikHM_TTTEEE_lensing_BAO_Pantheon
+#          - planck_lowl_plikHM_TTTEEE_lensingk_BK14
+#        classy:
+#          - planck_lowl_plikHM_TTTEEE_lensing_BAO_Pantheon
+#        classy_r:
+#          - planck_lowl_plikHM_TTTEEE_lensing
+#          - planck_lowl_plikHM_TTTEEE_lensing_BAO_Pantheon
+#          - planck_lowl_plikHM_TTTEEE_lensing_poly
+  # Global skip combinations
+  skip:
+    # model: [dataset1, ...]
+  # Definitions of the models used
+  models:
+    camb:
+      preset:
+        theory: camb
+    camb_r:
+      preset:
+        theory: camb
+        primordial: SFSR_t
+    camb_omegak:
+      preset:
+        theory: camb
+        geometry: omegak
+    camb_w:
+      preset:
+        theory: camb
+        dark_energy: de_w
+    camb_mnu:
+      preset:
+        theory: camb
+        neutrinos: varying_mnu
+    camb_nnu:
+      preset:
+        theory: camb
+        neutrinos: varying_Neff
+    camb_mnu_nnu:
+      preset:
+        theory: camb
+        neutrinos: varying_mnu_Neff
+    classy:
+      preset:
+        theory: classy
+    classy_r:
+      preset:
+        theory: classy
+        primordial: SFSR_t
+    classy_mnu:
+      preset:
+        theory: classy
+        neutrinos: varying_mnu
+    classy_nnu:
+      preset:
+        theory: classy
+        neutrinos: varying_Neff
+    classy_mnu_nnu:
+      preset:
+        theory: classy
+        neutrinos: varying_mnu_Neff
+    classy_sBBN_2017:
+      preset:
+        theory: classy
+      theory:
+        classy:
+          extra_args:
+            sBBN file: "{classy}/bbn/sBBN_2017.dat"
+  # Definitions of datasets used
+  datasets:
+    planck_lowl_plikHM_TTTEEE_lensing:
+      preset:
+        like_cmb: planck_2015_lensing
+        sampler: MCMC
+    planck_lowl_plikHM_TTTEEE_lensing_poly:
+      preset:
+        like_cmb: planck_2015_lensing
+      sampler: {polychord: {nlive: 400, num_repeats: 20, do_clustering: False, precision_criterion: 0.05}}
+    planck_lowl_plikHM_TTTEEE_lensing_BAO_Pantheon:
+      preset:
+        like_cmb: planck_2015_lensing
+        like_bao: BAO_planck_2018
+        like_sn: Pantheon
+        sampler: MCMC
+    planck_lowl_plikHM_TTTEEE_lensingk_BK14:
+      preset:
+        like_cmb: planck_2015_lensing_bk14
+        sampler: MCMC
+
+# OLD
+##cov
+##    dir:  # where to look for covariance matrices
+#    # try to match each new run name to exisitng covmat (covariance matrix for efficient exploration)
+#    # e.g. try to map to get name without particular data combinations
+#    ##covWithoutNameOrder = ['lensing', 'BAO']
+#    # or try replacing various names (these are standard for the provided planck_covmats)
+#    ##covNameMappings = {'plikHM': 'plik', 'plikLite': 'plik'}
+#    # for mapping to nominal mission names try
+#    # covNameMappings = {'plikHM':'planck','TT':'', 'lowTEB':'lowLike'}
+
+# Below this line (upper level), defaults ########################
+
+# Presets for shorter input
+# Any other field ovewrites the presets
+preset:
+  # Base model
+  primordial: SFSR
+  geometry: flat
+  hubble: sound_horizon_last_scattering
+  matter: omegab_h2, omegac_h2
+  neutrinos: one_heavy_planck
+  dark_energy: lambda
+  bbn: consistency
+  reionization: gauss_prior
+
+# Bug in original Planck chains: wrong prior
+# (reproducing here for test purposes
+params:
+  galf_TE_A_143_217:
+    prior:
+      dist: norm
+      loc: 0.30
+      scale: 0.09
+    ref:
+      dist: norm
+      loc: 0.30
+      scale: 0.09
+
+timing: True

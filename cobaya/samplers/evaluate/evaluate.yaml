@@ -1,0 +1,9 @@
+# Dummy sampler for evaluating the posterior at particular points
+# (To do this interactively, check out the "Model wrapper".
+
+sampler:
+  evaluate:
+    # Optional: override parameter values
+    #   Use it if you don't want to change the reference points in your params block
+    override:
+      # param: value

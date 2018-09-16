@@ -1,0 +1,106 @@
+/* TOP of nav side bar */
+.wy-side-nav-search {
+    background-color: unset;
+}
+.wy-side-nav-search > a, .wy-side-nav-search .wy-dropdown > a {
+    font-size: 175%;
+    color: #404040;
+    margin-bottom: 0.5em;
+}
+.wy-side-nav-search > a.icon img.logo, .wy-side-nav-search .wy-dropdown > a.icon img.logo {
+    margin-top: 0.1em;
+}
+.wy-side-nav-search > div.version {
+    font-size: 150%;
+    color: #404040;
+}
+
+/* nav side bar */
+.wy-nav-side {
+    background-color: rgba(0,0,0,0.05);
+    padding-bottom: 0;
+    z-index: 0;
+}
+.wy-menu-vertical header, .wy-menu-vertical p.caption {
+    color: unset;
+    font-weight: bold;
+    font-weight: bold;
+    font-size: 95%;
+    border-top-style: solid;
+    border-color: #404040;
+    border-width: medium;
+    height: 2.8em;
+    margin-top: 0.4em;
+    padding-top: 0.4em;
+}
+.wy-menu-vertical a {
+    color: #666;
+    font-size: 95%;
+}
+.wy-menu-vertical a:hover {
+    background-color: #d6d6d6;
+}
+.wy-menu-vertical code {
+    /* slightly larger mono font size in nav bar */
+    font-size: 100%;
+    font-weight: bold;
+}
+/* selected */
+.wy-menu-vertical li.current a {
+    background: #fcfcfc;
+    border-right: none;
+    box-shadow: 0 0.75em 0.75em -0.75em #777;
+}
+.wy-menu-vertical li.toctree-l1.current > a {
+    border-top: none;
+    border-bottom: none;
+    box-shadow: 0.75em 0 0.75em 0 #777;
+}
+.wy-menu-vertical li.toctree-l2.current > a, .wy-menu-vertical li.toctree-l2.current li.toctree-l3 > a {
+    background: #fcfcfc;
+}
+
+/* Content */
+.wy-nav-content {
+    box-shadow: 0 0 0.75em 0 #777;
+    z-index: 1
+}
+.rst-content pre.literal-block, .rst-content div[class^="highlight"] pre, .rst-content .linenodiv pre {
+    background: #fdf6e3;
+    font-size: 90%;
+}
+.rst-content h3 {
+    font-size: 110%;
+}
+.rst-content h4 {
+    font-size: 100%;
+}
+
+
+/* CAMB / CLASS example switcher */
+
+/* The boxes containing CAMB and CLASS input */
+.cosmo-example .default {
+}
+.cosmo-example .alt {
+}
+
+/* The switch - the box around the slider */
+.cosmo-example .switch {
+  font-weight: bold;
+  width: 15em;
+  height: 2em;
+  background-color: #ddd;
+  border-radius: .2em;
+  padding-left: 1em;
+  padding-top: 0.5em;
+  margin-top: 0.5em;
+  margin-bottom: 1em;
+  box-shadow: 0.2em 0.2em 0.5em 0.0em;
+  cursor: pointer;
+  transition-duration: 0.2s;
+}
+
+.cosmo-example .switch:hover {
+  background-color: #e8e8e8;
+}

@@ -1,0 +1,14 @@
+# Final (BAO+FS) consensus results, Alam et al. 2016
+# https://arxiv.org/abs/1607.03155
+
+likelihood:
+  sdss_dr12_consensus_final:
+    path: null
+    measurements_file: bao_data/sdss_DR12Consensus_final.dat
+    cov_file: bao_data/final_consensus_covtot_dM_Hz_fsig.txt
+    # Fiducial sound horizon with which data have been stored
+    rs_fid: 147.78  # Mpc
+    # Aliases for automatic covariance matrix
+    renames: [BAO]
+    # Speed in evaluations/second
+    speed: 1600

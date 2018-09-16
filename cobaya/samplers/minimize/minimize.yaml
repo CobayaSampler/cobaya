@@ -1,0 +1,14 @@
+# Default arguments for the -logposterior minimizer
+
+sampler:
+  minimize:
+    # Minimizes the full posterior (False) or just the likelihood (True)
+    ignore_prior: False
+    # Tolerance for termination. Default: 0.001
+    # --> expected >0.01 deviation, reasonable value for Chi^2 minimisation
+    tol: 1e-3
+    # Maximum number of iterations. Default: practically infinite
+    maxiter: 1e10
+    # Override keyword arguments for `scipy.minize`,
+    # e.g. `override: {"method": BFGS}
+    override:

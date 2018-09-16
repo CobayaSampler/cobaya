@@ -1,0 +1,30 @@
+# Mock test likelihood
+
+likelihood:
+  _test:
+    # Mock-likelihood properties:
+    # 1. artificial delay in lik computation  
+    delay: 0  # seconds
+    # 2. prefix of the parameters names
+    prefix: ""
+
+params:
+  a1:
+    prior:
+      min: 0
+      max: 1
+    latex: \alpha_1
+  a2:
+    prior:
+      min: 0
+      max: 1
+    latex: \alpha_2
+  b1:
+    min: 0
+    max: 1
+    latex: \beta_1
+      
+
+prior:
+  first:  "lambda a1: stats.beta.logpdf(a1, a=2, b=2)"
+  second: "lambda a2: stats.beta.logpdf(a2, a=2, b=5)"
