@@ -44,6 +44,7 @@ Thanks to `Julien Lesgourgues`_ for support on interfacing CLASS_, and to `Guada
 .. _`Jesus Torrado`: https://astronomy.sussex.ac.uk/~jt386
 .. _`Antony Lewis`: https://cosmologist.info
 .. _CosmoMC: https://cosmologist.info/cosmomc/
+.. _CosmoCoffee: https://cosmocoffee.info/viewforum.php?f=11&sid=234d83c26105e5bfb56cb527a645f695
 .. _`Monte Python`: https://baudren.github.io/montepython.html
 .. _`Julien Lesgourgues`: https://www.particle-theory.rwth-aachen.de/cms/Particle-Theory/Das-Institut/Mitarbeiter-TTK/Professoren/~gufe/Lesgourgues-Julien/?lidx=1
 .. _`Benjamin Audren`: https://baudren.github.io/
@@ -52,7 +53,6 @@ Thanks to `Julien Lesgourgues`_ for support on interfacing CLASS_, and to `Guada
 .. _GetDist: https://github.com/cmbant/getdist
 .. _PolyChord: https://ccpforge.cse.rl.ac.uk/gf/project/polychord
 .. _`Guadalupe Cañas Herrera`: https://gcanasherrera.github.io/pages/about-me.html#about-me
-.. _CosmoCoffee: https://cosmocoffee.info/viewforum.php?f=11&sid=234d83c26105e5bfb56cb527a645f695
 
 ===================
 
