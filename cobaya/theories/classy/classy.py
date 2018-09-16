@@ -208,7 +208,7 @@ class classy(_cosmo):
                     args_names=["z"],
                     arg_array=0)
             elif v is None:
-                k_translated = self.translate_param(k)
+                k_translated = self.translate_param(k, force=True)
                 if k_translated not in self.derived_extra:
                     self.derived_extra += [k_translated]
             else:
@@ -252,8 +252,9 @@ class classy(_cosmo):
             [self.z_for_matter_power, np.atleast_1d(z)]))), axis=0)
         self.extra_args["z_pk"] = " ".join(["%g"%zi for zi in self.z_for_matter_power])
 
-    def translate_param(self, p):
-        if self.use_planck_names:
+    def translate_param(self, p, force=False):
+        # "force=True" is used when communicating with likelihoods, which speak "planck"
+        if self.use_planck_names or force:
             return self.planck_to_classy.get(p,p)
         return p
 
@@ -365,8 +366,8 @@ class classy(_cosmo):
         # Put all pamaremters in CLASS nomenclature (self.derived_extra already is)
         requested = [self.translate_param(p) for p in (
             self.output_params if derived_requested else [])]
-        requested_and_extra = {self.translate_param(p):None
-                               for p in set(requested).union(set(self.derived_extra))}
+        requested_and_extra = {
+            p:None for p in set(requested).union(set(self.derived_extra))}
         # Parameters with their own getters
         if "rs_drag" in requested_and_extra:
             requested_and_extra["rs_drag"] = self.classy.rs_drag()
@@ -388,7 +389,8 @@ class classy(_cosmo):
     def get_param(self, p):
         current_state = self.current_state()
         for pool in ["params", "derived", "derived_extra"]:
-            value = deepcopy(current_state[pool].get(self.translate_param(p), None))
+            value = deepcopy(
+                current_state[pool].get(self.translate_param(p, force=True), None))
             if value is not None:
                 return value
         self.log.error("Parameter not known: '%s'", p)
