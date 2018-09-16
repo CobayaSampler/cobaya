@@ -1,0 +1,24 @@
+# Backups
+*~
+\#*
+.\#*
+
+# Python and packaging
+*.pyc
+*.egg-info/
+build/
+dist/
+
+# Documentation
+docs/_*
+docs/.ipynb_checkpoints
+docs/src_examples/*/*.png
+
+# Tests
+.pytest_cache
+
+# IDE-specific
+.idea
+
+# pytest
+.cache

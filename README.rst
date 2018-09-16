@@ -31,7 +31,7 @@ The overhead per posterior evaluation is ``< 0.1 ms x dimension`` per posterior 
 How to cite us
 --------------
 
-As of this version, there is no scientific publication yet associated to this software, so simply mention its GitHub repository (see above).
+As of this version, there is no scientific publication yet associated to this software, so simply mention its `GitHub repository <https://github.com/CobayaSampler/cobaya>`_.
 
 To appropriately cite the modules (samplers, theory codes, likelihoods) that you have used, simply run the script `cobaya-citation` with your input file(s) as argument(s), and you will get *bibtex* references and a short suggested text snippet for each module mentioned in your input file.
 
