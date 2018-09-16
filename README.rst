@@ -33,7 +33,7 @@ How to cite us
 
 As of this version, there is no scientific publication yet associated to this software, so simply mention its `GitHub repository <https://github.com/CobayaSampler/cobaya>`_.
 
-To appropriately cite the modules (samplers, theory codes, likelihoods) that you have used, simply run the script `cobaya-citation` with your input file(s) as argument(s), and you will get *bibtex* references and a short suggested text snippet for each module mentioned in your input file.
+To appropriately cite the modules (samplers, theory codes, likelihoods) that you have used, simply run the script `cobaya-citation` with your input file(s) as argument(s), and you will get *bibtex* references and a short suggested text snippet for each module mentioned in your input file. You can find a usage example :ref:`here <citations>`.
 
 
 Acknowledgements

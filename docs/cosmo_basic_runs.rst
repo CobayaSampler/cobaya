@@ -63,6 +63,8 @@ As an example, here is the input for Planck 2015 base :math:`\Lambda\mathrm{CDM}
 Save the input generated to a file and run it with ``cobaya-run [your_input_file_name.yaml]``. This will create output files as explained :ref:`here <output_shell>`, and, after a couple of hours, you should be able to run ``GetDistGUI`` to generate some plots.
 
 
+.. _citations:
+
 Citations made easy!
 --------------------
 
