@@ -557,7 +557,7 @@ class camb(_cosmo):
 # Name of the Class repo/folder and version to download
 camb_repo_name = "CAMB"
 camb_repo_user = "cmbant"
-camb_repo_version = "7b6e8670cb76049bcac64b19fd2ca07b0405fc21"
+camb_repo_version = "0.1.8.1"
 
 
 def is_installed(**kwargs):
