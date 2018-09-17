@@ -29,7 +29,7 @@ from cobaya.mpi import import_MPI
 
 def run(info):
     assert hasattr(info, "keys"), (
-        "The first agument must be a dictionary with the info needed for the run. "
+        "The first argument must be a dictionary with the info needed for the run. "
         "If you were trying to pass the name of an input file instead, "
         "load it first with 'cobaya.input.load_input', "
         "or, if you were passing a yaml string, load it with 'cobaya.yaml.yaml_load'.")
@@ -38,7 +38,7 @@ def run(info):
     import getdist
     logger_setup(info.get(_debug), info.get(_debug_file))
     import logging
-    # Initialize output, if requiered
+    # Initialize output, if required
     output = Output(output_prefix=info.get(_output_prefix), resume=info.get(_resume),
                     force_output=info.pop(_force, None),
                     force_reproducible=info.get(_force_reproducible))
@@ -53,7 +53,7 @@ def run(info):
             logging.getLogger(__name__.split(".")[-1]).debug(
                 "Input info updated with defaults (dumped to YAML):\n%s",
                 yaml_dump(full_info))
-    # We dump the info now, before modules initialization, lest it is accidentaly modified
+    # We dump the info now, before modules initialization, lest it is accidentally modified
     # If resuming a sample, it checks that old and new infos are consistent
     output.dump_info(info, full_info)
     # Initialize the posterior and the sampler

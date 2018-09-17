@@ -4,7 +4,7 @@ gd_sample = loadCobayaSamples(updated_info, products["sample"])
 # Analyze and plot
 print("Mean:")
 print(gd_sample.getMeans()[:2])
-print("Covariace matrix:")
+print("Covariance matrix:")
 print(gd_sample.getCovMat().matrix[:2,:2])
 # %matplotlib inline  # uncomment if running from the Jupyter notebook
 import getdist.plots as gdplt

@@ -99,7 +99,7 @@ class BlockedProposer(object):
             block-wise).
         :param i_last_slow_block: index of the last block considered slow.
             By default, all blocks are considered slow.
-        :param proposal_scale: overal scale for the proposal.
+        :param proposal_scale: overall scale for the proposal.
         """
         self.proposal_scale = proposal_scale
         if oversampling_factors is None:

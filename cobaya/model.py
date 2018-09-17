@@ -34,7 +34,7 @@ logposterior.__new__.__defaults__ = (None, None, [], [])
 
 def get_model(info):
     assert hasattr(info, "keys"), (
-        "The first agument must be a dictionary with the info needed for the model. "
+        "The first argument must be a dictionary with the info needed for the model. "
         "If you were trying to pass the name of an input file instead, "
         "load it first with 'cobaya.input.load_input', "
         "or, if you were passing a yaml string, load it with 'cobaya.yaml.yaml_load'.")

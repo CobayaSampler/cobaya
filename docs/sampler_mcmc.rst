@@ -92,9 +92,9 @@ Example *parameters* block:
 
 A good initial covariance matrix for the proposal is critical for convergence.
 It can be specified either with the property ``proposal`` of each parameter, as shown
-above, or thorugh ``mcmc``'s property ``covmat``, as a file name (including path,
+above, or through ``mcmc``'s property ``covmat``, as a file name (including path,
 if not located at the invocation folder).
-The first line of the ``covamt`` file must start with ``#``, followed by a list of parameter
+The first line of the ``covmat`` file must start with ``#``, followed by a list of parameter
 names, separated by a space. The rest of the file must contain the covariance matrix,
 one row per line. It does not need to contain the same parameters as the sampled ones:
 it overrides the ``proposal``'s (and adds covariances) for the sampled parameters,
@@ -122,7 +122,7 @@ irregular, you should probably set ``learn_proposal: False``.
 If you don't know how good your initial guess for starting point and covariance of the
 proposal are, it is a good idea to allow for a number of initial *burn in* samples,
 e.g. 10 per dimension. This can be specified with the parameter ``burn_in``.
-These samples will be ignored for all purposes (output, covergence, proposal learning...)
+These samples will be ignored for all purposes (output, convergence, proposal learning...)
 
 
 .. _mcmc_speed_hierarchy:
@@ -137,9 +137,9 @@ parts of the likelihood when sampling along the fast directions only.
 Two different sampling schemes are available to take additional advantage from a speed
 hierarchy:
 
-- **Dragging the fast parameters:** implies a number of intermediate steps when jumping between fast+slow combinations, such that the jump in the fast parameters is optimised with respect to the jump in the slow parameters to explore any possible degeneracy betwen them. If enabled (``drag: True``), tries to spend the same amount of time doing dragging steps as it takes to compute a jump in the slow direction (make sure your likelihoods ``speed``'s are accurate; see below).
+- **Dragging the fast parameters:** implies a number of intermediate steps when jumping between fast+slow combinations, such that the jump in the fast parameters is optimised with respect to the jump in the slow parameters to explore any possible degeneracy between them. If enabled (``drag: True``), tries to spend the same amount of time doing dragging steps as it takes to compute a jump in the slow direction (make sure your likelihoods ``speed``'s are accurate; see below).
 
-- **Oversampling the fast parameters:** consists simply of taking a larger proportion of steps in the faster directions, useful when exploring their conditional distributions is cheap. If enabled (``oversampe: True``), it tries to spend the same amount of time in each block.
+- **Oversampling the fast parameters:** consists simply of taking a larger proportion of steps in the faster directions, useful when exploring their conditional distributions is cheap. If enabled (``oversample: True``), it tries to spend the same amount of time in each block.
 
 In general, the *dragging* method is the recommended one, since oversampling can potentially produce too many samples. For a thorough description of both methods, see
 `A. Lewis, "Efficient sampling of fast and slow cosmological parameters" (arXiv:1304.4473) <https://arxiv.org/abs/1304.4473>`_.
@@ -185,10 +185,10 @@ Module documentation
 
 .. automodule:: samplers.mcmc.mcmc
    :noindex:
-           
+
 Sampler class
 ^^^^^^^^^^^^^
-   
+
 .. autoclass:: samplers.mcmc.mcmc
    :members:
 
@@ -197,11 +197,11 @@ Proposal
 
 .. automodule:: samplers.mcmc.proposal
    :noindex:
-   
-.. autoclass:: samplers.mcmc.proposal.CyclicIndexRandomizer                     
+
+.. autoclass:: samplers.mcmc.proposal.CyclicIndexRandomizer
    :members:
 .. autoclass:: samplers.mcmc.proposal.RandDirectionProposer
    :members:
-.. autoclass:: samplers.mcmc.proposal.BlockedProposer                     
+.. autoclass:: samplers.mcmc.proposal.BlockedProposer
    :members:
 

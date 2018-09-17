@@ -30,9 +30,9 @@ names start with ``test_`` and must be defined in the ``params`` block:
 The option ``prefix`` fixes the parameters that will be understood by this likelihood (see :ref:`likehood_mock_params`).
 
 Derived parameters can be tracked, as many as sampled parameters times the number of modes,
-and they represent the standarised parameters of each of the modes, i.e. those distributed
+and they represent the standardized parameters of each of the modes, i.e. those distributed
 as :math:`\mathcal{N}(0,I)` around each mode (notice that if a mode is close to the
-boundary of the prior, you should not expect to recoved a unit covariance matrix from the
+boundary of the prior, you should not expect to recover a unit covariance matrix from the
 sample).
 
 A delay (in seconds) in the likelihood evaluation can be specified with the keyword

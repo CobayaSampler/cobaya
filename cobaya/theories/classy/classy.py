@@ -178,7 +178,7 @@ class classy(_cosmo):
         return self.states[lasts.index(max(lasts))]
 
     def needs(self, **requirements):
-        # Computed quantities requiered by the likelihood
+        # Computed quantities required by the likelihood
         super(classy, self).needs(**requirements)
         for k,v in self._needs.items():
             # Products and other computations

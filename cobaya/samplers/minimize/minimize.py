@@ -59,9 +59,9 @@ class minimize(Sampler):
         self.log.info("Starting minimization.")
         self.result = scpminimize(**self.kwargs)
         if self.result.success:
-            self.log.info("Finished succesfuly.")
+            self.log.info("Finished succesfully.")
         else:
-            self.log.error("Finished UNsuccesfuly.")
+            self.log.error("Finished Unsuccesfully.")
 
     def close(self, *args):
         """

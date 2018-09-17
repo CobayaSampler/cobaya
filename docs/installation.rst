@@ -127,10 +127,10 @@ Troubleshooting
 
    This section will be filled with the most common problems that our users encounter, so if you followed the instructions above and still something failed (or if you think that the instructions were not clear enough), don't hesitate to contact us!
 
-Low performace: install OpenBLAS (or MKL)
+Low performance: install OpenBLAS (or MKL)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-BLAS is a collection of algorithms for linear algebra computations. There will most likely be a BLAS library installed already in your system. It is recommended to make sure that it is an efficient one, preferably the highly-parallelized OpenBLAS.
+BLAS is a collection of algorithms for linear algebra computations. There will most likely be a BLAS library installed already in your system. It is recommended to make sure that it is an efficient one, preferably the highly-optimized OpenBLAS or MKL.
 
 To check whether ``numpy`` is actually using OpenBLAS or MKL, do
 

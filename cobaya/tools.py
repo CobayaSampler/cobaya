@@ -158,7 +158,7 @@ def read_dnumber(n, d, dtype=float):
     return n
 
 
-# Self decribing
+# Self describing
 def is_valid_variable_name(name):
     try:
         parse("%s=None"%name)

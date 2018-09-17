@@ -106,7 +106,7 @@ Implementing your own *internal* likelihood
 
 Even if defining likelihoods with simple Python functions is easy, you may want to create a new *internal*-like likelihood to incorporate to your fork of **cobaya**, or to suggest us to include it in the main source.
 
-Since cobaya was created to be flexible, creating your own likelihood is very easy: simply create a folder with its name under ``likelihoods`` in the source tree and follow the conventions explained above for *internal* likelihoods. Options defined in the ``[name].yaml`` are automatically accesible as attributes of your likelihood class at runtime.
+Since cobaya was created to be flexible, creating your own likelihood is very easy: simply create a folder with its name under ``likelihoods`` in the source tree and follow the conventions explained above for *internal* likelihoods. Options defined in the ``[name].yaml`` are automatically accessible as attributes of your likelihood class at runtime.
 
 You only need to specify one, or at most four, functions (see the :class:`Likelihood` class documentation below):
 
@@ -128,12 +128,12 @@ Likelihood module
 
 Likelihood class
 ^^^^^^^^^^^^^^^^
-   
+
 .. autoclass:: likelihood.Likelihood
    :members:
 
 LikelihoodCollection class
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
-   
+
 .. autoclass:: likelihood.LikelihoodCollection
    :members:

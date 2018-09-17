@@ -13,9 +13,9 @@ Creating your own cosmological likelihood with **cobaya** is super simple:
 Example: your own CMB experiment!
 ---------------------------------
 
-To illustrate how to create a cosmological likelihood in **cobaya**, we apply the procedure above to a ficticious WMAP-era full-sky CMB TT experiment.
+To illustrate how to create a cosmological likelihood in **cobaya**, we apply the procedure above to a fictitious WMAP-era full-sky CMB TT experiment.
 
-First of all, we will need to simulate the fictitious power spectrum of the ficticious sky that we would measure with our ficticious experiment, once we have accounted for noise and beam corrections. To do that, we choose a set of *true* cosmological parameters in the sky, and then use a :class:`model` to compute the corresponding power spectrum, up to some reasonable :math:`\ell_\mathrm{max}` (see :doc:`cosmo_model`).
+First of all, we will need to simulate the fictitious power spectrum of the fictitious sky that we would measure with our fictitious experiment, once we have accounted for noise and beam corrections. To do that, we choose a set of *true* cosmological parameters in the sky, and then use a :class:`model` to compute the corresponding power spectrum, up to some reasonable :math:`\ell_\mathrm{max}` (see :doc:`cosmo_model`).
 
 .. code:: python
 

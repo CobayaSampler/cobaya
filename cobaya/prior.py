@@ -225,7 +225,7 @@ parameters:
 We can use a similar approach to define dynamical **derived** parameters, which can depend
 on *input* and *sampled* parameters. To distinguish their notation from that of input
 parameters, we insert the functions defining them under a ``derived`` property
-(see the paramater ``y`` in the example above).
+(see the parameter ``y`` in the example above).
 
 .. note::
 

@@ -124,8 +124,8 @@ def random_mean(ranges, n_modes=1, mpi_warn=True):
 def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1, mpi_warn=True):
     """
     Returns a random covariance matrix, with standard deviations sampled log-uniformly
-    from the lenght of the parameter ranges times ``O_std_min`` and ``O_std_max``, and
-    uniformly sampled correlation coefficients betweem ``rho_min`` and ``rho_max``.
+    from the length of the parameter ranges times ``O_std_min`` and ``O_std_max``, and
+    uniformly sampled correlation coefficients between ``rho_min`` and ``rho_max``.
 
     The output of this function can be used directly as the value of the option ``cov`` of
     the :class:`likelihoods.gaussian`.
@@ -144,7 +144,7 @@ def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1, mpi_warn=True):
         this_cov = np.diag(stds).dot(
             (random_correlation.rvs(dim*stds/sum(stds)) if dim > 1 else np.eye(1))
             .dot(np.diag(stds)))
-        # Symmetrise (numerical noise is usually introduced in the last step)
+        # Symmetrize (numerical noise is usually introduced in the last step)
         cov += [(this_cov+this_cov.T)/2]
     if n_modes == 1:
         cov = cov[0]

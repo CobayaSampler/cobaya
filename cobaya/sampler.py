@@ -34,8 +34,8 @@ block of the input.
 In the cobaya code tree, each sampler is placed in its own folder, containing a file
 defining the sampler's class, which inherits from the :class:`cobaya.Sampler`, and a
 ``[sampler_name].yaml`` file, containing all possible user-specified options for the
-sampler and their default values. Whatever option is defined in this file becomes
-automatically an attibute of the sampler's instance.
+sampler and their default values. Whatever option is defined in this file automatically
+becomes an attribute of the sampler's instance.
 
 To implement your own sampler, or an interface to an external one, simply create a folder
 under the ``cobaya/cobaya/samplers/`` folder and include the two files described above.
@@ -105,7 +105,7 @@ class Sampler(object):
     def products(self):
         """
         Returns the products expected in a scripted call of cobaya,
-        (e.g. a collection of smaples or a list of them).
+        (e.g. a collection of samples or a list of them).
         """
         return None
 

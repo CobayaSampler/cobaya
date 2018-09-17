@@ -1,6 +1,6 @@
 # Notes about writing more presets:
 # ---------------------------------
-# - all parameter names below are PLANCK parameter names. They are substitited by the
+# - all parameter names below are PLANCK parameter names. They are substituted by the
 #   theory-code-specific ones in `create_input`
 # - all presets below, either "atomic" (e.g. primordial, geometry...) or for full runs
 #   must be OrderedDict's!
@@ -544,7 +544,7 @@ for pre in preset.values():
         {field:value for field,value in planck_base_model.items() if field not in pre})
     pre.update(default_sampler)
 
-# BASIC INSTALLTION ######################################################################
+# BASIC INSTALLATION ######################################################################
 install_basic = {
     _theory: {_camb: None, _classy: None},
     _likelihood: {

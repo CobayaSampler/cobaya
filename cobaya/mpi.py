@@ -33,7 +33,7 @@ def get_mpi():
     if _mpi == -1:
         if any([os.getenv(v) for v in
                 ["OMPI_COMM_WORLD_SIZE",  # OpenMPI
-                 "PMI_SIZE"]]):           # Inte MPI
+                 "PMI_SIZE"]]):           # Intel MPI
             from mpi4py import MPI
             _mpi = MPI
         else:

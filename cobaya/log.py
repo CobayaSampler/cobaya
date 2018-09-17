@@ -42,9 +42,9 @@ def exception_handler(exception_type, value, trace_back):
         log.critical("Interrupted by the user.")
         return
     log.critical(
-        "Some unexpected ERROR ocurred. You can see the exception information above.\n"
+        "Some unexpected ERROR occurred. You can see the exception information above.\n"
         "We recommend trying to reproduce this error with '%s:True' in the input.\n"
-        "If you cannot solve it yourself and need to report it, include the debug ouput,"
+        "If you cannot solve it yourself and need to report it, include the debug output,"
         "\nwhich you can send it to a file setting '%s:[some_file_name]'.",
         _debug, _debug_file)
     # Exit all MPI processes
@@ -53,7 +53,7 @@ def exception_handler(exception_type, value, trace_back):
 
 def logger_setup(debug=None, debug_file=None):
     """
-    Configuring the root logger, for its childs to inherit level, format and handlers.
+    Configuring the root logger, for its children to inherit level, format and handlers.
 
     Level: if debug=True, take DEBUG. If numerical, use "logging"'s corresponding level.
     Default: INFO

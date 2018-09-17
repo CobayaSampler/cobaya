@@ -112,7 +112,7 @@ def install(*infos, **kwargs):
                           "install this module manually.")
                 failed_modules += ["%s:%s"%(kind, module)]
     if failed_modules:
-        log.error("The instalation (or installation test) of some module(s) has failed: "
+        log.error("The installation (or installation test) of some module(s) has failed: "
                   "%r. Check output above.\n", failed_modules)
         raise HandledException
 

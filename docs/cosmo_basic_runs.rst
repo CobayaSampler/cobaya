@@ -55,7 +55,7 @@ As an example, here is the input for Planck 2015 base :math:`\Lambda\mathrm{CDM}
 
 .. note::
 
-   Note that Planck likelihood parameters (or *nuisance parameters*) do not appear in the input: they are included automatically at run time. The same goes for all *internal* likelhoods (i.e. those listed below in the table of contents).
+   Note that Planck likelihood parameters (or *nuisance parameters*) do not appear in the input: they are included automatically at run time. The same goes for all *internal* likelihoods (i.e. those listed below in the table of contents).
 
    You can still add them to the input, if you want to redefine any of their properties (its prior, label, etc.). See :ref:`prior_inheritance`.
 

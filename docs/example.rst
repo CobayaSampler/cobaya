@@ -17,10 +17,10 @@ The input of **cobaya** consists of a text file that usually looks like this:
    :language: yaml
 
 You can see the following *blocks* up there:
-              
+
 - A ``likelihood`` block, listing the likelihood pdf's to be explored, here a gaussian with the mean and covariance stated.
 - A ``params`` block, stating the parameters that are going to be explored (or derived), their ``prior``, the the Latex label that will be used in the plots, the reference (``ref``) starting point for the chains (optional), and the initial spread of the MCMC covariance matrix ``proposal``.
-- A ``sampler`` block stating that we will use the ``mcmc`` sampler to explore the prior+likelihood described above, stating the maximum number of samples used, how many initial samples to ignore, and that we will sequentially refine our initiall guess for a covariance matrix.
+- A ``sampler`` block stating that we will use the ``mcmc`` sampler to explore the prior+likelihood described above, stating the maximum number of samples used, how many initial samples to ignore, and that we will sequentially refine our initial guess for a covariance matrix.
 - An ``output`` prefix, indicating where the products will be written and a prefix for their name.
 
 To run this example, save the text above in a file called ``gaussian.yaml`` in a folder of your choice, and do
@@ -48,7 +48,7 @@ After a few seconts, a folder named ``chains`` will be created, and inside it yo
    ├── gaussian__full.yaml
    └── gaussian_1.txt
 
-The first file reproduces the same information as the input file given, here ``gaussian.yaml``. The second containts the ``full`` information needed to reproduce the sample, similar to the input one, but populated with the default options for the sampler, likelihood, etc. that you have used.
+The first file reproduces the same information as the input file given, here ``gaussian.yaml``. The second contains the ``full`` information needed to reproduce the sample, similar to the input one, but populated with the default options for the sampler, likelihood, etc. that you have used.
 
 The third file, ending in ``.txt``, contains the MCMC sample, and its first lines should look like
 
@@ -87,7 +87,7 @@ The code above may look more complicated than the corresponding ``yaml`` one, bu
 
    Same goes for the likelihoods, when one can use an ``OrderedDict`` to preserve the order of the likelihoods.
 
-Notice that here we supress the creation of the chain files by not including the field ``output``, since this is a very basic example. The chains will thus only be loaded in memory.
+Notice that here we suppress the creation of the chain files by not including the field ``output``, since this is a very basic example. The chains will thus only be loaded in memory.
 
 Alternatively, we can load the input from a ``yaml`` file like the one above:
 

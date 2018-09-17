@@ -288,7 +288,7 @@ def prepare_data_script():
     try:
         info = load_input(requirements_file_path)
     except IOError:
-        log.error("Cannot find the requiremets file. This should not be happening.")
+        log.error("Cannot find the requirements file. This should not be happening.")
         raise HandledException
     install(info, path=_modules_path, force=arguments.force,
             **{_code: False, _data: True})

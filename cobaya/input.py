@@ -49,7 +49,7 @@ def load_input(input_file):
         info[_output_prefix] = file_name
     # warn if no output, since we are in shell-invocation mode.
     elif info[_output_prefix] is None:
-        log.warning("WARNING: Output explicitly supressed with 'ouput_prefix: null'")
+        log.warning("WARNING: Output explicitly suppressed with 'output_prefix: null'")
     # contained? Ensure that output is sent where it should
     if "CONTAINED" in os.environ:
         for out in [_output_prefix, _debug_file]:
@@ -247,7 +247,7 @@ def merge_params_info(*params_infos):
 
 def merge_info(*infos):
     """
-    Merges information dictionaries. Rightmost arguments take precendence.
+    Merges information dictionaries. Rightmost arguments take precedence.
     """
     previous_info = deepcopy(infos[0])
     for new_info in infos[1:]:

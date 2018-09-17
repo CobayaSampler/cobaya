@@ -27,7 +27,7 @@ Shell call
 When called from the shell, **cobaya** generates most commonly the following output files:
 
 - ``[prefix__]input.yaml``: a file with the same content as the input file.
-- ``[prefix__]full.yaml``: a file containing the input information plus the default values used by each module.    
+- ``[prefix__]full.yaml``: a file containing the input information plus the default values used by each module.
 - ``[prefix_][number].txt``: one or more sample files, containing one sample per line, with values separated by spaces. The first line specifies the columns.
 
 .. note::
@@ -74,13 +74,13 @@ Both sample files and collections contain the following columns, in this order:
 
 * ``weight``: the relative weight of the sample.
 
-* ``minuslogpost``: minus the log-posterior, unnormalised.
+* ``minuslogpost``: minus the log-posterior, unnormalized.
 
 * ``a, b...``: *sampled* parameter values for each sample
 
 * ``derived_a, derived_b``: *derived* parameter values for each sample. They appear after the sampled ones, but cannot be distinguished from them by name (they just happen to start with ``derived_`` in this particular example, but can have any name).
 
-* ``minuslogprior``: minus the log-prior (unnormalised if :ref:`external priors <prior_external>` have been defined), sum of the individual log-priors.
+* ``minuslogprior``: minus the log-prior (unnormalized if :ref:`external priors <prior_external>` have been defined), sum of the individual log-priors.
 
 * ``minuslogprior__[...]``: individual priors; the first of which, named ``0``, corresponds to the separable product of 1-dimensional priors defined in the ``params`` block, and the rest to :ref:`external priors <prior_external>`, if they exist.
 

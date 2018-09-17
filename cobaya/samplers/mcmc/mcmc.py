@@ -282,7 +282,7 @@ class mcmc(Sampler):
                 set([list(params_infos)[i] for i in indices_sampler]))
             if missing_params:
                 self.log.info(
-                    "Missing proposal covarince for params %r",
+                    "Missing proposal covariance for params %r",
                     [p for p in self.model.parameterization.sampled_params()
                      if p in missing_params])
             else:
@@ -611,7 +611,7 @@ class mcmc(Sampler):
                 [self.collection.mean(first=i*cut, last=(i+1)*cut-1) for i in range(1,m)])
             covs = np.array(
                 [self.collection.cov(first=i*cut, last=(i+1)*cut-1) for i in range(1,m)])
-            # No logging of warnings temporarily, so getdist won't complain innecessarily
+            # No logging of warnings temporarily, so getdist won't complain unnecessarily
             logging.disable(logging.WARNING)
             mcsampleses = [
                 self.collection._sampled_to_getdist_mcsamples(
