@@ -137,7 +137,7 @@ If you don't know how good your initial guess for the starting point and covaria
 can be ignored from the start of the chains (e.g. 10 per dimension). This can be specified with the parameter ``burn_in``.
 These samples will be ignored for all purposes (output, convergence, proposal learning...). Of course there may well
 also be more burn in after these points are discarded, as the chain points converge (and, using ``learn_proposal``, the proposal estimates
-also converge). Often removing the first 30% the entire final chains gives good results (using ``ignore_rows``=0.3 when analysing with [getdist](http://getdist.readthedocs.org/en/latest/)).
+also converge). Often removing the first 30% the entire final chains gives good results (using ``ignore_rows=0.3`` when analysing with `getdist <http://getdist.readthedocs.org/en/latest/>`_).
 
 
 .. _mcmc_speed_hierarchy:
@@ -148,7 +148,7 @@ Taking advantage of a speed hierarchy
 The proposal pdf is *blocked* by speeds, i.e. it allows for efficient sampling of a
 mixture of *fast* and *slow* parameters, such that we can avoid recomputing the slowest
 parts of the likelihood when sampling along the fast directions only. This is often very useful when the likelihoods
-have large numbers of nuisance parameters, but recomputin the likelihood for different sets of nuisance parameters is fast.
+have large numbers of nuisance parameters, but recomputing the likelihood for different sets of nuisance parameters is fast.
 
 Two different sampling schemes are available to take additional advantage from a speed
 hierarchy:
