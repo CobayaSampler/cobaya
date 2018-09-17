@@ -20,7 +20,7 @@
 .. image:: https://img.shields.io/pypi/v/cobaya.svg?style=flat
         :target: https://pypi.python.org/pypi/cobaya/
 .. image:: https://readthedocs.org/projects/cobaya/badge/?version=latest
-   :target: https://getdist.readthedocs.org/en/latest
+   :target: https://cobaya.readthedocs.org/en/latest
 
 
 

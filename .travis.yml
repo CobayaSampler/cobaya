@@ -65,6 +65,26 @@ matrix:
         - GCC_VERSION="5"
         - PYVER="3"
       python: "3.6"
+    - addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - gcc-8
+            - gfortran-8
+            - g++-8
+            - openmpi-bin
+            - openmpi-common
+            - libopenmpi-dev
+            # numpy (and more)
+            - libopenblas-base
+            # Planck likelihood
+            - liblapack3
+            - liblapack-dev
+      env:
+        - GCC_VERSION="8"
+        - PYVER="3"
+      python: "3.7-dev"
     # BELOW: CAMB devel #################################################
     - addons:
         apt:
@@ -108,6 +128,7 @@ matrix:
         - PYVER="3"
         - CAMB_BRANCH="devel"
       python: "3.6"
+
 ###############################################################################
 before_install:
   - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-"${GCC_VERSION}" 90
