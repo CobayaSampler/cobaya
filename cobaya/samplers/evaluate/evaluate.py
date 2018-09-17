@@ -42,7 +42,7 @@ class evaluate(Sampler):
         reference_point = self.model.prior.reference()
         reference_point = odict(
             zip(self.model.parameterization.sampled_params(), reference_point))
-        for p,v in (self.override or {}).items():
+        for p, v in (self.override or {}).items():
             if p not in reference_point:
                 self.log.error("Parameter '%s' used in override not known. "
                                "Known parameters names are %r.",
@@ -50,7 +50,7 @@ class evaluate(Sampler):
                 raise HandledException
             reference_point[p] = v
         self.log.info("Reference point:\n   " + "\n   ".join(
-            ["%s = %g"%pv for pv in reference_point.items()]))
+            ["%s = %g" % pv for pv in reference_point.items()]))
         self.log.info("Evaluating prior and likelihoods...")
         self.logposterior = self.model.logposterior(reference_point)
         self.one_point.add(
@@ -59,16 +59,16 @@ class evaluate(Sampler):
             loglikes=self.logposterior.loglikes)
         self.log.info("log-posterior  = %g", self.logposterior.logpost)
         self.log.info("log-prior      = %g", sum(self.logposterior.logpriors))
-        for i,name in enumerate(self.model.prior):
-            self.log.info("   logprior_"+name+" = %g"%self.logposterior.logpriors[i])
+        for i, name in enumerate(self.model.prior):
+            self.log.info("   logprior_" + name + " = %g" % self.logposterior.logpriors[i])
         if sum(self.logposterior.logpriors) > -np.inf:
             self.log.info("log-likelihood = %g", sum(self.logposterior.loglikes))
-            for i,name in enumerate(self.model.likelihood):
-                self.log.info("   chi2_"+name+" = %g"%(-2*self.logposterior.loglikes[i]))
+            for i, name in enumerate(self.model.likelihood):
+                self.log.info("   chi2_" + name + " = %g" % (-2 * self.logposterior.loglikes[i]))
             self.log.info("Derived params:")
             for name, value in zip(self.model.parameterization.derived_params(),
                                    self.logposterior.derived):
-                self.log.info("   "+name+" = %g"%value)
+                self.log.info("   " + name + " = %g" % value)
         else:
             self.log.info("Likelihoods and derived parameters not computed, "
                           "since the prior is null.")

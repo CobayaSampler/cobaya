@@ -31,6 +31,7 @@ from cobaya.log import HandledException
 
 # Logger
 import logging
+
 log = logging.getLogger(__name__.split(".")[-1])
 
 
@@ -66,7 +67,7 @@ class RandDirectionProposer(IndexCycler):
             if self.n > 1:
                 self.R = scipy.stats.special_ortho_group.rvs(self.n)
             else:
-                self.R = np.eye(1)*numpy.random.choice((-1,1))
+                self.R = np.eye(1) * numpy.random.choice((-1, 1))
         return self.R[:, self.loop_index] * self.propose_r() * scale
 
     def propose_r(self):
@@ -118,15 +119,15 @@ class BlockedProposer(object):
         # Turn it into per-block: multiply by number of params in block
         self.oversampling_factors *= np.array([len(b) for b in parameter_blocks])
         if i_last_slow_block is None:
-            i_last_slow_block = len(parameter_blocks)-1
+            i_last_slow_block = len(parameter_blocks) - 1
         else:
-            if i_last_slow_block > len(parameter_blocks)-1:
+            if i_last_slow_block > len(parameter_blocks) - 1:
                 log.error("The index given for the last slow block, %d, is not valid: "
                           "there are only %d blocks.",
                           i_last_slow_block, len(parameter_blocks))
                 raise HandledException
         n_all = sum([len(b) for b in parameter_blocks])
-        n_slow = sum([len(b) for b in parameter_blocks[:1+i_last_slow_block]])
+        n_slow = sum([len(b) for b in parameter_blocks[:1 + i_last_slow_block]])
         if set(list(chain(*parameter_blocks))) != set(range(n_all)):
             log.error("The blocks do not contain all the parameter indices.")
             raise HandledException
@@ -138,12 +139,12 @@ class BlockedProposer(object):
         # iblock is the index of the blocks
         self.i_of_j = np.array(list(chain(*parameter_blocks)))
         self.iblock_of_j = list(
-            chain(*[[iblock]*len(b) for iblock,b in enumerate(parameter_blocks)]))
+            chain(*[[iblock] * len(b) for iblock, b in enumerate(parameter_blocks)]))
         # Creating the blocked proposers
         self.proposer = [RandDirectionProposer(len(b)) for b in parameter_blocks]
         # Starting j index of each block
         self.j_start = [len(list(chain(*parameter_blocks[:iblock])))
-                        for iblock,b in enumerate(parameter_blocks)]
+                        for iblock, b in enumerate(parameter_blocks)]
         # Parameter cyclers, cycling over the j's
         self.cycler_all = CyclicIndexRandomizer(n_all)
         # These ones are used by fast dragging only
@@ -194,13 +195,13 @@ class BlockedProposer(object):
                       "it's %d, but it should be %d.",
                       propose_matrix.shape[0], self.d())
             raise HandledException
-        if not (np.allclose(propose_matrix.T,propose_matrix) and
+        if not (np.allclose(propose_matrix.T, propose_matrix) and
                 np.all(np.linalg.eigvals(propose_matrix) > 0)):
             log.error("The given covmat is not a positive-definite, "
                       "symmetric square matrix.")
             raise HandledException
         self.propose_matrix = propose_matrix.copy()
-        propose_matrix_j_sorted = self.propose_matrix[np.ix_(self.i_of_j,self.i_of_j)]
+        propose_matrix_j_sorted = self.propose_matrix[np.ix_(self.i_of_j, self.i_of_j)]
         sigmas_diag = np.diag(np.sqrt(np.diag(propose_matrix_j_sorted)))
         invsigmas_diag = np.linalg.inv(sigmas_diag)
         corr = invsigmas_diag.dot(propose_matrix_j_sorted).dot(invsigmas_diag)
@@ -210,8 +211,8 @@ class BlockedProposer(object):
         for iblock, bp in enumerate(self.proposer):
             j_start = self.j_start[iblock]
             j_end = j_start + bp.n
-            self.transform += [sigmas_diag[j_start:,j_start:]
-                               .dot(L[j_start:,j_start:j_end])]
+            self.transform += [sigmas_diag[j_start:, j_start:]
+                                   .dot(L[j_start:, j_start:j_end])]
 
     def get_covariance(self):
         return self.propose_matrix.copy()

@@ -23,7 +23,7 @@ class fisher(Sampler):
     def initialize(self):
         self.log.info("Initializing.")
         # Example for setting default options
-        print("+++ For option '%s' got value '%s'. Add more options in fisher.yaml."%(
+        print("+++ For option '%s' got value '%s'. Add more options in fisher.yaml." % (
             "example_option", self.example_option))
         # Prepare the list of "samples" (posterior evaluations)
         self.collection = Collection(
@@ -38,7 +38,7 @@ class fisher(Sampler):
         # Get the boundaries of the prior
         bounds = self.prior.bounds()
         # Get n samples from the prior
-        n = 5*self.prior.d()  # e.g. # samples = 5 * dimension
+        n = 5 * self.prior.d()  # e.g. # samples = 5 * dimension
         initial_sample = self.prior.sample(n)
         # Evaluate the posterior at those points and add them to the samples collection
         for point in initial_sample:

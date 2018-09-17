@@ -45,7 +45,7 @@ def body_of_test(modules, lik_name, theory):
     # The default values for .get are for the _docs_ test
     mean = updated_info[_likelihood][lik_name].get("H0", fiducial_H0)
     std = updated_info[_likelihood][lik_name].get("H0_std", 1)
-    reference_value = -2*norm.logpdf(fiducial_H0, loc=mean, scale=std)
+    reference_value = -2 * norm.logpdf(fiducial_H0, loc=mean, scale=std)
     computed_value = (
-        products["sample"]["chi2__"+list(info[_likelihood].keys())[0]].values[0])
+        products["sample"]["chi2__" + list(info[_likelihood].keys())[0]].values[0])
     assert np.allclose(computed_value, reference_value)

@@ -47,7 +47,7 @@ def get_model(info):
     ignored_info = {}
     for k in list(info):
         if k not in [_params, _likelihood, _prior, _theory, _path_install, _timing]:
-            ignored_info.update({k:info.pop(k)})
+            ignored_info.update({k: info.pop(k)})
     import logging
     if ignored_info:
         logging.getLogger(__name__.split(".")[-1]).warn(
@@ -72,6 +72,7 @@ class Model(object):
     **NB:** do not initialize this class directly; use :func:`~model.get_model` instead,
     with some info as input.
     """
+
     def __init__(self, info_params, info_likelihood, info_prior=None, info_theory=None,
                  modules=None, timing=None, allow_renames=True):
         self.log = logging.getLogger(self.__class__.__name__)
@@ -83,8 +84,8 @@ class Model(object):
             raise HandledException
         for like in self._full_info[_likelihood].values():
             like.pop(_params)
-        for k,v in ((_prior, info_prior), (_theory, info_theory),
-                    (_path_install, modules), (_timing, timing)):
+        for k, v in ((_prior, info_prior), (_theory, info_theory),
+                     (_path_install, modules), (_timing, timing)):
             if v not in (None, {}):
                 self._full_info[k] = deepcopy(v)
         self.parameterization = Parameterization(info_params, allow_renames=allow_renames)

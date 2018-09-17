@@ -27,6 +27,7 @@ from cobaya.input import is_equal_info
 
 # Logger
 import logging
+
 log = logging.getLogger(__name__.split(".")[-1])
 
 
@@ -47,9 +48,9 @@ class Output(object):
             try:
                 os.makedirs(self.folder)
             except OSError:
-                log.error("".join(["-"]*20 + ["\n\n"] +
+                log.error("".join(["-"] * 20 + ["\n\n"] +
                                   list(traceback.format_exception(*sys.exc_info())) +
-                                  ["\n"] + ["-"]*37))
+                                  ["\n"] + ["-"] * 37))
                 log.error("Could not create folder '%s'. "
                           "See traceback on top of this message.", self.folder)
                 raise HandledException
@@ -58,8 +59,8 @@ class Output(object):
         # Prepare file names, and check if chain exists
         info_file_prefix = os.path.join(
             self.folder, self.prefix + (_separator if self.prefix else ""))
-        self.file_input = info_file_prefix+_input_suffix+_yaml_extensions[0]
-        self.file_full = info_file_prefix+_full_suffix+_yaml_extensions[0]
+        self.file_input = info_file_prefix + _input_suffix + _yaml_extensions[0]
+        self.file_full = info_file_prefix + _full_suffix + _yaml_extensions[0]
         if os.path.isfile(self.file_full):
             log.info("Found an existing sample with the requested ouput prefix: '%s'",
                      output_prefix)
@@ -127,10 +128,10 @@ class Output(object):
     def prepare_collection(self, name=None, extension=None):
         if not name:
             name = (datetime.datetime.now().isoformat()
-                    .replace("T","_").replace(":","-").replace(".","-"))
+                    .replace("T", "_").replace(":", "-").replace(".", "-"))
         file_name = os.path.join(
             self.folder,
-            self.prefix+("_" if self.prefix else "")+name+"."+(extension or self.ext))
+            self.prefix + ("_" if self.prefix else "") + name + "." + (extension or self.ext))
         return file_name, self.kind
 
 
@@ -138,6 +139,7 @@ class OutputDummy(Output):
     """
     Dummy output class. Does nothing. Evaluates to 'False' as a class.
     """
+
     def __init__(self, *args, **kwargs):
         log.debug("No output requested. Doing nothing.")
         # override all methods that actually produce output
@@ -146,7 +148,7 @@ class OutputDummy(Output):
             _func_name = "func_name"
         else:
             _func_name = "__name__"
-        for attrname,attr in list(Output.__dict__.items()):
+        for attrname, attr in list(Output.__dict__.items()):
             func_name = getattr(attr, _func_name, None)
             if func_name and func_name not in exclude and '__' not in func_name:
                 setattr(self, attrname, self.nullfunc)
@@ -165,6 +167,7 @@ class Output_MPI(Output):
     """
     MPI wrapper around the Output class.
     """
+
     def __init__(self, *args, **kwargs):
         from mpi4py import MPI
         comm = MPI.COMM_WORLD

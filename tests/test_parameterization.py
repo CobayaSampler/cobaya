@@ -14,17 +14,17 @@ from cobaya.yaml import yaml_load
 from cobaya.run import run
 from cobaya.tools import get_external_function
 
-x_func = lambda _: _/3
-e_func = lambda _: _+1
+x_func = lambda _: _ / 3
+e_func = lambda _: _ + 1
 b_func = "lambda a, bprime: a+2*bprime"
 c_func = "lambda a, cprime: a+3*cprime"
 f_func = "lambda b: b**2"
 g_func = "lambda x: 3*x"
 
 
-def loglik(a,b,c,d, _derived=["x", "e"]):
+def loglik(a, b, c, d, _derived=["x", "e"]):
     _derived.update({"x": x_func(c), "e": e_func(b)})
-    return multivariate_normal.logpdf((a,b,c,d), cov=0.1*np.eye(4))
+    return multivariate_normal.logpdf((a, b, c, d), cov=0.1 * np.eye(4))
 
 
 # Info
@@ -68,7 +68,7 @@ info = {
        # Dynamical derived parameter, needing non-mentioned output parameter (x)
        g:
          derived: "%s"
-    """%(b_func, c_func, f_func, g_func))}
+    """ % (b_func, c_func, f_func, g_func))}
 
 
 def test_parameterization():

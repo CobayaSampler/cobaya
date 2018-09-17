@@ -96,7 +96,7 @@ class polychord(Sampler):
             output_folder = gettempdir()
             if not get_mpi_rank():
                 from random import random
-                output_prefix = hex(int(random()*16**6))[2:]
+                output_prefix = hex(int(random() * 16 ** 6))[2:]
             else:
                 output_prefix = None
             if get_mpi():
@@ -122,12 +122,12 @@ class polychord(Sampler):
         self.ordering = [
             blocks_flat.index(p) for p in self.model.parameterization.sampled_params()]
         self.grade_dims = [len(block) for block in blocks]
-#        self.grade_frac = np.array(
-#            [i*j for i,j in zip(self.grade_dims, speeds)])
-#        self.grade_frac = (
-#            self.grade_frac/sum(self.grade_frac))
-# Disabled for now. We need a way to override the "time" part of the meaning of grade_frac
-        self.grade_frac = [1/len(self.grade_dims) for _ in self.grade_dims]
+        #        self.grade_frac = np.array(
+        #            [i*j for i,j in zip(self.grade_dims, speeds)])
+        #        self.grade_frac = (
+        #            self.grade_frac/sum(self.grade_frac))
+        # Disabled for now. We need a way to override the "time" part of the meaning of grade_frac
+        self.grade_frac = [1 / len(self.grade_dims) for _ in self.grade_dims]
         # Assign settings
         pc_args = ["nlive", "num_repeats", "nprior", "do_clustering",
                    "precision_criterion", "max_ndead", "boost_posterior", "feedback",
@@ -138,7 +138,7 @@ class polychord(Sampler):
                    "grade_dims"]
         self.pc_settings = PolyChordSettings(
             self.nDims, self.nDerived,
-            **{p:getattr(self,p) for p in pc_args if getattr(self,p) is not None})
+            **{p: getattr(self, p) for p in pc_args if getattr(self, p) is not None})
         # prior conversion from the hypercube
         bounds = self.model.prior.bounds(
             confidence_for_unbounded=self.confidence_for_unbounded)
@@ -148,18 +148,18 @@ class polychord(Sampler):
             params_names = self.model.parameterization.sampled_params()
             params = [params_names[i] for i in sorted(list(set(inf[0])))]
             self.log.error("PolyChord needs bounded priors, but the parameter(s) '"
-                           "', '".join(params)+"' is(are) unbounded.")
+                           "', '".join(params) + "' is(are) unbounded.")
             raise HandledException
-        locs = bounds[:,0]
-        scales = bounds[:,1] - bounds[:,0]
+        locs = bounds[:, 0]
+        scales = bounds[:, 1] - bounds[:, 0]
         # This function re-scales the parameters AND puts them in the right order
-        self.pc_prior = lambda x: (locs + np.array(x)[self.ordering]*scales).tolist()
+        self.pc_prior = lambda x: (locs + np.array(x)[self.ordering] * scales).tolist()
         # We will need the volume of the prior domain, since PolyChord divides by it
         self.logvolume = np.log(np.prod(scales))
         # Done!
         if not get_mpi_rank():
             self.log.info("Calling PolyChord with arguments:")
-            for p,v in inspect.getmembers(self.pc_settings, lambda a: not(callable(a))):
+            for p, v in inspect.getmembers(self.pc_settings, lambda a: not (callable(a))):
                 if not p.startswith("_"):
                     self.log.info("  %s: %s", p, v)
 
@@ -167,6 +167,7 @@ class polychord(Sampler):
         """
         Prepares the posterior function and calls ``PolyChord``'s ``run`` function.
         """
+
         # Prepare the posterior
         # Don't forget to multiply by the volume of the physical hypercube,
         # since PolyChord divides by it
@@ -181,7 +182,8 @@ class polychord(Sampler):
                     len(self.model.likelihood._likelihoods), np.nan)
             derived = list(derived) + list(logpriors) + list(loglikes)
             return (
-                max(logposterior+self.logvolume, 0.99*self.pc_settings.logzero), derived)
+                max(logposterior + self.logvolume, 0.99 * self.pc_settings.logzero), derived)
+
         self.log.info("Sampling!")
         if get_mpi():
             get_mpi_comm().barrier()
@@ -195,10 +197,10 @@ class polychord(Sampler):
         collection = Collection(self.model, self.output, name=str(name))
         for row in sample:
             collection.add(
-                row[2:2+self.n_sampled],
-                derived=row[2+self.n_sampled:2+self.n_sampled+self.n_derived+1],
+                row[2:2 + self.n_sampled],
+                derived=row[2 + self.n_sampled:2 + self.n_sampled + self.n_derived + 1],
                 weight=row[0], logpost=-row[1],
-                logpriors=row[-(self.n_priors+self.n_likes):-self.n_likes],
+                logpriors=row[-(self.n_priors + self.n_likes):-self.n_likes],
                 loglikes=row[-self.n_likes:])
         # make sure that the points are written
         collection._out_update()
@@ -218,7 +220,7 @@ class polychord(Sampler):
             self.n_priors = len(self.model.prior)
             self.n_likes = len(self.model.likelihood._likelihoods)
             prefix = os.path.join(self.pc_settings.base_dir, self.pc_settings.file_root)
-            self.collection = self.save_sample(prefix+".txt", "1")
+            self.collection = self.save_sample(prefix + ".txt", "1")
             if self.pc_settings.do_clustering is not False:  # NB: "None" == "default"
                 self.clusters = {}
                 do_output = hasattr(self.output, "folder")
@@ -228,11 +230,11 @@ class polychord(Sampler):
                     if do_output:
                         cluster_folder = os.path.join(
                             self.output.folder, self.output.prefix +
-                            ("_" if self.output.prefix else "") + clusters)
+                                                ("_" if self.output.prefix else "") + clusters)
                         if not os.path.exists(cluster_folder):
                             os.mkdir(cluster_folder)
                     try:
-                        i = int(f[len(self.pc_settings.file_root)+1:-len(".txt")])
+                        i = int(f[len(self.pc_settings.file_root) + 1:-len(".txt")])
                     except ValueError:
                         continue
                     if do_output:
@@ -248,21 +250,21 @@ class polychord(Sampler):
             pre = "log(Z"
             active = "(Still active)"
             lines = []
-            with open(prefix+".stats", "r") as statsfile:
+            with open(prefix + ".stats", "r") as statsfile:
                 lines = [l for l in statsfile.readlines() if l.startswith(pre)]
             for l in lines:
                 logZ, logZstd = [float(n.replace(active, "")) for n in
                                  l.split("=")[-1].split("+/-")]
-                component = l.split("=")[0].lstrip(pre+"_").rstrip(") ")
+                component = l.split("=")[0].lstrip(pre + "_").rstrip(") ")
                 if not component:
                     self.logZ, self.logZstd = logZ, logZstd
                 elif self.pc_settings.do_clustering and active in l:
                     i = int(component)
                     self.clusters[i]["logZ"], self.clusters[i]["logZstd"] = logZ, logZstd
-#        if get_mpi():
-#            bcast_from_0 = lambda attrname: setattr(self,
-#                attrname, get_mpi_comm().bcast(getattr(self, attrname, None), root=0))
-#            map(bcast_from_0, ["collection", "logZ", "logZstd", "clusters"])
+        #        if get_mpi():
+        #            bcast_from_0 = lambda attrname: setattr(self,
+        #                attrname, get_mpi_comm().bcast(getattr(self, attrname, None), root=0))
+        #            map(bcast_from_0, ["collection", "logZ", "logZstd", "clusters"])
         if not get_mpi_rank():  # process 0 or single (non-MPI process)
             self.log.info("Finished! Raw PolyChord output stored in '%s', "
                           "with prefix '%s'",

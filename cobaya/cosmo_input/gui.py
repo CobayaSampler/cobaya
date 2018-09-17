@@ -73,7 +73,7 @@ class MainWindow(QWidget):
             group_box = QGroupBox(group)
             self.layout_options.addWidget(group_box)
             group_layout = QVBoxLayout(group_box)
-            for a,desc in fields.items():
+            for a, desc in fields.items():
                 self.combos[a] = QComboBox()
                 if len(fields) > 1:
                     label = QLabel(desc)
@@ -81,20 +81,20 @@ class MainWindow(QWidget):
                 group_layout.addWidget(self.combos[a])
                 self.combos[a].addItems(
                     [text(k, v) for k, v in getattr(input_database, a).items()])
-# PLANCK NAMES CHECKBOX TEMPORARILY DISABLED
-#                if a == "theory":
-#                    # Add Planck-naming checkbox
-#                    self.planck_names = QCheckBox(
-#                        "Keep common parameter names "
-#                        "(useful for fast CLASS/CAMB switching)")
-#                    group_layout.addWidget(self.planck_names)
+        # PLANCK NAMES CHECKBOX TEMPORARILY DISABLED
+        #                if a == "theory":
+        #                    # Add Planck-naming checkbox
+        #                    self.planck_names = QCheckBox(
+        #                        "Keep common parameter names "
+        #                        "(useful for fast CLASS/CAMB switching)")
+        #                    group_layout.addWidget(self.planck_names)
         # Connect to refreshers -- needs to be after adding all elements
         for field, combo in self.combos.items():
             if field == "preset":
                 combo.currentIndexChanged.connect(self.refresh_preset)
             else:
                 combo.currentIndexChanged.connect(self.refresh)
-#        self.planck_names.stateChanged.connect(self.refresh_keep_preset)
+        #        self.planck_names.stateChanged.connect(self.refresh_keep_preset)
         # RIGHT: Output + buttons
         self.display_tabs = QTabWidget()
         self.display = {}
@@ -122,7 +122,7 @@ class MainWindow(QWidget):
     def create_input(self):
         return create_input(
             get_comments=True,
-#           planck_names=self.planck_names.isChecked(),
+            #           planck_names=self.planck_names.isChecked(),
             **{field: list(getattr(input_database, field).keys())[combo.currentIndex()]
                for field, combo in self.combos.items() if field is not "preset"})
 
@@ -143,7 +143,7 @@ class MainWindow(QWidget):
             self.combos["preset"].currentIndex()]
         info = create_input(
             get_comments=True,
-#            planck_names=self.planck_names.isChecked(),
+            #            planck_names=self.planck_names.isChecked(),
             preset=preset)
         self.refresh_display(info)
         # Update combo boxes to reflect the preset values, without triggering update

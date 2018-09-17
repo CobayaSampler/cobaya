@@ -74,21 +74,21 @@ def run_script():
     parser = argparse.ArgumentParser(description="Cobaya's run script.")
     parser.add_argument("input_file", nargs=1, action="store", metavar="input_file.yaml",
                         help="An input file to run.")
-    parser.add_argument("-"+_modules_path_arg[0], "--"+_modules_path_arg,
+    parser.add_argument("-" + _modules_path_arg[0], "--" + _modules_path_arg,
                         action="store", nargs="+", metavar="/some/path", default=[None],
                         help="Path where modules were automatically installed.")
-    parser.add_argument("-"+_output_prefix[0], "--"+_output_prefix,
+    parser.add_argument("-" + _output_prefix[0], "--" + _output_prefix,
                         action="store", nargs="+", metavar="/some/path", default=[None],
                         help="Path and prefix for the text output.")
-    parser.add_argument("-"+_debug[0], "--"+_debug, action="store_true",
+    parser.add_argument("-" + _debug[0], "--" + _debug, action="store_true",
                         help="Produce verbose debug output.")
     continuation = parser.add_mutually_exclusive_group(required=False)
-    continuation.add_argument("-"+_resume[0], "--"+_resume, action="store_true",
+    continuation.add_argument("-" + _resume[0], "--" + _resume, action="store_true",
                               help="Resume an existing chain if it has similar info "
-                              "(fails otherwise).")
-    continuation.add_argument("-"+_force[0], "--"+_force, action="store_true",
+                                   "(fails otherwise).")
+    continuation.add_argument("-" + _force[0], "--" + _force, action="store_true",
                               help="Overwrites previous output, if it exists "
-                              "(use with care!)")
+                                   "(use with care!)")
     args = parser.parse_args()
     if any([(os.path.splitext(f)[0] in ("input", "full")) for f in args.input_file]):
         raise ValueError("'input' and 'full' are reserved file names. "
@@ -104,7 +104,7 @@ def run_script():
         # Passed an existing output_prefix? Try to find the corresponding __full.yaml
         full_file = (given_input +
                      (_separator if not given_input.endswith(os.sep) else "") +
-                     _full_suffix+_yaml_extensions[0])
+                     _full_suffix + _yaml_extensions[0])
         try:
             info = load_input(full_file)
         except IOError:

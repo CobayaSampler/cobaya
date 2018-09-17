@@ -249,7 +249,7 @@ class jobItem(propertiesItem):
                 if len(impRun) > 2 and not impRun[2].wantImportance(self): continue
                 impRun = importanceSetting(impRun[0], impRun[1])
             if len(set(impRun.names).intersection(self.data_set.names)) > 0:
-                print('importance job duplicating parent data set: %s with %s'%(self.name,impRun.names))
+                print('importance job duplicating parent data set: %s with %s' % (self.name, impRun.names))
                 continue
             data = self.data_set.extendForImportance(impRun.names, impRun.inis)
             job = jobItem(self.batchPath, self.param_set, data, minimize=impRun.want_minimize)
@@ -401,7 +401,7 @@ class jobItem(propertiesItem):
 
     def getDistNeedsUpdate(self):
         return self.chainExists() and (
-            not self.getDistExists() or self.chainFileDate() > os.path.getmtime(self.distRoot + '.margestats'))
+                not self.getDistExists() or self.chainFileDate() > os.path.getmtime(self.distRoot + '.margestats'))
 
     def parentChanged(self):
         return not self.chainExists() or self.chainFileDate() < self.parent.chainFileDate()
@@ -445,10 +445,10 @@ class batchJob(propertiesItem):
     def __init__(self, path, cosmomcPath=None):
         self.batchPath = path
         self.skip = []
-##        self.basePath = cosmomcPath or getCodeRootPath()
-###        self.commonPath = os.path.join(self.basePath, iniDir)
+        ##        self.basePath = cosmomcPath or getCodeRootPath()
+        ###        self.commonPath = os.path.join(self.basePath, iniDir)
         self.subBatches = []
-##        self.jobItems = None
+        ##        self.jobItems = None
         self.getdist_options = {}
         self.iniFile_path = _input_folder
         self.scriptFile_path = _script_folder
@@ -487,7 +487,7 @@ class batchJob(propertiesItem):
                 if self.has_normed_name(x.normed_name):
                     if messages:
                         print('replacing importance sampling run '
-                              'with full run: %s'%x.name)
+                              'with full run: %s' % x.name)
                     item.removeImportance(x)
         for item in list(self.items()):
             for x in [imp for imp in item.importanceJobsRecursive()]:
@@ -560,6 +560,8 @@ class batchJob(propertiesItem):
         makePath(self.batchPath + self.iniFile_path)
         makePath(self.batchPath + self.scriptFile_path)
         makePath(self.batchPath + self.logFile_path)
+
+
 ####        makePath(self.batchPath + 'postIniFiles')
 
 

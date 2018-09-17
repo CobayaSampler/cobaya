@@ -25,7 +25,7 @@ def test_prior_external_string(tmpdir):
 
 
 def test_prior_external_callable(tmpdir):
-    body_of_test(info_callable, _prior, tmpdir) #####, test_yaml=False)   
+    body_of_test(info_callable, _prior, tmpdir)  #####, test_yaml=False)
 
 
 def test_prior_external_mixed(tmpdir):

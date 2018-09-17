@@ -130,7 +130,7 @@ class classy(_cosmo):
             self.path = os.path.join(
                 self.path_install, "code", classy_repo_rename)
         if self.path:
-            self.log.info("Importing *local* classy from "+self.path)
+            self.log.info("Importing *local* classy from " + self.path)
             classy_build_path = os.path.join(self.path, "python", "build")
             post = next(d for d in os.listdir(classy_build_path) if d.startswith("lib."))
             classy_build_path = os.path.join(classy_build_path, post)
@@ -180,7 +180,7 @@ class classy(_cosmo):
     def needs(self, **requirements):
         # Computed quantities required by the likelihood
         super(classy, self).needs(**requirements)
-        for k,v in self._needs.items():
+        for k, v in self._needs.items():
             # Products and other computations
             if k.lower() == "cl":
                 if any([("t" in cl.lower()) for cl in v]):
@@ -212,7 +212,7 @@ class classy(_cosmo):
                 if k_translated not in self.derived_extra:
                     self.derived_extra += [k_translated]
             else:
-                self.log.error("Requested product not known: %r", {k:v})
+                self.log.error("Requested product not known: %r", {k: v})
                 raise HandledException
         # Derived parameters (if some need some additional computations)
         if "sigma8" in self.output_params or requirements:
@@ -250,19 +250,19 @@ class classy(_cosmo):
             self.z_for_matter_power = np.empty((0))
         self.z_for_matter_power = np.flip(np.sort(np.unique(np.concatenate(
             [self.z_for_matter_power, np.atleast_1d(z)]))), axis=0)
-        self.extra_args["z_pk"] = " ".join(["%g"%zi for zi in self.z_for_matter_power])
+        self.extra_args["z_pk"] = " ".join(["%g" % zi for zi in self.z_for_matter_power])
 
     def translate_param(self, p, force=False):
         # "force=True" is used when communicating with likelihoods, which speak "planck"
         if self.use_planck_names or force:
-            return self.planck_to_classy.get(p,p)
+            return self.planck_to_classy.get(p, p)
         return p
 
     def set(self, params_values_dict, i_state):
         # Store them, to use them later to identify the state
         self.states[i_state]["params"] = deepcopy(params_values_dict)
         # Prepare parameters to be passed: this-iteration + extra
-        args = {self.translate_param(p):v for p,v in params_values_dict.items()}
+        args = {self.translate_param(p): v for p, v in params_values_dict.items()}
         args.update(self.extra_args)
         # Generate and save
         self.log.debug("Setting parameters: %r", args)
@@ -313,7 +313,7 @@ class classy(_cosmo):
             for product, collector in self.collectors.items():
                 # Special case: sigma8 needs H0, which cannot be known beforehand:
                 if "sigma8" in self.collectors:
-                    self.collectors["sigma8"].args[0] = 8/self.classy.h()
+                    self.collectors["sigma8"].args[0] = 8 / self.classy.h()
                 method = getattr(self.classy, collector.method)
                 arg_array = self.collectors[product].arg_array
                 if arg_array is None:
@@ -322,15 +322,15 @@ class classy(_cosmo):
                 elif isinstance(arg_array, Number):
                     self.states[i_state][product] = np.zeros(
                         len(self.collectors[product].args[arg_array]))
-                    for i,v in enumerate(self.collectors[product].args[arg_array]):
+                    for i, v in enumerate(self.collectors[product].args[arg_array]):
                         args = (list(self.collectors[product].args[:arg_array]) + [v] +
-                                list(self.collectors[product].args[arg_array+1:]))
+                                list(self.collectors[product].args[arg_array + 1:]))
                         self.states[i_state][product][i] = method(
                             *args, **self.collectors[product].kwargs)
                 elif arg_array in self.collectors[product].kwargs:
                     value = np.atleast_1d(self.collectors[product].kwargs[arg_array])
                     self.states[i_state][product] = np.zeros(value.shape)
-                    for i,v in enumerate(value):
+                    for i, v in enumerate(value):
                         kwargs = deepcopy(self.collectors[product].kwargs)
                         kwargs[arg_array] = v
                         self.states[i_state][product][i] = method(
@@ -345,7 +345,7 @@ class classy(_cosmo):
             self.states[i_state]["derived_extra"] = deepcopy(d_extra)
             if self.timing:
                 self.n += 1
-                self.time_avg = (time()-a + self.time_avg*(self.n-1))/self.n
+                self.time_avg = (time() - a + self.time_avg * (self.n - 1)) / self.n
                 self.log.debug("Average running time: %g seconds", self.time_avg)
         # make this one the current one by decreasing the antiquity of the rest
         for i in range(self.n_states):
@@ -367,7 +367,7 @@ class classy(_cosmo):
         requested = [self.translate_param(p) for p in (
             self.output_params if derived_requested else [])]
         requested_and_extra = {
-            p:None for p in set(requested).union(set(self.derived_extra))}
+            p: None for p in set(requested).union(set(self.derived_extra))}
         # Parameters with their own getters
         if "rs_drag" in requested_and_extra:
             requested_and_extra["rs_drag"] = self.classy.rs_drag()
@@ -377,13 +377,13 @@ class classy(_cosmo):
         # which parameters are not recognized
         requested_and_extra.update(
             self.classy.get_current_derived_parameters(
-                [p for p,v in requested_and_extra.items() if v is None]))
+                [p for p, v in requested_and_extra.items() if v is None]))
         # Separate the parameters before returning
         # Remember: self.output_params is in sampler nomenclature,
         # but self.derived_extra is in CLASS
         derived = {
-            p:requested_and_extra[self.translate_param(p)] for p in self.output_params}
-        derived_extra = {p:requested_and_extra[p] for p in self.derived_extra}
+            p: requested_and_extra[self.translate_param(p)] for p in self.output_params}
+        derived_extra = {p: requested_and_extra[p] for p in self.derived_extra}
         return derived, derived_extra
 
     def get_param(self, p):
@@ -405,9 +405,9 @@ class classy(_cosmo):
                 "No Cl's were computed. Are you sure that you have requested them?")
             raise HandledException
         # unit conversion and ell_factor
-        ell_factor = ((cls["ell"]+1)*cls["ell"]/(2*np.pi))[2:] if ell_factor else 1
+        ell_factor = ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[2:] if ell_factor else 1
         units_factors = {"1": 1,
-                         "muK2": _T_CMB_K*1.e6,
+                         "muK2": _T_CMB_K * 1.e6,
                          "K2": _T_CMB_K}
         try:
             units_factor = units_factors[units]
@@ -417,9 +417,9 @@ class classy(_cosmo):
             raise HandledException
         for cl in cls:
             if cl not in ['pp', 'ell']:
-                cls[cl][2:] *= units_factor**2 * ell_factor
+                cls[cl][2:] *= units_factor ** 2 * ell_factor
         if "pp" in cls and ell_factor is not 1:
-            cls['pp'][2:] *= ell_factor**2 * (2*np.pi)
+            cls['pp'][2:] *= ell_factor ** 2 * (2 * np.pi)
         return cls
 
     def _get_z_dependent(self, quantity, z):
@@ -480,7 +480,7 @@ def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs)
         return False
     log.info("Downloading classy...")
     success = download_github_release(
-        os.path.join(path, "code"), classy_repo_name,classy_repo_version,
+        os.path.join(path, "code"), classy_repo_name, classy_repo_version,
         github_user=classy_repo_user, repo_rename=classy_repo_rename,
         no_progress_bars=no_progress_bars)
     if not success:

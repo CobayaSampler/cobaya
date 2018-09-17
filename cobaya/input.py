@@ -31,6 +31,7 @@ from cobaya.parameterization import expand_info_param
 
 # Logger
 import logging
+
 log = logging.getLogger(__name__.split(".")[-1])
 
 
@@ -40,7 +41,7 @@ def load_input(input_file):
     """
     file_name, extension = os.path.splitext(input_file)
     file_name = os.path.basename(file_name)
-    if extension not in (".yaml",".yml"):
+    if extension not in (".yaml", ".yml"):
         log.error("Extension of input file '%s' not recognized.", input_file)
         raise HandledException
     info = yaml_load_file(input_file) or {}
@@ -84,20 +85,20 @@ def get_modules(*infos):
             modules[field] += [a for a in (info.get(field) or [])
                                if a not in modules[field]]
     # pop empty blocks
-    for k,v in list(modules.items()):
+    for k, v in list(modules.items()):
         if not v:
             modules.pop(k)
     return modules
 
 
 def get_default_info(module, kind):
-    path_to_defaults = os.path.join(get_folder(module, kind), module+".yaml")
+    path_to_defaults = os.path.join(get_folder(module, kind), module + ".yaml")
     try:
         default_module_info = yaml_load_file(path_to_defaults)
     except IOError:
         # probably an external module
         default_module_info = {kind: {module: {}}}
-        log.debug("Module %s:%s does not have a defaults file. "%(kind, module) +
+        log.debug("Module %s:%s does not have a defaults file. " % (kind, module) +
                   "Maybe it is an external module.")
     try:
         default_module_info[kind][module]
@@ -125,7 +126,7 @@ def get_full_info(info):
         for module in modules[block]:
             # Start with the default class options
             full_info[block][module] = deepcopy(getattr(
-                import_module(_package+"."+block, package=_package), "class_options", {}))
+                import_module(_package + "." + block, package=_package), "class_options", {}))
             # Go on with defaults
             default_module_info = get_default_info(module, block)
             full_info[block][module].update(default_module_info[block][module] or {})
@@ -152,7 +153,7 @@ def get_full_info(info):
             # Store default parameters and priors of class, and save to combine later
             if block == _likelihood:
                 params_info = default_module_info.get(_params, {})
-                full_info[block][module].update({_params:list(params_info)})
+                full_info[block][module].update({_params: list(params_info)})
                 default_params_info[module] = params_info
                 default_prior_info[module] = default_module_info.get(_prior, {})
     # Add priors info, after the necessary checks
@@ -171,19 +172,19 @@ def get_full_info(info):
     if _theory in full_info:
         renames = list(full_info[_theory].values())[0].get(_p_renames)
         str_to_list = lambda x: ([x] if isinstance(x, string_types) else x)
-        renames_flat = [set([k]+str_to_list(v)) for k,v in renames.items()]
+        renames_flat = [set([k] + str_to_list(v)) for k, v in renames.items()]
         for p in full_info.get(_params, {}):
             # Probably could be made faster by inverting the renames dicts *just once*
             renames_pairs = [a for a in renames_flat if p in a]
             if renames_pairs:
                 this_renames = reduce(
-                    lambda x,y: x.union(y), [a for a in renames_flat if p in a])
+                    lambda x, y: x.union(y), [a for a in renames_flat if p in a])
                 full_info[_params][p][_p_renames] = list(
                     set(this_renames).union(set(
                         str_to_list(full_info[_params][p].get(_p_renames, []))))
-                    .difference(set([p])))
+                        .difference(set([p])))
     # Rest of the options
-    for k,v in input_info.items():
+    for k, v in input_info.items():
         if k not in full_info:
             full_info[k] = v
     return full_info
@@ -220,7 +221,7 @@ def merge_params_info(*params_infos):
     to avoid surprises, the other one is set to None=+/-inf)
     """
     current_info = odict(
-        [[p, expand_info_param(v)] for p,v in params_infos[0].items() or {}])
+        [[p, expand_info_param(v)] for p, v in params_infos[0].items() or {}])
     for new_info in params_infos[1:]:
         if not new_info:
             continue
@@ -277,8 +278,8 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False):
     ignore_params = (set([]) if strict
                      else set([_p_label, _p_renames, _p_ref, _p_proposal, "min", "max"]))
     if set(info1).difference(ignore) != set(info2).difference(ignore):
-        myprint(myname+": different blocks or options: %r (old) vs %r (new)" % (
-                set(info1).difference(ignore), set(info2).difference(ignore)))
+        myprint(myname + ": different blocks or options: %r (old) vs %r (new)" % (
+            set(info1).difference(ignore), set(info2).difference(ignore)))
         return False
     for block_name in info1:
         if block_name in ignore:
@@ -286,12 +287,12 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False):
         block1, block2 = info1[block_name], info2[block_name]
         if not hasattr(block1, "keys"):
             if block1 != block2:
-                myprint(myname+": different option '%s'" % block_name)
+                myprint(myname + ": different option '%s'" % block_name)
                 return False
         if block_name in [_sampler, _theory]:
             # Internal order does NOT matter
             if set(block1) != set(block2):
-                myprint(myname+": different [%s]" % block_name)
+                myprint(myname + ": different [%s]" % block_name)
                 return False
             # Anything to ignore?
             for k in block1:
@@ -311,12 +312,12 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False):
                             pass
                 if recursive_odict_to_dict(block1k) != recursive_odict_to_dict(block2k):
                     myprint(
-                        myname+": different content of [%s:%s]" % (block_name, k))
+                        myname + ": different content of [%s:%s]" % (block_name, k))
                     return False
         elif block_name in [_params, _likelihood, _prior]:
             # Internal order DOES matter, but just up to 1st level
             if list(block1) != list(block2):
-                myprint(myname+": different [%s] or different order of them: %r vs %r" % (
+                myprint(myname + ": different [%s] or different order of them: %r vs %r" % (
                     block_name, list(block1), list(block2)))
                 return False
             for k in block1:
@@ -337,7 +338,7 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False):
                             if _p_value in b:
                                 b.pop(_p_derived, None)
                 if (recursive_odict_to_dict(block1k) != recursive_odict_to_dict(block2k)):
-                    myprint(myname+": different content of [%s:%s]" % (
+                    myprint(myname + ": different content of [%s:%s]" % (
                         block_name, k))
                     return False
     return True

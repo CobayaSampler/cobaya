@@ -299,7 +299,6 @@ Just give it a try and it should work fine, but, in case you need the details:
 
 """
 
-
 # Python 2/3 compatibility
 from __future__ import absolute_import
 from __future__ import division
@@ -320,6 +319,7 @@ from cobaya.log import HandledException
 
 # Logger
 import logging
+
 log = logging.getLogger(__name__.split(".")[-1])
 
 # Fast logpdf for uniforms and norms (do not understand nan masks!)
@@ -330,6 +330,7 @@ class Prior(object):
     """
     Class managing the prior and reference pdf's.
     """
+
     def __init__(self, parameterization, info_prior=None):
         """
         Initializes the prior and reference pdf's from the input information.
@@ -381,10 +382,10 @@ class Prior(object):
             self.external[name]["argspec"] = (
                 inspect.getargspec(self.external[name]["logp"]))
             self.external[name]["params"] = {
-                p:list(sampled_params_info).index(p)
+                p: list(sampled_params_info).index(p)
                 for p in self.external[name]["argspec"].args if p in sampled_params_info}
             self.external[name]["fixed_params"] = {
-                p:fixed_params_info[p]
+                p: fixed_params_info[p]
                 for p in self.external[name]["argspec"].args if p in fixed_params_info}
             if (not (len(self.external[name]["params"]) +
                      len(self.external[name]["fixed_params"]))):
@@ -394,16 +395,16 @@ class Prior(object):
                           name, self.external[name]["argspec"].args)
                 raise HandledException
             params_without_default = self.external[name]["argspec"].args[
-                :(len(self.external[name]["argspec"].args) -
-                  len(self.external[name]["argspec"].defaults or []))]
+                                     :(len(self.external[name]["argspec"].args) -
+                                       len(self.external[name]["argspec"].defaults or []))]
             if not all([(p in self.external[name]["params"] or
                          p in self.external[name]["fixed_params"])
                         for p in params_without_default]):
                 log.error("Some of the arguments of the external prior '%s' "
                           "cannot be found and don't have a default value either: %s",
                           name, list(set(params_without_default)
-                                .difference(self.external[name]["params"])
-                                .difference(self.external[name]["fixed_params"])))
+                                     .difference(self.external[name]["params"])
+                                     .difference(self.external[name]["fixed_params"])))
                 raise HandledException
             log.warning("External prior '%s' loaded. "
                         "Mind that it might not be normalized!", name)
@@ -483,7 +484,7 @@ class Prior(object):
         """
         log.debug("Evaluating prior at %r", x)
         logps = [
-            sum([pdf.logpdf(xi) for pdf,xi in zip(self.pdf,x)])] + self.logps_external(x)
+                    sum([pdf.logpdf(xi) for pdf, xi in zip(self.pdf, x)])] + self.logps_external(x)
         log.debug("Got logpriors = %r", logps)
         return logps
 
@@ -498,7 +499,7 @@ class Prior(object):
 
     def logps_external(self, x):
         """Evaluates the logprior using the external prior only."""
-        return [ext["logp"](**dict({p:x[i] for p,i in ext["params"].items()},
+        return [ext["logp"](**dict({p: x[i] for p, i in ext["params"].items()},
                                    **ext["fixed_params"]))
                 for ext in self.external.values()]
 

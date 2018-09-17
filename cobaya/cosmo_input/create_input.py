@@ -70,9 +70,9 @@ def create_input(**kwargs):
             info[_theory] = {theory_requested: info[_theory][theory_requested]}
         except KeyError:
             return ("There is no preset for\n'%s'" % (
-                     info.get(input_database._desc, field)) +
+                info.get(input_database._desc, field)) +
                     "with theory code '%s'." % theory_requested +
-                    ("\n--> "+error_msg if error_msg else
+                    ("\n--> " + error_msg if error_msg else
                      "\nThis does not mean that you cannot use this model with that "
                      "theory code; just that we have not implemented this yet."))
         # Add non-translatable parameters (in info["theory"][classy|camb][params])
@@ -109,7 +109,7 @@ def create_input(**kwargs):
     [info.pop(input_database._desc, None) for info in all_infos]
     merged = merge_info(*all_infos)
     # Simplify parameter infos
-    for p,info in merged[_params].items():
+    for p, info in merged[_params].items():
         merged[_params][p] = reduce_info_param(info)
     # Translate from Planck param names
     planck_to_theo = get_default_info(
@@ -120,7 +120,7 @@ def create_input(**kwargs):
     else:
         merged_params_translated = odict([
             translate(p, info, planck_to_theo)
-            for p,info in merged[_params].items()])
+            for p, info in merged[_params].items()])
         merged[_params] = merged_params_translated
     if get_comments and comments:
         merged[input_database._comment] = comments

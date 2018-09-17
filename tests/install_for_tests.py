@@ -9,9 +9,11 @@ def process_modules_path(modules):
 
 if __name__ == "__main__":
     from cobaya.log import logger_setup
+
     logger_setup()
     from cobaya.conventions import _likelihood, _theory, _sampler
     import sys
+
     info_install = {
         _sampler: {"polychord": None},
         _theory: {"camb": None, "classy": None},
@@ -31,6 +33,7 @@ if __name__ == "__main__":
             "sdss_dr12_consensus_final": None}}
     # Ignore Planck clik in Python 3 or GCC > 5
     from subprocess import Popen, PIPE
+
     process = Popen(["gcc", "-v"], stdout=PIPE, stderr=PIPE)
     out, err = process.communicate()
     prefix = "gcc version"
@@ -47,7 +50,9 @@ if __name__ == "__main__":
             info_install[_likelihood].pop(lik)
     path = sys.argv[1]
     import os
+
     if not os.path.exists(path):
         os.makedirs(path)
     from cobaya.install import install
+
     install(info_install, path=path, no_progress_bars=True)

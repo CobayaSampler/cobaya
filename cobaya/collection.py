@@ -29,6 +29,7 @@ from cobaya.log import HandledException
 
 # Suppress getdist output
 from getdist import chains
+
 chains.print_load_details = False
 
 # Default chunk size for enlarging collections more efficiently
@@ -42,7 +43,7 @@ enlargement_factor = None
 def check_end(end, imax):
     if end > imax:
         raise ValueError("Trying to access a sample index larger than "
-                         "the amount of samples (%d)!"%imax)
+                         "the amount of samples (%d)!" % imax)
 
 
 class Collection(object):
@@ -52,7 +53,7 @@ class Collection(object):
                  resuming=False):
         self.name = name
         self.log = logging.getLogger(
-            "collection:"+name if name else self.__class__.__name__)
+            "collection:" + name if name else self.__class__.__name__)
         self.sampled_params = list(model.parameterization.sampled_params())
         self.derived_params = list(model.parameterization.derived_params())
         # Create the dataframe structure
@@ -60,9 +61,9 @@ class Collection(object):
         columns += list(self.sampled_params)
         columns += list(self.derived_params)
         self.prior_names = [
-            _minuslogprior+_separator+piname for piname in list(model.prior)]
+            _minuslogprior + _separator + piname for piname in list(model.prior)]
         columns += [_minuslogprior] + self.prior_names
-        self.chi2_names = [_chi2+_separator+likname for likname in model.likelihood]
+        self.chi2_names = [_chi2 + _separator + likname for likname in model.likelihood]
         columns += [_chi2] + self.chi2_names
         # Create/load the main data frame and the tracking indices
         if output:
@@ -115,8 +116,8 @@ class Collection(object):
             self.data.at[self._n, _minuslogprior] = -sum(logpriors)
         if loglikes is not None:
             for name, value in zip(self.chi2_names, loglikes):
-                self.data.at[self._n, name] = -2*value
-            self.data.at[self._n, _chi2] = -2*sum(loglikes)
+                self.data.at[self._n, name] = -2 * value
+            self.data.at[self._n, _chi2] = -2 * sum(loglikes)
         for name, value in zip(self.sampled_params, values):
             self.data.at[self._n, name] = value
         if derived is not None:
@@ -127,12 +128,12 @@ class Collection(object):
     def _enlarge_if_needed(self):
         if self._n >= self.data.shape[0]:
             if enlargement_factor:
-                enlarge_by = self.data.shape[0]*enlargement_factor
+                enlarge_by = self.data.shape[0] * enlargement_factor
             else:
                 enlarge_by = enlargement_size
             self.data = pd.concat([
                 self.data, pd.DataFrame(np.nan, columns=self.data.columns,
-                                        index=np.arange(self.n(),self.n()+enlarge_by))])
+                                        index=np.arange(self.n(), self.n() + enlarge_by))])
 
     # Retrieve-like methods
     def n(self):
@@ -172,7 +173,7 @@ class Collection(object):
         elif hasattr(args[0], "__len__"):
             try:
                 return self.data.iloc[:self._n,
-                                      [self.data.columns.get_loc(c) for c in args[0]]]
+                       [self.data.columns.get_loc(c) for c in args[0]]]
             except KeyError:
                 raise ValueError("Some of the indices are not valid columns.")
         elif isinstance(args[0], six.integer_types):
@@ -194,7 +195,7 @@ class Collection(object):
         return np.average(
             self[list(self.sampled_params) +
                  (list(self.derived_params) if derived else [])]
-                [first:last].T,
+            [first:last].T,
             weights=self[_weight][first:last], axis=-1)
 
     def cov(self, first=None, last=None, derived=False):
@@ -206,7 +207,7 @@ class Collection(object):
         return np.atleast_2d(np.cov(
             self[list(self.sampled_params) +
                  (list(self.derived_params) if derived else [])]
-                [first:last].T,
+            [first:last].T,
             fweights=self[_weight][first:last]))
 
     def _sampled_to_getdist_mcsamples(self, first=None, last=None):
@@ -226,16 +227,19 @@ class Collection(object):
 
     # Saving and updating
     def _get_driver(self, method):
-        return getattr(self, method+_separator+self.driver)
+        return getattr(self, method + _separator + self.driver)
 
     # Load a pre-existing file
     def _out_load(self):
         self._get_driver("_load")()
+
     # Dump/update/delete collection
     def _out_dump(self):
         self._get_driver("_dump")()
+
     def _out_update(self):
         self._get_driver("_update")()
+
     def _out_delete(self):
         self._get_driver("_delete")()
 
@@ -246,10 +250,13 @@ class Collection(object):
             cols = [a.strip() for a in inp.readline().lstrip("#").split()]
             self.data = pd.read_table(
                 inp, sep=" ", header=None, names=cols, comment="#", skipinitialspace=True)
+
     def _dump__txt(self):
         self._dump_slice__txt(0, self.n())
+
     def _update__txt(self):
         self._dump_slice__txt(self.n_last_out(), self.n())
+
     def _dump_slice__txt(self, n_min=None, n_max=None):
         if n_min is None or n_max is None:
             self.log.error("Needs to specify the limit n's to dump.")
@@ -260,14 +267,15 @@ class Collection(object):
         n_float = 8
         with open(self.file_name, "a") as out:
             lines = self.data[n_min:n_max].to_string(
-                header=["# "+str(self.data.columns[0])]+list(self.data.columns[1:]),
+                header=["# " + str(self.data.columns[0])] + list(self.data.columns[1:]),
                 index=False, na_rep="nan", justify="right",
-                float_format=(lambda x: ("%%.%dg"%n_float)%x))
+                float_format=(lambda x: ("%%.%dg" % n_float) % x))
             # remove header if not first dump
             if n_min:
                 lines = "\n".join(lines.split("\n")[1:])
             out.write(lines)
             out.write("\n")
+
     def _delete__txt(self):
         try:
             os.remove(self.file_name)
@@ -277,14 +285,17 @@ class Collection(object):
     # dummy driver
     def _dump__dummy(self):
         pass
+
     def _update__dummy(self):
         pass
+
     def _delete__dummy(self):
         pass
 
 
 class OnePoint(Collection):
     """Wrapper of Collection to hold a single point, e.g. the current point of an MCMC."""
+
     def __init__(self, *args, **kwargs):
         kwargs["initial_size"] = 1
         Collection.__init__(self, *args, **kwargs)
@@ -314,7 +325,7 @@ class OnePoint(Collection):
             derived=(self[self.derived_params] if self.derived_params else None),
             logpost=-self[_minuslogpost], weight=self[_weight],
             logpriors=-np.array(self[self.prior_names]),
-            loglikes=-0.5*np.array(self[self.chi2_names]))
+            loglikes=-0.5 * np.array(self[self.chi2_names]))
 
     # Restore original __repr__ (here, there is only 1 sample)
     def __repr__(self):

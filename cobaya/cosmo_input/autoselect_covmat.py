@@ -15,16 +15,17 @@ from cobaya.conventions import _covmats_file, _p_renames, _path_install
 
 # Logger
 import logging
+
 log = logging.getLogger(__name__.split(".")[-1])
 
-covmat_folders = ["{%s}/data/planck_supp_data_and_covmats/covmats/"%_path_install,
-                  "{%s}/data/bicep_keck_2014/BK14_cosmomc/planck_covmats/"%_path_install]
+covmat_folders = ["{%s}/data/planck_supp_data_and_covmats/covmats/" % _path_install,
+                  "{%s}/data/bicep_keck_2014/BK14_cosmomc/planck_covmats/" % _path_install]
 
 
 def get_covmat_database(modules, cached=True):
     # Get folders with corresponding modules installed
     installed_folders = [folder for folder in covmat_folders
-                         if os.path.exists(folder.format(**{_path_install:modules}))]
+                         if os.path.exists(folder.format(**{_path_install: modules}))]
     covmats_database_fullpath = os.path.join(modules, _covmats_file)
     # Check if there is a usable cached one
     if cached:
@@ -40,7 +41,7 @@ def get_covmat_database(modules, cached=True):
     covmat_database = odict()
     for folder in installed_folders:
         covmat_database[folder] = []
-        folder_full = folder.format(**{_path_install:modules}).replace("/", os.sep)
+        folder_full = folder.format(**{_path_install: modules}).replace("/", os.sep)
         for filename in os.listdir(folder_full):
             try:
                 with open(os.path.join(folder_full, filename)) as covmat:
@@ -60,7 +61,7 @@ def get_best_covmat(modules, slow_params_info, likelihoods_info, cached=True):
     # Select first based on number of slow parameters
     str_to_list = lambda x: ([x] if isinstance(x, string_types) else x)
     params_renames = set(chain(*[
-        [p]+str_to_list(info.get(_p_renames, [])) for p,info in slow_params_info.items()]))
+        [p] + str_to_list(info.get(_p_renames, [])) for p, info in slow_params_info.items()]))
     get_score_params = (
         lambda covmat_params: len(set(covmat_params).intersection(params_renames)))
     highest_score = 0
@@ -79,8 +80,8 @@ def get_best_covmat(modules, slow_params_info, likelihoods_info, cached=True):
             "No covariance matrix found including at least one of the given parameters")
         return None
     # Sub-select by number of likelihoods
-    likes_renames = set(chain(*[[like]+str_to_list(info.get(_p_renames, []))
-                                for like,info in likelihoods_info.items()]))
+    likes_renames = set(chain(*[[like] + str_to_list(info.get(_p_renames, []))
+                                for like, info in likelihoods_info.items()]))
     get_score_likes = (
         lambda covmat_name: len([0 for like in likes_renames if like in covmat_name]))
     highest_score = 0

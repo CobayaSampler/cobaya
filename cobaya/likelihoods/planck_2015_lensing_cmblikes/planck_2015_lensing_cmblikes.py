@@ -17,7 +17,6 @@ from cobaya.install import download_github_release
 
 
 class planck_2015_lensing_cmblikes(_cmblikes_prototype):
-
     pass
 
 

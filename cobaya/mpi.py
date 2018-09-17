@@ -33,7 +33,7 @@ def get_mpi():
     if _mpi == -1:
         if any([os.getenv(v) for v in
                 ["OMPI_COMM_WORLD_SIZE",  # OpenMPI
-                 "PMI_SIZE"]]):           # Intel MPI
+                 "PMI_SIZE"]]):  # Intel MPI
             from mpi4py import MPI
             _mpi = MPI
         else:
@@ -83,5 +83,5 @@ def import_MPI(module, target):
     from importlib import import_module
     target_name = target
     if get_mpi_rank() is not None:
-        target_name = target+"_MPI"
+        target_name = target + "_MPI"
     return getattr(import_module(module, package=_package), target_name)

@@ -66,16 +66,18 @@ def logger_setup(debug=None, debug_file=None):
         level = int(debug)
     # Set the default level, to make sure the handlers have a higher one
     logging.root.setLevel(level)
+
     # Custom formatter
     class MyFormatter(logging.Formatter):
         def format(self, record):
             self._fmt = (
-                "[" + ("%d : "%get_mpi_rank() if get_mpi() else "") + "%(name)s" +
-                (" %(asctime)s " if debug else "") + "] " +
-                {logging.ERROR: "*ERROR* ",
-                 logging.WARNING: "*WARNING* "}.get(record.levelno, "") +
-                "%(message)s")
+                    "[" + ("%d : " % get_mpi_rank() if get_mpi() else "") + "%(name)s" +
+                    (" %(asctime)s " if debug else "") + "] " +
+                    {logging.ERROR: "*ERROR* ",
+                     logging.WARNING: "*WARNING* "}.get(record.levelno, "") +
+                    "%(message)s")
             return logging.Formatter.format(self, record)
+
     # Configure stdout handler
     handle_stdout = logging.StreamHandler(sys.stdout)
     handle_stdout.setLevel(level)

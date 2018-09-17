@@ -56,13 +56,13 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
     if not settings:
         if not settingName:
             raise NotImplementedError("Re-using previous batch is work in progress...")
-#            if not pathIsGrid(batchPath):
-#                raise Exception('Need to give name of setting file if batchPath/config '
-#                                'does not exist')
-#            read_only = True
-#            sys.path.insert(0, batchPath + 'config')
-#            sys.modules['batchJob'] = batchjob  # old name
-#            settings = __import__(IniFile(batchPath + 'config/config.ini').params['setting_file'].replace('.py', ''))
+        #            if not pathIsGrid(batchPath):
+        #                raise Exception('Need to give name of setting file if batchPath/config '
+        #                                'does not exist')
+        #            read_only = True
+        #            sys.path.insert(0, batchPath + 'config')
+        #            sys.modules['batchJob'] = batchjob  # old name
+        #            settings = __import__(IniFile(batchPath + 'config/config.ini').params['setting_file'].replace('.py', ''))
         elif os.path.splitext(settingName)[-1].lower() in _yaml_extensions:
             settings = yaml_load_file(settingName)
         else:
@@ -95,13 +95,13 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         try:
             model_info = copy.deepcopy(models_definitions[jobItem.param_set] or {})
         except KeyError:
-            raise ValueError("Model '%s' must be defined."%jobItem.param_set)
+            raise ValueError("Model '%s' must be defined." % jobItem.param_set)
         model_info = merge_info(defaults, model_info)
         # Dataset info
         try:
             dataset_info = copy.deepcopy(datasets_definitions[jobItem.data_set.tag])
         except KeyError:
-            raise ValueError("Data set '%s' must be defined."%jobItem.data_set.tag)
+            raise ValueError("Data set '%s' must be defined." % jobItem.data_set.tag)
         # Combined info
         combined_info = merge_info(defaults, model_info, dataset_info)
         if "preset" in combined_info:
@@ -146,7 +146,7 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
             like_params = set(chain(*[
                 list(like[_params])
                 for like in full_info[_likelihood].values()]))
-            params_info = {p:v for p,v in full_info[_params].items()
+            params_info = {p: v for p, v in full_info[_params].items()
                            if is_sampled_param(v) and p not in like_params}
             best_covmat = get_best_covmat(
                 os.path.abspath(modules_path),
@@ -200,7 +200,7 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
 
     if not interactive:
         return batch
-    print('Done... to run do: cobaya-grid-run %s'%batchPath)
+    print('Done... to run do: cobaya-grid-run %s' % batchPath)
 #    if not start_at_bestfit:
 #        print('....... for best fits: python python/runbatch.py %s --minimize'%batchPath)
 #    print('')

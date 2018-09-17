@@ -64,10 +64,10 @@ If are following the instructions there (you should!), you don't need to read th
 of this section.
 
 .. note::
-   
+
    By default, the ``gfortran`` compiler will be used, and the ``cfitsio`` library will be
    downloaded and compiled automatically.
-   
+
    If the installation fails, make sure that the packages ``liblapack3`` and
    ``liblapack-dev`` are installed in the system (in Debian/Ubuntu, simply do
    ``sudo apt install liblapack3 liblapack-dev``).
@@ -203,14 +203,14 @@ class _planck_clik_prototype(Likelihood):
 
     def add_theory(self):
         # State requisites to the theory code
-        requested_cls = ["tt","ee","bb","te","tb","eb"]
+        requested_cls = ["tt", "ee", "bb", "te", "tb", "eb"]
         if self.lensing:
             has_cl = [lmax != -1 for lmax in self.l_maxs]
             requested_cls = ["pp"] + requested_cls
         else:
             has_cl = self.clik.get_has_cl()
-        self.requested_cls = [cl for cl,i in zip(requested_cls, has_cl) if int(i)]
-        self.l_maxs_cls = [lmax for lmax,i in zip(self.l_maxs, has_cl) if int(i)]
+        self.requested_cls = [cl for cl, i in zip(requested_cls, has_cl) if int(i)]
+        self.l_maxs_cls = [lmax for lmax, i in zip(self.l_maxs, has_cl) if int(i)]
         self.theory.needs(Cl=dict(zip(self.requested_cls, self.l_maxs_cls)))
 
     def logp(self, **params_values):
@@ -218,8 +218,8 @@ class _planck_clik_prototype(Likelihood):
         cl = self.theory.get_cl()
         # fill with Cl's
         self.vector[:-len(self.expected_params)] = np.concatenate(
-            [(cl[spectrum][:1+lmax] if spectrum not in ["tb", "eb"]
-              else np.zeros(1+lmax))
+            [(cl[spectrum][:1 + lmax] if spectrum not in ["tb", "eb"]
+              else np.zeros(1 + lmax))
              for spectrum, lmax in zip(self.requested_cls, self.l_maxs_cls)])
         # fill with likelihood parameters
         self.vector[-len(self.expected_params):] = (
@@ -246,9 +246,9 @@ def download_from_planck(product_id, path, no_progress_bars=False, name=None):
     try:
         from wget import download, bar_thermometer
         wget_kwargs = {"out": path, "bar":
-                       (bar_thermometer if not no_progress_bars else None)}
+            (bar_thermometer if not no_progress_bars else None)}
         prefix = r"https://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLOGY_OID="
-        filename = download(prefix+product_id, **wget_kwargs)
+        filename = download(prefix + product_id, **wget_kwargs)
     except:
         log.error("Error downloading!")
         return False
@@ -258,7 +258,7 @@ def download_from_planck(product_id, path, no_progress_bars=False, name=None):
     import os
     import tarfile
     extension = os.path.splitext(filename)[-1][1:]
-    tar = tarfile.open(filename, "r:"+extension)
+    tar = tarfile.open(filename, "r:" + extension)
     try:
         tar.extractall(path)
         tar.close()
@@ -330,7 +330,7 @@ def install_clik(path, no_progress_bars=False):
     cfitsio_filename = os.path.join(path, "plc-2.0/waf_tools/cfitsio.py")
     with open(cfitsio_filename, "r") as cfitsio_file:
         lines = cfitsio_file.readlines()
-        i_offending = next(i for i,l in enumerate(lines) if ".tar.gz" in l)
+        i_offending = next(i for i, l in enumerate(lines) if ".tar.gz" in l)
         lines[i_offending] = (
             "  atl.installsmthg_pre(ctx,"
             "'http://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio3280.tar.gz',"

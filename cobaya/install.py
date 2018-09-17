@@ -68,14 +68,14 @@ def install(*infos, **kwargs):
                 if kind == _likelihood:
                     info = (next(info for info in infos
                                  if module in info.get(_likelihood, {}))
-                            [_likelihood][module]) or {}
+                    [_likelihood][module]) or {}
                     if isinstance(info, string_types) or _external in info:
                         log.warn("Module '%s' is a custom likelihood. Nothing to do.\n",
                                  module)
                         flag = False
                 if flag:
-                    log.error("Module '%s' not recognized.\n"%module)
-                    failed_modules += ["%s:%s"%(kind, module)]
+                    log.error("Module '%s' not recognized.\n" % module)
+                    failed_modules += ["%s:%s" % (kind, module)]
                 continue
             is_installed = getattr(imported_module, "is_installed", None)
             if is_installed is None:
@@ -101,7 +101,7 @@ def install(*infos, **kwargs):
                 log.error("Installation failed! Look at the error messages above. "
                           "Solve them and try again, or, if you are unable to solve, "
                           "install this module manually.")
-                failed_modules += ["%s:%s"%(kind, module)]
+                failed_modules += ["%s:%s" % (kind, module)]
                 continue
             # test installation
             if not is_installed(path=abspath, **kwargs_install):
@@ -110,7 +110,7 @@ def install(*infos, **kwargs):
                           "Look at the error messages above. "
                           "Solve them and try again, or, if you are unable to solve, "
                           "install this module manually.")
-                failed_modules += ["%s:%s"%(kind, module)]
+                failed_modules += ["%s:%s" % (kind, module)]
     if failed_modules:
         log.error("The installation (or installation test) of some module(s) has failed: "
                   "%r. Check output above.\n", failed_modules)
@@ -138,7 +138,7 @@ def download_github_release(directory, repo_name, release_name, repo_rename=None
     try:
         if extension == "tgz":
             extension = "gz"
-        tar = tarfile.open(filename, "r:"+extension)
+        tar = tarfile.open(filename, "r:" + extension)
         tar.extractall(directory)
         tar.close()
         os.remove(filename)
@@ -197,8 +197,8 @@ def install_script():
             description="Cobaya's installation tool for external modules.")
         parser.add_argument("files", action="store", nargs="+", metavar="input_file.yaml",
                             help="One or more input files "
-                            "(or 'cosmo' for a basic collection of cosmological modules)")
-        parser.add_argument("-"+_modules_path_arg[0], "--"+_modules_path_arg,
+                                 "(or 'cosmo' for a basic collection of cosmological modules)")
+        parser.add_argument("-" + _modules_path_arg[0], "--" + _modules_path_arg,
                             action="store", nargs=1, required=True,
                             metavar="/install/path",
                             help="Desired path where to install external modules.")

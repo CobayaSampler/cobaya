@@ -6,7 +6,6 @@ from cobaya.install import download_github_release
 
 
 class sdss_dr12_consensus_final(_bao_prototype):
-
     pass
 
 

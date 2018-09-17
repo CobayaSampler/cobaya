@@ -27,6 +27,7 @@ class gaussian(Likelihood):
     """
     Gaussian likelihood.
     """
+
     def initialize(self):
         """
         Initializes the gaussian distributions.
@@ -63,11 +64,11 @@ class gaussian(Likelihood):
                      if self.prefix else ""), mean_dim, len(self.input_params))
                 raise HandledException
             self.n_modes = mean_n_modes
-            if len(self.output_params) != self.d()*self.n_modes:
+            if len(self.output_params) != self.d() * self.n_modes:
                 self.log.error(
                     "The number of derived parameters must be equal to the dimensionality"
                     " times the number of modes, i.e. %d x %d = %d, but was given %d "
-                    "derived parameters.", self.d(), self.n_modes, self.d()*self.n_modes,
+                    "derived parameters.", self.d(), self.n_modes, self.d() * self.n_modes,
                     len(self.output_params))
                 raise HandledException
         else:
@@ -90,10 +91,10 @@ class gaussian(Likelihood):
         _derived = params_values.get("_derived")
         if _derived is not None:
             for i in range(self.n_modes):
-                standard = np.linalg.inv(self.choleskyL[i]).dot((x-self.mean[i]))
+                standard = np.linalg.inv(self.choleskyL[i]).dot((x - self.mean[i]))
                 _derived.update(dict(
-                    [(p,v) for p,v in
-                     zip(list(self.output_params)[i*self.d():(i+1)*self.d()],standard)]))
+                    [(p, v) for p, v in
+                     zip(list(self.output_params)[i * self.d():(i + 1) * self.d()], standard)]))
         # Compute the likelihood and return
         return (-np.log(self.n_modes) +
                 logsumexp([gauss.logpdf(x) for gauss in self.gaussians]))
@@ -113,7 +114,7 @@ def random_mean(ranges, n_modes=1, mpi_warn=True):
     if get_mpi_size() and mpi_warn:
         print ("WARNING! "
                "Using with MPI: different process will produce different random results.")
-    mean = np.array([uniform.rvs(loc=r[0], scale=r[1]-r[0], size=n_modes)
+    mean = np.array([uniform.rvs(loc=r[0], scale=r[1] - r[0], size=n_modes)
                      for r in ranges])
     mean = mean.T
     if n_modes == 1:
@@ -136,16 +137,16 @@ def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1, mpi_warn=True):
         print ("WARNING! "
                "Using with MPI: different process will produce different random results.")
     dim = len(ranges)
-    scales = np.array([r[1]-r[0] for r in ranges])
+    scales = np.array([r[1] - r[0] for r in ranges])
     cov = []
     for i in range(n_modes):
-        stds = scales * 10**(uniform.rvs(size=dim, loc=np.log10(O_std_min),
-                                         scale=np.log10(O_std_max/O_std_min)))
+        stds = scales * 10 ** (uniform.rvs(size=dim, loc=np.log10(O_std_min),
+                                           scale=np.log10(O_std_max / O_std_min)))
         this_cov = np.diag(stds).dot(
-            (random_correlation.rvs(dim*stds/sum(stds)) if dim > 1 else np.eye(1))
-            .dot(np.diag(stds)))
+            (random_correlation.rvs(dim * stds / sum(stds)) if dim > 1 else np.eye(1))
+                .dot(np.diag(stds)))
         # Symmetrize (numerical noise is usually introduced in the last step)
-        cov += [(this_cov+this_cov.T)/2]
+        cov += [(this_cov + this_cov.T) / 2]
     if n_modes == 1:
         cov = cov[0]
     return cov
@@ -168,14 +169,14 @@ def info_random_gaussian(ranges, n_modes=1, prefix="", O_std_min=1e-2, O_std_max
         if n_modes == 1:
             cov = [cov]
         # Make sure it stays away from the edges
-        mean = [[]]*n_modes
+        mean = [[]] * n_modes
         for i in range(n_modes):
             std = np.sqrt(cov[i].diagonal())
             factor = 3
-            ranges_mean = [[l[0]+factor*s,l[1]-+factor*s] for l,s in zip(ranges,std)]
+            ranges_mean = [[l[0] + factor * s, l[1] - +factor * s] for l, s in zip(ranges, std)]
             # If this implies min>max, take the centre
             ranges_mean = [
-                (l if l[0] <= l[1] else 2*[(l[0]+l[1])/2]) for l in ranges_mean]
+                (l if l[0] <= l[1] else 2 * [(l[0] + l[1]) / 2]) for l in ranges_mean]
             mean[i] = random_mean(ranges_mean, n_modes=1, mpi_warn=False)
     elif rank != 0 and mpi_aware:
         mean, cov = None, None
@@ -186,11 +187,11 @@ def info_random_gaussian(ranges, n_modes=1, prefix="", O_std_min=1e-2, O_std_max
         "mean": mean, "cov": cov, "prefix": prefix}}}
     info[_params] = odict(
         # sampled
-        [[prefix+"%d"%i,
-          {"prior":{"min": ranges[i][0], "max": ranges[i][1]},
-           "latex": r"\alpha_{%i}"%i}]
+        [[prefix + "%d" % i,
+          {"prior": {"min": ranges[i][0], "max": ranges[i][1]},
+           "latex": r"\alpha_{%i}" % i}]
          for i in range(dimension)] +
         # derived
-        [[prefix+"derived_%d"%i, {"min": -3,"max": 3,"latex": r"\beta_{%i}"%i}]
-         for i in range(dimension*n_modes)])
+        [[prefix + "derived_%d" % i, {"min": -3, "max": 3, "latex": r"\beta_{%i}" % i}]
+         for i in range(dimension * n_modes)])
     return info

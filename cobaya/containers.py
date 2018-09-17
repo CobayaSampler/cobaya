@@ -61,7 +61,7 @@ RUN mkdir $COBAYA_MODULES && \
 RUN pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist --force
 RUN cd $COBAYA_MODULES && git clone https://github.com/JesusTorrado/cobaya.git && \
     cd $COBAYA_MODULES/cobaya && pip install -e .
-"""%(_modules_path, _products_path)
+""" % (_modules_path, _products_path)
 
 MPI_URL = {
     "mpich": "https://www.mpich.org/static/downloads/_VER_/mpich-_VER_.tar.gz",
@@ -126,8 +126,8 @@ def image_help(engine):
             $ %s
 
         Have fun!
-        """%(engine.title(), requirements_file_path, pre_prepare[engine.lower()],
-             pre_run[engine.lower()], pre_shell[engine.lower()]))
+        """ % (engine.title(), requirements_file_path, pre_prepare[engine.lower()],
+               pre_run[engine.lower()], pre_shell[engine.lower()]))
 
 
 def get_docker_client():
@@ -152,22 +152,22 @@ def create_base_image(mpi=None, version=None, sub=None):
     if sub:
         sub = "." + sub
     try:
-        tag = "cobaya/base_%s_%s:latest"%(mpi.lower(), version+sub)
+        tag = "cobaya/base_%s_%s:latest" % (mpi.lower(), version + sub)
     except KeyError():
         log.error("MPI library '%s' not recognized.")
         raise HandledException
     URL = MPI_URL[mpi.lower()].replace("_VER_", str(version)).replace("_DOT_SUB_", sub)
     if head(URL).status_code >= 400:
         log.error("Failed to download %s %s: couldn't reach URL: '%s'",
-                  mpi.lower(), version+sub, URL)
+                  mpi.lower(), version + sub, URL)
         raise HandledException
-    log.info("Creating base image %s v%s..."%(mpi.lower(), version+sub))
+    log.info("Creating base image %s v%s..." % (mpi.lower(), version + sub))
     this_MPI_recipe = dedent(MPI_recipe[mpi.lower()].replace("_VER_", version)
                              .replace("_DOT_SUB_", sub).replace("_URL_", URL))
     dc = get_docker_client()
     with StringIO(base_recipe + this_MPI_recipe + MPI_epilogue) as stream:
         dc.images.build(fileobj=stream, tag=tag, nocache=True)
-    log.info("Base image '%s' created!"%tag)
+    log.info("Base image '%s' created!" % tag)
 
 
 def create_all_base_images():
@@ -188,11 +188,11 @@ def create_docker_image(filenames, MPI_version=None):
         #          " using '--mpi-version X.Y'. Defaulting to MPICH v%s.", MPI_version)
     dc = get_docker_client()
     modules = yaml_dump(get_modules(*[load_input(f) for f in filenames])).strip()
-    echos_reqs = "RUN "+" && \\ \n    ".join(
-        [r'echo "%s" >> %s'%(block, requirements_file_path)
+    echos_reqs = "RUN " + " && \\ \n    ".join(
+        [r'echo "%s" >> %s' % (block, requirements_file_path)
          for block in modules.split("\n")])
-    echos_help = "RUN "+" && \\ \n    ".join(
-        [r'echo "%s" >> %s'%(line, help_file_path)
+    echos_help = "RUN " + " && \\ \n    ".join(
+        [r'echo "%s" >> %s' % (line, help_file_path)
          for line in image_help("docker").split("\n")])
     recipe = r"""
     FROM cobaya/base_mpich_%s:latest
@@ -202,7 +202,7 @@ def create_docker_image(filenames, MPI_version=None):
     CMD ["cat", "%s"]
     """ % (MPI_version, echos_reqs, requirements_file_path, _modules_path_arg,
            _modules_path, echos_help, help_file_path)
-    image_name = "cobaya:"+uuid.uuid4().hex[:6]
+    image_name = "cobaya:" + uuid.uuid4().hex[:6]
     with StringIO(recipe) as stream:
         dc.images.build(fileobj=stream, tag=image_name)
     log.info("Docker image '%s' created! "
@@ -219,14 +219,14 @@ def create_singularity_image(filenames, MPI_version=None):
         #          " using '--mpi-version X.Y.Z'. Defaulting to OpenMPI v%s.", MPI_version)
     modules = yaml_dump(get_modules(*[load_input(f) for f in filenames])).strip()
     echos_reqs = "\n    " + "\n    ".join(
-        [""] + ['echo "%s" >> %s'%(block, requirements_file_path)
+        [""] + ['echo "%s" >> %s' % (block, requirements_file_path)
                 for block in modules.split("\n")])
     recipe = (
-        dedent("""
+            dedent("""
         Bootstrap: docker
         From: cobaya/base_openmpi_%s:latest\n
-        %%post\n"""%MPI_version) +
-        dedent(echos_reqs) + dedent("""
+        %%post\n""" % MPI_version) +
+            dedent(echos_reqs) + dedent("""
         export CONTAINED=TRUE
         cobaya-install %s --%s %s --just-code --force ### --no-progress-bars
         mkdir %s
@@ -240,7 +240,7 @@ def create_singularity_image(filenames, MPI_version=None):
     with NamedTemporaryFile(delete=False) as recipe_file:
         recipe_file.write(recipe)
         recipe_file_name = recipe_file.name
-    image_name = "cobaya_"+uuid.uuid4().hex[:6]+".simg"
+    image_name = "cobaya_" + uuid.uuid4().hex[:6] + ".simg"
     process_build = Popen(["singularity", "build", image_name, recipe_file_name],
                           stdout=PIPE, stderr=PIPE)
     out, err = process_build.communicate()

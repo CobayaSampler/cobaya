@@ -115,7 +115,6 @@ After this, mention the path to this likelihood when you include it in an input 
 
 """
 
-
 # Python 2/3 compatibility
 from __future__ import absolute_import
 from __future__ import division
@@ -140,7 +139,7 @@ class _bao_prototype(Likelihood):
     def initialize(self):
         # If no path specified, use the modules path
         data_file_path = os.path.normpath(getattr(self, "path", None) or
-                          os.path.join(self.path_install, "data"))
+                                          os.path.join(self.path_install, "data"))
         if not data_file_path:
             self.log.error("No path given to BAO data. Set the likelihood property "
                            "'path' or the common property '%s'.", _path_install)
@@ -158,7 +157,7 @@ class _bao_prototype(Likelihood):
                     os.path.join(data_file_path, self.measurements_file),
                     header=None, index_col=None, sep="\s+", comment="#")
             except IOError:
-                self.log.error("Couldn't find measurements file '%s' in folder '%s'. "%(
+                self.log.error("Couldn't find measurements file '%s' in folder '%s'. " % (
                     self.measurements_file, data_file_path) + "Check your paths.")
                 raise HandledException
         else:
@@ -181,7 +180,7 @@ class _bao_prototype(Likelihood):
                 chi2 = np.loadtxt(os.path.join(data_file_path, self.prob_dist))
             except IOError:
                 self.log.error("Couldn't find probability distribution file '%s' "
-                               "in folder '%s'. "%(self.prob_dist, data_file_path) +
+                               "in folder '%s'. " % (self.prob_dist, data_file_path) +
                                "Check your paths.")
                 raise HandledException
             try:
@@ -191,7 +190,7 @@ class _bao_prototype(Likelihood):
                 self.log.error("If 'prob_dist' given, 'prob_dist_bounds' needs to be "
                                "specified as [min, max].")
                 raise HandledException
-            spline = UnivariateSpline(alpha, -chi2/2, s=0)
+            spline = UnivariateSpline(alpha, -chi2 / 2, s=0)
             self.logpdf = lambda x: (
                 spline(x) if self.prob_dist_bounds[0] <= x <= self.prob_dist_bounds[1]
                 else -np.inf)
@@ -204,19 +203,19 @@ class _bao_prototype(Likelihood):
                     invcov = np.loadtxt(os.path.join(data_file_path, self.invcov_file))
                     self.cov = np.linalg.inv(invcov)
                 elif "error" in self.data.columns:
-                    self.cov = np.diag(self.data["error"]**2)
+                    self.cov = np.diag(self.data["error"] ** 2)
                 else:
                     self.log.error("No errors provided, either as cov, invcov "
                                    "or as the 3rd column in the data file.")
                     raise HandledException
                 self.invcov = np.linalg.inv(self.cov)
             except IOError:
-                self.log.error("Couldn't find (inv)cov file '%s' in folder '%s'. "%(
+                self.log.error("Couldn't find (inv)cov file '%s' in folder '%s'. " % (
                     getattr(self, "cov_file", getattr(self, "invcov_file", None)),
                     data_file_path) + "Check your paths.")
                 raise HandledException
-            self.logpdf = lambda x: (lambda x_: -0.5*x_.dot(self.invcov).dot(x_))(
-                x-self.data["value"].values)
+            self.logpdf = lambda x: (lambda x_: -0.5 * x_.dot(self.invcov).dot(x_))(
+                x - self.data["value"].values)
 
     def add_theory(self):
         if self.theory.__class__ == "classy":
@@ -224,7 +223,7 @@ class _bao_prototype(Likelihood):
                 "BAO likelihood not yet compatible with CLASS (help appreciated!)")
             raise HandledException
         # Requisites
-        zs = {obs:self.data.loc[self.data["observable"] == obs, "z"].values
+        zs = {obs: self.data.loc[self.data["observable"] == obs, "z"].values
               for obs in self.data["observable"].unique()}
         theory_reqs = {
             "DV_over_rs": {
@@ -269,39 +268,39 @@ class _bao_prototype(Likelihood):
         # Spherically-averaged distance, over sound horizon radius
         if observable == "DV_over_rs":
             return np.cbrt(
-                ((1+z)*self.theory.get_angular_diameter_distance(z))**2 *
-                _c_km_s*z/self.theory.get_H(z, units="km/s/Mpc"))/self.rs()
+                ((1 + z) * self.theory.get_angular_diameter_distance(z)) ** 2 *
+                _c_km_s * z / self.theory.get_H(z, units="km/s/Mpc")) / self.rs()
         # Idem, inverse
         elif observable == "rs_over_DV":
             return np.cbrt(
-                ((1+z)*self.theory.get_angular_diameter_distance(z))**2 *
-                _c_km_s*z/self.theory.get_H(z, units="km/s/Mpc"))**(-1)*self.rs()
+                ((1 + z) * self.theory.get_angular_diameter_distance(z)) ** 2 *
+                _c_km_s * z / self.theory.get_H(z, units="km/s/Mpc")) ** (-1) * self.rs()
         # Comoving angular diameter distance, over sound horizon radius
         elif observable == "DM_over_rs":
-            return (1+z)*self.theory.get_angular_diameter_distance(z)/self.rs()
+            return (1 + z) * self.theory.get_angular_diameter_distance(z) / self.rs()
         # Physical angular diameter distance, over sound horizon radius
         elif observable == "DA_over_rs":
-            return self.theory.get_angular_diameter_distance(z)/self.rs()
+            return self.theory.get_angular_diameter_distance(z) / self.rs()
         # Hubble parameter, times sound horizon radius
         elif observable == "Hz_rs":
-            return self.theory.get_H(z, units="km/s/Mpc")*self.rs()
+            return self.theory.get_H(z, units="km/s/Mpc") * self.rs()
         # Diff Linear Growth Rate times present amplitude
         elif observable == "f_sigma8":
             return self.theory.get_fsigma8(z)
         # Anisotropy (Alcock-Paczynski) parameter
         elif observable == "F_AP":
-            return ((1+z) * self.theory.get_angular_diameter_distance(z) *
-                    self.theory.get_H(z, units="km/s/Mpc"))/_c_km_s
+            return ((1 + z) * self.theory.get_angular_diameter_distance(z) *
+                    self.theory.get_H(z, units="km/s/Mpc")) / _c_km_s
 
     def rs(self):
         return self.theory.get_param("rdrag") * self.rs_rescale
 
     def logp(self, **params_values):
-        theory = np.array([self.theory_fun(z,obs) for z, obs
+        theory = np.array([self.theory_fun(z, obs) for z, obs
                            in zip(self.data["z"], self.data["observable"])]).T[0]
         if self.log.getEffectiveLevel() == logging.DEBUG:
-            for i,(z,obs,theo) in enumerate(
+            for i, (z, obs, theo) in enumerate(
                     zip(self.data["z"], self.data["observable"], theory)):
                 self.log.debug("%s at z=%g : %g (theo) ; %g (data)",
-                               obs, z, theo, self.data.iloc[i,1])
+                               obs, z, theo, self.data.iloc[i, 1])
         return self.logpdf(theory)

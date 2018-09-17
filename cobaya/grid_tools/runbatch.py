@@ -23,9 +23,9 @@ def run():
                              help='run where minimization previously failed')
     Opts.parser.add_argument('--checkpoint_run', nargs='?', default=None, const=0,
                              type=float, help=(
-                                 'run if stopped and not finished; if optional value '
-                                 'given then only run chains with convergence worse than '
-                                 'the given value'))
+            'run if stopped and not finished; if optional value '
+            'given then only run chains with convergence worse than '
+            'the given value'))
     Opts.parser.add_argument('--importance_ready', action='store_true',
                              help='where parent chain has converged and stopped')
     Opts.parser.add_argument('--importance_changed', action='store_true',
@@ -39,12 +39,14 @@ def run():
     if args.not_queued:
         print('Getting queued names...')
         queued = jobqueue.queue_job_names(args.batchPath)
+
     def notQueued(name):
         for job in queued:
             if name in job:
                 # print 'Already running:', name
                 return False
         return True
+
     variant = ''
     if args.importance_minimize:
         variant = '_minimize'
@@ -65,6 +67,7 @@ def run():
     global iniFiles
     iniFiles = []
     jobqueue.checkArguments(**args.__dict__)
+
     def jobName():
         s = "-".join([os.path.splitext(os.path.basename(ini))[0] for ini in iniFiles])
         if len(iniFiles) < 2 or len(s) < 70:
@@ -73,6 +76,7 @@ def run():
         if len(base) > 70:
             base = base[:70]
         return base + '__' + hashlib.md5(s).hexdigest()[:16]
+
     def submitJob(ini):
         global iniFiles
         if not args.dryrun:
@@ -87,26 +91,28 @@ def run():
                 print('--> jobName: ', jobName())
             jobqueue.submitJob(jobName(), iniFiles, **args.__dict__)
             iniFiles = []
+
     for jobItem in Opts.filteredBatchItems(wantSubItems=args.subitems):
         if ((not args.notexist or isMinimize and not jobItem.chainMinimumExists()
              or not isMinimize and not jobItem.chainExists()) and (
-                 not args.minimize_failed or not jobItem.chainMinimumConverged())
+                    not args.minimize_failed or not jobItem.chainMinimumConverged())
             and (isMinimize or args.notall is None or not jobItem.allChainExists(args.notall))) \
-            and (not isMinimize or getattr(jobItem, 'want_minimize', True)):
+                and (not isMinimize or getattr(jobItem, 'want_minimize', True)):
             if not args.parent_converge or not jobItem.isImportanceJob or jobItem.parent.hasConvergeBetterThan(
                     args.parent_converge):
                 if args.converge == 0 or not jobItem.hasConvergeBetterThan(args.converge, returnNotExist=True):
                     if args.checkpoint_run is None or jobItem.wantCheckpointContinue(
                             args.checkpoint_run) and jobItem.notRunning():
                         if (not jobItem.isImportanceJob or isMinimize
-                            or (args.importance_ready and jobItem.parent.chainFinished()
-                                or not args.importance_ready and jobItem.parent.chainExists())
-                            and (not args.importance_changed or jobItem.parentChanged())
-                            and (not args.parent_stopped or jobItem.parent.notRunning())):
+                                or (args.importance_ready and jobItem.parent.chainFinished()
+                                    or not args.importance_ready and jobItem.parent.chainExists())
+                                and (not args.importance_changed or jobItem.parentChanged())
+                                and (not args.parent_stopped or jobItem.parent.notRunning())):
                             if not args.not_queued or notQueued(jobItem.name):
                                 submitJob(jobItem.iniFile(variant))
 
     if len(iniFiles) > 0:
         if args.runs_per_job > 1: print('--> jobName: ', jobName())
-        jobqueue.submitJob(args.combine_one_job_name or jobName(), iniFiles, sequential=args.combine_one_job_name is not None,
+        jobqueue.submitJob(args.combine_one_job_name or jobName(), iniFiles,
+                           sequential=args.combine_one_job_name is not None,
                            **args.__dict__)

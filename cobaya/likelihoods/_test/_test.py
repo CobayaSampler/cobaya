@@ -7,6 +7,7 @@ import numpy as np
 # Local
 from cobaya.likelihood import Likelihood
 
+
 class _test(Likelihood):
     """
     Likelihood that evaluates to 1.

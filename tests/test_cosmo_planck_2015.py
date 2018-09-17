@@ -8,6 +8,7 @@ from cobaya.cosmo_input import cmb_precision
 
 # Generating plots in Travis
 import matplotlib
+
 matplotlib.use('agg')
 
 # Derived parameters not understood by CLASS
@@ -177,7 +178,6 @@ derived_lowl_highTT = {
     "thetaeq": [0.8243, 0.011],
     "thetarseq": [0.4550, 0.0058]}
 
-
 # Best fit Polarization ##################################################################
 
 lik_info_lowTEB_highTTTEEE = {"planck_2015_lowTEB": None,
@@ -249,7 +249,6 @@ derived_lowTEB_highTTTEEE = {
     "keq": [0.010365, 0.00010],
     "thetaeq": [0.8139, 0.0063],
     "thetarseq": [0.44980, 0.0032]}
-
 
 # Best fit lensing (from best combination with lowTEB+_highTTTEEE ########################
 

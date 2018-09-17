@@ -46,11 +46,11 @@ class _cosmo(Theory):
             self._needs = deepcopy(self.output_params)
         # Accumulate the requirements across several calls in a safe way;
         # e.g. take maximum of all values of a requested precision paramater
-        for k,v in requirements.items():
+        for k, v in requirements.items():
             # Products and other computations
             if k.lower() == "cl":
                 self._needs["cl"] = {
-                    cl:max(self._needs.get("cl", {}).get(cl, 0), v.get(cl, 0))
+                    cl: max(self._needs.get("cl", {}).get(cl, 0), v.get(cl, 0))
                     for cl in set(self._needs.get("cl", {})).union(v)}
             elif k.lower() == "pk_interpolator":
                 self._needs[k] = deepcopy(v)

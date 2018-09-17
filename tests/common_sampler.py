@@ -28,7 +28,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     # Info of likelihood and prior
-    ranges = np.array([[-1,1] for _ in range(dimension)])
+    ranges = np.array([[-1, 1] for _ in range(dimension)])
     while True:
         info = info_random_gaussian(
             ranges=ranges, n_modes=n_modes, prefix="a_",
@@ -36,9 +36,9 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
         if n_modes == 1:
             break
         means = info["likelihood"]["gaussian"]["mean"]
-        distances = chain(*[[np.linalg.norm(m1-m2) for m2 in means[i+1:]]
-                            for i,m1 in enumerate(means)])
-        if min(distances) >= distance_factor*O_std_max:
+        distances = chain(*[[np.linalg.norm(m1 - m2) for m2 in means[i + 1:]]
+                            for i, m1 in enumerate(means)])
+        if min(distances) >= distance_factor * O_std_max:
             break
     if rank == 0:
         print("Original mean of the gaussian mode:")
@@ -72,7 +72,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
         clusters = None
         if "clusters" in products:
             clusters = [loadCobayaSamples(updated_info, products["clusters"][i]["sample"],
-                                          name_tag="cluster %d"%(i+1))
+                                          name_tag="cluster %d" % (i + 1))
                         for i in products["clusters"]]
         # Plots!
         try:
@@ -96,7 +96,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
             KL_final = KL_norm(m1=info[_likelihood]["gaussian"]["mean"][0],
                                S1=info[_likelihood]["gaussian"]["cov"][0],
                                m2=mean_sample[:dimension],
-                               S2=cov_sample[:dimension,:dimension])
+                               S2=cov_sample[:dimension, :dimension])
             print("Final KL: ", KL_final)
             assert KL_final <= KL_tolerance
         # 2nd test: clusters
@@ -109,62 +109,65 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
                     KLs = [KL_norm(m1=info[_likelihood]["gaussian"]["mean"][i_c1],
                                    S1=info[_likelihood]["gaussian"]["cov"][i_c1],
                                    m2=mean_c2[:dimension],
-                                   S2=cov_c2[:dimension,:dimension])
+                                   S2=cov_c2[:dimension, :dimension])
                            for i_c1 in range(n_modes)]
-                    extra_tol = 2*n_modes if n_modes > 1 else 1
+                    extra_tol = 2 * n_modes if n_modes > 1 else 1
                     assert min(KLs) <= KL_tolerance * extra_tol
             else:
                 assert 0, "Could not check sample convergence: multimodal but no clusters"
         # 3rd test: Evidence
         if "logZ" in products:
-            logZprior = sum(np.log(ranges[:,1] - ranges[:,0]))
-            assert (products["logZ"] - logZ_nsigmas*products["logZstd"] < -logZprior <
-                    products["logZ"] + logZ_nsigmas*products["logZstd"])
+            logZprior = sum(np.log(ranges[:, 1] - ranges[:, 0]))
+            assert (products["logZ"] - logZ_nsigmas * products["logZstd"] < -logZprior <
+                    products["logZ"] + logZ_nsigmas * products["logZstd"])
 
 
 def body_of_test_speeds(info_sampler={}, modules=None):
     # Generate 2 3-dimensional gaussians
     dim = 3
     speed1, speed2 = 5, 20
-    ranges = [[i,i+1] for i in range(2*dim)]
+    ranges = [[i, i + 1] for i in range(2 * dim)]
     prefix = "a_"
     mean1, cov1 = [info_random_gaussian(
         ranges=[ranges[i] for i in range(dim)], n_modes=1, prefix=prefix,
         O_std_min=0.01, O_std_max=0.2)
-        [_likelihood]["gaussian"][p][0] for p in ["mean", "cov"]]
+                   [_likelihood]["gaussian"][p][0] for p in ["mean", "cov"]]
     mean2, cov2 = [info_random_gaussian(
-        ranges=[ranges[i] for i in range(dim,2*dim)], n_modes=1, prefix=prefix,
+        ranges=[ranges[i] for i in range(dim, 2 * dim)], n_modes=1, prefix=prefix,
         O_std_min=0.01, O_std_max=0.2)
-        [_likelihood]["gaussian"][p][0] for p in ["mean", "cov"]]
+                   [_likelihood]["gaussian"][p][0] for p in ["mean", "cov"]]
     global n1, n2
     n1, n2 = 0, 0
     # PolyChord measures its own speeds, so we need to "sleep"
-    sleep_unit = 1/50
+    sleep_unit = 1 / 50
     sampler = list(info_sampler.keys())[0]
+
     def like1(a_0, a_1, a_2, _derived=["sum_like1"]):
         if sampler == "polychord":
-            sleep(1/speed1*sleep_unit)
+            sleep(1 / speed1 * sleep_unit)
         global n1
         n1 += 1
         if _derived is not None:
             _derived["sum_like1"] = a_0 + a_1 + a_2
         return multivariate_normal.logpdf([a_0, a_1, a_2], mean=mean1, cov=cov1)
+
     def like2(a_3, a_4, a_5, _derived=["sum_like2"]):
         if sampler == "polychord":
-            sleep(1/speed2*sleep_unit)
+            sleep(1 / speed2 * sleep_unit)
         global n2
         n2 += 1
         if _derived is not None:
             _derived["sum_like2"] = a_3 + a_4 + a_5
         return multivariate_normal.logpdf([a_3, a_4, a_5], mean=mean2, cov=cov2)
+
     # Rearrange parameter in arbitrary order
-    perm = list(range(2*dim))
+    perm = list(range(2 * dim))
     shuffle(perm)
     # Create info
     info = {"params":
-            odict([
-                [prefix+"%d"%i,{"prior": dict(zip(["min", "max"], ranges[i]))}]
-                for i in perm] + [["sum_like1", None], ["sum_like2", None]]),
+                odict([
+                          [prefix + "%d" % i, {"prior": dict(zip(["min", "max"], ranges[i]))}]
+                          for i in perm] + [["sum_like1", None], ["sum_like2", None]]),
             "likelihood": {"like1": {"external": like1, "speed": speed1},
                            "like2": {"external": like2, "speed": speed2}}}
     info["sampler"] = info_sampler
@@ -177,47 +180,47 @@ def body_of_test_speeds(info_sampler={}, modules=None):
     n_cycles_all_params = 10
     if sampler == "mcmc":
         info["sampler"][sampler]["burn_in"] = 0
-        info["sampler"][sampler]["max_samples"] = n_cycles_all_params*10*dim
+        info["sampler"][sampler]["max_samples"] = n_cycles_all_params * 10 * dim
         # Force mixing of blocks:
         info["sampler"][sampler]["covmat_params"] = list(info["params"])
-        info["sampler"][sampler]["covmat"] = 1/10000*np.eye(len(info["params"]))
+        info["sampler"][sampler]["covmat"] = 1 / 10000 * np.eye(len(info["params"]))
         i_1st, i_2nd = map(lambda x: info["sampler"][sampler]["covmat_params"].index(x),
-                           [prefix+"0", prefix+"%d"%dim])
-        info["sampler"][sampler]["covmat"][i_1st, i_2nd] = 1/100000
-        info["sampler"][sampler]["covmat"][i_2nd, i_1st] = 1/100000
+                           [prefix + "0", prefix + "%d" % dim])
+        info["sampler"][sampler]["covmat"][i_1st, i_2nd] = 1 / 100000
+        info["sampler"][sampler]["covmat"][i_2nd, i_1st] = 1 / 100000
     elif sampler == "polychord":
-        info["sampler"][sampler]["nlive"] = 2*dim
-        info["sampler"][sampler]["max_ndead"] = n_cycles_all_params*dim
+        info["sampler"][sampler]["nlive"] = 2 * dim
+        info["sampler"][sampler]["max_ndead"] = n_cycles_all_params * dim
     else:
         assert 0, "Unknown sampler for this test."
     updated_info, products = run(info)
     # Done! --> Tests
     if sampler == "polychord":
         tolerance = 0.2
-        assert abs((n2-n1)/(n1) / (speed2/speed1) - 1) < tolerance, (
-            "#evaluations off: %g > %g" % (
-                abs((n2-n1)/(n1) / (speed2/speed1) - 1), tolerance))
+        assert abs((n2 - n1) / (n1) / (speed2 / speed1) - 1) < tolerance, (
+                "#evaluations off: %g > %g" % (
+            abs((n2 - n1) / (n1) / (speed2 / speed1) - 1), tolerance))
     # For MCMC tests, notice that there is a certain tolerance to be allowed for,
     # since for every proposed step the BlockedProposer cycles once, but the likelihood
     # may is not evaluated if the proposed point falls outside the prior bounds
     elif sampler == "mcmc" and info["sampler"][sampler].get("drag"):
-        assert abs((n2-n1)/(n1) / (speed2/speed1) - 1) < 0.1
+        assert abs((n2 - n1) / (n1) / (speed2 / speed1) - 1) < 0.1
     elif sampler == "mcmc" and info["sampler"][sampler].get("oversample"):
         # Testing oversampling: number of evaluations per param * oversampling factor
-        assert abs((n2-n1)*dim/(n1*dim) / (speed2/speed1) - 1) < 0.1
+        assert abs((n2 - n1) * dim / (n1 * dim) / (speed2 / speed1) - 1) < 0.1
     elif sampler == "mcmc":
         # Testing just correct blocking: same number of evaluations per param
-        assert abs((n2-n1)*dim/(n1*dim) - 1) < 0.1
+        assert abs((n2 - n1) * dim / (n1 * dim) - 1) < 0.1
     # Finally, test some points of the chain to reproduce the correct likes and derived
     # These are not AssertionError's to override the flakyness of the test
     for _ in range(10):
         i = choice(list(range(products["sample"].n())))
-        chi2_1_chain = -0.5*products["sample"]["chi2__like1"][i]
+        chi2_1_chain = -0.5 * products["sample"]["chi2__like1"][i]
         chi2_1_good = like1(
-            _derived=None, **{p:products["sample"][p][i] for p in ["a_0", "a_1", "a_2"]})
-        chi2_2_chain = -0.5*products["sample"]["chi2__like2"][i]
+            _derived=None, **{p: products["sample"][p][i] for p in ["a_0", "a_1", "a_2"]})
+        chi2_2_chain = -0.5 * products["sample"]["chi2__like2"][i]
         chi2_2_good = like2(
-            _derived=None, **{p:products["sample"][p][i] for p in ["a_3", "a_4", "a_5"]})
+            _derived=None, **{p: products["sample"][p][i] for p in ["a_3", "a_4", "a_5"]})
         if not np.allclose([chi2_1_chain, chi2_2_chain], [chi2_1_good, chi2_2_good]):
             raise ValueError(
                 "Likelihoods not reproduced correctly. "

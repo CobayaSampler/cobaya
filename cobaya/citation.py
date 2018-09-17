@@ -23,16 +23,16 @@ from cobaya.input import get_modules
 
 def get_citation_info(module, kind):
     folder = get_folder(module, kind, absolute=True)
-    filename = os.path.join(folder, module+".bibtex")
+    filename = os.path.join(folder, module + ".bibtex")
     try:
         with open(filename, "r") as f:
             lines = "".join(f.readlines())
     except IOError:
         if not os.path.isdir(folder):
-            lines = "[Module '%s.%s' not known.]"%(kind, module)
+            lines = "[Module '%s.%s' not known.]" % (kind, module)
         else:
             lines = "[no citation information found]"
-    return lines+"\n"
+    return lines + "\n"
 
 
 def citation(*infos):

@@ -25,6 +25,7 @@ from cobaya.log import HandledException
 
 # Logger
 import logging
+
 log = logging.getLogger(__name__.split(".")[-1])
 
 
@@ -91,6 +92,7 @@ class Parameterization(object):
     Class managing parameterization.
     Translates parameter between sampler+prior and likelihood
     """
+
     def __init__(self, info_params, allow_renames=True):
         self.allow_renames = allow_renames
         # First, we load the parameters,
@@ -139,11 +141,11 @@ class Parameterization(object):
                     self._derived_funcs[p] = get_external_function(info[_p_derived])
                     self._derived_args[p] = getargspec(self._derived_funcs[p]).args
         # Check that the sampled and derived params are all valid python variable names
-        for p in chain(self.sampled_params(),self.derived_params()):
+        for p in chain(self.sampled_params(), self.derived_params()):
             if not is_valid_variable_name(p):
                 is_in = p in self.sampled_params()
-                eg_in = "  p_prime:\n    prior: ...\n  %s: 'lambda p_prime: p_prime'\n"%p
-                eg_out = "  p_prime: 'lambda %s: %s'\n"%(p,p)
+                eg_in = "  p_prime:\n    prior: ...\n  %s: 'lambda p_prime: p_prime'\n" % p
+                eg_out = "  p_prime: 'lambda %s: %s'\n" % (p, p)
                 log.error("Parameter name '%s' is not a valid Python variable name "
                           "(it needs to start with a letter or '_').\n"
                           "If this is an %s parameter of a likelihood or theory, "
@@ -160,18 +162,18 @@ class Parameterization(object):
         for p in (list(self._input) + list(self._sampled) + list(self._derived)):
             if p in args:
                 args.remove(p)
-        self._output.update({p:None for p in args})
+        self._output.update({p: None for p in args})
         # Useful sets: directly-sampled input parameters and directly "output-ed" derived
         self._directly_sampled = [p for p in self._input if p in self._sampled]
         self._directly_output = [p for p in self._derived if p in self._output]
         # Useful mapping: input params that vary if each sampled is varied
         self._sampled_input_dependence = odict(
-            [[s,[i for i in self._input if s in self._input_args.get(i, {})]]
+            [[s, [i for i in self._input if s in self._input_args.get(i, {})]]
              for s in self._sampled])
         # From here on, some error control.
         dropped_but_never_used = (
-            set([p for p,v in self._sampled_input_dependence.items() if not v])
-            .difference(set(self._directly_sampled)))
+            set([p for p, v in self._sampled_input_dependence.items() if not v])
+                .difference(set(self._directly_sampled)))
         if dropped_but_never_used:
             log.error("Parameters %r are sampled but not passed to the likelihood or "
                       "theory code, neither ever used as arguments for any parameters. "
@@ -219,11 +221,11 @@ class Parameterization(object):
                 zip(self.sampled_params(), sampled_params_values))
         elif not isinstance(sampled_params_values, odict):
             sampled_params_values = odict(
-                [(p,sampled_params_values[p]) for p in self.sampled_params()])
+                [(p, sampled_params_values[p]) for p in self.sampled_params()])
         self._sampled = deepcopy(sampled_params_values)
         # Fill first directly sampled input parameters
         self._input.update(
-            {p:sampled_params_values[p] for p in self._directly_sampled})
+            {p: sampled_params_values[p] for p in self._directly_sampled})
         # Then evaluate the functions
         resolved_old = None
         resolved = []
@@ -232,7 +234,7 @@ class Parameterization(object):
             for p in self._input_funcs:
                 if p in resolved:
                     continue
-                args = {p:self._input.get(p, sampled_params_values.get(p, None))
+                args = {p: self._input.get(p, sampled_params_values.get(p, None))
                         for p in self._input_args[p]}
                 if not all([isinstance(v, Number) for v in args.values()]):
                     continue
@@ -251,7 +253,7 @@ class Parameterization(object):
                 zip(self.output_params(), output_params_values))
         # Fill first derived parameters which are direct output parameters
         self._derived.update(
-            {p:output_params_values[p] for p in self._directly_output})
+            {p: output_params_values[p] for p in self._directly_output})
         # Then evaluate the functions
         resolved_old = None
         resolved = []
@@ -260,10 +262,10 @@ class Parameterization(object):
             for p in self._derived_funcs:
                 if p in resolved:
                     continue
-                args = {p:(self.input_params().get(
-                    p, self.sampled_params().get(p,output_params_values.get(
-                        p, self._derived.get(p,None)))))
-                        for p in self._derived_args[p]}
+                args = {p: (self.input_params().get(
+                    p, self.sampled_params().get(p, output_params_values.get(
+                        p, self._derived.get(p, None)))))
+                    for p in self._derived_args[p]}
                 if not all([isinstance(v, Number) for v in args.values()]):
                     continue
                 self._derived[p] = self._derived_funcs[p](**args)
@@ -295,30 +297,30 @@ class Parameterization(object):
                 log.error("The following expected sampled parameters " +
                           ("(or their aliases) " if self.allow_renames else "") +
                           "where not found : %r",
-                          ({p:self._sampled_renames[p] for p in not_found}
+                          ({p: self._sampled_renames[p] for p in not_found}
                            if self.allow_renames else not_found))
             else:
                 log.error("The following expected sampled parameters "
                           "where not found : %r",
-                          {p:self._sampled_renames[p] for p in not_found})
+                          {p: self._sampled_renames[p] for p in not_found})
             raise HandledException
         if sampled_input:
             not_used = set(sampled_input)
             duplicated = not_used.intersection(set(
-                chain(*[list(chain(*[[k],v])) for k,v in self._sampled_renames.items()])))
+                chain(*[list(chain(*[[k], v])) for k, v in self._sampled_renames.items()])))
             not_used = not_used.difference(duplicated)
             derived = not_used.intersection(set(self.derived_params()))
             input_ = not_used.intersection(set(self.input_params()))
             unknown = not_used.difference(derived).difference(input_)
             log.error(
                 "Incorrect parameters! " +
-                ("\n   Duplicated entries (using their aliases): %r"%list(duplicated)
+                ("\n   Duplicated entries (using their aliases): %r" % list(duplicated)
                  if duplicated else "") +
-                ("\n   Not known: %r"%list(unknown) if unknown else "") +
-                ("\n   Cannot be fixed: %r "%list(input_) +
+                ("\n   Not known: %r" % list(unknown) if unknown else "") +
+                ("\n   Cannot be fixed: %r " % list(input_) +
                  "--> instead, fix sampled parameters that depend on them!"
                  if input_ else "") +
-                ("\n   Cannot be fixed because are derived parameters: %r "%list(derived)
+                ("\n   Cannot be fixed because are derived parameters: %r " % list(derived)
                  if derived else ""))
             raise HandledException
         return sampled_output
@@ -329,9 +331,9 @@ class Parameterization(object):
 
         Uses the parameter name of no label has been given.
         """
-        get_label = lambda p,info: (
-            ensure_nolatex(getattr(info, "get", lambda x,y: y)(_p_label,p)))
-        return odict([[p,get_label(p,info)] for p, info in
+        get_label = lambda p, info: (
+            ensure_nolatex(getattr(info, "get", lambda x, y: y)(_p_label, p)))
+        return odict([[p, get_label(p, info)] for p, info in
                       list(self.sampled_params().items()) +
                       list(self.derived_params().items())])
 

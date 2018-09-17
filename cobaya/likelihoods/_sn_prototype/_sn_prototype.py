@@ -114,7 +114,6 @@ from cobaya.likelihood import Likelihood
 from cobaya.log import HandledException
 from cobaya.install import download_github_release
 
-
 _twopi = 2 * np.pi
 
 
@@ -123,6 +122,7 @@ class _sn_prototype(Likelihood):
     def initialize(self):
         def relative_path(tag):
             return ini.relativeFileName(tag).replace('data/', '').replace('Pantheon/', '')
+
         # has_absdist = F, intrinsicdisp=0, idispdataset=False
         if not self.path:
             if self.path_install:
@@ -212,7 +212,7 @@ class _sn_prototype(Likelihood):
             if ini.bool('has_%s_covmat' % name):
                 self.log.debug('Reading covmat for: %s ' % name)
                 self.covs[name] = self._read_covmat(
-                    os.path.join(self.path, ini.string('%s_covmat_file'%name)))
+                    os.path.join(self.path, ini.string('%s_covmat_file' % name)))
         self.alphabeta_covmat = (len(self.covs.items()) > 1 or
                                  self.covs.get('mag', None) is None)
         self._last_alpha = np.inf
@@ -222,7 +222,7 @@ class _sn_prototype(Likelihood):
         # jla_prep
         zfacsq = 25.0 / np.log(10.0) ** 2
         self.pre_vars = self.mag_var + zfacsq * self.pecz ** 2 * (
-            (1.0 + self.zcmb) / (self.zcmb * (1 + 0.5 * self.zcmb))) ** 2
+                (1.0 + self.zcmb) / (self.zcmb * (1 + 0.5 * self.zcmb))) ** 2
         if self.twoscriptmfit:
             A1 = np.zeros(self.nsn)
             A2 = np.zeros(self.nsn)
@@ -250,11 +250,11 @@ class _sn_prototype(Likelihood):
                 for beta_i in range(-_marge_steps, _marge_steps + 1):
                     if alpha_i ** 2 + beta_i ** 2 <= _marge_steps ** 2:
                         self.alpha_grid[_int_points] = (
-                            self.marginalize_params['alpha_centre'] +
-                            alpha_i * self.step_width_alpha)
+                                self.marginalize_params['alpha_centre'] +
+                                alpha_i * self.step_width_alpha)
                         self.beta_grid[_int_points] = (
-                            self.marginalize_params['beta_centre'] +
-                            beta_i * self.step_width_beta)
+                                self.marginalize_params['beta_centre'] +
+                                beta_i * self.step_width_beta)
                         _int_points += 1
             self.log.debug('Marignalizing alpha, beta over %s points' % _int_points)
             self.marge_grid = np.empty(_int_points)

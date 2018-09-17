@@ -42,10 +42,10 @@ _force = "force"
 _separator = "__"
 
 # Names for the samples' fields internally and in the output
-_weight = "weight"                # sample weight
-_minuslogpost = "minuslogpost"    # log-posterior, or in general the total log-probability
+_weight = "weight"  # sample weight
+_minuslogpost = "minuslogpost"  # log-posterior, or in general the total log-probability
 _minuslogprior = "minuslogprior"  # log-prior
-_chi2 = "chi2"                    # chi^2 = -2 * loglik
+_chi2 = "chi2"  # chi^2 = -2 * loglik
 _prior_1d_name = "0"
 
 # Output files

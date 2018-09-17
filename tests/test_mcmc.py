@@ -8,6 +8,7 @@ from cobaya.tools import KL_norm
 
 from common_sampler import body_of_test, body_of_test_speeds
 
+
 ### import pytest
 ### @pytest.mark.mpi
 
@@ -19,27 +20,29 @@ def test_mcmc(tmpdir, modules=None):
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     if rank == 0:
-        S0 = random_cov(dimension*[[0,1]], n_modes=1, O_std_min=0.01, O_std_max=0.5)
+        S0 = random_cov(dimension * [[0, 1]], n_modes=1, O_std_min=0.01, O_std_max=0.5)
     else:
         S0 = None
     S0 = comm.bcast(S0, root=0)
     info_sampler = {"mcmc": {
         # Bad guess for covmat, so big burn in and max_tries
-        "max_tries": 1000*dimension, "burn_in": 100*dimension,
+        "max_tries": 1000 * dimension, "burn_in": 100 * dimension,
         # Learn proposal
         # "learn_proposal": True,  # default now!
         # Proposal
-        "covmat": S0,}}
+        "covmat": S0, }}
+
     def check_gaussian(sampler_instance):
         KL_proposer = KL_norm(S1=sampler_instance.model.likelihood["gaussian"].cov[0],
                               S2=sampler_instance.proposer.get_covariance())
         KL_sample = KL_norm(m1=sampler_instance.model.likelihood["gaussian"].mean[0],
                             S1=sampler_instance.model.likelihood["gaussian"].cov[0],
                             m2=sampler_instance.collection.mean(
-                                first=int(sampler_instance.n()/2)),
+                                first=int(sampler_instance.n() / 2)),
                             S2=sampler_instance.collection.cov(
-                                first=int(sampler_instance.n()/2)))
-        print("KL proposer: %g ; KL sample: %g"%(KL_proposer, KL_sample))
+                                first=int(sampler_instance.n() / 2)))
+        print("KL proposer: %g ; KL sample: %g" % (KL_proposer, KL_sample))
+
     if rank == 0:
         info_sampler["mcmc"].update({
             # Callback to check KL divergence -- disabled in the automatic test

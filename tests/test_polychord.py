@@ -4,6 +4,7 @@ from flaky import flaky
 
 from common_sampler import body_of_test, body_of_test_speeds
 
+
 ### import pytest
 ### @pytest.mark.mpi
 
@@ -12,7 +13,7 @@ from common_sampler import body_of_test, body_of_test_speeds
 def test_polychord(modules, tmpdir):
     dimension = 3
     n_modes = 1
-    info_sampler = {"polychord": {"nlive": 25*dimension*n_modes}}
+    info_sampler = {"polychord": {"nlive": 25 * dimension * n_modes}}
     body_of_test(dimension=dimension, n_modes=n_modes,
                  info_sampler=info_sampler, tmpdir=str(tmpdir), modules=modules)
 
@@ -21,7 +22,7 @@ def test_polychord(modules, tmpdir):
 def test_polychord_multimodal(modules, tmpdir):
     dimension = 2
     n_modes = 2
-    info_sampler = {"polychord": {"nlive": 25*dimension*n_modes}}
+    info_sampler = {"polychord": {"nlive": 25 * dimension * n_modes}}
     body_of_test(dimension=dimension, n_modes=n_modes,
                  info_sampler=info_sampler, tmpdir=str(tmpdir), modules=modules)
 

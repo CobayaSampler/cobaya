@@ -383,7 +383,7 @@ class camb(_cosmo):
             intermediates = {
                 "CAMBparams": {"result": result},
                 "CAMBdata": {"method": "get_results" if self.needs_perts
-                                       else "get_background",
+                else "get_background",
                              "result": None}}
             # Compute the necessary products (incl. any intermediate result, if needed)
             for product, collector in self.collectors.items():

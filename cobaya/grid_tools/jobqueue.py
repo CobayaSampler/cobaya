@@ -27,7 +27,7 @@ def addArguments(parser, combinedJobs=False):
                                   '(good for many fast operations)'))
         parser.add_argument('--runs-per-job', type=int,
                             default=1,
-#                            default=int(os.environ.get('COSMOMC_runsPerJob', '1')),
+                            #                            default=int(os.environ.get('COSMOMC_runsPerJob', '1')),
                             help=('submit multiple mpi runs at once from each job script '
                                   '(e.g. to get more than one run per node)'))
     parser.add_argument('--job-template',
@@ -65,7 +65,7 @@ class jobSettings(object):
             with open(self.job_template, 'r') as f:
                 template = f.read()
         except IOError:
-            raise ValueError("Job template '%s' not found."%self.job_template)
+            raise ValueError("Job template '%s' not found." % self.job_template)
         try:
             cores = multiprocessing.cpu_count()
             if cores > 64:
@@ -299,7 +299,7 @@ def submitJob(jobName, inputFiles, sequential=False, msg=False, **kwargs):
     vals['PROGRAM'] = j.program
     vals['QUEUE'] = j.queue
     vals['LOGDIR'] = os.path.join(os.path.abspath(kwargs.get('batchPath')), _log_folder)
-    if hasattr(j,'jobclass'):
+    if hasattr(j, 'jobclass'):
         vals['JOBCLASS'] = j.jobclass
     j.names = [os.path.basename(param) for param in inputFiles]
     commands = []

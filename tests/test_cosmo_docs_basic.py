@@ -18,9 +18,9 @@ preset_pre = "planck_2015_lensing_"
 def test_cosmo_docs_basic():
     flag = True
     for theo in ["camb", "classy"]:
-        info_new = create_input(preset=preset_pre+theo)
+        info_new = create_input(preset=preset_pre + theo)
         info_yaml_new = yaml_dump(info_new)
-        file_path = os.path.join(path, file_pre+theo+".yaml")
+        file_path = os.path.join(path, file_pre + theo + ".yaml")
         with open(file_path) as docs_file:
             info_yaml_docs = "".join(docs_file.readlines())
         info_docs = yaml_load(info_yaml_docs)
@@ -28,8 +28,8 @@ def test_cosmo_docs_basic():
             with open(file_path, "w") as docs_file:
                 docs_file.write(info_yaml_new)
             flag = False
-            print("OLD:\n%s"%info_yaml_docs)
+            print("OLD:\n%s" % info_yaml_docs)
             print("----------------------------------------")
-            print("NEW:\n%s"%info_yaml_new)
+            print("NEW:\n%s" % info_yaml_new)
     assert flag, ("Differences in example input file. "
                   "Files have been re-generated; check out your git diff.")

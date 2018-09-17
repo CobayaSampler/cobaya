@@ -222,7 +222,7 @@ def install(path=None, name=None, force=False, code=False, data=True,
     extension = os.path.splitext(filename)[-1][1:]
     if extension == "tgz":
         extension = "gz"
-    tar = tarfile.open(filename, "r:"+extension)
+    tar = tarfile.open(filename, "r:" + extension)
     try:
         tar.extractall(full_path)
         tar.close()

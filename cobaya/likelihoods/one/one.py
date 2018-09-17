@@ -33,4 +33,4 @@ class one(Likelihood):
 
     def logp_noise(self, **params_values):
         self.wait()
-        return self.noise*random()
+        return self.noise * random()

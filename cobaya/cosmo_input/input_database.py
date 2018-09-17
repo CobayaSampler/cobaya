@@ -29,7 +29,6 @@ _extra_args = "extra_args"
 _error_msg = "error_msg"
 _none = "(None)"
 
-
 # Theory codes
 theory = odict([[_camb, None], [_classy, None]])
 
@@ -60,7 +59,7 @@ primordial.update(odict([
              [["nrun", odict([
                  [_prior, odict([["min", -1], ["max", 1]])],
                  [_p_ref, odict([[_p_dist, "norm"], ["loc", 0], ["scale", 0.005]])],
-                 [ _p_proposal, 0.001], [_p_label, r"n_\mathrm{run}"]])]]))}]]))
+                 [_p_proposal, 0.001], [_p_label, r"n_\mathrm{run}"]])]]))}]]))
 primordial.update(odict([
     ["SFSR_runrun", {
         _desc: "Adiabatic scalar perturbations, power law + 2nd-order running spectrum",
@@ -88,9 +87,9 @@ primordial.update(odict([
         _desc: "Adiabatic scalar+tensor perturbations, "
                "power law + running spectrum (inflation consistency)",
         _theory: {_camb:
-                  {_extra_args: primordial["SFSR_t"][_theory][_camb][_extra_args]},
+                      {_extra_args: primordial["SFSR_t"][_theory][_camb][_extra_args]},
                   _classy:
-                  {_extra_args: primordial["SFSR_t"][_theory][_classy][_extra_args]}},
+                      {_extra_args: primordial["SFSR_t"][_theory][_classy][_extra_args]}},
         _params: odict(
             (list(primordial["SFSR_run"][_params].items()) +
              list(primordial["SFSR_t"][_params].items())))}]]))
@@ -107,7 +106,7 @@ geometry = odict([
             ["omegak", odict([
                 [_prior, odict([["min", -0.3], ["max", 0.3]])],
                 [_p_ref, odict([[_p_dist, "norm"], ["loc", -0.0008], ["scale", 0.001]])],
-                [_p_proposal, 0.001], [_p_label, r"\Omega_k"]])]])}],])
+                [_p_proposal, 0.001], [_p_label, r"\Omega_k"]])]])}], ])
 
 # Hubble parameter constraints
 hubble = odict([
@@ -142,7 +141,7 @@ hubble = odict([
                     [_p_drop, True]])],
                 ["100*theta_s", odict([
                     [_p_value, "lambda theta_s_1e2: theta_s_1e2"], [_p_derived, False]])],
-                ["H0", {_p_label: r"H_0"}]])},}}]])
+                ["H0", {_p_label: r"H_0"}]])}, }}]])
 
 # Matter sector (minus light species)
 matter = odict([
@@ -248,20 +247,20 @@ neutrinos.update(odict([
                         neutrinos["varying_mnu"][_theory]["camb"][_params]["mnu"])],
                     ["nnu", deepcopy(
                         neutrinos["varying_Neff"][_theory]["camb"][_params]["nnu"])]])},
-#            _classy: {
-#                _extra_args: {"N_ncdm": 1, "deg_ncdm": 3},
-#                _params: odict([
-#                    ["m_ncdm", deepcopy(
-#                        neutrinos["varying_mnu"][_theory]["classy"][_params]["m_ncdm"])],
-#                    ["mnu", deepcopy(
-#                        neutrinos["varying_mnu"][_theory]["classy"][_params]["mnu"])],
-#                    ["N_ur", deepcopy(
-#                        neutrinos["varying_Neff"][_theory]["classy"][_params]["N_ur"])],
-#                    ["nnu", deepcopy(
-#                        neutrinos["varying_Neff"][_theory]["classy"][_params]["nnu"])]
-#                ])}
+            #            _classy: {
+            #                _extra_args: {"N_ncdm": 1, "deg_ncdm": 3},
+            #                _params: odict([
+            #                    ["m_ncdm", deepcopy(
+            #                        neutrinos["varying_mnu"][_theory]["classy"][_params]["m_ncdm"])],
+            #                    ["mnu", deepcopy(
+            #                        neutrinos["varying_mnu"][_theory]["classy"][_params]["mnu"])],
+            #                    ["N_ur", deepcopy(
+            #                        neutrinos["varying_Neff"][_theory]["classy"][_params]["N_ur"])],
+            #                    ["nnu", deepcopy(
+            #                        neutrinos["varying_Neff"][_theory]["classy"][_params]["nnu"])]
+            #                ])}
         }}]]))
-#neutrinos["varying_mnu_Neff"][_theory][_classy][_params]["N_ur"][_p_ref]["loc"] = 0.00641
+# neutrinos["varying_mnu_Neff"][_theory][_classy][_params]["N_ur"][_p_ref]["loc"] = 0.00641
 
 #    # ["varying_Neff+1sterile", {
 #    #     _desc: "Varying Neff plus 1 sterile neutrino (SM nu's with m=0,0,0.06)",
@@ -317,7 +316,7 @@ bbn = odict([
             ["yhe", odict([
                 [_prior, odict([["min", 0.1], ["max", 0.5]])],
                 [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.245], ["scale", 0.006]])],
-                [_p_proposal, 0.006], [_p_label, r"Y_\mathrm{P}"]])]])}],])
+                [_p_proposal, 0.006], [_p_label, r"Y_\mathrm{P}"]])]])}], ])
 
 # Reionization
 reionization = odict([
@@ -338,7 +337,7 @@ reionization = odict([
                 [_prior, odict([[_p_dist, "norm"], ["loc", 0.07], ["scale", 0.02]])],
                 [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.07], ["scale", 0.01]])],
                 [_p_proposal, 0.005], [_p_label, r"\tau_\mathrm{reio}"]])],
-            ["zrei", {_p_label: r"z_\mathrm{re}"}]])}],])
+            ["zrei", {_p_label: r"z_\mathrm{re}"}]])}], ])
 
 # EXPERIMENTS ############################################################################
 cmb_precision = {_camb: {"lens_potential_accuracy": 1},
@@ -441,7 +440,6 @@ like_H0 = odict([
             ["H0_riess2018b", None]])}],
 ])
 
-
 # SAMPLERS ###############################################################################
 
 sampler = odict([
@@ -450,7 +448,7 @@ sampler = odict([
         _sampler: {"mcmc": {"covmat": "auto"}}}],
     ["PolyChord", {
         _desc: "Nested sampler, affine invariant and multi-modal",
-        _sampler: {"polychord": None}}],])
+        _sampler: {"polychord": None}}], ])
 
 # PRESETS ################################################################################
 
@@ -541,7 +539,7 @@ preset = odict([
 # Add planck baseline model
 for pre in preset.values():
     pre.update(
-        {field:value for field,value in planck_base_model.items() if field not in pre})
+        {field: value for field, value in planck_base_model.items() if field not in pre})
     pre.update(default_sampler)
 
 # BASIC INSTALLATION ######################################################################
