@@ -15,6 +15,15 @@
 
 :Installation: ``pip install cobaya --upgrade --user`` (see the `installation instructions <https://cobaya.readthedocs.io/en/latest/installation.html>`_; in general do *not* clone)
 
+.. image:: https://secure.travis-ci.org/CobayaSampler/cobaya.png?branch=master
+  :target: https://secure.travis-ci.org/CobayaSampler/cobaya
+.. image:: https://img.shields.io/pypi/v/cobaya.svg?style=flat
+        :target: https://pypi.python.org/pypi/cobaya/
+.. image:: https://readthedocs.org/projects/cobaya/badge/?version=latest
+   :target: https://getdist.readthedocs.org/en/latest
+
+
+
 **Cobaya** (**co**\ de for **bay**\ esian **a**\ nalysis, and Spanish for *Guinea Pig*) is a framework for sampling and statistical modelling: it allows you to explore arbitrary prior or posterior using a range of Monte Carlo samplers (including the advanced MCMC sampler from CosmoMC_, and the advanced nested sampler PolyChord_). The results of the sampling can be analysed with GetDist_. It supports MPI parallelization (and very soon HPC containerization with Docker/Shifter and Singularity).
 
 Its authors are `Jesus Torrado`_ and `Antony Lewis`_. Some ideas and pieces of code have been adapted from other codes (e.g CosmoMC_ by `Antony Lewis`_ and contributors, and `Monte Python`_, by `Julien Lesgourgues`_ and `Benjamin Audren`_).
