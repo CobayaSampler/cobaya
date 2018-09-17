@@ -1,7 +1,7 @@
 """
 .. module:: model
 
-:Synopsis: Wrapper for models: parametrisation+prior+likelihood+theory
+:Synopsis: Wrapper for models: parameterization+prior+likelihood+theory
 :Author: Jesus Torrado
 
 """

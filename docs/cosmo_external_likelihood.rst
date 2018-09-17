@@ -166,7 +166,7 @@ And now we can e.g. plot a slice of the log likelihood along different :math:`A_
    - If the likelihood evaluates to ``-inf`` (but the prior is finite) it probably means that the theory code is failing; to display the error information of the theory code, add to it the ``stop_at_error: True`` option, as shown in the example input above.
 
 
-Before we start sampling, it is a good idea to characterise the speed of your likelihood, so that the sampler can behave more efficiently. To do that, set ``timing: True`` in the input before initialising your model (as we did above), evaluate the likelihood a couple of times (as we did for the log-likelihood plot above), and *close* the model as ``model.close()``. This will print the evaluation time (in seconds) of the theory code and the likelihoods. Now, redefine the likelihood in the input to add the speed, which is the inverse of the evaluation time in seconds, e.g. if that was :math:`2\,\mathrm{ms}`:
+Before we start sampling, it is a good idea to characterize the speed of your likelihood, so that the sampler can behave more efficiently. To do that, set ``timing: True`` in the input before initialising your model (as we did above), evaluate the likelihood a couple of times (as we did for the log-likelihood plot above), and *close* the model as ``model.close()``. This will print the evaluation time (in seconds) of the theory code and the likelihoods. Now, redefine the likelihood in the input to add the speed, which is the inverse of the evaluation time in seconds, e.g. if that was :math:`2\,\mathrm{ms}`:
 
 .. code:: python
 

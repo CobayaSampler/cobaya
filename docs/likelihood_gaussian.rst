@@ -1,7 +1,7 @@
 ``gaussian`` likelihood
 =======================
 
-A simple (multi-modal if required) Gaussian likelihood, aimed at testing. The pdf is normalized to 1 when integrated over an infinite domain, regardless of the number of modes.
+A simple (multi-modal if required) Gaussian mixture likelihood, aimed at testing. The pdf is normalized to 1 when integrated over an infinite domain, regardless of the number of modes.
 
 Usage
 -----

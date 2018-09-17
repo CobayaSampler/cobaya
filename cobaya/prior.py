@@ -163,9 +163,9 @@ Prior normalization for evidence computation
 
 The one-dimensional priors defined within the ``params`` block are automatically
 normalized, so any sampler that computes the evidence will produce the right results as
-long as no external priors have been defined, whose normalisation is unknown.
+long as no external priors have been defined, whose normalization is unknown.
 
-To get the prior normalisation if using external functions as priors, you can substitute
+To get the prior normalization if using external functions as priors, you can substitute
 your likelihood by the :doc:`dummy unit likelihood <likelihood_one>`, and make an initial
 run with :doc:`PolyChord <sampler_polychord>` to get the prior volume
 (see section :ref:`polychord_bayes_ratios`).
@@ -196,7 +196,7 @@ gaussian ring. This is done in a simple way at
 :ref:`the end of the example <example_advanced_rtheta>`.
 Let us discuss the general case here.
 
-To enble this, **cobaya** creates a `re-parametrisation` layer between the `sampled`
+To enble this, **cobaya** creates a `re-parameterization` layer between the `sampled`
 parameters, and the `input` parameters of the likelihood. E.g. if we want to **sample**
 from the logarithm of an **input** parameter of the likelihood, we would do:
 
@@ -231,7 +231,7 @@ parameters, we insert the functions defining them under a ``derived`` property
 .. note::
 
    **Dynamical derived** parameters can also be functions of yet-undefined parameters.
-   In that case, those parameters will be automatically requested to the likelihood (or
+   In that case, those parameters will be automatically requested from the likelihood (or
    theory code) that understands them.
 
 .. note::

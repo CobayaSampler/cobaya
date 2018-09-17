@@ -82,7 +82,7 @@ preset:
   # Theory code
   theory: classy
 
-# Extra precision for polarised CMB
+# Extra precision for polarized CMB
 theory:
   classy:
     extra_args:

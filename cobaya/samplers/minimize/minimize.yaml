@@ -5,7 +5,7 @@ sampler:
     # Minimizes the full posterior (False) or just the likelihood (True)
     ignore_prior: False
     # Tolerance for termination. Default: 0.001
-    # --> expected >0.01 deviation, reasonable value for Chi^2 minimisation
+    # --> expected >0.01 deviation, reasonable value for Chi^2 minimization
     tol: 1e-3
     # Maximum number of iterations. Default: practically infinite
     maxiter: 1e10

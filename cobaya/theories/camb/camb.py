@@ -47,8 +47,8 @@ Pre-requisites
 ^^^^^^^^^^^^^^
 
 **cobaya** calls CAMB using its Python interface, which requires that you compile CAMB
-using the GNU gfortran compiler version 4.9 or later. To check if you fulfil that
-requisite, type ``gfortran --version`` in the shell, and the first line should look like
+using intel's ifort compiler or the GNU gfortran compiler version 4.9 or later. To check if you have the latter,
+type ``gfortran --version`` in the shell, and the first line should look like
 
 .. code::
 
@@ -56,6 +56,9 @@ requisite, type ``gfortran --version`` in the shell, and the first line should l
 
 Check that ``[gfortran's version]`` is at least 4.9. If you get an error instead, you need
 to install gfortran (contact your local IT service).
+
+CAMB comes with binaries pre-built for Windows, so if you don't need to modify the CAMB source code, no Fortran compiler is
+needed.
 
 
 Automatic installation
@@ -325,7 +328,7 @@ class camb(_cosmo):
                     setattr(cambparams, attr, value)
                 else:
                     self.log.error("Some of the attributes to be set manually were not "
-                                   "recognised: %s=%s", attr, value)
+                                   "recognized: %s=%s", attr, value)
                     raise HandledException
             return cambparams
         except CAMBParamRangeError:

@@ -7,7 +7,7 @@ You can use it to test your modifications, to evaluate the cosmological observab
 
 Models are created from the same input as the :func:`~run.run` function: a dictionary containing the same blocks, except for the ``sampler`` block (it can be included, but will be ignored).
 
-So let us create a simple one using the input-generator [LINK!!!!!]: Planck 2015 polarised CMB and lensing with CLASS as a theory code. Let us copy the ``python`` version (you can also copy the ``yaml`` version and load it with :func:`~yaml.yaml_load`).
+So let us create a simple one using the :doc:`input generator <cosmo_basic_runs>`: Planck 2015 polarized CMB and lensing with CLASS as a theory code. Let us copy the ``python`` version (you can also copy the ``yaml`` version and load it with :func:`~yaml.yaml_load`).
 
 .. literalinclude:: ./src_examples/cosmo_model/1.py
    :language: python
@@ -17,7 +17,7 @@ Now let's build a model (we will need the path to your modules' installation):
 .. literalinclude:: ./src_examples/cosmo_model/2.py
    :language: python
 
-To get (log)probabilities and derived parameters for particular parameter values, we can use the different methods of the :class:`model.Model` (see below), to which we pass a dictionary of **sampled** parameter values.
+To get (log) probabilities and derived parameters for particular parameter values, we can use the different methods of the :class:`model.Model` (see below), to which we pass a dictionary of **sampled** parameter values.
 
 .. note::
 

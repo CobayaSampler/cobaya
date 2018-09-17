@@ -6,7 +6,7 @@ Models in Cosmology are usually split in two: :math:`\mathcal{M}=\mathcal{T}+\ma
 * :math:`\mathcal{T}`, the *theoretical* model, is used to compute observable quantities :math:`\mathcal{O}`
 * :math:`\mathcal{E}`, the *experimental* model, accounts for instrumental errors, foregrounds... when comparing the theoretical observable with some data :math:`\mathcal{D}`.
 
-In practice the theoretical model is encapsulated in a **theory code** (:doc:`CLASS <theory_class>`, :doc:`CAMB <theory_camb>`...) and the experimental model in a **likelihood**, which gives the probability of the data being a realisation of the given observable in the context of the experiment:
+In practice the theoretical model is encapsulated in a **theory code** (:doc:`CLASS <theory_class>`, :doc:`CAMB <theory_camb>`...) and the experimental model in a **likelihood**, which gives the probability of the data being a realization of the given observable in the context of the experiment:
 
 .. math::
 
@@ -14,7 +14,7 @@ In practice the theoretical model is encapsulated in a **theory code** (:doc:`CL
    \mathcal{L}\left[\mathcal{D}\,|\,\mathcal{O},\mathcal{E}\right]
 
 
-Each iteration of a sampler reproduces that model along the following steps:
+Each iteration of a sampler reproduces the model using the following steps:
 
 #. A new set of theory+experimental parameters is proposed by the sampler.
 #. The theory parameters are passed to the theory code, which computes one or more observables.

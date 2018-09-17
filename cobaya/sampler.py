@@ -4,10 +4,10 @@
 :Synopsis: Prototype sampler class and sampler loader
 :Author: Jesus Torrado
 
-cobaya includes by default an
-:doc:`advanced Monte Carlo Markov Chain (MCMC) sampler <sampler_mcmc>`
-(a direct translation from `CosmoMC <https://cosmologist.info/cosmomc/>`_ and a dummy
-:doc:`evaluate <sampler_evaluate>` sampler, that simply evaluates the posterior at a given
+cobaya includes by default a
+:doc:`Monte Carlo Markov Chain (MCMC) sampler <sampler_mcmc>`
+(a direct translation from `CosmoMC <https://cosmologist.info/cosmomc/>`_) and a dummy
+:doc:`evaluate <sampler_evaluate>` sampler that simply evaluates the posterior at a given
 (or sampled) reference point. It also includes an interface to the
 :doc:`PolyChord sampler <sampler_polychord>` (needs to be installed separately).
 

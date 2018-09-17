@@ -137,7 +137,7 @@ class _cosmo(Theory):
 
     def get_auto_covmat(self, params_info, likes_info):
         """
-        Tries to get an automatic covariance matrix for the current model and data.
+        Tries to get match to a database of existing covariance matrix files for the current model and data.
 
         ``params_info`` should contain preferably the slow parameters only.
         """

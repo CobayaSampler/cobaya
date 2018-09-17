@@ -36,7 +36,7 @@ To use ``PolyChord``, you just need to mention it in the ``sampler`` block:
      polychord:
        # polychord options ...
 
-       
+
 Just copy the options that you wish to modify from the defaults file below:
 
 .. literalinclude:: ../cobaya/samplers/polychord/polychord.yaml
@@ -68,9 +68,9 @@ If the posterior was found to be **multi-modal**, the output will include separa
 Computing Bayes ratios
 ----------------------
 
-If you are using only internal priors, your full prior is correctly normalised, so you can directly use the output evidence of PolyChord, e.g. in a Bayes ratio.
+If you are using only internal priors, your full prior is correctly normalized, so you can directly use the output evidence of PolyChord, e.g. in a Bayes ratio.
 
-If you are using external priors (as described :ref:`here <prior_external>`), the full prior is not normalised by default, so the resulting evidence, :math:`\mathcal{Z}_\mathrm{u}`, needs to be divided by the prior volume. To compute the prior volume :math:`\mathcal{Z}_\pi`, substitute your likelihoods for :doc:`the unit likelihood <likelihood_one>` ``one``. The normalised likelihood and its propagated error are in this case:
+If you are using external priors (as described :ref:`here <prior_external>`), the full prior is not normalized by default, so the resulting evidence, :math:`\mathcal{Z}_\mathrm{u}`, needs to be divided by the prior volume. To compute the prior volume :math:`\mathcal{Z}_\pi`, substitute your likelihoods for :doc:`the unit likelihood <likelihood_one>` ``one``. The normalized likelihood and its propagated error are in this case:
 
 .. math::
 
@@ -187,7 +187,7 @@ PolyChord class
 
 .. automodule:: samplers.polychord.polychord
    :noindex:
-   
+
 .. autoclass:: samplers.polychord.polychord
    :members:
 

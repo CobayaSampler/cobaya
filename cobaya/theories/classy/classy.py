@@ -20,7 +20,7 @@ This module imports and manages the CLASS cosmological code.
 
 .. note::
 
-   CLASS is renamed ``classy`` for most purposes within cobaya, due to CLASS' name being
+   CLASS is renamed ``classy`` for most purposes within cobaya, due to CLASS's name being
    a python keyword.
 
 Usage
@@ -59,7 +59,7 @@ Manual installation (or using your own version)
 If you are planning to modify CLASS or use an already modified version,
 you should not use the automatic installation script. Use the method below instead.
 
-CLASS' python interface utilizes the ``cython`` compiler. If typing ``cython`` in the
+CLASS's python interface utilizes the ``cython`` compiler. If typing ``cython`` in the
 shell produces an error, install it with ``pip install cython --user``.
 
 .. note::
@@ -93,7 +93,7 @@ interface ready.
 
 If you modify CLASS and add new variables, you don't need to let cobaya know, but make
 sure that the variables you create are exposed in the Python
-interface (contact CLASS' developers if you need help with that).
+interface (contact CLASS's developers if you need help with that).
 
 """
 # Python 2/3 compatibility
@@ -380,7 +380,7 @@ class classy(_cosmo):
                 [p for p,v in requested_and_extra.items() if v is None]))
         # Separate the parameters before returning
         # Remember: self.output_params is in sampler nomenclature,
-        # but self.derived_extra is in CLASS'
+        # but self.derived_extra is in CLASS
         derived = {
             p:requested_and_extra[self.translate_param(p)] for p in self.output_params}
         derived_extra = {p:requested_and_extra[p] for p in self.derived_extra}

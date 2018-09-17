@@ -326,7 +326,7 @@ class LikelihoodCollection(object):
         """
         Computes observables and returns the (log) likelihoods *separately*.
         It takes a list of **input** parameter values, in the same order as they appear
-        in the `OrderedDictionary` of the :class:LikelihoodCollection.
+        in the `OrderedDictionary` of the :class:`LikelihoodCollection`.
         To compute the derived parameters, it takes an optional keyword `_derived` as an
         empty list, which is then populated with the derived parameter values.
         """
@@ -363,7 +363,7 @@ class LikelihoodCollection(object):
         """
         Computes observables and returns the (log) likelihood.
         It takes a list of **sampled** parameter values, in the same order as they appear
-        in the `OrderedDictionary` of the :class:LikelihoodCollection.
+        in the `OrderedDictionary` of the :class:`LikelihoodCollection`.
         To compute the derived parameters, it takes an optional keyword `_derived` as an
         empty list, which is then populated with the derived parameter values.
         """

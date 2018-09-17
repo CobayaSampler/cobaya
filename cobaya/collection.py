@@ -182,7 +182,7 @@ class Collection(object):
             check_end(args[0].stop, self._n)
             return self.data.iloc[args[0]]
         else:
-            raise ValueError("Index type not recognised: use column names or slices.")
+            raise ValueError("Index type not recognized: use column names or slices.")
 
     # Statistical computations
     def mean(self, first=None, last=None, derived=False):

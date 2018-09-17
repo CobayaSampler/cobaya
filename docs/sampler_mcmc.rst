@@ -22,7 +22,7 @@
 
 This is the Markov Chain Monte Carlo Metropolis sampler used by CosmoMC, and described in
 `Lewis, "Efficient sampling of fast and slow cosmological parameters" (arXiv:1304.4473)
-<https://arxiv.org/abs/1304.4473>`_.
+<https://arxiv.org/abs/1304.4473>`_. It works well on simple uni-modal (or only weakly multi-modal) distributions.
 
 The proposal pdf is a gaussian mixed with an exponential pdf in random directions,
 which is more robust to misestimation of the width of the proposal than a pure gaussian.
@@ -35,8 +35,12 @@ each parameter.
 .. note::
 
    The ``proposal`` size for a certain parameter should be close to its **conditional**
-   posterior, not it marginalised one, since for strong degeneracies, the latter being
+   posterior, not it marginalized one, since for strong degeneracies, the latter being
    wider than the former, it could cause the chain to get stuck.
+
+If the distribution being sampled is known have tight strongly non-linear parameter degeneracies, re-define the sampled
+parameters to remove the degeneracy before sampling (linear degeneracies are not a problem, esp. if you provide an
+approximate initial covariance matrix).
 
 A callback function can be specified through the ``callback_function`` option. In it, the
 sampler instance is accessible as ``sampler_instance``, which has ``prior``, ``likelihood``
@@ -63,14 +67,14 @@ Example *parameters* block:
       prior:
         min: -2
         max:  2
-      latex: \\alpha
+      latex: \alpha
       proposal: 0.5
      b:
       ref: 2
       prior:
         min: -1
         max:  4
-      latex: \\beta
+      latex: \beta
       proposal: 0.25
      c:
       ref:
@@ -80,7 +84,7 @@ Example *parameters* block:
       prior:
         min: -1
         max:  1
-      latex: \\gamma
+      latex: \gamma
 
 + ``a`` -- the initial point of the chain is drawn from an uniform pdf between -1 and 1,
   and its proposal width is 0.5.
@@ -90,15 +94,21 @@ Example *parameters* block:
   with standard deviation 0.2; its proposal width is not specified, so it is taken to be
   that of the reference pdf, 0.2.
 
-A good initial covariance matrix for the proposal is critical for convergence.
+Fixing the initial point is not usually recommended, since to assess convergence it is useful to run multiple chains
+(which you can do using MPI), and use the difference between the chains to assess convergence: if the chains all start
+in exactly the same point, the chains could appear to have converged just because they started at the same place. On the
+other hand if your initial points are spread much more widely than the posterior it could take longer for chains to
+converge.
+
+A good initial covariance matrix for the proposal is useful for faster and more reliable convergence.
 It can be specified either with the property ``proposal`` of each parameter, as shown
 above, or through ``mcmc``'s property ``covmat``, as a file name (including path,
 if not located at the invocation folder).
 The first line of the ``covmat`` file must start with ``#``, followed by a list of parameter
 names, separated by a space. The rest of the file must contain the covariance matrix,
 one row per line. It does not need to contain the same parameters as the sampled ones:
-it overrides the ``proposal``'s (and adds covariances) for the sampled parameters,
-and ignores the non-sampled ones.
+where sampled parameters exist in the file the they override the ``proposal`` (and add covariance information),
+non-sampled ones are ignored, and missing parameters are use the specified input ``proposal`` assuming no correlations.
 
 An example for the case above::
 
@@ -113,16 +123,21 @@ In this case, internally, the final covariance matrix of the proposal would be::
      0.01  0.2   0
      0     0     0.04
 
+
 If the option `learn_proposal` is set to ``True``, the covariance matrix will be updated
-once in a while to accelerate convergence.
+regularly. This means that accuracy of the initial covariance is not critical, and even if you do not initially know
+the covariance, it will be adaptively learnt (just make sure your ``proposal`` widths are sufficiently small that
+chains can move and hence explore the local shape; if your widths are too wide the parameter may just remain stuck).
 
 If you are not sure that your posterior has one single mode, or if its shape is very
-irregular, you should probably set ``learn_proposal: False``.
+irregular, you should probably set ``learn_proposal: False``; however the MCMC sampler is not likely to work
+well in this case and other samplers designed for multi-modal distributions may be much more efficient.
 
-If you don't know how good your initial guess for starting point and covariance of the
-proposal are, it is a good idea to allow for a number of initial *burn in* samples,
-e.g. 10 per dimension. This can be specified with the parameter ``burn_in``.
-These samples will be ignored for all purposes (output, convergence, proposal learning...)
+If you don't know how good your initial guess for the starting point and covariance, a number of initial *burn in* samples
+can be ignored from the start of the chains (e.g. 10 per dimension). This can be specified with the parameter ``burn_in``.
+These samples will be ignored for all purposes (output, convergence, proposal learning...). Of course there may well
+also be more burn in after these points are discarded, as the chain points converge (and, using ``learn_proposal``, the proposal estimates
+also converge). Often removing the first 30% the entire final chains gives good results (using ``ignore_rows``=0.3 when analysing with [getdist](http://getdist.readthedocs.org/en/latest/)).
 
 
 .. _mcmc_speed_hierarchy:
@@ -132,16 +147,19 @@ Taking advantage of a speed hierarchy
 
 The proposal pdf is *blocked* by speeds, i.e. it allows for efficient sampling of a
 mixture of *fast* and *slow* parameters, such that we can avoid recomputing the slowest
-parts of the likelihood when sampling along the fast directions only.
+parts of the likelihood when sampling along the fast directions only. This is often very useful when the likelihoods
+have large numbers of nuisance parameters, but recomputin the likelihood for different sets of nuisance parameters is fast.
 
 Two different sampling schemes are available to take additional advantage from a speed
 hierarchy:
 
-- **Dragging the fast parameters:** implies a number of intermediate steps when jumping between fast+slow combinations, such that the jump in the fast parameters is optimised with respect to the jump in the slow parameters to explore any possible degeneracy between them. If enabled (``drag: True``), tries to spend the same amount of time doing dragging steps as it takes to compute a jump in the slow direction (make sure your likelihoods ``speed``'s are accurate; see below).
+- **Dragging the fast parameters:** implies a number of intermediate steps when jumping between fast+slow combinations, such that the jump in the fast parameters is optimized with respect to the jump in the slow parameters to explore any possible degeneracy between them. If enabled (``drag: True``), tries to spend the same amount of time doing dragging steps as it takes to compute a jump in the slow direction (make sure your likelihoods ``speed``'s are accurate; see below).
 
 - **Oversampling the fast parameters:** consists simply of taking a larger proportion of steps in the faster directions, useful when exploring their conditional distributions is cheap. If enabled (``oversample: True``), it tries to spend the same amount of time in each block.
 
-In general, the *dragging* method is the recommended one, since oversampling can potentially produce too many samples. For a thorough description of both methods, see
+In general, the *dragging* method is the recommended one if there are non-trivial degeneracies between fast and slow parameters.
+Oversampling can potentially produce very large output files; dragging outputs
+smaller chain files since fast parameters are effectively partially marginalized over internally. For a thorough description of both methods and references, see
 `A. Lewis, "Efficient sampling of fast and slow cosmological parameters" (arXiv:1304.4473) <https://arxiv.org/abs/1304.4473>`_.
 
 The relative speeds can be specified per likelihood/theory, with the option ``speed``,
