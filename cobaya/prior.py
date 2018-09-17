@@ -36,7 +36,8 @@ samplers needing an initial point
 for a chain will attempt to draw it from the ``ref`` if it has been defined (otherwise
 from the prior). A good reference pdf will avoid a long *burn-in* stage during the
 sampling. If you assign a single value to ``ref``, samplers will always start from
-that value.
+that value; however this makes convergence tests less reliable as each chain will
+start from the same point (so all chains could be stuck near the same point).
 
 
 The syntax for priors and ref's has the following fields:
@@ -60,8 +61,8 @@ The syntax for priors and ref's has the following fields:
    ``scale`` (NB: unexpected behaviour for an unbounded pdf).
 
 
-The order of the parameters is conserved in the table of samples, except the fact that
-derived parameters are always moved to the last places.
+The order of the parameters is conserved in the table of samples, except that
+derived parameters are always moved to the end.
 
 An example ``params`` block:
 
