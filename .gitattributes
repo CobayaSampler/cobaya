@@ -1,0 +1,8 @@
+*.rst           text
+*.txt           text
+*.py            text eol=lf
+*.ini           text
+*.html          text
+*.yml           text
+*.yaml          text
+*.in            text
