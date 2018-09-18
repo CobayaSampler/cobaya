@@ -1,6 +1,6 @@
 info_txt = r"""
 likelihood:
-  planck_2015_lowl:   ## <------ restore to lowTEB!!!!
+  planck_2015_lowTEB:
   planck_2015_plikHM_TTTEEE:
   planck_2015_lensing:
 theory:
