@@ -3,6 +3,7 @@ from setuptools import setup, find_packages
 # To use a consistent encoding
 from codecs import open
 from os import path
+from itertools import chain
 # Package data and conventions
 from cobaya import __author__, __version__, __url__
 from cobaya.conventions import subfolders
@@ -48,7 +49,8 @@ setup(
     extras_require={
         'test': ['pytest', 'pytest-xdist', 'flaky', 'mpi4py']},
     package_data={
-        'cobaya': ['%s/*/*.yaml'%folder for folder in subfolders.values()]},
+        'cobaya': list(chain(*[['%s/*/*.yaml' % folder, '%s/*/*.bibtex' % folder]
+                               for folder in subfolders.values()]))},
     entry_points={
         'console_scripts': [
             'cobaya-install=cobaya.install:install_script',
