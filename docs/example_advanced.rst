@@ -46,7 +46,8 @@ Now, let's assume that we want to track the radius of the ring, whose posterior 
     theta = lambda x,y: np.arctan(y/x)
 
     info["params"]["r"] = {"derived": r}
-    info["params"]["theta"] = {"derived": theta, "latex": r"\theta"}
+    info["params"]["theta"] = {"derived": theta, "latex": r"\theta",
+                               "min": -np.pi/2, "max": np.pi/2}
 
 
 Now, we add the sampler information and run. Notice the high number of samples requested for just two dimensions, in order to map the curving posterior accurately:
