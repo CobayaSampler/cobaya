@@ -121,9 +121,9 @@ matrix:
             - liblapack3
             - liblapack-dev
       env:
-        - GCC_VERSION="5"
-        - PYVER="2"
         - PYDIST="ANACONDA"
+        - GCC_VERSION="5"
+        - PYVER="3"
       python: "3.6"
     # BELOW: CAMB devel #################################################
     - addons:
