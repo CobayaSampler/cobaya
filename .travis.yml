@@ -91,9 +91,9 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - gcc-5
-            - gfortran-5
-            - g++-5
+            - gcc-6
+            - gfortran-6
+            - g++-6
             - openmpi-bin
             - openmpi-common
             - libopenmpi-dev
@@ -102,31 +102,10 @@ matrix:
             - liblapack-dev
       env:
         - PYDIST="ANACONDA"
-        - GCC_VERSION="5"
+        - GCC_VERSION="6"
         - PYVER="3"
       python: "3.6"
     # BELOW: CAMB devel #################################################
-    - addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - gcc-6
-            - gfortran-6
-            - g++-6
-            - openmpi-bin
-            - openmpi-common
-            - libopenmpi-dev
-            # numpy (and more)
-            - libopenblas-base
-            # Planck likelihood
-            - liblapack3
-            - liblapack-dev
-      env:
-        - GCC_VERSION="6"
-        - PYVER="2"
-        - CAMB_BRANCH="devel"
-      python: "2.7"
     - addons:
         apt:
           sources:
@@ -156,11 +135,7 @@ before_install:
   - export PATH=$PWD/gcc-symlinks:$PATH
   - gfortran --version
   - if [[ "$PYDIST" == "ANACONDA" ]]; then
-      if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-        wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
-      else
-        wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-      fi;
+      wget https://repo.continuum.io/miniconda/Miniconda$PYVER-latest-Linux-x86_64.sh -O miniconda.sh;
       bash miniconda.sh -b -p $HOME/miniconda;
       export PATH="$HOME/miniconda/bin:$PATH";
       hash -r;
