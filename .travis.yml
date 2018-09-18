@@ -106,6 +106,25 @@ matrix:
         - GCC_VERSION="8"
         - PYVER="3"
       python: "3.6"
+  - addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - gcc-5
+            - gfortran-5
+            - g++-5
+            - openmpi-bin
+            - openmpi-common
+            - libopenmpi-dev
+            - libopenblas-base
+            - liblapack3
+            - liblapack-dev
+      env:
+        - GCC_VERSION="5"
+        - PYVER="3"
+        - PYDIST="ANACONDA"
+      python: "3.6"
     # BELOW: CAMB devel #################################################
     - addons:
         apt:
@@ -149,25 +168,6 @@ matrix:
         - PYVER="3"
         - CAMB_BRANCH="devel"
       python: "3.6"
-  - addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - gcc-5
-            - gfortran-5
-            - g++-5
-            - openmpi-bin
-            - openmpi-common
-            - libopenmpi-dev
-            - libopenblas-base
-            - liblapack3
-            - liblapack-dev
-      env:
-        - GCC_VERSION="5"
-        - PYVER="3"
-        - PYDIST="ANACONDA"
-      python: "3.6"
 before_install:
   - mkdir -p gcc-symlinks
   - ln -s /usr/bin/gfortran-$GCC_VERSION gcc-symlinks/gfortran
@@ -175,7 +175,7 @@ before_install:
   - ln -s /usr/bin/g++-$GCC_VERSION gcc-symlinks/g++
   - export PATH=$PWD/gcc-symlinks:$PATH
   - gfortran --version
-  - if [ "$PYDIST" == "ANACONDA" ]; then
+  - if [[ "$PYDIST" == "ANACONDA" ]]; then
      if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
        wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
      else
