@@ -151,7 +151,7 @@ matrix:
       python: "3.6"
 
 install:
-  - mkdir -p gfortran-symlinks
+  - mkdir -p gcc-symlinks
   - ln -s /usr/bin/gfortran-$GCC_VERSION gcc-symlinks/gfortran
   - ln -s /usr/bin/gcc-$GCC_VERSION gcc-symlinks/gcc
   - ln -s /usr/bin/g++-$GCC_VERSION gcc-symlinks/g++
