@@ -18,7 +18,6 @@ import traceback
 from collections import OrderedDict as odict
 from time import time, sleep
 import numpy as np
-import inspect
 from itertools import chain, permutations
 from fractions import gcd
 from copy import deepcopy
@@ -26,7 +25,7 @@ from copy import deepcopy
 # Local
 from cobaya.conventions import _external, _theory, _params, _overhead_per_param
 from cobaya.conventions import _timing, _p_renames
-from cobaya.tools import get_class, get_external_function
+from cobaya.tools import get_class, get_external_function, getargspec
 from cobaya.log import HandledException
 
 # Logger
@@ -183,7 +182,7 @@ class LikelihoodExternalFunction(Likelihood):
             setattr(self, k, info[k])
         # Store the external function and its arguments
         self.external_function = get_external_function(info[_external], name=self.name)
-        argspec = inspect.getargspec(self.external_function)
+        argspec = getargspec(self.external_function)
         self.input_params = odict(
             [(p, None) for p in argspec.args
              if p not in ["_derived", "_theory"] and p in parameterization.input_params()])

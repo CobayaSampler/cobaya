@@ -1,4 +1,4 @@
-"""
+r"""
 .. module:: prior
 
 :Synopsis: Class containing the prior and reference pdf, and other parameter information.
@@ -307,14 +307,13 @@ from __future__ import division
 from collections import OrderedDict as odict
 import numpy as np
 import numbers
-import inspect
 from copy import deepcopy
 from types import MethodType
 
 # Local
 from cobaya.conventions import _prior, _p_ref, _prior_1d_name
 from cobaya.tools import get_external_function, get_scipy_1d_pdf, read_dnumber
-from cobaya.tools import _fast_uniform_logpdf, _fast_norm_logpdf
+from cobaya.tools import _fast_uniform_logpdf, _fast_norm_logpdf, getargspec
 from cobaya.log import HandledException
 
 # Logger
@@ -380,7 +379,7 @@ class Prior(object):
             self.external[name] = (
                 {"logp": get_external_function(info_prior[name], name=name)})
             self.external[name]["argspec"] = (
-                inspect.getargspec(self.external[name]["logp"]))
+                getargspec(self.external[name]["logp"]))
             self.external[name]["params"] = {
                 p: list(sampled_params_info).index(p)
                 for p in self.external[name]["argspec"].args if p in sampled_params_info}

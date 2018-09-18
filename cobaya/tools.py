@@ -19,6 +19,10 @@ import numpy as np  # don't delete: necessary for get_external_function
 import scipy.stats as stats  # don't delete: necessary for get_external_function
 from collections import Mapping, OrderedDict as odict
 from ast import parse
+if six.PY3:
+    from inspect import getfullargspec as getargspec
+else:
+    from inspect import getargspec
 
 # Local
 from cobaya.conventions import _package, subfolders, _p_dist, _likelihood, _p_value
