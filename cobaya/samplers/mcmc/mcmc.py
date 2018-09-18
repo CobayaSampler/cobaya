@@ -544,12 +544,13 @@ class mcmc(Sampler):
         if (self.n() > 0 and self.current_point[_weight] == 1 and
                 not (self.n() % self.check_every)):
             self.log.info("Checkpoint: %d samples accepted.", self.n())
-            self.been_waiting += 1
-            if self.been_waiting > self.max_waiting:
-                self.log.error(
-                    "Waiting for too long for all chains to be ready. "
-                    "Maybe one of them is stuck or died unexpectedly?")
-                raise HandledException
+            if get_mpi():
+                self.been_waiting += 1
+                if self.been_waiting > self.max_waiting:
+                    self.log.error(
+                        "Waiting for too long for all chains to be ready. "
+                        "Maybe one of them is stuck or died unexpectedly?")
+                    raise HandledException
             self.model.dump_timing()
             # If not MPI, we are ready
             if not get_mpi():
