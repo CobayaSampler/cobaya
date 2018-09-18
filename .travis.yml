@@ -1,5 +1,6 @@
 language: python
 dist: trusty
+sudo: false
 
 # (Pre)Installation
 # Test matrix for different C & fortran compilers
@@ -149,14 +150,14 @@ matrix:
         - CAMB_BRANCH="devel"
       python: "3.6"
 
-###############################################################################
-before_install:
-  - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-"${GCC_VERSION}" 90
-  - sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-"${GCC_VERSION}" 90
+install:
+  - mkdir -p gfortran-symlinks
+  - ln -s /usr/bin/gfortran-$GCC_VERSION gcc-symlinks/gfortran
+  - ln -s /usr/bin/gcc-$GCC_VERSION gcc-symlinks/gcc
+  - ln -s /usr/bin/g++-$GCC_VERSION gcc-symlinks/g++
+  - export PATH=$PWD/gcc-symlinks:$PATH
   - gfortran --version
-  # optional, but necessary for tests
   - pip install mpi4py pytest-xdist flaky matplotlib
-###############################################################################
 script:
   # Installation
   - python tests/install_for_tests.py ../modules
