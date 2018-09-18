@@ -183,7 +183,7 @@ def create_docker_image(filenames, MPI_version=None):
     log.info("Creating Docker image...")
     if not MPI_version:
         MPI_version = "3.2"
-        # log.warn("You have not specified an MPICH version. "
+        # log.warning("You have not specified an MPICH version. "
         #          "It is strongly encouraged to request the one installed in your cluster,"
         #          " using '--mpi-version X.Y'. Defaulting to MPICH v%s.", MPI_version)
     dc = get_docker_client()
@@ -214,7 +214,7 @@ def create_singularity_image(filenames, MPI_version=None):
     log.info("Creating Singularity image...")
     if not MPI_version:
         MPI_version = "2.1.1"
-        # log.warn("You have not specified an OpenMPI version. "
+        # log.warning("You have not specified an OpenMPI version. "
         #          "It is strongly encouraged to request the one installed in your cluster,"
         #          " using '--mpi-version X.Y.Z'. Defaulting to OpenMPI v%s.", MPI_version)
     modules = yaml_dump(get_modules(*[load_input(f) for f in filenames])).strip()

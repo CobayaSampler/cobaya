@@ -70,7 +70,7 @@ def install(*infos, **kwargs):
                                  if module in info.get(_likelihood, {}))
                     [_likelihood][module]) or {}
                     if isinstance(info, string_types) or _external in info:
-                        log.warn("Module '%s' is a custom likelihood. Nothing to do.\n",
+                        log.warning("Module '%s' is a custom likelihood. Nothing to do.\n",
                                  module)
                         flag = False
                 if flag:

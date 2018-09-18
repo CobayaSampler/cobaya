@@ -224,7 +224,7 @@ class _cmblikes_prototype(Likelihood):
                 else:
                     Err = Err or any(window[i, 1:] != 0)
             if Err:
-                self.log.warn('%s %u outside pcl_lmin-cl_max range: %s' %
+                self.log.warning('%s %u outside pcl_lmin-cl_max range: %s' %
                               (file_stem, b, windows % (b + 1)))
         if ini.hasKey(file_stem + '_fix_cl_file'):
             self.log.error('fix_cl_file not implemented yet')
@@ -281,7 +281,7 @@ class _cmblikes_prototype(Likelihood):
         maps_use = ini.split('maps_use', [])
         if len(maps_use):
             if np.any([not i for i in use_theory_field]):
-                self.log.warn('maps_use overrides fields_use')
+                self.log.warning('maps_use overrides fields_use')
             self.use_map = np.zeros(len(self.map_names), dtype=bool)
             for j, map_used in enumerate(maps_use):
                 if map_used in self.map_names:
@@ -349,7 +349,7 @@ class _cmblikes_prototype(Likelihood):
                 raise HandledException
             self.nbins = self.pcl_lmax - self.pcl_lmin + 1
             if self.like_approx != 'exact':
-                self.log.warn('Unbinned likelihoods untested in this version')
+                self.log.warning('Unbinned likelihoods untested in this version')
             self.bin_min = ini.int('use_min', self.pcl_lmin)
             self.bin_max = ini.int('use_max', self.pcl_lmax)
             self.nbins_used = self.bin_max - self.bin_min + 1

@@ -443,7 +443,7 @@ class Prior(object):
             bounds = deepcopy(self._bounds)
             infs = list(set(np.argwhere(np.isinf(bounds)).T[0]))
             if infs:
-                log.warn("There are unbounded parameters. Prior bounds are given at %s "
+                log.warning("There are unbounded parameters. Prior bounds are given at %s "
                          "confidence level. Beware of likelihood modes at the edge of "
                          "the prior", confidence_for_unbounded)
                 bounds[infs] = [
@@ -562,7 +562,7 @@ class Prior(object):
                           for i, ref_pdf in enumerate(self.ref_pdf)])
         where_no_ref = np.isnan(covmat)
         if np.any(where_no_ref):
-            log.warn("Reference pdf not defined or improper for some parameters. "
+            log.warning("Reference pdf not defined or improper for some parameters. "
                      "Using prior's sigma instead for them.")
             covmat[where_no_ref] = self.covmat(ignore_external=True)[where_no_ref]
         return covmat
