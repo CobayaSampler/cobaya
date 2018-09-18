@@ -108,7 +108,7 @@ The first line of the ``covmat`` file must start with ``#``, followed by a list 
 names, separated by a space. The rest of the file must contain the covariance matrix,
 one row per line. It does not need to contain the same parameters as the sampled ones:
 where sampled parameters exist in the file the they override the ``proposal`` (and add covariance information),
-non-sampled ones are ignored, and missing parameters are use the specified input ``proposal`` assuming no correlations.
+non-sampled ones are ignored, and for missing parameters the specified input ``proposal`` is used, assuming no correlations.
 
 An example for the case above::
 
@@ -133,7 +133,7 @@ If you are not sure that your posterior has one single mode, or if its shape is 
 irregular, you should probably set ``learn_proposal: False``; however the MCMC sampler is not likely to work
 well in this case and other samplers designed for multi-modal distributions may be much more efficient.
 
-If you don't know how good your initial guess for the starting point and covariance, a number of initial *burn in* samples
+If you don't know how good your initial guess for the starting point and covariance is, a number of initial *burn in* samples
 can be ignored from the start of the chains (e.g. 10 per dimension). This can be specified with the parameter ``burn_in``.
 These samples will be ignored for all purposes (output, convergence, proposal learning...). Of course there may well
 also be more burn in after these points are discarded, as the chain points converge (and, using ``learn_proposal``, the proposal estimates
