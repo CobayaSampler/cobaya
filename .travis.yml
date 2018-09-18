@@ -191,6 +191,7 @@ before_install:
     else
       pip install mpi4py pytest-xdist flaky matplotlib;
     fi
+  - python --version
 script:
   # Installation
   - python tests/install_for_tests.py ../modules
