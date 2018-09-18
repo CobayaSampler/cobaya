@@ -444,8 +444,8 @@ class Prior(object):
             infs = list(set(np.argwhere(np.isinf(bounds)).T[0]))
             if infs:
                 log.warning("There are unbounded parameters. Prior bounds are given at %s "
-                         "confidence level. Beware of likelihood modes at the edge of "
-                         "the prior", confidence_for_unbounded)
+                            "confidence level. Beware of likelihood modes at the edge of "
+                            "the prior", confidence_for_unbounded)
                 bounds[infs] = [
                     self.pdf[i].interval(confidence_for_unbounded) for i in infs]
             return bounds
@@ -563,7 +563,7 @@ class Prior(object):
         where_no_ref = np.isnan(covmat)
         if np.any(where_no_ref):
             log.warning("Reference pdf not defined or improper for some parameters. "
-                     "Using prior's sigma instead for them.")
+                        "Using prior's sigma instead for them.")
             covmat[where_no_ref] = self.covmat(ignore_external=True)[where_no_ref]
         return covmat
 

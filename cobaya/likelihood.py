@@ -19,7 +19,13 @@ from collections import OrderedDict as odict
 from time import time, sleep
 import numpy as np
 from itertools import chain, permutations
-from fractions import gcd
+import six
+
+if six.PY3:
+    from math import gcd
+else:
+    from fractions import gcd
+
 from copy import deepcopy
 
 # Local
