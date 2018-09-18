@@ -310,6 +310,11 @@ class Model(object):
                                  return_derived=False, cached=cached)[0]
 
     def dump_timing(self):
+        """
+        Prints the average computation time of the theory code and likelihoods.
+
+        It's more reliable the more times the likelihood has been evaluated.
+        """
         self.likelihood.dump_timing()
 
     # Python magic for the "with" statement

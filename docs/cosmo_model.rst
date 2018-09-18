@@ -105,7 +105,7 @@ As a final example, let us request the Hubble parameter for a number of redshift
 
 If you are creating several models in a single session, call :func:`~model.Model.close` after you are finished with each one, to release the memory it has used.
 
-If you had set ``timing=True`` in the input info, :func:`~model.Model.close` would print the average computation time of your likelihoods and theory code (see the bottom of section :doc:`cosmo_external_likelihood` for a use example).
+If you had set ``timing=True`` in the input info, :func:`~model.Model.dump_timing` would print the average computation time of your likelihoods and theory code (see the bottom of section :doc:`cosmo_external_likelihood` for a use example).
 
 .. note::
 
