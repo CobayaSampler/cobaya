@@ -149,15 +149,48 @@ matrix:
         - PYVER="3"
         - CAMB_BRANCH="devel"
       python: "3.6"
-
-install:
+  - addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - gcc-5
+            - gfortran-5
+            - g++-5
+            - openmpi-bin
+            - openmpi-common
+            - libopenmpi-dev
+            - libopenblas-base
+            - liblapack3
+            - liblapack-dev
+      env:
+        - GCC_VERSION="5"
+        - PYVER="3"
+        - PYDIST="ANACONDA"
+      python: "3.6"
+before_install:
   - mkdir -p gcc-symlinks
   - ln -s /usr/bin/gfortran-$GCC_VERSION gcc-symlinks/gfortran
   - ln -s /usr/bin/gcc-$GCC_VERSION gcc-symlinks/gcc
   - ln -s /usr/bin/g++-$GCC_VERSION gcc-symlinks/g++
   - export PATH=$PWD/gcc-symlinks:$PATH
   - gfortran --version
-  - pip install mpi4py pytest-xdist flaky matplotlib
+  - if [ "$PYDIST" == "ANACONDA" ]; then
+     if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+       wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
+     else
+       wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+     fi
+    bash miniconda.sh -b -p $HOME/miniconda;
+    export PATH="$HOME/miniconda/bin:$PATH";
+    hash -r;
+    conda config --set always_yes yes --set changeps1 no;
+    conda info -a;
+    conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION scipy matplotlib PyYAML mpi4py pytest-xdist flaky;
+    source activate test-environment;
+    else
+      pip install mpi4py pytest-xdist flaky matplotlib;
+    fi
 script:
   # Installation
   - python tests/install_for_tests.py ../modules
