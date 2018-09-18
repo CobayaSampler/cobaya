@@ -106,7 +106,7 @@ matrix:
         - GCC_VERSION="8"
         - PYVER="3"
       python: "3.6"
-  - addons:
+    - addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
@@ -122,7 +122,7 @@ matrix:
             - liblapack-dev
       env:
         - GCC_VERSION="5"
-        - PYVER="3"
+        - PYVER="2"
         - PYDIST="ANACONDA"
       python: "3.6"
     # BELOW: CAMB devel #################################################
@@ -192,6 +192,7 @@ before_install:
       pip install mpi4py pytest-xdist flaky matplotlib;
     fi
   - python --version
+
 script:
   # Installation
   - python tests/install_for_tests.py ../modules
