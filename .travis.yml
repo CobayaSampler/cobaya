@@ -147,7 +147,7 @@ deploy: # only if it builds and if the commit has been tagged
   on:
     tags: true
     python: '2.7'
-    condition: "$GCC_VERSION = 5"
+    condition: "$GCC_VERSION = 4.9"
     branch: master
     repo: CobayaSampler/cobaya
 ###############################################################################
