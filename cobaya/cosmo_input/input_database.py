@@ -109,39 +109,44 @@ geometry = odict([
                 [_p_proposal, 0.001], [_p_label, r"\Omega_k"]])]])}], ])
 
 # Hubble parameter constraints
+H0_min, H0_max = 40, 100
 hubble = odict([
     ["H", {
         _desc: "Hubble parameter",
         _theory: {_camb: None, _classy: None},
         _params: odict([
             ["H0", odict([
-                [_prior, odict([["min", 40], ["max", 100]])],
+                [_prior, odict([["min", H0_min], ["max", H0_max]])],
                 [_p_ref, odict([[_p_dist, "norm"], ["loc", 70], ["scale", 2]])],
                 [_p_proposal, 2], [_p_label, r"H_0"]])]])}],
     ["sound_horizon_last_scattering", {
         _desc: "Angular size of the sound horizon at last scattering "
                "(approximate, if using CAMB)",
         _theory: {
-            _camb: {_params: odict([
-                ["theta", odict([
-                    [_prior, odict([["min", 0.5], ["max", 10]])],
-                    [_p_ref,
-                     odict([[_p_dist, "norm"], ["loc", 1.0411], ["scale", 0.0004]])],
-                    [_p_proposal, 0.0002], [_p_label, r"100\theta_\mathrm{MC}"],
-                    [_p_drop, True]])],
-                ["cosmomc_theta", odict([
-                    [_p_value, "lambda theta: 1.e-2*theta"], [_p_derived, False]])],
-                ["H0", {_p_label: r"H_0"}]])},
-            _classy: {_params: odict([
-                ["theta_s_1e2", odict([
-                    [_prior, odict([["min", 0.5], ["max", 10]])],
-                    [_p_ref, odict([
-                        [_p_dist, "norm"], ["loc", 1.0418], ["scale", 0.0004]])],
-                    [_p_proposal, 0.0002], [_p_label, r"100\theta_\mathrm{s}"],
-                    [_p_drop, True]])],
-                ["100*theta_s", odict([
-                    [_p_value, "lambda theta_s_1e2: theta_s_1e2"], [_p_derived, False]])],
-                ["H0", {_p_label: r"H_0"}]])}, }}]])
+            _camb: {
+                _params: odict([
+                    ["theta", odict([
+                        [_prior, odict([["min", 0.5], ["max", 10]])],
+                        [_p_ref,
+                         odict([[_p_dist, "norm"], ["loc", 1.0411], ["scale", 0.0004]])],
+                        [_p_proposal, 0.0002], [_p_label, r"100\theta_\mathrm{MC}"],
+                        [_p_drop, True]])],
+                    ["cosmomc_theta", odict([
+                        [_p_value, "lambda theta: 1.e-2*theta"], [_p_derived, False]])],
+                    ["H0", {_p_label: r"H_0", "min": H0_min, "max": H0_max}]]),
+                _extra_args: odict([["theta_H0_range", [H0_min, H0_max]]])},
+            _classy: {
+                _params: odict([
+                    ["theta_s_1e2", odict([
+                        [_prior, odict([["min", 0.5], ["max", 10]])],
+                        [_p_ref, odict([
+                            [_p_dist, "norm"], ["loc", 1.0418], ["scale", 0.0004]])],
+                        [_p_proposal, 0.0002], [_p_label, r"100\theta_\mathrm{s}"],
+                        [_p_drop, True]])],
+                    ["100*theta_s", odict([
+                        [_p_value, "lambda theta_s_1e2: theta_s_1e2"],
+                        [_p_derived, False]])],
+                    ["H0", {_p_label: r"H_0"}]])}}}]])
 
 # Matter sector (minus light species)
 matter = odict([
