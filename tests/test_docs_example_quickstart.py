@@ -46,37 +46,43 @@ def test_example(tmpdir):
     info_yaml.pop(_output_prefix)
     globals_example = {}
     exec (open(os.path.join(docs_src_folder, "create_info.py")).read(), globals_example)
-    assert is_equal_info(info_yaml, globals_example["info"]), (
-        "Inconsistent info between yaml and insteractive.")
-    exec (open(os.path.join(docs_src_folder, "load_info.py")).read(), globals_example)
-    globals_example["info_from_yaml"].pop(_output_prefix)
-    assert is_equal_info(info_yaml, globals_example["info_from_yaml"]), (
-        "Inconsistent info between interactive and *loaded* yaml.")
-    # Run the chain -- constant seed so results are the same!
-    np.random.seed(0)
-    exec (open(os.path.join(docs_src_folder, "run.py")).read(), globals_example)
-    # Analyze and plot -- capture print output
-    stream = StringIO()
-    with stdout_redirector(stream):
-        exec (open(os.path.join(docs_src_folder, "analyze.py")).read(), globals_example)
-    # Comparing text output
-    out_filename = "analyze_out.txt"
-    contents = "".join(open(os.path.join(docs_src_folder, out_filename)).readlines())
-    # The endswith guarantees that getdist messages and warnings are ignored
-    assert stream.getvalue().replace("\n", "").replace(" ", "").endswith(
-        contents.replace("\n", "").replace(" ", "")), (
-            "Text output does not coincide:\nwas\n%s\nand now it's\n%sstream.getvalue()" % (
-        contents, stream.getvalue()))
-    # Comparing plot
-    plot_filename = "example_quickstart_plot.png"
-    test_filename = tmpdir.join(plot_filename)
-    globals_example["gdplot"].export(str(test_filename))
-    print("Plot created at '%s'" % str(test_filename))
-    test_img = imread(str(test_filename)).astype(float)
-    docs_img = imread(os.path.join(docs_img_folder, plot_filename)).astype(float)
-    npixels = test_img.shape[0] * test_img.shape[1]
-    assert np.count_nonzero(test_img == docs_img) / (4 * npixels) >= pixel_tolerance, (
-        "Images are too different. Maybe GetDist conventions changed?")
-    # Back to the working directory of the tests, just in case, and restart the rng
-    os.chdir(cwd)
-    np.random.seed()
+    try:
+        assert is_equal_info(info_yaml, globals_example["info"]), (
+            "Inconsistent info between yaml and insteractive.")
+        
+        exec (open(os.path.join(docs_src_folder, "load_info.py")).read(), globals_example)
+        globals_example["info_from_yaml"].pop(_output_prefix)
+        assert is_equal_info(info_yaml, globals_example["info_from_yaml"]), (
+            "Inconsistent info between interactive and *loaded* yaml.")
+        # Run the chain -- constant seed so results are the same!
+        np.random.seed(0)
+        exec (open(os.path.join(docs_src_folder, "run.py")).read(), globals_example)
+        # Analyze and plot -- capture print output
+        stream = StringIO()
+        with stdout_redirector(stream):
+            exec (open(os.path.join(docs_src_folder, "analyze.py")).read(),
+                  globals_example)
+        # Comparing text output
+        out_filename = "analyze_out.txt"
+        contents = "".join(open(os.path.join(docs_src_folder, out_filename)).readlines())
+        # The endswith guarantees that getdist messages and warnings are ignored
+        assert stream.getvalue().replace("\n", "").replace(" ", "").endswith(
+            contents.replace("\n", "").replace(" ", "")), (
+                "Text output does not coincide:\nwas\n%s\nand " % contents +
+                "now it's\n%sstream.getvalue()" % stream.getvalue())
+        # Comparing plot
+        plot_filename = "example_quickstart_plot.png"
+        test_filename = tmpdir.join(plot_filename)
+        globals_example["gdplot"].export(str(test_filename))
+        print("Plot created at '%s'" % str(test_filename))
+        test_img = imread(str(test_filename)).astype(float)
+        docs_img = imread(os.path.join(docs_img_folder, plot_filename)).astype(float)
+        npixels = test_img.shape[0] * test_img.shape[1]
+        assert (np.count_nonzero(test_img == docs_img) / (4 * npixels) >=
+                pixel_tolerance), (
+            "Images are too different. Maybe GetDist conventions changed?")
+    except:
+        # Back to the working directory of the tests, just in case, and restart the rng
+        os.chdir(cwd)
+        np.random.seed()
+        raise
