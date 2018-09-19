@@ -19,7 +19,7 @@ params:
     latex: 100\theta_\mathrm{MC}
     drop: true
   cosmomc_theta: {value: 'lambda theta: 1.e-2*theta', derived: false}
-  H0: {latex: H_0}
+  H0: {latex: H_0, max: 100, min: 40}
   ombh2:
     prior: {min: 0.005, max: 0.1}
     ref: {dist: norm, loc: 0.0221, scale: 0.0001}
@@ -59,4 +59,7 @@ sampler:
   mcmc: {covmat: auto, drag: true, proposal_scale: 1.9}
 theory:
   camb:
-    extra_args: {num_massive_neutrinos: 1, nnu: 3.046}
+    extra_args:
+      num_massive_neutrinos: 1
+      nnu: 3.046
+      theta_H0_range: [40, 100]
