@@ -8,7 +8,6 @@ import os
 import shutil
 from random import random
 import numpy as np
-import inspect
 import six
 import scipy.stats as stats
 from copy import deepcopy
@@ -20,6 +19,7 @@ from cobaya.conventions import _chi2, _separator, _external
 from cobaya.run import run
 from cobaya.yaml import yaml_load
 from cobaya.likelihood import class_options
+from cobaya.tools import getargspec
 
 # Definition of external (log)pdf's
 
@@ -90,7 +90,7 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
         (info[_params]["y"][_prior]["max"] -
          info[_params]["y"][_prior]["min"]))
     logps = dict([
-        (name, logpdf(**dict([(arg, products["sample"][arg].values) for arg in inspect.getargspec(logpdf)[0]])))
+        (name, logpdf(**dict([(arg, products["sample"][arg].values) for arg in getargspec(logpdf)[0]])))
         for name, logpdf in {"half_ring": half_ring_func, "gaussian_y": gaussian_func}.items()])
     # Test #1: values of logpdf's
     if kind == _prior:

@@ -14,13 +14,12 @@ from six import string_types
 # Global
 from collections import OrderedDict as odict
 from numbers import Number
-from inspect import getargspec
 from itertools import chain
 from copy import deepcopy
 
 # Local
 from cobaya.conventions import _prior, _p_drop, _p_derived, _p_label, _p_value, _p_renames
-from cobaya.tools import get_external_function, ensure_nolatex, is_valid_variable_name
+from cobaya.tools import get_external_function, ensure_nolatex, is_valid_variable_name, getargspec
 from cobaya.log import HandledException
 
 # Logger

@@ -1,5 +1,6 @@
 language: python
 dist: trusty
+sudo: false
 
 # (Pre)Installation
 # Test matrix for different C & fortran compilers
@@ -84,8 +85,7 @@ matrix:
       env:
         - GCC_VERSION="8"
         - PYVER="3"
-      python: "3.7-dev"
-    # BELOW: CAMB devel #################################################
+      python: "3.6"
     - addons:
         apt:
           sources:
@@ -97,16 +97,15 @@ matrix:
             - openmpi-bin
             - openmpi-common
             - libopenmpi-dev
-            # numpy (and more)
             - libopenblas-base
-            # Planck likelihood
             - liblapack3
             - liblapack-dev
       env:
+        - PYDIST="ANACONDA"
         - GCC_VERSION="6"
-        - PYVER="2"
-        - CAMB_BRANCH="devel"
-      python: "2.7"
+        - PYVER="3"
+      python: "3.6"
+    # BELOW: CAMB devel #################################################
     - addons:
         apt:
           sources:
@@ -128,15 +127,27 @@ matrix:
         - PYVER="3"
         - CAMB_BRANCH="devel"
       python: "3.6"
-
-###############################################################################
 before_install:
-  - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-"${GCC_VERSION}" 90
-  - sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-"${GCC_VERSION}" 90
+  - mkdir -p gcc-symlinks
+  - ln -s /usr/bin/gfortran-$GCC_VERSION gcc-symlinks/gfortran
+  - ln -s /usr/bin/gcc-$GCC_VERSION gcc-symlinks/gcc
+  - ln -s /usr/bin/g++-$GCC_VERSION gcc-symlinks/g++
+  - export PATH=$PWD/gcc-symlinks:$PATH
   - gfortran --version
-  # optional, but necessary for tests
-  - pip install mpi4py pytest-xdist flaky matplotlib
-###############################################################################
+  - if [[ "$PYDIST" == "ANACONDA" ]]; then
+      wget https://repo.continuum.io/miniconda/Miniconda$PYVER-latest-Linux-x86_64.sh -O miniconda.sh;
+      bash miniconda.sh -b -p $HOME/miniconda;
+      export PATH="$HOME/miniconda/bin:$PATH";
+      hash -r;
+      conda config --set always_yes yes --set changeps1 no;
+      conda info -a;
+      conda create -q -n test-environment -c conda-forge python=$TRAVIS_PYTHON_VERSION mpi4py scipy matplotlib cython PyYAML pytest-xdist flaky;
+      source activate test-environment;
+    else
+      pip install mpi4py pytest-xdist flaky matplotlib;
+    fi
+  - python --version
+
 script:
   # Installation
   - python tests/install_for_tests.py ../modules
@@ -145,8 +156,8 @@ script:
   # Non-cosmological tests
   - pytest tests/ -k "not cosmo" --modules="../modules"
   # Cosmological tests (--boxed = 1 process per test; otherwise lowl planck lik fails!). Planck currently does not support py3.
-  - if (( $PYVER == 2 && $(echo "$GCC_VERSION <= 5" | bc -l) )); then pytest tests/ -k "cosmo" --modules="../modules" --boxed; fi
-  - if (( $PYVER == 3 && $(echo "$GCC_VERSION > 5" | bc -l) )); then pytest tests/ -k "cosmo" -m "not py3incompatible" --modules="../modules" --boxed; fi
+  - if (( $PYVER == 2 && $(echo "$GCC_VERSION <= 5" | bc -l) )); then pytest tests/ -v -s -k "cosmo" --modules="../modules" --boxed; fi
+  - if (( $PYVER == 3 && $(echo "$GCC_VERSION > 5" | bc -l) )); then pytest tests/ -v -s -k "cosmo" -m "not py3incompatible" --modules="../modules" --boxed; fi
 ###############################################################################
 deploy: # only if it builds and if the commit has been tagged
   provider: pypi
