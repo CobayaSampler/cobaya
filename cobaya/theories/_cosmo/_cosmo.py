@@ -38,6 +38,7 @@ class _cosmo(Theory):
           :func:`~_cosmo.get_comoving_radial_distance`.
         - ``fsigma8={'z': [z_1, ...]}``: Structure growth rate
           :math:`f\sigma_8` at the redshifts requested. Get it with
+          :func:`~_cosmo.get_fsigma8`.
         - ``k_max=[...]``: Fixes the maximum comoving wavenumber considered.
         - **Other derived parameters** that are not included in the input but whose
           value the likelihood may need.
