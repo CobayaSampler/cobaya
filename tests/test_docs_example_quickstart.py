@@ -85,7 +85,8 @@ def test_example(tmpdir):
                 pixel_tolerance), (
             "Images are too different. Maybe GetDist conventions changed?")
     except:
+        raise
+    finally:
         # Back to the working directory of the tests, just in case, and restart the rng
         os.chdir(cwd)
         np.random.seed()
-        raise
