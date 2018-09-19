@@ -19,7 +19,10 @@ docs_src_folder = os.path.join(docs_folder, "src_examples/quickstart/")
 docs_img_folder = os.path.join(docs_folder, "img")
 
 # Number of possible different pixels
-pixel_tolerance = 0.995
+if sys.version_info[0] < 3:
+    pixel_tolerance = 0.995
+else:
+    pixel_tolerance = 0.980
 
 # Capture stdout in string
 if (sys.version_info > (3, 0)):
