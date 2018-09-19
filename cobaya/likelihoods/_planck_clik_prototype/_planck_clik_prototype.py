@@ -397,27 +397,28 @@ def install(path=None, name=None, force=False, code=True, data=True,
             paths[s] = os.path.realpath(os.path.join(path, s, common_path))
             if not os.path.exists(paths[s]):
                 os.makedirs(paths[s])
+    success = True
     # Install clik
     if code and (not is_installed_clik(paths["code"]) or force):
         log.info("Installing the clik code.")
-        success = install_clik(paths["code"], no_progress_bars=no_progress_bars)
+        success *= install_clik(paths["code"], no_progress_bars=no_progress_bars)
         if not success:
-            return False
+            log.warning("clik code installation failed! "
+                        "Try configuring+compiling by hand at "+paths["code"])
     if data:
         # 2nd test, in case the code wasn't there but the data is:
-        if not force and is_installed(path=path, name=name, code=False, data=True):
-            return True
-        # Extract product_id
-        product_id, _ = get_product_id_and_clik_file(name)
-        # Download and uncompress the particular likelihood
-        log.info("Downloading likelihood data...")
-        if not download_from_planck(product_id, paths["data"],
-                                    no_progress_bars=no_progress_bars, name=name):
-            log.error("Not possible to download this likelihood.")
-            return False
-        # Additional data and covmats
-        from cobaya.likelihoods.planck_2015_lensing_cmblikes import \
-            install as install_supp
-        return install_supp(path=path, force=force, code=code, data=data,
-                            no_progress_bars=no_progress_bars)
-    return True
+        if force or not is_installed(path=path, name=name, code=False, data=True):
+            # Extract product_id
+            product_id, _ = get_product_id_and_clik_file(name)
+            # Download and uncompress the particular likelihood
+            log.info("Downloading likelihood data...")
+            if not download_from_planck(product_id, paths["data"],
+                                        no_progress_bars=no_progress_bars, name=name):
+                log.error("Not possible to download this likelihood.")
+                success = False
+            # Additional data and covmats
+            from cobaya.likelihoods.planck_2015_lensing_cmblikes import \
+                install as install_supp
+            success *= install_supp(path=path, force=force, code=code, data=data,
+                                    no_progress_bars=no_progress_bars)
+    return success
