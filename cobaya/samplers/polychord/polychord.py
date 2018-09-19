@@ -302,11 +302,16 @@ def is_installed(**kwargs):
     if not kwargs["code"]:
         return True
     try:
-        assert os.path.isfile(os.path.realpath(
-            os.path.join(kwargs["path"], "code", pc_repo_name, "lib/libchord.so")))
+        poly_path = os.path.join(kwargs["path"], "code", pc_repo_name)
+        assert os.path.isfile(
+            os.path.realpath(os.path.join(poly_path, "lib/libchord.so")))
+        pc_build_path = os.path.join(poly_path, "build")
+        post = next(d for d in os.listdir(pc_build_path) if d.startswith("lib."))
+        pc_build_path = os.path.join(pc_build_path, post)
+        sys.path.insert(0, pc_build_path)
         import PyPolyChord
         return True
-    except (AssertionError, ImportError):
+    except (AssertionError, ImportError, OSError, StopIteration):
         return False
 
 
