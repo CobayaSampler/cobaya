@@ -16,9 +16,9 @@
 :Installation: ``pip install cobaya --upgrade --user`` (see the `installation instructions <https://cobaya.readthedocs.io/en/latest/installation.html>`_; in general do *not* clone)
 
 .. image:: https://secure.travis-ci.org/CobayaSampler/cobaya.png?branch=master
-  :target: https://secure.travis-ci.org/CobayaSampler/cobaya
+   :target: https://secure.travis-ci.org/CobayaSampler/cobaya
 .. image:: https://img.shields.io/pypi/v/cobaya.svg?style=flat
-        :target: https://pypi.python.org/pypi/cobaya/
+   :target: https://pypi.python.org/pypi/cobaya/
 .. image:: https://readthedocs.org/projects/cobaya/badge/?version=latest
    :target: https://cobaya.readthedocs.org/en/latest
 
