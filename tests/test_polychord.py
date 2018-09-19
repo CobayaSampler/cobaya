@@ -27,7 +27,7 @@ def test_polychord_multimodal(modules, tmpdir):
 
 
 @flaky(max_runs=2, min_passes=1)
-@pytest.skip
+@pytest.mark.skip
 def test_polychord_speeds(modules):
     info_polychord = {"polychord": {}}
     body_of_test_speeds(info_polychord, modules=modules)
