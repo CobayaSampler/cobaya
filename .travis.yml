@@ -1,6 +1,6 @@
 language: python
 dist: trusty
-sudo: false
+sudo: required
 
 # (Pre)Installation
 # Test matrix for different C & fortran compilers
