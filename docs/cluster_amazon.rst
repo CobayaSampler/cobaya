@@ -35,7 +35,7 @@ And install **cobaya** (and optionally PolyChord and some cosmology modules) wit
 
    If ``cobaya-install cosmo`` fails with a segmentation fault, simply run it again.
 
-Now you are ready to run some samples. Don't forget to mention the modules folder with ``-m modules`` or ``modules: modules`` in the input file.
+Now you are ready to run some samples. Don't forget to mention the modules folder with ``-m modules`` in the command line, or ``modules: modules`` in the input file.
 
 As an example, you can just copy the input at :doc:`cosmo_basic_runs`, paste it in a file with ``nano`` and save it to ``planck.yaml``.
 
