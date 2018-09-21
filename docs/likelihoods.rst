@@ -21,6 +21,43 @@ Likelihood parameters are specified within the ``params`` block, as explained in
 **cobaya** comes with a number of *internal* mock and cosmological likelihoods. You can define your *external* ones too with simple Python functions, as explained below.
 
 
+.. _likelihood_external:
+
+*External* likelihoods: how to quickly define your own
+------------------------------------------------------
+
+*External* likelihoods are defined as:
+
+.. code:: yaml
+
+   likelihood:
+     # Simple way (does not admit additional options)
+     my_lik_1: [definition]
+     # Alternative way (can also take speeds, etc)
+     my_lik_1:
+       external: [definition]
+       speed: [...]
+       [more options]
+
+The ``[definition]`` follows the exact same rules as :ref:`external priors <prior_external>`, so check out that section for the details.
+
+The only difference with external priors is that external likelihoods can provide **derived** parameters. This can only be achieved using a ``def``'ed function (as opposed to a ``lambda`` one. To do that:
+
+1. In your function definition, define a *keyword* argument ``_derived`` with a list of derived parameter names as the default value.
+2. Inside the function, assume that you have been passed a dictionary through the keyword ``_derived`` and **update** it with the derived parameter values corresponding to the input files.
+
+For an application, check out the :ref:`advanced example <example_advanced_likderived>`.
+
+If your external likelihood needs the products of a **theory code**:
+
+1. In your function definition, define a *keyword* argument ``_theory`` with a default value stating the *needs* of your theory code, i.e. the argument that will be passed to the ``needs`` method of the theory code, to let it know what needs to be computed at every iteration.
+2. At runtime, the current theory code instance will be passed through that keyword, so you can use it to invoke the methods that return the necessary producs.
+
+For an application, check out :doc:`cosmo_external_likelihood`.
+
+.. note:: Obviously, ``_derived`` and ``_theory`` are reserved parameter names that you cannot use as arguments in your likelihood definition, except for the purposes explained above.
+
+
 *Internal* likelihoods: code conventions and defaults
 -----------------------------------------------------
 
@@ -62,43 +99,6 @@ Parameter names for mock likelihoods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 *Mock* likelihoods can have any number of non-predefined parameters, as long as they start with a certain prefix specified by the user with the option ``prefix`` of said likelihood. If said prefix is not defined (or defined to an empty string), the likelihood will understand all parameter as theirs.
-
-
-.. _likelihood_external:
-
-*External* likelihoods: how to quickly define your own
-------------------------------------------------------
-
-*External* likelihoods are defined as:
-
-.. code:: yaml
-
-   likelihood:
-     # Simple way (does not admit additional options)
-     my_lik_1: [definition]
-     # Alternative way (can also take speeds, etc)
-     my_lik_1:
-       external: [definition]
-       speed: [...]
-       [more options]
-
-The ``[definition]`` follows the exact same rules as :ref:`external priors <prior_external>`, so check out that section for the details.
-
-The only difference with external priors is that external likelihoods can provide **derived** parameters. This can only be achieved using a ``def``'ed function (as opposed to a ``lambda`` one. To do that:
-
-1. In your function definition, define a *keyword* argument ``_derived`` with a list of derived parameter names as the default value.
-2. Inside the function, assume that you have been passed a dictionary through the keyword ``_derived`` and **update** it with the derived parameter values corresponding to the input files.
-
-For an application, check out the :ref:`advanced example <example_advanced_likderived>`.
-
-If your external likelihood needs the products of a **theory code**:
-
-1. In your function definition, define a *keyword* argument ``_theory`` with a default value stating the *needs* of your theory code, i.e. the argument that will be passed to the ``needs`` method of the theory code, to let it know what needs to be computed at every iteration.
-2. At runtime, the current theory code instance will be passed through that keyword, so you can use it to invoke the methods that return the necessary producs.
-
-For an application, check out :doc:`cosmo_external_likelihood`.
-
-.. note:: Obviously, ``_derived`` and ``_theory`` are reserved parameter names that you cannot use as arguments in your likelihood definition, except for the purposes explained above.
 
 
 Implementing your own *internal* likelihood
