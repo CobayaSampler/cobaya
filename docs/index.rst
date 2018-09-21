@@ -56,6 +56,12 @@ Table of contents
    likelihood_sn
 
 .. toctree::
+   :caption: Running on clusters
+   :maxdepth: 1
+
+   cluster_amazon
+
+.. toctree::
    :caption: For developers
    :maxdepth: 1
 
