@@ -94,7 +94,7 @@ class minimize(Sampler):
                 extension=("likelihood" if self.ignore_prior else "posterior"))
             self.maximum.add(self.result.x, derived=post.derived, logpost=post.logpost,
                              logpriors=post.logpriors, loglikes=post.loglikes)
-            self.log.info("Parameter values at maximum:\n%r", self.maximum)
+            self.log.info("Parameter values at maximum:\n%s"%self.maximum.data.to_string())
             self.maximum._out_update()
 
     def products(self):

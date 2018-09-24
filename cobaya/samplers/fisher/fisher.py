@@ -6,7 +6,7 @@
 """
 
 # Python 2/3 compatibility
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, print_function
 
 # Global
 import numpy as np
@@ -26,37 +26,41 @@ class fisher(Sampler):
         print("+++ For option '%s' got value '%s'. Add more options in fisher.yaml." % (
             "example_option", self.example_option))
         # Prepare the list of "samples" (posterior evaluations)
-        self.collection = Collection(
-            self.parameterization, self.likelihood, self.output)
+        self.collection = Collection(self.model, self.output)
         # Prepare vectors to store derivatives
         # ... up to you
         # Prepare the matrix
-        self.fisher_matrix = np.eye(self.prior.d())
+        self.fisher_matrix = np.eye(self.model.prior.d())
 
     def run(self):
         self.log.info("Starting Fisher matrix estimation.")
-        # Get the boundaries of the prior
-        bounds = self.prior.bounds()
-        # Get n samples from the prior
-        n = 5 * self.prior.d()  # e.g. # samples = 5 * dimension
-        initial_sample = self.prior.sample(n)
-        # Evaluate the posterior at those points and add them to the samples collection
+        # Getting info about parameters
+        param_names = list(self.model.parameterization.sampled_params())
+        print("Parameter names:", param_names)
+        bounds = self.model.prior.bounds()
+        print("Parameter bounds:", zip(param_names, bounds))
+        # Get n samples from the prior, evaluate the likelihood,
+        # and adding them to our collection of points
+        #    (mind that self.model.prior.sample always returns an array, so,
+        #     for a single sample do `sample = self.model.prior.sample()[0]`)
+        initial_sample = self.model.prior.sample(4)
         for point in initial_sample:
-            logpost, logpriors, loglikes, derived = self.logposterior(point)
+            logpost, logpriors, loglikes, derived = self.model.logposterior(point)
             self.collection.add(
                 point, logpost=logpost, logpriors=logpriors, loglikes=loglikes)
-        # Access one of the stored points (e.g. the 3rd one),
-        # and its value for one of the parameters and the posterior
-        i_point = 2
-        i_param = 0
-        point = self.collection.data.iloc[i_point]
-        param_names = list(self.parameterization.sampled_params())
-        print "Point #%d is ", point
-        print "and its value for param", param_names[i_param], "is", point[param_names[i_param]]
-        print "and its evidence is", point["minuslogpost"]
+        print("--------------------")
+        print("Our collection so far")
+        print(self.collection)
+        # Access one of the stored points and its values for parameters and logprobs
+        i_point = 2  # the 3rd point!
+        param = "x_01"
+        print("For point #%d, " % i_point, "the value of parameter '%s' is %g" %
+              (param, self.collection[i_point][param]))
+        print("and the values of the logprior and loglikelihood are respectively %g, %g" %
+              (-self.collection[i_point]["minuslogprior"],
+               -0.5*self.collection[i_point]["chi2"]))
         # Accessing a column:
-        print "All the values for parameter", param_names[i_param], "are"
-        print self.collection[param_names[i_param]]
+        print("All the values for parameter", param, "are\n", self.collection[param])
         # If you want to modify values for parameter/posteriors/etc, you have to COPY them
         # otherwise they'll be modified inside the table too!
         copy_of_minuslogpost = self.collection["minuslogpost"].values.copy()
