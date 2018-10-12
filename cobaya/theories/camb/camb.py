@@ -323,9 +323,11 @@ class camb(_cosmo):
         self.log.debug("Setting parameters: %r", args)
         try:
             # Halofit version is for now a global parameter
-            halofit_version = args.pop("halofit_version", None)
-            if halofit_version:
-                self.camb.set_halofit_version(version=halofit_version)
+            # Delete the "if" block below when CAMB gets updated to the current devel
+            if hasattr(self.camb, "set_halofit_version"):
+                halofit_version = args.pop("halofit_version", None)
+                if halofit_version:
+                    self.camb.set_halofit_version(version=halofit_version)
             cambparams = self.camb.set_params(**args)
             for attr, value in self.extra_attrs.items():
                 if hasattr(cambparams, attr):
