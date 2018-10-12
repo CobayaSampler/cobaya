@@ -30,7 +30,8 @@ if __name__ == "__main__":
             "sn_jla_lite": None,
             "sdss_dr12_consensus_bao": None,
             "sdss_dr12_consensus_full_shape": None,
-            "sdss_dr12_consensus_final": None}}
+            "sdss_dr12_consensus_final": None,
+            "des_y1_joint": None}}
     # Ignore Planck clik in Python 3 or GCC > 5
     from subprocess import Popen, PIPE
 
