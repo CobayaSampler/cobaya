@@ -1,11 +1,11 @@
-# DES 1YR -- Shear data
+# DES Y1 -- Shear data
 
 likelihood:
-  des_1yr_shear:
+  des_y1_shear:
     # Path to the installation folder
     path: null
     # .dataset (or original .fits file) to read
-    data_file: DES_1YR_sim.dataset
+    data_file: DES_1YR_final.dataset
     # Parameters to override in .dataset file
     dataset_params:
       used_data_types: xip xim
@@ -134,5 +134,6 @@ params:
       scale: 0.2 
     proposal: 0.2
     latex: \alpha_\mathrm{IA,DES}
-  DES_z0IA: 0.62
-    # latex: z_{0\mathrm{IA,DES}}
+  DES_z0IA:
+    value: 0.62
+    latex: z_{0\mathrm{IA,DES}}

@@ -18,11 +18,13 @@ import numpy as np
 import scipy
 from scipy.interpolate import UnivariateSpline
 import copy
+import logging
 
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import HandledException
 from cobaya.conventions import _path_install, _c_km_s
+from cobaya.install import download_github_release
 
 # DES data types
 def_DES_types = ['xip', 'xim', 'gammat', 'wtheta']
@@ -104,7 +106,7 @@ class _des_prototype(Likelihood):
             if self.path:
                 data_file_path = self.path
             elif self.path_install:
-                data_file_path = os.path.join(self.path_install, "data", "des_1yr")
+                data_file_path = os.path.join(self.path_install, "data", des_data_name)
             else:
                 self.log.error(
                     "No path given to the DES data. Set the likelihood property 'path' "
@@ -716,3 +718,29 @@ def convert_txt(filename, root, outdir, ranges=None):
     outlines += ['nuisance_params = DES.paramnames']
     with open(outdir + root + '.dataset', 'w') as f:
         f.write("\n".join(outlines))
+
+
+# Installation routines ##################################################################
+
+# name of the data and covmats repo/folder
+des_data_name = "des_data"
+des_data_version = "v1.0"
+
+
+def get_path(path):
+    return os.path.realpath(os.path.join(path, "data", des_data_name))
+
+
+def is_installed(**kwargs):
+    print("psdoijfdjljhlkjhlssdifpsodiupoiupoiu")
+    return os.path.exists(os.path.realpath(
+        os.path.join(kwargs["path"], "data", des_data_name)))
+
+
+def install(path=None, force=False, code=False, data=True, no_progress_bars=False):
+    if not data:
+        return True
+    log = logging.getLogger(__name__.split(".")[-1])
+    log.info("Downloading DES data...")
+    return download_github_release(os.path.join(path, "data"), des_data_name,
+                                   des_data_version, no_progress_bars=no_progress_bars)

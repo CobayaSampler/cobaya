@@ -5,75 +5,88 @@ from test_cosmo_planck_2015 import params_lowTEB_highTTTEEE
 from common_cosmo import body_of_test
 
 best_fit = deepcopy(params_lowTEB_highTTTEEE)
+camb_extra = {"halofit_version": "mead"}
+
+
+def test_cosmo_des_y1_shear_camb(modules):
+    like = "des_y1_shear"
+    info_likelihood = {like: {}}
+    best_fit_shear = deepcopy(best_fit)
+    best_fit_shear.update(test_params_shear)
+    info_theory = {"camb": {"extra_args": camb_extra}}
+    body_of_test(modules, best_fit_shear, info_likelihood, info_theory,
+                 {like: ref_chi2["shear"], "tolerance": tolerance})
+
+
+def test_cosmo_des_y1_clustering_camb(modules):
+    like = "des_y1_clustering"
+    info_likelihood = {like: {}}
+    best_fit_clustering = deepcopy(best_fit)
+    best_fit_clustering.update(test_params_clustering)
+    info_theory = {"camb": {"extra_args": camb_extra}}
+    body_of_test(modules, best_fit_clustering, info_likelihood, info_theory,
+                 {like: ref_chi2["clustering"], "tolerance": tolerance})
+
+
+def test_cosmo_des_y1_galaxy_galaxy_camb(modules):
+    like = "des_y1_galaxy_galaxy"
+    info_likelihood = {like: {}}
+    best_fit_galaxy_galaxy = deepcopy(best_fit)
+    best_fit_galaxy_galaxy.update(test_params_shear)
+    best_fit_galaxy_galaxy.update(test_params_clustering)
+    info_theory = {"camb": {"extra_args": camb_extra}}
+    body_of_test(modules, best_fit_galaxy_galaxy, info_likelihood, info_theory,
+                 {like: ref_chi2["galaxy_galaxy"], "tolerance": tolerance})
+
+
+def test_cosmo_des_y1_joint_camb(modules):
+    like = "des_y1_joint"
+    info_likelihood = {like: {}}
+    best_fit_joint = deepcopy(best_fit)
+    best_fit_joint.update(test_params_shear)
+    best_fit_joint.update(test_params_clustering)
+    info_theory = {"camb": {"extra_args": camb_extra}}
+    body_of_test(modules, best_fit_joint, info_likelihood, info_theory,
+                 {like: ref_chi2["joint"], "tolerance": tolerance})
 
 
 @pytest.mark.skip
-def test_cosmo_des_1yr_shear_camb(modules):
+def test_cosmo_des_y1_shear_classy(modules):
     like = "des_1yr_shear"
     info_likelihood = {like: {}}
     best_fit_shear = deepcopy(best_fit)
     best_fit_shear.update(test_params_shear)
-    info_theory = {"camb": None}
-    body_of_test(modules, best_fit_shear, info_likelihood, info_theory,
-                 {like: 0, "tolerance": 5})
-
-
-@pytest.mark.skip
-def test_cosmo_des_1yr_clustering_camb(modules):
-    like = "des_1yr_clustering"
-    info_likelihood = {like: {}}
-    best_fit_clustering = deepcopy(best_fit)
-    best_fit_clustering.update(test_params_clustering)
-    info_theory = {"camb": None}
-    body_of_test(modules, best_fit_clustering, info_likelihood, info_theory,
-                 {like: 0, "tolerance": 5})
-
-
-@pytest.mark.skip
-def test_cosmo_des_1yr_galaxy_galaxylensing_camb(modules):
-    like = "des_1yr_galaxy_galaxylensing"
-    info_likelihood = {like: {}}
-    best_fit_galaxy_galaxylensing = deepcopy(best_fit)
-    best_fit_galaxy_galaxylensing.update(test_params_shear)
-    best_fit_galaxy_galaxylensing.update(test_params_clustering)
-    info_theory = {"camb": None}
-    body_of_test(modules, best_fit_galaxy_galaxylensing, info_likelihood, info_theory,
-                 {like: 0, "tolerance": 5})
-
-
-@pytest.mark.skip
-def test_cosmo_des_1yr_shear_classy(modules):
-    like = "des_1yr_shear"
-    info_likelihood = {like: {}}
-    best_fit_shear = deepcopy(best_fit)
-    best_fit_shear.update(test_params_shear)
     info_theory = {"classy": None}
     body_of_test(modules, best_fit_shear, info_likelihood, info_theory,
-                 {like: 0, "tolerance": 5})
+                 {like: ref_chi2["shear"], "tolerance": tolerance})
 
 
 @pytest.mark.skip
-def test_cosmo_des_1yr_clustering_classy(modules):
+def test_cosmo_des_y1_clustering_classy(modules):
     like = "des_1yr_clustering"
     info_likelihood = {like: {}}
     best_fit_clustering = deepcopy(best_fit)
     best_fit_clustering.update(test_params_clustering)
     info_theory = {"classy": None}
     body_of_test(modules, best_fit_clustering, info_likelihood, info_theory,
-                 {like: 0, "tolerance": 5})
+                 {like: ref_chi2["clustering"], "tolerance": tolerance})
 
 
 @pytest.mark.skip
-def test_cosmo_des_1yr_galaxy_galaxylensing_classy(modules):
-    like = "des_1yr_galaxy_galaxylensing"
+def test_cosmo_des_y1_galaxy_galaxy_classy(modules):
+    like = "des_1yr_galaxy_galaxy"
     info_likelihood = {like: {}}
-    best_fit_galaxy_galaxylensing = deepcopy(best_fit)
-    best_fit_galaxy_galaxylensing.update(test_params_shear)
-    best_fit_galaxy_galaxylensing.update(test_params_clustering)
+    best_fit_galaxy_galaxy = deepcopy(best_fit)
+    best_fit_galaxy_galaxy.update(test_params_shear)
+    best_fit_galaxy_galaxy.update(test_params_clustering)
     info_theory = {"classy": None}
-    body_of_test(modules, best_fit_galaxy_galaxylensing, info_likelihood, info_theory,
-                 {like: 0, "tolerance": 5})
+    body_of_test(modules, best_fit_galaxy_galaxy, info_likelihood, info_theory,
+                 {like: ref_chi2["galaxy_galaxy"], "tolerance": tolerance})
 
+
+ref_chi2 = {"shear": 242.825, "clustering": 100.997,
+            "galaxy_galaxy": 208.005, "joint": 570.428}
+tolerance = 0.2
 
 test_params_shear = {
     # wl_photoz_errors

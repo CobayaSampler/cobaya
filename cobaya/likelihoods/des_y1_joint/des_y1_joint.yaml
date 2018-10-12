@@ -1,0 +1,297 @@
+# DES Y1 -- Clustering+Shear+Galaxy-galaxy data
+
+likelihood:
+  des_y1_joint:
+    # Path to the installation folder
+    path: null
+    # .dataset (or original .fits file) to read
+    data_file: DES_1YR_final.dataset
+    # Parameters to override in .dataset file
+    dataset_params:
+      used_data_types: wtheta gammat xip xim
+    # Accuracy parameter
+    acc: 1
+    # Internal l_max used (If null/None, 5e4*acc used)
+    l_max: null
+    # Use hankel module for Bessel transforms. For checking.
+    use_hankel: False
+    # Use Weyl potential
+    use_Weyl: False
+    # Approximate bessel integral as binned smooth C_L
+    # against integrals of bessel in each bin.
+    binned_bessels: True
+
+  
+params:
+  # Lensing photo-z errors
+  DES_DzL1:
+    prior:
+      dist: norm
+      loc: 0.001
+      scale: 0.008
+    ref:
+      dist: norm
+      loc: 0.002
+      scale: 0.005
+    proposal: 0.005
+    latex: \Delta z_\mathrm{l,DES}^1
+  DES_DzL2:
+    prior:
+      dist: norm
+      loc: 0.002
+      scale: 0.007
+    ref:
+      dist: norm
+      loc: 0.001
+      scale: 0.005
+    proposal: 0.005
+    latex: \Delta z_\mathrm{l,DES}^2
+  DES_DzL3:
+    prior:
+      dist: norm
+      loc: 0.001
+      scale: 0.007
+    ref:
+      dist: norm
+      loc: 0.003
+      scale: 0.005
+    proposal: 0.005
+    latex: \Delta z_\mathrm{l,DES}^3
+  DES_DzL4:
+    prior:
+      dist: norm
+      loc: 0.003
+      scale: 0.01
+    ref:
+      dist: norm
+      loc: 0
+      scale: 0.005
+    proposal: 0.005
+    latex: \Delta z_\mathrm{l,DES}^4
+  DES_DzL5:
+    prior:
+      dist: norm
+      loc: 0
+      scale: 0.01 
+    ref:
+      dist: norm
+      loc: 0
+      scale: 0.005
+    proposal: 0.005
+    latex: \Delta z_\mathrm{l,DES}^5
+  # Bin bias parameters
+  DES_b1:
+    prior:
+      min: 0.8
+      max: 3
+    ref:
+      dist: norm
+      loc: 1.45
+      scale: 0.05
+    proposal: 0.05
+    latex: b_\mathrm{DES}^1
+  DES_b2:
+    prior:
+      min: 0.8
+      max: 3
+    ref:
+      dist: norm
+      loc: 1.55
+      scale: 0.05
+    proposal: 0.05
+    latex: b_\mathrm{DES}^2
+  DES_b3:
+    prior:
+      min: 0.8
+      max: 3
+    ref:
+      dist: norm
+      loc: 1.65
+      scale: 0.05
+    proposal: 0.05
+    latex: b_\mathrm{DES}^3
+  DES_b4:
+    prior:
+      min: 0.8
+      max: 3
+    ref:
+      dist: norm
+      loc: 1.8
+      scale: 0.05
+    proposal: 0.05
+    latex: b_\mathrm{DES}^4
+  DES_b5:
+    prior:
+      min: 0.8
+      max: 3
+    ref:
+      dist: norm
+      loc: 2.0
+      scale: 0.05
+    proposal: 0.05
+    latex: b_\mathrm{DES}^5
+  # Bin bias parameters
+  DES_b1:
+    prior:
+      min: 0.8
+      max: 3
+    ref:
+      dist: norm
+      loc: 1.45
+      scale: 0.05
+    proposal: 0.05
+    latex: b_\mathrm{DES}^1
+  DES_b2:
+    prior:
+      min: 0.8
+      max: 3
+    ref:
+      dist: norm
+      loc: 1.55
+      scale: 0.05
+    proposal: 0.05
+    latex: b_\mathrm{DES}^2
+  DES_b3:
+    prior:
+      min: 0.8
+      max: 3
+    ref:
+      dist: norm
+      loc: 1.65
+      scale: 0.05
+    proposal: 0.05
+    latex: b_\mathrm{DES}^3
+  DES_b4:
+    prior:
+      min: 0.8
+      max: 3
+    ref:
+      dist: norm
+      loc: 1.8
+      scale: 0.05
+    proposal: 0.05
+    latex: b_\mathrm{DES}^4
+  DES_b5:
+    prior:
+      min: 0.8
+      max: 3
+    ref:
+      dist: norm
+      loc: 2.0
+      scale: 0.05
+    proposal: 0.05
+    latex: b_\mathrm{DES}^5
+  # WL photo-z errors
+  DES_DzS1:
+    prior:
+      dist: norm
+      loc: -0.001
+      scale: 0.016
+    ref:
+      dist: norm
+      loc: 0.002
+      scale: 0.01
+    proposal: 0.01
+    latex: \Delta z_\mathrm{s,DES}^1
+  DES_DzS2:
+    prior:
+      dist: norm
+      loc: -0.019
+      scale: 0.013
+    ref:
+      dist: norm
+      loc: -0.015
+      scale: 0.01
+    proposal: 0.01
+    latex: \Delta z_\mathrm{s,DES}^2
+  DES_DzS3:
+    prior:
+      dist: norm
+      loc: 0.009
+      scale: 0.011
+    ref:
+      dist: norm
+      loc: 0.007
+      scale: 0.01
+    proposal: 0.01
+    latex: \Delta z_\mathrm{s,DES}^3
+  DES_DzS4:
+    prior:
+      dist: norm
+      loc: -0.018
+      scale: 0.022
+    ref:
+      dist: norm
+      loc: -0.018
+      scale: 0.01
+    proposal: 0.01
+    latex: \Delta z_\mathrm{s,DES}^4
+  # Shear calibration parameters
+  DES_m1:
+    prior:
+      dist: norm
+      loc: 0.012
+      scale: 0.023
+    ref:
+      dist: norm
+      loc: 0.012
+      scale: 0.005
+    proposal: 0.005
+    latex: m_\mathrm{DES}^1
+  DES_m2:
+    prior:
+      dist: norm
+      loc: 0.012
+      scale: 0.023
+    ref:
+      dist: norm
+      loc: 0.012
+      scale: 0.005
+    proposal: 0.005
+    latex: m_\mathrm{DES}^2
+  DES_m3:
+    prior:
+      dist: norm
+      loc: 0.012
+      scale: 0.023
+    ref:
+      dist: norm
+      loc: 0.012
+      scale: 0.005
+    proposal: 0.005
+    latex: m_\mathrm{DES}^3
+  DES_m4:
+    prior:
+      dist: norm
+      loc: 0.012
+      scale: 0.023
+    ref:
+      dist: norm
+      loc: 0.012
+      scale: 0.005
+    proposal: 0.005
+    latex: m_\mathrm{DES}^4
+  # Intrinsic alignment
+  DES_AIA:
+    prior:
+      min: -5
+      max:  5
+    ref:
+      dist: norm
+      loc: 1
+      scale: 0.2
+    proposal: 0.2
+    latex: A_\mathrm{IA,DES}
+  DES_alphaIA:
+    prior:
+      min: -5
+      max:  5
+    ref:
+      dist: norm
+      loc: 1
+      scale: 0.2 
+    proposal: 0.2
+    latex: \alpha_\mathrm{IA,DES}
+  DES_z0IA:
+    value: 0.62
+    latex: z_{0\mathrm{IA,DES}}
