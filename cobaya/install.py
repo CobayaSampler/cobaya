@@ -64,18 +64,17 @@ def install(*infos, **kwargs):
             try:
                 imported_module = import_module(module_folder, package=_package)
             except ImportError:
-                flag = False
                 if kind == _likelihood:
                     info = (next(info for info in infos
                                  if module in info.get(_likelihood, {}))
-                    [_likelihood][module]) or {}
+                            [_likelihood][module]) or {}
                     if isinstance(info, string_types) or _external in info:
-                        log.warning("Module '%s' is a custom likelihood. Nothing to do.\n",
-                                 module)
+                        log.warning("Module '%s' is a custom likelihood. "
+                                    "Nothing to do.\n", module)
                         flag = False
-                if flag:
-                    log.error("Module '%s' not recognized.\n" % module)
-                    failed_modules += ["%s:%s" % (kind, module)]
+                    else:
+                        log.error("Module '%s' not recognized.\n" % module)
+                        failed_modules += ["%s:%s" % (kind, module)]
                 continue
             is_installed = getattr(imported_module, "is_installed", None)
             if is_installed is None:
