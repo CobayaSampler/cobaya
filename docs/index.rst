@@ -52,6 +52,7 @@ Table of contents
    likelihood_H0
    likelihood_planck
    likelihood_bk
+   likelihood_des
    likelihood_bao
    likelihood_sn
 

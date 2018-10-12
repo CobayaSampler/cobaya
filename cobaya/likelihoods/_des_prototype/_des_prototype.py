@@ -5,6 +5,50 @@
            Well tested and agrees with likelihoods in DES chains for fixednu.
 :Author: Antony Lewis (little changes for Cobaya by Jesus Torrado)
 
+.. warning::
+
+   This is still in **beta**. Coming soon!
+
+.. |br| raw:: html
+
+   <br />
+
+.. note::
+
+   **If you use any of these likelihoods, please cite them as:**
+   |br|
+   Abbott, T. M. C. and others,
+   `Dark Energy Survey year 1 results: Cosmological constraints from
+   galaxy clustering and weak lensing`
+   `(arXiv:1708.01530) <https://arxiv.org/abs/1708.01530>`_
+
+
+Likelihoods of the DES Y1 data release, described in the paper mentioned above:
+
+- ``des_y1_clustering``
+- ``des_y1_shear``
+- ``des_y1_galaxy_galaxy``
+- ``des_y1_joint`` (a shortcut for the combination of the previous three)
+
+Usage
+-----
+
+To use any of the DES likelihoods, you simply need to mention them in the
+``likelihood`` block, or add them using the :doc:`input generator <cosmo_basic_runs>`.
+
+The corresponding nuisance parameters will be added automatically,
+so you don't have to care about listing them in the ``params`` block.
+
+The nuisance parameters and their default priors can be found in the ``defaults.yaml``
+files in the folder corresponding to each likelihood. They are not reproduced here because
+of their length.
+
+
+Installation
+------------
+
+This likelihood can be installed automatically as explained in :doc:`installation_cosmo`.
+
 """
 
 # Python 2/3 compatibility
