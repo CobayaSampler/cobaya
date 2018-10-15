@@ -14,7 +14,7 @@
    |br|
    Keck Array and BICEP2 Collaborations,
    `BICEP2 / Keck Array x: Constraints on Primordial Gravitational Waves
-    using Planck, WMAP, and New BICEP2/Keck Observations through the 2015 Season`
+   using Planck, WMAP, and New BICEP2/Keck Observations through the 2015 Season`
    `(arXiv:1810.05216) <https://arxiv.org/abs/1810.05216>`_
 
 Usage
