@@ -15,7 +15,7 @@ def test_bicep_keck_2015_camb(modules):
 
 lik_info = {"bicep_keck_2015": {}}
 
-chi2 = {"bicep_keck_2015": 735.991, "tolerance": 0.15}
+chi2 = {"bicep_keck_2015": 735.187, "tolerance": 0.15}
 
 test_point = {
     "omegabh2": 0.2235620E-01,

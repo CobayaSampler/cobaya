@@ -1,9 +1,9 @@
-# BICEP2/Keck Array April 2018 Data Products
-# BICEP2/Keck Array X: Improved Constraints On Cosmology and Foregrounds using BICEP/Keck and WMAP/Planck data
+# BICEP2/Keck Array September 2018 Data Products
+# BICEP2/Keck Array X: Constraints On Primordial Gravitational Waves using Planck, WMAP, and New BICEP2/Keck Observations through the 2015 Season
 # http://bicepkeck.org/
 #
 # File: BK15.ini
-# Date: 2018-03-30
+# Date: 2018-08-30
 #
 # BICEP2/Keck Array likelihood, including external data from Planck and WMAP.
 #
@@ -132,9 +132,9 @@ params:
   BBTdust: 19.6
   #   latex: T_{\mathrm{dust}}
   # dust correlation ratio between 217 and 353 GHz, ell=80
-  rho_dust: 1.0
+  delta_dust: 1.0
   # sync correlation ratio between 23 and 33 GHz, ell=80
-  rho_sync: 1.0
+  delta_sync: 1.0
   # Band center errors, fixed to zero
   gamma_corr: 0.0
   gamma_95: 0.0
