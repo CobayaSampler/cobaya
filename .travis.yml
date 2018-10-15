@@ -132,7 +132,7 @@ script:
   # Installation
   - python tests/install_for_tests.py ../modules
   # CAMB devel?
-  - if [ -n "${CAMB_BRANCH}" ]; then rm -rf ../modules/code/CAMB ; git clone -b $CAMB_BRANCH https://github.com/cmbant/CAMB ../modules/code/CAMB ; python ../modules/code/CAMB/pycamb/setup.py build ; fi
+  - if [ -n "${CAMB_BRANCH}" ]; then rm -rf ../modules/code/CAMB ; git clone --recursive -b $CAMB_BRANCH https://github.com/cmbant/CAMB ../modules/code/CAMB ; python ../modules/code/CAMB/pycamb/setup.py build ; fi
   # Non-cosmological tests
   - pytest tests/ -k "not cosmo" --modules="../modules"
   # Cosmological tests (--boxed = 1 process per test; otherwise lowl planck lik fails!). Planck currently does not support py3.

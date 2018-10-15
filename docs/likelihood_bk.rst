@@ -1,5 +1,5 @@
-CMB from BICEP2/Keck-Array Oct 2015
+CMB from BICEP2/Keck-Array Oct 2018
 ===================================
 
-.. automodule:: cobaya.likelihoods.bicep_keck_2014.bicep_keck_2014
+.. automodule:: cobaya.likelihoods.bicep_keck_2015
    :noindex:
