@@ -1,0 +1,254 @@
+import os
+import numpy as np
+
+# Local
+from cobaya.likelihoods._cmblikes_prototype import _cmblikes_prototype
+from cobaya.conventions import _T_CMB_K, _h_J_s, _kB_J_K
+
+# Logger
+import logging
+
+# Physical constants
+Ghz_Kelvin = _h_J_s / _kB_J_K * 1e9
+
+
+class bicep_keck_2015(_cmblikes_prototype):
+
+    def readIni(self, ini):
+
+        super(self.__class__, self).readIni(ini)
+        self.fpivot_dust = ini.float('fpivot_dust', 353.0)
+        self.fpivot_sync = ini.float('fpivot_sync', 23.0)
+        self.bandpasses = []
+        for i, used in enumerate(self.used_map_order):
+            self.bandpasses += [
+                self.read_bandpass(ini.relativeFileName('bandpass[%s]' % used))]
+
+        self.fpivot_dust_decorr = [ini.array_float('fpivot_dust_decorr', i, default) for i, default in
+                                   zip([1, 2], [217., 353.])]
+        self.fpivot_sync_decorr = [ini.array_float('fpivot_sync_decorr', i, default) for i, default in
+                                   zip([1, 2], [22., 33.])]
+        self.lform_dust_decorr = ini.string('lform_dust_decorr', 'flat')
+        self.lform_sync_decorr = ini.string('lform_sync_decorr', 'flat')
+
+    def read_bandpass(self, fname):
+        bandpass = Bandpass()
+        bandpass.R = np.loadtxt(fname)
+        nu = bandpass.R[:, 0]
+        bandpass.dnu = np.hstack(
+            ((nu[1] - nu[0]), (nu[2:] - nu[:-2]) / 2, (nu[-1] - nu[-2])))
+        # Calculate thermodynamic temperature conversion between this bandpass
+        # and pivot frequencies 353 GHz (usedfor dust) and 150 GHz (used for sync).
+        th_int = np.sum(bandpass.dnu * bandpass.R[:, 1] * bandpass.R[:, 0] ** 4 *
+                        np.exp(Ghz_Kelvin * bandpass.R[:, 0] / _T_CMB_K) /
+                        (np.exp(Ghz_Kelvin * bandpass.R[:, 0] / _T_CMB_K) - 1) ** 2)
+        nu0 = self.fpivot_dust
+        th0 = (nu0 ** 4 * np.exp(Ghz_Kelvin * nu0 / _T_CMB_K) /
+               (np.exp(Ghz_Kelvin * nu0 / _T_CMB_K) - 1) ** 2)
+        bandpass.th_dust = th_int / th0
+        nu0 = self.fpivot_sync
+        th0 = (nu0 ** 4 * np.exp(Ghz_Kelvin * nu0 / _T_CMB_K) /
+               (np.exp(Ghz_Kelvin * nu0 / _T_CMB_K) - 1) ** 2)
+        bandpass.th_sync = th_int / th0
+        # Calculate bandpass center-of-mass (i.e. mean frequency).
+        bandpass.nu_bar = np.dot(bandpass.dnu, bandpass.R[:, 0] * bandpass.R[:, 1]) / np.dot(bandpass.dnu,
+                                                                                             bandpass.R[:, 1])
+
+        return bandpass
+
+    def dust_scaling(self, beta, Tdust, bandpass, nu0, bandcenter_err):
+        """Calculates greybody scaling of dust signal defined at 353 GHz
+        to specified bandpass."""
+        gb_int = np.sum(bandpass.dnu * bandpass.R[:, 1] * bandpass.R[:, 0] ** (3 + beta) /
+                        (np.exp(Ghz_Kelvin * bandpass.R[:, 0] / Tdust) - 1))
+        # Calculate values at pivot frequency.
+        gb0 = nu0 ** (3 + beta) / (np.exp(Ghz_Kelvin * nu0 / Tdust) - 1)
+        #  Add correction for band center error
+        if bandcenter_err != 1.:
+            nu_bar = Ghz_Kelvin * bandpass.nu_bar
+            gb_err = (bandcenter_err) ** (beta - 1) * (
+                    np.exp(nu_bar * bandcenter_err / _T_CMB_K) - 1) ** 2 \
+                     * (np.exp(nu_bar / Tdust) - 1) \
+                     / (np.exp(nu_bar * (bandcenter_err - 1) / _T_CMB_K) \
+                        * (np.exp(nu_bar * bandcenter_err / Tdust) - 1) \
+                        * (np.exp(nu_bar / _T_CMB_K) - 1) ** 2)
+        else:
+            gb_err = 1.
+
+        # Calculate dust scaling.
+        return (gb_int / gb0) * gb_err / bandpass.th_dust
+
+    def sync_scaling(self, beta, bandpass, nu0, bandcenter_err):
+        """Calculates power-law scaling of synchrotron signal defined at 150 GHz
+        to specified bandpass."""
+        # Integrate power-law scaling and thermodynamic temperature conversion
+        # across experimental bandpass.
+        pl_int = np.sum(bandpass.dnu * bandpass.R[:, 1] * bandpass.R[:, 0] ** (2 + beta))
+        # Calculate values at pivot frequency.
+        pl0 = nu0 ** (2 + beta)
+        if bandcenter_err != 1.:
+            nu_bar = Ghz_Kelvin * bandpass.nu_bar
+            pl_err = (bandcenter_err) ** (beta - 2) \
+                     * (np.exp(nu_bar * bandcenter_err / _T_CMB_K) - 1) ** 2 \
+                     / (np.exp(nu_bar * (bandcenter_err - 1) / _T_CMB_K) \
+                        * (np.exp(nu_bar / _T_CMB_K) - 1) ** 2)
+        else:
+            pl_err = 1
+        # Calculate sync scaling.
+        return (pl_int / pl0) * pl_err / bandpass.th_sync
+
+    def decorrelation(self, cval, nu0, nu1, nupivot, rat, lform):
+        # Decorrelation scales as log^2(nu0/nu1). rat is l/l_pivot
+        lpivot = 80.0
+        scl_nu = (np.log(nu0 / nu1) ** 2) / (np.log(nupivot(1) / nupivot(2)) ** 2)
+        # Functional form for ell scaling is specified in .dataset file.
+        if lform == "flat":
+            scl_ell = 1.0
+        elif lform == 'lin':
+            scl_ell = rat
+        elif lform == 'quad':
+            scl_ell = rat ** 2
+        else:
+            scl_ell = 1.0
+
+        # Even for small cval, correlation can become negative for sufficiently large frequency
+        # difference or ell value (with linear or quadratic scaling).
+        # Following Vansyngel et al, A&A, 603, A62 (2017), we use an exponential function to
+        # remap the correlation coefficient on to the range [0,1].
+        # We symmetrically extend this function to (non-physical) correlation coefficients
+        # greater than 1 -- this is only used for validation tests of the likelihood model.
+        if cval > 1:
+            return 2.0 - np.exp(np.log(2.0 - cval) * scl_nu * scl_ell)
+        else:
+            return np.exp(np.log(cval) * scl_nu * scl_ell)
+
+    def add_foregrounds(self, cls, data_params):
+        lpivot = 80.0
+        Adust = data_params['BBdust']
+        Async = data_params['BBsync']
+        alphadust = data_params['BBalphadust']
+        betadust = data_params['BBbetadust']
+        Tdust = data_params['BBTdust']
+        alphasync = data_params['BBalphasync']
+        betasync = data_params['BBbetasync']
+        dustsync_corr = data_params['BBdustsynccorr']
+        EEtoBB_dust = data_params['EEtoBB_dust']
+        EEtoBB_sync = data_params['EEtoBB_sync']
+        R_dust = data_params['rho_dust']
+        R_sync = data_params['rho_sync']
+        gamma_corr = data_params['gamma_corr']  # 13
+
+        # Calculate dust and sync scaling for each map.
+        bandcenter_err = np.empty(self.nmaps_required)
+        fdust = np.empty(self.nmaps_required)
+        fsync = np.empty(self.nmaps_required)
+        for i, mapname in enumerate(self.used_map_order):
+            # Read and assign values to band center error params
+            if '95' in mapname:
+                bandcenter_err[i] = gamma_corr + data_params['gamma_95'] + 1
+            elif '150' in mapname:
+                bandcenter_err[i] = gamma_corr + data_params['gamma_150'] + 1
+            elif '220' in mapname:
+                bandcenter_err[i] = gamma_corr + data_params['gamma_220'] + 1
+            else:
+                bandcenter_err[i] = 1
+            fdust[i] = self.dust_scaling(
+                betadust, Tdust, self.bandpasses[i], self.fpivot_dust, bandcenter_err[i])
+            fsync[i] = self.sync_scaling(
+                betasync, self.bandpasses[i], self.fpivot_sync, bandcenter_err[i])
+
+        rat = np.arange(self.pcl_lmin, self.pcl_lmax + 1) / lpivot
+        dustpow = Adust * rat ** alphadust
+        syncpow = Async * rat ** alphasync
+        dustsyncpow = (dustsync_corr * np.sqrt(Adust * Async) *
+                       rat ** ((alphadust + alphasync) / 2))
+
+        #  Only calculate foreground decorrelation if necessary.
+        need_sync_decorr = np.abs(R_sync - 1) > 1e-5
+        need_dust_decorr = np.abs(R_dust - 1) > 1e-5
+        for i in range(self.nmaps_required):
+            for j in range(i + 1):
+                CL = cls[i, j]
+                dust = fdust[i] * fdust[j]
+                sync = fsync[i] * fsync[j]
+                dustsync = fdust[i] * fsync[j] + fsync[i] * fdust[j]
+                EE = CL.theory_ij[0] == 1 and CL.theory_ij[1] == 1
+                if EE:
+                    # EE spectrum: multiply foregrounds by EE/BB ratio
+                    dust *= EEtoBB_dust
+                    sync *= EEtoBB_sync
+                    dustsync *= np.sqrt(EEtoBB_sync * EEtoBB_dust)
+
+                if need_dust_decorr and i != j:
+                    corr_dust = self.decorrelation(R_dust, self.bandpasses[i].nu_bar * bandcenter_err[i], \
+                                                   self.andpasses[j].nu_bar * bandcenter_err[j],
+                                                   self.fpivot_dust_decorr, rat, \
+                                                   self.lform_dust_decorr)
+                else:
+                    corr_dust = 1
+                if need_sync_decorr and i != j:
+                    corr_sync = self.decorrelation(R_sync, self.bandpasses[i].nu_bar * bandcenter_err[i], \
+                                                   self.bandpasses[j].nu_bar * bandcenter_err(j),
+                                                   self.pivot_sync_decorr, rat, \
+                                                   self.lform_sync_decorr)
+                else:
+                    corr_sync = 1
+                #  Add foreground model to theory spectrum.
+                # NOTE: Decorrelation is not implemented for the dust/sync correlated component.
+                #      In BK15, we never turned on correlation and decorrelation parameters
+                #       simultaneously.
+                CL.CL += dust * dustpow * corr_dust + sync * syncpow * corr_sync + dustsync * dustsyncpow
+
+
+class Bandpass(object):
+    pass
+
+
+# Installation routines ##################################################################
+
+def get_path(path):
+    return os.path.realpath(os.path.join(path, "data", __name__.split(".")[-1]))
+
+
+def is_installed(**kwargs):
+    if kwargs["data"]:
+        if not os.path.exists(os.path.join(get_path(kwargs["path"]), "BK15_cosmomc")):
+            return False
+    return True
+
+
+def install(path=None, name=None, force=False, code=False, data=True,
+            no_progress_bars=False):
+    log = logging.getLogger(__name__.split(".")[-1])
+    full_path = get_path(path)
+    if not os.path.exists(full_path):
+        os.makedirs(full_path)
+    if not data:
+        return True
+    log.info("Downloading likelihood data...")
+    try:
+        from wget import download, bar_thermometer
+        wget_kwargs = {"out": full_path,
+                       "bar": (bar_thermometer if not no_progress_bars else None)}
+        # Refuses http[S]!
+        filename = download(r"http://bicepkeck.org/BK15_datarelease/BK15_cosmomc.tgz",
+                            **wget_kwargs)
+        print("")  # force newline after wget
+    except:
+        print("")  # force newline after wget
+        log.error("Error downloading!")
+        return False
+    import tarfile
+    extension = os.path.splitext(filename)[-1][1:]
+    if extension == "tgz":
+        extension = "gz"
+    tar = tarfile.open(filename, "r:" + extension)
+    try:
+        tar.extractall(full_path)
+        tar.close()
+        os.remove(filename)
+        log.info("Likelihood data downloaded and uncompressed correctly.")
+        return True
+    except:
+        log.error("Error decompressing downloaded file! Corrupt file?)")
+        return False

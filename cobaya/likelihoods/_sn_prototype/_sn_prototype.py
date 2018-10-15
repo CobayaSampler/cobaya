@@ -137,7 +137,7 @@ class _sn_prototype(Likelihood):
                                self.dataset_file, _path_install)
                 raise HandledException
         self.path = os.path.normpath(self.path)
-        self.dataset_file_path = os.path.join(self.path, self.dataset_file)
+        self.dataset_file_path = os.path.normpath(os.path.join(self.path, self.dataset_file))
         self.log.info("Reading data from %s", self.dataset_file_path)
         if not os.path.exists(self.dataset_file_path):
             self.log.error("The likelihood is not installed in the given path: "

@@ -3,6 +3,9 @@ import os
 
 
 def process_modules_path(modules):
+    if not modules:
+        if os.path.exists(os.path.join(os.getcwd(), '..', 'modules')):
+            modules = os.path.join('..', 'modules')
     assert modules, "I need a modules folder!"
     return modules if os.path.isabs(modules) else os.path.join(os.getcwd(), modules)
 
@@ -25,6 +28,7 @@ if __name__ == "__main__":
             "planck_2015_lensing": None,
             "planck_2015_lensing_cmblikes": None,
             "bicep_keck_2014": None,
+            "bicep_keck_2015": None,
             "sn_pantheon": None,
             "sn_jla": None,
             "sn_jla_lite": None,

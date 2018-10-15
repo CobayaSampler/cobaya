@@ -43,7 +43,7 @@ class _cmblikes_prototype(Likelihood):
                                    " property 'path' or the common property '%s'.",
                                    self.dataset_file, _path_install)
                     raise HandledException
-            self.dataset_file_path = os.path.join(self.path, self.dataset_file)
+            self.dataset_file_path = os.path.normpath(os.path.join(self.path, self.dataset_file))
         else:
             self.dataset_file_path = self.dataset_file
         self.log.info("Reading data from %s", self.dataset_file_path)
@@ -225,7 +225,7 @@ class _cmblikes_prototype(Likelihood):
                     Err = Err or any(window[i, 1:] != 0)
             if Err:
                 self.log.warning('%s %u outside pcl_lmin-cl_max range: %s' %
-                              (file_stem, b, windows % (b + 1)))
+                                 (file_stem, b, windows % (b + 1)))
         if ini.hasKey(file_stem + '_fix_cl_file'):
             self.log.error('fix_cl_file not implemented yet')
             raise HandledException

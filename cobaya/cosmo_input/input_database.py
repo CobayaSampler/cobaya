@@ -552,7 +552,7 @@ install_basic = {
     _theory: {_camb: None, _classy: None},
     _likelihood: {
         "planck_2015_lowl": None,
-        "bicep_keck_2014": None,
+        "bicep_keck_2015": None,
         "sn_pantheon": None,
         "sdss_dr12_consensus_final": None},
     _sampler: {"polychord": None}}

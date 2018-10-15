@@ -19,7 +19,7 @@ import logging
 log = logging.getLogger(__name__.split(".")[-1])
 
 covmat_folders = ["{%s}/data/planck_supp_data_and_covmats/covmats/" % _path_install,
-                  "{%s}/data/bicep_keck_2014/BK14_cosmomc/planck_covmats/" % _path_install]
+                  "{%s}/data/bicep_keck_2015/BK15_cosmomc/planck_covmats/" % _path_install]
 
 
 def get_covmat_database(modules, cached=True):
