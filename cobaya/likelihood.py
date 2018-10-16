@@ -463,19 +463,23 @@ class LikelihoodCollection(object):
         # Fast-slow separation: chooses separation that maximizes log-difference in speed
         # (speed per parameter in a combination of blocks is the slowest one)
         if fast_slow:
-            log_differences = np.zeros(len(blocks) - 1)
-            for i in range(len(blocks) - 1):
-                log_differences[i] = (np.log(np.min(params_speeds[:i + 1])) -
-                                      np.log(np.min(params_speeds[i + 1:])))
-            i_max = np.argmin(log_differences)
-            blocks = (
-                lambda l: [list(chain(*l[:i_max + 1])), list(chain(*l[i_max + 1:]))])(blocks)
-            # In this case, speeds must be *cumulative*, since I am squashing blocks
-            cum_inv = lambda ss: 1 / (sum(1 / ss))
-            params_speeds = (
-                lambda l: [cum_inv(l[:i_max + 1]), cum_inv(l[i_max + 1:])])(params_speeds)
-            log.debug("Fast-slow blocking: %r with speeds %r",
-                      blocks, params_speeds)
+            if len(blocks) > 1:
+                log_differences = np.zeros(len(blocks) - 1)
+                for i in range(len(blocks) - 1):
+                    log_differences[i] = (np.log(np.min(params_speeds[:i + 1])) -
+                                          np.log(np.min(params_speeds[i + 1:])))
+                i_max = np.argmin(log_differences)
+                blocks = (
+                    lambda l: [list(chain(*l[:i_max + 1])), list(chain(*l[i_max + 1:]))])(blocks)
+                # In this case, speeds must be *cumulative*, since I am squashing blocks
+                cum_inv = lambda ss: 1 / (sum(1 / ss))
+                params_speeds = (
+                    lambda l: [cum_inv(l[:i_max + 1]), cum_inv(l[i_max + 1:])])(params_speeds)
+                log.debug("Fast-slow blocking: %r with speeds %r",
+                          blocks, params_speeds)
+            else:
+                log.warning("Requested fast/slow separation, "
+                                 "but all pararameters have the same speed.")
         return params_speeds, blocks
 
     def _get_auto_covmat(self, params_info):

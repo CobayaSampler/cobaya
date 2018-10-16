@@ -105,12 +105,12 @@ class mcmc(Sampler):
                 fast_slow=True, int_speeds=True)
             # For now, no blocking inside either fast or slow: just 2 blocks
             self.i_last_slow_block = 0
-            # Make the 1st factor 1:
-            speeds = [1, speeds[1] / speeds[0]]
             if np.all(speeds == speeds[0]):
                 self.log.error("All speeds are equal or too similar: cannot drag! "
                                "Make sure to define accurate likelihoods' speeds.")
                 raise HandledException
+            # Make the 1st factor 1:
+            speeds = [1, speeds[1] / speeds[0]]
             # Target: dragging step taking as long as slow step
             self.drag_interp_steps = self.drag * speeds[1]
             # Per dragging step, the (fast) posterior is evaluated *twice*,
