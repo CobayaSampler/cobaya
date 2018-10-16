@@ -361,8 +361,8 @@ like_cmb = odict([
             ["planck_2015_lowTEB", None],
             ["planck_2015_plikHM_TTTEEE", None],
             ["planck_2015_lensing", None]])}],
-    ["planck_2015_lensing_bk14", {
-        _desc: "Planck 2015 (Polarized CMB + lensing) + Bicep/Keck-Array 2014",
+    ["planck_2015_lensing_bk15", {
+        _desc: "Planck 2015 (Polarized CMB + lensing) + Bicep/Keck-Array 2015",
         _sampler: cmb_sampler_recommended,
         _theory: {theo: {_extra_args: None}  # cmb_precision[theo]}  # not for now
                   for theo in [_camb, _classy]},
@@ -370,9 +370,9 @@ like_cmb = odict([
             ["planck_2015_lowTEB", None],
             ["planck_2015_plikHM_TTTEEE", None],
             ["planck_2015_lensing", None],
-            ["bicep_keck_2014", None]])}],
+            ["bicep_keck_2015", None]])}],
 ])
-like_cmb["planck_2015_lensing_bk14"][_comment] = like_cmb["planck_2015_lensing"][_comment]
+like_cmb["planck_2015_lensing_bk15"][_comment] = like_cmb["planck_2015_lensing"][_comment]
 # Add common CMB derived parameters
 for m in like_cmb.values():
     # Don't add the derived parameter to the no-CMB case!
@@ -480,15 +480,15 @@ preset = odict([
         "theory": _classy,
         "like_cmb": "planck_2015_lensing"}],
     ["planck_2015_lensing_bicep_camb", {
-        _desc: "Planck 2015 + lensing + BK14 with CAMB",
+        _desc: "Planck 2015 + lensing + BK15 with CAMB",
         "theory": _camb,
         "primordial": "SFSR_t",
-        "like_cmb": "planck_2015_lensing_bk14"}],
+        "like_cmb": "planck_2015_lensing_bk15"}],
     ["planck_2015_lensing_bicep_classy", {
-        _desc: "Planck 2015 + lensing + BK14 with CLASS",
+        _desc: "Planck 2015 + lensing + BK15 with CLASS",
         "theory": _classy,
         "primordial": "SFSR_t",
-        "like_cmb": "planck_2015_lensing_bk14"}],
+        "like_cmb": "planck_2015_lensing_bk15"}],
     # CMB+BAO ######################################################
     ["planck_2015_lensing_BAO_camb", {
         _desc: "Planck 2015 + lensing + BAO with CAMB",
@@ -501,16 +501,16 @@ preset = odict([
         "like_cmb": "planck_2015_lensing",
         "like_bao": "BAO_planck_2018"}],
     ["planck_2015_lensing_bicep_BAO_camb", {
-        _desc: "Planck 2015 + lensing + BK14 + BAO with CAMB",
+        _desc: "Planck 2015 + lensing + BK15 + BAO with CAMB",
         "theory": _camb,
         "primordial": "SFSR_t",
-        "like_cmb": "planck_2015_lensing_bk14",
+        "like_cmb": "planck_2015_lensing_bk15",
         "like_bao": "BAO_planck_2018"}],
     ["planck_2015_lensing_bicep_BAO_classy", {
-        _desc: "Planck 2015 + lensing + BK14 + BAO with CLASS",
+        _desc: "Planck 2015 + lensing + BK15 + BAO with CLASS",
         "theory": _classy,
         "primordial": "SFSR_t",
-        "like_cmb": "planck_2015_lensing_bk14",
+        "like_cmb": "planck_2015_lensing_bk15",
         "like_bao": "BAO_planck_2018"}],
     # CMB+BAO+SN ###################################################
     ["planck_2015_lensing_BAO_SN_camb", {
@@ -526,17 +526,17 @@ preset = odict([
         "like_bao": "BAO_planck_2018",
         "like_sn": "Pantheon"}],
     ["planck_2015_lensing_bicep_BAO_SN_camb", {
-        _desc: "Planck 2015 + lensing + BK14 + BAO + SN with CAMB",
+        _desc: "Planck 2015 + lensing + BK15 + BAO + SN with CAMB",
         "theory": _camb,
         "primordial": "SFSR_t",
-        "like_cmb": "planck_2015_lensing_bk14",
+        "like_cmb": "planck_2015_lensing_bk15",
         "like_bao": "BAO_planck_2018",
         "like_sn": "Pantheon"}],
     ["planck_2015_lensing_bicep_BAO_SN_classy", {
-        _desc: "Planck 2015 + lensing + BK14 + BAO + SN with CLASS",
+        _desc: "Planck 2015 + lensing + BK15 + BAO + SN with CLASS",
         "theory": _classy,
         "primordial": "SFSR_t",
-        "like_cmb": "planck_2015_lensing_bk14",
+        "like_cmb": "planck_2015_lensing_bk15",
         "like_bao": "BAO_planck_2018",
         "like_sn": "Pantheon"}],
 ])

@@ -1,21 +1,30 @@
-# Tries to evaluate the BK14 likelihood at a reference point
+# Tries to evaluate the BK15 likelihood at a reference point
+
+from copy import deepcopy
 
 from common_cosmo import body_of_test
 from cobaya.cosmo_input import cmb_precision
 
-classy_extra_tolerance = 0.7
-
 
 def test_bicep_keck_2015_camb(modules):
-    info_theory = {"camb": {"extra_args": dict(halofit_version="mead", **cmb_precision["camb"])}}
-
+    info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     body_of_test(modules, test_point, lik_info, info_theory, chi2,
+                 extra_model={"primordial": "SFSR_t"})
+
+
+def test_bicep_keck_2015_classy(modules):
+    info_theory = {"classy": {"extra_args": cmb_precision["classy"]}}
+    # extra tolerance for CLASS
+    chi2_classy = deepcopy(chi2)
+    chi2_classy["tolerance"] *= 2
+    body_of_test(modules, test_point, lik_info, info_theory, chi2_classy,
                  extra_model={"primordial": "SFSR_t"})
 
 
 lik_info = {"bicep_keck_2015": {}}
 
-chi2 = {"bicep_keck_2015": 735.187, "tolerance": 0.15}
+# NB: chi2 obtained using CAMB w HMcode
+chi2 = {"bicep_keck_2015": 735.187, "tolerance": 0.16}
 
 test_point = {
     "omegabh2": 0.2235620E-01,

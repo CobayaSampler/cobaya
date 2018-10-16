@@ -81,7 +81,7 @@ Within ``/path/to/modules``, the following file structure will be created, conta
             │   └── [...]
             └── data
                 ├── planck_2015
-                ├── bicep_keck_2014
+                ├── bicep_keck_2015
                 └── [...]
 
 .. note::
