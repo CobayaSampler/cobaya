@@ -80,13 +80,12 @@ import numpy as np
 
 # Local
 from cobaya.likelihoods._cmblikes_prototype import _cmblikes_prototype
-from cobaya.conventions import _h_J_s, _kB_J_K
+from cobaya.conventions import _h_J_s, _kB_J_K, _T_CMB_K
 
 # Logger
 import logging
 
 # Physical constants
-_T_CMB_K = 2.72548  # CMB temperature
 Ghz_Kelvin = _h_J_s / _kB_J_K * 1e9
 
 
