@@ -165,7 +165,7 @@ class Sampler(object):
     # Python magic for the "with" statement
 
     def __enter__(self):
-        if self.seed is not None:
+        if getattr(self, "seed", None) is not None:
             try:
                 np.random.seed(self.seed)
             except TypeError:
@@ -175,7 +175,7 @@ class Sampler(object):
         return self
 
     def __exit__(self, exception_type, exception_value, traceback):
-        if self.seed is not None:
+        if getattr(self, "seed", None) is not None:
             np.random.seed(self.seed)
         self.close(exception_type, exception_value, traceback)
 
