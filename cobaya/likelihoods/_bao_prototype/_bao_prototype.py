@@ -123,7 +123,6 @@ from __future__ import print_function
 # Global
 import os
 import numpy as np
-from scipy.stats import multivariate_normal
 from scipy.interpolate import UnivariateSpline
 import pandas as pd
 import logging
@@ -137,13 +136,13 @@ from cobaya.conventions import _path_install, _c_km_s
 class _bao_prototype(Likelihood):
 
     def initialize(self):
-        # If no path specified, use the modules path
-        data_file_path = os.path.normpath(getattr(self, "path", None) or
-                                          os.path.join(self.path_install, "data"))
-        if not data_file_path:
+        if not getattr(self, "path", None) and not getattr(self, "path_install", None):
             self.log.error("No path given to BAO data. Set the likelihood property "
                            "'path' or the common property '%s'.", _path_install)
             raise HandledException
+        # If no path specified, use the modules path
+        data_file_path = os.path.normpath(getattr(self, "path", None) or
+                                          os.path.join(self.path_install, "data"))
         # Rescaling by a fiducial value of the sound horizon
         if not hasattr(self, "rs_rescale"):
             if hasattr(self, "rs_fid"):
