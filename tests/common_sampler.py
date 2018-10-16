@@ -111,7 +111,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
                                    m2=mean_c2[:dimension],
                                    S2=cov_c2[:dimension, :dimension])
                            for i_c1 in range(n_modes)]
-                    extra_tol = 2 * n_modes if n_modes > 1 else 1
+                    extra_tol = 4 * n_modes if n_modes > 1 else 1
                     assert min(KLs) <= KL_tolerance * extra_tol
             else:
                 assert 0, "Could not check sample convergence: multimodal but no clusters"
