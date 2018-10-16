@@ -4,6 +4,12 @@
 :Synopsis: Likelihood of BICEP2/Keck-Array, October 2018 (2015 data)
 :Author: BICEP2/Keck team and Antony Lewis
 
+.. warning::
+
+   This is still in **beta**. Coming soon!
+
+   For now, use ``bicep_keck_2014`` instead, which was used in the Planck 2015 analysis.
+
 .. |br| raw:: html
 
    <br />
