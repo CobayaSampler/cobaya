@@ -58,7 +58,8 @@ def test_example(tmpdir):
             "Inconsistent info between interactive and *loaded* yaml.")
         # Run the chain -- constant seed so results are the same!
         globals_example["info"]["sampler"]["mcmc"] = (
-            globals_example["info"]["sampler"]["mcmc"] or {}).update({"seed": 0})
+            globals_example["info"]["sampler"]["mcmc"] or {})
+        globals_example["info"]["sampler"]["mcmc"].update({"seed": 0})
         exec (open(os.path.join(docs_src_folder, "run.py")).read(), globals_example)
         # Analyze and plot -- capture print output
         stream = StringIO()
