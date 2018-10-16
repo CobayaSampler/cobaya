@@ -12,6 +12,7 @@ def pytest_addoption(parser):
 @pytest.fixture
 def modules(request):
     cmd_modules = request.config.getoption("--modules", None)
-    cmd_modules = cmd_modules or os.path.normpath(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../modules"))
+    # By default, check in cobaya/modules/tests
+    cmd_modules = (cmd_modules or
+                   os.path.join(os.path.dirname(os.path.abspath(__file__)), "modules"))
     return cmd_modules
