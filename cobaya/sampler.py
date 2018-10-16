@@ -51,6 +51,7 @@ from __future__ import print_function
 # Global
 import os
 import logging
+import numpy as np
 
 # Local
 from cobaya.conventions import _sampler, _checkpoint_extension, _covmat_extension
@@ -164,9 +165,18 @@ class Sampler(object):
     # Python magic for the "with" statement
 
     def __enter__(self):
+        if self.seed is not None:
+            try:
+                np.random.seed(self.seed)
+            except TypeError:
+                self.log.error("The seed must be *integer*, but got %r with type %r",
+                               self.seed, type(self.seed))
+                raise HandledException
         return self
 
     def __exit__(self, exception_type, exception_value, traceback):
+        if self.seed is not None:
+            np.random.seed(self.seed)
         self.close(exception_type, exception_value, traceback)
 
 

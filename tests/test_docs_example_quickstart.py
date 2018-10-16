@@ -52,13 +52,13 @@ def test_example(tmpdir):
     try:
         assert is_equal_info(info_yaml, globals_example["info"]), (
             "Inconsistent info between yaml and insteractive.")
-        
         exec (open(os.path.join(docs_src_folder, "load_info.py")).read(), globals_example)
         globals_example["info_from_yaml"].pop(_output_prefix)
         assert is_equal_info(info_yaml, globals_example["info_from_yaml"]), (
             "Inconsistent info between interactive and *loaded* yaml.")
         # Run the chain -- constant seed so results are the same!
-        np.random.seed(0)
+        globals_example["info"]["sampler"]["mcmc"] = (
+            globals_example["info"]["sampler"]["mcmc"] or {}).update({"seed": 0})
         exec (open(os.path.join(docs_src_folder, "run.py")).read(), globals_example)
         # Analyze and plot -- capture print output
         stream = StringIO()
@@ -89,4 +89,3 @@ def test_example(tmpdir):
     finally:
         # Back to the working directory of the tests, just in case, and restart the rng
         os.chdir(cwd)
-        np.random.seed()

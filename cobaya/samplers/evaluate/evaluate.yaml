@@ -7,3 +7,5 @@ sampler:
     #   Use it if you don't want to change the reference points in your params block
     override:
       # param: value
+    # Seeding runs
+    seed:  # integer between 0 and 2**32 - 1

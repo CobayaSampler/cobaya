@@ -53,6 +53,9 @@ sampler:
     # -----------------
     callback_function:
     callback_every:  # default: every checkpoint
+    # Seeding runs
+    # ------------
+    seed:  # integer between 0 and 2**32 - 1
     # Checkpointing -- do not modify!
     Rminus1_last: .inf
     converged:

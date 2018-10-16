@@ -31,6 +31,9 @@ sampler:
     # ----------------------------------------------------------
     # (Use with care if there are likelihood modes close to the edge of the prior)
     confidence_for_unbounded: 0.9999995  # 5 sigmas
+    # Seeding runs
+    # ------------
+    seed:  # postitive integer
     # Raw output of PolyChord (no need to change them, normally)
     # ----------------------------------------------------------
     base_dir: raw_polychord_output

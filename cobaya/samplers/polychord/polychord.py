@@ -137,7 +137,7 @@ class polychord(Sampler):
                    "feedback", "read_resume", "base_dir", "file_root", "grade_frac",
                    "grade_dims"]
         self.pc_settings = PolyChordSettings(
-            self.nDims, self.nDerived,
+            self.nDims, self.nDerived, seed=(self.seed if self.seed is not None else -1),
             **{p: getattr(self, p) for p in pc_args if getattr(self, p) is not None})
         # prior conversion from the hypercube
         bounds = self.model.prior.bounds(
