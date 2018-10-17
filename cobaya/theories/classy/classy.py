@@ -121,7 +121,7 @@ collector = namedtuple("collector",
 collector.__new__.__defaults__ = (None, [], [], {}, None, lambda *x: x)
 
 # default non linear code
-non_linear_default = "halofit"
+non_linear_default_code = "halofit"
 
 
 class classy(_cosmo):
@@ -222,16 +222,13 @@ class classy(_cosmo):
                 self.add_z_for_matter_power(v.pop("z"))
                 # Use halofit by default if non-linear requested but no code specified
                 if v.get("nonlinear", False) and "non linear" not in self.extra_args:
-                    self.extra_args["non linear"] = default_nonlinear_code
+                    self.extra_args["non linear"] = non_linear_default_code
                 for pair in v.pop("vars_pairs", [["total", "total"]]):
                     if any([x.lower() != "delta_tot" for x in pair]):
                         self.log.error("NotImplemented in CLASS: %r", pair)
                         raise HandledException
                     self._Pk_interpolator_kwargs = {
                         "logk": True, "extrap_kmax": v.pop("extrap_kmax", None)}
-                    if v:
-                        self.log.error("Unknown options for P(k): %r", v)
-                        raise HandledException
                     name = "Pk_interpolator_%s_%s" % (pair[0], pair[1])
                     self.collectors[name] = collector(
                         method="get_pk_and_k_and_z",
@@ -261,7 +258,7 @@ class classy(_cosmo):
         if (((any([("b" in cl.lower()) for cl in cls]) and
               max([cls[cl] for cl in cls if "b" in cl.lower()]) > 50) or
              any([("p" in cl.lower()) for cl in cls]) and
-             not self.extra_args.get("non linear")):
+             not self.extra_args.get("non linear"))):
             self.log.warning("Requesting BB for ell>50 or lensing Cl's: "
                              "using a non-linear code is recommended (and you are not "
                              "using any). To activate it, set "
