@@ -28,3 +28,6 @@ Cosmological theory code
 
 .. autoclass:: theories._cosmo._cosmo
    :members:
+
+.. autoclass:: theories._cosmo.PowerSpectrumInterpolator
+   :members:

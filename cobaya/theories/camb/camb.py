@@ -276,6 +276,9 @@ class camb(_cosmo):
                 self.add_to_redshifts(v["z"])
                 v["vars_pairs"] = v["vars_pairs"] or [["total", "total"]]
                 kwargs = deepcopy(v)
+                # change of defaults:
+                kwargs["hubble_units"] = kwargs.get("hubble_units", False)
+                kwargs["k_hunit"] = kwargs.get("k_hunit", False)
                 for p in "k_max", "z", "vars_pairs":
                     kwargs.pop(p)
                 for pair in v["vars_pairs"]:

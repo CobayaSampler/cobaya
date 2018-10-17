@@ -10,6 +10,7 @@
 from __future__ import absolute_import
 import numpy as np
 from copy import deepcopy
+from scipy.interpolate import RectBivariateSpline
 
 # Local
 from cobaya.theory import Theory
@@ -54,7 +55,11 @@ class _cosmo(Theory):
                     cl: max(self._needs.get("cl", {}).get(cl, 0), v.get(cl, 0))
                     for cl in set(self._needs.get("cl", {})).union(v)}
             elif k.lower() == "pk_interpolator":
-                self._needs[k] = deepcopy(v)
+                self._needs[k.lower()] = deepcopy(v)
+                self._needs[k.lower()]["z"] = np.unique(np.concatenate(
+                    (self._needs[k.lower()].get("z", []), v["z"])))
+                self._needs[k.lower()]["k_max"] = max(
+                    self._needs[k.lower()].get("k_max", 0), v["k_max"])
             elif k.lower() in ["h", "angular_diameter_distance",
                                "comoving_radial_distance", "fsigma8"]:
                 if not k.lower() in self._needs:
@@ -116,9 +121,18 @@ class _cosmo(Theory):
         """
         pass
 
-    def get_comoving_radial_distance(self, z):
+    def get_Pk_interpolator(self, z):
         """
-        Returns the comoving radial distance from us to the given redshifts.
+        Returns a (dict of) power spectrum interpolator(s)
+        :class:`PowerSpectrumInterpolator`.
+        """
+        pass
+
+    def get_fsigma8(self, z):
+        """
+        Structure growth rate :math:`f\sigma_8`, as defined in eq. 33 of
+        `Planck 2015 results. XIII. Cosmological parameters <https://arxiv.org/pdf/1502.01589.pdf>`_,
+        at the given redshifts.
 
         The redshifts must be a subset of those requested when :func:`~_cosmo.needs`
         was called.
@@ -144,3 +158,66 @@ class _cosmo(Theory):
         """
         from cobaya.cosmo_input import get_best_covmat
         return get_best_covmat(self.path_install, params_info, likes_info)
+
+
+class PowerSpectrumInterpolator(RectBivariateSpline):
+    r"""
+    2D spline interpolation object (scipy.interpolate.RectBivariateSpline)
+    to evaluate matter power spectrum as function of z and k.
+
+    *This class is adapted from CAMB's own P(k) interpolator, by Antony Lewis;
+    it's mostly interface-compatible with the original.*
+
+    :param z: values of z for which the power spectrum was evaluated.
+    :param k: values of k for which the power spectrum was evaluated.
+    :param P_or_logP: Values of the power spectrum (or log-values, if logP=True).
+    :param logk: if True (default: False), assumes that k's are log-spaced.
+    :param logP: if True (default: False), log of power spectrum are given and used
+        for the underlying interpolator.
+    :param extrap_kmax: if set, use power law extrapolation beyond kmax up to
+        extrap_kmax; useful for tails of integrals.
+    """
+
+    def __init__(self, z, k, P_or_logP, extrap_kmax=None, logk=False, logP=False):
+        self.logk, self.logP = logk, logP
+        #  Check order
+        i_z = np.argsort(z)
+        i_k = np.argsort(k)
+        z, k, P_or_logP = z[i_z], k[i_k], P_or_logP[i_z, :][:, i_k]
+        self.zmin, self.zmax = np.min(z), np.max(z)
+        self._fk = (lambda k: k if logk else np.log(k))
+        self._finvk = (lambda k: np.exp(k) if logk else k)
+        self.kmin, self.kmax = np.min(k), np.max(k)
+        # Continue until extrap_kmax using a (log,log)-linear extrapolation
+        if extrap_kmax and extrap_kmax > self.kmax:
+            logknew = np.log(np.hstack([k, extrap_kmax]))
+            logPnew = np.empty((P_or_logP.shape[0], P_or_logP.shape[1] + 1))
+            logPnew[:, :-1] = P_or_logP if self.logP else np.log(P_or_logP)
+            logPnew[:, -1] = (
+                logPnew[:, -2] +
+                (logPnew[:, -2] - logPnew[:, -3]) / (logknew[-2] - logknew[-3]) *
+                (logknew[-1] - logknew[-2]))
+            k, P_or_logP = np.exp(logknew), logPnew if self.logP else np.exp(logPnew)
+        super(self.__class__, self).__init__(z, self._fk(k), P_or_logP)
+
+    def P(self, z, k, grid=None):
+        """
+        Get the power spectrum at (z,k).
+        """
+        if grid is None:
+            grid = not np.isscalar(z) and not np.isscalar(k)
+        if self.logP:
+            return np.exp(self.logP(z, k, grid=grid))
+        else:
+            return self(z, self._fk(k), grid=grid)
+
+    def logP(self, z, k, grid=None):
+        """
+        Get the log power spectrum at (z,k).
+        """
+        if grid is None:
+            grid = not np.isscalar(z) and not np.isscalar(k)
+        if self.logP:
+            return self(z, self._fk(k), grid=grid)
+        else:
+            return self.P(z, k, grid=grid)
