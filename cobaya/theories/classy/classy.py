@@ -110,15 +110,18 @@ from time import time
 from numbers import Number
 
 # Local
-from cobaya.theories._cosmo import _cosmo
+from cobaya.theories._cosmo import _cosmo, PowerSpectrumInterpolator
 from cobaya.log import HandledException
 from cobaya.install import download_github_release, pip_install
 from cobaya.conventions import _c_km_s, _T_CMB_K
 
 # Result collector
 collector = namedtuple("collector",
-                       ["method", "args", "args_names", "kwargs", "arg_array"])
-collector.__new__.__defaults__ = (None, [], [], {}, None)
+                       ["method", "args", "args_names", "kwargs", "arg_array", "post"])
+collector.__new__.__defaults__ = (None, [], [], {}, None, lambda *x: x)
+
+# default non linear code
+non_linear_default = "halofit"
 
 
 class classy(_cosmo):
@@ -207,6 +210,34 @@ class classy(_cosmo):
                     args=[np.atleast_1d(v["z"])],
                     args_names=["z"],
                     arg_array=0)
+            elif k.lower() == "comoving_radial_distance":
+                self.collectors[k.lower()] = collector(
+                    method="z_of_r",
+                    args_names=["z"],
+                    args=[np.atleast_1d(v["z"])])
+            elif k.lower() == "pk_interpolator":
+                self.extra_args["output"] += " mPk"
+                self.extra_args["P_k_max_h/Mpc"] = max(
+                    v.pop("k_max"), self.extra_args.get("P_k_max_h/Mpc", 0))
+                self.add_z_for_matter_power(v.pop("z"))
+                # Use halofit by default if non-linear requested but no code specified
+                if v.get("nonlinear", False) and "non linear" not in self.extra_args:
+                    self.extra_args["non linear"] = default_nonlinear_code
+                for pair in v.pop("vars_pairs", [["total", "total"]]):
+                    if any([x.lower() != "delta_tot" for x in pair]):
+                        self.log.error("NotImplemented in CLASS: %r", pair)
+                        raise HandledException
+                    self._Pk_interpolator_kwargs = {
+                        "logk": True, "extrap_kmax": v.pop("extrap_kmax", None)}
+                    if v:
+                        self.log.error("Unknown options for P(k): %r", v)
+                        raise HandledException
+                    name = "Pk_interpolator_%s_%s" % (pair[0], pair[1])
+                    self.collectors[name] = collector(
+                        method="get_pk_and_k_and_z",
+                        kwargs=v,
+                        post=(lambda P, k, z:PowerSpectrumInterpolator(
+                            z, k, P.T, **self._Pk_interpolator_kwargs)))
             elif v is None:
                 k_translated = self.translate_param(k, force=True)
                 if k_translated not in self.derived_extra:
@@ -215,7 +246,7 @@ class classy(_cosmo):
                 self.log.error("Requested product not known: %r", {k: v})
                 raise HandledException
         # Derived parameters (if some need some additional computations)
-        if "sigma8" in self.output_params or requirements:
+        if any([("sigma8" in s) for s in self.output_params or requirements]):
             self.extra_args["output"] += " mPk"
             self.extra_args["P_k_max_h/Mpc"] = (
                 max(1, self.extra_args.get("P_k_max_h/Mpc", 0)))
@@ -230,11 +261,11 @@ class classy(_cosmo):
         if (((any([("b" in cl.lower()) for cl in cls]) and
               max([cls[cl] for cl in cls if "b" in cl.lower()]) > 50) or
              any([("p" in cl.lower()) for cl in cls]) and
-             self.extra_args.get("non linear") != "halofit")):
+             not self.extra_args.get("non linear")):
             self.log.warning("Requesting BB for ell>50 or lensing Cl's: "
-                             "using Halofit is recommended (and you are not "
-                             "using it). To activate it, set "
-                             "'non_linear: halofit' in classy's 'extra_args'.")
+                             "using a non-linear code is recommended (and you are not "
+                             "using any). To activate it, set "
+                             "'non_linear: halofit|hmcode|...' in classy's 'extra_args'.")
         # Cleanup of products string
         self.extra_args["output"] = " ".join(set(self.extra_args["output"].split()))
         # Finally, check that there are no repeated parameters between input and extra
@@ -335,6 +366,8 @@ class classy(_cosmo):
                         kwargs[arg_array] = v
                         self.states[i_state][product][i] = method(
                             *self.collectors[product].args, **kwargs)
+                self.states[i_state][product] = collector.post(
+                    *self.states[i_state][product])
             # Prepare derived parameters
             d, d_extra = self.get_derived_all(derived_requested=(_derived == {}))
             if _derived == {}:
@@ -371,6 +404,8 @@ class classy(_cosmo):
         # Parameters with their own getters
         if "rs_drag" in requested_and_extra:
             requested_and_extra["rs_drag"] = self.classy.rs_drag()
+        elif "Omega_nu" in requested_and_extra:
+            requested_and_extra["Omega_nu"] = self.classy.Omega_nu
         # Get the rest using the general derived param getter
         # No need for error control: classy.get_current_derived_parameters is passed
         # every derived parameter not excluded before, and cause an error, indicating
@@ -432,7 +467,10 @@ class classy(_cosmo):
                 self.collectors[quantity].args_names.index("z")]
         i_kwarg_z = np.concatenate(
             [np.where(computed_redshifts == zi)[0] for zi in np.atleast_1d(z)])
-        return np.array(deepcopy(self.current_state()[quantity]))[i_kwarg_z]
+        values = np.array(deepcopy(self.current_state()[quantity]))
+        if quantity == "comoving_radial_distance":
+            values = values[0]
+        return values[i_kwarg_z]
 
     def get_H(self, z, units="km/s/Mpc"):
         try:
@@ -447,6 +485,12 @@ class classy(_cosmo):
 
     def get_comoving_radial_distance(self, z):
         return self._get_z_dependent("comoving_radial_distance", z)
+
+    def get_Pk_interpolator(self):
+        current_state = self.current_state()
+        prefix = "Pk_interpolator_"
+        return {k[len(prefix):]: deepcopy(v)
+                for k, v in current_state.items() if k.startswith(prefix)}
 
     def close(self):
         self.classy.struct_cleanup()

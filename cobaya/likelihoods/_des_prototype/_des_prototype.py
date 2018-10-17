@@ -400,9 +400,8 @@ class _des_prototype(Likelihood):
             "omegan": None,
             "omegam": None,
             "Pk_interpolator": {
-                "k_max": 15 * self.acc,
-                "z": self.zs_interp, "nonlinear": True, "hubble_units": False,
-                "k_hunit": False, "extrap_kmax": 500 * self.acc,
+                "z": self.zs_interp, "k_max": 15 * self.acc,
+                "extrap_kmax": 500 * self.acc, "nonlinear": True,
                 "vars_pairs": ([["delta_tot", "delta_tot"]] +
                                ([["Weyl", "Weyl"]] if self.use_Weyl else []))},
             "comoving_radial_distance": {"z": self.zs},

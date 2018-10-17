@@ -33,7 +33,7 @@ theory:
       # -- there are differences in the definition of the rest of the parameters,
       #    e.g. Neff (CAMB) vs N_ur (CLASS: not N_eff, but only of ultra-rel dof's),
       #    or mnu (CAMB, always total mass) vs m_ncdm (CLASS, mass of a single nu)
-      omegan: Omega_ncdm
+      omegan: Omega_nu
       # Thermodynamics
       tau: tau_reio
       zrei: z_reio
