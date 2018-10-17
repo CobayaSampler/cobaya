@@ -479,7 +479,7 @@ class LikelihoodCollection(object):
                           blocks, params_speeds)
             else:
                 log.warning("Requested fast/slow separation, "
-                                 "but all pararameters have the same speed.")
+                            "but all pararameters have the same speed.")
         return params_speeds, blocks
 
     def _get_auto_covmat(self, params_info):

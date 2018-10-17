@@ -776,7 +776,6 @@ def get_path(path):
 
 
 def is_installed(**kwargs):
-    print("psdoijfdjljhlkjhlssdifpsodiupoiupoiu")
     return os.path.exists(os.path.realpath(
         os.path.join(kwargs["path"], "data", des_data_name)))
 
