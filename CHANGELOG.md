@@ -2,6 +2,28 @@
 
 ## 1.1beta – [no release date yet]
 
-### Added
+### Samplers
 
-- DES Y1 likelihoods
+#### General
+
+- Seeded runs for `evaluate`, `mcmc` and `polychord`.
+
+### Cosmological theory codes
+
+#### General
+
+- Added P(k) interpolator as an observable (was already available for CAMB, but not documented)
+
+#### classy
+
+- Added P(k) interpolator
+
+### Cosmological likelihoods
+
+#### DES
+
+- Added Y1 release likelihoods [(arXiv:1708.01530)](https://arxiv.org/abs/1708.01530)
+
+#### BICEP-Keck
+
+- Updated to 2015 data [(arXiv:1810.05216)](https://arxiv.org/abs/1810.05216) and renamed to `bicep_keck_2015`.
