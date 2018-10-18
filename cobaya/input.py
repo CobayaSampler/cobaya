@@ -145,10 +145,18 @@ def get_full_info(info):
                                       .difference(set([_external, _p_renames]))
                                       .difference(set(full_info[block][module])))
             if options_not_recognized:
-                log.error("'%s' does not recognize some options: '%r'. "
-                          "To see the allowed options, check out the documentation of "
-                          "this module", module, tuple(options_not_recognized))
-                raise HandledException
+                if default_module_info[block][module]:
+                    # Internal module
+                    log.error("'%s' does not recognize some options: '%r'. "
+                              "To see the allowed options, check out the documentation of"
+                              " this module", module, tuple(options_not_recognized))
+                    raise HandledException
+                else:
+                    # External module
+                    log.error("External %s '%s' does not recognize some options: '%r'. "
+                              "Check the documentation for 'external %s'.",
+                              block, module, tuple(options_not_recognized), block)
+                    raise HandledException
             full_info[block][module].update(input_info[block][module])
             # Store default parameters and priors of class, and save to combine later
             if block == _likelihood:
