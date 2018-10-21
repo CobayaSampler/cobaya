@@ -11,6 +11,8 @@ from __future__ import absolute_import
 import numpy as np
 from copy import deepcopy
 from scipy.interpolate import RectBivariateSpline
+from six import string_types
+from itertools import chain
 
 # Local
 from cobaya.theory import Theory
@@ -55,11 +57,27 @@ class _cosmo(Theory):
                     cl: max(self._needs.get("cl", {}).get(cl, 0), v.get(cl, 0))
                     for cl in set(self._needs.get("cl", {})).union(v)}
             elif k.lower() == "pk_interpolator":
-                self._needs[k.lower()] = deepcopy(v)
-                self._needs[k.lower()]["z"] = np.unique(np.concatenate(
-                    (self._needs[k.lower()].get("z", []), v["z"])))
-                self._needs[k.lower()]["k_max"] = max(
-                    self._needs[k.lower()].get("k_max", 0), v["k_max"])
+                # Make sure vars_pairs is a list of [list of 2 vars pairs]
+                vars_pairs = v.pop("vars_pairs", [])
+                try:
+                    if isinstance(vars_pairs[0], string_types):
+                        vars_pairs = [vars_pairs]
+                except IndexError:
+                    # Empty list: by default [delta_tot, delta_tot]
+                    vars_pairs = [2*["delta_tot"]]
+                except:
+                    self.log("Cannot understands vars_pairs '%r' for P(k) interpolator",
+                             vars_pairs)
+                    raise HandledException
+                vars_pairs = set([tuple(pair) for pair in chain(
+                    self._needs.get(k.lower(), {}).get("vars_pairs", []), vars_pairs)])
+                self._needs[k.lower()] = {
+                    "z": np.unique(np.concatenate(
+                        (self._needs.get(k.lower(), {}).get("z", []),
+                         np.atleast_1d(v["z"])))),
+                    "k_max": max(
+                        self._needs.get(k.lower(), {}).get("k_max", 0), v["k_max"]),
+                    "vars_pairs": vars_pairs}
             elif k.lower() in ["h", "angular_diameter_distance",
                                "comoving_radial_distance", "fsigma8"]:
                 if not k.lower() in self._needs:
@@ -181,24 +199,25 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
     def __init__(self, z, k, P_or_logP, extrap_kmax=None, logk=False, logP=False):
         self.logk, self.logP = logk, logP
         #  Check order
+        z, k = [np.atleast_1d(x) for x in [z,k]]
         i_z = np.argsort(z)
         i_k = np.argsort(k)
-        z, k, P_or_logP = z[i_z], k[i_k], P_or_logP[i_z, :][:, i_k]
-        self.zmin, self.zmax = np.min(z), np.max(z)
+        self.z, self.k, P_or_logP = z[i_z], k[i_k], P_or_logP[i_z, :][:, i_k]
+        self.zmin, self.zmax = np.min(self.z), np.max(self.z)
         self._fk = (lambda k: k if logk else np.log(k))
         self._finvk = (lambda k: np.exp(k) if logk else k)
-        self.kmin, self.kmax = np.min(k), np.max(k)
+        self.kmin, self.kmax = np.min(self.k), np.max(self.k)
         # Continue until extrap_kmax using a (log,log)-linear extrapolation
         if extrap_kmax and extrap_kmax > self.kmax:
-            logknew = np.log(np.hstack([k, extrap_kmax]))
+            logknew = np.log(np.hstack([self.k, extrap_kmax]))
             logPnew = np.empty((P_or_logP.shape[0], P_or_logP.shape[1] + 1))
             logPnew[:, :-1] = P_or_logP if self.logP else np.log(P_or_logP)
             logPnew[:, -1] = (
                 logPnew[:, -2] +
                 (logPnew[:, -2] - logPnew[:, -3]) / (logknew[-2] - logknew[-3]) *
                 (logknew[-1] - logknew[-2]))
-            k, P_or_logP = np.exp(logknew), logPnew if self.logP else np.exp(logPnew)
-        super(self.__class__, self).__init__(z, self._fk(k), P_or_logP)
+            self.k, P_or_logP = np.exp(logknew), logPnew if self.logP else np.exp(logPnew)
+        super(self.__class__, self).__init__(self.z, self._fk(self.k), P_or_logP)
 
     def P(self, z, k, grid=None):
         """

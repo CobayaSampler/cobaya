@@ -223,7 +223,7 @@ class classy(_cosmo):
                 # Use halofit by default if non-linear requested but no code specified
                 if v.get("nonlinear", False) and "non linear" not in self.extra_args:
                     self.extra_args["non linear"] = non_linear_default_code
-                for pair in v.pop("vars_pairs", [["total", "total"]]):
+                for pair in v.pop("vars_pairs", [["delta_tot", "delta_tot"]]):
                     if any([x.lower() != "delta_tot" for x in pair]):
                         self.log.error("NotImplemented in CLASS: %r", pair)
                         raise HandledException
