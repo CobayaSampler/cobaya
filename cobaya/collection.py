@@ -204,11 +204,13 @@ class Collection(object):
         between `first` (default 0) and `last` (default last obtained),
         optionally including derived parameters if `derived=True` (default `False`).
         """
+        weights = (lambda w: (
+            {"fweights": w} if np.allclose(np.round(w), w) else {"aweights": w}))(
+                self[_weight][first:last].values)
         return np.atleast_2d(np.cov(
             self[list(self.sampled_params) +
-                 (list(self.derived_params) if derived else [])]
-            [first:last].T,
-            fweights=self[_weight][first:last]))
+                 (list(self.derived_params) if derived else [])][first:last].T,
+            **weights))
 
     def _sampled_to_getdist_mcsamples(self, first=None, last=None):
         """
