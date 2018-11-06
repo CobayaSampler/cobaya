@@ -78,6 +78,7 @@ class _cosmo(Theory):
                     "k_max": max(
                         self._needs.get(k.lower(), {}).get("k_max", 0), v["k_max"]),
                     "vars_pairs": vars_pairs}
+                self._needs[k.lower()].update(v)
             elif k.lower() in ["h", "angular_diameter_distance",
                                "comoving_radial_distance", "fsigma8"]:
                 if not k.lower() in self._needs:
