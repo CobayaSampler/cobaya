@@ -247,6 +247,35 @@ parameters, we insert the functions defining them under a ``derived`` property
           value: "lambda logx: np.exp(x)"
           derived: False
 
+.. note::
+
+   If you want to fix the value of a parameter whose only role is being an argument of a
+   dynamically defined one and is *not supposed to be passed to the likelihood*, you need
+   to explicilty *drop* it. E.g. suppose that you want to sample from a likelihood that
+   depends on ``x``, but want to use ``log(x)`` as the sampled parameter; you would do it
+   like this:
+
+   .. code:: yaml
+
+      params:
+        logx:
+          prior: [...]
+          drop: True
+        x:
+          value: "lambda logx: np.exp(x)"
+
+   Now, if you want to fix the value of ``logx`` without changing the structure of the
+   input, do
+
+   .. code:: yaml
+
+      params:
+        logx:
+          value: [fixed_value]
+          drop: True
+        x:
+          value: "lambda logx: np.exp(x)"
+
 
 .. _prior_inheritance:
 
