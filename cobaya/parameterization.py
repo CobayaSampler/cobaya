@@ -103,7 +103,7 @@ class Parameterization(object):
         self._input_funcs = dict()
         self._input_args = dict()
         self._output = odict()
-        self._fixed = odict()
+        self._constant = odict()
         self._sampled = odict()
         self._sampled_info = odict()
         self._sampled_renames = odict()
@@ -114,13 +114,14 @@ class Parameterization(object):
         # to infos without _prior or _p_value, and a _p_value field to fixed params
         for p, info in info_params.items():
             if is_fixed_param(info):
-                self._input[p] = (
-                    float(info[_p_value]) if isinstance(info[_p_value], Number) else None)
-                if self._input[p] is None:
+                if isinstance(info[_p_value], Number):
+                    self._constant[p] = info[_p_value]
+                    if not info.get(_p_drop, False):
+                        self._input[p] = self._constant[p]
+                else:
+                    self._input[p] = None
                     self._input_funcs[p] = get_external_function(info[_p_value])
                     self._input_args[p] = getargspec(self._input_funcs[p]).args
-                else:
-                    self._fixed[p] = self._input[p]
             if is_sampled_param(info):
                 self._sampled[p] = None
                 self._sampled_info[p] = deepcopy(info)
@@ -158,7 +159,8 @@ class Parameterization(object):
         # Assume that the *un*known function arguments are likelihood output parameters
         args = (set(chain(*self._input_args.values()))
                 .union(chain(*self._derived_args.values())))
-        for p in (list(self._input) + list(self._sampled) + list(self._derived)):
+        for p in (list(self._constant) + list(self._input) +
+                  list(self._sampled) + list(self._derived)):
             if p in args:
                 args.remove(p)
         self._output.update({p: None for p in args})
@@ -181,7 +183,7 @@ class Parameterization(object):
             raise HandledException
         # input params depend on input and sampled only, never on output/derived
         bad_input_dependencies = set(chain(*self._input_args.values())).difference(
-            set(self.input_params()).union(set(self.sampled_params())))
+            set(self.input_params()).union(set(self.sampled_params())).union(set(self.constant_params())))
         if bad_input_dependencies:
             log.error("Input parameters defined as functions can only depend on other "
                       "input parameters that are not defined as functions. "
@@ -195,8 +197,8 @@ class Parameterization(object):
     def output_params(self):
         return deepcopy(self._output)
 
-    def fixed_params(self):
-        return deepcopy(self._fixed)
+    def constant_params(self):
+        return deepcopy(self._constant)
 
     def sampled_params(self):
         return deepcopy(self._sampled)
@@ -233,7 +235,10 @@ class Parameterization(object):
             for p in self._input_funcs:
                 if p in resolved:
                     continue
-                args = {p: self._input.get(p, sampled_params_values.get(p, None))
+                args = {p:
+                        self._constant.get(
+                            p, self._input.get(
+                                p, sampled_params_values.get(p, None)))
                         for p in self._input_args[p]}
                 if not all([isinstance(v, Number) for v in args.values()]):
                     continue

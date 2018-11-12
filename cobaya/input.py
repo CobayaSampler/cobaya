@@ -240,7 +240,7 @@ def merge_params_info(*params_infos):
             current_info[p].update(deepcopy(new_info_p))
             # Account for incompatibilities: "prior" and ("value" or "derived"+bounds)
             incompatibilities = {_prior: [_p_value, _p_derived, "min", "max"],
-                                 _p_value: [_prior, _p_drop, _p_ref, _p_proposal],
+                                 _p_value: [_prior, _p_ref, _p_proposal],
                                  _p_derived: [_prior, _p_drop, _p_ref, _p_proposal]}
             for f1, incomp in incompatibilities.items():
                 if f1 in new_info_p:

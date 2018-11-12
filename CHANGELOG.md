@@ -2,6 +2,10 @@
 
 ## 1.1beta – [no release date yet]
 
+### Parameterization and priors
+
+- Made possible to fix a parameter whose only role is being an argument of a dynamically defined one.
+
 ### Samplers
 
 #### General

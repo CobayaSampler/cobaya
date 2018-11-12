@@ -247,13 +247,6 @@ parameters, we insert the functions defining them under a ``derived`` property
           value: "lambda logx: np.exp(x)"
           derived: False
 
-.. note::
-
-   It is not possible to **fix** the value of a dynamically defined parameter
-   (there would be no way to indicate that we want to drop it). Fix the corresponding
-   likelihood parameters instead.
-   [But let us know if this is a feature that you'd really, really like.]
-
 
 .. _prior_inheritance:
 
@@ -334,7 +327,7 @@ class Prior(object):
         """
         Initializes the prior and reference pdf's from the input information.
         """
-        fixed_params_info = parameterization.fixed_params()
+        constant_params_info = parameterization.constant_params()
         sampled_params_info = parameterization.sampled_params_info()
         if not sampled_params_info:
             log.warning("No sampled parameters requested! "
@@ -383,11 +376,11 @@ class Prior(object):
             self.external[name]["params"] = {
                 p: list(sampled_params_info).index(p)
                 for p in self.external[name]["argspec"].args if p in sampled_params_info}
-            self.external[name]["fixed_params"] = {
-                p: fixed_params_info[p]
-                for p in self.external[name]["argspec"].args if p in fixed_params_info}
+            self.external[name]["constant_params"] = {
+                p: constant_params_info[p]
+                for p in self.external[name]["argspec"].args if p in constant_params_info}
             if (not (len(self.external[name]["params"]) +
-                     len(self.external[name]["fixed_params"]))):
+                     len(self.external[name]["constant_params"]))):
                 log.error("None of the arguments of the external prior '%s' "
                           "are known *fixed* or *sampled* parameters. "
                           "This prior recognizes: %r",
@@ -397,13 +390,13 @@ class Prior(object):
                                      :(len(self.external[name]["argspec"].args) -
                                        len(self.external[name]["argspec"].defaults or []))]
             if not all([(p in self.external[name]["params"] or
-                         p in self.external[name]["fixed_params"])
+                         p in self.external[name]["constant_params"])
                         for p in params_without_default]):
                 log.error("Some of the arguments of the external prior '%s' "
                           "cannot be found and don't have a default value either: %s",
                           name, list(set(params_without_default)
                                      .difference(self.external[name]["params"])
-                                     .difference(self.external[name]["fixed_params"])))
+                                     .difference(self.external[name]["constant_params"])))
                 raise HandledException
             log.warning("External prior '%s' loaded. "
                         "Mind that it might not be normalized!", name)
@@ -499,7 +492,7 @@ class Prior(object):
     def logps_external(self, x):
         """Evaluates the logprior using the external prior only."""
         return [ext["logp"](**dict({p: x[i] for p, i in ext["params"].items()},
-                                   **ext["fixed_params"]))
+                                   **ext["constant_params"]))
                 for ext in self.external.values()]
 
     def covmat(self, ignore_external=False):

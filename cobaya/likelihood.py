@@ -240,9 +240,6 @@ class LikelihoodCollection(object):
 
     def __init__(self, info_likelihood, parameterization, info_theory=None, modules=None,
                  timing=None):
-        # Store the input/output parameters
-        self.input_params = parameterization.input_params()
-        self.output_params = parameterization.output_params()
         # Initialize individual Likelihoods
         self._likelihoods = odict()
         for name, info in info_likelihood.items():
@@ -264,6 +261,7 @@ class LikelihoodCollection(object):
         # Check that all are recognized
         requested_not_known = {}
         for params in ("input_params", "output_params"):
+            # Store the input/output parameters
             info = getattr(parameterization, params)()
             setattr(self, params, info)
             requested = set(info)
