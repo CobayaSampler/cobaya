@@ -242,7 +242,15 @@ class Parameterization(object):
                         for p in self._input_args[p]}
                 if not all([isinstance(v, Number) for v in args.values()]):
                     continue
-                self._input[p] = self._input_funcs[p](**args)
+                try:
+                    self._input[p] = self._input_funcs[p](**args)
+                except NameError as exception:
+                    unknown = str(exception).split("'")[1]
+                    log.error(
+                        "Unknown variable '%s' was referenced in the definition of "
+                        "the parameter '%s', with arguments %r.",
+                        unknown, p, list(args))
+                    raise HandledException
                 resolved.append(p)
         if set(resolved) != set(self._input_funcs):
             log.error("Could not resolve arguments for input parameters %s. Maybe there "
