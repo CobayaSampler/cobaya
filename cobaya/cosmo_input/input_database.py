@@ -178,7 +178,7 @@ matter = odict([
                 [_p_proposal, 0.02], [_p_label, r"\Omega_\mathrm{m}"],
                 [_p_drop, True]])],
             ["omegabh2", odict([
-                [_p_value, "lambda omegab, H0: omegam*(H0/100)**2"],
+                [_p_value, "lambda omegab, H0: omegab*(H0/100)**2"],
                 [_p_label, r"\Omega_\mathrm{b} h^2"]])],
             ["omegach2", odict([
                 [_p_value, ("lambda omegam, omegab, mnu, H0: "
