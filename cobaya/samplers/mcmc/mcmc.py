@@ -308,14 +308,12 @@ class mcmc(Sampler):
         assert not np.any(np.isnan(covmat))
         return covmat
 
-    def run(self):
-        """
-        Runs the sampler.
-        """
+    def _start_run(self):
         # Get first point, to be discarded -- not possible to determine its weight
         # Still, we need to compute derived parameters, since, as the proposal "blocked",
         # we may be saving the initial state of some block.
         # NB: if resuming but nothing was written (burn-in not finished): re-start
+        # Initial dummy checkpoint (needed when 1st checkpoint not reached in prev. run)        
         self.log.info("Initial point:")
         if self.resuming and self.collection.n():
             initial_point = (self.collection[self.collection.sampled_params]
@@ -335,25 +333,23 @@ class mcmc(Sampler):
                                logpriors=logpriors, loglikes=loglikes)
         self.log.info("\n%s", self.current_point.data.to_string(
             index=False, line_width=_line_width))
-        # Initial dummy checkpoint (needed when 1st checkpoint not reached in prev. run)
         self.write_checkpoint()
-        # Main loop!
-        self.log.info("Sampling!" + (
-            " (NB: nothing will be printed until %d burn-in samples " % self.burn_in +
-            "have been obtained)" if self.burn_in else ""))
-        while self.n() < self.effective_max_samples and not self.converged:
-            self.get_new_sample()
-            # Callback function
-            if (hasattr(self, "callback_function_callable") and
-                    not (max(self.n(), 1) % self.callback_every) and
-                    self.current_point[_weight] == 1):
-                self.callback_function_callable(self)
-            # Checking convergence and (optionally) learning the covmat of the proposal
-            if self.check_all_ready():
-                self.check_convergence_and_learn_proposal()
-            if self.n() == self.effective_max_samples:
-                self.log.info("Reached maximum number of accepted steps allowed. "
-                              "Stopping.")
+
+    def _iterate(self):
+        self.get_new_sample()
+        # Callback function
+        if (hasattr(self, "callback_function_callable") and
+                not (max(self.n(), 1) % self.callback_every) and
+                self.current_point[_weight] == 1):
+            self.callback_function_callable(self)
+        # Checking convergence and (optionally) learning the covmat of the proposal
+        if self.check_all_ready():
+            self.check_convergence_and_learn_proposal()
+        if self.n() == self.effective_max_samples:
+            self.log.info("Reached maximum number of accepted steps allowed. "
+                          "Stopping.")
+
+    def _end_sampling(self):
         # Make sure the last batch of samples ( < output_every ) are written
         self.collection._out_update()
         if get_mpi():
@@ -362,6 +358,46 @@ class mcmc(Sampler):
             Ns = [self.n()]
         if not get_mpi_rank():
             self.log.info("Sampling complete after %d accepted steps.", sum(Ns))
+
+    def run(self):
+        """
+        Runs the sampler.
+        """
+        self._start_run()
+
+        # Main loop!
+        self.log.info("Sampling!" + (
+            " (NB: nothing will be printed until %d burn-in samples " % self.burn_in +
+            "have been obtained)" if self.burn_in else ""))
+        while self.n() < self.effective_max_samples and not self.converged:
+            self._iterate()
+
+        self._end_sampling()
+
+    def iterate(self):
+        """
+        Run the sampler as an iterator, yielding each sample to the
+        caller after it arrives
+
+        """
+        self._start_run()
+
+        # Main loop - same as the one in the run method above
+        self.log.info("Sampling iteratively!"
+            " (NB: nothing will be printed until %d burn-in samples " % self.burn_in +
+            "have been obtained)" if self.burn_in else "")
+        while self.n() < self.effective_max_samples and not self.converged:
+            self._iterate()
+            # The samples are updated in-place in the rest of the code,
+            # so we have to copy it here.
+            sample = deepcopy(self.current_point.data)
+            # If we yield a sample at every iteration then the weights
+            # will be determined by how often we yield the point, not
+            # by its value.  So we should set weight=1
+            sample['weight'] = 1.0
+            yield sample
+
+        self._end_sampling()
 
     def n(self, burn_in=False):
         """
