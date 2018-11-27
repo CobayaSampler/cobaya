@@ -637,7 +637,7 @@ class mcmc(Sampler):
             # "Between" or "B" term
             # We don't weight with the number of samples in the chains here:
             # shorter chains will likely be outliers, and we want to notice them
-            cov_of_means = np.cov(means.T)  # , fweights=Ns)
+            cov_of_means = np.atleast_2d(np.cov(means.T))  # , fweights=Ns)
             # For numerical stability, we turn mean_of_covs into correlation matrix:
             #   rho = (diag(Sigma))^(-1/2) * Sigma * (diag(Sigma))^(-1/2)
             # and apply the same transformation to the mean of covs (same eigenvals!)
