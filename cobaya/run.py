@@ -47,6 +47,7 @@ def run(info):
     full_info = get_full_info(info)
     if output:
         full_info[_output_prefix] = output.updated_output_prefix()
+        full_info[_resume] = output.is_resuming()
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
         # Don't dump unless we are doing output, just in case something not serializable
         # May be fixed in the future if we find a way to serialize external functions
@@ -61,7 +62,7 @@ def run(info):
     with Model(full_info[_params], full_info[_likelihood], full_info.get(_prior),
                full_info.get(_theory), modules=info.get(_path_install),
                timing=full_info.get(_timing), allow_renames=False) as model:
-        with Sampler(full_info[_sampler], model, output, resume=info.get(_resume),
+        with Sampler(full_info[_sampler], model, output, resume=full_info[_resume],
                      modules=info.get(_path_install)) as sampler:
             sampler.run()
     # For scripted calls

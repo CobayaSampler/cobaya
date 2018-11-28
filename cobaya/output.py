@@ -68,6 +68,8 @@ class Output(object):
                 log.info("Deleting previous chain ('force' was requested).")
                 [os.remove(f) for f in [self.file_input, self.file_full]]
             elif resume:
+                # Only in this case we can be sure that we are actually resuming
+                self.resume = True
                 log.info("Let's try to resume sampling.")
             else:
                 # If only input and full info dumped, overwrite; else fail
@@ -94,6 +96,9 @@ class Output(object):
         Updated path: drops folder: now it's relative to the chain's location.
         """
         return self.prefix or "."
+
+    def is_resuming(self):
+        return getattr(self, "resume", False)
 
     def dump_info(self, input_info, full_info):
         """
