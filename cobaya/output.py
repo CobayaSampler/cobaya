@@ -18,7 +18,7 @@ import datetime
 from copy import deepcopy
 
 # Local
-from cobaya.yaml import yaml_dump, yaml_load_file
+from cobaya.yaml import yaml_dump, yaml_load_file, OutputError
 from cobaya.conventions import _input_suffix, _full_suffix, _separator, _yaml_extensions
 from cobaya.conventions import _resume, _resume_default, _force
 from cobaya.conventions import _force_reproducible_default, _likelihood, _params
@@ -121,9 +121,13 @@ class Output(object):
         for f, info in [(self.file_input, input_info),
                         (self.file_full, full_info_trimmed)]:
             with open(f, "w") as f_out:
-                f_out.write(
-                    yaml_dump(info, default_flow_style=False,
-                              force_reproducible=self.force_reproducible))
+                try:
+                    f_out.write(
+                        yaml_dump(info, default_flow_style=False,
+                                  force_reproducible=self.force_reproducible))
+                except OutputError as e:
+                    log.error(e.message)
+                    raise HandledException
 
     def prepare_collection(self, name=None, extension=None):
         if not name:

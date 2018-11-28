@@ -146,7 +146,8 @@ def yaml_dump(data, force_reproducible=_force_reproducible_default,
             "If you *really* need to generate output, "
             "set '%s: False'" % _force_reproducible +
             " in your input, but mind that the 'full' yaml file generated cannot be "
-            "called again, since it will contain unknown symbols.")
+            "called again, since some definitions (e.g. external functions) could not be "
+            "dumped.")
 
     if force_reproducible:
         OrderedDumper.add_representer(type(lambda: None), _fail_representer)

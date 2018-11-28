@@ -50,9 +50,9 @@ def run(info):
         # Don't dump unless we are doing output, just in case something not serializable
         # May be fixed in the future if we find a way to serialize external functions
         if info.get(_output_prefix):
-            logging.getLogger(__name__.split(".")[-1]).debug(
+            logging.getLogger(__name__.split(".")[-1]).info(
                 "Input info updated with defaults (dumped to YAML):\n%s",
-                yaml_dump(full_info))
+                yaml_dump(full_info, force_reproducible=False))
     # We dump the info now, before modules initialization, lest it is accidentally modified
     # If resuming a sample, it checks that old and new infos are consistent
     output.dump_info(info, full_info)
