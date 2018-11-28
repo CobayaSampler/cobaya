@@ -103,7 +103,7 @@ An alternative way of resuming a sample *from the command line* is passing, inst
 
 .. code:: bash
 
-   $ cobaya-run input.yaml    # contains 'output: chains/gauss'
+   $ cobaya-run input.yaml    # writes into 'output: chains/gauss'
    $ cobaya-run chains/gauss  # continues the previous one; no need for -r!!!
 
 .. note::
