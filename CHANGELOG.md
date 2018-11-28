@@ -2,6 +2,12 @@
 
 ## 1.1beta – [no release date yet]
 
+(Among many bugfixes...)
+
+### I/O
+
+- More permisive resuming.
+
 ### Parameterization and priors
 
 - Made possible to fix a parameter whose only role is being an argument of a dynamically defined one.
