@@ -17,7 +17,7 @@ from cobaya.conventions import _likelihood, _prior, _params, _theory, _sampler
 from cobaya.conventions import _path_install, _debug, _debug_file, _output_prefix
 from cobaya.conventions import _resume, _force_reproducible, _timing, _debug_default
 from cobaya.conventions import _yaml_extensions, _separator, _full_suffix, _resume_default
-from cobaya.conventions import _modules_path_arg, _force
+from cobaya.conventions import _modules_path_arg, _force, _force_reproducible_default
 from cobaya.output import get_Output as Output
 from cobaya.model import Model
 from cobaya.sampler import get_sampler as Sampler
@@ -41,7 +41,8 @@ def run(info):
     # Initialize output, if required
     output = Output(output_prefix=info.get(_output_prefix), resume=info.get(_resume),
                     force_output=info.pop(_force, None),
-                    force_reproducible=info.get(_force_reproducible))
+                    force_reproducible=info.get(
+                        _force_reproducible, _force_reproducible_default))
     # Create the full input information, including defaults for each module.
     full_info = get_full_info(info)
     if output:
