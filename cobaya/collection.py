@@ -75,7 +75,7 @@ class Collection(object):
             if output:
                 try:
                     self._out_load()
-                    if list(self.data.columns) != columns:
+                    if set(self.data.columns) != set(columns):
                         self.log.error(
                             "Unexpected column names!\nLoaded: %s\nShould be: %s",
                             list(self.data.columns), columns)

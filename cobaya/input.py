@@ -271,10 +271,10 @@ def merge_info(*infos):
 
 def is_equal_info(info1, info2, strict=True, print_not_log=False):
     """
-    Compares two information dictionaries, ignoring ordering where it does not matter.
+    Compares two information dictionaries.
 
     Set ``strict=False`` (default: ``True``) to ignore options that would not affect
-    the statistics of a posterior sample.
+    the statistics of a posterior sample, including order of params/priors/likelihoods.
     """
     if print_not_log:
         myprint = print
@@ -324,7 +324,8 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False):
                     return False
         elif block_name in [_params, _likelihood, _prior]:
             # Internal order DOES matter, but just up to 1st level
-            if list(block1) != list(block2):
+            f = list if strict else set
+            if f(block1) != f(block2):
                 myprint(myname + ": different [%s] or different order of them: %r vs %r" % (
                     block_name, list(block1), list(block2)))
                 return False
