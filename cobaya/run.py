@@ -62,7 +62,7 @@ def run(info):
     with Model(full_info[_params], full_info[_likelihood], full_info.get(_prior),
                full_info.get(_theory), modules=info.get(_path_install),
                timing=full_info.get(_timing), allow_renames=False) as model:
-        with Sampler(full_info[_sampler], model, output, resume=full_info[_resume],
+        with Sampler(full_info[_sampler], model, output, resume=full_info.get(_resume),
                      modules=info.get(_path_install)) as sampler:
             sampler.run()
     # For scripted calls
