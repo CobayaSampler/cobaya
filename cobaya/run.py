@@ -24,7 +24,7 @@ from cobaya.sampler import get_sampler as Sampler
 from cobaya.log import logger_setup
 from cobaya.yaml import yaml_dump
 from cobaya.input import get_full_info
-from cobaya.mpi import import_MPI
+from cobaya.mpi import import_MPI, get_mpi_rank
 
 
 def run(info):
@@ -51,7 +51,7 @@ def run(info):
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
         # Don't dump unless we are doing output, just in case something not serializable
         # May be fixed in the future if we find a way to serialize external functions
-        if info.get(_output_prefix):
+        if info.get(_output_prefix) and not get_mpi_rank():
             logging.getLogger(__name__.split(".")[-1]).info(
                 "Input info updated with defaults (dumped to YAML):\n%s",
                 yaml_dump(full_info, force_reproducible=False))
