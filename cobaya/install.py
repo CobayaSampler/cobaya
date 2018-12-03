@@ -120,7 +120,12 @@ def install(*infos, **kwargs):
 
 
 def download_github_release(directory, repo_name, release_name, repo_rename=None,
-                            github_user="CobayaSampler", no_progress_bars=False):
+                            no_progress_bars=False):
+    if "/" in repo_name:
+        github_user = repo_name[:repo_name.find("/")]
+        repo_name = repo_name[repo_name.find("/")+1:]
+    else:
+        github_user = "CobayaSampler"
     if not os.path.exists(directory):
         os.makedirs(directory)
     try:

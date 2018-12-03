@@ -496,9 +496,8 @@ class classy(_cosmo):
 # Installation routines ##################################################################
 
 # Name of the Class repo/folder and version to download
-classy_repo_name = "class_public"
+classy_repo_name = "lesgourg/class_public"
 classy_repo_rename = "classy"
-classy_repo_user = "lesgourg"
 classy_repo_version = "v2.6.3"
 
 
@@ -522,8 +521,7 @@ def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs)
     log.info("Downloading classy...")
     success = download_github_release(
         os.path.join(path, "code"), classy_repo_name, classy_repo_version,
-        github_user=classy_repo_user, repo_rename=classy_repo_rename,
-        no_progress_bars=no_progress_bars)
+        repo_rename=classy_repo_rename, no_progress_bars=no_progress_bars)
     if not success:
         log.error("Could not download classy.")
         return False

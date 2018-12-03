@@ -35,8 +35,7 @@ class polychord(Sampler):
             self.log.info("Initializing")
         # If path not given, try using general path to modules
         if not self.path and self.path_install:
-            self.path = os.path.join(
-                self.path_install, "code", pc_repo_name)
+            self.path = get_path(self.path_install)
         if self.path:
             if not get_mpi_rank():
                 self.log.info("Importing *local* PolyChord from " + self.path)
@@ -295,14 +294,16 @@ pc_repo_version = "v1.14.patch6"
 
 
 def get_path(path):
-    return os.path.realpath(os.path.join(path, "code", pc_repo_name))
+    return os.path.realpath(
+        os.path.join(path, "code", pc_repo_name[pc_repo_name.find("/")+1:]))
 
 
 def is_installed(**kwargs):
     if not kwargs["code"]:
         return True
     try:
-        poly_path = os.path.join(kwargs["path"], "code", pc_repo_name)
+        poly_path = os.path.join(
+            kwargs["path"], "code", pc_repo_name[pc_repo_name.find("/")+1:])
         assert os.path.isfile(
             os.path.realpath(os.path.join(poly_path, "lib/libchord.so")))
         pc_build_path = os.path.join(poly_path, "build")
@@ -329,7 +330,7 @@ def install(path=None, force=False, code=False, data=False, no_progress_bars=Fal
     from subprocess import Popen, PIPE
     # Needs to re-define os' PWD,
     # because MakeFile calls it and is not affected by the cwd of Popen
-    cwd = os.path.join(path, "code", pc_repo_name)
+    cwd = os.path.join(path, "code", pc_repo_name[pc_repo_name.find("/")+1:])
     my_env = os.environ.copy()
     my_env["PWD"] = cwd
     process_make = Popen(["make", "PyPolyChord", "MPI=1"], cwd=cwd, env=my_env,
