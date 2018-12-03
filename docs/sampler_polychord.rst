@@ -118,8 +118,6 @@ If everything seems to be working fine, but PolyChord is taking too long to conv
 Installation
 ------------
 
-At the moment, **cobaya** uses its own PolyChord distribution, hosted `here <https://github.com/CobayaSampler/PolyChord>`_, which is an exact clone of the original PolyChord, hosted at `CCPForge <https://ccpforge.cse.rl.ac.uk/gf/project/polychord/>`_, with an alternative Python interface.
-
 The easiest way to install it is through ``cobaya-install [input.yaml] --modules [/path/to/modules]``, where the ``input.yaml`` contains a mention to ``polychord`` inside the ``sampler`` block, and the installation path of the modules is indicated:
 
 .. code:: yaml
@@ -169,8 +167,8 @@ If you prefer to install PolyChord manually, assuming you want to install it at 
 .. code:: bash
 
    $ cd /path/to/polychord
-   $ git clone https://github.com/CobayaSampler/PolyChord.git
-   $ cd PolyChord
+   $ git clone https://github.com/PolyChord/PolyChordLite.git
+   $ cd PolyChordLite
    $ make PyPolyChord MPI=1
 
 After this, mention the path in your input file as
@@ -179,7 +177,7 @@ After this, mention the path in your input file as
 
    sampler:
      polychord:
-       path: /path/to/polychord/PolyChord
+       path: /path/to/polychord/PolyChordLite
 
 
 PolyChord class

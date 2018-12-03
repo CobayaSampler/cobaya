@@ -59,17 +59,23 @@ class polychord(Sampler):
         else:
             self.log.info("Importing *global* PolyChord.")
         try:
-            import PyPolyChord
-            from PyPolyChord.settings import PolyChordSettings
+            import pypolychord
+            from pypolychord.settings import PolyChordSettings
+            self.pc = pypolychord
         except ImportError:
-            self.log.error(
-                "Couldn't find the PolyChord python interface. "
-                "Make sure that you have compiled it, and that you either\n"
-                " (a) specify a path (you didn't) or\n"
-                " (b) install the Python interface globally with\n"
-                "     '/path/to/PolyChord/python setup.py install --user'")
-            raise HandledException
-        self.pc = PyPolyChord
+            # TODO Remove the following alt-caps import when PolyChord > 1.14 required
+            try:
+                import PyPolyChord
+                from PyPolyChord.settings import PolyChordSettings
+                self.pc = PyPolyChord
+            except ImportError:
+                self.log.error(
+                    "Couldn't find the PolyChord python interface. "
+                    "Make sure that you have compiled it, and that you either\n"
+                    " (a) specify a path (you didn't) or\n"
+                    " (b) install the Python interface globally with\n"
+                    "     '/path/to/PolyChord/python setup.py install --user'")
+                raise HandledException
         # Prepare arguments and settings
         self.nDims = self.model.prior.d()
         self.nDerived = (len(self.model.parameterization.derived_params()) +
@@ -289,8 +295,8 @@ class polychord(Sampler):
 # Installation routines ##################################################################
 
 # Name of the PolyChord repo and version to download
-pc_repo_name = "PolyChord"
-pc_repo_version = "v1.14.patch6"
+pc_repo_name = "PolyChord/PolyChordLite"
+pc_repo_version = "1.15"
 
 
 def get_path(path):
@@ -310,7 +316,7 @@ def is_installed(**kwargs):
         post = next(d for d in os.listdir(pc_build_path) if d.startswith("lib."))
         pc_build_path = os.path.join(pc_build_path, post)
         sys.path.insert(0, pc_build_path)
-        import PyPolyChord
+        import pypolychord
         return True
     except (AssertionError, ImportError, OSError, StopIteration):
         return False
