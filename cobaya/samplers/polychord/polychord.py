@@ -296,7 +296,7 @@ class polychord(Sampler):
 
 # Name of the PolyChord repo and version to download
 pc_repo_name = "PolyChord/PolyChordLite"
-pc_repo_version = "1.15"
+pc_repo_version = "ef02bb6d94dca218c7d8daa98e8ac010022e457e"
 
 
 def get_path(path):
@@ -308,13 +308,12 @@ def is_installed(**kwargs):
     if not kwargs["code"]:
         return True
     try:
-        poly_path = os.path.join(
-            kwargs["path"], "code", pc_repo_name[pc_repo_name.find("/")+1:])
+        poly_path = get_path(kwargs["path"])
         assert os.path.isfile(
             os.path.realpath(os.path.join(poly_path, "lib/libchord.so")))
         pc_build_path = os.path.join(poly_path, "build")
         post = next(d for d in os.listdir(pc_build_path) if d.startswith("lib."))
-        pc_build_path = os.path.join(pc_build_path, post)
+        pc_build_path = os.path.join(pc_build_path, post, "pypolychord")
         sys.path.insert(0, pc_build_path)
         import pypolychord
         return True
@@ -339,7 +338,7 @@ def install(path=None, force=False, code=False, data=False, no_progress_bars=Fal
     cwd = os.path.join(path, "code", pc_repo_name[pc_repo_name.find("/")+1:])
     my_env = os.environ.copy()
     my_env["PWD"] = cwd
-    process_make = Popen(["make", "PyPolyChord", "MPI=1"], cwd=cwd, env=my_env,
+    process_make = Popen(["make", "pypolychord", "MPI=1"], cwd=cwd, env=my_env,
                          stdout=PIPE, stderr=PIPE)
     out, err = process_make.communicate()
     if process_make.returncode:
