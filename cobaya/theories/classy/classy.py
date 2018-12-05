@@ -118,7 +118,7 @@ from cobaya.conventions import _c_km_s, _T_CMB_K
 # Result collector
 collector = namedtuple("collector",
                        ["method", "args", "args_names", "kwargs", "arg_array", "post"])
-collector.__new__.__defaults__ = (None, [], [], {}, None, lambda *x: x)
+collector.__new__.__defaults__ = (None, [], [], {}, None, lambda x: x)
 
 # default non linear code
 non_linear_default_code = "halofit"
@@ -364,7 +364,7 @@ class classy(_cosmo):
                         self.states[i_state][product][i] = method(
                             *self.collectors[product].args, **kwargs)
                 self.states[i_state][product] = collector.post(
-                    *self.states[i_state][product])
+                    self.states[i_state][product])
             # Prepare derived parameters
             d, d_extra = self.get_derived_all(derived_requested=(_derived == {}))
             if _derived == {}:
@@ -498,7 +498,7 @@ class classy(_cosmo):
 # Name of the Class repo/folder and version to download
 classy_repo_name = "lesgourg/class_public"
 classy_repo_rename = "classy"
-classy_repo_version = "v2.6.3"
+classy_repo_version = "v2.7.1"
 
 
 def is_installed(**kwargs):

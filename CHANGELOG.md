@@ -26,6 +26,7 @@
 
 #### classy
 
+- Updated to 2.7.1
 - Added P(k) interpolator
 
 ### Cosmological likelihoods
