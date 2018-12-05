@@ -8,21 +8,33 @@ import signal
 from collections import OrderedDict as odict
 from pprint import pformat
 
-try:
-    from PySide.QtGui import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
-    from PySide.QtGui import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
-    from PySide.QtGui import QFileDialog, QCheckBox, QLabel
-    from PySide.QtCore import Slot
-except ImportError:
-    from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
-    from PySide2.QtWidgets import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
-    from PySide2.QtWidgets import QFileDialog, QCheckBox, QLabel
-    from PySide2.QtCore import Slot
-
 # Local
 from cobaya.yaml import yaml_dump
 from cobaya.cosmo_input import input_database
 from cobaya.cosmo_input.create_input import create_input
+
+def do_imports():
+    try:
+        try:
+            from PySide.QtGui import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
+            from PySide.QtGui import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
+            from PySide.QtGui import QFileDialog, QCheckBox, QLabel
+            from PySide.QtCore import Slot
+        except ImportError:
+            from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
+            from PySide2.QtWidgets import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
+            from PySide2.QtWidgets import QFileDialog, QCheckBox, QLabel
+            from PySide2.QtCore import Slot
+    except ImportError:
+        # TODO: fix this long logger setup
+        from cobaya.log import logger_setup, HandledException
+        logger_setup(0, None)
+        import logging
+        logging.getLogger("cosmo_generator").error(
+            "PySide or PySide2 is not installed! "
+            "Check Cobaya's documentation for the cosmo_generator "
+            "('Basic cosmology runs').")
+        raise HandledException
 
 # Quit with C-c
 signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -32,6 +44,8 @@ def text(key, contents):
     desc = (contents or {}).get(input_database._desc)
     return desc or key
 
+# Dummy definitions to be able to simplify imports
+QWidget, Slot = object, (lambda: lambda *x: None)
 
 class MainWindow(QWidget):
 
@@ -194,6 +208,7 @@ class MainWindow(QWidget):
 
 
 def gui_script():
+    do_imports()
     app = QApplication(sys.argv)
     clip = app.clipboard()
     window = MainWindow()
