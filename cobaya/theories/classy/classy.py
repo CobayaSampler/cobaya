@@ -45,6 +45,15 @@ You can specify any parameter that CLASS understands in the ``params`` block:
 Installation
 ------------
 
+.. warning::
+
+   If the installation folder of CLASS is moved, due to CLASS hard-coding some folders,
+   CLASS needs to be recompiled, either manually or by deleting the CLASS installation and
+   repeating the ``cobaya-install`` command in the renamed *modules* folder.
+
+   If you do not recompile CLASS, it causes a memory leak (`thanks to Stefan Heimersheim
+   <https://github.com/CobayaSampler/cobaya/issues/10>`_).
+
 Automatic installation
 ^^^^^^^^^^^^^^^^^^^^^^
 
