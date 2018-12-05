@@ -7,15 +7,22 @@ import sys
 import signal
 from collections import OrderedDict as odict
 from pprint import pformat
-from PySide.QtGui import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
-from PySide.QtGui import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
-from PySide.QtGui import QFileDialog, QCheckBox, QLabel
-from PySide.QtCore import Slot
+
+try:
+    from PySide.QtGui import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
+    from PySide.QtGui import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
+    from PySide.QtGui import QFileDialog, QCheckBox, QLabel
+    from PySide.QtCore import Slot
+except ImportError:
+    from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
+    from PySide2.QtWidgets import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
+    from PySide2.QtWidgets import QFileDialog, QCheckBox, QLabel
+    from PySide2.QtCore import Slot
 
 # Local
 from cobaya.yaml import yaml_dump
-from . import input_database
-from .create_input import create_input
+from cobaya.cosmo_input import input_database
+from cobaya.cosmo_input.create_input import create_input
 
 # Quit with C-c
 signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -33,7 +40,7 @@ class MainWindow(QWidget):
         self.setWindowTitle("Cobaya input generator for Cosmology")
         self.setGeometry(0, 0, 1500, 1000)
         self.move(
-            QApplication.desktop().screen().rect().center() - self.rect().center())
+            QApplication.desktop().screenGeometry().center() - self.rect().center())
         self.show()
         # Main layout
         self.layout = QHBoxLayout()

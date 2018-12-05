@@ -7,7 +7,7 @@ except ImportError:
     logger_setup(0, None)
     import logging
     logging.getLogger("cosmo_generator").error(
-        "PySide is not installed! "
+        "PySide or PySide2 is not installed! "
         "Check Cobaya's documentation for the cosmo_generator "
         "('Basic cosmology runs').")
     raise HandledException
