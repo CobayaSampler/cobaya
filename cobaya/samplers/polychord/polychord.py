@@ -42,15 +42,8 @@ class polychord(Sampler):
                 if not os.path.exists(os.path.realpath(self.path)):
                     self.log.error("The given path does not exist.")
                     raise HandledException
-            pc_build_path = os.path.join(self.path, "build")
-            try:
-                post = next(d for d in os.listdir(pc_build_path) if d.startswith("lib."))
-            except (OSError, StopIteration):
-                self.log.error(
-                    "PolyChord has not been compiled yet: could not find 'build' subdir.")
-                raise HandledException
-            pc_build_path = os.path.join(pc_build_path, post, "pypolychord")
-            if not os.path.exists(pc_build_path):
+            pc_build_path = get_build_path(self.path)
+            if not pc_build_path:
                 self.log.error("Either PolyChord is not in the given folder, "
                                "'%s', or you have not compiled it.", self.path)
                 raise HandledException
@@ -63,19 +56,13 @@ class polychord(Sampler):
             from pypolychord.settings import PolyChordSettings
             self.pc = pypolychord
         except ImportError:
-            # TODO Remove the following alt-caps import when PolyChord > 1.14 required
-            try:
-                import PyPolyChord
-                from PyPolyChord.settings import PolyChordSettings
-                self.pc = PyPolyChord
-            except ImportError:
-                self.log.error(
-                    "Couldn't find the PolyChord python interface. "
-                    "Make sure that you have compiled it, and that you either\n"
-                    " (a) specify a path (you didn't) or\n"
-                    " (b) install the Python interface globally with\n"
-                    "     '/path/to/PolyChord/python setup.py install --user'")
-                raise HandledException
+            self.log.error(
+                "Couldn't find the PolyChord python interface. "
+                "Make sure that you have compiled it, and that you either\n"
+                " (a) specify a path (you didn't) or\n"
+                " (b) install the Python interface globally with\n"
+                "     '/path/to/PolyChord/python setup.py install --user'")
+            raise HandledException
         # Prepare arguments and settings
         self.nDims = self.model.prior.d()
         self.nDerived = (len(self.model.parameterization.derived_params()) +
@@ -304,21 +291,30 @@ def get_path(path):
     return os.path.realpath(
         os.path.join(path, "code", pc_repo_name[pc_repo_name.find("/")+1:]))
 
+def get_build_path(polychord_path):
+    try:
+        build_path = os.path.join(polychord_path, "build")
+        print(build_path, list(os.listdir(build_path)))
+        post = next(d for d in os.listdir(build_path) if d.startswith("lib."))
+        build_path = os.path.join(build_path, post, "pypolychord")
+        return build_path
+    except OSError, StopIteration:
+        return False
 
 def is_installed(**kwargs):
     if not kwargs["code"]:
         return True
+    poly_path = get_path(kwargs["path"])
+    if not os.path.isfile(os.path.realpath(os.path.join(poly_path, "lib/libchord.so"))):
+        return False
+    poly_build_path = get_build_path(poly_path)
+    if not poly_build_path:
+        return False
+    sys.path.insert(0, poly_build_path)
     try:
-        poly_path = get_path(kwargs["path"])
-        assert os.path.isfile(
-            os.path.realpath(os.path.join(poly_path, "lib/libchord.so")))
-        pc_build_path = os.path.join(poly_path, "build")
-        post = next(d for d in os.listdir(pc_build_path) if d.startswith("lib."))
-        pc_build_path = os.path.join(pc_build_path, post, "pypolychord")
-        sys.path.insert(0, pc_build_path)
         import pypolychord
         return True
-    except (AssertionError, ImportError, OSError, StopIteration):
+    except ImportError:
         return False
 
 
