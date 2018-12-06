@@ -295,11 +295,10 @@ def get_path(path):
 def get_build_path(polychord_path):
     try:
         build_path = os.path.join(polychord_path, "build")
-        print(build_path, list(os.listdir(build_path)))
         post = next(d for d in os.listdir(build_path) if d.startswith("lib."))
-        build_path = os.path.join(build_path, post, "pypolychord")
+        build_path = os.path.join(build_path, post)
         return build_path
-    except OSError, StopIteration:
+    except (OSError, StopIteration):
         return False
 
 
@@ -336,7 +335,7 @@ def install(path=None, force=False, code=False, data=False, no_progress_bars=Fal
     # because MakeFile calls it and is not affected by the cwd of Popen
     cwd = os.path.join(path, "code", pc_repo_name[pc_repo_name.find("/")+1:])
     my_env = os.environ.copy()
-    my_env["PWD"] = cwd
+    my_env.update({"PWD": cwd})
     process_make = Popen(["make", "pypolychord", "MPI=1"], cwd=cwd, env=my_env,
                          stdout=PIPE, stderr=PIPE)
     out, err = process_make.communicate()
@@ -345,12 +344,13 @@ def install(path=None, force=False, code=False, data=False, no_progress_bars=Fal
         log.info(err)
         log.error("Compilation failed!")
         return False
+    my_env.update({"CC": "mpicc", "CXX": "mpicxx"})
     process_make = Popen(["python", "setup.py", "build"],
                          cwd=cwd, env=my_env, stdout=PIPE, stderr=PIPE)
     out, err = process_make.communicate()
     if process_make.returncode:
         log.info(out)
         log.info(err)
-        log.error("Compilation failed!")
+        log.error("Python build failed!")
         return False
     return True
