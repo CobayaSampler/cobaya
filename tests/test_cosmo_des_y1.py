@@ -1,4 +1,5 @@
 from copy import deepcopy
+import pytest
 
 from test_cosmo_planck_2015 import params_lowTEB_highTTTEEE
 from common_cosmo import body_of_test
@@ -50,6 +51,7 @@ def test_cosmo_des_y1_joint_camb(modules):
                  {like: ref_chi2["joint"], "tolerance": tolerance})
 
 
+@pytest.mark.skip
 def test_cosmo_des_y1_shear_classy(modules):
     like = "des_y1_shear"
     info_likelihood = {like: {}}
@@ -60,6 +62,7 @@ def test_cosmo_des_y1_shear_classy(modules):
                  {like: ref_chi2["shear"], "tolerance": tolerance})
 
 
+@pytest.mark.skip
 def test_cosmo_des_y1_clustering_classy(modules):
     like = "des_y1_clustering"
     info_likelihood = {like: {}}
@@ -70,6 +73,7 @@ def test_cosmo_des_y1_clustering_classy(modules):
                  {like: ref_chi2["clustering"], "tolerance": tolerance})
 
 
+@pytest.mark.skip
 def test_cosmo_des_y1_galaxy_galaxy_classy(modules):
     like = "des_y1_galaxy_galaxy"
     info_likelihood = {like: {}}

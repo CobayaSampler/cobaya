@@ -251,6 +251,7 @@ class camb(_cosmo):
                              if k in self.collectors else []) +
                             ["total"] + (["lens_potential"] if "pp" in cls else []))),
                         "raw_cl": True})
+                self.needs_perts = True
             elif k.lower() == "h":
                 self.collectors[k.lower()] = collector(
                     method="CAMBdata.h_of_z",
