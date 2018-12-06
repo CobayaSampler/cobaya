@@ -56,7 +56,7 @@ class mcmc(Sampler):
         # Max # checkpoints to wait, in case one process dies without sending MPI_ABORT
         self.been_waiting = 0
         self.max_waiting = max(50, self.max_tries / self.model.prior.d())
-        if self.resuming and (max(self.mpi_size, 1) != max(get_mpi_size(), 1)):
+        if self.resuming and (max(self.mpi_size or 0, 1) != max(get_mpi_size(), 1)):
             self.log.error(
                 "Cannot resume a sample with a different number of chains: "
                 "was %d and now is %d.", max(self.mpi_size, 1), max(get_mpi_size(), 1))
