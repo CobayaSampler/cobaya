@@ -18,6 +18,10 @@
 
 - Seeded runs for `evaluate`, `mcmc` and `polychord`.
 
+#### PolyChord
+
+- Updated to PolyChord 1.15 and using the [official GitHub repo](https://github.com/PolyChord/PolyChordLite)
+
 ### Cosmological theory codes
 
 #### General

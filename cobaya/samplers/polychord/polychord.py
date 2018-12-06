@@ -49,7 +49,7 @@ class polychord(Sampler):
                 self.log.error(
                     "PolyChord has not been compiled yet: could not find 'build' subdir.")
                 raise HandledException
-            pc_build_path = os.path.join(pc_build_path, post)
+            pc_build_path = os.path.join(pc_build_path, post, "pypolychord")
             if not os.path.exists(pc_build_path):
                 self.log.error("Either PolyChord is not in the given folder, "
                                "'%s', or you have not compiled it.", self.path)
@@ -94,6 +94,7 @@ class polychord(Sampler):
         try:
             output_folder = getattr(self.output, "folder")
             output_prefix = getattr(self.output, "prefix") or ""
+            self.read_resume = self.resuming
         except AttributeError:
             # dummy output -- no resume!
             self.read_resume = False
