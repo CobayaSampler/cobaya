@@ -291,6 +291,7 @@ def get_path(path):
     return os.path.realpath(
         os.path.join(path, "code", pc_repo_name[pc_repo_name.find("/")+1:]))
 
+
 def get_build_path(polychord_path):
     try:
         build_path = os.path.join(polychord_path, "build")
@@ -300,6 +301,7 @@ def get_build_path(polychord_path):
         return build_path
     except OSError, StopIteration:
         return False
+
 
 def is_installed(**kwargs):
     if not kwargs["code"]:
