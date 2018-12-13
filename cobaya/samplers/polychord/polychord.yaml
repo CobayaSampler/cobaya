@@ -21,6 +21,8 @@ sampler:
     precision_criterion: 0.001
     # Stopping criterion (alt): maximum number of nested sampling iterations
     max_ndead: .inf
+    # How often to update the files and do clustering
+    compression_factor: 0.36787944117144233  # = exp(-1)
     # Numerical value of log(0) in PolyChord's Fortran code
     logzero: null  # default: result of `numpy.nan_to_num(-numpy.inf)`
     # Increase number of posterior samples
@@ -37,7 +39,6 @@ sampler:
     # Raw output of PolyChord (no need to change them, normally)
     # ----------------------------------------------------------
     base_dir: raw_polychord_output
-    update_files:
     file_root:
     posteriors: True
     equals: True
