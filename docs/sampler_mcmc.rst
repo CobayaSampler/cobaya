@@ -42,9 +42,21 @@ If the distribution being sampled is known have tight strongly non-linear parame
 parameters to remove the degeneracy before sampling (linear degeneracies are not a problem, esp. if you provide an
 approximate initial covariance matrix).
 
-A callback function can be specified through the ``callback_function`` option. In it, the
-sampler instance is accessible as ``sampler_instance``, which has ``prior``, ``likelihood``
-and (sample) ``collection`` as attributes.
+
+.. _mcmc_speed_hierarchy:
+
+Callback functions
+^^^^^^^^^^^^^^^^^^
+
+A callback function can be specified through the ``callback_function`` option. It must be a function of a single argument, which at runtime is the current instance of the ``mcmc`` sampler. You can access its attributes and methods inside your function, including the ``collection`` of chain points and the ``model`` (of which ``prior`` and ``likelihood`` are attributes). For example, the following callback function would print the points added to the chain since the last callback:
+
+.. code:: python
+
+    def my_callback(sampler):
+        print(sampler.collection[sampler.last_point_callback:])
+
+The callback function is called every ``callback_every`` points have been added to the chain, or at every checkpoint if that option has not been defined.
+
 
 Initial point and covariance of the proposal pdf
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -171,6 +171,8 @@ class mcmc(Sampler):
         if self.callback_function is not None:
             self.callback_function_callable = (
                 get_external_function(self.callback_function))
+        # Useful for getting last points added inside callback function
+        self.last_point_callback = 0
 
     def initial_proposal_covmat(self, slow_params=None):
         """
@@ -348,6 +350,7 @@ class mcmc(Sampler):
                     not (max(self.n(), 1) % self.callback_every) and
                     self.current_point[_weight] == 1):
                 self.callback_function_callable(self)
+                self.last_point_callback = self.collection.n()
             # Checking convergence and (optionally) learning the covmat of the proposal
             if self.check_all_ready():
                 self.check_convergence_and_learn_proposal()
