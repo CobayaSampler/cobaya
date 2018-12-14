@@ -190,10 +190,11 @@ class polychord(Sampler):
                                 self.n_sampled + self.n_derived + self.n_priors],
                 loglikes=point[self.n_sampled + self.n_derived + self.n_priors:
                                self.n_sampled + self.n_derived + self.n_priors + self.n_likes])
-        self.logZ, self.logZstd = logZ, logZstd
+        self.logZ, self.logZstd = logZ + self.logvolume, logZstd
         # Callback function
-        self.callback_function_callable(self)
-        self.last_point_callback = self.dead.n()
+        if self.callback_function is not None:
+            self.callback_function_callable(self)
+            self.last_point_callback = self.dead.n()
 
     def run(self):
         """
@@ -283,6 +284,7 @@ class polychord(Sampler):
             for l in lines:
                 logZ, logZstd = [float(n.replace(active, "")) for n in
                                  l.split("=")[-1].split("+/-")]
+                logZ += self.logvolume
                 component = l.split("=")[0].lstrip(pre + "_").rstrip(") ")
                 if not component:
                     self.logZ, self.logZstd = logZ, logZstd
