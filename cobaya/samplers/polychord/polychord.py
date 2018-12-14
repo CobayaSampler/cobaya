@@ -175,7 +175,7 @@ class polychord(Sampler):
             self.live.add(
                 point[:self.n_sampled],
                 derived=point[self.n_sampled:self.n_sampled + self.n_derived],
-                weight=np.nan, logpost=point[-1],
+                weight=np.nan,
                 logpriors=point[self.n_sampled + self.n_derived:
                                 self.n_sampled + self.n_derived + self.n_priors],
                 loglikes=point[self.n_sampled + self.n_derived + self.n_priors:
@@ -185,12 +185,12 @@ class polychord(Sampler):
             self.dead.add(
                 point[:self.n_sampled],
                 derived=point[self.n_sampled:self.n_sampled + self.n_derived],
-                weight=np.exp(logweight), logpost=point[-1],
+                weight=np.exp(logweight),
                 logpriors=point[self.n_sampled + self.n_derived:
                                 self.n_sampled + self.n_derived + self.n_priors],
                 loglikes=point[self.n_sampled + self.n_derived + self.n_priors:
                                self.n_sampled + self.n_derived + self.n_priors + self.n_likes])
-        self.logZ, self.logZstd = logZ + self.logvolume, logZstd
+        self.logZ, self.logZstd = logZ, logZstd
         # Callback function
         if self.callback_function is not None:
             self.callback_function_callable(self)
@@ -215,7 +215,7 @@ class polychord(Sampler):
                     len(self.model.likelihood._likelihoods), np.nan)
             derived = list(derived) + list(logpriors) + list(loglikes)
             return (
-                max(logposterior, 0.99 * self.pc_settings.logzero), derived)
+                max(logposterior + self.logvolume, 0.99 * self.pc_settings.logzero), derived)
 
         self.log.info("Sampling!")
         if get_mpi():
@@ -232,7 +232,7 @@ class polychord(Sampler):
             collection.add(
                 row[2:2 + self.n_sampled],
                 derived=row[2 + self.n_sampled:2 + self.n_sampled + self.n_derived + 1],
-                weight=row[0], logpost=-row[1]/2,
+                weight=row[0],
                 logpriors=row[-(self.n_priors + self.n_likes):-self.n_likes],
                 loglikes=row[-self.n_likes:])
         # make sure that the points are written
@@ -284,7 +284,6 @@ class polychord(Sampler):
             for l in lines:
                 logZ, logZstd = [float(n.replace(active, "")) for n in
                                  l.split("=")[-1].split("+/-")]
-                logZ += self.logvolume
                 component = l.split("=")[0].lstrip(pre + "_").rstrip(") ")
                 if not component:
                     self.logZ, self.logZstd = logZ, logZstd
