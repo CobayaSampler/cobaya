@@ -43,7 +43,7 @@ parameters to remove the degeneracy before sampling (linear degeneracies are not
 approximate initial covariance matrix).
 
 
-.. _mcmc_speed_hierarchy:
+.. _mcmc_callback:
 
 Callback functions
 ^^^^^^^^^^^^^^^^^^

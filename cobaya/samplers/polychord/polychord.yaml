@@ -21,8 +21,11 @@ sampler:
     precision_criterion: 0.001
     # Stopping criterion (alt): maximum number of nested sampling iterations
     max_ndead: .inf
-    # How often to update the files and do clustering
+    # How often to print progress, update output files and do clustering
+    # -- increase for more frequency (1 for update and callback per dead point)
     compression_factor: 0.36787944117144233  # = exp(-1)
+    # Callback function -- see documentation
+    callback_function:
     # Numerical value of log(0) in PolyChord's Fortran code
     logzero: null  # default: result of `numpy.nan_to_num(-numpy.inf)`
     # Increase number of posterior samples

@@ -93,10 +93,19 @@ class Collection(object):
         else:
             self._out_delete()
         if not resuming:
-            self.data = pd.DataFrame(np.nan, columns=columns, index=range(initial_size))
-            self._n = 0
+            self.reset(columns=columns, index=range(initial_size))
+            # TODO: the following 2 lines should go into the `reset` method.
             if output:
                 self._n_last_out = 0
+
+    def reset(self, columns=None, index=None):
+        """Create/reset the DataFrame."""
+        if columns is None:
+            columns = self.data.columns
+        if index is None:
+            index = self.data.index
+        self.data = pd.DataFrame(np.nan, columns=columns, index=index)
+        self._n = 0
 
     def add(self,
             values, derived=None, weight=1, logpost=None, logpriors=None, loglikes=None):

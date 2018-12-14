@@ -6,8 +6,7 @@
          Jesus Torrado (for the cobaya wrapper only)
 """
 # Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
+from __future__ import absolute_import, division, print_function
 
 # Global
 import os
@@ -18,7 +17,7 @@ import inspect
 from itertools import chain
 
 # Local
-from cobaya.tools import read_dnumber
+from cobaya.tools import read_dnumber, get_external_function
 from cobaya.sampler import Sampler
 from cobaya.mpi import get_mpi, get_mpi_rank, get_mpi_comm
 from cobaya.collection import Collection
@@ -149,12 +148,52 @@ class polychord(Sampler):
         self.pc_prior = lambda x: (locs + np.array(x)[self.ordering] * scales).tolist()
         # We will need the volume of the prior domain, since PolyChord divides by it
         self.logvolume = np.log(np.prod(scales))
+        # Prepare callback function
+        if self.callback_function is not None:
+            self.callback_function_callable = (
+                get_external_function(self.callback_function))
+        self.last_point_callback = 0
+        # Prepare runtime live and dead points collections
+        self.live = Collection(
+            self.model, None, name="live", initial_size=self.pc_settings.nlive)
+        self.dead = Collection(self.model, self.output, name="dead")
+        self.n_sampled = len(self.model.parameterization.sampled_params())
+        self.n_derived = len(self.model.parameterization.derived_params())
+        self.n_priors = len(self.model.prior)
+        self.n_likes = len(self.model.likelihood._likelihoods)
         # Done!
         if not get_mpi_rank():
             self.log.info("Calling PolyChord with arguments:")
             for p, v in inspect.getmembers(self.pc_settings, lambda a: not (callable(a))):
                 if not p.startswith("_"):
                     self.log.info("  %s: %s", p, v)
+
+    def dumper(self, live_points, dead_points, logweights, logZ, logZstd):
+        # Store live and dead points and evidence computed so far
+        self.live.reset()
+        for point in live_points:
+            self.live.add(
+                point[:self.n_sampled],
+                derived=point[self.n_sampled:self.n_sampled + self.n_derived],
+                weight=np.nan, logpost=point[-1],
+                logpriors=point[self.n_sampled + self.n_derived:
+                                self.n_sampled + self.n_derived + self.n_priors],
+                loglikes=point[self.n_sampled + self.n_derived + self.n_priors:
+                               self.n_sampled + self.n_derived + self.n_priors + self.n_likes])
+        for logweight, point in zip(logweights[self.last_point_callback:],
+                                    dead_points[self.last_point_callback:]):
+            self.dead.add(
+                point[:self.n_sampled],
+                derived=point[self.n_sampled:self.n_sampled + self.n_derived],
+                weight=np.exp(logweight), logpost=point[-1],
+                logpriors=point[self.n_sampled + self.n_derived:
+                                self.n_sampled + self.n_derived + self.n_priors],
+                loglikes=point[self.n_sampled + self.n_derived + self.n_priors:
+                               self.n_sampled + self.n_derived + self.n_priors + self.n_likes])
+        self.logZ, self.logZstd = logZ, logZstd
+        # Callback function
+        self.callback_function_callable(self)
+        self.last_point_callback = self.dead.n()
 
     def run(self):
         """
@@ -175,13 +214,13 @@ class polychord(Sampler):
                     len(self.model.likelihood._likelihoods), np.nan)
             derived = list(derived) + list(logpriors) + list(loglikes)
             return (
-                max(logposterior + self.logvolume, 0.99 * self.pc_settings.logzero), derived)
+                max(logposterior, 0.99 * self.pc_settings.logzero), derived)
 
         self.log.info("Sampling!")
         if get_mpi():
             get_mpi_comm().barrier()
-        self.pc.run_polychord(logpost, self.nDims, self.nDerived,
-                              self.pc_settings, self.pc_prior)
+        self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
+                              self.pc_prior, self.dumper)
 
     def save_sample(self, fname, name):
         sample = np.atleast_2d(np.loadtxt(fname))
@@ -192,7 +231,7 @@ class polychord(Sampler):
             collection.add(
                 row[2:2 + self.n_sampled],
                 derived=row[2 + self.n_sampled:2 + self.n_sampled + self.n_derived + 1],
-                weight=row[0], logpost=-row[1],
+                weight=row[0], logpost=-row[1]/2,
                 logpriors=row[-(self.n_priors + self.n_likes):-self.n_likes],
                 loglikes=row[-self.n_likes:])
         # make sure that the points are written
@@ -208,10 +247,6 @@ class polychord(Sampler):
             raise
         if not get_mpi_rank():  # process 0 or single (non-MPI process)
             self.log.info("Loading PolyChord's results: samples and evidences.")
-            self.n_sampled = len(self.model.parameterization.sampled_params())
-            self.n_derived = len(self.model.parameterization.derived_params())
-            self.n_priors = len(self.model.prior)
-            self.n_likes = len(self.model.likelihood._likelihoods)
             prefix = os.path.join(self.pc_settings.base_dir, self.pc_settings.file_root)
             self.collection = self.save_sample(prefix + ".txt", "1")
             if self.pc_settings.do_clustering is not False:  # NB: "None" == "default"

@@ -101,6 +101,32 @@ As an example, if we want to compute the area of the **constant** triangle :math
      polychord:
 
 
+.. _polychord_callback:
+
+Callback functions
+^^^^^^^^^^^^^^^^^^
+
+A callback function can be specified through the ``callback_function`` option. It must be a function of a single argument, which at runtime is the current instance of the ``polychord`` sampler. You can access its attributes and methods inside your function, including the collection of ``live`` and ``dead`` points, the current calculation of the evidence, and the ``model`` (of which ``prior`` and ``likelihood`` are attributes). For example, the following callback function would print the number of points added to the chain since the last callback, the current evidence estimate and the maximum likelihood point:
+
+.. code:: python
+
+    def callback(sampler):
+        print("There are %d dead points. The last %d were added since the last callback."%(
+            sampler.dead.n(), sampler.dead.n() - sampler.last_point_callback))
+        print("Current logZ = %g +/- %g"%(sampler.logZ, sampler.logZstd))
+        # Maximum likelihood: since we sample over the posterior, it may be "dead"!
+        min_chi2_dead = sampler.dead[sampler.dead["chi2"].values.argmin()]
+        # At the end of the run, the list of live points is empty
+        try:
+            min_chi2_live = sampler.live[sampler.live["chi2"].values.argmin()]
+            min_chi2_point = (min_chi2_live if min_chi2_live["chi2"] < min_chi2_dead["chi2"]
+                              else min_chi2_dead)
+        except:
+            min_chi2_point = min_chi2_dead
+        print("The maximum likelihood (min chi^2) point reached is\n%r"%min_chi2_point)
+
+The frequency of calls of the callback function is given by the ``compression_factor`` (see contents of ``polychord.yaml`` above).
+
 Troubleshooting
 ---------------
 
