@@ -44,9 +44,7 @@ implement only the methods ``initialize``, ``run``, ``close``, and ``products``.
 
 """
 # Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 # Global
 import os
@@ -59,6 +57,7 @@ from cobaya.conventions import _resume_default
 from cobaya.tools import get_class
 from cobaya.log import HandledException
 from cobaya.yaml import yaml_load_file
+from cobaya.mpi import get_mpi_rank
 
 # Logger
 log = logging.getLogger(__name__.split(".")[-1])
@@ -144,12 +143,14 @@ class Sampler(object):
                     for k, v in checkpoint_info[_sampler][self.name].items():
                         setattr(self, k, v)
                     self.resuming = True
-                    self.log.info("Resuming from previous sample!")
+                    if not get_mpi_rank():
+                        self.log.info("Resuming from previous sample!")
                 except KeyError:
-                    self.log.error("Checkpoint file found at '%s'"
-                                   "but corresponds to a different sampler.",
-                                   self.checkpoint_filename())
-                    raise HandledException
+                    if not get_mpi_rank():
+                        self.log.error("Checkpoint file found at '%s'"
+                                       "but corresponds to a different sampler.",
+                                       self.checkpoint_filename())
+                        raise HandledException
             except (IOError, TypeError):
                 pass
         else:

@@ -69,7 +69,7 @@ class Output(object):
                 [os.remove(f) for f in [self.file_input, self.file_full]]
             elif resume:
                 # Only in this case we can be sure that we are actually resuming
-                self.resume = True
+                self.resuming = True
                 log.info("Let's try to resume sampling.")
             else:
                 # If only input and full info dumped, overwrite; else fail
@@ -98,7 +98,7 @@ class Output(object):
         return self.prefix or "."
 
     def is_resuming(self):
-        return getattr(self, "resume", False)
+        return getattr(self, "resuming", False)
 
     def dump_info(self, input_info, full_info):
         """
@@ -181,7 +181,7 @@ class Output_MPI(Output):
         from mpi4py import MPI
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
-        to_broadcast = ("folder", "prefix", "kind", "ext")
+        to_broadcast = ("folder", "prefix", "kind", "ext", "resuming")
         if rank == 0:
             Output.__init__(self, *args, **kwargs)
         else:
