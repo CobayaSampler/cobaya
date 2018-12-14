@@ -18,9 +18,15 @@
 
 - Seeded runs for `evaluate`, `mcmc` and `polychord`.
 
+#### MCMC
+
+- Small improvements to callback functions.
+
 #### PolyChord
 
-- Updated to PolyChord 1.15 and using the [official GitHub repo](https://github.com/PolyChord/PolyChordLite)
+- Updated to PolyChord 1.15 and using the [official GitHub repo](https://github.com/PolyChord/PolyChordLite).
+- Fixed output: now -logposterior is actually that (was chi squared of posterior).
+- Interfaced callback functions.
 
 ### Cosmological theory codes
 
