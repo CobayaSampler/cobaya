@@ -62,7 +62,8 @@ class mcmc(Sampler):
                     "Cannot resume a sample with a different number of chains: "
                     "was %d and now is %d.", max(self.mpi_size, 1), max(get_mpi_size(), 1))
                 raise HandledException
-        get_mpi_comm().barrier()
+        if get_mpi_size():
+            get_mpi_comm().barrier()
         if not self.resuming and self.output:
             # Delete previous files (if not "forced", the run would have already failed)
             if ((os.path.abspath(self.covmat_filename()) !=

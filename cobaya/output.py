@@ -61,6 +61,7 @@ class Output(object):
             self.folder, self.prefix + (_separator if self.prefix else ""))
         self.file_input = info_file_prefix + _input_suffix + _yaml_extensions[0]
         self.file_full = info_file_prefix + _full_suffix + _yaml_extensions[0]
+        self.resuming = False
         if os.path.isfile(self.file_full):
             log.info("Found an existing sample with the requested ouput prefix: '%s'",
                      output_prefix)
@@ -98,7 +99,7 @@ class Output(object):
         return self.prefix or "."
 
     def is_resuming(self):
-        return getattr(self, "resuming", False)
+        return self.resuming
 
     def dump_info(self, input_info, full_info):
         """
