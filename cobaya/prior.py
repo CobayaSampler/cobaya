@@ -155,7 +155,8 @@ b) **As a string,** which will be passed to ``eval()``. The string can be a
 
    **Workaround #2:** Define your function as a
    :ref:`external likelihood <likelihood_external>` instead, since likelihoods do have
-   access to derived parameters.
+   access to derived parameters (for an example, see `this comment
+   <https://github.com/CobayaSampler/cobaya/issues/18#issuecomment-447818811>`_ ).
 
 
 Prior normalization for evidence computation
