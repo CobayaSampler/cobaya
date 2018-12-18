@@ -271,8 +271,7 @@ class polychord(Sampler):
                         self.output.folder = cluster_folder
                     fname = os.path.join(self.pc_settings.base_dir, clusters, f)
                     sample = self.save_sample(fname, str(i))
-                    if sample is not None:
-                        self.clusters[i] = {"sample": sample}
+                    self.clusters[i] = {"sample": sample}
                     if do_output:
                         self.output.folder = old_folder
             # Prepare the evidence
@@ -287,7 +286,7 @@ class polychord(Sampler):
                 component = l.split("=")[0].lstrip(pre + "_").rstrip(") ")
                 if not component:
                     self.logZ, self.logZstd = logZ, logZstd
-                elif self.pc_settings.do_clustering and active in l:
+                elif self.pc_settings.do_clustering:
                     i = int(component)
                     self.clusters[i]["logZ"], self.clusters[i]["logZstd"] = logZ, logZstd
         #        if get_mpi():
