@@ -1,10 +1,11 @@
 from collections import OrderedDict as odict
 info = {
     "likelihood": {
-        "gaussian": {
-            "mean": [0.2, 0],
-            "cov": [[0.1, 0.05],
-                    [0.05,0.2]]}},
+        "gaussian_mixture": {
+            "means": [0.2, 0],
+            "covs": [[0.1, 0.05],
+                     [0.05,0.2]],
+            "derived": True}},
     "params": odict([
         ("a", {
             "prior": {"min": -0.5, "max": 3},
