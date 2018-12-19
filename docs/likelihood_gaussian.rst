@@ -3,6 +3,10 @@
 
 A simple (multi-modal if required) Gaussian mixture likelihood, aimed at testing. The pdf is normalized to 1 when integrated over an infinite domain, regardless of the number of modes.
 
+.. warning::
+
+   This likelihood will soon be deprecated in favour of :doc:`likelihood_gaussian_mixture`
+
 Usage
 -----
 

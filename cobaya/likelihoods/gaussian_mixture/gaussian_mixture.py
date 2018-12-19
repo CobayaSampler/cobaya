@@ -1,7 +1,7 @@
 """
 .. module:: likelihoods.gaussian
 
-:Synopsis: Gaussian likelihood
+:Synopsis: Gaussian mixture likelihood
 :Author: Jesus Torrado
 
 """
@@ -22,8 +22,10 @@ from cobaya.log import HandledException
 from cobaya.mpi import get_mpi_size
 from cobaya.conventions import _likelihood, _params
 
+derived_suffix = "_derived"
 
-class gaussian(Likelihood):
+
+class gaussian_mixture(Likelihood):
     """
     Gaussian likelihood.
     """
@@ -33,22 +35,20 @@ class gaussian(Likelihood):
         Initializes the gaussian distributions.
         """
         self.log.debug("Initializing")
-        self.log.warn("This likelihood will be deprecated soon. "
-                      "Use 'gaussian_mixture' instead.")
         # Load mean and cov, and check consistency of n_modes and dimensionality
-        if self.mean is not None and self.cov is not None:
+        if self.means is not None and self.covs is not None:
             # Wrap them in the right arrays (n_mode, param) and check consistency
-            self.mean = np.atleast_1d(self.mean)
-            while len(np.array(self.mean).shape) < 2:
-                self.mean = np.array([self.mean])
-            mean_n_modes, mean_dim = self.mean.shape
-            self.cov = np.atleast_1d(self.cov)
-            while len(np.array(self.cov).shape) < 3:
-                self.cov = np.array([self.cov])
-            cov_n_modes, cov_dim, cov_dim_2 = self.cov.shape
+            self.means = np.atleast_1d(self.means)
+            while len(np.array(self.means).shape) < 2:
+                self.means = np.array([self.means])
+            mean_n_modes, mean_dim = self.means.shape
+            self.covs = np.atleast_1d(self.covs)
+            while len(np.array(self.covs).shape) < 3:
+                self.covs = np.array([self.covs])
+            cov_n_modes, cov_dim, cov_dim_2 = self.covs.shape
             if cov_dim != cov_dim_2:
                 self.log.error("The covariance matrix(/ces) do not appear to be square!\n"
-                               "Got %r", self.cov)
+                               "Got %r", self.covs)
                 raise HandledException
             if mean_dim != cov_dim:
                 self.log.error(
@@ -66,21 +66,38 @@ class gaussian(Likelihood):
                      if self.prefix else ""), mean_dim, len(self.input_params))
                 raise HandledException
             self.n_modes = mean_n_modes
-            if len(self.output_params) != self.d() * self.n_modes:
+            if self.derived and len(self.output_params) != self.d() * self.n_modes:
                 self.log.error(
                     "The number of derived parameters must be equal to the dimensionality"
                     " times the number of modes, i.e. %d x %d = %d, but was given %d "
                     "derived parameters.", self.d(), self.n_modes, self.d() * self.n_modes,
                     len(self.output_params))
                 raise HandledException
+            elif not self.derived and self.output_params:
+                self.log.error(
+                    "Derived parameters were requested, but 'derived' option is False. "
+                    "Set to True and define as many derived parameters as the "
+                    "dimensionality times the number of modes, i.e. %d x %d = %d.",
+                    self.d(), self.n_modes, self.d() * self.n_modes)
+                raise HandledException
         else:
             self.log.error("You must specify both a mean (or a list of them) and a "
                            "covariance matrix, or a list of them.")
             raise HandledException
         self.gaussians = [multivariate_normal(mean=mean, cov=cov)
-                          for mean, cov in zip(self.mean, self.cov)]
+                          for mean, cov in zip(self.means, self.covs)]
+        if self.weights:
+            if not len(self.weights) == len(self.gaussians):
+                self.log.error("There must be as many weights as components.")
+                raise HandledException
+            if not np.isclose(sum(self.weights), 1):
+                self.weights = self.weights/sum(self.weights)
+                self.log.warn(
+                    "Weights of components renormalized to %r", list(self.weights))
+        else:
+            self.weights = 1/len(self.gaussians)                
         # Prepare the transformation(s) for the derived parameters
-        self.choleskyL = [np.linalg.cholesky(cov) for cov in self.cov]
+        self.choleskyL = [np.linalg.cholesky(cov) for cov in self.covs]
 
     def logp(self, **params_values):
         """
@@ -90,16 +107,15 @@ class gaussian(Likelihood):
         # Prepare the vector of sampled parameter values
         x = np.array([params_values[p] for p in self.input_params])
         # Fill the derived parameters
-        _derived = params_values.get("_derived")
-        if _derived is not None:
+        derived = params_values.get("_derived")
+        if derived is not None:
             for i in range(self.n_modes):
-                standard = np.linalg.inv(self.choleskyL[i]).dot((x - self.mean[i]))
-                _derived.update(dict(
+                standard = np.linalg.inv(self.choleskyL[i]).dot((x - self.means[i]))
+                derived.update(dict(
                     [(p, v) for p, v in
                      zip(list(self.output_params)[i * self.d():(i + 1) * self.d()], standard)]))
         # Compute the likelihood and return
-        return (-np.log(self.n_modes) +
-                logsumexp([gauss.logpdf(x) for gauss in self.gaussians]))
+        return logsumexp([gauss.logpdf(x) for gauss in self.gaussians], b=self.weights)
 
 
 # Scripts to generate random means and covariances #######################################
@@ -154,8 +170,8 @@ def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1, mpi_warn=True):
     return cov
 
 
-def info_random_gaussian(ranges, n_modes=1, prefix="", O_std_min=1e-2, O_std_max=1,
-                         mpi_aware=True):
+def info_random_gaussian_mixture(
+        ranges, n_modes=1, prefix="", O_std_min=1e-2, O_std_max=1, mpi_aware=True):
     """
     Wrapper around ``random_mean`` and ``random_cov`` to generate the likelihood and
     parameter info for a random Gaussian.
@@ -186,7 +202,7 @@ def info_random_gaussian(ranges, n_modes=1, prefix="", O_std_min=1e-2, O_std_max
         mean, cov = comm.bcast(mean, root=0), comm.bcast(cov, root=0)
     dimension = len(ranges)
     info = {_likelihood: {"gaussian": {
-        "mean": mean, "cov": cov, "prefix": prefix}}}
+        "means": means, "covs": covs, "prefix": prefix}}}
     info[_params] = odict(
         # sampled
         [[prefix + "%d" % i,

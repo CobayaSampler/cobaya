@@ -28,6 +28,10 @@
 - Fixed output: now -logposterior is actually that (was chi squared of posterior).
 - Interfaced callback functions.
 
+### Likelihoods
+
+#### Created `gaussian_mixture` and added deprecation notice to `gaussian`
+
 ### Cosmological theory codes
 
 #### General

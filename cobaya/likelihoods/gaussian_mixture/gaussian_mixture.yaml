@@ -1,0 +1,15 @@
+# Gaussian mixtures likelihood, normalized
+
+likelihood:
+  gaussian_mixture:
+    # Means and covmats
+    means:
+    covs:
+    # Weights of the components (default: equal weights)
+    weights:
+    # Prefix of parameters names
+    prefix: ""
+    # Use derived standarized parameters for each component
+    derived: False
+    # Delay in likelihood evaluation
+    delay: 0  # seconds

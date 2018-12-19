@@ -21,6 +21,7 @@ Table of contents
    likelihoods
    likelihood_one
    likelihood_gaussian
+   likelihood_gaussian_mixture
    theory
    sampler
    sampler_evaluate
