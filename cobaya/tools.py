@@ -163,6 +163,12 @@ def read_dnumber(n, d, dtype=float):
     return n
 
 
+def prepare_comment(comment):
+    """Prepares a string (maybe containing multiple lines) to be written as a comment."""
+    return "\n".join(
+        ["# "+line.lstrip("#") for line in comment.split("\n") if line]) + "\n"
+
+
 # Self describing
 def is_valid_variable_name(name):
     try:

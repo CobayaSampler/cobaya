@@ -15,6 +15,7 @@ import numpy as np
 import logging
 import inspect
 from itertools import chain
+from collections import OrderedDict as odict
 
 # Local
 from cobaya.tools import read_dnumber, get_external_function
@@ -23,6 +24,7 @@ from cobaya.mpi import get_mpi, get_mpi_rank, get_mpi_comm
 from cobaya.collection import Collection
 from cobaya.log import HandledException
 from cobaya.install import download_github_release
+from cobaya.yaml import yaml_dump_file
 
 clusters = "clusters"
 
@@ -274,7 +276,7 @@ class polychord(Sampler):
                     self.clusters[i] = {"sample": sample}
                     if do_output:
                         self.output.folder = old_folder
-            # Prepare the evidence
+            # Prepare the evidence(s) and write to file
             pre = "log(Z"
             active = "(Still active)"
             lines = []
@@ -289,6 +291,17 @@ class polychord(Sampler):
                 elif self.pc_settings.do_clustering:
                     i = int(component)
                     self.clusters[i]["logZ"], self.clusters[i]["logZstd"] = logZ, logZstd
+            if do_output:
+                out_evidences = odict([["logZ", self.logZ], ["logZstd", self.logZstd]])
+                if self.clusters:
+                    out_evidences["clusters"] = odict()
+                    for i in sorted(list(self.clusters.keys())):
+                        out_evidences["clusters"][i] = odict(
+                            [["logZ", self.clusters[i]["logZ"]],
+                             ["logZstd", self.clusters[i]["logZstd"]]])
+                fname = os.path.join(self.output.folder, self.output.prefix+".logZ")
+                yaml_dump_file(fname, out_evidences, comment="log-evidence", error_if_exists=False)
+        # TODO: try to broadcast the collections
         #        if get_mpi():
         #            bcast_from_0 = lambda attrname: setattr(self,
         #                attrname, get_mpi_comm().bcast(getattr(self, attrname, None), root=0))

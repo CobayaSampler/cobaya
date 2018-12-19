@@ -26,6 +26,7 @@ import numpy as np
 
 # Local
 from cobaya.conventions import _force_reproducible, _force_reproducible_default
+from cobaya.tools import prepare_comment
 
 
 # Exceptions
@@ -159,8 +160,10 @@ def yaml_dump(data, force_reproducible=_force_reproducible_default,
     return yaml.dump(data, stream, OrderedDumper, **kwds)
 
 
-def yaml_dump_file(file_name, data, error_if_exists=True):
+def yaml_dump_file(file_name, data, comment=None, error_if_exists=True):
     if error_if_exists and os.path.isfile(file_name):
         raise IOError("File exists: '%s'" % file_name)
     with open(file_name, "w+") as f:
+        if comment:
+            f.write(prepare_comment(comment))
         f.write(yaml_dump(data))
