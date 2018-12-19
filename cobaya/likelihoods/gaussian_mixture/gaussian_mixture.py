@@ -171,7 +171,8 @@ def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1, mpi_warn=True):
 
 
 def info_random_gaussian_mixture(
-        ranges, n_modes=1, prefix="", O_std_min=1e-2, O_std_max=1, mpi_aware=True):
+        ranges, n_modes=1, prefix="", O_std_min=1e-2, O_std_max=1, derived=False,
+        mpi_aware=True):
     """
     Wrapper around ``random_mean`` and ``random_cov`` to generate the likelihood and
     parameter info for a random Gaussian.
@@ -201,8 +202,8 @@ def info_random_gaussian_mixture(
     if mpi_aware:
         mean, cov = comm.bcast(mean, root=0), comm.bcast(cov, root=0)
     dimension = len(ranges)
-    info = {_likelihood: {"gaussian": {
-        "means": means, "covs": covs, "prefix": prefix}}}
+    info = {_likelihood: {"gaussian_mixture": {
+        "means": mean, "covs": cov, "prefix": prefix, "derived": derived}}}
     info[_params] = odict(
         # sampled
         [[prefix + "%d" % i,
@@ -210,6 +211,6 @@ def info_random_gaussian_mixture(
            "latex": r"\alpha_{%i}" % i}]
          for i in range(dimension)] +
         # derived
-        [[prefix + "derived_%d" % i, {"min": -3, "max": 3, "latex": r"\beta_{%i}" % i}]
-         for i in range(dimension * n_modes)])
+        ([[prefix + "derived_%d" % i, {"min": -3, "max": 3, "latex": r"\beta_{%i}" % i}]
+         for i in range(dimension * n_modes)] if derived else []))
     return info

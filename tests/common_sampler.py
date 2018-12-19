@@ -12,7 +12,7 @@ from itertools import chain
 
 from cobaya.conventions import _likelihood, _sampler, _params, _output_prefix
 from cobaya.conventions import _force_reproducible, _debug, _debug_file, _path_install
-from cobaya.likelihoods.gaussian import info_random_gaussian
+from cobaya.likelihoods.gaussian_mixture import info_random_gaussian_mixture
 from cobaya.tools import KL_norm
 from cobaya.run import run
 from install_for_tests import process_modules_path
@@ -30,21 +30,21 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
     # Info of likelihood and prior
     ranges = np.array([[-1, 1] for _ in range(dimension)])
     while True:
-        info = info_random_gaussian(
+        info = info_random_gaussian_mixture(
             ranges=ranges, n_modes=n_modes, prefix="a_",
-            O_std_min=O_std_min, O_std_max=O_std_max)
+            O_std_min=O_std_min, O_std_max=O_std_max, derived=True)
         if n_modes == 1:
             break
-        means = info["likelihood"]["gaussian"]["mean"]
+        means = info["likelihood"]["gaussian_mixture"]["means"]
         distances = chain(*[[np.linalg.norm(m1 - m2) for m2 in means[i + 1:]]
                             for i, m1 in enumerate(means)])
         if min(distances) >= distance_factor * O_std_max:
             break
     if rank == 0:
         print("Original mean of the gaussian mode:")
-        print(info["likelihood"]["gaussian"]["mean"])
+        print(info["likelihood"]["gaussian_mixture"]["means"])
         print("Original covmat of the gaussian mode:")
-        print(info["likelihood"]["gaussian"]["cov"])
+        print(info["likelihood"]["gaussian_mixture"]["covs"])
     info[_sampler] = info_sampler
     if list(info_sampler.keys())[0] == "mcmc":
         if "covmat" in info_sampler["mcmc"]:
@@ -59,7 +59,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
         info[_path_install] = process_modules_path(modules)
     # Delay to one chain to check that MPI communication of the sampler is non-blocking
     #    if rank == 1:
-    #        info["likelihood"]["gaussian"]["delay"] = 0.1
+    #        info["likelihood"]["gaussian_mixture"]["delay"] = 0.1
     updated_info, products = run(info)
     # Done! --> Tests
     if rank == 0:
@@ -79,8 +79,8 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
             import getdist.plots as gdplots
             from getdist.gaussian_mixtures import MixtureND
             mixture = MixtureND(
-                info[_likelihood]["gaussian"]["mean"],
-                info[_likelihood]["gaussian"]["cov"],
+                info[_likelihood]["gaussian_mixture"]["means"],
+                info[_likelihood]["gaussian_mixture"]["covs"],
                 names=[p for p in info[_params] if "deriv" not in p], label="truth")
             g = gdplots.getSubplotPlotter()
             to_plot = [mixture, results]
@@ -93,8 +93,8 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
         # 1st test: KL divergence
         if n_modes == 1:
             cov_sample, mean_sample = results.getCov(), results.getMeans()
-            KL_final = KL_norm(m1=info[_likelihood]["gaussian"]["mean"][0],
-                               S1=info[_likelihood]["gaussian"]["cov"][0],
+            KL_final = KL_norm(m1=info[_likelihood]["gaussian_mixture"]["means"][0],
+                               S1=info[_likelihood]["gaussian_mixture"]["covs"][0],
                                m2=mean_sample[:dimension],
                                S2=cov_sample[:dimension, :dimension])
             print("Final KL: ", KL_final)
@@ -106,8 +106,8 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
                     "Not all clusters detected!")
                 for c2 in clusters:
                     cov_c2, mean_c2 = c2.getCov(), c2.getMeans()
-                    KLs = [KL_norm(m1=info[_likelihood]["gaussian"]["mean"][i_c1],
-                                   S1=info[_likelihood]["gaussian"]["cov"][i_c1],
+                    KLs = [KL_norm(m1=info[_likelihood]["gaussian_mixture"]["means"][i_c1],
+                                   S1=info[_likelihood]["gaussian_mixture"]["covs"][i_c1],
                                    m2=mean_c2[:dimension],
                                    S2=cov_c2[:dimension, :dimension])
                            for i_c1 in range(n_modes)]
@@ -128,14 +128,14 @@ def body_of_test_speeds(info_sampler={}, modules=None):
     speed1, speed2 = 5, 20
     ranges = [[i, i + 1] for i in range(2 * dim)]
     prefix = "a_"
-    mean1, cov1 = [info_random_gaussian(
+    mean1, cov1 = [info_random_gaussian_mixture(
         ranges=[ranges[i] for i in range(dim)], n_modes=1, prefix=prefix,
-        O_std_min=0.01, O_std_max=0.2)
-                   [_likelihood]["gaussian"][p][0] for p in ["mean", "cov"]]
-    mean2, cov2 = [info_random_gaussian(
+        O_std_min=0.01, O_std_max=0.2, derived=True)
+                   [_likelihood]["gaussian_mixture"][p][0] for p in ["means", "covs"]]
+    mean2, cov2 = [info_random_gaussian_mixture(
         ranges=[ranges[i] for i in range(dim, 2 * dim)], n_modes=1, prefix=prefix,
-        O_std_min=0.01, O_std_max=0.2)
-                   [_likelihood]["gaussian"][p][0] for p in ["mean", "cov"]]
+        O_std_min=0.01, O_std_max=0.2, derived=True)
+                   [_likelihood]["gaussian_mixture"][p][0] for p in ["means", "covs"]]
     global n1, n2
     n1, n2 = 0, 0
     # PolyChord measures its own speeds, so we need to "sleep"

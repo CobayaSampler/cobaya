@@ -9,7 +9,7 @@ from scipy.stats import multivariate_normal
 from flaky import flaky
 
 from cobaya.conventions import _likelihood, _sampler
-from cobaya.likelihoods.gaussian import info_random_gaussian
+from cobaya.likelihoods.gaussian_mixture import info_random_gaussian_mixture
 
 
 @flaky(max_runs=3, min_passes=1)
@@ -23,9 +23,10 @@ def test_minimize_gaussian():
     # Info of likelihood and prior
     ranges = np.array([[0, 1] for i in range(dimension)])
     prefix = "a_"
-    info = info_random_gaussian(ranges=ranges, n_modes=n_modes, prefix=prefix)
-    mean = info[_likelihood]["gaussian"]["mean"][0]
-    cov = info[_likelihood]["gaussian"]["cov"][0]
+    info = info_random_gaussian_mixture(
+        ranges=ranges, n_modes=n_modes, prefix=prefix, derived=True)
+    mean = info[_likelihood]["gaussian_mixture"]["means"][0]
+    cov = info[_likelihood]["gaussian_mixture"]["covs"][0]
     maxloglik = multivariate_normal.logpdf(mean, mean=mean, cov=cov)
     if rank == 0:
         print("Maximim of the gaussian mode to be found:")

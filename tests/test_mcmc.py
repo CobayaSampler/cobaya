@@ -3,7 +3,7 @@ from __future__ import division, print_function
 from mpi4py import MPI
 from flaky import flaky
 
-from cobaya.likelihoods.gaussian import random_cov
+from cobaya.likelihoods.gaussian_mixture import random_cov
 from cobaya.tools import KL_norm
 
 from common_sampler import body_of_test, body_of_test_speeds
@@ -33,10 +33,10 @@ def test_mcmc(tmpdir, modules=None):
         "covmat": S0, }}
 
     def check_gaussian(sampler_instance):
-        KL_proposer = KL_norm(S1=sampler_instance.model.likelihood["gaussian"].cov[0],
+        KL_proposer = KL_norm(S1=sampler_instance.model.likelihood["gaussian_mixture"].covs[0],
                               S2=sampler_instance.proposer.get_covariance())
-        KL_sample = KL_norm(m1=sampler_instance.model.likelihood["gaussian"].mean[0],
-                            S1=sampler_instance.model.likelihood["gaussian"].cov[0],
+        KL_sample = KL_norm(m1=sampler_instance.model.likelihood["gaussian_mixture"].means[0],
+                            S1=sampler_instance.model.likelihood["gaussian_mixture"].covs[0],
                             m2=sampler_instance.collection.mean(
                                 first=int(sampler_instance.n() / 2)),
                             S2=sampler_instance.collection.cov(

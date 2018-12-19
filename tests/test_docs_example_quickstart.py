@@ -51,7 +51,7 @@ def test_example(tmpdir):
     exec (open(os.path.join(docs_src_folder, "create_info.py")).read(), globals_example)
     try:
         assert is_equal_info(info_yaml, globals_example["info"]), (
-            "Inconsistent info between yaml and insteractive.")
+            "Inconsistent info between yaml and interactive.")
         exec (open(os.path.join(docs_src_folder, "load_info.py")).read(), globals_example)
         globals_example["info_from_yaml"].pop(_output_prefix)
         assert is_equal_info(info_yaml, globals_example["info_from_yaml"]), (
