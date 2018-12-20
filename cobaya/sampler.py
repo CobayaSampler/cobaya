@@ -57,7 +57,7 @@ from cobaya.conventions import _resume_default
 from cobaya.tools import get_class
 from cobaya.log import HandledException
 from cobaya.yaml import yaml_load_file
-from cobaya.mpi import get_mpi_rank
+from cobaya.mpi import am_single_or_primary_process
 
 # Logger
 log = logging.getLogger(__name__.split(".")[-1])
@@ -143,10 +143,10 @@ class Sampler(object):
                     for k, v in checkpoint_info[_sampler][self.name].items():
                         setattr(self, k, v)
                     self.resuming = True
-                    if not get_mpi_rank():
+                    if am_single_or_primary_process():
                         self.log.info("Resuming from previous sample!")
                 except KeyError:
-                    if not get_mpi_rank():
+                    if am_single_or_primary_process():
                         self.log.error("Checkpoint file found at '%s'"
                                        "but corresponds to a different sampler.",
                                        self.checkpoint_filename())

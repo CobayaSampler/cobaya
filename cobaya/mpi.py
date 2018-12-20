@@ -31,12 +31,10 @@ def get_mpi():
     """
     global _mpi
     if _mpi == -1:
-        if any([os.getenv(v) for v in
-                ["OMPI_COMM_WORLD_SIZE",  # OpenMPI
-                 "PMI_SIZE"]]):  # Intel MPI
+        try:
             from mpi4py import MPI
             _mpi = MPI
-        else:
+        except ImportError:
             _mpi = None
     return _mpi
 
@@ -76,6 +74,18 @@ def get_mpi_rank():
     if _mpi_rank == -1:
         _mpi_rank = getattr(get_mpi_comm(), "Get_rank", lambda: None)()
     return _mpi_rank
+
+
+# Aliases for simpler use
+def am_single_or_primary_process():
+    return not bool(get_mpi_rank())
+
+def more_than_one_process():
+    return bool(max(get_mpi_size(), 1) - 1)
+
+def sync_processes():
+    if get_mpi_size():
+        get_mpi_comm().barrier()
 
 
 def import_MPI(module, target):

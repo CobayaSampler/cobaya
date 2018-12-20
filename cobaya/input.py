@@ -28,6 +28,7 @@ from cobaya.tools import get_folder, recursive_update, recursive_odict_to_dict
 from cobaya.yaml import yaml_load_file
 from cobaya.log import HandledException
 from cobaya.parameterization import expand_info_param
+from cobaya.mpi import get_mpi_comm, am_single_or_primary_process
 
 # Logger
 import logging
@@ -62,15 +63,11 @@ def load_input(input_file):
 
 # MPI wrapper for loading the input info
 def load_input_MPI(input_file):
-    from mpi4py import MPI
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    # Load input (only one process does read the input file)
-    if rank == 0:
+    if am_single_or_primary_process():
         info = load_input(input_file)
     else:
         info = None
-    info = comm.bcast(info, root=0)
+    info = get_mpi_comm().bcast(info, root=0)
     return info
 
 

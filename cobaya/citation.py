@@ -46,8 +46,8 @@ def citation(*infos):
 
 # Command-line script
 def citation_script():
-    from cobaya.mpi import get_mpi_rank
-    if not get_mpi_rank():
+    from cobaya.mpi import am_single_or_primary_process
+    if not am_single_or_primary_process():
         # Configure the logger ASAP
         from cobaya.log import logger_setup
         logger_setup()

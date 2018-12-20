@@ -21,7 +21,8 @@ from pandas import DataFrame
 
 # Local
 from cobaya.sampler import Sampler
-from cobaya.mpi import get_mpi, get_mpi_size, get_mpi_rank, get_mpi_comm
+from cobaya.mpi import get_mpi_size, get_mpi_rank, get_mpi_comm
+from cobaya.mpi import more_than_one_process, am_single_or_primary_process, sync_processes
 from cobaya.collection import Collection, OnePoint
 from cobaya.conventions import _weight, _p_proposal, _p_renames, _sampler, _minuslogpost
 from cobaya.conventions import _line_width, _path_install
@@ -56,14 +57,13 @@ class mcmc(Sampler):
         # Max # checkpoints to wait, in case one process dies without sending MPI_ABORT
         self.been_waiting = 0
         self.max_waiting = max(50, self.max_tries / self.model.prior.d())
-        if not get_mpi_rank():
+        if am_single_or_primary_process():
             if self.resuming and (max(self.mpi_size or 0, 1) != max(get_mpi_size(), 1)):
                 self.log.error(
                     "Cannot resume a sample with a different number of chains: "
                     "was %d and now is %d.", max(self.mpi_size, 1), max(get_mpi_size(), 1))
                 raise HandledException
-        if get_mpi_size():
-            get_mpi_comm().barrier()
+        sync_processes()
         if not self.resuming and self.output:
             # Delete previous files (if not "forced", the run would have already failed)
             if ((os.path.abspath(self.covmat_filename()) !=
@@ -362,11 +362,11 @@ class mcmc(Sampler):
                               "Stopping.")
         # Make sure the last batch of samples ( < output_every ) are written
         self.collection._out_update()
-        if get_mpi():
+        if more_than_one_process():
             Ns = (lambda x: np.array(get_mpi_comm().gather(x)))(self.n())
         else:
             Ns = [self.n()]
-        if not get_mpi_rank():
+        if am_single_or_primary_process():
             self.log.info("Sampling complete after %d accepted steps.", sum(Ns))
 
     def n(self, burn_in=False):
@@ -542,15 +542,13 @@ class mcmc(Sampler):
         Checks if the chain(s) is(/are) ready to check convergence and, if requested,
         learn a new covariance matrix for the proposal distribution.
         """
-        msg_ready = (("Ready to" if get_mpi() or self.learn_proposal else "") +
-                     " check convergence" +
-                     (" and" if get_mpi() and self.learn_proposal else "") +
-                     (" learn a new proposal covmat" if self.learn_proposal else ""))
+        msg_ready = ("Ready to check convergence" +
+                     (" and learn a new proposal covmat" if self.learn_proposal else ""))
         # If *just* (weight==1) got ready to check+learn
         if (self.n() > 0 and self.current_point[_weight] == 1 and
                 not (self.n() % self.check_every)):
             self.log.info("Checkpoint: %d samples accepted.", self.n())
-            if get_mpi():
+            if more_than_one_process():
                 self.been_waiting += 1
                 if self.been_waiting > self.max_waiting:
                     self.log.error(
@@ -558,8 +556,8 @@ class mcmc(Sampler):
                         "Maybe one of them is stuck or died unexpectedly?")
                     raise HandledException
             self.model.dump_timing()
-            # If not MPI, we are ready
-            if not get_mpi():
+            # If not MPI size > 1, we are ready
+            if not more_than_one_process():
                 if msg_ready:
                     self.log.info(msg_ready)
                 return True
@@ -575,12 +573,12 @@ class mcmc(Sampler):
             # Sanity check: actually all processes have finished
             assert np.all(self.all_ready == 1), (
                 "This should not happen! Notify the developers. (Got %r)", self.all_ready)
-            if get_mpi_rank() == 0:
+            if more_than_one_process() and am_single_or_primary_process():
                 self.log.info("All chains are r" + msg_ready[1:])
             delattr(self, "req")
             self.been_waiting = 0
             # Just in case, a barrier here
-            get_mpi_comm().barrier()
+            sync_processes()
             return True
         return False
 
@@ -590,7 +588,7 @@ class mcmc(Sampler):
         learns a new covariance matrix for the proposal distribution from the covariance
         of the last samples.
         """
-        if get_mpi():
+        if more_than_one_process():
             # Compute and gather means, covs and CL intervals of last half of chains
             mean = self.collection.mean(first=int(self.n() / 2))
             cov = self.collection.cov(first=int(self.n() / 2))
@@ -636,7 +634,7 @@ class mcmc(Sampler):
                 bounds = None
                 success_bounds = False
         # Compute convergence diagnostics
-        if not get_mpi_rank():
+        if am_single_or_primary_process():
             # "Within" or "W" term -- our "units" for assessing convergence
             # and our prospective new covariance matrix
             mean_of_covs = np.average(covs, weights=Ns, axis=0)
@@ -677,8 +675,8 @@ class mcmc(Sampler):
                     self.log.debug("Eigenvalues = %r", eigvals)
                     self.log.info(
                         "Convergence of means: R-1 = %f after %d accepted steps" % (
-                            Rminus1, (sum(Ns) if get_mpi() else self.n())) +
-                        (" = sum(%r)" % list(Ns) if get_mpi() else ""))
+                            Rminus1, (sum(Ns) if more_than_one_process() else self.n())) +
+                        (" = sum(%r)" % list(Ns) if more_than_one_process() else ""))
                     # Have we converged in means?
                     # (criterion must be fulfilled twice in a row)
                     if max(Rminus1, self.Rminus1_last) < self.Rminus1_stop:
@@ -692,9 +690,9 @@ class mcmc(Sampler):
                             self.log.info(
                                 "Convergence of bounds: R-1 = %f after %d " % (
                                     np.max(Rminus1_cl),
-                                    (sum(Ns) if get_mpi() else self.n())) +
+                                    (sum(Ns) if more_than_one_process() else self.n())) +
                                 "accepted steps" +
-                                (" = sum(%r)" % list(Ns) if get_mpi() else ""))
+                                (" = sum(%r)" % list(Ns) if more_than_one_process() else ""))
                             if np.max(Rminus1_cl) < self.Rminus1_cl_stop:
                                 self.converged = True
                                 self.log.info("The run has converged!")
@@ -702,15 +700,15 @@ class mcmc(Sampler):
                         else:
                             self.log.info("Computation of the bounds was not possible. "
                                           "Waiting until the next checkpoint")
-        if get_mpi():
+        if more_than_one_process():
             # Broadcast and save the convergence status and the last R-1 of means
             success = get_mpi_comm().bcast(
-                (success if not get_mpi_rank() else None), root=0)
+                (success if am_single_or_primary_process() else None), root=0)
             if success:
                 self.Rminus1_last = get_mpi_comm().bcast(
-                    (Rminus1 if not get_mpi_rank() else None), root=0)
+                    (Rminus1 if am_single_or_primary_process() else None), root=0)
                 self.converged = get_mpi_comm().bcast(
-                    (self.converged if not get_mpi_rank() else None), root=0)
+                    (self.converged if am_single_or_primary_process() else None), root=0)
         else:
             if success:
                 self.Rminus1_last = Rminus1
@@ -719,29 +717,29 @@ class mcmc(Sampler):
             good_Rminus1 = (self.learn_proposal_Rminus1_max >
                             self.Rminus1_last > self.learn_proposal_Rminus1_min)
             if not good_Rminus1:
-                if not get_mpi_rank():
+                if am_single_or_primary_process():
                     self.log.info("Bad convergence statistics: "
                                   "waiting until the next checkpoint.")
                 return
-            if get_mpi():
-                if get_mpi_rank():
+            if more_than_one_process():
+                if not am_single_or_primary_process():
                     mean_of_covs = np.empty((self.model.prior.d(), self.model.prior.d()))
                 get_mpi_comm().Bcast(mean_of_covs, root=0)
-            elif not get_mpi():
+            else:
                 mean_of_covs = covs[0]
             try:
                 self.proposer.set_covariance(mean_of_covs)
             except:
                 self.log.debug("Updating covariance matrix failed unexpectedly. "
                                "waiting until next checkpoint.")
-            if not get_mpi_rank():
+            if am_single_or_primary_process():
                 self.log.info("Updated covariance matrix of proposal pdf.")
                 self.log.debug("%r", mean_of_covs)
         # Save checkpoint info
         self.write_checkpoint()
 
     def write_checkpoint(self):
-        if not get_mpi_rank() and self.output:
+        if am_single_or_primary_process() and self.output:
             checkpoint_filename = self.checkpoint_filename()
             covmat_filename = self.covmat_filename()
             np.savetxt(covmat_filename, self.proposer.get_covariance(), header=" ".join(

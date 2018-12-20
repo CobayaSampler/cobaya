@@ -24,6 +24,7 @@ from cobaya.conventions import _resume, _resume_default, _force
 from cobaya.conventions import _force_reproducible_default, _likelihood, _params
 from cobaya.log import HandledException
 from cobaya.input import is_equal_info
+from cobaya.mpi import am_single_or_primary_process, get_mpi_comm
 
 # Logger
 import logging
@@ -179,23 +180,17 @@ class Output_MPI(Output):
     """
 
     def __init__(self, *args, **kwargs):
-        from mpi4py import MPI
-        comm = MPI.COMM_WORLD
-        rank = comm.Get_rank()
         to_broadcast = ("folder", "prefix", "kind", "ext", "resuming")
-        if rank == 0:
+        if am_single_or_primary_process():
             Output.__init__(self, *args, **kwargs)
         else:
             for var in to_broadcast:
                 setattr(self, var, None)
         for var in to_broadcast:
-            setattr(self, var, comm.bcast(getattr(self, var), root=0))
+            setattr(self, var, get_mpi_comm().bcast(getattr(self, var), root=0))
 
     def dump_info(self, *args, **kwargs):
-        from mpi4py import MPI
-        comm = MPI.COMM_WORLD
-        rank = comm.Get_rank()
-        if rank == 0:
+        if am_single_or_primary_process():
             Output.dump_info(self, *args, **kwargs)
 
 

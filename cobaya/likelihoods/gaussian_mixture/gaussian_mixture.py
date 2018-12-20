@@ -13,13 +13,12 @@ from __future__ import division
 import numpy as np
 from scipy.stats import multivariate_normal, uniform, random_correlation
 from scipy.special import logsumexp
-from mpi4py import MPI
 from collections import OrderedDict as odict
 
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import HandledException
-from cobaya.mpi import get_mpi_size
+from cobaya.mpi import get_mpi_size, get_mpi_comm, am_single_or_primary_process
 from cobaya.conventions import _likelihood, _params
 
 derived_suffix = "_derived"
@@ -180,9 +179,7 @@ def info_random_gaussian_mixture(
     If ``mpi_aware=True``, it draws the random stuff only once, and communicates it to
     the rest of the MPI processes.
     """
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    if rank == 0 or not mpi_aware:
+    if am_single_or_primary_process() or not mpi_aware:
         cov = random_cov(ranges, n_modes=n_modes,
                          O_std_min=O_std_min, O_std_max=O_std_max, mpi_warn=False)
         if n_modes == 1:
@@ -197,10 +194,10 @@ def info_random_gaussian_mixture(
             ranges_mean = [
                 (l if l[0] <= l[1] else 2 * [(l[0] + l[1]) / 2]) for l in ranges_mean]
             mean[i] = random_mean(ranges_mean, n_modes=1, mpi_warn=False)
-    elif rank != 0 and mpi_aware:
+    elif not am_single_or_primary_process() and mpi_aware:
         mean, cov = None, None
     if mpi_aware:
-        mean, cov = comm.bcast(mean, root=0), comm.bcast(cov, root=0)
+        mean, cov = get_mpi_comm().bcast(mean, root=0), get_mpi_comm().bcast(cov, root=0)
     dimension = len(ranges)
     info = {_likelihood: {"gaussian_mixture": {
         "means": mean, "covs": cov, "prefix": prefix, "derived": derived}}}

@@ -17,7 +17,7 @@ import traceback
 
 # Local
 from cobaya.conventions import _debug, _debug_file
-from cobaya.mpi import get_mpi, get_mpi_rank, get_mpi_comm
+from cobaya.mpi import get_mpi_rank, get_mpi_comm, more_than_one_process
 
 
 class HandledException(Exception):
@@ -71,8 +71,8 @@ def logger_setup(debug=None, debug_file=None):
     class MyFormatter(logging.Formatter):
         def format(self, record):
             self._fmt = (
-                    "[" + ("%d : " % get_mpi_rank() if get_mpi() else "") + "%(name)s" +
-                    (" %(asctime)s " if debug else "") + "] " +
+                    "[" + ("%d : " % get_mpi_rank() if more_than_one_process() else "") +
+                    "%(name)s" + (" %(asctime)s " if debug else "") + "] " +
                     {logging.ERROR: "*ERROR* ",
                      logging.WARNING: "*WARNING* "}.get(record.levelno, "") +
                     "%(message)s")
