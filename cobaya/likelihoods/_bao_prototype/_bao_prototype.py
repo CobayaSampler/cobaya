@@ -191,7 +191,7 @@ class _bao_prototype(Likelihood):
                 raise HandledException
             spline = UnivariateSpline(alpha, -chi2 / 2, s=0)
             self.logpdf = lambda x: (
-                spline(x) if self.prob_dist_bounds[0] <= x <= self.prob_dist_bounds[1]
+                spline(x)[0] if self.prob_dist_bounds[0] <= x <= self.prob_dist_bounds[1]
                 else -np.inf)
         # Covariance --> read and re-sort as self.data
         else:
