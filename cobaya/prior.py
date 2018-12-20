@@ -237,6 +237,19 @@ parameters, we insert the functions defining them under a ``derived`` property
 
 .. note::
 
+   Also available are the :math:`\chi^2 = -2 \log \mathcal{L}` of the used likelihoods,
+   as `chi2__[name]`, e.g.
+
+   .. code:: yaml
+
+     likelihood:
+       my_like: [...]
+     params:
+       my_derived:
+         derived: "lambda chi2__my_like: [...]"
+
+.. note::
+
    By default, the values of **dynamical input** parameters (e.g. ``x`` above) are saved
    as if they were derived parameters. If you would like to ignore them, define them using
    the following *extended notation*:

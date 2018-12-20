@@ -30,7 +30,7 @@ from copy import deepcopy
 
 # Local
 from cobaya.conventions import _external, _theory, _params, _overhead_per_param
-from cobaya.conventions import _timing, _p_renames
+from cobaya.conventions import _timing, _p_renames, _chi2, _separator
 from cobaya.tools import get_class, get_external_function, getargspec
 from cobaya.log import HandledException
 
@@ -282,7 +282,9 @@ class LikelihoodCollection(object):
             input_params_theory = {p: v for p, v in self.input_params.items()
                                    if p in requested_not_known["input_params"]}
             output_params_theory = {p: None for p in self.output_params
-                                    if p in requested_not_known["output_params"]}
+                                    if p in requested_not_known["output_params"] and
+                                    # Not the chi2's either
+                                    not p.startswith(_chi2 + _separator)}
             name, fields = list(info_theory.items())[0]
             # If it has an "external" key, wrap it up. Else, load it up
             if _external in list(info_theory.values())[0]:
@@ -357,6 +359,8 @@ class LikelihoodCollection(object):
                 theory_params=(theory_params_dict if self.theory else None),
                 _derived=this_derived_dict, cached=cached, **this_params_dict)]
             derived_dict.update(this_derived_dict or {})
+            if _derived is not None:
+                derived_dict[_chi2 + _separator + like] = -2*logps[-1]
         # Turn the derived params dict into a list and return
         if _derived is not None:
             _derived += [derived_dict[p] for p in self.output_params]
