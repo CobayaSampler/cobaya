@@ -11,6 +11,7 @@
 ### Parameterization and priors
 
 - Made possible to fix a parameter whose only role is being an argument of a dynamically defined one.
+- Likelihoods can be used in dynamical derived parameters as `chi2__[name]` (cosmological application: added automatic consolidated CMB and BAO likelihoods).
 
 ### Samplers
 
