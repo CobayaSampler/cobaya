@@ -182,7 +182,8 @@ class Parameterization(object):
                       list(dropped_but_never_used), _p_drop)
             raise HandledException
         # input params depend on input and sampled only, never on output/derived
-        bad_input_dependencies = set(chain(*self._input_args.values())).difference(
+        all_input_arguments = set(chain(*self._input_args.values()))
+        bad_input_dependencies = all_input_arguments.difference(
             set(self.input_params()).union(set(self.sampled_params())).union(set(self.constant_params())))
         if bad_input_dependencies:
             log.error("Input parameters defined as functions can only depend on other "

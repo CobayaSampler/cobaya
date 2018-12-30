@@ -21,11 +21,13 @@ c_func = "lambda a, cprime: a+3*cprime"
 f_func = "lambda b: b**2"
 g_func = "lambda x: 3*x"
 h_func = "lambda i: i**2"
+j_func = "lambda b: b**2"
+k_func = "lambda f: f**3"
 
 
-def loglik(a, b, c, d, h, i, _derived=["x", "e"]):
+def loglik(a, b, c, d, h, i, j, _derived=["x", "e"]):
     _derived.update({"x": x_func(c), "e": e_func(b)})
-    return multivariate_normal.logpdf((a, b, c, d, h, i), cov=0.1 * np.eye(6))
+    return multivariate_normal.logpdf((a, b, c, d, h, i, j), cov=0.1 * np.eye(7))
 
 
 # Info
@@ -72,7 +74,12 @@ info = {
        # Fixing parameter whose only role is being an argument for a different one
        h: "%s"
        i: 2
-    """ % (b_func, c_func, f_func, g_func, h_func))}
+       # Multi-layer: input parameter of "2nd order", i.e. dep on another dyn input
+       j: "%s"
+       # Multi-layer derived parameter of "2nd order", i.e. depe on another dyn derived
+       k:
+         derived: "%s"
+    """ % (b_func, c_func, f_func, g_func, h_func, j_func, k_func))}
 
 
 def test_parameterization():
@@ -88,8 +95,11 @@ def test_parameterization():
         f = get_external_function(f_func)(b)
         g = get_external_function(info[_params]["g"]["derived"])(x_func(point["c"]))
         h = get_external_function(info[_params]["h"])(info[_params]["i"])
-        assert np.allclose(point[["b", "c", "e", "f", "g", "h"]], [b, c, e, f, g, h])
+        j = get_external_function(info[_params]["j"])(b)
+        k = get_external_function(info[_params]["k"]["derived"])(f)
+        assert np.allclose(
+            point[["b", "c", "e", "f", "g", "h", "j", "k"]], [b, c, e, f, g, h, j, k])
         # Test for GetDist too (except fixed ones, ignored by GetDist)
-        bcefg_getdist = [gdsample.samples[i][gdsample.paramNames.list().index(p)]
-                          for p in ["b", "c", "e", "f", "g"]]
-        assert np.allclose(bcefg_getdist, [b, c, e, f, g])
+        bcefffg_getdist = [gdsample.samples[i][gdsample.paramNames.list().index(p)]
+                           for p in ["b", "c", "e", "f", "g", "j", "k"]]
+        assert np.allclose(bcefffg_getdist, [b, c, e, f, g, j, k])
