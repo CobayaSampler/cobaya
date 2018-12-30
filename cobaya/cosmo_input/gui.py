@@ -12,6 +12,7 @@ from pprint import pformat
 from cobaya.yaml import yaml_dump
 from cobaya.cosmo_input import input_database
 from cobaya.cosmo_input.create_input import create_input
+from cobaya.citation import prettyprint_citation, citation
 
 try:
     from PySide.QtGui import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
@@ -108,7 +109,7 @@ class MainWindow(QWidget):
         # RIGHT: Output + buttons
         self.display_tabs = QTabWidget()
         self.display = {}
-        for k in ["yaml", "python"]:
+        for k in ["yaml", "python", "citations"]:
             self.display[k] = QTextEdit()
             self.display[k].setLineWrapMode(QTextEdit.NoWrap)
             self.display[k].setFontFamily("mono")
@@ -177,13 +178,15 @@ class MainWindow(QWidget):
             "from collections import OrderedDict\n\ninfo = " +
             pformat(info) + comments_text)
         self.display["yaml"].setText(yaml_dump(info) + comments_text)
+        self.display["citations"].setText(prettyprint_citation(citation(info)))
 
     @Slot()
     def save_file(self):
         ftype = next(k for k, w in self.display.items()
                      if w is self.display_tabs.currentWidget())
-        ffilter = {"yaml": "Yaml files (*.yaml *.yml)", "python": "(*.py)"}[ftype]
-        fsuffix = {"yaml": ".yaml", "python": ".py"}[ftype]
+        ffilter = {"yaml": "Yaml files (*.yaml *.yml)", "python": "(*.py)",
+                   "citations": "(*.txt)"}[ftype]
+        fsuffix = {"yaml": ".yaml", "python": ".py", "citations": ".txt"}[ftype]
         fname, path = self.save_dialog.getSaveFileName(
             self.save_dialog, "Save input file", fsuffix, ffilter, os.getcwd())
         if not fname.endswith(fsuffix):

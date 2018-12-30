@@ -129,9 +129,10 @@ def recursive_update(base, update):
     return base
 
 
-def make_header(kind, module):
+def make_header(kind, module=None):
     """Creates a header for a particular module of a particular kind."""
-    return ("=" * 80).join(["", "\n %s : %s \n" % (kind.title(), module), "\n"])
+    return ("=" * 80).join(["", "\n %s"%kind.title() +
+                            (": %s"%module if module else "") + "\n", "\n"])
 
 
 def ensure_latex(string):

@@ -9,12 +9,11 @@ Inspired by a similar characteristic of
 
 """
 # Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 # Global
 import os
+from collections import OrderedDict as odict
 
 # Local
 from cobaya.tools import get_folder, make_header
@@ -36,18 +35,24 @@ def get_citation_info(module, kind):
 
 
 def citation(*infos):
-    print(make_header("This framework", ""))
-    print("[Paper in preparation]\n")
+    blocks_text = odict([["Cobaya", "[Paper in preparation]"]])
     for kind, modules in get_modules(*infos).items():
         for module in modules:
-            print(make_header(kind, module))
-            print(get_citation_info(module, kind))
+            blocks_text["%s:%s"%(kind, module)] = get_citation_info(module, kind)
+    return blocks_text
 
+def prettyprint_citation(blocks_text):
+    txt = ""
+    for block, text in blocks_text.items():
+        if not txt.endswith("\n\n"):
+            txt += "\n\n"
+        txt += make_header(*block.split(":")) + "\n" + text
+    return txt.lstrip().rstrip() + "\n"
 
 # Command-line script
 def citation_script():
     from cobaya.mpi import am_single_or_primary_process
-    if not am_single_or_primary_process():
+    if am_single_or_primary_process():
         # Configure the logger ASAP
         from cobaya.log import logger_setup
         logger_setup()
@@ -58,4 +63,4 @@ def citation_script():
                             help="One or more input files.")
         from cobaya.input import load_input
         infos = [load_input(f) for f in parser.parse_args().files]
-        citation(*infos)
+        print(prettyprint_citation(citation(*infos)))
