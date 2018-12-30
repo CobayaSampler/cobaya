@@ -258,7 +258,7 @@ parameters, we insert the functions defining them under a ``derived`` property
 
       params:
         x:
-          value: "lambda logx: np.exp(x)"
+          value: "lambda logx: np.exp(logx)"
           derived: False
 
 .. note::
