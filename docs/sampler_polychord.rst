@@ -132,7 +132,7 @@ Troubleshooting
 
 If you are getting an error whose cause is not immediately obvious, try substituting ``polychord`` by :doc:`the dummy sampler <sampler_evaluate>` ``evaluate``.
 
-If still in doubt, run with debug output and check what the prior and likelihood are getting and producing: either set ``debug: True`` in the input file and set ``debug_file`` to some file name, or add the ``--debug`` flag to ``cobaya-run`` and pipe the output to a file with ``cobaya-run [input.yaml] --debug >file``.
+If still in doubt, run with debug output and check what the prior and likelihood are getting and producing: either set ``debug: True`` in the input file and set ``debug_file`` to some file name, or add the ``--debug`` flag to ``cobaya-run`` and pipe the output to a file with ``cobaya-run [input.yaml] --debug > file``.
 
 If PolyChord gets stuck in ``started sampling``, it probably means that your posterior is flat; if that was intentional, check the :ref:`polychord_bayes_ratios` section, where it is discussed how to deal with those cases.
 
@@ -161,7 +161,7 @@ If it has been installed this way, it is not necessary to specify a ``path`` for
 
    To run PolyChord with MPI (highly recommended!) you need to make sure that MPI+Python is working in your system, see :ref:`install_mpi`.
 
-   In addition, you need a MPI-wrapped Fortran compiler. You should have an MPI implementation installed if you followed  :ref:`the instructions to install mpi4py <install_mpi>`. On top of that, you need the Fortran compiler (we recommend the GNU one) and the *development* package of MPI. Use your system's package manager to install them (``sudo apt install gfortran libopenmpi-dev`` in Ubunto/Debian systems), or contact your local IT service. If everything is correctly installed, you should be able to type ``mpif90`` in the shell and not get a ``Command not found`` error.
+   In addition, you need a MPI-wrapped Fortran compiler. You should have an MPI implementation installed if you followed  :ref:`the instructions to install mpi4py <install_mpi>`. On top of that, you need the Fortran compiler (we recommend the GNU one) and the *development* package of MPI. Use your system's package manager to install them (``sudo apt install gfortran libopenmpi-dev`` in Ubuntu/Debian systems), or contact your local IT service. If everything is correctly installed, you should be able to type ``mpif90`` in the shell and not get a ``Command not found`` error.
 
 
 .. note::
