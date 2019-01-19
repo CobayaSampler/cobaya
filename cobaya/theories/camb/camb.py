@@ -422,12 +422,15 @@ class camb(_cosmo):
         try:
             return getattr(pars, p)
         except AttributeError:
-            for mod in ["InitPower", "Reion", "Recomb", "Transfer", "DarkEnergy"]:
-                try:
-                    return getattr(
-                        getattr(pars, mod), p)
-                except AttributeError:
-                    pass
+            try:
+                return getattr(result, p)
+            except AttributeError:
+                for mod in ["InitPower", "Reion", "Recomb", "Transfer", "DarkEnergy"]:
+                    try:
+                        return getattr(
+                            getattr(pars, mod), p)
+                    except AttributeError:
+                        pass
             return None
 
     def get_derived_from_std(self, p, intermediates):
@@ -451,8 +454,6 @@ class camb(_cosmo):
         # Specific calls, if general ones fail:
         if p == "sigma8":
             return intermediates["CAMBdata"]["result"].get_sigma8()[0]
-        elif p == "omegal":
-            return intermediates["CAMBdata"]["result"].omega_de
         for f in [self.get_derived_from_params,
                   self.get_derived_from_std,
                   self.get_derived_from_getter]:
