@@ -163,16 +163,12 @@ class camb(_cosmo):
             if not os.path.exists(self.path):
                 self.log.error("The given folder does not exist: '%s'", self.path)
                 raise HandledException
-            if os.path.exists(os.path.join(self.path, "setup.py")):
-                # CAMB 1.0.0 or later
-                pycamb_path = self.path
-            else:
-                pycamb_path = os.path.join(self.path, "pycamb")
-                if not os.path.exists(pycamb_path):
-                    self.log.error(
-                        "Either CAMB is not in the given folder, '%s', or you are using a "
-                        "very old version without the Python interface.", self.path)
-                    raise HandledException
+            pycamb_path = self.path
+            if not os.path.exists(os.path.join(self.path, "setup.py")):
+                self.log.error(
+                    "Either CAMB is not in the given folder, '%s', or you are using a "
+                    "very old version without the Python interface.", self.path)
+                raise HandledException
             sys.path.insert(0, pycamb_path)
         else:
             self.log.info("Importing *global* CAMB.")
@@ -559,7 +555,7 @@ class camb(_cosmo):
 
 # Name of the Class repo/folder and version to download
 camb_repo_name = "cmbant/CAMB"
-camb_repo_version = "1.0.0"
+camb_repo_version = "1.0.1"
 
 
 def is_installed(**kwargs):
