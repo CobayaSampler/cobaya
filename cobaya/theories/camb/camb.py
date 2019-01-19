@@ -47,14 +47,14 @@ Pre-requisites
 ^^^^^^^^^^^^^^
 
 **cobaya** calls CAMB using its Python interface, which requires that you compile CAMB
-using intel's ifort compiler or the GNU gfortran compiler version 4.9 or later. To check if you have the latter,
+using intel's ifort compiler or the GNU gfortran compiler version 6.4 or later. To check if you have the latter,
 type ``gfortran --version`` in the shell, and the first line should look like
 
 .. code::
 
    GNU Fortran ([your OS version]) [gfortran version] [release date]
 
-Check that ``[gfortran's version]`` is at least 4.9. If you get an error instead, you need
+Check that ``[gfortran's version]`` is at least 6.4. If you get an error instead, you need
 to install gfortran (contact your local IT service).
 
 CAMB comes with binaries pre-built for Windows, so if you don't need to modify the CAMB source code, no Fortran compiler is
@@ -86,28 +86,15 @@ best adapts to your needs:
   .. code:: bash
 
       $ cd /path/to/theories/
-      $ git clone https://[YourGithubUser]@github.com/[YourGithubUser]/CAMB.git
-      $ cd CAMB/pycamb
-      $ python setup.py build
-
-* To install an up-to-date CAMB locally, if you don't care about keeping track of your
-  changes (and don't want to use ``git``), do:
-
-  .. code:: bash
-
-      $ cd /path/to/theories/
-      $ wget https://github.com/cmbant/CAMB/archive/master.zip
-      $ unzip master.zip
-      $ rm master.zip
-      $ mv CAMB-master CAMB
-      $ cd CAMB/pycamb
+      $ git clone --recursive https://[YourGithubUser]@github.com/[YourGithubUser]/CAMB.git
+      $ cd CAMB
       $ python setup.py build
 
 * To use your own version, assuming it's placed under ``/path/to/theories/CAMB``,
   just make sure it is compiled (and that the version on top of which you based your
-  modifications is old enough to have the ``pycamb`` interface implemented.
+  modifications is old enough to have the Python interface implemented.
 
-In the three cases above, you **must** specify the path to your CAMB installation in
+In the cases above, you **must** specify the path to your CAMB installation in
 the input block for CAMB (otherwise a system-wide CAMB may be used instead):
 
 .. code:: yaml
@@ -170,18 +157,22 @@ class camb(_cosmo):
         """Importing CAMB from the correct path, if given."""
         if not self.path and self.path_install:
             self.path = os.path.join(
-                self.path_install, "code", camb_repo_name[camb_repo_name.find("/")+1:])
+                self.path_install, "code", camb_repo_name[camb_repo_name.find("/") + 1:])
         if self.path:
             self.log.info("Importing *local* CAMB from " + self.path)
             if not os.path.exists(self.path):
                 self.log.error("The given folder does not exist: '%s'", self.path)
                 raise HandledException
-            pycamb_path = os.path.join(self.path, "pycamb")
-            if not os.path.exists(pycamb_path):
-                self.log.error(
-                    "Either CAMB is not in the given folder, '%s', or you are using a "
-                    "very old version without the `pycamb` Python interface.", self.path)
-                raise HandledException
+            if os.path.exists(os.path.join(self.path, "setup.py")):
+                # CAMB 1.0.0 or later
+                pycamb_path = self.path
+            else:
+                pycamb_path = os.path.join(self.path, "pycamb")
+                if not os.path.exists(pycamb_path):
+                    self.log.error(
+                        "Either CAMB is not in the given folder, '%s', or you are using a "
+                        "very old version without the Python interface.", self.path)
+                    raise HandledException
             sys.path.insert(0, pycamb_path)
         else:
             self.log.info("Importing *global* CAMB.")
@@ -193,7 +184,7 @@ class camb(_cosmo):
                 "Make sure that you have compiled it, and that you either\n"
                 " (a) specify a path (you didn't) or\n"
                 " (b) install the Python interface globally with\n"
-                "     '/path/to/camb/pycamb/python setup.py install --user'")
+                "     'pip install -e /path/to/camb [--user]'")
             raise HandledException
         self.camb = camb
         # Prepare errors
@@ -239,39 +230,40 @@ class camb(_cosmo):
         super(camb, self).needs(**requirements)
         for k, v in self._needs.items():
             # Products and other computations
-            if k.lower() == "cl":
+            key_name = k.lower()
+            if key_name == "cl":
                 self.extra_args["lmax"] = max(
                     max(v.values()), self.extra_args.get("lmax", 0))
                 cls = [a.lower() for a in v]
-                self.collectors[k.lower()] = collector(
+                self.collectors[key_name] = collector(
                     method="CAMBdata.get_cmb_power_spectra",
                     kwargs={
                         "spectra": list(set(
-                            (self.collectors[k].kwargs.get("spectra", [])
-                             if k in self.collectors else []) +
+                            (self.collectors[key_name].kwargs.get("spectra", [])
+                             if key_name in self.collectors else []) +
                             ["total"] + (["lens_potential"] if "pp" in cls else []))),
                         "raw_cl": True})
                 self.needs_perts = True
-            elif k.lower() == "h":
-                self.collectors[k.lower()] = collector(
+            elif key_name == "h":
+                self.collectors[key_name] = collector(
                     method="CAMBdata.h_of_z",
                     kwargs={"z": np.atleast_1d(v["z"])})
                 self.H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": _c_km_s}
-            elif k.lower() == "angular_diameter_distance":
-                self.collectors[k.lower()] = collector(
+            elif key_name == "angular_diameter_distance":
+                self.collectors[key_name] = collector(
                     method="CAMBdata.angular_diameter_distance",
                     kwargs={"z": np.atleast_1d(v["z"])})
-            elif k.lower() == "comoving_radial_distance":
-                self.collectors[k.lower()] = collector(
+            elif key_name == "comoving_radial_distance":
+                self.collectors[key_name] = collector(
                     method="CAMBdata.comoving_radial_distance",
                     kwargs={"z": np.atleast_1d(v["z"])})
-            elif k.lower() == "fsigma8":
+            elif key_name == "fsigma8":
                 self.add_to_redshifts(v["z"])
-                self.collectors[k.lower()] = collector(
+                self.collectors[key_name] = collector(
                     method="CAMBdata.get_fsigma8",
                     kwargs={})
                 self.needs_perts = True
-            elif k.lower() == "pk_interpolator":
+            elif key_name == "pk_interpolator":
                 self.extra_args["kmax"] = max(v["k_max"], self.extra_args.get("kmax", 0))
                 self.add_to_redshifts(v["z"])
                 v["vars_pairs"] = v["vars_pairs"] or [["total", "total"]]
@@ -325,12 +317,6 @@ class camb(_cosmo):
         # Generate and save
         self.log.debug("Setting parameters: %r", args)
         try:
-            # Halofit version is for now a global parameter
-            # Delete the "if" block below when CAMB gets updated to the current devel
-            if hasattr(self.camb, "set_halofit_version"):
-                halofit_version = args.pop("halofit_version", None)
-                if halofit_version:
-                    self.camb.set_halofit_version(version=halofit_version)
             cambparams = self.camb.set_params(**args)
             for attr, value in self.extra_attrs.items():
                 if hasattr(cambparams, attr):
@@ -393,7 +379,7 @@ class camb(_cosmo):
                 "CAMBparams": {"result": result},
                 "CAMBdata": {"method": "get_results" if self.needs_perts
                 else "get_background",
-                             "result": None}}
+                             "result": None, "derived_dic": None}}
             # Compute the necessary products (incl. any intermediate result, if needed)
             for product, collector in self.collectors.items():
                 parent, method = collector.method.split(".")
@@ -434,23 +420,28 @@ class camb(_cosmo):
         return 1 if reused_state else 2
 
     def get_derived_from_params(self, p, intermediates):
+        result = intermediates["CAMBdata"].get("result", None)
+        if result is None: return None
+        pars = result.Params
         try:
-            return getattr(intermediates["CAMBparams"]["result"], p)
+            return getattr(pars, p)
         except AttributeError:
-            for mod in ["InitPower", "Reion", "Recomb", "Transfer", "ReionHist"]:
+            for mod in ["InitPower", "Reion", "Recomb", "Transfer", "DarkEnergy"]:
                 try:
                     return getattr(
-                        getattr(intermediates["CAMBparams"]["result"], mod), p)
+                        getattr(pars, mod), p)
                 except AttributeError:
                     pass
             return None
 
     def get_derived_from_std(self, p, intermediates):
-        try:
-            return intermediates["CAMBdata"]["result"].get_derived_params().get(p, None)
-        except AttributeError:
-            # Results not computed
-            return None
+        dic = intermediates["CAMBdata"].get("derived_dic", None)
+        if dic is None:
+            result = intermediates["CAMBdata"].get("result", None)
+            if result is None: return None
+            dic = result.get_derived_params()
+            intermediates["CAMBdata"]["derived_dic"] = dic
+        return dic.get(p, None)
 
     def get_derived_from_getter(self, p, intermediates):
         return getattr(intermediates["CAMBparams"]["result"], "get_" + p, lambda: None)()
@@ -568,7 +559,7 @@ class camb(_cosmo):
 
 # Name of the Class repo/folder and version to download
 camb_repo_name = "cmbant/CAMB"
-camb_repo_version = "0.1.8.1"
+camb_repo_version = "1.0.0"
 
 
 def is_installed(**kwargs):
@@ -577,9 +568,8 @@ def is_installed(**kwargs):
         return True
     return os.path.isfile(os.path.realpath(
         os.path.join(
-            kwargs["path"], "code", camb_repo_name[camb_repo_name.find("/")+1:],
-            "pycamb", "camb",
-            "cambdll.dll" if (platform.system() == "Windows") else "camblib.so")))
+            kwargs["path"], "code", camb_repo_name[camb_repo_name.find("/") + 1:],
+            "camb", "cambdll.dll" if (platform.system() == "Windows") else "camblib.so")))
 
 
 def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs):
@@ -594,10 +584,10 @@ def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs)
     if not success:
         log.error("Could not download camb.")
         return False
-    camb_path = os.path.join(path, "code", camb_repo_name[camb_repo_name.find("/")+1:])
+    camb_path = os.path.join(path, "code", camb_repo_name[camb_repo_name.find("/") + 1:])
     log.info("Compiling camb...")
     from subprocess import Popen, PIPE
-    process_make = Popen(["python", "pycamb/setup.py", "build_cluster"],
+    process_make = Popen(["python", "setup.py", "build_cluster"],
                          cwd=camb_path, stdout=PIPE, stderr=PIPE)
     out, err = process_make.communicate()
     if process_make.returncode:
