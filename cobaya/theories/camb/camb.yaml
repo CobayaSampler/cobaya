@@ -16,9 +16,8 @@ theory:
     renames:
       omegabh2: ombh2
       omegach2: omch2
-      omegal: omegav
+      omegal: omega_de
       omegak: omk
-      Alens: ALens  # corrected in CAMB/devel
       yhe: YHe
       yheused: YHe  # used by Planck when YHe is derived
       YpBBN: Y_p

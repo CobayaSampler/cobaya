@@ -11,46 +11,6 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - gcc-4.9
-            - gfortran-4.9
-            - g++-4.9
-            - openmpi-bin
-            - openmpi-common
-            - libopenmpi-dev
-            # numpy (and more)
-            - libopenblas-base
-            # Planck likelihood
-            - liblapack3
-            - liblapack-dev
-      env:
-        - GCC_VERSION="4.9"
-        - PYVER="2"
-      python: "2.7"
-    - addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - gcc-5
-            - gfortran-5
-            - g++-5
-            - openmpi-bin
-            - openmpi-common
-            - libopenmpi-dev
-            # numpy (and more)
-            - libopenblas-base
-            # Planck likelihood
-            - liblapack3
-            - liblapack-dev
-      env:
-        - GCC_VERSION="5"
-        - PYVER="3"
-      python: "3.6"
-    - addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
             - gcc-8
             - gfortran-8
             - g++-8
@@ -83,30 +43,8 @@ matrix:
       env:
         - PYDIST="ANACONDA"
         - GCC_VERSION="6"
-        - PYVER="3"
-      python: "3.6"
-    # BELOW: CAMB devel #################################################
-    - addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - gcc-6
-            - gfortran-6
-            - g++-6
-            - openmpi-bin
-            - openmpi-common
-            - libopenmpi-dev
-            # numpy (and more)
-            - libopenblas-base
-            # Planck likelihood
-            - liblapack3
-            - liblapack-dev
-      env:
-        - GCC_VERSION="6"
-        - PYVER="3"
-        - CAMB_BRANCH="devel"
-      python: "3.6"
+        - PYVER="2"
+      python: "2.7"
 before_install:
   - mkdir -p gcc-symlinks
   - ln -s /usr/bin/gfortran-$GCC_VERSION gcc-symlinks/gfortran
@@ -132,7 +70,7 @@ script:
   # Installation
   - python tests/install_for_tests.py ../modules
   # CAMB devel?
-  - if [ -n "${CAMB_BRANCH}" ]; then rm -rf ../modules/code/CAMB ; git clone --recursive -b $CAMB_BRANCH https://github.com/cmbant/CAMB ../modules/code/CAMB ; python ../modules/code/CAMB/pycamb/setup.py build ; fi
+  - if [ -n "${CAMB_BRANCH}" ]; then rm -rf ../modules/code/CAMB ; git clone --recursive -b $CAMB_BRANCH https://github.com/cmbant/CAMB ../modules/code/CAMB ; python ../modules/code/CAMB/setup.py build ; fi
   # Non-cosmological tests
   - pytest tests/ -k "not cosmo" --modules="../modules"
   # Cosmological tests (--boxed = 1 process per test; otherwise lowl planck lik fails!). Planck currently does not support py3.
@@ -146,8 +84,8 @@ deploy: # only if it builds and if the commit has been tagged
     secure: FVCgqGT0sMJyvlY3sJFBwvO4RycAbWbVyHl4p9CG7XRSSgVOLGy9RZjAJkX8dJjH06fPNdQDYfkkj1PV8I42y0n4uqKkQ9RB63Yq6skbuuzjXLGQK9Xop10/1GDBhMHietDibzl8ZIuJyibdFYsc3rM/j8QcKjOYpDe10jO8K+dZaXsgAvqHk4P3d3ScG1u+X+wr8K6qik21YbTpiILS0LdUxmP4DWQw/7NKGWDX1b7sImRmvQfO20KuPTMu8pPz9ThZyPl6zEPgtKi2sQej5sgDlfim/heYk4W8Bf7bggS8GLseffssL5ru96eNUWT1OSbxnsEFqyyYepngNHPpvifflvtCiFU+3f7rzzcgYqmybhdM4ZEOk0pL5y/NS/rHn/1iW7Cqxs+GfUCbr9fWuBgKmVuDqEfvtSu83U1x6zz9C3R259Oe6n0vXfCGSfJqiHhsW8wuXx+bODyDaMAUn+gRSCLuqJVQzdcYwF2pGFf1WUH5iTQItUHZjYbAIXdnSqDKnvGalNDJdNsF3vwNEdbe8hFqfHMMzG73ZkkLOCjDW+mswIKYJUflxIyOdRqtB+XE056dA+c8Zwc4ktg4iss/O3ZBtUVPmba/ivpyYm7Fk8EUN/zY+24NK4iKk6z543rfx2w+wNXAuQiwgN2f+JshqI8kzTuCxPTgf2N49ME=
   on:
     tags: true
-    python: '2.7'
-    condition: "$GCC_VERSION = 4.9"
+    python: '3.6'
+    condition: "$GCC_VERSION = 8"
     branch: master
     repo: CobayaSampler/cobaya
 ###############################################################################
