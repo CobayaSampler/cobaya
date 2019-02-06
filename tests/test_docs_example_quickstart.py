@@ -13,22 +13,19 @@ from imageio import imread
 from cobaya.yaml import yaml_load_file
 from cobaya.input import is_equal_info
 from cobaya.conventions import _output_prefix
+import six
+import platform
+from six import StringIO
 
-docs_folder = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../docs")
-docs_src_folder = os.path.join(docs_folder, "src_examples/quickstart/")
+docs_folder = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "docs")
+docs_src_folder = os.path.join(docs_folder, "src_examples", "quickstart")
 docs_img_folder = os.path.join(docs_folder, "img")
 
 # Number of possible different pixels
-if sys.version_info[0] < 3:
+if not six.PY3:
     pixel_tolerance = 0.995
 else:
     pixel_tolerance = 0.980
-
-# Capture stdout in string
-if (sys.version_info > (3, 0)):
-    from io import StringIO
-else:
-    from StringIO import StringIO
 
 
 @contextmanager
@@ -70,10 +67,12 @@ def test_example(tmpdir):
         out_filename = "analyze_out.txt"
         contents = "".join(open(os.path.join(docs_src_folder, out_filename)).readlines())
         # The endswith guarantees that getdist messages and warnings are ignored
-        assert stream.getvalue().replace("\n", "").replace(" ", "").endswith(
-            contents.replace("\n", "").replace(" ", "")), (
-                "Text output does not coincide:\nwas\n%s\nand " % contents +
-                "now it's\n%sstream.getvalue()" % stream.getvalue())
+        if platform.system() != 'Windows':
+            # randoms not reproducible on Windows in general
+            assert stream.getvalue().replace("\n", "").replace(" ", "").endswith(
+                contents.replace("\n", "").replace(" ", "")), (
+                    "Text output does not coincide:\nwas\n%s\nand " % contents +
+                    "now it's\n%sstream.getvalue()" % stream.getvalue())
         # Comparing plot
         # plot_filename = "example_quickstart_plot.png"
         # test_filename = tmpdir.join(plot_filename)

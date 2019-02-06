@@ -19,7 +19,7 @@ params:
     latex: 100\theta_\mathrm{MC}
     drop: true
   cosmomc_theta: {value: 'lambda theta: 1.e-2*theta', derived: false}
-  H0: {latex: H_0, max: 100, min: 40}
+  H0: {latex: H_0, min: 40, max: 100}
   ombh2:
     prior: {min: 0.005, max: 0.1}
     ref: {dist: norm, loc: 0.0221, scale: 0.0001}
@@ -34,7 +34,7 @@ params:
   omegamh2: {derived: 'lambda omegam, H0: omegam*(H0/100)**2', latex: '\Omega_\mathrm{m}
       h^2'}
   mnu: 0.06
-  omegav: {latex: \Omega_\Lambda}
+  omega_de: {latex: \Omega_\Lambda}
   YHe: {latex: 'Y_\mathrm{P}'}
   Y_p: {latex: 'Y_P^\mathrm{BBN}'}
   DHBBN: {derived: 'lambda DH: 10**5*DH', latex: '10^5 \mathrm{D}/\mathrm{H}'}
@@ -44,17 +44,9 @@ params:
     proposal: 0.005
     latex: \tau_\mathrm{reio}
   zre: {latex: 'z_\mathrm{re}'}
-  sigma8: {latex: \sigma_8}
-  s8h5: {derived: 'lambda sigma8, H0: sigma8*(H0*1e-2)**(-0.5)', latex: '\sigma_8/h^{0.5}'}
-  s8omegamp5: {derived: 'lambda sigma8, omegam: sigma8*omegam**0.5', latex: '\sigma_8
-      \Omega_\mathrm{m}^{0.5}'}
-  s8omegamp25: {derived: 'lambda sigma8, omegam: sigma8*omegam**0.25', latex: '\sigma_8
-      \Omega_\mathrm{m}^{0.25}'}
-  A: {derived: 'lambda As: 1e9*As', latex: '10^9 A_\mathrm{s}'}
-  clamp: {derived: 'lambda As, tau: 1e9*As*np.exp(-2*tau)', latex: '10^9 A_\mathrm{s}
-      e^{-2\tau}'}
-  age: {latex: '{\rm{Age}}/\mathrm{Gyr}'}
-  rdrag: {latex: 'r_\mathrm{drag}'}
+  chi2__CMB: {derived: 'lambda chi2__planck_2015_lowTEB, chi2__planck_2015_plikHM_TTTEEE,
+      chi2__planck_2015_lensing: sum([chi2__planck_2015_lowTEB, chi2__planck_2015_plikHM_TTTEEE,
+      chi2__planck_2015_lensing])', latex: '\chi^2_\mathrm{CMB}'}
 sampler:
   mcmc: {covmat: auto, drag: true, proposal_scale: 1.9}
 theory:

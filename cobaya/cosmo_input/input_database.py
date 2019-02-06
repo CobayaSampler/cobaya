@@ -416,11 +416,10 @@ for m in like_cmb.values():
 #    "thetarseq":   {"latex": r"100\theta_\mathrm{s,eq}"},
 for combination, info in like_cmb.items():
     if info:
-        likes = ", ".join([_chi2+_separator+like for like in info[_likelihood]])
+        likes = ", ".join([_chi2 + _separator + like for like in info[_likelihood]])
         info[_params] = odict([
-            ["chi2__CMB", odict([[_p_derived, "lambda %s: sum([%s])"%(likes, likes)],
+            ["chi2__CMB", odict([[_p_derived, "lambda %s: sum([%s])" % (likes, likes)],
                                  [_p_label, "\chi^2_\mathrm{CMB}"]])]])
-
 
 like_bao = odict([
     [_none, {}],
@@ -434,9 +433,9 @@ like_bao = odict([
 ])
 for combination, info in like_bao.items():
     if info:
-        likes = ", ".join([_chi2+_separator+like for like in info[_likelihood]])
+        likes = ", ".join([_chi2 + _separator + like for like in info[_likelihood]])
         info[_params] = odict([
-            ["chi2__BAO", odict([[_p_derived, "lambda %s: sum([%s])"%(likes, likes)],
+            ["chi2__BAO", odict([[_p_derived, "lambda %s: sum([%s])" % (likes, likes)],
                                  [_p_label, "\chi^2_\mathrm{BAO}"]])]])
 
 like_sn = odict([
