@@ -158,7 +158,10 @@ class camb(_cosmo):
         if not self.path and self.path_install:
             self.path = os.path.join(
                 self.path_install, "code", camb_repo_name[camb_repo_name.find("/") + 1:])
-        if self.path:
+        if self.path and not os.path.exists(self.path):
+            self.log.info("*local* CAMB not found at " + self.path)
+            self.log.info("Importing *global* CAMB.")
+        elif self.path:
             self.log.info("Importing *local* CAMB from " + self.path)
             if not os.path.exists(self.path):
                 self.log.error("The given folder does not exist: '%s'", self.path)
