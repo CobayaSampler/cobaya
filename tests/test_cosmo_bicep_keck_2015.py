@@ -1,7 +1,7 @@
 # Tries to evaluate the BK15 likelihood at a reference point
 
-from copy import deepcopy
 from __future__ import absolute_import
+from copy import deepcopy
 from .common_cosmo import body_of_test
 from cobaya.cosmo_input import cmb_precision
 

@@ -1,5 +1,5 @@
-from copy import deepcopy
 from __future__ import absolute_import
+from copy import deepcopy
 from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE
 from .common_cosmo import body_of_test
 

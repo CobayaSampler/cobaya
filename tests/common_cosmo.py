@@ -1,9 +1,8 @@
 """
 Body of the best-fit test for cosmological likelihoods
 """
-
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
 from copy import deepcopy
 
 from cobaya.conventions import _theory, _likelihood, _params, _debug, _path_install
