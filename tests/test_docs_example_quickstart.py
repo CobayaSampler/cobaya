@@ -5,17 +5,14 @@ to make sure it remains up to date.
 
 from __future__ import division
 import os
-from contextlib import contextmanager
-import sys
 import numpy as np
 from imageio import imread
 
 from cobaya.yaml import yaml_load_file
 from cobaya.input import is_equal_info
 from cobaya.conventions import _output_prefix
+from ._config import stdout_redirector, StringIO, random_reproducible, test_figs
 import six
-import platform
-from six import StringIO
 
 docs_folder = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "docs")
 docs_src_folder = os.path.join(docs_folder, "src_examples", "quickstart")
@@ -26,16 +23,6 @@ if not six.PY3:
     pixel_tolerance = 0.995
 else:
     pixel_tolerance = 0.980
-
-
-@contextmanager
-def stdout_redirector(stream):
-    old_stdout = sys.stdout
-    sys.stdout = stream
-    try:
-        yield
-    finally:
-        sys.stdout = old_stdout
 
 
 def test_example(tmpdir):
@@ -67,25 +54,24 @@ def test_example(tmpdir):
         out_filename = "analyze_out.txt"
         contents = "".join(open(os.path.join(docs_src_folder, out_filename)).readlines())
         # The endswith guarantees that getdist messages and warnings are ignored
-        if platform.system() != 'Windows':
+        if random_reproducible:
             # randoms not reproducible on Windows in general
             assert stream.getvalue().replace("\n", "").replace(" ", "").endswith(
                 contents.replace("\n", "").replace(" ", "")), (
                     "Text output does not coincide:\nwas\n%s\nand " % contents +
                     "now it's\n%sstream.getvalue()" % stream.getvalue())
-        # Comparing plot
-        # plot_filename = "example_quickstart_plot.png"
-        # test_filename = tmpdir.join(plot_filename)
-        # globals_example["gdplot"].export(str(test_filename))
-        # print("Plot created at '%s'" % str(test_filename))
-        # test_img = imread(str(test_filename)).astype(float)
-        # docs_img = imread(os.path.join(docs_img_folder, plot_filename)).astype(float)
-        # npixels = test_img.shape[0] * test_img.shape[1]
-        # assert (np.count_nonzero(test_img == docs_img) / (4 * npixels) >=
-        #         pixel_tolerance), (
-        #     "Images are too different. Maybe GetDist conventions changed?")
-    except:
-        raise
+        if test_figs:
+            # Comparing plot
+            plot_filename = "example_quickstart_plot.png"
+            test_filename = tmpdir.join(plot_filename)
+            globals_example["gdplot"].export(str(test_filename))
+            print("Plot created at '%s'" % str(test_filename))
+            test_img = imread(str(test_filename)).astype(float)
+            docs_img = imread(os.path.join(docs_img_folder, plot_filename)).astype(float)
+            npixels = test_img.shape[0] * test_img.shape[1]
+            assert (np.count_nonzero(test_img == docs_img) / (4 * npixels) >=
+                    pixel_tolerance), (
+                "Images are too different. Maybe GetDist conventions changed?")
     finally:
         # Back to the working directory of the tests, just in case, and restart the rng
         os.chdir(cwd)

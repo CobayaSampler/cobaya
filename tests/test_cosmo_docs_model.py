@@ -5,12 +5,10 @@ to make sure it remains up to date.
 
 from __future__ import division, absolute_import
 import os
-from contextlib import contextmanager
-import sys
 import numpy as np
 from imageio import imread
 import pytest
-from six import StringIO
+from ._config import stdout_redirector, StringIO, test_figs
 
 from cobaya.conventions import _path_install
 from .install_for_tests import process_modules_path
@@ -22,17 +20,6 @@ docs_img_folder = os.path.join(docs_folder, "img")
 
 # Number of possible different pixels
 pixel_tolerance = 0.995
-
-# Capture stdout in string
-
-@contextmanager
-def stdout_redirector(stream):
-    old_stdout = sys.stdout
-    sys.stdout = stream
-    try:
-        yield
-    finally:
-        sys.stdout = old_stdout
 
 
 @pytest.mark.py3incompatible
@@ -59,14 +46,15 @@ def test_cosmo_docs_model(modules):
     assert np.allclose(derived_params_old.values(), derived_params_new.values()), (
             "Wrong derived parameters line:\nBEFORE: %s\nNOW:    %s" %
             (derived_line_old, derived_line_new))
-    # Compare plots
-    pre = "cosmo_model_"
-    for filename, imgname in zip(["4.py", "5.py"], ["cltt.png", "omegacdm.png"]):
-        exec(open(os.path.join(docs_src_folder, filename)).read(), globals_example)
-        old_img = imread(os.path.join(docs_img_folder, pre + imgname)).astype(float)
-        new_img = imread(imgname).astype(float)
-        npixels = (lambda x: x.shape[0] + x.shape[1])(old_img)
-        assert np.count_nonzero(old_img == new_img) / (4 * npixels) >= pixel_tolerance, (
-                "Images '%s' are too different!" % imgname)
+    if test_figs:
+        # Compare plots
+        pre = "cosmo_model_"
+        for filename, imgname in zip(["4.py", "5.py"], ["cltt.png", "omegacdm.png"]):
+            exec(open(os.path.join(docs_src_folder, filename)).read(), globals_example)
+            old_img = imread(os.path.join(docs_img_folder, pre + imgname)).astype(float)
+            new_img = imread(imgname).astype(float)
+            npixels = (lambda x: x.shape[0] + x.shape[1])(old_img)
+            assert np.count_nonzero(old_img == new_img) / (4 * npixels) >= pixel_tolerance, (
+                    "Images '%s' are too different!" % imgname)
     # Back to the working directory of the tests, just in case, and restart the rng
     os.chdir(cwd)
