@@ -194,7 +194,7 @@ def pip_install(packages):
 
 def install_script():
     from cobaya.mpi import am_single_or_primary_process
-    if not am_single_or_primary_process():
+    if am_single_or_primary_process():
         # Configure the logger ASAP
         logger_setup()
         log = logging.getLogger(__name__.split(".")[-1])

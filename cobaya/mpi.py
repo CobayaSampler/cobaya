@@ -78,8 +78,7 @@ def get_mpi_rank():
 
 # Aliases for simpler use
 def am_single_or_primary_process():
-    rank = get_mpi_rank()
-    return rank is None or not bool(get_mpi_rank())
+    return not bool(get_mpi_rank())
 
 
 def more_than_one_process():
