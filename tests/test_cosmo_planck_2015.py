@@ -11,7 +11,7 @@ import matplotlib
 
 matplotlib.use('agg')
 
-camb_extra = {"halofit_version": "takahashi"}
+camb_extra = {"halofit_version": "takahashi", "bbn_predictor": "BBN_fitting_parthenope"}
 camb_extra.update(cmb_precision["camb"])
 
 # Derived parameters not understood by CLASS

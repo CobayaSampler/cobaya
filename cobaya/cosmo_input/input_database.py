@@ -565,5 +565,6 @@ install_basic = {
         "planck_2015_lowl": None,
         "bicep_keck_2015": None,
         "sn_pantheon": None,
-        "sdss_dr12_consensus_final": None},
+        "sdss_dr12_consensus_final": None,
+        "des_y1_joint": None},
     _sampler: {"polychord": None}}
