@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 import sys
 import numpy as np
 from scipy.stats import norm
@@ -6,7 +6,7 @@ from copy import copy
 
 from cobaya.conventions import _theory, _sampler, _likelihood, _params, _path_install
 from cobaya.run import run
-from install_for_tests import process_modules_path
+from .install_for_tests import process_modules_path
 
 fiducial_H0 = 70
 

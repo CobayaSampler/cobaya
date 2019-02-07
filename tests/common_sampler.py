@@ -1,6 +1,6 @@
 """General test for samplers. Checks convergence, cluster detection, evidence."""
 
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 import numpy as np
 from mpi4py import MPI
 from random import shuffle, choice
@@ -15,7 +15,7 @@ from cobaya.conventions import _force_reproducible, _debug, _debug_file, _path_i
 from cobaya.likelihoods.gaussian_mixture import info_random_gaussian_mixture
 from cobaya.tools import KL_norm
 from cobaya.run import run
-from install_for_tests import process_modules_path
+from .install_for_tests import process_modules_path
 
 KL_tolerance = 0.05
 logZ_nsigmas = 2

@@ -3,7 +3,7 @@ Automatic tests of the cosmo_model example in the documentation,
 to make sure it remains up to date.
 """
 
-from __future__ import division
+from __future__ import division, absolute_import
 import os
 from contextlib import contextmanager
 import sys
@@ -12,7 +12,7 @@ from imageio import imread
 import pytest
 
 from cobaya.conventions import _path_install
-from install_for_tests import process_modules_path
+from .install_for_tests import process_modules_path
 
 tests_folder = os.path.dirname(os.path.realpath(__file__))
 docs_folder = os.path.join(tests_folder, "../docs")
