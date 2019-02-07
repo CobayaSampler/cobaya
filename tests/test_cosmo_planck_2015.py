@@ -257,7 +257,7 @@ derived_lowTEB_highTTTEEE = {
 
 lik_info_lensing = {"planck_2015_lensing": None}
 
-chi2_lensing = {"planck_2015_lensing": 9.78, "tolerance": 0.07}
+chi2_lensing = {"planck_2015_lensing": 9.78, "tolerance": 0.09}
 
 params_lensing = {
     # Sampled
