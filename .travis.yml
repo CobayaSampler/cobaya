@@ -1,5 +1,5 @@
 language: python
-dist: trusty
+dist: xenial
 sudo: required
 
 # (Pre)Installation
@@ -26,6 +26,27 @@ matrix:
         - GCC_VERSION="8"
         - PYVER="3"
       python: "3.6"
+    - addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - gcc-7
+            - gfortran-7
+            - g++-7
+            - openmpi-bin
+            - openmpi-common
+            - libopenmpi-dev
+            # numpy (and more)
+            - libopenblas-base
+            # Planck likelihood
+            - liblapack3
+            - liblapack-dev
+      env:
+        - GCC_VERSION="7"
+        - PYDIST="ANACONDA"
+        - PYVER="3"
+      python: "3.7"      
     - addons:
         apt:
           sources:
