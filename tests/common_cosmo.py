@@ -55,10 +55,10 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
     for like in info[_likelihood]:
         chi2 = -2 * likes[like]
         assert abs(chi2 - ref_chi2[like]) < ref_chi2["tolerance"], (
-                "Testing likelihood '%s': | %g - %g | = %g >= %g" % (
+                "Testing likelihood '%s': | %.2f - %.2f | = %.2f >= %.2f" % (
             like, chi2, ref_chi2[like], abs(chi2 - ref_chi2[like]),
             ref_chi2["tolerance"]))
-        print("Testing likelihood '%s': | %g - %g | = %g >= %g" % (
+        print("Testing likelihood '%s': | %.2f - %.2f | = %.2f >= %.2f" % (
             like, chi2, ref_chi2[like], abs(chi2 - ref_chi2[like]), ref_chi2["tolerance"]))
     # Check value of derived parameters
     not_tested = []

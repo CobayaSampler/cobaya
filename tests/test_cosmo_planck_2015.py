@@ -182,7 +182,7 @@ lik_info_lowTEB_highTTTEEE = {"planck_2015_lowTEB": None,
 
 chi2_lowTEB_highTTTEEE = {"planck_2015_lowTEB": 10496.93,
                           "planck_2015_plikHM_TTTEEE": 2431.65,
-                          "tolerance": 0.1}
+                          "tolerance": 0.15}
 
 params_lowTEB_highTTTEEE = {
     # Sampled
