@@ -1,5 +1,10 @@
 from __future__ import division, absolute_import, print_function
-from ._config import gcc_version_atleast
+import os, sys
+
+file_dir = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, file_dir)
+config = __import__('_config')
+
 
 def process_modules_path(modules):
     if not modules:
@@ -35,13 +40,14 @@ if __name__ == "__main__":
             "sdss_dr12_consensus_final": None,
             "des_y1_joint": None}}
     # Ignore Planck clik in Python 3 or GCC > 5
-    if sys.version_info.major >= 3 or not gcc_version_atleast('6.0'):
+    if sys.version_info.major >= 3 or not config.gcc_version_atleast('6.0'):
         popliks = [lik for lik in info_install[_likelihood]
                    if lik.startswith("planck_2015") and not lik.endswith("cmblikes")]
         for lik in popliks:
             info_install[_likelihood].pop(lik)
     path = sys.argv[1]
     import os
+
     if not os.path.exists(path):
         os.makedirs(path)
     from cobaya.install import install
