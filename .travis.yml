@@ -46,7 +46,7 @@ matrix:
         - GCC_VERSION="7"
         - PYDIST="ANACONDA"
         - PYVER="3"
-      python: "3.7"      
+      python: "3.7"
     - addons:
         apt:
           sources:
@@ -87,17 +87,22 @@ before_install:
       pip install mpi4py pytest-xdist flaky matplotlib;
     fi
   - python --version
-
+  #install cfitsio until clik fixed
+  - oldpath=`pwd`;
+    wget https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio3280.tar.gz;
+    tar zxvf cfitsio3280.tar.gz;
+    cd cfitsio;
+    ./configure --prefix=/usr;
+    make -j 2;
+    sudo make install;
+    cd $oldpath;
 script:
   # Installation
   - python tests/install_for_tests.py ../modules
-  # CAMB devel?
   - if [ -n "${CAMB_BRANCH}" ]; then rm -rf ../modules/code/CAMB ; git clone --recursive -b $CAMB_BRANCH https://github.com/cmbant/CAMB ../modules/code/CAMB ; python ../modules/code/CAMB/setup.py build ; fi
+  - pytest tests/ -v -s -k "cosmo" --modules="../modules" --boxed
   # Non-cosmological tests
   - pytest tests/ -k "not cosmo" --modules="../modules"
-  # Cosmological tests (--boxed = 1 process per test; otherwise lowl planck lik fails!). Planck currently does not support py3.
-  - if (( $PYVER == 2 && $(echo "$GCC_VERSION <= 5" | bc -l) )); then pytest tests/ -v -s -k "cosmo" --modules="../modules" --boxed; fi
-  - if (( $PYVER == 3 || $(echo "$GCC_VERSION > 5" | bc -l) )); then pytest tests/ -v -s -k "cosmo" -m "not py3incompatible" --modules="../modules" --boxed; fi
 ###############################################################################
 deploy: # only if it builds and if the commit has been tagged
   provider: pypi

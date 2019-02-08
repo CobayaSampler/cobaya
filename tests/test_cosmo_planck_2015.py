@@ -24,7 +24,6 @@ classy_unknown = ["zstar", "rstar", "thetastar", "DAstar", "zdrag",
 classy_extra_tolerance = 0.2
 
 
-@pytest.mark.py3incompatible
 def test_planck_2015_t_camb(modules):
     best_fit = params_lowl_highTT
     info_likelihood = lik_info_lowl_highTT
@@ -34,7 +33,6 @@ def test_planck_2015_t_camb(modules):
                  chi2_lowl_highTT, best_fit_derived)
 
 
-@pytest.mark.py3incompatible
 def test_planck_2015_p_camb(modules):
     best_fit = params_lowTEB_highTTTEEE
     info_likelihood = lik_info_lowTEB_highTTTEEE
@@ -44,7 +42,6 @@ def test_planck_2015_p_camb(modules):
                  chi2_lowTEB_highTTTEEE, best_fit_derived)
 
 
-@pytest.mark.py3incompatible
 def test_planck_2015_l_camb(modules):
     best_fit = params_lensing
     info_likelihood = lik_info_lensing
@@ -67,7 +64,6 @@ def test_planck_2015_l2_camb(modules):
                  chi2_lensing_cmblikes, best_fit_derived)
 
 
-@pytest.mark.py3incompatible
 def test_planck_2015_t_classy(modules):
     best_fit = params_lowl_highTT
     info_likelihood = lik_info_lowl_highTT
@@ -81,7 +77,6 @@ def test_planck_2015_t_classy(modules):
                  chi2_lowl_highTT_classy, best_fit_derived)
 
 
-@pytest.mark.py3incompatible
 def test_planck_2015_p_classy(modules):
     best_fit = params_lowTEB_highTTTEEE
     info_likelihood = lik_info_lowTEB_highTTTEEE
@@ -95,7 +90,6 @@ def test_planck_2015_p_classy(modules):
                  chi2_lowTEB_highTTTEEE_classy, best_fit_derived)
 
 
-@pytest.mark.py3incompatible
 def test_planck_2015_l_classy(modules):
     best_fit = params_lensing
     info_likelihood = lik_info_lensing

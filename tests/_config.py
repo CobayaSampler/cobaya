@@ -4,6 +4,8 @@ import sys
 import numpy as np
 from scipy import stats
 import os
+import subprocess
+from pkg_resources import parse_version
 from six import StringIO
 
 
@@ -32,3 +34,19 @@ def stdout_redirector(stream):
         yield
     finally:
         sys.stdout = old_stdout
+
+
+def call_command(cmd):
+    try:
+        return subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode().strip()
+    except:
+        return None
+
+
+def get_gcc_version():
+    return call_command("gcc -dumpversion")
+
+
+def gcc_version_atleast(min_version='6.3'):
+    version = get_gcc_version()
+    return version is not None and parse_version(str(min_version)) <= parse_version(version)

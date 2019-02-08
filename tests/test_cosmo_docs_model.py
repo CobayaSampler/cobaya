@@ -22,7 +22,6 @@ docs_img_folder = os.path.join(docs_folder, "img")
 pixel_tolerance = 0.995
 
 
-@pytest.mark.py3incompatible
 def test_cosmo_docs_model(modules):
     modules = process_modules_path(modules)
     # Go to the folder containing the python code
@@ -44,7 +43,9 @@ def test_cosmo_docs_model(modules):
              stream.getvalue().split("\n")])
         derived_params_old, derived_params_new = map(
             lambda x: eval(x[x.find("{"):]), [derived_line_old, derived_line_new])
-        assert np.allclose(derived_params_old.values(), derived_params_new.values()), (
+        oldvals = list(derived_params_old.values())
+        newvals = [derived_params_new[v] for v in derived_params_old.keys()]
+        assert np.allclose(oldvals, newvals), (
                 "Wrong derived parameters line:\nBEFORE: %s\nNOW:    %s" %
                 (derived_line_old, derived_line_new))
         if test_figs:
