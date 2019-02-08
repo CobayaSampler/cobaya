@@ -19,10 +19,7 @@ matrix:
             - openmpi-bin
             - openmpi-common
             - libopenmpi-dev
-            # numpy (and more)
-            - libopenblas-base
-            # Planck likelihood
-            - liblapack3
+            - libopenblas-dev
             - liblapack-dev
       env:
         - GCC_VERSION="8"
@@ -39,10 +36,7 @@ matrix:
             - openmpi-bin
             - openmpi-common
             - libopenmpi-dev
-            # numpy (and more)
-            - libopenblas-base
-            # Planck likelihood
-            - liblapack3
+            - libopenblas-dev
             - liblapack-dev
       env:
         - GCC_VERSION="7"
@@ -60,8 +54,7 @@ matrix:
             - openmpi-bin
             - openmpi-common
             - libopenmpi-dev
-            - libopenblas-base
-            - liblapack3
+            - libopenblas-dev
             - liblapack-dev
       env:
         - PYDIST="ANACONDA"
