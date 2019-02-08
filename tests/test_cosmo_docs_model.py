@@ -27,34 +27,36 @@ def test_cosmo_docs_model(modules):
     modules = process_modules_path(modules)
     # Go to the folder containing the python code
     cwd = os.getcwd()
-    os.chdir(docs_src_folder)
-    globals_example = {}
-    exec(open(os.path.join(docs_src_folder, "1.py")).read(), globals_example)
-    globals_example["info"][_path_install] = modules
-    exec(open(os.path.join(docs_src_folder, "2.py")).read(), globals_example)
-    stream = StringIO()
-    with stdout_redirector(stream):
-        exec(open(os.path.join(docs_src_folder, "3.py")).read(), globals_example)
-    # Comparing text output for this cell -- only derived parameter values
-    out_filename = "3.out"
-    derived_line_old, derived_line_new = map(
-        lambda lines: next(line for line in lines[::-1] if line),
-        [open(os.path.join(docs_src_folder, out_filename)).readlines(),
-         stream.getvalue().split("\n")])
-    derived_params_old, derived_params_new = map(
-        lambda x: eval(x[x.find("{"):]), [derived_line_old, derived_line_new])
-    assert np.allclose(derived_params_old.values(), derived_params_new.values()), (
-            "Wrong derived parameters line:\nBEFORE: %s\nNOW:    %s" %
-            (derived_line_old, derived_line_new))
-    if test_figs:
-        # Compare plots
-        pre = "cosmo_model_"
-        for filename, imgname in zip(["4.py", "5.py"], ["cltt.png", "omegacdm.png"]):
-            exec(open(os.path.join(docs_src_folder, filename)).read(), globals_example)
-            old_img = imread(os.path.join(docs_img_folder, pre + imgname)).astype(float)
-            new_img = imread(imgname).astype(float)
-            npixels = (lambda x: x.shape[0] + x.shape[1])(old_img)
-            assert np.count_nonzero(old_img == new_img) / (4 * npixels) >= pixel_tolerance, (
-                    "Images '%s' are too different!" % imgname)
-    # Back to the working directory of the tests, just in case, and restart the rng
-    os.chdir(cwd)
+    try:
+        os.chdir(docs_src_folder)
+        globals_example = {}
+        exec(open(os.path.join(docs_src_folder, "1.py")).read(), globals_example)
+        globals_example["info"][_path_install] = modules
+        exec(open(os.path.join(docs_src_folder, "2.py")).read(), globals_example)
+        stream = StringIO()
+        with stdout_redirector(stream):
+            exec(open(os.path.join(docs_src_folder, "3.py")).read(), globals_example)
+        # Comparing text output for this cell -- only derived parameter values
+        out_filename = "3.out"
+        derived_line_old, derived_line_new = map(
+            lambda lines: next(line for line in lines[::-1] if line),
+            [open(os.path.join(docs_src_folder, out_filename)).readlines(),
+             stream.getvalue().split("\n")])
+        derived_params_old, derived_params_new = map(
+            lambda x: eval(x[x.find("{"):]), [derived_line_old, derived_line_new])
+        assert np.allclose(derived_params_old.values(), derived_params_new.values()), (
+                "Wrong derived parameters line:\nBEFORE: %s\nNOW:    %s" %
+                (derived_line_old, derived_line_new))
+        if test_figs:
+            # Compare plots
+            pre = "cosmo_model_"
+            for filename, imgname in zip(["4.py", "5.py"], ["cltt.png", "omegacdm.png"]):
+                exec(open(os.path.join(docs_src_folder, filename)).read(), globals_example)
+                old_img = imread(os.path.join(docs_img_folder, pre + imgname)).astype(float)
+                new_img = imread(imgname).astype(float)
+                npixels = (lambda x: x.shape[0] + x.shape[1])(old_img)
+                assert np.count_nonzero(old_img == new_img) / (4 * npixels) >= pixel_tolerance, (
+                        "Images '%s' are too different!" % imgname)
+        # Back to the working directory of the tests, just in case, and restart the rng
+    finally:
+        os.chdir(cwd)

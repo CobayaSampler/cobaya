@@ -29,11 +29,11 @@ def test_example(tmpdir):
     # temporarily change working directory to be able to run the files "as is"
     cwd = os.getcwd()
     os.chdir(docs_src_folder)
-    info_yaml = yaml_load_file("gaussian.yaml")
-    info_yaml.pop(_output_prefix)
-    globals_example = {}
-    exec(open(os.path.join(docs_src_folder, "create_info.py")).read(), globals_example)
     try:
+        info_yaml = yaml_load_file("gaussian.yaml")
+        info_yaml.pop(_output_prefix)
+        globals_example = {}
+        exec(open(os.path.join(docs_src_folder, "create_info.py")).read(), globals_example)
         assert is_equal_info(info_yaml, globals_example["info"]), (
             "Inconsistent info between yaml and interactive.")
         exec(open(os.path.join(docs_src_folder, "load_info.py")).read(), globals_example)

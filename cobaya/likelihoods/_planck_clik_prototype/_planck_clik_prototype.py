@@ -340,24 +340,26 @@ def install_clik(path, no_progress_bars=False):
     log.info("clik: configuring... (and maybe installing dependencies...)")
     cwd = os.getcwd()
     os.chdir(os.path.join(path, "plc-2.0"))
-    process = Popen(
-        ["./waf", "configure", "--install_all_deps"], stdout=PIPE, stderr=PIPE)
-    out, err = process.communicate()
-    if err or not out.split("\n")[-2].startswith("'configure' finished successfully"):
-        print(out)
-        print(err)
-        log.error("Configuration failed!")
-        return False
-    log.info("clik: compiling...")
-    process2 = Popen(["./waf", "install"], stdout=PIPE, stderr=PIPE)
-    out2, err2 = process2.communicate()
-    # We don't check that err2" is empty, because harmless warnings are included there.
-    if not out2.split("\n")[-2].startswith("'install' finished successfully"):
-        print(out2)
-        print(err2)
-        log.error("Compilation failed!")
-        return False
-    os.chdir(cwd)
+    try:
+        process = Popen(
+            ["./waf", "configure", "--install_all_deps"], stdout=PIPE, stderr=PIPE)
+        out, err = process.communicate()
+        if err or not out.split("\n")[-2].startswith("'configure' finished successfully"):
+            print(out)
+            print(err)
+            log.error("Configuration failed!")
+            return False
+        log.info("clik: compiling...")
+        process2 = Popen(["./waf", "install"], stdout=PIPE, stderr=PIPE)
+        out2, err2 = process2.communicate()
+        # We don't check that err2" is empty, because harmless warnings are included there.
+        if not out2.split("\n")[-2].startswith("'install' finished successfully"):
+            print(out2)
+            print(err2)
+            log.error("Compilation failed!")
+            return False
+    finally:
+        os.chdir(cwd)
     log.info("clik: finished!")
     return True
 
@@ -404,7 +406,7 @@ def install(path=None, name=None, force=False, code=True, data=True,
         success *= install_clik(paths["code"], no_progress_bars=no_progress_bars)
         if not success:
             log.warning("clik code installation failed! "
-                        "Try configuring+compiling by hand at "+paths["code"])
+                        "Try configuring+compiling by hand at " + paths["code"])
     if data:
         # 2nd test, in case the code wasn't there but the data is:
         if force or not is_installed(path=path, name=name, code=False, data=True):
