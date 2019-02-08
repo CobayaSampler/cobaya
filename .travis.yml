@@ -1,6 +1,8 @@
 language: python
 dist: xenial
 sudo: required
+git:
+  depth: false
 
 # (Pre)Installation
 # Test matrix for different C & fortran compilers

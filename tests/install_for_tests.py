@@ -36,7 +36,6 @@ if __name__ == "__main__":
             "sdss_dr12_consensus_final": None,
             "des_y1_joint": None}}
     path = sys.argv[1]
-    import os
 
     if not os.path.exists(path):
         os.makedirs(path)
