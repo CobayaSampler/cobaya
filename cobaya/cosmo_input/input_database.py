@@ -419,7 +419,7 @@ for combination, info in like_cmb.items():
         likes = ", ".join([_chi2 + _separator + like for like in info[_likelihood]])
         info[_params] = odict([
             ["chi2__CMB", odict([[_p_derived, "lambda %s: sum([%s])" % (likes, likes)],
-                                 [_p_label, "\chi^2_\mathrm{CMB}"]])]])
+                                 [_p_label, r"\chi^2_\mathrm{CMB}"]])]])
 
 like_bao = odict([
     [_none, {}],
@@ -436,7 +436,7 @@ for combination, info in like_bao.items():
         likes = ", ".join([_chi2 + _separator + like for like in info[_likelihood]])
         info[_params] = odict([
             ["chi2__BAO", odict([[_p_derived, "lambda %s: sum([%s])" % (likes, likes)],
-                                 [_p_label, "\chi^2_\mathrm{BAO}"]])]])
+                                 [_p_label, r"\chi^2_\mathrm{BAO}"]])]])
 
 like_sn = odict([
     [_none, {}],
