@@ -374,7 +374,7 @@ def install_clik(path, no_progress_bars=False):
                 log.error("Failed installing '%s'.", req)
                 raise HandledException
     log.info("clik: downloading...")
-    if not download_file('https://cdn.cosmologist.info/cosmobox/clik-14.1b4.tar.bz2', path,
+    if not download_file('https://cdn.cosmologist.info/cosmobox/plc-2.1_py3.tar.bz2', path,
                          no_progress_bars=no_progress_bars, name="clik"):
         log.error("Not possible to download clik.")
         return False
