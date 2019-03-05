@@ -6,8 +6,8 @@
 
 """
 # Python 2/3 compatibility
-from __future__ import print_function
 from __future__ import absolute_import
+from __future__ import print_function
 from __future__ import division
 
 # Global
@@ -168,33 +168,27 @@ def pip_install(packages):
     """
     Takes package name or list of them.
 
-    Retries installation with ``--user`` flag if it fails without it.
+    Uses ``--user`` flag if does not appear to have write permission to python path
 
     Returns exit status.
     """
+    import subprocess
     if hasattr(packages, "split"):
         packages = [packages]
-    try:
-        import pip._internal as pip  # pip version >= 10
-    except ImportError:
-        import pip  # pip version < 10
-    for package in packages:
-        for user_flag in [[], ["--user"]]:
-            exit_status = pip.main(["install", package] + user_flag)
-            if not exit_status:
-                # It worked! Let's not try again
-                break
-        if exit_status:
-            log.error("pip: error installing package '%s'", package)
-            break
-    return exit_status
+    cmd = [sys.executable, '-m', 'pip', 'install']
+    if not os.access(os.path.dirname(sys.executable), os.W_OK):
+        cmd += ['--user']
+    res = subprocess.call(cmd + packages)
+    if res:
+        log.error("pip: error installing packages '%s'", packages)
+    return res
 
 
 # Command-line script ####################################################################
 
 def install_script():
     from cobaya.mpi import am_single_or_primary_process
-    if not am_single_or_primary_process():
+    if am_single_or_primary_process():
         # Configure the logger ASAP
         logger_setup()
         log = logging.getLogger(__name__.split(".")[-1])

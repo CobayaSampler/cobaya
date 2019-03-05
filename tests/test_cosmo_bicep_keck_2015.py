@@ -1,13 +1,16 @@
 # Tries to evaluate the BK15 likelihood at a reference point
 
+from __future__ import absolute_import
 from copy import deepcopy
-
-from common_cosmo import body_of_test
+from .common_cosmo import body_of_test
 from cobaya.cosmo_input import cmb_precision
 
 
+camb_extra = {"halofit_version": "takahashi"}
+camb_extra.update(cmb_precision["camb"])
+
 def test_bicep_keck_2015_camb(modules):
-    info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
+    info_theory = {"camb": {"extra_args": camb_extra}}
     body_of_test(modules, test_point, lik_info, info_theory, chi2,
                  extra_model={"primordial": "SFSR_t"})
 

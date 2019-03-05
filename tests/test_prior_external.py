@@ -12,12 +12,12 @@ For manual testing, and observing/plotting the density, pass `manual=True` to `b
 """
 
 # Global
-from __future__ import division
+from __future__ import division, absolute_import
 
 # Local
 from cobaya.conventions import _prior
-from common_external import info_string, info_callable, info_mixed, info_import
-from common_external import body_of_test
+from .common_external import info_string, info_callable, info_mixed, info_import
+from .common_external import body_of_test
 
 
 def test_prior_external_string(tmpdir):

@@ -43,7 +43,7 @@ gaussian_func = lambda y: eval(gaussian_str)(y)
 info_string = {"half_ring": half_ring_str}
 info_callable = {"half_ring": half_ring_func}
 info_mixed = {"half_ring": half_ring_func, "gaussian_y": gaussian_str}
-info_import = {"half_ring": "import_module('common_external').half_ring_func"}
+info_import = {"half_ring": "import_module('.common_external','tests').half_ring_func"}
 info_derived = {"half_ring": half_ring_func_derived}
 
 

@@ -1,51 +1,13 @@
 language: python
-dist: trusty
+dist: xenial
 sudo: required
+git:
+  depth: false
 
 # (Pre)Installation
 # Test matrix for different C & fortran compilers
 matrix:
   include:
-    - addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - gcc-4.9
-            - gfortran-4.9
-            - g++-4.9
-            - openmpi-bin
-            - openmpi-common
-            - libopenmpi-dev
-            # numpy (and more)
-            - libopenblas-base
-            # Planck likelihood
-            - liblapack3
-            - liblapack-dev
-      env:
-        - GCC_VERSION="4.9"
-        - PYVER="2"
-      python: "2.7"
-    - addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - gcc-5
-            - gfortran-5
-            - g++-5
-            - openmpi-bin
-            - openmpi-common
-            - libopenmpi-dev
-            # numpy (and more)
-            - libopenblas-base
-            # Planck likelihood
-            - liblapack3
-            - liblapack-dev
-      env:
-        - GCC_VERSION="5"
-        - PYVER="3"
-      python: "3.6"
     - addons:
         apt:
           sources:
@@ -57,10 +19,7 @@ matrix:
             - openmpi-bin
             - openmpi-common
             - libopenmpi-dev
-            # numpy (and more)
-            - libopenblas-base
-            # Planck likelihood
-            - liblapack3
+            - libopenblas-dev
             - liblapack-dev
       env:
         - GCC_VERSION="8"
@@ -71,21 +30,19 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - gcc-6
-            - gfortran-6
-            - g++-6
+            - gcc-7
+            - gfortran-7
+            - g++-7
             - openmpi-bin
             - openmpi-common
             - libopenmpi-dev
-            - libopenblas-base
-            - liblapack3
+            - libopenblas-dev
             - liblapack-dev
       env:
+        - GCC_VERSION="7"
         - PYDIST="ANACONDA"
-        - GCC_VERSION="6"
         - PYVER="3"
-      python: "3.6"
-    # BELOW: CAMB devel #################################################
+      python: "3.7"
     - addons:
         apt:
           sources:
@@ -97,16 +54,13 @@ matrix:
             - openmpi-bin
             - openmpi-common
             - libopenmpi-dev
-            # numpy (and more)
-            - libopenblas-base
-            # Planck likelihood
-            - liblapack3
+            - libopenblas-dev
             - liblapack-dev
       env:
+        - PYDIST="ANACONDA"
         - GCC_VERSION="6"
-        - PYVER="3"
-        - CAMB_BRANCH="devel"
-      python: "3.6"
+        - PYVER="2"
+      python: "2.7"
 before_install:
   - mkdir -p gcc-symlinks
   - ln -s /usr/bin/gfortran-$GCC_VERSION gcc-symlinks/gfortran
@@ -121,23 +75,29 @@ before_install:
       hash -r;
       conda config --set always_yes yes --set changeps1 no;
       conda info -a;
-      conda create -q -n test-environment -c conda-forge python=$TRAVIS_PYTHON_VERSION mpi4py scipy matplotlib cython PyYAML pytest-xdist flaky;
+      conda create -q -n test-environment -c defaults python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML pytest-xdist flaky;
       source activate test-environment;
+      pip install mpi4py;
     else
       pip install mpi4py pytest-xdist flaky matplotlib;
     fi
   - python --version
-
+  #install cfitsio until clik fixed
+  - oldpath=`pwd`;
+    wget https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio3280.tar.gz;
+    tar zxvf cfitsio3280.tar.gz;
+    cd cfitsio;
+    ./configure --prefix=/usr;
+    make -j 2;
+    sudo make install;
+    cd $oldpath;
 script:
   # Installation
   - python tests/install_for_tests.py ../modules
-  # CAMB devel?
-  - if [ -n "${CAMB_BRANCH}" ]; then rm -rf ../modules/code/CAMB ; git clone --recursive -b $CAMB_BRANCH https://github.com/cmbant/CAMB ../modules/code/CAMB ; python ../modules/code/CAMB/pycamb/setup.py build ; fi
+  - if [ -n "${CAMB_BRANCH}" ]; then rm -rf ../modules/code/CAMB ; git clone --recursive -b $CAMB_BRANCH https://github.com/cmbant/CAMB ../modules/code/CAMB ; python ../modules/code/CAMB/setup.py build ; fi
+  - pytest tests/ -v -s -k "cosmo" --modules="../modules" --boxed
   # Non-cosmological tests
   - pytest tests/ -k "not cosmo" --modules="../modules"
-  # Cosmological tests (--boxed = 1 process per test; otherwise lowl planck lik fails!). Planck currently does not support py3.
-  - if (( $PYVER == 2 && $(echo "$GCC_VERSION <= 5" | bc -l) )); then pytest tests/ -v -s -k "cosmo" --modules="../modules" --boxed; fi
-  - if (( $PYVER == 3 || $(echo "$GCC_VERSION > 5" | bc -l) )); then pytest tests/ -v -s -k "cosmo" -m "not py3incompatible" --modules="../modules" --boxed; fi
 ###############################################################################
 deploy: # only if it builds and if the commit has been tagged
   provider: pypi
@@ -146,8 +106,8 @@ deploy: # only if it builds and if the commit has been tagged
     secure: FVCgqGT0sMJyvlY3sJFBwvO4RycAbWbVyHl4p9CG7XRSSgVOLGy9RZjAJkX8dJjH06fPNdQDYfkkj1PV8I42y0n4uqKkQ9RB63Yq6skbuuzjXLGQK9Xop10/1GDBhMHietDibzl8ZIuJyibdFYsc3rM/j8QcKjOYpDe10jO8K+dZaXsgAvqHk4P3d3ScG1u+X+wr8K6qik21YbTpiILS0LdUxmP4DWQw/7NKGWDX1b7sImRmvQfO20KuPTMu8pPz9ThZyPl6zEPgtKi2sQej5sgDlfim/heYk4W8Bf7bggS8GLseffssL5ru96eNUWT1OSbxnsEFqyyYepngNHPpvifflvtCiFU+3f7rzzcgYqmybhdM4ZEOk0pL5y/NS/rHn/1iW7Cqxs+GfUCbr9fWuBgKmVuDqEfvtSu83U1x6zz9C3R259Oe6n0vXfCGSfJqiHhsW8wuXx+bODyDaMAUn+gRSCLuqJVQzdcYwF2pGFf1WUH5iTQItUHZjYbAIXdnSqDKnvGalNDJdNsF3vwNEdbe8hFqfHMMzG73ZkkLOCjDW+mswIKYJUflxIyOdRqtB+XE056dA+c8Zwc4ktg4iss/O3ZBtUVPmba/ivpyYm7Fk8EUN/zY+24NK4iKk6z543rfx2w+wNXAuQiwgN2f+JshqI8kzTuCxPTgf2N49ME=
   on:
     tags: true
-    python: '2.7'
-    condition: "$GCC_VERSION = 4.9"
+    python: '3.6'
+    condition: "$GCC_VERSION = 8"
     branch: master
     repo: CobayaSampler/cobaya
 ###############################################################################

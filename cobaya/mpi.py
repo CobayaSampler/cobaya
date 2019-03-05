@@ -80,8 +80,10 @@ def get_mpi_rank():
 def am_single_or_primary_process():
     return not bool(get_mpi_rank())
 
+
 def more_than_one_process():
     return bool(max(get_mpi_size(), 1) - 1)
+
 
 def sync_processes():
     if get_mpi_size():
