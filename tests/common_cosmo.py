@@ -1,8 +1,7 @@
 """
 Body of the best-fit test for cosmological likelihoods
 """
-from __future__ import absolute_import
-from __future__ import division
+from __future__ import absolute_import, division
 from copy import deepcopy
 
 from cobaya.conventions import _theory, _likelihood, _params, _debug, _path_install
@@ -10,7 +9,7 @@ from cobaya.model import get_model
 from cobaya.input import get_full_info
 from cobaya.cosmo_input import create_input, planck_base_model
 from cobaya.tools import recursive_update
-from .install_for_tests import process_modules_path
+from .common import process_modules_path
 from ._config import skip_theories
 
 # Tolerance for the tests of the derived parameters, in units of the sigma of Planck 2015

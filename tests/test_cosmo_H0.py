@@ -6,7 +6,7 @@ from copy import copy
 
 from cobaya.conventions import _theory, _sampler, _likelihood, _params, _path_install
 from cobaya.run import run
-from .install_for_tests import process_modules_path
+from .common import process_modules_path
 from ._config import skip_theories
 
 fiducial_H0 = 70
