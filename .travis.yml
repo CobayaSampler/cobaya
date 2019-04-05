@@ -65,11 +65,11 @@ before_install:
       hash -r;
       conda config --set always_yes yes --set changeps1 no;
       conda info -a;
-      conda create -q -n test-environment -c defaults python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML pytest-xdist flaky;
+      conda create -q -n test-environment -c defaults python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML pytest pytest-xdist flaky;
       source activate test-environment;
       pip install mpi4py;
     else
-      pip install mpi4py pytest-xdist flaky matplotlib;
+      pip install mpi4py pytest pytest-xdist flaky matplotlib;
     fi
   - python --version
 script:
