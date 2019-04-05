@@ -253,6 +253,8 @@ common_path = "planck_2015"
 # To see full clik build output even if installs OK (e.g. to check warnings)
 _clik_verbose = any(
     [(s in os.getenv('TRAVIS_COMMIT_MESSAGE', '')) for s in ["clik", "planck"]])
+# Don't try again to install clik if it failed for a previous likelihood
+_clik_install_failed = False
 
 
 def is_installed_clik(path, log_and_fail=False, import_it=True):
@@ -378,9 +380,6 @@ def is_installed(**kwargs):
             is_installed as is_installed_supp
         result &= is_installed_supp(**kwargs)
     return result
-
-
-_clik_install_failed = False
 
 
 def install(path=None, name=None, force=False, code=True, data=True,
