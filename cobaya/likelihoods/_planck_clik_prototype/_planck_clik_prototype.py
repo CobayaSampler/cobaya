@@ -118,10 +118,10 @@ Now, download the required likelihood files from the
 
 For instance, if you want to reproduce the baseline Planck 2015 results,
 download the file ``COM_Likelihood_Data-baseline_R2.00.tar.gz``
-from any of the two links above, and uncompress it under the ``planck_2015`` folder
+from any of the two links above, and decompress it under the ``planck_2015`` folder
 that you created above.
 
-Finally, download and uncompress in the ``planck_2015`` folder the last release at
+Finally, download and decompress in the ``planck_2015`` folder the last release at
 `this repo <https://github.com/CobayaSampler/planck_supp_data_and_covmats/releases>`_.
 
 """
@@ -143,7 +143,7 @@ from cobaya.likelihood import Likelihood
 from cobaya.log import HandledException
 from cobaya.conventions import _path_install, _likelihood
 from cobaya.input import get_default_info
-from cobaya.install import pip_install
+from cobaya.install import pip_install, download_file
 
 
 class _planck_clik_prototype(Likelihood):
@@ -255,62 +255,6 @@ _clik_verbose = any(
     [(s in os.getenv('TRAVIS_COMMIT_MESSAGE', '')) for s in ["clik", "planck"]])
 
 
-def download_file(file, path, no_progress_bars=False, name=None):
-    log = logging.getLogger(name or __name__)
-    try:
-        from wget import download, bar_thermometer
-        wget_kwargs = {"out": path, "bar":
-            (bar_thermometer if not no_progress_bars else None)}
-        filename = download(file, **wget_kwargs)
-        print('Got: %s' % filename)
-    except:
-        log.error("Error downloading!")
-        return False
-    finally:
-        print("")
-    # uncompress
-    import os
-    import tarfile
-    extension = os.path.splitext(filename)[-1][1:]
-    tar = tarfile.open(filename, "r:" + extension)
-    try:
-        tar.extractall(path)
-        tar.close()
-        os.remove(filename)
-        return True
-    except:
-        log.error("Error decompressing downloaded file! Corrupt file?)")
-        return False
-
-
-def download_from_planck(product_id, path, no_progress_bars=False, name=None):
-    log = logging.getLogger(name or __name__)
-    try:
-        from wget import download, bar_thermometer
-        wget_kwargs = {"out": path, "bar":
-            (bar_thermometer if not no_progress_bars else None)}
-        prefix = r"https://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLOGY_OID="
-        filename = download(prefix + product_id, **wget_kwargs)
-    except:
-        log.error("Error downloading!")
-        return False
-    finally:
-        print("")
-    # uncompress
-    import os
-    import tarfile
-    extension = os.path.splitext(filename)[-1][1:]
-    tar = tarfile.open(filename, "r:" + extension)
-    try:
-        tar.extractall(path)
-        tar.close()
-        os.remove(filename)
-        return True
-    except:
-        log.error("Error decompressing downloaded file! Corrupt file?)")
-        return False
-
-
 def is_installed_clik(path, log_and_fail=False, import_it=True):
     log = logging.getLogger("clik")
     if os.path.exists(path) and len(os.listdir(path)):
@@ -378,8 +322,9 @@ def install_clik(path, no_progress_bars=False):
             log.error("Failed installing '%s'.", "pytest-xdist")
             raise HandledException
     log.info("Downloading...")
-    if not download_file('https://cdn.cosmologist.info/cosmobox/plc-2.1_py3.tar.bz2', path,
-                         no_progress_bars=no_progress_bars, name="clik"):
+    click_url = 'https://cdn.cosmologist.info/cosmobox/plc-2.1_py3.tar.bz2'
+    if not download_file(click_url, path, decompress=True,
+                         no_progress_bars=no_progress_bars, logger=log):
         log.error("Not possible to download clik.")
         return False
     source_dir = os.path.join(path, os.listdir(path)[0])
@@ -396,7 +341,6 @@ def install_clik(path, no_progress_bars=False):
                 "'cfitsio3280.tar.gz')\n")
         with open(cfitsio_filename, "w") as cfitsio_file:
             cfitsio_file.write("".join(lines))
-
     cwd = os.getcwd()
     try:
         os.chdir(source_dir)
@@ -471,10 +415,12 @@ def install(path=None, name=None, force=False, code=True, data=True,
         if force or not is_installed(path=path, name=name, code=False, data=True):
             # Extract product_id
             product_id, _ = get_product_id_and_clik_file(name)
-            # Download and uncompress the particular likelihood
+            # Download and decompress the particular likelihood
             log.info("Downloading likelihood data...")
-            if not download_from_planck(product_id, paths["data"],
-                                        no_progress_bars=no_progress_bars, name=name):
+            prefix = (r"https://pla.esac.esa.int/pla-sl/"
+                      "data-action?COSMOLOGY.COSMOLOGY_OID=")
+            if not download_file(prefix + product_id, paths["data"], decompress=True,
+                                 logger=log, no_progress_bars=no_progress_bars):
                 log.error("Not possible to download this likelihood.")
                 success = False
             # Additional data and covmats
