@@ -164,7 +164,7 @@ def download_github_release(directory, repo_name, release_name, repo_rename=None
     return True
 
 
-def pip_install(packages):
+def pip_install(packages, upgrade=False):
     """
     Takes package name or list of them.
 
@@ -178,6 +178,8 @@ def pip_install(packages):
     cmd = [sys.executable, '-m', 'pip', 'install']
     if not os.access(os.path.dirname(sys.executable), os.W_OK):
         cmd += ['--user']
+    if upgrade:
+        cmd += ['--upgrade']
     res = subprocess.call(cmd + packages)
     if res:
         log.error("pip: error installing packages '%s'", packages)

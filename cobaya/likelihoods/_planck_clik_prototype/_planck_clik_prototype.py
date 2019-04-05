@@ -71,8 +71,8 @@ of this section.
    ``sudo apt install liblapack3 liblapack-dev``).
 
    If you want to re-compile the Planck likelihood to your liking (e.g. with MKL), simply
-   go into the chosen modules installation folder and re-run the ``./waf configure`` and
-   ``./waf install`` with the desired options.
+   go into the chosen modules installation folder and re-run the ``python waf configure``
+   and ``python waf install`` with the desired options.
 
 However, if you wish to install it manually or have a previous installation already in
 your system, simply take note of the path to the ``plc-2.0`` and ``plc_2.0`` folders and
@@ -100,7 +100,7 @@ Assuming you are installing all your likelihoods under ``/path/to/likelihoods``:
    $ tar xvjf data-action?COSMOLOGY.COSMOLOGY_OID=1904
    $ rm data-action?COSMOLOGY.COSMOLOGY_OID=1904
    $ cd plc-2.0
-   $ ./waf configure # options
+   $ python waf configure  # [options]
 
 If the last step failed, try adding the option ``--install_all_deps``.
 It it doesn't solve it, follow the instructions in the ``readme.md``
@@ -109,8 +109,8 @@ file in the ``plc-2.0`` folder.
 If you have Intel's compiler and Math Kernel Library (MKL), you may want to also add the
 option ``--lapack_mkl=${MKLROOT}`` in the last line to make use of it.
 
-If ``./waf configure`` ended successfully run ``./waf install`` in the same folder.
-You do **not** need to run ``clik_profile.sh``, as advised.
+If ``python waf configure`` ended successfully run ``python waf install``
+in the same folder. You do **not** need to run ``clik_profile.sh``, as advised.
 
 Now, download the required likelihood files from the
 `Planck Legacy Archive <https://pla.esac.esa.int/pla/#cosmology>`_ (Europe) or the
@@ -144,9 +144,6 @@ from cobaya.log import HandledException
 from cobaya.conventions import _path_install, _likelihood
 from cobaya.input import get_default_info
 from cobaya.install import pip_install
-
-# To see full clik build output even if installs OK (e.g. to check warnings)
-_clik_verbose = 'clik' in os.getenv('TRAVIS_COMMIT_MESSAGE', '')
 
 
 class _planck_clik_prototype(Likelihood):
@@ -252,6 +249,10 @@ class _planck_clik_prototype(Likelihood):
 
 # path to be shared by all Planck likelihoods
 common_path = "planck_2015"
+
+# To see full clik build output even if installs OK (e.g. to check warnings)
+_clik_verbose = any(
+    [(s in os.getenv('TRAVIS_COMMIT_MESSAGE', '')) for s in ["clik", "planck"]])
 
 
 def download_file(file, path, no_progress_bars=False, name=None):
@@ -363,25 +364,28 @@ def execute(command):
 
 def install_clik(path, no_progress_bars=False):
     log = logging.getLogger("clik")
+    log.info("Installing pre-requisites...")
     for req in ("cython", "astropy"):
-        from importlib import import_module
-        try:
-            import_module(req)
-        except ImportError:
-            log.info("clik: installing requisite '%s'...", req)
-            exit_status = pip_install(req)
-            if exit_status:
-                log.error("Failed installing '%s'.", req)
-                raise HandledException
-    log.info("clik: downloading...")
+        exit_status = pip_install(req)
+        if exit_status:
+            log.error("Failed installing '%s'.", req)
+            raise HandledException
+    # PYTHON 2: pytest-xdist needs to be re-installed because its required pytest
+    #           version is downgraded by astropy2
+    if sys.version_info.major < 3:
+        exit_status = pip_install("pytest-xdist", upgrade=True)
+        if exit_status:
+            log.error("Failed installing '%s'.", "pytest-xdist")
+            raise HandledException
+    log.info("Downloading...")
     if not download_file('https://cdn.cosmologist.info/cosmobox/plc-2.1_py3.tar.bz2', path,
                          no_progress_bars=no_progress_bars, name="clik"):
         log.error("Not possible to download clik.")
         return False
     source_dir = os.path.join(path, os.listdir(path)[0])
-    print('clik: installing from directory %s' % source_dir)
+    log.info('Installing from directory %s' % source_dir)
     if True:  # should be fixed
-        log.info("clik: patching origin of cfitsio")
+        log.info("Patching origin of cfitsio")
         cfitsio_filename = os.path.join(source_dir, "waf_tools", "cfitsio.py")
         with open(cfitsio_filename, "r") as cfitsio_file:
             lines = cfitsio_file.readlines()
@@ -396,18 +400,18 @@ def install_clik(path, no_progress_bars=False):
     cwd = os.getcwd()
     try:
         os.chdir(source_dir)
-        log.info("clik: configuring... (and maybe installing dependencies...)")
-        if not execute(["./waf", "configure", "--install_all_deps"]):
+        log.info("Configuring... (and maybe installing dependencies...)")
+        if not execute([sys.executable, "waf", "configure", "--install_all_deps"]):
             log.error("Configuration failed!")
             return False
 
-        log.info("clik: compiling...")
-        if not execute(["./waf", "install"]):
+        log.info("Compiling...")
+        if not execute([sys.executable, "waf", "install"]):
             log.error("Compilation failed!")
             return False
     finally:
         os.chdir(cwd)
-    log.info("clik: finished!")
+    log.info("Finished!")
     return True
 
 
