@@ -75,7 +75,7 @@ before_install:
 script:
   - export MODULES="../modules"
   # General tests:
-  - echo "sampler: {polychord: }" > ../tmp.yaml
+  - 'echo "sampler: {polychord: }" > ../tmp.yaml'
   - cobaya-install ../tmp.yaml --modules=$MODULES
   - pytest tests/ -k "not cosmo" --modules=$MODULES
   # Cosmology tests:
