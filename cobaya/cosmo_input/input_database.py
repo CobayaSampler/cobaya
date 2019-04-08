@@ -566,5 +566,5 @@ install_basic = {
         "bicep_keck_2015": None,
         "sn_pantheon": None,
         "sdss_dr12_consensus_final": None,
-        "des_y1_joint": None},
-    _sampler: {"polychord": None}}
+        "des_y1_joint": None}
+    }}
