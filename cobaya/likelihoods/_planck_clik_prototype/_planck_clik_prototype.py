@@ -316,13 +316,6 @@ def install_clik(path, no_progress_bars=False):
         if exit_status:
             log.error("Failed installing '%s'.", req)
             raise HandledException
-    # PYTHON 2: pytest-xdist needs to be re-installed because its required pytest
-    #           version is downgraded by astropy2
-    if sys.version_info.major < 3:
-        exit_status = pip_install("pytest-xdist", upgrade=True)
-        if exit_status:
-            log.error("Failed installing '%s'.", "pytest-xdist")
-            raise HandledException
     log.info("Downloading...")
     click_url = 'https://cdn.cosmologist.info/cosmobox/plc-2.1_py3.tar.bz2'
     if not download_file(click_url, path, decompress=True,
