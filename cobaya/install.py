@@ -212,7 +212,8 @@ def install_script():
             description="Cobaya's installation tool for external modules.")
         parser.add_argument("files", action="store", nargs="+", metavar="input_file.yaml",
                             help="One or more input files "
-                                 "(or 'cosmo' for a basic collection of cosmological modules)")
+                                 "(or simply 'polychord', or 'cosmo' "
+                                 "for a basic collection of cosmological modules)")
         parser.add_argument("-" + _modules_path_arg[0], "--" + _modules_path_arg,
                             action="store", nargs=1, required=True,
                             metavar="/install/path",
@@ -228,9 +229,11 @@ def install_script():
                                 help="Install data of the modules.", dest=_code)
         arguments = parser.parse_args()
         if arguments.files == ["cosmo"]:
-            log.info("Installing cosmological modules (input files will be ignored")
+            log.info("Installing cosmological modules (input files will be ignored)")
             from cobaya.cosmo_input import install_basic
             infos = [install_basic]
+        elif arguments.files == ["polychord"]:
+            infos = [{"sampler": {"polychord": None}}]
         else:
             from cobaya.input import load_input
             infos = [load_input(f) for f in arguments.files]
