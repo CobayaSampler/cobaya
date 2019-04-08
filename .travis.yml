@@ -69,7 +69,7 @@ before_install:
       source activate test-environment;
       pip install mpi4py;
     else
-      pip install mpi4py pytest pytest-xdist flaky matplotlib;
+      pip install mpi4py pytest-xdist flaky matplotlib;
     fi
   - python --version
 script:
