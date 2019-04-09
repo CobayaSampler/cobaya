@@ -22,7 +22,7 @@ docs_img_folder = os.path.join(docs_folder, "img")
 pixel_tolerance = 0.995
 
 
-def test_cosmo_docs_model(modules):
+def test_cosmo_docs_model_classy(modules):
     modules = process_modules_path(modules)
     # Go to the folder containing the python code
     cwd = os.getcwd()
