@@ -77,18 +77,29 @@ If you are planning to modify CAMB or use an already modified version,
 you should not use the automatic installation script. Use the installation method that
 best adapts to your needs:
 
-* [**Recommended**]
-  To install an up-to-date CAMB locally and use git to keep track of your changes,
-  `fork the CAMB repository in Github <https://github.com/cmbant/CAMB>`_
-  (follow `this instructions <https://help.github.com/articles/fork-a-repo/>`_) and clone
-  it in some folder of your choice, say ``/path/to/theories/CAMB``:
+* [**Recommended for staying up-to-date**]
+  To install CAMB locally and keep it up-to-date, clone the
+  `CAMB repository in Github <https://github.com/cmbant/CAMB>`_
+   in some folder of your choice, say ``/path/to/theories/CAMB``:
 
   .. code:: bash
 
-      $ cd /path/to/theories/
-      $ git clone --recursive https://[YourGithubUser]@github.com/[YourGithubUser]/CAMB.git
+      $ cd /path/to/theories
+      $ git clone --recursive https://github.com/cmbant/CAMB.git
       $ cd CAMB
       $ python setup.py build
+
+  To update to the last changes in CAMB (master), run ``git pull`` from CAMB's folder and
+  re-build using the last command.
+
+* [**Recommended for modifying CAMB**]
+  First, `fork the CAMB repository in Github <https://github.com/cmbant/CAMB>`_
+  (follow `this instructions <https://help.github.com/articles/fork-a-repo/>`_) and then
+  follow the same steps as above, substituting the second one with:
+
+  .. code:: bash
+
+      $ git clone --recursive https://[YourGithubUser]@github.com/[YourGithubUser]/CAMB.git
 
 * To use your own version, assuming it's placed under ``/path/to/theories/CAMB``,
   just make sure it is compiled (and that the version on top of which you based your
@@ -143,7 +154,7 @@ from numbers import Number
 # Local
 from cobaya.theories._cosmo import _cosmo
 from cobaya.log import HandledException
-from cobaya.install import download_github_release
+from cobaya.install import download_github_release, check_gcc_version
 from cobaya.conventions import _c_km_s, _T_CMB_K
 
 # Result collector
@@ -562,6 +573,7 @@ class camb(_cosmo):
 # Name of the Class repo/folder and version to download
 camb_repo_name = "cmbant/CAMB"
 camb_repo_version = "master"
+camb_min_gcc_version = "6.4"
 
 
 def is_installed(**kwargs):
@@ -579,6 +591,14 @@ def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs)
     if not code:
         log.info("Code not requested. Nothing to do.")
         return True
+    gcc_check = check_gcc_version(camb_min_gcc_version, error_returns=-1)
+    if gcc_check == -1:
+        log.warn("Failed to get gcc version (maybe not using gcc?). "
+                 "Going ahead and hoping for the best.")
+    elif not gcc_check:
+        log.error("CAMB requires a gcc version >= %s, "
+                  "which is higher than your current one.", camb_min_gcc_version)
+        raise HandledException
     log.info("Downloading camb...")
     success = download_github_release(
         os.path.join(path, "code"), camb_repo_name, camb_repo_version,

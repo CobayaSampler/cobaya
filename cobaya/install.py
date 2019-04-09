@@ -13,11 +13,13 @@ from __future__ import division
 # Global
 import os
 import sys
+import subprocess
 import traceback
 import logging
 from importlib import import_module
 import shutil
 from six import string_types
+from pkg_resources import parse_version
 
 # Local
 from cobaya.log import logger_setup, HandledException
@@ -184,7 +186,6 @@ def pip_install(packages, upgrade=False):
 
     Returns exit status.
     """
-    import subprocess
     if hasattr(packages, "split"):
         packages = [packages]
     cmd = [sys.executable, '-m', 'pip', 'install']
@@ -196,6 +197,19 @@ def pip_install(packages, upgrade=False):
     if res:
         log.error("pip: error installing packages '%s'", packages)
     return res
+
+
+def check_gcc_version(min_version="6.4", error_returns=None):
+    try:
+        version = subprocess.check_output(
+            "gcc -dumpversion", shell=True, stderr=subprocess.STDOUT).decode().strip()
+    except:
+        return error_returns
+    # Change in gcc >= 7: -dumpversion only dumps major version
+    if not "." in version:
+        version = subprocess.check_output(
+            "gcc -dumpfullversion", shell=True, stderr=subprocess.STDOUT).decode().strip()
+    return parse_version(str(min_version)) <= parse_version(version)
 
 
 # Command-line script ####################################################################
