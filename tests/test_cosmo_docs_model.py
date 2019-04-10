@@ -8,10 +8,11 @@ import os
 import numpy as np
 from imageio import imread
 import pytest
-from ._config import stdout_redirector, StringIO, test_figs
+from six import StringIO
 
 from cobaya.conventions import _path_install
-from .common import process_modules_path
+from .common import process_modules_path, stdout_redirector
+
 
 tests_folder = os.path.dirname(os.path.realpath(__file__))
 docs_folder = os.path.join(tests_folder, "..", "docs")
@@ -48,16 +49,23 @@ def test_cosmo_docs_model_classy(modules):
         assert np.allclose(oldvals, newvals), (
                 "Wrong derived parameters line:\nBEFORE: %s\nNOW:    %s" %
                 (derived_line_old, derived_line_new))
-        if test_figs:
-            # Compare plots
-            pre = "cosmo_model_"
-            for filename, imgname in zip(["4.py", "5.py"], ["cltt.png", "omegacdm.png"]):
+        # Not testing figures for now (not robust)
+        # Instead, let's just check that no error is raised
+        for filename in ["4.py", "5.py"]:
+            try:
                 exec(open(os.path.join(docs_src_folder, filename)).read(), globals_example)
-                old_img = imread(os.path.join(docs_img_folder, pre + imgname)).astype(float)
-                new_img = imread(imgname).astype(float)
-                npixels = (lambda x: x.shape[0] + x.shape[1])(old_img)
-                assert np.count_nonzero(old_img == new_img) / (4 * npixels) >= pixel_tolerance, (
-                        "Images '%s' are too different!" % imgname)
-        # Back to the working directory of the tests, just in case, and restart the rng
+            except:
+                assert False, "File %s failed."%filename
+#        if test_figs:
+#            # Compare plots
+#            pre = "cosmo_model_"
+#            for filename, imgname in zip(["4.py", "5.py"], ["cltt.png", "omegacdm.png"]):
+#                exec(open(os.path.join(docs_src_folder, filename)).read(), globals_example)
+#                old_img = imread(os.path.join(docs_img_folder, pre + imgname)).astype(float)
+#                new_img = imread(imgname).astype(float)
+#                npixels = (lambda x: x.shape[0] + x.shape[1])(old_img)
+#                assert np.count_nonzero(old_img == new_img) / (4 * npixels) >= pixel_tolerance, (
+#                        "Images '%s' are too different!" % imgname)
+#        # Back to the working directory of the tests, just in case, and restart the rng
     finally:
         os.chdir(cwd)

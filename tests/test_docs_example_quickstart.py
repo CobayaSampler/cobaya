@@ -13,7 +13,7 @@ from cobaya.input import is_equal_info
 from cobaya.conventions import _output_prefix
 from cobaya.tools import KL_norm
 from .common_sampler import KL_tolerance
-from ._config import stdout_redirector, StringIO
+from .common import stdout_redirector
 
 docs_folder = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "docs")
 docs_src_folder = os.path.join(docs_folder, "src_examples", "quickstart")
@@ -42,7 +42,7 @@ def test_example(tmpdir):
         globals_example["info"]["sampler"]["mcmc"].update({"seed": 0})
         exec(open(os.path.join(docs_src_folder, "run.py")).read(), globals_example)
         # Analyze and plot -- capture print output
-        stream = StringIO()
+        stream = six.StringIO()
         with stdout_redirector(stream):
             exec(open(os.path.join(docs_src_folder, "analyze.py")).read(),
                  globals_example)
