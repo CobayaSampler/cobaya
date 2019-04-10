@@ -21,8 +21,10 @@ from collections import Mapping, OrderedDict as odict
 from ast import parse
 if six.PY3:
     from inspect import getfullargspec as getargspec
+    from math import gcd
 else:
     from inspect import getargspec
+    from fractions import gcd
 
 # Local
 from cobaya.conventions import _package, subfolders, _p_dist, _likelihood, _p_value
@@ -269,3 +271,34 @@ def KL_norm(m1=None, S1=np.array([]), m2=None, S2=np.array([])):
     KL = 0.5 * (np.trace(S2inv.dot(S1)) + (m1 - m2).dot(S2inv).dot(m1 - m2) -
                 dim + np.log(np.linalg.det(S2) / np.linalg.det(S1)))
     return KL
+
+def compare_params_lists(list_A, list_B):
+    """
+    Compares two parameter lists, and returns a dict with the following keys
+    (only present if applicable):
+
+      `duplicates_[A|B]`: duplicate elemnts in list 1|2
+    """
+    result = {}
+    names = ["A", "B"]
+    # Duplicates
+    list_A_copy, list_B_copy = list_A[:], list_B[:]
+    for n,l in zip(names, [list_A_copy, list_B_copy]):
+        [l.pop(i) for i in sorted([l.index(x) for x in set(l)])[::-1]]
+        if l:
+            result["duplicate_%s"%n] = list(set(l))
+    sets = {"A": set(list_A), "B": set(list_B)}
+    for n1,n2 in [["A", "B"], ["B", "A"]]:
+        missing = sets[n1].difference(sets[n2])
+        if missing:
+            result["%s_but_not_%s"%(n1,n2)] = list(missing)
+    return result
+
+def relative_to_int(numbers, precision=1/10):
+    """
+    Turns relative numbers (e.g. relative speeds) into integer,
+    up to some given `precision` on differences.
+    """
+    numbers = np.array(np.round(np.array(numbers) / min(numbers) / precision), dtype=int)
+    return np.array(
+        numbers / np.ufunc.reduce(np.frompyfunc(gcd, 2, 1), numbers), dtype=int)
