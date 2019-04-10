@@ -609,7 +609,7 @@ def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs)
     camb_path = os.path.join(path, "code", camb_repo_name[camb_repo_name.find("/") + 1:])
     log.info("Compiling camb...")
     from subprocess import Popen, PIPE
-    process_make = Popen(["python", "setup.py", "build_cluster"],
+    process_make = Popen([sys.executable, "setup.py", "build_cluster"],
                          cwd=camb_path, stdout=PIPE, stderr=PIPE)
     out, err = process_make.communicate()
     if process_make.returncode:

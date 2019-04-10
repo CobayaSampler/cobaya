@@ -394,7 +394,7 @@ def install(path=None, force=False, code=False, data=False, no_progress_bars=Fal
         log.error("Compilation failed!")
         return False
     my_env.update({"CC": "mpicc", "CXX": "mpicxx"})
-    process_make = Popen(["python", "setup.py", "build"],
+    process_make = Popen([sys.executable, "setup.py", "build"],
                          cwd=cwd, env=my_env, stdout=PIPE, stderr=PIPE)
     out, err = process_make.communicate()
     if process_make.returncode:

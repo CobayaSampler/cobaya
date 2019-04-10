@@ -537,7 +537,9 @@ def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs)
     classy_path = os.path.join(path, "code", classy_repo_rename)
     log.info("Compiling classy...")
     from subprocess import Popen, PIPE
-    process_make = Popen(["make"], cwd=classy_path, stdout=PIPE, stderr=PIPE)
+    env = deepcopy(os.environ)
+    env.update({"PYTHON": sys.executable})
+    process_make = Popen(["make"], cwd=classy_path, stdout=PIPE, stderr=PIPE, env=env)
     out, err = process_make.communicate()
     if process_make.returncode:
         log.info(out)
