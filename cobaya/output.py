@@ -13,6 +13,7 @@ from __future__ import division
 # Global
 import os
 import sys
+import six
 import traceback
 import datetime
 from copy import deepcopy
@@ -155,10 +156,7 @@ class OutputDummy(Output):
         log.debug("No output requested. Doing nothing.")
         # override all methods that actually produce output
         exclude = ["nullfunc"]
-        if sys.version_info < (3,):
-            _func_name = "func_name"
-        else:
-            _func_name = "__name__"
+        _func_name = "__name__" if six.PY3 else "func_name"
         for attrname, attr in list(Output.__dict__.items()):
             func_name = getattr(attr, _func_name, None)
             if func_name and func_name not in exclude and '__' not in func_name:
