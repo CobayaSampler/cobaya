@@ -5,31 +5,27 @@ to make sure it remains up to date.
 
 from __future__ import division
 import os
-import numpy as np
-from imageio import imread
+import six
+from flaky import flaky
 
 from cobaya.yaml import yaml_load_file
 from cobaya.input import is_equal_info
 from cobaya.conventions import _output_prefix
-from ._config import stdout_redirector, StringIO, random_reproducible, test_figs
-import six
+from cobaya.tools import KL_norm
+from .common_sampler import KL_tolerance
+from ._config import stdout_redirector, StringIO
 
 docs_folder = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "docs")
 docs_src_folder = os.path.join(docs_folder, "src_examples", "quickstart")
 docs_img_folder = os.path.join(docs_folder, "img")
 
-# Number of possible different pixels
-if not six.PY3:
-    pixel_tolerance = 0.995
-else:
-    pixel_tolerance = 0.980
 
-
+@flaky(max_runs=3, min_passes=1)
 def test_example(tmpdir):
     # temporarily change working directory to be able to run the files "as is"
     cwd = os.getcwd()
-    os.chdir(docs_src_folder)
     try:
+        os.chdir(docs_src_folder)
         info_yaml = yaml_load_file("gaussian.yaml")
         info_yaml.pop(_output_prefix)
         globals_example = {}
@@ -42,7 +38,7 @@ def test_example(tmpdir):
             "Inconsistent info between interactive and *loaded* yaml.")
         # Run the chain -- constant seed so results are the same!
         globals_example["info"]["sampler"]["mcmc"] = (
-                globals_example["info"]["sampler"]["mcmc"] or {})
+            globals_example["info"]["sampler"]["mcmc"] or {})
         globals_example["info"]["sampler"]["mcmc"].update({"seed": 0})
         exec(open(os.path.join(docs_src_folder, "run.py")).read(), globals_example)
         # Analyze and plot -- capture print output
@@ -50,28 +46,13 @@ def test_example(tmpdir):
         with stdout_redirector(stream):
             exec(open(os.path.join(docs_src_folder, "analyze.py")).read(),
                  globals_example)
-        # Comparing text output
-        out_filename = "analyze_out.txt"
-        contents = "".join(open(os.path.join(docs_src_folder, out_filename)).readlines())
-        # The endswith guarantees that getdist messages and warnings are ignored
-        if random_reproducible:
-            # randoms not reproducible on Windows in general
-            assert stream.getvalue().replace("\n", "").replace(" ", "").endswith(
-                contents.replace("\n", "").replace(" ", "")), (
-                    "Text output does not coincide:\nwas\n%s\nand " % contents +
-                    "now it's\n%sstream.getvalue()" % stream.getvalue())
-        if test_figs:
-            # Comparing plot
-            plot_filename = "example_quickstart_plot.png"
-            test_filename = tmpdir.join(plot_filename)
-            globals_example["gdplot"].export(str(test_filename))
-            print("Plot created at '%s'" % str(test_filename))
-            test_img = imread(str(test_filename)).astype(float)
-            docs_img = imread(os.path.join(docs_img_folder, plot_filename)).astype(float)
-            npixels = test_img.shape[0] * test_img.shape[1]
-            assert (np.count_nonzero(test_img == docs_img) / (4 * npixels) >=
-                    pixel_tolerance), (
-                "Images are too different. Maybe GetDist conventions changed?")
+        # Checking results
+        mean, covmat = [globals_example["info"]["likelihood"]["gaussian_mixture"][x]
+                        for x in ["means", "covs"]]
+        assert (KL_norm(
+            m1=mean, S1=covmat, m2=globals_example["mean"], S2=globals_example["covmat"])
+                <= KL_tolerance), (
+                    "Sampling appears not to have worked too well. Run again?")
     finally:
-        # Back to the working directory of the tests, just in case, and restart the rng
+        # Back to the working directory of the tests, just in case
         os.chdir(cwd)

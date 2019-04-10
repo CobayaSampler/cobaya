@@ -7,17 +7,6 @@ import os
 from six import StringIO
 
 
-def check_reproducible():
-    np.random.seed(0)
-    _test_mat = stats.special_ortho_group.rvs(3)
-    # signs etc. can flip on different platforms, don't test if results not expected to be the same
-    return np.abs(_test_mat[0, 0] + 0.8577182409977431) < 1e-10 and \
-           np.abs(_test_mat[1, 1] + 0.7206340034201331) < 1e-10
-
-
-random_reproducible = check_reproducible()
-
-test_figs = False
 
 skip_theories = []
 if os.environ.get('NO_CLASS_TESTS', False): skip_theories += ["classy"]

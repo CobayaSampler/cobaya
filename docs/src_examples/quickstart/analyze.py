@@ -2,10 +2,12 @@
 from getdist.mcsamples import loadCobayaSamples
 gd_sample = loadCobayaSamples(updated_info, products["sample"])
 # Analyze and plot
+mean = gd_sample.getMeans()[:2]
+covmat = gd_sample.getCovMat().matrix[:2,:2]
 print("Mean:")
-print(gd_sample.getMeans()[:2])
+print(mean)
 print("Covariance matrix:")
-print(gd_sample.getCovMat().matrix[:2,:2])
+print(covmat)
 # %matplotlib inline  # uncomment if running from the Jupyter notebook
 import getdist.plots as gdplt
 gdplot = gdplt.getSubplotPlotter()
