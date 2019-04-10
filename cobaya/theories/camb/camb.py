@@ -170,8 +170,14 @@ class camb(_cosmo):
             self.path = os.path.join(
                 self.path_install, "code", camb_repo_name[camb_repo_name.find("/") + 1:])
         if self.path and not os.path.exists(self.path):
-            self.log.info("*local* CAMB not found at " + self.path)
-            self.log.info("Importing *global* CAMB.")
+            # Fail if this was a directly specified path,
+            # or ignore and try to global-import if it came from a path_install
+            if self.path_install:
+                self.log.info("*local* CAMB not found at " + self.path)
+                self.log.info("Importing *global* CAMB.")
+            else:
+                self.log.error("*local* CAMB not found at " + self.path)
+                raise HandledException
         elif self.path:
             self.log.info("Importing *local* CAMB from " + self.path)
             if not os.path.exists(self.path):

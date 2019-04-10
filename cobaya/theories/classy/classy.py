@@ -147,11 +147,16 @@ class classy(_cosmo):
             post = next(d for d in os.listdir(classy_build_path) if d.startswith("lib."))
             classy_build_path = os.path.join(classy_build_path, post)
             if not os.path.exists(classy_build_path):
-                self.log.error("Either CLASS is not in the given folder, "
-                               "'%s', or you have not compiled it.", self.path)
-                raise HandledException
-            # Inserting the previously found path into the list of import folders
-            sys.path.insert(0, classy_build_path)
+                # If path was given as an install path, try to install global one anyway
+                if self.path_install:
+                    self.log.info("Importing *global* CLASS (because not installed).")
+                else:
+                    self.log.error("Either CLASS is not in the given folder, "
+                                   "'%s', or you have not compiled it.", self.path)
+                    raise HandledException
+            else:
+                # Inserting the previously found path into the list of import folders
+                sys.path.insert(0, classy_build_path)
         else:
             self.log.info("Importing *global* CLASS.")
         try:
