@@ -49,6 +49,13 @@ sampler:
     drag: False
     # Min and max number of times the fast block is iterated
     drag_limits : [1, 10]
+    # Manual blocking
+    # ---------------
+    # To take full advantage of speed-blocking, sort the blocks by ascending speeds
+    # (unless not possible due to the architecture of your likelihood)
+    blocking:
+    #  - [speed_1, [params_1]]
+    #  - etc.
     # Callback function
     # -----------------
     callback_function:
