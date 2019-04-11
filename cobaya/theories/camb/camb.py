@@ -2,13 +2,15 @@
 .. module:: theories.camb
 
 :Synopsis: Managing the CAMB cosmological code
-:Author: Jesus Torrado
+:Author: Jesus Torrado and Antony Lewis
 
 .. |br| raw:: html
 
    <br />
 
 This module imports and manages the CAMB cosmological code.
+It requires CAMB 1.0 or higher (for compatibility with older versions, you can temporarily
+use cobaya 1.0.4, but update asap, since that version is not maintained any more).
 
 .. note::
 
@@ -57,8 +59,8 @@ type ``gfortran --version`` in the shell, and the first line should look like
 Check that ``[gfortran's version]`` is at least 6.4. If you get an error instead, you need
 to install gfortran (contact your local IT service).
 
-CAMB comes with binaries pre-built for Windows, so if you don't need to modify the CAMB source code, no Fortran compiler is
-needed.
+CAMB comes with binaries pre-built for Windows, so if you don't need to modify the CAMB
+source code, no Fortran compiler is needed.
 
 
 Automatic installation
@@ -80,7 +82,7 @@ best adapts to your needs:
 * [**Recommended for staying up-to-date**]
   To install CAMB locally and keep it up-to-date, clone the
   `CAMB repository in Github <https://github.com/cmbant/CAMB>`_
-   in some folder of your choice, say ``/path/to/theories/CAMB``:
+  in some folder of your choice, say ``/path/to/theories/CAMB``:
 
   .. code:: bash
 

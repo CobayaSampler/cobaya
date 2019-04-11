@@ -56,7 +56,6 @@ of their length.
 Installation
 ------------
 
-
 This likelihood can be installed automatically as explained in :doc:`installation_cosmo`.
 If are following the instructions there (you should!), you don't need to read the rest
 of this section.
@@ -86,8 +85,16 @@ mention it below each Planck likelihood as
      planck_2015_plikHM_TTTEEE:
        path: /path/to/planck_2015
 
+
 Manual installation of Planck 2015 likelihoods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. warning::
+
+   For the time being (waiting for Planck 2018's data release), use instead the
+   alternative 'clik' code at
+   `<https://cdn.cosmologist.info/cosmobox/plc-2.1_py3.tar.bz2>`_, which is
+   compatible with Python 3 and gcc `>5`.
 
 Assuming you are installing all your likelihoods under ``/path/to/likelihoods``:
 
