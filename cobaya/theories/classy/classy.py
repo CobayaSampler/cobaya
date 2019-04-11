@@ -127,7 +127,7 @@ from cobaya.conventions import _c_km_s, _T_CMB_K
 # Result collector
 collector = namedtuple("collector",
                        ["method", "args", "args_names", "kwargs", "arg_array", "post"])
-collector.__new__.__defaults__ = (None, [], [], {}, None, lambda x: x)
+collector.__new__.__defaults__ = (None, [], [], {}, None, None)
 
 # default non linear code
 non_linear_default_code = "halofit"
@@ -247,7 +247,7 @@ class classy(_cosmo):
                     self.collectors[name] = collector(
                         method="get_pk_and_k_and_z",
                         kwargs=v,
-                        post=(lambda P, k, z:PowerSpectrumInterpolator(
+                        post=(lambda P, k, z: PowerSpectrumInterpolator(
                             z, k, P.T, **self._Pk_interpolator_kwargs)))
             elif v is None:
                 k_translated = self.translate_param(k, force=True)
@@ -377,8 +377,9 @@ class classy(_cosmo):
                         kwargs[arg_array] = v
                         self.states[i_state][product][i] = method(
                             *self.collectors[product].args, **kwargs)
-                self.states[i_state][product] = collector.post(
-                    self.states[i_state][product])
+                if collector.post:
+                    self.states[i_state][product] = collector.post(
+                        *self.states[i_state][product])
             # Prepare derived parameters
             d, d_extra = self.get_derived_all(derived_requested=(_derived == {}))
             if _derived == {}:
