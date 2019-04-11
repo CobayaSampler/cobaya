@@ -299,7 +299,20 @@ dark_energy = odict([
             ["w", odict([
                 [_prior, odict([["min", -3], ["max", -0.333]])],
                 [_p_ref, odict([[_p_dist, "norm"], ["loc", -0.99], ["scale", 0.02]])],
-                [_p_proposal, 0.02], [_p_label, r"w_\mathrm{DE}"]])]])}]])
+                [_p_proposal, 0.02], [_p_label, r"w_\mathrm{DE}"]])]])}],
+    ["de_w_wa", {
+        _desc: "Varying constant eq of state with w(a) = w0 + (1-a) wa",
+        _theory: {_camb: None,
+                  _classy: {_params: {"Omega_Lambda": 0}}},
+        _params: odict([
+            ["w", odict([
+                [_prior, odict([["min", -3], ["max", 1]])],
+                [_p_ref, odict([[_p_dist, "norm"], ["loc", -0.99], ["scale", 0.02]])],
+                [_p_proposal, 0.02], [_p_label, r"w_{0,\mathrm{DE}}"]])],
+            ["wa", odict([
+                [_prior, odict([["min", -3], ["max", 2]])],
+                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0], ["scale", 0.05]])],
+                [_p_proposal, 0.05], [_p_label, r"w_{a,\mathrm{DE}}"]])]])}]])
 
 # BBN
 bbn_derived_camb = odict([

@@ -180,7 +180,6 @@ class _planck_clik_prototype(Likelihood):
             # test and import clik
             is_installed_clik(self.path_clik, log_and_fail=True, import_it=False)
             import clik
-
         # Loading the likelihood data
         if not os.path.isabs(self.clik_file):
             self.path_data = getattr(self, "path_data", os.path.join(
