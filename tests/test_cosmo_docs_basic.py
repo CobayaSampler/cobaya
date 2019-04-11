@@ -2,15 +2,15 @@
 Testing and automatic generation of basic cosmological examples in the docs.
 """
 
-from __future__ import division
+from __future__ import division, absolute_import
 import os
 
 from cobaya.yaml import yaml_dump, yaml_load
 from cobaya.input import is_equal_info
 from cobaya.cosmo_input import create_input
-from test_docs_example_quickstart import docs_folder
+from .test_docs_example_quickstart import docs_folder
 
-path = os.path.join(docs_folder, "src_examples/cosmo_basic")
+path = os.path.join(docs_folder, "src_examples", "cosmo_basic")
 file_pre = "basic_"
 preset_pre = "planck_2015_lensing_"
 

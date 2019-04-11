@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 
 from mpi4py import MPI
 from flaky import flaky
@@ -6,7 +6,7 @@ from flaky import flaky
 from cobaya.likelihoods.gaussian_mixture import random_cov
 from cobaya.tools import KL_norm
 
-from common_sampler import body_of_test, body_of_test_speeds
+from .common_sampler import body_of_test, body_of_test_speeds
 
 
 ### import pytest

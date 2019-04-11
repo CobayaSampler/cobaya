@@ -63,18 +63,12 @@ params:
       scale: 0.001
     proposal: 0.0005
     latex: \Omega_\mathrm{c} h^2
-  Omega_m:
-    latex: \Omega_\mathrm{m}
-  omegamh2:
-    derived: 'lambda Omega_m, H0: Omega_m*(H0/100)**2'
-    latex: \Omega_\mathrm{m} h^2
-  m_ncdm:
-    renames: mnu
-    value: 0.06
-  Omega_Lambda:
-    latex: \Omega_\Lambda
-  YHe:
-    latex: Y_\mathrm{P}
+  Omega_m: {latex: '\Omega_\mathrm{m}'}
+  omegamh2: {derived: 'lambda Omega_m, H0: Omega_m*(H0/100)**2', latex: '\Omega_\mathrm{m}
+      h^2'}
+  m_ncdm: {value: 0.06, renames: mnu}
+  Omega_Lambda: {latex: \Omega_\Lambda}
+  YHe: {latex: 'Y_\mathrm{P}'}
   tau_reio:
     prior:
       min: 0.01
@@ -85,33 +79,10 @@ params:
       scale: 0.01
     proposal: 0.005
     latex: \tau_\mathrm{reio}
-  z_reio:
-    latex: z_\mathrm{re}
-  sigma8:
-    latex: \sigma_8
-  s8h5:
-    derived: 'lambda sigma8, H0: sigma8*(H0*1e-2)**(-0.5)'
-    latex: \sigma_8/h^{0.5}
-  s8omegamp5:
-    derived: 'lambda sigma8, Omega_m: sigma8*Omega_m**0.5'
-    latex: \sigma_8 \Omega_\mathrm{m}^{0.5}
-  s8omegamp25:
-    derived: 'lambda sigma8, Omega_m: sigma8*Omega_m**0.25'
-    latex: \sigma_8 \Omega_\mathrm{m}^{0.25}
-  A:
-    derived: 'lambda A_s: 1e9*A_s'
-    latex: 10^9 A_\mathrm{s}
-  clamp:
-    derived: 'lambda A_s, tau_reio: 1e9*A_s*np.exp(-2*tau_reio)'
-    latex: 10^9 A_\mathrm{s} e^{-2\tau}
-  age:
-    latex: '{\rm{Age}}/\mathrm{Gyr}'
-  rs_drag:
-    latex: r_\mathrm{drag}
-  chi2__CMB:
-    derived: 'lambda chi2__planck_2015_lowTEB, chi2__planck_2015_plikHM_TTTEEE, chi2__planck_2015_lensing:
-      sum([chi2__planck_2015_lowTEB, chi2__planck_2015_plikHM_TTTEEE, chi2__planck_2015_lensing])'
-    latex: \chi^2_\mathrm{CMB}
+  z_reio: {latex: 'z_\mathrm{re}'}
+  chi2__CMB: {derived: 'lambda chi2__planck_2015_lowTEB, chi2__planck_2015_plikHM_TTTEEE,
+      chi2__planck_2015_lensing: sum([chi2__planck_2015_lowTEB, chi2__planck_2015_plikHM_TTTEEE,
+      chi2__planck_2015_lensing])', latex: '\chi^2_\mathrm{CMB}'}
 sampler:
   mcmc:
     covmat: auto
@@ -119,6 +90,4 @@ sampler:
     proposal_scale: 1.9
 theory:
   classy:
-    extra_args:
-      N_ur: 2.0328
-      N_ncdm: 1
+    extra_args: {N_ncdm: 1, N_ur: 2.0328}

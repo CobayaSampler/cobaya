@@ -5,13 +5,13 @@
 :Author: Jesus Torrado
          (based on MontePython's version by Julien Lesgourgues and Benjamin Audren)
 
-Family of Planck 2015 CMB likelihoods, based on the ``clik 2.0`` code.
+Family of Planck CMB likelihoods, based on the ``clik`` code.
 
 The Planck 2015 likelihoods defined here are:
 
 - ``planck_2015_lensing``
 - ``planck_2015_lensing_cmblikes``
-  (an alternative, more customizable version of the previous one)
+  (a native non-clik, more customizable version of the previous clik-wrapped one)
 - ``planck_2015_lowl``
 - ``planck_2015_lowTEB``
 - ``planck_2015_plikHM_TT``
@@ -36,9 +36,7 @@ You can read a description of the different likelihoods in the
 
 .. warning::
 
-   Unfortunately, ``planck_2015_lowTEB`` does not work with ``gcc`` version 5 or higher,
-   and none of Planck's 2015 likelihoods work with Python 3. Also, ``planck_2015_lowTEB``
-   and cannot be instantiated more than once.
+   ``planck_2015_lowTEB`` cannot be instantiated more than once.
 
 
 Usage
@@ -138,6 +136,7 @@ import os
 import sys
 import numpy as np
 import logging
+import six
 
 # Local
 from cobaya.likelihood import Likelihood
@@ -146,20 +145,26 @@ from cobaya.conventions import _path_install, _likelihood
 from cobaya.input import get_default_info
 from cobaya.install import pip_install
 
+# To see full clik build output even if installs OK (e.g. to check warnings)
+_clik_verbose = 'clik' in os.getenv('TRAVIS_COMMIT_MESSAGE', '')
+
 
 class _planck_clik_prototype(Likelihood):
 
     def initialize(self):
-        # Importing Planck's clik library (only once!)
-        try:
-            clik
-        except NameError:
+        if self.path:
+            has_clik = False
+        else:
+            try:
+                import clik
+                has_clik = True
+            except ImportError:
+                has_clik = False
+        if not has_clik:
             if not self.path:
                 if self.path_install:
                     self.path_clik = os.path.join(
                         self.path_install, "code", common_path)
-                    self.path_data = os.path.join(
-                        self.path_install, "data", common_path)
                 else:
                     self.log.error("No path given to the Planck likelihood. Set the "
                                    "likelihood property 'path' or the common property "
@@ -171,22 +176,29 @@ class _planck_clik_prototype(Likelihood):
             # test and import clik
             is_installed_clik(self.path_clik, log_and_fail=True, import_it=False)
             import clik
+
         # Loading the likelihood data
-        clik_file = os.path.join(self.path_data, self.clik_file)
-        # for lensing, some routines change. Intializing a flag for easier
+        if not os.path.isabs(self.clik_file):
+            self.path_data = getattr(self, "path_data", os.path.join(
+                self.path or self.path_install, "data", common_path))
+            self.clik_file = os.path.join(self.path_data, self.clik_file)
+        # for lensing, some routines change. Initializing a flag for easier
         # testing of this condition
         self.lensing = "lensing" in self.name
         try:
             self.clik = (
-                clik.clik_lensing(clik_file) if self.lensing else clik.clik(clik_file))
+                clik.clik_lensing(self.clik_file) if self.lensing else clik.clik(self.clik_file))
         except clik.lkl.CError:
             self.log.error(
                 "The .clik file was not found where specified in the 'clik_file' field "
                 "of the settings of this likelihood. Maybe the 'path' given is not "
                 "correct? The full path where the .clik file was searched for is '%s'",
-                clik_file)
+                self.clik_file)
             raise HandledException
         self.expected_params = list(self.clik.extra_parameter_names)
+        # py3 lensing bug
+        if "b'A_planck'" in self.expected_params:
+            self.expected_params[self.expected_params.index("b'A_planck'")] = "A_planck"
         # line added to deal with a bug in planck likelihood release:
         # A_planck called A_Planck in plik_lite
         if "plikHM_lite" in self.name:
@@ -195,7 +207,8 @@ class _planck_clik_prototype(Likelihood):
             self.log.info("Corrected nuisance parameter name A_Planck to A_planck")
         # Check that the parameters are the right ones
         assert set(self.input_params) == set(self.expected_params), (
-            "Likelihoods parameters do not coincide with the ones clik understands.")
+                "Likelihoods parameters do not coincide with the ones clik understands. Have: %s, Expected: %s"
+                % (set(self.input_params), set(self.expected_params)))
         # Placeholder for vector passed to clik
         self.l_maxs = self.clik.get_lmax()
         length = (len(self.l_maxs) if self.lensing else len(self.clik.get_has_cl()))
@@ -241,6 +254,34 @@ class _planck_clik_prototype(Likelihood):
 common_path = "planck_2015"
 
 
+def download_file(file, path, no_progress_bars=False, name=None):
+    log = logging.getLogger(name or __name__)
+    try:
+        from wget import download, bar_thermometer
+        wget_kwargs = {"out": path, "bar":
+            (bar_thermometer if not no_progress_bars else None)}
+        filename = download(file, **wget_kwargs)
+        print('Got: %s' % filename)
+    except:
+        log.error("Error downloading!")
+        return False
+    finally:
+        print("")
+    # uncompress
+    import os
+    import tarfile
+    extension = os.path.splitext(filename)[-1][1:]
+    tar = tarfile.open(filename, "r:" + extension)
+    try:
+        tar.extractall(path)
+        tar.close()
+        os.remove(filename)
+        return True
+    except:
+        log.error("Error decompressing downloaded file! Corrupt file?)")
+        return False
+
+
 def download_from_planck(product_id, path, no_progress_bars=False, name=None):
     log = logging.getLogger(name or __name__)
     try:
@@ -271,17 +312,13 @@ def download_from_planck(product_id, path, no_progress_bars=False, name=None):
 
 def is_installed_clik(path, log_and_fail=False, import_it=True):
     log = logging.getLogger("clik")
-    clik_path = os.path.join(path, "plc-2.0")
-    if not os.path.exists(clik_path):
+    if os.path.exists(path) and len(os.listdir(path)):
+        clik_path = os.path.join(path, os.listdir(path)[0], 'lib/python/site-packages')
+    else:
+        clik_path = None
+    if not clik_path or not os.path.exists(clik_path):
         if log_and_fail:
-            log.error("The given folder does not exist: '%s'", clik_path)
-            raise HandledException
-        return False
-    clik_path = os.path.join(clik_path, "lib/python2.7/site-packages")
-    if not os.path.exists(clik_path):
-        if log_and_fail:
-            log.error("You have not compiled the Planck likelihood code 'clik'.\n"
-                      "Take a look at the docs to see how to do it using 'waf'.")
+            log.error("The given folder does not exist: '%s'", clik_path or path)
             raise HandledException
         return False
     sys.path.insert(0, clik_path)
@@ -290,28 +327,43 @@ def is_installed_clik(path, log_and_fail=False, import_it=True):
             import clik
         return True
     except:
+        print('Failed to import clik')
+        if log_and_fail:
+            log.error("Error importing click from: '%s'", clik_path)
+            raise HandledException
         return False
+
+
+def execute(command):
+    from subprocess import Popen, PIPE, STDOUT
+    if _clik_verbose:
+        process = Popen(command, stdout=PIPE, stderr=STDOUT)
+        out = []
+        while True:
+            nextline = process.stdout.readline()
+            if nextline == b"" and process.poll() is not None:
+                break
+            if six.PY3:
+                sys.stdout.buffer.write(nextline)
+            else:
+                sys.stdout.write(nextline)
+            out.append(nextline)
+            sys.stdout.flush()
+        _, err = process.communicate()
+        return b"finished successfully" in out[-1]
+    else:
+        process = Popen(command, stdout=PIPE, stderr=PIPE)
+        out, err = process.communicate()
+        OK = b"finished successfully" in out.split(b"\n")[-2]
+        if not OK:
+            print(out.decode('utf-8'))
+            print(err.decode('utf-8'))
+        return OK
 
 
 def install_clik(path, no_progress_bars=False):
     log = logging.getLogger("clik")
-    # Checking gcc < 6
-    from subprocess import Popen, PIPE
-    process = Popen(["gcc", "-v"], stdout=PIPE, stderr=PIPE)
-    out, err = process.communicate()
-    prefix = "gcc version"
-    try:
-        version = [line for line in err.split("\n") if line.startswith(prefix)]
-        version = version[0][len(prefix):].split()[0]
-        major = version.split(".")[0]
-        if int(major) > 5:
-            log.error(
-                "GCC version > 5: unfortunately, the Planck likelihood won't work!")
-            return False
-    except:
-        log.error("Could not identify the GCC version. Notice that the Planck likelihood "
-                  "works for GCC <= 5 only.")
-    for req in ("cython", "pyfits"):
+    for req in ("cython", "astropy"):
         from importlib import import_module
         try:
             import_module(req)
@@ -319,45 +371,42 @@ def install_clik(path, no_progress_bars=False):
             log.info("clik: installing requisite '%s'...", req)
             exit_status = pip_install(req)
             if exit_status:
-                log.error("Failed installing requisite '%s'.", req)
+                log.error("Failed installing '%s'.", req)
                 raise HandledException
-    log.info("clik: downlowading...")
-    if not download_from_planck("1904", path,
-                                no_progress_bars=no_progress_bars, name="clik"):
+    log.info("clik: downloading...")
+    if not download_file('https://cdn.cosmologist.info/cosmobox/plc-2.1_py3.tar.bz2', path,
+                         no_progress_bars=no_progress_bars, name="clik"):
         log.error("Not possible to download clik.")
         return False
-    log.info("clik: patching origin of cfitsio")
-    cfitsio_filename = os.path.join(path, "plc-2.0/waf_tools/cfitsio.py")
-    with open(cfitsio_filename, "r") as cfitsio_file:
-        lines = cfitsio_file.readlines()
-        i_offending = next(i for i, l in enumerate(lines) if ".tar.gz" in l)
-        lines[i_offending] = (
-            "  atl.installsmthg_pre(ctx,"
-            "'http://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio3280.tar.gz',"
-            "'cfitsio3280.tar.gz')\n")
-    with open(cfitsio_filename, "w") as cfitsio_file:
-        cfitsio_file.write("".join(lines))
-    log.info("clik: configuring... (and maybe installing dependencies...)")
+    source_dir = os.path.join(path, os.listdir(path)[0])
+    print('clik: installing from directory %s' % source_dir)
+    if True:  # should be fixed
+        log.info("clik: patching origin of cfitsio")
+        cfitsio_filename = os.path.join(source_dir, "waf_tools", "cfitsio.py")
+        with open(cfitsio_filename, "r") as cfitsio_file:
+            lines = cfitsio_file.readlines()
+            i_offending = next(i for i, l in enumerate(lines) if ".tar.gz" in l)
+            lines[i_offending] = (
+                "  atl.installsmthg_pre(ctx,"
+                "'http://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio3280.tar.gz',"
+                "'cfitsio3280.tar.gz')\n")
+        with open(cfitsio_filename, "w") as cfitsio_file:
+            cfitsio_file.write("".join(lines))
+
     cwd = os.getcwd()
-    os.chdir(os.path.join(path, "plc-2.0"))
-    process = Popen(
-        ["./waf", "configure", "--install_all_deps"], stdout=PIPE, stderr=PIPE)
-    out, err = process.communicate()
-    if err or not out.split("\n")[-2].startswith("'configure' finished successfully"):
-        print(out)
-        print(err)
-        log.error("Configuration failed!")
-        return False
-    log.info("clik: compiling...")
-    process2 = Popen(["./waf", "install"], stdout=PIPE, stderr=PIPE)
-    out2, err2 = process2.communicate()
-    # We don't check that err2" is empty, because harmless warnings are included there.
-    if not out2.split("\n")[-2].startswith("'install' finished successfully"):
-        print(out2)
-        print(err2)
-        log.error("Compilation failed!")
-        return False
-    os.chdir(cwd)
+    try:
+        os.chdir(source_dir)
+        log.info("clik: configuring... (and maybe installing dependencies...)")
+        if not execute(["./waf", "configure", "--install_all_deps"]):
+            log.error("Configuration failed!")
+            return False
+
+        log.info("clik: compiling...")
+        if not execute(["./waf", "install"]):
+            log.error("Compilation failed!")
+            return False
+    finally:
+        os.chdir(cwd)
     log.info("clik: finished!")
     return True
 
@@ -383,12 +432,19 @@ def is_installed(**kwargs):
     return result
 
 
+_clik_install_failed = False
+
+
 def install(path=None, name=None, force=False, code=True, data=True,
             no_progress_bars=False):
     log = logging.getLogger(name)
     import platform
     if platform.system() == "Windows":
         log.error("Not compatible with Windows.")
+        return False
+    global _clik_install_failed
+    if _clik_install_failed:
+        log.info("Previous clik install failed, skipping")
         return False
     # Create common folders: all planck likelihoods share install folder for code and data
     paths = {}
@@ -404,7 +460,8 @@ def install(path=None, name=None, force=False, code=True, data=True,
         success *= install_clik(paths["code"], no_progress_bars=no_progress_bars)
         if not success:
             log.warning("clik code installation failed! "
-                        "Try configuring+compiling by hand at "+paths["code"])
+                        "Try configuring+compiling by hand at " + paths["code"])
+        _clik_install_failed = True
     if data:
         # 2nd test, in case the code wasn't there but the data is:
         if force or not is_installed(path=path, name=name, code=False, data=True):

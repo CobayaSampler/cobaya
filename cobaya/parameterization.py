@@ -237,10 +237,10 @@ class Parameterization(object):
                 if p in resolved:
                     continue
                 args = {p:
-                        self._constant.get(
-                            p, self._input.get(
-                                p, sampled_params_values.get(p, None)))
-                        for p in self._input_args[p]}
+                    self._constant.get(
+                        p, self._input.get(
+                            p, sampled_params_values.get(p, None)))
+                    for p in self._input_args[p]}
                 if not all([isinstance(v, Number) for v in args.values()]):
                     continue
                 try:

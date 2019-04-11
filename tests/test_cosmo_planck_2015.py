@@ -1,15 +1,18 @@
 # Tries to evaluate the likelihood at LCDM's best fit of Planck 2015, with CAMB and CLASS
-
+from __future__ import absolute_import
 import pytest
 from copy import deepcopy
 
-from common_cosmo import body_of_test
+from .common_cosmo import body_of_test
 from cobaya.cosmo_input import cmb_precision
 
 # Generating plots in Travis
 import matplotlib
 
 matplotlib.use('agg')
+
+camb_extra = {"halofit_version": "takahashi", "bbn_predictor": "BBN_fitting_parthenope"}
+camb_extra.update(cmb_precision["camb"])
 
 # Derived parameters not understood by CLASS
 # https://wiki.cosmos.esa.int/planckpla2015/images/b/b9/Parameter_tag_definitions_2015.pdf
@@ -21,31 +24,28 @@ classy_unknown = ["zstar", "rstar", "thetastar", "DAstar", "zdrag",
 classy_extra_tolerance = 0.2
 
 
-@pytest.mark.py3incompatible
 def test_planck_2015_t_camb(modules):
     best_fit = params_lowl_highTT
     info_likelihood = lik_info_lowl_highTT
-    info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
+    info_theory = {"camb": {"extra_args": camb_extra}}
     best_fit_derived = derived_lowl_highTT
     body_of_test(modules, best_fit, info_likelihood, info_theory,
                  chi2_lowl_highTT, best_fit_derived)
 
 
-@pytest.mark.py3incompatible
 def test_planck_2015_p_camb(modules):
     best_fit = params_lowTEB_highTTTEEE
     info_likelihood = lik_info_lowTEB_highTTTEEE
-    info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
+    info_theory = {"camb": {"extra_args": camb_extra}}
     best_fit_derived = derived_lowTEB_highTTTEEE
     body_of_test(modules, best_fit, info_likelihood, info_theory,
                  chi2_lowTEB_highTTTEEE, best_fit_derived)
 
 
-@pytest.mark.py3incompatible
 def test_planck_2015_l_camb(modules):
     best_fit = params_lensing
     info_likelihood = lik_info_lensing
-    info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
+    info_theory = {"camb": {"extra_args": camb_extra}}
     best_fit_derived = derived_lensing
     body_of_test(modules, best_fit, info_likelihood, info_theory,
                  chi2_lensing, best_fit_derived)
@@ -58,13 +58,12 @@ def test_planck_2015_l2_camb(modules):
     info_likelihood = {lik_name: lik_info_lensing[clik_name]}
     chi2_lensing_cmblikes = deepcopy(chi2_lensing)
     chi2_lensing_cmblikes[lik_name] = chi2_lensing[clik_name]
-    info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
+    info_theory = {"camb": {"extra_args": camb_extra}}
     best_fit_derived = derived_lensing
     body_of_test(modules, best_fit, info_likelihood, info_theory,
                  chi2_lensing_cmblikes, best_fit_derived)
 
 
-@pytest.mark.py3incompatible
 def test_planck_2015_t_classy(modules):
     best_fit = params_lowl_highTT
     info_likelihood = lik_info_lowl_highTT
@@ -78,7 +77,6 @@ def test_planck_2015_t_classy(modules):
                  chi2_lowl_highTT_classy, best_fit_derived)
 
 
-@pytest.mark.py3incompatible
 def test_planck_2015_p_classy(modules):
     best_fit = params_lowTEB_highTTTEEE
     info_likelihood = lik_info_lowTEB_highTTTEEE
@@ -92,7 +90,6 @@ def test_planck_2015_p_classy(modules):
                  chi2_lowTEB_highTTTEEE_classy, best_fit_derived)
 
 
-@pytest.mark.py3incompatible
 def test_planck_2015_l_classy(modules):
     best_fit = params_lensing
     info_likelihood = lik_info_lensing
@@ -185,7 +182,7 @@ lik_info_lowTEB_highTTTEEE = {"planck_2015_lowTEB": None,
 
 chi2_lowTEB_highTTTEEE = {"planck_2015_lowTEB": 10496.93,
                           "planck_2015_plikHM_TTTEEE": 2431.65,
-                          "tolerance": 0.1}
+                          "tolerance": 0.15}
 
 params_lowTEB_highTTTEEE = {
     # Sampled
@@ -254,7 +251,7 @@ derived_lowTEB_highTTTEEE = {
 
 lik_info_lensing = {"planck_2015_lensing": None}
 
-chi2_lensing = {"planck_2015_lensing": 9.78, "tolerance": 0.07}
+chi2_lensing = {"planck_2015_lensing": 9.78, "tolerance": 0.09}
 
 params_lensing = {
     # Sampled

@@ -48,7 +48,7 @@ RUN sed -i 's/# \(.*multiverse$\)/\1/g' /etc/apt/sources.list && \
 # Python requisites -- LC_ALL=C: Necessary just for pip <= 8.1.2 (Xenial version)
 ENV LC_ALL C
 RUN pip install --upgrade pip
-RUN pip install pytest-xdist matplotlib cython pyfits --upgrade
+RUN pip install pytest-xdist matplotlib cython astropy --upgrade
 # Prepare environment and tree for modules -----------------------------------
 ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/lib
 ENV CONTAINED TRUE

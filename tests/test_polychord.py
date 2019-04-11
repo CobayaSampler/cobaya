@@ -1,9 +1,10 @@
-from __future__ import division, print_function
+from __future__ import absolute_import, division, print_function
 
 import pytest
 from flaky import flaky
 
-from common_sampler import body_of_test, body_of_test_speeds
+from .common_sampler import body_of_test, body_of_test_speeds
+
 
 ### @pytest.mark.mpi
 
