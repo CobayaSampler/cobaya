@@ -224,6 +224,10 @@ parameters:
   having being assigned a fixed value or a function. Here, ``x`` would be an input
   parameter, but not ``logx``.
 
+.. image:: ./img/diagram.svg
+   :align: center
+   :width: 60%
+
 We can use a similar approach to define dynamical **derived** parameters, which can depend
 on *input* and *sampled* parameters. To distinguish their notation from that of input
 parameters, we insert the functions defining them under a ``derived`` property

@@ -1,8 +1,6 @@
-# CHANGELOG
+## 1.0.4 – 2019-04-12
 
-## 1.1beta – [no release date yet]
-
-(Among many bugfixes...)
+### Many bugfixes -- special thanks to Guadalupe Cañas-Herrera and Vivian Miranda!
 
 ### I/O
 

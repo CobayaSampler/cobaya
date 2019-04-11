@@ -16,7 +16,7 @@ import os
 from collections import OrderedDict as odict
 
 # Local
-from cobaya.tools import get_folder, make_header
+from cobaya.tools import get_folder, make_header, warn_deprecation
 from cobaya.input import get_modules
 
 
@@ -53,6 +53,7 @@ def prettyprint_citation(blocks_text):
 def citation_script():
     from cobaya.mpi import am_single_or_primary_process
     if am_single_or_primary_process():
+        warn_deprecation()
         # Configure the logger ASAP
         from cobaya.log import logger_setup
         logger_setup()

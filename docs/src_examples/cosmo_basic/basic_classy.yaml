@@ -1,33 +1,66 @@
-likelihood: {planck_2015_lowTEB: null, planck_2015_plikHM_TTTEEE: null, planck_2015_lensing: null}
+likelihood:
+  planck_2015_lowTEB:
+  planck_2015_plikHM_TTTEEE:
+  planck_2015_lensing:
 params:
   logA:
-    prior: {min: 2, max: 4}
-    ref: {dist: norm, loc: 3.1, scale: 0.001}
+    prior:
+      min: 2
+      max: 4
+    ref:
+      dist: norm
+      loc: 3.1
+      scale: 0.001
     proposal: 0.001
     latex: \log(10^{10} A_\mathrm{s})
     drop: true
-  A_s: {value: 'lambda logA: 1e-10*np.exp(logA)', latex: 'A_\mathrm{s}'}
+  A_s:
+    value: 'lambda logA: 1e-10*np.exp(logA)'
+    latex: A_\mathrm{s}
   n_s:
-    prior: {min: 0.8, max: 1.2}
-    ref: {dist: norm, loc: 0.96, scale: 0.004}
+    prior:
+      min: 0.8
+      max: 1.2
+    ref:
+      dist: norm
+      loc: 0.96
+      scale: 0.004
     proposal: 0.002
     latex: n_\mathrm{s}
   theta_s_1e2:
-    prior: {min: 0.5, max: 10}
-    ref: {dist: norm, loc: 1.0418, scale: 0.0004}
+    prior:
+      min: 0.5
+      max: 10
+    ref:
+      dist: norm
+      loc: 1.0418
+      scale: 0.0004
     proposal: 0.0002
     latex: 100\theta_\mathrm{s}
     drop: true
-  100*theta_s: {value: 'lambda theta_s_1e2: theta_s_1e2', derived: false}
-  H0: {latex: H_0}
+  100*theta_s:
+    value: 'lambda theta_s_1e2: theta_s_1e2'
+    derived: false
+  H0:
+    latex: H_0
   omega_b:
-    prior: {min: 0.005, max: 0.1}
-    ref: {dist: norm, loc: 0.0221, scale: 0.0001}
+    prior:
+      min: 0.005
+      max: 0.1
+    ref:
+      dist: norm
+      loc: 0.0221
+      scale: 0.0001
     proposal: 0.0001
     latex: \Omega_\mathrm{b} h^2
   omega_cdm:
-    prior: {min: 0.001, max: 0.99}
-    ref: {dist: norm, loc: 0.12, scale: 0.001}
+    prior:
+      min: 0.001
+      max: 0.99
+    ref:
+      dist: norm
+      loc: 0.12
+      scale: 0.001
     proposal: 0.0005
     latex: \Omega_\mathrm{c} h^2
   Omega_m: {latex: '\Omega_\mathrm{m}'}
@@ -37,8 +70,13 @@ params:
   Omega_Lambda: {latex: \Omega_\Lambda}
   YHe: {latex: 'Y_\mathrm{P}'}
   tau_reio:
-    prior: {min: 0.01, max: 0.8}
-    ref: {dist: norm, loc: 0.09, scale: 0.01}
+    prior:
+      min: 0.01
+      max: 0.8
+    ref:
+      dist: norm
+      loc: 0.09
+      scale: 0.01
     proposal: 0.005
     latex: \tau_\mathrm{reio}
   z_reio: {latex: 'z_\mathrm{re}'}
@@ -46,7 +84,10 @@ params:
       chi2__planck_2015_lensing: sum([chi2__planck_2015_lowTEB, chi2__planck_2015_plikHM_TTTEEE,
       chi2__planck_2015_lensing])', latex: '\chi^2_\mathrm{CMB}'}
 sampler:
-  mcmc: {covmat: auto, drag: true, proposal_scale: 1.9}
+  mcmc:
+    covmat: auto
+    drag: true
+    proposal_scale: 1.9
 theory:
   classy:
     extra_args: {N_ncdm: 1, N_ur: 2.0328}
