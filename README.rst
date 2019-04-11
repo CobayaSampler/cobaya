@@ -62,7 +62,7 @@ Thanks to `Julien Lesgourgues`_ for support on interfacing CLASS_, and to `Guada
 .. _GetDist: https://github.com/cmbant/getdist
 .. _PolyChord: https://ccpforge.cse.rl.ac.uk/gf/project/polychord
 .. _`Guadalupe Cañas Herrera`: https://gcanasherrera.github.io/pages/about-me.html#about-me
--- _`Vivian Miranda`: https://github.com/vivianmiranda
+.. _`Vivian Miranda`: https://github.com/vivianmiranda
 
 ===================
 
