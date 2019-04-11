@@ -21,7 +21,7 @@ from six import string_types
 
 # Local
 from cobaya.log import logger_setup, HandledException
-from cobaya.tools import get_folder, make_header
+from cobaya.tools import get_folder, make_header, warn_deprecation
 from cobaya.input import get_modules
 from cobaya.conventions import _package, _code, _data, _likelihood, _external
 from cobaya.conventions import _modules_path_arg, _path_install
@@ -195,6 +195,7 @@ def pip_install(packages):
 def install_script():
     from cobaya.mpi import am_single_or_primary_process
     if not am_single_or_primary_process():
+        warn_deprecation()
         # Configure the logger ASAP
         logger_setup()
         log = logging.getLogger(__name__.split(".")[-1])

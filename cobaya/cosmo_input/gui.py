@@ -200,6 +200,7 @@ class MainWindow(QWidget):
 
 
 def gui_script():
+    warn_deprecation()
     try:
         app = QApplication(sys.argv)
     except NameError:
