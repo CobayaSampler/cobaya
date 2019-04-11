@@ -25,6 +25,7 @@ from cobaya.log import logger_setup
 from cobaya.yaml import yaml_dump
 from cobaya.input import get_full_info
 from cobaya.mpi import import_MPI, am_single_or_primary_process
+from cobaya.tools import warn_deprecation
 
 
 def run(info):
@@ -71,6 +72,7 @@ def run(info):
 
 # Command-line script
 def run_script():
+    warn_deprecation()
     import os
     import argparse
     parser = argparse.ArgumentParser(description="Cobaya's run script.")

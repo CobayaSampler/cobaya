@@ -28,6 +28,7 @@ from cobaya.yaml import yaml_dump
 from cobaya.install import install
 from cobaya.conventions import _modules_path, _products_path, _code, _data
 from cobaya.conventions import _requirements_file, _help_file, _modules_path_arg
+from cobaya.tools import warn_deprecation
 
 log = logging.getLogger(__name__.split(".")[-1])
 
@@ -255,6 +256,7 @@ def create_singularity_image(filenames, MPI_version=None):
 # Command-line scripts ###################################################################
 
 def create_image_script():
+    warn_deprecation()
     logger_setup()
     parser = argparse.ArgumentParser(description=(
         "Cobaya's tool for preparing Docker (for Shifter) and Singularity images."))
@@ -275,6 +277,7 @@ def create_image_script():
 
 
 def prepare_data_script():
+    warn_deprecation()
     logger_setup()
     if "CONTAINED" not in os.environ:
         log.error("This command should only be run within a container. "

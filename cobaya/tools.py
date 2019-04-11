@@ -20,13 +20,14 @@ import scipy.stats as stats  # don't delete: necessary for get_external_function
 from collections import Mapping, OrderedDict as odict
 from ast import parse
 if six.PY3:
-    from inspect import getfullargspec as getargspec
+    from inspect import cleandoc, getfullargspec as getargspec
     from math import gcd
 else:
-    from inspect import getargspec
+    from inspect import cleandoc, getargspec
     from fractions import gcd
 
 # Local
+from cobaya import __obsolete__
 from cobaya.conventions import _package, subfolders, _p_dist, _likelihood, _p_value
 from cobaya.log import HandledException
 
@@ -35,6 +36,18 @@ import logging
 
 log = logging.getLogger(__name__.split(".")[-1])
 
+# Deepcopy workaround:
+def deepcopyfix(olddict):
+    if not hasattr(olddict, "keys"):
+        return deepcopy(olddict)
+    newdict={}
+    for key in olddict:
+        if(key=='theory' or key=='instance' or key=='external'):
+            newdict[key]=olddict[key]
+        else:
+            #print(key)
+            newdict[key]=deepcopy(olddict[key])
+    return newdict
 
 def get_folder(name, kind, sep=os.sep, absolute="True"):
     """
@@ -302,3 +315,38 @@ def relative_to_int(numbers, precision=1/10):
     numbers = np.array(np.round(np.array(numbers) / min(numbers) / precision), dtype=int)
     return np.array(
         numbers / np.ufunc.reduce(np.frompyfunc(gcd, 2, 1), numbers), dtype=int)
+
+def create_banner(msg):
+    """
+    Puts message into an attention-grabbing banner.
+    """
+    msg_clean = cleandoc(msg)
+    longest_line_len = max([len(line) for line in msg_clean.split("\n")])
+    return ("*"*longest_line_len + "\n" + msg_clean + "\n" + "*"*longest_line_len)
+
+def warn_deprecation_python2():
+    msg = """
+    *WARNING*: Python 2 support will eventually be dropped
+    (it is already unsupported by many scientific Python modules).
+
+    Please use Python 3!
+
+    In some systems, the Python 3 command may be python3 instead of python.
+    If that is the case, use pip3 instead of pip to install Cobaya.
+    """
+    if not six.PY3:
+        print(create_banner(msg))
+
+def warn_deprecation_version():
+    msg = """
+    *WARNING*: You are using an obsolete version of Cobaya, which is no loger maintained.
+
+    Please, update asap to the last version (e.g. with ``pip install cobaya --upgrade``).
+    """
+    if __obsolete__:
+        print(create_banner(msg))
+
+
+def warn_deprecation():
+    warn_deprecation_python2()
+    warn_deprecation_version()

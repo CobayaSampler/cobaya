@@ -1,8 +1,44 @@
 # CHANGELOG
 
-## 1.1beta – [no release date yet]
+## 1.1.0 – 2019-04-12
 
-(Among many bugfixes...)
+### Python 3 compatibility – lots of fixes
+
+### Cosmological likelihoods
+
+#### Planck
+
+- clik code updated for compatibility with Python 3 and modern gcc versions
+
+### Cosmological theory codes
+
+#### camb
+
+- Updated to 1.0 (installing from master branch, considered stable)
+
+#### classy
+
+- Updated to ...
+- Added P(k) interpolator
+
+### Samplers
+
+#### MCMC
+
+- Manual parameter speed-blocking.
+
+#### PolyChord
+
+- Now installable with `cobaya-install polychord --modules [/path]`
+
+### Cosmology input generator
+
+- Added "citation" tab.
+
+
+## 1.0.4 – 2019-04-11
+
+### Many bugfixes -- special thanks to Guadalupe Cañas-Herrera, Vivian Miranda!
 
 ### I/O
 

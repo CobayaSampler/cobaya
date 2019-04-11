@@ -33,11 +33,11 @@ Release checklist
 -----------------
 
 + Make sure all test pass in Travis (or the package won't be pushed to PyPI).
-+ Bump version number in ``__init__.py``.
++ Bump version number in ``__init__.py`` (and make ``__obsolete__ = True`` if unmaintained version)
 + Update year of copyright in ``__init__.py``.
 + Update year of copyright in ``LICENCE.txt``.
 + Commit + tag with new version + ``git push`` + ``git push --tags``
-      
+
 
 Notes on some design choices (some a bit old)
 ---------------------------------------------

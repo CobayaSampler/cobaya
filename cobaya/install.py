@@ -23,7 +23,7 @@ from pkg_resources import parse_version
 
 # Local
 from cobaya.log import logger_setup, HandledException
-from cobaya.tools import get_folder, make_header
+from cobaya.tools import get_folder, make_header, warn_deprecation
 from cobaya.input import get_modules
 from cobaya.conventions import _package, _code, _data, _likelihood, _external
 from cobaya.conventions import _modules_path_arg, _path_install
@@ -217,6 +217,7 @@ def check_gcc_version(min_version="6.4", error_returns=None):
 def install_script():
     from cobaya.mpi import am_single_or_primary_process
     if am_single_or_primary_process():
+        warn_deprecation()
         # Configure the logger ASAP
         logger_setup()
         log = logging.getLogger(__name__.split(".")[-1])
