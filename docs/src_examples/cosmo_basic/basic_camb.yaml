@@ -127,4 +127,6 @@ theory:
     extra_args:
       num_massive_neutrinos: 1
       nnu: 3.046
-      theta_H0_range: [40, 100]
+      theta_H0_range:
+      - 40
+      - 100

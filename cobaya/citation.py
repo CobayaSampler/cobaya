@@ -54,6 +54,7 @@ def citation_script():
     warn_deprecation()
     from cobaya.mpi import am_single_or_primary_process
     if am_single_or_primary_process():
+        warn_deprecation()
         # Configure the logger ASAP
         from cobaya.log import logger_setup
         logger_setup()

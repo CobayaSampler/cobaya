@@ -285,6 +285,7 @@ def KL_norm(m1=None, S1=np.array([]), m2=None, S2=np.array([])):
                 dim + np.log(np.linalg.det(S2) / np.linalg.det(S1)))
     return KL
 
+
 def compare_params_lists(list_A, list_B):
     """
     Compares two parameter lists, and returns a dict with the following keys
@@ -307,6 +308,7 @@ def compare_params_lists(list_A, list_B):
             result["%s_but_not_%s"%(n1,n2)] = list(missing)
     return result
 
+  
 def relative_to_int(numbers, precision=1/10):
     """
     Turns relative numbers (e.g. relative speeds) into integer,
@@ -316,6 +318,7 @@ def relative_to_int(numbers, precision=1/10):
     return np.array(
         numbers / np.ufunc.reduce(np.frompyfunc(gcd, 2, 1), numbers), dtype=int)
 
+
 def create_banner(msg):
     """
     Puts message into an attention-grabbing banner.
@@ -324,6 +327,7 @@ def create_banner(msg):
     longest_line_len = max([len(line) for line in msg_clean.split("\n")])
     return ("*"*longest_line_len + "\n" + msg_clean + "\n" + "*"*longest_line_len)
 
+  
 def warn_deprecation_python2():
     msg = """
     *WARNING*: Python 2 support will eventually be dropped
@@ -336,6 +340,7 @@ def warn_deprecation_python2():
     """
     if not six.PY3:
         print(create_banner(msg))
+
 
 def warn_deprecation_version():
     msg = """

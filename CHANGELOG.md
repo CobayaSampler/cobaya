@@ -1,5 +1,3 @@
-# CHANGELOG
-
 ## 1.1.0 – 2019-04-12
 
 ### Python 3 compatibility – lots of fixes
@@ -38,7 +36,7 @@
 
 ## 1.0.4 – 2019-04-11
 
-### Many bugfixes -- special thanks to Guadalupe Cañas-Herrera, Vivian Miranda!
+### Many bugfixes -- special thanks to Guadalupe Cañas-Herrera and Vivian Miranda!
 
 ### I/O
 

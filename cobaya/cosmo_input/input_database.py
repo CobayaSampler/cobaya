@@ -182,7 +182,7 @@ matter = odict([
                 [_p_label, r"\Omega_\mathrm{b} h^2"]])],
             ["omegach2", odict([
                 [_p_value, ("lambda omegam, omegab, mnu, H0: "
-                            "(omegam-omegab-(mnu*(3.046/3)**0.75)/94.07)*(H0/100)**2")],
+                            "(omegam-omegab)*(H0/100)**2-(mnu*(3.046/3)**0.75)/94.07")],
                 [_p_label, r"\Omega_\mathrm{c} h^2"]])]
         ])}]])
 for m in matter.values():
