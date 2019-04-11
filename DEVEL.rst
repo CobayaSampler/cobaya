@@ -138,7 +138,7 @@ Unfortunately, for many samplers, such as basic MH-MCMC, we do not know a priori
 Reparameterization layer
 """"""""""""""""""""""""
 
-**Statistical parameters** are specified according to their rôles for the **sampler**: as *fixed*, *sampled* and *derived*. On the other hand, the **likelihood** (and the **theory code**, if present) cares only about input and output arguments. In a trivial case, those would correspond respectively to *fixed+sampled* and *derived* parameters.
+**Statistical parameters** are specified according to their roles for the **sampler**: as *fixed*, *sampled* and *derived*. On the other hand, the **likelihood** (and the **theory code**, if present) cares only about input and output arguments. In a trivial case, those would correspond respectively to *fixed+sampled* and *derived* parameters.
 
 Actually, this needs not be the case in general, e.g. one may want to fix one or more likelihood arguments to a function of the value of a sampled parameter, or sample from some function or scaling of a likelihood argument, instead of from the likelihood argument directly. The **reparameterization layers** allow us to specify this non-trivial behaviour at run-time (i.e. in the *input*), instead of  having to change the likelihood code to make it understand different parameterizations or impose certain conditions as fixed input arguments.
 

@@ -10,7 +10,7 @@ Basic parameter specification
 
 The ``params`` block contains all the information intrinsic
 to the parameters of the model: their prior pdf and reference pdf, their latex labels,
-and useful properties for particular samplers (e.g. width of a proposal pdf in and MCMC
+and useful properties for particular samplers (e.g. width of a proposal pdf in an MCMC
 -- see the documentation for each sampler).
 The prior and reference pdf are managed by the :class:`Prior` class.
 

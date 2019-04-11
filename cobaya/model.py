@@ -208,6 +208,7 @@ class Model(object):
         of the likelihood (unnormalized, in general), and ``derived_params``
         are the values of the derived parameters in the order given by
         ``list([your_model].parameterization.derived_params())``.
+        If the model contains multiple likelihoods, the sum of the loglikes is returned.
 
         To return just the list of log-likelihood values, make ``return_derived=False``.
 

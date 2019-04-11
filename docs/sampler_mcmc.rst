@@ -136,7 +136,7 @@ In this case, internally, the final covariance matrix of the proposal would be::
      0     0     0.04
 
 
-If the option `learn_proposal` is set to ``True``, the covariance matrix will be updated
+If the option ``learn_proposal`` is set to ``True``, the covariance matrix will be updated
 regularly. This means that accuracy of the initial covariance is not critical, and even if you do not initially know
 the covariance, it will be adaptively learnt (just make sure your ``proposal`` widths are sufficiently small that
 chains can move and hence explore the local shape; if your widths are too wide the parameter may just remain stuck).

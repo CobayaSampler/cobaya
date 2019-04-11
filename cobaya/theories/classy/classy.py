@@ -36,7 +36,7 @@ You can specify any parameter that CLASS understands in the ``params`` block:
    theory:
      classy:
        extra_args:
-         [any param that CLASS understands, for FIXED and PRECISION]
+         [any param that CLASS understands]
 
    params:
        [any param that CLASS understands, fixed, sampled or derived]
