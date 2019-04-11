@@ -513,7 +513,7 @@ class classy(_cosmo):
 # Name of the Class repo/folder and version to download
 classy_repo_name = "lesgourg/class_public"
 classy_repo_rename = "classy"
-classy_repo_version = "v2.7.1"
+classy_repo_version = "v2.7.2"
 
 
 def is_installed(**kwargs):
