@@ -21,10 +21,13 @@ from collections import Mapping, OrderedDict as odict
 from ast import parse
 if six.PY3:
     from inspect import cleandoc, getfullargspec as getargspec
+    from math import gcd
 else:
     from inspect import cleandoc, getargspec
+    from fractions import gcd
 
 # Local
+from cobaya import __obsolete__
 from cobaya.conventions import _package, subfolders, _p_dist, _likelihood, _p_value
 from cobaya.log import HandledException
 
@@ -33,6 +36,18 @@ import logging
 
 log = logging.getLogger(__name__.split(".")[-1])
 
+# Deepcopy workaround:
+def deepcopyfix(olddict):
+    if not hasattr(olddict, "keys"):
+        return deepcopy(olddict)
+    newdict={}
+    for key in olddict:
+        if(key=='theory' or key=='instance' or key=='external'):
+            newdict[key]=olddict[key]
+        else:
+            #print(key)
+            newdict[key]=deepcopy(olddict[key])
+    return newdict
 
 def get_folder(name, kind, sep=os.sep, absolute="True"):
     """
@@ -271,6 +286,39 @@ def KL_norm(m1=None, S1=np.array([]), m2=None, S2=np.array([])):
     return KL
 
 
+def compare_params_lists(list_A, list_B):
+    """
+    Compares two parameter lists, and returns a dict with the following keys
+    (only present if applicable):
+
+      `duplicates_[A|B]`: duplicate elemnts in list 1|2
+    """
+    result = {}
+    names = ["A", "B"]
+    # Duplicates
+    list_A_copy, list_B_copy = list_A[:], list_B[:]
+    for n,l in zip(names, [list_A_copy, list_B_copy]):
+        [l.pop(i) for i in sorted([l.index(x) for x in set(l)])[::-1]]
+        if l:
+            result["duplicate_%s"%n] = list(set(l))
+    sets = {"A": set(list_A), "B": set(list_B)}
+    for n1,n2 in [["A", "B"], ["B", "A"]]:
+        missing = sets[n1].difference(sets[n2])
+        if missing:
+            result["%s_but_not_%s"%(n1,n2)] = list(missing)
+    return result
+
+  
+def relative_to_int(numbers, precision=1/10):
+    """
+    Turns relative numbers (e.g. relative speeds) into integer,
+    up to some given `precision` on differences.
+    """
+    numbers = np.array(np.round(np.array(numbers) / min(numbers) / precision), dtype=int)
+    return np.array(
+        numbers / np.ufunc.reduce(np.frompyfunc(gcd, 2, 1), numbers), dtype=int)
+
+
 def create_banner(msg):
     """
     Puts message into an attention-grabbing banner.
@@ -279,7 +327,7 @@ def create_banner(msg):
     longest_line_len = max([len(line) for line in msg_clean.split("\n")])
     return ("*"*longest_line_len + "\n" + msg_clean + "\n" + "*"*longest_line_len)
 
-
+  
 def warn_deprecation_python2():
     msg = """
     *WARNING*: Python 2 support will eventually be dropped

@@ -18,17 +18,25 @@ Creating the input info for a realistic cosmological case from scratch would tak
 
    If ``PySide`` is not installed, this will fail. To fix it:
 
-   **Debian/Ubuntu**
-
    .. code:: bash
 
-      $ sudo apt install python-pyside  # or python3-pyside if using Python 3
+      $ pip3 install pyside2
 
-   **Mac**
+   .. warning::
 
-   .. code:: bash
+      In Python 2 (soon to be discontinued!):
 
-      $ pip install PySide  # add --user if it fails
+      + Debian/Ubuntu
+
+      .. code:: bash
+
+         $ sudo apt install python-pyside  # or python3-pyside if using Python 3
+
+      + Mac
+
+      .. code:: bash
+
+         $ pip install PySide2  # add --user if it fails
 
 Start by choosing a preset, maybe modify some aspects using the options provided, and copy or save the generated input to a file, either in ``yaml`` form or as a python dictionary.
 

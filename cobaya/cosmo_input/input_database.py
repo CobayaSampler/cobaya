@@ -299,7 +299,20 @@ dark_energy = odict([
             ["w", odict([
                 [_prior, odict([["min", -3], ["max", -0.333]])],
                 [_p_ref, odict([[_p_dist, "norm"], ["loc", -0.99], ["scale", 0.02]])],
-                [_p_proposal, 0.02], [_p_label, r"w_\mathrm{DE}"]])]])}]])
+                [_p_proposal, 0.02], [_p_label, r"w_\mathrm{DE}"]])]])}],
+    ["de_w_wa", {
+        _desc: "Varying constant eq of state with w(a) = w0 + (1-a) wa",
+        _theory: {_camb: None,
+                  _classy: {_params: {"Omega_Lambda": 0}}},
+        _params: odict([
+            ["w", odict([
+                [_prior, odict([["min", -3], ["max", 1]])],
+                [_p_ref, odict([[_p_dist, "norm"], ["loc", -0.99], ["scale", 0.02]])],
+                [_p_proposal, 0.02], [_p_label, r"w_{0,\mathrm{DE}}"]])],
+            ["wa", odict([
+                [_prior, odict([["min", -3], ["max", 2]])],
+                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0], ["scale", 0.05]])],
+                [_p_proposal, 0.05], [_p_label, r"w_{a,\mathrm{DE}}"]])]])}]])
 
 # BBN
 bbn_derived_camb = odict([
@@ -417,9 +430,9 @@ for m in like_cmb.values():
 for combination, info in like_cmb.items():
     if info:
         likes = ", ".join([_chi2 + _separator + like for like in info[_likelihood]])
-        info[_params] = odict([
+        info[_params].update(odict([
             ["chi2__CMB", odict([[_p_derived, "lambda %s: sum([%s])" % (likes, likes)],
-                                 [_p_label, r"\chi^2_\mathrm{CMB}"]])]])
+                                 [_p_label, r"\chi^2_\mathrm{CMB}"]])]]))
 
 like_bao = odict([
     [_none, {}],
@@ -566,5 +579,4 @@ install_basic = {
         "bicep_keck_2015": None,
         "sn_pantheon": None,
         "sdss_dr12_consensus_final": None,
-        "des_y1_joint": None},
-    _sampler: {"polychord": None}}
+        "des_y1_joint": None}}

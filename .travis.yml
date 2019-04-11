@@ -5,45 +5,10 @@ git:
   depth: false
 
 # (Pre)Installation
-# Test matrix for different C & fortran compilers
 matrix:
   include:
-    - addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - gcc-8
-            - gfortran-8
-            - g++-8
-            - openmpi-bin
-            - openmpi-common
-            - libopenmpi-dev
-            - libopenblas-dev
-            - liblapack-dev
-      env:
-        - GCC_VERSION="8"
-        - PYVER="3"
-      python: "3.6"
-    - addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - gcc-7
-            - gfortran-7
-            - g++-7
-            - openmpi-bin
-            - openmpi-common
-            - libopenmpi-dev
-            - libopenblas-dev
-            - liblapack-dev
-      env:
-        - GCC_VERSION="7"
-        - PYDIST="ANACONDA"
-        - PYVER="3"
-      python: "3.7"
-    - addons:
+    - name: "Minimum requisites for Cosmology: gcc-6, Python 2.7"
+      addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
@@ -51,23 +16,48 @@ matrix:
             - gcc-6
             - gfortran-6
             - g++-6
-            - openmpi-bin
-            - openmpi-common
-            - libopenmpi-dev
-            - libopenblas-dev
-            - liblapack-dev
       env:
-        - PYDIST="ANACONDA"
         - GCC_VERSION="6"
         - PYVER="2"
       python: "2.7"
+    - name: "Typical scenario: latest Ubuntu LTS"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - gcc-7
+            - gfortran-7
+            - g++-7
+      env:
+        - GCC_VERSION="7"
+        - PYVER="3"
+      python: "3.6"
+    - name: "Edge scenario: gcc-8, Python 3.7 with Anaconda"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - gcc-8
+            - gfortran-8
+            - g++-8
+      env:
+        - GCC_VERSION="8"
+        - PYVER="3"
+        - PYDIST="ANACONDA"
+      python: "3.7"
 before_install:
-  - mkdir -p gcc-symlinks
-  - ln -s /usr/bin/gfortran-$GCC_VERSION gcc-symlinks/gfortran
-  - ln -s /usr/bin/gcc-$GCC_VERSION gcc-symlinks/gcc
-  - ln -s /usr/bin/g++-$GCC_VERSION gcc-symlinks/g++
-  - export PATH=$PWD/gcc-symlinks:$PATH
+  # Configure right compilers version
+  - mkdir -p gcc-symlinks ;
+    ln -s /usr/bin/gfortran-$GCC_VERSION gcc-symlinks/gfortran ;
+    ln -s /usr/bin/gcc-$GCC_VERSION gcc-symlinks/gcc ;
+    ln -s /usr/bin/g++-$GCC_VERSION gcc-symlinks/g++ ;
+    export PATH=$PWD/gcc-symlinks:$PATH ;
   - gfortran --version
+  # Install rest of system requisites
+  - sudo apt install openmpi-bin openmpi-common libopenmpi-dev libopenblas-dev liblapack-dev
+  # Python requisites
   - if [[ "$PYDIST" == "ANACONDA" ]]; then
       wget https://repo.continuum.io/miniconda/Miniconda$PYVER-latest-Linux-x86_64.sh -O miniconda.sh;
       bash miniconda.sh -b -p $HOME/miniconda;
@@ -75,29 +65,30 @@ before_install:
       hash -r;
       conda config --set always_yes yes --set changeps1 no;
       conda info -a;
-      conda create -q -n test-environment -c defaults python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML pytest-xdist flaky;
+      conda create -q -n test-environment -c defaults python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML pytest pytest-xdist flaky;
       source activate test-environment;
       pip install mpi4py;
     else
       pip install mpi4py pytest-xdist flaky matplotlib;
     fi
   - python --version
-  #install cfitsio until clik fixed
-  - oldpath=`pwd`;
-    wget https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio3280.tar.gz;
-    tar zxvf cfitsio3280.tar.gz;
-    cd cfitsio;
-    ./configure --prefix=/usr;
-    make -j 2;
-    sudo make install;
-    cd $oldpath;
 script:
-  # Installation
-  - python tests/install_for_tests.py ../modules
-  - if [ -n "${CAMB_BRANCH}" ]; then rm -rf ../modules/code/CAMB ; git clone --recursive -b $CAMB_BRANCH https://github.com/cmbant/CAMB ../modules/code/CAMB ; python ../modules/code/CAMB/setup.py build ; fi
-  - pytest tests/ -v -s -k "cosmo" --modules="../modules" --boxed
-  # Non-cosmological tests
-  - pytest tests/ -k "not cosmo" --modules="../modules"
+  - export MODULES="../modules"
+  # General tests:
+  - cobaya-install polychord --modules=$MODULES
+  - pytest tests/ -k "not cosmo" --modules=$MODULES
+  # Cosmology tests:
+  - cobaya-install cosmo --modules=$MODULES --no-progress-bars
+  # Python 2 problem: astropy downgrades pytest
+  - if [[ "$PYVER" == "2" ]]; then
+      pip install pytest-xdist --upgrade ;
+    fi
+  - if [ -n "${CAMB_BRANCH}" ]; then
+      rm -rf $MODULES/code/CAMB ;
+      git clone --recursive -b $CAMB_BRANCH https://github.com/cmbant/CAMB $MODULES/code/CAMB ;
+      python $MODULES/code/CAMB/setup.py build ;
+    fi
+  - pytest tests/ -v -s -k "cosmo" --modules=$MODULES --boxed
 ###############################################################################
 deploy: # only if it builds and if the commit has been tagged
   provider: pypi
@@ -107,7 +98,7 @@ deploy: # only if it builds and if the commit has been tagged
   on:
     tags: true
     python: '3.6'
-    condition: "$GCC_VERSION = 8"
+    condition: "$GCC_VERSION = 7"
     branch: master
     repo: CobayaSampler/cobaya
 ###############################################################################

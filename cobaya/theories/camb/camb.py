@@ -2,13 +2,15 @@
 .. module:: theories.camb
 
 :Synopsis: Managing the CAMB cosmological code
-:Author: Jesus Torrado
+:Author: Jesus Torrado and Antony Lewis
 
 .. |br| raw:: html
 
    <br />
 
 This module imports and manages the CAMB cosmological code.
+It requires CAMB 1.0 or higher (for compatibility with older versions, you can temporarily
+use cobaya 1.0.4, but update asap, since that version is not maintained any more).
 
 .. note::
 
@@ -57,8 +59,8 @@ type ``gfortran --version`` in the shell, and the first line should look like
 Check that ``[gfortran's version]`` is at least 6.4. If you get an error instead, you need
 to install gfortran (contact your local IT service).
 
-CAMB comes with binaries pre-built for Windows, so if you don't need to modify the CAMB source code, no Fortran compiler is
-needed.
+CAMB comes with binaries pre-built for Windows, so if you don't need to modify the CAMB
+source code, no Fortran compiler is needed.
 
 
 Automatic installation
@@ -77,18 +79,29 @@ If you are planning to modify CAMB or use an already modified version,
 you should not use the automatic installation script. Use the installation method that
 best adapts to your needs:
 
-* [**Recommended**]
-  To install an up-to-date CAMB locally and use git to keep track of your changes,
-  `fork the CAMB repository in Github <https://github.com/cmbant/CAMB>`_
-  (follow `this instructions <https://help.github.com/articles/fork-a-repo/>`_) and clone
-  it in some folder of your choice, say ``/path/to/theories/CAMB``:
+* [**Recommended for staying up-to-date**]
+  To install CAMB locally and keep it up-to-date, clone the
+  `CAMB repository in Github <https://github.com/cmbant/CAMB>`_
+  in some folder of your choice, say ``/path/to/theories/CAMB``:
 
   .. code:: bash
 
-      $ cd /path/to/theories/
-      $ git clone --recursive https://[YourGithubUser]@github.com/[YourGithubUser]/CAMB.git
+      $ cd /path/to/theories
+      $ git clone --recursive https://github.com/cmbant/CAMB.git
       $ cd CAMB
       $ python setup.py build
+
+  To update to the last changes in CAMB (master), run ``git pull`` from CAMB's folder and
+  re-build using the last command.
+
+* [**Recommended for modifying CAMB**]
+  First, `fork the CAMB repository in Github <https://github.com/cmbant/CAMB>`_
+  (follow `this instructions <https://help.github.com/articles/fork-a-repo/>`_) and then
+  follow the same steps as above, substituting the second one with:
+
+  .. code:: bash
+
+      $ git clone --recursive https://[YourGithubUser]@github.com/[YourGithubUser]/CAMB.git
 
 * To use your own version, assuming it's placed under ``/path/to/theories/CAMB``,
   just make sure it is compiled (and that the version on top of which you based your
@@ -143,7 +156,7 @@ from numbers import Number
 # Local
 from cobaya.theories._cosmo import _cosmo
 from cobaya.log import HandledException
-from cobaya.install import download_github_release
+from cobaya.install import download_github_release, check_gcc_version
 from cobaya.conventions import _c_km_s, _T_CMB_K
 
 # Result collector
@@ -159,8 +172,14 @@ class camb(_cosmo):
             self.path = os.path.join(
                 self.path_install, "code", camb_repo_name[camb_repo_name.find("/") + 1:])
         if self.path and not os.path.exists(self.path):
-            self.log.info("*local* CAMB not found at " + self.path)
-            self.log.info("Importing *global* CAMB.")
+            # Fail if this was a directly specified path,
+            # or ignore and try to global-import if it came from a path_install
+            if self.path_install:
+                self.log.info("*local* CAMB not found at " + self.path)
+                self.log.info("Importing *global* CAMB.")
+            else:
+                self.log.error("*local* CAMB not found at " + self.path)
+                raise HandledException
         elif self.path:
             self.log.info("Importing *local* CAMB from " + self.path)
             if not os.path.exists(self.path):
@@ -562,6 +581,7 @@ class camb(_cosmo):
 # Name of the Class repo/folder and version to download
 camb_repo_name = "cmbant/CAMB"
 camb_repo_version = "master"
+camb_min_gcc_version = "6.4"
 
 
 def is_installed(**kwargs):
@@ -579,6 +599,14 @@ def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs)
     if not code:
         log.info("Code not requested. Nothing to do.")
         return True
+    gcc_check = check_gcc_version(camb_min_gcc_version, error_returns=-1)
+    if gcc_check == -1:
+        log.warn("Failed to get gcc version (maybe not using gcc?). "
+                 "Going ahead and hoping for the best.")
+    elif not gcc_check:
+        log.error("CAMB requires a gcc version >= %s, "
+                  "which is higher than your current one.", camb_min_gcc_version)
+        raise HandledException
     log.info("Downloading camb...")
     success = download_github_release(
         os.path.join(path, "code"), camb_repo_name, camb_repo_version,
@@ -589,7 +617,7 @@ def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs)
     camb_path = os.path.join(path, "code", camb_repo_name[camb_repo_name.find("/") + 1:])
     log.info("Compiling camb...")
     from subprocess import Popen, PIPE
-    process_make = Popen(["python", "setup.py", "build_cluster"],
+    process_make = Popen([sys.executable, "setup.py", "build_cluster"],
                          cwd=camb_path, stdout=PIPE, stderr=PIPE)
     out, err = process_make.communicate()
     if process_make.returncode:

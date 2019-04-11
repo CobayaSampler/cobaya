@@ -144,16 +144,7 @@ If everything seems to be working fine, but PolyChord is taking too long to conv
 Installation
 ------------
 
-The easiest way to install it is through ``cobaya-install [input.yaml] --modules [/path/to/modules]``, where the ``input.yaml`` contains a mention to ``polychord`` inside the ``sampler`` block, and the installation path of the modules is indicated:
-
-.. code:: yaml
-
-    # Contents of input.yaml
-    modules: /path/to/modules
-    sampler:
-      polychord:
-        # [Polychord options]
-    # ...
+Simply run ``cobaya-install polychord --modules [/path/to/modules]`` (or, instead of ``polychord`` after ``cobaya-install``, mention an input file that uses ``polychord``).
 
 If it has been installed this way, it is not necessary to specify a ``path`` for it, as long as the modules folder has been indicated.
 

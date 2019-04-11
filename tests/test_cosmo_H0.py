@@ -6,8 +6,7 @@ from copy import copy
 
 from cobaya.conventions import _theory, _sampler, _likelihood, _params, _path_install
 from cobaya.run import run
-from .install_for_tests import process_modules_path
-from ._config import skip_theories
+from .common import process_modules_path
 
 fiducial_H0 = 70
 
@@ -32,9 +31,6 @@ def test_H0_docs_camb(modules):
 
 
 def body_of_test(modules, lik_name, theory):
-    if theory in skip_theories:
-        print('Skipping test with %s' % theory)
-        return
     info = {_path_install: process_modules_path(modules),
             _theory: {theory: None},
             _sampler: {"evaluate": None}}

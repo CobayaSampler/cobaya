@@ -13,6 +13,7 @@ from cobaya.yaml import yaml_dump
 from cobaya.cosmo_input import input_database
 from cobaya.cosmo_input.create_input import create_input
 from cobaya.citation import prettyprint_citation, citation
+from cobaya.tools import warn_deprecation
 
 try:
     from PySide.QtGui import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox

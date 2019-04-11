@@ -46,7 +46,7 @@ approximate initial covariance matrix).
 .. _mcmc_callback:
 
 Callback functions
-^^^^^^^^^^^^^^^^^^
+------------------
 
 A callback function can be specified through the ``callback_function`` option. It must be a function of a single argument, which at runtime is the current instance of the ``mcmc`` sampler. You can access its attributes and methods inside your function, including the ``collection`` of chain points and the ``model`` (of which ``prior`` and ``likelihood`` are attributes). For example, the following callback function would print the points added to the chain since the last callback:
 
@@ -59,7 +59,7 @@ The callback function is called every ``callback_every`` points have been added 
 
 
 Initial point and covariance of the proposal pdf
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+------------------------------------------------
 
 The initial points for the chains are sampled from the *reference* pdf
 (see :doc:`params_prior`). The reference pdf can be a fixed point, and in that case the
@@ -155,7 +155,7 @@ also converge). Often removing the first 30% the entire final chains gives good 
 .. _mcmc_speed_hierarchy:
 
 Taking advantage of a speed hierarchy
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------------------
 
 The proposal pdf is *blocked* by speeds, i.e. it allows for efficient sampling of a
 mixture of *fast* and *slow* parameters, such that we can avoid recomputing the slowest
@@ -200,6 +200,36 @@ For example:
 Here, evaluating the theory code is the slowest step, while the ``lik_b`` is faster.
 Likelihood ``lik_a`` is assumed to be as slow as the theory code.
 
+Manual specification of speed-blocking – *new in 1.1*
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+*Automatic* speed-blocking takes advantage of differences in speed *per likelihood* (or theory). If the parameters of your likelihood or theory have some internal speed hierarchy that you would like to utilize (e.g. if your likelihood internally caches the result of a computation depending only on a subset of the likelihood parameters), you can specify a fine-grained list of parameter blocks and their speeds under the ``mcmc`` option ``blocking``.
+
+E.g. if a likelihood depends of parameters ``a``, ``b`` and ``c`` and the cost of varying ``a`` is *twice* as big as the other two, your ``mcmc`` block should look like
+
+.. code-block:: yaml
+
+   mcmc:
+     blocking:
+       - [1, [a]]
+       - [2, [b,c]]
+     oversampling: True  # if desired
+     # or `drag: True`, if 2-blocks only (put fastest last)
+     # [other options...]
+
+.. warning::
+
+   The cost of a parameter block should be the **total** cost of varying one parameter in the block, i.e. it needs to take into account the time needed to re-compute every part of the code that depends (directly or indirectly) on it.
+
+   For example, if varying parameter ``a`` in the example above would also force a re-computation of the part of the code associated to parameters ``b`` and ``c``, then the relative cost of varying the parameters in each block would not be 2-to-1, but (2+1)-to-1, meaning relative speeds would be 1 and 3.
+
+.. note::
+
+   If ``blocking`` is specified, it must contain **all** the sampled parameters.
+
+.. note::
+
+   If automatic learning of the proposal covariance is enabled, after some checkpoint the proposed steps will mix parameters from different blocks, but *always towards faster ones*. Thus, it is important to specify your blocking in **ascending order of speed**, when not prevented by the architecture of your likelihood (e.g. due to internal caching of intermediate results that require some particular order of parameter variation).
 
 Options and defaults
 --------------------

@@ -51,6 +51,7 @@ def prettyprint_citation(blocks_text):
 
 # Command-line script
 def citation_script():
+    warn_deprecation()
     from cobaya.mpi import am_single_or_primary_process
     if am_single_or_primary_process():
         warn_deprecation()

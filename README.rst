@@ -48,7 +48,7 @@ To appropriately cite the modules (samplers, theory codes, likelihoods) that you
 Acknowledgements
 ----------------
 
-Thanks to `Julien Lesgourgues`_ for support on interfacing CLASS_, and to `Guadalupe Cañas Herrera`_ for extensive and somewhat painful testing.
+Thanks to `Julien Lesgourgues`_ for support on interfacing CLASS_, and to `Guadalupe Cañas Herrera`_ and `Vivian Miranda`_ for extensive and somewhat painful testing.
 
 .. _`Jesus Torrado`: https://astronomy.sussex.ac.uk/~jt386
 .. _`Antony Lewis`: https://cosmologist.info
@@ -62,6 +62,7 @@ Thanks to `Julien Lesgourgues`_ for support on interfacing CLASS_, and to `Guada
 .. _GetDist: https://github.com/cmbant/getdist
 .. _PolyChord: https://ccpforge.cse.rl.ac.uk/gf/project/polychord
 .. _`Guadalupe Cañas Herrera`: https://gcanasherrera.github.io/pages/about-me.html#about-me
+-- _`Vivian Miranda`: https://github.com/vivianmiranda
 
 ===================
 

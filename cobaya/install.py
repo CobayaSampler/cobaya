@@ -13,11 +13,13 @@ from __future__ import division
 # Global
 import os
 import sys
+import subprocess
 import traceback
 import logging
 from importlib import import_module
 import shutil
 from six import string_types
+from pkg_resources import parse_version
 
 # Local
 from cobaya.log import logger_setup, HandledException
@@ -119,6 +121,37 @@ def install(*infos, **kwargs):
         raise HandledException
 
 
+def download_file(filename, path, no_progress_bars=False, decompress=False, logger=None):
+    log = logger or logging.getLogger(__name__)
+    try:
+        from wget import download, bar_thermometer
+        wget_kwargs = {"out": path, "bar":
+            (bar_thermometer if not no_progress_bars else None)}
+        filename = download(filename, **wget_kwargs)
+    except:
+        log.error("Error downloading file '%s' to folder '%s'", filename, path)
+        return False
+    finally:
+        print("")
+    log.debug('Got: %s' % filename)
+    if not decompress:
+        return True
+    import tarfile
+    extension = os.path.splitext(filename)[-1][1:]
+    if extension == "tgz":
+        extension = "gz"
+    try:
+        tar = tarfile.open(filename, "r:" + extension)
+        tar.extractall(path)
+        tar.close()
+        os.remove(filename)
+        log.debug('Decompressed: %s' % filename)
+        return True
+    except:
+        log.error("Error decompressing downloaded file! Corrupt file?")
+        return False
+
+
 def download_github_release(directory, repo_name, release_name, repo_rename=None,
                             no_progress_bars=False):
     if "/" in repo_name:
@@ -128,29 +161,10 @@ def download_github_release(directory, repo_name, release_name, repo_rename=None
         github_user = "CobayaSampler"
     if not os.path.exists(directory):
         os.makedirs(directory)
-    try:
-        from wget import download, bar_thermometer
-        wget_kwargs = {"out": directory,
-                       "bar": (bar_thermometer if not no_progress_bars else None)}
-        filename = download(
-            r"https://github.com/" + github_user + "/" + repo_name +
-            "/archive/" + release_name + ".tar.gz", **wget_kwargs)
-        print("")  # force newline after wget
-    except:
-        print("")  # force newline after wget
-        log.error("Error downloading!")
-        return False
-    import tarfile
-    extension = os.path.splitext(filename)[-1][1:]
-    try:
-        if extension == "tgz":
-            extension = "gz"
-        tar = tarfile.open(filename, "r:" + extension)
-        tar.extractall(directory)
-        tar.close()
-        os.remove(filename)
-    except:
-        log.error("Error decompressing downloaded file! Corrupt file?)")
+    filename = (r"https://github.com/" + github_user + "/" + repo_name +
+                "/archive/" + release_name + ".tar.gz")
+    if not download_file(filename, directory, decompress=True,
+                         no_progress_bars=no_progress_bars, logger=log):
         return False
     # Remove version number from directory name
     w_version = next(d for d in os.listdir(directory)
@@ -160,11 +174,11 @@ def download_github_release(directory, repo_name, release_name, repo_rename=None
     if os.path.exists(repo_path):
         shutil.rmtree(repo_path)
     os.rename(os.path.join(directory, w_version), repo_path)
-    log.info("%s %s downloaded and uncompressed correctly.", repo_name, release_name)
+    log.info("%s %s downloaded and decompressed correctly.", repo_name, release_name)
     return True
 
 
-def pip_install(packages):
+def pip_install(packages, upgrade=False):
     """
     Takes package name or list of them.
 
@@ -172,16 +186,30 @@ def pip_install(packages):
 
     Returns exit status.
     """
-    import subprocess
     if hasattr(packages, "split"):
         packages = [packages]
     cmd = [sys.executable, '-m', 'pip', 'install']
     if not os.access(os.path.dirname(sys.executable), os.W_OK):
         cmd += ['--user']
+    if upgrade:
+        cmd += ['--upgrade']
     res = subprocess.call(cmd + packages)
     if res:
         log.error("pip: error installing packages '%s'", packages)
     return res
+
+
+def check_gcc_version(min_version="6.4", error_returns=None):
+    try:
+        version = subprocess.check_output(
+            "gcc -dumpversion", shell=True, stderr=subprocess.STDOUT).decode().strip()
+    except:
+        return error_returns
+    # Change in gcc >= 7: -dumpversion only dumps major version
+    if not "." in version:
+        version = subprocess.check_output(
+            "gcc -dumpfullversion", shell=True, stderr=subprocess.STDOUT).decode().strip()
+    return parse_version(str(min_version)) <= parse_version(version)
 
 
 # Command-line script ####################################################################
@@ -199,7 +227,8 @@ def install_script():
             description="Cobaya's installation tool for external modules.")
         parser.add_argument("files", action="store", nargs="+", metavar="input_file.yaml",
                             help="One or more input files "
-                                 "(or 'cosmo' for a basic collection of cosmological modules)")
+                                 "(or simply 'polychord', or 'cosmo' "
+                                 "for a basic collection of cosmological modules)")
         parser.add_argument("-" + _modules_path_arg[0], "--" + _modules_path_arg,
                             action="store", nargs=1, required=True,
                             metavar="/install/path",
@@ -215,9 +244,11 @@ def install_script():
                                 help="Install data of the modules.", dest=_code)
         arguments = parser.parse_args()
         if arguments.files == ["cosmo"]:
-            log.info("Installing cosmological modules (input files will be ignored")
+            log.info("Installing cosmological modules (input files will be ignored)")
             from cobaya.cosmo_input import install_basic
             infos = [install_basic]
+        elif arguments.files == ["polychord"]:
+            infos = [{"sampler": {"polychord": None}}]
         else:
             from cobaya.input import load_input
             infos = [load_input(f) for f in arguments.files]

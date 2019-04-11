@@ -1,8 +1,7 @@
 """
 Body of the best-fit test for cosmological likelihoods
 """
-from __future__ import absolute_import
-from __future__ import division
+from __future__ import absolute_import, division
 from copy import deepcopy
 
 from cobaya.conventions import _theory, _likelihood, _params, _debug, _path_install
@@ -10,8 +9,7 @@ from cobaya.model import get_model
 from cobaya.input import get_full_info
 from cobaya.cosmo_input import create_input, planck_base_model
 from cobaya.tools import recursive_update
-from .install_for_tests import process_modules_path
-from ._config import skip_theories
+from .common import process_modules_path
 
 # Tolerance for the tests of the derived parameters, in units of the sigma of Planck 2015
 tolerance_derived = 0.055
@@ -21,9 +19,6 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
                  best_fit_derived=None, extra_model={}):
     # Create base info
     theo = list(info_theory)[0]
-    if theo in skip_theories:
-        print('Skipping test with %s' % theo)
-        return
     # In Class, theta_s is exact, but different from the approximate one cosmomc_theta
     # used by Planck, so we take H0 instead
     planck_base_model_prime = deepcopy(planck_base_model)

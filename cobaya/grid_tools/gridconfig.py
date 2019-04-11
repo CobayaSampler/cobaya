@@ -23,6 +23,7 @@ from cobaya.install import install as install_reqs
 from cobaya.grid_tools import batchjob
 from cobaya.cosmo_input import create_input, get_best_covmat
 from cobaya.parameterization import is_sampled_param
+from cobaya.tools import warn_deprecation
 
 
 def getArgs(vals=None):
@@ -44,6 +45,7 @@ def getArgs(vals=None):
 
 
 def MakeGridScript():
+    warn_deprecation()
     args = getArgs()
     args.interactive = True
     makeGrid(**args.__dict__)

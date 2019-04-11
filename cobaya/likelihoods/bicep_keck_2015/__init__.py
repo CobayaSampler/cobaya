@@ -81,6 +81,7 @@ import numpy as np
 # Local
 from cobaya.likelihoods._cmblikes_prototype import _cmblikes_prototype
 from cobaya.conventions import _h_J_s, _kB_J_K, _T_CMB_K
+from cobaya.install import download_file
 
 # Logger
 import logging
@@ -311,29 +312,10 @@ def install(path=None, name=None, force=False, code=False, data=True,
     if not data:
         return True
     log.info("Downloading likelihood data...")
-    try:
-        from wget import download, bar_thermometer
-        wget_kwargs = {"out": full_path,
-                       "bar": (bar_thermometer if not no_progress_bars else None)}
-        # Refuses http[S]!
-        filename = download(r"http://bicepkeck.org/BK15_datarelease/BK15_cosmomc.tgz",
-                            **wget_kwargs)
-        print("")  # force newline after wget
-    except:
-        print("")  # force newline after wget
-        log.error("Error downloading!")
+    # Refuses http[S]!  (check again after new release)
+    filename = r"http://bicepkeck.org/BK15_datarelease/BK15_cosmomc.tgz"
+    if not download_file(filename, full_path, decompress=True, logger=log,
+                         no_progress_bars=no_progress_bars):
         return False
-    import tarfile
-    extension = os.path.splitext(filename)[-1][1:]
-    if extension == "tgz":
-        extension = "gz"
-    tar = tarfile.open(filename, "r:" + extension)
-    try:
-        tar.extractall(full_path)
-        tar.close()
-        os.remove(filename)
-        log.info("Likelihood data downloaded and uncompressed correctly.")
-        return True
-    except:
-        log.error("Error decompressing downloaded file! Corrupt file?)")
-        return False
+    log.info("Likelihood data downloaded and uncompressed correctly.")
+    return True
