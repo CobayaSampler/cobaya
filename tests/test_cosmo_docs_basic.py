@@ -4,6 +4,7 @@ Testing and automatic generation of basic cosmological examples in the docs.
 
 from __future__ import division
 import os
+import pytest
 
 from cobaya.yaml import yaml_dump, yaml_load
 from cobaya.input import is_equal_info
@@ -15,6 +16,7 @@ file_pre = "basic_"
 preset_pre = "planck_2015_lensing_"
 
 
+@pytest.mark.skip
 def test_cosmo_docs_basic():
     flag = True
     for theo in ["camb", "classy"]:
