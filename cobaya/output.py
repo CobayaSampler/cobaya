@@ -30,34 +30,34 @@ from cobaya.mpi import am_single_or_primary_process, get_mpi_comm
 # Logger
 import logging
 
-log = logging.getLogger(__name__.split(".")[-1])
-
 
 class Output(object):
     def __init__(self, output_prefix=None, force_reproducible=_force_reproducible_default,
                  resume=_resume_default, force_output=False):
+        self.log = logging.getLogger("output")
         self.force_reproducible = force_reproducible
         self.folder = os.sep.join(output_prefix.split(os.sep)[:-1]) or "."
         self.prefix = (lambda x: x if x != "." else "")(output_prefix.split(os.sep)[-1])
         self.force_output = force_output
         if resume and force_output and output_prefix:
             # No resume and force at the same time (if output)
-            log.error("Make 'resume: True' or 'force: True', not both at the same time: "
-                      "can't simultaneously overwrite a chain and resume from it.")
+            self.log.error(
+                "Make 'resume: True' or 'force: True', not both at the same time: "
+                "can't simultaneously overwrite a chain and resume from it.")
             raise HandledException
         if not os.path.exists(self.folder):
-            log.debug("Creating output folder '%s'", self.folder)
+            self.log.debug("Creating output folder '%s'", self.folder)
             try:
                 os.makedirs(self.folder)
             except OSError:
-                log.error("".join(["-"] * 20 + ["\n\n"] +
-                                  list(traceback.format_exception(*sys.exc_info())) +
-                                  ["\n"] + ["-"] * 37))
-                log.error("Could not create folder '%s'. "
-                          "See traceback on top of this message.", self.folder)
+                self.log.error("".join(["-"] * 20 + ["\n\n"] +
+                                       list(traceback.format_exception(*sys.exc_info())) +
+                                       ["\n"] + ["-"] * 37))
+                self.log.error("Could not create folder '%s'. "
+                               "See traceback on top of this message.", self.folder)
                 raise HandledException
-        log.info("Products to be written into folder '%s', with prefix '%s'",
-                 self.folder, self.prefix)
+        self.log.info("Products to be written into folder '%s', with prefix '%s'",
+                      self.folder, self.prefix)
         # Prepare file names, and check if chain exists
         info_file_prefix = os.path.join(
             self.folder, self.prefix + (_separator if self.prefix else ""))
@@ -65,15 +65,16 @@ class Output(object):
         self.file_full = info_file_prefix + _full_suffix + _yaml_extensions[0]
         self.resuming = False
         if os.path.isfile(self.file_full):
-            log.info("Found an existing sample with the requested ouput prefix: '%s'",
-                     output_prefix)
+            self.log.info(
+                "Found an existing sample with the requested ouput prefix: '%s'",
+                output_prefix)
             if self.force_output:
-                log.info("Deleting previous chain ('force' was requested).")
+                self.log.info("Deleting previous chain ('force' was requested).")
                 [os.remove(f) for f in [self.file_input, self.file_full]]
             elif resume:
                 # Only in this case we can be sure that we are actually resuming
                 self.resuming = True
-                log.info("Let's try to resume sampling.")
+                self.log.info("Let's try to resume sampling.")
             else:
                 # If only input and full info dumped, overwrite; else fail
                 info_files = [
@@ -82,13 +83,13 @@ class Output(object):
                                       f.startswith(self.prefix) and f not in info_files]
                 if not same_prefix_noinfo:
                     [os.remove(f) for f in [self.file_input, self.file_full]]
-                    log.info("Overwritten old failed chain files.")
+                    self.log.info("Overwritten old failed chain files.")
                 else:
-                    log.error("Delete the previous sample manually, automatically "
-                              "('-%s', '--%s', '%s: True')" % (
-                                  _force[0], _force, _force) +
-                              " or request resuming ('-%s', '--%s', '%s: True')" % (
-                                  _resume[0], _resume, _resume))
+                    self.log.error("Delete the previous sample manually, automatically "
+                                   "('-%s', '--%s', '%s: True')" % (
+                                       _force[0], _force, _force) +
+                                   " or request resuming ('-%s', '--%s', '%s: True')" % (
+                                       _resume[0], _resume, _resume))
                     raise HandledException
         # Output kind and collection extension
         self.kind = "txt"
@@ -119,8 +120,8 @@ class Output(object):
         try:
             old_info = yaml_load_file(self.file_full)
             if not is_equal_info(old_info, full_info_trimmed, strict=False):
-                log.error("Old and new sample information not compatible! "
-                          "Resuming not possible!")
+                self.log.error("Old and new sample information not compatible! "
+                               "Resuming not possible!")
                 raise HandledException
         except IOError:
             # There was no previous chain
@@ -134,7 +135,7 @@ class Output(object):
                         yaml_dump(info, default_flow_style=False,
                                   force_reproducible=self.force_reproducible))
                 except OutputError as e:
-                    log.error(e.message)
+                    self.log.error(e.message)
                     raise HandledException
 
     def prepare_collection(self, name=None, extension=None):
@@ -153,7 +154,8 @@ class OutputDummy(Output):
     """
 
     def __init__(self, *args, **kwargs):
-        log.debug("No output requested. Doing nothing.")
+        self.log = logging.getLogger("output")
+        self.log.debug("No output requested. Doing nothing.")
         # override all methods that actually produce output
         exclude = ["nullfunc"]
         _func_name = "__name__" if six.PY3 else "func_name"

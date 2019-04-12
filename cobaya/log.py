@@ -12,6 +12,7 @@ from __future__ import division
 
 # Global
 import sys
+import six
 import logging
 import traceback
 
@@ -70,13 +71,17 @@ def logger_setup(debug=None, debug_file=None):
     # Custom formatter
     class MyFormatter(logging.Formatter):
         def format(self, record):
-            self._fmt = (
-                    "[" + ("%d : " % get_mpi_rank() if more_than_one_process() else "") +
-                    "%(name)s" + (" %(asctime)s " if debug else "") + "] " +
-                    {logging.ERROR: "*ERROR* ",
-                     logging.WARNING: "*WARNING* "}.get(record.levelno, "") +
-                    "%(message)s")
-            return logging.Formatter.format(self, record)
+            fmt = ((" %(asctime)s " if debug else "") +
+                   "[" + ("%d : " % get_mpi_rank() if more_than_one_process() else "") +
+                   "%(name)s" + "] " +
+                   {logging.ERROR: "*ERROR* ",
+                    logging.WARNING: "*WARNING* "}.get(record.levelno, "") +
+                   "%(message)s")
+            if six.PY3:
+                self._style._fmt = fmt
+            else:
+                self._fmt = fmt
+            return super(MyFormatter, self).format(record)
 
     # Configure stdout handler
     handle_stdout = logging.StreamHandler(sys.stdout)

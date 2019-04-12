@@ -37,8 +37,6 @@ from cobaya.log import HandledException
 # Logger
 import logging
 
-log = logging.getLogger(__name__.split(".")[-1])
-
 # Default options for all subclasses
 class_options = {"speed": -1}
 
@@ -224,10 +222,10 @@ class LikelihoodExternalFunction(Likelihood):
         try:
             return self.external_function(**params_values)
         except:
-            log.error("".join(
+            self.log.error("".join(
                 ["-"] * 16 + ["\n\n"] + list(traceback.format_exception(*sys.exc_info())) +
                 ["\n"] + ["-"] * 37))
-            log.error("The external likelihood '%s' failed at evaluation. "
+            self.log.error("The external likelihood '%s' failed at evaluation. "
                       "See traceback on top of this message.", self.name)
             raise HandledException
 
@@ -240,6 +238,7 @@ class LikelihoodCollection(object):
 
     def __init__(self, info_likelihood, parameterization, info_theory=None, modules=None,
                  timing=None):
+        self.log = logging.getLogger("Likelihood")
         # Initialize individual Likelihoods
         self._likelihoods = odict()
         for name, info in info_likelihood.items():
@@ -253,8 +252,8 @@ class LikelihoodCollection(object):
                 # all parameters, or they would never reach the theory code
                 if "prefix" in info and info_theory:
                     info["prefix"] = None
-                    log.debug("Mock likelihood '%s' will ignore all parameters, "
-                              "since a theory code is present.", name)
+                    self.log.debug("Mock likelihood '%s' will ignore all parameters, "
+                                   "since a theory code is present.", name)
                 like_class = get_class(name)
                 self._likelihoods[name] = like_class(
                     info, parameterization, modules=modules, timing=timing)
@@ -269,13 +268,15 @@ class LikelihoodCollection(object):
             requested_not_known[params] = requested.difference(known)
             if requested_not_known[params]:
                 if info_theory:
-                    log.debug("The following %s parameters are not recognized by any "
-                              "likelihood, and will be passed to the theory code: %r",
-                              params.split("_")[0], list(requested_not_known[params]))
+                    self.log.debug(
+                        "The following %s parameters are not recognized by any "
+                        "likelihood, and will be passed to the theory code: %r",
+                        params.split("_")[0], list(requested_not_known[params]))
                 else:
-                    log.error("Some of the requested %s parameters were not recognized "
-                              "by any likelihood: %r",
-                              params.split("_")[0], list(requested_not_known[params]))
+                    self.log.error(
+                        "Some of the requested %s parameters were not recognized "
+                        "by any likelihood: %r",
+                        params.split("_")[0], list(requested_not_known[params]))
                     raise HandledException
         # *IF* there is a theory code, initialize it
         if info_theory:
@@ -321,7 +322,7 @@ class LikelihoodCollection(object):
         try:
             return self._likelihoods.__getitem__(key) if key != _theory else self.theory
         except KeyError:
-            log.error("Likelihood '%r' not known", key)
+            self.log.error("Likelihood '%r' not known", key)
             raise HandledException
 
     def __iter__(self):
@@ -335,7 +336,7 @@ class LikelihoodCollection(object):
         To compute the derived parameters, it takes an optional keyword `_derived` as an
         empty list, which is then populated with the derived parameter values.
         """
-        log.debug("Got input parameters: %r", input_params)
+        self.log.debug("Got input parameters: %r", input_params)
         # Prepare the likelihood-defined derived parameters (only computed if requested)
         # Notice that they are in general different from the sampler-defined ones.
         derived_dict = {}
@@ -346,7 +347,8 @@ class LikelihoodCollection(object):
                 _derived=(derived_dict if _derived is not None else None), cached=cached,
                 **theory_params_dict)
             if not theory_success:
-                log.debug("Theory code computation failed. Not computing likelihood.")
+                self.log.debug(
+                    "Theory code computation failed. Not computing likelihood.")
                 if _derived is not None:
                     _derived += [np.nan] * len(self.output_params)
                 return np.array([-np.inf for _ in self])
@@ -377,7 +379,7 @@ class LikelihoodCollection(object):
         return np.sum(self.logps(input_params, _derived=_derived))
 
     def marginal(self, *args):
-        log.error("Marginal not implemented for >1 likelihoods. Sorry!")
+        self.log.error("Marginal not implemented for >1 likelihoods. Sorry!")
         raise HandledException
 
     def _speeds_of_params(self, int_speeds=False, fast_slow=False):
@@ -460,8 +462,8 @@ class LikelihoodCollection(object):
                 params_speeds) / min(params_speeds) / speed_precision), dtype=int)
             params_speeds = np.array(
                 speeds / np.ufunc.reduce(np.frompyfunc(gcd, 2, 1), speeds), dtype=int)
-        log.debug("Optimal ordering of parameter blocks: %r with speeds %r",
-                  blocks, params_speeds)
+        self.log.debug("Optimal ordering of parameter blocks: %r with speeds %r",
+                       blocks, params_speeds)
         # Fast-slow separation: chooses separation that maximizes log-difference in speed
         # (speed per parameter in a combination of blocks is the slowest one)
         if fast_slow:
@@ -477,11 +479,11 @@ class LikelihoodCollection(object):
                 cum_inv = lambda ss: 1 / (sum(1 / ss))
                 params_speeds = (
                     lambda l: [cum_inv(l[:i_max + 1]), cum_inv(l[i_max + 1:])])(params_speeds)
-                log.debug("Fast-slow blocking: %r with speeds %r",
-                          blocks, params_speeds)
+                self.log.debug("Fast-slow blocking: %r with speeds %r",
+                               blocks, params_speeds)
             else:
-                log.warning("Requested fast/slow separation, "
-                            "but all pararameters have the same speed.")
+                self.log.warning("Requested fast/slow separation, "
+                                 "but all pararameters have the same speed.")
         return params_speeds, blocks
 
     def _get_auto_covmat(self, params_info):
@@ -504,7 +506,8 @@ class LikelihoodCollection(object):
             if getattr(self[like], _timing)])
         if avg_times_evals:
             sep = "\n   "
-            log.info("Average computation time:" + sep + sep.join(
+            self.log.info(
+                "Average computation time:" + sep + sep.join(
                 ["%s : %g s (%d evaluations)" % (name, vals["t"], vals["n"])
                  for name, vals in avg_times_evals.items()]))
 
