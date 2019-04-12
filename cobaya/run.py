@@ -122,7 +122,7 @@ def run_script():
     path_env = os.environ.get("COBAYA_MODULES", None)
     path_input = info.get(_path_install)
     info[_path_install] = path_cmd or (path_env or path_input)
-    info[_debug] = getattr(args, _debug, info.get(_debug, _debug_default))
+    info[_debug] = getattr(args, _debug) or info.get(_debug, _debug_default)
     info[_resume] = getattr(args, _resume, _resume_default)
     info[_force] = getattr(args, _force, False)
     run(info)
