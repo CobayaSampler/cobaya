@@ -382,7 +382,7 @@ class _sn_prototype(Likelihood):
 
 # name of the data and covmats repo/folder
 sn_data_name = "sn_data"
-sn_data_version = "v1.2"
+sn_data_version = "v1.3"
 
 
 def get_path(path):
