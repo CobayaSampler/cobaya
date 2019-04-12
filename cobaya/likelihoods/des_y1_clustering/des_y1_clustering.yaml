@@ -20,6 +20,8 @@ likelihood:
     # Approximate bessel integral as binned smooth C_L
     # against integrals of bessel in each bin.
     binned_bessels: True
+    # Speed in evaluations/second
+    speed: 50
 
   
 params:
