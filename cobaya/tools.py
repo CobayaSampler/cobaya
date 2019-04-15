@@ -17,14 +17,17 @@ from importlib import import_module
 import six
 import numpy as np  # don't delete: necessary for get_external_function
 import scipy.stats as stats  # don't delete: necessary for get_external_function
-from collections import Mapping, OrderedDict as odict
+from collections import OrderedDict as odict
 from ast import parse
+
 if six.PY3:
     from inspect import cleandoc, getfullargspec as getargspec
     from math import gcd
+    from collections.abc import Mapping
 else:
     from inspect import cleandoc, getargspec
     from fractions import gcd
+    from collections import Mapping
 
 # Local
 from cobaya import __obsolete__
@@ -36,18 +39,20 @@ import logging
 
 log = logging.getLogger(__name__.split(".")[-1])
 
+
 # Deepcopy workaround:
 def deepcopyfix(olddict):
     if not hasattr(olddict, "keys"):
         return deepcopy(olddict)
-    newdict={}
+    newdict = {}
     for key in olddict:
-        if(key=='theory' or key=='instance' or key=='external'):
-            newdict[key]=olddict[key]
+        if (key == 'theory' or key == 'instance' or key == 'external'):
+            newdict[key] = olddict[key]
         else:
-            #print(key)
-            newdict[key]=deepcopy(olddict[key])
+            # print(key)
+            newdict[key] = deepcopy(olddict[key])
     return newdict
+
 
 def get_folder(name, kind, sep=os.sep, absolute="True"):
     """
@@ -146,8 +151,8 @@ def recursive_update(base, update):
 
 def make_header(kind, module=None):
     """Creates a header for a particular module of a particular kind."""
-    return ("=" * 80).join(["", "\n %s"%kind.title() +
-                            (": %s"%module if module else "") + "\n", "\n"])
+    return ("=" * 80).join(["", "\n %s" % kind.title() +
+                            (": %s" % module if module else "") + "\n", "\n"])
 
 
 def ensure_latex(string):
@@ -182,7 +187,7 @@ def read_dnumber(n, d, dtype=float):
 def prepare_comment(comment):
     """Prepares a string (maybe containing multiple lines) to be written as a comment."""
     return "\n".join(
-        ["# "+line.lstrip("#") for line in comment.split("\n") if line]) + "\n"
+        ["# " + line.lstrip("#") for line in comment.split("\n") if line]) + "\n"
 
 
 # Self describing
@@ -297,19 +302,19 @@ def compare_params_lists(list_A, list_B):
     names = ["A", "B"]
     # Duplicates
     list_A_copy, list_B_copy = list_A[:], list_B[:]
-    for n,l in zip(names, [list_A_copy, list_B_copy]):
+    for n, l in zip(names, [list_A_copy, list_B_copy]):
         [l.pop(i) for i in sorted([l.index(x) for x in set(l)])[::-1]]
         if l:
-            result["duplicate_%s"%n] = list(set(l))
+            result["duplicate_%s" % n] = list(set(l))
     sets = {"A": set(list_A), "B": set(list_B)}
-    for n1,n2 in [["A", "B"], ["B", "A"]]:
+    for n1, n2 in [["A", "B"], ["B", "A"]]:
         missing = sets[n1].difference(sets[n2])
         if missing:
-            result["%s_but_not_%s"%(n1,n2)] = list(missing)
+            result["%s_but_not_%s" % (n1, n2)] = list(missing)
     return result
 
-  
-def relative_to_int(numbers, precision=1/10):
+
+def relative_to_int(numbers, precision=1 / 10):
     """
     Turns relative numbers (e.g. relative speeds) into integer,
     up to some given `precision` on differences.
@@ -325,9 +330,9 @@ def create_banner(msg):
     """
     msg_clean = cleandoc(msg)
     longest_line_len = max([len(line) for line in msg_clean.split("\n")])
-    return ("*"*longest_line_len + "\n" + msg_clean + "\n" + "*"*longest_line_len)
+    return ("*" * longest_line_len + "\n" + msg_clean + "\n" + "*" * longest_line_len)
 
-  
+
 def warn_deprecation_python2():
     msg = """
     *WARNING*: Python 2 support will eventually be dropped
