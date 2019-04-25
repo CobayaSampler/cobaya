@@ -101,6 +101,14 @@ As an example, if we want to compute the area of the **constant** triangle :math
      polychord:
 
 
+Taking advantage of a speed hierarchy – *new in 1.X*
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+PolyChord *automatically* sorts parameters optimally and chooses the number of repeats per likelihood (or parameter block). The user only needs to specify the speed of each likelihood.
+
+*Automatic* speed-blocking takes advantage of differences in speed *per likelihood* (or theory). If the parameters of your likelihood or theory have some internal speed hierarchy that you would like to exploit (e.g. if your likelihood internally caches the result of a computation depending only on a subset of the likelihood parameters), you can specify a fine-grained list of parameter blocks and their speeds under the ``blocking`` option. :ref:`The same syntax and caveats as in the MCMC sampler apply<mcmc_speed_hierarchy_manual>` (excluding the mentions to *oversampling* and *dragging*).
+
+
 .. _polychord_callback:
 
 Callback functions

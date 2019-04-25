@@ -18,7 +18,7 @@ from itertools import chain
 from collections import OrderedDict as odict
 
 # Local
-from cobaya.tools import read_dnumber, get_external_function
+from cobaya.tools import read_dnumber, get_external_function, relative_to_int
 from cobaya.sampler import Sampler
 from cobaya.mpi import get_mpi_comm
 from cobaya.mpi import am_single_or_primary_process, more_than_one_process, sync_processes
@@ -112,7 +112,12 @@ class polychord(Sampler):
             self.log.info("Storing raw PolyChord output in '%s'.",
                           self.base_dir)
         # Exploiting the speed hierarchy
-        speeds, blocks = self.model.likelihood._speeds_of_params(int_speeds=True)
+        if self.blocking:
+            speeds, blocks = self.model.likelihood._check_speeds_of_params(self.blocking)
+            # Speeds need to be integer to be interpreted as # steps per block
+            speeds = relative_to_int(speeds)
+        else:
+            speeds, blocks = self.model.likelihood._speeds_of_params(int_speeds=True)
         blocks_flat = list(chain(*blocks))
         self.ordering = [
             blocks_flat.index(p) for p in self.model.parameterization.sampled_params()]

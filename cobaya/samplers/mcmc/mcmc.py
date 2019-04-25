@@ -28,8 +28,7 @@ from cobaya.conventions import _weight, _p_proposal, _p_renames, _sampler, _minu
 from cobaya.conventions import _line_width, _path_install
 from cobaya.samplers.mcmc.proposal import BlockedProposer
 from cobaya.log import HandledException
-from cobaya.tools import get_external_function, read_dnumber
-from cobaya.tools import relative_to_int
+from cobaya.tools import get_external_function, read_dnumber, relative_to_int
 from cobaya.yaml import yaml_dump_file
 from cobaya.output import OutputDummy
 

@@ -1,3 +1,13 @@
+## 1.X – ????
+
+### Samplers
+
+#### PolyChord
+
+- Updated to version 1.??
+- Handles speed-blocking optimally, including oversampling (manual blocking also possible).
+
+
 ## 1.1.0 – 2019-04-12
 
 ### Python 3 compatibility – lots of fixes
