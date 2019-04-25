@@ -116,13 +116,8 @@ class polychord(Sampler):
         blocks_flat = list(chain(*blocks))
         self.ordering = [
             blocks_flat.index(p) for p in self.model.parameterization.sampled_params()]
-        self.grade_dims = [len(block) for block in blocks]
-        #        self.grade_frac = np.array(
-        #            [i*j for i,j in zip(self.grade_dims, speeds)])
-        #        self.grade_frac = (
-        #            self.grade_frac/sum(self.grade_frac))
-        # Disabled for now. We need a way to override the "time" part of the meaning of grade_frac
-        self.grade_frac = [1 / len(self.grade_dims) for _ in self.grade_dims]
+        self.grade_dims = np.array([len(block) for block in blocks])
+        self.grade_frac = np.array(speeds)*self.grade_dims  # steps per block
         # Assign settings
         pc_args = ["nlive", "num_repeats", "nprior", "do_clustering",
                    "precision_criterion", "max_ndead", "boost_posterior", "feedback",
