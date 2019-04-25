@@ -32,6 +32,7 @@ from copy import deepcopy
 from cobaya.conventions import _external, _theory, _params, _overhead_per_param
 from cobaya.conventions import _timing, _p_renames, _chi2, _separator
 from cobaya.tools import get_class, get_external_function, getargspec
+from cobaya.tools import compare_params_lists
 from cobaya.log import HandledException
 
 # Logger
@@ -485,6 +486,40 @@ class LikelihoodCollection(object):
                 self.log.warning("Requested fast/slow separation, "
                                  "but all pararameters have the same speed.")
         return params_speeds, blocks
+
+    def _check_speeds_of_params(self, blocking):
+        """
+        Checks the correct formatting of the given parameter blocking.
+
+        `blocking` is a list of tuples `(speed, (param1, param2, etc))`.
+
+        Returns tuples of ``(speeds), (params_in_block)``.
+        """
+        try:
+            speeds, blocks = zip(*list(blocking))
+            speeds = np.array(speeds)
+        except:
+            raise HandledException(
+                "Manual blocking not understood. Check documentation.")
+        sampled_params = list(self.sampled_like_dependence)
+        check = compare_params_lists(
+            list(chain(*blocks)), sampled_params)
+        duplicate = check.pop("duplicate_A", None)
+        missing = check.pop("B_but_not_A", None)
+        unknown = check.pop("A_but_not_B", None)
+        if duplicate:
+            self.log.error("Manual blocking: repeated parameters: %r", duplicate)
+            raise HandledException
+        if missing:
+            self.log.error("Manual blocking: missing parameters: %r", missing)
+            raise HandledException
+        if unknown:
+            self.log.error("Manual blocking: unkown parameters: %r", unknown)
+            raise HandledException
+        if (speeds != np.sort(speeds)).all():
+            self.log.warn("Manual blocking: speed-blocking *apparently* non-optimal: "
+                          "sort by ascending speed when possible")
+        return speeds, blocks
 
     def _get_auto_covmat(self, params_info):
         """

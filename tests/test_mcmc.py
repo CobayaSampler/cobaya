@@ -63,6 +63,12 @@ def test_mcmc_oversampling():
     body_of_test_speeds(info_mcmc)
 
 
+@flaky(max_runs=3, min_passes=1)
+def test_mcmc_oversampling_manual():
+    info_mcmc = {"mcmc": {"burn_in": 0, "learn_proposal": False, "oversample": True}}
+    body_of_test_speeds(info_mcmc, manual_blocking=True)
+
+
 # The flaky test fails if likes or derived at chain points are not reproduced directly
 # (dragging is somewhat delicate)
 @flaky(max_runs=3, min_passes=1,

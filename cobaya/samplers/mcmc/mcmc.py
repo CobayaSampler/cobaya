@@ -28,7 +28,7 @@ from cobaya.conventions import _weight, _p_proposal, _p_renames, _sampler, _minu
 from cobaya.conventions import _line_width, _path_install
 from cobaya.samplers.mcmc.proposal import BlockedProposer
 from cobaya.log import HandledException
-from cobaya.tools import get_external_function, read_dnumber, compare_params_lists
+from cobaya.tools import get_external_function, read_dnumber
 from cobaya.tools import relative_to_int
 from cobaya.yaml import yaml_dump_file
 from cobaya.output import OutputDummy
@@ -97,32 +97,9 @@ class mcmc(Sampler):
             self.log.error("Choose either oversampling or dragging, not both.")
             raise HandledException
         if self.blocking:
-            try:
-                speeds, blocks = zip(*list(self.blocking))
-                speeds = np.array(speeds)
-            except:
-                raise HandledException(
-                    "Manual blocking not understood. Check documentation.")
-            check = compare_params_lists(
-                list(chain(*blocks)), list(self.model.parameterization.sampled_params()))
-            duplicate = check.pop("duplicate_A", None)
-            missing = check.pop("B_but_not_A", None)
-            unknown = check.pop("A_but_not_B", None)
-            if duplicate:
-                self.log.error("Manual blocking: repeated parameters: %r", duplicate)
-                raise HandledException
-            if missing:
-                self.log.error("Manual blocking: missing parameters: %r", missing)
-                raise HandledException
-            if unknown:
-                self.log.error("Manual blocking: unkown parameters: %r", unknown)
-                raise HandledException
-            int_speeds = self.oversample or self.drag
-            if int_speeds:
+            speeds, blocks = self.model.likelihood._check_speeds_of_params(self.blocking)
+            if self.oversample or self.drag:
                 speeds = relative_to_int(speeds)
-            if (speeds != np.sort(speeds)).all():
-                self.log.warn("Manual blocking: speed-blocking non-optimal: sort by "
-                              "ascending speed when possible")
         else:
             speeds, blocks = self.model.likelihood._speeds_of_params(
                 int_speeds=self.oversample or self.drag, fast_slow=self.drag)
