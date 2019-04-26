@@ -278,9 +278,12 @@ class Collection(object):
         n_float = 8
         with open(self.file_name, "a") as out:
             lines = self.data[n_min:n_max].to_string(
-                header=["# " + str(self.data.columns[0])] + list(self.data.columns[1:]),
+                header=[str(self.data.columns[0])] + list(self.data.columns[1:]),
                 index=False, na_rep="nan", justify="right",
                 float_format=(lambda x: ("%%.%dg" % n_float) % x))
+            # add comment hash (push if needed)
+            # (cannot be added before, because it messes with `justify="right"`)
+            lines = "#" + (lines[1:] if lines[0] == " " else lines)
             # remove header if not first dump
             if n_min:
                 lines = "\n".join(lines.split("\n")[1:])
