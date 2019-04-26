@@ -56,7 +56,7 @@ def get_model(info):
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
         logging.getLogger(__name__.split(".")[-1]).debug(
             "Input info updated with defaults (dumped to YAML):\n%s",
-            yaml_dump(full_info, force_reproducible=False))
+            yaml_dump(full_info))
     # Initialize the posterior and the sampler
     return Model(full_info[_params], full_info[_likelihood], full_info.get(_prior),
                  full_info.get(_theory), modules=info.get(_path_install),

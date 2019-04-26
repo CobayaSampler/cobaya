@@ -25,7 +25,6 @@ from collections import OrderedDict as odict
 import numpy as np
 
 # Local
-from cobaya.conventions import _force_reproducible, _force_reproducible_default
 from cobaya.tools import prepare_comment
 
 
@@ -94,8 +93,7 @@ def yaml_load_file(file_name):
     return yaml_load(lines, file_name=file_name)
 
 
-def yaml_dump(data, force_reproducible=_force_reproducible_default,
-              stream=None, Dumper=yaml.Dumper, **kwds):
+def yaml_dump(data, stream=None, Dumper=yaml.Dumper, **kwds):
     class OrderedDumper(Dumper):
         pass
 
@@ -130,32 +128,13 @@ def yaml_dump(data, force_reproducible=_force_reproducible_default,
 
     OrderedDumper.add_representer(np.float64, _numpy_float_representer)
 
-    # Dummy representer that raises an error if object has no explicit representer
-    # e.g. useful to avoid dumping a python function (makes loading impossible later)
-    # NB: Necessary in pyyaml = 3.12, but apparently in later versions they would produce
-    #     a `yaml.representer.RepresenterError` without needing to do this.
-    #     Update (and also required version in setup.py) when next pyyaml version is out
+    # Dummy representer that prints nothing for non-representable python objects
     def _null_representer(dumper, data):
         return dumper.represent_scalar('tag:yaml.org,2002:null', '')
 
-    def _fail_representer(dumper, data):
-        raise OutputError(
-            "You are probably trying to dump a function into YAML, "
-            "and that's not possible. If you are using an external prior "
-            "or likelihood, try writing it as a string instead -- there is always a way: "
-            "see the documentation about user-defined priors/likelihoods. "
-            "If you *really* need to generate output, "
-            "set '%s: False'" % _force_reproducible +
-            " in your input, but mind that the 'full' yaml file generated cannot be "
-            "called again, since some definitions (e.g. external functions) could not be "
-            "dumped.")
+    OrderedDumper.add_representer(type(lambda: None), _null_representer)
+    OrderedDumper.add_multi_representer(object, _null_representer)
 
-    if force_reproducible:
-        OrderedDumper.add_representer(type(lambda: None), _fail_representer)
-        OrderedDumper.add_multi_representer(object, _fail_representer)
-    else:
-        OrderedDumper.add_representer(type(lambda: None), _null_representer)
-        OrderedDumper.add_multi_representer(object, _null_representer)
     # Dump!
     return yaml.dump(data, stream, OrderedDumper, **kwds)
 

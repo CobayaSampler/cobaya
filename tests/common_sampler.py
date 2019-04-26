@@ -11,7 +11,7 @@ from time import sleep
 from itertools import chain
 
 from cobaya.conventions import _likelihood, _sampler, _params, _output_prefix
-from cobaya.conventions import _force_reproducible, _debug, _debug_file, _path_install
+from cobaya.conventions import _debug, _debug_file, _path_install
 from cobaya.likelihoods.gaussian_mixture import info_random_gaussian_mixture
 from cobaya.tools import KL_norm
 from cobaya.run import run
@@ -50,8 +50,6 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
         if "covmat" in info_sampler["mcmc"]:
             info[_sampler]["mcmc"]["covmat_params"] = (
                 list(info["params"].keys())[:dimension])
-    # For tests, no worries about using non-serializable func
-    info[_force_reproducible] = False
     info[_debug] = False
     info[_debug_file] = None
     info[_output_prefix] = getattr(tmpdir, "realpath()", lambda: tmpdir)()
@@ -172,8 +170,6 @@ def body_of_test_speeds(info_sampler={}, modules=None):
                            "like2": {"external": like2, "speed": speed2}}}
     info["sampler"] = info_sampler
     print("Parameter order:", list(info["params"]))
-    # For tests, no worries about using non-serializable func
-    info["force_reproducible"] = False
     # info["debug"] = True
     info["modules"] = modules
     # Adjust number of samples

@@ -119,9 +119,7 @@ in the ``prior`` block, you still have to specify their bounds in the ``params``
 A prior function can be specified in two different ways:
 
 a) **As a function**, either assigning a function defined with ``def``, or a ``lambda``.
-   Its arguments must be known parameter names. This option is not compatible with shell
-   invocation, since the ``yaml`` output cannot store python objects (if you don't care
-   about this, make ``force_reproducible: False``).
+   Its arguments must be known parameter names.
 
 b) **As a string,** which will be passed to ``eval()``. The string can be a
    ``lambda`` function definition with known parameters as its arguments (you can
@@ -132,14 +130,15 @@ b) **As a string,** which will be passed to ``eval()``. The string can be a
 
 .. note::
 
-   If you don't want to write your function definition in a separate file and don't care
-   about reproducibility of the run (you should!), there is a workaround: add
-   ``force_reproducible: False`` at the top of your input.
-
-.. note::
-
    Your function definition may contain keyword arguments that aren't known parameter
    names. They will simply be ignored and left to their default.
+
+.. warning::
+
+   When **resuming** a run using an *external* python object as input (e.g. a prior or a
+   likelihood), there is no way for Cobaya to know whether the new object is the same as
+   the old one: it is left to the user to ensure reproducibility of those objects between
+   runs.
 
 .. warning::
 

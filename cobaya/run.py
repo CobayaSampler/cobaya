@@ -15,9 +15,9 @@ from copy import deepcopy
 # Local
 from cobaya.conventions import _likelihood, _prior, _params, _theory, _sampler
 from cobaya.conventions import _path_install, _debug, _debug_file, _output_prefix
-from cobaya.conventions import _resume, _force_reproducible, _timing, _debug_default
+from cobaya.conventions import _resume, _timing, _debug_default
 from cobaya.conventions import _yaml_extensions, _separator, _full_suffix, _resume_default
-from cobaya.conventions import _modules_path_arg, _force, _force_reproducible_default
+from cobaya.conventions import _modules_path_arg, _force
 from cobaya.output import get_Output as Output
 from cobaya.model import Model
 from cobaya.sampler import get_sampler as Sampler
@@ -41,9 +41,7 @@ def run(info):
     import logging
     # Initialize output, if required
     output = Output(output_prefix=info.get(_output_prefix), resume=info.get(_resume),
-                    force_output=info.pop(_force, None),
-                    force_reproducible=info.get(
-                        _force_reproducible, _force_reproducible_default))
+                    force_output=info.pop(_force, None))
     # Create the full input information, including defaults for each module.
     full_info = get_full_info(info)
     if output:
@@ -55,7 +53,15 @@ def run(info):
         if info.get(_output_prefix) and am_single_or_primary_process():
             logging.getLogger(__name__.split(".")[-1]).info(
                 "Input info updated with defaults (dumped to YAML):\n%s",
-                yaml_dump(full_info, force_reproducible=False))
+                yaml_dump(full_info))
+    # TO BE DEPRECATED IN >1.2!!! #####################
+    _force_reproducible = "force_reproducible"
+    if _force_reproducible in info:
+        info.pop(_force_reproducible)
+        logging.getLogger(__name__.split(".")[-1]).warn(
+            "Option '%s' is no longer necessary. Please remove it!" % _force_reproducible)
+    # CHECK THAT THIS WARNING WORKS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ###################################################
     # We dump the info now, before modules initialization, lest it is accidentally modified
     # If resuming a sample, it checks that old and new infos are consistent
     output.dump_info(info, full_info)

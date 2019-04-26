@@ -20,7 +20,7 @@ from itertools import chain
 
 # Local
 from cobaya.conventions import _package, _products_path, _path_install, _resume
-from cobaya.conventions import _output_prefix, _debug, _debug_file, _force_reproducible
+from cobaya.conventions import _output_prefix, _debug, _debug_file
 from cobaya.conventions import _params, _prior, _theory, _likelihood, _sampler, _external
 from cobaya.conventions import _p_label, _p_derived, _p_ref, _p_drop, _p_value, _p_renames
 from cobaya.conventions import _p_proposal
@@ -279,7 +279,7 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False):
         myprint = log.info
     myname = inspect.stack()[0][3]
     ignore = set([]) if strict else set(
-        [_debug, _debug_file, _resume, _path_install, _force_reproducible])
+        [_debug, _debug_file, _resume, _path_install])
     ignore_params = (set([]) if strict
                      else set([_p_label, _p_renames, _p_ref, _p_proposal, "min", "max"]))
     if set(info1).difference(ignore) != set(info2).difference(ignore):

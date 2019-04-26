@@ -179,9 +179,6 @@ Now we can start sampling. To do that, you can save all the definitions above in
 
 .. code:: python
 
-   # You don't care about using yaml files in this case
-   info['force_reproducible'] = False
-
    from cobaya.run import run
    run(info)
 

@@ -19,10 +19,10 @@ import datetime
 from copy import deepcopy
 
 # Local
-from cobaya.yaml import yaml_dump, yaml_load_file, OutputError
+from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
 from cobaya.conventions import _input_suffix, _full_suffix, _separator, _yaml_extensions
 from cobaya.conventions import _resume, _resume_default, _force
-from cobaya.conventions import _force_reproducible_default, _likelihood, _params
+from cobaya.conventions import _likelihood, _params
 from cobaya.log import HandledException
 from cobaya.input import is_equal_info
 from cobaya.mpi import am_single_or_primary_process, get_mpi_comm
@@ -32,10 +32,8 @@ import logging
 
 
 class Output(object):
-    def __init__(self, output_prefix=None, force_reproducible=_force_reproducible_default,
-                 resume=_resume_default, force_output=False):
+    def __init__(self, output_prefix=None, resume=_resume_default, force_output=False):
         self.log = logging.getLogger("output")
-        self.force_reproducible = force_reproducible
         self.folder = os.sep.join(output_prefix.split(os.sep)[:-1]) or "."
         self.prefix = (lambda x: x if x != "." else "")(output_prefix.split(os.sep)[-1])
         self.force_output = force_output
@@ -118,8 +116,11 @@ class Output(object):
             if hasattr(lik_info, "pop"):
                 lik_info.pop(_params, None)
         try:
+            # We will test the old info agains the dumped+loaded new info.
+            # This is because we can't actually check if python objects are the same as before.
             old_info = yaml_load_file(self.file_full)
-            if not is_equal_info(old_info, full_info_trimmed, strict=False):
+            new_info = yaml_load(yaml_dump(full_info_trimmed))
+            if not is_equal_info(old_info, new_info, strict=False):
                 self.log.error("Old and new sample information not compatible! "
                                "Resuming not possible!")
                 raise HandledException
@@ -131,9 +132,7 @@ class Output(object):
                         (self.file_full, full_info_trimmed)]:
             with open(f, "w") as f_out:
                 try:
-                    f_out.write(
-                        yaml_dump(info, default_flow_style=False,
-                                  force_reproducible=self.force_reproducible))
+                    f_out.write(yaml_dump(info))
                 except OutputError as e:
                     self.log.error(e.message)
                     raise HandledException

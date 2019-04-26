@@ -1,3 +1,10 @@
+## 1.X – ???
+
+### I/O
+
+- More liberal treatment of external Python objects, since we cannot check if they are the same between runs. So `force_reproducible` not needed any more! (deprecation notice left)
+
+
 ## 1.1.0 – 2019-04-12
 
 ### Python 3 compatibility – lots of fixes
