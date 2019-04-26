@@ -259,7 +259,7 @@ class Collection(object):
         self.log.info("Loading existing sample from '%s'", self.file_name)
         with open(self.file_name, "r") as inp:
             cols = [a.strip() for a in inp.readline().lstrip("#").split()]
-            self.data = pd.read_table(
+            self.data = pd.read_csv(
                 inp, sep=" ", header=None, names=cols, comment="#", skipinitialspace=True)
 
     def _dump__txt(self):
