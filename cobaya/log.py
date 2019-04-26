@@ -18,7 +18,7 @@ import traceback
 
 # Local
 from cobaya.conventions import _debug, _debug_file
-from cobaya.mpi import get_mpi_rank, get_mpi_comm, more_than_one_process
+from cobaya.mpi import get_mpi_rank, get_mpi_size, get_mpi_comm, more_than_one_process
 
 
 class HandledException(Exception):
@@ -28,28 +28,36 @@ class HandledException(Exception):
     """
 
 
+def safe_exit():
+    """Closes all MPI process, if more than one present."""
+    if get_mpi_size() > 1:
+        get_mpi_comm().Abort()
+
+
 def exception_handler(exception_type, value, trace_back):
-    # Do nothing (just exit) if the exception has been handled and logged
+    # Do not print traceback if the exception has been handled and logged
     if exception_type == HandledException:
-        # Exit all MPI processes
-        getattr(get_mpi_comm(), "Abort", lambda: None)()
-        return  # so that no traceback is printed
-    log = logging.getLogger("exception handler")
-    line = "------------------------------------------------\n"
-    log.critical(line[6:] + "\n" +
+        safe_exit()
+        return  # no traceback printed
+    _logger_name = "exception handler"
+    log = logging.getLogger(_logger_name)
+    line = "-------------------------------------------------------------\n"
+    log.critical(line[len(_logger_name)+5:] + "\n" +
                  "".join(traceback.format_exception(exception_type, value, trace_back)) +
                  line)
     if exception_type == KeyboardInterrupt:
         log.critical("Interrupted by the user.")
-        return
-    log.critical(
-        "Some unexpected ERROR occurred. You can see the exception information above.\n"
-        "We recommend trying to reproduce this error with '%s:True' in the input.\n"
-        "If you cannot solve it yourself and need to report it, include the debug output,"
-        "\nwhich you can send it to a file setting '%s:[some_file_name]'.",
+    else:
+        log.critical(
+            "Some unexpected ERROR occurred. "
+            "You can see the exception information above.\n"
+            "We recommend trying to reproduce this error with '%s:True' in the input.\n"
+            "If you cannot solve it yourself and need to report it, "
+            "include the debug output,\n"
+            "which you can send it to a file setting '%s:[some_file_name]'.",
         _debug, _debug_file)
     # Exit all MPI processes
-    getattr(get_mpi_comm(), "Abort", lambda: None)()
+    safe_exit()
 
 
 def logger_setup(debug=None, debug_file=None):
