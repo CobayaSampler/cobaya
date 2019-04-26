@@ -335,7 +335,7 @@ class polychord(Sampler):
 
 # Name of the PolyChord repo and version to download
 pc_repo_name = "PolyChord/PolyChordLite"
-pc_repo_version = "ef02bb6d94dca218c7d8daa98e8ac010022e457e"
+pc_repo_version = "1.16"
 
 
 def get_path(path):

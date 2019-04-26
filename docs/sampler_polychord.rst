@@ -77,28 +77,33 @@ If you are using external priors (as described :ref:`here <prior_external>`), th
    \log\mathcal{Z} &= \log\mathcal{Z}_\mathrm{u} - \log\mathcal{Z}_\pi\\
    \sigma(\log\mathcal{Z}) &= \sigma(\log\mathcal{Z}_\mathrm{u}) + \sigma(\log\mathcal{Z}_\pi)
 
-If your prior is **constant** in the region of interest, in order for PolyChord not to get stuck, you have to add a small noise term to the likelihood ``one`` (see :doc:`its documentation <likelihood_one>`). The noise amplitude must be smaller by a couple of orders of magnitude than the inverse of a rough estimation of the expected prior volume, e.g. if your prior volume is expected to be :math:`\mathcal{O}(10^3)`, make the noise :math:`\mathcal{O}(10^{-5})`. PolyChord will take a while to converge (even if the prior evaluation is fast), and you may get some ``Non deterministic loglikelihood`` warnings coming from PolyChord, but don't worry about them.
 
-As an example, if we want to compute the area of the **constant** triangle :math:`y > x` in a square of side 10 (expected area :math:`\sim 100`), we would use the following input file:
+.. note::
 
-.. code:: yaml
+   **Only for Cobaya versions <1.X (using PolyChord 1.15)**
 
-   params:
-     x:
-       prior:
-         min:  0
-         max: 10
-     y:
-       prior:
-         min:  0
-         max: 10
-   prior:
-     triangle: "lambda x,y: np.log(y>x)"
-   likelihood:
-     one:
-       noise: 1e-4
-   sampler:
-     polychord:
+   If your prior is **constant** in the region of interest, in order for PolyChord not to get stuck, you have to add a small noise term to the likelihood ``one`` (see :doc:`its documentation <likelihood_one>`). The noise amplitude must be smaller by a couple of orders of magnitude than the inverse of a rough estimation of the expected prior volume, e.g. if your prior volume is expected to be :math:`\mathcal{O}(10^3)`, make the noise :math:`\mathcal{O}(10^{-5})`. PolyChord will take a while to converge (even if the prior evaluation is fast), and you may get some ``Non deterministic loglikelihood`` warnings coming from PolyChord, but don't worry about them.
+
+   As an example, if we want to compute the area of the **constant** triangle :math:`y > x` in a square of side 10 (expected area :math:`\sim 100`), we would use the following input file:
+
+   .. code:: yaml
+
+      params:
+        x:
+          prior:
+            min:  0
+            max: 10
+        y:
+          prior:
+            min:  0
+            max: 10
+      prior:
+        triangle: "lambda x,y: np.log(y>x)"
+      likelihood:
+        one:
+          noise: 1e-4
+      sampler:
+        polychord:
 
 
 Taking advantage of a speed hierarchy – *new in 1.X*

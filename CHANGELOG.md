@@ -4,7 +4,7 @@
 
 #### PolyChord
 
-- Updated to version 1.??
+- Updated to version 1.16
 - Handles speed-blocking optimally, including oversampling (manual blocking also possible).
 
 
