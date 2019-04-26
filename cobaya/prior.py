@@ -135,7 +135,7 @@ b) **As a string,** which will be passed to ``eval()``. The string can be a
 
 .. warning::
 
-   When **resuming** a run using an *external* python object as input (e.g. a prior or a
+   When **resuming** a run using an **external** python object as input (e.g. a prior or a
    likelihood), there is no way for Cobaya to know whether the new object is the same as
    the old one: it is left to the user to ensure reproducibility of those objects between
    runs.

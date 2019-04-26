@@ -22,17 +22,20 @@ Creating the input info for a realistic cosmological case from scratch would tak
 
       $ pip3 install pyside2
 
+
+   **Anaconda** users should instead do:
+
+   .. code:: bash
+
+      $ conda install -c conda-forge pyside2
+
    .. warning::
 
-      In Python 2 (soon to be discontinued!):
-
-      + Debian/Ubuntu
+      In Python 2 (soon to be discontinued!) try **one** of the following:
 
       .. code:: bash
 
-         $ sudo apt install python-pyside  # or python3-pyside if using Python 3
-
-      + Mac
+         $ sudo apt install python-pyside
 
       .. code:: bash
 
