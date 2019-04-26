@@ -123,6 +123,8 @@ class polychord(Sampler):
             blocks_flat.index(p) for p in self.model.parameterization.sampled_params()]
         self.grade_dims = np.array([len(block) for block in blocks])
         self.grade_frac = np.array(speeds)*self.grade_dims  # steps per block
+        # bugfix: pypolychord's C interface for Fortran does not like int numpy types
+        self.grade_dims = [int(x) for x in self.grade_dims]
         # Assign settings
         pc_args = ["nlive", "num_repeats", "nprior", "do_clustering",
                    "precision_criterion", "max_ndead", "boost_posterior", "feedback",
