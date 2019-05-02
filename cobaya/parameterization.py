@@ -86,6 +86,20 @@ def reduce_info_param(info_param):
     return info_param
 
 
+def call_param_func(p, func, kwargs):
+    try:
+        return func(**kwargs)
+    except NameError as exception:
+        unknown = str(exception).split("'")[1]
+        log.error("Unknown variable '%s' was referenced in the definition of "
+                  "the parameter '%s', with arguments %r.", unknown, p, list(kwargs))
+        raise HandledException
+    except:
+        log.error("Function for parameter '%s' failed at evaluation "
+                  "and threw the following exception:", p)
+        raise
+
+
 class Parameterization(object):
     """
     Class managing parameterization.
@@ -243,15 +257,7 @@ class Parameterization(object):
                     for p in self._input_args[p]}
                 if not all([isinstance(v, Number) for v in args.values()]):
                     continue
-                try:
-                    self._input[p] = self._input_funcs[p](**args)
-                except NameError as exception:
-                    unknown = str(exception).split("'")[1]
-                    log.error(
-                        "Unknown variable '%s' was referenced in the definition of "
-                        "the parameter '%s', with arguments %r.",
-                        unknown, p, list(args))
-                    raise HandledException
+                self._input[p] = call_param_func(p, self._input_funcs[p], args)
                 resolved.append(p)
         if set(resolved) != set(self._input_funcs):
             log.error("Could not resolve arguments for input parameters %s. Maybe there "
@@ -281,7 +287,7 @@ class Parameterization(object):
                     for p in self._derived_args[p]}
                 if not all([isinstance(v, Number) for v in args.values()]):
                     continue
-                self._derived[p] = self._derived_funcs[p](**args)
+                self._derived[p] = call_param_func(p, self._derived_funcs[p], args)
                 resolved.append(p)
         if set(resolved) != set(self._derived_funcs):
             log.error("Could not resolve arguments for derived parameters %s. Maybe there"
