@@ -463,7 +463,7 @@ class camb(_cosmo):
         """
         # Specific calls, if general ones fail:
         if p == "sigma8":
-            return intermediates["CAMBdata"]["result"].get_sigma8()[0]
+            return intermediates["CAMBdata"]["result"].get_sigma8()[-1]
         for f in [self.get_derived_from_params,
                   self.get_derived_from_std,
                   self.get_derived_from_getter]:
