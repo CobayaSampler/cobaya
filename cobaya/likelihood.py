@@ -266,6 +266,20 @@ class LikelihoodCollection(object):
             requested = set(info)
             known = set(chain(*[getattr(self[like], params) for like in self]))
             requested_not_known[params] = requested.difference(known)
+            # Check those that reference a likelihood
+            if params == "output_params":
+                chi2s = [p[len(_chi2 + _separator):]
+                         for p in requested_not_known["output_params"]
+                         if p.startswith(_chi2 + _separator)]
+                if chi2s:
+                    if set(chi2s) != set(self):
+                        self.log.error(
+                            "Your derived parameters depend on unknown likelihoods: %r",
+                            list(set(chi2s).difference(set(self))))
+                        raise HandledException
+                for p in chi2s:
+                    requested_not_known[params].remove(_chi2+_separator+p)
+            # Check the rest
             if requested_not_known[params]:
                 if info_theory:
                     self.log.debug(
