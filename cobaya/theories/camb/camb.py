@@ -298,6 +298,7 @@ class camb(_cosmo):
                         method="CAMBdata.get_matter_power_interpolator",
                         kwargs=kwargs)
                 self.needs_perts = True
+            # General derived parameters
             elif v is None:
                 k_translated = self.translate_param(k)
                 if k_translated not in self.derived_extra:
@@ -421,12 +422,12 @@ class camb(_cosmo):
                         return 0
             # Prepare derived parameters
             if _derived == {}:
-                _derived.update(self.get_derived_all(intermediates))
+                _derived.update(self._get_derived_all(intermediates))
                 self.states[i_state]["derived"] = odict(
                     [[p, _derived[p]] for p in self.output_params])
             # Prepare necessary extra derived parameters
             self.states[i_state]["derived_extra"] = {
-                p: self.get_derived(p, intermediates) for p in self.derived_extra}
+                p: self._get_derived(p, intermediates) for p in self.derived_extra}
             if self.timing:
                 self.n += 1
                 self.time_avg = (time() - a + self.time_avg * (self.n - 1)) / self.n
@@ -437,7 +438,7 @@ class camb(_cosmo):
         self.states[i_state]["last"] = 1
         return 1 if reused_state else 2
 
-    def get_derived_from_params(self, p, intermediates):
+    def _get_derived_from_params(self, p, intermediates):
         result = intermediates["CAMBdata"].get("result", None)
         if result is None: return None
         pars = result.Params
@@ -455,7 +456,7 @@ class camb(_cosmo):
                         pass
             return None
 
-    def get_derived_from_std(self, p, intermediates):
+    def _get_derived_from_std(self, p, intermediates):
         dic = intermediates["CAMBdata"].get("derived_dic", None)
         if dic is None:
             result = intermediates["CAMBdata"].get("result", None)
@@ -464,10 +465,10 @@ class camb(_cosmo):
             intermediates["CAMBdata"]["derived_dic"] = dic
         return dic.get(p, None)
 
-    def get_derived_from_getter(self, p, intermediates):
+    def _get_derived_from_getter(self, p, intermediates):
         return getattr(intermediates["CAMBparams"]["result"], "get_" + p, lambda: None)()
 
-    def get_derived(self, p, intermediates):
+    def _get_derived(self, p, intermediates):
         """
         General function to extract a single derived parameter.
 
@@ -476,14 +477,14 @@ class camb(_cosmo):
         # Specific calls, if general ones fail:
         if p == "sigma8":
             return intermediates["CAMBdata"]["result"].get_sigma8()[0]
-        for f in [self.get_derived_from_params,
-                  self.get_derived_from_std,
-                  self.get_derived_from_getter]:
+        for f in [self._get_derived_from_params,
+                  self._get_derived_from_std,
+                  self._get_derived_from_getter]:
             derived = f(p, intermediates)
             if derived is not None:
                 return derived
 
-    def get_derived_all(self, intermediates):
+    def _get_derived_all(self, intermediates):
         """
         Returns a dictionary of derived parameters with their values,
         using the *current* state (i.e. it should only be called from
@@ -493,7 +494,7 @@ class camb(_cosmo):
         """
         derived = {}
         for p in self.output_params:
-            derived[p] = self.get_derived(self.translate_param(p), intermediates)
+            derived[p] = self._get_derived(self.translate_param(p), intermediates)
             if derived[p] is None:
                 self.log.error(
                     "Derived param '%s' not implemented in the CAMB interface", p)

@@ -381,7 +381,7 @@ class classy(_cosmo):
                     self.states[i_state][product] = collector.post(
                         *self.states[i_state][product])
             # Prepare derived parameters
-            d, d_extra = self.get_derived_all(derived_requested=(_derived == {}))
+            d, d_extra = self._get_derived_all(derived_requested=(_derived == {}))
             if _derived == {}:
                 _derived.update(d)
             self.states[i_state]["derived"] = odict(
@@ -398,7 +398,7 @@ class classy(_cosmo):
         self.states[i_state]["last"] = 1
         return 1 if reused_state else 2
 
-    def get_derived_all(self, derived_requested=True):
+    def _get_derived_all(self, derived_requested=True):
         """
         Returns a dictionary of derived parameters with their values,
         using the *current* state (i.e. it should only be called from
