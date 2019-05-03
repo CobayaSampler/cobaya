@@ -17,6 +17,7 @@ from importlib import import_module
 import inspect
 from six import string_types
 from itertools import chain
+from fuzzywuzzy import process as fuzzy_process
 
 # Local
 from cobaya.conventions import _package, _products_path, _path_install, _resume
@@ -142,17 +143,30 @@ def get_full_info(info):
                                       .difference(set([_external, _p_renames]))
                                       .difference(set(full_info[block][module])))
             if options_not_recognized:
+                alternatives = odict()
+                available = set([_external, _p_renames]).union(full_info[block][module])
+                while options_not_recognized:
+                    option = options_not_recognized.pop()
+                    try:
+                        alternatives[option] = list(
+                            zip(*(fuzzy_process.extractBests(
+                                option, available, score_cutoff=50)[:3])))[0]
+                    except IndexError:
+                        alternatives[option] = []
+                did_you_mean = ", ".join(
+                    [("'%s' (did you mean %s?)" % (o,a) if a else "'%s'" % o)
+                     for o,a in alternatives.items()])
                 if default_module_info[block][module]:
                     # Internal module
-                    log.error("'%s' does not recognize some options: '%r'. "
+                    log.error("'%s' does not recognize some options: %s. "
                               "To see the allowed options, check out the documentation of"
-                              " this module", module, tuple(options_not_recognized))
+                              " this module.", module, did_you_mean)
                     raise HandledException
                 else:
                     # External module
-                    log.error("External %s '%s' does not recognize some options: '%r'. "
+                    log.error("External %s '%s' does not recognize some options: %s. "
                               "Check the documentation for 'external %s'.",
-                              block, module, tuple(options_not_recognized), block)
+                              block, module, did_you_mean, block)
                     raise HandledException
             full_info[block][module].update(input_info[block][module])
             # Store default parameters and priors of class, and save to combine later

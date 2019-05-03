@@ -112,7 +112,7 @@ def get_external_function(string_or_function, name=None):
         function = string_or_function
     if not callable(function):
         log.error("The external function provided " +
-                  ("for '%s'x " % name if name else "") +
+                  ("for '%s' " % name if name else "") +
                   "is not an actual function. Got: '%r'", function)
         raise HandledException
     return function
