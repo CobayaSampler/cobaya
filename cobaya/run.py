@@ -17,7 +17,7 @@ from cobaya.conventions import _likelihood, _prior, _params, _theory, _sampler
 from cobaya.conventions import _path_install, _debug, _debug_file, _output_prefix
 from cobaya.conventions import _resume, _timing, _debug_default
 from cobaya.conventions import _yaml_extensions, _separator, _full_suffix, _resume_default
-from cobaya.conventions import _modules_path_arg, _force
+from cobaya.conventions import _modules_path_arg, _force, _post
 from cobaya.output import get_Output as Output
 from cobaya.model import Model
 from cobaya.sampler import get_sampler as Sampler
@@ -26,6 +26,7 @@ from cobaya.yaml import yaml_dump
 from cobaya.input import get_full_info
 from cobaya.mpi import import_MPI, am_single_or_primary_process
 from cobaya.tools import warn_deprecation
+from cobaya.post import post
 
 
 def run(info):
@@ -131,4 +132,7 @@ def run_script():
     info[_debug] = getattr(args, _debug) or info.get(_debug, _debug_default)
     info[_resume] = getattr(args, _resume, _resume_default)
     info[_force] = getattr(args, _force, False)
-    run(info)
+    if _post in info:
+        post(info)
+    else:
+        run(info)
