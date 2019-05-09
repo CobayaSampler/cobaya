@@ -59,12 +59,10 @@ class Likelihood(object):
             info[_params] = [p for p in all_params
                              if p.startswith(self.prefix or "")]
         # Load parameters
-        self.input_params = odict(
-            [(p, p_info) for p, p_info in parameterization.input_params().items()
-             if p in info[_params]])
-        self.output_params = odict(
-            [(p, p_info) for p, p_info in parameterization.output_params().items()
-             if p in info[_params]])
+        self.input_params = [
+            p for p in parameterization.input_params() if p in info[_params]]
+        self.output_params = [
+            p for p in parameterization.output_params() if p in info[_params]]
         # States, to avoid recomputing
         self.n_states = 3
         self.states = [{"params": None, "logp": None, "_derived": None,
