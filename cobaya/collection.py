@@ -73,9 +73,9 @@ class Collection(object):
         columns = [_weight, _minuslogpost]
         columns += list(self.sampled_params)
         columns += list(self.derived_params)
-        self.prior_names = [
+        self.minuslogprior_names = [
             _minuslogprior + _separator + piname for piname in list(model.prior)]
-        columns += [_minuslogprior] + self.prior_names
+        columns += [_minuslogprior] + self.minuslogprior_names
         self.chi2_names = [_chi2 + _separator + likname for likname in model.likelihood]
         columns += [_chi2] + self.chi2_names
         # Create/load the main data frame and the tracking indices
@@ -133,7 +133,7 @@ class Collection(object):
                 raise HandledException
         self.data.at[self._n, _minuslogpost] = -logpost
         if logpriors is not None:
-            for name, value in zip(self.prior_names, logpriors):
+            for name, value in zip(self.minuslogprior_names, logpriors):
                 self.data.at[self._n, name] = -value
             self.data.at[self._n, _minuslogprior] = -sum(logpriors)
         if loglikes is not None:
@@ -357,7 +357,7 @@ class OnePoint(Collection):
             self[self.sampled_params],
             derived=(self[self.derived_params] if self.derived_params else None),
             logpost=-self[_minuslogpost], weight=self[_weight],
-            logpriors=-np.array(self[self.prior_names]),
+            logpriors=-np.array(self[self.minuslogprior_names]),
             loglikes=-0.5 * np.array(self[self.chi2_names]))
 
     # Restore original __repr__ (here, there is only 1 sample)

@@ -354,7 +354,7 @@ class mcmc(Sampler):
                 .ix[self.collection.n() - 1]).values.copy()
             logpost = -(self.collection[_minuslogpost]
                         .ix[self.collection.n() - 1].copy())
-            logpriors = -(self.collection[self.collection.prior_names]
+            logpriors = -(self.collection[self.collection.minuslogprior_names]
                           .ix[self.collection.n() - 1].copy())
             loglikes = -0.5 * (self.collection[self.collection.chi2_names]
                                .ix[self.collection.n() - 1].copy())
