@@ -17,8 +17,8 @@ from collections import OrderedDict as odict
 from cobaya.input import load_input
 from cobaya.parameterization import is_fixed_param, is_sampled_param, is_derived_param
 from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_prefix, _post
-from cobaya.conventions import _params, _prior, _likelihood, _theory, _p_drop
-from cobaya.conventions import _chi2, _separator
+from cobaya.conventions import _params, _prior, _likelihood, _theory, _p_drop, _weight
+from cobaya.conventions import _chi2, _separator, _minuslogpost
 from cobaya.collection import Collection
 from cobaya.log import logger_setup, HandledException
 from cobaya.input import get_full_info
@@ -120,6 +120,7 @@ def post(info):
         sampled = point[dummy_model_in.parameterization.sampled_params()]
         derived = point[dummy_model_in.parameterization.derived_params()]
         inputs = point[dummy_model_in.parameterization.input_params()]
+        weight_old = point[_weight]
         logpriors_old = -point[collection_in.minuslogprior_names]
         loglikes_old = odict(-0.5*point[collection_in.chi2_names])
 
@@ -137,12 +138,13 @@ def post(info):
         if -np.inf in loglikes_new:
             continue
 
-        ## TODO!
-        weight = 1
+        collection_out.add(
+            sampled, derived=derived,
+            weight=weight_old, logpriors=logpriors_old, loglikes=loglikes_new)
+        # Reweight
+        collection_out[-1][_weight] *= np.exp(
+            point[_minuslogpost] - collection_out[-1][_minuslogpost])
         # maybe I have to do everything in memory and only write at the end?
         # in that case, use output_update property of collection
 
-        collection_out.add(
-            sampled, derived=derived,
-            weight=weight, logpriors=logpriors_old, loglikes=loglikes_new)
         collection_out._out_update()
