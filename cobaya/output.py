@@ -130,6 +130,8 @@ class Output(object):
         # We write the new one anyway (maybe updated debug, resuming...)
         for f, info in [(self.file_input, input_info),
                         (self.file_full, full_info_trimmed)]:
+            if not info:
+                pass
             with open(f, "w") as f_out:
                 try:
                     f_out.write(yaml_dump(info))
