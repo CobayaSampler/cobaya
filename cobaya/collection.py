@@ -50,7 +50,7 @@ class Collection(object):
 
     def __init__(self, model, output=None,
                  initial_size=enlargement_size, name=None, extension=None,
-                 resuming=False):
+                 resuming=False, onload_skip=None, onload_thin=None):
         self.name = name
         self.log = logging.getLogger(
             "collection:" + name if name else self.__class__.__name__)
@@ -74,7 +74,7 @@ class Collection(object):
         if resuming:
             if output:
                 try:
-                    self._out_load()
+                    self._out_load(skip=onload_skip, thin=onload_thin)
                     if set(self.data.columns) != set(columns):
                         self.log.error(
                             "Unexpected column names!\nLoaded: %s\nShould be: %s",
@@ -241,8 +241,8 @@ class Collection(object):
         return getattr(self, method + _separator + self.driver)
 
     # Load a pre-existing file
-    def _out_load(self):
-        self._get_driver("_load")()
+    def _out_load(self, **kwargs):
+        self._get_driver("_load")(**kwargs)
 
     # Dump/update/delete collection
     def _out_dump(self):
@@ -255,12 +255,23 @@ class Collection(object):
         self._get_driver("_delete")()
 
     # txt driver
-    def _load__txt(self):
+    def _load__txt(self, skip=None, thin=None):
         self.log.info("Loading existing sample from '%s'", self.file_name)
         with open(self.file_name, "r") as inp:
             cols = [a.strip() for a in inp.readline().lstrip("#").split()]
+            skip = skip or 0
+            if 0 < skip < 1:
+                # turn into #lines (need to know total line number)
+                for n, line in enumerate(inp):
+                    pass
+                skip = int(skip * (n + 1))
+                inp.seek(0)
+            thin = int(thin) or 1
+            self.log.debug("Skipping %d rows and thinning with factor %d.", skip, thin)
+            skiprows = lambda i: i < skip or i % thin
             self.data = pd.read_csv(
-                inp, sep=" ", header=None, names=cols, comment="#", skipinitialspace=True)
+                inp, sep=" ", header=None, names=cols, comment="#", skipinitialspace=True,
+                skiprows=skiprows)
 
     def _dump__txt(self):
         self._dump_slice__txt(0, self.n())
