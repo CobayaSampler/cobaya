@@ -18,7 +18,7 @@ from cobaya.input import load_input
 from cobaya.parameterization import is_fixed_param, is_sampled_param, is_derived_param
 from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_prefix, _post
 from cobaya.conventions import _params, _prior, _likelihood, _theory, _p_drop, _weight
-from cobaya.conventions import _chi2, _separator, _minuslogpost
+from cobaya.conventions import _chi2, _separator, _minuslogpost, _force
 from cobaya.collection import Collection
 from cobaya.log import logger_setup, HandledException
 from cobaya.input import get_full_info
@@ -111,9 +111,14 @@ def post(info):
 
     # 3. Create output collection
     dummy_model_out = DummyModel(info_in[_params], likelihoods_out)#, info_in.get(_prior, None), info_in.get(_theory, None))
-    output_out = Output(output_prefix=info.get(_output_prefix, "")+info[_post]["suffix"])
+    output_out = Output(output_prefix=info.get(_output_prefix, "") +
+                        "_" + _post + "_" + info[_post]["suffix"],
+                        force_output=info.get(_force))
     ## TODO: generalise NAME for multiple chains!!!!!!
-    collection_out = Collection(dummy_model_out, output_out, name="post")
+    info.update(info_in)
+    info[_post]["add"]["likelihood"].pop("one")
+    output_out.dump_info({}, info)
+    collection_out = Collection(dummy_model_out, output_out, name="1")
 
     # 4. Main loop!
     for i, point in collection_in:
