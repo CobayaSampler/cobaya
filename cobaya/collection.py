@@ -300,12 +300,11 @@ class Collection(object):
         n_float = 8
         with open(self.file_name, "a") as out:
             lines = self.data[n_min:n_max].to_string(
-                header=["# " + str(self.data.columns[0])] + list(self.data.columns[1:]),
-                index=False, na_rep="nan", justify="right",
+                header=(not n_min), index=False, na_rep="nan", justify="right",
                 float_format=(lambda x: ("%%.%dg" % n_float) % x))
-            # remove header if not first dump
-            if n_min:
-                lines = "\n".join(lines.split("\n")[1:])
+            # if header, add comment marker (careful not to overwrite col name)
+            if not n_min:
+                lines = "#" + (lines[1:] if lines[0] == " " else lines)
             out.write(lines)
             out.write("\n")
 
