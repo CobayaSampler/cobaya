@@ -40,10 +40,23 @@ enlargement_factor = None
 
 
 # Make sure that we don't reach the empty part of the dataframe
-def check_end(end, imax):
-    if end > imax:
-        raise ValueError("Trying to access a sample index larger than "
+def check_index(i, imax):
+    if (i > 0 and i >= imax) or (i < 0 and -i > imax):
+        raise IndexError("Trying to access a sample index larger than "
                          "the amount of samples (%d)!" % imax)
+    if i < 0:
+        return imax + i
+    return i
+
+# Notice that slices are never supposed to raise IndexError, but an empty list at worst!
+def check_slice(ij, imax):
+    newlims = {"start": ij.start, "stop": ij.stop}
+    for limname, lim in newlims.items():
+        if lim >= 0:
+            newlims[limname] = min(imax, lim)
+        else:
+            newlims[limname] = imax + lim
+    return slice(newlims["start"], newlims["stop"], ij.step)
 
 
 class Collection(object):
@@ -186,11 +199,9 @@ class Collection(object):
             except KeyError:
                 raise ValueError("Some of the indices are not valid columns.")
         elif isinstance(args[0], six.integer_types):
-            check_end(args[0], self._n)
-            return self.data.iloc[args[0]]
+            return self.data.iloc[check_index(args[0], self._n)]
         elif isinstance(args[0], slice):
-            check_end(args[0].stop, self._n)
-            return self.data.iloc[args[0]]
+            return self.data.iloc[check_slice(args[0], self._n)]
         else:
             raise ValueError("Index type not recognized: use column names or slices.")
 
