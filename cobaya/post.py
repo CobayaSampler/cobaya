@@ -181,4 +181,5 @@ def post(info):
         # maybe I have to do everything in memory and only write at the end?
         # in that case, use output_update property of collection
 
-        collection_out._out_update()
+    # Write!
+    collection_out._out_update()
