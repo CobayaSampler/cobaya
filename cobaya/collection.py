@@ -298,15 +298,15 @@ class Collection(object):
             return
         self._n_last_out = n_max
         n_float = 8
+        do_header = not n_min
         with open(self.file_name, "a") as out:
             lines = self.data[n_min:n_max].to_string(
-                header=(not n_min), index=False, na_rep="nan", justify="right",
+                header=do_header, index=False, na_rep="nan", justify="right",
                 float_format=(lambda x: ("%%.%dg" % n_float) % x))
-            # if header, add comment marker (careful not to overwrite col name)
-            if not n_min:
+            # if header, add comment marker by hand (messes with align if auto)
+            if do_header:
                 lines = "#" + (lines[1:] if lines[0] == " " else lines)
-            out.write(lines)
-            out.write("\n")
+            out.write(lines + "\n")
 
     def _delete__txt(self):
         try:
