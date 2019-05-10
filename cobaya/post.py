@@ -12,17 +12,20 @@ from __future__ import absolute_import, division
 import numpy as np
 import logging
 from collections import OrderedDict as odict
+from numbers import Number
 
 # Local
 from cobaya.input import load_input
 from cobaya.parameterization import is_fixed_param, is_sampled_param, is_derived_param
 from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_prefix, _post
 from cobaya.conventions import _params, _prior, _likelihood, _theory, _p_drop, _weight
-from cobaya.conventions import _chi2, _separator, _minuslogpost, _force
+from cobaya.conventions import _chi2, _separator, _minuslogpost, _force, _p_value
+from cobaya.conventions import _minuslogprior
 from cobaya.collection import Collection
 from cobaya.log import logger_setup, HandledException
 from cobaya.input import get_full_info
 from cobaya.output import Output
+from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection as Likelihood
 
 
@@ -35,9 +38,12 @@ class DummyParameterization(object):
         self._derived_params = []
         self._input_params = []
         self._output_params = []
+        self._constant_params = []
         for param, info in params_info.items():
             if is_fixed_param(info):
                 self._input_params.append(param)
+                if isinstance(info[_p_value], Number):
+                    self._constant_params.append(p)
             if is_sampled_param(info):
                 self._sampled_params.append(param)
                 if not info.get(_p_drop):
@@ -56,6 +62,13 @@ class DummyParameterization(object):
 
     def derived_params(self):
         return self._derived_params
+
+    def constant_params(self):
+        return self._constant_params
+
+    def sampled_params_info(self):
+        return odict([[p, {_prior: {"dist": "uniform", "min": 0, "max": 1}}]
+                      for p in self.sampled_params()])
 
     def sampled_input_dependence(self):
         return {}
@@ -88,43 +101,45 @@ def post(info):
                   "or skipping or thinning less.")
         raise HandledException
     # 2. Compare old and new info: determine what to do
-    ## TODO: checks should happen BEFORE loading the old chain maybe???
-    likelihoods_out = list(dummy_model_in.likelihood)
-    remove = info[_post].get("remove", {})
-    for like in remove.get(_likelihood, []):
-        try:
-            likelihoods_out.remove(like)
-        except ValueError:
-            log.error("Trying to remove likelihood '%s', but it is not present. "
-                      "Existing likelihoods: %r", like, likelihoods_out)
-            raise HandledException
+    out = {}
+    for level in [_prior, _likelihood]:
+        out[level] = getattr(dummy_model_in, level)
+        for pdf in info[_post].get("remove", {}).get(level, []):
+            try:
+                out[level].remove(pdf)
+            except ValueError:
+                existing = out[level]
+                if level == _prior:
+                    existing.remove(_prior_1d_name)
+                log.error("Trying to remove %s '%s', but it is not present. "
+                          "Existing ones: %r", level, pdf, out[level])
+                raise HandledException
     add = info[_post].get("add")
-    if _likelihood in add:
         # Add a dummy 'one' likelihood, to absorb unused parameters
-        add[_likelihood].update({"one": None})
-    add_full = get_full_info(add)
-    if _likelihood in add_full:
+    add.get(_likelihood, {}).update({"one": None})
+    add = get_full_info(add)
+    prior_add, likelihood_add = None, None
+    if _prior in add:
+        prior_add = Prior(dummy_model_in.parameterization, add[_prior])
+        mlprior_names_add = [_minuslogprior + _separator + name for name in prior_add
+                             if name is not _prior_1d_name]
+        out[_prior] += [p for p in prior_add if p is not _prior_1d_name]
+    if _likelihood in add:
         likelihood_add = Likelihood(
-            add_full[_likelihood], dummy_model_in.parameterization,
-                                    #info_theory, # modules=modules
-            # TODO: how do we get to know whether we have to initialise the theory code?
-            # i.e. whether one of the likelihoods needs it.
+            add[_likelihood], dummy_model_in.parameterization,
         )
-        chi2_add = [_chi2 + _separator + name for name in likelihood_add]
-        likelihoods_out += list(likelihood_add)
-        likelihoods_out.remove("one")
-        ## TODO: manage output/derived parameters!!!
-    else:
-        likelihood_add = None
+        chi2_names_add = [_chi2 + _separator + name for name in likelihood_add
+                          if name is not "one"]
+        out[_likelihood] += [l for l in likelihood_add if l is not "one"]
 
     # 3. Create output collection
-    dummy_model_out = DummyModel(info_in[_params], likelihoods_out)#, info_in.get(_prior, None), info_in.get(_theory, None))
+    dummy_model_out = DummyModel(info_in[_params], out[_likelihood])#, info_in.get(_prior, None), info_in.get(_theory, None))
     output_out = Output(output_prefix=info.get(_output_prefix, "") +
                         "_" + _post + "_" + info[_post]["suffix"],
                         force_output=info.get(_force))
     ## TODO: generalise NAME for multiple chains!!!!!!
     info.update(info_in)
-    info[_post]["add"]["likelihood"].pop("one")
+    info[_post].get("add", {}).get(_likelihood, {}).pop("one", None)
     output_out.dump_info({}, info)
     collection_out = Collection(dummy_model_out, output_out, name="1")
 
@@ -136,21 +151,27 @@ def post(info):
         weight_old = point[_weight]
         logpriors_old = -point[collection_in.minuslogprior_names]
         loglikes_old = odict(-0.5*point[collection_in.chi2_names])
-
         # Add/remove priors
         logpriors_new = logpriors_old
+        if prior_add:
+            # Notice "0" (first prior in prior_add) is ignored: not in mlprior_names_add
+            logpriors_add = odict(zip(mlprior_names_add, prior_add.logps(sampled)[1:]))
+        else:
+            logpriors_add = dict()
+        logpriors_new = [logpriors_add.get(name, logpriors_old.get(name))
+                         for name in collection_out.minuslogprior_names]
         if -np.inf in logpriors_new:
             continue
-
         # Add/remove likelihoods
         if likelihood_add:
-            loglikes_add = odict(zip(chi2_add, likelihood_add.logps(inputs)))
+            # Notice "one" (last in likelihood_add) is ignored: not in chi2_names
+            loglikes_add = odict(zip(chi2_names_add, likelihood_add.logps(inputs)))
         else:
             loglikes_add = dict()
         loglikes_new = [loglikes_add.get(name, loglikes_old.get(name)) for name in collection_out.chi2_names]
         if -np.inf in loglikes_new:
             continue
-
+        # Save to the collection
         collection_out.add(
             sampled, derived=derived,
             weight=weight_old, logpriors=logpriors_old, loglikes=loglikes_new)
