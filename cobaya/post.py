@@ -13,6 +13,7 @@ import numpy as np
 import logging
 from collections import OrderedDict as odict
 from numbers import Number
+from copy import deepcopy
 
 # Local
 from cobaya.input import load_input
@@ -95,7 +96,8 @@ def post(info):
     dummy_model_in = DummyModel(info_in[_params], info_in[_likelihood], info_in.get(_prior, None), info_in.get(_theory, None))
     # TODO: generalise NAME for multiple chains!!!!!!
     collection_in = Collection(dummy_model_in, output_in, name="1", resuming=True,
-                               onload_skip=info[_post]["skip"], onload_thin=info[_post]["thin"])
+                               onload_skip=info[_post].get("skip", 0),
+                               onload_thin=info[_post].get("thin", 1))
     if collection_in.n() <= 1:
         log.error("Not enough samples for post-processing. Try using a larger sample, "
                   "or skipping or thinning less.")
@@ -138,9 +140,10 @@ def post(info):
                         "_" + _post + "_" + info[_post]["suffix"],
                         force_output=info.get(_force))
     ## TODO: generalise NAME for multiple chains!!!!!!
-    info.update(info_in)
-    info[_post].get("add", {}).get(_likelihood, {}).pop("one", None)
-    output_out.dump_info({}, info)
+    info_out = deepcopy(info)
+    info_out.update(info_in)
+    info_out[_post].get("add", {}).get(_likelihood, {}).pop("one", None)
+    output_out.dump_info({}, info_out)
     collection_out = Collection(dummy_model_out, output_out, name="1")
 
     # 4. Main loop!
