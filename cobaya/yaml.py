@@ -128,9 +128,10 @@ def yaml_dump(data, stream=None, Dumper=yaml.Dumper, **kwds):
 
     OrderedDumper.add_representer(np.float64, _numpy_float_representer)
 
-    # Dummy representer that prints nothing for non-representable python objects
+    # Dummy representer that prints True for non-representable python objects
+    # (prints True instead of nothing because some functions try cast values to bool)
     def _null_representer(dumper, data):
-        return dumper.represent_scalar('tag:yaml.org,2002:null', '')
+        return dumper.represent_scalar('tag:yaml.org,2002:bool', 'true')
 
     OrderedDumper.add_representer(type(lambda: None), _null_representer)
     OrderedDumper.add_multi_representer(object, _null_representer)
