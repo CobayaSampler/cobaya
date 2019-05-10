@@ -86,9 +86,6 @@ class DummyModel(object):
 def post(info):
     logger_setup(info.get(_debug), info.get(_debug_file))
     log = logging.getLogger(__name__.split(".")[-1])
-
-    # TODO: 0. some input check here!
-
     # 1. Load existing sample
     # TODO: remove logging (talks about "resuming")
     output_in = Output(output_prefix=info.get(_output_prefix), resume=True)
@@ -106,13 +103,12 @@ def post(info):
     out = {}
     for level in [_prior, _likelihood]:
         out[level] = getattr(dummy_model_in, level)
+        if level == _prior:
+            out[level].remove(_prior_1d_name)
         for pdf in info[_post].get("remove", {}).get(level, []):
             try:
                 out[level].remove(pdf)
             except ValueError:
-                existing = out[level]
-                if level == _prior:
-                    existing.remove(_prior_1d_name)
                 log.error("Trying to remove %s '%s', but it is not present. "
                           "Existing ones: %r", level, pdf, out[level])
                 raise HandledException
@@ -135,7 +131,10 @@ def post(info):
         out[_likelihood] += [l for l in likelihood_add if l is not "one"]
 
     # 3. Create output collection
-    dummy_model_out = DummyModel(info_in[_params], out[_likelihood])#, info_in.get(_prior, None), info_in.get(_theory, None))
+    priors_no0 = deepcopy(out[_prior])
+    dummy_model_out = DummyModel(info_in[_params], out[_likelihood], info_prior=out[_prior]
+    ###                             info_in.get(_theory, None)
+    )
     output_out = Output(output_prefix=info.get(_output_prefix, "") +
                         "_" + _post + "_" + info[_post]["suffix"],
                         force_output=info.get(_force))
@@ -155,7 +154,6 @@ def post(info):
         logpriors_old = -point[collection_in.minuslogprior_names]
         loglikes_old = odict(-0.5*point[collection_in.chi2_names])
         # Add/remove priors
-        logpriors_new = logpriors_old
         if prior_add:
             # Notice "0" (first prior in prior_add) is ignored: not in mlprior_names_add
             logpriors_add = odict(zip(mlprior_names_add, prior_add.logps(sampled)[1:]))
@@ -177,7 +175,7 @@ def post(info):
         # Save to the collection
         collection_out.add(
             sampled, derived=derived,
-            weight=weight_old, logpriors=logpriors_old, loglikes=loglikes_new)
+            weight=weight_old, logpriors=logpriors_new, loglikes=loglikes_new)
         # Reweight
         collection_out[-1][_weight] *= np.exp(
             point[_minuslogpost] - collection_out[-1][_minuslogpost])

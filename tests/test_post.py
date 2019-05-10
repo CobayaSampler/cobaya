@@ -32,6 +32,27 @@ info_sampler = {"mcmc": {"Rminus1_stop": 0.01}}
 
 
 @flaky(max_runs=3, min_passes=1)
+def test_post_prior(tmpdir):
+    # Generate original chain
+    info = {
+        "output": os.path.join(str(tmpdir), "gaussian"), "force": True,
+        "params": info_params, "sampler": info_sampler,
+        "likelihood": {"one": None}, "prior": {"gaussian": sampled_pdf}}
+    run(info)
+    info_post = {
+        "output": info["output"], "force": True,
+        "post": {"suffix": "foo",
+                 "remove": {"prior": {"gaussian": None}},
+                 "add": {"prior": {"target": target_pdf}}}}
+    post(info_post)
+    # Load with GetDist and compare
+    mcsamples = loadMCSamples(info_post["output"] + "_post_" + info_post["post"]["suffix"])
+    new_mean = mcsamples.mean(["a", "b"])
+    new_cov = mcsamples.getCovMat().matrix
+    assert abs(KL_norm(target["mean"], target["cov"], new_mean, new_cov)) < 0.01
+
+
+@flaky(max_runs=3, min_passes=1)
 def test_post_likelihood(tmpdir):
     # Generate original chain
     info = {
