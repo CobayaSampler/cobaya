@@ -89,8 +89,16 @@ def post(info):
         raise HandledException
     # 2. Compare old and new info: determine what to do
     ## TODO: checks should happen BEFORE loading the old chain maybe???
-    add = info[_post].get("add")
     likelihoods_out = list(dummy_model_in.likelihood)
+    remove = info[_post].get("remove", {})
+    for like in remove.get(_likelihood, []):
+        try:
+            likelihoods_out.remove(like)
+        except ValueError:
+            log.error("Trying to remove likelihood '%s', but it is not present. "
+                      "Existing likelihoods: %r", like, likelihoods_out)
+            raise HandledException
+    add = info[_post].get("add")
     if _likelihood in add:
         # Add a dummy 'one' likelihood, to absorb unused parameters
         add[_likelihood].update({"one": None})
