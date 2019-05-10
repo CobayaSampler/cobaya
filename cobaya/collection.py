@@ -276,19 +276,15 @@ class Collection(object):
             return
         self._n_last_out = n_max
         n_float = 8
+        do_header = not n_min
         with open(self.file_name, "a") as out:
             lines = self.data[n_min:n_max].to_string(
-                header=[str(self.data.columns[0])] + list(self.data.columns[1:]),
-                index=False, na_rep="nan", justify="right",
+                header=do_header, index=False, na_rep="nan", justify="right",
                 float_format=(lambda x: ("%%.%dg" % n_float) % x))
-            # add comment hash (push if needed)
-            # (cannot be added before, because it messes with `justify="right"`)
-            lines = "#" + (lines[1:] if lines[0] == " " else lines)
-            # remove header if not first dump
-            if n_min:
-                lines = "\n".join(lines.split("\n")[1:])
-            out.write(lines)
-            out.write("\n")
+            # if header, add comment marker by hand (messes with align if auto)
+            if do_header:
+                lines = "#" + (lines[1:] if lines[0] == " " else lines)
+            out.write(lines + "\n")
 
     def _delete__txt(self):
         try:
