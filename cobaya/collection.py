@@ -63,7 +63,7 @@ class Collection(object):
 
     def __init__(self, model, output=None,
                  initial_size=enlargement_size, name=None, extension=None,
-                 resuming=False, onload_skip=None, onload_thin=None):
+                 resuming=False, onload_skip=0, onload_thin=1):
         self.name = name
         self.log = logging.getLogger(
             "collection:" + name if name else self.__class__.__name__)
@@ -266,18 +266,17 @@ class Collection(object):
         self._get_driver("_delete")()
 
     # txt driver
-    def _load__txt(self, skip=None, thin=None):
+    def _load__txt(self, skip=0, thin=1):
         self.log.info("Loading existing sample from '%s'", self.file_name)
         with open(self.file_name, "r") as inp:
             cols = [a.strip() for a in inp.readline().lstrip("#").split()]
-            skip = skip or 0
             if 0 < skip < 1:
                 # turn into #lines (need to know total line number)
                 for n, line in enumerate(inp):
                     pass
                 skip = int(skip * (n + 1))
                 inp.seek(0)
-            thin = int(thin) or 1
+            thin = int(thin)
             self.log.debug("Skipping %d rows and thinning with factor %d.", skip, thin)
             skiprows = lambda i: i < skip or i % thin
             self.data = pd.read_csv(
