@@ -28,6 +28,7 @@ from cobaya.input import get_full_info
 from cobaya.output import Output
 from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection as Likelihood
+from cobaya.mpi import get_mpi_rank
 
 
 # Dummy classes for loading chains for post processing
@@ -86,6 +87,9 @@ class DummyModel(object):
 def post(info):
     logger_setup(info.get(_debug), info.get(_debug_file))
     log = logging.getLogger(__name__.split(".")[-1])
+    if get_mpi_rank():
+        log.warn("Post-processing is not MPI-able. Doing nothing for rank > 1 processes.")
+        return
     # 1. Load existing sample
     output_in = Output(output_prefix=info.get(_output_prefix), resume=True)
     info_in = load_input(output_in.file_full)
