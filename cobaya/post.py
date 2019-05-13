@@ -45,7 +45,7 @@ class DummyParameterization(object):
             if is_fixed_param(info):
                 self._input_params.append(param)
                 if isinstance(info[_p_value], Number):
-                    self._constant_params.append(p)
+                    self._constant_params.append(param)
             if is_sampled_param(info):
                 self._sampled_params.append(param)
                 if not info.get(_p_drop):
