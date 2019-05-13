@@ -165,7 +165,7 @@ class Collection(object):
         Append another collection.
         Internal method: does not check for consistency!
         """
-        self.data = pd.concat([self.data[:self.n()], collection.data])
+        self.data = pd.concat([self.data[:self.n()], collection.data], ignore_index=True)
         self._n = self.n() + collection.n()
 
     # Retrieve-like methods
