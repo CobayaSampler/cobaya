@@ -40,12 +40,12 @@ class DummyParameterization(object):
         self._derived_params = []
         self._input_params = []
         self._output_params = []
-        self._constant_params = []
+        self._constant_params = odict()
         for param, info in params_info.items():
             if is_fixed_param(info):
                 self._input_params.append(param)
                 if isinstance(info[_p_value], Number):
-                    self._constant_params.append(param)
+                    self._constant_params[param] = info[_p_value]
             if is_sampled_param(info):
                 self._sampled_params.append(param)
                 if not info.get(_p_drop):
@@ -165,8 +165,11 @@ def post(info):
                    dummy_model_in.parameterization.sampled_params()]
         derived = [getattr(point, param) for param in
                    dummy_model_in.parameterization.derived_params()]
-        inputs = odict([[param, getattr(point, param)] for param in
-                        dummy_model_in.parameterization.input_params()])
+        inputs = odict([
+            [param, getattr(
+                point, param,
+                dummy_model_in.parameterization.constant_params().get(param, None))]
+            for param in dummy_model_in.parameterization.input_params()])
         # Add/remove priors
         if prior_add:
             # Notice "0" (first prior in prior_add) is ignored: not in mlprior_names_add
