@@ -47,7 +47,7 @@ class _cosmo(Theory):
           value the likelihood may need.
         """
         if not getattr(self, "_needs", None):
-            self._needs = deepcopy(self.output_params)
+            self._needs = dict([[p, None] for p in self.output_params])
         # Accumulate the requirements across several calls in a safe way;
         # e.g. take maximum of all values of a requested precision paramater
         for k, v in requirements.items():

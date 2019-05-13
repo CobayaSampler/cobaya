@@ -292,12 +292,12 @@ class LikelihoodCollection(object):
                     raise HandledException
         # *IF* there is a theory code, initialize it
         if info_theory:
-            input_params_theory = {p: v for p, v in self.input_params.items()
-                                   if p in requested_not_known["input_params"]}
-            output_params_theory = {p: None for p in self.output_params
+            input_params_theory = [p for p in self.input_params
+                                   if p in requested_not_known["input_params"]]
+            output_params_theory = [p for p in self.output_params
                                     if p in requested_not_known["output_params"] and
                                     # Not the chi2's either
-                                    not p.startswith(_chi2 + _separator)}
+                                    not p.startswith(_chi2 + _separator)]
             name, fields = list(info_theory.items())[0]
             # If it has an "external" key, wrap it up. Else, load it up
             if _external in list(info_theory.values())[0]:

@@ -21,7 +21,7 @@ from cobaya.parameterization import is_fixed_param, is_sampled_param, is_derived
 from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_prefix, _post
 from cobaya.conventions import _params, _prior, _likelihood, _theory, _p_drop, _weight
 from cobaya.conventions import _chi2, _separator, _minuslogpost, _force, _p_value
-from cobaya.conventions import _minuslogprior
+from cobaya.conventions import _minuslogprior, _path_install
 from cobaya.collection import Collection
 from cobaya.log import logger_setup, HandledException
 from cobaya.input import get_full_info
@@ -141,6 +141,8 @@ def post(info):
     if _likelihood in add:
         likelihood_add = Likelihood(
             add[_likelihood], dummy_model_in.parameterization,
+            info_theory=add.get(_theory, info_in.get(_theory, None)),
+            modules=info.get(_path_install)
         )
         chi2_names_add = [_chi2 + _separator + name for name in likelihood_add
                           if name is not "one"]
