@@ -109,7 +109,8 @@ def post(info):
             i += 1
         except IOError:
             break
-    log.info("Loaded %d chain%s.", i, "s" if i - 1 else "")
+    log.info("Loaded %d chain%s containing %d samples.",
+             i, "s" if i - 1 else "", collection_in.n())
     if collection_in.n() <= 1:
         log.error("Not enough samples for post-processing. Try using a larger sample, "
                   "or skipping or thinning less.")
@@ -191,11 +192,15 @@ def post(info):
         collection_out.add(
             sampled, derived=derived,
             weight=weight_old, logpriors=logpriors_new, loglikes=loglikes_new)
-        # Reweight
-        collection_out[-1][_weight] *= np.exp(
-            point[_minuslogpost] - collection_out[-1][_minuslogpost])
-        # maybe I have to do everything in memory and only write at the end?
-        # in that case, use output_update property of collection
 
+    # Reweight -- account for large dynamic range!
+    #   Prefer to rescale +inf to finite, and ignore final points with -inf.
+    #   Remove -inf's (0-weight), and correct indices
+    difflogmax = max(collection_in[_minuslogpost] - collection_out[_minuslogpost])
+    collection_out.data[_weight] *= np.exp(
+        collection_in[_minuslogpost] - collection_out[_minuslogpost] - difflogmax)
+    collection_out.data = (
+        collection_out.data[collection_out.data.weight > 0].reset_index(drop=True))
+    collection_out._n = collection_out.data.last_valid_index() + 1
     # Write!
     collection_out._out_update()
