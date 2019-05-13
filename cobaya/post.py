@@ -87,14 +87,25 @@ def post(info):
     logger_setup(info.get(_debug), info.get(_debug_file))
     log = logging.getLogger(__name__.split(".")[-1])
     # 1. Load existing sample
-    # TODO: remove logging (talks about "resuming")
     output_in = Output(output_prefix=info.get(_output_prefix), resume=True)
     info_in = load_input(output_in.file_full)
-    dummy_model_in = DummyModel(info_in[_params], info_in[_likelihood], info_in.get(_prior, None), info_in.get(_theory, None))
-    # TODO: generalise NAME for multiple chains!!!!!!
-    collection_in = Collection(dummy_model_in, output_in, name="1", resuming=True,
-                               onload_skip=info[_post].get("skip", 0),
-                               onload_thin=info[_post].get("thin", 1))
+    dummy_model_in = DummyModel(info_in[_params], info_in[_likelihood],
+                                info_in.get(_prior, None), info_in.get(_theory, None))
+    i = 0
+    while True:
+        try:
+            collection = Collection(
+                dummy_model_in, output_in, name="%d" % (1 + i),
+                load=True, onload_skip=info[_post].get("skip", 0),
+                onload_thin=info[_post].get("thin", 1))
+            if i == 0:
+                collection_in = collection
+            else:
+                collection_in._append(collection)
+            i += 1
+        except IOError:
+            break
+    log.info("Loaded %d chain%s.", i, "s" if i - 1 else "")
     if collection_in.n() <= 1:
         log.error("Not enough samples for post-processing. Try using a larger sample, "
                   "or skipping or thinning less.")
