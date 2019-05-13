@@ -154,28 +154,26 @@ def post(info):
     output_out = Output(output_prefix=info.get(_output_prefix, "") +
                         "_" + _post + "_" + info[_post]["suffix"],
                         force_output=info.get(_force))
-    ## TODO: generalise NAME for multiple chains!!!!!!
     info_out = deepcopy(info)
     info_out.update(info_in)
     info_out[_post].get("add", {}).get(_likelihood, {}).pop("one", None)
     output_out.dump_info({}, info_out)
     collection_out = Collection(dummy_model_out, output_out, name="1")
-
     # 4. Main loop!
-    for i, point in collection_in:
-        sampled = point[dummy_model_in.parameterization.sampled_params()]
-        derived = point[dummy_model_in.parameterization.derived_params()]
-        inputs = point[dummy_model_in.parameterization.input_params()]
-        weight_old = point[_weight]
-        logpriors_old = -point[collection_in.minuslogprior_names]
-        loglikes_old = odict(-0.5*point[collection_in.chi2_names])
+    for point in collection_in.data.itertuples():
+        sampled = [getattr(point, param) for param in
+                   dummy_model_in.parameterization.sampled_params()]
+        derived = [getattr(point, param) for param in
+                   dummy_model_in.parameterization.derived_params()]
+        inputs = odict([[param, getattr(point, param)] for param in
+                        dummy_model_in.parameterization.input_params()])
         # Add/remove priors
         if prior_add:
             # Notice "0" (first prior in prior_add) is ignored: not in mlprior_names_add
             logpriors_add = odict(zip(mlprior_names_add, prior_add.logps(sampled)[1:]))
         else:
             logpriors_add = dict()
-        logpriors_new = [logpriors_add.get(name, logpriors_old.get(name))
+        logpriors_new = [logpriors_add.get(name, - getattr(point, name, 0))
                          for name in collection_out.minuslogprior_names]
         if -np.inf in logpriors_new:
             continue
@@ -185,13 +183,14 @@ def post(info):
             loglikes_add = odict(zip(chi2_names_add, likelihood_add.logps(inputs)))
         else:
             loglikes_add = dict()
-        loglikes_new = [loglikes_add.get(name, loglikes_old.get(name)) for name in collection_out.chi2_names]
+        loglikes_new = [loglikes_add.get(name, -0.5 * getattr(point, name, 0))
+                        for name in collection_out.chi2_names]
         if -np.inf in loglikes_new:
             continue
-        # Save to the collection
+        # Save to the collection (keep old weight for now)
         collection_out.add(
-            sampled, derived=derived,
-            weight=weight_old, logpriors=logpriors_new, loglikes=loglikes_new)
+            sampled, derived=derived, weight=getattr(point, _weight),
+            logpriors=logpriors_new, loglikes=loglikes_new)
 
     # Reweight -- account for large dynamic range!
     #   Prefer to rescale +inf to finite, and ignore final points with -inf.
