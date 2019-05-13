@@ -54,7 +54,7 @@ class Output(object):
                 self.log.error("Could not create folder '%s'. "
                                "See traceback on top of this message.", self.folder)
                 raise HandledException
-        self.log.info("Products to be written into folder '%s', with prefix '%s'",
+        self.log.info("Output to be read-from/written-into folder '%s', with prefix '%s'",
                       self.folder, self.prefix)
         # Prepare file names, and check if chain exists
         info_file_prefix = os.path.join(
@@ -64,7 +64,7 @@ class Output(object):
         self.resuming = False
         if os.path.isfile(self.file_full):
             self.log.info(
-                "Found an existing sample with the requested ouput prefix: '%s'",
+                "Found existing products with the requested ouput prefix: '%s'",
                 output_prefix)
             if self.force_output:
                 self.log.info("Deleting previous chain ('force' was requested).")
@@ -72,7 +72,7 @@ class Output(object):
             elif resume:
                 # Only in this case we can be sure that we are actually resuming
                 self.resuming = True
-                self.log.info("Let's try to resume sampling.")
+                self.log.info("Let's try to resume/load.")
             else:
                 # If only input and full info dumped, overwrite; else fail
                 info_files = [
