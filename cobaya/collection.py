@@ -172,9 +172,6 @@ class Collection(object):
     def n(self):
         return self._n
 
-    def last(self):
-        return self.data.loc[-1]
-
     def n_last_out(self):
         return self._n_last_out
 
