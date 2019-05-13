@@ -63,7 +63,7 @@ class Collection(object):
 
     def __init__(self, model, output=None,
                  initial_size=enlargement_size, name=None, extension=None,
-                 resuming=False, onload_skip=0, onload_thin=1):
+                 resuming=False, load=False, onload_skip=0, onload_thin=1):
         self.name = name
         self.log = logging.getLogger(
             "collection:" + name if name else self.__class__.__name__)
@@ -84,7 +84,7 @@ class Collection(object):
                 name=self.name, extension=extension)
         else:
             self.driver = "dummy"
-        if resuming:
+        if resuming or load:
             if output:
                 try:
                     self._out_load(skip=onload_skip, thin=onload_thin)
@@ -96,16 +96,19 @@ class Collection(object):
                     self._n = self.data.shape[0]
                     self._n_last_out = self._n
                 except IOError:
-                    self.log.info(
-                        "Could not find a chain to resume. Maybe burn-in didn't finish. "
-                        "Creating new chain file!")
-                    resuming = False
+                    if resuming:
+                        self.log.info(
+                            "Could not find a chain to resume. "
+                            "Maybe burn-in didn't finish. Creating new chain file!")
+                        resuming = False
+                    elif load:
+                        raise
             else:
                 self.log.error("No continuation possible if there is no output.")
                 raise HandledException
         else:
             self._out_delete()
-        if not resuming:
+        if not resuming and not load:
             self.reset(columns=columns, index=range(initial_size))
             # TODO: the following 2 lines should go into the `reset` method.
             if output:
@@ -156,6 +159,14 @@ class Collection(object):
             self.data = pd.concat([
                 self.data, pd.DataFrame(np.nan, columns=self.data.columns,
                                         index=np.arange(self.n(), self.n() + enlarge_by))])
+
+    def _append(self, collection):
+        """
+        Append another collection.
+        Internal method: does not check for consistency!
+        """
+        self.data = pd.concat([self.data[:self.n()], collection.data])
+        self._n = self.n() + collection.n()
 
     # Retrieve-like methods
     def n(self):
@@ -267,7 +278,6 @@ class Collection(object):
 
     # txt driver
     def _load__txt(self, skip=0, thin=1):
-        self.log.info("Loading existing sample from '%s'", self.file_name)
         with open(self.file_name, "r") as inp:
             cols = [a.strip() for a in inp.readline().lstrip("#").split()]
             if 0 < skip < 1:
@@ -282,6 +292,7 @@ class Collection(object):
             self.data = pd.read_csv(
                 inp, sep=" ", header=None, names=cols, comment="#", skipinitialspace=True,
                 skiprows=skiprows)
+        self.log.info("Loaded sample from '%s'", self.file_name)
 
     def _dump__txt(self):
         self._dump_slice__txt(0, self.n())
