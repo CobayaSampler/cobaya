@@ -252,7 +252,7 @@ def get_scipy_1d_pdf(info):
             "'scipy.stats' produced an error: <<%r>>. "
             "This probably means that the distribution '%s' "
             "does not recognize the parameter mentioned in the 'scipy' error above.",
-            str(message), dist)
+            str(tp), dist)
         raise HandledException
 
 
