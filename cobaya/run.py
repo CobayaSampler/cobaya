@@ -13,6 +13,7 @@ from __future__ import division
 from copy import deepcopy
 
 # Local
+from cobaya import __version__
 from cobaya.conventions import _likelihood, _prior, _params, _theory, _sampler
 from cobaya.conventions import _path_install, _debug, _debug_file, _output_prefix
 from cobaya.conventions import _resume, _timing, _debug_default
@@ -100,6 +101,7 @@ def run_script():
     continuation.add_argument("-" + _force[0], "--" + _force, action="store_true",
                               help="Overwrites previous output, if it exists "
                                    "(use with care!)")
+    parser.add_argument("--version", action="version", version=__version__)
     args = parser.parse_args()
     if any([(os.path.splitext(f)[0] in ("input", "full")) for f in args.input_file]):
         raise ValueError("'input' and 'full' are reserved file names. "
