@@ -136,7 +136,7 @@ class Output(object):
                 try:
                     f_out.write(yaml_dump(info))
                 except OutputError as e:
-                    self.log.error(e.message)
+                    self.log.error(str(e))
                     raise HandledException
 
     def prepare_collection(self, name=None, extension=None):

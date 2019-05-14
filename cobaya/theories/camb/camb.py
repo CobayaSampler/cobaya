@@ -360,8 +360,8 @@ class camb(_cosmo):
                 self.states[i_state]["params"], self.extra_args)
             raise
         except CAMBUnknownArgumentError as e:
-            self.log.error("Some of the parameters passed to CAMB were not recognized: "
-                           "%s", e.message)
+            self.log.error(
+                "Some of the parameters passed to CAMB were not recognized: %s" % str(e))
             raise HandledException
         return False
 
