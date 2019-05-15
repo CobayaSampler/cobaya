@@ -162,7 +162,9 @@ def post(info):
     output_out.dump_info({}, info_out)
     collection_out = Collection(dummy_model_out, output_out, name="1")
     # 4. Main loop!
-    for point in collection_in.data.itertuples():
+    log.info("Running post-processing...")
+    last_percent = 0
+    for i, point in enumerate(collection_in.data.itertuples()):
         sampled = [getattr(point, param) for param in
                    dummy_model_in.parameterization.sampled_params()]
         derived = [getattr(point, param) for param in
@@ -197,6 +199,10 @@ def post(info):
             sampled, derived=derived, weight=getattr(point, _weight),
             logpriors=logpriors_new, loglikes=loglikes_new)
 
+        percent = np.round(i / collection_in.n() * 100)
+        if percent != last_percent:
+            log.info("%d%%", percent)
+            last_percent = percent
     # Reweight -- account for large dynamic range!
     #   Prefer to rescale +inf to finite, and ignore final points with -inf.
     #   Remove -inf's (0-weight), and correct indices
