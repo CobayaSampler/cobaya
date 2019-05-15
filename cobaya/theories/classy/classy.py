@@ -279,6 +279,15 @@ class classy(_cosmo):
                              "'non_linear: halofit|hmcode|...' in classy's 'extra_args'.")
         # Cleanup of products string
         self.extra_args["output"] = " ".join(set(self.extra_args["output"].split()))
+        # If no output requested, remove arguments that produce an error
+        # (e.g. complaints if halofit requested but no Cl's computed.)
+        # Needed for facilitating post-processing
+        if not self.extra_args["output"]:
+            for k in ["non linear"]:
+                if k in self.extra_args:
+                    self.log.info("Ignoring {%s: %r}, since no products requested.",
+                                  k, self.extra_args[k])
+                    self.extra_args.pop(k)
         # Finally, check that there are no repeated parameters between input and extra
         if set(self.input_params).intersection(set(self.extra_args)):
             self.log.error(
