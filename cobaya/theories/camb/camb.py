@@ -504,7 +504,8 @@ class camb(_cosmo):
     def get_param(self, p):
         current_state = self.current_state()
         for pool in ["params", "derived", "derived_extra"]:
-            value = deepcopy(current_state[pool].get(self.translate_param(p), None))
+            value = deepcopy(
+                (current_state[pool] or {}).get(self.translate_param(p), None))
             if value is not None:
                 return value
         self.log.error("Parameter not known: '%s'", p)
