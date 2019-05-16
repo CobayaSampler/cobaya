@@ -197,6 +197,9 @@ def post(info):
             logpriors_add = dict()
         logpriors_new = [logpriors_add.get(name, - getattr(point, name, 0))
                          for name in collection_out.minuslogprior_names]
+        if log.getEffectiveLevel() <= logging.DEBUG:
+            log.debug(
+                "New set of priors: %r", dict(zip(dummy_model_out.prior, logpriors_new)))
         if -np.inf in logpriors_new:
             continue
         # Add/remove likelihoods
@@ -207,6 +210,10 @@ def post(info):
             loglikes_add = dict()
         loglikes_new = [loglikes_add.get(name, -0.5 * getattr(point, name, 0))
                         for name in collection_out.chi2_names]
+        if log.getEffectiveLevel() <= logging.DEBUG:
+            log.debug(
+                "New set of likelihoods: %r",
+                dict(zip(dummy_model_out.likelihood, loglikes_new)))
         if -np.inf in loglikes_new:
             continue
         # Save to the collection (keep old weight for now)
