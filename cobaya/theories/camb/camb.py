@@ -316,9 +316,9 @@ class camb(_cosmo):
                 "extra arguments: %s. Please, remove one of the definitions of each.",
                 list(set(self.input_params).intersection(set(self.extra_args))))
             raise HandledException
-        # And add mandatory (though trivial if unspecified) lmax
-        if "lmax" not in self.input_params and "lmax" not in self.extra_args:
-            self.extra_args["lmax"] = 0
+        # Remove extra args that cause an error if the associated product is not requested
+        if "cl" not in [k.lower() for k in self._needs]:
+            self.extra_args.pop("lens_potential_accuracy", None)
 
     def add_to_redshifts(self, z):
         self.extra_args["redshifts"] = np.sort(np.unique(np.concatenate(
