@@ -117,6 +117,7 @@ def post(info):
         raise HandledException
     # 2. Compare old and new info: determine what to do
     out = {}
+    warn_remove = False
     for level in [_prior, _likelihood]:
         out[level] = getattr(dummy_model_in, level)
         if level == _prior:
@@ -124,13 +125,21 @@ def post(info):
         for pdf in info[_post].get("remove", {}).get(level, []):
             try:
                 out[level].remove(pdf)
+                warn_remove = True
             except ValueError:
                 log.error("Trying to remove %s '%s', but it is not present. "
                           "Existing ones: %r", level, pdf, out[level])
                 raise HandledException
+    if warn_remove:
+        log.warn("You are removing a prior or likelihood pdf. "
+                 "Notice that if the resulting posterior is much wider "
+                 "than the original one, or displaced enough, "
+                 "it is probably safer to explore it directly.")
     add = info[_post].get("add")
-        # Add a dummy 'one' likelihood, to absorb unused parameters
-    add.get(_likelihood, {}).update({"one": None})
+    # Add a dummy 'one' likelihood, to absorb unused parameters
+    if not add.get(_likelihood):
+        add[_likelihood] = odict()
+    add[_likelihood].update({"one": None})
     add = get_full_info(add)
     prior_add, likelihood_add = None, None
     if _prior in add:
@@ -139,11 +148,17 @@ def post(info):
                              if name is not _prior_1d_name]
         out[_prior] += [p for p in prior_add if p is not _prior_1d_name]
     if _likelihood in add:
+        # Don't initialise the theory code if not adding/recomputing theory or likelihoods
+        info_theory_out = (
+            add.get(_theory, (info_in.get(_theory, None)
+                              if list(add[_likelihood]) != ["one"] else None)))
         likelihood_add = Likelihood(
             add[_likelihood], dummy_model_in.parameterization,
-            info_theory=add.get(_theory, info_in.get(_theory, None)),
-            modules=info.get(_path_install)
+            info_theory=info_theory_out, modules=info.get(_path_install)
         )
+        # TEMPORARY (BETA ONLY): specify theory parameters
+        if likelihood_add.theory:
+            likelihood_add.theory.input_params = info[_post]["theory_params"]["input"]
         chi2_names_add = [_chi2 + _separator + name for name in likelihood_add
                           if name is not "one"]
         out[_likelihood] += [l for l in likelihood_add if l is not "one"]
