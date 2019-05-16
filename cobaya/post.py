@@ -122,7 +122,7 @@ def post(info):
         out[level] = getattr(dummy_model_in, level)
         if level == _prior:
             out[level].remove(_prior_1d_name)
-        for pdf in info[_post].get("remove", {}).get(level, []):
+        for pdf in info[_post].get("remove", {}).get(level, []) or []:
             try:
                 out[level].remove(pdf)
                 warn_remove = True
@@ -229,3 +229,4 @@ def post(info):
     collection_out._n = collection_out.data.last_valid_index() + 1
     # Write!
     collection_out._out_update()
+    log.info("Finished!")
