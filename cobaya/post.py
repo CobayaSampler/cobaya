@@ -29,6 +29,7 @@ from cobaya.output import Output
 from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection as Likelihood
 from cobaya.mpi import get_mpi_rank
+from cobaya.tools import progress_bar
 
 
 # Dummy classes for loading chains for post processing
@@ -168,6 +169,9 @@ def post(info):
     dummy_model_out = DummyModel(info_in[_params], out[_likelihood], info_prior=out[_prior]
     ###                             info_in.get(_theory, None)
     )
+    if "suffix" not in info[_post]:
+        log.error("You need to provide a 'suffix' for your chains.")
+        raise HandledException
     output_out = Output(output_prefix=info.get(_output_prefix, "") +
                         "_" + _post + "_" + info[_post]["suffix"],
                         force_output=info.get(_force))
@@ -222,9 +226,9 @@ def post(info):
             logpriors=logpriors_new, loglikes=loglikes_new)
 
         percent = np.round(i / collection_in.n() * 100)
-        if percent != last_percent:
-            log.info("%d%%", percent)
+        if percent != last_percent and not percent % 5:
             last_percent = percent
+            progress_bar(log, percent, " (%d/%d)" % (i, collection_in.n()))
     # Reweight -- account for large dynamic range!
     #   Prefer to rescale +inf to finite, and ignore final points with -inf.
     #   Remove -inf's (0-weight), and correct indices
