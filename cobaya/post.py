@@ -89,7 +89,8 @@ def post(info):
     logger_setup(info.get(_debug), info.get(_debug_file))
     log = logging.getLogger(__name__.split(".")[-1])
     if get_mpi_rank():
-        log.warn("Post-processing is not MPI-able. Doing nothing for rank > 1 processes.")
+        log.warning(
+            "Post-processing is not MPI-able. Doing nothing for rank > 1 processes.")
         return
     # 1. Load existing sample
     output_in = Output(output_prefix=info.get(_output_prefix), resume=True)
@@ -132,10 +133,10 @@ def post(info):
                           "Existing ones: %r", level, pdf, out[level])
                 raise HandledException
     if warn_remove:
-        log.warn("You are removing a prior or likelihood pdf. "
-                 "Notice that if the resulting posterior is much wider "
-                 "than the original one, or displaced enough, "
-                 "it is probably safer to explore it directly.")
+        log.warning("You are removing a prior or likelihood pdf. "
+                    "Notice that if the resulting posterior is much wider "
+                    "than the original one, or displaced enough, "
+                    "it is probably safer to explore it directly.")
     add = info[_post].get("add")
     # Add a dummy 'one' likelihood, to absorb unused parameters
     if not add.get(_likelihood):

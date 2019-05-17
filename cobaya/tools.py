@@ -366,4 +366,4 @@ def progress_bar(logger, percentage, final_text=""):
     """Very simple, multiline, logger-compatible progress bar, with increments of 5%."""
     progress = int(percentage/5)
     logger.info(" |%s| %3d%% %s",
-                "@" * progress + "·" * (20-progress), percentage, final_text)
+                "@" * progress + "-" * (20-progress), percentage, final_text)
