@@ -143,9 +143,17 @@ class Collection(object):
             for name, value in zip(self.chi2_names, loglikes):
                 self.data.at[self._n, name] = -2 * value
             self.data.at[self._n, _chi2] = -2 * sum(loglikes)
+        if len(values) != len(self.sampled_params):
+            self.log.error("Got %d values for the sampled parameters. Should be %d.",
+                           len(values), len(self.sampled_params))
+            raise HandledException
         for name, value in zip(self.sampled_params, values):
             self.data.at[self._n, name] = value
         if derived is not None:
+            if len(derived) != len(self.derived_params):
+                self.log.error("Got %d values for the dervied parameters. Should be %d.",
+                               len(derived), len(self.derived_params))
+                raise HandledException
             for name, value in zip(self.derived_params, derived):
                 self.data.at[self._n, name] = value
         self._n += 1
