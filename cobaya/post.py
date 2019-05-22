@@ -210,6 +210,11 @@ def post(info):
         if percent != last_percent and not percent % 5:
             last_percent = percent
             progress_bar(log, percent, " (%d/%d)" % (i, collection_in.n()))
+    if not collection_out.data.last_valid_index():
+        log.error("No elements in the final sample. Possible causes: "
+                  "added a prior or likelihood valued zero over the full sampled domain; "
+                  "the computation of the theory failed everywhere...")
+        raise HandledException
     # Reweight -- account for large dynamic range!
     #   Prefer to rescale +inf to finite, and ignore final points with -inf.
     #   Remove -inf's (0-weight), and correct indices
