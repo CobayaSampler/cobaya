@@ -71,3 +71,21 @@ def test_post_likelihood(tmpdir):
     new_mean = mcsamples.mean(["a", "b"])
     new_cov = mcsamples.getCovMat().matrix
     assert abs(KL_norm(target["mean"], target["cov"], new_mean, new_cov)) < 0.01
+
+
+def test_post_params(tmpdir):
+    # Generate original chain
+    info = {
+        "output": os.path.join(str(tmpdir), "gaussian"),  "force": True,
+        "params": info_params, "sampler": info_sampler,
+        "likelihood": {"gaussian": sampled_pdf}}
+    run(info)
+    info_post = {
+        "output": info["output"], "force": True,
+        "post": {"suffix": "foo",
+                 "remove": {"params": {"a_plus_b": None}},
+                 "add": {"params": {"a_minus_b": {"derived": "lambda a,b: a-b"}}}}}
+    updated_info, products = post(info_post)
+    # Compare parameters
+    assert np.allclose(
+        products["post"]["a"] - products["post"]["b"], products["post"]["a_minus_b"]))

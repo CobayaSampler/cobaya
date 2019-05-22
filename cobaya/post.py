@@ -17,6 +17,7 @@ from copy import deepcopy
 
 # Local
 from cobaya.input import load_input
+from cobaya.parameterization import Parameterization
 from cobaya.parameterization import is_fixed_param, is_sampled_param, is_derived_param
 from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_prefix, _post
 from cobaya.conventions import _params, _prior, _likelihood, _theory, _p_drop, _weight
@@ -34,53 +35,11 @@ from cobaya.tools import progress_bar
 
 # Dummy classes for loading chains for post processing
 
-class DummyParameterization(object):
-
-    def __init__(self, params_info):
-        self._sampled_params = []
-        self._derived_params = []
-        self._input_params = []
-        self._output_params = []
-        self._constant_params = odict()
-        for param, info in params_info.items():
-            if is_fixed_param(info):
-                self._input_params.append(param)
-                if isinstance(info[_p_value], Number):
-                    self._constant_params[param] = info[_p_value]
-            if is_sampled_param(info):
-                self._sampled_params.append(param)
-                if not info.get(_p_drop):
-                    self._input_params.append(param)
-            elif is_derived_param(info):
-                self._derived_params.append(param)
-
-    def input_params(self):
-        return self._input_params
-
-    def output_params(self):
-        return self._output_params
-
-    def sampled_params(self):
-        return self._sampled_params
-
-    def derived_params(self):
-        return self._derived_params
-
-    def constant_params(self):
-        return self._constant_params
-
-    def sampled_params_info(self):
-        return odict([[p, {_prior: {"dist": "uniform", "min": 0, "max": 1}}]
-                      for p in self.sampled_params()])
-
-    def sampled_input_dependence(self):
-        return {}
-
 class DummyModel(object):
 
     def __init__(self, info_params, info_likelihood, info_prior=None, info_theory=None):
 
-        self.parameterization = DummyParameterization(info_params)
+        self.parameterization = Parameterization(info_params)
         self.prior = [_prior_1d_name] + list(info_prior or [])
         self.likelihood = list(info_likelihood)
 
@@ -137,7 +96,8 @@ def post(info):
                     "Notice that if the resulting posterior is much wider "
                     "than the original one, or displaced enough, "
                     "it is probably safer to explore it directly.")
-    add = info[_post].get("add")
+    add = info[_post].get("add", {})
+    remove = info[_post].get("remove", {})
     # Add a dummy 'one' likelihood, to absorb unused parameters
     if not add.get(_likelihood):
         add[_likelihood] = odict()
@@ -164,12 +124,23 @@ def post(info):
         chi2_names_add = [_chi2 + _separator + name for name in likelihood_add
                           if name is not "one"]
         out[_likelihood] += [l for l in likelihood_add if l is not "one"]
-
+    out[_params] = deepcopy(info_in[_params])
+    for p in remove.get(_params, {}):
+        pinfo = info_in[_params].get(p)
+        if pinfo is None or not is_derived_param(pinfo):
+            log.error(
+                "You tried to remove parameter '%s', which is not a derived paramter. "
+                "Only derived parameters can be removed during post-processing.", p)
+            raise HandledException
+        out[_params].pop(p)
+    for p, pinfo in add.get(_params, {}).items():
+        if not is_derived_param(pinfo):
+            log.error(
+                "You tried to add parameter '%s', which is not a derived paramter. "
+                "Only derived parameters can be added during post-processing.", p)
+            raise HandledException
+        out[_params][p] = pinfo
     # 3. Create output collection
-    priors_no0 = deepcopy(out[_prior])
-    dummy_model_out = DummyModel(info_in[_params], out[_likelihood], info_prior=out[_prior]
-    ###                             info_in.get(_theory, None)
-    )
     if "suffix" not in info[_post]:
         log.error("You need to provide a 'suffix' for your chains.")
         raise HandledException
@@ -180,6 +151,9 @@ def post(info):
     info_out.update(info_in)
     info_out[_post].get("add", {}).get(_likelihood, {}).pop("one", None)
     output_out.dump_info({}, info_out)
+    dummy_model_out = DummyModel(
+        out[_params], out[_likelihood], info_prior=out[_prior]
+    )
     collection_out = Collection(dummy_model_out, output_out, name="1")
     # 4. Main loop!
     log.info("Running post-processing...")
@@ -187,8 +161,9 @@ def post(info):
     for i, point in enumerate(collection_in.data.itertuples()):
         sampled = [getattr(point, param) for param in
                    dummy_model_in.parameterization.sampled_params()]
-        derived = [getattr(point, param) for param in
-                   dummy_model_in.parameterization.derived_params()]
+        derived = odict(
+            [[param, getattr(point, param, None)]
+             for param in dummy_model_out.parameterization.derived_params()])
         inputs = odict([
             [param, getattr(
                 point, param,
@@ -221,11 +196,16 @@ def post(info):
                 dict(zip(dummy_model_out.likelihood, loglikes_new)))
         if -np.inf in loglikes_new:
             continue
+        # Add/remove derived parameters
+        for p in add[_params]:
+            func = dummy_model_out.parameterization._derived_funcs[p]
+            args = dummy_model_out.parameterization._derived_args[p]
+            derived[p] = func(*[getattr(point, arg) for arg in args])
         # Save to the collection (keep old weight for now)
         collection_out.add(
-            sampled, derived=derived, weight=getattr(point, _weight),
+            sampled, derived=derived.values(), weight=getattr(point, _weight),
             logpriors=logpriors_new, loglikes=loglikes_new)
-
+        # Display progress
         percent = np.round(i / collection_in.n() * 100)
         if percent != last_percent and not percent % 5:
             last_percent = percent
@@ -242,3 +222,4 @@ def post(info):
     # Write!
     collection_out._out_update()
     log.info("Finished!")
+    return deepcopy(info_out), {"post": collection_out}
