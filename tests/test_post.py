@@ -88,4 +88,4 @@ def test_post_params(tmpdir):
     updated_info, products = post(info_post)
     # Compare parameters
     assert np.allclose(
-        products["post"]["a"] - products["post"]["b"], products["post"]["a_minus_b"]))
+        products["post"]["a"] - products["post"]["b"], products["post"]["a_minus_b"])

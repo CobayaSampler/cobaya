@@ -77,7 +77,38 @@ def post(info):
                   "or skipping or thinning less.")
         raise HandledException
     # 2. Compare old and new info: determine what to do
-    out = {}
+    add = info[_post].get("add", {})
+    remove = info[_post].get("remove", {})
+    # 2.1 Adding/removing derived parameters and changes in priors of sampled parameters
+    out = {_params: deepcopy(info_in[_params])}
+    for p in remove.get(_params, {}):
+        pinfo = info_in[_params].get(p)
+        if pinfo is None or not is_derived_param(pinfo):
+            log.error(
+                "You tried to remove parameter '%s', which is not a derived paramter. "
+                "Only derived parameters can be removed during post-processing.", p)
+            raise HandledException
+        out[_params].pop(p)
+    mlprior_names_add = []
+    for p, pinfo in add.get(_params, {}).items():
+        if is_sampled_param(pinfo):
+            pinfo_in = info_in[_params].get(p)
+            if not is_sampled_param(pinfo_in):
+                log.error(
+                    "You tried to change the prior of parameter '%s', "
+                    "but it was not a sampled parameter. "
+                    "To change that prior, you need to define as an external one.", p)
+                raise HandledException
+            if mlprior_names_add[:1] != _prior_1d_name:
+                mlprior_names_add = (
+                    [_minuslogprior + _separator + _prior_1d_name] + mlprior_names_add)
+        elif not is_derived_param(pinfo):
+            log.error(
+                "You tried to add parameter '%s', which is not a derived paramter. "
+                "Only derived parameters can be added during post-processing.", p)
+            raise HandledException
+        out[_params][p] = pinfo
+    # 2.2 Add/remove priors and likelihoods
     warn_remove = False
     for level in [_prior, _likelihood]:
         out[level] = getattr(dummy_model_in, level)
@@ -96,19 +127,16 @@ def post(info):
                     "Notice that if the resulting posterior is much wider "
                     "than the original one, or displaced enough, "
                     "it is probably safer to explore it directly.")
-    add = info[_post].get("add", {})
-    remove = info[_post].get("remove", {})
     # Add a dummy 'one' likelihood, to absorb unused parameters
     if not add.get(_likelihood):
         add[_likelihood] = odict()
     add[_likelihood].update({"one": None})
     add = get_full_info(add)
-    prior_add, likelihood_add = None, None
     if _prior in add:
-        prior_add = Prior(dummy_model_in.parameterization, add[_prior])
-        mlprior_names_add = [_minuslogprior + _separator + name for name in prior_add
-                             if name is not _prior_1d_name]
-        out[_prior] += [p for p in prior_add if p is not _prior_1d_name]
+        mlprior_names_add += [_minuslogprior + _separator + name for name in add[_prior]]
+        out[_prior] += list(add[_prior])
+    prior_recompute_1d = (
+        mlprior_names_add[:1] == [_minuslogprior + _separator + _prior_1d_name])
     if _likelihood in add:
         # Don't initialise the theory code if not adding/recomputing theory or likelihoods
         info_theory_out = (
@@ -124,22 +152,6 @@ def post(info):
         chi2_names_add = [_chi2 + _separator + name for name in likelihood_add
                           if name is not "one"]
         out[_likelihood] += [l for l in likelihood_add if l is not "one"]
-    out[_params] = deepcopy(info_in[_params])
-    for p in remove.get(_params, {}):
-        pinfo = info_in[_params].get(p)
-        if pinfo is None or not is_derived_param(pinfo):
-            log.error(
-                "You tried to remove parameter '%s', which is not a derived paramter. "
-                "Only derived parameters can be removed during post-processing.", p)
-            raise HandledException
-        out[_params].pop(p)
-    for p, pinfo in add.get(_params, {}).items():
-        if not is_derived_param(pinfo):
-            log.error(
-                "You tried to add parameter '%s', which is not a derived paramter. "
-                "Only derived parameters can be added during post-processing.", p)
-            raise HandledException
-        out[_params][p] = pinfo
     # 3. Create output collection
     if "suffix" not in info[_post]:
         log.error("You need to provide a 'suffix' for your chains.")
@@ -152,13 +164,15 @@ def post(info):
     info_out[_post].get("add", {}).get(_likelihood, {}).pop("one", None)
     output_out.dump_info({}, info_out)
     dummy_model_out = DummyModel(
-        out[_params], out[_likelihood], info_prior=out[_prior]
+        out[_params], out[_likelihood], info_prior=out[_prior],
     )
+    prior_add = Prior(dummy_model_out.parameterization, add.get(_prior))
     collection_out = Collection(dummy_model_out, output_out, name="1")
     # 4. Main loop!
     log.info("Running post-processing...")
     last_percent = 0
     for i, point in enumerate(collection_in.data.itertuples()):
+        log.debug("Point: %r", point)
         sampled = [getattr(point, param) for param in
                    dummy_model_in.parameterization.sampled_params()]
         derived = odict(
@@ -170,11 +184,10 @@ def post(info):
                 dummy_model_in.parameterization.constant_params().get(param, None))]
             for param in dummy_model_in.parameterization.input_params()])
         # Add/remove priors
-        if prior_add:
-            # Notice "0" (first prior in prior_add) is ignored: not in mlprior_names_add
-            logpriors_add = odict(zip(mlprior_names_add, prior_add.logps(sampled)[1:]))
-        else:
-            logpriors_add = dict()
+        priors_add = prior_add.logps(sampled)
+        if not prior_recompute_1d:
+            priors_add = priors_add[1:]
+        logpriors_add = odict(zip(mlprior_names_add, priors_add))
         logpriors_new = [logpriors_add.get(name, - getattr(point, name, 0))
                          for name in collection_out.minuslogprior_names]
         if log.getEffectiveLevel() <= logging.DEBUG:
@@ -196,11 +209,12 @@ def post(info):
                 dict(zip(dummy_model_out.likelihood, loglikes_new)))
         if -np.inf in loglikes_new:
             continue
-        # Add/remove derived parameters
+        # Add/remove derived parameters and change priors of sampled parameters
         for p in add[_params]:
-            func = dummy_model_out.parameterization._derived_funcs[p]
-            args = dummy_model_out.parameterization._derived_args[p]
-            derived[p] = func(*[getattr(point, arg) for arg in args])
+            if p in dummy_model_out.parameterization._derived_funcs:
+                func = dummy_model_out.parameterization._derived_funcs[p]
+                args = dummy_model_out.parameterization._derived_args[p]
+                derived[p] = func(*[getattr(point, arg) for arg in args])
         # Save to the collection (keep old weight for now)
         collection_out.add(
             sampled, derived=derived.values(), weight=getattr(point, _weight),
@@ -212,8 +226,8 @@ def post(info):
             progress_bar(log, percent, " (%d/%d)" % (i, collection_in.n()))
     if not collection_out.data.last_valid_index():
         log.error("No elements in the final sample. Possible causes: "
-                  "added a prior or likelihood valued zero over the full sampled domain; "
-                  "the computation of the theory failed everywhere...")
+                  "added a prior or likelihood valued zero over the full sampled domain, "
+                  "or the computation of the theory failed everywhere, etc.")
         raise HandledException
     # Reweight -- account for large dynamic range!
     #   Prefer to rescale +inf to finite, and ignore final points with -inf.
@@ -226,5 +240,5 @@ def post(info):
     collection_out._n = collection_out.data.last_valid_index() + 1
     # Write!
     collection_out._out_update()
-    log.info("Finished!")
+    log.info("Finished! Final number of samples: %d", collection_out.n())
     return deepcopy(info_out), {"post": collection_out}
