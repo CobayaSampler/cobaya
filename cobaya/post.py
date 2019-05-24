@@ -17,7 +17,7 @@ from copy import deepcopy
 
 # Local
 from cobaya.input import load_input
-from cobaya.parameterization import Parameterization
+from cobaya.parameterization import Parameterization, expand_info_param
 from cobaya.parameterization import is_fixed_param, is_sampled_param, is_derived_param
 from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_prefix, _post
 from cobaya.conventions import _params, _prior, _likelihood, _theory, _p_drop, _weight
@@ -49,7 +49,7 @@ def post(info):
     log = logging.getLogger(__name__.split(".")[-1])
     if get_mpi_rank():
         log.warning(
-            "Post-processing is not MPI-able. Doing nothing for rank > 1 processes.")
+            "Post-processing is not yet MPI-able. Doing nothing for rank > 1 processes.")
         return
     # 1. Load existing sample
     output_in = Output(output_prefix=info.get(_output_prefix), resume=True)
@@ -107,7 +107,7 @@ def post(info):
                 "You tried to add parameter '%s', which is not a derived paramter. "
                 "Only derived parameters can be added during post-processing.", p)
             raise HandledException
-        out[_params][p] = pinfo
+        out[_params][p] = expand_info_param(pinfo)
     # 2.2 Add/remove priors and likelihoods
     warn_remove = False
     for level in [_prior, _likelihood]:
@@ -183,6 +183,14 @@ def post(info):
                 point, param,
                 dummy_model_in.parameterization.constant_params().get(param, None))]
             for param in dummy_model_in.parameterization.input_params()])
+        # Solve inputs that depend on a function and were not saved
+        # (we don't use the Parameterization_to_input method in case there are references
+        #  to functions that cannot be loaded at the moment)
+        for p, value in inputs.items():
+            if value is None:
+                func = dummy_model_out.parameterization._input_funcs[p]
+                args = dummy_model_out.parameterization._input_args[p]
+                inputs[p] = func(*[getattr(point, arg) for arg in args])
         # Add/remove priors
         priors_add = prior_add.logps(sampled)
         if not prior_recompute_1d:
