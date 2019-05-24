@@ -394,7 +394,7 @@ class classy(_cosmo):
             if _derived == {}:
                 _derived.update(d)
             self.states[i_state]["derived"] = odict(
-                [[p, _derived.get(p)] for p in self.output_params])
+                [[p, (_derived or {}).get(p)] for p in self.output_params])
             # Prepare necessary extra derived parameters
             self.states[i_state]["derived_extra"] = deepcopy(d_extra)
             if self.timing:
