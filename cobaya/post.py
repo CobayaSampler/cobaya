@@ -79,6 +79,12 @@ def post(info):
     # 2. Compare old and new info: determine what to do
     add = info[_post].get("add", {})
     remove = info[_post].get("remove", {})
+    # Add a dummy 'one' likelihood, to absorb unused parameters
+    if not add.get(_likelihood):
+        add[_likelihood] = odict()
+    add[_likelihood].update({"one": None})
+    # Expand the "add" info
+    add = get_full_info(add)
     # 2.1 Adding/removing derived parameters and changes in priors of sampled parameters
     out = {_params: deepcopy(info_in[_params])}
     for p in remove.get(_params, {}):
@@ -107,7 +113,7 @@ def post(info):
                 "You tried to add parameter '%s', which is not a derived paramter. "
                 "Only derived parameters can be added during post-processing.", p)
             raise HandledException
-        out[_params][p] = expand_info_param(pinfo)
+        out[_params][p] = pinfo
     # 2.2 Add/remove priors and likelihoods
     warn_remove = False
     for level in [_prior, _likelihood]:
@@ -127,11 +133,6 @@ def post(info):
                     "Notice that if the resulting posterior is much wider "
                     "than the original one, or displaced enough, "
                     "it is probably safer to explore it directly.")
-    # Add a dummy 'one' likelihood, to absorb unused parameters
-    if not add.get(_likelihood):
-        add[_likelihood] = odict()
-    add[_likelihood].update({"one": None})
-    add = get_full_info(add)
     if _prior in add:
         mlprior_names_add += [_minuslogprior + _separator + name for name in add[_prior]]
         out[_prior] += list(add[_prior])
@@ -160,7 +161,9 @@ def post(info):
                         "_" + _post + "_" + info[_post]["suffix"],
                         force_output=info.get(_force))
     info_out = deepcopy(info)
+    # Updated with input info and extended (full) add info
     info_out.update(info_in)
+    info_out[_post]["add"] = add
     info_out[_post].get("add", {}).get(_likelihood, {}).pop("one", None)
     output_out.dump_info({}, info_out)
     dummy_model_out = DummyModel(
@@ -223,6 +226,11 @@ def post(info):
                 func = dummy_model_out.parameterization._derived_funcs[p]
                 args = dummy_model_out.parameterization._derived_args[p]
                 derived[p] = func(*[getattr(point, arg) for arg in args])
+        if log.getEffectiveLevel() <= logging.DEBUG:
+            log.debug("New derived parameters: %r",
+                      dict([[p, derived[p]]
+                            for p in dummy_model_out.parameterization.derived_params()
+                            if p in add[_params]]))
         # Save to the collection (keep old weight for now)
         collection_out.add(
             sampled, derived=derived.values(), weight=getattr(point, _weight),
