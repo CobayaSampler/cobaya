@@ -39,7 +39,7 @@ class DummyModel(object):
 
     def __init__(self, info_params, info_likelihood, info_prior=None, info_theory=None):
 
-        self.parameterization = Parameterization(info_params)
+        self.parameterization = Parameterization(info_params, ignore_unused_sampled=True)
         self.prior = [_prior_1d_name] + list(info_prior or [])
         self.likelihood = list(info_likelihood)
 
@@ -114,7 +114,14 @@ def post(info):
                 "Only derived parameters can be added during post-processing.", p)
             raise HandledException
         out[_params][p] = pinfo
-    # 2.2 Add/remove priors and likelihoods
+    # For the likelihood only, turn the rest of derived parameters into constants,
+    # so that the likelihoods do not try to compute them)
+    out_params_like = deepcopy(out[_params])
+    for p, pinfo in out_params_like.items():
+        if is_derived_param(pinfo) and p not in add.get(_params, {}):
+            out_params_like[p] = {_p_value: np.nan, _p_drop: True}
+    parameterization_like = Parameterization(out_params_like, ignore_unused_sampled=True)
+    # 2.2 Manage adding/removing priors and likelihoods
     warn_remove = False
     for level in [_prior, _likelihood]:
         out[level] = getattr(dummy_model_in, level)
@@ -143,16 +150,9 @@ def post(info):
         info_theory_out = (
             add.get(_theory, (info_in.get(_theory, None)
                               if list(add[_likelihood]) != ["one"] else None)))
-        likelihood_add = Likelihood(
-            add[_likelihood], dummy_model_in.parameterization,
-            info_theory=info_theory_out, modules=info.get(_path_install)
-        )
-        # TEMPORARY (BETA ONLY): specify theory parameters
-        if likelihood_add.theory:
-            likelihood_add.theory.input_params = info[_post]["theory_params"]["input"]
-        chi2_names_add = [_chi2 + _separator + name for name in likelihood_add
+        chi2_names_add = [_chi2 + _separator + name for name in add[_likelihood]
                           if name is not "one"]
-        out[_likelihood] += [l for l in likelihood_add if l is not "one"]
+        out[_likelihood] += [l for l in add[_likelihood] if l is not "one"]
     # 3. Create output collection
     if "suffix" not in info[_post]:
         log.error("You need to provide a 'suffix' for your chains.")
@@ -170,6 +170,13 @@ def post(info):
         out[_params], out[_likelihood], info_prior=out[_prior],
     )
     prior_add = Prior(dummy_model_out.parameterization, add.get(_prior))
+    likelihood_add = Likelihood(
+        add[_likelihood], parameterization_like,
+        info_theory=info_theory_out, modules=info.get(_path_install)
+        )
+        # TEMPORARY (BETA ONLY): specify theory parameters
+    if likelihood_add.theory:
+        likelihood_add.theory.input_params = info[_post]["theory_params"]["input"]
     collection_out = Collection(dummy_model_out, output_out, name="1")
     # 4. Main loop!
     log.info("Running post-processing...")
@@ -207,9 +214,12 @@ def post(info):
         if -np.inf in logpriors_new:
             continue
         # Add/remove likelihoods
+        output_like = []
         if likelihood_add:
             # Notice "one" (last in likelihood_add) is ignored: not in chi2_names
-            loglikes_add = odict(zip(chi2_names_add, likelihood_add.logps(inputs)))
+            loglikes_add = odict(
+                zip(chi2_names_add, likelihood_add.logps(inputs, _derived=output_like)))
+            output_like = dict(zip(likelihood_add.output_params, output_like))
         else:
             loglikes_add = dict()
         loglikes_new = [loglikes_add.get(name, -0.5 * getattr(point, name, 0))
@@ -218,14 +228,21 @@ def post(info):
             log.debug(
                 "New set of likelihoods: %r",
                 dict(zip(dummy_model_out.likelihood, loglikes_new)))
+            if output_like:
+                log.debug("New set of likelihood-derived parameters: %r", output_like)
         if -np.inf in loglikes_new:
             continue
         # Add/remove derived parameters and change priors of sampled parameters
         for p in add[_params]:
-            if p in dummy_model_out.parameterization._derived_funcs:
+            if p in dummy_model_out.parameterization._directly_output:
+                derived[p] = output_like[p]
+            elif p in dummy_model_out.parameterization._derived_funcs:
                 func = dummy_model_out.parameterization._derived_funcs[p]
                 args = dummy_model_out.parameterization._derived_args[p]
                 derived[p] = func(*[getattr(point, arg) for arg in args])
+            else:
+                log.error("I don't know what to do with parameter '%s'.", p)
+                raise HandledException
         if log.getEffectiveLevel() <= logging.DEBUG:
             log.debug("New derived parameters: %r",
                       dict([[p, derived[p]]
