@@ -199,7 +199,7 @@ class classy(_cosmo):
         super(classy, self).needs(**requirements)
         for k, v in self._needs.items():
             # Products and other computations
-            if k.lower() == "cl":
+            if k == "Cl":
                 if any([("t" in cl.lower()) for cl in v]):
                     self.extra_args["output"] += " tCl"
                 if any([(("e" in cl.lower()) or ("b" in cl.lower())) for cl in v]):
@@ -209,27 +209,27 @@ class classy(_cosmo):
                 self.extra_args["lensing"] = "yes"
                 # For l_max_scalars, remember previous entries.
                 self.extra_args["l_max_scalars"] = max(v.values())
-                self.collectors[k.lower()] = collector(
+                self.collectors[k] = collector(
                     method="lensed_cl", kwargs={"lmax": self.extra_args["l_max_scalars"]})
-            elif k.lower() == "h":
-                self.collectors[k.lower()] = collector(
+            elif k == "H":
+                self.collectors[k] = collector(
                     method="Hubble",
                     args=[np.atleast_1d(v["z"])],
                     args_names=["z"],
                     arg_array=0)
                 self.H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": _c_km_s}
-            elif k.lower() == "angular_diameter_distance":
-                self.collectors[k.lower()] = collector(
+            elif k == "angular_diameter_distance":
+                self.collectors[k] = collector(
                     method="angular_distance",
                     args=[np.atleast_1d(v["z"])],
                     args_names=["z"],
                     arg_array=0)
-            elif k.lower() == "comoving_radial_distance":
-                self.collectors[k.lower()] = collector(
+            elif k == "comoving_radial_distance":
+                self.collectors[k] = collector(
                     method="z_of_r",
                     args_names=["z"],
                     args=[np.atleast_1d(v["z"])])
-            elif k.lower() == "pk_interpolator":
+            elif k == "Pk_interpolator":
                 self.extra_args["output"] += " mPk"
                 self.extra_args["P_k_max_h/Mpc"] = max(
                     v.pop("k_max"), self.extra_args.get("P_k_max_h/Mpc", 0))
@@ -238,7 +238,7 @@ class classy(_cosmo):
                 if v.get("nonlinear", False) and "non linear" not in self.extra_args:
                     self.extra_args["non linear"] = non_linear_default_code
                 for pair in v.pop("vars_pairs", [["delta_tot", "delta_tot"]]):
-                    if any([x.lower() != "delta_tot" for x in pair]):
+                    if any([x != "delta_tot" for x in pair]):
                         self.log.error("NotImplemented in CLASS: %r", pair)
                         raise HandledException
                     self._Pk_interpolator_kwargs = {
@@ -265,10 +265,7 @@ class classy(_cosmo):
         if self.extra_args.get("r") or "r" in self.input_params:
             self.extra_args["modes"] = "s,t"
         # If B spectrum with l>50, or lensing, recommend using Halofit
-        try:
-            cls = self.needs[next(k for k in ["cl", "Cl", "CL"] if k in self._needs)]
-        except:
-            cls = {}
+        cls = self._needs.get("Cl", {})
         if (((any([("b" in cl.lower()) for cl in cls]) and
               max([cls[cl] for cl in cls if "b" in cl.lower()]) > 50) or
              any([("p" in cl.lower()) for cl in cls]) and
@@ -455,7 +452,7 @@ class classy(_cosmo):
     def get_cl(self, ell_factor=False, units="muK2"):
         current_state = self.current_state()
         try:
-            cls = deepcopy(current_state["cl"])
+            cls = deepcopy(current_state["Cl"])
         except:
             self.log.error(
                 "No Cl's were computed. Are you sure that you have requested them?")
@@ -495,7 +492,7 @@ class classy(_cosmo):
 
     def get_H(self, z, units="km/s/Mpc"):
         try:
-            return self._get_z_dependent("h", z) * self.H_units_conv_factor[units]
+            return self._get_z_dependent("H", z) * self.H_units_conv_factor[units]
         except KeyError:
             self.log.error("Units not known for H: '%s'. Try instead one of %r.",
                            units, list(self.H_units_conv_factor))
