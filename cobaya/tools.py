@@ -235,8 +235,8 @@ def get_scipy_1d_pdf(info):
             try:
                 minmaxvalues[limit] = np.float(info2.pop(limit, minmaxvalues[limit]))
             except TypeError:
-                log.error("Invalid value for '%s': %r (it must be a number)",
-                          limit, info2.pop(limit))
+                log.error("Invalid value '%s: %r' in param '%r' (it must be a number)",
+                          limit, info2.pop(limit), param)
                 raise HandledException
         info2["loc"] = minmaxvalues["min"]
         info2["scale"] = minmaxvalues["max"] - minmaxvalues["min"]
