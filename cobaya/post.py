@@ -163,7 +163,7 @@ def post(info):
     info_out = deepcopy(info)
     # Updated with input info and extended (full) add info
     info_out.update(info_in)
-    info_out[_post]["add"] = add
+    info_out[_post]["add"] = deepcopy(add)
     info_out[_post].get("add", {}).get(_likelihood, {}).pop("one", None)
     output_out.dump_info({}, info_out)
     dummy_model_out = DummyModel(
@@ -240,9 +240,6 @@ def post(info):
                 func = dummy_model_out.parameterization._derived_funcs[p]
                 args = dummy_model_out.parameterization._derived_args[p]
                 derived[p] = func(*[getattr(point, arg) for arg in args])
-            else:
-                log.error("I don't know what to do with parameter '%s'.", p)
-                raise HandledException
         if log.getEffectiveLevel() <= logging.DEBUG:
             log.debug("New derived parameters: %r",
                       dict([[p, derived[p]]
