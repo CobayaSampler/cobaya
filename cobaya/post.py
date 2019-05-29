@@ -146,10 +146,13 @@ def post(info):
     prior_recompute_1d = (
         mlprior_names_add[:1] == [_minuslogprior + _separator + _prior_1d_name])
     if _likelihood in add:
-        # Don't initialise the theory code if not adding/recomputing theory or likelihoods
+        # Don't initialise the theory code if not adding/recomputing theory,
+        # theory-derived params or likelihoods
+        recompute_theory = not (
+            list(add[_likelihood]) == ["one"] and
+            not any([is_derived_param(pinfo) for pinfo in add.get(_params, {}).values()]))
         info_theory_out = (
-            add.get(_theory, (info_in.get(_theory, None)
-                              if list(add[_likelihood]) != ["one"] else None)))
+            add.get(_theory, info_in.get(_theory, None)) if recompute_theory else None)
         chi2_names_add = [_chi2 + _separator + name for name in add[_likelihood]
                           if name is not "one"]
         out[_likelihood] += [l for l in add[_likelihood] if l is not "one"]
@@ -167,14 +170,11 @@ def post(info):
     info_out[_post].get("add", {}).get(_likelihood, {}).pop("one", None)
     output_out.dump_info({}, info_out)
     dummy_model_out = DummyModel(
-        out[_params], out[_likelihood], info_prior=out[_prior],
-    )
+        out[_params], out[_likelihood], info_prior=out[_prior])
     prior_add = Prior(dummy_model_out.parameterization, add.get(_prior))
     likelihood_add = Likelihood(
         add[_likelihood], parameterization_like,
-        info_theory=info_theory_out, modules=info.get(_path_install)
-        )
-        # TEMPORARY (BETA ONLY): specify theory parameters
+        info_theory=info_theory_out, modules=info.get(_path_install))
     if likelihood_add.theory:
         likelihood_add.theory.input_params = info[_post]["theory_params"]["input"]
     collection_out = Collection(dummy_model_out, output_out, name="1")
