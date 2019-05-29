@@ -230,16 +230,16 @@ def get_scipy_1d_pdf(info):
             log.error("You cannot use the 'loc/scale' convention and the 'min/max' "
                       "convention at the same time. Either use one or the other.")
             raise HandledException
-        try:
-            mini = np.float(info2.pop("min"))
-        except KeyError:
-            mini = 0
-        try:
-            maxi = np.float(info2.pop("max"))
-        except KeyError:
-            maxi = 1
-        info2["loc"] = mini
-        info2["scale"] = maxi - mini
+        minmaxvalues = {"min": 0, "max": 1}
+        for limit in minmaxvalues:
+            try:
+                minmaxvalues[limit] = np.float(info2.pop(limit, minmaxvalues[limit]))
+            except TypeError:
+                log.error("Invalid value for '%s': %r (it must be a number)",
+                          limit, info2.pop(limit))
+                raise HandledException
+        info2["loc"] = minmaxvalues["min"]
+        info2["scale"] = minmaxvalues["max"] - minmaxvalues["min"]
     # Check for improper priors
     if not np.all(np.isfinite([info2.get(x, 0) for x in ["loc", "scale", "min", "max"]])):
         log.error("Improper prior for parameter '%s'.", param)
