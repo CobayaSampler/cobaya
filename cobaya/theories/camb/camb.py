@@ -441,28 +441,27 @@ class camb(_cosmo):
         return 1 if reused_state else 2
 
     def _get_derived_from_params(self, p, intermediates):
-        result = intermediates["CAMBdata"].get("result", None)
-        if result is None: return None
-        pars = result.Params
-        try:
-            return getattr(pars, p)
-        except AttributeError:
-            try:
-                return getattr(result, p)
-            except AttributeError:
-                for mod in ["InitPower", "Reion", "Recomb", "Transfer", "DarkEnergy"]:
-                    try:
-                        return getattr(
-                            getattr(pars, mod), p)
-                    except AttributeError:
-                        pass
-            return None
+        for origin in ["CAMBdata", "CAMBparams"]:
+            result = intermediates[origin].get("result")
+            if result is None:
+                continue
+            for thing in [result, getattr(result, "Params", {})]:
+                try:
+                    return getattr(thing, p)
+                except AttributeError:
+                    for mod in ["InitPower", "Reion", "Recomb", "Transfer", "DarkEnergy"]:
+                        try:
+                            return getattr(getattr(thing, mod), p)
+                        except AttributeError:
+                            pass
+        return None
 
     def _get_derived_from_std(self, p, intermediates):
         dic = intermediates["CAMBdata"].get("derived_dic", None)
         if dic is None:
             result = intermediates["CAMBdata"].get("result", None)
-            if result is None: return None
+            if result is None:
+                return None
             dic = result.get_derived_params()
             intermediates["CAMBdata"]["derived_dic"] = dic
         return dic.get(p, None)
