@@ -48,6 +48,13 @@ class _cosmo(Theory):
         """
         if not getattr(self, "_needs", None):
             self._needs = dict([[p, None] for p in self.output_params])
+        # TO BE DEPRECATED IN >=1.3
+        for product, capitalization in {
+                "cl": "Cl", "pk_interpolator": "Pk_interpolator"}.items():
+            if product in requirements:
+                self.log.error("You requested product '%s', which from now on should be "
+                               "capitalized as '%s'.", product, capitalization)
+                raise HandledException
         # Accumulate the requirements across several calls in a safe way;
         # e.g. take maximum of all values of a requested precision paramater
         for k, v in requirements.items():
