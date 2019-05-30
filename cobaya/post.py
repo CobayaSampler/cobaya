@@ -156,6 +156,13 @@ def post(info):
         chi2_names_add = [_chi2 + _separator + name for name in add[_likelihood]
                           if name is not "one"]
         out[_likelihood] += [l for l in add[_likelihood] if l is not "one"]
+    for level in [_prior, _likelihood]:
+        for i, x_i in enumerate(out[level]):
+            if x_i in list(out[level])[i+1:]:
+                log.error("You have added %s '%s', which was already present. If you "
+                          "want to force its recomputation, you must also 'remove' it.",
+                          level, x_i)
+                raise HandledException
     # 3. Create output collection
     if "suffix" not in info[_post]:
         log.error("You need to provide a 'suffix' for your chains.")
