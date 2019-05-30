@@ -12,11 +12,12 @@ from __future__ import division
 # Global
 import numpy as np
 from copy import deepcopy
-from collections import namedtuple
+from collections import namedtuple, OrderedDict as odict
 
 # Local
 from cobaya.conventions import _likelihood, _prior, _params, _theory, _timing
 from cobaya.conventions import _path_install, _debug, _debug_default, _debug_file
+from cobaya.conventions import _input_params, _output_params
 from cobaya.input import get_full_info
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
@@ -98,6 +99,19 @@ class Model(object):
         Returns a copy of the information used to create the model, including defaults.
         """
         return deepcopy(self._full_info)
+
+    def update_params(self, info):
+        """
+        Updates the info with the resolved params routing (input/output).
+        """
+        if self.likelihood.theory:
+            info[_theory][self.likelihood.theory.name].update(odict([
+                [_input_params, self.likelihood.theory.input_params],
+                [_output_params, self.likelihood.theory.output_params]]))
+        for like in self.likelihood:
+            info[_likelihood][like].update(odict([
+                [_input_params, self.likelihood[like].input_params],
+                [_output_params, self.likelihood[like].output_params]]))
 
     def _to_sampled_array(self, params_values):
         """

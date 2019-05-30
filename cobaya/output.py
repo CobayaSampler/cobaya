@@ -102,7 +102,10 @@ class Output(object):
     def is_resuming(self):
         return self.resuming
 
-    def dump_info(self, input_info, full_info):
+    def reload_full_info(self):
+        return yaml_load_file(self.file_full)
+
+    def dump_info(self, input_info, full_info, check_compatible=True):
         """
         Saves the info in the chain folder twice:
            - the input info.
@@ -115,18 +118,19 @@ class Output(object):
         for lik_info in full_info_trimmed.get(_likelihood, {}).values():
             if hasattr(lik_info, "pop"):
                 lik_info.pop(_params, None)
-        try:
-            # We will test the old info agains the dumped+loaded new info.
-            # This is because we can't actually check if python objects are the same as before.
-            old_info = yaml_load_file(self.file_full)
-            new_info = yaml_load(yaml_dump(full_info_trimmed))
-            if not is_equal_info(old_info, new_info, strict=False):
-                self.log.error("Old and new sample information not compatible! "
-                               "Resuming not possible!")
-                raise HandledException
-        except IOError:
-            # There was no previous chain
-            pass
+        if check_compatible:
+            try:
+                # We will test the old info agains the dumped+loaded new info.
+                # This is because we can't actually check if python objects do change
+                old_info = self.reload_full_info()
+                new_info = yaml_load(yaml_dump(full_info_trimmed))
+                if not is_equal_info(old_info, new_info, strict=False):
+                    self.log.error("Old and new sample information not compatible! "
+                                   "Resuming not possible!")
+                    raise HandledException
+            except IOError:
+                # There was no previous chain
+                pass
         # We write the new one anyway (maybe updated debug, resuming...)
         for f, info in [(self.file_input, input_info),
                         (self.file_full, full_info_trimmed)]:

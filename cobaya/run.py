@@ -64,13 +64,17 @@ def run(info):
             "Option '%s' is no longer necessary. Please remove it!" % _force_reproducible)
     # CHECK THAT THIS WARNING WORKS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ###################################################
-    # We dump the info now, before modules initialization, lest it is accidentally modified
-    # If resuming a sample, it checks that old and new infos are consistent
+    # We dump the info now, before modules initialization, to better track errors and
+    # to check if resuming is possible asap (old and new infos are consistent)
     output.dump_info(info, full_info)
     # Initialize the posterior and the sampler
     with Model(full_info[_params], full_info[_likelihood], full_info.get(_prior),
                full_info.get(_theory), modules=info.get(_path_install),
                timing=full_info.get(_timing), allow_renames=False) as model:
+        # Update full info with resolved input/output params (reloaded in case it changed)
+        full_info = output.reload_full_info()
+        model.update_params(full_info)
+        output.dump_info(None, full_info, check_compatible=False)
         with Sampler(full_info[_sampler], model, output, resume=full_info.get(_resume),
                      modules=info.get(_path_install)) as sampler:
             sampler.run()
