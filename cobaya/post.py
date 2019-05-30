@@ -176,6 +176,8 @@ def post(info):
         add[_likelihood], parameterization_like,
         info_theory=info_theory_out, modules=info.get(_path_install))
     if likelihood_add.theory:
+        # Make sure that theory.needs is called at least once, for adjustments
+        likelihood_add.theory.needs()
         likelihood_add.theory.input_params = info[_post]["theory_params"]["input"]
     collection_out = Collection(dummy_model_out, output_out, name="1")
     # 4. Main loop!
