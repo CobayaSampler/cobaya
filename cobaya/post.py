@@ -108,6 +108,11 @@ def post(info):
             if mlprior_names_add[:1] != _prior_1d_name:
                 mlprior_names_add = (
                     [_minuslogprior + _separator + _prior_1d_name] + mlprior_names_add)
+        elif is_derived_param(pinfo):
+            if p in out[_params]:
+                log.error("You tried to add derived parameter '%s', which is already "
+                          "present. To force its recomputation, 'remove' it too.", p)
+                raise HandledException
         elif not is_derived_param(pinfo):
             log.error(
                 "You tried to add parameter '%s', which is not a derived paramter. "
