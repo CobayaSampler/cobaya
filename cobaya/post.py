@@ -150,17 +150,20 @@ def post(info):
         out[_prior] += list(add[_prior])
     prior_recompute_1d = (
         mlprior_names_add[:1] == [_minuslogprior + _separator + _prior_1d_name])
-    if _likelihood in add:
-        # Don't initialise the theory code if not adding/recomputing theory,
-        # theory-derived params or likelihoods
-        recompute_theory = not (
-            list(add[_likelihood]) == ["one"] and
-            not any([is_derived_param(pinfo) for pinfo in add.get(_params, {}).values()]))
-        info_theory_out = (
-            add.get(_theory, info_in.get(_theory, None)) if recompute_theory else None)
-        chi2_names_add = [_chi2 + _separator + name for name in add[_likelihood]
-                          if name is not "one"]
-        out[_likelihood] += [l for l in add[_likelihood] if l is not "one"]
+    # Don't initialise the theory code if not adding/recomputing theory,
+    # theory-derived params or likelihoods
+    recompute_theory = info_in.get(_theory) and not (
+        list(add[_likelihood]) == ["one"] and
+        not any([is_derived_param(pinfo) for pinfo in add.get(_params, {}).values()]))
+    info_theory_out = (
+        add.get(_theory, info_in.get(_theory, None)) if recompute_theory else None)
+    chi2_names_add = [_chi2 + _separator + name for name in add[_likelihood]
+                      if name is not "one"]
+    out[_likelihood] += [l for l in add[_likelihood] if l is not "one"]
+    if recompute_theory:
+        log.warn("You are recomputing the theory, but in the current version this does "
+                 "not force recomputation of any likelihood or derived parameter, "
+                 "unless explicitly removed+added.")
     for level in [_prior, _likelihood]:
         for i, x_i in enumerate(out[level]):
             if x_i in list(out[level])[i+1:]:
