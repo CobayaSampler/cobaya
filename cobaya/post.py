@@ -22,7 +22,7 @@ from cobaya.parameterization import is_fixed_param, is_sampled_param, is_derived
 from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_prefix, _post
 from cobaya.conventions import _params, _prior, _likelihood, _theory, _p_drop, _weight
 from cobaya.conventions import _chi2, _separator, _minuslogpost, _force, _p_value
-from cobaya.conventions import _minuslogprior, _path_install
+from cobaya.conventions import _minuslogprior, _path_install, _input_params
 from cobaya.collection import Collection
 from cobaya.log import logger_setup, HandledException
 from cobaya.input import get_full_info
@@ -193,7 +193,21 @@ def post(info):
     if likelihood_add.theory:
         # Make sure that theory.needs is called at least once, for adjustments
         likelihood_add.theory.needs()
-        likelihood_add.theory.input_params = info[_post]["theory_params"]["input"]
+        try:
+            theory = list(info_in[_theory].keys())[0]
+            likelihood_add.theory.input_params = info_in[_theory][theory][_input_params]
+        except KeyError:
+            log.error(
+                "You appear to be post-processing a chain generated with an older "
+                "version of Cobaya. For post-processing to work, please edit the "
+                "'[root]__full.info' file of the original chain to add, inside the "
+                "theory code block, the list of its input parameters. E.g.\n----\n"
+                "theory:\n  %s:\n    input_params: [param1, param2, ...]\n"
+                "----\nIf you get strange errors later, it is likely that you did not "
+                "specify the correct set of theory parameters.\n"
+                "The full set of input parameters are %s.",
+                theory, list(dummy_model_out.parameterization.input_params()))
+            raise HandledException
     collection_out = Collection(dummy_model_out, output_out, name="1")
     # 4. Main loop!
     log.info("Running post-processing...")
