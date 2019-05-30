@@ -272,7 +272,7 @@ class LikelihoodCollection(object):
                          for p in requested_not_known["output_params"]
                          if p.startswith(_chi2 + _separator)]
                 if chi2s:
-                    if set(chi2s) != set(self):
+                    if set(chi2s).difference(set(self)):
                         self.log.error(
                             "Your derived parameters depend on unknown likelihoods: %r",
                             list(set(chi2s).difference(set(self))))
