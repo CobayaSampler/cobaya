@@ -28,6 +28,7 @@ Table of contents
    sampler_mcmc
    sampler_polychord
    sampler_minimize
+   post
 
 .. toctree::
    :caption: Cosmology!
