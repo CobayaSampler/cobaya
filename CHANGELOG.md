@@ -1,3 +1,17 @@
+## 1.1.3 – 2019-05-31
+
+### Bugfixes (thanks Andreas Finke!)
+
+### I/O
+
+- Fuzzy-matching suggestions for options of blocks.
+
+
+## 1.1.2 – 2019-05-02
+
+### Bugfixes (thanks Vivian Miranda!)
+
+
 ## 1.1.1 – 2019-04-26
 
 ### I/O
