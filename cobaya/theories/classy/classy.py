@@ -41,6 +41,16 @@ You can specify any parameter that CLASS understands in the ``params`` block:
    params:
        [any param that CLASS understands, fixed, sampled or derived]
 
+If you want to use your own version of CLASS, you need to specify its location with a
+``path`` option inside the ``classy`` block. If you do not specify a ``path``,
+CLASS will be loaded from the automatic-install ``modules`` folder, if specified, or
+otherwise imported as a globally-installed Python package. Cobaya will print at
+initialisation where it is getting CLASS from.
+
+If you modify CLASS and add new variables, you don't need to let cobaya know, but make
+sure that the variables you create are exposed in the Python interface (contact CLASS'
+developers if you need help with that).
+
 
 Installation
 ------------
@@ -99,11 +109,6 @@ shell produces an error, install it with ``pip install cython --user``.
 If the instructions above failed, follow those in the
 `official CLASS web page <http://class-code.net/>`_ to get CLASS compiled with the Python
 interface ready.
-
-If you modify CLASS and add new variables, you don't need to let cobaya know, but make
-sure that the variables you create are exposed in the Python
-interface (contact CLASS's developers if you need help with that).
-
 """
 # Python 2/3 compatibility
 from __future__ import absolute_import, division

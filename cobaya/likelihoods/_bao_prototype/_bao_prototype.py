@@ -45,7 +45,7 @@ The datasets implemented at this moment are:
 Usage
 -----
 
-To use any of these likelihoods, simply mention them in the theory block, or add them
+To use any of these likelihoods, simply mention them in the likelihoods block, or add them
 using the :doc:`input generator <cosmo_basic_runs>`.
 
 These likelihoods have no nuisance parameters or particular settings that you may want

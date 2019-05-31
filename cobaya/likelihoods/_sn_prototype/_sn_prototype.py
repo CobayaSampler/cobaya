@@ -33,7 +33,7 @@ This code provides the following likelihoods:
 Usage
 -----
 
-To use any of these likelihoods, simply mention them in the theory block
+To use any of these likelihoods, simply mention them in the likelihoods block
 (do not use ``sn_jla`` and its `lite` version simultaneously), or add them
 using the :doc:`input generator <cosmo_basic_runs>`.
 

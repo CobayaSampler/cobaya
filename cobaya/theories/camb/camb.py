@@ -42,6 +42,17 @@ You can specify any parameter that CAMB understands in the ``params`` block:
        [any param that CAMB understands, fixed, sampled or derived]
 
 
+If you want to use your own version of CAMB, you need to specify its location with a
+``path`` option inside the ``classy`` block. If you do not specify a ``path``,
+CAMB will be loaded from the automatic-install ``modules`` folder, if specified, or
+otherwise imported as a globally-installed Python package. Cobaya will print at
+initialisation where it is getting CAMB from.
+
+If you modify CAMB and add new variables, you don't need to let **cobaya** know,
+but make sure that the variables you create are exposed in its Python interface
+(contact CAMB's developers if you need help with that).
+
+
 Installation
 ------------
 
@@ -122,21 +133,6 @@ the input block for CAMB (otherwise a system-wide CAMB may be used instead):
    ``python setup.py install --user``, as the official instructions suggest.
    It is actually safer not to do so if you intend to switch between different versions or
    modifications of CAMB.
-
-
-Modifying CAMB
---------------
-
-If you modify CAMB and add new variables, you don't need to let **cobaya** know,
-but make sure
-that the variables you create are exposed in its Python interface (contact CAMB's
-developers if you need help with that).
-
-.. todo::
-
-   Point somewhere to the CAMB documentation where how to make these modifications
-   is explained.
-
 """
 
 # Python 2/3 compatibility
