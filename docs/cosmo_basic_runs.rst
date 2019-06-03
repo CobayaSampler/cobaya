@@ -64,11 +64,13 @@ As an example, here is the input for Planck 2015 base :math:`\Lambda\mathrm{CDM}
 
       .. literalinclude:: ./src_examples/cosmo_basic/basic_camb.yaml
          :language: yaml
+         :caption: **CAMB parameter names:**
 
    .. container:: alt
 
       .. literalinclude:: ./src_examples/cosmo_basic/basic_classy.yaml
          :language: yaml
+         :caption: **CLASS parameter names:**
 
 .. note::
 
