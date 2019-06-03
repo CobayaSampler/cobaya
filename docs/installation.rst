@@ -134,6 +134,9 @@ Troubleshooting
 
    This section will be filled with the most common problems that our users encounter, so if you followed the instructions above and still something failed (or if you think that the instructions were not clear enough), don't hesitate to contact us!
 
+
+.. _install_openblas:
+
 Low performance: install OpenBLAS (or MKL)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -157,6 +160,13 @@ To check if OpenBLAS is installed, in Debian-like systems, type
 
 The output should end in ``install ok installed``. If you don't have it installed, in a Debian-like system, type ``sudo apt install libopenblas-base`` or ask your local IT service.
 
+You may need to re-install ``numpy`` after loading/installing OpenBLAS.
+
+To check that this worked correctly, run the following one-liner with the same Python that Cobaya is using, and check that ``top`` reports more than 100% CPU usage:
+
+    .. code:: python
+
+       import numpy as np ; (lambda x: x.dot(x))((lambda n: np.reshape(np.random.random(n**2), (n,n)))(10000))
 
 
 Installing cobaya in development mode

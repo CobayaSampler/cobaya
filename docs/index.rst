@@ -36,6 +36,7 @@ Table of contents
    installation_cosmo
    cosmo_theories_likes
    cosmo_basic_runs
+   cosmo_troubleshooting
    cosmo_model
    cosmo_external_likelihood
 

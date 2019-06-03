@@ -55,6 +55,8 @@ developers if you need help with that).
 Installation
 ------------
 
+   .. _classy_install_warn:
+
 .. warning::
 
    If the installation folder of CLASS is moved, due to CLASS hard-coding some folders,
