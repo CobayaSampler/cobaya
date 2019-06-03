@@ -21,10 +21,12 @@ If you notice that Cobaya is performing unusually slow on your cluster *compared
 - If it is some part of the code written in pure Python, ``numpy`` may not be taking advantage of parallelisation. To fix that, follow :ref:`this instructions <install_openblas>`.
 
 
-Running out of memory (memory leak)
------------------------------------
+Running out of memory
+---------------------
 
-Python rarely runs out of memory, thanks to its *garbage collector*, so the culprit is probably some external C or Fortran code.
+If your job runs out of memory at **at initialisation** of the theory or likelihoods, you may need to allocate more memory for your job.
+
+If, instead, your jobs runs out of memory **after a number of iterations**, there is probably a memory leak somewhere. Python rarely leaks memory, thanks to its *garbage collector*, so the culprit is probably some external C or Fortran code.
 
 If you have modified CLASS or CAMB, make sure that every ``alloc`` is followed by the corresponding ``free`` in C, and every ``allocate`` is followed by a ``deallocate`` in Fortran. Otherwise, a new array will be created at each iteration while the old one will not be deleted.
 
