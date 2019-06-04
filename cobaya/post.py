@@ -26,7 +26,7 @@ from cobaya.conventions import _minuslogprior, _path_install, _input_params
 from cobaya.collection import Collection
 from cobaya.log import logger_setup, HandledException
 from cobaya.input import get_full_info
-from cobaya.output import Output
+from cobaya.output import get_Output as Output
 from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection as Likelihood
 from cobaya.mpi import get_mpi_rank
@@ -44,32 +44,52 @@ class DummyModel(object):
         self.likelihood = list(info_likelihood)
 
 
-def post(info):
+def post(info, sample=None):
     logger_setup(info.get(_debug), info.get(_debug_file))
     log = logging.getLogger(__name__.split(".")[-1])
+    try:
+        info_post = info.pop(_post)
+    except KeyError:
+        log.error("No 'post' block given. Nothing to do!")
+        raise HandledException
     if get_mpi_rank():
         log.warning(
             "Post-processing is not yet MPI-able. Doing nothing for rank > 1 processes.")
         return
     # 1. Load existing sample
     output_in = Output(output_prefix=info.get(_output_prefix), resume=True)
-    info_in = load_input(output_in.file_full)
+    info_in = load_input(output_in.file_full) if output_in else deepcopy(info)
     dummy_model_in = DummyModel(info_in[_params], info_in[_likelihood],
                                 info_in.get(_prior, None), info_in.get(_theory, None))
-    i = 0
-    while True:
-        try:
-            collection = Collection(
-                dummy_model_in, output_in, name="%d" % (1 + i),
-                load=True, onload_skip=info[_post].get("skip", 0),
-                onload_thin=info[_post].get("thin", 1))
-            if i == 0:
-                collection_in = collection
-            else:
-                collection_in._append(collection)
-            i += 1
-        except IOError:
-            break
+    if output_in:
+        i = 0
+        while True:
+            try:
+                collection = Collection(
+                    dummy_model_in, output_in, name="%d" % (1 + i),
+                    load=True, onload_skip=info_post.get("skip", 0),
+                    onload_thin=info_post.get("thin", 1))
+                if i == 0:
+                    collection_in = collection
+                else:
+                    collection_in._append(collection)
+                i += 1
+            except IOError:
+                break
+    elif sample:
+        if isinstance(sample, Collection):
+            sample = [sample]
+        collection_in = deepcopy(sample[0])
+        for s in sample[1:]:
+            try:
+                collection_in._append(s)
+            except:
+                log.error("Failed to load some of the input samples.")
+                raise HandledException
+        i = len(sample)
+    else:
+        log.error("Not output from where to load from or input collections given.")
+        raise HandledException
     log.info("Loaded %d chain%s. Will process %d samples.",
              i, "s" if i - 1 else "", collection_in.n())
     if collection_in.n() <= 1:
@@ -77,8 +97,8 @@ def post(info):
                   "or skipping or thinning less.")
         raise HandledException
     # 2. Compare old and new info: determine what to do
-    add = info[_post].get("add", {})
-    remove = info[_post].get("remove", {})
+    add = info_post.get("add", {})
+    remove = info_post.get("remove", {})
     # Add a dummy 'one' likelihood, to absorb unused parameters
     if not add.get(_likelihood):
         add[_likelihood] = odict()
@@ -132,7 +152,7 @@ def post(info):
         out[level] = getattr(dummy_model_in, level)
         if level == _prior:
             out[level].remove(_prior_1d_name)
-        for pdf in info[_post].get("remove", {}).get(level, []) or []:
+        for pdf in info_post.get("remove", {}).get(level, []) or []:
             try:
                 out[level].remove(pdf)
                 warn_remove = True
@@ -172,13 +192,14 @@ def post(info):
                           level, x_i)
                 raise HandledException
     # 3. Create output collection
-    if "suffix" not in info[_post]:
+    if "suffix" not in info_post:
         log.error("You need to provide a 'suffix' for your chains.")
         raise HandledException
     output_out = Output(output_prefix=info.get(_output_prefix, "") +
-                        "_" + _post + "_" + info[_post]["suffix"],
+                        "_" + _post + "_" + info_post["suffix"],
                         force_output=info.get(_force))
     info_out = deepcopy(info)
+    info_out[_post] = info_post
     # Updated with input info and extended (full) add info
     info_out.update(info_in)
     info_out[_post]["add"] = deepcopy(add)
