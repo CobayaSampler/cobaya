@@ -70,7 +70,7 @@ def post(info):
             i += 1
         except IOError:
             break
-    log.info("Loaded %d chain%s containing %d samples.",
+    log.info("Loaded %d chain%s. Will process %d samples.",
              i, "s" if i - 1 else "", collection_in.n())
     if collection_in.n() <= 1:
         log.error("Not enough samples for post-processing. Try using a larger sample, "
