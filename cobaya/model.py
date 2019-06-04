@@ -83,32 +83,16 @@ class Model(object):
         if not self._full_info[_likelihood]:
             self.log.error("No likelihood requested!")
             raise HandledException
-        for like in self._full_info[_likelihood].values():
-            like.pop(_params)
         for k, v in ((_prior, info_prior), (_theory, info_theory),
                      (_path_install, modules), (_timing, timing)):
             if v not in (None, {}):
                 self._full_info[k] = deepcopy(v)
-        self.parameterization = Parameterization(info_params, allow_renames=allow_renames)
-        self.prior = Prior(self.parameterization, info_prior)
-        self.likelihood = Likelihood(info_likelihood, self.parameterization, info_theory,
-                                     modules=modules, timing=timing)
-        self._update_params_io()
-
-    def _update_params_io(self):
-        """
-        Updates the info with the resolved params routing (input/output).
-        """
-        if self.likelihood.theory:
-            self._full_info[_theory].pop(_params, None)
-            self._full_info[_theory][self.likelihood.theory.name].update(odict([
-                [_input_params, self.likelihood.theory.input_params],
-                [_output_params, self.likelihood.theory.output_params]]))
-        for like in self.likelihood:
-            self._full_info[_likelihood][like].pop(_params, None)
-            self._full_info[_likelihood][like].update(odict([
-                [_input_params, self.likelihood[like].input_params],
-                [_output_params, self.likelihood[like].output_params]]))
+        self.parameterization = Parameterization(
+            self._full_info[_params], allow_renames=allow_renames)
+        self.prior = Prior(self.parameterization, self._full_info.get(_prior, None))
+        self.likelihood = Likelihood(
+            self._full_info[_likelihood], self.parameterization,
+            self._full_info.get(_theory), modules=modules,timing=timing)
 
     def info(self):
         """

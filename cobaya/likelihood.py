@@ -20,17 +20,17 @@ from time import time, sleep
 import numpy as np
 from itertools import chain, permutations
 import six
+from copy import deepcopy
 
 if six.PY3:
     from math import gcd
 else:
     from fractions import gcd
 
-from copy import deepcopy
-
 # Local
 from cobaya.conventions import _external, _theory, _params, _overhead_per_param
 from cobaya.conventions import _timing, _p_renames, _chi2, _separator
+from cobaya.conventions import _input_params, _output_params
 from cobaya.tools import get_class, get_external_function, getargspec
 from cobaya.log import HandledException
 
@@ -59,10 +59,13 @@ class Likelihood(object):
             info[_params] = [p for p in all_params
                              if p.startswith(self.prefix or "")]
         # Load parameters
+        info_params = info.pop(_params, [])
         self.input_params = [
-            p for p in parameterization.input_params() if p in info[_params]]
+            p for p in parameterization.input_params() if p in info_params]
         self.output_params = [
-            p for p in parameterization.output_params() if p in info[_params]]
+            p for p in parameterization.output_params() if p in info_params]
+        info.update(dict(
+            {k: list(getattr(self, k, [])) for k in [_input_params, _output_params]}))
         # States, to avoid recomputing
         self.n_states = 3
         self.states = [{"params": None, "logp": None, "_derived": None,
@@ -194,6 +197,9 @@ class LikelihoodExternalFunction(Likelihood):
             self.output_params = argspec.defaults[derived_kw_index]
         else:
             self.output_params = []
+        info.pop(_params, [])
+        info.update(dict(
+            {k: list(getattr(self, k, [])) for k in [_input_params, _output_params]}))
         self.has_theory = "_theory" in argspec.args
         if self.has_theory:
             theory_kw_index = argspec.args[-len(argspec.defaults):].index("_theory")

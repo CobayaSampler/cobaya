@@ -24,6 +24,9 @@ from __future__ import division
 # Global
 import logging
 
+# Local
+from cobaya.conventions import _input_params, _output_params
+
 # Default options for all subclasses
 class_options = {"speed": -1}
 
@@ -74,6 +77,9 @@ class Theory(object):
         # Load info of the code
         for k in info_theory:
             setattr(self, k, info_theory[k])
+        # Update I/O params info
+        info_theory[_input_params] = list(info_input_params)
+        info_theory[_output_params] = list(info_output_params)
         # Timing
         self.timing = timing
         self.n = 0
