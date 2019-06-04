@@ -270,6 +270,9 @@ class Collection(object):
         new.__dict__  = {k: deepcopy(v) for k, v in self.__dict__.items() if k != "log"}
         return new
 
+    def __getstate__(self):
+        return deepcopy(self).__dict__
+
     # Saving and updating
     def _get_driver(self, method):
         return getattr(self, method + _separator + self.driver)
