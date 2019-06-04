@@ -17,10 +17,11 @@ import six
 
 # Global
 import os
+from copy import deepcopy
+import logging
 import numpy as np
 import pandas as pd
 from getdist import MCSamples
-import logging
 
 # Local
 from cobaya.conventions import _weight, _chi2, _minuslogpost, _minuslogprior
@@ -262,6 +263,12 @@ class Collection(object):
             loglikes=self.data[:self.n()][_minuslogpost].values[first:last], names=names)
         logging.disable(logging.NOTSET)
         return mcsamples
+
+    # Copying and pickling
+    def __deepcopy__(self, memo={}):
+        new = (lambda cls: cls.__new__(cls))(self.__class__)
+        new.__dict__  = {k: deepcopy(v) for k, v in self.__dict__.items() if k != "log"}
+        return new
 
     # Saving and updating
     def _get_driver(self, method):
