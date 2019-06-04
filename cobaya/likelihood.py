@@ -322,9 +322,6 @@ class LikelihoodCollection(object):
         for p, ls in self.sampled_like_dependence.items():
             if _theory in ls:
                 self.sampled_like_dependence[p] = ([_theory] + list(self._likelihoods))
-        # Pop the per-likelihood parameters info, that was auxiliary
-        for like in info_likelihood:
-            info_likelihood[like].pop(_params)
         # Overhead per likelihood evaluation
         self.overhead = _overhead_per_param * len(parameterization.sampled_params())
 

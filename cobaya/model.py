@@ -93,25 +93,28 @@ class Model(object):
         self.prior = Prior(self.parameterization, info_prior)
         self.likelihood = Likelihood(info_likelihood, self.parameterization, info_theory,
                                      modules=modules, timing=timing)
+        self._update_params_io()
+
+    def _update_params_io(self):
+        """
+        Updates the info with the resolved params routing (input/output).
+        """
+        if self.likelihood.theory:
+            self._full_info[_theory].pop(_params, None)
+            self._full_info[_theory][self.likelihood.theory.name].update(odict([
+                [_input_params, self.likelihood.theory.input_params],
+                [_output_params, self.likelihood.theory.output_params]]))
+        for like in self.likelihood:
+            self._full_info[_likelihood][like].pop(_params, None)
+            self._full_info[_likelihood][like].update(odict([
+                [_input_params, self.likelihood[like].input_params],
+                [_output_params, self.likelihood[like].output_params]]))
 
     def info(self):
         """
         Returns a copy of the information used to create the model, including defaults.
         """
         return deepcopy(self._full_info)
-
-    def update_params(self, info):
-        """
-        Updates the info with the resolved params routing (input/output).
-        """
-        if self.likelihood.theory:
-            info[_theory][self.likelihood.theory.name].update(odict([
-                [_input_params, self.likelihood.theory.input_params],
-                [_output_params, self.likelihood.theory.output_params]]))
-        for like in self.likelihood:
-            info[_likelihood][like].update(odict([
-                [_input_params, self.likelihood[like].input_params],
-                [_output_params, self.likelihood[like].output_params]]))
 
     def _to_sampled_array(self, params_values):
         """

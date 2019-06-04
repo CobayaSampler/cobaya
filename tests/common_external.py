@@ -15,7 +15,7 @@ from copy import deepcopy
 # Local
 from cobaya.conventions import _output_prefix, _params, _prior
 from cobaya.conventions import _sampler, _likelihood, _full_suffix
-from cobaya.conventions import _chi2, _separator, _external
+from cobaya.conventions import _chi2, _separator, _external, _input_params, _output_params
 from cobaya.run import run
 from cobaya.yaml import yaml_load
 from cobaya.likelihood import class_options
@@ -132,6 +132,8 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
                 info_likelihood[lik] = {_external: value}
             info_likelihood[lik].update({k: v for k, v in class_options.items()
                                          if not k in info_likelihood[lik]})
+            for k in [_input_params, _output_params]:
+                updated_info[_likelihood][lik].pop(k)
         assert info_likelihood == dict(updated_info[_likelihood]), (
                 "The likelihood information has not been updated correctly\n %r vs %r" % (
             info_likelihood, dict(updated_info[_likelihood])))
