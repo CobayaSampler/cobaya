@@ -16,11 +16,13 @@ use cobaya 1.0.4, but update asap, since that version is not maintained any more
 
    **If you use this cosmological code, please cite it as:**
    |br|
-   `A. Lewis, A. Challinor, A. Lasenby, "Efficient computation of CMB anisotropies in closed FRW"
-   (arXiv:astro-ph/9911177) <https://arxiv.org/abs/astro-ph/9911177>`_
+   A. Lewis, A. Challinor, A. Lasenby,
+   *Efficient computation of CMB anisotropies in closed FRW*
+   (`arXiv:astro-ph/9911177 <https://arxiv.org/abs/astro-ph/9911177>`_)
    |br|
-   `C. Howlett, A. Lewis, A. Hall, A. Challinor, "CMB power spectrum parameter degeneracies in the era of precision cosmology"
-   (arXiv:1201.3654) <https://arxiv.org/abs/1201.3654>`_
+   C. Howlett, A. Lewis, A. Hall, A. Challinor,
+   *CMB power spectrum parameter degeneracies in the era of precision cosmology*
+   (`arXiv:1201.3654 <https://arxiv.org/abs/1201.3654>`_)
 
 
 Usage
@@ -48,9 +50,12 @@ CAMB will be loaded from the automatic-install ``modules`` folder, if specified,
 otherwise imported as a globally-installed Python package. Cobaya will print at
 initialisation where it is getting CAMB from.
 
-If you modify CAMB and add new variables, you don't need to let **cobaya** know,
-but make sure that the variables you create are exposed in its Python interface
-(contact CAMB's developers if you need help with that).
+If you modify CAMB and add new variables, you don't need to let Cobaya know, but make
+sure that the variables you create are exposed in the Python interface
+(`instructions here <foo>`__).
+You can use the :doc:`model wrapper <cosmo_model>` to test your modification by
+evaluating observables or getting derived quantities at known points in the parameter
+space.
 
 
 Installation
@@ -60,8 +65,9 @@ Pre-requisites
 ^^^^^^^^^^^^^^
 
 **cobaya** calls CAMB using its Python interface, which requires that you compile CAMB
-using intel's ifort compiler or the GNU gfortran compiler version 6.4 or later. To check if you have the latter,
-type ``gfortran --version`` in the shell, and the first line should look like
+using intel's ifort compiler or the GNU gfortran compiler version 6.4 or later.
+To check if you have the latter, type ``gfortran --version`` in the shell,
+and the first line should look like
 
 .. code::
 

@@ -1,7 +1,7 @@
 Using the ``model`` wrapper
 ===========================
 
-In the last section we have seen how to run basic samples. Before we get to modifying modules, let us take a look at the *model wrapper*. It creates a python object that lets you interact with the different parts of your model: theory code, prior and likelihood. It can do the same as the :doc:`sampler_evaluate`, and much more, in an interactive way.
+In the last section we have seen how to run basic samples. Before we get to creating cosmological likelihoods, let us take a look at the *model wrapper*. It creates a python object that lets you interact with the different parts of your model: theory code, prior and likelihood. It can do the same as the :doc:`sampler_evaluate`, and much more, in an interactive way.
 
 You can use it to test your modifications, to evaluate the cosmological observables and likelihoods at particular points, and also to interface cosmological codes and likelihoods with external tools, such as a different sampler, a machine-learning framework...
 
@@ -109,7 +109,7 @@ If you had set ``timing=True`` in the input info, :func:`~model.Model.dump_timin
 
 .. note::
 
-   If you are not really interested in any likelihood value and just want to get some cosmological observables (possibly using your modified version of a cosmological code :doc:`modified_code`), use :doc:`likelihood_one` as the only likelihood and add the requests for cosmological quantities by hand, as we did above with :math:`H(z)`.
+   If you are not really interested in any likelihood value and just want to get some cosmological observables (possibly using your modified version of a cosmological code), use the mock :doc:`'one' <likelihood_one>` likelihood as the only likelihood, and add the requests for cosmological quantities by hand, as we did above with :math:`H(z)`.
 
    **NB:** you will not be able to request some of the derived parameters unless you have requested some cosmological product to compute.
 

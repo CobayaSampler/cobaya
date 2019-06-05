@@ -15,8 +15,9 @@ This module imports and manages the CLASS cosmological code.
 
    **If you use this cosmological code, please cite it as:**
    |br|
-   `D. Blas, J. Lesgourgues, T. Tram, "The Cosmic Linear Anisotropy Solving System (CLASS). Part II: Approximation schemes"
-   (arXiv:1104.2933) <https://arxiv.org/abs/1104.2933>`_
+   D. Blas, J. Lesgourgues, T. Tram,
+   *The Cosmic Linear Anisotropy Solving System (CLASS). Part II: Approximation schemes*
+   (`arXiv:1104.2933 <https://arxiv.org/abs/1104.2933>`_)
 
 .. note::
 
@@ -47,9 +48,12 @@ CLASS will be loaded from the automatic-install ``modules`` folder, if specified
 otherwise imported as a globally-installed Python package. Cobaya will print at
 initialisation where it is getting CLASS from.
 
-If you modify CLASS and add new variables, you don't need to let cobaya know, but make
-sure that the variables you create are exposed in the Python interface (contact CLASS'
-developers if you need help with that).
+If you modify CLASS and add new variables, you don't need to let Cobaya know, but make
+sure that the variables you create are exposed in the Python interface
+(`instructions here <https://github.com/lesgourg/class_public/wiki/Python-wrapper>`__).
+You can use the :doc:`model wrapper <cosmo_model>` to test your modification by
+evaluating observables or getting derived quantities at known points in the parameter
+space.
 
 
 Installation
