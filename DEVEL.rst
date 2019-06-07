@@ -129,20 +129,28 @@ Option (a) is a little more complex from the coding point of view, whereas optio
 
 After parameters have been assigned, we save the assignments in the updated (*full*) info using the unambiguous "input/output lists" option, for future use by e.g. post-processing: during post-processing, unused likelihoods are not initialised, in case they do not exist any more (e.g. an external function), but we still need to know on which parameters it depended.
 
-But in general, one needs the current *state* of the sampled parameters to compute the derived ones. Thus, if the sample is potentially an interesting one, we will have to get the derived parameters immediately after the likelihood computation (otherwise, if we have jumped somewhere else and then decided to get them, we may have to re-compute the likelihood at the point of interest, which is probably more costly than having computed derived parameters that we are likely to throw away). It is up the each sampler to decide whether the derived parameters at one particular sample are worth computing.
 
-We could implement the passing of derived parameters in two ways:
+Special considerations for output parameters
+""""""""""""""""""""""""""""""""""""""""""""
 
-a) A keyword option in the log-likelihood function to request the computation of derived parameters (passed back as a mutable argument of that same function).
-b) An optional method of the :class:`Likelihood` class, say ``get_derived``, that is called whenever the derived parameters are needed (e.g. just by the :class:`Collection` class).
+Computing output parameters may be expensive, and we won't need them for samples that are not going to be stored (e.g. they are rejected, only used just to perform *fast-dragging*, or just to train a machine-learning model). Thus, their computation must be **optional**.
 
-In option (b) the ``get_derived`` method, when called, would always have to be called immediately after computing the likelihood; otherwise, we risk doing something that changes the *state* of the likelihood (and/or the theory code) potentially returning the wrong set of values. For this reason, we adopt option (a).
+But in general, one needs the current *state* (value of the input parameters) to compute the output ones. Thus, if the state is potentially an interesting one for the sampler, we will have to get the output parameters immediately after the likelihood computation (otherwise, if we have jumped somewhere else and then decided to get them, we may have to re-compute the likelihood at the point of interest, which is probably more costly than having computed output parameters that we are likely to throw away). It is up the each sampler to decide whether the output parameters (of, for the sampler, the derived parameters) at one particular sample are worth computing.
 
-Both for the ``log-likelihood`` method of a :class:`Likelihood` and for external likelihood functions, we will create a keyword argument ``derived``. If that keyword valued ``None``, the derived parameters will not be computed, and if valued as an empty dictionary, it will be used to return the derived parameters (thanks to Python's passing mutable objects by reference, not value).
+.. note::
 
-From the sampler point of view, the dictionary above becomes a list in the call to obtain the log-pdf of the :class:`LikelihoodCollection`: an empty list is passed which is populated with a list of the derived parameters values, in the order in which :class:`LikelihoodCollection` stores them. This way, the sampler does not need to keep track of the names of the derived parameters.
+   Unfortunately, for many samplers, such as basic MH-MCMC, we do not know a priori if we are going to save a particular point, so we are forced to compute derived parameters even when they are not necessary. In those case, if their computation is prohibitively expensive, it may be faster to run the sample without derived parameters, and add them after the sampling process is finished.
 
-Unfortunately, for many samplers, such as basic MH-MCMC, we do not know a priori if we are going to save a particular point, so we are forced to compute derived parameters even when they are not necessary. In those case, if their computation is prohibitively expensive, it may be faster to run the sample without derived parameters, and add them after the sampling process is finished.
+We could implement the way likelihoods and theory communicate output parameters to the model in two ways:
+
+a) A keyword option in the log-likelihood (or theory's ``compute``) method to request the computation of output parameters (passed back as a mutable argument of that same function).
+b) An optional method of the :class:`Likelihood` class, say ``get_output_parameters``, that is called only if needed.
+
+Since the method in option (b) would *always* have to be called *immediately* after computing the likelihood (or otherwise risk inadvertedly changing the state and getting the wrong set of set of output parameters), we adopt option (a).
+
+So we create, for the ``log-likelihood`` method of a :class:`Likelihood` and the ``compute`` method of a theory, a keyword argument ``_output``. If that keyword is valued ``None``, the output parameters will not be computed, and if valued as an empty dictionary, it will be used to return the output parameters (thanks to Python's passing mutable objects by reference, not value).
+
+From the sampler point of view (now of *derived*, not *output*, parameters), we use a list, not a dictionary, as an argument of the log-likelihood of the :class:`LikelihoodCollection`; we do so (dropping paramter names by using a list) so that the sampler does not need to keep track of the names of the derived parameters.
 
 
 Reparameterization layer
@@ -240,98 +248,4 @@ Notice that if a non trivial reparameterization layer is present, we need to cha
         v: lambda u: 3/2*u
         V:
           derived: lambda v: v
-
-
-About the ``theory`` module
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-In many physical applications, the Bayesian model can be separated in to a theoretical part :math:`\mathcal{T}` with parameters :math:`\tau`, and an experimental part :math:`\mathcal{E}` with parameters :math:`\epsilon`. In turn, the likelihood :math:`\mathcal{L}[\mathcal{D}|\mathcal{E}(\epsilon),\mathcal{T}(\tau)]` can be written in terms of an intermediate quantity, the *observable* :math:`\mathcal{O}` that contains all the dependence on the theoretical model, and which is the input of an *experimental likelihood* :math:`\mathcal{L}_\mathrm{exp}[\mathcal{D}|\mathcal{E}(\epsilon),\mathcal{O}]`, which does not care about which model was used to compute the observable:
-
-.. math::
-
-   \mathcal{L}[\mathcal{D}|\mathcal{E}(\epsilon),\mathcal{T}(\tau)] =
-   \mathcal{L}_\mathrm{exp}[\mathcal{D}|\mathcal{E}(\epsilon),\mathcal{O}]
-   \quad\text{with}\quad
-   \mathcal{O}[\mathcal{T}(\tau)]
-
-It is also common that more than one experimental likelihood make use of the same observables, or of elements of a set of observables, all of them computed with the same *theory code*. This is the code that we wrap in the ``theory`` module.
-
-Since the sampling process should not necessarily care about this particular physical aspect of the problem, the ``theory`` module, which is optional, belongs into the collection of likelihoods :class:`likelihood.LikelihoodCollection`.
-
-Since we normally expect to heavily modify the theoretical models, introducing new parameters and priors, we are not defining default parameter sets for theory codes in the respective ``defaults.yaml`` file, to avoid having to modify the theory wrapper if we introduce a new theory parameter. This means that the parameters of the theory must be **identifiable** in some other way:
-
-a) Listed at the same level as the likelihood parameters, and identified as the parameters not understood by any likelihood.
-b) Defined in a separate block or with a separate prefix, such as ``theory__[name]``.
-
-We choose option **(b)**. The separation is natural within the context of the distinction between theoretical and experimental model, as explained above.
-
-
-------------------------------------------------------------------------------------
-
-
-TODO from here on!!!
---------------------
-
-Towards `models` instead of `codes`
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Ideally, one would define models, not codes: in models, it is natural to define default parameter priors (and actually desirable!), and one could use *inheritance* for extending the model.
-
-Models would have their own ``defaults.yaml`` file. All codes considered compatible with that model must understand all of the parameters defined there, and have methods to set them and get them (ideally their names are not mentioned in the code wrapper, but are passed to or retrieved from the code transparently, so if we extend/inherit the model and modify the theory code to add a new parameter, we don't need to edit the wrapper of the theory code accordingly).
-
-The distinction between theory and likelihood also has a consequence here. As, in practise, we may use different codes to compute the observables given by the same theoretical model, models and codes are separated in the source.
-
-* **Models** are defined by a yaml file containing parameters (in the sense described above, as opposed to options.
-* **Codes** are defined as a python object with methods for initializing, computing and closing, and also `get`-methods for the observables that the likelihoods may request.
-
-The model to be inherited is mentioned in the `theory` block. Its parameters, fixed, sampled and derived, are automatically added to the `params` block internally.
-
-If one wants to sample a modification of a code, simply state the differences (a fixed parameter with a different value or sampled by default, a new derived parameter, a different prior...) inside the `params` block, and everything indicated there takes precedence over the inherited model.
-
-.. todo::
-
-   NB: we may want to include code-specific options in a model, e.g. to ensure precision. They would be something like `camb__accuracy: 2`, where the double underscore would serve as a separator between the name of the code to be passes to, and the name of the parameter.
-
-.. code-block:: yaml
-
-   theory:
-     model: lcdm_planck
-       code: camb
-       path: /path/to/camb
-       option_1: value_1
-       option_2: value_2
-       ...
-
-   likelihood:
-     experiment_1:
-       option_1: value_1
-     experiment_2:
-       ...
-
-   params:
-     # Directly passed to the theory module (RESERVED PARAMETER NAME!)
-     theory:
-       # fixed: (args)
-       f_1: 1
-       ...
-       # sampled: (params)
-       p_1:
-         prior:
-           ...
-       ...
-       # derived:
-       d_1:
-    # Parameters passed to the likelihoods
-    likelihood:
-      # fixed: (args)
-      f_1: 1
-      ...
-      # sampled: (params)
-      p_1:
-        prior:
-          ...
-      ...
-      # derived:
-      d_1:
-      ...
 
