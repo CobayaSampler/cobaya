@@ -80,7 +80,7 @@ The simplest way to do that would be tagging each parameter with its correspondi
 
 So, in order not to have tag parameters or hard-code their routes, the only option left is that each likelihood and theory can tell us which parameters it understands. There are a number of possible ways a likelihood or theory could do that:
 
-- If it is defined as a Python function (an *external* likelihood, in our terminology), we can use *introspection* to get the possible arguments (which will need to be *keyword* arguments, since parameters are *named*). Introspection for output parameters is a little more complicated (see note below).
+- If it is defined as a Python function (an *external* likelihood, in our terminology), we can use *introspection* to get the possible arguments. Introspection for output parameters is a little more complicated (see note below).
 - For *internal* likelihoods and theories (i.e. more complex classes that allow more flexibility and that have no function to inspect), we need either:
 
   + to keep a *list* of possible input/output parameters
@@ -90,13 +90,14 @@ So, in order not to have tag parameters or hard-code their routes, the only opti
 
 .. note::
 
-   For callable (*external*) likelihoods, output parameters cannot be **keyword** arguments, since in Python parameter values (``float``'s) are *immutable*: they are passed by value, not by reference, so their value cannot be *modified back*. Thus, we interface them via a dictionary passed through a ``_output`` keyword argument. Since dictionaries are *mutable* objects, when their contents are modified the modifications are permanent, which makes a natural way of dealing with derived parameters on the same ground as sampled parameters. At function definition, we assign this keyword argument a list of possible keys, which we can get, via *introspection*, as the list of output parameters understood by that likelihood. 
+   For callable (*external*) likelihoods, output parameters cannot be simple **keyword** arguments, since in Python parameter values (``float``'s) are *immutable*: they are passed by value, not by reference, so their value cannot be *modified back*. Thus, we interface them via a dictionary passed through a ``_output`` keyword argument. Since dictionaries are *mutable* objects, when their contents are modified the modifications are permanent, which makes a natural way of dealing with derived parameters on the same ground as sampled parameters. At function definition, we assign this keyword argument a list of possible keys, which we can get, via *introspection*, as the list of output parameters understood by that likelihood. 
 
 We should also take into account the following:
 
 - Different likelihoods may share part of the same model, so they may have input parameters in common (but not output parameters; or if they do, we still only need to compute them once).
 - Some likelihoods may not take any input parameter at all, but simply get an observable through their interface with a theory code.
 - Some parameters may be both input and output, e.g. when only a subset of them can determine the value of the rest of them; e.g. a likelihood may depend on ``a`` and ``b``, but we may want to expose ``a+b`` too, so that the user can choose any two of the three as input, and the other one as output.
+- External functions may have a variable number of input parameters, since some may be represented by keyword arguments with a default value, and would thus be optional.
 
 To implement these behaviours, we have taken the following design choices:
 
@@ -111,11 +112,12 @@ To implement these behaviours, we have taken the following design choices:
 
 - It may be that the likelihood does not depend on (i.e. has constraining power over) a particular parameter(s). In that case, we still throw an error if some input parameter has not been recognised by any likelihood, since parameter names may have been misspelled somewhere, and it is easier to define a mock likelihood to absorb the unused ones than maybe finding a warning about unused parameters (or use the unit likelihood described below).
 - Some times we are not interested in the likelihood, because we want to explore just the prior, or the distribution the prior induces on a derived parameter. In those cases, we would need a mock unit likelihood. This unit likelihood would automatically recognise all input parameters (except those absorbed by the theory, if a theory is needed to compute derived parameters).
+- For external likelihoods, where we can get input and output parameters via introspection, we may not want to use all of the input ones, as stated above, since they may have a fixed default value as keyword arguments. This would be treated as a special case of having a list of input parameters.
 
 Given these principles, we implement the following algorithm to resolve input/output parameter dependencies: (in the following, "likelihoods" include the theory code)
 
 0. Start with a dictionary of input parameters as keys, and another one for output parameters. The values will be a list of the likelihoods that depend on each parameter.
-1. Iterate over likelihoods that have knowledge of their own parameters, either because they are *callable*, or because they have input/output parameters lists, a mixed ``params`` list or a prefix. Add them to the lists in the initial parameters dictionaries if applicable.
+1. Iterate over likelihoods that have knowledge of their own parameters, either because they are *callable*, or because they have input/output parameters lists, a prefix, or a mixed ``params`` list, *in that order of priority*. Add them to the lists in the initial parameters dictionaries if applicable.
 2. Deal with the case (check that it is only one) of a likelihood with no parameters declared, and assign it all unclaimed parameters.
 3. Check that, if a theory code is present, it does not share parameters with anyone else.
 4. If the unit likelihood is present, assign it all input parameters (except those absorbed by the theory code).

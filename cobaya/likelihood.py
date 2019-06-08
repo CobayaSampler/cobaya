@@ -31,6 +31,7 @@ else:
 from cobaya.conventions import _external, _theory, _params, _overhead_per_param
 from cobaya.conventions import _timing, _p_renames, _chi2, _separator
 from cobaya.conventions import _input_params, _output_params
+from cobaya.conventions import _input_params_prefix, _output_params_prefix
 from cobaya.tools import get_class, get_external_function, getargspec
 from cobaya.log import HandledException
 
@@ -45,27 +46,13 @@ class Likelihood(object):
     """Likelihood class prototype."""
 
     # Generic initialization -- do not touch
-    def __init__(self, info, parameterization, modules=None, timing=None):
+    def __init__(self, info, modules=None, timing=None):
         self.name = self.__class__.__name__
         self.log = logging.getLogger(self.name)
         self.path_install = modules
         # Load info of the likelihood
         for k in info:
             setattr(self, k, info[k])
-        # *Mock* likelihoods: gather all parameters starting with `prefix`
-        if getattr(self, "prefix", False) not in [False, None]:
-            all_params = (list(parameterization.input_params()) +
-                          list(parameterization.output_params()))
-            info[_params] = [p for p in all_params
-                             if p.startswith(self.prefix or "")]
-        # Load parameters
-        info_params = info.pop(_params, [])
-        self.input_params = [
-            p for p in parameterization.input_params() if p in info_params]
-        self.output_params = [
-            p for p in parameterization.output_params() if p in info_params]
-        info.update(dict(
-            {k: list(getattr(self, k, [])) for k in [_input_params, _output_params]}))
         # States, to avoid recomputing
         self.n_states = 3
         self.states = [{"params": None, "logp": None, "_derived": None,
@@ -75,14 +62,16 @@ class Likelihood(object):
         self.timing = timing
         self.n = 0
         self.time_avg = 0
-        # Initialize
-        self.initialize()
 
     # What you *must* implement to create your own likelihood:
 
     # Optional
     def initialize(self):
-        """Initializes the specifics of this likelihood."""
+        """
+        Initializes the specifics of this likelihood.
+        Note that at this point we know `the `self.input_params``
+        and the ``self.output_params``.
+        """
         pass
 
     # Optional
@@ -179,7 +168,7 @@ class Likelihood(object):
 
 
 class LikelihoodExternalFunction(Likelihood):
-    def __init__(self, name, info, parameterization, _theory=None, timing=None):
+    def __init__(self, name, info, _theory=None, timing=None):
         self.name = name
         self.log = logging.getLogger(self.name)
         # Load info of the likelihood
@@ -188,18 +177,13 @@ class LikelihoodExternalFunction(Likelihood):
         # Store the external function and its arguments
         self.external_function = get_external_function(info[_external], name=self.name)
         argspec = getargspec(self.external_function)
-        self.input_params = [
-            p for p in argspec.args
-            if p not in ["_derived", "_theory"] and p in parameterization.input_params()]
+        self.input_params = [p for p in argspec.args if p not in ["_derived", "_theory"]]
         self.has_derived = "_derived" in argspec.args
         if self.has_derived:
             derived_kw_index = argspec.args[-len(argspec.defaults):].index("_derived")
             self.output_params = argspec.defaults[derived_kw_index]
         else:
             self.output_params = []
-        info.pop(_params, [])
-        info.update(dict(
-            {k: list(getattr(self, k, [])) for k in [_input_params, _output_params]}))
         self.has_theory = "_theory" in argspec.args
         if self.has_theory:
             theory_kw_index = argspec.args[-len(argspec.defaults):].index("_theory")
@@ -243,78 +227,34 @@ class LikelihoodCollection(object):
     def __init__(self, info_likelihood, parameterization, info_theory=None, modules=None,
                  timing=None):
         self.log = logging.getLogger("Likelihood")
+        # *IF* there is a theory code, initialize it
+        if info_theory:
+            name = list(info_theory)[0]
+            # If it has an "external" key, wrap it up. Else, load it up
+            if _external in info_theory[name]:
+                theory_class = info_theory[name][_external]
+            else:
+                theory_class = get_class(name, kind=_theory)
+            self.theory = theory_class(info_theory[name], modules=modules, timing=timing)
+        else:
+            self.theory = None
         # Initialize individual Likelihoods
         self._likelihoods = odict()
         for name, info in info_likelihood.items():
             # If it has an "external" key, wrap it up. Else, load it up
             if _external in info:
                 self._likelihoods[name] = LikelihoodExternalFunction(
-                    name, info, parameterization, _theory=getattr(self, _theory, None),
-                    timing=timing)
+                    name, info, _theory=getattr(self, _theory, None), timing=timing)
             else:
-                # If mock likelihood and there is a theory code, make the mock ignore
-                # all parameters, or they would never reach the theory code
-                if "prefix" in info and info_theory:
-                    info["prefix"] = None
-                    self.log.debug("Mock likelihood '%s' will ignore all parameters, "
-                                   "since a theory code is present.", name)
                 like_class = get_class(name)
-                self._likelihoods[name] = like_class(
-                    info, parameterization, modules=modules, timing=timing)
-        # Check that all are recognized
-        requested_not_known = {}
-        for params in ("input_params", "output_params"):
-            # Store the input/output parameters
-            info = getattr(parameterization, params)()
-            setattr(self, params, info)
-            requested = set(info)
-            known = set(chain(*[getattr(self[like], params) for like in self]))
-            requested_not_known[params] = requested.difference(known)
-            # Check those that reference a likelihood
-            if params == "output_params":
-                chi2s = [p[len(_chi2 + _separator):]
-                         for p in requested_not_known["output_params"]
-                         if p.startswith(_chi2 + _separator)]
-                if chi2s:
-                    if set(chi2s).difference(set(self)):
-                        self.log.error(
-                            "Your derived parameters depend on unknown likelihoods: %r",
-                            list(set(chi2s).difference(set(self))))
-                        raise HandledException
-                for p in chi2s:
-                    requested_not_known[params].remove(_chi2+_separator+p)
-            # Check the rest
-            if requested_not_known[params]:
-                if info_theory:
-                    self.log.debug(
-                        "The following %s parameters are not recognized by any "
-                        "likelihood, and will be passed to the theory code: %r",
-                        params.split("_")[0], list(requested_not_known[params]))
-                else:
-                    self.log.error(
-                        "Some of the requested %s parameters were not recognized "
-                        "by any likelihood: %r",
-                        params.split("_")[0], list(requested_not_known[params]))
-                    raise HandledException
-        # *IF* there is a theory code, initialize it
-        if info_theory:
-            input_params_theory = [p for p in self.input_params
-                                   if p in requested_not_known["input_params"]]
-            output_params_theory = [p for p in self.output_params
-                                    if p in requested_not_known["output_params"] and
-                                    # Not the chi2's either
-                                    not p.startswith(_chi2 + _separator)]
-            name, fields = list(info_theory.items())[0]
-            # If it has an "external" key, wrap it up. Else, load it up
-            if _external in list(info_theory.values())[0]:
-                theory_class = list(info_theory.values())[0][_external]
-            else:
-                theory_class = get_class(name, kind=_theory)
-            self.theory = theory_class(input_params_theory, output_params_theory,
-                                       fields, modules=modules, timing=timing)
-        else:
-            self.theory = None
+                self._likelihoods[name] = like_class(info, modules=modules, timing=timing)
+        # Assign input/output parameters
+        self._assign_params(parameterization, info_likelihood, info_theory)
+        # Do the user-defined post-initialisation, and assign the theory code
+        if self.theory:
+            self.theory.initialize()
         for like in self:
+            self[like].initialize()
             self[like].theory = self.theory
             self[like].add_theory()
         # Store the input params and likelihoods on which each sampled params depends.
@@ -396,6 +336,137 @@ class LikelihoodCollection(object):
     def marginal(self, *args):
         self.log.error("Marginal not implemented for >1 likelihoods. Sorry!")
         raise HandledException
+
+    def _assign_params(self, parameterization, info_likelihood, info_theory=None):
+        """
+        Assign parameters to likelihoods, following the algorithm explained in
+        :doc:`DEVEL`.
+        """
+        self.input_params = list(parameterization.input_params())
+        self.output_params = list(parameterization.output_params())
+        input_params = {p: [] for p in self.input_params}
+        output_params = {p: [] for p in self.output_params}
+        param_agnostic_likes = []
+        for like in (list(self) + ([_theory] if self.theory else [])):
+            # "one" only takes leftover parameters
+            if like == "one":
+                continue
+            # Identify parameters understood by this likelihood/therory
+            # 1a. Does it have input/output params list?
+            #     (takes into account that for callables, we can ignore elements)
+            if getattr(self[like], _input_params, None) is not None:
+                for p in getattr(self[like], _input_params):
+                    try:
+                        input_params[p] += [like]
+                    except KeyError:
+                        # If external function, no problem: it may have default value
+                        if not isinstance(self[like], LikelihoodExternalFunction):
+                            self.log.error("Parameter '%s' needed as input for '%s', "
+                                           "but not provided.", p, like)
+                            raise HandledException
+                for p in getattr(self[like], _output_params, []):
+                    try:
+                        output_params[p] += [like]
+                    except KeyError:
+                        pass
+            # 2. Is there a params prefix?
+            elif getattr(self[like], _input_params_prefix, None) is not None:
+                for p in input_params:
+                    if p.startswith(getattr(self[like], _input_params_prefix)):
+                        input_params[p] += [like]
+                # May not have output_params_prefix
+                if getattr(self[like], _output_params_prefix, None) is not None:
+                    for p in output_params:
+                        if p.startswith(getattr(self[like], _output_params_prefix)):
+                            output_params[p] += [like]
+            # 3. Does it have a general (mixed) list of params?
+            elif getattr(self[like], _params, None) is not None:
+                for p in getattr(self[like], _params):
+                    if p in input_params:
+                        input_params[p] += [like]
+                    if p in output_params:
+                        output_params[p] += [like]
+            # 4. No parameter knowledge: store as parameter agnostic
+            else:
+                param_agnostic_likes += [like]
+        # Check that there is only one non-knowledgeable element, and assign unused params
+        if len(param_agnostic_likes) > 1:
+            self.log.error("More than once parameter-agnostic likelihood/theory: %r. "
+                           "Cannot decide parameter assignements.", param_agnostic_likes)
+            raise HandledException
+        elif param_agnostic_likes:
+            for p, assigned in input_params.items():
+                if not assigned:
+                    input_params[p] = [param_agnostic_likes[0]]
+            for p, assigned in output_params.items():
+                if not assigned:
+                    output_params[p] = [param_agnostic_likes[0]]
+        # Check that, of a theory code is present, it does not share input parameters
+        # (because of the theory+experimental model separation)
+        if self.theory:
+            for p, assigned in input_params.items():
+                 if _theory in assigned and len(assigned) > 1:
+                     self.log.error("Some parameter has been asigned to the theory code "
+                                    "AND a likelihood, and that is not allowed: {%s: %r}",
+                                    p, assigned)
+                     raise HandledException
+        # If unit likelihood is present, assign all non-theory inputs to it
+        if "one" in self:
+            for p, assigned in input_params.items():
+                if _theory not in assigned:
+                    assigned += ["one"]
+        # If there are unassigned input params, fail
+        unassigned_input = [p for p, assigned in input_params.items() if not assigned]
+        if unassigned_input:
+            self.log.error("Could not find whom to assign input parameters %r.",
+                           unassigned_input)
+            raise HandledException
+        # Assign the "chi2__" output parameters
+        for p, assigned in output_params.items():
+            if p.startswith(_chi2 + _separator):
+                like = p[len(_chi2 + _separator):]
+                if p not in self:
+                    self.log.error("Your derived parameters depend on an unknown "
+                                   "likelihood: '%s'", like)
+                    raise HandledException
+                assigned += [like]
+        # Check that output parameters are assigned exactly once
+        unassigned_output = [p for p, assigned in output_params.items() if not assigned]
+        multiassigned_output = {
+            p: asigned for p, assigned in output_params.items() if len(assigned) > 1}
+        if unassigned_output:
+            self.log.error("Could not find whom to assign output parameters %r.",
+                           unassigned_output)
+            raise HandledException
+        if multiassigned_output:
+            self.log.error("Output params can only be computed by one likelihood/theory, "
+                           "but some were claimed by more than one: %r.",
+                           multiassigned_output)
+            raise HandledException
+        # Finished! Assign and update infos
+        input_params_inv = odict()
+        output_params_inv = odict()
+        for like in list(self) + ([_theory] if self.theory else []):
+            self[like].input_params = [
+                p for p, assign in input_params.items() if like in assign]
+            self[like].output_params = [
+                p for p, assign in output_params.items() if like in assign]
+            # Update infos!
+            if like != _theory:
+                info_likelihood[like].pop(_params, None)
+                info_likelihood[like][_input_params] = self[like].input_params
+                info_likelihood[like][_output_params] = self[like].output_params
+            elif self.theory:
+                name = list(info_theory)[0]
+                info_theory[name].pop(_params, None)
+                info_theory[name][_input_params] = self[like].input_params
+                info_theory[name][_output_params] = self[like].output_params
+        if self.log.getEffectiveLevel() <= logging.DEBUG:
+            self.log.debug("Parameters were assigned as follows:")
+            for like in list(self) + ([_theory] if self.theory else []):
+                self.log.debug("- %r:", like)
+                self.log.debug("     Input:  %r", self[like].input_params)
+                self.log.debug("     Output: %r", self[like].output_params)
 
     def _speeds_of_params(self, int_speeds=False, fast_slow=False):
         """

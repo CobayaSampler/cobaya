@@ -67,24 +67,17 @@ class Theory(object):
 
     # Generic methods: do not touch these
 
-    def __init__(self, info_input_params, info_output_params, info_theory, modules=None,
-                 timing=None):
+    def __init__(self, info_theory, modules=None, timing=None):
         self.name = self.__class__.__name__
         self.log = logging.getLogger(self.name)
-        self.input_params = info_input_params
-        self.output_params = info_output_params
         self.path_install = modules
         # Load info of the code
         for k in info_theory:
             setattr(self, k, info_theory[k])
-        # Update I/O params info
-        info_theory[_input_params] = list(info_input_params)
-        info_theory[_output_params] = list(info_output_params)
         # Timing
         self.timing = timing
         self.n = 0
         self.time_avg = 0
-        self.initialize()
 
     def d(self):
         return len(self.sampled)

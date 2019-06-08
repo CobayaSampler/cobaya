@@ -24,7 +24,7 @@ def test_minimize_gaussian():
     ranges = np.array([[0, 1] for i in range(dimension)])
     prefix = "a_"
     info = info_random_gaussian_mixture(
-        ranges=ranges, n_modes=n_modes, prefix=prefix, derived=True)
+        ranges=ranges, n_modes=n_modes, input_params_prefix=prefix, derived=True)
     mean = info[_likelihood]["gaussian_mixture"]["means"][0]
     cov = info[_likelihood]["gaussian_mixture"]["covs"][0]
     maxloglik = multivariate_normal.logpdf(mean, mean=mean, cov=cov)

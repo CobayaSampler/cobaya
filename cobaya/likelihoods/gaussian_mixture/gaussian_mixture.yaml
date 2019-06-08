@@ -8,7 +8,8 @@ likelihood:
     # Weights of the components (default: equal weights)
     weights:
     # Prefix of parameters names
-    prefix: ""
+    input_params_prefix: ""
+    output_params_prefix: ""
     # Use derived standarized parameters for each component
     derived: False
     # Delay in likelihood evaluation
