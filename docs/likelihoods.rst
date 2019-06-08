@@ -18,7 +18,7 @@ Likelihoods are specified under the `likelihood` block, together with their opti
 
 Likelihood parameters are specified within the ``params`` block, as explained in :doc:`params_prior`.
 
-**cobaya** comes with a number of *internal* mock and cosmological likelihoods. You can define your *external* ones too with simple Python functions, as explained below.
+**cobaya** comes with a number of *internal* general and cosmological likelihoods. You can define your *external* ones too with simple Python functions, as explained below.
 
 
 .. _likelihood_external:
@@ -93,14 +93,6 @@ For an application, check out :doc:`cosmo_external_likelihood`.
    Actually, there are some user-defined options that are common to all likelihoods and do not need to be specified in the defaults ``[name].yaml`` file, such as the computational ``speed`` of the likelihood (see :ref:`mcmc_speed_hierarchy`).
 
 
-.. _likehood_mock_params:
-
-Parameter names for mock likelihoods
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-*Mock* likelihoods can have any number of non-predefined parameters, as long as they start with a certain prefix specified by the user with the option ``prefix`` of said likelihood. If said prefix is not defined (or defined to an empty string), the likelihood will understand all parameter as theirs.
-
-
 Implementing your own *internal* likelihood
 -------------------------------------------
 
@@ -115,7 +107,7 @@ You only need to specify one, or at most four, functions (see the :class:`Likeli
 - An (optional) ``add_theory`` method specifying the requests from the theory code, if it applies.
 - An (optional) ``close`` method doing whatever needs to be done at the end of the sampling (e.g. releasing memory).
 
-You can use the :doc:`Gaussian likelihood <likelihood_gaussian>` as a guide. If your likelihood needs a cosmological code, just define one in the input file and you can automatically access it as an attribute of your class: ``[your_likelihood].theory``. Use the :doc:`Planck likelihood <likelihood_planck>` as a guide to create your own cosmological likelihood.
+You can use the :doc:`Gaussian mixtures likelihood <likelihood_gaussian_mixture>` as a guide. If your likelihood needs a cosmological code, just define one in the input file and you can automatically access it as an attribute of your class: ``[your_likelihood].theory``. Use the :doc:`Planck likelihood <likelihood_planck>` as a guide to create your own cosmological likelihood.
 
 .. note:: ``_theory`` and ``_derived`` are reserved parameter names: you cannot use them as options in your defaults file!
 

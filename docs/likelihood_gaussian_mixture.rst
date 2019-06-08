@@ -15,7 +15,7 @@ names start with ``test_`` and must be defined in the ``params`` block:
 
    likelihood:
      gaussian_mixture:
-       prefix: test_
+       input_params_prefix: test_
        means: [ [0.1,0.1],
                 [0.3,0.3],
                 [0.4,0.5] ]
@@ -27,13 +27,13 @@ names start with ``test_`` and must be defined in the ``params`` block:
                  [0,    0.01]] ]
 
 
-The option ``prefix`` fixes the parameters that will be understood by this likelihood (see :ref:`likehood_mock_params`).
+The option ``input_params_prefix`` fixes the parameters that will be understood by this likelihood: it is a special kind of likelihood that can have any number of non-predefined parameters, as long as they start with this prefix. If this prefix is not defined (or defined to an empty string), the likelihood will understand all parameter as theirs. The number of parameters taken as input must match the dimensionality defined by the means and covariance matrices.
 
 Derived parameters can be tracked, as many as sampled parameters times the number of modes,
 and they represent the standardized parameters of each of the modes, i.e. those distributed
 as :math:`\mathcal{N}(0,I)` around each mode (notice that if a mode is close to the
 boundary of the prior, you should not expect to recover a unit covariance matrix from the
-sample). To track them, add the option `derived: True`.
+sample). To track them, add the option `derived: True`, and they will be identified by a prefix defined by ``output_params_prefix``.
 
 A delay (in seconds) in the likelihood evaluation can be specified with the keyword
 ``delay``.

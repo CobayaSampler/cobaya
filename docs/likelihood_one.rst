@@ -13,9 +13,6 @@ Simply copy this block in your input ``yaml`` file and modify whatever options y
    :language: yaml
 
 
-The option ``prefix`` fixes the parameters that will be understood by this likelihood (see :ref:`likehood_mock_params`).              
-
-
 ``one`` likelihood class
 ------------------------
 

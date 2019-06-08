@@ -1,7 +1,7 @@
 """
 .. module:: one
 
-:Synopsis: Mock constant value (1) likelihood
+:Synopsis: Unit likelihood: always outputs :math:`0 = \log(1)`.
 :Author: Jesus Torrado
 
 """
