@@ -70,6 +70,10 @@ Parameters have different roles with respect to different parts of the code:
 
 The :class:`parameterization.Parameterization` class (see diagram) takes care of interfacing between these two sets of roles, which, as it can be seen below, is sometimes not as simple as ``sampled + fixed = input``, and ``derived = output``.
 
+.. warning::
+
+   Despite generating some ambiguity, we call output parameters sometimes also *derived*, when it is clear that we are in the likelihood context, not the sampler context.
+
 
 How likelihoods and theory decide which input/output parameters go where
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
