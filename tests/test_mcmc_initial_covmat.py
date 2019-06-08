@@ -9,7 +9,7 @@ from itertools import chain
 from random import shuffle
 from collections import OrderedDict as odict
 
-from cobaya.likelihoods.gaussian import random_cov
+from cobaya.likelihoods.gaussian_mixture import random_cov
 from cobaya.conventions import _likelihood, _prior, _sampler, _params
 from cobaya.conventions import _p_ref, _p_proposal, _p_dist
 from cobaya.run import run
