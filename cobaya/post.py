@@ -48,7 +48,7 @@ def post(info, sample=None):
     logger_setup(info.get(_debug), info.get(_debug_file))
     log = logging.getLogger(__name__.split(".")[-1])
     try:
-        info_post = info.pop(_post)
+        info_post = info[_post]
     except KeyError:
         log.error("No 'post' block given. Nothing to do!")
         raise HandledException
@@ -202,15 +202,15 @@ def post(info, sample=None):
     info_out[_post] = info_post
     # Updated with input info and extended (full) add info
     info_out.update(info_in)
-    info_out[_post]["add"] = deepcopy(add)
-    info_out[_post].get("add", {}).get(_likelihood, {}).pop("one", None)
-    output_out.dump_info({}, info_out)
+    info_out[_post]["add"] = add
     dummy_model_out = DummyModel(
         out[_params], out[_likelihood], info_prior=out[_prior])
     prior_add = Prior(dummy_model_out.parameterization, add.get(_prior))
     likelihood_add = Likelihood(
         add[_likelihood], parameterization_like,
         info_theory=info_theory_out, modules=info.get(_path_install))
+    # Remove auxiliary "one" before dumping -- 'add' *is* info_out[_post]["add"]
+    add[_likelihood].pop("one")
     if likelihood_add.theory:
         # Make sure that theory.needs is called at least once, for adjustments
         likelihood_add.theory.needs()
@@ -230,6 +230,7 @@ def post(info, sample=None):
                 theory, list(dummy_model_out.parameterization.input_params()))
             raise HandledException
     collection_out = Collection(dummy_model_out, output_out, name="1")
+    output_out.dump_info({}, info_out)
     # 4. Main loop!
     log.info("Running post-processing...")
     last_percent = 0
@@ -323,4 +324,4 @@ def post(info, sample=None):
     # Write!
     collection_out._out_update()
     log.info("Finished! Final number of samples: %d", collection_out.n())
-    return deepcopy(info_out), {"post": collection_out}
+    return info_out, {"sample": collection_out}

@@ -49,7 +49,7 @@ def test_post_prior(tmpdir):
     mcsamples = loadMCSamples(info_post["output"] + "_post_" + info_post["post"]["suffix"])
     new_mean = mcsamples.mean(["a", "b"])
     new_cov = mcsamples.getCovMat().matrix
-    assert abs(KL_norm(target["mean"], target["cov"], new_mean, new_cov)) < 0.01
+    assert abs(KL_norm(target["mean"], target["cov"], new_mean, new_cov)) < 0.02
 
 
 @flaky(max_runs=3, min_passes=1)
@@ -70,7 +70,7 @@ def test_post_likelihood(tmpdir):
     mcsamples = loadMCSamples(info_post["output"] + "_post_" + info_post["post"]["suffix"])
     new_mean = mcsamples.mean(["a", "b"])
     new_cov = mcsamples.getCovMat().matrix
-    assert abs(KL_norm(target["mean"], target["cov"], new_mean, new_cov)) < 0.01
+    assert abs(KL_norm(target["mean"], target["cov"], new_mean, new_cov)) < 0.02
 
 
 def test_post_params(tmpdir):
@@ -88,4 +88,4 @@ def test_post_params(tmpdir):
     updated_info, products = post(info_post)
     # Compare parameters
     assert np.allclose(
-        products["post"]["a"] - products["post"]["b"], products["post"]["a_minus_b"])
+        products["sample"]["a"] - products["sample"]["b"], products["sample"]["a_minus_b"])
