@@ -344,8 +344,8 @@ class LikelihoodCollection(object):
         """
         self.input_params = list(parameterization.input_params())
         self.output_params = list(parameterization.output_params())
-        input_params = {p: [] for p in self.input_params}
-        output_params = {p: [] for p in self.output_params}
+        input_params = odict([[p, []] for p in self.input_params])
+        output_params = odict([[p, []] for p in self.output_params])
         param_agnostic_likes = []
         for like in (list(self) + ([_theory] if self.theory else [])):
             # "one" only takes leftover parameters
