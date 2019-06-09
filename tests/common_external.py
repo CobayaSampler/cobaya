@@ -72,7 +72,7 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
     # Complete according to kind
     if kind == _prior:
         info.update({_prior: info_logpdf,
-                     _likelihood: {"one": {"prefix": ""}}})
+                     _likelihood: {"one": None}})
     elif kind == _likelihood:
         info.update({_likelihood: info_logpdf})
     else:
