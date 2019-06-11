@@ -21,7 +21,7 @@ from cobaya.parameterization import Parameterization, expand_info_param
 from cobaya.parameterization import is_fixed_param, is_sampled_param, is_derived_param
 from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_prefix, _post
 from cobaya.conventions import _params, _prior, _likelihood, _theory, _p_drop, _weight
-from cobaya.conventions import _chi2, _separator, _minuslogpost, _force, _p_value
+from cobaya.conventions import _chi2, _separator, _minuslogpost, _force, _p_value, _p_drop
 from cobaya.conventions import _minuslogprior, _path_install, _input_params
 from cobaya.collection import Collection
 from cobaya.log import logger_setup, HandledException
@@ -139,11 +139,14 @@ def post(info, sample=None):
                 "Only derived parameters can be added during post-processing.", p)
             raise HandledException
         out[_params][p] = pinfo
-    # For the likelihood only, turn the rest of derived parameters into constants,
+    # For the likelihood only, turn the rest of *derived* parameters into constants,
     # so that the likelihoods do not try to compute them)
+    # But be careful to exclude *input* params that have a "derived: True" value
+    # (which in "full info" turns into "derived: 'lambda [x]: [x]'")
     out_params_like = deepcopy(out[_params])
     for p, pinfo in out_params_like.items():
-        if is_derived_param(pinfo) and p not in add.get(_params, {}):
+        if ((is_derived_param(pinfo) and not(_p_value in pinfo)
+             and p not in add.get(_params, {}))):
             out_params_like[p] = {_p_value: np.nan, _p_drop: True}
     parameterization_like = Parameterization(out_params_like, ignore_unused_sampled=True)
     # 2.2 Manage adding/removing priors and likelihoods
@@ -175,7 +178,7 @@ def post(info, sample=None):
     recompute_theory = info_in.get(_theory) and not (
         list(add[_likelihood]) == ["one"] and
         not any([is_derived_param(pinfo) for pinfo in add.get(_params, {}).values()]))
-    info_theory_out = (
+    info_theory_out = deepcopy(
         add.get(_theory, info_in.get(_theory, None)) if recompute_theory else None)
     chi2_names_add = [_chi2 + _separator + name for name in add[_likelihood]
                       if name is not "one"]
