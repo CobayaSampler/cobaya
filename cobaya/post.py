@@ -198,9 +198,12 @@ def post(info, sample=None):
     if "suffix" not in info_post:
         log.error("You need to provide a 'suffix' for your chains.")
         raise HandledException
-    output_out = Output(output_prefix=info.get(_output_prefix, "") +
-                        "_" + _post + "_" + info_post["suffix"],
-                        force_output=info.get(_force))
+    # Use default prefix if it exists. If it does not, produce no output by default.
+    # {post: {output: None}} suppresses output, and if it's a string, updates it.
+    out_prefix = info_post.get(_output_prefix, info.get(_output_prefix))
+    if out_prefix not in [None, False]:
+        out_prefix += "_" + _post + "_" + info_post["suffix"]
+    output_out = Output(output_prefix=out_prefix, force_output=info.get(_force))
     info_out = deepcopy(info)
     info_out[_post] = info_post
     # Updated with input info and extended (full) add info
