@@ -344,85 +344,77 @@ class LikelihoodCollection(object):
         """
         self.input_params = list(parameterization.input_params())
         self.output_params = list(parameterization.output_params())
-        input_params = odict([[p, []] for p in self.input_params])
-        output_params = odict([[p, []] for p in self.output_params])
-        param_agnostic_likes = []
-        for like in (list(self) + ([_theory] if self.theory else [])):
-            # "one" only takes leftover parameters
-            if like == "one":
-                continue
-            # Identify parameters understood by this likelihood/therory
-            # 1a. Does it have input/output params list?
-            #     (takes into account that for callables, we can ignore elements)
-            if getattr(self[like], _input_params, None) is not None:
-                for p in getattr(self[like], _input_params):
-                    try:
-                        input_params[p] += [like]
-                    except KeyError:
-                        # If external function, no problem: it may have default value
-                        if not isinstance(self[like], LikelihoodExternalFunction):
-                            self.log.error("Parameter '%s' needed as input for '%s', "
-                                           "but not provided.", p, like)
-                            raise HandledException
-                for p in getattr(self[like], _output_params, []):
-                    try:
-                        output_params[p] += [like]
-                    except KeyError:
-                        pass
-            # 2. Is there a params prefix?
-            elif getattr(self[like], _input_params_prefix, None) is not None:
-                for p in input_params:
-                    if p.startswith(getattr(self[like], _input_params_prefix)):
-                        input_params[p] += [like]
-                # May not have output_params_prefix
-                if getattr(self[like], _output_params_prefix, None) is not None:
-                    for p in output_params:
-                        if p.startswith(getattr(self[like], _output_params_prefix)):
-                            output_params[p] += [like]
-            # 3. Does it have a general (mixed) list of params?
-            elif getattr(self[like], _params, None) is not None:
-                for p in getattr(self[like], _params):
-                    if p in input_params:
-                        input_params[p] += [like]
-                    if p in output_params:
-                        output_params[p] += [like]
-            # 4. No parameter knowledge: store as parameter agnostic
-            else:
-                param_agnostic_likes += [like]
-        # Check that there is only one non-knowledgeable element, and assign unused params
-        if len(param_agnostic_likes) > 1:
-            self.log.error("More than once parameter-agnostic likelihood/theory: %r. "
-                           "Cannot decide parameter assignements.", param_agnostic_likes)
-            raise HandledException
-        elif param_agnostic_likes:
-            for p, assigned in input_params.items():
-                if not assigned:
-                    input_params[p] = [param_agnostic_likes[0]]
-            for p, assigned in output_params.items():
-                if not assigned:
-                    output_params[p] = [param_agnostic_likes[0]]
-        # Check that, of a theory code is present, it does not share input parameters
-        # (because of the theory+experimental model separation)
+        params_assign = odict([
+            ["input", odict([[p, []] for p in self.input_params])],
+            ["output", odict([[p, []] for p in self.output_params])]])
+        agnostic_likes = {"input": [], "output": []}
+        for kind, option, prefix in (
+                ["input", _input_params, _input_params_prefix],
+                ["output", _output_params, _output_params_prefix]):
+            for like in (list(self) + ([_theory] if self.theory else [])):
+                # "one" only takes leftover parameters
+                if like == "one":
+                    continue
+                # Identify parameters understood by this likelihood/therory
+                # 1a. Does it have input/output params list?
+                #     (takes into account that for callables, we can ignore elements)
+                if getattr(self[like], option, None) is not None:
+                    for p in getattr(self[like], option):
+                        try:
+                            params_assign[kind][p] += [like]
+                        except KeyError:
+                            if kind == "input":
+                                # If external function, no problem: it may have default value
+                                if not isinstance(self[like], LikelihoodExternalFunction):
+                                    self.log.error("Parameter '%s' needed as input for '%s', "
+                                                   "but not provided.", p, like)
+                                    raise HandledException
+                # 2. Is there a params prefix?
+                elif getattr(self[like], prefix, None) is not None:
+                    for p in params_assign[kind]:
+                        if p.startswith(getattr(self[like], prefix)):
+                            params_assign[kind][p] += [like]
+                # 3. Does it have a general (mixed) list of params?
+                elif getattr(self[like], _params, None) is not None:
+                    for p in getattr(self[like], _params):
+                        if p in params_assign[kind]:
+                            params_assign[kind][p] += [like]
+                # 4. No parameter knowledge: store as parameter agnostic
+                else:
+                    agnostic_likes[kind] += [like]
+                # Check that there is only one non-knowledgeable element, and assign unused params
+                if len(agnostic_likes[kind]) > 1:
+                    self.log.error("More than once parameter-agnostic likelihood/theory "
+                                   "with respect to %s parameters: %r. Cannot decide "
+                                   "parameter assignements.", kind, param_agnostic_likes)
+                    raise HandledException
+                elif agnostic_likes[kind]:  # if there is only one
+                    for p, assigned in params_assign[kind].items():
+                        if not assigned:
+                            params_assign[kind][p] = [agnostic_likes[kind][0]]
+        # Check that, if a theory code is present, it does not share input parameters with
+        # any likelihood (because of the theory+experimental model separation)
         if self.theory:
-            for p, assigned in input_params.items():
+            for p, assigned in params_assign["input"].items():
                  if _theory in assigned and len(assigned) > 1:
                      self.log.error("Some parameter has been asigned to the theory code "
                                     "AND a likelihood, and that is not allowed: {%s: %r}",
                                     p, assigned)
                      raise HandledException
-        # If unit likelihood is present, assign all non-theory inputs to it
+        # If unit likelihood is present, assign all *non-theory* inputs to it
         if "one" in self:
-            for p, assigned in input_params.items():
+            for p, assigned in params_assign["input"].items():
                 if _theory not in assigned:
                     assigned += ["one"]
         # If there are unassigned input params, fail
-        unassigned_input = [p for p, assigned in input_params.items() if not assigned]
+        unassigned_input = [
+            p for p, assigned in params_assign["input"].items() if not assigned]
         if unassigned_input:
             self.log.error("Could not find whom to assign input parameters %r.",
                            unassigned_input)
             raise HandledException
         # Assign the "chi2__" output parameters
-        for p, assigned in output_params.items():
+        for p, assigned in params_assign["output"].items():
             if p.startswith(_chi2 + _separator):
                 like = p[len(_chi2 + _separator):]
                 if p not in self:
@@ -431,9 +423,11 @@ class LikelihoodCollection(object):
                     raise HandledException
                 assigned += [like]
         # Check that output parameters are assigned exactly once
-        unassigned_output = [p for p, assigned in output_params.items() if not assigned]
+        unassigned_output = [
+            p for p, assigned in params_assign["output"].items() if not assigned]
         multiassigned_output = {
-            p: asigned for p, assigned in output_params.items() if len(assigned) > 1}
+            p: asigned for p, assigned in params_assign["output"].items()
+            if len(assigned) > 1}
         if unassigned_output:
             self.log.error("Could not find whom to assign output parameters %r.",
                            unassigned_output)
@@ -444,23 +438,22 @@ class LikelihoodCollection(object):
                            multiassigned_output)
             raise HandledException
         # Finished! Assign and update infos
-        input_params_inv = odict()
-        output_params_inv = odict()
-        for like in list(self) + ([_theory] if self.theory else []):
-            self[like].input_params = [
-                p for p, assign in input_params.items() if like in assign]
-            self[like].output_params = [
-                p for p, assign in output_params.items() if like in assign]
-            # Update infos!
-            if like != _theory:
-                info_likelihood[like].pop(_params, None)
-                info_likelihood[like][_input_params] = self[like].input_params
-                info_likelihood[like][_output_params] = self[like].output_params
-            elif self.theory:
-                name = list(info_theory)[0]
-                info_theory[name].pop(_params, None)
-                info_theory[name][_input_params] = self[like].input_params
-                info_theory[name][_output_params] = self[like].output_params
+        params_assign_inv = odict([["input", odict()], ["output", odict()]])
+        for kind, option, attr in (
+                ["input", _input_params, "input_params"],
+                ["output", _output_params, "output_params"]):
+            for like in list(self) + ([_theory] if self.theory else []):
+                setattr(
+                    self[like], attr,
+                    [p for p, assign in params_assign[kind].items() if like in assign])
+                # Update infos!
+                if like != _theory:
+                    info_likelihood[like].pop(_params, None)
+                    info_likelihood[like][option] = getattr(self[like], attr)
+                elif self.theory:
+                    name = list(info_theory)[0]
+                    info_theory[name].pop(_params, None)
+                    info_theory[name][option] = getattr(self[like], attr)
         if self.log.getEffectiveLevel() <= logging.DEBUG:
             self.log.debug("Parameters were assigned as follows:")
             for like in list(self) + ([_theory] if self.theory else []):

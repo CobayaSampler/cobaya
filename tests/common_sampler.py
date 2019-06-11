@@ -102,7 +102,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
             if "clusters" in products:
                 assert len(products["clusters"].keys()) >= n_modes, (
                     "Not all clusters detected!")
-                for c2 in clusters:
+                for i, c2 in enumerate(clusters):
                     cov_c2, mean_c2 = c2.getCov(), c2.getMeans()
                     KLs = [KL_norm(m1=info[_likelihood]["gaussian_mixture"]["means"][i_c1],
                                    S1=info[_likelihood]["gaussian_mixture"]["covs"][i_c1],
@@ -110,6 +110,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
                                    S2=cov_c2[:dimension, :dimension])
                            for i_c1 in range(n_modes)]
                     extra_tol = 4 * n_modes if n_modes > 1 else 1
+                    print("Final KL for cluster %d: %g", i, min(KLs))
                     assert min(KLs) <= KL_tolerance * extra_tol
             else:
                 assert 0, "Could not check sample convergence: multimodal but no clusters"
