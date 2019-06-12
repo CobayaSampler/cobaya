@@ -38,6 +38,7 @@ Release checklist
 + Update year of copyright in ``LICENCE.txt``.
 + Commit + tag with new version + ``git push`` + ``git push --tags``
 + If needed, re-build the documentation.
++ If applicable, delete branches merged for this version.
 
 
 Notes on some design choices
