@@ -121,7 +121,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
                     products["logZ"] + logZ_nsigmas * products["logZstd"])
 
 
-def body_of_test_speeds(info_sampler={}, modules=None):
+def body_of_test_speeds(info_sampler={}, manual_blocking=False, modules=None):
     # Generate 2 3-dimensional gaussians
     dim = 3
     speed1, speed2 = 5, 20
@@ -170,6 +170,10 @@ def body_of_test_speeds(info_sampler={}, modules=None):
             "likelihood": {"like1": {"external": like1, "speed": speed1},
                            "like2": {"external": like2, "speed": speed2}}}
     info["sampler"] = info_sampler
+    if manual_blocking:
+        info["sampler"][sampler]["blocking"] = [
+            [speed1, ["a_0", "a_1", "a_2"]],
+            [speed2, ["a_3", "a_4", "a_5"]]]
     print("Parameter order:", list(info["params"]))
     # info["debug"] = True
     info["modules"] = modules

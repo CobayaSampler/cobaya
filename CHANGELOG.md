@@ -14,9 +14,16 @@
 - Now picklable!
 - Support for skip and thin
 
-### Sampler:evaluate
+### Samplers
+
+#### Evaluate
 
 - Multiple evaluations with new `N` option.
+
+#### PolyChord
+
+- Updated to version 1.16
+- Handles speed-blocking optimally, including oversampling (manual blocking also possible).
 
 ### Likelihoods
 

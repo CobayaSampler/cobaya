@@ -32,6 +32,13 @@ sampler:
     boost_posterior: 0  # increase up to `num_repeats`
     # Verbosity during the sampling process. Set to one of [0,1,2,3]
     feedback:  # default: Same as global `verbosity`
+    # Manual speed blocking
+    # ---------------------
+    # To take full advantage of speed-blocking, sort the blocks by ascending speeds
+    # (unless not possible due to the architecture of your likelihood)
+    blocking:
+    #  - [speed_1, [params_1]]
+    #  - etc.
     # Treatment of unbounded parameters: confidence level to use
     # ----------------------------------------------------------
     # (Use with care if there are likelihood modes close to the edge of the prior)

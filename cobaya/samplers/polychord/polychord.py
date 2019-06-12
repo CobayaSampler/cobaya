@@ -18,7 +18,7 @@ from itertools import chain
 from collections import OrderedDict as odict
 
 # Local
-from cobaya.tools import read_dnumber, get_external_function
+from cobaya.tools import read_dnumber, get_external_function, relative_to_int
 from cobaya.sampler import Sampler
 from cobaya.mpi import get_mpi_comm
 from cobaya.mpi import am_single_or_primary_process, more_than_one_process, sync_processes
@@ -112,17 +112,19 @@ class polychord(Sampler):
             self.log.info("Storing raw PolyChord output in '%s'.",
                           self.base_dir)
         # Exploiting the speed hierarchy
-        speeds, blocks = self.model.likelihood._speeds_of_params(int_speeds=True)
+        if self.blocking:
+            speeds, blocks = self.model.likelihood._check_speeds_of_params(self.blocking)
+            # Speeds need to be integer to be interpreted as # steps per block
+            speeds = relative_to_int(speeds)
+        else:
+            speeds, blocks = self.model.likelihood._speeds_of_params(int_speeds=True)
         blocks_flat = list(chain(*blocks))
         self.ordering = [
             blocks_flat.index(p) for p in self.model.parameterization.sampled_params()]
-        self.grade_dims = [len(block) for block in blocks]
-        #        self.grade_frac = np.array(
-        #            [i*j for i,j in zip(self.grade_dims, speeds)])
-        #        self.grade_frac = (
-        #            self.grade_frac/sum(self.grade_frac))
-        # Disabled for now. We need a way to override the "time" part of the meaning of grade_frac
-        self.grade_frac = [1 / len(self.grade_dims) for _ in self.grade_dims]
+        self.grade_dims = np.array([len(block) for block in blocks])
+        self.grade_frac = np.array(speeds)*self.grade_dims  # steps per block
+        # bugfix: pypolychord's C interface for Fortran does not like int numpy types
+        self.grade_dims = [int(x) for x in self.grade_dims]
         # Assign settings
         pc_args = ["nlive", "num_repeats", "nprior", "do_clustering",
                    "precision_criterion", "max_ndead", "boost_posterior", "feedback",
@@ -333,7 +335,7 @@ class polychord(Sampler):
 
 # Name of the PolyChord repo and version to download
 pc_repo_name = "PolyChord/PolyChordLite"
-pc_repo_version = "ef02bb6d94dca218c7d8daa98e8ac010022e457e"
+pc_repo_version = "1.16"
 
 
 def get_path(path):

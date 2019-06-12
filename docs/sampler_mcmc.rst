@@ -200,10 +200,12 @@ For example:
 Here, evaluating the theory code is the slowest step, while the ``lik_b`` is faster.
 Likelihood ``lik_a`` is assumed to be as slow as the theory code.
 
+.. _mcmc_speed_hierarchy_manual:
+
 Manual specification of speed-blocking – *new in 1.1*
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-*Automatic* speed-blocking takes advantage of differences in speed *per likelihood* (or theory). If the parameters of your likelihood or theory have some internal speed hierarchy that you would like to utilize (e.g. if your likelihood internally caches the result of a computation depending only on a subset of the likelihood parameters), you can specify a fine-grained list of parameter blocks and their speeds under the ``mcmc`` option ``blocking``.
+*Automatic* speed-blocking takes advantage of differences in speed *per likelihood* (or theory). If the parameters of your likelihood or theory have some internal speed hierarchy that you would like to exploit (e.g. if your likelihood internally caches the result of a computation depending only on a subset of the likelihood parameters), you can specify a fine-grained list of parameter blocks and their speeds under the ``mcmc`` option ``blocking``.
 
 E.g. if a likelihood depends of parameters ``a``, ``b`` and ``c`` and the cost of varying ``a`` is *twice* as big as the other two, your ``mcmc`` block should look like
 
