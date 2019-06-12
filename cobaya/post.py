@@ -30,7 +30,7 @@ from cobaya.output import get_Output as Output
 from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection as Likelihood
 from cobaya.mpi import get_mpi_rank
-from cobaya.tools import progress_bar
+from cobaya.tools import progress_bar, recursive_update
 
 
 # Dummy classes for loading chains for post processing
@@ -117,8 +117,8 @@ def post(info, sample=None):
         out[_params].pop(p)
     mlprior_names_add = []
     for p, pinfo in add.get(_params, {}).items():
+        pinfo_in = info_in[_params].get(p)
         if is_sampled_param(pinfo):
-            pinfo_in = info_in[_params].get(p)
             if not is_sampled_param(pinfo_in):
                 # No added sampled parameters (de-marginalisation not implemented)
                 if pinfo_in is None:
@@ -141,10 +141,19 @@ def post(info, sample=None):
                 log.error("You tried to add derived parameter '%s', which is already "
                           "present. To force its recomputation, 'remove' it too.", p)
                 raise HandledException
-        elif not is_derived_param(pinfo):
-            log.error(
-                "You tried to add parameter '%s', which is not a derived paramter. "
-                "Only derived parameters can be added during post-processing.", p)
+        elif is_fixed_param(pinfo):
+            # Only one possibility left "fixed" parameter that was not present before:
+            # input of new likelihood, or just an argument for dynamical derived (dropped)
+            if ((p in info_in[_params] and
+                 pinfo[_p_value] != (pinfo_in or {}).get(_p_value, None))):
+                log.error(
+                    "You tried to add a fixed parameter '%s: %r' that was already present"
+                    " but had a different value or was not fixed. This is not allowed. "
+                    "The old info of the parameter was '%s: %r'",
+                    p, dict(pinfo), p, dict(pinfo_in))
+                raise HandledException
+        else:
+            log.error("This should not happen. Contact the developers.")
             raise HandledException
         out[_params][p] = pinfo
     # For the likelihood only, turn the rest of *derived* parameters into constants,
@@ -186,8 +195,14 @@ def post(info, sample=None):
     recompute_theory = info_in.get(_theory) and not (
         list(add[_likelihood]) == ["one"] and
         not any([is_derived_param(pinfo) for pinfo in add.get(_params, {}).values()]))
-    info_theory_out = deepcopy(
-        add.get(_theory, info_in.get(_theory, None)) if recompute_theory else None)
+    if recompute_theory:
+        # Inherit from the original chain (needs input|output_params, renames, etc
+        theory = list(info_in[_theory].keys())[0]
+        info_theory_out = odict([
+            [theory, recursive_update(deepcopy(info_in[_theory][theory]),
+                                      add.get(_theory, {theory: {}})[theory])]])
+    else:
+        info_theory_out = None
     chi2_names_add = [_chi2 + _separator + name for name in add[_likelihood]
                       if name is not "one"]
     out[_likelihood] += [l for l in add[_likelihood] if l is not "one"]
@@ -219,19 +234,9 @@ def post(info, sample=None):
     info_out[_post]["add"] = add
     dummy_model_out = DummyModel(
         out[_params], out[_likelihood], info_prior=out[_prior])
-    prior_add = Prior(dummy_model_out.parameterization, add.get(_prior))
-    likelihood_add = Likelihood(
-        add[_likelihood], parameterization_like,
-        info_theory=info_theory_out, modules=info.get(_path_install))
-    # Remove auxiliary "one" before dumping -- 'add' *is* info_out[_post]["add"]
-    add[_likelihood].pop("one")
-    if likelihood_add.theory:
-        # Make sure that theory.needs is called at least once, for adjustments
-        likelihood_add.theory.needs()
-        try:
-            theory = list(info_in[_theory].keys())[0]
-            likelihood_add.theory.input_params = info_in[_theory][theory][_input_params]
-        except KeyError:
+    if recompute_theory:
+        theory = list(info_theory_out.keys())[0]
+        if _input_params not in info_theory_out[theory]:
             log.error(
                 "You appear to be post-processing a chain generated with an older "
                 "version of Cobaya. For post-processing to work, please edit the "
@@ -243,6 +248,15 @@ def post(info, sample=None):
                 "The full set of input parameters are %s.",
                 theory, list(dummy_model_out.parameterization.input_params()))
             raise HandledException
+    prior_add = Prior(dummy_model_out.parameterization, add.get(_prior))
+    likelihood_add = Likelihood(
+        add[_likelihood], parameterization_like,
+        info_theory=info_theory_out, modules=info.get(_path_install))
+    # Remove auxiliary "one" before dumping -- 'add' *is* info_out[_post]["add"]
+    add[_likelihood].pop("one")
+    if likelihood_add.theory:
+        # Make sure that theory.needs is called at least once, for adjustments
+        likelihood_add.theory.needs()
     collection_out = Collection(dummy_model_out, output_out, name="1")
     output_out.dump_info({}, info_out)
     # 4. Main loop!
@@ -258,8 +272,10 @@ def post(info, sample=None):
         inputs = odict([
             [param, getattr(
                 point, param,
-                dummy_model_in.parameterization.constant_params().get(param, None))]
-            for param in dummy_model_in.parameterization.input_params()])
+                dummy_model_in.parameterization.constant_params().get(
+                    param, dummy_model_out.parameterization.constant_params().get(
+                        param, None)))]
+            for param in dummy_model_out.parameterization.input_params()])
         # Solve inputs that depend on a function and were not saved
         # (we don't use the Parameterization_to_input method in case there are references
         #  to functions that cannot be loaded at the moment)
@@ -306,7 +322,8 @@ def post(info, sample=None):
             elif p in dummy_model_out.parameterization._derived_funcs:
                 func = dummy_model_out.parameterization._derived_funcs[p]
                 args = dummy_model_out.parameterization._derived_args[p]
-                derived[p] = func(*[getattr(point, arg) for arg in args])
+                derived[p] = func(
+                    *[getattr(point, arg, output_like.get(arg, None)) for arg in args])
         if log.getEffectiveLevel() <= logging.DEBUG:
             log.debug("New derived parameters: %r",
                       dict([[p, derived[p]]

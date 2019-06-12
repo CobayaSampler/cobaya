@@ -70,14 +70,15 @@ class Collection(object):
             "collection:" + name if name else self.__class__.__name__)
         self.sampled_params = list(model.parameterization.sampled_params())
         self.derived_params = list(model.parameterization.derived_params())
+        self.minuslogprior_names = [
+            _minuslogprior + _separator + piname for piname in list(model.prior)]
+        self.chi2_names = [_chi2 + _separator + likname for likname in model.likelihood]
         # Create the dataframe structure
         columns = [_weight, _minuslogpost]
         columns += list(self.sampled_params)
-        columns += list(self.derived_params)
-        self.minuslogprior_names = [
-            _minuslogprior + _separator + piname for piname in list(model.prior)]
+        # Just in case: ignore derived names as likelihoods: would be duplicate cols
+        columns += [p for p in self.derived_params if p not in self.chi2_names]
         columns += [_minuslogprior] + self.minuslogprior_names
-        self.chi2_names = [_chi2 + _separator + likname for likname in model.likelihood]
         columns += [_chi2] + self.chi2_names
         # Create/load the main data frame and the tracking indices
         if output:

@@ -414,19 +414,21 @@ class LikelihoodCollection(object):
                            unassigned_input)
             raise HandledException
         # Assign the "chi2__" output parameters
-        for p, assigned in params_assign["output"].items():
+        for p in params_assign["output"]:
             if p.startswith(_chi2 + _separator):
                 like = p[len(_chi2 + _separator):]
-                if p not in self:
+                if like not in list(self):
                     self.log.error("Your derived parameters depend on an unknown "
                                    "likelihood: '%s'", like)
                     raise HandledException
-                assigned += [like]
+                # They may have been already assigned to an agnostic likelihood,
+                # so purge first: no "=+"
+                params_assign["output"][p] = [like]
         # Check that output parameters are assigned exactly once
         unassigned_output = [
             p for p, assigned in params_assign["output"].items() if not assigned]
         multiassigned_output = {
-            p: asigned for p, assigned in params_assign["output"].items()
+            p: assigned for p, assigned in params_assign["output"].items()
             if len(assigned) > 1}
         if unassigned_output:
             self.log.error("Could not find whom to assign output parameters %r.",
