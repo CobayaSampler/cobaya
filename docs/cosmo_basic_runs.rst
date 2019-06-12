@@ -80,6 +80,65 @@ As an example, here is the input for Planck 2015 base :math:`\Lambda\mathrm{CDM}
 Save the input generated to a file and run it with ``cobaya-run [your_input_file_name.yaml]``. This will create output files as explained :ref:`here <output_shell>`, and, after a couple of hours, you should be able to run ``GetDistGUI`` to generate some plots.
 
 
+.. _cosmo_post:
+
+Post-processing cosmological samples
+------------------------------------
+
+Let's suppose that we want to importance-reweight a Plank sample, in particular the one we just generated with the input above, with some late time LSS data from BAO. To do that, we ``add`` the new BAO likelihoods. We would also like to increase the theory code's precision with some extra arguments: we will need to re-``add`` it, repeating its ``extra_args``, now including the new precision parameters. Since we do not need to recompute the CMB likelihoods, which are not too affected by the new precision parameters. On top of that, let us add a derived parameter.
+
+Assuming we saved the sammple at ``chains/planck``, we need to define the following input file, which we can run with ``$ cobaya-run``:
+
+.. code:: yaml
+
+   # Path the original sample
+   ouput: chains/planck
+
+   # Post-processing information
+   post:
+     suffix: BAO  # the new sample will be called "chains\planck_post_des*"
+     # If we want to skip the first third and take 1 every 3 samples
+     skip: 0.3
+     thin: 3
+     # Now let's add the DES likelihood,
+     # increase the precision (remember to repeat the extra_args)
+     # and add the new derived parameter
+     add:
+       likelihood:
+         sixdf_2011_bao:
+         sdss_dr7_mgs:
+         sdss_dr12_consensus_bao:
+       theory:
+         # Use *only* the theory corresponding to the original sample
+         classy:
+           extra_args:
+             N_ncdm: 1
+             N_ur: 2.0328
+             # New precision parameter
+             [option]: [value]
+             non_linear: hmcode
+         camb:
+           extra_args:
+             num_massive_neutrinos: 1
+             nnu: 3.046
+             theta_H0_range: [40, 100]
+             # New precision parameter
+             [option]: [value]
+       params:
+         # h = H0/100. (nothing to add: CLASS/CAMB knows it)
+         h:
+         # A dynamic derived parameter: sum of BAO chi-squared's
+         chi2__BAO:
+           derived: 'lambda chi2__sixdf_2011_bao, chi2__sdss_dr7_mgs, chi2__sdss_dr12_consensus_bao:
+                     sum([chi2__sixdf_2011_bao, chi2__sdss_dr7_mgs, chi2__sdss_dr12_consensus_bao])'
+           latex: \chi^2_\mathrm{BAO}
+
+
+.. warning::
+
+   In the current implementation, likelihood recomputation does not automatically trigger recomputation of the partial "chi2" sums as the one in the basic Planck examples above, ``chi2__cmb``. If you are recomputing one likelihood that is part of a partial sum, you need to re-define them inside the ``add`` block.
+
+
 .. _citations:
 
 Citations made easy!
