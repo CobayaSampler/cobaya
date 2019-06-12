@@ -61,7 +61,7 @@ def yaml_load(text_stream, Loader=yaml.Loader, object_pairs_hook=odict, file_nam
     try:
         return yaml.load(text_stream, OrderedLoader)
     # Redefining the general exception to give more user-friendly information
-    except yaml.YAMLError as exception:
+    except (yaml.YAMLError, TypeError) as exception:
         errstr = "Error in your input file " + ("'" + file_name + "'" if file_name else "")
         if hasattr(exception, "problem_mark"):
             line = 1 + exception.problem_mark.line
