@@ -9,7 +9,7 @@ from itertools import chain
 from random import shuffle
 from collections import OrderedDict as odict
 
-from cobaya.likelihoods.gaussian import random_cov
+from cobaya.likelihoods.gaussian_mixture import random_cov
 from cobaya.conventions import _likelihood, _prior, _sampler, _params
 from cobaya.conventions import _p_ref, _p_proposal, _p_dist
 from cobaya.run import run
@@ -46,7 +46,7 @@ def body_of_test(dim, tmpdir=None):
     prefix = "a_"
     input_order = list(range(dim))
     shuffle(input_order)
-    info = {_likelihood: {"one": {"prefix": ""}}, _params: odict()}
+    info = {_likelihood: {"one": None}, _params: odict()}
     for i in input_order:
         p = prefix + str(i)
         info[_params][p] = {_prior: {_p_dist: "norm", "loc": 0, "scale": 1000}}

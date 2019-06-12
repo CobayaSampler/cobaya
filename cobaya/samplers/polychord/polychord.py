@@ -234,7 +234,7 @@ class polychord(Sampler):
         for row in sample:
             collection.add(
                 row[2:2 + self.n_sampled],
-                derived=row[2 + self.n_sampled:2 + self.n_sampled + self.n_derived + 1],
+                derived=row[2 + self.n_sampled:2 + self.n_sampled + self.n_derived],
                 weight=row[0],
                 logpriors=row[-(self.n_priors + self.n_likes):-self.n_likes],
                 loglikes=row[-self.n_likes:])

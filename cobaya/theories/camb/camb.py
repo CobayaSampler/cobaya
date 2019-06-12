@@ -250,40 +250,39 @@ class camb(_cosmo):
         super(camb, self).needs(**requirements)
         for k, v in self._needs.items():
             # Products and other computations
-            key_name = k.lower()
-            if key_name == "cl":
+            if k == "Cl":
                 self.extra_args["lmax"] = max(
                     max(v.values()), self.extra_args.get("lmax", 0))
                 cls = [a.lower() for a in v]
-                self.collectors[key_name] = collector(
+                self.collectors[k] = collector(
                     method="CAMBdata.get_cmb_power_spectra",
                     kwargs={
                         "spectra": list(set(
-                            (self.collectors[key_name].kwargs.get("spectra", [])
-                             if key_name in self.collectors else []) +
+                            (self.collectors[k].kwargs.get("spectra", [])
+                             if k in self.collectors else []) +
                             ["total"] + (["lens_potential"] if "pp" in cls else []))),
                         "raw_cl": True})
                 self.needs_perts = True
-            elif key_name == "h":
-                self.collectors[key_name] = collector(
+            elif k == "H":
+                self.collectors[k] = collector(
                     method="CAMBdata.h_of_z",
                     kwargs={"z": np.atleast_1d(v["z"])})
                 self.H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": _c_km_s}
-            elif key_name == "angular_diameter_distance":
-                self.collectors[key_name] = collector(
+            elif k == "angular_diameter_distance":
+                self.collectors[k] = collector(
                     method="CAMBdata.angular_diameter_distance",
                     kwargs={"z": np.atleast_1d(v["z"])})
-            elif key_name == "comoving_radial_distance":
-                self.collectors[key_name] = collector(
+            elif k == "comoving_radial_distance":
+                self.collectors[k] = collector(
                     method="CAMBdata.comoving_radial_distance",
                     kwargs={"z": np.atleast_1d(v["z"])})
-            elif key_name == "fsigma8":
+            elif k == "fsigma8":
                 self.add_to_redshifts(v["z"])
-                self.collectors[key_name] = collector(
+                self.collectors[k] = collector(
                     method="CAMBdata.get_fsigma8",
                     kwargs={})
                 self.needs_perts = True
-            elif key_name == "pk_interpolator":
+            elif k == "Pk_interpolator":
                 self.extra_args["kmax"] = max(v["k_max"], self.extra_args.get("kmax", 0))
                 self.add_to_redshifts(v["z"])
                 v["vars_pairs"] = v["vars_pairs"] or [["total", "total"]]
@@ -318,6 +317,9 @@ class camb(_cosmo):
                 "extra arguments: %s. Please, remove one of the definitions of each.",
                 list(set(self.input_params).intersection(set(self.extra_args))))
             raise HandledException
+        # Remove extra args that cause an error if the associated product is not requested
+        if "Cl" not in [k for k in self._needs]:
+            self.extra_args.pop("lens_potential_accuracy", None)
 
     def add_to_redshifts(self, z):
         self.extra_args["redshifts"] = np.sort(np.unique(np.concatenate(
@@ -362,8 +364,8 @@ class camb(_cosmo):
                 self.states[i_state]["params"], self.extra_args)
             raise
         except CAMBUnknownArgumentError as e:
-            self.log.error("Some of the parameters passed to CAMB were not recognized: "
-                           "%s", e.message)
+            self.log.error(
+                "Some of the parameters passed to CAMB were not recognized: %s" % str(e))
             raise HandledException
         return False
 
@@ -441,28 +443,27 @@ class camb(_cosmo):
         return 1 if reused_state else 2
 
     def _get_derived_from_params(self, p, intermediates):
-        result = intermediates["CAMBdata"].get("result", None)
-        if result is None: return None
-        pars = result.Params
-        try:
-            return getattr(pars, p)
-        except AttributeError:
-            try:
-                return getattr(result, p)
-            except AttributeError:
-                for mod in ["InitPower", "Reion", "Recomb", "Transfer", "DarkEnergy"]:
-                    try:
-                        return getattr(
-                            getattr(pars, mod), p)
-                    except AttributeError:
-                        pass
-            return None
+        for origin in ["CAMBdata", "CAMBparams"]:
+            result = intermediates[origin].get("result")
+            if result is None:
+                continue
+            for thing in [result, getattr(result, "Params", {})]:
+                try:
+                    return getattr(thing, p)
+                except AttributeError:
+                    for mod in ["InitPower", "Reion", "Recomb", "Transfer", "DarkEnergy"]:
+                        try:
+                            return getattr(getattr(thing, mod), p)
+                        except AttributeError:
+                            pass
+        return None
 
     def _get_derived_from_std(self, p, intermediates):
         dic = intermediates["CAMBdata"].get("derived_dic", None)
         if dic is None:
             result = intermediates["CAMBdata"].get("result", None)
-            if result is None: return None
+            if result is None:
+                return None
             dic = result.get_derived_params()
             intermediates["CAMBdata"]["derived_dic"] = dic
         return dic.get(p, None)
@@ -506,7 +507,8 @@ class camb(_cosmo):
     def get_param(self, p):
         current_state = self.current_state()
         for pool in ["params", "derived", "derived_extra"]:
-            value = deepcopy(current_state[pool].get(self.translate_param(p), None))
+            value = deepcopy(
+                (current_state[pool] or {}).get(self.translate_param(p), None))
             if value is not None:
                 return value
         self.log.error("Parameter not known: '%s'", p)
@@ -516,7 +518,7 @@ class camb(_cosmo):
         current_state = self.current_state()
         # get C_l^XX from the cosmological code
         try:
-            cl_camb = deepcopy(current_state["cl"]["total"])
+            cl_camb = deepcopy(current_state["Cl"]["total"])
         except:
             self.log.error(
                 "No Cl's were computed. Are you sure that you have requested them?")
@@ -524,8 +526,8 @@ class camb(_cosmo):
         mapping = {"tt": 0, "ee": 1, "bb": 2, "te": 3}
         cls = {"ell": np.arange(cl_camb.shape[0])}
         cls.update({sp: cl_camb[:, i] for sp, i in mapping.items()})
-        if "lens_potential" in current_state["cl"]:
-            cls.update({"pp": deepcopy(current_state["cl"]["lens_potential"])[:, 0]})
+        if "lens_potential" in current_state["Cl"]:
+            cls.update({"pp": deepcopy(current_state["Cl"]["lens_potential"])[:, 0]})
         # unit conversion and ell_factor
         ell_factor = ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[2:] if ell_factor else 1
         units_factors = {"1": 1,
@@ -557,7 +559,7 @@ class camb(_cosmo):
 
     def get_H(self, z, units="km/s/Mpc"):
         try:
-            return self._get_z_dependent("h", z) * self.H_units_conv_factor[units]
+            return self._get_z_dependent("H", z) * self.H_units_conv_factor[units]
         except KeyError:
             self.log.error("Units not known for H: '%s'. Try instead one of %r.",
                            units, list(self.H_units_conv_factor))

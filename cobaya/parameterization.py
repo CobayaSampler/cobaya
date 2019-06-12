@@ -106,7 +106,7 @@ class Parameterization(object):
     Translates parameter between sampler+prior and likelihood
     """
 
-    def __init__(self, info_params, allow_renames=True):
+    def __init__(self, info_params, allow_renames=True, ignore_unused_sampled=False):
         self.allow_renames = allow_renames
         # First, we load the parameters,
         # not caring about whether they are understood by any likelihood.
@@ -189,7 +189,7 @@ class Parameterization(object):
         dropped_but_never_used = (
             set([p for p, v in self._sampled_input_dependence.items() if not v])
                 .difference(set(self._directly_sampled)))
-        if dropped_but_never_used:
+        if dropped_but_never_used and not ignore_unused_sampled:
             log.error("Parameters %r are sampled but not passed to the likelihood or "
                       "theory code, neither ever used as arguments for any parameters. "
                       "Check that you are not using the '%s' tag unintentionally.",

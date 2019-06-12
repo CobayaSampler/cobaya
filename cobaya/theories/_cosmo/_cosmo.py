@@ -27,7 +27,7 @@ class _cosmo(Theory):
 
         Typical requisites in Cosmology (as keywords, case insensitive):
 
-        - ``cl={[...]}``: CMB lensed power spectra, as a dictionary ``{spectrum:l_max}``,
+        - ``Cl={[...]}``: CMB lensed power spectra, as a dictionary ``{spectrum:l_max}``,
           where the possible spectra are combinations of "t", "e", "b" and "p"
           (lensing potential). Get with :func:`~_cosmo.get_cl`.
         - ``H={'z': [z_1, ...], 'units': '1/Mpc' or 'km/s/Mpc'}``: Hubble
@@ -47,16 +47,23 @@ class _cosmo(Theory):
           value the likelihood may need.
         """
         if not getattr(self, "_needs", None):
-            self._needs = deepcopy(self.output_params)
+            self._needs = dict([[p, None] for p in self.output_params])
+        # TO BE DEPRECATED IN >=1.3
+        for product, capitalization in {
+                "cl": "Cl", "pk_interpolator": "Pk_interpolator"}.items():
+            if product in requirements:
+                self.log.error("You requested product '%s', which from now on should be "
+                               "capitalized as '%s'.", product, capitalization)
+                raise HandledException
         # Accumulate the requirements across several calls in a safe way;
         # e.g. take maximum of all values of a requested precision paramater
         for k, v in requirements.items():
             # Products and other computations
-            if k.lower() == "cl":
-                self._needs["cl"] = {
-                    cl: max(self._needs.get("cl", {}).get(cl, 0), v.get(cl, 0))
-                    for cl in set(self._needs.get("cl", {})).union(v)}
-            elif k.lower() == "pk_interpolator":
+            if k == "Cl":
+                self._needs["Cl"] = {
+                    cl: max(self._needs.get("Cl", {}).get(cl, 0), v.get(cl, 0))
+                    for cl in set(self._needs.get("Cl", {})).union(v)}
+            elif k == "Pk_interpolator":
                 # Make sure vars_pairs is a list of [list of 2 vars pairs]
                 vars_pairs = v.pop("vars_pairs", [])
                 try:
@@ -70,21 +77,21 @@ class _cosmo(Theory):
                              vars_pairs)
                     raise HandledException
                 vars_pairs = set([tuple(pair) for pair in chain(
-                    self._needs.get(k.lower(), {}).get("vars_pairs", []), vars_pairs)])
-                self._needs[k.lower()] = {
+                    self._needs.get(k, {}).get("vars_pairs", []), vars_pairs)])
+                self._needs[k] = {
                     "z": np.unique(np.concatenate(
-                        (self._needs.get(k.lower(), {}).get("z", []),
+                        (self._needs.get(k, {}).get("z", []),
                          np.atleast_1d(v["z"])))),
                     "k_max": max(
-                        self._needs.get(k.lower(), {}).get("k_max", 0), v["k_max"]),
+                        self._needs.get(k, {}).get("k_max", 0), v["k_max"]),
                     "vars_pairs": vars_pairs}
-                self._needs[k.lower()].update(v)
-            elif k.lower() in ["h", "angular_diameter_distance",
+                self._needs[k].update(v)
+            elif k in ["H", "angular_diameter_distance",
                                "comoving_radial_distance", "fsigma8"]:
-                if not k.lower() in self._needs:
-                    self._needs[k.lower()] = {}
-                self._needs[k.lower()]["z"] = np.unique(np.concatenate(
-                    (self._needs[k.lower()].get("z", []), v["z"])))
+                if not k in self._needs:
+                    self._needs[k] = {}
+                self._needs[k]["z"] = np.unique(np.concatenate(
+                    (self._needs[k].get("z", []), v["z"])))
             # Extra derived paramaters and other unknown stuff (keep capitalization)
             elif v is None:
                 self._needs[k] = None

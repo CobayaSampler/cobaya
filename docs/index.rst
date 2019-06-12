@@ -20,7 +20,6 @@ Table of contents
    params_prior
    likelihoods
    likelihood_one
-   likelihood_gaussian
    likelihood_gaussian_mixture
    theory
    sampler
@@ -28,6 +27,7 @@ Table of contents
    sampler_mcmc
    sampler_polychord
    sampler_minimize
+   post
 
 .. toctree::
    :caption: Cosmology!

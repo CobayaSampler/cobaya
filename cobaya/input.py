@@ -24,7 +24,7 @@ from cobaya.conventions import _package, _products_path, _path_install, _resume
 from cobaya.conventions import _output_prefix, _debug, _debug_file
 from cobaya.conventions import _params, _prior, _theory, _likelihood, _sampler, _external
 from cobaya.conventions import _p_label, _p_derived, _p_ref, _p_drop, _p_value, _p_renames
-from cobaya.conventions import _p_proposal
+from cobaya.conventions import _p_proposal, _input_params, _output_params
 from cobaya.tools import get_folder, recursive_update, recursive_odict_to_dict
 from cobaya.yaml import yaml_load_file
 from cobaya.log import HandledException
@@ -294,8 +294,8 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False):
     myname = inspect.stack()[0][3]
     ignore = set([]) if strict else set(
         [_debug, _debug_file, _resume, _path_install])
-    ignore_params = (set([]) if strict
-                     else set([_p_label, _p_renames, _p_ref, _p_proposal, "min", "max"]))
+    ignore_params = (set([]) if strict else set(
+        [_p_label, _p_renames, _p_ref, _p_proposal, "min", "max"]))
     if set(info1).difference(ignore) != set(info2).difference(ignore):
         myprint(myname + ": different blocks or options: %r (old) vs %r (new)" % (
             set(info1).difference(ignore), set(info2).difference(ignore)))
@@ -321,6 +321,8 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False):
                         module_folder, package=_package), "ignore_at_resume", {})
                 except ImportError:
                     ignore_k = {}
+                if block_name == _theory:
+                    ignore_k.update({_input_params: None, _output_params: None})
                 block1k, block2k = deepcopy(block1[k]), deepcopy(block2[k])
                 if not strict:
                     for kignore in ignore_k:
@@ -348,15 +350,16 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False):
                     block2k = expand_info_param(block2k)
                     if not strict:
                         for kignore in ignore_params:
-                            try:
-                                block1k.pop(kignore, None)
-                                block2k.pop(kignore, None)
-                            except:
-                                pass
+                            block1k.pop(kignore, None)
+                            block2k.pop(kignore, None)
                         # Fixed params, it doesn't matter if they are saved as derived
                         for b in [block1k, block2k]:
                             if _p_value in b:
                                 b.pop(_p_derived, None)
+                if block_name == _likelihood and not strict:
+                    for kignore in [_input_params, _output_params]:
+                        block1k.pop(kignore, None)
+                        block2k.pop(kignore, None)
                 if (recursive_odict_to_dict(block1k) != recursive_odict_to_dict(block2k)):
                     myprint(myname + ": different content of [%s:%s]" % (
                         block_name, k))

@@ -152,13 +152,13 @@ Some common YAML *gotchas*
           max_samples: 100  # ERROR: should be aligned with 'burn_in'
 
      params:
-       mock_a:
+       a:
          prior:
            min: 0
            max: 1
           latex: \alpha  # ERROR:  should be aligned with 'prior'
 
-  Above, ``max_samples`` should be aligned to ``burn_in``, because both belong into ``mcmc``. In the same way, ``latex`` should be aligned to ``prior``, since both belong into the definition of the parameter ``mock_a``.
+  Above, ``max_samples`` should be aligned to ``burn_in``, because both belong into ``mcmc``. In the same way, ``latex`` should be aligned to ``prior``, since both belong into the definition of the parameter ``a``.
 
 .. note::
 

@@ -31,7 +31,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
     ranges = np.array([[-1, 1] for _ in range(dimension)])
     while True:
         info = info_random_gaussian_mixture(
-            ranges=ranges, n_modes=n_modes, prefix="a_",
+            ranges=ranges, n_modes=n_modes, input_params_prefix="a_",
             O_std_min=O_std_min, O_std_max=O_std_max, derived=True)
         if n_modes == 1:
             break
@@ -102,7 +102,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
             if "clusters" in products:
                 assert len(products["clusters"].keys()) >= n_modes, (
                     "Not all clusters detected!")
-                for c2 in clusters:
+                for i, c2 in enumerate(clusters):
                     cov_c2, mean_c2 = c2.getCov(), c2.getMeans()
                     KLs = [KL_norm(m1=info[_likelihood]["gaussian_mixture"]["means"][i_c1],
                                    S1=info[_likelihood]["gaussian_mixture"]["covs"][i_c1],
@@ -110,6 +110,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
                                    S2=cov_c2[:dimension, :dimension])
                            for i_c1 in range(n_modes)]
                     extra_tol = 4 * n_modes if n_modes > 1 else 1
+                    print("Final KL for cluster %d: %g", i, min(KLs))
                     assert min(KLs) <= KL_tolerance * extra_tol
             else:
                 assert 0, "Could not check sample convergence: multimodal but no clusters"
@@ -127,12 +128,12 @@ def body_of_test_speeds(info_sampler={}, modules=None):
     ranges = [[i, i + 1] for i in range(2 * dim)]
     prefix = "a_"
     mean1, cov1 = [info_random_gaussian_mixture(
-        ranges=[ranges[i] for i in range(dim)], n_modes=1, prefix=prefix,
+        ranges=[ranges[i] for i in range(dim)], n_modes=1, input_params_prefix=prefix,
         O_std_min=0.01, O_std_max=0.2, derived=True)
                    [_likelihood]["gaussian_mixture"][p][0] for p in ["means", "covs"]]
     mean2, cov2 = [info_random_gaussian_mixture(
-        ranges=[ranges[i] for i in range(dim, 2 * dim)], n_modes=1, prefix=prefix,
-        O_std_min=0.01, O_std_max=0.2, derived=True)
+        ranges=[ranges[i] for i in range(dim, 2 * dim)], n_modes=1,
+        input_params_prefix=prefix, O_std_min=0.01, O_std_max=0.2, derived=True)
                    [_likelihood]["gaussian_mixture"][p][0] for p in ["means", "covs"]]
     global n1, n2
     n1, n2 = 0, 0

@@ -24,6 +24,9 @@ from __future__ import division
 # Global
 import logging
 
+# Local
+from cobaya.conventions import _input_params, _output_params
+
 # Default options for all subclasses
 class_options = {"speed": -1}
 
@@ -64,12 +67,9 @@ class Theory(object):
 
     # Generic methods: do not touch these
 
-    def __init__(self, info_input_params, info_output_params, info_theory, modules=None,
-                 timing=None):
+    def __init__(self, info_theory, modules=None, timing=None):
         self.name = self.__class__.__name__
         self.log = logging.getLogger(self.name)
-        self.input_params = info_input_params
-        self.output_params = info_output_params
         self.path_install = modules
         # Load info of the code
         for k in info_theory:
@@ -78,7 +78,6 @@ class Theory(object):
         self.timing = timing
         self.n = 0
         self.time_avg = 0
-        self.initialize()
 
     def d(self):
         return len(self.sampled)

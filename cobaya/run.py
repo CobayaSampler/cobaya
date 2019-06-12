@@ -11,13 +11,15 @@ from __future__ import division
 
 # Global
 from copy import deepcopy
+from collections import OrderedDict as odict
 
 # Local
+from cobaya import __version__
 from cobaya.conventions import _likelihood, _prior, _params, _theory, _sampler
 from cobaya.conventions import _path_install, _debug, _debug_file, _output_prefix
 from cobaya.conventions import _resume, _timing, _debug_default
 from cobaya.conventions import _yaml_extensions, _separator, _full_suffix, _resume_default
-from cobaya.conventions import _modules_path_arg, _force
+from cobaya.conventions import _modules_path_arg, _force, _post
 from cobaya.output import get_Output as Output
 from cobaya.model import Model
 from cobaya.sampler import get_sampler as Sampler
@@ -26,6 +28,7 @@ from cobaya.yaml import yaml_dump
 from cobaya.input import get_full_info
 from cobaya.mpi import import_MPI, am_single_or_primary_process
 from cobaya.tools import warn_deprecation
+from cobaya.post import post
 
 
 def run(info):
@@ -62,18 +65,22 @@ def run(info):
             "Option '%s' is no longer necessary. Please remove it!" % _force_reproducible)
     # CHECK THAT THIS WARNING WORKS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ###################################################
-    # We dump the info now, before modules initialization, lest it is accidentally modified
-    # If resuming a sample, it checks that old and new infos are consistent
+    # We dump the info now, before modules initialization, to better track errors and
+    # to check if resuming is possible asap (old and new infos are consistent)
     output.dump_info(info, full_info)
     # Initialize the posterior and the sampler
     with Model(full_info[_params], full_info[_likelihood], full_info.get(_prior),
                full_info.get(_theory), modules=info.get(_path_install),
                timing=full_info.get(_timing), allow_renames=False) as model:
+        # Update the full info with the parameter routes
+        keys = ([_likelihood, _theory] if _theory in full_info else [_likelihood])
+        full_info.update(odict([[k,model.info()[k]] for k in keys]))
+        output.dump_info(None, full_info, check_compatible=False)
         with Sampler(full_info[_sampler], model, output, resume=full_info.get(_resume),
                      modules=info.get(_path_install)) as sampler:
             sampler.run()
     # For scripted calls
-    return deepcopy(full_info), sampler.products()
+    return full_info, sampler.products()
 
 
 # Command-line script
@@ -99,6 +106,7 @@ def run_script():
     continuation.add_argument("-" + _force[0], "--" + _force, action="store_true",
                               help="Overwrites previous output, if it exists "
                                    "(use with care!)")
+    parser.add_argument("--version", action="version", version=__version__)
     args = parser.parse_args()
     if any([(os.path.splitext(f)[0] in ("input", "full")) for f in args.input_file]):
         raise ValueError("'input' and 'full' are reserved file names. "
@@ -131,4 +139,7 @@ def run_script():
     info[_debug] = getattr(args, _debug) or info.get(_debug, _debug_default)
     info[_resume] = getattr(args, _resume, _resume_default)
     info[_force] = getattr(args, _force, False)
-    run(info)
+    if _post in info:
+        post(info)
+    else:
+        run(info)

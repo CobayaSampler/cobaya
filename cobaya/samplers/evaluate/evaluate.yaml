@@ -3,6 +3,8 @@
 
 sampler:
   evaluate:
+    # Number of evaluations
+    N: 1
     # Optional: override parameter values
     #   Use it if you don't want to change the reference points in your params block
     override:

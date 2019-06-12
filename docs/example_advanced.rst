@@ -174,7 +174,7 @@ To run the example above in from the shell, we could just save all the Python co
 
 But there a small complication: **cobaya** would fail at the time of dumping a copy of the information dictionary, since there is no way to dump a pure Python function to pure-text ``yaml`` in a reproducible manner. To solve that, for functions that can be written in a single line, we simply write it ``lambda`` form and wrap it in quotation marks, e.g. ``r = "lambda x,y: np.sqrt(x**2+y**2)"``. Inside this lambdas, you can use ``np`` for ``numpy`` and ``stats`` for ``scipy.stats``.
 
-Longer functions must be saved to a separate file and imported on the fly. In the example above, let's assume that we have saved the definition of the gaussian ring likelihood (which could actually be written in a single line anyway), to a file called ``my_likelihood`` in the same folder as the Python script. In that case, we would load the likelihood as
+More complex functions must be saved to a separate file and imported on the fly. In the example above, let's assume that we have saved the definition of the gaussian ring likelihood (which could actually be written in a single line anyway), to a file called ``my_likelihood`` in the same folder as the Python script. In that case, we would load the likelihood as
 
 .. code::
 

@@ -17,10 +17,11 @@ import six
 
 # Global
 import os
+from copy import deepcopy
+import logging
 import numpy as np
 import pandas as pd
 from getdist import MCSamples
-import logging
 
 # Local
 from cobaya.conventions import _weight, _chi2, _minuslogpost, _minuslogprior
@@ -40,30 +41,44 @@ enlargement_factor = None
 
 
 # Make sure that we don't reach the empty part of the dataframe
-def check_end(end, imax):
-    if end > imax:
-        raise ValueError("Trying to access a sample index larger than "
+def check_index(i, imax):
+    if (i > 0 and i >= imax) or (i < 0 and -i > imax):
+        raise IndexError("Trying to access a sample index larger than "
                          "the amount of samples (%d)!" % imax)
+    if i < 0:
+        return imax + i
+    return i
+
+# Notice that slices are never supposed to raise IndexError, but an empty list at worst!
+def check_slice(ij, imax):
+    newlims = {"start": ij.start, "stop": ij.stop}
+    for limname, lim in newlims.items():
+        if lim >= 0:
+            newlims[limname] = min(imax, lim)
+        else:
+            newlims[limname] = imax + lim
+    return slice(newlims["start"], newlims["stop"], ij.step)
 
 
 class Collection(object):
 
     def __init__(self, model, output=None,
                  initial_size=enlargement_size, name=None, extension=None,
-                 resuming=False):
+                 resuming=False, load=False, onload_skip=0, onload_thin=1):
         self.name = name
         self.log = logging.getLogger(
             "collection:" + name if name else self.__class__.__name__)
         self.sampled_params = list(model.parameterization.sampled_params())
         self.derived_params = list(model.parameterization.derived_params())
+        self.minuslogprior_names = [
+            _minuslogprior + _separator + piname for piname in list(model.prior)]
+        self.chi2_names = [_chi2 + _separator + likname for likname in model.likelihood]
         # Create the dataframe structure
         columns = [_weight, _minuslogpost]
         columns += list(self.sampled_params)
-        columns += list(self.derived_params)
-        self.prior_names = [
-            _minuslogprior + _separator + piname for piname in list(model.prior)]
-        columns += [_minuslogprior] + self.prior_names
-        self.chi2_names = [_chi2 + _separator + likname for likname in model.likelihood]
+        # Just in case: ignore derived names as likelihoods: would be duplicate cols
+        columns += [p for p in self.derived_params if p not in self.chi2_names]
+        columns += [_minuslogprior] + self.minuslogprior_names
         columns += [_chi2] + self.chi2_names
         # Create/load the main data frame and the tracking indices
         if output:
@@ -71,10 +86,10 @@ class Collection(object):
                 name=self.name, extension=extension)
         else:
             self.driver = "dummy"
-        if resuming:
+        if resuming or load:
             if output:
                 try:
-                    self._out_load()
+                    self._out_load(skip=onload_skip, thin=onload_thin)
                     if set(self.data.columns) != set(columns):
                         self.log.error(
                             "Unexpected column names!\nLoaded: %s\nShould be: %s",
@@ -83,16 +98,19 @@ class Collection(object):
                     self._n = self.data.shape[0]
                     self._n_last_out = self._n
                 except IOError:
-                    self.log.info(
-                        "Could not find a chain to resume. Maybe burn-in didn't finish. "
-                        "Creating new chain file!")
-                    resuming = False
+                    if resuming:
+                        self.log.info(
+                            "Could not find a chain to resume. "
+                            "Maybe burn-in didn't finish. Creating new chain file!")
+                        resuming = False
+                    elif load:
+                        raise
             else:
                 self.log.error("No continuation possible if there is no output.")
                 raise HandledException
         else:
             self._out_delete()
-        if not resuming:
+        if not resuming and not load:
             self.reset(columns=columns, index=range(initial_size))
             # TODO: the following 2 lines should go into the `reset` method.
             if output:
@@ -120,16 +138,24 @@ class Collection(object):
                 raise HandledException
         self.data.at[self._n, _minuslogpost] = -logpost
         if logpriors is not None:
-            for name, value in zip(self.prior_names, logpriors):
+            for name, value in zip(self.minuslogprior_names, logpriors):
                 self.data.at[self._n, name] = -value
             self.data.at[self._n, _minuslogprior] = -sum(logpriors)
         if loglikes is not None:
             for name, value in zip(self.chi2_names, loglikes):
                 self.data.at[self._n, name] = -2 * value
             self.data.at[self._n, _chi2] = -2 * sum(loglikes)
+        if len(values) != len(self.sampled_params):
+            self.log.error("Got %d values for the sampled parameters. Should be %d.",
+                           len(values), len(self.sampled_params))
+            raise HandledException
         for name, value in zip(self.sampled_params, values):
             self.data.at[self._n, name] = value
         if derived is not None:
+            if len(derived) != len(self.derived_params):
+                self.log.error("Got %d values for the dervied parameters. Should be %d.",
+                               len(derived), len(self.derived_params))
+                raise HandledException
             for name, value in zip(self.derived_params, derived):
                 self.data.at[self._n, name] = value
         self._n += 1
@@ -144,12 +170,17 @@ class Collection(object):
                 self.data, pd.DataFrame(np.nan, columns=self.data.columns,
                                         index=np.arange(self.n(), self.n() + enlarge_by))])
 
+    def _append(self, collection):
+        """
+        Append another collection.
+        Internal method: does not check for consistency!
+        """
+        self.data = pd.concat([self.data[:self.n()], collection.data], ignore_index=True)
+        self._n = self.n() + collection.n()
+
     # Retrieve-like methods
     def n(self):
         return self._n
-
-    def last(self):
-        return self.data.loc[-1]
 
     def n_last_out(self):
         return self._n_last_out
@@ -186,11 +217,9 @@ class Collection(object):
             except KeyError:
                 raise ValueError("Some of the indices are not valid columns.")
         elif isinstance(args[0], six.integer_types):
-            check_end(args[0], self._n)
-            return self.data.iloc[args[0]]
+            return self.data.iloc[check_index(args[0], self._n)]
         elif isinstance(args[0], slice):
-            check_end(args[0].stop, self._n)
-            return self.data.iloc[args[0]]
+            return self.data.iloc[check_slice(args[0], self._n)]
         else:
             raise ValueError("Index type not recognized: use column names or slices.")
 
@@ -236,13 +265,22 @@ class Collection(object):
         logging.disable(logging.NOTSET)
         return mcsamples
 
+    # Copying and pickling
+    def __deepcopy__(self, memo={}):
+        new = (lambda cls: cls.__new__(cls))(self.__class__)
+        new.__dict__  = {k: deepcopy(v) for k, v in self.__dict__.items() if k != "log"}
+        return new
+
+    def __getstate__(self):
+        return deepcopy(self).__dict__
+
     # Saving and updating
     def _get_driver(self, method):
         return getattr(self, method + _separator + self.driver)
 
     # Load a pre-existing file
-    def _out_load(self):
-        self._get_driver("_load")()
+    def _out_load(self, **kwargs):
+        self._get_driver("_load")(**kwargs)
 
     # Dump/update/delete collection
     def _out_dump(self):
@@ -255,12 +293,22 @@ class Collection(object):
         self._get_driver("_delete")()
 
     # txt driver
-    def _load__txt(self):
-        self.log.info("Loading existing sample from '%s'", self.file_name)
+    def _load__txt(self, skip=0, thin=1):
         with open(self.file_name, "r") as inp:
             cols = [a.strip() for a in inp.readline().lstrip("#").split()]
+            if 0 < skip < 1:
+                # turn into #lines (need to know total line number)
+                for n, line in enumerate(inp):
+                    pass
+                skip = int(skip * (n + 1))
+                inp.seek(0)
+            thin = int(thin)
+            self.log.debug("Skipping %d rows and thinning with factor %d.", skip, thin)
+            skiprows = lambda i: i < skip or i % thin
             self.data = pd.read_csv(
-                inp, sep=" ", header=None, names=cols, comment="#", skipinitialspace=True)
+                inp, sep=" ", header=None, names=cols, comment="#", skipinitialspace=True,
+                skiprows=skiprows)
+        self.log.info("Loaded sample from '%s'", self.file_name)
 
     def _dump__txt(self):
         self._dump_slice__txt(0, self.n())
@@ -276,16 +324,15 @@ class Collection(object):
             return
         self._n_last_out = n_max
         n_float = 8
+        do_header = not n_min
         with open(self.file_name, "a") as out:
             lines = self.data[n_min:n_max].to_string(
-                header=["# " + str(self.data.columns[0])] + list(self.data.columns[1:]),
-                index=False, na_rep="nan", justify="right",
+                header=do_header, index=False, na_rep="nan", justify="right",
                 float_format=(lambda x: ("%%.%dg" % n_float) % x))
-            # remove header if not first dump
-            if n_min:
-                lines = "\n".join(lines.split("\n")[1:])
-            out.write(lines)
-            out.write("\n")
+            # if header, add comment marker by hand (messes with align if auto)
+            if do_header:
+                lines = "#" + (lines[1:] if lines[0] == " " else lines)
+            out.write(lines + "\n")
 
     def _delete__txt(self):
         try:
@@ -335,7 +382,7 @@ class OnePoint(Collection):
             self[self.sampled_params],
             derived=(self[self.derived_params] if self.derived_params else None),
             logpost=-self[_minuslogpost], weight=self[_weight],
-            logpriors=-np.array(self[self.prior_names]),
+            logpriors=-np.array(self[self.minuslogprior_names]),
             loglikes=-0.5 * np.array(self[self.chi2_names]))
 
     # Restore original __repr__ (here, there is only 1 sample)

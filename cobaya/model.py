@@ -12,11 +12,12 @@ from __future__ import division
 # Global
 import numpy as np
 from copy import deepcopy
-from collections import namedtuple
+from collections import namedtuple, OrderedDict as odict
 
 # Local
 from cobaya.conventions import _likelihood, _prior, _params, _theory, _timing
 from cobaya.conventions import _path_install, _debug, _debug_default, _debug_file
+from cobaya.conventions import _input_params, _output_params
 from cobaya.input import get_full_info
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
@@ -82,16 +83,16 @@ class Model(object):
         if not self._full_info[_likelihood]:
             self.log.error("No likelihood requested!")
             raise HandledException
-        for like in self._full_info[_likelihood].values():
-            like.pop(_params)
         for k, v in ((_prior, info_prior), (_theory, info_theory),
                      (_path_install, modules), (_timing, timing)):
             if v not in (None, {}):
                 self._full_info[k] = deepcopy(v)
-        self.parameterization = Parameterization(info_params, allow_renames=allow_renames)
-        self.prior = Prior(self.parameterization, info_prior)
-        self.likelihood = Likelihood(info_likelihood, self.parameterization, info_theory,
-                                     modules=modules, timing=timing)
+        self.parameterization = Parameterization(
+            self._full_info[_params], allow_renames=allow_renames)
+        self.prior = Prior(self.parameterization, self._full_info.get(_prior, None))
+        self.likelihood = Likelihood(
+            self._full_info[_likelihood], self.parameterization,
+            self._full_info.get(_theory), modules=modules,timing=timing)
 
     def info(self):
         """

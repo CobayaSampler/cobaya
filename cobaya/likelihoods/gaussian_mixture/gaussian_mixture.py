@@ -20,6 +20,7 @@ from cobaya.likelihood import Likelihood
 from cobaya.log import HandledException
 from cobaya.mpi import get_mpi_size, get_mpi_comm, am_single_or_primary_process
 from cobaya.conventions import _likelihood, _params
+from cobaya.conventions import _input_params_prefix, _output_params_prefix
 
 derived_suffix = "_derived"
 
@@ -62,7 +63,8 @@ class gaussian_mixture(Likelihood):
                     "The dimensionality is %d (guessed from given means and covmats) "
                     "but was passed %d parameters instead. " +
                     ("Maybe you forgot to specify the prefix by which to identify them?"
-                     if self.prefix else ""), mean_dim, len(self.input_params))
+                     if self.input_params_prefix else ""), mean_dim,
+                    len(self.input_params))
                 raise HandledException
             self.n_modes = mean_n_modes
             if self.derived and len(self.output_params) != self.d() * self.n_modes:
@@ -170,8 +172,8 @@ def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1, mpi_warn=True):
 
 
 def info_random_gaussian_mixture(
-        ranges, n_modes=1, prefix="", O_std_min=1e-2, O_std_max=1, derived=False,
-        mpi_aware=True):
+        ranges, n_modes=1, input_params_prefix="", output_params_prefix="",
+        O_std_min=1e-2, O_std_max=1, derived=False, mpi_aware=True):
     """
     Wrapper around ``random_mean`` and ``random_cov`` to generate the likelihood and
     parameter info for a random Gaussian.
@@ -200,14 +202,15 @@ def info_random_gaussian_mixture(
         mean, cov = get_mpi_comm().bcast(mean, root=0), get_mpi_comm().bcast(cov, root=0)
     dimension = len(ranges)
     info = {_likelihood: {"gaussian_mixture": {
-        "means": mean, "covs": cov, "prefix": prefix, "derived": derived}}}
+        "means": mean, "covs": cov, _input_params_prefix: input_params_prefix,
+        _output_params_prefix: output_params_prefix, "derived": derived}}}
     info[_params] = odict(
         # sampled
-        [[prefix + "%d" % i,
+        [[input_params_prefix + "_%d" % i,
           {"prior": {"min": ranges[i][0], "max": ranges[i][1]},
            "latex": r"\alpha_{%i}" % i}]
          for i in range(dimension)] +
         # derived
-        ([[prefix + "derived_%d" % i, {"min": -3, "max": 3, "latex": r"\beta_{%i}" % i}]
+        ([[output_params_prefix + "_%d" % i, {"min": -3, "max": 3, "latex": r"\beta_{%i}" % i}]
          for i in range(dimension * n_modes)] if derived else []))
     return info

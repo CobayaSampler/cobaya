@@ -230,16 +230,17 @@ def get_scipy_1d_pdf(info):
             log.error("You cannot use the 'loc/scale' convention and the 'min/max' "
                       "convention at the same time. Either use one or the other.")
             raise HandledException
-        try:
-            mini = np.float(info2.pop("min"))
-        except KeyError:
-            mini = 0
-        try:
-            maxi = np.float(info2.pop("max"))
-        except KeyError:
-            maxi = 1
-        info2["loc"] = mini
-        info2["scale"] = maxi - mini
+        minmaxvalues = {"min": 0, "max": 1}
+        for limit in minmaxvalues:
+            try:
+                value = info2.pop(limit, minmaxvalues[limit])
+                minmaxvalues[limit] = np.float(value)
+            except (TypeError, ValueError):
+                log.error("Invalid value '%s: %r' in param '%s' (it must be a number)",
+                          limit, value, param)
+                raise HandledException
+        info2["loc"] = minmaxvalues["min"]
+        info2["scale"] = minmaxvalues["max"] - minmaxvalues["min"]
     # Check for improper priors
     if not np.all(np.isfinite([info2.get(x, 0) for x in ["loc", "scale", "min", "max"]])):
         log.error("Improper prior for parameter '%s'.", param)
@@ -252,7 +253,7 @@ def get_scipy_1d_pdf(info):
             "'scipy.stats' produced an error: <<%r>>. "
             "This probably means that the distribution '%s' "
             "does not recognize the parameter mentioned in the 'scipy' error above.",
-            tp.message, dist)
+            str(tp), dist)
         raise HandledException
 
 
@@ -360,3 +361,10 @@ def warn_deprecation_version():
 def warn_deprecation():
     warn_deprecation_python2()
     warn_deprecation_version()
+
+
+def progress_bar(logger, percentage, final_text=""):
+    """Very simple, multiline, logger-compatible progress bar, with increments of 5%."""
+    progress = int(percentage/5)
+    logger.info(" |%s| %3d%% %s",
+                "@" * progress + "-" * (20-progress), percentage, final_text)

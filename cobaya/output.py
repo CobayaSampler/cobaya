@@ -54,7 +54,7 @@ class Output(object):
                 self.log.error("Could not create folder '%s'. "
                                "See traceback on top of this message.", self.folder)
                 raise HandledException
-        self.log.info("Products to be written into folder '%s', with prefix '%s'",
+        self.log.info("Output to be read-from/written-into folder '%s', with prefix '%s'",
                       self.folder, self.prefix)
         # Prepare file names, and check if chain exists
         info_file_prefix = os.path.join(
@@ -64,7 +64,7 @@ class Output(object):
         self.resuming = False
         if os.path.isfile(self.file_full):
             self.log.info(
-                "Found an existing sample with the requested ouput prefix: '%s'",
+                "Found existing products with the requested ouput prefix: '%s'",
                 output_prefix)
             if self.force_output:
                 self.log.info("Deleting previous chain ('force' was requested).")
@@ -72,7 +72,7 @@ class Output(object):
             elif resume:
                 # Only in this case we can be sure that we are actually resuming
                 self.resuming = True
-                self.log.info("Let's try to resume sampling.")
+                self.log.info("Let's try to resume/load.")
             else:
                 # If only input and full info dumped, overwrite; else fail
                 info_files = [
@@ -102,7 +102,10 @@ class Output(object):
     def is_resuming(self):
         return self.resuming
 
-    def dump_info(self, input_info, full_info):
+    def reload_full_info(self):
+        return yaml_load_file(self.file_full)
+
+    def dump_info(self, input_info, full_info, check_compatible=True):
         """
         Saves the info in the chain folder twice:
            - the input info.
@@ -115,26 +118,29 @@ class Output(object):
         for lik_info in full_info_trimmed.get(_likelihood, {}).values():
             if hasattr(lik_info, "pop"):
                 lik_info.pop(_params, None)
-        try:
-            # We will test the old info agains the dumped+loaded new info.
-            # This is because we can't actually check if python objects are the same as before.
-            old_info = yaml_load_file(self.file_full)
-            new_info = yaml_load(yaml_dump(full_info_trimmed))
-            if not is_equal_info(old_info, new_info, strict=False):
-                self.log.error("Old and new sample information not compatible! "
-                               "Resuming not possible!")
-                raise HandledException
-        except IOError:
-            # There was no previous chain
-            pass
+        if check_compatible:
+            try:
+                # We will test the old info agains the dumped+loaded new info.
+                # This is because we can't actually check if python objects do change
+                old_info = self.reload_full_info()
+                new_info = yaml_load(yaml_dump(full_info_trimmed))
+                if not is_equal_info(old_info, new_info, strict=False):
+                    self.log.error("Old and new sample information not compatible! "
+                                   "Resuming not possible!")
+                    raise HandledException
+            except IOError:
+                # There was no previous chain
+                pass
         # We write the new one anyway (maybe updated debug, resuming...)
         for f, info in [(self.file_input, input_info),
                         (self.file_full, full_info_trimmed)]:
+            if not info:
+                pass
             with open(f, "w") as f_out:
                 try:
                     f_out.write(yaml_dump(info))
                 except OutputError as e:
-                    self.log.error(e.message)
+                    self.log.error(str(e))
                     raise HandledException
 
     def prepare_collection(self, name=None, extension=None):

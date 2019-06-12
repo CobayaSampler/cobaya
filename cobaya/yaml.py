@@ -61,7 +61,7 @@ def yaml_load(text_stream, Loader=yaml.Loader, object_pairs_hook=odict, file_nam
     try:
         return yaml.load(text_stream, OrderedLoader)
     # Redefining the general exception to give more user-friendly information
-    except yaml.YAMLError as exception:
+    except (yaml.YAMLError, TypeError) as exception:
         errstr = "Error in your input file " + ("'" + file_name + "'" if file_name else "")
         if hasattr(exception, "problem_mark"):
             line = 1 + exception.problem_mark.line
@@ -128,9 +128,10 @@ def yaml_dump(data, stream=None, Dumper=yaml.Dumper, **kwds):
 
     OrderedDumper.add_representer(np.float64, _numpy_float_representer)
 
-    # Dummy representer that prints nothing for non-representable python objects
+    # Dummy representer that prints True for non-representable python objects
+    # (prints True instead of nothing because some functions try cast values to bool)
     def _null_representer(dumper, data):
-        return dumper.represent_scalar('tag:yaml.org,2002:null', '')
+        return dumper.represent_scalar('tag:yaml.org,2002:bool', 'true')
 
     OrderedDumper.add_representer(type(lambda: None), _null_representer)
     OrderedDumper.add_multi_representer(object, _null_representer)
