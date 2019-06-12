@@ -1,3 +1,34 @@
+## 1.X  – 2019-XX-XX
+
+### General
+
+- Added `--version` argument for `cobaya-run`
+- Many bug-fixes for corner-cases
+
+### Post-processing (still **BETA**: fixing conventions)
+
+- Importance re-weighting, adding derived parameters, etc.
+
+### Collections
+
+- Now picklable!
+- Support for skip and thin
+
+### Sampler:evaluate
+
+- Multiple evaluations with new `N` option.
+
+### Likelihoods
+
+- Reworked input/output parameters assignment (documented in DEVEL.rst)
+- Removed deprecated `gaussian`
+
+### Cosmo theories:
+
+- Capitalization for observables now enforced! (fixed `H=H(z)` vs `h` ambiguity)
+- CAMB and CLASS: fixed call without observables (just derived parameters)
+
+
 ## 1.1.1 – 2019-04-26
 
 ### I/O
