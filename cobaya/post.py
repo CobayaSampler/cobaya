@@ -120,11 +120,19 @@ def post(info, sample=None):
         if is_sampled_param(pinfo):
             pinfo_in = info_in[_params].get(p)
             if not is_sampled_param(pinfo_in):
-                log.error(
-                    "You tried to change the prior of parameter '%s', "
-                    "but it was not a sampled parameter. "
-                    "To change that prior, you need to define as an external one.", p)
-                raise HandledException
+                # No added sampled parameters (de-marginalisation not implemented)
+                if pinfo_in is None:
+                    log.error("You added a new sampled parameter %r (maybe accidentaly "
+                              "by adding a new likelihood that depends on it). "
+                              "Adding new sampled parameters is not possible. Try fixing "
+                              "it to some value.", p)
+                    raise HandledException
+                else:
+                    log.error(
+                        "You tried to change the prior of parameter '%s', "
+                        "but it was not a sampled parameter. "
+                        "To change that prior, you need to define as an external one.", p)
+                    raise HandledException
             if mlprior_names_add[:1] != _prior_1d_name:
                 mlprior_names_add = (
                     [_minuslogprior + _separator + _prior_1d_name] + mlprior_names_add)
