@@ -150,7 +150,7 @@ Still, this can be done in a simple way at the level of the parameters, i.e. wit
 
 [We start from the original example, not the one with ``theta`` and ``r`` as derived parameters.]
 
-.. code:: yaml
+.. code:: python
 
     from copy import deepcopy
     info_rtheta = deepcopy(info)

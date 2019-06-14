@@ -51,8 +51,8 @@ otherwise imported as a globally-installed Python package. Cobaya will print at
 initialisation where it is getting CAMB from.
 
 If you modify CAMB and add new variables, you don't need to let Cobaya know, but make
-sure that the variables you create are exposed in the Python interface
-(`instructions here <foo>`__).
+sure that the variables you create are exposed in the Python interface (`instructions
+here <https://camb.readthedocs.io/en/latest/model.html#camb.model.CAMBparams>`__).
 You can use the :doc:`model wrapper <cosmo_model>` to test your modification by
 evaluating observables or getting derived quantities at known points in the parameter
 space.

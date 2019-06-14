@@ -3,7 +3,7 @@ Basic cosmology runs
 
 Sampling from a cosmological posterior works exactly as the examples at the beginning of the documentation, except one usually needs to add a theory code, and possibly some of the cosmological likelihoods presented later.
 
-You can sample or track any parameter that is understood by the theory code in use (or any dynamical redefinition of those). You **do not need to modify Cobaya's source** to use new parameters that you have created by modifying CLASS (`instructions here <https://github.com/lesgourg/class_public/wiki/Python-wrapper>`__) or CAMB (`instructions here <foo>`__), or to :doc:`create a new cosmological likelihood <cosmo_external_likelihood>` and track its parameters.
+You can sample or track any parameter that is understood by the theory code in use (or any dynamical redefinition of those). You **do not need to modify Cobaya's source** to use new parameters that you have created by modifying CLASS (`instructions here <https://github.com/lesgourg/class_public/wiki/Python-wrapper>`__) or CAMB (`instructions here <https://camb.readthedocs.io/en/latest/model.html#camb.model.CAMBparams>`__), or to :doc:`create a new cosmological likelihood <cosmo_external_likelihood>` and track its parameters.
 
 Creating *from scratch* the input for a realistic cosmological case is quite a bit of work. But to make it simpler, we have created an automatic **input generator**, that you can run from the shell as:
 
@@ -115,11 +115,11 @@ Assuming we saved the sammple at ``chains/planck``, we need to define the follow
          classy:
            extra_args:
              # New precision parameter
-             [option]: [value]
+             # [option]: [value]
          camb:
            extra_args:
              # New precision parameter
-             [option]: [value]
+             # [option]: [value]
        params:
          # h = H0/100. (nothing to add: CLASS/CAMB knows it)
          h:
