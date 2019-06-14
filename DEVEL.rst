@@ -33,12 +33,15 @@ Release checklist
 -----------------
 
 + Make sure all test pass in Travis (or the package won't be pushed to PyPI).
++ Make sure everything relevant has been added to the Changelog.
++ Delete old deprecation notices (>=2 versions before)
 + Bump version number in ``__init__.py`` (and make ``__obsolete__ = True`` if unmaintained version)
 + Update year of copyright in ``__init__.py``.
 + Update year of copyright in ``LICENCE.txt``.
 + Commit + tag with new version + ``git push`` + ``git push --tags``
 + If needed, re-build the documentation.
 + If applicable, delete branches merged for this version.
++ Notify via the e-mail list.
 
 
 Notes on some design choices
