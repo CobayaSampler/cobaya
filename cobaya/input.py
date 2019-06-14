@@ -17,7 +17,11 @@ from importlib import import_module
 import inspect
 from six import string_types
 from itertools import chain
-from fuzzywuzzy import process as fuzzy_process
+import warnings
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore")
+    # Suppress message about optional dependency
+    from fuzzywuzzy import process as fuzzy_process
 
 # Local
 from cobaya.conventions import _package, _products_path, _path_install, _resume
