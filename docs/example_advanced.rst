@@ -42,11 +42,11 @@ Now, let's assume that we want to track the radius of the ring, whose posterior 
 
 .. code:: python
 
-    r = lambda x,y: np.sqrt(x**2+y**2)
-    theta = lambda x,y: np.arctan(y/x)
+    get_r = lambda x,y: np.sqrt(x**2+y**2)
+    get_theta = lambda x,y: np.arctan(y/x)
 
-    info["params"]["r"] = {"derived": r}
-    info["params"]["theta"] = {"derived": theta, "latex": r"\theta",
+    info["params"]["r"] = {"derived": get_r}
+    info["params"]["theta"] = {"derived": get_theta, "latex": r"\theta",
                                "min": -np.pi/2, "max": np.pi/2}
 
 
@@ -172,7 +172,7 @@ From the shell
 
 To run the example above in from the shell, we could just save all the Python code above in a text file and run it with ``python [file_name]``. To get the sampling results as text output, we would add to the ``info`` dictionary some ``output`` prefix, e.g. ``info["output"] = "chains/ring"``.
 
-But there a small complication: **cobaya** would fail at the time of dumping a copy of the information dictionary, since there is no way to dump a pure Python function to pure-text ``yaml`` in a reproducible manner. To solve that, for functions that can be written in a single line, we simply write it ``lambda`` form and wrap it in quotation marks, e.g. ``r = "lambda x,y: np.sqrt(x**2+y**2)"``. Inside this lambdas, you can use ``np`` for ``numpy`` and ``stats`` for ``scipy.stats``.
+But there a small complication: **cobaya** would fail at the time of dumping a copy of the information dictionary, since there is no way to dump a pure Python function to pure-text ``yaml`` in a reproducible manner. To solve that, for functions that can be written in a single line, we simply write it ``lambda`` form and wrap it in quotation marks, e.g. for ``r`` that would be ``"lambda x,y: np.sqrt(x**2+y**2)"``. Inside this lambdas, you can use ``np`` for ``numpy`` and ``stats`` for ``scipy.stats``.
 
 More complex functions must be saved to a separate file and imported on the fly. In the example above, let's assume that we have saved the definition of the gaussian ring likelihood (which could actually be written in a single line anyway), to a file called ``my_likelihood`` in the same folder as the Python script. In that case, we would load the likelihood as
 
