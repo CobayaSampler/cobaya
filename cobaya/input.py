@@ -17,11 +17,6 @@ from importlib import import_module
 import inspect
 from six import string_types
 from itertools import chain
-import warnings
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore")
-    # Suppress message about optional dependency
-    from fuzzywuzzy import process as fuzzy_process
 
 # Local
 from cobaya.conventions import _package, _products_path, _path_install, _resume
@@ -30,6 +25,7 @@ from cobaya.conventions import _params, _prior, _theory, _likelihood, _sampler, 
 from cobaya.conventions import _p_label, _p_derived, _p_ref, _p_drop, _p_value, _p_renames
 from cobaya.conventions import _p_proposal, _input_params, _output_params
 from cobaya.tools import get_folder, recursive_update, recursive_odict_to_dict
+from cobaya.tools import fuzzy_match
 from cobaya.yaml import yaml_load_file
 from cobaya.log import HandledException
 from cobaya.parameterization import expand_info_param
@@ -151,12 +147,7 @@ def get_full_info(info):
                 available = set([_external, _p_renames]).union(full_info[block][module])
                 while options_not_recognized:
                     option = options_not_recognized.pop()
-                    try:
-                        alternatives[option] = list(
-                            zip(*(fuzzy_process.extractBests(
-                                option, available, score_cutoff=50)[:3])))[0]
-                    except IndexError:
-                        alternatives[option] = []
+                    alternatives[option] = fuzzy_match(option, available, n=3)
                 did_you_mean = ", ".join(
                     [("'%s' (did you mean %s?)" % (o,a) if a else "'%s'" % o)
                      for o,a in alternatives.items()])

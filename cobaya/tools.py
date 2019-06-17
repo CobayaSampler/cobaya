@@ -19,7 +19,11 @@ import numpy as np  # don't delete: necessary for get_external_function
 import scipy.stats as stats  # don't delete: necessary for get_external_function
 from collections import OrderedDict as odict
 from ast import parse
-
+import warnings
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore")
+    # Suppress message about optional dependency
+    from fuzzywuzzy import process as fuzzy_process
 if six.PY3:
     from inspect import cleandoc, getfullargspec as getargspec
     from math import gcd
@@ -368,3 +372,12 @@ def progress_bar(logger, percentage, final_text=""):
     progress = int(percentage/5)
     logger.info(" |%s| %3d%% %s",
                 "@" * progress + "-" * (20-progress), percentage, final_text)
+
+
+def fuzzy_match(in_string, choices, n=3, score_cutoff=50):
+    try:
+        return list(zip(*(fuzzy_process.extractBests(
+            in_string, choices, score_cutoff=score_cutoff))))[:n]
+    except IndexError:
+        return []
+
