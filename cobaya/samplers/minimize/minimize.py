@@ -61,7 +61,8 @@ class minimize(Sampler):
                 "objfun": (lambda x: -self.logp_transf(x)),
                 "x0": initial_point,
                 "bounds": np.array(list(
-                    zip(*self.model.prior.bounds(confidence_for_unbounded=0.999)))),
+                    zip(*self.model.prior.bounds(
+                        confidence_for_unbounded=self.confidence_for_unbounded)))),
                 "seek_global_minimum": True,
                 "scaling_within_bounds": hasattr(self, "covmat"),
 
@@ -74,7 +75,8 @@ class minimize(Sampler):
             self.kwargs = {
                 "fun": (lambda x: -self.logp_transf(x)),
                 "x0": initial_point,
-                "bounds": self.model.prior.bounds(confidence_for_unbounded=0.999),
+                "bounds": self.model.prior.bounds(
+                    confidence_for_unbounded=self.confidence_for_unbounded),
                 "tol": self.tol,
                 "options": {
                     "maxiter": self.max_evals,
