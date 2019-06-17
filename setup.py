@@ -44,7 +44,7 @@ setup(
     keywords='montecarlo sampling cosmology',
     packages=find_packages(exclude=['docs', 'tests']),
     install_requires=['numpy>=1.12.0', 'scipy >= 1.0', 'pandas>=0.20',
-                      'PyYAML>=5.1', 'wget>=3.2', 'imageio>=2.2.0',
+                      'PyYAML>=5.1', 'wget>=3.2', 'imageio>=2.2.0', 'py-bobyqa>=1.1',
                       'GetDist>=0.3.0', 'fuzzywuzzy>=0.17'],
     extras_require={
         'test': ['pytest', 'pytest-xdist', 'flaky', 'mpi4py']},

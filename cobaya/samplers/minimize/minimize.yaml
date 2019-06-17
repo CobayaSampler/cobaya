@@ -2,13 +2,16 @@
 
 sampler:
   minimize:
+    # Method: bobyqa|scipy
+    method: bobyqa
     # Minimizes the full posterior (False) or just the likelihood (True)
+    # Likelihood maximization is subject to prior bounds!
     ignore_prior: False
     # Tolerance for termination. Default: 0.001
     # --> expected >0.01 deviation, reasonable value for Chi^2 minimization
     tol: 1e-3
     # Maximum number of iterations. Default: practically infinite
-    maxiter: 1e10
+    max_evals: 1e6d
     # Override keyword arguments for `scipy.minize`,
     # e.g. `override: {"method": BFGS}
     override:
