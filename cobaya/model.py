@@ -22,7 +22,7 @@ from cobaya.input import get_full_info
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection as Likelihood
-from cobaya.log import HandledException, logger_setup
+from cobaya.log import HandledException, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
 
 # Logger
@@ -64,7 +64,7 @@ def get_model(info):
                  timing=full_info.get(_timing))
 
 
-class Model(object):
+class Model(HasLogger):
     """
     Class containing all the information necessary to compute the unnormalized posterior.
 
@@ -76,7 +76,7 @@ class Model(object):
 
     def __init__(self, info_params, info_likelihood, info_prior=None, info_theory=None,
                  modules=None, timing=None, allow_renames=True):
-        self.log = logging.getLogger(self.__class__.__name__)
+        self.set_logger(lowercase=True)
         self._full_info = {
             _params: deepcopy(info_params),
             _likelihood: deepcopy(info_likelihood)}

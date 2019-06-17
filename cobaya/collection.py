@@ -26,7 +26,7 @@ from getdist import MCSamples
 # Local
 from cobaya.conventions import _weight, _chi2, _minuslogpost, _minuslogprior
 from cobaya.conventions import _separator
-from cobaya.log import HandledException
+from cobaya.log import HandledException, HasLogger
 
 # Suppress getdist output
 from getdist import chains
@@ -60,14 +60,13 @@ def check_slice(ij, imax):
     return slice(newlims["start"], newlims["stop"], ij.step)
 
 
-class Collection(object):
+class Collection(HasLogger):
 
     def __init__(self, model, output=None,
                  initial_size=enlargement_size, name=None, extension=None,
                  resuming=False, load=False, onload_skip=0, onload_thin=1):
         self.name = name
-        self.log = logging.getLogger(
-            "collection:" + name if name else self.__class__.__name__)
+        self.set_logger()
         self.sampled_params = list(model.parameterization.sampled_params())
         self.derived_params = list(model.parameterization.derived_params())
         self.minuslogprior_names = [
@@ -265,15 +264,6 @@ class Collection(object):
         logging.disable(logging.NOTSET)
         return mcsamples
 
-    # Copying and pickling
-    def __deepcopy__(self, memo={}):
-        new = (lambda cls: cls.__new__(cls))(self.__class__)
-        new.__dict__  = {k: deepcopy(v) for k, v in self.__dict__.items() if k != "log"}
-        return new
-
-    def __getstate__(self):
-        return deepcopy(self).__dict__
-
     # Saving and updating
     def _get_driver(self, method):
         return getattr(self, method + _separator + self.driver)
@@ -356,7 +346,7 @@ class OnePoint(Collection):
 
     def __init__(self, *args, **kwargs):
         kwargs["initial_size"] = 1
-        Collection.__init__(self, *args, **kwargs)
+        super(OnePoint, self).__init__(*args, **kwargs)
 
     def __getitem__(self, columns):
         if isinstance(columns, six.string_types):
@@ -369,7 +359,7 @@ class OnePoint(Collection):
 
     # Resets the counter, so the dataframe never fills up!
     def add(self, *args, **kwargs):
-        Collection.add(self, *args, **kwargs)
+        super(OnePoint, self).add(*args, **kwargs)
         self._n = 0
 
     def increase_weight(self, increase):

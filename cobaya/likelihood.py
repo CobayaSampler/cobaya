@@ -34,7 +34,7 @@ from cobaya.conventions import _input_params, _output_params
 from cobaya.conventions import _input_params_prefix, _output_params_prefix
 from cobaya.tools import get_class, get_external_function, getargspec
 from cobaya.tools import compare_params_lists
-from cobaya.log import HandledException
+from cobaya.log import HandledException, HasLogger
 
 # Logger
 import logging
@@ -43,12 +43,13 @@ import logging
 class_options = {"speed": -1}
 
 
-class Likelihood(object):
+class Likelihood(HasLogger):
     """Likelihood class prototype."""
 
     # Generic initialization -- do not touch
     def __init__(self, info, modules=None, timing=None):
         self.name = self.__class__.__name__
+        self.set_logger()
         self.log = logging.getLogger(self.name)
         self.path_install = modules
         # Load info of the likelihood
@@ -168,10 +169,10 @@ class Likelihood(object):
         self.close()
 
 
-class LikelihoodExternalFunction(Likelihood):
+class LikelihoodExternalFunction(Likelihood, HasLogger):
     def __init__(self, name, info, _theory=None, timing=None):
         self.name = name
-        self.log = logging.getLogger(self.name)
+        self.set_logger()
         # Load info of the likelihood
         for k in info:
             setattr(self, k, info[k])
@@ -219,7 +220,7 @@ class LikelihoodExternalFunction(Likelihood):
             raise HandledException
 
 
-class LikelihoodCollection(object):
+class LikelihoodCollection(HasLogger):
     """
     Likelihood manager:
     Initializes the theory code and the experimental likelihoods.
@@ -227,7 +228,8 @@ class LikelihoodCollection(object):
 
     def __init__(self, info_likelihood, parameterization, info_theory=None, modules=None,
                  timing=None):
-        self.log = logging.getLogger("Likelihood")
+        self.name = "likelihood"
+        self.set_logger()
         # *IF* there is a theory code, initialize it
         if info_theory:
             name = list(info_theory)[0]

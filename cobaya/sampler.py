@@ -55,15 +55,12 @@ import numpy as np
 from cobaya.conventions import _sampler, _checkpoint_extension, _covmat_extension
 from cobaya.conventions import _resume_default
 from cobaya.tools import get_class
-from cobaya.log import HandledException
+from cobaya.log import HandledException, HasLogger
 from cobaya.yaml import yaml_load_file
 from cobaya.mpi import am_single_or_primary_process
 
-# Logger
-log = logging.getLogger(__name__.split(".")[-1])
 
-
-class Sampler(object):
+class Sampler(HasLogger):
     """Prototype of the sampler class."""
 
     # What you *must* implement to create your own sampler:
@@ -118,7 +115,7 @@ class Sampler(object):
         [Do not modify this one.]
         """
         self.name = self.__class__.__name__
-        self.log = logging.getLogger(self.name)
+        self.set_logger()
         self.model = model
         self.output = output
         self.path_install = modules
@@ -189,6 +186,7 @@ def get_sampler(info_sampler, posterior, output_file,
     """
     Auxiliary function to retrieve and initialize the requested sampler.
     """
+    log = logging.getLogger(__name__.split(".")[-1])
     if not info_sampler:
         log.error("No sampler given!")
         raise HandledException

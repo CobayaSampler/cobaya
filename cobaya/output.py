@@ -23,17 +23,14 @@ from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
 from cobaya.conventions import _input_suffix, _full_suffix, _separator, _yaml_extensions
 from cobaya.conventions import _resume, _resume_default, _force
 from cobaya.conventions import _likelihood, _params
-from cobaya.log import HandledException
+from cobaya.log import HandledException, HasLogger
 from cobaya.input import is_equal_info
 from cobaya.mpi import am_single_or_primary_process, get_mpi_comm
 
-# Logger
-import logging
 
-
-class Output(object):
+class Output(HasLogger):
     def __init__(self, output_prefix=None, resume=_resume_default, force_output=False):
-        self.log = logging.getLogger("output")
+        self.set_logger(lowercase=True)
         self.folder = os.sep.join(output_prefix.split(os.sep)[:-1]) or "."
         self.prefix = (lambda x: x if x != "." else "")(output_prefix.split(os.sep)[-1])
         self.force_output = force_output
@@ -159,7 +156,7 @@ class OutputDummy(Output):
     """
 
     def __init__(self, *args, **kwargs):
-        self.log = logging.getLogger("output")
+        self.set_logger(lowercase=True)
         self.log.debug("No output requested. Doing nothing.")
         # override all methods that actually produce output
         exclude = ["nullfunc"]

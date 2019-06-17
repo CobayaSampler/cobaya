@@ -107,3 +107,25 @@ def logger_setup(debug=None, debug_file=None):
         logging.root.addHandler(handle_stdout)
     # Configure the logger to manage exceptions
     sys.excepthook = exception_handler
+
+
+class HasLogger(object):
+    """
+    Class having a logger with its name (or an alternative one).
+
+    Has magic methods to ignore the logger at (de)serialization.
+    """
+    def set_logger(self, lowercase=True):
+        self.log = logging.getLogger(
+            (lambda x: x.lower() if lowercase else x)(
+                getattr(self, "name", self.__class__.__name__)))
+
+    # Copying and pickling
+    def __deepcopy__(self, memo={}):
+        new = (lambda cls: cls.__new__(cls))(self.__class__)
+        new.__dict__  = {k: deepcopy(v) for k, v in self.__dict__.items() if k != "log"}
+        return new
+
+    def __getstate__(self):
+        return deepcopy(self).__dict__
+

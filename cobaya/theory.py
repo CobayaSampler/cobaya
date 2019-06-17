@@ -21,18 +21,16 @@ code.
 # Python 2/3 compatibility
 from __future__ import division
 
-# Global
-import logging
-
 # Local
 from cobaya.conventions import _input_params, _output_params
+from cobaya.log import HasLogger
 
 # Default options for all subclasses
 class_options = {"speed": -1}
 
 
 # Theory code prototype
-class Theory(object):
+class Theory(HasLogger):
     """Prototype of the theory class."""
 
     def initialize(self):
@@ -69,7 +67,7 @@ class Theory(object):
 
     def __init__(self, info_theory, modules=None, timing=None):
         self.name = self.__class__.__name__
-        self.log = logging.getLogger(self.name)
+        self.set_logger()
         self.path_install = modules
         # Load info of the code
         for k in info_theory:
