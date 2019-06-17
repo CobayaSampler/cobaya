@@ -30,7 +30,8 @@ from cobaya.mpi import am_single_or_primary_process, get_mpi_comm
 
 class Output(HasLogger):
     def __init__(self, output_prefix=None, resume=_resume_default, force_output=False):
-        self.set_logger(lowercase=True)
+        self.name = "output"  # so that the MPI-wrapped class conserves the name
+        self.set_logger()
         self.folder = os.sep.join(output_prefix.split(os.sep)[:-1]) or "."
         self.prefix = (lambda x: x if x != "." else "")(output_prefix.split(os.sep)[-1])
         self.force_output = force_output
