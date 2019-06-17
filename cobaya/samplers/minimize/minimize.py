@@ -68,6 +68,7 @@ class minimize(Sampler):
 
                 "maxfun": int(self.max_evals),
                 }
+            self.kwargs.update(self.override or {})
             self.log.debug("Arguments for pybobyqa.solve:\n%r",
                            {k:v for k,v in self.kwargs.items() if k != "objfun"})
         elif self.method.lower() == "scipy":

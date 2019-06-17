@@ -14,7 +14,12 @@ sampler:
     max_evals: 1e6d
     # Treatment of unbounded parameters: confidence level to use
     # (Use with care if there are likelihood modes close to the edge of the prior)
-    confidence_for_unbounded: 0.9999995  # 5 sigmas
-    # Override keyword arguments for `scipy.minize`,
-    # e.g. `override: {"method": BFGS}
+    confidence_for_unbounded: 0.9999995  # 5 sigmas of the prior
+    # Override keyword arguments for `scipy.optimize.minimize()` or `pybobyqa.solve()`
+    # scipy:
+    #  - https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
+    #  - options for individual methods
+    # bobyqa:
+    #  - https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/userguide.html
+    #  - https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/advanced.html
     override:
