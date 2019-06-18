@@ -15,6 +15,7 @@ import sys
 import six
 import logging
 import traceback
+from copy import deepcopy
 
 # Local
 from cobaya.conventions import _debug, _debug_file
