@@ -1,6 +1,10 @@
 Importance reweighting and general ``post``-processing
 ======================================================
 
+.. note::
+
+   *new in 1.2*
+
 The `post` module provides a way to post-process an existing sample in different ways:
 
 - Add/remove/recompute a prior, e.g. to impose a parameter cut.
@@ -129,7 +133,7 @@ If a theory code was present in the original sample and a new likelihood or theo
 
 .. warning::
 
-   In order to post-process samples created with a version of Cobaya :math:`\le` 1.2, you need to manually add inside the theory code block a list the input parameters used in the **original chain**: ``theory: {[code]: {input_params: [param1, param2, ...], [...]}}``.
+   In order to post-process samples created with a version of Cobaya :math:`<1.2`, you need to manually add inside the theory code block a list the input parameters used in the **original chain**: ``theory: {[code]: {input_params: [param1, param2, ...], [...]}}``.
 
 
 You can see a realistic example in :ref:`cosmo_post`.
