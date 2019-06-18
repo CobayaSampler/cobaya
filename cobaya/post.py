@@ -97,7 +97,7 @@ def post(info, sample=None):
                   "or skipping or thinning less.")
         raise HandledException
     # 2. Compare old and new info: determine what to do
-    add = info_post.get("add", {})
+    add = info_post.get("add", {}) or {}
     remove = info_post.get("remove", {})
     # Add a dummy 'one' likelihood, to absorb unused parameters
     if not add.get(_likelihood):
