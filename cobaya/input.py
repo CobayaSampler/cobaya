@@ -275,7 +275,7 @@ def merge_info(*infos):
     return current_info
 
 
-def is_equal_info(info1, info2, strict=True, print_not_log=False):
+def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=[]):
     """
     Compares two information dictionaries.
 
@@ -289,6 +289,7 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False):
     myname = inspect.stack()[0][3]
     ignore = set([]) if strict else set(
         [_debug, _debug_file, _resume, _force, _path_install])
+    ignore = ignore.union(set(ignore_blocks or []))
     ignore_params = (set([]) if strict else set(
         [_p_label, _p_renames, _p_ref, _p_proposal, "min", "max"]))
     if set(info1).difference(ignore) != set(info2).difference(ignore):

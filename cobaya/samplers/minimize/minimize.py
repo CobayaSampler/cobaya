@@ -45,12 +45,26 @@ class minimize(Sampler):
             (lambda x: self.model.logposterior(x, make_finite=True)[0])
             if not self.ignore_prior else
             (lambda x: sum(self.model.loglikes(x, return_derived=True)[0])))
-        # Initial point:
-        # BASIC: sample from reference and make sure that it has finite like/post
-        this_logp = -np.inf
-        while not np.isfinite(this_logp):
-            initial_point = self.model.prior.reference()
-            this_logp = self.logp(initial_point)
+        # Try to load info from previous samples.
+        # If none, sample from reference (make sure that it has finite like/post)
+        initial_point = None
+        if self.output:
+            collection_in = self.output.load_collections(
+                self.model, skip=0, thin=1, concatenate=True)
+            if collection_in:
+                initial_point = (
+                    collection_in.bestfit() if self.ignore_prior else collection_in.MAP())
+                initial_point = initial_point[
+                    list(self.model.parameterization.sampled_params())].values
+                self.log.info("Starting from %s of previous chain:",
+                              "best fit" if self.ignore_prior else "MAP")
+        if initial_point is None:
+            this_logp = -np.inf
+            while not np.isfinite(this_logp):
+                initial_point = self.model.prior.reference()
+                this_logp = self.logp(initial_point)
+            self.log.info("Starting from random initial point:")
+        self.log.info(dict(zip(self.model.parameterization.sampled_params(), initial_point)))
         self.linear_transform = np.eye(self.model.prior.d())
         # Configure transformation for target
         self.logp_transf = lambda x: self.logp(self.transform(x))

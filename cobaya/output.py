@@ -23,7 +23,7 @@ import re
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
 from cobaya.conventions import _input_suffix, _full_suffix, _separator, _yaml_extensions
 from cobaya.conventions import _resume, _resume_default, _force
-from cobaya.conventions import _likelihood, _params
+from cobaya.conventions import _likelihood, _params, _sampler
 from cobaya.log import HandledException, HasLogger
 from cobaya.input import is_equal_info
 from cobaya.mpi import am_single_or_primary_process, get_mpi_comm
@@ -128,7 +128,11 @@ class Output(HasLogger):
                 # This is because we can't actually check if python objects do change
                 old_info = self.reload_full_info()
                 new_info = yaml_load(yaml_dump(full_info_trimmed))
-                if not is_equal_info(old_info, new_info, strict=False):
+                ignore_blocks = []
+                if list(new_info.get(_sampler, [None]))[0] == "minimize":
+                    ignore_blocks = [_sampler]
+                if not is_equal_info(old_info, new_info, strict=False,
+                                     ignore_blocks=ignore_blocks):
                     self.log.error("Old and new sample information not compatible! "
                                    "Resuming not possible!")
                     raise HandledException

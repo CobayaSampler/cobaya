@@ -43,8 +43,14 @@ def run(info):
     logger_setup(info.get(_debug), info.get(_debug_file))
     import logging
     # Initialize output, if required
-    output = Output(output_prefix=info.get(_output_prefix), resume=info.get(_resume),
-                    force_output=info.pop(_force, None))
+    resume, force = info.get(_resume), info.get(_force)
+    ignore_blocks = []
+    # If minimizer, always try to re-use sample to get bestfit/covmat
+    if list(info[_sampler])[0] == "minimize":
+        resume = True
+        force = False
+    output = Output(output_prefix=info.get(_output_prefix),
+                    resume=resume, force_output=force)
     # Create the full input information, including defaults for each module.
     full_info = get_full_info(info)
     if output:

@@ -133,7 +133,7 @@ class Sampler(HasLogger):
                 raise HandledException
         # Load checkpoint info, if resuming
         self.resuming = resume
-        if self.resuming:
+        if self.resuming and self.name != "minimize":
             try:
                 checkpoint_info = yaml_load_file(self.checkpoint_filename())
                 try:
@@ -144,8 +144,8 @@ class Sampler(HasLogger):
                         self.log.info("Resuming from previous sample!")
                 except KeyError:
                     if am_single_or_primary_process():
-                        self.log.error("Checkpoint file found at '%s'"
-                                       "but corresponds to a different sampler.",
+                        self.log.error("Checkpoint file found at '%s' "
+                                       "but it corresponds to a different sampler.",
                                        self.checkpoint_filename())
                         raise HandledException
             except (IOError, TypeError):
