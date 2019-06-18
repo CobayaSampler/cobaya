@@ -251,6 +251,14 @@ class Collection(HasLogger):
                  (list(self.derived_params) if derived else [])][first:last].T,
             **weights))
 
+    def bestfit(self):
+        """Best fit (maximum likelihood) sample. Returns a copy."""
+        return self.data.loc[self.data[_chi2].idxmin()].copy()
+
+    def MAP(self):
+        """Maximum-a-posteriori (MAP) sample. Returns a copy."""
+        return self.data.loc[self.data[_minuslogpost].idxmin()].copy()
+
     def _sampled_to_getdist_mcsamples(self, first=None, last=None):
         """
         Basic interface with getdist -- internal use only!
