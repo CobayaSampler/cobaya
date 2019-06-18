@@ -63,7 +63,7 @@ def check_slice(ij, imax):
 class Collection(HasLogger):
 
     def __init__(self, model, output=None,
-                 initial_size=enlargement_size, name=None, extension=None,
+                 initial_size=enlargement_size, name=None, extension=None, file_name=None,
                  resuming=False, load=False, onload_skip=0, onload_thin=1):
         self.name = name
         self.set_logger()
@@ -83,6 +83,8 @@ class Collection(HasLogger):
         if output:
             self.file_name, self.driver = output.prepare_collection(
                 name=self.name, extension=extension)
+            if file_name:
+                self.file_name = file_name
         else:
             self.driver = "dummy"
         if resuming or load:

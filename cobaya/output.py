@@ -7,8 +7,7 @@
 """
 
 # Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
+from __future__ import absolute_import, division
 
 # Global
 import os
@@ -17,6 +16,8 @@ import six
 import traceback
 import datetime
 from copy import deepcopy
+from itertools import chain
+import re
 
 # Local
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
@@ -26,6 +27,11 @@ from cobaya.conventions import _likelihood, _params
 from cobaya.log import HandledException, HasLogger
 from cobaya.input import is_equal_info
 from cobaya.mpi import am_single_or_primary_process, get_mpi_comm
+from cobaya.collection import Collection
+
+
+# Regular expressions for plain unsigned integers
+re_uint = re.compile("[0-9]+")
 
 
 class Output(HasLogger):
@@ -89,7 +95,7 @@ class Output(HasLogger):
                     raise HandledException
         # Output kind and collection extension
         self.kind = "txt"
-        self.ext = "txt"
+        self.ext = "sample"
 
     def updated_output_prefix(self):
         """
@@ -144,11 +150,44 @@ class Output(HasLogger):
     def prepare_collection(self, name=None, extension=None):
         if not name:
             name = (datetime.datetime.now().isoformat()
-                    .replace("T", "_").replace(":", "-").replace(".", "-"))
+                    .replace("T", "").replace(":", "").replace(".", ""))
         file_name = os.path.join(
             self.folder,
-            self.prefix + ("_" if self.prefix else "") + name + "." + (extension or self.ext))
+            self.prefix + ("." if self.prefix else "") + name + "." + (extension or self.ext))
         return file_name, self.kind
+
+    def is_collection_file_name(self, file_name, extension=None):
+        extension = extension or self.ext
+        # 1 field only: a number between prefix and extension, ignoring "_" and "."
+        fields = list(chain(
+            *[_.split("_") for _ in
+              file_name[len(self.prefix):-len(extension)].split(".")]))
+        fields = [f for f in fields if f]
+        return len(fields) == 1 and fields[0] == re_uint.match(fields[0]).group()
+
+    def find_collections(self, extension=None):
+        """Returns collection files, including their path."""
+        # Anything that looks like a collection
+        extension = extension or self.ext
+        file_names = [
+            os.path.join(self.folder, f) for f in os.listdir(self.folder) if (
+                f.startswith(self.prefix) and
+                f.lower().endswith(extension.lower()) and
+                self.is_collection_file_name(f, extension=extension))]
+        return file_names
+
+    def load_collections(self, model, skip=0, thin=1, concatenate=False):
+        filenames = self.find_collections()
+        collections = [
+            Collection(model, self, name="%d" % (1 + i), file_name=filename,
+                       load=True, onload_skip=skip, onload_thin=thin)
+            for i, filename in enumerate(filenames)]
+        if concatenate and collections:
+            collection = collections[0]
+            for collection_i in collections[1:]:
+                collection._append(collection_i)
+            collections = collection
+        return collections
 
 
 class OutputDummy(Output):

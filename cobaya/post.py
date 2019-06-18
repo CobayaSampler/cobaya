@@ -62,20 +62,9 @@ def post(info, sample=None):
     dummy_model_in = DummyModel(info_in[_params], info_in[_likelihood],
                                 info_in.get(_prior, None), info_in.get(_theory, None))
     if output_in:
-        i = 0
-        while True:
-            try:
-                collection = Collection(
-                    dummy_model_in, output_in, name="%d" % (1 + i),
-                    load=True, onload_skip=info_post.get("skip", 0),
-                    onload_thin=info_post.get("thin", 1))
-                if i == 0:
-                    collection_in = collection
-                else:
-                    collection_in._append(collection)
-                i += 1
-            except IOError:
-                break
+        collection_in = output_in.load_collections(
+            dummy_model_in, skip=info_post.get("skip", 0), thin=info_post.get("thin", 1),
+            concatenate=True)
     elif sample:
         if isinstance(sample, Collection):
             sample = [sample]
@@ -86,12 +75,10 @@ def post(info, sample=None):
             except:
                 log.error("Failed to load some of the input samples.")
                 raise HandledException
-        i = len(sample)
     else:
         log.error("Not output from where to load from or input collections given.")
         raise HandledException
-    log.info("Loaded %d chain%s. Will process %d samples.",
-             i, "s" if i - 1 else "", collection_in.n())
+    log.info("Will process %d samples.", collection_in.n())
     if collection_in.n() <= 1:
         log.error("Not enough samples for post-processing. Try using a larger sample, "
                   "or skipping or thinning less.")
