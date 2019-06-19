@@ -72,25 +72,24 @@ class minimize(Sampler):
         self._affine_transform_matrix = None
         self._inv_affine_transform_matrix = None
         self._affine_transform_baseline = None
-        if covmat is not None:
-            sigmas_diag, L = choleskyL(covmat, return_scale_free=True)
-            self._affine_transform_matrix = np.linalg.inv(sigmas_diag)
-            self._inv_affine_transform_matrix = sigmas_diag
-            self._affine_transform_baseline = initial_point
-            # Transforms to space where initial point is at centre, and cov is normalised
-            self.affine_transform = lambda x: (
-                self._affine_transform_matrix.dot(x - self._affine_transform_baseline))
-            self.inv_affine_transform = lambda x: (
-                self._inv_affine_transform_matrix.dot(x) + self._affine_transform_baseline)
-        else:
-            self.affine_transform = lambda x: x
-            self.inv_affine_transform = lambda x: x
+        if covmat is None:
+           # Use as much info as we have from ref & prior
+            covmat = self.model.prior.reference_covmat()
+        # Transform to space where initial point is at centre, and cov is normalised
+        sigmas_diag, L = choleskyL(covmat, return_scale_free=True)
+        self._affine_transform_matrix = np.linalg.inv(sigmas_diag)
+        self._inv_affine_transform_matrix = sigmas_diag
+        self._affine_transform_baseline = initial_point
+        self.affine_transform = lambda x: (
+            self._affine_transform_matrix.dot(x - self._affine_transform_baseline))
+        self.inv_affine_transform = lambda x: (
+            self._inv_affine_transform_matrix.dot(x) + self._affine_transform_baseline)
         bounds = self.model.prior.bounds(
             confidence_for_unbounded=self.confidence_for_unbounded)
         # Re-scale
         self.logp_transf = lambda x: self.logp(self.inv_affine_transform(x))
         initial_point = self.affine_transform(initial_point)
-        bounds = self.affine_transform(bounds)
+        bounds = np.array([self.affine_transform(bounds[:,i]) for i in range(2)]).T
         # Configure method
         if self.method.lower() == "bobyqa":
             self.minimizer = pybobyqa.solve
@@ -158,7 +157,7 @@ class minimize(Sampler):
             else:
                 reason = ""
             self.log.error("Finished unsuccesfully." +
-                           ("Reason: " + reason if reason else ""))
+                           (" Reason: " + reason if reason else ""))
 
     def close(self, *args):
         """
@@ -182,8 +181,8 @@ class minimize(Sampler):
                 self._affine_transform_baseline = _affine_transform_baselines[i_min]
         if am_single_or_primary_process():
             if not self.success:
-                self.log.error("Minimization failed! Here is the `scipy` raw result:\n%r",
-                               self.result)
+                self.log.error("Minimization failed! Here is the raw result object:\n%s",
+                               str(self.result))
                 raise HandledException
             logpost = -np.array(getattr(self.result, evals_attr_))
             x_minimum = self.inv_affine_transform(self.result.x)
