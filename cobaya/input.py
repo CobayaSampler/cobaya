@@ -139,8 +139,9 @@ def get_full_info(info):
                 raise HandledException
             if not hasattr(input_info[block][module], "get"):
                 input_info[block][module] = {_external: input_info[block][module]}
+            ignore = set([_external, _p_renames, _input_params, _output_params])
             options_not_recognized = (set(input_info[block][module])
-                                      .difference(set([_external, _p_renames]))
+                                      .difference(ignore)
                                       .difference(set(full_info[block][module])))
             if options_not_recognized:
                 alternatives = odict()
@@ -284,8 +285,10 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
     """
     if print_not_log:
         myprint = print
+        myprint_debug = lambda x: x
     else:
         myprint = log.info
+        myprint_debug = log.debug
     myname = inspect.stack()[0][3]
     ignore = set([]) if strict else set(
         [_debug, _debug_file, _resume, _force, _path_install])
@@ -330,6 +333,9 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
                 if recursive_odict_to_dict(block1k) != recursive_odict_to_dict(block2k):
                     myprint(
                         myname + ": different content of [%s:%s]" % (block_name, k))
+                    myprint_debug("%r (old) vs %r (new)" % (
+                        recursive_odict_to_dict(block1k),
+                        recursive_odict_to_dict(block2k)))
                     return False
         elif block_name in [_params, _likelihood, _prior]:
             # Internal order DOES matter, but just up to 1st level
