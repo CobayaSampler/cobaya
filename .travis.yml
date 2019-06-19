@@ -33,17 +33,17 @@ matrix:
         - GCC_VERSION="7"
         - PYVER="3"
       python: "3.6"
-    - name: "Edge scenario: gcc-8, Python 3.7 with Anaconda"
+    - name: "Edge scenario: gcc-9, Python 3.7 with Anaconda"
       addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - gcc-8
-            - gfortran-8
-            - g++-8
+            - gcc-9
+            - gfortran-9
+            - g++-9
       env:
-        - GCC_VERSION="8"
+        - GCC_VERSION="9"
         - PYVER="3"
         - PYDIST="ANACONDA"
       python: "3.7"
