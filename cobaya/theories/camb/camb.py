@@ -160,6 +160,8 @@ from cobaya.theories._cosmo import _cosmo
 from cobaya.log import HandledException
 from cobaya.install import download_github_release, check_gcc_version
 from cobaya.conventions import _c_km_s, _T_CMB_K
+from cobaya.tools import deepcopy_where_possible
+
 
 # Result collector
 collector = namedtuple("collector", ["method", "args", "kwargs"])
@@ -218,7 +220,7 @@ class camb(_cosmo):
         # Dict of named tuples to collect requirements and computation methods
         self.collectors = {}
         # Additional input parameters to pass to CAMB, and attributes to set_ manually
-        self.extra_args = self.extra_args or {}
+        self.extra_args = deepcopy_where_possible(self.extra_args) or {}
         self.extra_attrs = {}
         # Patch: if cosmomc_theta is used, CAMB needs to be passed explicitly "H0=None"
         # This is *not* going to change on CAMB's side.

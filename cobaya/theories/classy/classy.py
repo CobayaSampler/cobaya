@@ -134,6 +134,8 @@ from cobaya.theories._cosmo import _cosmo, PowerSpectrumInterpolator
 from cobaya.log import HandledException
 from cobaya.install import download_github_release, pip_install
 from cobaya.conventions import _c_km_s, _T_CMB_K
+from cobaya.tools import deepcopy_where_possible
+
 
 # Result collector
 collector = namedtuple("collector",
@@ -190,7 +192,7 @@ class classy(_cosmo):
         # Dict of named tuples to collect requirements and computation methods
         self.collectors = {}
         # Additional input parameters to pass to CLASS
-        self.extra_args = self.extra_args or {}
+        self.extra_args = deepcopy_where_possible(self.extra_args) or {}
         # Add general CLASS stuff
         self.extra_args["output"] = self.extra_args.get("output", "")
         if "sBBN file" in self.extra_args:

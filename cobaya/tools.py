@@ -411,3 +411,27 @@ def fuzzy_match(in_string, choices, n=3, score_cutoff=50):
             in_string, choices, score_cutoff=score_cutoff))))[0][:n]
     except IndexError:
         return []
+
+
+def deepcopy_where_possible(base):
+    """
+    Deepcopies an object whenever possible. If the object cannot be copied, returns a
+    reference to the original object (this applies recursively to keys and values of
+    a dictionary).
+
+    Rationale: cobaya tries to manipulate its input as non-destructively as possible,
+    and to do that it works on a copy of it; but some of the values passed to cobaya
+    may not be copyable (if they are not pickleable). This function provides a
+    compromise solution.
+    """
+    if isinstance(base, Mapping):
+        _copy = (base.__class__)()
+        for key, value in (base or {}).items():
+            key_copy = deepcopy(key)
+            _copy[key_copy] = deepcopy_where_possible(value)
+        return _copy
+    else:
+        try:
+            return deepcopy(base)
+        except:
+            return base
