@@ -27,12 +27,8 @@ import numpy
 from itertools import chain
 
 # Local
-from cobaya.log import HandledException
-
-# Logger
-import logging
-
-log = logging.getLogger(__name__.split(".")[-1])
+from cobaya.tools import cov_to_std_and_choleskyL
+from cobaya.log import HandledException, HasLogger
 
 
 class IndexCycler(object):
@@ -84,7 +80,7 @@ class RandDirectionProposer(IndexCycler):
             return np.linalg.norm(np.random.normal(size=min(self.n, 2)))
 
 
-class BlockedProposer(object):
+class BlockedProposer(HasLogger):
     def __init__(self, parameter_blocks, oversampling_factors=None,
                  i_last_slow_block=None, proposal_scale=2.4):
         """
@@ -102,6 +98,7 @@ class BlockedProposer(object):
             By default, all blocks are considered slow.
         :param proposal_scale: overall scale for the proposal.
         """
+        self.set_logger(lowercase=True)
         self.proposal_scale = proposal_scale
         if oversampling_factors is None:
             self.oversampling_factors = np.array([1 for _ in parameter_blocks], dtype=int)
@@ -202,10 +199,8 @@ class BlockedProposer(object):
             raise HandledException
         self.propose_matrix = propose_matrix.copy()
         propose_matrix_j_sorted = self.propose_matrix[np.ix_(self.i_of_j, self.i_of_j)]
-        sigmas_diag = np.diag(np.sqrt(np.diag(propose_matrix_j_sorted)))
-        invsigmas_diag = np.linalg.inv(sigmas_diag)
-        corr = invsigmas_diag.dot(propose_matrix_j_sorted).dot(invsigmas_diag)
-        L = np.linalg.cholesky(corr)
+        sigmas_diag, L = cov_to_std_and_choleskyL(
+            propose_matrix_j_sorted, return_separate_std=True)
         # Store the basis as transformation matrices
         self.transform = []
         for iblock, bp in enumerate(self.proposer):

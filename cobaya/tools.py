@@ -296,6 +296,35 @@ def KL_norm(m1=None, S1=np.array([]), m2=None, S2=np.array([])):
     return KL
 
 
+def cov_to_std_and_choleskyL(cov, return_separate_std=False):
+    """
+    Gets the Cholesky lower triangular matrix :math:`L` (defined as :math:`C=LL^T`)
+    of a given covariance matrix.
+
+    Use to create an affine transformation that decorrelates a sample
+    :math:`x=\{x_i\}` as :math:`y=Lx`.
+
+    If ``return_separate_std=True`` (default: ``False``), returns a tuple of
+    the standard deviations as a diagonal matrix :math:`S` and the scale-free
+    :math:`L^\prime=S^{-1}L`.
+    """
+    std_diag, corr = cov_to_std_and_corr(cov)
+    Lprime = np.linalg.cholesky(corr)
+    if return_separate_std:
+        return std_diag, Lprime
+    else:
+        return np.linalg.inv(std_diag).dot(Lprime)
+
+def cov_to_std_and_corr(cov):
+    """
+    Gets the standard deviations (as a diagonal matrix)
+    and the correlation matrix of a covariance matrix.
+    """
+    std_diag = np.diag(np.sqrt(np.diag(cov)))
+    invstd_diag = np.linalg.inv(std_diag)
+    corr = invstd_diag.dot(cov).dot(invstd_diag)
+    return std_diag, corr
+
 def compare_params_lists(list_A, list_B):
     """
     Compares two parameter lists, and returns a dict with the following keys
@@ -380,4 +409,3 @@ def fuzzy_match(in_string, choices, n=3, score_cutoff=50):
             in_string, choices, score_cutoff=score_cutoff))))[:n]
     except IndexError:
         return []
-
