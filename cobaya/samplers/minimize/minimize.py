@@ -171,9 +171,15 @@ class minimize(Sampler):
             return
         if get_mpi_size():
             results = get_mpi_comm().gather(self.result, root=0)
+            _inv_affine_transform_matrices = get_mpi_comm().gather(
+                self._inv_affine_transform_matrix, root=0)
+            _inv_affine_transform_baselines = get_mpi_comm().gather(
+                self._inv_affine_transform_baseline, root=0)
             if am_single_or_primary_process():
-                self.result = results[np.argmin(
-                    [getattr(r, evals_attr_) for r in results])]
+                i_min = np.argmin([getattr(r, evals_attr_) for r in results])
+                self.result = results[i_min]
+                self._inv_affine_transform_matrix = self._inv_affine_transform_matrices[i_min]
+                self._inv_affine_transform_baseline = self._inv_affine_transform_baselines[i_min]
         if am_single_or_primary_process():
             if not self.success:
                 self.log.error("Minimization failed! Here is the `scipy` raw result:\n%r",
