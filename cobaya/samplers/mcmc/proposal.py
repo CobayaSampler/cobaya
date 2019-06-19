@@ -27,7 +27,7 @@ import numpy
 from itertools import chain
 
 # Local
-from cobaya.tools import cov_to_std_and_choleskyL
+from cobaya.tools import choleskyL
 from cobaya.log import HandledException, HasLogger
 
 
@@ -199,8 +199,7 @@ class BlockedProposer(HasLogger):
             raise HandledException
         self.propose_matrix = propose_matrix.copy()
         propose_matrix_j_sorted = self.propose_matrix[np.ix_(self.i_of_j, self.i_of_j)]
-        sigmas_diag, L = cov_to_std_and_choleskyL(
-            propose_matrix_j_sorted, return_separate_std=True)
+        sigmas_diag, L = choleskyL(propose_matrix_j_sorted, return_scale_free=True)
         # Store the basis as transformation matrices
         self.transform = []
         for iblock, bp in enumerate(self.proposer):

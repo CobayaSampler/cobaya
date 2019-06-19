@@ -296,21 +296,23 @@ def KL_norm(m1=None, S1=np.array([]), m2=None, S2=np.array([])):
     return KL
 
 
-def cov_to_std_and_choleskyL(cov, return_separate_std=False):
-    """
-    Gets the Cholesky lower triangular matrix :math:`L` (defined as :math:`C=LL^T`)
-    of a given covariance matrix.
+def choleskyL(M, return_scale_free=False):
+    r"""
+    Gets the Cholesky lower triangular matrix :math:`L` (defined as :math:`M=LL^T`)
+    of a given matrix ``M``.
 
-    Use to create an affine transformation that decorrelates a sample
-    :math:`x=\{x_i\}` as :math:`y=Lx`.
+    Can be used to create an affine transformation that decorrelates a sample
+    :math:`x=\{x_i\}` as :math:`y=Lx`, where :math:`L` is extracted from the
+    covariance of the sample.
 
-    If ``return_separate_std=True`` (default: ``False``), returns a tuple of
-    the standard deviations as a diagonal matrix :math:`S` and the scale-free
+    If ``return_scale_free=True`` (default: ``False``), returns a tuple of
+    a matrix :math:`S` containing the square roots of the diagonal of the input matrix
+    (the standard deviations, if a covariance is given), and the scale-free
     :math:`L^\prime=S^{-1}L`.
     """
-    std_diag, corr = cov_to_std_and_corr(cov)
+    std_diag, corr = cov_to_std_and_corr(M)
     Lprime = np.linalg.cholesky(corr)
-    if return_separate_std:
+    if return_scale_free:
         return std_diag, Lprime
     else:
         return np.linalg.inv(std_diag).dot(Lprime)
