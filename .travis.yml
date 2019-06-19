@@ -88,7 +88,7 @@ script:
       git clone --recursive -b $CAMB_BRANCH https://github.com/cmbant/CAMB $MODULES/code/CAMB ;
       python $MODULES/code/CAMB/setup.py build ;
     fi
-  - pytest tests/ -v -s -k "cosmo" --modules=$MODULES --boxed
+  - pytest tests/ -v -s -k "cosmo and sdss" --modules=$MODULES --boxed
 ###############################################################################
 deploy: # only if it builds and if the commit has been tagged
   provider: pypi
