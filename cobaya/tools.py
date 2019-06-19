@@ -408,6 +408,6 @@ def progress_bar(logger, percentage, final_text=""):
 def fuzzy_match(in_string, choices, n=3, score_cutoff=50):
     try:
         return list(zip(*(fuzzy_process.extractBests(
-            in_string, choices, score_cutoff=score_cutoff))))[:n]
+            in_string, choices, score_cutoff=score_cutoff))))[0][:n]
     except IndexError:
         return []
