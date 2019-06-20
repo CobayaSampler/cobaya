@@ -148,7 +148,7 @@ def recursive_update(base, update):
             base[update_key] = update_value
     # Trim terminal (o)dicts
     for k, v in (base or {}).items():
-        if v in [odict(), {}]:
+        if isinstance(v, Mapping) and len(v) == 0:
             base[k] = None
     return base
 

@@ -152,6 +152,13 @@ class Output(HasLogger):
                     raise HandledException
 
     def prepare_collection(self, name=None, extension=None):
+        """
+        Generates a file name for the collection, as
+        ``[folder]/[prefix].[name].[extension]``.
+
+        Notice that ``name=None`` generates a date, but ``name=""`` removes the ``name``
+        field, making it simply ``[folder]/[prefix].[extension]``.
+        """
         if name is None:
             name = (datetime.datetime.now().isoformat()
                     .replace("T", "").replace(":", "").replace(".", "").replace("-", "")
