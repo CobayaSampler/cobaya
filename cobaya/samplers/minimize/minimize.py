@@ -221,19 +221,27 @@ class minimize(Sampler):
 
     def products(self):
         """
-        Auxiliary function to define what should be returned in a scripted call.
+        Returns a dictionary containing:
 
-        Returns:
-           The :class:`OnePoint` that maximizes the posterior or likelihood (depending on
-           ``ignore_prior``), the ``result_object`` instance of `scipy
-           <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.OptimizeResult.html>`_
+        - ``minimum``: :class:`OnePoint` that maximizes the posterior or likelihood
+          (depending on ``ignore_prior``).
+
+        - ``result_object``: instance of results class of
+           `scipy <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.OptimizeResult.html>`_
            or `pyBOBYQA
-           <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/userguide.html>`_,
-           and the inverse of the affine transform under which the minimizer has worked, 
-           as a matrix ``M`` and a point ``X0``, from which the real space points can be
-           obtained as :math:`x = M x^\prime + X0`, where :math:`x^\prime` represents the
-           parameter space used in ``result_object`` (returns ``None`` for both ``M`` and
-           ``X0`` if no transformation was applied).
+           <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/userguide.html>`_.
+
+        - ``M``: inverse of the affine transform matrix (see below).
+           ``None`` if no transformation applied.
+
+        - ``X0``: offset of the affine transform matrix (see below)
+           ``None`` if no transformation applied.
+
+        If non-trivial ``M`` and ``X0`` are returned, this means that the minimizer has
+        been working on an affine-transformed parameter space :math:`x^\prime`, from which
+        the real space points can be obtained as :math:`x = M x^\prime + X_0`. This inverse
+        transformation needs to be applied to the coordinates appearing inside the
+        ``result_object``.
         """
         if am_single_or_primary_process():
             return {"minimum": self.minimum, "result_object": self.result,
