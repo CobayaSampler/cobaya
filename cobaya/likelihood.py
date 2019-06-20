@@ -204,6 +204,7 @@ class LikelihoodExternalFunction(Likelihood, HasLogger):
         self.n_states = 3
         self.states = [{"params": None, "logp": None, "derived": None, "last": 0}
                        for _ in range(self.n_states)]
+        self.log.info("Initialised external likelihood.")
 
     def add_theory(self):
         if self.has_theory:

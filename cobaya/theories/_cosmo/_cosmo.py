@@ -96,7 +96,7 @@ class _cosmo(Theory):
             elif v is None:
                 self._needs[k] = None
             else:
-                self.log.error("Unknown required product: '%s:%s'.", k, v)
+                self.log.error("Unknown required product: '%s'.", k)
                 raise HandledException
 
     def requested(self):
