@@ -95,7 +95,7 @@ class Output(HasLogger):
                     raise HandledException
         # Output kind and collection extension
         self.kind = "txt"
-        self.ext = "sample"
+        self.ext = "txt"
 
     def updated_output_prefix(self):
         """
