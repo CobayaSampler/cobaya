@@ -1,4 +1,4 @@
-"""
+r"""
 .. module:: one
 
 :Synopsis: Unit likelihood: always outputs :math:`0 = \log(1)`.

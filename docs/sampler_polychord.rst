@@ -106,7 +106,7 @@ If you are using external priors (as described :ref:`here <prior_external>`), th
         polychord:
 
 
-Taking advantage of a speed hierarchy – *new in 1.X*
+Taking advantage of a speed hierarchy – *new in 1.2*
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PolyChord *automatically* sorts parameters optimally and chooses the number of repeats per likelihood (or parameter block). The user only needs to specify the speed of each likelihood.

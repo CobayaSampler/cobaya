@@ -50,12 +50,27 @@ CAMB will be loaded from the automatic-install ``modules`` folder, if specified,
 otherwise imported as a globally-installed Python package. Cobaya will print at
 initialisation where it is getting CAMB from.
 
-If you modify CAMB and add new variables, you don't need to let Cobaya know, but make
-sure that the variables you create are exposed in the Python interface (`instructions
-here <https://camb.readthedocs.io/en/latest/model.html#camb.model.CAMBparams>`__).
+.. _camb_modify:
+
+Modifying CAMB
+^^^^^^^^^^^^^^
+
+If you modify CAMB and add new variables, make sure that the variables you create are
+exposed in the Python interface (`instructions here
+<https://camb.readthedocs.io/en/latest/model.html#camb.model.CAMBparams>`__).
+If you follow those instructions you do not need to make any additional modification in
+Cobaya.
+
 You can use the :doc:`model wrapper <cosmo_model>` to test your modification by
 evaluating observables or getting derived quantities at known points in the parameter
-space.
+space (set ``debug: True`` to get more detailed information of what exactly is passed to
+CLASS).
+
+In your CAMB modification, remember that you can raise a ``CAMBParamRangeError`` or a
+``CAMBError`` whenever the computation of any observable would fail, but you do not
+expect that observable to be compatible with the data (e.g. at the fringes of the
+parameter space). Whenever such an error is raised during sampling, the likelihood is
+assumed to be zero, and the run is not interrupted.
 
 
 Installation
