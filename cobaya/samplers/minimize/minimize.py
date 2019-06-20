@@ -8,7 +8,9 @@ This is a **maximizator** for posteriors or likelihoods, based on
 `scipy.optimize.minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_
 and `Py-BOBYQA <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/index.html>`_.
 
-It is pretty self-explanatory: just look at the comments on the defaults below.
+.. note::
+
+   BOBYQA tends to work better on Cosmological problems with the default settings.
 
 It works more effectively when run on top of a Monte Carlo sample: just change the sampler
 for ``minimize`` with the desired options, and it will use as a starting point the
@@ -125,7 +127,6 @@ class minimize(Sampler):
                 "fun": (lambda x: -self.logp_transf(x)),
                 "x0": initial_point,
                 "bounds": bounds,
-                "tol": self.tol,
                 "options": {
                     "maxiter": self.max_evals,
                     "disp": (self.log.getEffectiveLevel() == logging.DEBUG)}}

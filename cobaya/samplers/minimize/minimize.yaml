@@ -7,9 +7,6 @@ sampler:
     # Minimizes the full posterior (False) or just the likelihood (True)
     # Likelihood maximization is subject to prior bounds!
     ignore_prior: False
-    # Tolerance for termination. Default: 0.001
-    # --> expected >0.01 deviation, reasonable value for Chi^2 minimization
-    tol: 1e-3
     # Maximum number of iterations (default: practically infinite)
     max_evals: 1e6d
     # Treatment of unbounded parameters: confidence level to use
