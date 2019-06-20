@@ -36,13 +36,14 @@ import numpy as np
 from scipy.optimize import minimize as scpminimize
 import pybobyqa
 import logging
+from copy import deepcopy
 
 # Local
 from cobaya.sampler import Sampler
 from cobaya.mpi import get_mpi_size, get_mpi_comm, am_single_or_primary_process
 from cobaya.collection import OnePoint
 from cobaya.log import HandledException
-from cobaya.tools import read_dnumber, choleskyL
+from cobaya.tools import read_dnumber, choleskyL, recursive_update
 
 
 # Handling scpiy vs BOBYQA
@@ -115,7 +116,7 @@ class minimize(Sampler):
                 "bounds": np.array(list(zip(*bounds))),
                 "seek_global_minimum": True,
                 "maxfun": int(self.max_evals)}
-            self.kwargs.update(self.override or {})
+            self.kwargs = recursive_update(deepcopy(self.kwargs), self.override or {})
             self.log.debug("Arguments for pybobyqa.solve:\n%r",
                            {k:v for k,v in self.kwargs.items() if k != "objfun"})
         elif self.method.lower() == "scipy":
@@ -128,7 +129,7 @@ class minimize(Sampler):
                 "options": {
                     "maxiter": self.max_evals,
                     "disp": (self.log.getEffectiveLevel() == logging.DEBUG)}}
-            self.kwargs.update(self.override or {})
+            self.kwargs = recursive_update(deepcopy(self.kwargs), self.override or {})
             self.log.debug("Arguments for scipy.optimize.minimize:\n%r",
                            {k:v for k,v in self.kwargs.items() if k != "fun"})
         else:
