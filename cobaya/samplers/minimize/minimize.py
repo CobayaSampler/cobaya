@@ -200,23 +200,26 @@ class minimize(Sampler):
                 self.log.error("Minimization failed! Here is the raw result object:\n%s",
                                str(self.result))
                 raise HandledException
-            logpost = -np.array(getattr(self.result, evals_attr_))
-            x_minimum = self.inv_affine_transform(self.result.x)
-            self.log.info("log%s maximized at %g",
-                          "likelihood" if self.ignore_prior else "posterior", logpost)
-            post = self.model.logposterior(x_minimum)
-            recomputed_max = sum(post.loglikes) if self.ignore_prior else post.logpost
-            if not np.allclose(logpost, recomputed_max):
+            logp_min = -np.array(getattr(self.result, evals_attr_))
+            x_min = self.inv_affine_transform(self.result.x)
+            self.log.info("-log(%s) minimized to %g",
+                          "likelihood" if self.ignore_prior else "posterior", logp_min)
+            recomputed_post_min = self.model.logposterior(x_min)
+            recomputed_logp_min = (sum(recomputed_post_min.loglikes) if self.ignore_prior
+                                   else recomputed_post_min.logpost)
+            if not np.allclose(logp_min, recomputed_logp_min):
                 self.log.error("Cannot reproduce result. Something bad happened. "
-                               "Recomputed max: %g at %r", recomputed_max, x_minimum)
+                               "Recomputed min: %g at %r", recomputed_logp_min, x_min)
                 raise HandledException
             self.minimum = OnePoint(
-                self.model, self.output, name="maximum",
-                extension=("likelihood" if self.ignore_prior else "posterior"))
-            self.minimum.add(x_minimum, derived=post.derived, logpost=post.logpost,
-                             logpriors=post.logpriors, loglikes=post.loglikes)
+                self.model, self.output, name="",
+                extension=("bestfit" if self.ignore_prior else "minimum"))
+            self.minimum.add(x_min, derived=recomputed_post_min.derived,
+                             logpost=recomputed_post_min.logpost,
+                             logpriors=recomputed_post_min.logpriors,
+                             loglikes=recomputed_post_min.loglikes)
             self.log.info(
-                "Parameter values at maximum:\n%s", self.minimum.data.to_string())
+                "Parameter values at minimum:\n%s", self.minimum.data.to_string())
             self.minimum._out_update()
 
     def products(self):
@@ -227,15 +230,15 @@ class minimize(Sampler):
           (depending on ``ignore_prior``).
 
         - ``result_object``: instance of results class of
-           `scipy <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.OptimizeResult.html>`_
-           or `pyBOBYQA
-           <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/userguide.html>`_.
+          `scipy <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.OptimizeResult.html>`_
+          or `pyBOBYQA
+          <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/userguide.html>`_.
 
         - ``M``: inverse of the affine transform matrix (see below).
-           ``None`` if no transformation applied.
+          ``None`` if no transformation applied.
 
         - ``X0``: offset of the affine transform matrix (see below)
-           ``None`` if no transformation applied.
+          ``None`` if no transformation applied.
 
         If non-trivial ``M`` and ``X0`` are returned, this means that the minimizer has
         been working on an affine-transformed parameter space :math:`x^\prime`, from which

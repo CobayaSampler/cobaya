@@ -152,12 +152,14 @@ class Output(HasLogger):
                     raise HandledException
 
     def prepare_collection(self, name=None, extension=None):
-        if not name:
+        if name is None:
             name = (datetime.datetime.now().isoformat()
-                    .replace("T", "").replace(":", "").replace(".", ""))
+                    .replace("T", "").replace(":", "").replace(".", "").replace("-", "")
+                    [:(4+2+2)+(2+2+2+3)])  # up to ms
         file_name = os.path.join(
             self.folder,
-            self.prefix + ("." if self.prefix else "") + name + "." + (extension or self.ext))
+            self.prefix + ("." if self.prefix else "") + (name + "." if name else "") +
+            (extension or self.ext))
         return file_name, self.kind
 
     def is_collection_file_name(self, file_name, extension=None):
