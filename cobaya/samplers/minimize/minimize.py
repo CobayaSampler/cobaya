@@ -1,4 +1,4 @@
-"""
+r"""
 .. module:: samplers.minimize
 
 :Synopsis: Posterior/likelihood *maximization* (i.e. -log(post) and chi^2 minimization).
@@ -11,18 +11,18 @@ and `Py-BOBYQA <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/i
 It is pretty self-explanatory: just look at the comments on the defaults below.
 
 It works more effectively when run on top of a Monte Carlo sample: just change the sampler
-for ``minimize`` with the desired options, and the MAP (*maximum a posteriori*) or best
-fit (maximum likelihood) found so far will be used, as well as the covariance matrix of
-the sample for more efficient exploration.
+for ``minimize`` with the desired options, and it will use as a starting point the
+*maximum a posteriori* (MAP) or best fit (maximum likelihood, o minimal :math:`\chi^2`)
+found so far, as well as the covariance matrix of the sample for rescaling of the
+parameter jumps.
 
-As text output, it produces a ``[output prefix].[target].minimum``, where ``target`` is
-XXX of minimizing the posterior (``ignore_prior: False``, default) and YYY otherwise
+As text output, it produces a ``[output prefix].minimum`` if the MAP was requested, or
+``[output prefix].bestfit`` if the maximum likelihood was requested
+(``ignore_prior: True``).
 
-TODO: file names!
-
-(or, when called from a Python script, the updated info and the products described in
-:method:`samplers.minimize.minimize.results`).
-TODO: check that link and accuracy of documentation
+When called from a Python script, Cobaya's ``run`` function returns the updated info
+and the products described below in the method
+:func:`products <samplers.minimize.minimize.products>`.
 
 It is recommended to run a couple of parallel MPI processes:
 it will finally pick the best among the results.
