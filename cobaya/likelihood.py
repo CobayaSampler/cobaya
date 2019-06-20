@@ -160,6 +160,12 @@ class Likelihood(HasLogger):
         sleep(self.delay)
 
     def d(self):
+        """
+        Dimension of the input vector.
+
+        NB: Different from dimensionality of the sampling problem, e.g. this may include
+        fixed input parameters.
+        """
         return len(self.input_params)
 
     def __exit__(self, exception_type, exception_value, traceback):
