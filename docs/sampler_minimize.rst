@@ -1,12 +1,6 @@
 ``minimize`` sampler
 ====================
 
-.. warning::
-
-   This sampler is still WIP. Don't use!
-
-
-
 .. automodule:: samplers.minimize.minimize
    :noindex:
 

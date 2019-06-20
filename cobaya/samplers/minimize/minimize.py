@@ -1,13 +1,28 @@
 """
 .. module:: samplers.minimize
 
-:Synopsis: Posterior/likelihood *maximization* (i.e. chi^2 minimization).
-:Author: Jesus Torrado (though it's just a wrapper of ``scipy.optimize.minimize``)
+:Synopsis: Posterior/likelihood *maximization* (i.e. -log(post) and chi^2 minimization).
+:Author: Jesus Torrado
 
-This is a **maximizator** for posteriors or likelihoods, using
-`scipy.optimize.minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
+This is a **maximizator** for posteriors or likelihoods, based on
+`scipy.optimize.minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_
+and `Py-BOBYQA <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/index.html>`_.
 
 It is pretty self-explanatory: just look at the comments on the defaults below.
+
+It works more effectively when run on top of a Monte Carlo sample: just change the sampler
+for ``minimize`` with the desired options, and the MAP (*maximum a posteriori*) or best
+fit (maximum likelihood) found so far will be used, as well as the covariance matrix of
+the sample for more efficient exploration.
+
+As text output, it produces a ``[output prefix].[target].minimum``, where ``target`` is
+XXX of minimizing the posterior (``ignore_prior: False``, default) and YYY otherwise
+
+TODO: file names!
+
+(or, when called from a Python script, the updated info and the products described in
+:method:`samplers.minimize.minimize.results`).
+TODO: check that link and accuracy of documentation
 
 It is recommended to run a couple of parallel MPI processes:
 it will finally pick the best among the results.
@@ -60,6 +75,7 @@ class minimize(Sampler):
                     list(self.model.parameterization.sampled_params())].values
                 self.log.info("Starting from %s of previous chain:",
                               "best fit" if self.ignore_prior else "MAP")
+                # TODO: if ignore_prior, one should use *like* covariance (this is *post*)
                 covmat = collection_in.cov()
         if initial_point is None:
             this_logp = -np.inf
