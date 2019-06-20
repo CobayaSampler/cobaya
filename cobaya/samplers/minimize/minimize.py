@@ -12,6 +12,29 @@ and `Py-BOBYQA <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/i
 
    BOBYQA tends to work better on Cosmological problems with the default settings.
 
+.. |br| raw:: html
+
+   <br />
+
+.. note::
+   **If you use BOBYQA, please cite it as:**
+   |br|
+   `C. Cartis, J. Fiala, B. Marteau, L. Roberts,
+   "Improving the Flexibility and Robustness of Model-Based Derivative-Free Optimization Solvers"
+   (arXiv:1804.00154) <https://arxiv.org/abs/1804.00154>`_
+   |br|
+   `C. Cartis, L. Roberts, O. Sheridan-Methven,
+   "Escaping local minima with derivative-free methods: a numerical investigation"
+   (arXiv:1812.11343) <https://arxiv.org/abs/1812.11343>`_
+   |br|
+   `M.J.D. Powell,
+   "The BOBYQA Algorithm for Bound Constrained Optimization without Derivatives",
+   (Technical Report 2009/NA06, DAMTP, University of Cambridge)
+   <http://www.damtp.cam.ac.uk/user/na/NA_papers/NA2009_06.pdf>`_
+
+   **If you use scipy**, you can find `the appropriate references here
+   <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
+
 It works more effectively when run on top of a Monte Carlo sample: just change the sampler
 for ``minimize`` with the desired options, and it will use as a starting point the
 *maximum a posteriori* (MAP) or best fit (maximum likelihood, o minimal :math:`\chi^2`)
@@ -116,7 +139,8 @@ class minimize(Sampler):
                 "objfun": (lambda x: -self.logp_transf(x)),
                 "x0": initial_point,
                 "bounds": np.array(list(zip(*bounds))),
-                "seek_global_minimum": True,
+                "seek_global_minimum": (
+                    True if get_mpi_size() in [0, 1] else False),
                 "maxfun": int(self.max_evals)}
             self.kwargs = recursive_update(deepcopy(self.kwargs), self.override or {})
             self.log.debug("Arguments for pybobyqa.solve:\n%r",
@@ -210,8 +234,10 @@ class minimize(Sampler):
             recomputed_logp_min = (sum(recomputed_post_min.loglikes) if self.ignore_prior
                                    else recomputed_post_min.logpost)
             if not np.allclose(logp_min, recomputed_logp_min):
-                self.log.error("Cannot reproduce result. Something bad happened. "
-                               "Recomputed min: %g at %r", recomputed_logp_min, x_min)
+                self.log.error(
+                    "Cannot reproduce result. Maybe yout likelihood is stochastic? "
+                    "Recomputed min: %g (was %g) at %r",
+                    recomputed_logp_min, logp_min, x_min)
                 raise HandledException
             self.minimum = OnePoint(
                 self.model, self.output, name="",
