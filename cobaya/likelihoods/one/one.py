@@ -1,7 +1,7 @@
-"""
+r"""
 .. module:: one
 
-:Synopsis: Unit likelihood: always outputs :math:`0 = log(1)`.
+:Synopsis: Unit likelihood: always outputs :math:`0 = \log(1)`.
 :Author: Jesus Torrado
 
 """

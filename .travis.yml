@@ -33,17 +33,17 @@ matrix:
         - GCC_VERSION="7"
         - PYVER="3"
       python: "3.6"
-    - name: "Edge scenario: gcc-9, Python 3.7 with Anaconda"
+    - name: "Edge scenario: gcc-8, Python 3.7 with Anaconda"
       addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - gcc-9
-            - gfortran-9
-            - g++-9
+            - gcc-8
+            - gfortran-8
+            - g++-8
       env:
-        - GCC_VERSION="9"
+        - GCC_VERSION="8"
         - PYVER="3"
         - PYDIST="ANACONDA"
       python: "3.7"
@@ -88,7 +88,7 @@ script:
       git clone --recursive -b $CAMB_BRANCH https://github.com/cmbant/CAMB $MODULES/code/CAMB ;
       python $MODULES/code/CAMB/setup.py build ;
     fi
-  - pytest tests/ -v -s -k "cosmo and sdss" --modules=$MODULES --boxed
+  - pytest tests/ -v -s -k "cosmo" --modules=$MODULES --boxed
 ###############################################################################
 deploy: # only if it builds and if the commit has been tagged
   provider: pypi
