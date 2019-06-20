@@ -194,9 +194,9 @@ def post(info, sample=None):
                       if name is not "one"]
     out[_likelihood] += [l for l in add[_likelihood] if l is not "one"]
     if recompute_theory:
-        log.warn("You are recomputing the theory, but in the current version this does "
-                 "not force recomputation of any likelihood or derived parameter, "
-                 "unless explicitly removed+added.")
+        log.warning("You are recomputing the theory, but in the current version this does"
+                    " not force recomputation of any likelihood or derived parameter, "
+                    "unless explicitly removed+added.")
     for level in [_prior, _likelihood]:
         for i, x_i in enumerate(out[level]):
             if x_i in list(out[level])[i+1:]:

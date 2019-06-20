@@ -93,7 +93,7 @@ class gaussian_mixture(Likelihood):
                 raise HandledException
             if not np.isclose(sum(self.weights), 1):
                 self.weights = self.weights/sum(self.weights)
-                self.log.warn(
+                self.log.warning(
                     "Weights of components renormalized to %r", list(self.weights))
         else:
             self.weights = 1/len(self.gaussians)                

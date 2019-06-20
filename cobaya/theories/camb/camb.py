@@ -623,8 +623,8 @@ def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs)
         return True
     gcc_check = check_gcc_version(camb_min_gcc_version, error_returns=-1)
     if gcc_check == -1:
-        log.warn("Failed to get gcc version (maybe not using gcc?). "
-                 "Going ahead and hoping for the best.")
+        log.warning("Failed to get gcc version (maybe not using gcc?). "
+                    "Going ahead and hoping for the best.")
     elif not gcc_check:
         log.error("CAMB requires a gcc version >= %s, "
                   "which is higher than your current one.", camb_min_gcc_version)

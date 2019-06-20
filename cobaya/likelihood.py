@@ -606,8 +606,8 @@ class LikelihoodCollection(HasLogger):
             self.log.error("Manual blocking: unkown parameters: %r", unknown)
             raise HandledException
         if (speeds != np.sort(speeds)).all():
-            self.log.warn("Manual blocking: speed-blocking *apparently* non-optimal: "
-                          "sort by ascending speed when possible")
+            self.log.warning("Manual blocking: speed-blocking *apparently* non-optimal: "
+                             "sort by ascending speed when possible")
         return speeds, blocks
 
     def _get_auto_covmat(self, params_info):
