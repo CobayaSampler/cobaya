@@ -531,7 +531,7 @@ class camb(_cosmo):
         self.log.error("Parameter not known: '%s'", p)
         raise HandledException
 
-    def get_cl(self, ell_factor=False, units="muK2"):
+    def get_Cl(self, ell_factor=False, units="muK2"):
         current_state = self.current_state()
         # get C_l^XX from the cosmological code
         try:

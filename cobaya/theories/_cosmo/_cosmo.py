@@ -88,7 +88,7 @@ class _cosmo(Theory):
                 self._needs[k].update(v)
             elif k in ["H", "angular_diameter_distance",
                                "comoving_radial_distance", "fsigma8"]:
-                if not k in self._needs:
+                if k not in self._needs:
                     self._needs[k] = {}
                 self._needs[k]["z"] = np.unique(np.concatenate(
                     (self._needs[k].get("z", []), v["z"])))

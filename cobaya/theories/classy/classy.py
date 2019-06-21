@@ -3,7 +3,7 @@
 
 :Synopsis: Managing the CLASS cosmological code
 :Author: Jesus Torrado
-         (import and ``get_cl`` based on MontePython's CLASS wrapper Benjamin Audren)
+         (import and ``get_Cl`` based on MontePython's CLASS wrapper Benjamin Audren)
 
 .. |br| raw:: html
 
@@ -477,7 +477,7 @@ class classy(_cosmo):
         self.log.error("Parameter not known: '%s'", p)
         raise HandledException
 
-    def get_cl(self, ell_factor=False, units="muK2"):
+    def get_Cl(self, ell_factor=False, units="muK2"):
         current_state = self.current_state()
         try:
             cls = deepcopy(current_state["Cl"])

@@ -490,7 +490,7 @@ class _cmblikes_prototype(Likelihood):
                            "Make sure you have evaluated the likelihood.")
             raise HandledException
         try:
-            Cl_theo = self.theory.get_cl(ell_factor=True, units=units)
+            Cl_theo = self.theory.get_Cl(ell_factor=True, units=units)
             Cl = Cl_theo.get(column.lower())
         except KeyError:
             self.log.error("'%s' spectrum has not been computed." % column)
@@ -619,7 +619,7 @@ class _cmblikes_prototype(Likelihood):
                     (np.trace(M) - self.nmaps - np.linalg.slogdet(M)[1]))
 
     def logp(self, **data_params):
-        Cls = self.theory.get_cl(ell_factor=True)
+        Cls = self.theory.get_Cl(ell_factor=True)
         self.get_theory_map_cls(Cls, data_params)
         C = np.empty((self.nmaps, self.nmaps))
         bigX = np.empty(self.nbins_used * self.ncl_used)
