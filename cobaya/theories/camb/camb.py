@@ -248,7 +248,13 @@ class camb(_cosmo):
         self.planck_to_camb = self.renames
         # Derived parameters that may not have been requested, but will be necessary later
         self.derived_extra = []
+        # Some default settings
         self.needs_perts = False
+        self.limber = False
+        self.non_linear_lens = False
+        self.non_linear_pk = False
+###     # TODO: This will hopefully be fixed later
+###        self.extra_attrs["Want_CMB"] = False
 
     def current_state(self):
         lasts = [self.states[i]["last"] for i in range(self.n_states)]
@@ -280,6 +286,8 @@ class camb(_cosmo):
                             ["total"] + (["lens_potential"] if "pp" in cls else []))),
                         "raw_cl": True})
                 self.needs_perts = True
+                self.extra_attrs["Want_CMB"] = True
+                self.non_linear_lens = True
             elif k == "H":
                 self.collectors[k] = collector(
                     method="CAMBdata.h_of_z",
@@ -316,6 +324,20 @@ class camb(_cosmo):
                         method="CAMBdata.get_matter_power_interpolator",
                         kwargs=kwargs)
                 self.needs_perts = True
+            elif k == "source_Cl":
+                if not hasattr(self, "sources"):
+                    self.sources = odict()
+                for source, window in v["sources"].items():
+                    # If it was already there, _cosmo.needs() has already checked that
+                    # old info == new info
+                    if source not in self.sources:
+                        self.sources[source] = window
+                self.limber = self.limber or v.get("limber", False)
+                self.non_linear_pk = self.non_linear_pk or v.get("non_linear", False)
+                self.non_linear_lens = self.non_linear_lens or v.get("non_linear", False)
+                self.needs_perts = True
+                # Create collector
+                self.collectors[k] = collector(method="CAMBdata.get_source_cls_dict")
             # General derived parameters
             elif v is None:
                 k_translated = self.translate_param(k)
@@ -337,6 +359,13 @@ class camb(_cosmo):
         # Remove extra args that cause an error if the associated product is not requested
         if "Cl" not in self._needs:
             self.extra_args.pop("lens_potential_accuracy", None)
+        # Computing non-linear corrections
+        from camb import model
+        self.extra_attrs["NonLinear"] = {
+            (True, True): model.NonLinear_both,
+            (True, False): model.NonLinear_lens,
+            (False, True): model.NonLinear_pk,
+            (False, False): False}[(self.non_linear_lens, self.non_linear_pk)]
 
     def add_to_redshifts(self, z):
         self.extra_args["redshifts"] = np.sort(np.unique(np.concatenate(
@@ -367,6 +396,23 @@ class camb(_cosmo):
                     self.log.error("Some of the attributes to be set manually were not "
                                    "recognized: %s=%s", attr, value)
                     raise HandledException
+            # Sources
+            if getattr(self, "sources", None):
+                from camb.sources import GaussianSourceWindow, SplinedSourceWindow
+                self.log.debug("Setting sources: %r", self.sources)
+                SourceWindows = []
+                for source, window in self.sources.items():
+                    function = window.pop("function", None)
+                    if function == "spline":
+                        SourceWindows.append(SplinedSourceWindow(**window))
+                    elif function == "gaussian":
+                        SourceWindows.append(GaussianSourceWindow(**window))
+                    else:
+                        self.log.error("Unknown source window function type %r", function)
+                        raise HandledException
+                    window["function"] = function
+                cambparams.SourceWindows = SourceWindows
+                cambparams.SourceTerms.limber_windows = self.limber
             return cambparams
         except CAMBParamRangeError:
             if self.stop_at_error:
@@ -420,7 +466,7 @@ class camb(_cosmo):
             intermediates = {
                 "CAMBparams": {"result": result},
                 "CAMBdata": {"method": "get_results" if self.needs_perts
-                else "get_background",
+                             else "get_background",
                              "result": None, "derived_dic": None}}
             # Compute the necessary products (incl. any intermediate result, if needed)
             for product, collector in self.collectors.items():
@@ -600,6 +646,24 @@ class camb(_cosmo):
         return {k[len(prefix):]: deepcopy(v)
                 for k, v in current_state.items() if k.startswith(prefix)}
 
+    def get_source_Cl(self):
+        current_state = self.current_state()
+        # get C_l^XX from the cosmological code
+        try:
+            cls = deepcopy(current_state["source_Cl"])
+        except:
+            self.log.error(
+                "No source Cl's were computed. "
+                "Are you sure that you have requested some source?")
+            raise HandledException
+        cls_dict = dict()
+        for term, cl in cls.items():
+            term_tuple = tuple(
+                [(lambda x: x if x == "P" else list(self.sources)[int(x)-1])(_.strip("W"))
+                 for _ in term.split("x")])
+            cls_dict[term_tuple] = cl
+        cls_dict["ell"] = np.arange(cls[list(cls)[0]].shape[0])
+        return cls_dict
 
 # Installation routines ##################################################################
 

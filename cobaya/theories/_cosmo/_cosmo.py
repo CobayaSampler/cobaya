@@ -27,9 +27,16 @@ class _cosmo(Theory):
 
         Typical requisites in Cosmology (as keywords, case insensitive):
 
-        - ``Cl={[...]}``: CMB lensed power spectra, as a dictionary ``{spectrum:l_max}``,
+        - ``Cl={...}``: CMB lensed power spectra, as a dictionary ``{spectrum:l_max}``,
           where the possible spectra are combinations of "t", "e", "b" and "p"
-          (lensing potential). Get with :func:`~_cosmo.get_cl`.
+          (lensing potential). Get with :func:`~_cosmo.get_Cl`.
+        - **[BETA: CAMB only; notation may change!]** ``source_Cl={...}``:
+          :math:`C_\ell` of given sources with given windows, e.g.:
+          ``source_name: {"function": "spline"|"gaussian", [source_args]``;
+          for now, ``[source_args]`` follow the notation of ``CAMBSources``.
+          If can also take ``lmax: [int]``, ``limber: True`` if Limber approximation
+          desired, and ``non_linear: True`` if non-linear contributions requested.
+          Get with :func:`~_cosmo.get_source_Cl`.
         - ``H={'z': [z_1, ...], 'units': '1/Mpc' or 'km/s/Mpc'}``: Hubble
           rate at the redshifts requested, in the given units. Get it with
           :func:`~_cosmo.get_H`.
@@ -86,6 +93,24 @@ class _cosmo(Theory):
                         self._needs.get(k, {}).get("k_max", 0), v["k_max"]),
                     "vars_pairs": vars_pairs}
                 self._needs[k].update(v)
+            elif k == "source_Cl":
+                if k not in self._needs:
+                    self._needs[k] = {}
+                if "sources" not in v:
+                    self.log.error("Needs a 'sources' key, containing a dict with every "
+                                   "source name and definition")
+                    raise HandledException
+                # Check that no two sources with equal name but diff specification
+                for source, windown in v["sources"].items():
+                    if source in getattr(self, "sources", {}):
+                        # TODO: improve this test!!!
+                        # (e.g. 2 z-vectors that fulfill np.allclose would fail a == test)
+                        if window != self.sources[source]:
+                            self.log.error(
+                                "Source %r requested twice with different specification: "
+                                "%r vs %r.", window, self.sources[source])
+                            raise HandledException
+                self._needs[k].update(v)
             elif k in ["H", "angular_diameter_distance",
                                "comoving_radial_distance", "fsigma8"]:
                 if k not in self._needs:
@@ -114,7 +139,7 @@ class _cosmo(Theory):
         """
         pass
 
-    def get_cl(self, ell_factor=False, units="muK2"):
+    def get_Cl(self, ell_factor=False, units="muK2"):
         """
         Returns a dictionary of lensed CMB power spectra and the lensing potential ``pp`` power spectrum.
 
@@ -153,6 +178,13 @@ class _cosmo(Theory):
         :class:`PowerSpectrumInterpolator`.
         """
         pass
+
+    def get_source_Cl(self):
+        """
+        Returns a dict of power spectra of for the computed sources, with keys a tuple of
+        sources ``([source1], [source2])``, and an additional key ``ell`` containing the
+        multipoles.
+        """
 
     def get_fsigma8(self, z):
         """

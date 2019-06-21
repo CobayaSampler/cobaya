@@ -267,8 +267,10 @@ class LikelihoodCollection(HasLogger):
             self[like].initialize()
             self[like].theory = self.theory
             self[like].add_theory()
-            self.log.info("The theory code will compute the following products, "
-                          "requested by the likelihoods: %r", list(self.theory._needs))
+            if self.theory:
+                self.log.info(
+                    "The theory code will compute the following products, "
+                    "requested by the likelihoods: %r", list(self.theory._needs))
         # Store the input params and likelihoods on which each sampled params depends.
         self.sampled_input_dependence = parameterization.sampled_input_dependence()
         self.sampled_like_dependence = odict(
