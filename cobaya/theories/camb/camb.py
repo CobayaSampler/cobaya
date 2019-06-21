@@ -327,7 +327,7 @@ class camb(_cosmo):
             else:
                 self.log.error("This should not be happening. Contact the developers.")
                 raise HandledException
-        # Finally, check that there are no repeated parameters between input and extra
+        # Check that there are no repeated parameters between input and extra
         if set(self.input_params).intersection(set(self.extra_args)):
             self.log.error(
                 "The following parameters appear both as input parameters and as CAMB "
@@ -335,7 +335,7 @@ class camb(_cosmo):
                 list(set(self.input_params).intersection(set(self.extra_args))))
             raise HandledException
         # Remove extra args that cause an error if the associated product is not requested
-        if "Cl" not in [k for k in self._needs]:
+        if "Cl" not in self._needs:
             self.extra_args.pop("lens_potential_accuracy", None)
 
     def add_to_redshifts(self, z):
@@ -358,6 +358,8 @@ class camb(_cosmo):
         self.log.debug("Setting parameters: %r", args)
         try:
             cambparams = self.camb.set_params(**args)
+            if self.extra_attrs:
+                self.log.debug("Setting attributes of CAMBParams: %r", self.extra_attrs)
             for attr, value in self.extra_attrs.items():
                 if hasattr(cambparams, attr):
                     setattr(cambparams, attr, value)
@@ -434,10 +436,11 @@ class camb(_cosmo):
                 except CAMBError:
                     if self.stop_at_error:
                         self.log.error(
-                            "Computation error! Parameters sent to CAMB: %r and %r.\n"
+                            "Computation error (see traceback below)! "
+                            "Parameters sent to CAMB: %r and %r.\n"
                             "To ignore this kind of errors, make 'stop_at_error: False'.",
                             self.states[i_state]["params"], self.extra_args)
-                        raise HandledException
+                        raise
                     else:
                         # Assumed to be a "parameter out of range" error.
                         return 0
