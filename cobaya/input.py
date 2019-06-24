@@ -188,7 +188,7 @@ def get_full_info(info):
     if _theory in full_info:
         renames = list(full_info[_theory].values())[0].get(_p_renames)
         str_to_list = lambda x: ([x] if isinstance(x, string_types) else x)
-        renames_flat = [set([k] + str_to_list(v)) for k, v in renames.items()]
+        renames_flat = [set([k] + str_to_list(v)) for k, v in (renames or {}).items()]
         for p in full_info.get(_params, {}):
             # Probably could be made faster by inverting the renames dicts *just once*
             renames_pairs = [a for a in renames_flat if p in a]

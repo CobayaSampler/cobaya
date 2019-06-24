@@ -29,6 +29,7 @@ if six.PY3:
     from math import gcd
     from collections.abc import Mapping
 else:
+    ModuleNotFoundError = ImportError
     from inspect import cleandoc, getargspec
     from fractions import gcd
     from collections import Mapping
@@ -79,7 +80,8 @@ def get_class(name, kind=_likelihood):
     try:
         return getattr(import_module(class_folder, package=_package), name)
     except:
-        if sys.exc_info()[0] == ImportError and str(sys.exc_info()[1]).endswith(name):
+        if ((sys.exc_info()[0] is ModuleNotFoundError and
+             str(sys.exc_info()[1]).rstrip("'").endswith(name))):
             log.error("%s '%s' not found (wrong capitalization?)",
                       kind.capitalize(), name)
             raise HandledException

@@ -267,7 +267,7 @@ class LikelihoodCollection(HasLogger):
             self[like].initialize()
             self[like].theory = self.theory
             self[like].add_theory()
-            if self.theory:
+            if self.theory and hasattr(self.theory, "_needs"):
                 self.log.info(
                     "The theory code will compute the following products, "
                     "requested by the likelihoods: %r", list(self.theory._needs))
