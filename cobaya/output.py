@@ -28,6 +28,7 @@ from cobaya.log import HandledException, HasLogger
 from cobaya.input import is_equal_info
 from cobaya.mpi import am_single_or_primary_process, get_mpi_comm
 from cobaya.collection import Collection
+from cobaya.tools import deepcopy_where_possible
 
 
 # Regular expressions for plain unsigned integers
@@ -118,7 +119,7 @@ class Output(HasLogger):
         If resuming a sample, checks first that old and new infos are consistent.
         """
         # trim known params of each likelihood: for internal use only
-        full_info_trimmed = deepcopy(full_info)
+        full_info_trimmed = deepcopy_where_possible(full_info)
         for lik_info in full_info_trimmed.get(_likelihood, {}).values():
             if hasattr(lik_info, "pop"):
                 lik_info.pop(_params, None)

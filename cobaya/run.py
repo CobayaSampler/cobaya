@@ -10,7 +10,6 @@ from __future__ import absolute_import
 from __future__ import division
 
 # Global
-from copy import deepcopy
 from collections import OrderedDict as odict
 
 # Local
@@ -27,7 +26,7 @@ from cobaya.log import logger_setup
 from cobaya.yaml import yaml_dump
 from cobaya.input import get_full_info
 from cobaya.mpi import import_MPI, am_single_or_primary_process
-from cobaya.tools import warn_deprecation
+from cobaya.tools import warn_deprecation, deepcopy_where_possible
 from cobaya.post import post
 
 

@@ -11,8 +11,8 @@ from __future__ import division
 
 # Global
 import numpy as np
-from copy import deepcopy
 from collections import namedtuple, OrderedDict as odict
+import logging
 
 # Local
 from cobaya.conventions import _likelihood, _prior, _params, _theory, _timing
@@ -24,9 +24,8 @@ from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection as Likelihood
 from cobaya.log import HandledException, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
+from cobaya.tools import deepcopy_where_possible
 
-# Logger
-import logging
 
 # Log-posterior namedtuple
 logposterior = namedtuple("logposterior", ["logpost", "logpriors", "loglikes", "derived"])
@@ -44,7 +43,7 @@ def get_model(info):
     import getdist
     logger_setup(info.pop(_debug, _debug_default), info.pop(_debug_file, None))
     # Create the full input information, including defaults for each module.
-    info = deepcopy(info)
+    info = deepcopy_where_possible(info)
     ignored_info = {}
     for k in list(info):
         if k not in [_params, _likelihood, _prior, _theory, _path_install, _timing]:
@@ -78,15 +77,15 @@ class Model(HasLogger):
                  modules=None, timing=None, allow_renames=True):
         self.set_logger(lowercase=True)
         self._full_info = {
-            _params: deepcopy(info_params),
-            _likelihood: deepcopy(info_likelihood)}
+            _params: deepcopy_where_possible(info_params),
+            _likelihood: deepcopy_where_possible(info_likelihood)}
         if not self._full_info[_likelihood]:
             self.log.error("No likelihood requested!")
             raise HandledException
         for k, v in ((_prior, info_prior), (_theory, info_theory),
                      (_path_install, modules), (_timing, timing)):
             if v not in (None, {}):
-                self._full_info[k] = deepcopy(v)
+                self._full_info[k] = deepcopy_where_possible(v)
         self.parameterization = Parameterization(
             self._full_info[_params], allow_renames=allow_renames)
         self.prior = Prior(self.parameterization, self._full_info.get(_prior, None))
@@ -98,7 +97,7 @@ class Model(HasLogger):
         """
         Returns a copy of the information used to create the model, including defaults.
         """
-        return deepcopy(self._full_info)
+        return deepcopy_where_possible(self._full_info)
 
     def _to_sampled_array(self, params_values):
         """

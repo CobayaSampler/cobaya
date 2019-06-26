@@ -25,7 +25,7 @@ from cobaya.conventions import _params, _prior, _theory, _likelihood, _sampler, 
 from cobaya.conventions import _p_label, _p_derived, _p_ref, _p_drop, _p_value, _p_renames
 from cobaya.conventions import _p_proposal, _input_params, _output_params
 from cobaya.tools import get_folder, recursive_update, recursive_odict_to_dict
-from cobaya.tools import fuzzy_match
+from cobaya.tools import fuzzy_match, deepcopy_where_possible
 from cobaya.yaml import yaml_load_file
 from cobaya.log import HandledException
 from cobaya.parameterization import expand_info_param
@@ -113,7 +113,7 @@ def get_full_info(info):
     with the input info.
     """
     # Don't modify the original input!
-    input_info = deepcopy(info)
+    input_info = deepcopy_where_possible(info)
     # Creates an equivalent info using only the defaults
     full_info = odict()
     default_params_info = odict()
