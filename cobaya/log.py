@@ -130,3 +130,6 @@ class HasLogger(object):
     def __getstate__(self):
         return deepcopy(self).__dict__
 
+    def __setstate__(self, d):
+        self.__dict__ = d
+        self.set_logger()

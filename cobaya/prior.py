@@ -377,12 +377,12 @@ class Prior(HasLogger):
                              "This will fail for non-mock samplers.")
         # pdf: a list of independent components
         # in principle, separable: one per parameter
-        self.name = []
+        self.params = []
         self.pdf = []
         self.ref_pdf = []
         self._bounds = np.zeros((len(sampled_params_info), 2))
         for i, p in enumerate(sampled_params_info):
-            self.name += [p]
+            self.params += [p]
             prior = sampled_params_info[p].get(_prior)
             self.pdf += [get_scipy_1d_pdf({p: prior})]
             fast_logpdf = fast_logpdfs.get(self.pdf[-1].dist.name)
