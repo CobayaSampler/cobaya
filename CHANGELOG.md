@@ -1,3 +1,10 @@
+## 2.0  – 2019-07-XX
+
+### I/O
+
+- Naming conventions for output files changed! ``*.updated.yaml`` instead of ``*.full.yaml`` for updated info, `*.[#].txt` instead of ``_[#].txt`` for chains, etc (see docs).
+
+
 ## 1.2.0  – 2019-06-18
 
 ### General
