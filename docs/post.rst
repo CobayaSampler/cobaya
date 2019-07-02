@@ -18,7 +18,7 @@ The `post` module provides a way to post-process an existing sample in different
 
 The requested operations are detailed in a ``post`` block, which may contain one ``add`` and one ``remove`` sub-block. Under ``add``, *using standard input syntaxis*, specify what you want to add duting preprocessing, and under ``remove`` what you would like to remove (no options necessary for removed stuff: just a mention). To force an update of a prior/likelihood/derived-parameter, include it both under ``remove`` and ``add``, with the new options, if needed insinde ``add``.
 
-The input sample is specified via the ``output`` option with the same value as the original sample. Cobaya will look for it and check that it is compatible with the requested operations. If multiple samples are found (e.g. from an MPI run), all of them are loaded and concatenated. The resulting sample will have a suffix ``_post_[your_suffix]``, where ``[your_suffix]`` is specified with the ``suffix`` option of ``post`` (you can also change the original prefix by setting ``output: [new prefix]`` inside ``post``.
+The input sample is specified via the ``output`` option with the same value as the original sample. Cobaya will look for it and check that it is compatible with the requested operations. If multiple samples are found (e.g. from an MPI run), all of them are loaded and concatenated. The resulting sample will have a suffix ``.post.[your_suffix]``, where ``[your_suffix]`` is specified with the ``suffix`` option of ``post`` (you can also change the original prefix by setting ``output: [new prefix]`` inside ``post``.
 
 .. note::
 

@@ -9,8 +9,13 @@ from flaky import flaky
 from cobaya.run import run
 from cobaya.post import post
 from cobaya.tools import KL_norm
+from cobaya.conventions import _output_prefix, _params, _force, _likelihood, _sampler
+from cobaya.conventions import _prior, _p_dist, _p_proposal, _p_derived, _separator_files
+from cobaya.conventions import _post, _post_add, _post_remove, _post_suffix
 from getdist.mcsamples import loadMCSamples
 
+
+_post_ = _separator_files + _post + _separator_files
 
 mean = np.array([0,0])
 sigma = 0.5
@@ -25,11 +30,11 @@ def target_pdf(a, b, c=0, _derived=["cprime"]):
     return multivariate_normal.logpdf([a, b], mean=target["mean"], cov=target["cov"])
 
 range = {"min": -2, "max": 2}
-ref_pdf = {"dist": "norm", "loc": 0, "scale": 0.1}
+ref_pdf = {_p_dist: "norm", "loc": 0, "scale": 0.1}
 info_params = odict([
-    ["a", {"prior": range, "ref": ref_pdf, "proposal": sigma}],
-    ["b", {"prior": range, "ref": ref_pdf, "proposal": sigma}],
-    ["a_plus_b", {"derived": lambda a, b: a + b}]])
+    ["a", {"prior": range, "ref": ref_pdf, _p_proposal: sigma}],
+    ["b", {"prior": range, "ref": ref_pdf, _p_proposal: sigma}],
+    ["a_plus_b", {_p_derived: lambda a, b: a + b}]])
 
 info_sampler = {"mcmc": {"Rminus1_stop": 0.01}}
 info_sampler_dummy = {"evaluate": {"N": 10}}
@@ -38,18 +43,19 @@ info_sampler_dummy = {"evaluate": {"N": 10}}
 def test_post_prior(tmpdir):
     # Generate original chain
     info = {
-        "output": os.path.join(str(tmpdir), "gaussian"), "force": True,
-        "params": info_params, "sampler": info_sampler,
-        "likelihood": {"one": None}, "prior": {"gaussian": sampled_pdf}}
+        _output_prefix: os.path.join(str(tmpdir), "gaussian"), _force: True,
+        _params: info_params, _sampler: info_sampler,
+        _likelihood: {"one": None}, _prior: {"gaussian": sampled_pdf}}
     run(info)
     info_post = {
-        "output": info["output"], "force": True,
-        "post": {"suffix": "foo",
-                 "remove": {"prior": {"gaussian": None}},
-                 "add": {"prior": {"target": target_pdf}}}}
+        _output_prefix: info[_output_prefix], _force: True,
+        _post: {_post_suffix: "foo",
+                _post_remove: {_prior: {"gaussian": None}},
+                _post_add: {_prior: {"target": target_pdf}}}}
     post(info_post)
     # Load with GetDist and compare
-    mcsamples = loadMCSamples(info_post["output"] + "_post_" + info_post["post"]["suffix"])
+    mcsamples = loadMCSamples(
+        info_post[_output_prefix] + _post_ + info_post[_post][_post_suffix])
     new_mean = mcsamples.mean(["a", "b"])
     new_cov = mcsamples.getCovMat().matrix
     assert abs(KL_norm(target["mean"], target["cov"], new_mean, new_cov)) < 0.02
@@ -59,18 +65,19 @@ def test_post_prior(tmpdir):
 def test_post_likelihood(tmpdir):
     # Generate original chain
     info = {
-        "output": os.path.join(str(tmpdir), "gaussian"),  "force": True,
-        "params": info_params, "sampler": info_sampler,
-        "likelihood": {"gaussian": sampled_pdf}}
+        _output_prefix: os.path.join(str(tmpdir), "gaussian"),  _force: True,
+        _params: info_params, _sampler: info_sampler,
+        _likelihood: {"gaussian": sampled_pdf}}
     run(info)
     info_post = {
-        "output": info["output"], "force": True,
-        "post": {"suffix": "foo",
-                 "remove": {"likelihood": {"gaussian": None}},
-                 "add": {"likelihood": {"target": target_pdf}}}}
+        _output_prefix: info[_output_prefix], _force: True,
+        _post: {_post_suffix: "foo",
+                _post_remove: {_likelihood: {"gaussian": None}},
+                _post_add: {_likelihood: {"target": target_pdf}}}}
     post(info_post)
     # Load with GetDist and compare
-    mcsamples = loadMCSamples(info_post["output"] + "_post_" + info_post["post"]["suffix"])
+    mcsamples = loadMCSamples(
+        info_post[_output_prefix] + _post_ + info_post[_post][_post_suffix])
     new_mean = mcsamples.mean(["a", "b"])
     new_cov = mcsamples.getCovMat().matrix
     assert abs(KL_norm(target["mean"], target["cov"], new_mean, new_cov)) < 0.02
@@ -83,18 +90,18 @@ def test_post_params():
     # - added new fixed input "c" + new derived-from-external-function "cprime"
     # Generate original chain
     info = {
-        "params": info_params, "sampler": info_sampler_dummy,
-        "likelihood": {"gaussian": sampled_pdf}}
+        _params: info_params, _sampler: info_sampler_dummy,
+        _likelihood: {"gaussian": sampled_pdf}}
     updated_info_gaussian, products_gaussian = run(info)
     info_post = {
-        "post": {"suffix": "foo",
-                 "remove": {"params": {"a_plus_b": None}},
-                 "add": {
-                     "likelihood": {"target": target_pdf},
-                     "params": {
+        _post: {_post_suffix: "foo",
+                _post_remove: {_params: {"a_plus_b": None}},
+                _post_add: {
+                     _likelihood: {"target": target_pdf},
+                     _params: {
                          "c": 1.234,
-                         "a_minus_b": {"derived": "lambda a,b: a-b"},
-                         "my_chi2__target": {"derived": "lambda chi2__target: chi2__target"},
+                         "a_minus_b": {_p_derived: "lambda a,b: a-b"},
+                         "my_chi2__target": {_p_derived: "lambda chi2__target: chi2__target"},
                          "cprime": None}}}}
     info_post.update(updated_info_gaussian)
     updated_info, products = post(info_post, products_gaussian["sample"])
@@ -102,7 +109,7 @@ def test_post_params():
     assert np.allclose(
         products["sample"]["a"] - products["sample"]["b"], products["sample"]["a_minus_b"])
     assert np.allclose(
-        products["sample"]["cprime"], info_post["post"]["add"]["params"]["c"])
+        products["sample"]["cprime"], info_post[_post][_post_add][_params]["c"])
     assert np.allclose(
         products["sample"]["my_chi2__target"], products["sample"]["chi2__target"])
 

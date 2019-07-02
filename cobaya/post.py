@@ -23,6 +23,7 @@ from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_pref
 from cobaya.conventions import _params, _prior, _likelihood, _theory, _p_drop, _weight
 from cobaya.conventions import _chi2, _separator, _minuslogpost, _force, _p_value, _p_drop
 from cobaya.conventions import _minuslogprior, _path_install, _input_params
+from cobaya.conventions import _separator_files, _post_add, _post_remove, _post_suffix
 from cobaya.collection import Collection
 from cobaya.log import logger_setup, HandledException
 from cobaya.input import update_info
@@ -84,8 +85,8 @@ def post(info, sample=None):
                   "or skipping or thinning less.")
         raise HandledException
     # 2. Compare old and new info: determine what to do
-    add = info_post.get("add", {}) or {}
-    remove = info_post.get("remove", {})
+    add = info_post.get(_post_add, {}) or {}
+    remove = info_post.get(_post_remove, {})
     # Add a dummy 'one' likelihood, to absorb unused parameters
     if not add.get(_likelihood):
         add[_likelihood] = odict()
@@ -159,7 +160,7 @@ def post(info, sample=None):
         out[level] = getattr(dummy_model_in, level)
         if level == _prior:
             out[level].remove(_prior_1d_name)
-        for pdf in info_post.get("remove", {}).get(level, []) or []:
+        for pdf in info_post.get(_post_remove, {}).get(level, []) or []:
             try:
                 out[level].remove(pdf)
                 warn_remove = True
@@ -205,20 +206,20 @@ def post(info, sample=None):
                           level, x_i)
                 raise HandledException
     # 3. Create output collection
-    if "suffix" not in info_post:
-        log.error("You need to provide a 'suffix' for your chains.")
+    if _post_suffix not in info_post:
+        log.error("You need to provide a '%s' for your chains.", _post_suffix)
         raise HandledException
     # Use default prefix if it exists. If it does not, produce no output by default.
     # {post: {output: None}} suppresses output, and if it's a string, updates it.
     out_prefix = info_post.get(_output_prefix, info.get(_output_prefix))
     if out_prefix not in [None, False]:
-        out_prefix += "_" + _post + "_" + info_post["suffix"]
+        out_prefix += _separator_files + _post + _separator_files + info_post[_post_suffix]
     output_out = Output(output_prefix=out_prefix, force_output=info.get(_force))
     info_out = deepcopy(info)
     info_out[_post] = info_post
     # Updated with input info and extended (updated) add info
     info_out.update(info_in)
-    info_out[_post]["add"] = add
+    info_out[_post][_post_add] = add
     dummy_model_out = DummyModel(
         out[_params], out[_likelihood], info_prior=out[_prior])
     if recompute_theory:
@@ -239,7 +240,7 @@ def post(info, sample=None):
     likelihood_add = Likelihood(
         add[_likelihood], parameterization_like,
         info_theory=info_theory_out, modules=info.get(_path_install))
-    # Remove auxiliary "one" before dumping -- 'add' *is* info_out[_post]["add"]
+    # Remove auxiliary "one" before dumping -- 'add' *is* info_out[_post][_post_add]
     add[_likelihood].pop("one")
     if likelihood_add.theory:
         # Make sure that theory.needs is called at least once, for adjustments
