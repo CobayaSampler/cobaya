@@ -107,7 +107,7 @@ def get_default_info(module, kind):
     return default_module_info
 
 
-def get_full_info(info):
+def update_info(info):
     """
     Creates an updated info starting from the defaults for each module and updating it
     with the input info.
@@ -115,19 +115,20 @@ def get_full_info(info):
     # Don't modify the original input!
     input_info = deepcopy_where_possible(info)
     # Creates an equivalent info using only the defaults
-    full_info = odict()
+    updated_info = odict()
     default_params_info = odict()
     default_prior_info = odict()
     modules = get_modules(input_info)
     for block in modules:
-        full_info[block] = odict()
+        updated_info[block] = odict()
         for module in modules[block]:
             # Start with the default class options
-            full_info[block][module] = deepcopy(getattr(
-                import_module(_package + "." + block, package=_package), "class_options", {}))
+            updated_info[block][module] = deepcopy(getattr(
+                import_module(_package + "." + block, package=_package),
+                "class_options", {}))
             # Go on with defaults
             default_module_info = get_default_info(module, block)
-            full_info[block][module].update(default_module_info[block][module] or {})
+            updated_info[block][module].update(default_module_info[block][module] or {})
             # Update the options with the input file
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
             # First deal with cases "no options" and "external function"
@@ -142,10 +143,11 @@ def get_full_info(info):
             ignore = set([_external, _p_renames, _input_params, _output_params])
             options_not_recognized = (set(input_info[block][module])
                                       .difference(ignore)
-                                      .difference(set(full_info[block][module])))
+                                      .difference(set(updated_info[block][module])))
             if options_not_recognized:
                 alternatives = odict()
-                available = set([_external, _p_renames]).union(full_info[block][module])
+                available = (
+                    set([_external, _p_renames]).union(updated_info[block][module]))
                 while options_not_recognized:
                     option = options_not_recognized.pop()
                     alternatives[option] = fuzzy_match(option, available, n=3)
@@ -165,45 +167,46 @@ def get_full_info(info):
                               "Check the documentation for 'external %s'.",
                               block, module, did_you_mean, block)
                     raise HandledException
-            full_info[block][module].update(input_info[block][module])
+            updated_info[block][module].update(input_info[block][module])
             # Store default parameters and priors of class, and save to combine later
             if block == _likelihood:
                 params_info = default_module_info.get(_params, {})
-                full_info[block][module].update({_params: list(params_info)})
+                updated_info[block][module].update({_params: list(params_info)})
                 default_params_info[module] = params_info
                 default_prior_info[module] = default_module_info.get(_prior, {})
     # Add priors info, after the necessary checks
     if _prior in input_info or any(default_prior_info.values()):
-        full_info[_prior] = input_info.get(_prior, odict())
+        updated_info[_prior] = input_info.get(_prior, odict())
     for prior_info in default_prior_info.values():
         for name, prior in prior_info.items():
-            if full_info[_prior].get(name, prior) != prior:
+            if updated_info[_prior].get(name, prior) != prior:
                 log.error("Two different priors cannot have the same name: '%s'.", name)
                 raise HandledException
-            full_info[_prior][name] = prior
+            updated_info[_prior][name] = prior
     # Add parameters info, after the necessary updates and checks
     defaults_merged = merge_default_params_info(default_params_info)
-    full_info[_params] = merge_params_info(defaults_merged, input_info.get(_params, {}))
+    updated_info[_params] = merge_params_info(
+        defaults_merged, input_info.get(_params, {}))
     # Add aliases for theory params (after merging!)
-    if _theory in full_info:
-        renames = list(full_info[_theory].values())[0].get(_p_renames)
+    if _theory in updated_info:
+        renames = list(updated_info[_theory].values())[0].get(_p_renames)
         str_to_list = lambda x: ([x] if isinstance(x, string_types) else x)
         renames_flat = [set([k] + str_to_list(v)) for k, v in (renames or {}).items()]
-        for p in full_info.get(_params, {}):
+        for p in updated_info.get(_params, {}):
             # Probably could be made faster by inverting the renames dicts *just once*
             renames_pairs = [a for a in renames_flat if p in a]
             if renames_pairs:
                 this_renames = reduce(
                     lambda x, y: x.union(y), [a for a in renames_flat if p in a])
-                full_info[_params][p][_p_renames] = list(
+                updated_info[_params][p][_p_renames] = list(
                     set(this_renames).union(set(
-                        str_to_list(full_info[_params][p].get(_p_renames, []))))
+                        str_to_list(updated_info[_params][p].get(_p_renames, []))))
                         .difference(set([p])))
     # Rest of the options
     for k, v in input_info.items():
-        if k not in full_info:
-            full_info[k] = v
-    return full_info
+        if k not in updated_info:
+            updated_info[k] = v
+    return updated_info
 
 
 def merge_default_params_info(defaults):
@@ -342,8 +345,9 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
             # Internal order DOES matter, but just up to 1st level
             f = list if strict else set
             if f(block1) != f(block2):
-                myprint(myname + ": different [%s] or different order of them: %r vs %r" % (
-                    block_name, list(block1), list(block2)))
+                myprint(
+                    myname + ": different [%s] or different order of them: %r vs %r" % (
+                        block_name, list(block1), list(block2)))
                 return False
             for k in block1:
                 block1k, block2k = deepcopy(block1[k]), deepcopy(block2[k])

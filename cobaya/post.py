@@ -25,7 +25,7 @@ from cobaya.conventions import _chi2, _separator, _minuslogpost, _force, _p_valu
 from cobaya.conventions import _minuslogprior, _path_install, _input_params
 from cobaya.collection import Collection
 from cobaya.log import logger_setup, HandledException
-from cobaya.input import get_full_info
+from cobaya.input import update_info
 from cobaya.output import get_Output as Output
 from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection as Likelihood
@@ -58,7 +58,7 @@ def post(info, sample=None):
         return
     # 1. Load existing sample
     output_in = Output(output_prefix=info.get(_output_prefix), resume=True)
-    info_in = load_input(output_in.file_full) if output_in else deepcopy(info)
+    info_in = load_input(output_in.file_updated) if output_in else deepcopy(info)
     dummy_model_in = DummyModel(info_in[_params], info_in[_likelihood],
                                 info_in.get(_prior, None), info_in.get(_theory, None))
     if output_in:
@@ -91,7 +91,7 @@ def post(info, sample=None):
         add[_likelihood] = odict()
     add[_likelihood].update({"one": None})
     # Expand the "add" info
-    add = get_full_info(add)
+    add = update_info(add)
     # 2.1 Adding/removing derived parameters and changes in priors of sampled parameters
     out = {_params: deepcopy(info_in[_params])}
     for p in remove.get(_params, {}):
@@ -146,7 +146,7 @@ def post(info, sample=None):
     # For the likelihood only, turn the rest of *derived* parameters into constants,
     # so that the likelihoods do not try to compute them)
     # But be careful to exclude *input* params that have a "derived: True" value
-    # (which in "full info" turns into "derived: 'lambda [x]: [x]'")
+    # (which in "updated info" turns into "derived: 'lambda [x]: [x]'")
     out_params_like = deepcopy(out[_params])
     for p, pinfo in out_params_like.items():
         if ((is_derived_param(pinfo) and not(_p_value in pinfo)
@@ -216,7 +216,7 @@ def post(info, sample=None):
     output_out = Output(output_prefix=out_prefix, force_output=info.get(_force))
     info_out = deepcopy(info)
     info_out[_post] = info_post
-    # Updated with input info and extended (full) add info
+    # Updated with input info and extended (updated) add info
     info_out.update(info_in)
     info_out[_post]["add"] = add
     dummy_model_out = DummyModel(
@@ -227,7 +227,7 @@ def post(info, sample=None):
             log.error(
                 "You appear to be post-processing a chain generated with an older "
                 "version of Cobaya. For post-processing to work, please edit the "
-                "'[root]__full.info' file of the original chain to add, inside the "
+                "'[root].updated.yaml' file of the original chain to add, inside the "
                 "theory code block, the list of its input parameters. E.g.\n----\n"
                 "theory:\n  %s:\n    input_params: [param1, param2, ...]\n"
                 "----\nIf you get strange errors later, it is likely that you did not "

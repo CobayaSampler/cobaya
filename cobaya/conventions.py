@@ -42,7 +42,7 @@ _force = "force"
 
 # Separator for different names.
 # Its manual inclusion in a string anywhere else (e.g. a parameter name) is forbidden.
-_separator = "__"
+_separator = "__" #####
 
 # Names for the samples' fields internally and in the output
 _weight = "weight"  # sample weight
@@ -53,7 +53,7 @@ _prior_1d_name = "0"
 
 # Output files
 _input_suffix = "input"
-_full_suffix = "full"
+_updated_suffix = "updated"
 _yaml_extensions = ".yaml", ".yml"
 _checkpoint_extension = ".checkpoint"
 _covmat_extension = ".covmat"

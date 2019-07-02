@@ -18,7 +18,7 @@ import logging
 from cobaya.conventions import _likelihood, _prior, _params, _theory, _timing
 from cobaya.conventions import _path_install, _debug, _debug_default, _debug_file
 from cobaya.conventions import _input_params, _output_params
-from cobaya.input import get_full_info
+from cobaya.input import updated_info
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection as Likelihood
@@ -42,7 +42,7 @@ def get_model(info):
     # Just a dummy import before configuring the logger, until I fix root/individual level
     import getdist
     logger_setup(info.pop(_debug, _debug_default), info.pop(_debug_file, None))
-    # Create the full input information, including defaults for each module.
+    # Create the updated input information, including defaults for each module.
     info = deepcopy_where_possible(info)
     ignored_info = {}
     for k in list(info):
@@ -52,15 +52,15 @@ def get_model(info):
     if ignored_info:
         logging.getLogger(__name__.split(".")[-1]).warn(
             "Ignored blocks/options: %r", list(ignored_info))
-    full_info = get_full_info(info)
+    updated_info = update_info(info)
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
         logging.getLogger(__name__.split(".")[-1]).debug(
             "Input info updated with defaults (dumped to YAML):\n%s",
-            yaml_dump(full_info))
+            yaml_dump(updated_info))
     # Initialize the posterior and the sampler
-    return Model(full_info[_params], full_info[_likelihood], full_info.get(_prior),
-                 full_info.get(_theory), modules=info.get(_path_install),
-                 timing=full_info.get(_timing))
+    return Model(updated_info[_params], updated_info[_likelihood],
+                 updated_info.get(_prior), updated_info.get(_theory),
+                 modules=info.get(_path_install), timing=updated_info.get(_timing))
 
 
 class Model(HasLogger):
@@ -76,28 +76,28 @@ class Model(HasLogger):
     def __init__(self, info_params, info_likelihood, info_prior=None, info_theory=None,
                  modules=None, timing=None, allow_renames=True):
         self.set_logger(lowercase=True)
-        self._full_info = {
+        self._updated_info = {
             _params: deepcopy_where_possible(info_params),
             _likelihood: deepcopy_where_possible(info_likelihood)}
-        if not self._full_info[_likelihood]:
+        if not self._updated_info[_likelihood]:
             self.log.error("No likelihood requested!")
             raise HandledException
         for k, v in ((_prior, info_prior), (_theory, info_theory),
                      (_path_install, modules), (_timing, timing)):
             if v not in (None, {}):
-                self._full_info[k] = deepcopy_where_possible(v)
+                self._updated_info[k] = deepcopy_where_possible(v)
         self.parameterization = Parameterization(
-            self._full_info[_params], allow_renames=allow_renames)
-        self.prior = Prior(self.parameterization, self._full_info.get(_prior, None))
+            self._updated_info[_params], allow_renames=allow_renames)
+        self.prior = Prior(self.parameterization, self._updated_info.get(_prior, None))
         self.likelihood = Likelihood(
-            self._full_info[_likelihood], self.parameterization,
-            self._full_info.get(_theory), modules=modules,timing=timing)
+            self._updated_info[_likelihood], self.parameterization,
+            self._updated_info.get(_theory), modules=modules,timing=timing)
 
     def info(self):
         """
         Returns a copy of the information used to create the model, including defaults.
         """
-        return deepcopy_where_possible(self._full_info)
+        return deepcopy_where_possible(self._updated_info)
 
     def _to_sampled_array(self, params_values):
         """

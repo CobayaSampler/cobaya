@@ -21,8 +21,8 @@ import re
 
 # Local
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
-from cobaya.conventions import _input_suffix, _full_suffix, _separator, _yaml_extensions
-from cobaya.conventions import _resume, _resume_default, _force
+from cobaya.conventions import _input_suffix, _updated_suffix, _separator
+from cobaya.conventions import _resume, _resume_default, _force, _yaml_extensions
 from cobaya.conventions import _likelihood, _params, _sampler
 from cobaya.log import HandledException, HasLogger
 from cobaya.input import is_equal_info
@@ -65,27 +65,27 @@ class Output(HasLogger):
         info_file_prefix = os.path.join(
             self.folder, self.prefix + (_separator if self.prefix else ""))
         self.file_input = info_file_prefix + _input_suffix + _yaml_extensions[0]
-        self.file_full = info_file_prefix + _full_suffix + _yaml_extensions[0]
+        self.file_updated = info_file_prefix + _updated_suffix + _yaml_extensions[0]
         self.resuming = False
-        if os.path.isfile(self.file_full):
+        if os.path.isfile(self.file_updated):
             self.log.info(
                 "Found existing products with the requested ouput prefix: '%s'",
                 output_prefix)
             if self.force_output:
                 self.log.info("Deleting previous chain ('force' was requested).")
-                [os.remove(f) for f in [self.file_input, self.file_full]]
+                [os.remove(f) for f in [self.file_input, self.file_updated]]
             elif resume:
                 # Only in this case we can be sure that we are actually resuming
                 self.resuming = True
                 self.log.info("Let's try to resume/load.")
             else:
-                # If only input and full info dumped, overwrite; else fail
+                # If only input and updated info dumped, overwrite; else fail
                 info_files = [
-                    os.path.basename(f) for f in [self.file_input, self.file_full]]
+                    os.path.basename(f) for f in [self.file_input, self.file_updated]]
                 same_prefix_noinfo = [f for f in os.listdir(self.folder) if
                                       f.startswith(self.prefix) and f not in info_files]
                 if not same_prefix_noinfo:
-                    [os.remove(f) for f in [self.file_input, self.file_full]]
+                    [os.remove(f) for f in [self.file_input, self.file_updated]]
                     self.log.info("Overwritten old failed chain files.")
                 else:
                     self.log.error("Delete the previous sample manually, automatically "
@@ -107,10 +107,10 @@ class Output(HasLogger):
     def is_resuming(self):
         return self.resuming
 
-    def reload_full_info(self):
-        return yaml_load_file(self.file_full)
+    def reload_updated_info(self):
+        return yaml_load_file(self.file_updated)
 
-    def dump_info(self, input_info, full_info, check_compatible=True):
+    def dump_info(self, input_info, updated_info, check_compatible=True):
         """
         Saves the info in the chain folder twice:
            - the input info.
@@ -119,16 +119,16 @@ class Output(HasLogger):
         If resuming a sample, checks first that old and new infos are consistent.
         """
         # trim known params of each likelihood: for internal use only
-        full_info_trimmed = deepcopy_where_possible(full_info)
-        for lik_info in full_info_trimmed.get(_likelihood, {}).values():
+        updated_info_trimmed = deepcopy_where_possible(updated_info)
+        for lik_info in updated_info_trimmed.get(_likelihood, {}).values():
             if hasattr(lik_info, "pop"):
                 lik_info.pop(_params, None)
         if check_compatible:
             try:
                 # We will test the old info agains the dumped+loaded new info.
                 # This is because we can't actually check if python objects do change
-                old_info = self.reload_full_info()
-                new_info = yaml_load(yaml_dump(full_info_trimmed))
+                old_info = self.reload_updated_info()
+                new_info = yaml_load(yaml_dump(updated_info_trimmed))
                 ignore_blocks = []
                 if list(new_info.get(_sampler, [None]))[0] == "minimize":
                     ignore_blocks = [_sampler]
@@ -142,7 +142,7 @@ class Output(HasLogger):
                 pass
         # We write the new one anyway (maybe updated debug, resuming...)
         for f, info in [(self.file_input, input_info),
-                        (self.file_full, full_info_trimmed)]:
+                        (self.file_updated, updated_info_trimmed)]:
             if not info:
                 pass
             with open(f, "w") as f_out:
