@@ -18,7 +18,7 @@ import logging
 from cobaya.conventions import _likelihood, _prior, _params, _theory, _timing
 from cobaya.conventions import _path_install, _debug, _debug_default, _debug_file
 from cobaya.conventions import _input_params, _output_params
-from cobaya.input import updated_info
+from cobaya.input import update_info
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection as Likelihood

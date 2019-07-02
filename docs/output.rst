@@ -26,9 +26,9 @@ Shell call
 
 When called from the shell, **cobaya** generates most commonly the following output files:
 
-- ``[prefix__]input.yaml``: a file with the same content as the input file.
-- ``[prefix__]full.yaml``: a file containing the input information plus the default values used by each module.
-- ``[prefix_][number].txt``: one or more sample files, containing one sample per line, with values separated by spaces. The first line specifies the columns.
+- ``[prefix].input.yaml``: a file with the same content as the input file.
+- ``[prefix].updated.yaml``: a file containing the input information plus the default values used by each module.
+- ``[prefix].[number].txt``: one or more sample files, containing one sample per line, with values separated by spaces. The first line specifies the columns.
 
 .. note::
 

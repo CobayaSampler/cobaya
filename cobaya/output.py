@@ -21,7 +21,7 @@ import re
 
 # Local
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
-from cobaya.conventions import _input_suffix, _updated_suffix, _separator
+from cobaya.conventions import _input_suffix, _updated_suffix, _separator_files
 from cobaya.conventions import _resume, _resume_default, _force, _yaml_extensions
 from cobaya.conventions import _likelihood, _params, _sampler
 from cobaya.log import HandledException, HasLogger
@@ -63,7 +63,7 @@ class Output(HasLogger):
                       self.folder, self.prefix)
         # Prepare file names, and check if chain exists
         info_file_prefix = os.path.join(
-            self.folder, self.prefix + (_separator if self.prefix else ""))
+            self.folder, self.prefix + (_separator_files if self.prefix else ""))
         self.file_input = info_file_prefix + _input_suffix + _yaml_extensions[0]
         self.file_updated = info_file_prefix + _updated_suffix + _yaml_extensions[0]
         self.resuming = False

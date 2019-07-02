@@ -40,9 +40,10 @@ _resume_default = False
 _timing = "timing"
 _force = "force"
 
-# Separator for different names.
-# Its manual inclusion in a string anywhere else (e.g. a parameter name) is forbidden.
-_separator = "__" #####
+# Separator for fields in parameter names and files
+# Its manual inclusion in a string anywhere else (e.g. a parameter name) should be avoided
+_separator = "__"
+_separator_files = "."
 
 # Names for the samples' fields internally and in the output
 _weight = "weight"  # sample weight

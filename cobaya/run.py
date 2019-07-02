@@ -17,8 +17,8 @@ from cobaya import __version__
 from cobaya.conventions import _likelihood, _prior, _params, _theory, _sampler
 from cobaya.conventions import _path_install, _debug, _debug_file, _output_prefix
 from cobaya.conventions import _resume, _timing, _debug_default
-from cobaya.conventions import _yaml_extensions, _separator, _updated_suffix, _resume_default
-from cobaya.conventions import _modules_path_arg, _force, _post
+from cobaya.conventions import _yaml_extensions, _separator_files, _updated_suffix
+from cobaya.conventions import _modules_path_arg, _force, _post, _resume_default
 from cobaya.output import get_Output as Output
 from cobaya.model import Model
 from cobaya.sampler import get_sampler as Sampler
@@ -81,9 +81,9 @@ def run(info):
         keys = ([_likelihood, _theory] if _theory in updated_info else [_likelihood])
         updated_info.update(odict([[k,model.info()[k]] for k in keys]))
         output.dump_info(None, updated_info, check_compatible=False)
-        with (Sampler(updated_info[_sampler], model, output,
-                     resume=updated_info.get(_resume), modules=info.get(_path_install))
-              as sampler:
+        with Sampler(
+                updated_info[_sampler], model, output, resume=updated_info.get(_resume),
+                modules=info.get(_path_install)) as sampler:
             sampler.run()
     # For scripted calls
     return updated_info, sampler.products()
@@ -127,7 +127,7 @@ def run_script():
     else:
         # Passed an existing output_prefix? Try to find the corresponding *.updated.yaml
         updated_file = (given_input +
-                     (_separator if not given_input.endswith(os.sep) else "") +
+                     (_separator_files if not given_input.endswith(os.sep) else "") +
                      _updated_suffix + _yaml_extensions[0])
         try:
             info = load_input(updated_file)

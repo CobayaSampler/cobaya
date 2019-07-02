@@ -6,7 +6,7 @@ from copy import deepcopy
 
 from cobaya.conventions import _theory, _likelihood, _params, _debug, _path_install
 from cobaya.model import get_model
-from cobaya.input import get_full_info
+from cobaya.input import update_info
 from cobaya.cosmo_input import create_input, planck_base_model
 from cobaya.tools import recursive_update
 from .common import process_modules_path
@@ -33,9 +33,9 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
     info[_theory][theo]["use_planck_names"] = True
     info = recursive_update(info, {_likelihood: info_likelihood})
     info[_params].update({p: None for p in best_fit_derived or {}})
-    # We need FULL info, to get the likelihoods nuisance parameters
-    info = get_full_info(info)
-    # Notice that get_full_info adds an aux internal-only _params property to the likes
+    # We need UPDATED info, to get the likelihoods nuisance parameters
+    info = update_info(info)
+    # Notice that update_info adds an aux internal-only _params property to the likes
     for lik in info[_likelihood]:
         info[_likelihood][lik].pop(_params, None)
     info[_path_install] = process_modules_path(modules)
