@@ -85,7 +85,10 @@ def run(info):
                 updated_info[_sampler], model, output, resume=updated_info.get(_resume),
                 modules=info.get(_path_install)) as sampler:
             sampler.run()
-    # For scripted calls
+    # For scripted calls:
+    # Restore the original output_prefix: the script has not changed folder!
+    if _output_prefix in info:
+        updated_info[_output_prefix] = info.get(_output_prefix)
     return updated_info, sampler.products()
 
 
