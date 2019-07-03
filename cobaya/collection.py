@@ -262,7 +262,8 @@ class Collection(HasLogger):
     def _sampled_to_getdist_mcsamples(self, first=None, last=None):
         """
         Basic interface with getdist -- internal use only!
-        (For analysis and plotting use `getdist.mcsamples.loadCobayaSamples`.)
+        (For analysis and plotting use `getdist.mcsamples.MCSamplesFromCobaya
+        <https://getdist.readthedocs.io/en/latest/mcsamples.html#getdist.mcsamples.loadMCSamples>`_.)
         """
         names = list(self.sampled_params)
         # No logging of warnings temporarily, so getdist won't complain unnecessarily

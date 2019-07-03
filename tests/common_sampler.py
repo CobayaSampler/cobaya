@@ -6,7 +6,7 @@ from mpi4py import MPI
 from random import shuffle, choice
 from scipy.stats import multivariate_normal
 from collections import OrderedDict as odict
-from getdist.mcsamples import loadCobayaSamples
+from getdist.mcsamples import MCSamplesFromCobaya
 from time import sleep
 from itertools import chain
 
@@ -65,12 +65,13 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
             ignore_rows = 0.5
         else:
             ignore_rows = 0
-        results = loadCobayaSamples(updated_info, products["sample"],
-                                    ignore_rows=ignore_rows, name_tag="sample")
+        results = MCSamplesFromCobaya(updated_info, products["sample"],
+                                      ignore_rows=ignore_rows, name_tag="sample")
         clusters = None
         if "clusters" in products:
-            clusters = [loadCobayaSamples(updated_info, products["clusters"][i]["sample"],
-                                          name_tag="cluster %d" % (i + 1))
+            clusters = [MCSamplesFromCobaya(
+                updated_info, products["clusters"][i]["sample"],
+                name_tag="cluster %d" % (i + 1))
                         for i in products["clusters"]]
         # Plots!
         try:

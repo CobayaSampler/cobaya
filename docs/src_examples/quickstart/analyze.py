@@ -1,6 +1,6 @@
 # Export the results to GetDist
-from getdist.mcsamples import loadCobayaSamples
-gd_sample = loadCobayaSamples(updated_info, products["sample"])
+from getdist.mcsamples import MCSamplesFromCobaya
+gd_sample = MCSamplesFromCobaya(updated_info, products["sample"])
 # Analyze and plot
 mean = gd_sample.getMeans()[:2]
 covmat = gd_sample.getCovMat().matrix[:2,:2]

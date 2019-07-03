@@ -99,12 +99,12 @@ And let us define the additions and run post-processing:
    updinfo_post, results_post = post(info_post, results["sample"])
 
    # Load with GetDist and plot
-   from getdist.mcsamples import loadCobayaSamples
+   from getdist.mcsamples import MCSamplesFromCobaya
    import getdist.plots as gdplt
    # %matplotlib inline  # if on a jupyter notebook
 
-   gdsamples_gaussian = loadCobayaSamples(updinfo, results["sample"])
-   gdsamples_post = loadCobayaSamples(updinfo_post, results_post["sample"])
+   gdsamples_gaussian = MCSamplesFromCobaya(updinfo, results["sample"])
+   gdsamples_post = MCSamplesFromCobaya(updinfo_post, results_post["sample"])
 
    p = gdplt.getSubplotPlotter(width_inch=6)
    p.plot_2d([gdsamples_gaussian, gdsamples_post], ["x", "y"], filled=True)
