@@ -33,7 +33,7 @@ from cobaya.conventions import _timing, _p_renames, _chi2, _separator
 from cobaya.conventions import _input_params, _output_params
 from cobaya.conventions import _input_params_prefix, _output_params_prefix
 from cobaya.tools import get_class, get_external_function, getargspec
-from cobaya.tools import compare_params_lists
+from cobaya.tools import are_different_params_lists
 from cobaya.log import HandledException, HasLogger
 
 # Logger
@@ -596,7 +596,7 @@ class LikelihoodCollection(HasLogger):
             raise HandledException(
                 "Manual blocking not understood. Check documentation.")
         sampled_params = list(self.sampled_like_dependence)
-        check = compare_params_lists(
+        check = are_different_params_lists(
             list(chain(*blocks)), sampled_params)
         duplicate = check.pop("duplicate_A", None)
         missing = check.pop("B_but_not_A", None)

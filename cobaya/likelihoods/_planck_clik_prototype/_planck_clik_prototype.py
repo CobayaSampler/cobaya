@@ -151,6 +151,7 @@ from cobaya.log import HandledException
 from cobaya.conventions import _path_install, _likelihood
 from cobaya.input import get_default_info
 from cobaya.install import pip_install, download_file
+from cobaya.tools import are_different_params_lists
 
 
 class _planck_clik_prototype(Likelihood):
@@ -209,9 +210,13 @@ class _planck_clik_prototype(Likelihood):
             self.expected_params[i] = 'A_planck'
             self.log.info("Corrected nuisance parameter name A_Planck to A_planck")
         # Check that the parameters are the right ones
-        assert set(self.input_params) == set(self.expected_params), (
-                "Likelihoods parameters do not coincide with the ones clik understands. Have: %s, Expected: %s"
-                % (set(self.input_params), set(self.expected_params)))
+        differences = are_different_params_lists(
+            self.input_params, self.expected_params, name_A="given", name_B="expected")
+        if differences:
+            self.log.error("Configuration error in parameters: %r. "
+                           "If this has happened without you fiddling with the defaults, "
+                           "please open an issue in GitHub.", differences)
+            raise HandledException
         # Placeholder for vector passed to clik
         self.l_maxs = self.clik.get_lmax()
         length = (len(self.l_maxs) if self.lensing else len(self.clik.get_has_cl()))

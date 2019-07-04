@@ -329,7 +329,7 @@ def cov_to_std_and_corr(cov):
     corr = invstd_diag.dot(cov).dot(invstd_diag)
     return std_diag, corr
 
-def compare_params_lists(list_A, list_B):
+def are_different_params_lists(list_A, list_B, name_A="A", name_B="B"):
     """
     Compares two parameter lists, and returns a dict with the following keys
     (only present if applicable):
@@ -337,7 +337,7 @@ def compare_params_lists(list_A, list_B):
       `duplicates_[A|B]`: duplicate elemnts in list 1|2
     """
     result = {}
-    names = ["A", "B"]
+    names = {"A": name_A, "B": name_B}
     # Duplicates
     list_A_copy, list_B_copy = list_A[:], list_B[:]
     for n, l in zip(names, [list_A_copy, list_B_copy]):
@@ -348,7 +348,7 @@ def compare_params_lists(list_A, list_B):
     for n1, n2 in [["A", "B"], ["B", "A"]]:
         missing = sets[n1].difference(sets[n2])
         if missing:
-            result["%s_but_not_%s" % (n1, n2)] = list(missing)
+            result["%s_but_not_%s" % (names[n1], names[n2])] = list(missing)
     return result
 
 
