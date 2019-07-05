@@ -94,7 +94,7 @@ Alternatively, we can load the input from a ``yaml`` file like the one above:
 .. literalinclude:: ./src_examples/quickstart/load_info.py
    :language: python
 
-And ``info``, ``info_from_yaml`` and the file ``gaussian.yaml`` should contain the same information (minus the ``output`` prefix).
+And ``info``, ``info_from_yaml`` and the file ``gaussian.yaml`` should contain the same information (except that we have chosen not to add an ``output`` prefix to ``info``).
 
 Now, let's run the example.
 
@@ -114,6 +114,15 @@ Let's now analyse the chain and get some plots, using the interactive interface 
 Output:
 
 .. literalinclude:: ./src_examples/quickstart/analyze_out.txt
-   :language: python
 
 .. image:: img/example_quickstart_plot.png
+
+Alternatively, if we had chosen to write the output as in the shell case by adding an ``output`` prefix, we could have loaded the chain in GetDist from the hard drive:
+
+.. literalinclude:: ./src_examples/quickstart/analyze_alt.py
+   :language: python
+
+If we are only interested in plotting, we do not even need to generate a GetDist ``MCSamples`` object: we can ask the plotter to load all chains in the given folder, and then just name the corresponding one when plotting:
+
+.. literalinclude:: ./src_examples/quickstart/analyze_alt2.py
+   :language: python
