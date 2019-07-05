@@ -25,8 +25,8 @@ from pkg_resources import parse_version
 from cobaya.log import logger_setup, HandledException
 from cobaya.tools import get_folder, make_header, warn_deprecation
 from cobaya.input import get_modules
-from cobaya.conventions import _package, _code, _data, _likelihood, _external
-from cobaya.conventions import _modules_path_arg, _path_install
+from cobaya.conventions import _package, _code, _data, _likelihood, _external, _force
+from cobaya.conventions import _modules_path_arg, _modules_path_env, _path_install
 
 log = logging.getLogger(__name__.split(".")[-1])
 
@@ -229,11 +229,14 @@ def install_script():
                             help="One or more input files "
                                  "(or simply 'polychord', or 'cosmo' "
                                  "for a basic collection of cosmological modules)")
+        default_modules_path = os.environ.get(_modules_path_env)
         parser.add_argument("-" + _modules_path_arg[0], "--" + _modules_path_arg,
-                            action="store", nargs=1, required=True,
-                            metavar="/install/path",
+                            action="store", nargs=1,
+                            required=not bool(default_modules_path),
+                            metavar="/modules/path", default=[default_modules_path],
                             help="Desired path where to install external modules.")
-        parser.add_argument("-f", "--force", action="store_true", default=False,
+        parser.add_argument("-" + _force[0], "--" + _force, action="store_true",
+                            default=False,
                             help="Force re-installation of apparently installed modules.")
         parser.add_argument("--no-progress-bars", action="store_true", default=False,
                             help="No progress bars shown. Shorter logs (used in Travis).")

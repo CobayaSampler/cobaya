@@ -63,7 +63,8 @@ _checkpoint_extension = ".checkpoint"
 _covmat_extension = ".covmat"
 
 # Installation and container definitions
-_modules_path_arg = "modules"
+_modules_path_arg = _path_install
+_modules_path_env = "COBAYA_MODULES"
 _modules_path = "/modules"
 _code = "code"
 _data = "data"

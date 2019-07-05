@@ -16,9 +16,9 @@ from collections import OrderedDict as odict
 from cobaya import __version__
 from cobaya.conventions import _likelihood, _prior, _params, _theory, _sampler
 from cobaya.conventions import _path_install, _debug, _debug_file, _output_prefix
-from cobaya.conventions import _resume, _timing, _debug_default
+from cobaya.conventions import _resume, _timing, _debug_default, _force, _post
 from cobaya.conventions import _yaml_extensions, _separator_files, _updated_suffix
-from cobaya.conventions import _modules_path_arg, _force, _post, _resume_default
+from cobaya.conventions import _modules_path_arg, _modules_path_env, _resume_default
 from cobaya.output import get_Output as Output
 from cobaya.model import Model
 from cobaya.sampler import get_sampler as Sampler
@@ -101,10 +101,10 @@ def run_script():
     parser.add_argument("input_file", nargs=1, action="store", metavar="input_file.yaml",
                         help="An input file to run.")
     parser.add_argument("-" + _modules_path_arg[0], "--" + _modules_path_arg,
-                        action="store", nargs="+", metavar="/some/path", default=[None],
+                        action="store", nargs=1, metavar="/some/path", default=[None],
                         help="Path where modules were automatically installed.")
     parser.add_argument("-" + _output_prefix[0], "--" + _output_prefix,
-                        action="store", nargs="+", metavar="/some/path", default=[None],
+                        action="store", nargs=1, metavar="/some/path", default=[None],
                         help="Path and prefix for the text output.")
     parser.add_argument("-" + _debug[0], "--" + _debug, action="store_true",
                         help="Produce verbose debug output.")
@@ -142,7 +142,7 @@ def run_script():
         info[_resume] = True
     # solve modules installation path cmd > env > input
     path_cmd = getattr(args, _modules_path_arg)[0]
-    path_env = os.environ.get("COBAYA_MODULES", None)
+    path_env = os.environ.get(_modules_path_env, None)
     path_input = info.get(_path_install)
     info[_path_install] = path_cmd or (path_env or path_input)
     info[_debug] = getattr(args, _debug) or info.get(_debug, _debug_default)

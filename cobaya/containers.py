@@ -27,6 +27,7 @@ from cobaya.input import get_modules, load_input
 from cobaya.yaml import yaml_dump
 from cobaya.install import install
 from cobaya.conventions import _modules_path, _products_path, _code, _data
+from cobaya.conventions import _modules_path_env
 from cobaya.conventions import _requirements_file, _help_file, _modules_path_arg
 from cobaya.tools import warn_deprecation
 
@@ -53,16 +54,17 @@ RUN pip install pytest-xdist matplotlib cython astropy --upgrade
 # Prepare environment and tree for modules -----------------------------------
 ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/lib
 ENV CONTAINED TRUE
-ENV COBAYA_MODULES %s
+ENV %s %s
 ENV COBAYA_PRODUCTS %s
-RUN mkdir $COBAYA_MODULES && \
+RUN mkdir $%s && \
     mkdir $COBAYA_PRODUCTS
 # COBAYA  --------------------------------------------------------------------
 # getdist fork (it will be an automatic requisite in the future)
 RUN pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist --force
-RUN cd $COBAYA_MODULES && git clone https://github.com/JesusTorrado/cobaya.git && \
-    cd $COBAYA_MODULES/cobaya && pip install -e .
-""" % (_modules_path, _products_path)
+RUN cd $%s && git clone https://github.com/JesusTorrado/cobaya.git && \
+    cd $%s/cobaya && pip install -e .
+""" % (_modules_path_env, _modules_path, _products_path,
+       _modules_path_env, _modules_path_env, _modules_path_env)
 
 MPI_URL = {
     "mpich": "https://www.mpich.org/static/downloads/_VER_/mpich-_VER_.tar.gz",
