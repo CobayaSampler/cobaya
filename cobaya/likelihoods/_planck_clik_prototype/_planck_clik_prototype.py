@@ -26,9 +26,11 @@ The Planck 2018 likelihoods defined here are:
 - ``planck_2018_lowl``: low-:math:`\ell` temperature
 - ``planck_2018_lowE``: low-:math:`\ell` E polarization
 - ``planck_2018_plikHM_TT``: high-:math:`\ell` temperature
-- ``planck_2018_plikHM_TTTEEE``: high-:math:`\ell` E polarization
+- ``planck_2018_plikHM_TTTEEE``: high-:math:`\ell` temperature, polarization and cross-correlated
 - ``planck_2018_plikHM_TT_unbinned``, ``planck_2018_plikHM_TTTEEE_unbinned``:
-  unbinned-in-:math:`\ell` versions of the ones above
+  unbinned-in-:math:`\ell` versions of the baseline ones
+- ``planck_2018_plikHM_TT_lite``, ``planck_2018_plikHM_TTTEEE_lite``:
+  foreground-marginalized versions of the baseline ones
 - ``planck_2015_lensing``: lensing temperature+polarisation-based
 - ``planck_2015_lensing_cmblikes``: native version of the ``clik``-based one above,
   more customizable.
@@ -38,9 +40,9 @@ The Planck 2015 likelihoods defined here are:
 - ``planck_2015_lowl``
 - ``planck_2015_lowTEB``
 - ``planck_2015_plikHM_TT``
+- ``planck_2015_plikHM_TT_unbinned``
 - ``planck_2015_plikHM_TTTEEE``
 - ``planck_2015_plikHM_TTTEEE_unbinned``
-- ``planck_2015_plikHM_TT_unbinned``
 - ``planck_2015_lensing``
 - ``planck_2015_lensing_cmblikes``
   (a native non-clik, more customizable version of the previous clik-wrapped one)
@@ -224,10 +226,9 @@ class _planck_clik_prototype(Likelihood):
             self.expected_params[self.expected_params.index("b'A_planck'")] = "A_planck"
         # line added to deal with a bug in planck likelihood release:
         # A_planck called A_Planck in plik_lite
-        if "plikHM_lite" in self.name:
+        if "_lite" in self.name:
             i = self.expected_params.index('A_Planck')
             self.expected_params[i] = 'A_planck'
-            self.log.info("Corrected nuisance parameter name A_Planck to A_planck")
         # Check that the parameters are the right ones
         differences = are_different_params_lists(
             self.input_params, self.expected_params, name_A="given", name_B="expected")
