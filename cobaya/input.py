@@ -17,6 +17,7 @@ from importlib import import_module
 import inspect
 from six import string_types
 from itertools import chain
+import re
 
 # Local
 from cobaya.conventions import _package, _products_path, _path_install, _resume, _force
@@ -89,7 +90,13 @@ def get_modules(*infos):
     return modules
 
 
-def get_default_info(module, kind):
+def get_default_info(module, kind, ignore_re="^_"):
+    """
+    Get default info for a module.
+
+    Use ``ignore_re`` to ignore keys (default: keys starting with ``_``, which are
+    auxiliary keys used for ``!incude`` directives).
+    """
     path_to_defaults = os.path.join(get_folder(module, kind), module + ".yaml")
     try:
         default_module_info = yaml_load_file(path_to_defaults)
@@ -104,6 +111,9 @@ def get_default_info(module, kind):
         log.error("The defaults file for '%s' should be structured "
                   "as %s:%s:{[options]}.", module, kind, module)
         raise HandledException
+    if ignore_re:
+        default_module_info = odict([
+            [k,v] for k,v in default_module_info.items() if not re.match(ignore_re, k)])
     return default_module_info
 
 
