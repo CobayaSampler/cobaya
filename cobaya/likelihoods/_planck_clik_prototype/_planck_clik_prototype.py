@@ -171,12 +171,21 @@ from cobaya.log import HandledException
 from cobaya.conventions import _path_install, _likelihood
 from cobaya.input import get_default_info
 from cobaya.install import pip_install, download_file
-from cobaya.tools import are_different_params_lists
+from cobaya.tools import are_different_params_lists, create_banner
+
+
+_deprecation_msg_2015 = create_banner("""
+The likelihoods from the Planck 2015 data release have been superseeded
+by the 2018 ones, and will eventually be deprecated.
+""")
 
 
 class _planck_clik_prototype(Likelihood):
 
     def initialize(self):
+        if "2015" in self.name:
+            for line in _deprecation_msg_2015.split("\n"):
+                self.log.warning(line)
         code_path = common_path
         data_path = get_data_path(self.name)
         if self.path:
