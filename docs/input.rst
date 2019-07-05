@@ -23,7 +23,7 @@ There are 5 different input blocks (two of them optional), which can be specifie
 
 - ``theory`` (optional): has only one entry, which specifies the theory code with which to compute the observables used by the likelihoods, and options for it.
 
-The modules specified above (i.e. likelihoods, samplers, theories...) can have any number of options, but you don't need to specify all of them every time you use them: if an option is not specified, its **default** value is used. The default values for each module are described in their respective section of the documentation, and in a ``defaults.yaml`` file in the folder of **cobaya** where that module is defined, e.g. ``cobaya/cobaya/likelihoods/gaussian/defaults.yaml`` for the defaults of the ``gaussian`` likelihood.
+The modules specified above (i.e. likelihoods, samplers, theories...) can have any number of options, but you don't need to specify all of them every time you use them: if an option is not specified, its **default** value is used. The default values for each module are described in their respective section of the documentation, and in a ``[likelihood_name].yaml`` file in the folder of **cobaya** where that module is defined, e.g. ``cobaya/cobaya/likelihoods/gaussian/gaussian.yaml`` for the defaults of the ``gaussian`` likelihood.
 
 In addition, there are some *top level* options (i.e. defined outside any block):
 

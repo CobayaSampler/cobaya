@@ -26,12 +26,6 @@ On top of the pre-requisites of **cobaya**, you will need some others, which are
 
 You will need an internet connection with a decent bandwidth (don't use your phone's): you may need to download several gigabytes!
 
-.. warning::
-
-   Unfortunately, ``planck_2015_lowTEB`` does not work with ``gcc`` version 5 or higher,
-   and none of Planck's 2015 likelihoods work with Python 3. Also, ``planck_2015_lowTEB``
-   and cannot be instantiated more than once.
-
 
 .. _install_auto_and_directory_structure:
 
@@ -51,6 +45,13 @@ When you have prepared the relevant input files, call the automatic installation
 .. code:: bash
 
    $ cobaya-install input_1.yaml input_2.yaml [etc] --modules /path/to/modules
+
+Alternatively, you can specify the modules path using the ``COBAYA_MODULES`` environment variable: the example above is equivalent to
+
+.. code:: bash
+
+   $ export COBAYA_MODULES=/path/to/modules
+   $ cobaya-install input_1.yaml input_2.yaml [etc]
 
 .. note::
 
@@ -74,13 +75,13 @@ Within ``/path/to/modules``, the following file structure will be created, conta
 
    /path/to/modules
             ├── code
-            │   ├── planck_2015
+            │   ├── planck
             │   ├── CAMB
             │   ├── classy
             │   ├── PolyChord
             │   └── [...]
             └── data
-                ├── planck_2015
+                ├── planck_2018
                 ├── bicep_keck_2015
                 └── [...]
 
@@ -95,7 +96,7 @@ Take note of that folder in your case, here ``/path/to/modules``, and include it
 
    modules: /path/to/modules
 
-or specify it using the flat ``--modules /path/to/modules`` (or ``-m``) when invoking from the shell. The command line specification takes precedence over the input file one.
+Alternatively, you can specify the modules path using the argument ``--modules /path/to/modules`` (or ``-m``) when invoking from the shell, or defining a ``COBAYA_MODULES`` environment variable; the order of preference goes from most to least explicit: shell argument :math:`>` input file :math:`>` environment variable.
 
 
 .. _install_manual:
