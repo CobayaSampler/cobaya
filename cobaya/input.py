@@ -181,7 +181,7 @@ def update_info(info):
             # Store default parameters and priors of class, and save to combine later
             if block == _likelihood:
                 params_info = default_module_info.get(_params, {})
-                updated_info[block][module].update({_params: list(params_info)})
+                updated_info[block][module].update({_params: list(params_info or [])})
                 default_params_info[module] = params_info
                 default_prior_info[module] = default_module_info.get(_prior, {})
     # Add priors info, after the necessary checks
@@ -226,7 +226,7 @@ def merge_default_params_info(defaults):
     """
     defaults_merged = odict()
     for lik, params in defaults.items():
-        for p, info in params.items():
+        for p, info in (params or {}).items():
             # if already there, check consistency
             if p in defaults_merged:
                 log.debug("Parameter '%s' multiply defined.", p)
