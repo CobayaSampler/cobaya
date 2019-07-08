@@ -45,6 +45,7 @@ params:
 """
 
 from cobaya.yaml import yaml_load
+
 info = yaml_load(info_txt)
 
 # Add your modules installation folder

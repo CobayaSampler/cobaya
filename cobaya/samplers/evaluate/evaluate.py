@@ -47,7 +47,7 @@ class evaluate(Sampler):
         """
         for i in range(self.N):
             if self.N > 1:
-                self.log.info("Evaluating sample #%d ------------------------------", i+1)
+                self.log.info("Evaluating sample #%d ------------------------------", i + 1)
             self.log.info("Looking for a reference point with non-zero prior.")
             reference_point = self.model.prior.reference()
             reference_point = odict(

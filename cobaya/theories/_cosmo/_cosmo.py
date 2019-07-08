@@ -57,7 +57,7 @@ class _cosmo(Theory):
             self._needs = dict([[p, None] for p in self.output_params])
         # TO BE DEPRECATED IN >=1.3
         for product, capitalization in {
-                "cl": "Cl", "pk_interpolator": "Pk_interpolator"}.items():
+            "cl": "Cl", "pk_interpolator": "Pk_interpolator"}.items():
             if product in requirements:
                 self.log.error("You requested product '%s', which from now on should be "
                                "capitalized as '%s'.", product, capitalization)
@@ -78,7 +78,7 @@ class _cosmo(Theory):
                         vars_pairs = [vars_pairs]
                 except IndexError:
                     # Empty list: by default [delta_tot, delta_tot]
-                    vars_pairs = [2*["delta_tot"]]
+                    vars_pairs = [2 * ["delta_tot"]]
                 except:
                     self.log("Cannot understands vars_pairs '%r' for P(k) interpolator",
                              vars_pairs)
@@ -112,7 +112,7 @@ class _cosmo(Theory):
                             raise HandledException
                 self._needs[k].update(v)
             elif k in ["H", "angular_diameter_distance",
-                               "comoving_radial_distance", "fsigma8"]:
+                       "comoving_radial_distance", "fsigma8"]:
                 if k not in self._needs:
                     self._needs[k] = {}
                 self._needs[k]["z"] = np.unique(np.concatenate(
@@ -239,7 +239,7 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
     def __init__(self, z, k, P_or_logP, extrap_kmax=None, logk=False, logP=False):
         self.logk, self.logP = logk, logP
         #  Check order
-        z, k = [np.atleast_1d(x) for x in [z,k]]
+        z, k = [np.atleast_1d(x) for x in [z, k]]
         i_z = np.argsort(z)
         i_k = np.argsort(k)
         self.z, self.k, P_or_logP = z[i_z], k[i_k], P_or_logP[i_z, :][:, i_k]
@@ -253,9 +253,9 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
             logPnew = np.empty((P_or_logP.shape[0], P_or_logP.shape[1] + 1))
             logPnew[:, :-1] = P_or_logP if self.logP else np.log(P_or_logP)
             logPnew[:, -1] = (
-                logPnew[:, -2] +
-                (logPnew[:, -2] - logPnew[:, -3]) / (logknew[-2] - logknew[-3]) *
-                (logknew[-1] - logknew[-2]))
+                    logPnew[:, -2] +
+                    (logPnew[:, -2] - logPnew[:, -3]) / (logknew[-2] - logknew[-3]) *
+                    (logknew[-1] - logknew[-2]))
             self.k, P_or_logP = np.exp(logknew), logPnew if self.logP else np.exp(logPnew)
         super(self.__class__, self).__init__(self.z, self._fk(self.k), P_or_logP)
 

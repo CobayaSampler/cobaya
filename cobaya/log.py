@@ -43,7 +43,7 @@ def exception_handler(exception_type, value, trace_back):
     _logger_name = "exception handler"
     log = logging.getLogger(_logger_name)
     line = "-------------------------------------------------------------\n"
-    log.critical(line[len(_logger_name)+5:] + "\n" +
+    log.critical(line[len(_logger_name) + 5:] + "\n" +
                  "".join(traceback.format_exception(exception_type, value, trace_back)) +
                  line)
     if exception_type == KeyboardInterrupt:
@@ -56,7 +56,7 @@ def exception_handler(exception_type, value, trace_back):
             "If you cannot solve it yourself and need to report it, "
             "include the debug output,\n"
             "which you can send it to a file setting '%s:[some_file_name]'.",
-        _debug, _debug_file)
+            _debug, _debug_file)
     # Exit all MPI processes
     safe_exit()
 
@@ -116,6 +116,7 @@ class HasLogger(object):
 
     Has magic methods to ignore the logger at (de)serialization.
     """
+
     def set_logger(self, lowercase=True):
         self.log = logging.getLogger(
             (lambda x: x.lower() if lowercase else x)(
@@ -124,7 +125,7 @@ class HasLogger(object):
     # Copying and pickling
     def __deepcopy__(self, memo={}):
         new = (lambda cls: cls.__new__(cls))(self.__class__)
-        new.__dict__  = {k: deepcopy(v) for k, v in self.__dict__.items() if k != "log"}
+        new.__dict__ = {k: deepcopy(v) for k, v in self.__dict__.items() if k != "log"}
         return new
 
     def __getstate__(self):

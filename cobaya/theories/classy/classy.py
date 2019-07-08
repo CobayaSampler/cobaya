@@ -151,7 +151,6 @@ from cobaya.install import download_github_release, pip_install
 from cobaya.conventions import _c_km_s, _T_CMB_K
 from cobaya.tools import deepcopy_where_possible
 
-
 # Result collector
 collector = namedtuple("collector",
                        ["method", "args", "args_names", "kwargs", "arg_array", "post"])

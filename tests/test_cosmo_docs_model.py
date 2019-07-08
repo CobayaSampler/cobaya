@@ -13,7 +13,6 @@ from six import StringIO
 from cobaya.conventions import _path_install
 from .common import process_modules_path, stdout_redirector
 
-
 tests_folder = os.path.dirname(os.path.realpath(__file__))
 docs_folder = os.path.join(tests_folder, "..", "docs")
 docs_src_folder = os.path.join(docs_folder, "src_examples", "cosmo_model")
@@ -55,17 +54,17 @@ def test_cosmo_docs_model_classy(modules):
             try:
                 exec(open(os.path.join(docs_src_folder, filename)).read(), globals_example)
             except:
-                assert False, "File %s failed."%filename
-#        if test_figs:
-#            # Compare plots
-#            pre = "cosmo_model_"
-#            for filename, imgname in zip(["4.py", "5.py"], ["cltt.png", "omegacdm.png"]):
-#                exec(open(os.path.join(docs_src_folder, filename)).read(), globals_example)
-#                old_img = imread(os.path.join(docs_img_folder, pre + imgname)).astype(float)
-#                new_img = imread(imgname).astype(float)
-#                npixels = (lambda x: x.shape[0] + x.shape[1])(old_img)
-#                assert np.count_nonzero(old_img == new_img) / (4 * npixels) >= pixel_tolerance, (
-#                        "Images '%s' are too different!" % imgname)
-#        # Back to the working directory of the tests, just in case, and restart the rng
+                assert False, "File %s failed." % filename
+    #        if test_figs:
+    #            # Compare plots
+    #            pre = "cosmo_model_"
+    #            for filename, imgname in zip(["4.py", "5.py"], ["cltt.png", "omegacdm.png"]):
+    #                exec(open(os.path.join(docs_src_folder, filename)).read(), globals_example)
+    #                old_img = imread(os.path.join(docs_img_folder, pre + imgname)).astype(float)
+    #                new_img = imread(imgname).astype(float)
+    #                npixels = (lambda x: x.shape[0] + x.shape[1])(old_img)
+    #                assert np.count_nonzero(old_img == new_img) / (4 * npixels) >= pixel_tolerance, (
+    #                        "Images '%s' are too different!" % imgname)
+    #        # Back to the working directory of the tests, just in case, and restart the rng
     finally:
         os.chdir(cwd)

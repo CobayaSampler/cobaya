@@ -49,6 +49,7 @@ def check_index(i, imax):
         return imax + i
     return i
 
+
 # Notice that slices are never supposed to raise IndexError, but an empty list at worst!
 def check_slice(ij, imax):
     newlims = {"start": ij.start, "stop": ij.stop}
@@ -245,7 +246,7 @@ class Collection(HasLogger):
         """
         weights = (lambda w: (
             {"fweights": w} if np.allclose(np.round(w), w) else {"aweights": w}))(
-                self[_weight][first:last].values)
+            self[_weight][first:last].values)
         return np.atleast_2d(np.cov(
             self[list(self.sampled_params) +
                  (list(self.derived_params) if derived else [])][first:last].T,
