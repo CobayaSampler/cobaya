@@ -69,7 +69,7 @@ def install(*infos, **kwargs):
                 if kind == _likelihood:
                     info = (next(info for info in infos
                                  if module in info.get(_likelihood, {}))
-                            [_likelihood][module]) or {}
+                    [_likelihood][module]) or {}
                     if isinstance(info, string_types) or _external in info:
                         log.warning("Module '%s' is a custom likelihood. "
                                     "Nothing to do.\n", module)
@@ -156,7 +156,7 @@ def download_github_release(directory, repo_name, release_name, repo_rename=None
                             no_progress_bars=False):
     if "/" in repo_name:
         github_user = repo_name[:repo_name.find("/")]
-        repo_name = repo_name[repo_name.find("/")+1:]
+        repo_name = repo_name[repo_name.find("/") + 1:]
     else:
         github_user = "CobayaSampler"
     if not os.path.exists(directory):

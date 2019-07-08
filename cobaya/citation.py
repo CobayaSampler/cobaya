@@ -38,8 +38,9 @@ def citation(*infos):
     blocks_text = odict([["Cobaya", "[Paper in preparation]"]])
     for kind, modules in get_modules(*infos).items():
         for module in modules:
-            blocks_text["%s:%s"%(kind, module)] = get_citation_info(module, kind)
+            blocks_text["%s:%s" % (kind, module)] = get_citation_info(module, kind)
     return blocks_text
+
 
 def prettyprint_citation(blocks_text):
     txt = ""
@@ -48,6 +49,7 @@ def prettyprint_citation(blocks_text):
             txt += "\n\n"
         txt += make_header(*block.split(":")) + "\n" + text
     return txt.lstrip().rstrip() + "\n"
+
 
 # Command-line script
 def citation_script():

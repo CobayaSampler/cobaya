@@ -177,7 +177,6 @@ from cobaya.install import download_github_release, check_gcc_version
 from cobaya.conventions import _c_km_s, _T_CMB_K
 from cobaya.tools import deepcopy_where_possible
 
-
 # Result collector
 collector = namedtuple("collector", ["method", "args", "kwargs"])
 collector.__new__.__defaults__ = (None, [], {})
@@ -253,8 +252,9 @@ class camb(_cosmo):
         self.limber = False
         self.non_linear_lens = False
         self.non_linear_pk = False
-###     # TODO: This will hopefully be fixed later
-###        self.extra_attrs["Want_CMB"] = False
+
+    ###     # TODO: This will hopefully be fixed later
+    ###        self.extra_attrs["Want_CMB"] = False
 
     def current_state(self):
         lasts = [self.states[i]["last"] for i in range(self.n_states)]
@@ -465,8 +465,7 @@ class camb(_cosmo):
                 return 0
             intermediates = {
                 "CAMBparams": {"result": result},
-                "CAMBdata": {"method": "get_results" if self.needs_perts
-                             else "get_background",
+                "CAMBdata": {"method": "get_results" if self.needs_perts else "get_background",
                              "result": None, "derived_dic": None}}
             # Compute the necessary products (incl. any intermediate result, if needed)
             for product, collector in self.collectors.items():
@@ -659,11 +658,12 @@ class camb(_cosmo):
         cls_dict = dict()
         for term, cl in cls.items():
             term_tuple = tuple(
-                [(lambda x: x if x == "P" else list(self.sources)[int(x)-1])(_.strip("W"))
+                [(lambda x: x if x == "P" else list(self.sources)[int(x) - 1])(_.strip("W"))
                  for _ in term.split("x")])
             cls_dict[term_tuple] = cl
         cls_dict["ell"] = np.arange(cls[list(cls)[0]].shape[0])
         return cls_dict
+
 
 # Installation routines ##################################################################
 

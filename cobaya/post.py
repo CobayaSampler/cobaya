@@ -39,7 +39,6 @@ from cobaya.tools import progress_bar, recursive_update
 class DummyModel(object):
 
     def __init__(self, info_params, info_likelihood, info_prior=None, info_theory=None):
-
         self.parameterization = Parameterization(info_params, ignore_unused_sampled=True)
         self.prior = [_prior_1d_name] + list(info_prior or [])
         self.likelihood = list(info_likelihood)
@@ -123,7 +122,7 @@ def post(info, sample=None):
                     raise HandledException
             if mlprior_names_add[:1] != _prior_1d_name:
                 mlprior_names_add = (
-                    [_minuslogprior + _separator + _prior_1d_name] + mlprior_names_add)
+                        [_minuslogprior + _separator + _prior_1d_name] + mlprior_names_add)
         elif is_derived_param(pinfo):
             if p in out[_params]:
                 log.error("You tried to add derived parameter '%s', which is already "
@@ -150,7 +149,7 @@ def post(info, sample=None):
     # (which in "updated info" turns into "derived: 'lambda [x]: [x]'")
     out_params_like = deepcopy(out[_params])
     for p, pinfo in out_params_like.items():
-        if ((is_derived_param(pinfo) and not(_p_value in pinfo)
+        if ((is_derived_param(pinfo) and not (_p_value in pinfo)
              and p not in add.get(_params, {}))):
             out_params_like[p] = {_p_value: np.nan, _p_drop: True}
     parameterization_like = Parameterization(out_params_like, ignore_unused_sampled=True)
@@ -177,12 +176,12 @@ def post(info, sample=None):
         mlprior_names_add += [_minuslogprior + _separator + name for name in add[_prior]]
         out[_prior] += list(add[_prior])
     prior_recompute_1d = (
-        mlprior_names_add[:1] == [_minuslogprior + _separator + _prior_1d_name])
+            mlprior_names_add[:1] == [_minuslogprior + _separator + _prior_1d_name])
     # Don't initialise the theory code if not adding/recomputing theory,
     # theory-derived params or likelihoods
     recompute_theory = info_in.get(_theory) and not (
-        list(add[_likelihood]) == ["one"] and
-        not any([is_derived_param(pinfo) for pinfo in add.get(_params, {}).values()]))
+            list(add[_likelihood]) == ["one"] and
+            not any([is_derived_param(pinfo) for pinfo in add.get(_params, {}).values()]))
     if recompute_theory:
         # Inherit from the original chain (needs input|output_params, renames, etc
         theory = list(info_in[_theory].keys())[0]
@@ -200,7 +199,7 @@ def post(info, sample=None):
                     "unless explicitly removed+added.")
     for level in [_prior, _likelihood]:
         for i, x_i in enumerate(out[level]):
-            if x_i in list(out[level])[i+1:]:
+            if x_i in list(out[level])[i + 1:]:
                 log.error("You have added %s '%s', which was already present. If you "
                           "want to force its recomputation, you must also 'remove' it.",
                           level, x_i)

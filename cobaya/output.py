@@ -30,7 +30,6 @@ from cobaya.mpi import am_single_or_primary_process, get_mpi_comm
 from cobaya.collection import Collection
 from cobaya.tools import deepcopy_where_possible
 
-
 # Regular expressions for plain unsigned integers
 re_uint = re.compile("[0-9]+")
 
@@ -162,8 +161,8 @@ class Output(HasLogger):
         """
         if name is None:
             name = (datetime.datetime.now().isoformat()
-                    .replace("T", "").replace(":", "").replace(".", "").replace("-", "")
-                    [:(4+2+2)+(2+2+2+3)])  # up to ms
+                        .replace("T", "").replace(":", "").replace(".", "").replace("-", "")[
+                    :(4 + 2 + 2) + (2 + 2 + 2 + 3)])  # up to ms
         file_name = os.path.join(
             self.folder,
             self.prefix + ("." if self.prefix else "") + (name + "." if name else "") +
@@ -185,9 +184,9 @@ class Output(HasLogger):
         extension = extension or self.ext
         file_names = [
             os.path.join(self.folder, f) for f in os.listdir(self.folder) if (
-                f.startswith(self.prefix) and
-                f.lower().endswith(extension.lower()) and
-                self.is_collection_file_name(f, extension=extension))]
+                    f.startswith(self.prefix) and
+                    f.lower().endswith(extension.lower()) and
+                    self.is_collection_file_name(f, extension=extension))]
         return file_names
 
     def load_collections(self, model, skip=0, thin=1, concatenate=False):

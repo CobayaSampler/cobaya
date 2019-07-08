@@ -72,7 +72,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
             clusters = [MCSamplesFromCobaya(
                 updated_info, products["clusters"][i]["sample"],
                 name_tag="cluster %d" % (i + 1))
-                        for i in products["clusters"]]
+                for i in products["clusters"]]
         # Plots!
         try:
             import getdist.plots as gdplots

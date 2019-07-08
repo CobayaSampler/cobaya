@@ -355,7 +355,6 @@ from cobaya.tools import get_external_function, get_scipy_1d_pdf, read_dnumber
 from cobaya.tools import _fast_uniform_logpdf, _fast_norm_logpdf, getargspec
 from cobaya.log import HandledException, HasLogger
 
-
 # Fast logpdf for uniforms and norms (do not understand nan masks!)
 fast_logpdfs = {"uniform": _fast_uniform_logpdf, "norm": _fast_norm_logpdf}
 
@@ -438,9 +437,9 @@ class Prior(HasLogger):
                         for p in params_without_default]):
                 self.log.error("Some of the arguments of the external prior '%s' cannot "
                                "be found and don't have a default value either: %s",
-                          name, list(set(params_without_default)
-                                     .difference(self.external[name]["params"])
-                                     .difference(self.external[name]["constant_params"])))
+                               name, list(set(params_without_default)
+                                          .difference(self.external[name]["params"])
+                                          .difference(self.external[name]["constant_params"])))
                 raise HandledException
             self.log.warning("External prior '%s' loaded. "
                              "Mind that it might not be normalized!", name)
@@ -521,7 +520,7 @@ class Prior(HasLogger):
         """
         self.log.debug("Evaluating prior at %r", x)
         logps = [
-            sum([pdf.logpdf(xi) for pdf, xi in zip(self.pdf, x)])] + self.logps_external(x)
+                    sum([pdf.logpdf(xi) for pdf, xi in zip(self.pdf, x)])] + self.logps_external(x)
         self.log.debug("Got logpriors = %r", logps)
         return logps
 

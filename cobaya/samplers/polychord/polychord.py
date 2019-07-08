@@ -122,7 +122,7 @@ class polychord(Sampler):
         self.ordering = [
             blocks_flat.index(p) for p in self.model.parameterization.sampled_params()]
         self.grade_dims = np.array([len(block) for block in blocks])
-        self.grade_frac = np.array(speeds)*self.grade_dims  # steps per block
+        self.grade_frac = np.array(speeds) * self.grade_dims  # steps per block
         # bugfix: pypolychord's C interface for Fortran does not like int numpy types
         self.grade_dims = [int(x) for x in self.grade_dims]
         # Assign settings
@@ -302,7 +302,7 @@ class polychord(Sampler):
                         out_evidences["clusters"][i] = odict(
                             [["logZ", self.clusters[i]["logZ"]],
                              ["logZstd", self.clusters[i]["logZstd"]]])
-                fname = os.path.join(self.output.folder, self.output.prefix+".logZ")
+                fname = os.path.join(self.output.folder, self.output.prefix + ".logZ")
                 yaml_dump_file(fname, out_evidences, comment="log-evidence", error_if_exists=False)
         # TODO: try to broadcast the collections
         #        if get_mpi():
@@ -340,7 +340,7 @@ pc_repo_version = "1.16"
 
 def get_path(path):
     return os.path.realpath(
-        os.path.join(path, "code", pc_repo_name[pc_repo_name.find("/")+1:]))
+        os.path.join(path, "code", pc_repo_name[pc_repo_name.find("/") + 1:]))
 
 
 def get_build_path(polychord_path):
@@ -384,7 +384,7 @@ def install(path=None, force=False, code=False, data=False, no_progress_bars=Fal
     from subprocess import Popen, PIPE
     # Needs to re-define os' PWD,
     # because MakeFile calls it and is not affected by the cwd of Popen
-    cwd = os.path.join(path, "code", pc_repo_name[pc_repo_name.find("/")+1:])
+    cwd = os.path.join(path, "code", pc_repo_name[pc_repo_name.find("/") + 1:])
     my_env = os.environ.copy()
     my_env.update({"PWD": cwd})
     process_make = Popen(["make", "pypolychord", "MPI=1"], cwd=cwd, env=my_env,

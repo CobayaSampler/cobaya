@@ -79,7 +79,7 @@ def run(info):
                timing=updated_info.get(_timing), allow_renames=False) as model:
         # Update the updated info with the parameter routes
         keys = ([_likelihood, _theory] if _theory in updated_info else [_likelihood])
-        updated_info.update(odict([[k,model.info()[k]] for k in keys]))
+        updated_info.update(odict([[k, model.info()[k]] for k in keys]))
         output.dump_info(None, updated_info, check_compatible=False)
         with Sampler(
                 updated_info[_sampler], model, output, resume=updated_info.get(_resume),
@@ -130,8 +130,8 @@ def run_script():
     else:
         # Passed an existing output_prefix? Try to find the corresponding *.updated.yaml
         updated_file = (given_input +
-                     (_separator_files if not given_input.endswith(os.sep) else "") +
-                     _updated_suffix + _yaml_extensions[0])
+                        (_separator_files if not given_input.endswith(os.sep) else "") +
+                        _updated_suffix + _yaml_extensions[0])
         try:
             info = load_input(updated_file)
         except IOError:

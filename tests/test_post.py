@@ -14,20 +14,22 @@ from cobaya.conventions import _prior, _p_dist, _p_proposal, _p_derived, _separa
 from cobaya.conventions import _post, _post_add, _post_remove, _post_suffix
 from getdist.mcsamples import loadMCSamples
 
-
 _post_ = _separator_files + _post + _separator_files
 
-mean = np.array([0,0])
+mean = np.array([0, 0])
 sigma = 0.5
-cov = np.array([[sigma**2, 0], [0, sigma**2]])
+cov = np.array([[sigma ** 2, 0], [0, sigma ** 2]])
 sampled = {"mean": mean, "cov": cov}
-target = {"mean": mean + np.array([sigma/2, 0]), "cov": cov}
+target = {"mean": mean + np.array([sigma / 2, 0]), "cov": cov}
 sampled_pdf = lambda a, b: multivariate_normal.logpdf(
     [a, b], mean=sampled["mean"], cov=sampled["cov"])
+
+
 def target_pdf(a, b, c=0, _derived=["cprime"]):
     if _derived == {}:
         _derived["cprime"] = c
     return multivariate_normal.logpdf([a, b], mean=target["mean"], cov=target["cov"])
+
 
 range = {"min": -2, "max": 2}
 ref_pdf = {_p_dist: "norm", "loc": 0, "scale": 0.1}
@@ -38,6 +40,7 @@ info_params = odict([
 
 info_sampler = {"mcmc": {"Rminus1_stop": 0.01}}
 info_sampler_dummy = {"evaluate": {"N": 10}}
+
 
 @flaky(max_runs=3, min_passes=1)
 def test_post_prior(tmpdir):
@@ -65,7 +68,7 @@ def test_post_prior(tmpdir):
 def test_post_likelihood(tmpdir):
     # Generate original chain
     info = {
-        _output_prefix: os.path.join(str(tmpdir), "gaussian"),  _force: True,
+        _output_prefix: os.path.join(str(tmpdir), "gaussian"), _force: True,
         _params: info_params, _sampler: info_sampler,
         _likelihood: {"gaussian": sampled_pdf}}
     run(info)
@@ -97,12 +100,12 @@ def test_post_params():
         _post: {_post_suffix: "foo",
                 _post_remove: {_params: {"a_plus_b": None}},
                 _post_add: {
-                     _likelihood: {"target": target_pdf},
-                     _params: {
-                         "c": 1.234,
-                         "a_minus_b": {_p_derived: "lambda a,b: a-b"},
-                         "my_chi2__target": {_p_derived: "lambda chi2__target: chi2__target"},
-                         "cprime": None}}}}
+                    _likelihood: {"target": target_pdf},
+                    _params: {
+                        "c": 1.234,
+                        "a_minus_b": {_p_derived: "lambda a,b: a-b"},
+                        "my_chi2__target": {_p_derived: "lambda chi2__target: chi2__target"},
+                        "cprime": None}}}}
     info_post.update(updated_info_gaussian)
     updated_info, products = post(info_post, products_gaussian["sample"])
     # Compare parameters
@@ -112,4 +115,3 @@ def test_post_params():
         products["sample"]["cprime"], info_post[_post][_post_add][_params]["c"])
     assert np.allclose(
         products["sample"]["my_chi2__target"], products["sample"]["chi2__target"])
-

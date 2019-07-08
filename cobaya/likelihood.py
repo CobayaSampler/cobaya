@@ -337,7 +337,7 @@ class LikelihoodCollection(HasLogger):
                 _derived=this_derived_dict, cached=cached, **this_params_dict)]
             derived_dict.update(this_derived_dict or {})
             if _derived is not None:
-                derived_dict[_chi2 + _separator + like] = -2*logps[-1]
+                derived_dict[_chi2 + _separator + like] = -2 * logps[-1]
         # Turn the derived params dict into a list and return
         if _derived is not None:
             _derived += [derived_dict[p] for p in self.output_params]
@@ -416,11 +416,11 @@ class LikelihoodCollection(HasLogger):
         # any likelihood (because of the theory+experimental model separation)
         if self.theory:
             for p, assigned in params_assign["input"].items():
-                 if _theory in assigned and len(assigned) > 1:
-                     self.log.error("Some parameter has been asigned to the theory code "
-                                    "AND a likelihood, and that is not allowed: {%s: %r}",
-                                    p, assigned)
-                     raise HandledException
+                if _theory in assigned and len(assigned) > 1:
+                    self.log.error("Some parameter has been asigned to the theory code "
+                                   "AND a likelihood, and that is not allowed: {%s: %r}",
+                                   p, assigned)
+                    raise HandledException
         # If unit likelihood is present, assign all *non-theory* inputs to it
         if "one" in self:
             for p, assigned in params_assign["input"].items():
@@ -643,8 +643,8 @@ class LikelihoodCollection(HasLogger):
             sep = "\n   "
             self.log.info(
                 "Average computation time:" + sep + sep.join(
-                ["%s : %g s (%d evaluations)" % (name, vals["t"], vals["n"])
-                 for name, vals in avg_times_evals.items()]))
+                    ["%s : %g s (%d evaluations)" % (name, vals["t"], vals["n"])
+                     for name, vals in avg_times_evals.items()]))
 
     # Python magic for the "with" statement
     def __enter__(self):

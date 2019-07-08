@@ -70,7 +70,6 @@ from cobaya.collection import OnePoint
 from cobaya.log import HandledException
 from cobaya.tools import read_dnumber, choleskyL, recursive_update
 
-
 # Handling scpiy vs BOBYQA
 evals_attr = {"scipy": "fun", "bobyqa": "f"}
 
@@ -115,7 +114,7 @@ class minimize(Sampler):
         self._inv_affine_transform_matrix = None
         self._affine_transform_baseline = None
         if covmat is None:
-           # Use as much info as we have from ref & prior
+            # Use as much info as we have from ref & prior
             covmat = self.model.prior.reference_covmat()
         # Transform to space where initial point is at centre, and cov is normalised
         sigmas_diag, L = choleskyL(covmat, return_scale_free=True)
@@ -125,13 +124,13 @@ class minimize(Sampler):
         self.affine_transform = lambda x: (
             self._affine_transform_matrix.dot(x - self._affine_transform_baseline))
         self.inv_affine_transform = lambda x: (
-            self._inv_affine_transform_matrix.dot(x) + self._affine_transform_baseline)
+                self._inv_affine_transform_matrix.dot(x) + self._affine_transform_baseline)
         bounds = self.model.prior.bounds(
             confidence_for_unbounded=self.confidence_for_unbounded)
         # Re-scale
         self.logp_transf = lambda x: self.logp(self.inv_affine_transform(x))
         initial_point = self.affine_transform(initial_point)
-        bounds = np.array([self.affine_transform(bounds[:,i]) for i in range(2)]).T
+        bounds = np.array([self.affine_transform(bounds[:, i]) for i in range(2)]).T
         # Configure method
         if self.method.lower() == "bobyqa":
             self.minimizer = pybobyqa.solve
@@ -144,7 +143,7 @@ class minimize(Sampler):
                 "maxfun": int(self.max_evals)}
             self.kwargs = recursive_update(deepcopy(self.kwargs), self.override or {})
             self.log.debug("Arguments for pybobyqa.solve:\n%r",
-                           {k:v for k,v in self.kwargs.items() if k != "objfun"})
+                           {k: v for k, v in self.kwargs.items() if k != "objfun"})
         elif self.method.lower() == "scipy":
             self.minimizer = scpminimize
             self.kwargs = {
@@ -156,7 +155,7 @@ class minimize(Sampler):
                     "disp": (self.log.getEffectiveLevel() == logging.DEBUG)}}
             self.kwargs = recursive_update(deepcopy(self.kwargs), self.override or {})
             self.log.debug("Arguments for scipy.optimize.minimize:\n%r",
-                           {k:v for k,v in self.kwargs.items() if k != "fun"})
+                           {k: v for k, v in self.kwargs.items() if k != "fun"})
         else:
             methods = ["bobyqa", "scipy"]
             self.log.error(
@@ -181,21 +180,21 @@ class minimize(Sampler):
             if self.method.lower() == "bobyqa":
                 reason = {
                     self.result.EXIT_MAXFUN_WARNING:
-                    "Maximum allowed objective evaluations reached. "
-                    "This is the most likely return value when using multiple restarts.",
+                        "Maximum allowed objective evaluations reached. "
+                        "This is the most likely return value when using multiple restarts.",
                     self.result.EXIT_SLOW_WARNING:
-                    "Maximum number of slow iterations reached.",
+                        "Maximum number of slow iterations reached.",
                     self.result.EXIT_FALSE_SUCCESS_WARNING:
-                    "Py-BOBYQA reached the maximum number of restarts which decreased the"
-                    " objective, but to a worse value than was found in a previous run.",
+                        "Py-BOBYQA reached the maximum number of restarts which decreased the"
+                        " objective, but to a worse value than was found in a previous run.",
                     self.result.EXIT_INPUT_ERROR:
-                    "Error in the inputs.",
+                        "Error in the inputs.",
                     self.result.EXIT_TR_INCREASE_ERROR:
-                    "Error occurred when solving the trust region subproblem.",
+                        "Error occurred when solving the trust region subproblem.",
                     self.result.EXIT_LINALG_ERROR:
-                    "Linear algebra error, e.g. the interpolation points produced a "
-                    "singular linear system."
-                    }[self.result.flag]
+                        "Linear algebra error, e.g. the interpolation points produced a "
+                        "singular linear system."
+                }[self.result.flag]
             else:
                 reason = ""
             self.log.error("Finished unsuccesfully." +

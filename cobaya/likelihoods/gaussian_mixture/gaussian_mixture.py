@@ -92,11 +92,12 @@ class gaussian_mixture(Likelihood):
                 self.log.error("There must be as many weights as components.")
                 raise HandledException
             if not np.isclose(sum(self.weights), 1):
-                self.weights = self.weights/sum(self.weights)
+                self.weights = self.weights / sum(self.weights)
                 self.log.warning(
                     "Weights of components renormalized to %r", list(self.weights))
         else:
-            self.weights = 1/len(self.gaussians)                
+            self.weights = 1 / len(self.gaussians)
+
         # Prepare the transformation(s) for the derived parameters
         self.choleskyL = [np.linalg.cholesky(cov) for cov in self.covs]
 
@@ -131,8 +132,8 @@ def random_mean(ranges, n_modes=1, mpi_warn=True):
     If ``n_modes>1``, returns an array of such points.
     """
     if get_mpi_size() and mpi_warn:
-        print ("WARNING! "
-               "Using with MPI: different process will produce different random results.")
+        print("WARNING! "
+              "Using with MPI: different process will produce different random results.")
     mean = np.array([uniform.rvs(loc=r[0], scale=r[1] - r[0], size=n_modes)
                      for r in ranges])
     mean = mean.T
@@ -153,8 +154,8 @@ def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1, mpi_warn=True):
     If ``n_modes>1``, returns a list of such matrices.
     """
     if get_mpi_size() and mpi_warn:
-        print ("WARNING! "
-               "Using with MPI: different process will produce different random results.")
+        print("WARNING! "
+              "Using with MPI: different process will produce different random results.")
     dim = len(ranges)
     scales = np.array([r[1] - r[0] for r in ranges])
     cov = []
@@ -212,5 +213,5 @@ def info_random_gaussian_mixture(
          for i in range(dimension)] +
         # derived
         ([[output_params_prefix + "_%d" % i, {"min": -3, "max": 3, "latex": r"\beta_{%i}" % i}]
-         for i in range(dimension * n_modes)] if derived else []))
+          for i in range(dimension * n_modes)] if derived else []))
     return info

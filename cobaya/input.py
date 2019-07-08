@@ -162,9 +162,9 @@ def update_info(info):
                     option = options_not_recognized.pop()
                     alternatives[option] = fuzzy_match(option, available, n=3)
                 did_you_mean = ", ".join(
-                    [("'%s' (did you mean %s?)" % (o,"|".join(["'%s'" % _ for _ in a]))
+                    [("'%s' (did you mean %s?)" % (o, "|".join(["'%s'" % _ for _ in a]))
                       if a else "'%s'" % o)
-                     for o,a in alternatives.items()])
+                     for o, a in alternatives.items()])
                 if default_module_info[block][module]:
                     # Internal module
                     log.error("'%s' does not recognize some options: %s. "

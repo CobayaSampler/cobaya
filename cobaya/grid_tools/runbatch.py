@@ -7,6 +7,7 @@ import os
 from cobaya.grid_tools import batchjob_args, jobqueue
 from cobaya.tools import warn_deprecation
 
+
 def run():
     warn_deprecation()
     Opts = batchjob_args.batchArgs('Submit jobs to run chains or importance sample',

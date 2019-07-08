@@ -20,6 +20,7 @@ import scipy.stats as stats  # don't delete: necessary for get_external_function
 from collections import OrderedDict as odict
 from ast import parse
 import warnings
+
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore")
     # Suppress message about optional dependency
@@ -319,6 +320,7 @@ def choleskyL(M, return_scale_free=False):
     else:
         return np.linalg.inv(std_diag).dot(Lprime)
 
+
 def cov_to_std_and_corr(cov):
     """
     Gets the standard deviations (as a diagonal matrix)
@@ -328,6 +330,7 @@ def cov_to_std_and_corr(cov):
     invstd_diag = np.linalg.inv(std_diag)
     corr = invstd_diag.dot(cov).dot(invstd_diag)
     return std_diag, corr
+
 
 def are_different_params_lists(list_A, list_B, name_A="A", name_B="B"):
     """
@@ -402,9 +405,9 @@ def warn_deprecation():
 
 def progress_bar(logger, percentage, final_text=""):
     """Very simple, multiline, logger-compatible progress bar, with increments of 5%."""
-    progress = int(percentage/5)
+    progress = int(percentage / 5)
     logger.info(" |%s| %3d%% %s",
-                "@" * progress + "-" * (20-progress), percentage, final_text)
+                "@" * progress + "-" * (20 - progress), percentage, final_text)
 
 
 def fuzzy_match(in_string, choices, n=3, score_cutoff=50):

@@ -26,7 +26,6 @@ from cobaya.log import HandledException, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
 from cobaya.tools import deepcopy_where_possible
 
-
 # Log-posterior namedtuple
 logposterior = namedtuple("logposterior", ["logpost", "logpriors", "loglikes", "derived"])
 logposterior.__new__.__defaults__ = (None, None, [], [])
@@ -91,7 +90,7 @@ class Model(HasLogger):
         self.prior = Prior(self.parameterization, self._updated_info.get(_prior, None))
         self.likelihood = Likelihood(
             self._updated_info[_likelihood], self.parameterization,
-            self._updated_info.get(_theory), modules=modules,timing=timing)
+            self._updated_info.get(_theory), modules=modules, timing=timing)
 
     def info(self):
         """
