@@ -218,12 +218,18 @@ class LikelihoodExternalFunction(Likelihood, HasLogger):
             params_values["_theory"] = self.theory
         try:
             return self.external_function(**params_values)
-        except:
-            self.log.error("".join(
-                ["-"] * 16 + ["\n\n"] + list(traceback.format_exception(*sys.exc_info())) +
-                ["\n"] + ["-"] * 37))
+        except Exception as ex:
+            if isinstance(ex, HandledException):
+                # Assume proper error info was written before raising HandledException
+                pass
+            else:
+                # Print traceback
+                self.log.error("".join(
+                    ["-"] * 16 + ["\n\n"] +
+                    list(traceback.format_exception(*sys.exc_info())) +
+                    ["\n"] + ["-"] * 37))
             self.log.error("The external likelihood '%s' failed at evaluation. "
-                      "See traceback on top of this message.", self.name)
+                           "See error info on top of this message.", self.name)
             raise HandledException
 
 

@@ -16,6 +16,7 @@ from itertools import chain
 
 # Local
 from cobaya.theory import Theory
+from cobaya.tools import fuzzy_match
 from cobaya.log import HandledException
 
 
@@ -216,6 +217,17 @@ class _cosmo(Theory):
         """
         from cobaya.cosmo_input import get_best_covmat
         return get_best_covmat(self.path_install, params_info, likes_info)
+
+    def __getattr__(self, method):
+        try:
+            object.__getattr__(self, method)
+        except AttributeError:
+            if method.startswith("get"):
+                self.log.error(
+                    "Getter method for cosmology product %r is not known. "
+                    "Maybe you meant any of %r?",
+                    method, fuzzy_match(method, dir(self), n=3))
+                raise HandledException
 
 
 class PowerSpectrumInterpolator(RectBivariateSpline):
