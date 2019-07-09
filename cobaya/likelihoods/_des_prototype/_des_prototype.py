@@ -143,32 +143,33 @@ def get_def_cuts():
 class _des_prototype(Likelihood):
     def initialize(self):
         self.l_max = self.l_max or int(50000 * self.acc)
-        if os.path.isabs(self.data_file):
-            data_file = self.data_file
+        if os.path.isabs(self.dataset_file):
+            dataset_file = self.dataset_file
         else:
             # If no path specified, use the modules path
             if self.path:
-                data_file_path = self.path
+                dataset_file_path = self.path
             elif self.path_install:
-                data_file_path = os.path.join(self.path_install, "data", des_data_name)
+                dataset_file_path = os.path.join(self.path_install, "data", des_data_name)
             else:
                 self.log.error(
                     "No path given to the DES data. Set the likelihood property 'path' "
                     "or the common property '%s'.", _path_install)
                 raise HandledException
-            data_file = os.path.normpath(os.path.join(data_file_path, self.data_file))
+            dataset_file = os.path.normpath(
+                os.path.join(dataset_file_path, self.dataset_file))
         try:
-            if data_file.endswith(".fits"):
+            if dataset_file.endswith(".fits"):
                 if self.dataset_params:
                     self.log.error("'dataset_params' can only be specified "
                                    "for .dataset (not .fits) file.")
                     raise HandledException
-                self.load_fits_data(data_file)
+                self.load_fits_data(dataset_file)
             else:
-                self.load_dataset(data_file, self.dataset_params)
+                self.load_dataset(dataset_file, self.dataset_params)
         except IOError:
             self.log.error("The data file '%s' could not be found at '%s'. "
-                           "Check your paths!", self.data_file, data_file_path)
+                           "Check your paths!", self.dataset_file, dataset_file_path)
             raise HandledException
         self.initialize_postload()
 
