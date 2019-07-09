@@ -5,7 +5,7 @@ likelihood:
     # Path to the installation folder
     path: null
     # .dataset (or original .fits file) to read
-    data_file: DES_1YR_final.dataset
+    dataset_file: DES_1YR_final.dataset
     # Parameters to override in .dataset file
     dataset_params:
       used_data_types: gammat

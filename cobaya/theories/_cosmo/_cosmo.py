@@ -16,6 +16,7 @@ from itertools import chain
 
 # Local
 from cobaya.theory import Theory
+from cobaya.tools import fuzzy_match, create_banner
 from cobaya.log import HandledException
 
 
@@ -197,17 +198,6 @@ class _cosmo(Theory):
         """
         pass
 
-    def get_fsigma8(self, z):
-        """
-        Structure growth rate :math:`f\sigma_8`, as defined in eq. 33 of
-        `Planck 2015 results. XIII. Cosmological parameters <https://arxiv.org/pdf/1502.01589.pdf>`_,
-        at the given redshifts.
-
-        The redshifts must be a subset of those requested when :func:`~_cosmo.needs`
-        was called.
-        """
-        pass
-
     def get_auto_covmat(self, params_info, likes_info):
         """
         Tries to get match to a database of existing covariance matrix files for the current model and data.
@@ -216,6 +206,30 @@ class _cosmo(Theory):
         """
         from cobaya.cosmo_input import get_best_covmat
         return get_best_covmat(self.path_install, params_info, likes_info)
+
+    def __getattr__(self, method):
+        try:
+            object.__getattr__(self, method)
+        except AttributeError:
+            if method.startswith("get"):
+                # Deprecated method names
+                # -- this will be deprecated in favour of the error below
+                new_names = {"get_cl": "get_Cl"}
+                if method in new_names:
+                    msg = create_banner(
+                        "Method '%s' has been re-capitalized to '%s'.\n"
+                        "Overriding for now, but please change it: "
+                        "this will produce an error in the future." % (
+                            method, new_names[method]))
+                    for line in msg.split("\n"):
+                        self.log.warning(line)
+                    return getattr(self, new_names[method])
+                # End of deprecation block ------------------------------
+                self.log.error(
+                    "Getter method for cosmology product %r is not known. "
+                    "Maybe you meant any of %r?",
+                    method, fuzzy_match(method, dir(self), n=3))
+                raise HandledException
 
 
 class PowerSpectrumInterpolator(RectBivariateSpline):

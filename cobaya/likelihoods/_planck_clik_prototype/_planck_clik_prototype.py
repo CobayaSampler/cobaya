@@ -1,26 +1,13 @@
-"""
+r"""
 .. module:: _planck_clik_prototype
 
 :Synopsis: Definition of the clik-based likelihoods
 :Author: Jesus Torrado
          (based on MontePython's version by Julien Lesgourgues and Benjamin Audren)
 
-Family of Planck CMB likelihoods, based on the ``clik`` code.
-
-The Planck 2015 likelihoods defined here are:
-
-- ``planck_2015_lensing``
-- ``planck_2015_lensing_cmblikes``
-  (a native non-clik, more customizable version of the previous clik-wrapped one)
-- ``planck_2015_lowl``
-- ``planck_2015_lowTEB``
-- ``planck_2015_plikHM_TT``
-- ``planck_2015_plikHM_TTTEEE``
-- ``planck_2015_plikHM_TTTEEE_unbinned``
-- ``planck_2015_plikHM_TT_unbinned``
-
-You can read a description of the different likelihoods in the
-`Planck wiki <https://wiki.cosmos.esa.int/planckpla2015/index.php/CMB_spectrum_%26_Likelihood_Code>`_.
+Family of Planck CMB likelihoods, as interfaces to the official ``clik`` code (and some
+native ``cmblikes`` ones) You can find a description of the different likelihoods in the
+`Planck wiki <https://wiki.cosmos.esa.int/planck-legacy-archive/index.php/CMB_spectrum_%26_Likelihood_Code>`_.
 
 .. |br| raw:: html
 
@@ -34,9 +21,42 @@ You can read a description of the different likelihoods in the
    `Planck 2015 results. XI. CMB power spectra, likelihoods, and robustness of parameters`
    `(arXiv:1507.02704) <https://arxiv.org/abs/1507.02704>`_
 
+The Planck 2018 likelihoods defined here are:
+
+- ``planck_2018_lowl``: low-:math:`\ell` temperature
+- ``planck_2018_lowE``: low-:math:`\ell` E polarization
+- ``planck_2018_plikHM_TT``: high-:math:`\ell` temperature
+- ``planck_2018_plikHM_TTTEEE``: high-:math:`\ell` temperature, polarization and cross-correlated
+- ``planck_2018_plikHM_TT_unbinned``, ``planck_2018_plikHM_TTTEEE_unbinned``:
+  unbinned-in-:math:`\ell` versions of the baseline ones
+- ``planck_2018_plikHM_TT_lite``, ``planck_2018_plikHM_TTTEEE_lite``:
+  foreground-marginalized versions of the baseline ones
+- ``planck_2015_lensing``: lensing temperature+polarisation-based
+- ``planck_2015_lensing_cmblikes``: native version of the ``clik``-based one above,
+  more customizable.
+
+The Planck 2015 likelihoods defined here are:
+
+- ``planck_2015_lowl``
+- ``planck_2015_lowTEB``
+- ``planck_2015_plikHM_TT``
+- ``planck_2015_plikHM_TT_unbinned``
+- ``planck_2015_plikHM_TTTEEE``
+- ``planck_2015_plikHM_TTTEEE_unbinned``
+- ``planck_2015_lensing``
+- ``planck_2015_lensing_cmblikes``
+  (a native non-clik, more customizable version of the previous clik-wrapped one)
+
 .. warning::
 
-   ``planck_2015_lowTEB`` cannot be instantiated more than once.
+   The Planck 2015 likelihoods have been superseeded by the 2018 release, and will
+   eventually be deprecated.
+
+.. warning::
+
+   ``planck_2015_lowTEB`` cannot be instantiated more than once. This should have no
+   consequence when calling ``cobaya-run`` from the shell, but will impede running
+   a sampler or defining a model more than once per Python interpreter session.
 
 
 Usage
@@ -48,9 +68,9 @@ To use any of the Planck likelihoods, you simply need to mention them in the
 The corresponding nuisance parameters will be added automatically,
 so you don't have to care about listing them in the ``params`` block.
 
-The nuisance parameters and their default priors can be found in the ``defaults.yaml``
-files in the folder corresponding to each likelihood. They are not reproduced here because
-of their length.
+The nuisance parameters and their default priors can be found in the
+``[likelihood_name].yaml`` files in the folder corresponding to each likelihood.
+They are not reproduced here because of their length.
 
 
 Installation
@@ -151,12 +171,23 @@ from cobaya.log import HandledException
 from cobaya.conventions import _path_install, _likelihood
 from cobaya.input import get_default_info
 from cobaya.install import pip_install, download_file
-from cobaya.tools import are_different_params_lists
+from cobaya.tools import are_different_params_lists, create_banner
+
+
+_deprecation_msg_2015 = create_banner("""
+The likelihoods from the Planck 2015 data release have been superseeded
+by the 2018 ones, and will eventually be deprecated.
+""")
 
 
 class _planck_clik_prototype(Likelihood):
 
     def initialize(self):
+        if "2015" in self.name:
+            for line in _deprecation_msg_2015.split("\n"):
+                self.log.warning(line)
+        code_path = common_path
+        data_path = get_data_path(self.name)
         if self.path:
             has_clik = False
         else:
@@ -168,8 +199,7 @@ class _planck_clik_prototype(Likelihood):
         if not has_clik:
             if not self.path:
                 if self.path_install:
-                    self.path_clik = os.path.join(
-                        self.path_install, "code", common_path)
+                    self.path_clik = os.path.join(self.path_install, "code", code_path)
                 else:
                     self.log.error("No path given to the Planck likelihood. Set the "
                                    "likelihood property 'path' or the common property "
@@ -184,7 +214,7 @@ class _planck_clik_prototype(Likelihood):
         # Loading the likelihood data
         if not os.path.isabs(self.clik_file):
             self.path_data = getattr(self, "path_data", os.path.join(
-                self.path or self.path_install, "data", common_path))
+                self.path or self.path_install, "data", data_path))
             self.clik_file = os.path.join(self.path_data, self.clik_file)
         # for lensing, some routines change. Initializing a flag for easier
         # testing of this condition
@@ -205,10 +235,9 @@ class _planck_clik_prototype(Likelihood):
             self.expected_params[self.expected_params.index("b'A_planck'")] = "A_planck"
         # line added to deal with a bug in planck likelihood release:
         # A_planck called A_Planck in plik_lite
-        if "plikHM_lite" in self.name:
+        if "_lite" in self.name:
             i = self.expected_params.index('A_Planck')
             self.expected_params[i] = 'A_planck'
-            self.log.info("Corrected nuisance parameter name A_Planck to A_planck")
         # Check that the parameters are the right ones
         differences = are_different_params_lists(
             self.input_params, self.expected_params, name_A="given", name_B="expected")
@@ -259,13 +288,21 @@ class _planck_clik_prototype(Likelihood):
 # Installation routines ##################################################################
 
 # path to be shared by all Planck likelihoods
-common_path = "planck_2015"
+common_path = "planck"
 
 # To see full clik build output even if installs OK (e.g. to check warnings)
 _clik_verbose = any(
     [(s in os.getenv('TRAVIS_COMMIT_MESSAGE', '')) for s in ["clik", "planck"]])
 # Don't try again to install clik if it failed for a previous likelihood
 _clik_install_failed = False
+
+
+def get_data_path(name):
+    return common_path + "_%s" % get_release(name)
+
+
+def get_release(name):
+    return next(re for re in ["2015", "2018"] if re in name)
 
 
 def is_installed_clik(path, log_and_fail=False, import_it=True):
