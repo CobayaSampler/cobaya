@@ -7,7 +7,7 @@
 """
 
 # Python 2/3 compatibility
-from __future__ import absolute_import, division
+from __future__ import absolute_import, division, print_function
 
 # Global
 import os
@@ -374,33 +374,34 @@ def create_banner(msg):
     return ("*" * longest_line_len + "\n" + msg_clean + "\n" + "*" * longest_line_len)
 
 
-def warn_deprecation_python2():
+def warn_deprecation_python2(logger=None):
     msg = """
-    *WARNING*: Python 2 support will eventually be dropped
+    Python 2 support will eventually be dropped
     (it is already unsupported by many scientific Python modules).
 
     Please use Python 3!
 
-    In some systems, the Python 3 command may be python3 instead of python.
-    If that is the case, use pip3 instead of pip to install Cobaya.
+    In some systems, the Python 3 command may be `python3` instead of `python`.
+    If that is the case, use `pip3` instead of `pip` to install Cobaya.
     """
     if not six.PY3:
-        print(create_banner(msg))
+        for line in create_banner(msg).split("\n"):
+            getattr(logger, "warning", (lambda x: print("*WARNING*", x)))(line)
 
-
-def warn_deprecation_version():
+def warn_deprecation_version(logger=None):
     msg = """
-    *WARNING*: You are using an obsolete version of Cobaya, which is no loger maintained.
-
-    Please, update asap to the last version (e.g. with ``pip install cobaya --upgrade``).
+    You are using an archived version of Cobaya, which is no loger maintained.
+    Unless intentionally doing so, please, update asap to the latest version
+    (e.g. with ``pip install cobaya --upgrade``).
     """
     if __obsolete__:
-        print(create_banner(msg))
+        for line in create_banner(msg).split("\n"):
+            getattr(logger, "warning", (lambda x: print("*WARNING*", x)))(line)
 
 
-def warn_deprecation():
-    warn_deprecation_python2()
-    warn_deprecation_version()
+def warn_deprecation(logger=None):
+    warn_deprecation_python2(logger=logger)
+    warn_deprecation_version(logger=logger)
 
 
 def progress_bar(logger, percentage, final_text=""):
