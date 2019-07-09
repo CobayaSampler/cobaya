@@ -10,6 +10,8 @@ seconds the first time it is loaded, but the inverse can be cached.
 Use dataset_params : { 'use_cl': '100x100 143x143 217x217 143x217'} to use e.g. just TT , or other combination with TE and EE.
 Set use_range to string representation of L range to use, e.g. 50-100, 200-500, 1470-2500, or pass a dictionary of ranges for each spectrum.
 
+##TODO: calPlanck vs Aplanck
+
 """
 # Python 2/3 compatibility
 from __future__ import absolute_import
