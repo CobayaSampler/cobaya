@@ -39,7 +39,7 @@ primordial = odict([
         _theory: {_camb: None, _classy: None},
         _params: odict([
             ["logA", odict([
-                [_prior, odict([["min", 2], ["max", 4]])],
+                [_prior, odict([["min", 1.61], ["max", 3.91]])],
                 [_p_ref, odict([[_p_dist, "norm"], ["loc", 3.1], ["scale", 0.001]])],
                 [_p_proposal, 0.001], [_p_label, r"\log(10^{10} A_\mathrm{s})"],
                 [_p_drop, True]])],
@@ -358,7 +358,9 @@ reionization = odict([
             ["zrei", {_p_label: r"z_\mathrm{re}"}]])}], ])
 
 # EXPERIMENTS ############################################################################
-cmb_precision = {_camb: {"lens_potential_accuracy": 1},
+cmb_precision = {_camb: {"halofit_version": "mead",
+                         "bbn_predictor": "PArthENoPE_880.2_standard.dat",
+                         "lens_potential_accuracy": 1},
                  _classy: {"non linear": "halofit"}}
 cmb_sampler_recommended = {"mcmc": {"drag": True, "proposal_scale": 1.9}}
 
@@ -368,7 +370,7 @@ like_cmb = odict([
         _desc: "Planck 2015 (Polarized CMB + lensing)",
         _comment: None,
         _sampler: cmb_sampler_recommended,
-        _theory: {theo: {_extra_args: None}  # cmb_precision[theo]}  # not for now
+        _theory: {theo: {_extra_args: cmb_precision[theo]}
                   for theo in [_camb, _classy]},
         _likelihood: odict([
             ["planck_2015_lowTEB", None],
