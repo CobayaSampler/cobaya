@@ -661,7 +661,7 @@ class _cmblikes_prototype(Likelihood):
             bigX[bin * self.ncl_used:(bin + 1) * self.ncl_used] = vecp[self.cl_used_index]
         if self.like_approx == 'exact':
             return -0.5 * chisq
-        return -0.5 * np.dot(bigX, np.dot(self.covinv, bigX))
+        return -0.5 * fast_chi_squared(self.covinv, bigX)
 
 
 class BinWindows(object):
