@@ -3,7 +3,7 @@ from cobaya.likelihoods._planck_clik_prototype import install as install_common
 from cobaya.likelihoods._planck_clik_prototype import is_installed as is_installed_common
 
 
-class planck_2018_lensing(_planck_clik_prototype):
+class planck_2018_clik_lensing(_planck_clik_prototype):
     pass
 
 

@@ -68,12 +68,13 @@ def test_planck_2018_p_classy(modules):
 # Temperature only #######################################################################
 
 lik_info_lowl_highTT_lensing = {
-    "planck_2018_lowl": None, "planck_2018_plikHM_TT": None, "planck_2018_lensing": None}
+    "planck_2018_lowl": None, "planck_2018_plikHM_TT": None,
+    "planck_2018_clik_lensing": None}
 
 chi2_lowl_highTT_lensing = {
     "planck_2018_lowl": 22.92,
     "planck_2018_plikHM_TT": 757.77,
-    "planck_2018_lensing": 9.11,
+    "planck_2018_clik_lensing": 9.11,
     "tolerance": 0.11}
 
 params_lowl_highTT_lensing = {
@@ -82,7 +83,7 @@ params_lowl_highTT_lensing = {
     "omegach2": 0.1172,
     # only one of the next two is finally used!
     "H0": 68.45,  # will be ignored in the CAMB case
-    "theta": 1.04117,  # will be ignored in the CLASS case
+    "theta_MC_100": 1.04117,  # will be ignored in the CLASS case
     "tau": 0.0862,
     "logA": 3.100,
     "ns": 0.9733,
@@ -131,11 +132,11 @@ derived_lowl_highTT_lensing = {
 
 lik_info_lowTE_highTTTEEE_lensingcmblikes = {
     "planck_2018_lowl": None, "planck_2018_lowE": None, "planck_2018_plikHM_TTTEEE": None,
-    "planck_2018_lensing": None}
+    "planck_2018_cmblikes_lensing": None}
 
 chi2_lowTE_highTTTEEE_lensingcmblikes = {
     "planck_2018_lowl": 23.25, "planck_2018_lowE": 396.05,
-    "planck_2018_plikHM_TTTEEE": 2344.93, "planck_2018_lensing": 8.87,
+    "planck_2018_plikHM_TTTEEE": 2344.93, "planck_2018_cmblikes_lensing": 8.87,
     "tolerance": 0.11}
 
 params_lowTE_highTTTEEE_lensingcmblikes = {
@@ -144,7 +145,7 @@ params_lowTE_highTTTEEE_lensingcmblikes = {
     "omegach2": 0.12011,
     # only one of the next two is finally used!
     "H0": 67.32,  # will be ignored in the CAMB case
-    "theta": 1.040909,  # will be ignored in the CLASS case
+    "theta_MC_100": 1.040909,  # will be ignored in the CLASS case
     "logA": 3.0448,
     "ns": 0.96605,
     "tau": 0.0543,

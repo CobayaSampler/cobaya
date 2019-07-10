@@ -135,7 +135,7 @@ params_lowl_highTT = {
     "omegach2": 0.1174684,
     # only one of the next two is finally used!
     "H0": 68.43994,  # will be ignored in the CAMB case
-    "theta": 1.041189,  # will be ignored in the CLASS case
+    "theta_MC_100": 1.041189,  # will be ignored in the CLASS case
     "tau": 0.1249913,
     "logA": 3.179,
     "ns": 0.9741693,
@@ -195,7 +195,7 @@ params_lowTEB_highTTTEEE = {
     "omegach2": 0.1198657,
     # only one of the next two is finally used!
     "H0": 67.25,  # will be ignored in the CAMB case
-    "theta": 1.040778,  # will be ignored in the CLASS case
+    "theta_MC_100": 1.040778,  # will be ignored in the CLASS case
     "logA": 3.0929,
     "ns": 0.9647522,
     "tau": 0.07888604,
@@ -264,7 +264,7 @@ params_lensing = {
     "omegach2": 0.11913,
     # only one of the next two is finally used!
     "H0": 67.56,  # will be ignored in the CAMB case
-    "theta": 1.040867,  # will be ignored in the CLASS case
+    "theta_MC_100": 1.040867,  # will be ignored in the CLASS case
     "logA": 3.0600,
     "ns": 0.96597,
     "tau": 0.0639,
