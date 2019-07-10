@@ -77,6 +77,7 @@ class MainWindow(QWidget):
             ["Data sets", odict([
                 ["like_cmb", "CMB experiments"],
                 ["like_bao", "BAO experiments"],
+                ["like_des", "DES measurements"],
                 ["like_sn", "SN experiments"],
                 ["like_H0", "Local H0 measurements"]])],
             ["Sampler", odict([["sampler", "Samplers"]])]])
