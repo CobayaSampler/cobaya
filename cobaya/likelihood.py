@@ -218,7 +218,7 @@ class LikelihoodExternalFunction(Likelihood, HasLogger):
         try:
             return self.external_function(**params_values)
         except Exception as ex:
-            if isinstance(ex, HandledException):
+            if isinstance(ex, LoggedError):
                 # Assume proper error info was written before raising LoggedError
                 pass
             else:
