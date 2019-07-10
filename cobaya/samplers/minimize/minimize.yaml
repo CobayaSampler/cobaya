@@ -16,8 +16,12 @@ sampler:
     # scipy:
     #  - https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
     #  - options for individual methods
+    override_scipy:
+      # option: value
     # bobyqa:
     #  - https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/userguide.html
     #  - https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/advanced.html
-    override:
+    override_bobyqa:
       # option: value
+      # Relaxed convergence criterion for numerically-noisiy likelihoods
+      rhoend: 0.05
