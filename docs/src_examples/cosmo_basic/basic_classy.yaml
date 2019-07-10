@@ -1,7 +1,8 @@
 likelihood:
-  planck_2015_lowTEB:
-  planck_2015_plikHM_TTTEEE:
-  planck_2015_lensing:
+  planck_2018_lowl:
+  planck_2018_lowE:
+  planck_2018_plikHM_TTTEEE:
+  planck_2018_cmblikes_lensing:
 params:
   logA:
     prior:
@@ -109,8 +110,9 @@ params:
   rs_drag:
     latex: r_\mathrm{drag}
   chi2__CMB:
-    derived: 'lambda chi2__planck_2015_lowTEB, chi2__planck_2015_plikHM_TTTEEE, chi2__planck_2015_lensing:
-      sum([chi2__planck_2015_lowTEB, chi2__planck_2015_plikHM_TTTEEE, chi2__planck_2015_lensing])'
+    derived: 'lambda chi2__planck_2018_lowl, chi2__planck_2018_lowE, chi2__planck_2018_plikHM_TTTEEE,
+      chi2__planck_2018_cmblikes_lensing: sum([chi2__planck_2018_lowl, chi2__planck_2018_lowE,
+      chi2__planck_2018_plikHM_TTTEEE, chi2__planck_2018_cmblikes_lensing])'
     latex: \chi^2_\mathrm{CMB}
 sampler:
   mcmc:
