@@ -442,7 +442,7 @@ class camb(_cosmo):
             reused_state = True
             # Get (pre-computed) derived parameters
             if _derived == {}:
-                _derived.update(self.states[i_state]["derived"])
+                _derived.update(self.states[i_state]["derived"] or {})
             self.log.debug("Re-using computed results (state %d)", i_state)
         except StopIteration:
             reused_state = False
