@@ -22,7 +22,7 @@ from cobaya.conventions import _debug, _debug_file
 from cobaya.mpi import get_mpi_rank, get_mpi_size, get_mpi_comm, more_than_one_process
 
 
-class HandledException(Exception):
+class LoggedError(Exception):
     """
     Dummy exception, to be raised when the originating exception
     has been cleanly handled and logged.
@@ -37,7 +37,11 @@ def safe_exit():
 
 def exception_handler(exception_type, value, trace_back):
     # Do not print traceback if the exception has been handled and logged
-    if exception_type == HandledException:
+    if exception_type == LoggedError:
+        if value.args:
+            logger = value.args[0]
+            msgargs = value.args[1:]
+            logger.error(*msgargs)
         safe_exit()
         return  # no traceback printed
     _logger_name = "exception handler"

@@ -172,7 +172,7 @@ from numbers import Number
 
 # Local
 from cobaya.theories._cosmo import _cosmo
-from cobaya.log import HandledException
+from cobaya.log import LoggedError
 from cobaya.install import download_github_release, check_gcc_version
 from cobaya.conventions import _c_km_s, _T_CMB_K
 from cobaya.tools import deepcopy_where_possible
@@ -196,32 +196,30 @@ class camb(_cosmo):
                 self.log.info("*local* CAMB not found at " + self.path)
                 self.log.info("Importing *global* CAMB.")
             else:
-                self.log.error("*local* CAMB not found at " + self.path)
-                raise HandledException
+                raise LoggedError(self.log, "*local* CAMB not found at " + self.path)
         elif self.path:
             self.log.info("Importing *local* CAMB from " + self.path)
             if not os.path.exists(self.path):
-                self.log.error("The given folder does not exist: '%s'", self.path)
-                raise HandledException
+                raise LoggedError(
+                    self.log, "The given folder does not exist: '%s'", self.path)
             pycamb_path = self.path
             if not os.path.exists(os.path.join(self.path, "setup.py")):
-                self.log.error(
+                raise LoggedError(
+                    self.log,
                     "Either CAMB is not in the given folder, '%s', or you are using a "
                     "very old version without the Python interface.", self.path)
-                raise HandledException
             sys.path.insert(0, pycamb_path)
         else:
             self.log.info("Importing *global* CAMB.")
         try:
             import camb
         except ImportError:
-            self.log.error(
-                "Couldn't find the CAMB python interface.\n"
+            raise LoggedError(
+                self.log, "Couldn't find the CAMB python interface.\n"
                 "Make sure that you have compiled it, and that you either\n"
                 " (a) specify a path (you didn't) or\n"
                 " (b) install the Python interface globally with\n"
                 "     'pip install -e /path/to/camb [--user]'")
-            raise HandledException
         self.camb = camb
         # Prepare errors
         from camb.baseconfig import CAMBParamRangeError, CAMBError
@@ -239,8 +237,7 @@ class camb(_cosmo):
         # Patch: if cosmomc_theta is used, CAMB needs to be passed explicitly "H0=None"
         # This is *not* going to change on CAMB's side.
         if all((p in self.input_params) for p in ["H0", "cosmomc_theta"]):
-            self.log.error("Can't pass both H0 and cosmomc_theta to Camb.")
-            raise HandledException
+            raise LoggedError(self.log, "Can't pass both H0 and cosmomc_theta to CAMB.")
         if "cosmomc_theta" in self.input_params:
             self.extra_args["H0"] = None
         # Set aliases
@@ -347,15 +344,14 @@ class camb(_cosmo):
                     self.extra_attrs["WantTransfer"] = True
                     self.needs_perts = True
             else:
-                self.log.error("This should not be happening. Contact the developers.")
-                raise HandledException
+                raise LoggedError(self.log, "This should not be happening. Contact the developers.")
         # Check that there are no repeated parameters between input and extra
         if set(self.input_params).intersection(set(self.extra_args)):
-            self.log.error(
+            raise LoggedError(
+                self.log,
                 "The following parameters appear both as input parameters and as CAMB "
                 "extra arguments: %s. Please, remove one of the definitions of each.",
                 list(set(self.input_params).intersection(set(self.extra_args))))
-            raise HandledException
         # Remove extra args that cause an error if the associated product is not requested
         if "Cl" not in self._needs:
             self.extra_args.pop("lens_potential_accuracy", None)
@@ -393,9 +389,9 @@ class camb(_cosmo):
                 if hasattr(cambparams, attr):
                     setattr(cambparams, attr, value)
                 else:
-                    self.log.error("Some of the attributes to be set manually were not "
-                                   "recognized: %s=%s", attr, value)
-                    raise HandledException
+                    raise LoggedError(
+                        self.log, "Some of the attributes to be set manually were not "
+                        "recognized: %s=%s", attr, value)
             # Sources
             if getattr(self, "sources", None):
                 from camb.sources import GaussianSourceWindow, SplinedSourceWindow
@@ -408,16 +404,14 @@ class camb(_cosmo):
                     elif function == "gaussian":
                         SourceWindows.append(GaussianSourceWindow(**window))
                     else:
-                        self.log.error("Unknown source window function type %r", function)
-                        raise HandledException
+                        raise LoggedError(self.log, "Unknown source window function type %r", function)
                     window["function"] = function
                 cambparams.SourceWindows = SourceWindows
                 cambparams.SourceTerms.limber_windows = self.limber
             return cambparams
         except CAMBParamRangeError:
             if self.stop_at_error:
-                self.log.error("Out of bound parameters: %r", params_values_dict)
-                raise HandledException
+                raise LoggedError(self.log, "Out of bound parameters: %r", params_values_dict)
             else:
                 self.log.debug("Out of bounds parameters. "
                                "Assigning 0 likelihood and going on.")
@@ -429,9 +423,9 @@ class camb(_cosmo):
                 self.states[i_state]["params"], self.extra_args)
             raise
         except CAMBUnknownArgumentError as e:
-            self.log.error(
+            raise LoggedError(
+                self.log,
                 "Some of the parameters passed to CAMB were not recognized: %s" % str(e))
-            raise HandledException
         return False
 
     def compute(self, _derived=None, cached=True, **params_values_dict):
@@ -564,9 +558,8 @@ class camb(_cosmo):
         for p in self.output_params:
             derived[p] = self._get_derived(self.translate_param(p), intermediates)
             if derived[p] is None:
-                self.log.error(
-                    "Derived param '%s' not implemented in the CAMB interface", p)
-                raise HandledException
+                raise LoggedError(
+                    self.log, "Derived param '%s' not implemented in the CAMB interface", p)
         return derived
 
     def get_param(self, p):
@@ -576,8 +569,7 @@ class camb(_cosmo):
                 (current_state[pool] or {}).get(self.translate_param(p), None))
             if value is not None:
                 return value
-        self.log.error("Parameter not known: '%s'", p)
-        raise HandledException
+        raise LoggedError(self.log, "Parameter not known: '%s'", p)
 
     def get_Cl(self, ell_factor=False, units="muK2"):
         current_state = self.current_state()
@@ -585,9 +577,8 @@ class camb(_cosmo):
         try:
             cl_camb = deepcopy(current_state["Cl"]["total"])
         except:
-            self.log.error(
-                "No Cl's were computed. Are you sure that you have requested them?")
-            raise HandledException
+            raise LoggedError(
+                self.log, "No Cl's were computed. Are you sure that you have requested them?")
         mapping = {"tt": 0, "ee": 1, "bb": 2, "te": 3}
         cls = {"ell": np.arange(cl_camb.shape[0])}
         cls.update({sp: cl_camb[:, i] for sp, i in mapping.items()})
@@ -601,9 +592,8 @@ class camb(_cosmo):
         try:
             units_factor = units_factors[units]
         except KeyError:
-            self.log.error("Units '%s' not recognized. Use one of %s.",
-                           units, list(units_factors))
-            raise HandledException
+            raise LoggedError(self.log, "Units '%s' not recognized. Use one of %s.",
+                              units, list(units_factors))
         for cl in cls:
             if cl not in ['pp', 'ell']:
                 cls[cl][2:] *= units_factor ** 2 * ell_factor
@@ -626,9 +616,9 @@ class camb(_cosmo):
         try:
             return self._get_z_dependent("H", z) * self.H_units_conv_factor[units]
         except KeyError:
-            self.log.error("Units not known for H: '%s'. Try instead one of %r.",
-                           units, list(self.H_units_conv_factor))
-            raise HandledException
+            raise LoggedError(
+                self.log, "Units not known for H: '%s'. Try instead one of %r.",
+                units, list(self.H_units_conv_factor))
 
     def get_angular_diameter_distance(self, z):
         return self._get_z_dependent("angular_diameter_distance", z)
@@ -651,10 +641,9 @@ class camb(_cosmo):
         try:
             cls = deepcopy(current_state["source_Cl"])
         except:
-            self.log.error(
-                "No source Cl's were computed. "
+            raise LoggedError(
+                self.log, "No source Cl's were computed. "
                 "Are you sure that you have requested some source?")
-            raise HandledException
         cls_dict = dict()
         for term, cl in cls.items():
             term_tuple = tuple(
@@ -693,9 +682,9 @@ def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs)
         log.warning("Failed to get gcc version (maybe not using gcc?). "
                     "Going ahead and hoping for the best.")
     elif not gcc_check:
-        log.error("CAMB requires a gcc version >= %s, "
-                  "which is higher than your current one.", camb_min_gcc_version)
-        raise HandledException
+        raise LoggedError(
+            log, "CAMB requires a gcc version >= %s, "
+            "which is higher than your current one.", camb_min_gcc_version)
     log.info("Downloading camb...")
     success = download_github_release(
         os.path.join(path, "code"), camb_repo_name, camb_repo_version,

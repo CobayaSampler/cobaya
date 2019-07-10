@@ -1,4 +1,4 @@
-"""
+r"""
 .. module:: likelihoods._H0_prototype
 
 :Synopsis: Prototype class for local Hubble parameter measurements

@@ -111,7 +111,7 @@ from getdist import IniFile
 # Local
 from cobaya.conventions import _package, _path_install
 from cobaya.likelihood import Likelihood
-from cobaya.log import HandledException
+from cobaya.log import LoggedError
 from cobaya.install import download_github_release
 
 _twopi = 2 * np.pi
@@ -132,17 +132,17 @@ class _sn_prototype(Likelihood):
                         _package + ".likelihoods." + self.name, package=_package),
                     "get_path")(self.path_install)
             else:
-                self.log.error("No path given to the %s likelihood. Set the likelihood"
-                               " property 'path' or the common property '%s'.",
-                               self.dataset_file, _path_install)
-                raise HandledException
+                raise LoggedError(
+                    self.log, "No path given to the %s likelihood. Set the likelihood"
+                    " property 'path' or the common property '%s'.",
+                    self.dataset_file, _path_install)
         self.path = os.path.normpath(self.path)
         self.dataset_file_path = os.path.normpath(os.path.join(self.path, self.dataset_file))
         self.log.info("Reading data from %s", self.dataset_file_path)
         if not os.path.exists(self.dataset_file_path):
-            self.log.error("The likelihood is not installed in the given path: "
-                           "cannot find the file '%s'.", self.dataset_file_path)
-            raise HandledException
+            raise LoggedError(
+                self.log, "The likelihood is not installed in the given path: "
+                "cannot find the file '%s'.", self.dataset_file_path)
         ini = IniFile(self.dataset_file_path)
         ini.params.update(self.dataset_params or {})
         self.twoscriptmfit = ini.bool('twoscriptmfit')
@@ -182,8 +182,7 @@ class _sn_prototype(Likelihood):
                         setattr(self, col, zeros.copy())
                 elif line.strip():
                     if cols is None:
-                        self.log.error('Data file must have comment header')
-                        raise HandledException
+                        raise LoggedError(self.log, 'Data file must have comment header')
                     vals = line.split()
                     for i, (col, val) in enumerate(zip(cols, vals)):
                         if col == 'name':
@@ -200,11 +199,10 @@ class _sn_prototype(Likelihood):
         self.nsn = ix
         self.log.debug('Number of SN read: %s ' % self.nsn)
         if self.twoscriptmfit and not self.has_third_var:
-            self.log.error('twoscriptmfit was set but thirdvar information not present')
-            raise HandledException
+            raise LoggedError(
+                self.log, 'twoscriptmfit was set but thirdvar information not present')
         if ini.bool('absdist_file'):
-            self.log.error('absdist_file not supported')
-            raise HandledException
+            raise LoggedError(self.log, 'absdist_file not supported')
         covmats = [
             'mag', 'stretch', 'colour', 'mag_stretch', 'mag_colour', 'stretch_colour']
         self.covs = {}

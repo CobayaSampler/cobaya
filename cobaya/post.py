@@ -25,7 +25,7 @@ from cobaya.conventions import _chi2, _separator, _minuslogpost, _force, _p_valu
 from cobaya.conventions import _minuslogprior, _path_install, _input_params
 from cobaya.conventions import _separator_files, _post_add, _post_remove, _post_suffix
 from cobaya.collection import Collection
-from cobaya.log import logger_setup, HandledException
+from cobaya.log import logger_setup, LoggedError
 from cobaya.input import update_info
 from cobaya.output import get_Output as Output
 from cobaya.prior import Prior
@@ -50,8 +50,7 @@ def post(info, sample=None):
     try:
         info_post = info[_post]
     except KeyError:
-        log.error("No 'post' block given. Nothing to do!")
-        raise HandledException
+        raise LoggedError(log, "No 'post' block given. Nothing to do!")
     if get_mpi_rank():
         log.warning(
             "Post-processing is not yet MPI-able. Doing nothing for rank > 1 processes.")
@@ -73,16 +72,14 @@ def post(info, sample=None):
             try:
                 collection_in._append(s)
             except:
-                log.error("Failed to load some of the input samples.")
-                raise HandledException
+                raise LoggedError(log, "Failed to load some of the input samples.")
     else:
-        log.error("Not output from where to load from or input collections given.")
-        raise HandledException
+        raise LoggedError(log, "Not output from where to load from or input collections given.")
     log.info("Will process %d samples.", collection_in.n())
     if collection_in.n() <= 1:
-        log.error("Not enough samples for post-processing. Try using a larger sample, "
-                  "or skipping or thinning less.")
-        raise HandledException
+        raise LoggedError(
+            log, "Not enough samples for post-processing. Try using a larger sample, "
+            "or skipping or thinning less.")
     # 2. Compare old and new info: determine what to do
     add = info_post.get(_post_add, {}) or {}
     remove = info_post.get(_post_remove, {})
@@ -97,10 +94,10 @@ def post(info, sample=None):
     for p in remove.get(_params, {}):
         pinfo = info_in[_params].get(p)
         if pinfo is None or not is_derived_param(pinfo):
-            log.error(
+            raise LoggedError(
+                log,
                 "You tried to remove parameter '%s', which is not a derived paramter. "
                 "Only derived parameters can be removed during post-processing.", p)
-            raise HandledException
         out[_params].pop(p)
     mlprior_names_add = []
     for p, pinfo in add.get(_params, {}).items():
@@ -109,39 +106,38 @@ def post(info, sample=None):
             if not is_sampled_param(pinfo_in):
                 # No added sampled parameters (de-marginalisation not implemented)
                 if pinfo_in is None:
-                    log.error("You added a new sampled parameter %r (maybe accidentaly "
-                              "by adding a new likelihood that depends on it). "
-                              "Adding new sampled parameters is not possible. Try fixing "
-                              "it to some value.", p)
-                    raise HandledException
+                    raise LoggedError(
+                        log, "You added a new sampled parameter %r (maybe accidentaly "
+                        "by adding a new likelihood that depends on it). "
+                        "Adding new sampled parameters is not possible. Try fixing "
+                        "it to some value.", p)
                 else:
-                    log.error(
+                    raise LoggedError(
+                        log,
                         "You tried to change the prior of parameter '%s', "
                         "but it was not a sampled parameter. "
                         "To change that prior, you need to define as an external one.", p)
-                    raise HandledException
             if mlprior_names_add[:1] != _prior_1d_name:
                 mlprior_names_add = (
                         [_minuslogprior + _separator + _prior_1d_name] + mlprior_names_add)
         elif is_derived_param(pinfo):
             if p in out[_params]:
-                log.error("You tried to add derived parameter '%s', which is already "
-                          "present. To force its recomputation, 'remove' it too.", p)
-                raise HandledException
+                raise LoggedError(
+                    log, "You tried to add derived parameter '%s', which is already "
+                    "present. To force its recomputation, 'remove' it too.", p)
         elif is_fixed_param(pinfo):
             # Only one possibility left "fixed" parameter that was not present before:
             # input of new likelihood, or just an argument for dynamical derived (dropped)
             if ((p in info_in[_params] and
                  pinfo[_p_value] != (pinfo_in or {}).get(_p_value, None))):
-                log.error(
+                raise LoggedError(
+                    log,
                     "You tried to add a fixed parameter '%s: %r' that was already present"
                     " but had a different value or was not fixed. This is not allowed. "
                     "The old info of the parameter was '%s: %r'",
                     p, dict(pinfo), p, dict(pinfo_in))
-                raise HandledException
         else:
-            log.error("This should not happen. Contact the developers.")
-            raise HandledException
+            raise LoggedError(log, "This should not happen. Contact the developers.")
         out[_params][p] = pinfo
     # For the likelihood only, turn the rest of *derived* parameters into constants,
     # so that the likelihoods do not try to compute them)
@@ -164,9 +160,9 @@ def post(info, sample=None):
                 out[level].remove(pdf)
                 warn_remove = True
             except ValueError:
-                log.error("Trying to remove %s '%s', but it is not present. "
-                          "Existing ones: %r", level, pdf, out[level])
-                raise HandledException
+                raise LoggedError(
+                    log, "Trying to remove %s '%s', but it is not present. "
+                    "Existing ones: %r", level, pdf, out[level])
     if warn_remove:
         log.warning("You are removing a prior or likelihood pdf. "
                     "Notice that if the resulting posterior is much wider "
@@ -200,14 +196,14 @@ def post(info, sample=None):
     for level in [_prior, _likelihood]:
         for i, x_i in enumerate(out[level]):
             if x_i in list(out[level])[i + 1:]:
-                log.error("You have added %s '%s', which was already present. If you "
-                          "want to force its recomputation, you must also 'remove' it.",
-                          level, x_i)
-                raise HandledException
+                raise LoggedError(
+                    log, "You have added %s '%s', which was already present. If you "
+                    "want to force its recomputation, you must also 'remove' it.",
+                    level, x_i)
     # 3. Create output collection
     if _post_suffix not in info_post:
-        log.error("You need to provide a '%s' for your chains.", _post_suffix)
-        raise HandledException
+        raise LoggedError(
+            log, "You need to provide a '%s' for your chains.", _post_suffix)
     # Use default prefix if it exists. If it does not, produce no output by default.
     # {post: {output: None}} suppresses output, and if it's a string, updates it.
     out_prefix = info_post.get(_output_prefix, info.get(_output_prefix))
@@ -224,7 +220,8 @@ def post(info, sample=None):
     if recompute_theory:
         theory = list(info_theory_out.keys())[0]
         if _input_params not in info_theory_out[theory]:
-            log.error(
+            raise LoggedError(
+                log,
                 "You appear to be post-processing a chain generated with an older "
                 "version of Cobaya. For post-processing to work, please edit the "
                 "'[root].updated.yaml' file of the original chain to add, inside the "
@@ -234,7 +231,6 @@ def post(info, sample=None):
                 "specify the correct set of theory parameters.\n"
                 "The full set of input parameters are %s.",
                 theory, list(dummy_model_out.parameterization.input_params()))
-            raise HandledException
     prior_add = Prior(dummy_model_out.parameterization, add.get(_prior))
     likelihood_add = Likelihood(
         add[_likelihood], parameterization_like,
@@ -326,10 +322,10 @@ def post(info, sample=None):
             last_percent = percent
             progress_bar(log, percent, " (%d/%d)" % (i, collection_in.n()))
     if not collection_out.data.last_valid_index():
-        log.error("No elements in the final sample. Possible causes: "
-                  "added a prior or likelihood valued zero over the full sampled domain, "
-                  "or the computation of the theory failed everywhere, etc.")
-        raise HandledException
+        raise LoggedError(
+            log, "No elements in the final sample. Possible causes: "
+            "added a prior or likelihood valued zero over the full sampled domain, "
+            "or the computation of the theory failed everywhere, etc.")
     # Reweight -- account for large dynamic range!
     #   Prefer to rescale +inf to finite, and ignore final points with -inf.
     #   Remove -inf's (0-weight), and correct indices

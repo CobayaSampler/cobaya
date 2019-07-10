@@ -172,7 +172,7 @@ import six
 
 # Local
 from cobaya.likelihood import Likelihood
-from cobaya.log import HandledException
+from cobaya.log import LoggedError
 from cobaya.conventions import _path_install, _likelihood
 from cobaya.input import get_default_info
 from cobaya.install import pip_install, download_file
@@ -206,10 +206,10 @@ class _planck_clik_prototype(Likelihood):
                 if self.path_install:
                     self.path_clik = os.path.join(self.path_install, "code", code_path)
                 else:
-                    self.log.error("No path given to the Planck likelihood. Set the "
-                                   "likelihood property 'path' or the common property "
-                                   "'%s'.", _path_install)
-                    raise HandledException
+                    raise LoggedError(
+                        self.log, "No path given to the Planck likelihood. Set the "
+                        "likelihood property 'path' or the common property "
+                        "'%s'.", _path_install)
             else:
                 self.path_clik = self.path
             self.log.info("Importing clik from %s", self.path_clik)
@@ -228,12 +228,12 @@ class _planck_clik_prototype(Likelihood):
             self.clik = (
                 clik.clik_lensing(self.clik_file) if self.lensing else clik.clik(self.clik_file))
         except clik.lkl.CError:
-            self.log.error(
+            raise LoggedError(
+                self.log,
                 "The .clik file was not found where specified in the 'clik_file' field "
                 "of the settings of this likelihood. Maybe the 'path' given is not "
                 "correct? The full path where the .clik file was searched for is '%s'",
                 self.clik_file)
-            raise HandledException
         self.expected_params = list(self.clik.extra_parameter_names)
         # py3 lensing bug
         if "b'A_planck'" in self.expected_params:
@@ -247,10 +247,10 @@ class _planck_clik_prototype(Likelihood):
         differences = are_different_params_lists(
             self.input_params, self.expected_params, name_A="given", name_B="expected")
         if differences:
-            self.log.error("Configuration error in parameters: %r. "
-                           "If this has happened without you fiddling with the defaults, "
-                           "please open an issue in GitHub.", differences)
-            raise HandledException
+            raise LoggedError(
+                self.log, "Configuration error in parameters: %r. "
+                "If this has happened without you fiddling with the defaults, "
+                "please open an issue in GitHub.", differences)
         # Placeholder for vector passed to clik
         self.l_maxs = self.clik.get_lmax()
         length = (len(self.l_maxs) if self.lensing else len(self.clik.get_has_cl()))
@@ -318,8 +318,7 @@ def is_installed_clik(path, log_and_fail=False, import_it=True):
         clik_path = None
     if not clik_path or not os.path.exists(clik_path):
         if log_and_fail:
-            log.error("The given folder does not exist: '%s'", clik_path or path)
-            raise HandledException
+            raise LoggedError(log, "The given folder does not exist: '%s'", clik_path or path)
         return False
     sys.path.insert(0, clik_path)
     try:
@@ -329,8 +328,7 @@ def is_installed_clik(path, log_and_fail=False, import_it=True):
     except:
         print('Failed to import clik')
         if log_and_fail:
-            log.error("Error importing click from: '%s'", clik_path)
-            raise HandledException
+            raise LoggedError(log, "Error importing click from: '%s'", clik_path)
         return False
 
 
@@ -367,8 +365,7 @@ def install_clik(path, no_progress_bars=False):
     for req in ("cython", "astropy"):
         exit_status = pip_install(req)
         if exit_status:
-            log.error("Failed installing '%s'.", req)
-            raise HandledException
+            raise LoggedError(log, "Failed installing '%s'.", req)
     log.info("Downloading...")
     click_url = 'https://cdn.cosmologist.info/cosmobox/plc-2.1_py3.tar.bz2'
     if not download_file(click_url, path, decompress=True,
@@ -396,7 +393,6 @@ def install_clik(path, no_progress_bars=False):
         if not execute([sys.executable, "waf", "configure", "--install_all_deps"]):
             log.error("Configuration failed!")
             return False
-
         log.info("Compiling...")
         if not execute([sys.executable, "waf", "install"]):
             log.error("Compilation failed!")

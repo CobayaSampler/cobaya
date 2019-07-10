@@ -129,7 +129,7 @@ import logging
 
 # Local
 from cobaya.likelihood import Likelihood
-from cobaya.log import HandledException
+from cobaya.log import LoggedError
 from cobaya.conventions import _path_install, _c_km_s
 
 
@@ -137,9 +137,9 @@ class _bao_prototype(Likelihood):
 
     def initialize(self):
         if not getattr(self, "path", None) and not getattr(self, "path_install", None):
-            self.log.error("No path given to BAO data. Set the likelihood property "
-                           "'path' or the common property '%s'.", _path_install)
-            raise HandledException
+            raise LoggedError(
+                self.log, "No path given to BAO data. Set the likelihood property "
+                "'path' or the common property '%s'.", _path_install)
         # If no path specified, use the modules path
         data_file_path = os.path.normpath(getattr(self, "path", None) or
                                           os.path.join(self.path_install, "data"))
@@ -156,9 +156,9 @@ class _bao_prototype(Likelihood):
                     os.path.join(data_file_path, self.measurements_file),
                     header=None, index_col=None, sep="\s+", comment="#")
             except IOError:
-                self.log.error("Couldn't find measurements file '%s' in folder '%s'. " % (
-                    self.measurements_file, data_file_path) + "Check your paths.")
-                raise HandledException
+                raise LoggedError(
+                    self.log, "Couldn't find measurements file '%s' in folder '%s'. " % (
+                        self.measurements_file, data_file_path) + "Check your paths.")
         else:
             self.data = pd.DataFrame([self.data] if not hasattr(self.data[0], "__len__")
                                      else self.data)
@@ -178,17 +178,17 @@ class _bao_prototype(Likelihood):
             try:
                 chi2 = np.loadtxt(os.path.join(data_file_path, self.prob_dist))
             except IOError:
-                self.log.error("Couldn't find probability distribution file '%s' "
-                               "in folder '%s'. " % (self.prob_dist, data_file_path) +
-                               "Check your paths.")
-                raise HandledException
+                raise LoggedError(
+                    self.log, "Couldn't find probability distribution file '%s' "
+                    "in folder '%s'. " % (self.prob_dist, data_file_path) +
+                    "Check your paths.")
             try:
                 alpha = np.linspace(
                     self.prob_dist_bounds[0], self.prob_dist_bounds[1], len(chi2))
             except (TypeError, AttributeError, IndexError, ValueError):
-                self.log.error("If 'prob_dist' given, 'prob_dist_bounds' needs to be "
-                               "specified as [min, max].")
-                raise HandledException
+                raise LoggedError(
+                    self.log, "If 'prob_dist' given, 'prob_dist_bounds' needs to be "
+                    "specified as [min, max].")
             spline = UnivariateSpline(alpha, -chi2 / 2, s=0)
             self.logpdf = lambda x: (
                 spline(x)[0] if self.prob_dist_bounds[0] <= x <= self.prob_dist_bounds[1]
@@ -204,23 +204,23 @@ class _bao_prototype(Likelihood):
                 elif "error" in self.data.columns:
                     self.cov = np.diag(self.data["error"] ** 2)
                 else:
-                    self.log.error("No errors provided, either as cov, invcov "
-                                   "or as the 3rd column in the data file.")
-                    raise HandledException
+                    raise LoggedError(
+                        self.log, "No errors provided, either as cov, invcov "
+                        "or as the 3rd column in the data file.")
                 self.invcov = np.linalg.inv(self.cov)
             except IOError:
-                self.log.error("Couldn't find (inv)cov file '%s' in folder '%s'. " % (
-                    getattr(self, "cov_file", getattr(self, "invcov_file", None)),
-                    data_file_path) + "Check your paths.")
-                raise HandledException
+                raise LoggedError(
+                    self.log, "Couldn't find (inv)cov file '%s' in folder '%s'. " % (
+                        getattr(self, "cov_file", getattr(self, "invcov_file", None)),
+                        data_file_path) + "Check your paths.")
             self.logpdf = lambda x: (lambda x_: -0.5 * x_.dot(self.invcov).dot(x_))(
                 x - self.data["value"].values)
 
     def add_theory(self):
         if self.theory.__class__ == "classy":
-            self.log.error(
+            raise LoggedError(
+                self.log,
                 "BAO likelihood not yet compatible with CLASS (help appreciated!)")
-            raise HandledException
         # Requisites
         zs = {obs: self.data.loc[self.data["observable"] == obs, "z"].values
               for obs in self.data["observable"].unique()}
@@ -251,11 +251,11 @@ class _bao_prototype(Likelihood):
         obs_used_not_implemented = np.unique([obs for obs in self.data["observable"]
                                               if obs not in theory_reqs])
         if len(obs_used_not_implemented):
-            self.log.error("This likelihood refers to observables '%s' that have not been"
-                           " implemented yet. Did you mean any of %s? "
-                           "If you didn't, please, open an issue in github.",
-                           obs_used_not_implemented, list(theory_reqs))
-            raise HandledException
+            raise LoggedError(
+                self.log, "This likelihood refers to observables '%s' that have not been"
+                " implemented yet. Did you mean any of %s? "
+                "If you didn't, please, open an issue in github.",
+                obs_used_not_implemented, list(theory_reqs))
         requisites = {}
         if self.has_type:
             for obs in self.data["observable"].unique():

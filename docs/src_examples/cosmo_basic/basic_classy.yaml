@@ -5,8 +5,8 @@ likelihood:
 params:
   logA:
     prior:
-      min: 2
-      max: 4
+      min: 1.61
+      max: 3.91
     ref:
       dist: norm
       loc: 3.1
@@ -120,5 +120,6 @@ sampler:
 theory:
   classy:
     extra_args:
+      non linear: halofit
       N_ncdm: 1
       N_ur: 2.0328

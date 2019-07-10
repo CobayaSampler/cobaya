@@ -22,7 +22,7 @@ from cobaya.input import update_info
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection as Likelihood
-from cobaya.log import HandledException, logger_setup, HasLogger
+from cobaya.log import LoggedError, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
 from cobaya.tools import deepcopy_where_possible
 
@@ -79,8 +79,7 @@ class Model(HasLogger):
             _params: deepcopy_where_possible(info_params),
             _likelihood: deepcopy_where_possible(info_likelihood)}
         if not self._updated_info[_likelihood]:
-            self.log.error("No likelihood requested!")
-            raise HandledException
+            raise LoggedError(self.log, "No likelihood requested!")
         for k, v in ((_prior, info_prior), (_theory, info_theory),
                      (_path_install, modules), (_timing, timing)):
             if v not in (None, {}):
@@ -108,12 +107,12 @@ class Model(HasLogger):
         else:
             params_values_array = np.atleast_1d(params_values)
             if params_values_array.shape[0] != self.prior.d():
-                self.log.error("Wrong dimensionality: it's %d and it should be %d.",
-                               len(params_values_array), self.prior.d())
-                raise HandledException
+                raise LoggedError(
+                    self.log, "Wrong dimensionality: it's %d and it should be %d.",
+                    len(params_values_array), self.prior.d())
         if len(params_values_array.shape) >= 2:
-            self.log.error("Cannot take arrays of points as inputs, just single points.")
-            raise HandledException
+            raise LoggedError(
+                self.log, "Cannot take arrays of points as inputs, just single points.")
         return params_values_array
 
     def logpriors(self, params_values, make_finite=False):
@@ -269,10 +268,9 @@ class Model(HasLogger):
                 "Posterior to be computed for parameters %s",
                 dict(zip(self.parameterization.sampled_params(), params_values_array)))
         if not np.all(np.isfinite(params_values_array)):
-            self.log.error(
-                "Got non-finite parameter values: %r",
+            raise LoggedError(
+                self.log,  "Got non-finite parameter values: %r",
                 dict(zip(self.parameterization.sampled_params(), params_values_array)))
-            raise HandledException
         # Notice that we don't use the make_finite in the prior call,
         # to correctly check if we have to compute the likelihood
         logpriors = self.logpriors(params_values_array, make_finite=False)

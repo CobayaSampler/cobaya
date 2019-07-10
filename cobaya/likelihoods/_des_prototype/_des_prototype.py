@@ -66,7 +66,7 @@ import logging
 
 # Local
 from cobaya.likelihood import Likelihood
-from cobaya.log import HandledException
+from cobaya.log import LoggedError
 from cobaya.conventions import _path_install, _c_km_s
 from cobaya.install import download_github_release
 
@@ -152,25 +152,25 @@ class _des_prototype(Likelihood):
             elif self.path_install:
                 dataset_file_path = os.path.join(self.path_install, "data", des_data_name)
             else:
-                self.log.error(
+                raise LoggedError(
+                    self.log,
                     "No path given to the DES data. Set the likelihood property 'path' "
                     "or the common property '%s'.", _path_install)
-                raise HandledException
             dataset_file = os.path.normpath(
                 os.path.join(dataset_file_path, self.dataset_file))
         try:
             if dataset_file.endswith(".fits"):
                 if self.dataset_params:
-                    self.log.error("'dataset_params' can only be specified "
-                                   "for .dataset (not .fits) file.")
-                    raise HandledException
+                    raise LoggedError(
+                        self.log, "'dataset_params' can only be specified "
+                        "for .dataset (not .fits) file.")
                 self.load_fits_data(dataset_file)
             else:
                 self.load_dataset(dataset_file, self.dataset_params)
         except IOError:
-            self.log.error("The data file '%s' could not be found at '%s'. "
-                           "Check your paths!", self.dataset_file, dataset_file_path)
-            raise HandledException
+            raise LoggedError(
+                self.log, "The data file '%s' could not be found at '%s'. "
+                "Check your paths!", self.dataset_file, dataset_file_path)
         self.initialize_postload()
 
     def load_dataset(self, filename, dataset_params):
@@ -393,9 +393,9 @@ class _des_prototype(Likelihood):
 
     def add_theory(self):
         if self.theory.__class__ == "classy":
-            self.log.error(
+            raise LoggedError(
+                self.log,
                 "DES likelihood not yet compatible with CLASS (help appreciated!)")
-            raise HandledException
         # Requisites for the theory code
         self.theory.needs(**{
             "omegan": None,
@@ -456,9 +456,9 @@ class _des_prototype(Likelihood):
             wq = get_wq()
             if PKWeyl is not None:
                 if 'gammat' in self.used_types:
-                    self.log.error(
+                    raise LoggedError(
+                        self.log,
                         'DES currently only supports Weyl potential for lensing only')
-                    raise HandledException
                 qs = chis * wq
             else:
                 qs = 3 * omegam * h2 * (1e5 / c) ** 2 * chis * (1 + self.zs) / 2 * wq

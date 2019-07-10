@@ -26,7 +26,7 @@ from getdist import MCSamples
 # Local
 from cobaya.conventions import _weight, _chi2, _minuslogpost, _minuslogprior
 from cobaya.conventions import _separator
-from cobaya.log import HandledException, HasLogger
+from cobaya.log import LoggedError, HasLogger
 
 # Suppress getdist output
 from getdist import chains
@@ -93,10 +93,10 @@ class Collection(HasLogger):
                 try:
                     self._out_load(skip=onload_skip, thin=onload_thin)
                     if set(self.data.columns) != set(columns):
-                        self.log.error(
+                        raise LoggedError(
+                            self.log,
                             "Unexpected column names!\nLoaded: %s\nShould be: %s",
                             list(self.data.columns), columns)
-                        raise HandledException
                     self._n = self.data.shape[0]
                     self._n_last_out = self._n
                 except IOError:
@@ -108,8 +108,7 @@ class Collection(HasLogger):
                     elif load:
                         raise
             else:
-                self.log.error("No continuation possible if there is no output.")
-                raise HandledException
+                raise LoggedError(self.log, "No continuation possible if there is no output.")
         else:
             self._out_delete()
         if not resuming and not load:
@@ -135,9 +134,9 @@ class Collection(HasLogger):
             try:
                 logpost = sum(logpriors) + sum(loglikes)
             except ValueError:
-                self.log.error("If a log-posterior is not specified, you need to pass "
-                               "a log-likelihood and a log-prior.")
-                raise HandledException
+                raise LoggedError(
+                    self.log, "If a log-posterior is not specified, you need to pass "
+                    "a log-likelihood and a log-prior.")
         self.data.at[self._n, _minuslogpost] = -logpost
         if logpriors is not None:
             for name, value in zip(self.minuslogprior_names, logpriors):
@@ -148,16 +147,16 @@ class Collection(HasLogger):
                 self.data.at[self._n, name] = -2 * value
             self.data.at[self._n, _chi2] = -2 * sum(loglikes)
         if len(values) != len(self.sampled_params):
-            self.log.error("Got %d values for the sampled parameters. Should be %d.",
-                           len(values), len(self.sampled_params))
-            raise HandledException
+            raise LoggedError(
+                self.log, "Got %d values for the sampled parameters. Should be %d.",
+                len(values), len(self.sampled_params))
         for name, value in zip(self.sampled_params, values):
             self.data.at[self._n, name] = value
         if derived is not None:
             if len(derived) != len(self.derived_params):
-                self.log.error("Got %d values for the dervied parameters. Should be %d.",
-                               len(derived), len(self.derived_params))
-                raise HandledException
+                raise LoggedError(
+                    self.log, "Got %d values for the dervied parameters. Should be %d.",
+                    len(derived), len(self.derived_params))
             for name, value in zip(self.derived_params, derived):
                 self.data.at[self._n, name] = value
         self._n += 1
@@ -320,8 +319,7 @@ class Collection(HasLogger):
 
     def _dump_slice__txt(self, n_min=None, n_max=None):
         if n_min is None or n_max is None:
-            self.log.error("Needs to specify the limit n's to dump.")
-            raise HandledException
+            raise LoggedError(self.log, "Needs to specify the limit n's to dump.")
         if self._n_last_out == n_max:
             return
         self._n_last_out = n_max

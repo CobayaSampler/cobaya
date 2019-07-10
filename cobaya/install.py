@@ -22,7 +22,7 @@ from six import string_types
 from pkg_resources import parse_version
 
 # Local
-from cobaya.log import logger_setup, HandledException
+from cobaya.log import logger_setup, LoggedError
 from cobaya.tools import get_folder, make_header, warn_deprecation
 from cobaya.input import get_modules
 from cobaya.conventions import _package, _code, _data, _likelihood, _external, _force
@@ -42,9 +42,9 @@ def install(*infos, **kwargs):
             path = paths[0]
         else:
             print("logging?")
-            log.error("No 'path' argument given and could not extract one (and only one) "
-                      "from the infos.")
-            raise HandledException
+            raise LoggedError(
+                log, "No 'path' argument given and could not extract one (and only one) "
+                "from the infos.")
     abspath = os.path.abspath(path)
     log.info("Installing modules at '%s'\n", abspath)
     kwargs_install = {"force": kwargs.get("force", False),
@@ -56,8 +56,8 @@ def install(*infos, **kwargs):
             try:
                 os.makedirs(spath)
             except OSError:
-                log.error("Could not create the desired installation folder '%s'", spath)
-                raise HandledException
+                raise LoggedError(
+                    log, "Could not create the desired installation folder '%s'", spath)
     failed_modules = []
     for kind, modules in get_modules(*infos).items():
         for module in modules:
@@ -114,11 +114,11 @@ def install(*infos, **kwargs):
                 failed_modules += ["%s:%s" % (kind, module)]
     if failed_modules:
         bullet = "\n - "
-        log.error("The installation (or installation test) of some module(s) has failed: "
-                  "%s\nCheck output of the installer of each module above "
-                  "for precise error info.\n",
-                  bullet + bullet.join(failed_modules))
-        raise HandledException
+        raise LoggedError(
+            log, "The installation (or installation test) of some module(s) has failed: "
+            "%s\nCheck output of the installer of each module above "
+            "for precise error info.\n",
+            bullet + bullet.join(failed_modules))
 
 
 def download_file(filename, path, no_progress_bars=False, decompress=False, logger=None):
