@@ -23,7 +23,7 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
     # used by Planck, so we take H0 instead
     planck_base_model_prime = deepcopy(planck_base_model)
     planck_base_model_prime.update(extra_model or {})
-    if theo == "classy":
+    if "H0" in best_fit:
         planck_base_model_prime["hubble"] = "H"
         best_fit_derived = deepcopy(best_fit_derived) or {}
         best_fit_derived.pop("H0", None)

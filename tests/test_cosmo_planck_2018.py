@@ -22,7 +22,8 @@ classy_extra_tolerance = 0.2
 
 
 def test_planck_2018_t_camb(modules):
-    best_fit = params_lowl_highTT_lensing
+    best_fit = deepcopy(params_lowl_highTT_lensing)
+    best_fit.pop("H0")
     info_likelihood = lik_info_lowl_highTT_lensing
     info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = derived_lowl_highTT_lensing
@@ -31,7 +32,8 @@ def test_planck_2018_t_camb(modules):
 
 
 def test_planck_2018_p_camb(modules):
-    best_fit = params_lowTE_highTTTEEE_lensingcmblikes
+    best_fit = deepcopy(params_lowTE_highTTTEEE_lensingcmblikes)
+    best_fit.pop("H0")
     info_likelihood = lik_info_lowTE_highTTTEEE_lensingcmblikes
     info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = derived_lowTE_highTTTEEE_lensingcmblikes
@@ -39,7 +41,18 @@ def test_planck_2018_p_camb(modules):
                   chi2_lowTE_highTTTEEE_lensingcmblikes, best_fit_derived)
 
 
+def test_planck_2018_lcmbmarged_camb(modules):
+    best_fit = params_lensing_cmbmarged
+    info_likelihood = lik_info_lensing_cmbmarged
+    info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
+    best_fit_derived = {}
+    body_of_test(modules, best_fit, info_likelihood, info_theory,
+                  chi2_lensing_cmbmarged, best_fit_derived)
+
+
 def test_planck_2018_t_classy(modules):
+    best_fit = deepcopy(params_lowl_highTT_lensing)
+    best_fit.pop("theta_MC_100")
     best_fit = params_lowl_highTT_lensing
     info_likelihood = lik_info_lowl_highTT_lensing
     info_theory = {"classy": {"extra_args": cmb_precision["classy"]}}
@@ -53,7 +66,8 @@ def test_planck_2018_t_classy(modules):
 
 
 def test_planck_2018_p_classy(modules):
-    best_fit = params_lowTE_highTTTEEE_lensingcmblikes
+    best_fit = deepcopy(params_lowTE_highTTTEEE_lensingcmblikes)
+    best_fit.pop("theta_MC_100")
     info_likelihood = lik_info_lowTE_highTTTEEE_lensingcmblikes
     info_theory = {"classy": {"extra_args": cmb_precision["classy"]}}
     best_fit_derived = deepcopy(derived_lowTE_highTTTEEE_lensingcmblikes)
@@ -68,12 +82,13 @@ def test_planck_2018_p_classy(modules):
 # Temperature only #######################################################################
 
 lik_info_lowl_highTT_lensing = {
-    "planck_2018_lowl": None, "planck_2018_plikHM_TT": None, "planck_2018_lensing": None}
+    "planck_2018_lowl": None, "planck_2018_plikHM_TT": None,
+    "planck_2018_clik_lensing": None}
 
 chi2_lowl_highTT_lensing = {
     "planck_2018_lowl": 22.92,
     "planck_2018_plikHM_TT": 757.77,
-    "planck_2018_lensing": 9.11,
+    "planck_2018_clik_lensing": 9.11,
     "tolerance": 0.11}
 
 params_lowl_highTT_lensing = {
@@ -82,7 +97,7 @@ params_lowl_highTT_lensing = {
     "omegach2": 0.1172,
     # only one of the next two is finally used!
     "H0": 68.45,  # will be ignored in the CAMB case
-    "theta": 1.04117,  # will be ignored in the CLASS case
+    "theta_MC_100": 1.04117,  # will be ignored in the CLASS case
     "tau": 0.0862,
     "logA": 3.100,
     "ns": 0.9733,
@@ -131,11 +146,11 @@ derived_lowl_highTT_lensing = {
 
 lik_info_lowTE_highTTTEEE_lensingcmblikes = {
     "planck_2018_lowl": None, "planck_2018_lowE": None, "planck_2018_plikHM_TTTEEE": None,
-    "planck_2018_lensing": None}
+    "planck_2018_cmblikes_lensing": None}
 
 chi2_lowTE_highTTTEEE_lensingcmblikes = {
     "planck_2018_lowl": 23.25, "planck_2018_lowE": 396.05,
-    "planck_2018_plikHM_TTTEEE": 2344.93, "planck_2018_lensing": 8.87,
+    "planck_2018_plikHM_TTTEEE": 2344.93, "planck_2018_cmblikes_lensing": 8.87,
     "tolerance": 0.11}
 
 params_lowTE_highTTTEEE_lensingcmblikes = {
@@ -144,7 +159,7 @@ params_lowTE_highTTTEEE_lensingcmblikes = {
     "omegach2": 0.12011,
     # only one of the next two is finally used!
     "H0": 67.32,  # will be ignored in the CAMB case
-    "theta": 1.040909,  # will be ignored in the CLASS case
+    "theta_MC_100": 1.040909,  # will be ignored in the CLASS case
     "logA": 3.0448,
     "ns": 0.96605,
     "tau": 0.0543,
@@ -194,3 +209,18 @@ derived_lowTE_highTTTEEE_lensingcmblikes = {
     "keq": [0.010393, 0.000081],
     "thetaeq": [0.81281, 0.0050],
     "thetarseq": [0.44912, 0.0026]}
+
+# Best fit CMBmarged #####################################################################
+
+lik_info_lensing_cmbmarged = {"planck_2018_cmblikes_lensing_cmbmarged": None}
+
+chi2_lensing_cmbmarged = {
+    "planck_2018_cmblikes_lensing_cmbmarged": 7.51, "tolerance": 0.11}
+
+params_lensing_cmbmarged = {
+    "omegabh2": 2.2219050E-02,
+    "omegach2": 1.1726920E-01,
+    "theta_MC_100": 1.1180650E+00,
+    "tau": 0.055,
+    "logA": 3.2528000E+00,
+    "ns": 9.6135180E-01}

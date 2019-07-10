@@ -404,14 +404,12 @@ class _cmblikes_prototype(Likelihood):
             s = ini.relativeFileName('nuisance_params')
             self.nuisance_params = ParamNames(s)
             if ini.hasKey('calibration_param'):
-                self.calibration_param = ini.string('calibration_param')
-                if '.paramnames' in self.calibration_param:
-                    self.log.error('calibration_param should be name of parameter '
-                                   'in nuisance_params')
-                    raise HandledException
+                raise Exception('calibration_param not allowed with nuisance_params')
+            if ini.hasKey('calibration_paramname'):
+                self.calibration_param = ini.string('calibration_paramname')
             else:
                 self.calibration_param = None
-        elif ini.hasKey('calibration_param'):
+        elif ini.string('calibration_param', ''):
             s = ini.relativeFileName('calibration_param')
             if '.paramnames' not in s:
                 self.log.error('calibration_param must be paramnames file unless '

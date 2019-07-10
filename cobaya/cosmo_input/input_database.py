@@ -125,14 +125,15 @@ hubble = odict([
         _theory: {
             _camb: {
                 _params: odict([
-                    ["theta", odict([
+                    ["theta_MC_100", odict([
                         [_prior, odict([["min", 0.5], ["max", 10]])],
                         [_p_ref,
                          odict([[_p_dist, "norm"], ["loc", 1.0411], ["scale", 0.0004]])],
                         [_p_proposal, 0.0002], [_p_label, r"100\theta_\mathrm{MC}"],
                         [_p_drop, True]])],
                     ["cosmomc_theta", odict([
-                        [_p_value, "lambda theta: 1.e-2*theta"], [_p_derived, False]])],
+                        [_p_value, "lambda theta_MC_100: 1.e-2*theta_MC_100"],
+                        [_p_derived, False]])],
                     ["H0", {_p_label: r"H_0", "min": H0_min, "max": H0_max}]]),
                 _extra_args: odict([["theta_H0_range", [H0_min, H0_max]]])},
             _classy: {
