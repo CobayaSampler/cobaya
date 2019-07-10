@@ -133,6 +133,13 @@ class Output(HasLogger):
                     ignore_blocks = [_sampler]
                 if not is_equal_info(old_info, new_info, strict=False,
                                      ignore_blocks=ignore_blocks):
+                    # HACK!!! NEEDS TO BE FIXED
+                    if list(updated_info.get(_sampler, [None]))[0] == "minimize":
+                        raise LoggedError(
+                            self.log, "Old and new sample information not compatible! "
+                            "At this moment it is not possible to 'force' deletion of "
+                            "and old 'minimize' run. Please delete it by hand. "
+                            "We are working on fixing this very soon!")
                     raise LoggedError(
                         self.log, "Old and new sample information not compatible! "
                         "Resuming not possible!")
