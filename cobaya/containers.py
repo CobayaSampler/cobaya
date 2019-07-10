@@ -22,7 +22,7 @@ from textwrap import dedent
 from requests import head
 
 # Local
-from cobaya.log import logger_setup, HandledException
+from cobaya.log import logger_setup, LoggedError
 from cobaya.input import get_modules, load_input
 from cobaya.yaml import yaml_dump
 from cobaya.install import install
@@ -137,8 +137,7 @@ def get_docker_client():
     try:
         import docker
     except ImportError:
-        log.error("The Python Docker interface not installed: do 'pip install docker'.")
-        raise HandledException
+        raise LoggedError(log, "The Python Docker interface not installed: do 'pip install docker'.")
     return docker.from_env(version="auto")
 
 
@@ -149,21 +148,18 @@ def create_base_image(mpi=None, version=None, sub=None):
     `sub` : (optional) the subversion of the major.minor version
     """
     if version is None:
-        log.error("Needs a major.minor version!")
-        raise HandledException
+        raise LoggedError(log, "Needs a major.minor version!")
     sub = sub or ""
     if sub:
         sub = "." + sub
     try:
         tag = "cobaya/base_%s_%s:latest" % (mpi.lower(), version + sub)
     except KeyError():
-        log.error("MPI library '%s' not recognized.")
-        raise HandledException
+        raise LoggedError(log, "MPI library '%s' not recognized.")
     URL = MPI_URL[mpi.lower()].replace("_VER_", str(version)).replace("_DOT_SUB_", sub)
     if head(URL).status_code >= 400:
-        log.error("Failed to download %s %s: couldn't reach URL: '%s'",
-                  mpi.lower(), version + sub, URL)
-        raise HandledException
+        raise LoggedError(log, "Failed to download %s %s: couldn't reach URL: '%s'",
+                          mpi.lower(), version + sub, URL)
     log.info("Creating base image %s v%s..." % (mpi.lower(), version + sub))
     this_MPI_recipe = dedent(MPI_recipe[mpi.lower()].replace("_VER_", version)
                              .replace("_DOT_SUB_", sub).replace("_URL_", URL))
@@ -250,8 +246,7 @@ def create_singularity_image(filenames, MPI_version=None):
     if process_build.returncode:
         log.info(out)
         log.info(err)
-        log.error("Image creation failed! See error message above.")
-        raise HandledException
+        raise LoggedError(log, "Image creation failed! See error message above.")
     log.info("Singularity image '%s' created!", image_name)
 
 
@@ -282,9 +277,8 @@ def prepare_data_script():
     warn_deprecation()
     logger_setup()
     if "CONTAINED" not in os.environ:
-        log.error("This command should only be run within a container. "
-                  "Run 'cobaya-install' instead.")
-        raise HandledException
+        raise LoggedError(log, "This command should only be run within a container. "
+                          "Run 'cobaya-install' instead.")
     parser = argparse.ArgumentParser(
         description="Cobaya's installation tool for the data needed by a container.")
     parser.add_argument("-f", "--force", action="store_true", default=False,
@@ -293,7 +287,6 @@ def prepare_data_script():
     try:
         info = load_input(requirements_file_path)
     except IOError:
-        log.error("Cannot find the requirements file. This should not be happening.")
-        raise HandledException
+        raise LoggedError(log, "Cannot find the requirements file. This should not be happening.")
     install(info, path=_modules_path, force=arguments.force,
             **{_code: False, _data: True})
