@@ -228,8 +228,8 @@ class minimize(Sampler):
                     str(self.result))
             logp_min = -np.array(getattr(self.result, evals_attr_))
             x_min = self.inv_affine_transform(self.result.x)
-            self.log.info("log(%s) minimized to %g",
-                          "likelihood" if self.ignore_prior else "posterior", logp_min)
+            self.log.info("-log(%s) minimized to %g",
+                          "likelihood" if self.ignore_prior else "posterior", -logp_min)
             recomputed_post_min = self.model.logposterior(x_min)
             recomputed_logp_min = (sum(recomputed_post_min.loglikes) if self.ignore_prior
                                    else recomputed_post_min.logpost)
