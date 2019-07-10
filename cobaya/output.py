@@ -182,7 +182,8 @@ class Output(HasLogger):
             *[_.split("_") for _ in
               file_name[len(self.prefix):-len(extension)].split(".")]))
         fields = [f for f in fields if f]
-        return len(fields) == 1 and fields[0] == re_uint.match(fields[0]).group()
+        return (len(fields) == 1 and
+                fields[0] == getattr(re_uint.match(fields[0]), "group", lambda: None)())
 
     def find_collections(self, extension=None):
         """Returns collection files, including their path."""
