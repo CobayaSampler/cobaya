@@ -329,18 +329,21 @@ class Parameterization(HasLogger):
                     {p: self._sampled_renames[p] for p in not_found})
             raise HandledException
         # Ignore fixed input parameters if they have the correct value
+        to_pop = []
         for p, value in sampled_input.items():
             known_value = self.constant_params().get(p, None)
             if known_value is None:
                 self.log.error("Unknown parameter %r.", p)
                 raise HandledException
             elif np.allclose(value, known_value):
-                sampled_input.pop(p)
+                to_pop.append(p)
                 self.log.debug("Fixed parameter %r ignored.", p)
             else:
                 self.log.error("Cannot change value of constant parameter: "
                                "%s = %g (new) vs %g (old).", p, value, known_value)
                 raise HandledException
+        for p in to_pop:
+            sampled_input.pop(p)
         if sampled_input:
             not_used = set(sampled_input)
             duplicated = not_used.intersection(set(
