@@ -252,7 +252,7 @@ class minimize(Sampler):
                     recomputed_logp_min, logp_min, x_min)
             self.minimum = OnePoint(
                 self.model, self.output, name="",
-                extension=("bestfit" if self.ignore_prior else "minimum"))
+                extension=("bestfit.txt" if self.ignore_prior else "minimum.txt"))
             self.minimum.add(x_min, derived=recomputed_post_min.derived,
                              logpost=recomputed_post_min.logpost,
                              logpriors=recomputed_post_min.logpriors,
@@ -260,6 +260,7 @@ class minimize(Sampler):
             self.log.info(
                 "Parameter values at minimum:\n%s", self.minimum.data.to_string())
             self.minimum._out_update()
+            self.dump_getdist()
 
     def products(self):
         """
@@ -289,3 +290,24 @@ class minimize(Sampler):
             return {"minimum": self.minimum, "result_object": self.result,
                     "M": self._inv_affine_transform_matrix,
                     "X0": self._affine_transform_baseline}
+
+    def dump_getdist(self):
+        import os
+        from collections import OrderedDict as odict
+        print("### Help with GetDist format ############################################")
+        print("* Root:", self.output.prefix)
+        print("* Root with full path:", os.path.join(self.output.folder, self.output.prefix))
+        print("* Target of minimization:",
+              ("-log(likelihood)" if self.ignore_prior else "-log(posterior)"))
+        print("* Point of minimum target\n", self.minimum)
+        # Extracting sampled + fixed + derived params of minimum
+        sampled = odict([
+            [p, self.minimum[p]] for p in self.model.parameterization.sampled_params()])
+        fixed = odict([
+            [p, value] for p, value in self.model.parameterization.constant_params().items()])
+        derived = odict([
+            [p, self.minimum[p]] for p in self.model.parameterization.derived_params()])
+        print("* Extracting parameters of minimum:")
+        print("  - Sampled:", sampled)
+        print("  - Fixed:", fixed)
+        print("  - Derived:", derived)
