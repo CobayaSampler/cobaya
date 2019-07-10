@@ -41,8 +41,8 @@ for ``minimize`` with the desired options, and it will use as a starting point t
 found so far, as well as the covariance matrix of the sample for rescaling of the
 parameter jumps.
 
-As text output, it produces a ``[output prefix].minimum`` if the MAP was requested, or
-``[output prefix].bestfit`` if the maximum likelihood was requested
+As text output, it produces a ``[output prefix].minimum.txt`` if the MAP was requested, or
+``[output prefix].bestfit.txt`` if the maximum likelihood was requested
 (``ignore_prior: True``).
 
 When called from a Python script, Cobaya's ``run`` function returns the updated info
