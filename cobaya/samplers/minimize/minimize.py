@@ -51,6 +51,15 @@ and the products described below in the method
 
 It is recommended to run a couple of parallel MPI processes:
 it will finally pick the best among the results.
+
+.. warning::
+
+   Since Cobaya is often used on likelihoods featuring numerical noise (e.g. Cosmology),
+   we have reduced the default accuracy criterion for the minimizers, so that they
+   converge in a limited amount of time. If your posterior is fast to evaluate, you may
+   want to refine the convergence parameters (see ``override`` options in the ``yaml``
+   below).
+
 """
 # Python 2/3 compatibility
 from __future__ import absolute_import
@@ -143,7 +152,8 @@ class minimize(Sampler):
                 "seek_global_minimum": (
                     True if get_mpi_size() in [0, 1] else False),
                 "maxfun": int(self.max_evals)}
-            self.kwargs = recursive_update(deepcopy(self.kwargs), self.override or {})
+            self.kwargs = recursive_update(
+                deepcopy(self.kwargs), self.override_bobyqa or {})
             self.log.debug("Arguments for pybobyqa.solve:\n%r",
                            {k: v for k, v in self.kwargs.items() if k != "objfun"})
         elif self.method.lower() == "scipy":
@@ -155,7 +165,8 @@ class minimize(Sampler):
                 "options": {
                     "maxiter": self.max_evals,
                     "disp": (self.log.getEffectiveLevel() == logging.DEBUG)}}
-            self.kwargs = recursive_update(deepcopy(self.kwargs), self.override or {})
+            self.kwargs = recursive_update(
+                deepcopy(self.kwargs), self.override_scipy or {})
             self.log.debug("Arguments for scipy.optimize.minimize:\n%r",
                            {k: v for k, v in self.kwargs.items() if k != "fun"})
         else:
