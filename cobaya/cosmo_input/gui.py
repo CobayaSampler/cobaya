@@ -154,6 +154,8 @@ class MainWindow(QWidget):
     def refresh_preset(self):
         preset = list(getattr(input_database, "preset").keys())[
             self.combos["preset"].currentIndex()]
+        if preset is input_database._none:
+            return
         info = create_input(
             get_comments=True,
             #            planck_names=self.planck_names.isChecked(),
