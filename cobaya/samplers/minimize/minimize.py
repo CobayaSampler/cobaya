@@ -59,7 +59,9 @@ from __future__ import division
 # Global
 import numpy as np
 from scipy.optimize import minimize as scpminimize
-import pybobyqa
+
+import pybobyqa  # in the py-bobyqa pip package
+
 import logging
 from copy import deepcopy
 
@@ -174,7 +176,7 @@ class minimize(Sampler):
         self.success = (self.result.success if self.method.lower() == "scipy" else
                         self.result.flag == self.result.EXIT_SUCCESS)
         if self.success:
-            self.log.info("Finished succesfully!")
+            self.log.info("Finished successfully!")
         else:
             if self.method.lower() == "bobyqa":
                 reason = {
@@ -196,7 +198,7 @@ class minimize(Sampler):
                 }[self.result.flag]
             else:
                 reason = ""
-            self.log.error("Finished unsuccesfully." +
+            self.log.error("Finished unsuccessfully." +
                            (" Reason: " + reason if reason else ""))
 
     def close(self, *args):
