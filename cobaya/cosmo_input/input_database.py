@@ -119,6 +119,14 @@ hubble = odict([
                 [_prior, odict([["min", H0_min], ["max", H0_max]])],
                 [_p_ref, odict([[_p_dist, "norm"], ["loc", 70], ["scale", 2]])],
                 [_p_proposal, 2], [_p_label, r"H_0"]])]])}],
+    ["H_DESpriors", {
+        _desc: "Hubble parameter (reduced range for DES and lensing-only constraints)",
+        _theory: {_camb: None, _classy: None},
+        _params: odict([
+            ["H0", odict([
+                [_prior, odict([["min", 55], ["max", 91]])],
+                [_p_ref, odict([[_p_dist, "norm"], ["loc", 70], ["scale", 2]])],
+                [_p_proposal, 2], [_p_label, r"H_0"]])]])}],
     ["sound_horizon_last_scattering", {
         _desc: "Angular size of the sound horizon at last scattering "
                "(approximate, if using CAMB)",
@@ -629,7 +637,7 @@ preset.update(odict([
 lensingonly_model = {
     "primordial": "SFSR",
     "geometry": "flat",
-    "hubble": "H",
+    "hubble": "H_DESpriors",
     "matter": "Omegab, Omegam",
     "neutrinos": "one_heavy_planck",
     "dark_energy": "lambda",
