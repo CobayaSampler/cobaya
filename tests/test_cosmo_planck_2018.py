@@ -22,7 +22,8 @@ classy_extra_tolerance = 0.2
 
 
 def test_planck_2018_t_camb(modules):
-    best_fit = params_lowl_highTT_lensing
+    best_fit = deepcopy(params_lowl_highTT_lensing)
+    best_fit.pop("H0")
     info_likelihood = lik_info_lowl_highTT_lensing
     info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = derived_lowl_highTT_lensing
@@ -31,7 +32,8 @@ def test_planck_2018_t_camb(modules):
 
 
 def test_planck_2018_p_camb(modules):
-    best_fit = params_lowTE_highTTTEEE_lensingcmblikes
+    best_fit = deepcopy(params_lowTE_highTTTEEE_lensingcmblikes)
+    best_fit.pop("H0")
     info_likelihood = lik_info_lowTE_highTTTEEE_lensingcmblikes
     info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = derived_lowTE_highTTTEEE_lensingcmblikes
@@ -40,6 +42,8 @@ def test_planck_2018_p_camb(modules):
 
 
 def test_planck_2018_t_classy(modules):
+    best_fit = deepcopy(params_lowl_highTT_lensing)
+    best_fit.pop("theta_MC_100")
     best_fit = params_lowl_highTT_lensing
     info_likelihood = lik_info_lowl_highTT_lensing
     info_theory = {"classy": {"extra_args": cmb_precision["classy"]}}
@@ -53,7 +57,8 @@ def test_planck_2018_t_classy(modules):
 
 
 def test_planck_2018_p_classy(modules):
-    best_fit = params_lowTE_highTTTEEE_lensingcmblikes
+    best_fit = deepcopy(params_lowTE_highTTTEEE_lensingcmblikes)
+    best_fit.pop("theta_MC_100")
     info_likelihood = lik_info_lowTE_highTTTEEE_lensingcmblikes
     info_theory = {"classy": {"extra_args": cmb_precision["classy"]}}
     best_fit_derived = deepcopy(derived_lowTE_highTTTEEE_lensingcmblikes)
