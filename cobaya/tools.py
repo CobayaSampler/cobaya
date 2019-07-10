@@ -211,7 +211,7 @@ def get_scipy_1d_pdf(info):
     param = list(info.keys())[0]
     info2 = deepcopy(info[param])
     if not info2:
-        log.error("No specific prior info given for sampler parameter '%s'." % param)
+        log.error("No specific prior info given for sampled parameter '%s'." % param)
         raise HandledException
     # What distribution?
     try:

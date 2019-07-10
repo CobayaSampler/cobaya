@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function
 from six import string_types
 
 # Global
+import numpy as np
 from collections import OrderedDict as odict
 from numbers import Number
 from itertools import chain
@@ -327,6 +328,19 @@ class Parameterization(HasLogger):
                     "where not found : %r",
                     {p: self._sampled_renames[p] for p in not_found})
             raise HandledException
+        # Ignore fixed input parameters if they have the correct value
+        for p, value in sampled_input.items():
+            known_value = self.constant_params().get(p, None)
+            if known_value is None:
+                self.log.error("Unknown parameter %r.", p)
+                raise HandledException
+            elif np.allclose(value, known_value):
+                sampled_input.pop(p)
+                self.log.debug("Fixed parameter %r ignored.", p)
+            else:
+                self.log.error("Cannot change value of constant parameter: "
+                               "%s = %g (new) vs %g (old).", p, value, known_value)
+                raise HandledException
         if sampled_input:
             not_used = set(sampled_input)
             duplicated = not_used.intersection(set(
@@ -335,16 +349,18 @@ class Parameterization(HasLogger):
             derived = not_used.intersection(set(self.derived_params()))
             input_ = not_used.intersection(set(self.input_params()))
             unknown = not_used.difference(derived).difference(input_)
-            self.log.error(
-                "Incorrect parameters! " +
-                ("\n   Duplicated entries (using their aliases): %r" % list(duplicated)
-                 if duplicated else "") +
-                ("\n   Not known: %r" % list(unknown) if unknown else "") +
-                ("\n   Cannot be fixed: %r " % list(input_) +
-                 "--> instead, fix sampled parameters that depend on them!"
-                 if input_ else "") +
-                ("\n   Cannot be fixed because are derived parameters: %r " % list(derived)
-                 if derived else ""))
+            msg = ("Incorrect parameters! " +
+                   ("\n   Duplicated entries (using their aliases): %r" % list(duplicated)
+                    if duplicated else "") +
+                   ("\n   Not known: %r" % list(unknown) if unknown else "") +
+                   ("\n   Cannot be fixed: %r " % list(input_) +
+                    "--> instead, fix sampled parameters that depend on them!"
+                    if input_ else "") +
+                   ("\n   "
+                    "Cannot be fixed because are derived parameters: %r " % list(derived)
+                    if derived else ""))
+            for line in msg.split("\n"):
+                self.log.error(line)
             raise HandledException
         return sampled_output
 

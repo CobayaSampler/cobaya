@@ -11,10 +11,6 @@ import matplotlib
 
 matplotlib.use('agg')
 
-camb_extra = {"halofit_version": "mead", # "takahashi",
-              "bbn_predictor": "BBN_fitting_parthenope"}
-camb_extra.update(cmb_precision["camb"])
-
 # Derived parameters not understood by CLASS
 # https://wiki.cosmos.esa.int/planckpla2015/images/b/b9/Parameter_tag_definitions_2015.pdf
 classy_unknown = ["zstar", "rstar", "thetastar", "DAstar", "zdrag",
@@ -28,18 +24,18 @@ classy_extra_tolerance = 0.2
 def test_planck_2018_t_camb(modules):
     best_fit = params_lowl_highTT_lensing
     info_likelihood = lik_info_lowl_highTT_lensing
-    info_theory = {"camb": {"extra_args": camb_extra}}
+    info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = derived_lowl_highTT_lensing
     body_of_test(modules, best_fit, info_likelihood, info_theory,
                  chi2_lowl_highTT_lensing, best_fit_derived)
 
 
 def test_planck_2018_p_camb(modules):
-     best_fit = params_lowTE_highTTTEEE_lensingcmblikes
-     info_likelihood = lik_info_lowTE_highTTTEEE_lensingcmblikes
-     info_theory = {"camb": {"extra_args": camb_extra}}
-     best_fit_derived = derived_lowTE_highTTTEEE_lensingcmblikes
-     body_of_test(modules, best_fit, info_likelihood, info_theory,
+    best_fit = params_lowTE_highTTTEEE_lensingcmblikes
+    info_likelihood = lik_info_lowTE_highTTTEEE_lensingcmblikes
+    info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
+    best_fit_derived = derived_lowTE_highTTTEEE_lensingcmblikes
+    body_of_test(modules, best_fit, info_likelihood, info_theory,
                   chi2_lowTE_highTTTEEE_lensingcmblikes, best_fit_derived)
 
 
@@ -116,7 +112,7 @@ derived_lowl_highTT_lensing = {
     "zrei": [10.61, 2.2],
     "YHe": [0.245408, 0.0001],
     "Y_p": [0.246735, 0.0001],
-    "DH": [2.5794e-5, 2*0.05e-5],
+    "DH": [2.5794e-5, 0.05e-5],
     "age": [13.7744, 0.047],
     "zstar": [1089.63, 0.52],
     "rstar": [145.13, 0.55],
@@ -184,7 +180,7 @@ derived_lowTE_highTTTEEE_lensingcmblikes = {
     "zrei": [7.68, 7.67],
     "YHe": [0.245401, 0.000057],
     "Y_p": [0.246727, 0.000058],
-    "DH": [2.5831e-5, 2*0.027e-5],
+    "DH": [2.5831e-5, 0.027e-5],
     "age": [13.7971, 0.023],
     "zstar": [1089.914, 0.25],
     "rstar": [144.394, 0.26],

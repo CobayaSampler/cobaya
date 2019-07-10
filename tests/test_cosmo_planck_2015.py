@@ -11,8 +11,13 @@ import matplotlib
 
 matplotlib.use('agg')
 
-camb_extra = {"halofit_version": "takahashi", "bbn_predictor": "BBN_fitting_parthenope"}
-camb_extra.update(cmb_precision["camb"])
+# Downgrade of Planck 2018 precision/model
+
+cmb_precision = deepcopy(cmb_precision)
+cmb_precision["camb"].update({
+    "halofit_version": "takahashi",
+    "bbn_predictor": "BBN_fitting_parthenope"
+})
 
 # Derived parameters not understood by CLASS
 # https://wiki.cosmos.esa.int/planckpla2015/images/b/b9/Parameter_tag_definitions_2015.pdf
@@ -27,7 +32,7 @@ classy_extra_tolerance = 0.2
 def test_planck_2015_t_camb(modules):
     best_fit = params_lowl_highTT
     info_likelihood = lik_info_lowl_highTT
-    info_theory = {"camb": {"extra_args": camb_extra}}
+    info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = derived_lowl_highTT
     body_of_test(modules, best_fit, info_likelihood, info_theory,
                  chi2_lowl_highTT, best_fit_derived)
@@ -36,7 +41,7 @@ def test_planck_2015_t_camb(modules):
 def test_planck_2015_p_camb(modules):
     best_fit = params_lowTEB_highTTTEEE
     info_likelihood = lik_info_lowTEB_highTTTEEE
-    info_theory = {"camb": {"extra_args": camb_extra}}
+    info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = derived_lowTEB_highTTTEEE
     body_of_test(modules, best_fit, info_likelihood, info_theory,
                  chi2_lowTEB_highTTTEEE, best_fit_derived)
@@ -45,7 +50,7 @@ def test_planck_2015_p_camb(modules):
 def test_planck_2015_l_camb(modules):
     best_fit = params_lensing
     info_likelihood = lik_info_lensing
-    info_theory = {"camb": {"extra_args": camb_extra}}
+    info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = derived_lensing
     body_of_test(modules, best_fit, info_likelihood, info_theory,
                  chi2_lensing, best_fit_derived)
@@ -58,7 +63,7 @@ def test_planck_2015_l2_camb(modules):
     info_likelihood = {lik_name: lik_info_lensing[clik_name]}
     chi2_lensing_cmblikes = deepcopy(chi2_lensing)
     chi2_lensing_cmblikes[lik_name] = chi2_lensing[clik_name]
-    info_theory = {"camb": {"extra_args": camb_extra}}
+    info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = derived_lensing
     body_of_test(modules, best_fit, info_likelihood, info_theory,
                  chi2_lensing_cmblikes, best_fit_derived)
