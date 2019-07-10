@@ -51,7 +51,7 @@ def create_input(**kwargs):
     infos = odict()
     kwargs_params = ["primordial", "geometry", "hubble", "matter", "neutrinos",
                      "dark_energy", "bbn", "reionization"]
-    kwargs_likes = ["like_cmb", "like_bao", "like_sn", "like_H0"]
+    kwargs_likes = ["like_cmb", "like_bao", "like_des", "like_sn", "like_H0"]
     for k in kwargs_params + kwargs_likes:
         if k not in kwargs:
             infos[k] = odict()

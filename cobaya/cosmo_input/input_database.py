@@ -119,6 +119,14 @@ hubble = odict([
                 [_prior, odict([["min", H0_min], ["max", H0_max]])],
                 [_p_ref, odict([[_p_dist, "norm"], ["loc", 70], ["scale", 2]])],
                 [_p_proposal, 2], [_p_label, r"H_0"]])]])}],
+    ["H_DESpriors", {
+        _desc: "Hubble parameter (reduced range for DES and lensing-only constraints)",
+        _theory: {_camb: None, _classy: None},
+        _params: odict([
+            ["H0", odict([
+                [_prior, odict([["min", 55], ["max", 91]])],
+                [_p_ref, odict([[_p_dist, "norm"], ["loc", 70], ["scale", 2]])],
+                [_p_proposal, 2], [_p_label, r"H_0"]])]])}],
     ["sound_horizon_last_scattering", {
         _desc: "Angular size of the sound horizon at last scattering "
                "(approximate, if using CAMB)",
@@ -327,6 +335,12 @@ bbn = odict([
                   _classy: None},
         _params: odict([
             ["yheused", {_p_label: r"Y_\mathrm{P}"}]])}],
+    ["YHe_des_y1", {
+        _desc: "Fixed Y_P = 0.245341 (used in DES Y1)",
+        _theory: {_camb: None,
+                  _classy: None},
+        _params: odict([
+            ["yhe", 0.245341]])}],
     ["YHe", {
         _desc: "Varying primordial Helium fraction",
         _theory: {_camb: None,
@@ -356,7 +370,11 @@ reionization = odict([
                 [_prior, odict([[_p_dist, "norm"], ["loc", 0.07], ["scale", 0.02]])],
                 [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.07], ["scale", 0.01]])],
                 [_p_proposal, 0.005], [_p_label, r"\tau_\mathrm{reio}"]])],
-            ["zrei", {_p_label: r"z_\mathrm{re}"}]])}], ])
+            ["zrei", {_p_label: r"z_\mathrm{re}"}]])}],
+    ["irrelevant", {
+        _desc: "Irrelevant (NB: only valid for non-CMB or CMB-marged datasets!)",
+        _theory: {_camb: None, _classy: None},
+        _params: odict([])}], ])
 
 # EXPERIMENTS ############################################################################
 cmb_precision = {_camb: {"halofit_version": "mead",
@@ -367,28 +385,37 @@ cmb_sampler_recommended = {"mcmc": {"drag": True, "proposal_scale": 1.9}}
 
 like_cmb = odict([
     [_none, {}],
-    ["planck_2015_lensing", {
-        _desc: "Planck 2015 (Polarized CMB + lensing)",
+    ["planck_2018", {
+        _desc: "Planck 2018 (Polarized CMB + lensing)",
         _comment: None,
         _sampler: cmb_sampler_recommended,
         _theory: {theo: {_extra_args: cmb_precision[theo]}
                   for theo in [_camb, _classy]},
         _likelihood: odict([
-            ["planck_2015_lowTEB", None],
-            ["planck_2015_plikHM_TTTEEE", None],
-            ["planck_2015_lensing", None]])}],
-    ["planck_2015_lensing_bk15", {
-        _desc: "Planck 2015 (Polarized CMB + lensing) + Bicep/Keck-Array 2015",
+            ["planck_2018_lowl", None],
+            ["planck_2018_lowE", None],
+            ["planck_2018_plikHM_TTTEEE", None],
+            ["planck_2018_cmblikes_lensing", None]])}],
+    ["planck_2018_bk15", {
+        _desc: "Planck 2018 (Polarized CMB + lensing) + Bicep/Keck-Array 2015",
         _sampler: cmb_sampler_recommended,
-        _theory: {theo: {_extra_args: None}  # cmb_precision[theo]}  # not for now
+        _theory: {theo: {_extra_args: cmb_precision[theo]}
                   for theo in [_camb, _classy]},
         _likelihood: odict([
-            ["planck_2015_lowTEB", None],
-            ["planck_2015_plikHM_TTTEEE", None],
-            ["planck_2015_lensing", None],
+            ["planck_2018_lowl", None],
+            ["planck_2018_lowE", None],
+            ["planck_2018_plikHM_TTTEEE", None],
+            ["planck_2018_cmblikes_lensing", None],
             ["bicep_keck_2015", None]])}],
+    ["planck_2018_CMBmarged_lensing", {
+        _desc: "Planck 2018 CMB-marginalized lensing",
+        _sampler: cmb_sampler_recommended,
+        _theory: {theo: {_extra_args: cmb_precision[theo]}
+                  for theo in [_camb, _classy]},
+        _likelihood: odict([
+            ["planck_2018_cmblikes_lensing_cmbmarged", None]])}],
 ])
-like_cmb["planck_2015_lensing_bk15"][_comment] = like_cmb["planck_2015_lensing"][_comment]
+like_cmb["planck_2018_bk15"][_comment] = like_cmb["planck_2018"][_comment]
 # Add common CMB derived parameters
 for m in like_cmb.values():
     # Don't add the derived parameter to the no-CMB case!
@@ -454,6 +481,30 @@ for combination, info in like_bao.items():
             ["chi2__BAO", odict([[_p_derived, "lambda %s: sum([%s])" % (likes, likes)],
                                  [_p_label, r"\chi^2_\mathrm{BAO}"]])]])
 
+like_des = odict([
+    [_none, {}],
+    ["des_y1_clustering", {
+        _desc: "Galaxy clustering from DES Y1",
+        _theory: {_camb: None, _classy: None},
+        _likelihood: odict([
+            ["des_y1_clustering", None]])}],
+    ["des_y1_galaxy_galaxy", {
+        _desc: "Galaxy-galaxy lensing from DES Y1",
+        _theory: {_camb: None, _classy: None},
+        _likelihood: odict([
+            ["des_y1_galaxy_galaxy", None]])}],
+    ["des_y1_shear", {
+        _desc: "Cosmic shear data from DES Y1",
+        _theory: {_camb: None, _classy: None},
+        _likelihood: odict([
+            ["des_y1_shear", None]])}],
+    ["des_y1_joint", {
+        _desc: "Combination of galaxy clustering and weak lensing data from DES Y1",
+        _theory: {_camb: None, _classy: None},
+        _likelihood: odict([
+            ["des_y1_joint", None]])}],
+])
+
 like_sn = odict([
     [_none, {}],
     ["Pantheon", {
@@ -465,11 +516,16 @@ like_sn = odict([
 
 like_H0 = odict([
     [_none, {}],
-    ["Riess2018b", {
-        _desc: "Local H0 measurement from Riess et al. 2018b",
+    ["Riess2018a", {
+        _desc: "Local H0 measurement from Riess et al. 2018a (used in Planck 2018)",
         _theory: {_camb: None, _classy: None},
         _likelihood: odict([
-            ["H0_riess2018b", None]])}],
+            ["H0_riess2018a", None]])}],
+    ["Riess201903", {
+        _desc: "Local H0 measurement from Riess et al. 2019",
+        _theory: {_camb: None, _classy: None},
+        _likelihood: odict([
+            ["H0_riess201903", None]])}],
 ])
 
 # SAMPLERS ###############################################################################
@@ -498,73 +554,62 @@ default_sampler = {"sampler": "MCMC"}
 preset = odict([
     [_none, {_desc: "(No preset chosen)"}],
     # Pure CMB #######################################################
-    ["planck_2015_lensing_camb", {
-        _desc: "Planck 2015 + lensing with CAMB",
+    ["planck_2018_camb", {
+        _desc: "Planck 2018 with CAMB",
         "theory": _camb,
-        "like_cmb": "planck_2015_lensing"}],
-    ["planck_2015_lensing_classy", {
-        _desc: "Planck 2015 + lensing with CLASS",
+        "like_cmb": "planck_2018"}],
+    ["planck_2018_classy", {
+        _desc: "Planck 2018 with CLASS",
         "theory": _classy,
-        "like_cmb": "planck_2015_lensing"}],
-    ["planck_2015_lensing_bicep_camb", {
-        _desc: "Planck 2015 + lensing + BK15 with CAMB",
+        "like_cmb": "planck_2018"}],
+    ["planck_2018_bicep_camb", {
+        _desc: "Planck 2018 + BK15 (with tensor modes) with CAMB",
         "theory": _camb,
         "primordial": "SFSR_t",
-        "like_cmb": "planck_2015_lensing_bk15"}],
-    ["planck_2015_lensing_bicep_classy", {
-        _desc: "Planck 2015 + lensing + BK15 with CLASS",
+        "like_cmb": "planck_2018_bk15"}],
+    ["planck_2018_bicep_classy", {
+        _desc: "Planck 2018 + BK15 (with tensor modes) with CLASS",
         "theory": _classy,
         "primordial": "SFSR_t",
-        "like_cmb": "planck_2015_lensing_bk15"}],
+        "like_cmb": "planck_2018_bk15"}],
     # CMB+BAO ######################################################
-    ["planck_2015_lensing_BAO_camb", {
-        _desc: "Planck 2015 + lensing + BAO with CAMB",
+    ["planck_2018_BAO_camb", {
+        _desc: "Planck 2018 + BAO with CAMB",
         "theory": _camb,
-        "like_cmb": "planck_2015_lensing",
+        "like_cmb": "planck_2018",
         "like_bao": "BAO_planck_2018"}],
-    ["planck_2015_lensing_BAO_classy", {
-        _desc: "Planck 2015 + lensing + BAO with CLASS",
+    ["planck_2018_BAO_classy", {
+        _desc: "Planck 2018 + BAO with CLASS",
         "theory": _classy,
-        "like_cmb": "planck_2015_lensing",
-        "like_bao": "BAO_planck_2018"}],
-    ["planck_2015_lensing_bicep_BAO_camb", {
-        _desc: "Planck 2015 + lensing + BK15 + BAO with CAMB",
-        "theory": _camb,
-        "primordial": "SFSR_t",
-        "like_cmb": "planck_2015_lensing_bk15",
-        "like_bao": "BAO_planck_2018"}],
-    ["planck_2015_lensing_bicep_BAO_classy", {
-        _desc: "Planck 2015 + lensing + BK15 + BAO with CLASS",
-        "theory": _classy,
-        "primordial": "SFSR_t",
-        "like_cmb": "planck_2015_lensing_bk15",
+        "like_cmb": "planck_2018",
         "like_bao": "BAO_planck_2018"}],
     # CMB+BAO+SN ###################################################
-    ["planck_2015_lensing_BAO_SN_camb", {
-        _desc: "Planck 2015 + lensing + BAO + SN with CAMB",
+    ["planck_2018_BAO_SN_camb", {
+        _desc: "Planck 2018 + BAO + SN with CAMB",
         "theory": _camb,
-        "like_cmb": "planck_2015_lensing",
+        "like_cmb": "planck_2018",
         "like_bao": "BAO_planck_2018",
         "like_sn": "Pantheon"}],
-    ["planck_2015_lensing_BAO_SN_classy", {
-        _desc: "Planck 2015 + lensing + BAO + SN with CLASS",
+    ["planck_2018_BAO_SN_classy", {
+        _desc: "Planck 2018 + BAO + SN with CLASS",
         "theory": _classy,
-        "like_cmb": "planck_2015_lensing",
+        "like_cmb": "planck_2018",
         "like_bao": "BAO_planck_2018",
         "like_sn": "Pantheon"}],
-    ["planck_2015_lensing_bicep_BAO_SN_camb", {
-        _desc: "Planck 2015 + lensing + BK15 + BAO + SN with CAMB",
+    # CMB+DES+BAO+SN ###################################################
+    ["planck_2018_DES_BAO_SN_camb", {
+        _desc: "Planck 2018 + DESjoint + BAO + SN with CAMB",
         "theory": _camb,
-        "primordial": "SFSR_t",
-        "like_cmb": "planck_2015_lensing_bk15",
+        "like_cmb": "planck_2018",
         "like_bao": "BAO_planck_2018",
+        "like_des": "des_y1_joint",
         "like_sn": "Pantheon"}],
-    ["planck_2015_lensing_bicep_BAO_SN_classy", {
-        _desc: "Planck 2015 + lensing + BK15 + BAO + SN with CLASS",
+    ["planck_2018_DES_BAO_SN_classy", {
+        _desc: "Planck 2018 + DESjoint + BAO + SN with CLASS",
         "theory": _classy,
-        "primordial": "SFSR_t",
-        "like_cmb": "planck_2015_lensing_bk15",
+        "like_cmb": "planck_2018",
         "like_bao": "BAO_planck_2018",
+        "like_des": "des_y1_joint",
         "like_sn": "Pantheon"}],
 ])
 
@@ -574,11 +619,45 @@ for pre in preset.values():
         {field: value for field, value in planck_base_model.items() if field not in pre})
     pre.update(default_sampler)
 
+# Lensing-only ###################################################
+preset.update(odict([
+    [_none, {_desc: "(No preset chosen)"}],
+    ["planck_2018_DES_lensingonly_camb", {
+        _desc: "Planck 2018 + DES Y1 lensing-only with CAMB",
+        "theory": _camb,
+        "like_cmb": "planck_2018_CMBmarged_lensing",
+        "like_des": "des_y1_shear"}],
+    ["planck_2018_DES_lensingonly_classy", {
+        _desc: "Planck 2018 + DES Y1 lensing-only with CLASS",
+        "theory": _classy,
+        "like_cmb": "planck_2018_CMBmarged_lensing",
+        "like_des": "des_y1_shear"}],
+]))
+
+lensingonly_model = {
+    "primordial": "SFSR",
+    "geometry": "flat",
+    "hubble": "H_DESpriors",
+    "matter": "Omegab, Omegam",
+    "neutrinos": "one_heavy_planck",
+    "dark_energy": "lambda",
+    "bbn": "YHe_des_y1",
+    "reionization": "irrelevant"}
+
+# Add planck baseline model
+for name, pre in preset.items():
+    if "lensingonly" in name:
+        pre.update(
+            {field: value for field, value in lensingonly_model.items() if field not in pre})
+        pre.update(default_sampler)
+
+
 # BASIC INSTALLATION ######################################################################
 install_basic = {
     _theory: {_camb: None, _classy: None},
     _likelihood: {
-        "planck_2015_lowl": None,
+        "planck_2018_lowl": None,
+        "des_y1_clustering": None,
         "bicep_keck_2015": None,
         "sn_pantheon": None,
         "sdss_dr12_consensus_final": None,

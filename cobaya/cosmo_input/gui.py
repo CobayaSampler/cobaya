@@ -77,6 +77,7 @@ class MainWindow(QWidget):
             ["Data sets", odict([
                 ["like_cmb", "CMB experiments"],
                 ["like_bao", "BAO experiments"],
+                ["like_des", "DES measurements"],
                 ["like_sn", "SN experiments"],
                 ["like_H0", "Local H0 measurements"]])],
             ["Sampler", odict([["sampler", "Samplers"]])]])
@@ -153,6 +154,8 @@ class MainWindow(QWidget):
     def refresh_preset(self):
         preset = list(getattr(input_database, "preset").keys())[
             self.combos["preset"].currentIndex()]
+        if preset is input_database._none:
+            return
         info = create_input(
             get_comments=True,
             #            planck_names=self.planck_names.isChecked(),
