@@ -24,7 +24,7 @@ from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
 from cobaya.conventions import _input_suffix, _updated_suffix, _separator_files
 from cobaya.conventions import _resume, _resume_default, _force, _yaml_extensions
 from cobaya.conventions import _likelihood, _params, _sampler
-from cobaya.log import HandledException, HasLogger
+from cobaya.log import LoggedError, HasLogger
 from cobaya.input import is_equal_info
 from cobaya.mpi import am_single_or_primary_process, get_mpi_comm
 from cobaya.collection import Collection
@@ -43,10 +43,10 @@ class Output(HasLogger):
         self.force_output = force_output
         if resume and force_output and output_prefix:
             # No resume and force at the same time (if output)
-            self.log.error(
+            raise LoggedError(
+                self.log,
                 "Make 'resume: True' or 'force: True', not both at the same time: "
                 "can't simultaneously overwrite a chain and resume from it.")
-            raise HandledException
         if not os.path.exists(self.folder):
             self.log.debug("Creating output folder '%s'", self.folder)
             try:
@@ -55,9 +55,9 @@ class Output(HasLogger):
                 self.log.error("".join(["-"] * 20 + ["\n\n"] +
                                        list(traceback.format_exception(*sys.exc_info())) +
                                        ["\n"] + ["-"] * 37))
-                self.log.error("Could not create folder '%s'. "
-                               "See traceback on top of this message.", self.folder)
-                raise HandledException
+                raise LoggedError(
+                    self.log, "Could not create folder '%s'. "
+                    "See traceback on top of this message.", self.folder)
         self.log.info("Output to be read-from/written-into folder '%s', with prefix '%s'",
                       self.folder, self.prefix)
         # Prepare file names, and check if chain exists
@@ -87,12 +87,12 @@ class Output(HasLogger):
                     [os.remove(f) for f in [self.file_input, self.file_updated]]
                     self.log.info("Overwritten old failed chain files.")
                 else:
-                    self.log.error("Delete the previous sample manually, automatically "
-                                   "('-%s', '--%s', '%s: True')" % (
-                                       _force[0], _force, _force) +
-                                   " or request resuming ('-%s', '--%s', '%s: True')" % (
-                                       _resume[0], _resume, _resume))
-                    raise HandledException
+                    raise LoggedError(
+                        self.log, "Delete the previous sample manually, automatically "
+                        "('-%s', '--%s', '%s: True')" % (
+                            _force[0], _force, _force) +
+                        " or request resuming ('-%s', '--%s', '%s: True')" % (
+                            _resume[0], _resume, _resume))
         # Output kind and collection extension
         self.kind = "txt"
         self.ext = "txt"
@@ -133,9 +133,9 @@ class Output(HasLogger):
                     ignore_blocks = [_sampler]
                 if not is_equal_info(old_info, new_info, strict=False,
                                      ignore_blocks=ignore_blocks):
-                    self.log.error("Old and new sample information not compatible! "
-                                   "Resuming not possible!")
-                    raise HandledException
+                    raise LoggedError(
+                        self.log, "Old and new sample information not compatible! "
+                        "Resuming not possible!")
             except IOError:
                 # There was no previous chain
                 pass
@@ -148,8 +148,7 @@ class Output(HasLogger):
                 try:
                     f_out.write(yaml_dump(info))
                 except OutputError as e:
-                    self.log.error(str(e))
-                    raise HandledException
+                    raise LoggedError(self.log, str(e))
 
     def prepare_collection(self, name=None, extension=None):
         """

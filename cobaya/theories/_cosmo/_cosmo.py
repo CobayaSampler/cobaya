@@ -17,13 +17,13 @@ from itertools import chain
 # Local
 from cobaya.theory import Theory
 from cobaya.tools import fuzzy_match, create_banner
-from cobaya.log import HandledException
+from cobaya.log import LoggedError
 
 
 class _cosmo(Theory):
 
     def needs(self, **requirements):
-        """
+        r"""
         Specifies the quantities that each likelihood needs from the Cosmology code.
 
         Typical requisites in Cosmology (as keywords, case insensitive):
@@ -60,9 +60,9 @@ class _cosmo(Theory):
         for product, capitalization in {
             "cl": "Cl", "pk_interpolator": "Pk_interpolator"}.items():
             if product in requirements:
-                self.log.error("You requested product '%s', which from now on should be "
-                               "capitalized as '%s'.", product, capitalization)
-                raise HandledException
+                raise LoggedError(
+                    self.log, "You requested product '%s', which from now on should be "
+                    "capitalized as '%s'.", product, capitalization)
         # Accumulate the requirements across several calls in a safe way;
         # e.g. take maximum of all values of a requested precision paramater
         for k, v in requirements.items():
@@ -81,9 +81,9 @@ class _cosmo(Theory):
                     # Empty list: by default [delta_tot, delta_tot]
                     vars_pairs = [2 * ["delta_tot"]]
                 except:
-                    self.log("Cannot understands vars_pairs '%r' for P(k) interpolator",
-                             vars_pairs)
-                    raise HandledException
+                    raise LoggedError(
+                        self.log, "Cannot understands vars_pairs '%r' for P(k) interpolator",
+                        vars_pairs)
                 vars_pairs = set([tuple(pair) for pair in chain(
                     self._needs.get(k, {}).get("vars_pairs", []), vars_pairs)])
                 self._needs[k] = {
@@ -98,19 +98,19 @@ class _cosmo(Theory):
                 if k not in self._needs:
                     self._needs[k] = {}
                 if "sources" not in v:
-                    self.log.error("Needs a 'sources' key, containing a dict with every "
-                                   "source name and definition")
-                    raise HandledException
+                    raise LoggedError(
+                        self.log, "Needs a 'sources' key, containing a dict with every "
+                        "source name and definition")
                 # Check that no two sources with equal name but diff specification
                 for source, windown in v["sources"].items():
                     if source in getattr(self, "sources", {}):
                         # TODO: improve this test!!!
                         # (e.g. 2 z-vectors that fulfill np.allclose would fail a == test)
                         if window != self.sources[source]:
-                            self.log.error(
+                            raise LoggedError(
+                                self.log,
                                 "Source %r requested twice with different specification: "
                                 "%r vs %r.", window, self.sources[source])
-                            raise HandledException
                 self._needs[k].update(v)
             elif k in ["H", "angular_diameter_distance",
                        "comoving_radial_distance", "fsigma8"]:
@@ -122,8 +122,7 @@ class _cosmo(Theory):
             elif v is None:
                 self._needs[k] = None
             else:
-                self.log.error("Unknown required product: '%s'.", k)
-                raise HandledException
+                raise LoggedError(self.log, "Unknown required product: '%s'.", k)
 
     def requested(self):
         """
@@ -141,7 +140,7 @@ class _cosmo(Theory):
         pass
 
     def get_Cl(self, ell_factor=False, units="muK2"):
-        """
+        r"""
         Returns a dictionary of lensed CMB power spectra and the lensing potential ``pp`` power spectrum.
 
         Set the units with the keyword ``units='1'|'muK2'|'K2'`` (default: 'muK2',
@@ -154,7 +153,7 @@ class _cosmo(Theory):
         pass
 
     def get_H(self, z, units="km/s/Mpc"):
-        """
+        r"""
         Returns the Hubble rate at the given redshifts.
 
         The redshifts must be a subset of those requested when :func:`~_cosmo.needs`
@@ -165,7 +164,7 @@ class _cosmo(Theory):
         pass
 
     def get_angular_diameter_distance(self, z):
-        """
+        r"""
         Returns the physical angular diameter distance to the given redshifts.
 
         The redshifts must be a subset of those requested when :func:`~_cosmo.needs`
@@ -174,21 +173,21 @@ class _cosmo(Theory):
         pass
 
     def get_Pk_interpolator(self, z):
-        """
+        r"""
         Returns a (dict of) power spectrum interpolator(s)
         :class:`PowerSpectrumInterpolator`.
         """
         pass
 
     def get_source_Cl(self):
-        """
+        r"""
         Returns a dict of power spectra of for the computed sources, with keys a tuple of
         sources ``([source1], [source2])``, and an additional key ``ell`` containing the
         multipoles.
         """
 
     def get_fsigma8(self, z):
-        """
+        r"""
         Structure growth rate :math:`f\sigma_8`, as defined in eq. 33 of
         `Planck 2015 results. XIII. Cosmological parameters <https://arxiv.org/pdf/1502.01589.pdf>`_,
         at the given redshifts.
@@ -199,7 +198,7 @@ class _cosmo(Theory):
         pass
 
     def get_auto_covmat(self, params_info, likes_info):
-        """
+        r"""
         Tries to get match to a database of existing covariance matrix files for the current model and data.
 
         ``params_info`` should contain preferably the slow parameters only.
@@ -225,11 +224,10 @@ class _cosmo(Theory):
                         self.log.warning(line)
                     return getattr(self, new_names[method])
                 # End of deprecation block ------------------------------
-                self.log.error(
-                    "Getter method for cosmology product %r is not known. "
+                raise LoggedError(
+                    self.log, "Getter method for cosmology product %r is not known. "
                     "Maybe you meant any of %r?",
                     method, fuzzy_match(method, dir(self), n=3))
-                raise HandledException
 
 
 class PowerSpectrumInterpolator(RectBivariateSpline):

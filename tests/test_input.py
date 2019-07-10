@@ -9,7 +9,7 @@ import pytest
 from cobaya.conventions import _likelihood, _sampler, _prior
 from cobaya.conventions import _params, _p_label
 from cobaya.run import run
-from cobaya.log import HandledException
+from cobaya.log import LoggedError
 from cobaya.input import get_default_info
 
 # Aux definitions and functions
@@ -52,7 +52,7 @@ def test_prior_inherit_samegiven_differentdefinition():
     default_info = get_default_info(likname, _likelihood)
     name, prior = deepcopy(default_info[_prior]).popitem()
     test_info[_prior] = {name: "this is not a prior"}
-    with pytest.raises(HandledException):
+    with pytest.raises(LoggedError):
         updated_info, products = run(test_info)
 
 

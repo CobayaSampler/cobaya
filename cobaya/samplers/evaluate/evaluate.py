@@ -16,7 +16,7 @@ from collections import OrderedDict as odict
 # Local
 from cobaya.sampler import Sampler
 from cobaya.collection import Collection
-from cobaya.log import HandledException
+from cobaya.log import LoggedError
 
 
 class evaluate(Sampler):
@@ -29,9 +29,9 @@ class evaluate(Sampler):
         try:
             self.N = int(self.N)
         except:
-            self.log.error(
+            raise LoggedError(
+                self.log,
                 "Could not convert the number of samples to an integer: %r", self.N)
-            raise HandledException
         self.one_point = Collection(
             self.model, self.output, initial_size=self.N, name="1")
         self.log.info("Initialized!")
@@ -54,10 +54,10 @@ class evaluate(Sampler):
                 zip(self.model.parameterization.sampled_params(), reference_point))
             for p, v in (self.override or {}).items():
                 if p not in reference_point:
-                    self.log.error("Parameter '%s' used in override not known. "
-                                   "Known parameters names are %r.",
-                                   p, self.model.parameterization.sampled_params())
-                    raise HandledException
+                    raise LoggedError(
+                        self.log, "Parameter '%s' used in override not known. "
+                        "Known parameters names are %r.",
+                        p, self.model.parameterization.sampled_params())
                 reference_point[p] = v
             self.log.info("Reference point:\n   " + "\n   ".join(
                 ["%s = %g" % pv for pv in reference_point.items()]))

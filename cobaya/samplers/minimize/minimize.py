@@ -69,7 +69,7 @@ from copy import deepcopy
 from cobaya.sampler import Sampler
 from cobaya.mpi import get_mpi_size, get_mpi_comm, am_single_or_primary_process
 from cobaya.collection import OnePoint
-from cobaya.log import HandledException
+from cobaya.log import LoggedError
 from cobaya.tools import read_dnumber, choleskyL, recursive_update
 
 # Handling scpiy vs BOBYQA
@@ -160,9 +160,8 @@ class minimize(Sampler):
                            {k: v for k, v in self.kwargs.items() if k != "fun"})
         else:
             methods = ["bobyqa", "scipy"]
-            self.log.error(
-                "Method '%s' not recognized. Try one of %r.", self.method, methods)
-            raise HandledException
+            raise LoggedError(
+                self.log, "Method '%s' not recognized. Try one of %r.", self.method, methods)
 
     def run(self):
         """
@@ -224,22 +223,22 @@ class minimize(Sampler):
                 self._affine_transform_baseline = _affine_transform_baselines[i_min]
         if am_single_or_primary_process():
             if not self.success:
-                self.log.error("Minimization failed! Here is the raw result object:\n%s",
-                               str(self.result))
-                raise HandledException
+                raise LoggedError(
+                    self.log, "Minimization failed! Here is the raw result object:\n%s",
+                    str(self.result))
             logp_min = -np.array(getattr(self.result, evals_attr_))
             x_min = self.inv_affine_transform(self.result.x)
             self.log.info("-log(%s) minimized to %g",
-                          "likelihood" if self.ignore_prior else "posterior", logp_min)
+                          "likelihood" if self.ignore_prior else "posterior", -logp_min)
             recomputed_post_min = self.model.logposterior(x_min)
             recomputed_logp_min = (sum(recomputed_post_min.loglikes) if self.ignore_prior
                                    else recomputed_post_min.logpost)
             if not np.allclose(logp_min, recomputed_logp_min):
-                self.log.error(
+                raise LoggedError(
+                    self.log,
                     "Cannot reproduce result. Maybe yout likelihood is stochastic? "
                     "Recomputed min: %g (was %g) at %r",
                     recomputed_logp_min, logp_min, x_min)
-                raise HandledException
             self.minimum = OnePoint(
                 self.model, self.output, name="",
                 extension=("bestfit" if self.ignore_prior else "minimum"))

@@ -38,7 +38,7 @@ else:
 # Local
 from cobaya import __obsolete__
 from cobaya.conventions import _package, subfolders, _p_dist, _likelihood, _p_value
-from cobaya.log import HandledException
+from cobaya.log import LoggedError
 
 # Logger
 import logging
@@ -83,9 +83,9 @@ def get_class(name, kind=_likelihood):
     except:
         if ((sys.exc_info()[0] is ModuleNotFoundError and
              str(sys.exc_info()[1]).rstrip("'").endswith(name))):
-            log.error("%s '%s' not found (wrong capitalization?)",
-                      kind.capitalize(), name)
-            raise HandledException
+            raise LoggedError(
+                log, "%s '%s' not found (wrong capitalization?)",
+                kind.capitalize(), name)
         else:
             log.error("There was a problem when importing %s '%s':", kind, name)
             raise sys.exc_info()[1]
@@ -112,16 +112,16 @@ def get_external_function(string_or_function, name=None):
                 sys.path.append(os.path.realpath(os.curdir))
             function = eval(string_or_function)
         except Exception as e:
-            log.error("Failed to load external function%s: '%r'",
-                      " '%s'" % name if name else "", e)
-            raise HandledException
+            raise LoggedError(
+                log, "Failed to load external function%s: '%r'",
+                " '%s'" % name if name else "", e)
     else:
         function = string_or_function
     if not callable(function):
-        log.error("The external function provided " +
-                  ("for '%s' " % name if name else "") +
-                  "is not an actual function. Got: '%r'", function)
-        raise HandledException
+        raise LoggedError(
+            log, "The external function provided " +
+            ("for '%s' " % name if name else "") +
+            "is not an actual function. Got: '%r'", function)
     return function
 
 
@@ -186,8 +186,7 @@ def read_dnumber(n, d, dtype=float):
                 return dtype(n[:-1]) * d
             raise ValueError
     except ValueError:
-        log.error("Could not convert '%r' to a number.", n)
-        raise HandledException
+        raise LoggedError(log, "Could not convert '%r' to a number.", n)
     return n
 
 
@@ -211,8 +210,7 @@ def get_scipy_1d_pdf(info):
     param = list(info.keys())[0]
     info2 = deepcopy(info[param])
     if not info2:
-        log.error("No specific prior info given for sampled parameter '%s'." % param)
-        raise HandledException
+        raise LoggedError(log, "No specific prior info given for sampled parameter '%s'." % param)
     # What distribution?
     try:
         dist = info2.pop(_p_dist).lower()
@@ -226,42 +224,41 @@ def get_scipy_1d_pdf(info):
     try:
         pdf_dist = getattr(import_module("scipy.stats", dist), dist)
     except AttributeError:
-        log.error("Error creating the prior for parameter '%s': "
-                  "The distribution '%s' is unknown to 'scipy.stats'. "
-                  "Check the list of allowed possibilities in the docs.", param, dist)
-        raise HandledException
+        raise LoggedError(
+            log, "Error creating the prior for parameter '%s': "
+            "The distribution '%s' is unknown to 'scipy.stats'. "
+            "Check the list of allowed possibilities in the docs.", param, dist)
     # Recover loc,scale from min,max
     # For coherence with scipy.stats, defaults are min,max=0,1
     if "min" in info2 or "max" in info2:
         if "loc" in info2 or "scale" in info2:
-            log.error("You cannot use the 'loc/scale' convention and the 'min/max' "
-                      "convention at the same time. Either use one or the other.")
-            raise HandledException
+            raise LoggedError(
+                log, "You cannot use the 'loc/scale' convention and the 'min/max' "
+                "convention at the same time. Either use one or the other.")
         minmaxvalues = {"min": 0, "max": 1}
         for limit in minmaxvalues:
             try:
                 value = info2.pop(limit, minmaxvalues[limit])
                 minmaxvalues[limit] = np.float(value)
             except (TypeError, ValueError):
-                log.error("Invalid value '%s: %r' in param '%s' (it must be a number)",
-                          limit, value, param)
-                raise HandledException
+                raise LoggedError(
+                    log, "Invalid value '%s: %r' in param '%s' (it must be a number)",
+                    limit, value, param)
         info2["loc"] = minmaxvalues["min"]
         info2["scale"] = minmaxvalues["max"] - minmaxvalues["min"]
     # Check for improper priors
     if not np.all(np.isfinite([info2.get(x, 0) for x in ["loc", "scale", "min", "max"]])):
-        log.error("Improper prior for parameter '%s'.", param)
-        raise HandledException
+        raise LoggedError(log, "Improper prior for parameter '%s'.", param)
     # Generate and return the frozen distribution
     try:
         return pdf_dist(**info2)
     except TypeError as tp:
-        log.error(
+        raise LoggedError(
+            log,
             "'scipy.stats' produced an error: <<%r>>. "
             "This probably means that the distribution '%s' "
             "does not recognize the parameter mentioned in the 'scipy' error above.",
             str(tp), dist)
-        raise HandledException
 
 
 def _fast_uniform_logpdf(self, x):

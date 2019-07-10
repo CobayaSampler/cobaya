@@ -28,7 +28,7 @@ from cobaya.conventions import _p_proposal, _input_params, _output_params
 from cobaya.tools import get_folder, recursive_update, recursive_odict_to_dict
 from cobaya.tools import fuzzy_match, deepcopy_where_possible
 from cobaya.yaml import yaml_load_file
-from cobaya.log import HandledException
+from cobaya.log import LoggedError
 from cobaya.parameterization import expand_info_param
 from cobaya.mpi import get_mpi_comm, am_single_or_primary_process
 
@@ -45,8 +45,7 @@ def load_input(input_file):
     file_name, extension = os.path.splitext(input_file)
     file_name = os.path.basename(file_name)
     if extension not in (".yaml", ".yml"):
-        log.error("Extension of input file '%s' not recognized.", input_file)
-        raise HandledException
+        raise LoggedError(log, "Extension of input file '%s' not recognized.", input_file)
     info = yaml_load_file(input_file) or {}
     # if output_prefix not defined, default to input_file name (sans ext.) as prefix;
     if _output_prefix not in info:
@@ -108,9 +107,9 @@ def get_default_info(module, kind, ignore_re="^_"):
     try:
         default_module_info[kind][module]
     except KeyError:
-        log.error("The defaults file for '%s' should be structured "
-                  "as %s:%s:{[options]}.", module, kind, module)
-        raise HandledException
+        raise LoggedError(
+            log, "The defaults file for '%s' should be structured "
+            "as %s:%s:{[options]}.", module, kind, module)
     if ignore_re:
         default_module_info = odict([
             [k,v] for k,v in default_module_info.items() if not re.match(ignore_re, k)])
@@ -145,9 +144,9 @@ def update_info(info):
             try:
                 input_info[block][module] = input_info[block][module] or {}
             except TypeError:
-                log.error("Your input info is not well formatted at the '%s' block. "
-                          "It must be a dictionary {'%s':{options}, ...}. ", block, block)
-                raise HandledException
+                raise LoggedError(
+                    log, "Your input info is not well formatted at the '%s' block. "
+                    "It must be a dictionary {'%s':{options}, ...}. ", block, block)
             if not hasattr(input_info[block][module], "get"):
                 input_info[block][module] = {_external: input_info[block][module]}
             ignore = set([_external, _p_renames, _input_params, _output_params])
@@ -167,16 +166,16 @@ def update_info(info):
                      for o, a in alternatives.items()])
                 if default_module_info[block][module]:
                     # Internal module
-                    log.error("'%s' does not recognize some options: %s. "
-                              "To see the allowed options, check out the documentation of"
-                              " this module.", module, did_you_mean)
-                    raise HandledException
+                    raise LoggedError(
+                        log, "'%s' does not recognize some options: %s. "
+                        "To see the allowed options, check out the documentation of"
+                        " this module.", module, did_you_mean)
                 else:
                     # External module
-                    log.error("External %s '%s' does not recognize some options: %s. "
-                              "Check the documentation for 'external %s'.",
-                              block, module, did_you_mean, block)
-                    raise HandledException
+                    raise LoggedError(
+                        log, "External %s '%s' does not recognize some options: %s. "
+                        "Check the documentation for 'external %s'.",
+                        block, module, did_you_mean, block)
             updated_info[block][module].update(input_info[block][module])
             # Store default parameters and priors of class, and save to combine later
             if block == _likelihood:
@@ -190,8 +189,8 @@ def update_info(info):
     for prior_info in default_prior_info.values():
         for name, prior in prior_info.items():
             if updated_info[_prior].get(name, prior) != prior:
-                log.error("Two different priors cannot have the same name: '%s'.", name)
-                raise HandledException
+                raise LoggedError(
+                    log, "Two different priors cannot have the same name: '%s'.", name)
             updated_info[_prior][name] = prior
     # Add parameters info, after the necessary updates and checks
     defaults_merged = merge_default_params_info(default_params_info)
@@ -231,11 +230,11 @@ def merge_default_params_info(defaults):
             if p in defaults_merged:
                 log.debug("Parameter '%s' multiply defined.", p)
                 if info != defaults_merged[p]:
-                    log.error("Parameter '%s' multiply defined, but inconsistent info: "
-                              "For likelihood '%s' is '%r', but for some other likelihood"
-                              " it was '%r'. Check your defaults!",
-                              p, lik, info, defaults_merged[p])
-                    raise HandledException
+                    raise LoggedError(
+                        log, "Parameter '%s' multiply defined, but inconsistent info: "
+                        "For likelihood '%s' is '%r', but for some other likelihood"
+                        " it was '%r'. Check your defaults!",
+                        p, lik, info, defaults_merged[p])
             defaults_merged[p] = info
     return defaults_merged
 

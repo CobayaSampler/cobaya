@@ -23,7 +23,7 @@ from cobaya.sampler import Sampler
 from cobaya.mpi import get_mpi_comm
 from cobaya.mpi import am_single_or_primary_process, more_than_one_process, sync_processes
 from cobaya.collection import Collection
-from cobaya.log import HandledException
+from cobaya.log import LoggedError
 from cobaya.install import download_github_release
 from cobaya.yaml import yaml_dump_file
 
@@ -42,13 +42,11 @@ class polychord(Sampler):
             if am_single_or_primary_process():
                 self.log.info("Importing *local* PolyChord from " + self.path)
                 if not os.path.exists(os.path.realpath(self.path)):
-                    self.log.error("The given path does not exist.")
-                    raise HandledException
+                    raise LoggedError(self.log, "The given path does not exist.")
             pc_build_path = get_build_path(self.path)
             if not pc_build_path:
-                self.log.error("Either PolyChord is not in the given folder, "
-                               "'%s', or you have not compiled it.", self.path)
-                raise HandledException
+                raise LoggedError(self.log, "Either PolyChord is not in the given folder, "
+                                  "'%s', or you have not compiled it.", self.path)
             # Inserting the previously found path into the list of import folders
             sys.path.insert(0, pc_build_path)
         else:
@@ -58,13 +56,12 @@ class polychord(Sampler):
             from pypolychord.settings import PolyChordSettings
             self.pc = pypolychord
         except ImportError:
-            self.log.error(
-                "Couldn't find the PolyChord python interface. "
+            raise LoggedError(
+                self.log, "Couldn't find the PolyChord python interface. "
                 "Make sure that you have compiled it, and that you either\n"
                 " (a) specify a path (you didn't) or\n"
                 " (b) install the Python interface globally with\n"
                 "     '/path/to/PolyChord/python setup.py install --user'")
-            raise HandledException
         # Prepare arguments and settings
         self.nDims = self.model.prior.d()
         self.nDerived = (len(self.model.parameterization.derived_params()) +
@@ -144,9 +141,9 @@ class polychord(Sampler):
         if len(inf[0]):
             params_names = self.model.parameterization.sampled_params()
             params = [params_names[i] for i in sorted(list(set(inf[0])))]
-            self.log.error("PolyChord needs bounded priors, but the parameter(s) '"
-                           "', '".join(params) + "' is(are) unbounded.")
-            raise HandledException
+            raise LoggedError(
+                self.log, "PolyChord needs bounded priors, but the parameter(s) '"
+                "', '".join(params) + "' is(are) unbounded.")
         locs = bounds[:, 0]
         scales = bounds[:, 1] - bounds[:, 0]
         # This function re-scales the parameters AND puts them in the right order
@@ -402,6 +399,6 @@ def install(path=None, force=False, code=False, data=False, no_progress_bars=Fal
     if process_make.returncode:
         log.info(out)
         log.info(err)
-        log.error("Python build failed!")
+        log.erro("Python build failed!")
         return False
     return True

@@ -20,7 +20,7 @@ from copy import deepcopy
 # Local
 from cobaya.conventions import _prior, _p_drop, _p_derived, _p_label, _p_value, _p_renames
 from cobaya.tools import get_external_function, ensure_nolatex, is_valid_variable_name, getargspec
-from cobaya.log import HandledException, HasLogger
+from cobaya.log import LoggedError, HasLogger
 
 
 def is_fixed_param(info_param):
@@ -81,19 +81,16 @@ def reduce_info_param(info_param):
     return info_param
 
 
-def call_param_func(p, func, kwargs, logger=None):
-    logger_error = print if logger is None else logger.error
-    if logger is None:
-        logger = print
+def call_param_func(p, func, kwargs, logger):
     try:
         return func(**kwargs)
     except NameError as exception:
         unknown = str(exception).split("'")[1]
-        logger_error("Unknown variable '%s' was referenced in the definition of "
-                     "the parameter '%s', with arguments %r.", unknown, p, list(kwargs))
-        raise HandledException
+        raise LoggedError(
+            logger, "Unknown variable '%s' was referenced in the definition of "
+            "the parameter '%s', with arguments %r.", unknown, p, list(kwargs))
     except:
-        logger_error("Function for parameter '%s' failed at evaluation "
+        logger.error("Function for parameter '%s' failed at evaluation "
                      "and threw the following exception:", p)
         raise
 
@@ -159,16 +156,16 @@ class Parameterization(HasLogger):
                 is_in = p in self.sampled_params()
                 eg_in = "  p_prime:\n    prior: ...\n  %s: 'lambda p_prime: p_prime'\n" % p
                 eg_out = "  p_prime: 'lambda %s: %s'\n" % (p, p)
-                self.log.error("Parameter name '%s' is not a valid Python variable name "
-                               "(it needs to start with a letter or '_').\n"
-                               "If this is an %s parameter of a likelihood or theory, "
-                               "whose name you cannot change,%s define an associated "
-                               "%s one with a valid name 'p_prime' as: \n\n%s",
-                               p, "input" if is_in else "output",
-                               "" if is_in else " remove it and",
-                               "sampled" if is_in else "derived",
-                               eg_in if is_in else eg_out)
-                raise HandledException
+                raise LoggedError(
+                    self.log, "Parameter name '%s' is not a valid Python variable name "
+                    "(it needs to start with a letter or '_').\n"
+                    "If this is an %s parameter of a likelihood or theory, "
+                    "whose name you cannot change,%s define an associated "
+                    "%s one with a valid name 'p_prime' as: \n\n%s",
+                    p, "input" if is_in else "output",
+                    "" if is_in else " remove it and",
+                    "sampled" if is_in else "derived",
+                    eg_in if is_in else eg_out)
         # Assume that the *un*known function arguments are likelihood output parameters
         args = (set(chain(*self._input_args.values()))
                 .union(chain(*self._derived_args.values())))
@@ -189,23 +186,23 @@ class Parameterization(HasLogger):
             set([p for p, v in self._sampled_input_dependence.items() if not v])
                 .difference(set(self._directly_sampled)))
         if dropped_but_never_used and not ignore_unused_sampled:
-            self.log.error(
+            raise LoggedError(
+                self.log,
                 "Parameters %r are sampled but not passed to the likelihood or theory "
                 "code, neither ever used as arguments for any parameters. "
                 "Check that you are not using the '%s' tag unintentionally.",
                 list(dropped_but_never_used), _p_drop)
-            raise HandledException
         # input params depend on input and sampled only, never on output/derived
         all_input_arguments = set(chain(*self._input_args.values()))
         bad_input_dependencies = all_input_arguments.difference(
             set(self.input_params()).union(set(self.sampled_params())).union(set(self.constant_params())))
         if bad_input_dependencies:
-            self.log.error(
+            raise LoggedError(
+                self.log,
                 "Input parameters defined as functions can only depend on other "
                 "input parameters that are not defined as functions. "
                 "In particular, an input parameter cannot depend on %r",
                 list(bad_input_dependencies))
-            raise HandledException
 
     def input_params(self):
         return deepcopy(self._input)
@@ -261,11 +258,11 @@ class Parameterization(HasLogger):
                 self._input[p] = call_param_func(p, self._input_funcs[p], args, self.log)
                 resolved.append(p)
         if set(resolved) != set(self._input_funcs):
-            self.log.error(
+            raise LoggedError(
+                self.log,
                 "Could not resolve arguments for input parameters %s. Maybe there "
                 "is a circular dependency between derived parameters?",
                 list(set(self._input_funcs).difference(set(resolved))))
-            raise HandledException
         return self.input_params()
 
     def _to_derived(self, output_params_values):
@@ -289,14 +286,14 @@ class Parameterization(HasLogger):
                     for p in self._derived_args[p]}
                 if not all([isinstance(v, Number) for v in args.values()]):
                     continue
-                self._derived[p] = call_param_func(p, self._derived_funcs[p], args)
+                self._derived[p] = call_param_func(p, self._derived_funcs[p], args, self.log)
                 resolved.append(p)
         if set(resolved) != set(self._derived_funcs):
-            self.log.error(
+            raise LoggedError(
+                self.log,
                 "Could not resolve arguments for derived parameters %s. Maybe there"
                 " is a circular dependency between derived parameters?",
                 list(set(self._derived_funcs).difference(set(resolved))))
-            raise HandledException
         return list(self._derived.values())
 
     def _check_sampled(self, **sampled_params):
@@ -316,32 +313,29 @@ class Parameterization(HasLogger):
         if len(sampled_output) < len(self._sampled):
             not_found = set(self.sampled_params()).difference(set(sampled_output))
             if self.allow_renames:
-                self.log.error(
-                    "The following expected sampled parameters " +
-                    ("(or their aliases) " if self.allow_renames else "") +
-                    "where not found : %r",
-                    ({p: self._sampled_renames[p] for p in not_found}
-                     if self.allow_renames else not_found))
+                msg = ("The following expected sampled parameters " +
+                       ("(or their aliases) " if self.allow_renames else "") +
+                       "where not found : %r",
+                       ({p: self._sampled_renames[p] for p in not_found}
+                        if self.allow_renames else not_found))
             else:
-                self.log.error(
-                    "The following expected sampled parameters "
-                    "where not found : %r",
-                    {p: self._sampled_renames[p] for p in not_found})
-            raise HandledException
+                msg = ("The following expected sampled parameters "
+                       "where not found : %r",
+                       {p: self._sampled_renames[p] for p in not_found})
+            raise LoggedError(self.log, msg)
         # Ignore fixed input parameters if they have the correct value
         to_pop = []
         for p, value in sampled_input.items():
             known_value = self.constant_params().get(p, None)
             if known_value is None:
-                self.log.error("Unknown parameter %r.", p)
-                raise HandledException
+                raise LoggedError(self.log, "Unknown parameter %r.", p)
             elif np.allclose(value, known_value):
                 to_pop.append(p)
                 self.log.debug("Fixed parameter %r ignored.", p)
             else:
-                self.log.error("Cannot change value of constant parameter: "
-                               "%s = %g (new) vs %g (old).", p, value, known_value)
-                raise HandledException
+                raise LoggedError(
+                    self.log, "Cannot change value of constant parameter: "
+                    "%s = %g (new) vs %g (old).", p, value, known_value)
         for p in to_pop:
             sampled_input.pop(p)
         if sampled_input:
@@ -364,7 +358,7 @@ class Parameterization(HasLogger):
                     if derived else ""))
             for line in msg.split("\n"):
                 self.log.error(line)
-            raise HandledException
+            raise LoggedError
         return sampled_output
 
     def labels(self):

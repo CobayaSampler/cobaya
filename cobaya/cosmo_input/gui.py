@@ -206,14 +206,14 @@ def gui_script():
         app = QApplication(sys.argv)
     except NameError:
         # TODO: fix this long logger setup
-        from cobaya.log import logger_setup, HandledException
+        from cobaya.log import logger_setup, LoggedError
         logger_setup(0, None)
         import logging
-        logging.getLogger("cosmo_generator").error(
+        raise LoggedError(
+            logging.getLogger("cosmo_generator"),
             "PySide or PySide2 is not installed! "
             "Check Cobaya's documentation for the cosmo_generator "
             "('Basic cosmology runs').")
-        raise HandledException
     clip = app.clipboard()
     window = MainWindow()
     window.clipboard = clip

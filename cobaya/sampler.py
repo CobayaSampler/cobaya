@@ -55,7 +55,7 @@ import numpy as np
 from cobaya.conventions import _sampler, _checkpoint_extension, _covmat_extension
 from cobaya.conventions import _resume_default
 from cobaya.tools import get_class
-from cobaya.log import HandledException, HasLogger
+from cobaya.log import LoggedError, HasLogger
 from cobaya.yaml import yaml_load_file
 from cobaya.mpi import am_single_or_primary_process
 
@@ -128,9 +128,9 @@ class Sampler(HasLogger):
             try:
                 np.random.seed(self.seed)
             except TypeError:
-                self.log.error("Seeds must be *integer*, but got %r with type %r",
-                               self.seed, type(self.seed))
-                raise HandledException
+                raise LoggedError(
+                    self.log, "Seeds must be *integer*, but got %r with type %r",
+                    self.seed, type(self.seed))
         # Load checkpoint info, if resuming
         self.resuming = resume
         if self.resuming and self.name != "minimize":
@@ -144,10 +144,10 @@ class Sampler(HasLogger):
                         self.log.info("Resuming from previous sample!")
                 except KeyError:
                     if am_single_or_primary_process():
-                        self.log.error("Checkpoint file found at '%s' "
-                                       "but it corresponds to a different sampler.",
-                                       self.checkpoint_filename())
-                        raise HandledException
+                        raise LoggedError(
+                            self.log, "Checkpoint file found at '%s' "
+                            "but it corresponds to a different sampler.",
+                            self.checkpoint_filename())
             except (IOError, TypeError):
                 pass
         else:
@@ -188,13 +188,12 @@ def get_sampler(info_sampler, posterior, output_file,
     """
     log = logging.getLogger(__name__.split(".")[-1])
     if not info_sampler:
-        log.error("No sampler given!")
-        raise HandledException
+        raise LoggedError(log, "No sampler given!")
     try:
         name = list(info_sampler)[0]
     except AttributeError:
-        log.error("The sampler block must be a dictionary 'sampler: {options}'.")
-        raise HandledException
+        raise LoggedError(
+            log, "The sampler block must be a dictionary 'sampler: {options}'.")
     sampler_class = get_class(name, kind=_sampler)
     return sampler_class(
         info_sampler[name], posterior, output_file, resume=resume, modules=modules)

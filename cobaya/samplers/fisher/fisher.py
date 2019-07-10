@@ -14,7 +14,7 @@ import logging
 
 # Local
 from cobaya.sampler import Sampler
-from cobaya.log import HandledException
+from cobaya.log import LoggedError
 from cobaya.mpi import get_mpi_rank, get_mpi_size, get_mpi_comm
 from cobaya.collection import Collection
 

@@ -5,8 +5,8 @@ likelihood:
 params:
   logA:
     prior:
-      min: 2
-      max: 4
+      min: 1.61
+      max: 3.91
     ref:
       dist: norm
       loc: 3.1
@@ -27,7 +27,7 @@ params:
       scale: 0.004
     proposal: 0.002
     latex: n_\mathrm{s}
-  theta:
+  theta_MC_100:
     prior:
       min: 0.5
       max: 10
@@ -39,7 +39,7 @@ params:
     latex: 100\theta_\mathrm{MC}
     drop: true
   cosmomc_theta:
-    value: 'lambda theta: 1.e-2*theta'
+    value: 'lambda theta_MC_100: 1.e-2*theta_MC_100'
     derived: false
   H0:
     latex: H_0
@@ -125,6 +125,9 @@ sampler:
 theory:
   camb:
     extra_args:
+      halofit_version: mead
+      bbn_predictor: PArthENoPE_880.2_standard.dat
+      lens_potential_accuracy: 1
       num_massive_neutrinos: 1
       nnu: 3.046
       theta_H0_range:
