@@ -21,19 +21,24 @@ native ``cmblikes`` ones) You can find a description of the different likelihood
    `Planck 2015 results. XI. CMB power spectra, likelihoods, and robustness of parameters`
    `(arXiv:1507.02704) <https://arxiv.org/abs/1507.02704>`_
 
-The Planck 2018 likelihoods defined here are:
+The Planck 2018 likelihoods defined here are: (*new in 2.0*)
 
 - ``planck_2018_lowl``: low-:math:`\ell` temperature
 - ``planck_2018_lowE``: low-:math:`\ell` E polarization
 - ``planck_2018_plikHM_TT``: high-:math:`\ell` temperature
-- ``planck_2018_plikHM_TTTEEE``: high-:math:`\ell` temperature, polarization and cross-correlated
+- ``planck_2018_plikHM_TTTEEE``:
+  high-:math:`\ell` temperature, polarization and cross-correlated
 - ``planck_2018_plikHM_TT_unbinned``, ``planck_2018_plikHM_TTTEEE_unbinned``:
   unbinned-in-:math:`\ell` versions of the baseline ones
 - ``planck_2018_plikHM_TT_lite``, ``planck_2018_plikHM_TTTEEE_lite``:
   foreground-marginalized versions of the baseline ones
-- ``planck_2015_lensing``: lensing temperature+polarisation-based
-- ``planck_2015_lensing_cmblikes``: native version of the ``clik``-based one above,
+- ``planck_2015_clik_lensing``: lensing temperature+polarisation-based,
+  based on the official ``clik`` code.
+- ``planck_2015_cmblikes_lensing``: native version of the ``clik``-based one above,
   more customizable.
+- ``planck_2015_cmblikes_lensing_cmbmarged``: CMB-marginalized,
+  temperature+polarisation-based lensing likelihood.
+  Do not combine with any of the ones above!
 
 The Planck 2015 likelihoods defined here are:
 
