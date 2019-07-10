@@ -291,6 +291,38 @@ class minimize(Sampler):
                     "M": self._inv_affine_transform_matrix,
                     "X0": self._affine_transform_baseline}
 
+    def getdist_point_text(self, params, weight=None, minuslogpost=None):
+        lines = []
+        if weight is not None:
+            lines.append('  weight    = %s' % weight)
+        if minuslogpost is not None:
+            lines.append(' -log(Like) = %s' % minuslogpost)
+            lines.append('  chi-sq    = %s' % (2 * minuslogpost))
+        lines.append('')
+
+        labels = self.model.parameterization.labels()  # doesn't actually seem to work
+
+        def add_section(pars):
+            for num, p, val in pars:
+                lab = labels.get(p, p)
+                if isinstance(val, (float, np.floating)) and len(str(val)) > 10:
+                    lines.append("%5d  %-15.7e %-22s %s" % (num, val, p, lab))
+                else:
+                    lines.append("%5d  %-15s %-22s %s" % (num, val, p, lab))
+
+        num_sampled = len(self.model.parameterization.sampled_params())
+        num_derived = len(self.model.parameterization.derived_params())
+        add_section([[i + 1, p, params[p]] for i, p in enumerate(self.model.parameterization.sampled_params())])
+        lines.append('')
+
+        add_section([[i + num_sampled + num_derived + 1, p, value] for i, (p, value) in
+                     enumerate(self.model.parameterization.constant_params().items())])
+        lines.append('')
+
+        add_section(
+            [[i + num_sampled + 1, p, params[p]] for i, p in enumerate(self.model.parameterization.derived_params())])
+        return "\n".join(lines)
+
     def dump_getdist(self):
         import os
         from collections import OrderedDict as odict
@@ -311,3 +343,10 @@ class minimize(Sampler):
         print("  - Sampled:", sampled)
         print("  - Fixed:", fixed)
         print("  - Derived:", derived)
+
+        if not self.ignore_prior:
+            # .minimum files currently assumed to be maximum of posterior
+            getdist_bf = self.getdist_point_text(self.minimum, minuslogpost=self.minimum['minuslogpost'])
+            print("\n" + getdist_bf)
+            with open(os.path.join(self.output.folder, self.output.prefix + '.minimum'), 'w') as f:
+                f.write(getdist_bf)
