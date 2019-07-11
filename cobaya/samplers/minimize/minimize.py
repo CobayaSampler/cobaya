@@ -330,10 +330,8 @@ class minimize(Sampler):
 
             labels.update(
                 odict([[p, r'\chi^2_{\rm %s}' % (p.replace(_chi2 + _separator, '').replace("_", r"\ "))]
-                       for p in
-                       params.chi2_names]))
-            chi2s = [[chi2, params[chi2]] for chi2 in params.chi2_names]
-            add_section(chi2s)
+                       for p in params.chi2_names]))
+            add_section([[chi2, params[chi2]] for chi2 in params.chi2_names])
 
         return "\n".join(lines)
 
