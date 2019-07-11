@@ -68,6 +68,7 @@ from __future__ import division
 # Global
 import numpy as np
 from scipy.optimize import minimize as scpminimize
+from collections import OrderedDict as odict
 
 import pybobyqa  # in the py-bobyqa pip package
 
@@ -300,49 +301,42 @@ class minimize(Sampler):
             lines.append('  chi-sq    = %s' % (2 * minuslogpost))
         lines.append('')
 
-        labels = self.model.parameterization.labels()  # doesn't actually seem to work
+        labels = self.model.parameterization.labels()
+        label_list = list(labels.keys())
+        if hasattr(params, 'chi2_names'): label_list += params.chi2_names
+        width = max([len(lab) for lab in label_list]) + 2
 
         def add_section(pars):
-            for num, p, val in pars:
+            for p, val in pars:
                 lab = labels.get(p, p)
+                num = label_list.index(p) + 1
                 if isinstance(val, (float, np.floating)) and len(str(val)) > 10:
-                    lines.append("%5d  %-15.7e %-22s %s" % (num, val, p, lab))
+                    lines.append("%5d  %-17.9e %-*s %s" % (num, val, width, p, lab))
                 else:
-                    lines.append("%5d  %-15s %-22s %s" % (num, val, p, lab))
+                    lines.append("%5d  %-17s %-*s %s" % (num, val, width, p, lab))
 
         num_sampled = len(self.model.parameterization.sampled_params())
         num_derived = len(self.model.parameterization.derived_params())
-        add_section([[i + 1, p, params[p]] for i, p in enumerate(self.model.parameterization.sampled_params())])
+        add_section([[p, params[p]] for p in self.model.parameterization.sampled_params()])
         lines.append('')
 
-        add_section([[i + num_sampled + num_derived + 1, p, value] for i, (p, value) in
-                     enumerate(self.model.parameterization.constant_params().items())])
+        add_section([[p, value] for p, value in self.model.parameterization.constant_params().items()])
         lines.append('')
 
-        add_section(
-            [[i + num_sampled + 1, p, params[p]] for i, p in enumerate(self.model.parameterization.derived_params())])
+        add_section([[p, params[p]] for p in self.model.parameterization.derived_params()])
+
+        if hasattr(params, 'chi2_names'):
+            labels.update(
+                odict([[p, r'\chi^2_{\rm %s}' % (p.replace('chi2__', '').replace('_', '{\\textunderscore}'))] for p in
+                       params.chi2_names]))
+            add_section([[chi2, params[chi2]] for chi2 in params.chi2_names])
+
         return "\n".join(lines)
 
     def dump_getdist(self):
+        if not self.output:
+            return
         import os
-        from collections import OrderedDict as odict
-        print("### Help with GetDist format ############################################")
-        print("* Root:", self.output.prefix)
-        print("* Root with full path:", os.path.join(self.output.folder, self.output.prefix))
-        print("* Target of minimization:",
-              ("-log(likelihood)" if self.ignore_prior else "-log(posterior)"))
-        print("* Point of minimum target\n", self.minimum)
-        # Extracting sampled + fixed + derived params of minimum
-        sampled = odict([
-            [p, self.minimum[p]] for p in self.model.parameterization.sampled_params()])
-        fixed = odict([
-            [p, value] for p, value in self.model.parameterization.constant_params().items()])
-        derived = odict([
-            [p, self.minimum[p]] for p in self.model.parameterization.derived_params()])
-        print("* Extracting parameters of minimum:")
-        print("  - Sampled:", sampled)
-        print("  - Fixed:", fixed)
-        print("  - Derived:", derived)
 
         if not self.ignore_prior:
             # .minimum files currently assumed to be maximum of posterior
