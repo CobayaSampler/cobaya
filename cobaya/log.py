@@ -29,26 +29,32 @@ class LoggedError(Exception):
     """
 
 
+def log_LoggedError(loggedError):
+    args = loggedError.args
+    if args:
+        logger = args[0]
+        msgargs = args[1:]
+        logger.error(*msgargs)
+
+
 def safe_exit():
     """Closes all MPI process, if more than one present."""
     if get_mpi_size() > 1:
         get_mpi_comm().Abort()
 
 
-def exception_handler(exception_type, value, trace_back):
+def exception_handler(exception_type, exception_instance, trace_back):
     # Do not print traceback if the exception has been handled and logged
     if exception_type == LoggedError:
-        if value.args:
-            logger = value.args[0]
-            msgargs = value.args[1:]
-            logger.error(*msgargs)
+        log_LoggedError(exception_instance)
         safe_exit()
         return  # no traceback printed
     _logger_name = "exception handler"
     log = logging.getLogger(_logger_name)
     line = "-------------------------------------------------------------\n"
     log.critical(line[len(_logger_name) + 5:] + "\n" +
-                 "".join(traceback.format_exception(exception_type, value, trace_back)) +
+                 "".join(traceback.format_exception(
+                     exception_type, exception_instance, trace_back)) +
                  line)
     if exception_type == KeyboardInterrupt:
         log.critical("Interrupted by the user.")
@@ -63,6 +69,21 @@ def exception_handler(exception_type, value, trace_back):
             _debug, _debug_file)
     # Exit all MPI processes
     safe_exit()
+
+
+# Jupyter patch
+try:
+    from __main__ import get_ipython  # throws ImportError if not in Jupyter
+    import IPython
+    showtraceback_original = IPython.core.interactiveshell.InteractiveShell.showtraceback
+    def showtraceback_new(self, *args, **kwargs):
+        exception_class, exception_instance, exception_traceback = sys.exc_info()
+        if exception_class == LoggedError:
+            log_LoggedError(exception_instance)
+        showtraceback_original(self, *args, **kwargs)
+    IPython.core.interactiveshell.InteractiveShell.showtraceback = showtraceback_new
+except ImportError:
+    pass
 
 
 def logger_setup(debug=None, debug_file=None):
