@@ -369,7 +369,7 @@ class Parameterization(HasLogger):
         Uses the parameter name if no label has been given.
         """
         get_label = lambda p, info: (
-            ensure_nolatex(getattr(info, "get", lambda x, y: y)(_p_label, p.replace('_', '{\\textunderscore}'))))
+            ensure_nolatex(getattr(info, "get", lambda x, y: y)(_p_label, p.replace("_", r"\ "))))
         return odict([[p, get_label(p, info)] for p, info in self._infos.items()])
 
     # Python magic for the "with" statement

@@ -326,10 +326,14 @@ class minimize(Sampler):
         add_section([[p, params[p]] for p in self.model.parameterization.derived_params()])
 
         if hasattr(params, 'chi2_names'):
+            from cobaya.conventions import _chi2, _separator
+
             labels.update(
-                odict([[p, r'\chi^2_{\rm %s}' % (p.replace('chi2__', '').replace('_', '{\\textunderscore}'))] for p in
+                odict([[p, r'\chi^2_{\rm %s}' % (p.replace(_chi2 + _separator, '').replace("_", r"\ "))]
+                       for p in
                        params.chi2_names]))
-            add_section([[chi2, params[chi2]] for chi2 in params.chi2_names])
+            chi2s = [[chi2, params[chi2]] for chi2 in params.chi2_names]
+            add_section(chi2s)
 
         return "\n".join(lines)
 
