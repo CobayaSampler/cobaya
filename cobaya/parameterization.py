@@ -15,11 +15,12 @@ import numpy as np
 from collections import OrderedDict as odict
 from numbers import Number
 from itertools import chain
-from copy import deepcopy
+
 
 # Local
 from cobaya.conventions import _prior, _p_drop, _p_derived, _p_label, _p_value, _p_renames
-from cobaya.tools import get_external_function, ensure_nolatex, is_valid_variable_name, getargspec
+from cobaya.tools import get_external_function, ensure_nolatex, is_valid_variable_name
+from cobaya.tools import getargspec, deepcopy_where_possible as deepcopy
 from cobaya.log import LoggedError, HasLogger
 
 
@@ -109,13 +110,13 @@ class Parameterization(HasLogger):
         # `input` contains the parameters (expected to be) understood by the likelihood,
         #   with its fixed value, its fixing function, or None if their value is given
         #   directly by the sampler.
+        self._infos = odict()
         self._input = odict()
         self._input_funcs = dict()
         self._input_args = dict()
         self._output = odict()
         self._constant = odict()
         self._sampled = odict()
-        self._sampled_info = odict()
         self._sampled_renames = odict()
         self._derived = odict()
         self._derived_funcs = dict()
@@ -123,6 +124,7 @@ class Parameterization(HasLogger):
         # Notice here that expand_info_param *always* adds a _p_derived:True tag
         # to infos without _prior or _p_value, and a _p_value field to fixed params
         for p, info in info_params.items():
+            self._infos[p] = deepcopy(info)
             if is_fixed_param(info):
                 if isinstance(info[_p_value], Number):
                     self._constant[p] = info[_p_value]
@@ -134,7 +136,6 @@ class Parameterization(HasLogger):
                     self._input_args[p] = getargspec(self._input_funcs[p]).args
             if is_sampled_param(info):
                 self._sampled[p] = None
-                self._sampled_info[p] = deepcopy(info)
                 if not info.get(_p_drop, False):
                     self._input[p] = None
                 self._sampled_renames[p] = (
@@ -217,7 +218,8 @@ class Parameterization(HasLogger):
         return deepcopy(self._sampled)
 
     def sampled_params_info(self):
-        return deepcopy(self._sampled_info)
+        return odict([
+            [p, deepcopy(info)] for p, info in self._infos.items() if p in self._sampled])
 
     def sampled_params_renames(self):
         return deepcopy(self._sampled_renames)
@@ -369,9 +371,7 @@ class Parameterization(HasLogger):
         """
         get_label = lambda p, info: (
             ensure_nolatex(getattr(info, "get", lambda x, y: y)(_p_label, p)))
-        return odict([[p, get_label(p, info)] for p, info in
-                      list(self.sampled_params().items()) +
-                      list(self.derived_params().items())])
+        return odict([[p, get_label(p, info)] for p, info in self._infos.items()])
 
     # Python magic for the "with" statement
     def __enter__(self):
