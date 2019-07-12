@@ -295,8 +295,8 @@ class mcmc(Sampler):
             # we want to start learning the covmat earlier
             self.log.info("Covariance matrix " +
                           ("not present" if np.all(where_nan) else "not complete") + ". "
-                                                                                     "We will start learning the covariance of the proposal earlier:"
-                                                                                     " R-1 = %g (was %g).",
+                          "We will start learning the covariance of the proposal earlier:"
+                          " R-1 = %g (was %g).",
                           self.learn_proposal_Rminus1_max_early,
                           self.learn_proposal_Rminus1_max)
             self.learn_proposal_Rminus1_max = self.learn_proposal_Rminus1_max_early
@@ -722,12 +722,13 @@ class mcmc(Sampler):
                 mean_of_covs = covs[0]
             try:
                 self.proposer.set_covariance(mean_of_covs)
+                if am_single_or_primary_process():
+                    self.log.info("Updated covariance matrix of proposal pdf.")
+                    self.log.debug("%r", mean_of_covs)
             except:
-                self.log.debug("Updating covariance matrix failed unexpectedly. "
-                               "waiting until next checkpoint.")
-            if am_single_or_primary_process():
-                self.log.info("Updated covariance matrix of proposal pdf.")
-                self.log.debug("%r", mean_of_covs)
+                if am_single_or_primary_process():
+                    self.log.debug("Updating covariance matrix failed unexpectedly. "
+                                   "waiting until next checkpoint.")
         # Save checkpoint info
         self.write_checkpoint()
 
