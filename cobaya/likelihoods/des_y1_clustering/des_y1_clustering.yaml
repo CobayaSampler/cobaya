@@ -23,7 +23,7 @@ likelihood:
     # Aliases for automatic covariance matrix
     renames: [DESwt]
     # Speed in evaluations/second
-    speed: 50
+    speed: 40
 
   
 params:

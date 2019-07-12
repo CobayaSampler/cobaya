@@ -136,6 +136,7 @@ from cobaya.conventions import _path_install, _c_km_s
 class _bao_prototype(Likelihood):
 
     def initialize(self):
+        self.log.info("Initialising.")
         if not getattr(self, "path", None) and not getattr(self, "path_install", None):
             raise LoggedError(
                 self.log, "No path given to BAO data. Set the likelihood property "

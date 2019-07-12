@@ -22,6 +22,8 @@ likelihood:
     binned_bessels: True
     # Aliases for automatic covariance matrix
     renames: [DES]
+    # Speed in evaluations/second
+    speed: 20
 
   
 params:

@@ -10,7 +10,7 @@ likelihood:
     # Aliases for automatic covariance matrix
     renames: [plikHM_TTTEEE]
     # Speed in evaluations/second
-    speed: 26
+    speed: 500
 
 params:
   # Calibration factors

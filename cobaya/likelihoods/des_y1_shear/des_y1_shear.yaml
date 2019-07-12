@@ -23,7 +23,7 @@ likelihood:
     # Aliases for automatic covariance matrix
     renames: [DESlens]
     # Speed in evaluations/second
-    speed: 30
+    speed: 20
 
 
 params:

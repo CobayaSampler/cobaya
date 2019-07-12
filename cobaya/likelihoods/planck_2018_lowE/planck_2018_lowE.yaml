@@ -9,7 +9,7 @@ likelihood:
     # Aliases for automatic covariance matrix
     renames: [lowE]
     # Speed in evaluations/second
-    speed: 4
+    speed: 3000
 
 params:
   A_planck:
