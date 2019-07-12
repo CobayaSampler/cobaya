@@ -25,7 +25,7 @@ class planck_2018_cmblikes_lensing_cmbmarged(_cmblikes_prototype):
 
 # name of the supplementary data and covmats repo/folder
 supp_data_name = "planck_supp_data_and_covmats"
-supp_data_version = "v1.0"
+supp_data_version = "v2.0"
 
 
 def get_path(path):
