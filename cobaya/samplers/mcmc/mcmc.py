@@ -165,7 +165,6 @@ class mcmc(Sampler):
             self.log.info("Covariance matrix from checkpoint.")
         else:
             covmat = self.initial_proposal_covmat(slow_params=slow_params)
-            self.log.info("Initial covariance matrix.")
         self.log.debug(
             "Sampling with covmat:\n%s",
             DataFrame(covmat, columns=self.model.parameterization.sampled_params(),

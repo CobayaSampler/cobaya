@@ -51,6 +51,20 @@ primordial = odict([
                 [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.96], ["scale", 0.004]])],
                 [_p_proposal, 0.002], [_p_label, r"n_\mathrm{s}"]])]])}]])
 primordial.update(odict([
+    ["SFSR_DESpriors", {
+        _desc: "Adiabatic scalar perturbations, power law + running spectrum -- DESpriors",
+        _theory: {_camb: None, _classy: None},
+        _params: odict([
+            ["As_1e9", odict([
+                [_prior, odict([["min", 0.5], ["max", 5]])],
+                [_p_ref, odict([[_p_dist, "norm"], ["loc", 2.5], ["scale", 0.5]])],
+                [_p_proposal, 0.25], [_p_label, r"10^9 A_\mathrm{s})"],
+                [_p_drop, True], [_p_renames, "A"]])],
+            ["As", odict([
+                [_p_value, "lambda As_1e9: 1e-9 * As_1e9"],
+                [_p_label, r"A_\mathrm{s}"]])],
+            ["ns", primordial["SFSR"][_params]["ns"]]])}]]))
+primordial.update(odict([
     ["SFSR_run", {
         _desc: "Adiabatic scalar perturbations, power law + running spectrum",
         _theory: {_camb: None, _classy: None},
@@ -138,7 +152,7 @@ hubble = odict([
                         [_p_ref,
                          odict([[_p_dist, "norm"], ["loc", 1.0411], ["scale", 0.0004]])],
                         [_p_proposal, 0.0002], [_p_label, r"100\theta_\mathrm{MC}"],
-                        [_p_drop, True]])],
+                        [_p_drop, True], [_p_renames, "theta"]])],
                     ["cosmomc_theta", odict([
                         [_p_value, "lambda theta_MC_100: 1.e-2*theta_MC_100"],
                         [_p_derived, False]])],
@@ -417,7 +431,7 @@ like_cmb = odict([
 ])
 like_cmb["planck_2018_bk15"][_comment] = like_cmb["planck_2018"][_comment]
 # Add common CMB derived parameters
-for m in like_cmb.values():
+for name, m in like_cmb.items():
     # Don't add the derived parameter to the no-CMB case!
     if not m:
         continue
@@ -444,6 +458,9 @@ for m in like_cmb.values():
             [_p_label, r"{\rm{Age}}/\mathrm{Gyr}"]])],
         ["rdrag", odict([
             [_p_label, r"r_\mathrm{drag}"]])]]))
+    if "cmbmarged" in name.lower():
+        m[_params].pop("A")
+        m[_params].pop("clamp")
 # Some more, in case we want to add them at some point, described in
 # https://wiki.cosmos.esa.int/planckpla2015/images/b/b9/Parameter_tag_definitions_2015.pdf
 #    "zstar":       {"latex": r"z_*"},
@@ -635,7 +652,7 @@ preset.update(odict([
 ]))
 
 lensingonly_model = {
-    "primordial": "SFSR",
+    "primordial": "SFSR_DESpriors",
     "geometry": "flat",
     "hubble": "H_DESpriors",
     "matter": "Omegab, Omegam",
