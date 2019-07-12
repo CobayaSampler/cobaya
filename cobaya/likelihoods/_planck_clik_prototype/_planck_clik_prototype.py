@@ -227,12 +227,19 @@ class _planck_clik_prototype(Likelihood):
             self.clik = (
                 clik.clik_lensing(self.clik_file) if self.lensing else clik.clik(self.clik_file))
         except clik.lkl.CError:
-            raise LoggedError(
-                self.log,
-                "The .clik file was not found where specified in the 'clik_file' field "
-                "of the settings of this likelihood. Maybe the 'path' given is not "
-                "correct? The full path where the .clik file was searched for is '%s'",
-                self.clik_file)
+            # Is it that the file was not found?
+            if not os.path.exists(self.clik_file):
+                raise LoggedError(
+                    self.log, "The .clik file was not found where specified in the "
+                    "'clik_file' field of the settings of this likelihood. Maybe the "
+                    "'path' given is not correct? The full path where the .clik file was "
+                    "searched for is '%s'", self.clik_file)
+            # Else: unknown clik error
+            self.log.error("An unexpected error occurred in clik (possibly related to "
+                           "multiple simultaneous initialization, or simultaneous "
+                           "initialization of incompatible likelihoods (e.g. polarised "
+                           "vs non-polarised 'lite' likelihoods. See error info below:")
+            raise
         self.expected_params = list(self.clik.extra_parameter_names)
         # py3 lensing bug
         if "b'A_planck'" in self.expected_params:
