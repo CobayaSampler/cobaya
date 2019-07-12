@@ -221,9 +221,8 @@ class _planck_clik_prototype(Likelihood):
             self.path_data = getattr(self, "path_data", os.path.join(
                 self.path or self.path_install, "data", data_path))
             self.clik_file = os.path.join(self.path_data, self.clik_file)
-        # for lensing, some routines change. Initializing a flag for easier
-        # testing of this condition
-        self.lensing = "lensing" in self.name
+        # Differences in the wrapper for lensing and non-lensing likes
+        self.lensing = clik.try_lensing(self.clik_file)
         try:
             self.clik = (
                 clik.clik_lensing(self.clik_file) if self.lensing else clik.clik(self.clik_file))
@@ -410,14 +409,16 @@ def get_product_id_and_clik_file(name):
 
 
 def is_installed(**kwargs):
+    code_path = common_path
+    data_path = get_data_path(kwargs["name"])
     result = True
     if kwargs["code"]:
         result &= is_installed_clik(os.path.realpath(
-            os.path.join(kwargs["path"], "code", common_path)))
+            os.path.join(kwargs["path"], "code", code_path)))
     if kwargs["data"]:
         _, filename = get_product_id_and_clik_file(kwargs["name"])
         result &= os.path.exists(os.path.realpath(
-            os.path.join(kwargs["path"], "data", common_path, filename)))
+            os.path.join(kwargs["path"], "data", data_path, filename)))
         from cobaya.likelihoods.planck_2015_lensing_cmblikes import \
             is_installed as is_installed_supp
         result &= is_installed_supp(**kwargs)
@@ -427,6 +428,7 @@ def is_installed(**kwargs):
 def install(path=None, name=None, force=False, code=True, data=True,
             no_progress_bars=False):
     log = logging.getLogger(name)
+    path_names = {"code": common_path, "data": get_data_path(name)}
     import platform
     if platform.system() == "Windows":
         log.error("Not compatible with Windows.")
@@ -439,7 +441,7 @@ def install(path=None, name=None, force=False, code=True, data=True,
     paths = {}
     for s in ("code", "data"):
         if eval(s):
-            paths[s] = os.path.realpath(os.path.join(path, s, common_path))
+            paths[s] = os.path.realpath(os.path.join(path, s, path_names[s]))
             if not os.path.exists(paths[s]):
                 os.makedirs(paths[s])
     success = True
