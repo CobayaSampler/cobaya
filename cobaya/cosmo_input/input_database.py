@@ -172,6 +172,8 @@ hubble = odict([
                     ["H0", {_p_label: r"H_0"}]])}}}]])
 
 # Matter sector (minus light species)
+N_eff_std = 3.046
+nu_mass_fac = 94.0708
 matter = odict([
     ["omegab_h2, omegac_h2", {
         _desc: "Flat prior on Omega*h^2 for barions and cold dark matter",
@@ -205,7 +207,8 @@ matter = odict([
                 [_p_label, r"\Omega_\mathrm{b} h^2"]])],
             ["omegach2", odict([
                 [_p_value, ("lambda omegam, omegab, mnu, H0: "
-                            "(omegam-omegab)*(H0/100)**2-(mnu*(3.046/3)**0.75)/94.07")],
+                            "(omegam-omegab)*(H0/100)**2-(mnu*(%g/3)**0.75)/%g" % (
+                                N_eff_std, nu_mass_fac))],
                 [_p_label, r"\Omega_\mathrm{c} h^2"]])]
         ])}]])
 for m in matter.values():
