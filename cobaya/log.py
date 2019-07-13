@@ -40,7 +40,7 @@ def log_LoggedError(loggedError):
 def safe_exit():
     """Closes all MPI process, if more than one present."""
     if get_mpi_size() > 1:
-        get_mpi_comm().Abort()
+        get_mpi_comm().Abort(1)
 
 
 def exception_handler(exception_type, exception_instance, trace_back):

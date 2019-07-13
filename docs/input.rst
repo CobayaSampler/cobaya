@@ -58,6 +58,12 @@ To run **cobaya** from the shell, use the command ``cobaya-run``, followed by yo
 
       $ mpirun -n [#processes] $HOME/.local/bin/cobaya-run your_input.yaml
 
+   .. warning::
+
+      In rare occasions, when ``KeyboardInterrupt`` is raised twice in a row within a small interval, i.e. when :kbd:`Control-c` is hit twice really fast, secondary processes may not die, and need to be killed manually.
+
+      If you notice secondary process not dying by themselves in any other circumstance, please contact us, including as much information on the run as possible.
+
 
 To run **cobaya** from a Python interpreter, simply do
 
