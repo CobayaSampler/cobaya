@@ -24,7 +24,7 @@ class _fast_chi_square(object):
 
 
 class _DataSetLikelihood(Likelihood):
-    "A likelihood reading parameters and filenames from a .dataset plain text .ini file (as CosmoMC)"
+    """A likelihood reading parameters and filenames from a .dataset plain text .ini file (as CosmoMC)"""
 
     data_name = ""
     supp_data_name = "planck_supp_data_and_covmats"

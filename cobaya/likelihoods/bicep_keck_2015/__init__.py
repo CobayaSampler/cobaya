@@ -116,7 +116,7 @@ class bicep_keck_2015(_cmblikes_prototype):
         bandpass.dnu = np.hstack(
             ((nu[1] - nu[0]), (nu[2:] - nu[:-2]) / 2, (nu[-1] - nu[-2])))
         # Calculate thermodynamic temperature conversion between this bandpass
-        # and pivot frequencies 353 GHz (usedfor dust) and 150 GHz (used for sync).
+        # and pivot frequencies 353 GHz (used for dust) and 150 GHz (used for sync).
         th_int = np.sum(bandpass.dnu * bandpass.R[:, 1] * bandpass.R[:, 0] ** 4 *
                         np.exp(Ghz_Kelvin * bandpass.R[:, 0] / _T_CMB_K) /
                         (np.exp(Ghz_Kelvin * bandpass.R[:, 0] / _T_CMB_K) - 1) ** 2)
@@ -266,16 +266,16 @@ class bicep_keck_2015(_cmblikes_prototype):
                     dustsync *= np.sqrt(EEtoBB_sync * EEtoBB_dust)
 
                 if need_dust_decorr and i != j:
-                    corr_dust = self.decorrelation(delta_dust, self.bandpasses[i].nu_bar * bandcenter_err[i], \
+                    corr_dust = self.decorrelation(delta_dust, self.bandpasses[i].nu_bar * bandcenter_err[i],
                                                    self.bandpasses[j].nu_bar * bandcenter_err[j],
-                                                   self.fpivot_dust_decorr, rat, \
+                                                   self.fpivot_dust_decorr, rat,
                                                    self.lform_dust_decorr)
                 else:
                     corr_dust = 1
                 if need_sync_decorr and i != j:
-                    corr_sync = self.decorrelation(delta_sync, self.bandpasses[i].nu_bar * bandcenter_err[i], \
+                    corr_sync = self.decorrelation(delta_sync, self.bandpasses[i].nu_bar * bandcenter_err[i],
                                                    self.bandpasses[j].nu_bar * bandcenter_err[j],
-                                                   self.pivot_sync_decorr, rat, \
+                                                   self.fpivot_sync_decorr, rat,
                                                    self.lform_sync_decorr)
                 else:
                     corr_sync = 1

@@ -49,9 +49,6 @@ class planck_2018_CamSpec_python(_DataSetLikelihood):
     data_name = 'CamSpec'
     data_version = "v1.0"
 
-    def init_params(self, ini):
-        pass
-
     def read_normalized(self, filename, pivot=None):
         # arrays all based at L=0, in L(L+1)/2pi units
         print('Loading: ', filename)
@@ -204,7 +201,7 @@ class planck_2018_CamSpec_python(_DataSetLikelihood):
         A_sz_143_bandpass = asz143 * sz_bandpass143_nom143
         A_cib_143_bandpass = acib143 * cib_bandpass143_nom143
         zCIB = A_cib_143_bandpass * cl_cib
-        C_foregrounds[1, :] = (zCIB + ksz + A_sz_143_bandpass * self.sz_143 \
+        C_foregrounds[1, :] = (zCIB + ksz + A_sz_143_bandpass * self.sz_143
                                - 2.0 * np.sqrt(A_cib_143_bandpass * A_sz_143_bandpass) * xi * self.tszxcib)
 
         # 217
