@@ -193,7 +193,7 @@ The recommended way is to get a `GitHub <https://github.com>`_ user and `fork th
    $ git clone https://YOUR_USERNAME@github.com/YOUR_USERNAME/cobaya.git
    $ pip install --editable cobaya[test] --upgrade
 
-(add the --user option if you don't have write access to the default pip installation location).
+(add the --user option if you don't have write access to the default pip installation location). Here ``cobaya[test]`` should include the square brackets.
 
 Alternatively, you can clone from the official **cobaya** repo (but this way you won't be able to upload your changes!).
 
