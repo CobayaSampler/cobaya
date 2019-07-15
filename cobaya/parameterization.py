@@ -16,7 +16,6 @@ from collections import OrderedDict as odict
 from numbers import Number
 from itertools import chain
 
-
 # Local
 from cobaya.conventions import _prior, _p_drop, _p_derived, _p_label, _p_value, _p_renames
 from cobaya.tools import get_external_function, ensure_nolatex, is_valid_variable_name
@@ -89,7 +88,7 @@ def call_param_func(p, func, kwargs, logger):
         unknown = str(exception).split("'")[1]
         raise LoggedError(
             logger, "Unknown variable '%s' was referenced in the definition of "
-            "the parameter '%s', with arguments %r.", unknown, p, list(kwargs))
+                    "the parameter '%s', with arguments %r.", unknown, p, list(kwargs))
     except:
         logger.error("Function for parameter '%s' failed at evaluation "
                      "and threw the following exception:", p)
@@ -159,10 +158,10 @@ class Parameterization(HasLogger):
                 eg_out = "  p_prime: 'lambda %s: %s'\n" % (p, p)
                 raise LoggedError(
                     self.log, "Parameter name '%s' is not a valid Python variable name "
-                    "(it needs to start with a letter or '_').\n"
-                    "If this is an %s parameter of a likelihood or theory, "
-                    "whose name you cannot change,%s define an associated "
-                    "%s one with a valid name 'p_prime' as: \n\n%s",
+                              "(it needs to start with a letter or '_').\n"
+                              "If this is an %s parameter of a likelihood or theory, "
+                              "whose name you cannot change,%s define an associated "
+                              "%s one with a valid name 'p_prime' as: \n\n%s",
                     p, "input" if is_in else "output",
                     "" if is_in else " remove it and",
                     "sampled" if is_in else "derived",
@@ -337,7 +336,7 @@ class Parameterization(HasLogger):
             else:
                 raise LoggedError(
                     self.log, "Cannot change value of constant parameter: "
-                    "%s = %g (new) vs %g (old).", p, value, known_value)
+                              "%s = %g (new) vs %g (old).", p, value, known_value)
         for p in to_pop:
             sampled_input.pop(p)
         if sampled_input:
@@ -367,10 +366,10 @@ class Parameterization(HasLogger):
         """
         Returns a dictionary of LaTeX labels of the sampled and derived parameters.
 
-        Uses the parameter name of no label has been given.
+        Uses the parameter name if no label has been given.
         """
         get_label = lambda p, info: (
-            ensure_nolatex(getattr(info, "get", lambda x, y: y)(_p_label, p)))
+            ensure_nolatex(getattr(info, "get", lambda x, y: y)(_p_label, p.replace("_", r"\ "))))
         return odict([[p, get_label(p, info)] for p, info in self._infos.items()])
 
     # Python magic for the "with" statement

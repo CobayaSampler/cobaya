@@ -5,10 +5,6 @@
            Well tested and agrees with likelihoods in DES chains for fixednu.
 :Author: Antony Lewis (little changes for Cobaya by Jesus Torrado)
 
-.. warning::
-
-   This is still in **beta**. Coming soon!
-
 .. |br| raw:: html
 
    <br />
