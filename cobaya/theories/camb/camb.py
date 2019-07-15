@@ -677,14 +677,6 @@ def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs)
     if not code:
         log.info("Code not requested. Nothing to do.")
         return True
-    gcc_check = check_gcc_version(camb_min_gcc_version, error_returns=-1)
-    if gcc_check == -1:
-        log.warning("Failed to get gcc version (maybe not using gcc?). "
-                    "Going ahead and hoping for the best.")
-    elif not gcc_check:
-        raise LoggedError(
-            log, "CAMB requires a gcc version >= %s, "
-            "which is higher than your current one.", camb_min_gcc_version)
     log.info("Downloading camb...")
     success = download_github_release(
         os.path.join(path, "code"), camb_repo_name, camb_repo_version,
@@ -701,6 +693,13 @@ def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs)
     if process_make.returncode:
         log.info(out)
         log.info(err)
-        log.error("Compilation failed!")
+        gcc_check = check_gcc_version(camb_min_gcc_version, error_returns=False)
+        if not gcc_check:
+            cause = (" Possible cause: it looks like `gcc` does not have the correct "
+                     "version number (CAMB requires %s); and `ifort` is also probably "
+                     "not available.", camb_min_gcc_version)
+        else:
+            cause = ""
+        log.error("Compilation failed!" + cause)
         return False
     return True

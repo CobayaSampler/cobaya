@@ -14,4 +14,4 @@ likelihood:
     # Aliases for automatic covariance matrix
 #    renames: [lensing]
     # Speed in evaluations/second
-    speed: 1100
+    speed: 1500

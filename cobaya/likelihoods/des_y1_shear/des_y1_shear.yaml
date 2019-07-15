@@ -20,8 +20,10 @@ likelihood:
     # Approximate bessel integral as binned smooth C_L
     # against integrals of bessel in each bin.
     binned_bessels: True
+    # Aliases for automatic covariance matrix
+    renames: [DESlens]
     # Speed in evaluations/second
-    speed: 30
+    speed: 20
 
 
 params:

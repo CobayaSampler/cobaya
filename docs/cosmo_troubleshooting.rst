@@ -35,3 +35,11 @@ You can use e.g. `Valgrind <http://www.valgrind.org/>`_ to monitor memory usage.
 .. note::
 
    In particular, for CLASS, check out :ref:`this warning <classy_install_warn>` concerning moving the CLASS folder after compilation.
+
+
+Secondary MPI processes not dying
+----------------------------------
+
+We have noticed that hitting :kbd:`Control-c` **twice in a row** prevents the termination signal to be propagated among processes, letting some or all secondary ones running after the primary one is killed, so that they need to be killed manually. Please, be patient!
+
+Secondary processes not dying is something that should not happen when running on a cluster. If this happens, please report to us via GitHub, including as much information about the run as possible.

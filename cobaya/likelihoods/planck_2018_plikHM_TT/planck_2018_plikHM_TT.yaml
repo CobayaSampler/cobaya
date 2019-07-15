@@ -9,8 +9,7 @@ likelihood:
     # Aliases for automatic covariance matrix
     renames: [plikHM_TT]
     # Speed in evaluations/second
-    speed: 90
-
+    speed: 7
 
 params:
   # CIB & SZ

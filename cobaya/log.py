@@ -27,26 +27,24 @@ class LoggedError(Exception):
     Dummy exception, to be raised when the originating exception
     has been cleanly handled and logged.
     """
-
-
-def log_LoggedError(loggedError):
-    args = loggedError.args
-    if args:
-        logger = args[0]
-        msgargs = args[1:]
-        logger.error(*msgargs)
+    def __init__(self, logger, *args, **kwargs):
+        if args:
+            logger.error(*args, **kwargs)
+        msg = args[0] if len(args) else ""
+        if msg and len(args) > 1:
+            msg = msg % args[1:]
+        super().__init__(msg, **kwargs)
 
 
 def safe_exit():
     """Closes all MPI process, if more than one present."""
     if get_mpi_size() > 1:
-        get_mpi_comm().Abort()
+        get_mpi_comm().Abort(1)
 
 
 def exception_handler(exception_type, exception_instance, trace_back):
     # Do not print traceback if the exception has been handled and logged
     if exception_type == LoggedError:
-        log_LoggedError(exception_instance)
         safe_exit()
         return  # no traceback printed
     _logger_name = "exception handler"
@@ -69,21 +67,6 @@ def exception_handler(exception_type, exception_instance, trace_back):
             _debug, _debug_file)
     # Exit all MPI processes
     safe_exit()
-
-
-# Jupyter patch
-try:
-    from __main__ import get_ipython  # throws ImportError if not in Jupyter
-    import IPython
-    showtraceback_original = IPython.core.interactiveshell.InteractiveShell.showtraceback
-    def showtraceback_new(self, *args, **kwargs):
-        exception_class, exception_instance, exception_traceback = sys.exc_info()
-        if exception_class == LoggedError:
-            log_LoggedError(exception_instance)
-        showtraceback_original(self, *args, **kwargs)
-    IPython.core.interactiveshell.InteractiveShell.showtraceback = showtraceback_new
-except ImportError:
-    pass
 
 
 def logger_setup(debug=None, debug_file=None):

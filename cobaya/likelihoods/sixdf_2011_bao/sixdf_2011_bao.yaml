@@ -11,4 +11,4 @@ likelihood:
     # Aliases for automatic covariance matrix
     renames: [BAO]
     # Speed in evaluations/second
-    speed: 3900
+    speed: 5000

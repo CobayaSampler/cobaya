@@ -72,6 +72,12 @@ Thanks to `Julien Lesgourgues`_ for support on interfacing CLASS_, and to `Guada
    :width: 150px
    :align: right
 
+.. image:: ./img/logo_ttk.png
+   :alt: RWTH Aachen
+   :target: https://www.particle-theory.rwth-aachen.de/
+   :width: 150px
+   :align: right
+
 .. image:: ./img/logo_ERC.png
    :alt: European Research Council
    :target: https://erc.europa.eu/

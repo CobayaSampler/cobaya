@@ -318,7 +318,7 @@ class classy(_cosmo):
                 list(set(self.input_params).intersection(set(self.extra_args))))
 
     def add_z_for_matter_power(self, z):
-        if not hasattr(self, "z_for_matter_power"):
+        if not getattr(self, "z_for_matter_power"):
             self.z_for_matter_power = np.empty((0))
         self.z_for_matter_power = np.flip(np.sort(np.unique(np.concatenate(
             [self.z_for_matter_power, np.atleast_1d(z)]))), axis=0)

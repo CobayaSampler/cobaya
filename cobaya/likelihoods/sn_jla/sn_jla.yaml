@@ -15,7 +15,7 @@ likelihood:
     # Aliases for automatic covariance matrix
     renames: [JLA]
     # Speed in evaluations/second
-    speed: 15
+    speed: 20
 
 params:
   alpha_jla:
