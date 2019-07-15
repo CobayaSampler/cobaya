@@ -134,57 +134,6 @@ params:
       scale: 0.05
     proposal: 0.05
     latex: b_\mathrm{DES}^5
-  # Bin bias parameters
-  DES_b1:
-    prior:
-      min: 0.8
-      max: 3
-    ref:
-      dist: norm
-      loc: 1.45
-      scale: 0.05
-    proposal: 0.05
-    latex: b_\mathrm{DES}^1
-  DES_b2:
-    prior:
-      min: 0.8
-      max: 3
-    ref:
-      dist: norm
-      loc: 1.55
-      scale: 0.05
-    proposal: 0.05
-    latex: b_\mathrm{DES}^2
-  DES_b3:
-    prior:
-      min: 0.8
-      max: 3
-    ref:
-      dist: norm
-      loc: 1.65
-      scale: 0.05
-    proposal: 0.05
-    latex: b_\mathrm{DES}^3
-  DES_b4:
-    prior:
-      min: 0.8
-      max: 3
-    ref:
-      dist: norm
-      loc: 1.8
-      scale: 0.05
-    proposal: 0.05
-    latex: b_\mathrm{DES}^4
-  DES_b5:
-    prior:
-      min: 0.8
-      max: 3
-    ref:
-      dist: norm
-      loc: 2.0
-      scale: 0.05
-    proposal: 0.05
-    latex: b_\mathrm{DES}^5
   # WL photo-z errors
   DES_DzS1:
     prior:
