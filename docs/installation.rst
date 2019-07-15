@@ -186,7 +186,7 @@ Method 1: Using ``git`` (recommended!)
 
 To download and install **cobaya** in *development mode* you will need ``git`` (`learn how to use git <https://git-scm.com/book/en/v2>`_). Type ``git`` in the shell and check that you get usage instructions instead of a ``command not found`` error. In the later case, in a Debian-like system, install it with a ``sudo apt install git``.
 
-The recommended way is to get a `GitHub <https://github.com>`_ user and `fork the cobaya repo <https://help.github.com/articles/fork-a-repo/>`_. Then clone you fork and install it as a Python package in *development mode* (i.e. your changes to the code will have an immediate effect, without needing to update the Python package):
+The recommended way is to get a `GitHub <https://github.com>`_ user and `fork the cobaya repo <https://help.github.com/articles/fork-a-repo/>`_. Then clone your fork and install it as a Python package in *development mode* (i.e. your changes to the code will have an immediate effect, without needing to update the Python package):
 
 .. code:: bash
 
