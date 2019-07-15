@@ -682,9 +682,8 @@ def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs)
         log.warning("Failed to get gcc version (maybe not using gcc?). "
                     "Going ahead and hoping for the best.")
     elif not gcc_check:
-        raise LoggedError(
-            log, "CAMB requires a gcc version >= %s, "
-            "which is higher than your current one.", camb_min_gcc_version)
+        log.warning("Your gcc version is lower than the required one for CAMB, %s. "
+                    "Going ahead and hoping for the best.", camb_min_gcc_version)
     log.info("Downloading camb...")
     success = download_github_release(
         os.path.join(path, "code"), camb_repo_name, camb_repo_version,
