@@ -23,7 +23,7 @@ from pkg_resources import parse_version
 
 # Local
 from cobaya.log import logger_setup, LoggedError
-from cobaya.tools import get_folder, make_header, warn_deprecation
+from cobaya.tools import get_folder, make_header, warn_deprecation, get_class
 from cobaya.input import get_modules
 from cobaya.conventions import _package, _code, _data, _likelihood, _external, _force
 from cobaya.conventions import _modules_path_arg, _modules_path_env, _path_install
@@ -65,6 +65,7 @@ def install(*infos, **kwargs):
             module_folder = get_folder(module, kind, sep=".", absolute=False)
             try:
                 imported_module = import_module(module_folder, package=_package)
+                imported_class = get_class(module, kind)
             except ImportError:
                 if kind == _likelihood:
                     info = (next(info for info in infos
@@ -78,7 +79,8 @@ def install(*infos, **kwargs):
                         log.error("Module '%s' not recognized.\n" % module)
                         failed_modules += ["%s:%s" % (kind, module)]
                 continue
-            is_installed = getattr(imported_module, "is_installed", None)
+            is_installed = getattr(imported_class, "is_installed",
+                                   getattr(imported_module, "is_installed", None))
             if is_installed is None:
                 log.info("Built-in module: nothing to do.\n")
                 continue
@@ -90,7 +92,9 @@ def install(*infos, **kwargs):
                     log.info("Doing nothing.\n")
                     continue
             try:
-                success = imported_module.install(path=abspath, **kwargs_install)
+                install_this = getattr(imported_class, "install",
+                                       getattr(imported_module, "install", None))
+                success = install_this(path=abspath, **kwargs_install)
             except:
                 traceback.print_exception(*sys.exc_info(), file=sys.stdout)
                 log.error("An unknown error occurred. Delete the modules folder and try "

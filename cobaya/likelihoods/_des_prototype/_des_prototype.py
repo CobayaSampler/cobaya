@@ -137,6 +137,10 @@ def get_def_cuts():
 
 
 class _des_prototype(Likelihood):
+
+    des_data_name = "des_data"  # Name of data *and* covmats repo/folder
+    des_data_version = "v1.0"  # Repo version
+
     def initialize(self):
         self.l_max = self.l_max or int(50000 * self.acc)
         if os.path.isabs(self.dataset_file):
@@ -146,7 +150,8 @@ class _des_prototype(Likelihood):
             if self.path:
                 dataset_file_path = self.path
             elif self.path_install:
-                dataset_file_path = os.path.join(self.path_install, "data", des_data_name)
+                dataset_file_path = os.path.join(
+                    self.path_install, "data", self.__class__.des_data_name)
             else:
                 raise LoggedError(
                     self.log,
@@ -388,11 +393,6 @@ class _des_prototype(Likelihood):
         self.zs_interp = np.linspace(0, self.zmax, 100)
 
     def add_theory(self):
-        if self.theory.__class__ == "classy":
-            raise LoggedError(
-                self.log,
-                "DES likelihood not yet compatible with CLASS (help appreciated!)")
-        # Requisites for the theory code
         self.theory.needs(**{
             "omegan": None,
             "omegam": None,
@@ -700,6 +700,25 @@ class _des_prototype(Likelihood):
                 ax.set_title('%s-%s' % (f2 + 1, f1 + 1))
         return axs
 
+    # Installation methods ###############################################################
+
+    @classmethod
+    def get_path(cls, path):
+        return os.path.realpath(os.path.join(path, "data", cls.des_data_name))
+
+    @classmethod
+    def is_installed(cls, **kwargs):
+        return os.path.exists(cls.get_path(kwargs["path"]))
+
+    @classmethod
+    def install(cls, path=None, force=False, code=False, data=True, no_progress_bars=False):
+        if not data:
+            return True
+        log = logging.getLogger(__name__.split(".")[-1])
+        log.info("Downloading DES data...")
+        return download_github_release(
+            os.path.join(path, "data"), cls.des_data_name, cls.des_data_version,
+            no_progress_bars=no_progress_bars)
 
 # Conversion .fits --> .dataset  #########################################################
 
@@ -758,28 +777,3 @@ def convert_txt(filename, root, outdir, ranges=None):
     outlines += ['nuisance_params = DES.paramnames']
     with open(outdir + root + '.dataset', 'w') as f:
         f.write("\n".join(outlines))
-
-
-# Installation routines ##################################################################
-
-# name of the data and covmats repo/folder
-des_data_name = "des_data"
-des_data_version = "v1.0"
-
-
-def get_path(path):
-    return os.path.realpath(os.path.join(path, "data", des_data_name))
-
-
-def is_installed(**kwargs):
-    return os.path.exists(os.path.realpath(
-        os.path.join(kwargs["path"], "data", des_data_name)))
-
-
-def install(path=None, force=False, code=False, data=True, no_progress_bars=False):
-    if not data:
-        return True
-    log = logging.getLogger(__name__.split(".")[-1])
-    log.info("Downloading DES data...")
-    return download_github_release(os.path.join(path, "data"), des_data_name,
-                                   des_data_version, no_progress_bars=no_progress_bars)
