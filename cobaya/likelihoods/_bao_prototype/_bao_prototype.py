@@ -163,7 +163,7 @@ class _bao_prototype(Likelihood):
         else:
             self.data = pd.DataFrame([self.data] if not hasattr(self.data[0], "__len__")
                                      else self.data)
-        # Colums: z value [err] [type]
+        # Columns: z value [err] [type]
         self.has_type = self.data.iloc[:, -1].dtype == np.dtype("O")
         assert self.has_type  # mandatory for now!
         self.has_err = len(self.data.columns) > 2 and self.data[2].dtype == np.float
