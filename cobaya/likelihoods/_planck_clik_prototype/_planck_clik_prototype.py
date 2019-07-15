@@ -380,18 +380,20 @@ def install_clik(path, no_progress_bars=False):
         return False
     source_dir = os.path.join(path, os.listdir(path)[0])
     log.info('Installing from directory %s' % source_dir)
-    if True:  # should be fixed
-        log.info("Patching origin of cfitsio")
-        cfitsio_filename = os.path.join(source_dir, "waf_tools", "cfitsio.py")
-        with open(cfitsio_filename, "r") as cfitsio_file:
-            lines = cfitsio_file.readlines()
-            i_offending = next(i for i, l in enumerate(lines) if ".tar.gz" in l)
-            lines[i_offending] = (
-                "  atl.installsmthg_pre(ctx,"
-                "'http://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio3280.tar.gz',"
-                "'cfitsio3280.tar.gz')\n")
-        with open(cfitsio_filename, "w") as cfitsio_file:
-            cfitsio_file.write("".join(lines))
+    # The following code patches a problem with the download source of cfitsio.
+    # Left here in case the FTP server breaks again.
+    # if True:  # should be fixed: maybe a ping to the FTP server???
+    #     log.info("Patching origin of cfitsio")
+    #     cfitsio_filename = os.path.join(source_dir, "waf_tools", "cfitsio.py")
+    #     with open(cfitsio_filename, "r") as cfitsio_file:
+    #         lines = cfitsio_file.readlines()
+    #         i_offending = next(i for i, l in enumerate(lines) if ".tar.gz" in l)
+    #         lines[i_offending] = (
+    #             "  atl.installsmthg_pre(ctx,"
+    #             "'http://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio3280.tar.gz',"
+    #             "'cfitsio3280.tar.gz')\n")
+    #     with open(cfitsio_filename, "w") as cfitsio_file:
+    #         cfitsio_file.write("".join(lines))
     cwd = os.getcwd()
     try:
         os.chdir(source_dir)
@@ -467,9 +469,19 @@ def install(path=None, name=None, force=False, code=True, data=True,
             product_id, _ = get_product_id_and_clik_file(name)
             # Download and decompress the particular likelihood
             log.info("Downloading likelihood data...")
-            prefix = (r"https://pla.esac.esa.int/pla-sl/"
-                      "data-action?COSMOLOGY.COSMOLOGY_OID=")
-            if not download_file(prefix + product_id, paths["data"], decompress=True,
+            url = (r"https://pla.esac.esa.int/pla-sl/"
+                   "data-action?COSMOLOGY.COSMOLOGY_OID=" + product_id)
+            # OVERRIDE!
+            if "lensing" in name:
+                # OVERRIDE FOR LENSING!
+                url = 
+            elif "lite" in name:
+                # OVERRIDE FOR PLIK LITE!
+                url = 
+            else:
+                # LET'S ASSUME IT'S BASELINE!
+                url = 
+            if not download_file(url, paths["data"], decompress=True,
                                  logger=log, no_progress_bars=no_progress_bars):
                 log.error("Not possible to download this likelihood.")
                 success = False
