@@ -373,7 +373,7 @@ def install_clik(path, no_progress_bars=False):
         if exit_status:
             raise LoggedError(log, "Failed installing '%s'.", req)
     log.info("Downloading...")
-    click_url = 'https://cdn.cosmologist.info/cosmobox/plc-2.1_py3.tar.bz2'
+    click_url = 'https://cdn.cosmologist.info/cosmobox/test2019_kaml/plc-3.0.tar.bz2'
     if not download_file(click_url, path, decompress=True,
                          no_progress_bars=no_progress_bars, logger=log):
         log.error("Not possible to download clik.")
@@ -474,13 +474,13 @@ def install(path=None, name=None, force=False, code=True, data=True,
             # OVERRIDE!
             if "lensing" in name:
                 # OVERRIDE FOR LENSING!
-                url = 
+                url = "https://cdn.cosmologist.info/cosmobox/test2019_kaml/extended_lensing.tar.gz"
             elif "lite" in name:
                 # OVERRIDE FOR PLIK LITE!
-                url = 
+                url = "https://cdn.cosmologist.info/cosmobox/test2019_kaml/extended_plik_lite.tar.gz"
             else:
                 # LET'S ASSUME IT'S BASELINE!
-                url = 
+                url = "https://cdn.cosmologist.info/cosmobox/test2019_kaml/baseline.tar.gz"
             if not download_file(url, paths["data"], decompress=True,
                                  logger=log, no_progress_bars=no_progress_bars):
                 log.error("Not possible to download this likelihood.")
