@@ -66,6 +66,7 @@ from __future__ import absolute_import
 from __future__ import division
 
 # Global
+import os
 import numpy as np
 from scipy.optimize import minimize as scpminimize
 from collections import OrderedDict as odict
@@ -300,12 +301,10 @@ class minimize(Sampler):
             lines.append(' -log(Like) = %s' % minuslogpost)
             lines.append('  chi-sq    = %s' % (2 * minuslogpost))
         lines.append('')
-
         labels = self.model.parameterization.labels()
         label_list = list(labels.keys())
         if hasattr(params, 'chi2_names'): label_list += params.chi2_names
         width = max([len(lab) for lab in label_list]) + 2
-
         def add_section(pars):
             for p, val in pars:
                 lab = labels.get(p, p)
@@ -314,32 +313,24 @@ class minimize(Sampler):
                     lines.append("%5d  %-17.9e %-*s %s" % (num, val, width, p, lab))
                 else:
                     lines.append("%5d  %-17s %-*s %s" % (num, val, width, p, lab))
-
         num_sampled = len(self.model.parameterization.sampled_params())
         num_derived = len(self.model.parameterization.derived_params())
         add_section([[p, params[p]] for p in self.model.parameterization.sampled_params()])
         lines.append('')
-
         add_section([[p, value] for p, value in self.model.parameterization.constant_params().items()])
         lines.append('')
-
         add_section([[p, params[p]] for p in self.model.parameterization.derived_params()])
-
         if hasattr(params, 'chi2_names'):
             from cobaya.conventions import _chi2, _separator
-
             labels.update(
                 odict([[p, r'\chi^2_{\rm %s}' % (p.replace(_chi2 + _separator, '').replace("_", r"\ "))]
                        for p in params.chi2_names]))
             add_section([[chi2, params[chi2]] for chi2 in params.chi2_names])
-
         return "\n".join(lines)
 
     def dump_getdist(self):
         if not self.output:
             return
-        import os
-
         if not self.ignore_prior:
             # .minimum files currently assumed to be maximum of posterior
             getdist_bf = self.getdist_point_text(self.minimum, minuslogpost=self.minimum['minuslogpost'])
