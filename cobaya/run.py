@@ -66,7 +66,7 @@ def run(info):
     _force_reproducible = "force_reproducible"
     if _force_reproducible in info:
         info.pop(_force_reproducible)
-        logging.getLogger(__name__.split(".")[-1]).warn(
+        logging.getLogger(__name__.split(".")[-1]).warning(
             "Option '%s' is no longer necessary. Please remove it!" % _force_reproducible)
     # CHECK THAT THIS WARNING WORKS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ###################################################

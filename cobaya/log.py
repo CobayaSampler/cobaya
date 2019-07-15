@@ -33,7 +33,7 @@ class LoggedError(Exception):
         msg = args[0] if len(args) else ""
         if msg and len(args) > 1:
             msg = msg % args[1:]
-        super().__init__(msg, **kwargs)
+        super(LoggedError, self).__init__(msg, **kwargs)
 
 
 def safe_exit():
