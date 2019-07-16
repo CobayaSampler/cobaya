@@ -391,7 +391,6 @@ def install_clik(path, no_progress_bars=False):
             lines[i_offending] = lines[i_offending].replace(
                 "ftp://heasarc.gsfc.nasa.gov/software/fitsio/c/cfitsio3280.tar.gz",
                 "https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio3280.tar.gz")
-            _
         with open(cfitsio_filename, "w") as cfitsio_file:
             cfitsio_file.write("".join(lines))
     cwd = os.getcwd()
