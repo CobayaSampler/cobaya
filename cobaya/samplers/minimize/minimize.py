@@ -265,7 +265,7 @@ class minimize(Sampler):
             self.dump_getdist()
 
     def products(self):
-        """
+        r"""
         Returns a dictionary containing:
 
         - ``minimum``: :class:`OnePoint` that maximizes the posterior or likelihood

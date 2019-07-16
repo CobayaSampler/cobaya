@@ -404,7 +404,7 @@ class LikelihoodCollection(HasLogger):
                     raise LoggedError(
                         self.log, "More than once parameter-agnostic likelihood/theory "
                         "with respect to %s parameters: %r. Cannot decide "
-                        "parameter assignements.", kind, param_agnostic_likes)
+                        "parameter assignements.", kind, agnostic_likes)
                 elif agnostic_likes[kind]:  # if there is only one
                     for p, assigned in params_assign[kind].items():
                         if not assigned:
