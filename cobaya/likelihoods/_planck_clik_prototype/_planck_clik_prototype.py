@@ -178,7 +178,6 @@ from cobaya.input import get_default_info
 from cobaya.install import pip_install, download_file
 from cobaya.tools import are_different_params_lists, create_banner
 
-
 _deprecation_msg_2015 = create_banner("""
 The likelihoods from the Planck 2015 data release have been superseeded
 by the 2018 ones, and will eventually be deprecated.
@@ -208,8 +207,8 @@ class _planck_clik_prototype(Likelihood):
                 else:
                     raise LoggedError(
                         self.log, "No path given to the Planck likelihood. Set the "
-                        "likelihood property 'path' or the common property "
-                        "'%s'.", _path_install)
+                                  "likelihood property 'path' or the common property "
+                                  "'%s'.", _path_install)
             else:
                 self.path_clik = self.path
             self.log.info("Importing clik from %s", self.path_clik)
@@ -231,9 +230,9 @@ class _planck_clik_prototype(Likelihood):
             if not os.path.exists(self.clik_file):
                 raise LoggedError(
                     self.log, "The .clik file was not found where specified in the "
-                    "'clik_file' field of the settings of this likelihood. Maybe the "
-                    "'path' given is not correct? The full path where the .clik file was "
-                    "searched for is '%s'", self.clik_file)
+                              "'clik_file' field of the settings of this likelihood. Maybe the "
+                              "'path' given is not correct? The full path where the .clik file was "
+                              "searched for is '%s'", self.clik_file)
             # Else: unknown clik error
             self.log.error("An unexpected error occurred in clik (possibly related to "
                            "multiple simultaneous initialization, or simultaneous "
@@ -255,8 +254,8 @@ class _planck_clik_prototype(Likelihood):
         if differences:
             raise LoggedError(
                 self.log, "Configuration error in parameters: %r. "
-                "If this has happened without you fiddling with the defaults, "
-                "please open an issue in GitHub.", differences)
+                          "If this has happened without you fiddling with the defaults, "
+                          "please open an issue in GitHub.", differences)
         # Placeholder for vector passed to clik
         self.l_maxs = self.clik.get_lmax()
         length = (len(self.l_maxs) if self.lensing else len(self.clik.get_has_cl()))
@@ -472,7 +471,7 @@ def install(path=None, name=None, force=False, code=True, data=True,
             # url = (r"https://pla.esac.esa.int/pla-sl/"
             #        "data-action?COSMOLOGY.COSMOLOGY_OID=" + product_id)
             # OVERRIDE! -- for baseline only
-            url = 'http://localhost:8000//home/jesus/scratch/plc_3.0_release/baseline.tar.gz'
+            url = 'https://cdn.cosmologist.info/cosmobox/test2019_kaml/baseline.tar.gz'
             if not download_file(url, paths["data"], decompress=True,
                                  logger=log, no_progress_bars=no_progress_bars):
                 log.error("Not possible to download this likelihood.")
