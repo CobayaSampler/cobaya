@@ -22,6 +22,7 @@ from scipy.linalg import sqrtm
 from cobaya.conventions import _path_install, _package
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
+from cobaya.likelihoods._base_classes import _fast_chi_square
 
 
 class _cmblikes_prototype(Likelihood):
@@ -603,6 +604,8 @@ class _cmblikes_prototype(Likelihood):
             return ((2 * L + 1) * self.fsky *
                     (np.trace(M) - self.nmaps - np.linalg.slogdet(M)[1]))
 
+    fast_chi_squared = _fast_chi_square()
+
     def logp(self, **data_params):
         Cls = self.theory.get_Cl(ell_factor=True)
         self.get_theory_map_cls(Cls, data_params)
@@ -646,7 +649,7 @@ class _cmblikes_prototype(Likelihood):
             bigX[bin * self.ncl_used:(bin + 1) * self.ncl_used] = vecp[self.cl_used_index]
         if self.like_approx == 'exact':
             return -0.5 * chisq
-        return -0.5 * fast_chi_squared(self.covinv, bigX)
+        return -0.5 * self.fast_chi_squared(self.covinv, bigX)
 
 
 class BinWindows(object):
