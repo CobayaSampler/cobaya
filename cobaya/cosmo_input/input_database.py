@@ -677,7 +677,6 @@ install_basic = {
     _theory: {_camb: None, _classy: None},
     _likelihood: {
         "planck_2018_lowl": None,
-        "des_y1_clustering": None,
         "bicep_keck_2015": None,
         "sn_pantheon": None,
         "sdss_dr12_consensus_final": None,
