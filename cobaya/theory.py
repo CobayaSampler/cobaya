@@ -24,13 +24,14 @@ from __future__ import division
 # Local
 from cobaya.conventions import _input_params, _output_params
 from cobaya.log import HasLogger
+from cobaya.input import HasDefaults
 
 # Default options for all subclasses
 class_options = {"speed": -1}
 
 
 # Theory code prototype
-class Theory(HasLogger):
+class Theory(HasLogger, HasDefaults):
     """Prototype of the theory class."""
 
     def initialize(self):

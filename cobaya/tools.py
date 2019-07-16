@@ -69,7 +69,7 @@ def get_folder(name, kind, sep=os.sep, absolute="True"):
     return pre + subfolders[kind] + sep + name
 
 
-def get_class(name, kind=_likelihood):
+def get_class(name, kind=_likelihood, None_if_not_found=False):
     """
     Retrieves the requested likelihood (default) or theory class.
 
@@ -83,6 +83,8 @@ def get_class(name, kind=_likelihood):
     except:
         if ((sys.exc_info()[0] is ModuleNotFoundError and
              str(sys.exc_info()[1]).rstrip("'").endswith(name))):
+            if None_if_not_found:
+                return None
             raise LoggedError(
                 log, "%s '%s' not found (wrong capitalization?)",
                 kind.capitalize(), name)

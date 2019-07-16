@@ -26,7 +26,7 @@ from cobaya.conventions import _params, _prior, _theory, _likelihood, _sampler, 
 from cobaya.conventions import _p_label, _p_derived, _p_ref, _p_drop, _p_value, _p_renames
 from cobaya.conventions import _p_proposal, _input_params, _output_params
 from cobaya.tools import get_folder, recursive_update, recursive_odict_to_dict
-from cobaya.tools import fuzzy_match, deepcopy_where_possible
+from cobaya.tools import fuzzy_match, deepcopy_where_possible, get_class
 from cobaya.yaml import yaml_load_file
 from cobaya.log import LoggedError
 from cobaya.parameterization import expand_info_param
@@ -89,30 +89,21 @@ def get_modules(*infos):
     return modules
 
 
-def get_default_info(module, kind, ignore_re="^_"):
+def get_default_info(module, kind, info={}):
     """
     Get default info for a module.
-
-    Use ``ignore_re`` to ignore keys (default: keys starting with ``_``, which are
-    auxiliary keys used for ``!incude`` directives).
     """
-    path_to_defaults = os.path.join(get_folder(module, kind), module + ".yaml")
     try:
-        default_module_info = yaml_load_file(path_to_defaults)
-    except IOError:
-        # probably an external module
-        default_module_info = {kind: {module: {}}}
-        log.debug("Module %s:%s does not have a defaults file. " % (kind, module) +
-                  "Maybe it is an external module.")
+        cls = get_class(module, kind, None_if_not_found=True)
+        default_module_info = cls.get_defaults() if cls else {kind: {module: {}}}
+    except:
+        raise LoggedError(log, "Failed to get defaults for module '%s:%s'", kind, module)
     try:
         default_module_info[kind][module]
     except KeyError:
         raise LoggedError(
             log, "The defaults file for '%s' should be structured "
             "as %s:%s:{[options]}.", module, kind, module)
-    if ignore_re:
-        default_module_info = odict([
-            [k,v] for k,v in default_module_info.items() if not re.match(ignore_re, k)])
     return default_module_info
 
 
@@ -131,16 +122,7 @@ def update_info(info):
     for block in modules:
         updated_info[block] = odict()
         for module in modules[block]:
-            # Start with the default class options
-            updated_info[block][module] = deepcopy(getattr(
-                import_module(_package + "." + block, package=_package),
-                "class_options", {}))
-            # Go on with defaults
-            default_module_info = get_default_info(module, block)
-            updated_info[block][module].update(default_module_info[block][module] or {})
-            # Update the options with the input file
-            # Consistency is checked only up to first level! (i.e. subkeys may not match)
-            # First deal with cases "no options" and "external function"
+            # Preprocess "no options" and "external function" in input
             try:
                 input_info[block][module] = input_info[block][module] or {}
             except TypeError:
@@ -149,6 +131,14 @@ def update_info(info):
                     "It must be a dictionary {'%s':{options}, ...}. ", block, block)
             if not hasattr(input_info[block][module], "get"):
                 input_info[block][module] = {_external: input_info[block][module]}
+            # Get default class options
+            updated_info[block][module] = deepcopy(getattr(
+                import_module(_package + "." + block, package=_package),
+                "class_options", {}))
+            default_module_info = get_default_info(module, block, input_info[block][module])
+            updated_info[block][module].update(default_module_info[block][module] or {})
+            # Update default options with input info
+            # Consistency is checked only up to first level! (i.e. subkeys may not match)
             ignore = set([_external, _p_renames, _input_params, _output_params])
             options_not_recognized = (set(input_info[block][module])
                                       .difference(ignore)
@@ -381,3 +371,13 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
                         block_name, k))
                     return False
     return True
+
+
+class HasDefaults(object):
+
+    @classmethod
+    def get_defaults(cls):
+        folder = os.path.split(inspect.getfile(cls))[0]
+        name = cls.__name__
+        path_to_defaults = os.path.join(folder, name + ".yaml")
+        return yaml_load_file(path_to_defaults)

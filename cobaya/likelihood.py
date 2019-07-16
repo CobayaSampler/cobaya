@@ -35,6 +35,7 @@ from cobaya.conventions import _input_params_prefix, _output_params_prefix
 from cobaya.tools import get_class, get_external_function, getargspec
 from cobaya.tools import are_different_params_lists
 from cobaya.log import LoggedError, HasLogger
+from cobaya.input import HasDefaults
 
 # Logger
 import logging
@@ -43,7 +44,7 @@ import logging
 class_options = {"speed": -1}
 
 
-class Likelihood(HasLogger):
+class Likelihood(HasLogger, HasDefaults):
     """Likelihood class prototype."""
 
     # Generic initialization -- do not touch
