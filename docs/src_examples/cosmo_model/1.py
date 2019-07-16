@@ -1,8 +1,9 @@
 info_txt = r"""
 likelihood:
-  planck_2015_lowTEB:
-  planck_2015_plikHM_TTTEEE:
-  planck_2015_lensing:
+  planck_2018_lowl:
+  planck_2018_lowE:
+  planck_2018_plikHM_TTTEEE:
+  planck_2018_clik_lensing:
 theory:
   classy:
     extra_args: {N_ur: 2.0328, N_ncdm: 1}

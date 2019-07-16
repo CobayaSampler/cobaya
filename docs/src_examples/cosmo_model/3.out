@@ -1,5 +1,5 @@
 Full log-posterior:
-   logposterior: -40759.21981138617
-   logpriors: {'0': -20.46279635804489, 'SZ': -2.1490651623821413}
-   loglikelihoods: {'planck_2015_lensing': -5.318001369817892, 'planck_2015_plikHM_TTTEEE': -40724.701046690534, 'planck_2015_lowl': -6.588901805391373}
-   derived params: {'Omega_Lambda': 0.68165001855872, 'A_s': 2.1327557162026904e-09, 'YHe': 0.2453671312631958}
+   logposterior: -16826.4
+   logpriors: {'0': -21.068028542859743, 'SZ': -4.4079090809077135}
+   loglikelihoods: {'planck_2018_lowl': -11.659342468489626, 'planck_2018_lowE': -199.91123947242667, 'planck_2018_plikHM_TTTEEE': -16584.946305616675, 'planck_2018_clik_lensing': -4.390708962961917}
+   derived params: {'A_s': 2.1327557162026904e-09, 'Omega_Lambda': 0.68165001855872, 'YHe': 0.2453671312631958}

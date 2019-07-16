@@ -1,8 +1,8 @@
 likelihood:
-  planck_2018_lowl:
-  planck_2018_lowE:
-  planck_2018_plikHM_TTTEEE:
-  planck_2018_cmblikes_lensing:
+  planck_2018_lowl: null
+  planck_2018_lowE: null
+  planck_2018_plikHM_TTTEEE: null
+  planck_2018_cmblikes_lensing: null
 params:
   logA:
     prior:
@@ -39,6 +39,7 @@ params:
     proposal: 0.0002
     latex: 100\theta_\mathrm{MC}
     drop: true
+    renames: theta
   cosmomc_theta:
     value: 'lambda theta_MC_100: 1.e-2*theta_MC_100'
     derived: false
