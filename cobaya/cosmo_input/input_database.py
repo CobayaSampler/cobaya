@@ -681,3 +681,6 @@ install_basic = {
         "sn_pantheon": None,
         "sdss_dr12_consensus_final": None,
         "des_y1_joint": None}}
+
+install_tests = deepcopy(install_basic)
+install_tests[_likelihood].update({"planck_2015_lowl": None})

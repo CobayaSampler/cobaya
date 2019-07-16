@@ -58,9 +58,10 @@ from cobaya.tools import get_class
 from cobaya.log import LoggedError, HasLogger
 from cobaya.yaml import yaml_load_file
 from cobaya.mpi import am_single_or_primary_process
+from cobaya.input import HasDefaults
 
 
-class Sampler(HasLogger):
+class Sampler(HasLogger, HasDefaults):
     """Prototype of the sampler class."""
 
     # What you *must* implement to create your own sampler:

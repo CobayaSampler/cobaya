@@ -94,7 +94,7 @@ script:
   - cobaya-install polychord --modules=$MODULES
   - pytest tests/ -k "not cosmo" --modules=$MODULES
   # Cosmology tests:
-  - cobaya-install cosmo --modules=$MODULES --no-progress-bars
+  - cobaya-install cosmo-tests --modules=$MODULES --no-progress-bars
   # Python 2 problem: astropy downgrades pytest
   - if [[ "$PYVER" == "2" ]]; then
       pip install pytest-xdist --upgrade ;
