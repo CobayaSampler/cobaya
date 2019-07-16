@@ -465,22 +465,14 @@ def install(path=None, name=None, force=False, code=True, data=True,
     if data:
         # 2nd test, in case the code wasn't there but the data is:
         if force or not is_installed(path=path, name=name, code=False, data=True):
-            # Extract product_id
-            product_id, _ = get_product_id_and_clik_file(name)
-            # Download and decompress the particular likelihood
-            log.info("Downloading likelihood data...")
-            url = (r"https://pla.esac.esa.int/pla-sl/"
-                   "data-action?COSMOLOGY.COSMOLOGY_OID=" + product_id)
-            # OVERRIDE!
-            if "lensing" in name:
-                # OVERRIDE FOR LENSING!
-                url = "https://cdn.cosmologist.info/cosmobox/test2019_kaml/extended_lensing.tar.gz"
-            elif "lite" in name:
-                # OVERRIDE FOR PLIK LITE!
-                url = "https://cdn.cosmologist.info/cosmobox/test2019_kaml/extended_plik_lite.tar.gz"
-            else:
-                # LET'S ASSUME IT'S BASELINE!
-                url = "https://cdn.cosmologist.info/cosmobox/test2019_kaml/baseline.tar.gz"
+            # # Extract product_id
+            # product_id, _ = get_product_id_and_clik_file(name)
+            # # Download and decompress the particular likelihood
+            # log.info("Downloading likelihood data...")
+            # url = (r"https://pla.esac.esa.int/pla-sl/"
+            #        "data-action?COSMOLOGY.COSMOLOGY_OID=" + product_id)
+            # OVERRIDE! -- for baseline only
+            url = 'http://localhost:8000//home/jesus/scratch/plc_3.0_release/baseline.tar.gz'
             if not download_file(url, paths["data"], decompress=True,
                                  logger=log, no_progress_bars=no_progress_bars):
                 log.error("Not possible to download this likelihood.")
