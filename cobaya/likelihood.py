@@ -155,7 +155,7 @@ class Likelihood(HasLogger):
 
     def wait(self):
         if self.delay:
-            log.debug("Sleeping for %f seconds.", self.delay)
+            self.log.debug("Sleeping for %f seconds.", self.delay)
         sleep(self.delay)
 
     def d(self):
