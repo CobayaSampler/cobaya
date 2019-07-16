@@ -386,11 +386,10 @@ def install_clik(path, no_progress_bars=False):
         cfitsio_filename = os.path.join(source_dir, "waf_tools", "cfitsio.py")
         with open(cfitsio_filename, "r") as cfitsio_file:
             lines = cfitsio_file.readlines()
+
             i_offending = next(i for i, l in enumerate(lines) if ".tar.gz" in l)
-            lines[i_offending] = (
-                "  atl.installsmthg_pre(ctx,"
-                "'https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio3280.tar.gz',"
-                "'cfitsio3280.tar.gz')\n")
+            lines[
+                i_offending] = 'url,tar = atl.get_lib_url(ctx,"cfitsio",("https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio3280.tar.gz","cfitsio3280.tar.gz"))'
         with open(cfitsio_filename, "w") as cfitsio_file:
             cfitsio_file.write("".join(lines))
     cwd = os.getcwd()
