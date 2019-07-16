@@ -99,7 +99,7 @@ chi2_sdss_dr12_consensus_bao = {
 chi2_sdss_dr12_consensus_full_shape = {
     "sdss_dr12_consensus_full_shape": 8.154, "tolerance": 0.02}
 chi2_sdss_dr12_consensus_final = {
-    "sdss_dr12_consensus_final": 8.051, "tolerance": 0.02}
+    "sdss_dr12_consensus_final": 8.051, "tolerance": 0.03}
 chi2_sixdf_2011_bao = {
     "sixdf_2011_bao": 0.088, "tolerance": 0.02}
 chi2_sdss_dr7_mgs = {
