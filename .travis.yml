@@ -58,7 +58,7 @@ matrix:
             - gfortran-9
             - g++-9
       env:
-        - GCC_VERSION="8"
+        - GCC_VERSION="9"
         - PYVER="3"
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="conda-forge"
