@@ -4,7 +4,7 @@
 likelihood:
   planck_2018_lowE:
     path:
-    clik_file: plc_3.0/low_l/simall/simall_100x143_offlike5_EE_Aplanck_B.clik
+    clik_file: baseline/plc_3.0/low_l/simall/simall_100x143_offlike5_EE_Aplanck_B.clik
 #    product_id: "1900"
     # Aliases for automatic covariance matrix
     renames: [lowE]

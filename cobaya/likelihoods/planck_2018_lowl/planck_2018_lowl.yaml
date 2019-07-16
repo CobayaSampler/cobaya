@@ -4,7 +4,7 @@
 likelihood:
   planck_2018_lowl:
     path:
-    clik_file: plc_3.0/low_l/commander/commander_dx12_v3_2_29.clik
+    clik_file: baseline/plc_3.0/low_l/commander/commander_dx12_v3_2_29.clik
 #    product_id: "1900"
     # Aliases for automatic covariance matrix
     renames: [lowl]
