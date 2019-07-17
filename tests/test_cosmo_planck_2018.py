@@ -63,7 +63,7 @@ def test_planck_CamSpec_2018_p_camb(modules):
     for x in (chi2, info_likelihood):
         x.pop("planck_2018_plikHM_TTTEEE")
     info_likelihood["planck_2018_CamSpec_python"] = None
-    chi2["planck_2018_CamSpec_python"] = 1000
+    chi2["planck_2018_CamSpec_python"] = 11513.53
     best_fit = params_lowTE_highTTTEEE_lite_lensingcmblikes.copy()
     best_fit.update(
         {'aps100': 238.7887, 'aps143': 41.31762, 'aps217': 100.6226, 'acib217': 44.96003, 'asz143': 5.886124,
