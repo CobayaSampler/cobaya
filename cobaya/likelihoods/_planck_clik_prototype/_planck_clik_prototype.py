@@ -469,6 +469,9 @@ def install(path=None, name=None, force=False, code=True, data=True,
         if force or not is_installed(path=path, name=name, code=False, data=True):
             if "2015" in name:
                 # Extract product_id
+                if 'planck_2015' in os.environ.get("COBAYA_TEST_SKIP", ""):
+                    log.info("Skipping Planck 2015 data installation")
+                    return True
                 product_id, _ = get_product_id_and_clik_file(name)
                 # Download and decompress the particular likelihood
                 url = (r"https://pla.esac.esa.int/pla-sl/"

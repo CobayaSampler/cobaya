@@ -7,7 +7,7 @@ git:
 #testing
 env:
   global:
-    - COBAYA_TEST_SKIP=polychord planck_2015
+    - COBAYA_TEST_SKIP=polychord,planck_2015
 
 # (Pre)Installation
 matrix:

@@ -34,11 +34,7 @@ class _cmblikes_prototype(Likelihood):
         if not os.path.isabs(self.dataset_file):
             if not self.path:
                 if self.path_install:
-                    from importlib import import_module
-                    self.path = getattr(
-                        import_module(
-                            _package + ".likelihoods." + self.name, package=_package),
-                        "get_path")(self.path_install)
+                    self.path = self.__class_.get_path(self.path_install)
                 else:
                     raise LoggedError(
                         self.log, "No path given to the %s likelihood. Set the likelihood"
