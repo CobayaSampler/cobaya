@@ -371,7 +371,6 @@ class planck_2018_CamSpec_python(_DataSetLikelihood):
     def install(cls, path=None, force=False, code=False, data=True, no_progress_bars=False):
         log = logging.getLogger(__name__.split(".")[-1])
         full_path = cls.get_path(path)
-
         if not os.path.exists(full_path):
             os.makedirs(full_path)
         if not data:
