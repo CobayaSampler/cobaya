@@ -67,8 +67,8 @@ def install(*infos, **kwargs):
             try:
                 imported_module = import_module(module_folder, package=_package)
                 imported_class = get_class(module, kind)
-                if len([s in imported_class.__name__.lower() for s in skip_list]):
-                    log.info("Skipping %s"%imported_class.__name__)
+                if len([s for s in skip_list if s in imported_class.__name__.lower()]):
+                    log.info("Skipping %s for test skip list %s" % (imported_class.__name__, skip_list))
                     continue
             except ImportError:
                 if kind == _likelihood:
