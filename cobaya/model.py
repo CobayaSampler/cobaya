@@ -49,7 +49,7 @@ def get_model(info):
             ignored_info.update({k: info.pop(k)})
     import logging
     if ignored_info:
-        logging.getLogger(__name__.split(".")[-1]).warn(
+        logging.getLogger(__name__.split(".")[-1]).warning(
             "Ignored blocks/options: %r", list(ignored_info))
     updated_info = update_info(info)
     if logging.root.getEffectiveLevel() <= logging.DEBUG:

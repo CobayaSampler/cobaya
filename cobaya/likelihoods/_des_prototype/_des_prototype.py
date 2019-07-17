@@ -224,7 +224,7 @@ class _des_prototype(Likelihood):
                 corr[f1, f2][ix] = dat
                 if ranges[tp][f1, f2] is not None:
                     mn, mx = ranges[tp][f1, f2]
-                    if self.theta_bins[ix] > mn and self.theta_bins[ix] < mx:
+                    if mn < self.theta_bins[ix] < mx:
                         self.thetas.append(self.theta_bins[ix])
                         self.used_indices.append(cov_ix)
                         self.used_items.append(self.indices[-1])
@@ -267,7 +267,7 @@ class _des_prototype(Likelihood):
                 if not (f1, f2) in self.bin_pairs[i]:
                     self.bin_pairs[i].append((f1, f2))
                 mn, mx = ranges[tp][f1, f2]
-                if theta > mn and theta < mx:
+                if mn < theta < mx:
                     self.used_indices.append(cov_ix)
                     self.used_items.append(self.indices[-1])
                 cov_ix += 1
