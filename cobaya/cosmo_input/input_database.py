@@ -682,4 +682,6 @@ install_basic = {
         "des_y1_joint": None}}
 
 install_tests = deepcopy(install_basic)
-install_tests[_likelihood].update({"planck_2015_lowl": None, "planck_2018_pliklite_python": None})
+install_tests[_likelihood].update({"planck_2015_lowl": None,
+                                   "planck_2018_pliklite_python": None,
+                                   "planck_2018_CamSpec_python": None})

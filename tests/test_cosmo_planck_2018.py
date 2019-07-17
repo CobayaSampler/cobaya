@@ -2,8 +2,9 @@
 from __future__ import absolute_import
 import pytest
 from copy import deepcopy
+import os
 
-from .common_cosmo import body_of_test
+from .common_cosmo import body_of_test, process_modules_path
 from cobaya.cosmo_input import cmb_precision
 
 # Generating plots in Travis
@@ -54,6 +55,25 @@ def test_planck_2018_p_lite_camb(modules):
 
 def test_planck_2018_p_lite_python_camb(modules):
     test_planck_2018_p_camb(modules, lite=True, native=True)
+
+
+def test_planck_CamSpec_2018_p_camb(modules):
+    info_likelihood = lik_info_lowTE_highTTTEEE_lensingcmblikes.copy()
+    chi2 = chi2_lowTE_highTTTEEE_lensingcmblikes.copy()
+    for x in (chi2, info_likelihood):
+        x.pop("planck_2018_plikHM_TTTEEE")
+    info_likelihood["planck_2018_CamSpec_python"] = None
+    chi2["planck_2018_CamSpec_python"] = 1000
+    best_fit = params_lowTE_highTTTEEE_lite_lensingcmblikes.copy()
+    best_fit.update(
+        {'aps100': 238.7887, 'aps143': 41.31762, 'aps217': 100.6226, 'acib217': 44.96003, 'asz143': 5.886124,
+         'psr': 0.5820399, 'cibr': 0.7912195, 'ncib': 0.0, 'cibrun': 0.0, 'xi': 0.1248677, 'aksz': 1.153473,
+         'dust100': 1.010905, 'dust143': 0.9905765, 'dust217': 0.9658913, 'dust143x217': 0.9946434,
+         'cal0': 0.9975484, 'cal2': 1.00139, 'calTE': 1.0, 'calEE': 1.0})
+
+    info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
+    best_fit_derived = derived_lowTE_highTTTEEE_lensingcmblikes
+    body_of_test(modules, best_fit, info_likelihood, info_theory, chi2, best_fit_derived)
 
 
 def test_planck_2018_lcmbmarged_camb(modules):

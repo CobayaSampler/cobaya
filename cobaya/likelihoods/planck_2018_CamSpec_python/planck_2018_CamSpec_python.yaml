@@ -4,7 +4,7 @@ likelihood:
   planck_2018_CamSpec_python:
     # Path to the data: where the planck_supp_data_and_covmats has been cloned
     path: null
-    dataset_file: CamSpec/CamSpecHM_10_7.dataset
+    dataset_file: CamSpec2018/CamSpecHM_10_7.dataset
     # Overriding of .dataset parameters
     dataset_params:
       # field: value

@@ -22,6 +22,7 @@ import numpy as np
 import six
 import os
 import scipy
+import logging
 
 # Local
 from cobaya.likelihoods._base_classes import _DataSetLikelihood
@@ -46,8 +47,6 @@ def range_to_ells(use_range):
 
 
 class planck_2018_CamSpec_python(_DataSetLikelihood):
-    data_name = 'CamSpec'
-    data_version = "v1.0"
 
     def read_normalized(self, filename, pivot=None):
         # arrays all based at L=0, in L(L+1)/2pi units
@@ -357,3 +356,30 @@ class planck_2018_CamSpec_python(_DataSetLikelihood):
                + cals[j] ** 2 * cov[off2:off2 + n_p, off2:off2 + n_p] \
                - cals[i] * cals[j] * (cov[off2:off2 + n_p, off1:off1 + n_p] + cov[off1:off1 + n_p, off2:off2 + n_p])
         return range(lmin, lmax + 1), diff[lmin:lmax + 1], pcov
+
+    # Installation methods ###############################################################
+
+    data_name = 'CamSpec'
+
+    @classmethod
+    def is_installed(cls, **kwargs):
+        if kwargs["data"]:
+            return os.path.exists(os.path.join(cls.get_path(kwargs["path"]), "CamSpec2018"))
+        return True
+
+    @classmethod
+    def install(cls, path=None, force=False, code=False, data=True, no_progress_bars=False):
+        log = logging.getLogger(__name__.split(".")[-1])
+        full_path = cls.get_path(path)
+        if not os.path.exists(full_path):
+            os.makedirs(full_path)
+        if not data:
+            return True
+        filename = r"https://cdn.cosmologist.info/cosmobox/test2019_kaml/CamSpec2018.zip"
+        log.info("Downloading likelihood data file: %s...", filename)
+        from cobaya.install import download_file
+        if not download_file(filename, full_path, decompress=True, logger=log,
+                             no_progress_bars=no_progress_bars):
+            return False
+        log.info("Likelihood data downloaded and uncompressed correctly.")
+        return True
