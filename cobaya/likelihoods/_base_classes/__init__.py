@@ -9,7 +9,6 @@ from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
 
 
-
 class _fast_chi_square(object):
     def __get__(self, instance, owner):
         # delay testing active camb until run time
@@ -43,16 +42,17 @@ class _DataSetLikelihood(Likelihood):
             elif self.path_install:
                 data_file_path = self.get_path(self.path_install)
             else:
-                raise LoggedError(
-                    "No path given for %s. Set the likelihood property 'path' "
-                    "or the common property '%s'.", self.dataset_file, _path_install)
+                raise LoggedError(self.log,
+                                  "No path given for %s. Set the likelihood property 'path' "
+                                  "or the common property '%s'.", self.dataset_file, _path_install)
 
             data_file = os.path.normpath(os.path.join(data_file_path, self.dataset_file))
         try:
             self.load_dataset_file(data_file, self.dataset_params)
         except IOError:
-            raise LoggedError("The data file '%s' could not be found at '%s'. "
-                           "Check your paths! %s", self.dataset_file, data_file_path, os.listdir(data_file_path))
+            raise LoggedError(self.log, "The data file '%s' could not be found at '%s'. "
+                                        "Check your paths! %s,%s", self.dataset_file, data_file_path,
+                              os.listdir(data_file_path), os.listdir(os.path.join(data_file_path, 'CamSpec2018')))
 
     def load_dataset_file(self, filename, dataset_params):
         ini = IniFile(filename)
