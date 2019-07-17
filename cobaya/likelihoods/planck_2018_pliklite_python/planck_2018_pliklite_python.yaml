@@ -4,7 +4,7 @@ likelihood:
   planck_2018_pliklite_python:
     # Path to the data: where the planck_supp_data_and_covmats has been cloned
     path: null
-    dataset_file: plik_lite/plik_lite_v22.dataset
+    dataset_file: plik_lite_v22.dataset
     # Overriding of .dataset parameters
     dataset_params:
       # field: value

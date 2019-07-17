@@ -59,6 +59,7 @@ def install(*infos, **kwargs):
                 raise LoggedError(
                     log, "Could not create the desired installation folder '%s'", spath)
     failed_modules = []
+    skip_list = os.environ.get("COBAYA_TEST_SKIP", "").replace(",", " ").lower().split()
     for kind, modules in get_modules(*infos).items():
         for module in modules:
             print(make_header(kind, module))
@@ -66,6 +67,9 @@ def install(*infos, **kwargs):
             try:
                 imported_module = import_module(module_folder, package=_package)
                 imported_class = get_class(module, kind)
+                if len([s in imported_class.__name__.lower() for s in skip_list]):
+                    log.info("Skipping %s"%imported_class.__name__)
+                    continue
             except ImportError:
                 if kind == _likelihood:
                     info = (next(info for info in infos

@@ -430,8 +430,8 @@ def is_installed(**kwargs):
         _, filename = get_product_id_and_clik_file(kwargs["name"])
         result &= os.path.exists(os.path.realpath(
             os.path.join(kwargs["path"], "data", data_path, filename)))
-        from cobaya.likelihoods.planck_2015_lensing_cmblikes import planck_2015_lensing_cmblikes
-        result &= planck_2015_lensing_cmblikes.is_installed(**kwargs)
+        from cobaya.likelihoods.planck_2018_cmblikes_lensing import planck_2018_cmblikes_lensing
+        result &= planck_2018_cmblikes_lensing.is_installed(**kwargs)
     return result
 
 

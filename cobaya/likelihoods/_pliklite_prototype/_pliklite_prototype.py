@@ -23,7 +23,6 @@ cl_names = ['tt', 'te', 'ee']
 
 
 class _pliklite_prototype(_DataSetLikelihood):
-    data_name = 'plik_lite'
 
     def init_params(self, ini):
         self.use_cl = [c.lower() for c in ini.list('use_cl')]
@@ -160,9 +159,7 @@ class _pliklite_prototype(_DataSetLikelihood):
 
     # Installation methods ###############################################################
 
-    @classmethod
-    def get_path(cls, path):
-        return os.path.realpath(os.path.join(path, "data", __name__.split(".")[-1]))
+    data_name = 'plik_lite'
 
     @classmethod
     def is_installed(cls, **kwargs):
