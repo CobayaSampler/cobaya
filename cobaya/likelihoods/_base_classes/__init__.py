@@ -52,7 +52,7 @@ class _DataSetLikelihood(Likelihood):
             self.load_dataset_file(data_file, self.dataset_params)
         except IOError:
             raise LoggedError("The data file '%s' could not be found at '%s'. "
-                           "Check your paths!", self.dataset_file, data_file_path)
+                           "Check your paths! %s", self.dataset_file, data_file_path, os.listdir(data_file_path))
 
     def load_dataset_file(self, filename, dataset_params):
         ini = IniFile(filename)
