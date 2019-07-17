@@ -151,14 +151,13 @@ def download_file(filename, path, no_progress_bars=False, decompress=False, logg
             import tarfile
             if extension == "tgz":
                 extension = "gz"
-            tar = tarfile.open(filename, "r:" + extension)
-            tar.extractall(path)
-            tar.close()
-        os.remove(filename)
+            with tarfile.open(filename, "r:" + extension) as tar:
+                tar.extractall(path)
         log.debug('Decompressed: %s' % filename)
+        os.remove(filename)
         return True
     except Exception as e:
-        log.error("Error decompressing downloaded file! Corrupt file?\n" + str(e))
+        log.error("Error decompressing downloaded file! Corrupt file? [%s]" % e)
         return False
 
 

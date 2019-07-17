@@ -165,7 +165,7 @@ lik_info_lowTE_highTTTEEE_lite_lensingcmblikes = {
 
 chi2_lowTE_highTTTEEE_lite_lensingcmblikes = {
     "planck_2018_lowl": 23.25, "planck_2018_lowE": 396.05,
-    "planck_2018_plikHM_TTTEEE_lite": 2344.93, "planck_2018_cmblikes_lensing": 8.87,
+    "planck_2018_plikHM_TTTEEE_lite": 584.64, "planck_2018_cmblikes_lensing": 8.87,
     "tolerance": 0.11}
 
 params_lowTE_highTTTEEE_lite_lensingcmblikes = {

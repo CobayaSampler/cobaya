@@ -4,6 +4,11 @@ sudo: required
 git:
   depth: false
 
+#testing
+env:
+  global:
+    - COBAYA_TEST_SKIP=polychord planck_2015
+
 # (Pre)Installation
 matrix:
   include:

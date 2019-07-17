@@ -286,34 +286,34 @@ class bicep_keck_2015(_cmblikes_prototype):
 
         # Installation methods ###############################################################
 
-        @classmethod
-        def get_path(cls, path):
-            return os.path.realpath(os.path.join(path, "data", __name__.split(".")[-1]))
+    @classmethod
+    def get_path(cls, path):
+        return os.path.realpath(os.path.join(path, "data", __name__.split(".")[-1]))
 
-        @classmethod
-        def is_installed(cls, **kwargs):
-            if kwargs["data"]:
-                if not os.path.exists(os.path.join(cls.get_path(kwargs["path"]), "BK15_cosmomc")):
-                    return False
-            return True
-
-        @classmethod
-        def install(cls, path=None, force=False, code=False, data=True, no_progress_bars=False):
-            log = logging.getLogger(__name__.split(".")[-1])
-            full_path = cls.get_path(path)
-            if not os.path.exists(full_path):
-                os.makedirs(full_path)
-            if not data:
-                return True
-            log.info("Downloading likelihood data...")
-            # Refuses http[S]!  (check again after new release)
-            filename = r"http://bicepkeck.org/BK15_datarelease/BK15_cosmomc.tgz"
-            from cobaya.install import download_file
-            if not download_file(filename, full_path, decompress=True, logger=log,
-                                 no_progress_bars=no_progress_bars):
+    @classmethod
+    def is_installed(cls, **kwargs):
+        if kwargs["data"]:
+            if not os.path.exists(os.path.join(cls.get_path(kwargs["path"]), "BK15_cosmomc")):
                 return False
-            log.info("Likelihood data downloaded and uncompressed correctly.")
+        return True
+
+    @classmethod
+    def install(cls, path=None, force=False, code=False, data=True, no_progress_bars=False):
+        log = logging.getLogger(__name__.split(".")[-1])
+        full_path = cls.get_path(path)
+        if not os.path.exists(full_path):
+            os.makedirs(full_path)
+        if not data:
             return True
+        log.info("Downloading likelihood data...")
+        # Refuses http[S]!  (check again after new release)
+        filename = r"http://bicepkeck.org/BK15_datarelease/BK15_cosmomc.tgz"
+        from cobaya.install import download_file
+        if not download_file(filename, full_path, decompress=True, logger=log,
+                             no_progress_bars=no_progress_bars):
+            return False
+        log.info("Likelihood data downloaded and uncompressed correctly.")
+        return True
 
 
 class Bandpass(object):
