@@ -44,7 +44,7 @@ def test_planck_2018_p_camb(modules, lite=False):
 
 
 def test_planck_2018_p_lite_camb(modules):
-    test_planck_2018_p_camb(lite=True)
+    test_planck_2018_p_camb(modules, lite=True)
 
 
 def test_planck_2018_lcmbmarged_camb(modules):

@@ -44,7 +44,7 @@ def install(*infos, **kwargs):
             print("logging?")
             raise LoggedError(
                 log, "No 'path' argument given and could not extract one (and only one) "
-                "from the infos.")
+                     "from the infos.")
     abspath = os.path.abspath(path)
     log.info("Installing modules at '%s'\n", abspath)
     kwargs_install = {"force": kwargs.get("force", False),
@@ -120,8 +120,8 @@ def install(*infos, **kwargs):
         bullet = "\n - "
         raise LoggedError(
             log, "The installation (or installation test) of some module(s) has failed: "
-            "%s\nCheck output of the installer of each module above "
-            "for precise error info.\n",
+                 "%s\nCheck output of the installer of each module above "
+                 "for precise error info.\n",
             bullet + bullet.join(failed_modules))
 
 
@@ -141,19 +141,24 @@ def download_file(filename, path, no_progress_bars=False, decompress=False, logg
     log.debug('Got: %s' % filename)
     if not decompress:
         return True
-    import tarfile
     extension = os.path.splitext(filename)[-1][1:]
-    if extension == "tgz":
-        extension = "gz"
     try:
-        tar = tarfile.open(filename, "r:" + extension)
-        tar.extractall(path)
-        tar.close()
+        if extension == "zip":
+            from zipfile import ZipFile
+            with ZipFile(filename, 'r') as zipObj:
+                zipObj.extractall(path)
+        else:
+            import tarfile
+            if extension == "tgz":
+                extension = "gz"
+            tar = tarfile.open(filename, "r:" + extension)
+            tar.extractall(path)
+            tar.close()
         os.remove(filename)
         log.debug('Decompressed: %s' % filename)
         return True
-    except:
-        log.error("Error decompressing downloaded file! Corrupt file?")
+    except Exception as e:
+        log.error("Error decompressing downloaded file! Corrupt file?\n" + str(e))
         return False
 
 
