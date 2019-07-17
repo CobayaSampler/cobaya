@@ -9,6 +9,10 @@ env:
   global:
     - COBAYA_TEST_SKIP=polychord,planck_2015
 
+cache:
+  directories:
+  - /home/travis/build/CosmoPars/modules
+
 # (Pre)Installation
 matrix:
   include:

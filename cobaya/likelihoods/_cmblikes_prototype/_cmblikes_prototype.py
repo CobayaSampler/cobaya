@@ -27,6 +27,10 @@ from cobaya.likelihoods._base_classes import _fast_chi_square
 
 class _cmblikes_prototype(Likelihood):
 
+    @classmethod
+    def get_path(cls, path):
+        raise AttributeError("get_path must be overridden if not explicit .dataset path given")
+
     def initialize(self):
         self.tot_theory_fields = len(self.field_names)
         assert self.dataset_file.endswith('.dataset'), (
@@ -34,7 +38,7 @@ class _cmblikes_prototype(Likelihood):
         if not os.path.isabs(self.dataset_file):
             if not self.path:
                 if self.path_install:
-                    self.path = self.__class_.get_path(self.path_install)
+                    self.path = self.get_path(self.path_install)
                 else:
                     raise LoggedError(
                         self.log, "No path given to the %s likelihood. Set the likelihood"
