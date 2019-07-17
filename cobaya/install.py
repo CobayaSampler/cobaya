@@ -132,8 +132,9 @@ def download_file(filename, path, no_progress_bars=False, decompress=False, logg
         wget_kwargs = {"out": path, "bar":
             (bar_thermometer if not no_progress_bars else None)}
         filename = download(filename, **wget_kwargs)
-    except:
-        log.error("Error downloading file '%s' to folder '%s'", filename, path)
+    except Exception as excpt:
+        log.error(
+            "Error downloading file '%s' to folder '%s': %s", filename, path, str(excpt))
         return False
     finally:
         print("")
