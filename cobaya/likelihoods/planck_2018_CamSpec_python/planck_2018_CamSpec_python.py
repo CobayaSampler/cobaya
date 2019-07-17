@@ -147,7 +147,7 @@ class planck_2018_CamSpec_python(_DataSetLikelihood):
             self.lnrat[l_min:] = np.log(self.ls[l_min:] / np.float64(pivot))
 
         import hashlib
-        cache_file = self.dataset_file.replace('.dataset', '_covinv_%s.npy' % hashlib.md5(
+        cache_file = self.dataset_filename.replace('.dataset', '_covinv_%s.npy' % hashlib.md5(
             str(ini.params).encode('utf8')).hexdigest())
         if use_cache and os.path.exists(cache_file):
             self.covinv = np.load(cache_file).astype(np.float64)

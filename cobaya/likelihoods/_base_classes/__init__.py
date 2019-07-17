@@ -48,18 +48,13 @@ class _DataSetLikelihood(Likelihood):
 
             data_file = os.path.normpath(os.path.join(data_file_path, self.dataset_file))
         if not os.path.exists(data_file):
-            raise LoggedError(self.log, "not exist" + data_file)
+            raise LoggedError(self.log, "The data file '%s' could not be found at '%s'. "
+                                        "Check your paths!", self.dataset_file, data_file_path)
         self.load_dataset_file(data_file, self.dataset_params)
-        if False:
-            try:
-                self.load_dataset_file(data_file, self.dataset_params)
-            except IOError:
-                raise LoggedError(self.log, "The data file '%s' could not be found at '%s'. "
-                                            "Check your paths! %s,%s", self.dataset_file, data_file_path,
-                                  os.listdir(data_file_path), os.listdir(os.path.join(data_file_path, 'CamSpec2018')))
 
     def load_dataset_file(self, filename, dataset_params):
         ini = IniFile(filename)
+        self.dataset_filename = filename
         ini.params.update(dataset_params or {})
         self.init_params(ini)
 
