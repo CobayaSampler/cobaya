@@ -245,7 +245,7 @@ class _planck_clik_prototype(Likelihood):
             self.expected_params[self.expected_params.index("b'A_planck'")] = "A_planck"
         # line added to deal with a bug in planck likelihood release:
         # A_planck called A_Planck in plik_lite
-        if "_lite" in self.name:
+        if "_lite" in self.name and 'A_Planck' in self.expected_params:
             i = self.expected_params.index('A_Planck')
             self.expected_params[i] = 'A_planck'
         # Check that the parameters are the right ones
