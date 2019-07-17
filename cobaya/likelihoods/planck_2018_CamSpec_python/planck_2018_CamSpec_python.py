@@ -218,7 +218,7 @@ class planck_2018_CamSpec_python(_DataSetLikelihood):
         return C_foregrounds
 
     def get_cals(self, data_params):
-        calPlanck = data_params.get('calPlanck', 1) ** 2
+        calPlanck = data_params.get('A_planck', 1) ** 2
         cal0 = data_params.get('cal0', 1)
         cal2 = data_params.get('cal2', 1)
         calTE = data_params.get('calTE', 1)
