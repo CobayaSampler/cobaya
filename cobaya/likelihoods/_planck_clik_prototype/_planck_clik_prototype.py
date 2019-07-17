@@ -484,7 +484,7 @@ def install(path=None, name=None, force=False, code=True, data=True,
                 log.error("Not possible to download this likelihood.")
                 success = False
             # Additional data and covmats
-            from cobaya.likelihoods.planck_2018_lensing_cmblikes import planck_2018_lensing_cmblikes
-            success *= planck_2018_lensing_cmblikes.install(path=path, force=force, code=code, data=data,
+            from cobaya.likelihoods.planck_2018_cmblikes_lensing import planck_2018_cmblikes_lensing
+            success *= planck_2018_cmblikes_lensing.install(path=path, force=force, code=code, data=data,
                                                             no_progress_bars=no_progress_bars)
     return success
