@@ -305,7 +305,10 @@ common_path = "planck"
 _clik_verbose = any(
     [(s in os.getenv('TRAVIS_COMMIT_MESSAGE', '')) for s in ["clik", "planck"]])
 # Don't try again to install clik if it failed for a previous likelihood
-_clik_install_failed = False
+try:
+    _clik_install_failed
+except NameError:
+    _clik_install_failed = False
 
 
 def get_data_path(name):
@@ -461,18 +464,20 @@ def install(path=None, name=None, force=False, code=True, data=True,
         if not success:
             log.warning("clik code installation failed! "
                         "Try configuring+compiling by hand at " + paths["code"])
-        _clik_install_failed = True
+            _clik_install_failed = True
     if data:
         # 2nd test, in case the code wasn't there but the data is:
         if force or not is_installed(path=path, name=name, code=False, data=True):
-            # # Extract product_id
-            # product_id, _ = get_product_id_and_clik_file(name)
-            # # Download and decompress the particular likelihood
-            # log.info("Downloading likelihood data...")
-            # url = (r"https://pla.esac.esa.int/pla-sl/"
-            #        "data-action?COSMOLOGY.COSMOLOGY_OID=" + product_id)
-            # OVERRIDE! -- for baseline only
-            url = 'http://localhost:8000//home/jesus/scratch/plc_3.0_release/baseline.tar.gz'
+            if "2015" in name:
+                # Extract product_id
+                product_id, _ = get_product_id_and_clik_file(name)
+                # Download and decompress the particular likelihood
+                url = (r"https://pla.esac.esa.int/pla-sl/"
+                       "data-action?COSMOLOGY.COSMOLOGY_OID=" + product_id)
+            else:
+                # OVERRIDE! -- for baseline only
+                url = 'http://localhost:8000//home/jesus/scratch/plc_3.0_release/baseline.tar.gz'
+            log.info("Downloading likelihood data...")
             if not download_file(url, paths["data"], decompress=True,
                                  logger=log, no_progress_bars=no_progress_bars):
                 log.error("Not possible to download this likelihood.")
