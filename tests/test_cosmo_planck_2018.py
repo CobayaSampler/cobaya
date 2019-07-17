@@ -36,20 +36,16 @@ def test_planck_2018_p_camb(modules, lite=False, native=False):
         params_lowTE_highTTTEEE_lite_lensingcmblikes if lite else params_lowTE_highTTTEEE_lensingcmblikes)
     best_fit.pop("H0")
     info_likelihood = lik_info_lowTE_highTTTEEE_lensingcmblikes.copy()
+    chi2 = chi2_lowTE_highTTTEEE_lensingcmblikes.copy()
     if lite:  # use plik_lite
         info_likelihood.pop("planck_2018_plikHM_TTTEEE")
-        if native:
-            # native python version
-            info_likelihood["planck_2018_pliklite_python"] = None
-        else:
-            # clik version
-            info_likelihood["planck_2018_plikHM_TTTEEE_lite"] = None
-
+        chi2.pop("planck_2018_plikHM_TTTEEE")
+        tag = "planck_2018_pliklite_python" if native else "planck_2018_plikHM_TTTEEE_lite"
+        info_likelihood[tag] = None
+        chi2[tag] = chi2_planck_2018_plikHM_highTTTEEE_lite
     info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = derived_lowTE_highTTTEEE_lensingcmblikes
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
-                 chi2_lowTE_highTTTEEE_lite_lensingcmblikes if lite else chi2_lowTE_highTTTEEE_lensingcmblikes,
-                 best_fit_derived)
+    body_of_test(modules, best_fit, info_likelihood, info_theory, chi2, best_fit_derived)
 
 
 def test_planck_2018_p_lite_camb(modules):
@@ -172,10 +168,7 @@ chi2_lowTE_highTTTEEE_lensingcmblikes = {
     "planck_2018_plikHM_TTTEEE": 2344.93, "planck_2018_cmblikes_lensing": 8.87,
     "tolerance": 0.11}
 
-chi2_lowTE_highTTTEEE_lite_lensingcmblikes = {
-    "planck_2018_lowl": 23.25, "planck_2018_lowE": 396.05,
-    "planck_2018_plikHM_TTTEEE_lite": 584.64, "planck_2018_cmblikes_lensing": 8.87,
-    "tolerance": 0.11}
+chi2_planck_2018_plikHM_highTTTEEE_lite = 584.64
 
 params_lowTE_highTTTEEE_lite_lensingcmblikes = {
     # Sampled
