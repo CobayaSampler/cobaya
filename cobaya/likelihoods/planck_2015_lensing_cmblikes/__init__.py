@@ -1,1 +1,5 @@
-from .planck_2015_lensing_cmblikes import planck_2015_lensing_cmblikes, is_installed, install, get_path
+from cobaya.likelihoods.planck_2018_cmblikes_lensing import planck_2018_cmblikes_lensing
+
+
+class planck_2015_lensing_cmblikes(planck_2018_cmblikes_lensing):
+    supp_data_version = "v2.0"
