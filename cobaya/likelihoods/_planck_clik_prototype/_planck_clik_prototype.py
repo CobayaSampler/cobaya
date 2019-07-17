@@ -475,7 +475,7 @@ def install(path=None, name=None, force=False, code=True, data=True,
                        "data-action?COSMOLOGY.COSMOLOGY_OID=" + product_id)
             else:
                 # OVERRIDE! -- for baseline only
-                url = 'http://localhost:8000//home/jesus/scratch/plc_3.0_release/baseline.tar.gz'
+                url = 'https://cdn.cosmologist.info/cosmobox/test2019_kaml/baseline.tar.gz'
             log.info("Downloading likelihood data...")
             if not download_file(url, paths["data"], decompress=True,
                                  logger=log, no_progress_bars=no_progress_bars):
