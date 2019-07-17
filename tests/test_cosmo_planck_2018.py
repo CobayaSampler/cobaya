@@ -31,14 +31,20 @@ def test_planck_2018_t_camb(modules):
                  chi2_lowl_highTT_lensing, best_fit_derived)
 
 
-def test_planck_2018_p_camb(modules):
-    best_fit = deepcopy(params_lowTE_highTTTEEE_lensingcmblikes)
+def test_planck_2018_p_camb(modules, lite=False):
+    best_fit = deepcopy(
+        params_lowTE_highTTTEEE_lite_lensingcmblikes if lite else params_lowTE_highTTTEEE_lensingcmblikes)
     best_fit.pop("H0")
-    info_likelihood = lik_info_lowTE_highTTTEEE_lensingcmblikes
+    info_likelihood = lik_info_lowTE_highTTTEEE_lite_lensingcmblikes if lite else lik_info_lowTE_highTTTEEE_lensingcmblikes
     info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = derived_lowTE_highTTTEEE_lensingcmblikes
     body_of_test(modules, best_fit, info_likelihood, info_theory,
-                  chi2_lowTE_highTTTEEE_lensingcmblikes, best_fit_derived)
+                 chi2_lowTE_highTTTEEE_lite_lensingcmblikes if lite else chi2_lowTE_highTTTEEE_lensingcmblikes,
+                 best_fit_derived)
+
+
+def test_planck_2018_p_lite_camb(modules):
+    test_planck_2018_p_camb(lite=True)
 
 
 def test_planck_2018_lcmbmarged_camb(modules):
@@ -47,7 +53,7 @@ def test_planck_2018_lcmbmarged_camb(modules):
     info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = {}
     body_of_test(modules, best_fit, info_likelihood, info_theory,
-                  chi2_lensing_cmbmarged, best_fit_derived)
+                 chi2_lensing_cmbmarged, best_fit_derived)
 
 
 def test_planck_2018_t_classy(modules):
@@ -153,7 +159,16 @@ chi2_lowTE_highTTTEEE_lensingcmblikes = {
     "planck_2018_plikHM_TTTEEE": 2344.93, "planck_2018_cmblikes_lensing": 8.87,
     "tolerance": 0.11}
 
-params_lowTE_highTTTEEE_lensingcmblikes = {
+lik_info_lowTE_highTTTEEE_lite_lensingcmblikes = {
+    "planck_2018_lowl": None, "planck_2018_lowE": None, "planck_2018_plikHM_TTTEEE_lite": None,
+    "planck_2018_cmblikes_lensing": None}
+
+chi2_lowTE_highTTTEEE_lite_lensingcmblikes = {
+    "planck_2018_lowl": 23.25, "planck_2018_lowE": 396.05,
+    "planck_2018_plikHM_TTTEEE_lite": 2344.93, "planck_2018_cmblikes_lensing": 8.87,
+    "tolerance": 0.11}
+
+params_lowTE_highTTTEEE_lite_lensingcmblikes = {
     # Sampled
     "omegabh2": 0.022383,
     "omegach2": 0.12011,
@@ -164,27 +179,30 @@ params_lowTE_highTTTEEE_lensingcmblikes = {
     "ns": 0.96605,
     "tau": 0.0543,
     # Planck likelihood
-    "A_planck": 1.00044,
-    "A_cib_217": 46.1,
-    "xi_sz_cib": 0.66,
-    "A_sz": 7.08,
-    "ps_A_100_100": 248.2,
-    "ps_A_143_143": 50.7,
-    "ps_A_143_217": 53.3,
-    "ps_A_217_217": 121.9,
-    "ksz_norm": 0.00,
-    "gal545_A_100": 8.80,
-    "gal545_A_143": 11.01,
-    "gal545_A_143_217": 20.16,
-    "gal545_A_217": 95.5,
-    "galf_TE_A_100": 0.1138,
-    "galf_TE_A_100_143": 0.1346,
-    "galf_TE_A_100_217": 0.479,
-    "galf_TE_A_143": 0.225,
-    "galf_TE_A_143_217": 0.665,
-    "galf_TE_A_217": 2.082,
-    "calib_100T": 0.99974,
-    "calib_217T": 0.99819}
+    "A_planck": 1.00044}
+
+params_lowTE_highTTTEEE_lensingcmblikes = params_lowTE_highTTTEEE_lite_lensingcmblikes.copy()
+params_lowTE_highTTTEEE_lensingcmblikes.update(
+    {"A_cib_217": 46.1,
+     "xi_sz_cib": 0.66,
+     "A_sz": 7.08,
+     "ps_A_100_100": 248.2,
+     "ps_A_143_143": 50.7,
+     "ps_A_143_217": 53.3,
+     "ps_A_217_217": 121.9,
+     "ksz_norm": 0.00,
+     "gal545_A_100": 8.80,
+     "gal545_A_143": 11.01,
+     "gal545_A_143_217": 20.16,
+     "gal545_A_217": 95.5,
+     "galf_TE_A_100": 0.1138,
+     "galf_TE_A_100_143": 0.1346,
+     "galf_TE_A_100_217": 0.479,
+     "galf_TE_A_143": 0.225,
+     "galf_TE_A_143_217": 0.665,
+     "galf_TE_A_217": 2.082,
+     "calib_100T": 0.99974,
+     "calib_217T": 0.99819})
 
 derived_lowTE_highTTTEEE_lensingcmblikes = {
     # param: [best_fit, sigma]
