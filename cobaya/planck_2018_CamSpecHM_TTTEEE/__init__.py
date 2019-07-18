@@ -1,7 +1,9 @@
 from cobaya.likelihoods._planck_clik_prototype import _planck_clik_prototype
 
-class planck_2018_CamSpecHM_TTTEEE_lite(_planck_clik_prototype):
+
+class planck_2018_CamSpecHM_TTTEEE(_planck_clik_prototype):
     pass
+
 
 from cobaya.likelihoods._planck_clik_prototype import install as install_common
 from cobaya.likelihoods._planck_clik_prototype import is_installed as is_installed_common
