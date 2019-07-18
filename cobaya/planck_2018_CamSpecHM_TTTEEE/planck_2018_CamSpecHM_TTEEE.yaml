@@ -1,13 +1,11 @@
 # Native python version of the plik_lite 2018 Planck likelihood, allowing multipole/bin selection
 
 likelihood:
-  planck_2018_CamSpec_python:
-    # Path to the data: where the planck_supp_data_and_covmats has been cloned
-    path: null
-    dataset_file: CamSpec2018/CamSpecHM_10_7.dataset
-    # Overriding of .dataset parameters
-    dataset_params:
-      # field: value
+  planck_2018_CamSpecHM_TTTEEE:
+    path:
+    clik_file: extended_camspec/plc_3.0/hi_l/camspec/camspec_10.7HM_1400_TTTEEE.clik
+    url: https://cdn.cosmologist.info/cosmobox/test2019_kaml/extended_camspec.tar.gz
+    #product_id: "1900"
     # Aliases for automatic covariance matrix
     renames: [CamSpecHM_TTTEEE]
     # Speed in evaluations/second

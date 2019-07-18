@@ -478,6 +478,8 @@ def install(path=None, name=None, force=False, code=True, data=True,
             else:
                 # OVERRIDE! -- for baseline only
                 url = 'https://cdn.cosmologist.info/cosmobox/test2019_kaml/baseline.tar.gz'
+                url = get_default_info(name, _likelihood)[_likelihood][name].get("url", url)
+
             log.info("Downloading likelihood data...")
             if not download_file(url, paths["data"], decompress=True,
                                  logger=log, no_progress_bars=no_progress_bars):

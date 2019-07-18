@@ -28,6 +28,7 @@ class _DataSetLikelihood(Likelihood):
     data_name = ""
     supp_data_name = "planck_supp_data_and_covmats"
     supp_data_version = "v1.0"
+    default_dataset_params = {}
 
     fast_chi_squared = _fast_chi_square()
 
@@ -55,6 +56,7 @@ class _DataSetLikelihood(Likelihood):
     def load_dataset_file(self, filename, dataset_params):
         ini = IniFile(filename)
         self.dataset_filename = filename
+        ini.params.update(self.default_dataset_params)
         ini.params.update(dataset_params or {})
         self.init_params(ini)
 
