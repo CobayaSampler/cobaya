@@ -72,9 +72,8 @@ def install(*infos, **kwargs):
                     continue
             except ImportError:
                 if kind == _likelihood:
-                    info = (next(info for info in infos
-                                 if module in info.get(_likelihood, {}))
-                    [_likelihood][module]) or {}
+                    info = (next(info for info in infos if module in info.get(_likelihood, {}))[_likelihood][module]
+                           ) or {}
                     if isinstance(info, string_types) or _external in info:
                         log.warning("Module '%s' is a custom likelihood. "
                                     "Nothing to do.\n", module)
