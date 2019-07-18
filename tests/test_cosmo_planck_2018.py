@@ -57,13 +57,14 @@ def test_planck_2018_p_lite_python_camb(modules):
     test_planck_2018_p_camb(modules, lite=True, native=True)
 
 
-def test_planck_CamSpec_2018_p_camb(modules):
+def test_planck_CamSpec_2018_p_camb(modules, plik=False):
     info_likelihood = lik_info_lowTE_highTTTEEE_lensingcmblikes.copy()
     chi2 = chi2_lowTE_highTTTEEE_lensingcmblikes.copy()
     for x in (chi2, info_likelihood):
         x.pop("planck_2018_plikHM_TTTEEE")
-    info_likelihood["planck_2018_CamSpec_python"] = None
-    chi2["planck_2018_CamSpec_python"] = 11513.53
+    name = "planck_2018_CamSpecHM_TTTEEE" if plik else "planck_2018_CamSpec_python"
+    info_likelihood[name] = None
+    chi2[name] = 11513.53
     best_fit = params_lowTE_highTTTEEE_lite_lensingcmblikes.copy()
     best_fit.update(
         {'aps100': 238.7887, 'aps143': 41.31762, 'aps217': 100.6226, 'acib217': 44.96003, 'asz143': 5.886124,
@@ -74,6 +75,10 @@ def test_planck_CamSpec_2018_p_camb(modules):
     info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = derived_lowTE_highTTTEEE_lensingcmblikes
     body_of_test(modules, best_fit, info_likelihood, info_theory, chi2, best_fit_derived)
+
+
+def test_planck_clik_CamSpec_2018_p_camb(modules):
+    test_planck_CamSpec_2018_p_camb(modules, plik=True)
 
 
 def test_planck_2018_lcmbmarged_camb(modules):
