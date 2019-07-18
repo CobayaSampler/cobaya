@@ -34,7 +34,7 @@ class planck_2018_cmblikes_lensing(_cmblikes_prototype):
     def install(cls, path=None, force=False, code=False, data=True, no_progress_bars=False):
         if not data:
             return True
-        log = logging.getLogger(__name__.split(".")[-1])
+        log = logging.getLogger(cls.__name__)
         log.info("Downloading supplementary likelihood data and covmats...")
         from cobaya.install import download_github_release
         return download_github_release(os.path.join(path, "data"), cls.supp_data_name,

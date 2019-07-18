@@ -294,6 +294,79 @@ class _planck_clik_prototype(Likelihood):
         del self.clik  # MANDATORY: forces deallocation of the Cython class
         # Actually, it does not work for low-l likelihoods, which is quite dangerous!
 
+    @classmethod
+    def is_installed(cls, **kwargs):
+        code_path = common_path
+        data_path = get_data_path(cls.__name__)
+        result = True
+        if kwargs["code"]:
+            result &= is_installed_clik(os.path.realpath(
+                os.path.join(kwargs["path"], "code", code_path)))
+        if kwargs["data"]:
+            _, filename = get_product_id_and_clik_file(cls.__name__)
+            result &= os.path.exists(os.path.realpath(
+                os.path.join(kwargs["path"], "data", data_path, filename)))
+            from cobaya.likelihoods.planck_2018_cmblikes_lensing import planck_2018_cmblikes_lensing
+            result &= planck_2018_cmblikes_lensing.is_installed(**kwargs)
+        return result
+
+    @classmethod
+    def install(cls, path=None, force=False, code=True, data=True, no_progress_bars=False):
+        name = cls.__name__
+        log = logging.getLogger(name)
+        path_names = {"code": common_path, "data": get_data_path(name)}
+        import platform
+        if platform.system() == "Windows":
+            log.error("Not compatible with Windows.")
+            return False
+        global _clik_install_failed
+        if _clik_install_failed:
+            log.info("Previous clik install failed, skipping")
+            return False
+        # Create common folders: all planck likelihoods share install folder for code and data
+        paths = {}
+        for s in ("code", "data"):
+            if eval(s):
+                paths[s] = os.path.realpath(os.path.join(path, s, path_names[s]))
+                if not os.path.exists(paths[s]):
+                    os.makedirs(paths[s])
+        success = True
+        # Install clik
+        if code and (not is_installed_clik(paths["code"]) or force):
+            log.info("Installing the clik code.")
+            success *= install_clik(paths["code"], no_progress_bars=no_progress_bars)
+            if not success:
+                log.warning("clik code installation failed! "
+                            "Try configuring+compiling by hand at " + paths["code"])
+                _clik_install_failed = True
+        if data:
+            # 2nd test, in case the code wasn't there but the data is:
+            if force or not cls.is_installed(path=path, code=False, data=True):
+                if "2015" in name:
+                    # Extract product_id
+                    if 'planck_2015' in os.environ.get("COBAYA_TEST_SKIP", ""):
+                        log.info("Skipping Planck 2015 data installation")
+                        return True
+                    product_id, _ = get_product_id_and_clik_file(name)
+                    # Download and decompress the particular likelihood
+                    url = (r"https://pla.esac.esa.int/pla-sl/"
+                           "data-action?COSMOLOGY.COSMOLOGY_OID=" + product_id)
+                else:
+                    # OVERRIDE! -- for baseline only
+                    url = 'https://cdn.cosmologist.info/cosmobox/test2019_kaml/baseline.tar.gz'
+                    url = get_default_info(name, _likelihood)[_likelihood][name].get("url", url)
+
+                log.info("Downloading likelihood data...")
+                if not download_file(url, paths["data"], decompress=True,
+                                     logger=log, no_progress_bars=no_progress_bars):
+                    log.error("Not possible to download this likelihood.")
+                    success = False
+                # Additional data and covmats
+                from cobaya.likelihoods.planck_2018_cmblikes_lensing import planck_2018_cmblikes_lensing
+                success *= planck_2018_cmblikes_lensing.install(path=path, force=force, code=code, data=data,
+                                                                no_progress_bars=no_progress_bars)
+        return success
+
 
 # Installation routines ##################################################################
 
@@ -417,76 +490,3 @@ def get_product_id_and_clik_file(name):
     """Gets the PLA product info from the defaults file."""
     defaults = get_default_info(name, _likelihood)[_likelihood][name]
     return defaults.get("product_id"), defaults.get("clik_file")
-
-
-def is_installed(**kwargs):
-    code_path = common_path
-    data_path = get_data_path(kwargs["name"])
-    result = True
-    if kwargs["code"]:
-        result &= is_installed_clik(os.path.realpath(
-            os.path.join(kwargs["path"], "code", code_path)))
-    if kwargs["data"]:
-        _, filename = get_product_id_and_clik_file(kwargs["name"])
-        result &= os.path.exists(os.path.realpath(
-            os.path.join(kwargs["path"], "data", data_path, filename)))
-        from cobaya.likelihoods.planck_2018_cmblikes_lensing import planck_2018_cmblikes_lensing
-        result &= planck_2018_cmblikes_lensing.is_installed(**kwargs)
-    return result
-
-
-def install(path=None, name=None, force=False, code=True, data=True,
-            no_progress_bars=False):
-    log = logging.getLogger(name)
-    path_names = {"code": common_path, "data": get_data_path(name)}
-    import platform
-    if platform.system() == "Windows":
-        log.error("Not compatible with Windows.")
-        return False
-    global _clik_install_failed
-    if _clik_install_failed:
-        log.info("Previous clik install failed, skipping")
-        return False
-    # Create common folders: all planck likelihoods share install folder for code and data
-    paths = {}
-    for s in ("code", "data"):
-        if eval(s):
-            paths[s] = os.path.realpath(os.path.join(path, s, path_names[s]))
-            if not os.path.exists(paths[s]):
-                os.makedirs(paths[s])
-    success = True
-    # Install clik
-    if code and (not is_installed_clik(paths["code"]) or force):
-        log.info("Installing the clik code.")
-        success *= install_clik(paths["code"], no_progress_bars=no_progress_bars)
-        if not success:
-            log.warning("clik code installation failed! "
-                        "Try configuring+compiling by hand at " + paths["code"])
-            _clik_install_failed = True
-    if data:
-        # 2nd test, in case the code wasn't there but the data is:
-        if force or not is_installed(path=path, name=name, code=False, data=True):
-            if "2015" in name:
-                # Extract product_id
-                if 'planck_2015' in os.environ.get("COBAYA_TEST_SKIP", ""):
-                    log.info("Skipping Planck 2015 data installation")
-                    return True
-                product_id, _ = get_product_id_and_clik_file(name)
-                # Download and decompress the particular likelihood
-                url = (r"https://pla.esac.esa.int/pla-sl/"
-                       "data-action?COSMOLOGY.COSMOLOGY_OID=" + product_id)
-            else:
-                # OVERRIDE! -- for baseline only
-                url = 'https://cdn.cosmologist.info/cosmobox/test2019_kaml/baseline.tar.gz'
-                url = get_default_info(name, _likelihood)[_likelihood][name].get("url", url)
-
-            log.info("Downloading likelihood data...")
-            if not download_file(url, paths["data"], decompress=True,
-                                 logger=log, no_progress_bars=no_progress_bars):
-                log.error("Not possible to download this likelihood.")
-                success = False
-            # Additional data and covmats
-            from cobaya.likelihoods.planck_2018_cmblikes_lensing import planck_2018_cmblikes_lensing
-            success *= planck_2018_cmblikes_lensing.install(path=path, force=force, code=code, data=data,
-                                                            no_progress_bars=no_progress_bars)
-    return success

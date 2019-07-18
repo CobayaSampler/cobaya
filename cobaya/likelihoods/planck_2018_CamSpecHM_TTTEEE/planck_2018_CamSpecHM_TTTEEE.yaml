@@ -161,7 +161,7 @@ params:
       scale: 0.1
     proposal: 0.1
     latex:  A^{\rm dust}_{143\times217}
-  A_planck:
+  calPlanck:
     prior:
       dist: norm
       loc: 1
@@ -172,7 +172,7 @@ params:
       scale: 0.002
     proposal: 0.0005
     latex: y_\mathrm{cal}
-    renames: calPlanck
+    renames: A_planck
   cal0:
     prior:
       dist: norm
@@ -217,3 +217,7 @@ params:
       scale: 0.005
     proposal: 0.005
     latex: c_{EE}
+    cal1: 1
+    acib143: -1
+    ncib143: -10
+
