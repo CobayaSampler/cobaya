@@ -217,7 +217,7 @@ params:
       scale: 0.005
     proposal: 0.005
     latex: c_{EE}
-    cal1: 1
-    acib143: -1
-    ncib143: -10
+  cal1: 1
+  acib143: -1
+  ncib143: -10
 
