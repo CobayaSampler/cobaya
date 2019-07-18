@@ -324,6 +324,7 @@ def is_installed_clik(path, log_and_fail=False, import_it=True):
         clik_path = os.path.join(path, os.listdir(path)[0], 'lib/python/site-packages')
     else:
         clik_path = None
+    print('testing clik_path: %s' % clik_path)
     if not clik_path or not os.path.exists(clik_path):
         if log_and_fail:
             raise LoggedError(log, "The given folder does not exist: '%s'", clik_path or path)
