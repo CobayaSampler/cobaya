@@ -58,6 +58,7 @@ def test_planck_2018_p_lite_python_camb(modules):
 
 
 def test_planck_CamSpec_2018_p_camb(modules, plik=False):
+    # TODO: sort out calPlacnk vs A_planck
     info_likelihood = lik_info_lowTE_highTTTEEE_lensingcmblikes.copy()
     chi2 = chi2_lowTE_highTTTEEE_lensingcmblikes.copy()
     for x in (chi2, info_likelihood):
@@ -66,6 +67,7 @@ def test_planck_CamSpec_2018_p_camb(modules, plik=False):
     info_likelihood[name] = None
     chi2[name] = 11513.53
     best_fit = params_lowTE_highTTTEEE_lite_lensingcmblikes.copy()
+    best_fit['calPlanck'] = best_fit['A_planck']
     best_fit.update(
         {'aps100': 238.7887, 'aps143': 41.31762, 'aps217': 100.6226, 'acib217': 44.96003, 'asz143': 5.886124,
          'psr': 0.5820399, 'cibr': 0.7912195, 'ncib': 0.0, 'cibrun': 0.0, 'xi': 0.1248677, 'aksz': 1.153473,
