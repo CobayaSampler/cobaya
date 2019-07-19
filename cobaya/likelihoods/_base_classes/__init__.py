@@ -83,21 +83,20 @@ class _DataSetLikelihood(_InstallableLikelihood):
 
         if os.path.isabs(self.dataset_file):
             data_file = self.dataset_file
+            self.path = os.path.split(data_file)[0]
         else:
             # If no path specified, use the modules path
-            if self.path:
-                data_file_path = self.path
-            elif self.path_install:
-                data_file_path = self.get_path(self.path_install)
-            else:
+            if not self.path and self.path_install:
+                self.path = self.get_path(self.path_install)
+            if not self.path:
                 raise LoggedError(self.log,
                                   "No path given for %s. Set the likelihood property 'path' "
                                   "or the common property '%s'.", self.dataset_file, _path_install)
 
-            data_file = os.path.normpath(os.path.join(data_file_path, self.dataset_file))
+            data_file = os.path.normpath(os.path.join(self.path, self.dataset_file))
         if not os.path.exists(data_file):
             raise LoggedError(self.log, "The data file '%s' could not be found at '%s'. "
-                                        "Check your paths!", self.dataset_file, data_file_path)
+                                        "Check your paths!", self.dataset_file, self.path)
         self.load_dataset_file(data_file, self.dataset_params)
 
     def load_dataset_file(self, filename, dataset_params):
