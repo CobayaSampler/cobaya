@@ -1,5 +1,5 @@
-from cobaya.likelihoods._planck_clik_prototype import _planck_clik_prototype
+from cobaya.likelihoods.planck_2015_plikHM_TTTEEE import planck_2015_plikHM_TTTEEE
 
 
-class planck_2015_plikHM_TTTEEE_unbinned(_planck_clik_prototype):
+class planck_2015_plikHM_TTTEEE_unbinned(planck_2015_plikHM_TTTEEE):
     pass

@@ -95,7 +95,7 @@ def get_default_info(module, kind, info={}):
     """
     try:
         cls = get_class(module, kind, None_if_not_found=True)
-        default_module_info = cls.get_defaults() if cls else {kind: {module: {}}}
+        default_module_info = cls.get_defaults(kind, module) if cls else {kind: {module: {}}}
     except:
         raise LoggedError(log, "Failed to get defaults for module '%s:%s'", kind, module)
     try:
@@ -103,7 +103,7 @@ def get_default_info(module, kind, info={}):
     except KeyError:
         raise LoggedError(
             log, "The defaults file for '%s' should be structured "
-            "as %s:%s:{[options]}.", module, kind, module)
+                 "as %s:%s:{[options]}.", module, kind, module)
     return default_module_info
 
 
@@ -128,7 +128,7 @@ def update_info(info):
             except TypeError:
                 raise LoggedError(
                     log, "Your input info is not well formatted at the '%s' block. "
-                    "It must be a dictionary {'%s':{options}, ...}. ", block, block)
+                         "It must be a dictionary {'%s':{options}, ...}. ", block, block)
             if not hasattr(input_info[block][module], "get"):
                 input_info[block][module] = {_external: input_info[block][module]}
             # Get default class options
@@ -158,13 +158,13 @@ def update_info(info):
                     # Internal module
                     raise LoggedError(
                         log, "'%s' does not recognize some options: %s. "
-                        "To see the allowed options, check out the documentation of"
-                        " this module.", module, did_you_mean)
+                             "To see the allowed options, check out the documentation of"
+                             " this module.", module, did_you_mean)
                 else:
                     # External module
                     raise LoggedError(
                         log, "External %s '%s' does not recognize some options: %s. "
-                        "Check the documentation for 'external %s'.",
+                             "Check the documentation for 'external %s'.",
                         block, module, did_you_mean, block)
             updated_info[block][module].update(input_info[block][module])
             # Store default parameters and priors of class, and save to combine later
@@ -222,8 +222,8 @@ def merge_default_params_info(defaults):
                 if info != defaults_merged[p]:
                     raise LoggedError(
                         log, "Parameter '%s' multiply defined, but inconsistent info: "
-                        "For likelihood '%s' is '%r', but for some other likelihood"
-                        " it was '%r'. Check your defaults!",
+                             "For likelihood '%s' is '%r', but for some other likelihood"
+                             " it was '%r'. Check your defaults!",
                         p, lik, info, defaults_merged[p])
             defaults_merged[p] = info
     return defaults_merged
@@ -376,8 +376,31 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
 class HasDefaults(object):
 
     @classmethod
-    def get_defaults(cls):
+    def get_yaml_file(cls):
         folder = os.path.split(inspect.getfile(cls))[0]
-        name = cls.__name__
-        path_to_defaults = os.path.join(folder, name + ".yaml")
-        return yaml_load_file(path_to_defaults)
+        file = os.path.join(folder, cls.__name__ + ".yaml")
+        if os.path.exists(file):
+            return file
+        return None
+
+    @classmethod
+    def get_defaults(cls, kind, name):
+        if cls is HasDefaults:
+            return {kind: {name: {}}}
+        for base in cls.__bases__:
+            if issubclass(base, HasDefaults):
+                info = base.get_defaults(kind, name)
+                break  # don't allow multiple inheritance
+        path_to_defaults = cls.get_yaml_file()
+        if path_to_defaults:
+            new_info = yaml_load_file(path_to_defaults)
+            new_info[kind][name] = new_info[kind].pop(cls.__name__)
+            if 'remove_params' in new_info:
+                for par in new_info.pop('remove_params'):
+                    if not par in info[_params]:
+                        logging.warning("remove_params parameter does not exist in inherited :%s" % par)
+                    else:
+                        info[_params].pop(par)
+            info = merge_info(info, new_info)
+            if (cls.__name__ == name): print(info)
+        return info

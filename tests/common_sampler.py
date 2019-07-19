@@ -165,11 +165,11 @@ def body_of_test_speeds(info_sampler={}, manual_blocking=False, modules=None):
     shuffle(perm)
     # Create info
     info = {"params":
-                odict([
-                          [prefix + "%d" % i, {"prior": dict(zip(["min", "max"], ranges[i]))}]
+                odict([ [prefix + "%d" % i, {"prior": dict(zip(["min", "max"], ranges[i]))}]
                           for i in perm] + [["sum_like1", None], ["sum_like2", None]]),
             "likelihood": {"like1": {"external": like1, "speed": speed1},
                            "like2": {"external": like2, "speed": speed2}}}
+
     info["sampler"] = info_sampler
     if manual_blocking:
         info["sampler"][sampler]["blocking"] = [

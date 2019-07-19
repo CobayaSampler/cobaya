@@ -230,7 +230,7 @@ class LikelihoodExternalFunction(Likelihood, HasLogger):
                     ["\n"] + ["-"] * 37))
             raise LoggedError(
                 self.log, "The external likelihood '%s' failed at evaluation. "
-                "See error info on top of this message.", self.name)
+                          "See error info on top of this message.", self.name)
 
 
 class LikelihoodCollection(HasLogger):
@@ -386,7 +386,7 @@ class LikelihoodCollection(HasLogger):
                                 if not isinstance(self[like], LikelihoodExternalFunction):
                                     raise LoggedError(
                                         self.log, "Parameter '%s' needed as input for '%s', "
-                                        "but not provided.", p, like)
+                                                  "but not provided.", p, like)
                 # 2. Is there a params prefix?
                 elif getattr(self[like], prefix, None) is not None:
                     for p in params_assign[kind]:
@@ -404,8 +404,8 @@ class LikelihoodCollection(HasLogger):
                 if len(agnostic_likes[kind]) > 1:
                     raise LoggedError(
                         self.log, "More than once parameter-agnostic likelihood/theory "
-                        "with respect to %s parameters: %r. Cannot decide "
-                        "parameter assignements.", kind, agnostic_likes)
+                                  "with respect to %s parameters: %r. Cannot decide "
+                                  "parameter assignements.", kind, agnostic_likes)
                 elif agnostic_likes[kind]:  # if there is only one
                     for p, assigned in params_assign[kind].items():
                         if not assigned:
@@ -417,7 +417,7 @@ class LikelihoodCollection(HasLogger):
                 if _theory in assigned and len(assigned) > 1:
                     raise LoggedError(
                         self.log, "Some parameter has been asigned to the theory code "
-                        "AND a likelihood, and that is not allowed: {%s: %r}",
+                                  "AND a likelihood, and that is not allowed: {%s: %r}",
                         p, assigned)
         # If unit likelihood is present, assign all *non-theory* inputs to it
         if "one" in self:
@@ -438,7 +438,7 @@ class LikelihoodCollection(HasLogger):
                 if like not in list(self):
                     raise LoggedError(
                         self.log, "Your derived parameters depend on an unknown "
-                        "likelihood: '%s'", like)
+                                  "likelihood: '%s'", like)
                 # They may have been already assigned to an agnostic likelihood,
                 # so purge first: no "=+"
                 params_assign["output"][p] = [like]
@@ -455,7 +455,7 @@ class LikelihoodCollection(HasLogger):
         if multiassigned_output:
             raise LoggedError(
                 self.log, "Output params can only be computed by one likelihood/theory, "
-                "but some were claimed by more than one: %r.",
+                          "but some were claimed by more than one: %r.",
                 multiassigned_output)
         # Finished! Assign and update infos
         params_assign_inv = odict([["input", odict()], ["output", odict()]])
