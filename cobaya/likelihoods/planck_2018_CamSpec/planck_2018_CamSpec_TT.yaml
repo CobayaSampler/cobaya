@@ -1,19 +1,3 @@
-# Native python version of the plik_lite 2018 Planck likelihood, allowing multipole/bin selection
-
-likelihood:
-  planck_2018_CamSpec_python:
-    # Path to the data: where the planck_supp_data_and_covmats has been cloned
-    path: null
-    dataset_file: CamSpec2018/CamSpecHM_10_7.dataset
-    # Overriding of .dataset parameters
-    dataset_params:
-    # field: value
-    # use_cl: 100x100 143x143 217x217 143x217 TE EE
-    # Aliases for automatic covariance matrix
-    renames: [CamSpecHM_TTTEEE]
-    # Speed in evaluations/second
-    speed: 100
-
 params:
   aps100:
     prior:
@@ -164,18 +148,6 @@ params:
       scale: 0.1
     proposal: 0.1
     latex:  A^{\rm dust}_{143\times217}
-  A_planck:
-    prior:
-      dist: norm
-      loc: 1
-      scale: 0.0025
-    ref:
-      dist: norm
-      loc: 1
-      scale: 0.002
-    proposal: 0.0005
-    latex: y_\mathrm{cal}
-    renames: calPlanck
   cal0:
     prior:
       dist: norm
@@ -198,25 +170,3 @@ params:
       scale: 0.001
     proposal: 0.001
     latex: c_{217}
-  calTE:
-    prior:
-      dist: norm
-      loc: 1
-      scale: 0.02
-    ref:
-      dist: norm
-      loc: 1
-      scale: 0.005
-    proposal: 0.005
-    latex: c_{TE}
-  calEE:
-    prior:
-      dist: norm
-      loc: 1
-      scale: 0.02
-    ref:
-      dist: norm
-      loc: 1
-      scale: 0.005
-    proposal: 0.005
-    latex: c_{EE}

@@ -1,5 +1,5 @@
 """
-.. module:: planck_2018_CamSpec_python
+.. module:: planck_2018_CamSpec
 
 :Synopsis: Definition of python-native CamSpec 2018 likelihood (not official Planck product)
 :Author: Antony Lewis (from CamSpec f90 source by GPE, StG and AL)
@@ -22,7 +22,6 @@ import numpy as np
 import six
 import os
 import scipy
-import logging
 
 # Local
 from cobaya.likelihoods._base_classes import _DataSetLikelihood

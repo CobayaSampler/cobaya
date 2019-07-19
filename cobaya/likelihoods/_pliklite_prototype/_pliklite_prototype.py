@@ -17,11 +17,12 @@ import numpy as np
 
 # Local
 from cobaya.likelihoods._base_classes import _DataSetLikelihood
+from cobaya.likelihoods._planck_calibration_base import _planck_calibration_base
 
 cl_names = ['tt', 'te', 'ee']
 
 
-class _pliklite_prototype(_DataSetLikelihood):
+class _pliklite_prototype(_DataSetLikelihood, _planck_calibration_base):
     install_options = {"download_url": "https://cdn.cosmologist.info/cosmobox/test2019_kaml/plik_lite_AL.zip",
                        "data_path": "plit_lite"}
 

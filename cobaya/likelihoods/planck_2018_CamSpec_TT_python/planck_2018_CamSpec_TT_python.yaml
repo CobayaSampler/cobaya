@@ -8,4 +8,3 @@ likelihood:
     renames: [CamSpecHM_TT]
     # Speed in evaluations/second
     speed: 200
-remove_params: [calEE, calTE]

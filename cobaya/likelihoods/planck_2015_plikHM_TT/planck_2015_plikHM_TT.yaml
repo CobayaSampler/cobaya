@@ -13,18 +13,6 @@ likelihood:
 
 params:
   cib_index: -1.3
-  A_planck:
-    prior:
-      dist: norm
-      loc: 1
-      scale: 0.0025
-    ref:
-      dist: norm
-      loc: 1
-      scale: 0.002
-    proposal: 0.0005
-    latex: y_\mathrm{cal}
-    renames: calPlanck
   A_cib_217:
     prior:
       dist: uniform
