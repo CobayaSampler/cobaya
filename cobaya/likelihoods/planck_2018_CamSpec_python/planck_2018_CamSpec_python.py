@@ -1,11 +1,11 @@
 """
-.. module:: _pliklite_prototype
+.. module:: planck_2018_CamSpec_python
 
-:Synopsis: Definition of python-native CamSpec 2018 likelihood (not official Planck product).
+:Synopsis: Definition of python-native CamSpec 2018 likelihood (not official Planck product)
 :Author: Antony Lewis (from CamSpec f90 source by GPE, StG and AL)
 
 This python version loads the covariance, and cuts it as requested (then inverting). It can take a few
-seconds the first time it is loaded, but the inverse can be cached.
+seconds the first time it is loaded, but the inverse can be cached. The Planck likelihood code (clik) is not required.
 
 Use dataset_params : { 'use_cl': '100x100 143x143 217x217 143x217'} to use e.g. just TT , or other combination with TE and EE.
 Set use_range to string representation of L range to use, e.g. 50-100, 200-500, 1470-2500, or pass a dictionary of ranges for each spectrum.
@@ -47,6 +47,8 @@ def range_to_ells(use_range):
 
 
 class planck_2018_CamSpec_python(_DataSetLikelihood):
+    install_optiosn = {"download_url": r"https://cdn.cosmologist.info/cosmobox/test2019_kaml/CamSpec2018.zip",
+                       "data_path": "CamSpec2018"}
 
     def read_normalized(self, filename, pivot=None):
         # arrays all based at L=0, in L(L+1)/2pi units
@@ -356,30 +358,3 @@ class planck_2018_CamSpec_python(_DataSetLikelihood):
                + cals[j] ** 2 * cov[off2:off2 + n_p, off2:off2 + n_p] \
                - cals[i] * cals[j] * (cov[off2:off2 + n_p, off1:off1 + n_p] + cov[off1:off1 + n_p, off2:off2 + n_p])
         return range(lmin, lmax + 1), diff[lmin:lmax + 1], pcov
-
-    # Installation methods ###############################################################
-
-    data_name = 'CamSpec'
-
-    @classmethod
-    def is_installed(cls, **kwargs):
-        if kwargs["data"]:
-            return os.path.exists(os.path.join(cls.get_path(kwargs["path"]), "CamSpec2018"))
-        return True
-
-    @classmethod
-    def install(cls, path=None, force=False, code=False, data=True, no_progress_bars=False):
-        log = logging.getLogger(__name__.split(".")[-1])
-        full_path = cls.get_path(path)
-        if not os.path.exists(full_path):
-            os.makedirs(full_path)
-        if not data:
-            return True
-        filename = r"https://cdn.cosmologist.info/cosmobox/test2019_kaml/CamSpec2018.zip"
-        log.info("Downloading likelihood data file: %s...", filename)
-        from cobaya.install import download_file
-        if not download_file(filename, full_path, decompress=True, logger=log,
-                             no_progress_bars=no_progress_bars):
-            return False
-        log.info("Likelihood data downloaded and uncompressed correctly.")
-        return True

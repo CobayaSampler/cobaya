@@ -58,13 +58,11 @@ import numpy as np
 import scipy
 from scipy.interpolate import UnivariateSpline
 import copy
-import logging
 
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
 from cobaya.conventions import _path_install, _c_km_s
-from cobaya.install import download_github_release
 
 # DES data types
 def_DES_types = ['xip', 'xim', 'gammat', 'wtheta']
@@ -137,9 +135,7 @@ def get_def_cuts():
 
 
 class _des_prototype(Likelihood):
-
-    des_data_name = "des_data"  # Name of data *and* covmats repo/folder
-    des_data_version = "v1.0"  # Repo version
+    install_options = {"github_repository": "CobayaSampler/des_data", "github_release": "v1.0"}
 
     def initialize(self):
         self.l_max = self.l_max or int(50000 * self.acc)
@@ -150,8 +146,7 @@ class _des_prototype(Likelihood):
             if self.path:
                 dataset_file_path = self.path
             elif self.path_install:
-                dataset_file_path = os.path.join(
-                    self.path_install, "data", self.__class__.des_data_name)
+                dataset_file_path = self.get_path(self.path_install)
             else:
                 raise LoggedError(
                     self.log,
@@ -164,14 +159,14 @@ class _des_prototype(Likelihood):
                 if self.dataset_params:
                     raise LoggedError(
                         self.log, "'dataset_params' can only be specified "
-                        "for .dataset (not .fits) file.")
+                                  "for .dataset (not .fits) file.")
                 self.load_fits_data(dataset_file)
             else:
                 self.load_dataset(dataset_file, self.dataset_params)
         except IOError:
             raise LoggedError(
                 self.log, "The data file '%s' could not be found at '%s'. "
-                "Check your paths!", self.dataset_file, dataset_file_path)
+                          "Check your paths!", self.dataset_file, dataset_file_path)
         self.initialize_postload()
 
     def load_dataset(self, filename, dataset_params):
@@ -700,25 +695,6 @@ class _des_prototype(Likelihood):
                 ax.set_title('%s-%s' % (f2 + 1, f1 + 1))
         return axs
 
-    # Installation methods ###############################################################
-
-    @classmethod
-    def get_path(cls, path):
-        return os.path.realpath(os.path.join(path, "data", cls.des_data_name))
-
-    @classmethod
-    def is_installed(cls, **kwargs):
-        return os.path.exists(cls.get_path(kwargs["path"]))
-
-    @classmethod
-    def install(cls, path=None, force=False, code=False, data=True, no_progress_bars=False):
-        if not data:
-            return True
-        log = logging.getLogger(__name__.split(".")[-1])
-        log.info("Downloading DES data...")
-        return download_github_release(
-            os.path.join(path, "data"), cls.des_data_name, cls.des_data_version,
-            no_progress_bars=no_progress_bars)
 
 # Conversion .fits --> .dataset  #########################################################
 

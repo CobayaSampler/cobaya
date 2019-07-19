@@ -15,6 +15,7 @@ from __future__ import absolute_import, division, print_function
 # Global
 from collections import OrderedDict as odict
 from copy import deepcopy
+import os
 
 # Local
 from cobaya.conventions import _theory, _params, _likelihood, _sampler, _prior, _p_derived
@@ -676,6 +677,7 @@ install_basic = {
     _theory: {_camb: None, _classy: None},
     _likelihood: {
         "planck_2018_lowl": None,
+        "planck_2018_cmblikes_lensing": None,
         "bicep_keck_2015": None,
         "sn_pantheon": None,
         "sdss_dr12_consensus_final": None,
@@ -686,3 +688,8 @@ install_tests[_likelihood].update({"planck_2015_lowl": None,
                                    "planck_2018_pliklite_python": None,
                                    "planck_2018_CamSpec_python": None,
                                    "planck_2018_CamSpecHM_TTTEEE": None})
+
+skip_list = os.environ.get("COBAYA_TEST_SKIP", "").replace(",", " ").lower().split()
+for key in list(install_tests.keys()):
+    if any(skip for skip in skip_list if skip in key.lower()):
+        skip_list.pop(key)

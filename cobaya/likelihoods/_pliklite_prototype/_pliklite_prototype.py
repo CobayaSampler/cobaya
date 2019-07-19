@@ -14,7 +14,6 @@ from __future__ import division
 # Global
 import os
 import numpy as np
-import logging
 
 # Local
 from cobaya.likelihoods._base_classes import _DataSetLikelihood
@@ -23,6 +22,8 @@ cl_names = ['tt', 'te', 'ee']
 
 
 class _pliklite_prototype(_DataSetLikelihood):
+    install_options = {"download_url": "https://cdn.cosmologist.info/cosmobox/test2019_kaml/plik_lite_AL.zip",
+                       "data_path": "plit_lite"}
 
     def init_params(self, ini):
         self.use_cl = [c.lower() for c in ini.list('use_cl')]
@@ -156,30 +157,3 @@ class _pliklite_prototype(_DataSetLikelihood):
         Cls = self.theory.get_Cl(ell_factor=True)
         return -0.5 * self.get_chi_squared(0, Cls.get('tt'), Cls.get('te'), Cls.get('ee'),
                                            data_params[self.calibration_param])
-
-    # Installation methods ###############################################################
-
-    data_name = 'plik_lite'
-
-    @classmethod
-    def is_installed(cls, **kwargs):
-        if kwargs["data"]:
-            return os.path.exists(os.path.join(cls.get_path(kwargs["path"]), "plik_lite_v22.dataset"))
-        return True
-
-    @classmethod
-    def install(cls, path=None, force=False, code=False, data=True, no_progress_bars=False):
-        log = logging.getLogger(__name__.split(".")[-1])
-        full_path = cls.get_path(path)
-        if not os.path.exists(full_path):
-            os.makedirs(full_path)
-        if not data:
-            return True
-        filename = r"https://cdn.cosmologist.info/cosmobox/test2019_kaml/plik_lite_AL.zip"
-        log.info("Downloading likelihood data file: %s...", filename)
-        from cobaya.install import download_file
-        if not download_file(filename, full_path, decompress=True, logger=log,
-                             no_progress_bars=no_progress_bars):
-            return False
-        log.info("Likelihood data downloaded and uncompressed correctly.")
-        return True

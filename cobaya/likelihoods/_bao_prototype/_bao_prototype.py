@@ -134,13 +134,14 @@ from cobaya.conventions import _path_install, _c_km_s
 
 
 class _bao_prototype(Likelihood):
+    install_options = {"github_repository": "CobayaSampler/bao_data", "github_release": "v1.1"}
 
     def initialize(self):
         self.log.info("Initialising.")
         if not getattr(self, "path", None) and not getattr(self, "path_install", None):
             raise LoggedError(
                 self.log, "No path given to BAO data. Set the likelihood property "
-                "'path' or the common property '%s'.", _path_install)
+                          "'path' or the common property '%s'.", _path_install)
         # If no path specified, use the modules path
         data_file_path = os.path.normpath(getattr(self, "path", None) or
                                           os.path.join(self.path_install, "data"))
@@ -181,15 +182,15 @@ class _bao_prototype(Likelihood):
             except IOError:
                 raise LoggedError(
                     self.log, "Couldn't find probability distribution file '%s' "
-                    "in folder '%s'. " % (self.prob_dist, data_file_path) +
-                    "Check your paths.")
+                              "in folder '%s'. " % (self.prob_dist, data_file_path) +
+                              "Check your paths.")
             try:
                 alpha = np.linspace(
                     self.prob_dist_bounds[0], self.prob_dist_bounds[1], len(chi2))
             except (TypeError, AttributeError, IndexError, ValueError):
                 raise LoggedError(
                     self.log, "If 'prob_dist' given, 'prob_dist_bounds' needs to be "
-                    "specified as [min, max].")
+                              "specified as [min, max].")
             spline = UnivariateSpline(alpha, -chi2 / 2, s=0)
             self.logpdf = lambda x: (
                 spline(x)[0] if self.prob_dist_bounds[0] <= x <= self.prob_dist_bounds[1]
@@ -207,7 +208,7 @@ class _bao_prototype(Likelihood):
                 else:
                     raise LoggedError(
                         self.log, "No errors provided, either as cov, invcov "
-                        "or as the 3rd column in the data file.")
+                                  "or as the 3rd column in the data file.")
                 self.invcov = np.linalg.inv(self.cov)
             except IOError:
                 raise LoggedError(
@@ -254,8 +255,8 @@ class _bao_prototype(Likelihood):
         if len(obs_used_not_implemented):
             raise LoggedError(
                 self.log, "This likelihood refers to observables '%s' that have not been"
-                " implemented yet. Did you mean any of %s? "
-                "If you didn't, please, open an issue in github.",
+                          " implemented yet. Did you mean any of %s? "
+                          "If you didn't, please, open an issue in github.",
                 obs_used_not_implemented, list(theory_reqs))
         requisites = {}
         if self.has_type:

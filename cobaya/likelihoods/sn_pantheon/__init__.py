@@ -1,2 +1,5 @@
-from .sn_pantheon import sn_pantheon
-from cobaya.likelihoods._sn_prototype import is_installed, install, get_path
+from cobaya.likelihoods._sn_prototype import _sn_prototype
+
+
+class sn_pantheon(_sn_prototype):
+    pass

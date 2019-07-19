@@ -1,6 +1,5 @@
 import os
 import logging
-import sys
 from getdist import IniFile
 
 # Local
@@ -25,9 +24,7 @@ class _fast_chi_square(object):
 class _DataSetLikelihood(Likelihood):
     """A likelihood reading parameters and filenames from a .dataset plain text .ini file (as CosmoMC)"""
 
-    data_name = ""
-    supp_data_name = "planck_supp_data_and_covmats"
-    supp_data_version = "v1.0"
+    install_options = {"github_repository": "CobayaSampler/planck_supp_data_and_covmats", "github_release": "master"}
     default_dataset_params = {}
 
     fast_chi_squared = _fast_chi_square()
@@ -54,6 +51,8 @@ class _DataSetLikelihood(Likelihood):
         self.load_dataset_file(data_file, self.dataset_params)
 
     def load_dataset_file(self, filename, dataset_params):
+        if '.dataset' not in filename:
+            filename += '.dataset'
         ini = IniFile(filename)
         self.dataset_filename = filename
         ini.params.update(self.default_dataset_params)
@@ -64,19 +63,48 @@ class _DataSetLikelihood(Likelihood):
         assert False, "set_file_params should be inherited"
 
     @classmethod
-    def is_installed(cls, **kwargs):
-        return os.path.exists(cls.get_path(kwargs["path"]))
+    def get_install_options(cls):
+        return cls.install_options
 
     @classmethod
     def get_path(cls, path):
-        return os.path.realpath(os.path.join(path, "data", cls.data_name))
+        opts = cls.get_install_options()
+        repo = opts.get("github_repository", None)
+        if repo:
+            data_path = repo.split('/')[-1]
+        else:
+            data_path = opts.get("data_path", cls.__name__)
+        return os.path.realpath(os.path.join(path, "data", data_path))
+
+    @classmethod
+    def is_installed(cls, **kwargs):
+        if kwargs["data"]:
+            return os.path.exists(cls.get_path(kwargs["path"]))
+        return True
 
     @classmethod
     def install(cls, path=None, force=False, code=False, data=True, no_progress_bars=False):
         if not data:
             return True
-        from cobaya.install import download_github_release
-        log = logging.getLogger(__name__.split(".")[-1])
-        log.info("Downloading %s data..." % cls.data_name)
-        return download_github_release(os.path.join(path, "data"), cls.supp_data_name,
-                                       cls.supp_data_version, no_progress_bars=no_progress_bars)
+        log = logging.getLogger(cls.__name__)
+        opts = cls.get_install_options()
+        repo = opts.get("github_repository", None)
+        if repo:
+            from cobaya.install import download_github_release
+            log.info("Downloading %s data..." % repo)
+            return download_github_release(os.path.join(path, "data"), repo, opts.get("github_release", "master"),
+                                           no_progress_bars=no_progress_bars)
+        else:
+            full_path = cls.get_path(path)
+            if not os.path.exists(full_path):
+                os.makedirs(full_path)
+            if not data:
+                return True
+            filename = opts["download_url"]
+            log.info("Downloading likelihood data file: %s...", filename)
+            from cobaya.install import download_file
+            if not download_file(filename, full_path, decompress=True, logger=log,
+                                 no_progress_bars=no_progress_bars):
+                return False
+            log.info("Likelihood data downloaded and uncompressed correctly.")
+            return True

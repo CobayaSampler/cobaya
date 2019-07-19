@@ -1,2 +1,4 @@
-from .sdss_dr12_consensus_full_shape import sdss_dr12_consensus_full_shape
-from cobaya.likelihoods.sdss_dr12_consensus_final import is_installed, install, get_path
+from cobaya.likelihoods._bao_prototype import _bao_prototype
+
+class sdss_dr12_consensus_full_shape(_bao_prototype):
+    pass

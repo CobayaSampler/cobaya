@@ -1,8 +1,8 @@
 """
-.. module:: planck_2015_lensing_cmblikes
+.. module:: planck_2018_cmblikes_lensing_cmbmarged
 
 :Synopsis: Alternative version of the Planck lensing likelihood,
-           marginalized over the CMB power spectrum
+           marginalized over the CMB power spectra. Native python .dataset-based implementation
 :Author: Antony Lewis
 
 """
@@ -11,4 +11,4 @@ from cobaya.likelihoods.planck_2018_cmblikes_lensing import planck_2018_cmblikes
 
 
 class planck_2018_cmblikes_lensing_cmbmarged(planck_2018_cmblikes_lensing):
-    supp_data_version = "v2.0"
+    pass
