@@ -385,6 +385,8 @@ class HasDefaults(object):
 
     @classmethod
     def get_defaults(cls, kind, name):
+        # load defaults from .yaml file.
+        # This works with inheritance, so if any superclass has a .yaml file, that is loaded first and then overridden
         if cls is HasDefaults:
             return {kind: {name: {}}}
         for base in cls.__bases__:
@@ -394,6 +396,8 @@ class HasDefaults(object):
         path_to_defaults = cls.get_yaml_file()
         if path_to_defaults:
             new_info = yaml_load_file(path_to_defaults)
+            # inherited likelihood parameters are mapped into dictionary index for the top-level name
+            # bit ugly, limitation of having e.g. likelihood .yaml files be global rather than local scope.
             new_info[kind][name] = new_info[kind].pop(cls.__name__)
             if 'remove_params' in new_info:
                 for par in new_info.pop('remove_params'):
@@ -402,5 +406,4 @@ class HasDefaults(object):
                     else:
                         info[_params].pop(par)
             info = merge_info(info, new_info)
-            if (cls.__name__ == name): print(info)
         return info

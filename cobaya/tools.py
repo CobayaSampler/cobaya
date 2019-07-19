@@ -122,8 +122,8 @@ def get_external_function(string_or_function, name=None):
     if not callable(function):
         raise LoggedError(
             log, "The external function provided " +
-            ("for '%s' " % name if name else "") +
-            "is not an actual function. Got: '%r'", function)
+                 ("for '%s' " % name if name else "") +
+                 "is not an actual function. Got: '%r'", function)
     return function
 
 
@@ -143,16 +143,17 @@ def recursive_update(base, update):
     <https://stackoverflow.com/questions/3232943>`_.
     Modified for yaml input, where None and {} are almost equivalent
     """
+    base = base or odict()
     for update_key, update_value in (update or {}).items():
-        update_value = update_value or odict()
-        base = base or odict()
+        if update_value is None:
+            update_value = odict()
         if isinstance(update_value, Mapping):
             base[update_key] = recursive_update(
                 base.get(update_key, odict()), update_value)
         else:
             base[update_key] = update_value
     # Trim terminal (o)dicts
-    for k, v in (base or {}).items():
+    for k, v in base.items():
         if isinstance(v, Mapping) and len(v) == 0:
             base[k] = None
     return base
@@ -228,15 +229,15 @@ def get_scipy_1d_pdf(info):
     except AttributeError:
         raise LoggedError(
             log, "Error creating the prior for parameter '%s': "
-            "The distribution '%s' is unknown to 'scipy.stats'. "
-            "Check the list of allowed possibilities in the docs.", param, dist)
+                 "The distribution '%s' is unknown to 'scipy.stats'. "
+                 "Check the list of allowed possibilities in the docs.", param, dist)
     # Recover loc,scale from min,max
     # For coherence with scipy.stats, defaults are min,max=0,1
     if "min" in info2 or "max" in info2:
         if "loc" in info2 or "scale" in info2:
             raise LoggedError(
                 log, "You cannot use the 'loc/scale' convention and the 'min/max' "
-                "convention at the same time. Either use one or the other.")
+                     "convention at the same time. Either use one or the other.")
         minmaxvalues = {"min": 0, "max": 1}
         for limit in minmaxvalues:
             try:
@@ -386,6 +387,7 @@ def warn_deprecation_python2(logger=None):
     if not six.PY3:
         for line in create_banner(msg).split("\n"):
             getattr(logger, "warning", (lambda x: print("*WARNING*", x)))(line)
+
 
 def warn_deprecation_version(logger=None):
     msg = """
