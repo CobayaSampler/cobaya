@@ -53,16 +53,15 @@ from __future__ import division
 from __future__ import print_function
 
 # Global
-import os
 import numpy as np
 import scipy
 from scipy.interpolate import UnivariateSpline
 import copy
 
 # Local
-from cobaya.likelihood import Likelihood
+from cobaya.likelihoods._base_classes import _DataSetLikelihood
 from cobaya.log import LoggedError
-from cobaya.conventions import _path_install, _c_km_s
+from cobaya.conventions import _c_km_s
 
 # DES data types
 def_DES_types = ['xip', 'xim', 'gammat', 'wtheta']
@@ -134,45 +133,30 @@ def get_def_cuts():
     return ranges
 
 
-class _des_prototype(Likelihood):
+class _des_prototype(_DataSetLikelihood):
     install_options = {"github_repository": "CobayaSampler/des_data", "github_release": "v1.0"}
 
-    def initialize(self):
-        self.l_max = self.l_max or int(50000 * self.acc)
-        if os.path.isabs(self.dataset_file):
-            dataset_file = self.dataset_file
-        else:
-            # If no path specified, use the modules path
-            if self.path:
-                dataset_file_path = self.path
-            elif self.path_install:
-                dataset_file_path = self.get_path(self.path_install)
-            else:
+    def load_dataset_file(self, filename, dataset_params):
+        self.l_max = self.l_max or int(50000 * self.acc)  # lmax here is an internal parameter for transforms
+        if filename.endswith(".fits"):
+
+            if dataset_params:
                 raise LoggedError(
-                    self.log,
-                    "No path given to the DES data. Set the likelihood property 'path' "
-                    "or the common property '%s'.", _path_install)
-            dataset_file = os.path.normpath(
-                os.path.join(dataset_file_path, self.dataset_file))
-        try:
-            if dataset_file.endswith(".fits"):
-                if self.dataset_params:
-                    raise LoggedError(
-                        self.log, "'dataset_params' can only be specified "
-                                  "for .dataset (not .fits) file.")
-                self.load_fits_data(dataset_file)
-            else:
-                self.load_dataset(dataset_file, self.dataset_params)
-        except IOError:
-            raise LoggedError(
-                self.log, "The data file '%s' could not be found at '%s'. "
-                          "Check your paths!", self.dataset_file, dataset_file_path)
+                    self.log, "'dataset_params' can only be specified "
+                              "for .dataset (not .fits) file.")
+            try:
+
+                self.load_fits_data(filename)
+            except IOError:
+                raise LoggedError(
+                    self.log, "The data file '%s' could not be found'. "
+                              "Check your paths!", filename)
+
+        else:
+            super(_des_prototype, self).load_dataset_file(filename, dataset_params)
         self.initialize_postload()
 
-    def load_dataset(self, filename, dataset_params):
-        from getdist import IniFile
-        ini = IniFile(filename)
-        ini.params.update(dataset_params or {})
+    def init_params(self, ini):
         self.indices = []
         self.used_indices = []
         self.used_items = []
