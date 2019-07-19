@@ -128,12 +128,12 @@ import pandas as pd
 import logging
 
 # Local
-from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
 from cobaya.conventions import _path_install, _c_km_s
+from cobaya.likelihoods._base_classes import _InstallableLikelihood
 
 
-class _bao_prototype(Likelihood):
+class _bao_prototype(_InstallableLikelihood):
     install_options = {"github_repository": "CobayaSampler/bao_data", "github_release": "v1.1"}
 
     def initialize(self):

@@ -70,16 +70,15 @@ def install(*infos, **kwargs):
                 if len([s for s in skip_list if s in imported_class.__name__.lower()]):
                     log.info("Skipping %s for test skip list %s" % (imported_class.__name__, skip_list))
                     continue
-            except ImportError:
+            except ImportError as e:
                 if kind == _likelihood:
                     info = (next(info for info in infos if module in info.get(_likelihood, {}))[_likelihood][module]
                            ) or {}
                     if isinstance(info, string_types) or _external in info:
                         log.warning("Module '%s' is a custom likelihood. "
                                     "Nothing to do.\n", module)
-                        flag = False
                     else:
-                        log.error("Module '%s' not recognized.\n" % module)
+                        log.error("Module '%s' not recognized. [%s]\n" % (module, e))
                         failed_modules += ["%s:%s" % (kind, module)]
                 continue
             is_installed = getattr(imported_class, "is_installed",

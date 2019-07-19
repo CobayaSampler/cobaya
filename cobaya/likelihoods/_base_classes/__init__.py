@@ -21,46 +21,8 @@ class _fast_chi_square(object):
         return fast_chi_squared
 
 
-class _DataSetLikelihood(Likelihood):
-    """A likelihood reading parameters and filenames from a .dataset plain text .ini file (as CosmoMC)"""
-
+class _InstallableLikelihood(Likelihood):
     install_options = {"github_repository": "CobayaSampler/planck_supp_data_and_covmats", "github_release": "master"}
-    default_dataset_params = {}
-
-    fast_chi_squared = _fast_chi_square()
-
-    def initialize(self):
-
-        if os.path.isabs(self.dataset_file):
-            data_file = self.dataset_file
-        else:
-            # If no path specified, use the modules path
-            if self.path:
-                data_file_path = self.path
-            elif self.path_install:
-                data_file_path = self.get_path(self.path_install)
-            else:
-                raise LoggedError(self.log,
-                                  "No path given for %s. Set the likelihood property 'path' "
-                                  "or the common property '%s'.", self.dataset_file, _path_install)
-
-            data_file = os.path.normpath(os.path.join(data_file_path, self.dataset_file))
-        if not os.path.exists(data_file):
-            raise LoggedError(self.log, "The data file '%s' could not be found at '%s'. "
-                                        "Check your paths!", self.dataset_file, data_file_path)
-        self.load_dataset_file(data_file, self.dataset_params)
-
-    def load_dataset_file(self, filename, dataset_params):
-        if '.dataset' not in filename:
-            filename += '.dataset'
-        ini = IniFile(filename)
-        self.dataset_filename = filename
-        ini.params.update(self.default_dataset_params)
-        ini.params.update(dataset_params or {})
-        self.init_params(ini)
-
-    def init_params(self, ini):
-        assert False, "set_file_params should be inherited"
 
     @classmethod
     def get_install_options(cls):
@@ -108,3 +70,44 @@ class _DataSetLikelihood(Likelihood):
                 return False
             log.info("Likelihood data downloaded and uncompressed correctly.")
             return True
+
+
+class _DataSetLikelihood(_InstallableLikelihood):
+    """A likelihood reading parameters and filenames from a .dataset plain text .ini file (as CosmoMC)"""
+
+    default_dataset_params = {}
+
+    fast_chi_squared = _fast_chi_square()
+
+    def initialize(self):
+
+        if os.path.isabs(self.dataset_file):
+            data_file = self.dataset_file
+        else:
+            # If no path specified, use the modules path
+            if self.path:
+                data_file_path = self.path
+            elif self.path_install:
+                data_file_path = self.get_path(self.path_install)
+            else:
+                raise LoggedError(self.log,
+                                  "No path given for %s. Set the likelihood property 'path' "
+                                  "or the common property '%s'.", self.dataset_file, _path_install)
+
+            data_file = os.path.normpath(os.path.join(data_file_path, self.dataset_file))
+        if not os.path.exists(data_file):
+            raise LoggedError(self.log, "The data file '%s' could not be found at '%s'. "
+                                        "Check your paths!", self.dataset_file, data_file_path)
+        self.load_dataset_file(data_file, self.dataset_params)
+
+    def load_dataset_file(self, filename, dataset_params):
+        if '.dataset' not in filename:
+            filename += '.dataset'
+        ini = IniFile(filename)
+        self.dataset_filename = filename
+        ini.params.update(self.default_dataset_params)
+        ini.params.update(dataset_params or {})
+        self.init_params(ini)
+
+    def init_params(self, ini):
+        assert False, "set_file_params should be inherited"
