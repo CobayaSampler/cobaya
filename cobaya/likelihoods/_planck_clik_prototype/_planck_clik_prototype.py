@@ -177,7 +177,7 @@ from cobaya.conventions import _path_install, _likelihood
 from cobaya.input import get_default_info
 from cobaya.install import pip_install, download_file
 from cobaya.tools import are_different_params_lists, create_banner
-from cobaya.likelihoods import _planck_calibration_base
+from cobaya.likelihoods._planck_calibration_base import _planck_calibration_base
 
 _deprecation_msg_2015 = create_banner("""
 The likelihoods from the Planck 2015 data release have been superseeded
