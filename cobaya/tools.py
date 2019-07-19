@@ -77,9 +77,10 @@ def get_class(name, kind=_likelihood, None_if_not_found=False):
 
     Raises ``ImportError`` if class not found in the appropriate place in the source tree.
     """
+    class_name = name.split('.')[-1]
     class_folder = get_folder(name, kind, sep=".", absolute=False)
     try:
-        return getattr(import_module(class_folder, package=_package), name)
+        return getattr(import_module(class_folder, package=_package), class_name)
     except:
         if ((sys.exc_info()[0] is ModuleNotFoundError and
              str(sys.exc_info()[1]).rstrip("'").endswith(name))):
