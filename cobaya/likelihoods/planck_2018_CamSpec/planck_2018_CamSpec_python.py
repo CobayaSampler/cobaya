@@ -46,7 +46,7 @@ def range_to_ells(use_range):
 
 
 class planck_2018_CamSpec_python(_DataSetLikelihood):
-    install_optiosn = {"download_url": r"https://cdn.cosmologist.info/cosmobox/test2019_kaml/CamSpec2018.zip",
+    install_options = {"download_url": r"https://cdn.cosmologist.info/cosmobox/test2019_kaml/CamSpec2018.zip",
                        "data_path": "CamSpec2018"}
 
     def read_normalized(self, filename, pivot=None):

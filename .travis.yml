@@ -7,7 +7,7 @@ git:
 #testing
 env:
   global:
-    - COBAYA_TEST_SKIP=polychord
+    - COBAYA_TEST_SKIP=polychord,planck_2015
 
 cache:
   directories:
