@@ -359,10 +359,11 @@ class _planck_clik_prototype(_planck_calibration_base):
                                      logger=log, no_progress_bars=no_progress_bars):
                     log.error("Not possible to download this likelihood.")
                     success = False
-                # Additional data and covmats
+                # Additional data and covmats, stored in same repo as the 2018 python lensing likelihood
                 from cobaya.likelihoods.planck_2018_cmblikes_lensing import planck_2018_cmblikes_lensing
-                success *= planck_2018_cmblikes_lensing.install(path=path, force=force, code=code, data=data,
-                                                                no_progress_bars=no_progress_bars)
+                if not planck_2018_cmblikes_lensing.is_installed(data=True, path=path):
+                    success *= planck_2018_cmblikes_lensing.install(path=path, force=force, code=code, data=data,
+                                                                    no_progress_bars=no_progress_bars)
         return success
 
 
