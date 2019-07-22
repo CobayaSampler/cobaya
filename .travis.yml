@@ -7,11 +7,16 @@ git:
 #testing
 env:
   global:
-    - COBAYA_TEST_SKIP=polychord,planck_2015,CamSpec
+    - COBAYA_TEST_SKIP=polychord,planck_2015
 
 cache:
   directories:
-  - /home/travis/build/CosmoPars/modules
+  - /home/travis/build/CosmoPars/modules/code
+  - /home/travis/build/CosmoPars/modules/data/planck_supp_data_and_covmats
+  - /home/travis/build/CosmoPars/modules/data/planck_2018
+  - /home/travis/build/CosmoPars/modules/data/bicep_keck_2015
+  - /home/travis/build/CosmoPars/modules/data/bao_data
+  - /home/travis/build/CosmoPars/modules/data/sn_data
 
 # (Pre)Installation
 matrix:

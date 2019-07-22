@@ -1,9 +1,12 @@
 # Native python version of the plik_lite 2018 Planck likelihood, allowing multipole/bin selection
+#Note calibration parameter is inherited via _planck_calibration_base
+
+defaults: [params_TT,params_TE,params_EE]
 
 likelihood:
-  planck_2018_CamSpec.TTTEEE_python:
+  planck_2018_CamSpec.CamSpec_TTTEEE_python:
     dataset_params:
-      use_cl: 100x100 143x143 217x217 143x217
+      use_cl: 100x100 143x143 217x217 143x217 TE EE
     # Aliases for automatic covariance matrix
     renames: [CamSpecHM_TT]
     # Speed in evaluations/second

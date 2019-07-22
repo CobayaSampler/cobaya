@@ -17,7 +17,7 @@ from importlib import import_module
 import inspect
 from six import string_types
 from itertools import chain
-import re
+import six
 
 # Local
 from cobaya.conventions import _package, _products_path, _path_install, _resume, _force
@@ -37,6 +37,8 @@ import logging
 
 log = logging.getLogger(__name__.split(".")[-1])
 
+yaml_extensions = (".yaml", ".yml")
+
 
 def load_input(input_file):
     """
@@ -44,7 +46,7 @@ def load_input(input_file):
     """
     file_name, extension = os.path.splitext(input_file)
     file_name = os.path.basename(file_name)
-    if extension not in (".yaml", ".yml"):
+    if extension not in yaml_extensions:
         raise LoggedError(log, "Extension of input file '%s' not recognized.", input_file)
     info = yaml_load_file(input_file) or {}
     # if output_prefix not defined, default to input_file name (sans ext.) as prefix;
@@ -89,15 +91,15 @@ def get_modules(*infos):
     return modules
 
 
-def get_default_info(module, kind, info={}):
+def get_default_info(module, kind):
     """
     Get default info for a module.
     """
     try:
         cls = get_class(module, kind, None_if_not_found=True)
         default_module_info = cls.get_defaults(kind, module) if cls else {kind: {module: {}}}
-    except:
-        raise LoggedError(log, "Failed to get defaults for module '%s:%s'", kind, module)
+    except Exception as e:
+        raise LoggedError(log, "Failed to get defaults for module '%s:%s' [%s]", kind, module, e)
     try:
         default_module_info[kind][module]
     except KeyError:
@@ -135,7 +137,8 @@ def update_info(info):
             updated_info[block][module] = deepcopy(getattr(
                 import_module(_package + "." + block, package=_package),
                 "class_options", {}))
-            default_module_info = get_default_info(module, block, input_info[block][module])
+            default_module_info = get_default_info(module, block)
+            # TODO: check - get_default_info was ignoring this extra arg: input_info[block][module])
             updated_info[block][module].update(default_module_info[block][module] or {})
             # Update default options with input info
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
@@ -268,7 +271,10 @@ def merge_info(*infos):
     """
     Merges information dictionaries. Rightmost arguments take precedence.
     """
+    assert len(infos)
     previous_info = deepcopy(infos[0])
+    if len(infos) == 1:
+        return previous_info
     for new_info in infos[1:]:
         previous_params_info = deepcopy(previous_info.pop(_params, odict()) or odict())
         new_params_info = deepcopy(new_info).pop(_params, odict()) or odict()
@@ -373,11 +379,53 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
     return True
 
 
+def resolve_defaults(info, base_path):
+    info = info.copy()
+    defaults = info.pop("defaults", [])
+    infos = []
+    if len(defaults):
+        if isinstance(defaults, six.string_types):
+            defaults = [defaults]
+        for default in defaults:
+            if not os.path.isabs(default):
+                default = os.path.join(base_path, default)
+            infos.append(yaml_load_with_defaults(os.path.normpath(default)))
+
+    infos.append(info)
+    new_info = merge_info(*infos)
+    for par in new_info.pop('remove_params', []):
+        if not par in new_info[_params]:
+            logging.warning("remove_params parameter does not exist in inherited :%s" % par)
+        else:
+            new_info[_params].pop(par)
+
+    return new_info
+
+
+def yaml_load_with_defaults(name):
+    """
+    Load a yaml file, merging in sets in defaults: list (right rightmost having higher priority)
+    :param filename: Name of .yaml file
+    :return: merged info dictionary
+    """
+    if os.path.splitext(name)[1] not in yaml_extensions:
+        name += '.yaml'
+    return resolve_defaults(yaml_load_file(name), os.path.dirname(name))
+
+
 class HasDefaults(object):
 
     @classmethod
+    def get_qualified_names(cls):
+        parts = cls.__module__.split('.')
+        if parts[-1] == cls.__name__:
+            return ['.'.join(parts[i:]) for i in range(len(parts))]
+        else:
+            return ['.'.join(parts[i:]) + '.' + cls.__name__ for i in range(len(parts))]
+
+    @classmethod
     def get_yaml_file(cls):
-        folder = os.path.split(inspect.getfile(cls))[0]
+        folder = os.path.dirname(inspect.getfile(cls))
         file = os.path.join(folder, cls.__name__ + ".yaml")
         if os.path.exists(file):
             return file
@@ -391,22 +439,27 @@ class HasDefaults(object):
         if cls is HasDefaults:
             return {kind: {name: {}}}
         base_infos = [base.get_defaults(kind, name) for base in cls.__bases__[::-1] if issubclass(base, HasDefaults)]
-        if len(base_infos) > 1:
-            info = merge_info(*base_infos)
-        else:
-            info = base_infos[0]
+        info = merge_info(*base_infos)
         path_to_defaults = cls.get_yaml_file()
         if path_to_defaults:
-            new_info = yaml_load_file(path_to_defaults)
+            new_info = yaml_load_with_defaults(path_to_defaults)
+
             # inherited likelihood parameters are mapped into dictionary index for the top-level name
             # bit ugly, limitation of having e.g. likelihood .yaml files be global rather than local scope.
             if kind in new_info:
-                new_info[kind][name] = new_info[kind].pop(cls.__name__, {})
-            if 'remove_params' in new_info:
-                for par in new_info.pop('remove_params'):
-                    if not par in info[_params]:
-                        logging.warning("remove_params parameter does not exist in inherited :%s" % par)
-                    else:
-                        info[_params].pop(par)
+                like_info = {}
+                for name_id in cls.get_qualified_names():
+                    if name_id in new_info[kind]:
+                        like_info = new_info[kind].pop(name_id)
+                        break
+                new_info[kind][name] = like_info or new_info[kind].pop(cls.__name__, {})
+
+            for par in new_info.pop('remove_params', []):
+                if not par in info[_params]:
+                    logging.warning("remove_params parameter does not exist in inherited :%s" % par)
+                else:
+                    info[_params].pop(par)
+            # print(info, new_info)
             info = merge_info(info, new_info)
+
         return info

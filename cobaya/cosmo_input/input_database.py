@@ -687,7 +687,7 @@ install_tests = deepcopy(install_basic)
 install_tests[_likelihood].update({"planck_2015_lowl": None,
                                    "planck_2018_pliklite_python": None,
                                    "planck_2018_CamSpec.CamSpec_TTTEEE_python": None,
-                                   "planck_2018_CamSpecHM_TTTEEE": None})
+                                   "planck_2018_CamSpec.clik_CamSpecHM_TTTEEE": None})
 
 skip_list = os.environ.get("COBAYA_TEST_SKIP", "").replace(",", " ").lower().split()
 for key in list(install_tests.keys()):

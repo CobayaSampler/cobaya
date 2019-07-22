@@ -83,7 +83,7 @@ class _DataSetLikelihood(_InstallableLikelihood):
 
         if os.path.isabs(self.dataset_file):
             data_file = self.dataset_file
-            self.path = os.path.split(data_file)[0]
+            self.path = os.path.dirname(data_file)
         else:
             # If no path specified, use the modules path
             if not self.path and self.path_install:

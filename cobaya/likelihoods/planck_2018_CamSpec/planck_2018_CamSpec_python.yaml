@@ -7,9 +7,6 @@ likelihood:
     dataset_file: CamSpec2018/CamSpecHM_10_7.dataset
     # Overriding of .dataset parameters
     dataset_params:
-    # field: value
-    # use_cl: 100x100 143x143 217x217 143x217 TE EE
-    # Aliases for automatic covariance matrix
-    renames: [CamSpecHM_TTTEEE]
+      use_cl: 100x100 143x143 217x217 143x217 TE EE
     # Speed in evaluations/second
     speed: 100
