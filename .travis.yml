@@ -17,6 +17,7 @@ cache:
   - /home/travis/build/CosmoPars/modules/data/bicep_keck_2015
   - /home/travis/build/CosmoPars/modules/data/bao_data
   - /home/travis/build/CosmoPars/modules/data/sn_data
+  - /home/travis/build/CosmoPars/modules/data/des_data
 
 # (Pre)Installation
 matrix:

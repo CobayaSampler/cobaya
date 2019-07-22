@@ -387,7 +387,7 @@ def get_data_path(name):
 
 
 def get_release(name):
-    return next(re for re in ["2015", "2018"] if re in name)
+    return "2015" if "2015" in name else "2018"
 
 
 def is_installed_clik(path, log_and_fail=False, import_it=True):
