@@ -6,7 +6,6 @@
 
 """
 
-# Local
 from cobaya.likelihoods._cmblikes_prototype import _cmblikes_prototype
 from cobaya.likelihoods._planck_calibration_base import _planck_calibration_base
 

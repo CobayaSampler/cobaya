@@ -12,4 +12,3 @@ likelihood:
     # Speed in evaluations/second
     speed: 200
 
-remove_params: [A_planck]
