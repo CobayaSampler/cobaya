@@ -61,7 +61,7 @@ def test_planck_CamSpec_2018_p_camb(modules, plik=False):
     # TODO: sort out calPlacnk vs A_planck
     name = "planck_2018_CamSpec.clik_CamSpecHM_TTTEEE" if plik else "planck_2018_CamSpec.CamSpec_TTTEEE_python"
     info_likelihood = {name: None}
-    chi2 = {name: 11517.50, 'tolerance': 0.2}
+    chi2 = {name: 11513.53, 'tolerance': 0.2}
     best_fit = params_lowTE_highTTTEEE_lite_lensingcmblikes.copy()
     best_fit['calPlanck'] = best_fit['A_planck']
     best_fit.update(

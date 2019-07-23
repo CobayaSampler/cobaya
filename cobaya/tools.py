@@ -60,13 +60,19 @@ def deepcopyfix(olddict):
     return newdict
 
 
-def get_folder(name, kind, sep=os.sep, absolute="True"):
+def get_class_base_filename(name, kind):
     """
-    Gets folder, relative to the package source, of a likelihood, theory or sampler.
+    Gets absoluate file base name for a class module, relative to the package source, of a likelihood, theory or sampler.
     """
-    pre = (os.path.dirname(__file__) + sep if absolute
-           else "" + (sep if sep == "." else ""))
-    return pre + subfolders[kind] + sep + name
+    if '.' not in name: name += '.' + name
+    return os.path.join(os.path.dirname(__file__), subfolders[kind], name.replace('.', os.sep))
+
+
+def get_class_module(name, kind):
+    """
+    Gets qualified module name, relative to the package source, of a likelihood, theory or sampler.
+    """
+    return '.' + subfolders[kind] + '.' + name
 
 
 def get_class(name, kind=_likelihood, None_if_not_found=False):
@@ -78,7 +84,7 @@ def get_class(name, kind=_likelihood, None_if_not_found=False):
     Raises ``ImportError`` if class not found in the appropriate place in the source tree.
     """
     class_name = name.split('.')[-1]
-    class_folder = get_folder(name, kind, sep=".", absolute=False)
+    class_folder = get_class_module(name, kind)
     try:
         return getattr(import_module(class_folder, package=_package), class_name)
     except:

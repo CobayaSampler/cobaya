@@ -25,7 +25,7 @@ from cobaya.conventions import _output_prefix, _debug, _debug_file
 from cobaya.conventions import _params, _prior, _theory, _likelihood, _sampler, _external
 from cobaya.conventions import _p_label, _p_derived, _p_ref, _p_drop, _p_value, _p_renames
 from cobaya.conventions import _p_proposal, _input_params, _output_params
-from cobaya.tools import get_folder, recursive_update, recursive_odict_to_dict
+from cobaya.tools import get_class_module, recursive_update, recursive_odict_to_dict
 from cobaya.tools import fuzzy_match, deepcopy_where_possible, get_class
 from cobaya.yaml import yaml_load_file
 from cobaya.log import LoggedError
@@ -323,7 +323,7 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
                 return False
             # Anything to ignore?
             for k in block1:
-                module_folder = get_folder(k, block_name, sep=".", absolute=False)
+                module_folder = get_class_module(k, block_name)
                 try:
                     ignore_k = getattr(import_module(
                         module_folder, package=_package), "ignore_at_resume", {})
@@ -432,11 +432,27 @@ class HasDefaults(object):
         return cls.get_qualified_names()[2]
 
     @classmethod
-    def get_yaml_file(cls):
+    def get_root_file_name(cls):
         folder = os.path.dirname(inspect.getfile(cls))
-        file = os.path.join(folder, cls.__name__ + ".yaml")
-        if os.path.exists(file):
-            return file
+        return os.path.join(folder, cls.__name__)
+
+    @classmethod
+    def get_yaml_file(cls):
+        filename = cls.get_root_file_name() + ".yaml"
+        if os.path.exists(filename):
+            return filename
+        return None
+
+    @classmethod
+    def get_bibtex_file(cls):
+        bib = cls.get_root_file_name() + '.bibtex'
+        if os.path.exists(bib):
+            return bib
+        for base in cls.__bases__:
+            if issubclass(base, HasDefaults):
+                bib = base.get_bibtex_file()
+                if bib:
+                    return bib
         return None
 
     @classmethod
