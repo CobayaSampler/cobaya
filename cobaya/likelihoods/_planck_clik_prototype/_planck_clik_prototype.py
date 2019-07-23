@@ -304,14 +304,14 @@ class _planck_clik_prototype(_planck_calibration_base):
             result &= is_installed_clik(os.path.realpath(
                 os.path.join(kwargs["path"], "code", code_path)))
         if kwargs["data"]:
-            _, filename = get_product_id_and_clik_file(cls.get_qualified_names()[2])
+            _, filename = get_product_id_and_clik_file(cls.get_module_class())
             result &= os.path.exists(os.path.realpath(
                 os.path.join(kwargs["path"], "data", data_path, filename)))
-            print('testing:', os.path.realpath(
+            print('testing:', cls.get_module_class(), os.path.realpath(
                 os.path.join(kwargs["path"], "data", data_path, filename)), result)
             from cobaya.likelihoods.planck_2018_cmblikes_lensing import planck_2018_cmblikes_lensing
             result &= planck_2018_cmblikes_lensing.is_installed(**kwargs)
-            print('testing2:',result)
+            print('testing2:', result)
             try:
                 print(os.listdir('/home/travis/build/CosmoPars/cobaya/../modules/data/planck_2018/'))
             except:
@@ -320,7 +320,7 @@ class _planck_clik_prototype(_planck_calibration_base):
 
     @classmethod
     def install(cls, path=None, force=False, code=True, data=True, no_progress_bars=False):
-        name = cls.__name__
+        name = cls.get_module_class()
         log = logging.getLogger(name)
         path_names = {"code": common_path, "data": get_data_path(name)}
         import platform

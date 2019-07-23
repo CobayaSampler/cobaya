@@ -18,6 +18,8 @@ cache:
   - /home/travis/build/CosmoPars/modules/data/bao_data
   - /home/travis/build/CosmoPars/modules/data/sn_data
   - /home/travis/build/CosmoPars/modules/data/des_data
+  - /home/travis/build/CosmoPars/modules/data/plik_lite
+
 
 # (Pre)Installation
 matrix:

@@ -24,7 +24,7 @@ cl_names = ['tt', 'te', 'ee']
 
 class _pliklite_prototype(_DataSetLikelihood, _planck_calibration_base):
     install_options = {"download_url": "https://cdn.cosmologist.info/cosmobox/test2019_kaml/plik_lite_AL.zip",
-                       "data_path": "plit_lite"}
+                       "data_path": "plik_lite"}
 
     def init_params(self, ini):
         self.use_cl = [c.lower() for c in ini.list('use_cl')]
