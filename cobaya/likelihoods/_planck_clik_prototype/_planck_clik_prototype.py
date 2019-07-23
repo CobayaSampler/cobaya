@@ -304,7 +304,7 @@ class _planck_clik_prototype(_planck_calibration_base):
             result &= is_installed_clik(os.path.realpath(
                 os.path.join(kwargs["path"], "code", code_path)))
         if kwargs["data"]:
-            _, filename = get_product_id_and_clik_file(cls.__name__)
+            _, filename = get_product_id_and_clik_file(cls.get_qualified_names()[2])
             result &= os.path.exists(os.path.realpath(
                 os.path.join(kwargs["path"], "data", data_path, filename)))
             from cobaya.likelihoods.planck_2018_cmblikes_lensing import planck_2018_cmblikes_lensing
