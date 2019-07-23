@@ -394,7 +394,7 @@ def resolve_defaults(info, base_path):
     infos.append(info)
     new_info = merge_info(*infos)
     remove = new_info.get('remove_params', None)
-    if remove is not None:
+    if remove is not None and _params in new_info:
         for par in list(remove):
             if par in new_info[_params]:
                 new_info[_params].pop(par)
