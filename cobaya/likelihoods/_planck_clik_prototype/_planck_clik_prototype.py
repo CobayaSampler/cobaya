@@ -313,7 +313,7 @@ class _planck_clik_prototype(_planck_calibration_base):
             result &= planck_2018_cmblikes_lensing.is_installed(**kwargs)
             print('testing2:', result)
             try:
-                print(os.listdir('/home/travis/build/CosmoPars/cobaya/../modules/data/planck_2018/'))
+                print(os.listdir('/home/travis/build/CosmoPars/cobaya/../modules/data/'))
             except:
                 print('no dir')
         return result

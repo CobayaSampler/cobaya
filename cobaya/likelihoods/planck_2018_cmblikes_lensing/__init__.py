@@ -1,7 +1,7 @@
 """
 .. module:: planck_2018_cmblikes_lensing
 
-:Synopsis: Alternative version of the Planck lensing likelihood
+:Synopsis: Native python version of the Planck lensing likelihood
 :Author: Antony Lewis
 
 """

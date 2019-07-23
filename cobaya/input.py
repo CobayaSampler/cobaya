@@ -398,7 +398,7 @@ def resolve_defaults(info, base_path):
         for par in list(remove):
             if par in new_info[_params]:
                 new_info[_params].pop(par)
-            remove.remove(par)
+                remove.remove(par)
         if not len(remove):
             new_info.pop('remove_params', None)
 
@@ -467,7 +467,6 @@ class HasDefaults(object):
                     logging.warning("remove_params parameter does not exist in inherited :%s" % par)
                 else:
                     info[_params].pop(par)
-            # print(info, new_info)
             info = merge_info(info, new_info)
 
         return info

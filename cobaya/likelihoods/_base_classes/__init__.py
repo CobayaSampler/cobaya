@@ -42,7 +42,7 @@ class _InstallableLikelihood(Likelihood):
     def is_installed(cls, **kwargs):
         if kwargs["data"]:
             path = cls.get_path(kwargs["path"])
-            return cls.get_install_options() and os.path.exists(path) and len(os.listdir(path))
+            return cls.get_install_options() and os.path.exists(path) and len(os.listdir(path)) > 0
         return True
 
     @classmethod
