@@ -9,6 +9,7 @@ env:
   global:
     - COBAYA_TEST_SKIP=polychord,planck_2015
 
+#Large CamSpec folders tend to hang, so exclude non-base likelihoods from cache
 cache:
   directories:
   - /home/travis/build/CosmoPars/modules/code
