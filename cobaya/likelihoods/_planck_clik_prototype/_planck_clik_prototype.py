@@ -307,8 +307,15 @@ class _planck_clik_prototype(_planck_calibration_base):
             _, filename = get_product_id_and_clik_file(cls.get_qualified_names()[2])
             result &= os.path.exists(os.path.realpath(
                 os.path.join(kwargs["path"], "data", data_path, filename)))
+            print('testing:', os.path.realpath(
+                os.path.join(kwargs["path"], "data", data_path, filename)), result)
             from cobaya.likelihoods.planck_2018_cmblikes_lensing import planck_2018_cmblikes_lensing
             result &= planck_2018_cmblikes_lensing.is_installed(**kwargs)
+            print('testing2:',result)
+            try:
+                print(os.listdir('/home/travis/build/CosmoPars/cobaya/../modules/data/planck_2018/'))
+            except:
+                print('no dir')
         return result
 
     @classmethod

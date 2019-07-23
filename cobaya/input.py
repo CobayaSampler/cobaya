@@ -393,11 +393,14 @@ def resolve_defaults(info, base_path):
 
     infos.append(info)
     new_info = merge_info(*infos)
-    for par in new_info.pop('remove_params', []):
-        if not par in new_info[_params]:
-            logging.warning("remove_params parameter does not exist in inherited :%s" % par)
-        else:
-            new_info[_params].pop(par)
+    remove = new_info.get('remove_params', None)
+    if remove is not None:
+        for par in list(remove):
+            if par in new_info[_params]:
+                new_info[_params].pop(par)
+            remove.remove(par)
+        if not len(remove):
+            new_info.pop('remove_params', None)
 
     return new_info
 
