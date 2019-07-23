@@ -428,7 +428,7 @@ class HasDefaults(object):
 
     @classmethod
     def get_module_class(cls):
-        """get cls.__name__ if class is same name as the module, otherwise module.class_name"
+        """get cls.__name__ if class is same name as the module, otherwise module.class_name"""
         return cls.get_qualified_names()[2]
 
     @classmethod
