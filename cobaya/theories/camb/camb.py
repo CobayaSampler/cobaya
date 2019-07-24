@@ -216,10 +216,10 @@ class camb(_cosmo):
         except ImportError:
             raise LoggedError(
                 self.log, "Couldn't find the CAMB python interface.\n"
-                "Make sure that you have compiled it, and that you either\n"
-                " (a) specify a path (you didn't) or\n"
-                " (b) install the Python interface globally with\n"
-                "     'pip install -e /path/to/camb [--user]'")
+                          "Make sure that you have compiled it, and that you either\n"
+                          " (a) specify a path (you didn't) or\n"
+                          " (b) install the Python interface globally with\n"
+                          "     'pip install -e /path/to/camb [--user]'")
         self.camb = camb
         # Prepare errors
         from camb.baseconfig import CAMBParamRangeError, CAMBError
@@ -391,7 +391,7 @@ class camb(_cosmo):
                 else:
                     raise LoggedError(
                         self.log, "Some of the attributes to be set manually were not "
-                        "recognized: %s=%s", attr, value)
+                                  "recognized: %s=%s", attr, value)
             # Sources
             if getattr(self, "sources", None):
                 from camb.sources import GaussianSourceWindow, SplinedSourceWindow
@@ -643,7 +643,7 @@ class camb(_cosmo):
         except:
             raise LoggedError(
                 self.log, "No source Cl's were computed. "
-                "Are you sure that you have requested some source?")
+                          "Are you sure that you have requested some source?")
         cls_dict = dict()
         for term, cl in cls.items():
             term_tuple = tuple(
@@ -653,53 +653,50 @@ class camb(_cosmo):
         cls_dict["ell"] = np.arange(cls[list(cls)[0]].shape[0])
         return cls_dict
 
+    # Name of the Class repo/folder and version to download
+    camb_repo_name = "cmbant/CAMB"
+    camb_repo_version = "master"
+    camb_min_gcc_version = "6.4"
 
-# Installation routines ##################################################################
+    @classmethod
+    def is_installed(cls, **kwargs):
+        import platform
+        if not kwargs["code"]:
+            return True
+        return os.path.isfile(os.path.realpath(
+            os.path.join(
+                kwargs["path"], "code", cls.camb_repo_name[cls.camb_repo_name.find("/") + 1:],
+                "camb", "cambdll.dll" if (platform.system() == "Windows") else "camblib.so")))
 
-# Name of the Class repo/folder and version to download
-camb_repo_name = "cmbant/CAMB"
-camb_repo_version = "master"
-camb_min_gcc_version = "6.4"
-
-
-def is_installed(**kwargs):
-    import platform
-    if not kwargs["code"]:
+    @classmethod
+    def install(cls, path=None, force=False, code=True, data=False, no_progress_bars=False, **kwargs):
+        log = logging.getLogger(cls.__name__)
+        if not code:
+            log.info("Code not requested. Nothing to do.")
+            return True
+        log.info("Downloading camb...")
+        success = download_github_release(
+            os.path.join(path, "code"), cls.camb_repo_name, cls.camb_repo_version,
+            no_progress_bars=no_progress_bars)
+        if not success:
+            log.error("Could not download camb.")
+            return False
+        camb_path = os.path.join(path, "code", cls.camb_repo_name[cls.camb_repo_name.find("/") + 1:])
+        log.info("Compiling camb...")
+        from subprocess import Popen, PIPE
+        process_make = Popen([sys.executable, "setup.py", "build_cluster"],
+                             cwd=camb_path, stdout=PIPE, stderr=PIPE)
+        out, err = process_make.communicate()
+        if process_make.returncode:
+            log.info(out)
+            log.info(err)
+            gcc_check = check_gcc_version(cls.camb_min_gcc_version, error_returns=False)
+            if not gcc_check:
+                cause = (" Possible cause: it looks like `gcc` does not have the correct "
+                         "version number (CAMB requires %s); and `ifort` is also probably "
+                         "not available.", cls.camb_min_gcc_version)
+            else:
+                cause = ""
+            log.error("Compilation failed!" + cause)
+            return False
         return True
-    return os.path.isfile(os.path.realpath(
-        os.path.join(
-            kwargs["path"], "code", camb_repo_name[camb_repo_name.find("/") + 1:],
-            "camb", "cambdll.dll" if (platform.system() == "Windows") else "camblib.so")))
-
-
-def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs):
-    log = logging.getLogger(__name__.split(".")[-1])
-    if not code:
-        log.info("Code not requested. Nothing to do.")
-        return True
-    log.info("Downloading camb...")
-    success = download_github_release(
-        os.path.join(path, "code"), camb_repo_name, camb_repo_version,
-        no_progress_bars=no_progress_bars)
-    if not success:
-        log.error("Could not download camb.")
-        return False
-    camb_path = os.path.join(path, "code", camb_repo_name[camb_repo_name.find("/") + 1:])
-    log.info("Compiling camb...")
-    from subprocess import Popen, PIPE
-    process_make = Popen([sys.executable, "setup.py", "build_cluster"],
-                         cwd=camb_path, stdout=PIPE, stderr=PIPE)
-    out, err = process_make.communicate()
-    if process_make.returncode:
-        log.info(out)
-        log.info(err)
-        gcc_check = check_gcc_version(camb_min_gcc_version, error_returns=False)
-        if not gcc_check:
-            cause = (" Possible cause: it looks like `gcc` does not have the correct "
-                     "version number (CAMB requires %s); and `ifort` is also probably "
-                     "not available.", camb_min_gcc_version)
-        else:
-            cause = ""
-        log.error("Compilation failed!" + cause)
-        return False
-    return True

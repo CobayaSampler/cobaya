@@ -7,7 +7,7 @@ git:
 #testing
 env:
   global:
-    - COBAYA_TEST_SKIP=polychord,planck_2015
+    - COBAYA_TEST_SKIP=polychord,planck_2015,CamSpec
 
 #Large CamSpec folders tend to hang, so exclude non-base likelihoods from cache
 cache:
@@ -81,6 +81,23 @@ matrix:
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="conda-forge"
       python: "3.7"
+    - name: "devel_HMcode: gcc-9, Python 3.7 Anaconda (conda-forge)"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - gcc-9
+            - gfortran-9
+            - g++-9
+      env:
+        - GCC_VERSION="9"
+        - PYVER="3"
+        - PYDIST="ANACONDA"
+        - ANACONDA_CHANNEL="conda-forge"
+        - CAMB_BRANCH="devel_HMcode"
+      python: "3.7"
+
 before_install:
   # Configure right compilers version
   - mkdir -p gcc-symlinks ;
