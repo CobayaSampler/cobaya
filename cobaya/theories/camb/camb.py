@@ -183,12 +183,15 @@ collector.__new__.__defaults__ = (None, [], {})
 
 
 class camb(_cosmo):
+    # Name of the Class repo/folder and version to download
+    camb_repo_name = "cmbant/CAMB"
+    camb_repo_version = "master"
+    camb_min_gcc_version = "6.4"
 
     def initialize(self):
         """Importing CAMB from the correct path, if given."""
         if not self.path and self.path_install:
-            self.path = os.path.join(
-                self.path_install, "code", camb_repo_name[camb_repo_name.find("/") + 1:])
+            self.path = self.get_path(self.path_install)
         if self.path and not os.path.exists(self.path):
             # Fail if this was a directly specified path,
             # or ignore and try to global-import if it came from a path_install
@@ -653,10 +656,9 @@ class camb(_cosmo):
         cls_dict["ell"] = np.arange(cls[list(cls)[0]].shape[0])
         return cls_dict
 
-    # Name of the Class repo/folder and version to download
-    camb_repo_name = "cmbant/CAMB"
-    camb_repo_version = "master"
-    camb_min_gcc_version = "6.4"
+    @classmethod
+    def get_path(cls, path):
+        return os.path.realpath(os.path.join(path, "code", cls.camb_repo_name[cls.camb_repo_name.find("/") + 1:]))
 
     @classmethod
     def is_installed(cls, **kwargs):
@@ -664,9 +666,8 @@ class camb(_cosmo):
         if not kwargs["code"]:
             return True
         return os.path.isfile(os.path.realpath(
-            os.path.join(
-                kwargs["path"], "code", cls.camb_repo_name[cls.camb_repo_name.find("/") + 1:],
-                "camb", "cambdll.dll" if (platform.system() == "Windows") else "camblib.so")))
+            os.path.join(cls.get_path(kwargs["path"]),
+                         "camb", "cambdll.dll" if (platform.system() == "Windows") else "camblib.so")))
 
     @classmethod
     def install(cls, path=None, force=False, code=True, data=False, no_progress_bars=False, **kwargs):
@@ -681,7 +682,7 @@ class camb(_cosmo):
         if not success:
             log.error("Could not download camb.")
             return False
-        camb_path = os.path.join(path, "code", cls.camb_repo_name[cls.camb_repo_name.find("/") + 1:])
+        camb_path = cls.get_path(path)
         log.info("Compiling camb...")
         from subprocess import Popen, PIPE
         process_make = Popen([sys.executable, "setup.py", "build_cluster"],
