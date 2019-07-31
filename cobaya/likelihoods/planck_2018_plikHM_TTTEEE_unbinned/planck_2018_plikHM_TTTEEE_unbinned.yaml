@@ -6,7 +6,7 @@ likelihood:
   planck_2018_plikHM_TTTEEE_unbinned:
     path:
     clik_file: plc_3.0/hi_l/plik/plik_rd12_HM_v22b_TTTEEE_bin1.clik
-    product_id: "1900"
+    product_id: "151905"
     # Aliases for automatic covariance matrix
     renames: [plikHM_TTTEEE]
     # Speed in evaluations/second

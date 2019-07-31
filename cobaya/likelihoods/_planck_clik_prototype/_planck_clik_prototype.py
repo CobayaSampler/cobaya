@@ -3,7 +3,7 @@ r"""
 
 :Synopsis: Definition of the clik-based likelihoods
 :Author: Jesus Torrado
-         (based on MontePython's version by Julien Lesgourgues and Benjamin Audren)
+         (initially based on MontePython's version by Julien Lesgourgues and Benjamin Audren)
 
 Family of Planck CMB likelihoods, as interfaces to the official ``clik`` code (and some
 native ``cmblikes`` ones) You can find a description of the different likelihoods in the
@@ -116,9 +116,7 @@ Manual installation of Planck 2015 likelihoods
 
 .. warning::
 
-   For the time being (waiting for Planck 2018's data release), use instead the
-   alternative 'clik' code at
-   `<https://cdn.cosmologist.info/cosmobox/plc-2.1_py3.tar.bz2>`_, which is
+   Use the 2018 likelihood code instead the 2015 one, which is
    compatible with Python 3 and gcc `>5`.
 
 Assuming you are installing all your likelihoods under ``/path/to/likelihoods``:
@@ -343,17 +341,12 @@ class _planck_clik_prototype(_planck_calibration_base):
         if data:
             # 2nd test, in case the code wasn't there but the data is:
             if force or not cls.is_installed(path=path, code=False, data=True):
-                if "2015" in name:
-                    # Extract product_id
-                    product_id, _ = get_product_id_and_clik_file(name)
-                    # Download and decompress the particular likelihood
-                    url = (r"https://pla.esac.esa.int/pla-sl/"
-                           "data-action?COSMOLOGY.COSMOLOGY_OID=" + product_id)
-                else:
-                    # OVERRIDE! -- for baseline only
-                    url = 'https://cdn.cosmologist.info/cosmobox/test2019_kaml/baseline.tar.gz'
-                    url = get_default_info(name, _likelihood)[_likelihood][name].get("url", url)
 
+                product_id, _ = get_product_id_and_clik_file(name)
+                # Download and decompress the particular likelihood
+                url = (r"https://pla.esac.esa.int/pla-sl/"
+                       "data-action?COSMOLOGY.COSMOLOGY_OID=" + product_id)
+                # url = get_default_info(name, _likelihood)[_likelihood][name].get("url", url)
                 log.info("Downloading likelihood data...")
                 if not download_file(url, paths["data"], decompress=True,
                                      logger=log, no_progress_bars=no_progress_bars):
@@ -448,6 +441,8 @@ def install_clik(path, no_progress_bars=False):
             raise LoggedError(log, "Failed installing '%s'.", req)
     log.info("Downloading...")
     click_url = 'https://cdn.cosmologist.info/cosmobox/test2019_kaml/plc-3.0.tar.bz2'
+    # currently the PLA file is a double zip
+    # click_url = 'https://pla.esac.esa.int/pla/aio/product-action?COSMOLOGY.FILE_ID=COM_Likelihood_Data-baseline_R3.00.tar.gz'
     if not download_file(click_url, path, decompress=True,
                          no_progress_bars=no_progress_bars, logger=log):
         log.error("Not possible to download clik.")
