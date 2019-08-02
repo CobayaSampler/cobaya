@@ -440,14 +440,13 @@ def install_clik(path, no_progress_bars=False):
         if exit_status:
             raise LoggedError(log, "Failed installing '%s'.", req)
     log.info("Downloading...")
-    click_url = 'https://cdn.cosmologist.info/cosmobox/test2019_kaml/plc-3.0.tar.bz2'
-    # currently the PLA file is a double zip
-    # click_url = 'https://pla.esac.esa.int/pla/aio/product-action?COSMOLOGY.FILE_ID=COM_Likelihood_Data-baseline_R3.00.tar.gz'
+    # click_url = 'https://cdn.cosmologist.info/cosmobox/test2019_kaml/plc-3.0.tar.bz2'
+    click_url = 'https://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLOGY_OID=151912'
     if not download_file(click_url, path, decompress=True,
                          no_progress_bars=no_progress_bars, logger=log):
         log.error("Not possible to download clik.")
         return False
-    source_dir = os.path.join(path, os.listdir(path)[0])
+    source_dir = os.path.join(path, 'code', 'plc_3.0', 'plc-3.01')
     log.info('Installing from directory %s' % source_dir)
     # The following code patches a problem with the download source of cfitsio.
     # Left here in case the FTP server breaks again.
