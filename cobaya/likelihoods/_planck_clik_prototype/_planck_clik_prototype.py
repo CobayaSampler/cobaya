@@ -303,6 +303,8 @@ class _planck_clik_prototype(_planck_calibration_base):
                 os.path.join(kwargs["path"], "code", code_path)))
         if kwargs["data"]:
             _, filename = get_product_id_and_clik_file(cls.get_module_class())
+            print('isInstalled checking : ', (os.path.realpath(
+                os.path.join(kwargs["path"], "data", data_path, filename))))
             result &= os.path.exists(os.path.realpath(
                 os.path.join(kwargs["path"], "data", data_path, filename)))
             from cobaya.likelihoods.planck_2018_cmblikes_lensing import planck_2018_cmblikes_lensing
@@ -352,6 +354,7 @@ class _planck_clik_prototype(_planck_calibration_base):
                                      logger=log, no_progress_bars=no_progress_bars):
                     log.error("Not possible to download this likelihood.")
                     success = False
+                print('Check clik data %s' % cls.__name__, cls.is_installed(path=path, code=False, data=True))
                 # Additional data and covmats, stored in same repo as the 2018 python lensing likelihood
                 from cobaya.likelihoods.planck_2018_cmblikes_lensing import planck_2018_cmblikes_lensing
                 if not planck_2018_cmblikes_lensing.is_installed(data=True, path=path):
@@ -440,7 +443,6 @@ def install_clik(path, no_progress_bars=False):
         if exit_status:
             raise LoggedError(log, "Failed installing '%s'.", req)
     log.info("Downloading...")
-    # click_url = 'https://cdn.cosmologist.info/cosmobox/test2019_kaml/plc-3.0.tar.bz2'
     click_url = 'https://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLOGY_OID=151912'
     if not download_file(click_url, path, decompress=True,
                          no_progress_bars=no_progress_bars, logger=log):
