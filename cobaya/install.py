@@ -154,10 +154,8 @@ def download_file(filename, path, no_progress_bars=False, decompress=False, logg
             import tarfile
             if extension == "tgz":
                 extension = "gz"
-            print('extracting %s to %s'%(filename,path))
             with tarfile.open(filename, "r:" + extension) as tar:
                 tar.extractall(path)
-            print('Extracted ok')
         log.debug('Decompressed: %s' % filename)
         os.remove(filename)
         return True
