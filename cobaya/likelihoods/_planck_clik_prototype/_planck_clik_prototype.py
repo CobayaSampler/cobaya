@@ -347,11 +347,6 @@ class _planck_clik_prototype(_planck_calibration_base):
                 url = (r"https://pla.esac.esa.int/pla-sl/"
                        "data-action?COSMOLOGY.COSMOLOGY_OID=" + product_id)
                 # url = get_default_info(name, _likelihood)[_likelihood][name].get("url", url)
-                log.info("Downloading likelihood data...")
-                print(cls.__name__, 'downloading to %s'%paths["data"])
-                print(os.listdir('/home/travis/build/CosmoPars/modules/data/'))
-                print(os.listdir('/home/travis/build/CosmoPars/modules/data/planck_2018/'))
-                print(os.listdir('/home/travis/build/CosmoPars/modules/data/planck_2018/baseline'))
                 if not download_file(url, paths["data"], decompress=True,
                                      logger=log, no_progress_bars=no_progress_bars):
                     log.error("Not possible to download this likelihood.")

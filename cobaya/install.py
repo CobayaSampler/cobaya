@@ -134,6 +134,7 @@ def download_file(filename, path, no_progress_bars=False, decompress=False, logg
         wget_kwargs = {"out": path, "bar":
             (bar_thermometer if not no_progress_bars else None)}
         filename = download(filename, **wget_kwargs)
+        print('downloaded filename %s'%filename)
     except Exception as excpt:
         log.error(
             "Error downloading file '%s' to folder '%s': %s", filename, path, str(excpt))
@@ -153,8 +154,10 @@ def download_file(filename, path, no_progress_bars=False, decompress=False, logg
             import tarfile
             if extension == "tgz":
                 extension = "gz"
+            print('extracting %s to %s'%(filename,path))
             with tarfile.open(filename, "r:" + extension) as tar:
                 tar.extractall(path)
+            print('Extracted ok')
         log.debug('Decompressed: %s' % filename)
         os.remove(filename)
         return True
