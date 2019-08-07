@@ -301,14 +301,15 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
     def get_defaults(cls, return_yaml=False):
         defaults = textwrap.dedent(cls.defaults)
         nuisances = yaml_load(defaults)[_likelihood][cls.__name__].get("nuisance", [])
+        release = next(year for year in ["2015", "2018"] if year in cls.__name__)
         if nuisances:
             defaults += "\n\n%s:" % _params
         for nui in nuisances:
-            defaults += nuisance_defaults[nui]
-        if any([nuisance_priors.get(nui) for nui in nuisances]):
+            defaults += nuisance_params[release][nui]
+        if any([nuisance_priors[release].get(nui) for nui in nuisances]):
             defaults += "\n\n%s:" % _prior
         for nui in nuisances:
-            defaults += nuisance_priors.get(nui, "")
+            defaults += nuisance_priors[release].get(nui, "")
         defaults = defaults.strip()
         if return_yaml:
             return defaults
@@ -511,7 +512,7 @@ def install(path=None, name=None, force=False, code=True, data=True,
 
 # Default parameters subclasses ##########################################################
 
-params_calib = r"""
+params_2015_calib = r"""
   A_planck:
     prior:
       dist: norm
@@ -525,7 +526,404 @@ params_calib = r"""
     latex: y_\mathrm{cal}
     renames: calPlanck"""
 
-params_TT = r"""
+params_2015_TT = r"""
+  cib_index: -1.3
+  A_cib_217:
+    prior:
+      dist: uniform
+      min: 0
+      max: 200
+    ref:
+      dist: norm
+      loc: 65
+      scale: 10
+    proposal: 1.2
+    latex: A^\mathrm{CIB}_{217}
+    renames: acib217
+  xi_sz_cib:
+    prior:
+      dist: uniform
+      min: 0
+      max: 1
+    ref:
+      dist: halfnorm
+      loc: 0
+      scale: 0.1
+    proposal: 0.1
+    latex: \xi^{\mathrm{tSZ}\times\mathrm{CIB}}
+    renames: xi
+  A_sz:
+    prior:
+      dist: uniform
+      min: 0
+      max: 10
+    ref:
+      dist: norm
+      loc: 5
+      scale: 2
+    proposal: 0.6
+    latex: A^\mathrm{tSZ}_{143}
+    renames: asz143
+  ps_A_100_100:
+    prior:
+      dist: uniform
+      min: 0
+      max: 400
+    ref:
+      dist: norm
+      loc: 250
+      scale: 24
+    proposal: 17
+    latex: A^\mathrm{PS}_{100}
+    renames: aps100
+  ps_A_143_143:
+    prior:
+      dist: uniform
+      min: 0
+      max: 400
+    ref:
+      dist: norm
+      loc: 40
+      scale: 10
+    proposal: 3
+    latex: A^\mathrm{PS}_{143}
+    renames: aps143
+  ps_A_143_217:
+    prior:
+      dist: uniform
+      min: 0
+      max: 400
+    ref:
+      dist: norm
+      loc: 40
+      scale: 12
+    proposal: 2
+    latex: A^\mathrm{PS}_{\mathrm{143}\times\mathrm{217}}
+    renames: aps143217
+  ps_A_217_217:
+    prior:
+      dist: uniform
+      min: 0
+      max: 400
+    ref:
+      dist: norm
+      loc: 100
+      scale: 13
+    proposal: 2.5
+    latex: A^\mathrm{PS}_{217}
+    renames: aps217
+  ksz_norm:
+    prior:
+      dist: uniform
+      min: 0
+      max: 10
+    ref:
+      dist: halfnorm
+      loc: 0
+      scale: 3
+    proposal: 1
+    latex: A^\mathrm{kSZ}
+    renames: aksz
+  gal545_A_100:
+    prior:
+      dist: norm
+      loc: 7
+      scale: 2
+    ref:
+      dist: norm
+      loc: 7
+      scale: 2
+    proposal: 1
+    latex: A^\mathrm{dustTT}_{100}
+    renames: kgal100
+  gal545_A_143:
+    prior:
+      dist: norm
+      loc: 9
+      scale: 2
+    ref:
+      dist: norm
+      loc: 9
+      scale: 2
+    proposal: 1
+    latex: A^\mathrm{dustTT}_{143}
+    renames: kgal143
+  gal545_A_143_217:
+    prior:
+      dist: norm
+      loc: 21
+      scale: 8.5
+    ref:
+      dist: norm
+      loc: 21
+      scale: 4
+    proposal: 1.5
+    latex: A^\mathrm{dustTT}_{\mathrm{143}\times\mathrm{217}}
+    renames: kgal143217
+  gal545_A_217:
+    prior:
+      dist: norm
+      loc: 80
+      scale: 20
+    ref:
+      dist: norm
+      loc: 80
+      scale: 15
+    proposal: 2
+    latex: A^\mathrm{dustTT}_{217}
+    renames: kgal217
+  calib_100T:
+    prior:
+      dist: norm
+      loc: 0.999
+      scale: 0.001
+    ref:
+      dist: norm
+      loc: 0.999
+      scale: 0.001
+    proposal: 0.0005
+    latex: c_{100}
+    renames: cal0
+  calib_217T:
+    prior:
+      dist: norm
+      loc: 0.995
+      scale: 0.002
+    ref:
+      dist: norm
+      loc: 0.995
+      scale: 0.002
+    proposal: 0.001
+    latex: c_{217}
+    renames: cal2"""
+
+params_2015_TEEE = r"""
+  A_pol: 1
+  calib_100P: 1
+  calib_143P: 1
+  calib_217P: 1
+  galf_EE_index: -2.4
+  galf_TE_index: -2.4
+  bleak_epsilon_0_0T_0E: 0
+  bleak_epsilon_1_0T_0E: 0
+  bleak_epsilon_2_0T_0E: 0
+  bleak_epsilon_3_0T_0E: 0
+  bleak_epsilon_4_0T_0E: 0
+  bleak_epsilon_0_0T_1E: 0
+  bleak_epsilon_1_0T_1E: 0
+  bleak_epsilon_2_0T_1E: 0
+  bleak_epsilon_3_0T_1E: 0
+  bleak_epsilon_4_0T_1E: 0
+  bleak_epsilon_0_0T_2E: 0
+  bleak_epsilon_1_0T_2E: 0
+  bleak_epsilon_2_0T_2E: 0
+  bleak_epsilon_3_0T_2E: 0
+  bleak_epsilon_4_0T_2E: 0
+  bleak_epsilon_0_1T_1E: 0
+  bleak_epsilon_1_1T_1E: 0
+  bleak_epsilon_2_1T_1E: 0
+  bleak_epsilon_3_1T_1E: 0
+  bleak_epsilon_4_1T_1E: 0
+  bleak_epsilon_0_1T_2E: 0
+  bleak_epsilon_1_1T_2E: 0
+  bleak_epsilon_2_1T_2E: 0
+  bleak_epsilon_3_1T_2E: 0
+  bleak_epsilon_4_1T_2E: 0
+  bleak_epsilon_0_2T_2E: 0
+  bleak_epsilon_1_2T_2E: 0
+  bleak_epsilon_2_2T_2E: 0
+  bleak_epsilon_3_2T_2E: 0
+  bleak_epsilon_4_2T_2E: 0
+  bleak_epsilon_0_0E_0E: 0
+  bleak_epsilon_1_0E_0E: 0
+  bleak_epsilon_2_0E_0E: 0
+  bleak_epsilon_3_0E_0E: 0
+  bleak_epsilon_4_0E_0E: 0
+  bleak_epsilon_0_0E_1E: 0
+  bleak_epsilon_1_0E_1E: 0
+  bleak_epsilon_2_0E_1E: 0
+  bleak_epsilon_3_0E_1E: 0
+  bleak_epsilon_4_0E_1E: 0
+  bleak_epsilon_0_0E_2E: 0
+  bleak_epsilon_1_0E_2E: 0
+  bleak_epsilon_2_0E_2E: 0
+  bleak_epsilon_3_0E_2E: 0
+  bleak_epsilon_4_0E_2E: 0
+  bleak_epsilon_0_1E_1E: 0
+  bleak_epsilon_1_1E_1E: 0
+  bleak_epsilon_2_1E_1E: 0
+  bleak_epsilon_3_1E_1E: 0
+  bleak_epsilon_4_1E_1E: 0
+  bleak_epsilon_0_1E_2E: 0
+  bleak_epsilon_1_1E_2E: 0
+  bleak_epsilon_2_1E_2E: 0
+  bleak_epsilon_3_1E_2E: 0
+  bleak_epsilon_4_1E_2E: 0
+  bleak_epsilon_0_2E_2E: 0
+  bleak_epsilon_1_2E_2E: 0
+  bleak_epsilon_2_2E_2E: 0
+  bleak_epsilon_3_2E_2E: 0
+  bleak_epsilon_4_2E_2E: 0
+  galf_EE_A_100:
+    prior:
+      dist: norm
+      loc: 0.060
+      scale: 0.012
+    ref:
+      dist: norm
+      loc: 0.06
+      scale: 0.012
+    proposal: 0.006
+    latex: A^\mathrm{dustEE}_{100}
+    renames: galfEE100
+  galf_EE_A_100_143:
+    prior:
+      dist: norm
+      loc: 0.050
+      scale: 0.015
+    ref:
+      dist: norm
+      loc: 0.05
+      scale: 0.015
+    proposal: 0.007
+    latex: A^\mathrm{dustEE}_{\mathrm{100}\times\mathrm{143}}
+    renames: galfEE100143
+  galf_EE_A_100_217:
+    prior:
+      dist: norm
+      loc: 0.110
+      scale: 0.033
+    ref:
+      dist: norm
+      loc: 0.11
+      scale: 0.03
+    proposal: 0.02
+    latex: A^\mathrm{dustEE}_{\mathrm{100}\times\mathrm{217}}
+    renames: galfEE100217
+  galf_EE_A_143:
+    prior:
+      dist: norm
+      loc: 0.10
+      scale: 0.02
+    ref:
+      dist: norm
+      loc: 0.1
+      scale: 0.02
+    proposal: 0.01
+    latex: A^\mathrm{dustEE}_{143}
+    renames: galfEE143
+  galf_EE_A_143_217:
+    prior:
+      dist: norm
+      loc: 0.240
+      scale: 0.048
+    ref:
+      dist: norm
+      loc: 0.24
+      scale: 0.05
+    proposal: 0.03
+    latex: A^\mathrm{dustEE}_{\mathrm{143}\times\mathrm{217}}
+    renames: galfEE143217
+  galf_EE_A_217:
+    prior:
+      dist: norm
+      loc: 0.72
+      scale: 0.14
+    ref:
+      dist: norm
+      loc: 0.72
+      scale: 0.15
+    proposal: 0.07
+    latex: A^\mathrm{dustEE}_{217}
+    renames: galfEE217
+  galf_TE_A_100:
+    prior:
+      dist: norm
+      loc: 0.140
+      scale: 0.042
+    ref:
+      dist: norm
+      loc: 0.14
+      scale: 0.04
+    proposal: 0.02
+    latex: A^\mathrm{dustTE}_{100}
+    renames: galfTE100
+  galf_TE_A_100_143:
+    prior:
+      dist: norm
+      loc: 0.120
+      scale: 0.036
+    ref:
+      dist: norm
+      loc: 0.12
+      scale: 0.04
+    proposal: 0.02
+    latex: A^\mathrm{dustTE}_{\mathrm{100}\times\mathrm{143}}
+    renames: galfTE100143
+  galf_TE_A_100_217:
+    prior:
+      dist: norm
+      loc: 0.30
+      scale: 0.09
+    ref:
+      dist: norm
+      loc: 0.3
+      scale: 0.09
+    proposal: 0.05
+    latex: A^\mathrm{dustTE}_{\mathrm{100}\times\mathrm{217}}
+    renames: galfTE100217
+  galf_TE_A_143:
+    prior:
+      dist: norm
+      loc: 0.240
+      scale: 0.072
+    ref:
+      dist: norm
+      loc: 0.24
+      scale: 0.07
+    proposal: 0.04
+    latex: A^\mathrm{dustTE}_{143}
+    renames: galfTE143
+  galf_TE_A_143_217:
+    prior:
+      dist: norm
+      loc: 0.60
+      scale: 0.18
+    ref:
+      dist: norm
+      loc: 0.60
+      scale: 0.18
+    proposal: 0.1
+    latex: A^\mathrm{dustTE}_{\mathrm{143}\times\mathrm{217}}
+    renames: galfTE143217
+  galf_TE_A_217:
+    prior:
+      dist: norm
+      loc: 1.80
+      scale: 0.54
+    ref:
+      dist: norm
+      loc: 1.8
+      scale: 0.5
+    proposal: 0.3
+    latex: A^\mathrm{dustTE}_{217}
+    renames: galfTE217"""
+
+params_2018_calib = r"""
+  A_planck:
+    prior:
+      dist: norm
+      loc: 1
+      scale: 0.0025
+    ref:
+      dist: norm
+      loc: 1
+      scale: 0.002
+    proposal: 0.0005
+    latex: y_\mathrm{cal}
+    renames: calPlanck"""
+
+params_2018_TT = r"""
   # CIB & SZ
   cib_index: -1.3
   A_cib_217:
@@ -705,7 +1103,7 @@ params_TT = r"""
     latex: A^\mathrm{PS}_{217}
     renames: aps217"""
 
-params_TEEE = r"""
+params_2018_TEEE = r"""
   # Dust priors
   galf_TE_index: -2.4
   galf_TE_A_100:
@@ -807,6 +1205,7 @@ params_TEEE = r"""
     latex: A^\mathrm{dustEE}_{217}
     renames: galfEE217
   # Calibration parameters
+  A_pol: 1
   calib_100P: 1.021  # (± 0.01)
   calib_143P: 0.966  # (± 0.01)
   calib_217P: 1.040  # (± 0.01)
@@ -822,9 +1221,21 @@ params_TEEE = r"""
   A_sbpx_143_217_EE: 1
   A_sbpx_217_217_EE: 1"""
 
-nuisance_priors_TT = """
+nuisance_priors_2015_TT = """
   SZ: "lambda ksz_norm, A_sz: stats.norm.logpdf(ksz_norm+1.6*A_sz, loc=9.5, scale=3.0)"
 """
 
-nuisance_defaults = {"calib": params_calib, "TT": params_TT, "TEEE": params_TEEE}
-nuisance_priors = {"TT": nuisance_priors_TT}
+nuisance_priors_2018_TT = nuisance_priors_2015_TT
+
+nuisance_2015_params = {
+    "calib": params_2015_calib, "TT": params_2015_TT, "TEEE": params_2015_TEEE}
+
+nuisance_2018_params = {
+    "calib": params_2018_calib, "TT": params_2018_TT, "TEEE": params_2018_TEEE}
+
+nuisance_2015_priors = {"TT": nuisance_priors_2015_TT}
+
+nuisance_2018_priors = {"TT": nuisance_priors_2018_TT}
+
+nuisance_params = {"2015": nuisance_2015_params, "2018": nuisance_2018_params}
+nuisance_priors = {"2015": nuisance_2015_priors, "2018": nuisance_2018_priors}
