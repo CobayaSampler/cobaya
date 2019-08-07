@@ -56,6 +56,7 @@ setup(
             'cobaya-create-image=cobaya.containers:create_image_script',
             'cobaya-prepare-data=cobaya.containers:prepare_data_script',
             'cobaya-run=cobaya.run:run_script',
+            'cobaya-doc=cobaya.doc:doc_script',
             'cobaya-citation=cobaya.citation:citation_script',
             'cobaya-grid-create=cobaya.grid_tools:MakeGridScript',
             'cobaya-grid-run=cobaya.grid_tools.runbatch:run',

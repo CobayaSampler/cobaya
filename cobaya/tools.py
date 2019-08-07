@@ -38,6 +38,7 @@ else:
 # Local
 from cobaya import __obsolete__
 from cobaya.conventions import _package, subfolders, _p_dist, _likelihood, _p_value
+from cobaya.conventions import _sampler, _theory
 from cobaya.log import LoggedError
 
 # Logger
@@ -76,7 +77,15 @@ def get_class(name, kind=_likelihood, None_if_not_found=False):
     ``info`` must be a dictionary of the kind ``{[class_name]: [options]}``.
 
     Raises ``ImportError`` if class not found in the appropriate place in the source tree.
+
+    If 'kind=None' is not given, tries to guess it if the module name is unique (slow!).
     """
+    if kind is None:
+        try:
+            kind = next(
+                k for k in [_sampler, _theory, _likelihood] if name in get_modules(k))
+        except StopIteration:
+            raise LoggedError(log, "Could not determine kind of module %s", name)
     class_folder = get_folder(name, kind, sep=".", absolute=False)
     try:
         return getattr(import_module(class_folder, package=_package), name)
@@ -93,7 +102,16 @@ def get_class(name, kind=_likelihood, None_if_not_found=False):
             raise sys.exc_info()[1]
 
 
-def get_external_function(string_or_function, name=None):
+def get_modules(kind):
+    """
+    Gets all modules' names of a given kind.
+    """
+    return sorted([
+        m for m in os.listdir(os.path.join(os.path.dirname(__file__), subfolders[kind]))
+        if not m.startswith("_") and not m.startswith(".")])
+
+
+def get_external_function(string_or_function, name=None, or_class=False):
     """
     Processes an external prior or likelihood, given as a string or a function.
 
