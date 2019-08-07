@@ -168,15 +168,17 @@ import os
 import sys
 import numpy as np
 import logging
+import textwrap
 import six
 
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
-from cobaya.conventions import _path_install, _likelihood
-from cobaya.input import get_default_info
+from cobaya.conventions import _path_install, _likelihood, _params, _prior
+from cobaya.input import get_default_info, HasDefaults
 from cobaya.install import pip_install, download_file
 from cobaya.tools import are_different_params_lists, create_banner
+from cobaya.yaml import yaml_load
 
 
 _deprecation_msg_2015 = create_banner("""
@@ -185,7 +187,7 @@ by the 2018 ones, and will eventually be deprecated.
 """)
 
 
-class _planck_clik_prototype(Likelihood):
+class _planck_clik_prototype(Likelihood, HasDefaults):
 
     def initialize(self):
         if "2015" in self.name:
@@ -295,6 +297,23 @@ class _planck_clik_prototype(Likelihood):
         del self.clik  # MANDATORY: forces deallocation of the Cython class
         # Actually, it does not work for low-l likelihoods, which is quite dangerous!
 
+    @classmethod
+    def get_defaults(cls, return_yaml=False):
+        defaults = textwrap.dedent(cls.defaults)
+        nuisances = yaml_load(defaults)[_likelihood][cls.__name__].get("nuisance", [])
+        if nuisances:
+            defaults += "\n\n%s:" % _params
+        for nui in nuisances:
+            defaults += nuisance_defaults[nui]
+        if any([nuisance_priors.get(nui) for nui in nuisances]):
+            defaults += "\n\n%s:" % _prior
+        for nui in nuisances:
+            defaults += nuisance_priors.get(nui, "")
+        defaults = defaults.strip()
+        if return_yaml:
+            return defaults
+        else:
+            return yaml_load(defaults)
 
 # Installation routines ##################################################################
 
@@ -488,3 +507,324 @@ def install(path=None, name=None, force=False, code=True, data=True,
             success *= install_supp(path=path, force=force, code=code, data=data,
                                     no_progress_bars=no_progress_bars)
     return success
+
+
+# Default parameters subclasses ##########################################################
+
+params_calib = r"""
+  A_planck:
+    prior:
+      dist: norm
+      loc: 1
+      scale: 0.0025
+    ref:
+      dist: norm
+      loc: 1
+      scale: 0.002
+    proposal: 0.0005
+    latex: y_\mathrm{cal}
+    renames: calPlanck"""
+
+params_TT = r"""
+  # CIB & SZ
+  cib_index: -1.3
+  A_cib_217:
+    prior:
+      dist: uniform
+      min: 0
+      max: 200
+    ref:
+      dist: norm
+      loc: 67
+      scale: 10
+    proposal: 1.2
+    latex: A^\mathrm{CIB}_{217}
+    renames: acib217
+  xi_sz_cib:
+    prior:
+      dist: uniform
+      min: 0
+      max: 1
+    ref:
+      dist: halfnorm
+      loc: 0
+      scale: 0.1
+    proposal: 0.1
+    latex: \xi^{\mathrm{tSZ}\times\mathrm{CIB}}
+    renames: xi
+  A_sz:
+    prior:
+      dist: uniform
+      min: 0
+      max: 10
+    ref:
+      dist: norm
+      loc: 7
+      scale: 2
+    proposal: 0.6
+    latex: A^\mathrm{tSZ}_{143}
+    renames: asz143
+  ksz_norm:
+    prior:
+      dist: uniform
+      min: 0
+      max: 10
+    ref:
+      dist: halfnorm
+      loc: 0
+      scale: 3
+    proposal: 1
+    latex: A^\mathrm{kSZ}
+    renames: aksz
+  # Dust priors
+  gal545_A_100:
+    prior:
+      dist: norm
+      loc: 8.6
+      scale: 2
+    ref:
+      dist: norm
+      loc: 7
+      scale: 2
+    proposal: 1
+    latex: A^\mathrm{dustTT}_{100}
+    renames: kgal100
+  gal545_A_143:
+    prior:
+      dist: norm
+      loc: 10.6
+      scale: 2
+    ref:
+      dist: norm
+      loc: 9
+      scale: 2
+    proposal: 1
+    latex: A^\mathrm{dustTT}_{143}
+    renames: kgal143
+  gal545_A_143_217:
+    prior:
+      dist: norm
+      loc: 23.5
+      scale: 8.5
+    ref:
+      dist: norm
+      loc: 21
+      scale: 4
+    proposal: 1.5
+    latex: A^\mathrm{dustTT}_{\mathrm{143}\times\mathrm{217}}
+    renames: kgal143217
+  gal545_A_217:
+    prior:
+      dist: norm
+      loc: 91.9
+      scale: 20
+    ref:
+      dist: norm
+      loc: 80
+      scale: 15
+    proposal: 2
+    latex: A^\mathrm{dustTT}_{217}
+    renames: kgal217
+  # Calibration factors
+  calib_100T:
+    prior:
+      dist: norm
+      loc: 1.0002
+      scale: 0.0007
+    ref:
+      dist: norm
+      loc: 1.0002
+      scale: 0.001
+    proposal: 0.0005
+    latex: c_{100}
+    renames: cal0
+  calib_217T:
+    prior:
+      dist: norm
+      loc: 0.99805
+      scale: 0.00065
+    ref:
+      dist: norm
+      loc: 0.99805
+      scale: 0.001
+    proposal: 0.0005
+    latex: c_{217}
+    renames: cal2
+  # Subpixel effect
+  A_sbpx_100_100_TT: 1
+  A_sbpx_143_143_TT: 1
+  A_sbpx_143_217_TT: 1
+  A_sbpx_217_217_TT: 1
+  # Point source contributions
+  ps_A_100_100:
+    prior:
+      dist: uniform
+      min: 0
+      max: 400
+    ref:
+      dist: norm
+      loc: 257
+      scale: 24
+    proposal: 17
+    latex: A^\mathrm{PS}_{100}
+    renames: aps100
+  ps_A_143_143:
+    prior:
+      dist: uniform
+      min: 0
+      max: 400
+    ref:
+      dist: norm
+      loc: 47
+      scale: 10
+    proposal: 3
+    latex: A^\mathrm{PS}_{143}
+    renames: aps143
+  ps_A_143_217:
+    prior:
+      dist: uniform
+      min: 0
+      max: 400
+    ref:
+      dist: norm
+      loc: 40
+      scale: 12
+    proposal: 2
+    latex: A^\mathrm{PS}_{\mathrm{143}\times\mathrm{217}}
+    renames: aps143217
+  ps_A_217_217:
+    prior:
+      dist: uniform
+      min: 0
+      max: 400
+    ref:
+      dist: norm
+      loc: 104
+      scale: 13
+    proposal: 2.5
+    latex: A^\mathrm{PS}_{217}
+    renames: aps217"""
+
+params_TEEE = r"""
+  # Dust priors
+  galf_TE_index: -2.4
+  galf_TE_A_100:
+    prior:
+      dist: norm
+      loc: 0.130
+      scale: 0.042
+    ref:
+      dist: norm
+      loc: 0.130
+      scale: 0.1
+    proposal: 0.1
+    latex: A^\mathrm{dustTE}_{100}
+    renames: galfTE100
+  galf_TE_A_100_143:
+    prior:
+      dist: norm
+      loc: 0.130
+      scale: 0.036
+    ref:
+      dist: norm
+      loc: 0.130
+      scale: 0.1
+    proposal: 0.1
+    latex: A^\mathrm{dustTE}_{\mathrm{100}\times\mathrm{143}}
+    renames: galfTE100143
+  galf_TE_A_100_217:
+    prior:
+      dist: norm
+      loc: 0.46
+      scale: 0.09
+    ref:
+      dist: norm
+      loc: 0.46
+      scale: 0.10
+    proposal: 0.10
+    latex: A^\mathrm{dustTE}_{\mathrm{100}\times\mathrm{217}}
+    renames: galfTE100217
+  galf_TE_A_143:
+    prior:
+      dist: norm
+      loc: 0.207
+      scale: 0.072
+    ref:
+      dist: norm
+      loc: 0.207
+      scale: 0.100
+    proposal: 0.100
+    latex: A^\mathrm{dustTE}_{143}
+    renames: galfTE143
+  galf_TE_A_143_217:
+    prior:
+      dist: norm
+      loc: 0.69
+      scale: 0.09
+    ref:
+      dist: norm
+      loc: 0.69
+      scale: 0.1
+    proposal: 0.1
+    latex: A^\mathrm{dustTE}_{\mathrm{143}\times\mathrm{217}}
+    renames: galfTE143217
+  galf_TE_A_217:
+    prior:
+      dist: norm
+      loc: 1.938
+      scale: 0.54
+    ref:
+      dist: norm
+      loc: 1.938
+      scale: 0.2
+    proposal: 0.2
+    latex: A^\mathrm{dustTE}_{217}
+    renames: galfTE217
+  # EE now recommended to be left to the central values of the stated priors
+  galf_EE_index: -2.4
+  galf_EE_A_100:
+    value: 0.055  # (± 0.014)
+    latex: A^\mathrm{dustEE}_{100}
+    renames: galfEE100
+  galf_EE_A_100_143:
+    value: 0.040  # (± 0.010)
+    latex: A^\mathrm{dustEE}_{\mathrm{100}\times\mathrm{143}}
+    renames: galfEE100143
+  galf_EE_A_100_217:
+    value: 0.094  # (± 0.023)
+    latex: A^\mathrm{dustEE}_{\mathrm{100}\times\mathrm{217}}
+    renames: galfEE100217
+  galf_EE_A_143:
+    value: 0.086  # (± 0.022)
+    latex: A^\mathrm{dustEE}_{143}
+    renames: galfEE143
+  galf_EE_A_143_217:
+    value: 0.21  # (± 0.051)
+    latex: A^\mathrm{dustEE}_{\mathrm{143}\times\mathrm{217}}
+    renames: galfEE143217
+  galf_EE_A_217:
+    value: 0.70  # (± 0.18)
+    latex: A^\mathrm{dustEE}_{217}
+    renames: galfEE217
+  # Calibration parameters
+  calib_100P: 1.021  # (± 0.01)
+  calib_143P: 0.966  # (± 0.01)
+  calib_217P: 1.040  # (± 0.01)
+  # EE End2End correlated noise
+  A_cnoise_e2e_100_100_EE: 1
+  A_cnoise_e2e_143_143_EE: 1
+  A_cnoise_e2e_217_217_EE: 1
+  # Subpixel effect
+  A_sbpx_100_100_EE: 1
+  A_sbpx_100_143_EE: 1
+  A_sbpx_100_217_EE: 1
+  A_sbpx_143_143_EE: 1
+  A_sbpx_143_217_EE: 1
+  A_sbpx_217_217_EE: 1"""
+
+nuisance_priors_TT = """
+  SZ: "lambda ksz_norm, A_sz: stats.norm.logpdf(ksz_norm+1.6*A_sz, loc=9.5, scale=3.0)"
+"""
+
+nuisance_defaults = {"calib": params_calib, "TT": params_TT, "TEEE": params_TEEE}
+nuisance_priors = {"TT": nuisance_priors_TT}

@@ -1,12 +1,25 @@
 from cobaya.likelihoods._planck_clik_prototype import _planck_clik_prototype
+from cobaya.likelihoods._planck_clik_prototype import install as install_common
+from cobaya.likelihoods._planck_clik_prototype import is_installed as is_installed_common
 
 
 class planck_2018_lowE(_planck_clik_prototype):
-    pass
 
+    defaults = """
+        # Planck 2015 release: low-ell, CMB temperature+polarization likelihood
+        # See https://wiki.cosmos.esa.int/planckpla2015/index.php/CMB_spectrum_%26_Likelihood_Code
 
-from cobaya.likelihoods._planck_clik_prototype import install as install_common
-from cobaya.likelihoods._planck_clik_prototype import is_installed as is_installed_common
+        likelihood:
+          planck_2018_lowE:
+            path:
+            clik_file: baseline/plc_3.0/low_l/simall/simall_100x143_offlike5_EE_Aplanck_B.clik
+        #    product_id: "1900"
+            # Aliases for automatic covariance matrix
+            renames: [lowE]
+            # Speed in evaluations/second
+            speed: 3000
+            # Nuisance parameters (do not change)
+            nuisance: [calib]"""
 
 
 def is_installed(**kwargs):
