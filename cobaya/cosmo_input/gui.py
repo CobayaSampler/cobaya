@@ -12,19 +12,21 @@ from pprint import pformat
 from cobaya.yaml import yaml_dump
 from cobaya.cosmo_input import input_database
 from cobaya.cosmo_input.create_input import create_input
-from cobaya.citation import prettyprint_citation, citation
-from cobaya.tools import warn_deprecation
+from cobaya.citation import prettyprint_citation, citation, get_citation_info
+from cobaya.tools import warn_deprecation, get_modules
+from cobaya.doc import _kinds, dump_defaults
+from cobaya.conventions import subfolders
 
 try:
     from PySide.QtGui import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
     from PySide.QtGui import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
-    from PySide.QtGui import QFileDialog, QCheckBox, QLabel
+    from PySide.QtGui import QFileDialog, QCheckBox, QLabel, QMenuBar, QAction, QDialog
     from PySide.QtCore import Slot
 except ImportError:
     try:
         from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
         from PySide2.QtWidgets import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
-        from PySide2.QtWidgets import QFileDialog, QCheckBox, QLabel
+        from PySide2.QtWidgets import QFileDialog, QCheckBox, QLabel, QMenuBar, QAction, QDialog
         from PySide2.QtCore import Slot
     except ImportError:
         QWidget, Slot = object, (lambda: lambda *x: None)
@@ -47,9 +49,25 @@ class MainWindow(QWidget):
         self.move(
             QApplication.desktop().screenGeometry().center() - self.rect().center())
         self.show()
+        # Menu bar for defaults
+        self.menubar = QMenuBar()
+        defaults_menu = self.menubar.addMenu('&Show defaults for a module...')
+        menu_actions = {}
+        for kind in _kinds:
+            submenu = defaults_menu.addMenu(subfolders[kind])
+            modules = get_modules(kind)
+            menu_actions[kind] = {}
+            for module in modules:
+                menu_actions[kind][module] = QAction(module, self)
+                menu_actions[kind][module].setData((kind, module))
+                menu_actions[kind][module].triggered.connect(self.show_defaults)
+                submenu.addAction(menu_actions[kind][module])
         # Main layout
+        self.menu_layout = QVBoxLayout()
+        self.menu_layout.addWidget(self.menubar)
+        self.setLayout(self.menu_layout)
         self.layout = QHBoxLayout()
-        self.setLayout(self.layout)
+        self.menu_layout.addLayout(self.layout)
         self.layout_left = QVBoxLayout()
         self.layout.addLayout(self.layout_left)
         self.layout_output = QVBoxLayout()
@@ -197,6 +215,56 @@ class MainWindow(QWidget):
             fname += fsuffix
         with open(fname, "w+") as f:
             f.write(self.display_tabs.currentWidget().toPlainText())
+
+    @Slot()
+    def copy_clipb(self):
+        self.clipboard.setText(self.display_tabs.currentWidget().toPlainText())
+
+    def show_defaults(self):
+        kind, module = self.sender().data()
+        self.current_defaults_diag = DefaultsDialog(kind, module, parent=self)
+
+
+class DefaultsDialog(QWidget):
+
+    def __init__(self, kind, module, parent=None):
+        super(DefaultsDialog, self).__init__()
+        self.clipboard = parent.clipboard
+        self.setWindowTitle("%s : %s" % (kind, module))
+        self.setGeometry(0, 0, 500, 500)
+        self.move(
+            QApplication.desktop().screenGeometry().center() - self.rect().center())
+        self.show()
+        # Main layout
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
+        self.display_tabs = QTabWidget()
+        self.display = {}
+        for k in ["yaml", "python", "citation"]:
+            self.display[k] = QTextEdit()
+            self.display[k].setLineWrapMode(QTextEdit.NoWrap)
+            self.display[k].setFontFamily("mono")
+            self.display[k].setCursorWidth(0)
+            self.display[k].setReadOnly(True)
+            self.display_tabs.addTab(self.display[k], k)
+        self.layout.addWidget(self.display_tabs)
+        # Fill text
+        defaults_txt = dump_defaults(module, kind)
+        from cobaya.yaml import yaml_load
+        self.display["python"].setText(
+            "from collections import OrderedDict\n\ninfo = " +
+            pformat(yaml_load(defaults_txt)))
+        self.display["yaml"].setText(defaults_txt)
+        self.display["citation"].setText(get_citation_info(module, kind))
+        # Buttons
+        self.buttons = QHBoxLayout()
+        self.close_button = QPushButton('Close', self)
+        self.copy_button = QPushButton('Copy to clipboard', self)
+        self.buttons.addWidget(self.close_button)
+        self.buttons.addWidget(self.copy_button)
+        self.close_button.released.connect(self.close)
+        self.copy_button.released.connect(self.copy_clipb)
+        self.layout.addLayout(self.buttons)
 
     @Slot()
     def copy_clipb(self):
