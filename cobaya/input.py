@@ -376,8 +376,30 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
 class HasDefaults(object):
 
     @classmethod
-    def get_defaults(cls):
+    def get_defaults(cls, return_yaml=False):
+        """
+        Return defaults for this module, with syntax:
+
+        .. code::
+           [kind]
+             [module_name]:
+               option: value
+               [...]
+
+           params:
+             [...]  # if required
+
+           prior:
+             [...]  # if required
+
+        If keyword `return_yaml` is set to True, it returns literally that,
+        whereas if False (default), it returns the corresponding Python dict.
+        """
         folder = os.path.split(inspect.getfile(cls))[0]
         name = cls.__name__
         path_to_defaults = os.path.join(folder, name + ".yaml")
-        return yaml_load_file(path_to_defaults)
+        if return_yaml:
+            with open(path_to_defaults, "r") as filedef:
+                return "".join(filedef.readlines())
+        else:
+            return yaml_load_file(path_to_defaults)

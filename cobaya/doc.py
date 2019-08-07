@@ -20,7 +20,7 @@ _indent = 2 * " "
 
 
 def dump_defaults(module, kind=None):
-    return yaml_dump(get_class(module, kind=kind).get_defaults())
+    return get_class(module, kind=kind).get_defaults(return_yaml=True)
 
 
 # Command-line script ####################################################################
