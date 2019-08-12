@@ -1,1 +1,5 @@
-from .sdss_dr12_consensus_final import sdss_dr12_consensus_final, is_installed, install, get_path
+from cobaya.likelihoods._bao_prototype import _bao_prototype
+
+
+class sdss_dr12_consensus_final(_bao_prototype):
+    pass

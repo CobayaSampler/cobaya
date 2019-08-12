@@ -53,18 +53,15 @@ from __future__ import division
 from __future__ import print_function
 
 # Global
-import os
 import numpy as np
 import scipy
 from scipy.interpolate import UnivariateSpline
 import copy
-import logging
 
 # Local
-from cobaya.likelihood import Likelihood
+from cobaya.likelihoods._base_classes import _DataSetLikelihood
 from cobaya.log import LoggedError
-from cobaya.conventions import _path_install, _c_km_s
-from cobaya.install import download_github_release
+from cobaya.conventions import _c_km_s
 
 # DES data types
 def_DES_types = ['xip', 'xim', 'gammat', 'wtheta']
@@ -136,48 +133,30 @@ def get_def_cuts():
     return ranges
 
 
-class _des_prototype(Likelihood):
+class _des_prototype(_DataSetLikelihood):
+    install_options = {"github_repository": "CobayaSampler/des_data", "github_release": "v1.0"}
 
-    des_data_name = "des_data"  # Name of data *and* covmats repo/folder
-    des_data_version = "v1.0"  # Repo version
+    def load_dataset_file(self, filename, dataset_params):
+        self.l_max = self.l_max or int(50000 * self.acc)  # lmax here is an internal parameter for transforms
+        if filename.endswith(".fits"):
 
-    def initialize(self):
-        self.l_max = self.l_max or int(50000 * self.acc)
-        if os.path.isabs(self.dataset_file):
-            dataset_file = self.dataset_file
-        else:
-            # If no path specified, use the modules path
-            if self.path:
-                dataset_file_path = self.path
-            elif self.path_install:
-                dataset_file_path = os.path.join(
-                    self.path_install, "data", self.__class__.des_data_name)
-            else:
+            if dataset_params:
                 raise LoggedError(
-                    self.log,
-                    "No path given to the DES data. Set the likelihood property 'path' "
-                    "or the common property '%s'.", _path_install)
-            dataset_file = os.path.normpath(
-                os.path.join(dataset_file_path, self.dataset_file))
-        try:
-            if dataset_file.endswith(".fits"):
-                if self.dataset_params:
-                    raise LoggedError(
-                        self.log, "'dataset_params' can only be specified "
-                        "for .dataset (not .fits) file.")
-                self.load_fits_data(dataset_file)
-            else:
-                self.load_dataset(dataset_file, self.dataset_params)
-        except IOError:
-            raise LoggedError(
-                self.log, "The data file '%s' could not be found at '%s'. "
-                "Check your paths!", self.dataset_file, dataset_file_path)
+                    self.log, "'dataset_params' can only be specified "
+                              "for .dataset (not .fits) file.")
+            try:
+
+                self.load_fits_data(filename)
+            except IOError:
+                raise LoggedError(
+                    self.log, "The data file '%s' could not be found'. "
+                              "Check your paths!", filename)
+
+        else:
+            super(_des_prototype, self).load_dataset_file(filename, dataset_params)
         self.initialize_postload()
 
-    def load_dataset(self, filename, dataset_params):
-        from getdist import IniFile
-        ini = IniFile(filename)
-        ini.params.update(dataset_params or {})
+    def init_params(self, ini):
         self.indices = []
         self.used_indices = []
         self.used_items = []
@@ -224,7 +203,7 @@ class _des_prototype(Likelihood):
                 corr[f1, f2][ix] = dat
                 if ranges[tp][f1, f2] is not None:
                     mn, mx = ranges[tp][f1, f2]
-                    if self.theta_bins[ix] > mn and self.theta_bins[ix] < mx:
+                    if mn < self.theta_bins[ix] < mx:
                         self.thetas.append(self.theta_bins[ix])
                         self.used_indices.append(cov_ix)
                         self.used_items.append(self.indices[-1])
@@ -267,7 +246,7 @@ class _des_prototype(Likelihood):
                 if not (f1, f2) in self.bin_pairs[i]:
                     self.bin_pairs[i].append((f1, f2))
                 mn, mx = ranges[tp][f1, f2]
-                if theta > mn and theta < mx:
+                if mn < theta < mx:
                     self.used_indices.append(cov_ix)
                     self.used_items.append(self.indices[-1])
                 cov_ix += 1
@@ -700,25 +679,6 @@ class _des_prototype(Likelihood):
                 ax.set_title('%s-%s' % (f2 + 1, f1 + 1))
         return axs
 
-    # Installation methods ###############################################################
-
-    @classmethod
-    def get_path(cls, path):
-        return os.path.realpath(os.path.join(path, "data", cls.des_data_name))
-
-    @classmethod
-    def is_installed(cls, **kwargs):
-        return os.path.exists(cls.get_path(kwargs["path"]))
-
-    @classmethod
-    def install(cls, path=None, force=False, code=False, data=True, no_progress_bars=False):
-        if not data:
-            return True
-        log = logging.getLogger(__name__.split(".")[-1])
-        log.info("Downloading DES data...")
-        return download_github_release(
-            os.path.join(path, "data"), cls.des_data_name, cls.des_data_version,
-            no_progress_bars=no_progress_bars)
 
 # Conversion .fits --> .dataset  #########################################################
 

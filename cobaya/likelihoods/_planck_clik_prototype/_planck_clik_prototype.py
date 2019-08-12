@@ -3,7 +3,7 @@ r"""
 
 :Synopsis: Definition of the clik-based likelihoods
 :Author: Jesus Torrado
-         (based on MontePython's version by Julien Lesgourgues and Benjamin Audren)
+         (initially based on MontePython's version by Julien Lesgourgues and Benjamin Audren)
 
 Family of Planck CMB likelihoods, as interfaces to the official ``clik`` code (and some
 native ``cmblikes`` ones) You can find a description of the different likelihoods in the
@@ -116,9 +116,7 @@ Manual installation of Planck 2015 likelihoods
 
 .. warning::
 
-   For the time being (waiting for Planck 2018's data release), use instead the
-   alternative 'clik' code at
-   `<https://cdn.cosmologist.info/cosmobox/plc-2.1_py3.tar.bz2>`_, which is
+   Use the 2018 likelihood code instead the 2015 one, which is
    compatible with Python 3 and gcc `>5`.
 
 Assuming you are installing all your likelihoods under ``/path/to/likelihoods``:
@@ -174,12 +172,10 @@ import six
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
-from cobaya.conventions import _path_install, _likelihood, _params, _prior
+from cobaya.conventions import _path_install, _likelihood
 from cobaya.input import get_default_info, HasDefaults
 from cobaya.install import pip_install, download_file
 from cobaya.tools import are_different_params_lists, create_banner
-from cobaya.yaml import yaml_load
-
 
 _deprecation_msg_2015 = create_banner("""
 The likelihoods from the Planck 2015 data release have been superseeded
@@ -210,8 +206,8 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
                 else:
                     raise LoggedError(
                         self.log, "No path given to the Planck likelihood. Set the "
-                        "likelihood property 'path' or the common property "
-                        "'%s'.", _path_install)
+                                  "likelihood property 'path' or the common property "
+                                  "'%s'.", _path_install)
             else:
                 self.path_clik = self.path
             self.log.info("Importing clik from %s", self.path_clik)
@@ -233,9 +229,9 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
             if not os.path.exists(self.clik_file):
                 raise LoggedError(
                     self.log, "The .clik file was not found where specified in the "
-                    "'clik_file' field of the settings of this likelihood. Maybe the "
-                    "'path' given is not correct? The full path where the .clik file was "
-                    "searched for is '%s'", self.clik_file)
+                              "'clik_file' field of the settings of this likelihood. Maybe the "
+                              "'path' given is not correct? The full path where the .clik file was "
+                              "searched for is '%s'", self.clik_file)
             # Else: unknown clik error
             self.log.error("An unexpected error occurred in clik (possibly related to "
                            "multiple simultaneous initialization, or simultaneous "
@@ -247,8 +243,8 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
         if "b'A_planck'" in self.expected_params:
             self.expected_params[self.expected_params.index("b'A_planck'")] = "A_planck"
         # line added to deal with a bug in planck likelihood release:
-        # A_planck called A_Planck in plik_lite
-        if "_lite" in self.name:
+        # A_planck called A_Planck in plik_lite 2015
+        if "_lite" in self.name and 'A_Planck' in self.expected_params:
             i = self.expected_params.index('A_Planck')
             self.expected_params[i] = 'A_planck'
         # Check that the parameters are the right ones
@@ -257,8 +253,8 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
         if differences:
             raise LoggedError(
                 self.log, "Configuration error in parameters: %r. "
-                "If this has happened without you fiddling with the defaults, "
-                "please open an issue in GitHub.", differences)
+                          "If this has happened without you fiddling with the defaults, "
+                          "please open an issue in GitHub.", differences)
         # Placeholder for vector passed to clik
         self.l_maxs = self.clik.get_lmax()
         length = (len(self.l_maxs) if self.lensing else len(self.clik.get_has_cl()))
@@ -298,23 +294,70 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
         # Actually, it does not work for low-l likelihoods, which is quite dangerous!
 
     @classmethod
-    def get_defaults(cls, return_yaml=False):
-        defaults = textwrap.dedent(cls.defaults)
-        nuisances = yaml_load(defaults)[_likelihood][cls.__name__].get("nuisance", [])
-        release = next(year for year in ["2015", "2018"] if year in cls.__name__)
-        if nuisances:
-            defaults += "\n\n%s:" % _params
-        for nui in nuisances:
-            defaults += nuisance_params[release][nui]
-        if any([nuisance_priors[release].get(nui) for nui in nuisances]):
-            defaults += "\n\n%s:" % _prior
-        for nui in nuisances:
-            defaults += nuisance_priors[release].get(nui, "")
-        defaults = defaults.strip()
-        if return_yaml:
-            return defaults
-        else:
-            return yaml_load(defaults)
+    def is_installed(cls, **kwargs):
+        code_path = common_path
+        data_path = get_data_path(cls.__name__)
+        result = True
+        if kwargs["code"]:
+            result &= is_installed_clik(os.path.realpath(
+                os.path.join(kwargs["path"], "code", code_path)))
+        if kwargs["data"]:
+            _, filename = get_product_id_and_clik_file(cls.get_module_class())
+            result &= os.path.exists(os.path.realpath(
+                os.path.join(kwargs["path"], "data", data_path, filename)))
+            from cobaya.likelihoods.planck_2018_cmblikes_lensing import planck_2018_cmblikes_lensing
+            result &= planck_2018_cmblikes_lensing.is_installed(**kwargs)
+        return result
+
+    @classmethod
+    def install(cls, path=None, force=False, code=True, data=True, no_progress_bars=False):
+        name = cls.get_module_class()
+        log = logging.getLogger(name)
+        path_names = {"code": common_path, "data": get_data_path(name)}
+        import platform
+        if platform.system() == "Windows":
+            log.error("Not compatible with Windows.")
+            return False
+        global _clik_install_failed
+        if _clik_install_failed:
+            log.info("Previous clik install failed, skipping")
+            return False
+        # Create common folders: all planck likelihoods share install folder for code and data
+        paths = {}
+        for s in ("code", "data"):
+            if eval(s):
+                paths[s] = os.path.realpath(os.path.join(path, s, path_names[s]))
+                if not os.path.exists(paths[s]):
+                    os.makedirs(paths[s])
+        success = True
+        # Install clik
+        if code and (not is_installed_clik(paths["code"]) or force):
+            log.info("Installing the clik code.")
+            success *= install_clik(paths["code"], no_progress_bars=no_progress_bars)
+            if not success:
+                log.warning("clik code installation failed! "
+                            "Try configuring+compiling by hand at " + paths["code"])
+                _clik_install_failed = True
+        if data:
+            # 2nd test, in case the code wasn't there but the data is:
+            if force or not cls.is_installed(path=path, code=False, data=True):
+
+                product_id, _ = get_product_id_and_clik_file(name)
+                # Download and decompress the particular likelihood
+                url = (r"https://pla.esac.esa.int/pla-sl/"
+                       "data-action?COSMOLOGY.COSMOLOGY_OID=" + product_id)
+                # url = get_default_info(name, _likelihood)[_likelihood][name].get("url", url)
+                if not download_file(url, paths["data"], decompress=True,
+                                     logger=log, no_progress_bars=no_progress_bars):
+                    log.error("Not possible to download this likelihood.")
+                    success = False
+                # Additional data and covmats, stored in same repo as the 2018 python lensing likelihood
+                from cobaya.likelihoods.planck_2018_cmblikes_lensing import planck_2018_cmblikes_lensing
+                if not planck_2018_cmblikes_lensing.is_installed(data=True, path=path):
+                    success *= planck_2018_cmblikes_lensing.install(path=path, force=force, code=code, data=data,
+                                                                    no_progress_bars=no_progress_bars)
+        return success
+
 
 # Installation routines ##################################################################
 
@@ -396,27 +439,27 @@ def install_clik(path, no_progress_bars=False):
         if exit_status:
             raise LoggedError(log, "Failed installing '%s'.", req)
     log.info("Downloading...")
-    click_url = 'https://cdn.cosmologist.info/cosmobox/plc-2.1_py3.tar.bz2'
+    click_url = 'https://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLOGY_OID=151912'
     if not download_file(click_url, path, decompress=True,
                          no_progress_bars=no_progress_bars, logger=log):
         log.error("Not possible to download clik.")
         return False
-    source_dir = os.path.join(path, os.listdir(path)[0])
+    source_dir = os.path.join(path, 'code', 'plc_3.0', 'plc-3.01')
     log.info('Installing from directory %s' % source_dir)
     # The following code patches a problem with the download source of cfitsio.
     # Left here in case the FTP server breaks again.
-    # if True:  # should be fixed: maybe a ping to the FTP server???
-    #     log.info("Patching origin of cfitsio")
-    #     cfitsio_filename = os.path.join(source_dir, "waf_tools", "cfitsio.py")
-    #     with open(cfitsio_filename, "r") as cfitsio_file:
-    #         lines = cfitsio_file.readlines()
-    #         i_offending = next(i for i, l in enumerate(lines) if ".tar.gz" in l)
-    #         lines[i_offending] = (
-    #             "  atl.installsmthg_pre(ctx,"
-    #             "'http://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio3280.tar.gz',"
-    #             "'cfitsio3280.tar.gz')\n")
-    #     with open(cfitsio_filename, "w") as cfitsio_file:
-    #         cfitsio_file.write("".join(lines))
+    if True:  # should be fixed: maybe a ping to the FTP server???
+        log.info("Patching origin of cfitsio")
+        cfitsio_filename = os.path.join(source_dir, "waf_tools", "cfitsio.py")
+        with open(cfitsio_filename, "r") as cfitsio_file:
+            lines = cfitsio_file.readlines()
+
+            i_offending = next(i for i, l in enumerate(lines) if ".tar.gz" in l)
+            lines[i_offending] = lines[i_offending].replace(
+                "ftp://heasarc.gsfc.nasa.gov/software/fitsio/c/cfitsio3280.tar.gz",
+                "https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio3280.tar.gz")
+        with open(cfitsio_filename, "w") as cfitsio_file:
+            cfitsio_file.write("".join(lines))
     cwd = os.getcwd()
     try:
         os.chdir(source_dir)
@@ -438,804 +481,3 @@ def get_product_id_and_clik_file(name):
     """Gets the PLA product info from the defaults file."""
     defaults = get_default_info(name, _likelihood)[_likelihood][name]
     return defaults.get("product_id"), defaults.get("clik_file")
-
-
-def is_installed(**kwargs):
-    code_path = common_path
-    data_path = get_data_path(kwargs["name"])
-    result = True
-    if kwargs["code"]:
-        result &= is_installed_clik(os.path.realpath(
-            os.path.join(kwargs["path"], "code", code_path)))
-    if kwargs["data"]:
-        _, filename = get_product_id_and_clik_file(kwargs["name"])
-        result &= os.path.exists(os.path.realpath(
-            os.path.join(kwargs["path"], "data", data_path, filename)))
-        from cobaya.likelihoods.planck_2015_lensing_cmblikes import \
-            is_installed as is_installed_supp
-        result &= is_installed_supp(**kwargs)
-    return result
-
-
-def install(path=None, name=None, force=False, code=True, data=True,
-            no_progress_bars=False):
-    log = logging.getLogger(name)
-    path_names = {"code": common_path, "data": get_data_path(name)}
-    import platform
-    if platform.system() == "Windows":
-        log.error("Not compatible with Windows.")
-        return False
-    global _clik_install_failed
-    if _clik_install_failed:
-        log.info("Previous clik install failed, skipping")
-        return False
-    # Create common folders: all planck likelihoods share install folder for code and data
-    paths = {}
-    for s in ("code", "data"):
-        if eval(s):
-            paths[s] = os.path.realpath(os.path.join(path, s, path_names[s]))
-            if not os.path.exists(paths[s]):
-                os.makedirs(paths[s])
-    success = True
-    # Install clik
-    if code and (not is_installed_clik(paths["code"]) or force):
-        log.info("Installing the clik code.")
-        success *= install_clik(paths["code"], no_progress_bars=no_progress_bars)
-        if not success:
-            log.warning("clik code installation failed! "
-                        "Try configuring+compiling by hand at " + paths["code"])
-            _clik_install_failed = True
-    if data:
-        # 2nd test, in case the code wasn't there but the data is:
-        if force or not is_installed(path=path, name=name, code=False, data=True):
-            if "2015" in name:
-                # Extract product_id
-                product_id, _ = get_product_id_and_clik_file(name)
-                # Download and decompress the particular likelihood
-                url = (r"https://pla.esac.esa.int/pla-sl/"
-                       "data-action?COSMOLOGY.COSMOLOGY_OID=" + product_id)
-            else:
-                # OVERRIDE! -- for baseline only
-                url = 'http://localhost:8000//home/jesus/scratch/plc_3.0_release/baseline.tar.gz'
-            log.info("Downloading likelihood data...")
-            if not download_file(url, paths["data"], decompress=True,
-                                 logger=log, no_progress_bars=no_progress_bars):
-                log.error("Not possible to download this likelihood.")
-                success = False
-            # Additional data and covmats
-            from cobaya.likelihoods.planck_2015_lensing_cmblikes import \
-                install as install_supp
-            success *= install_supp(path=path, force=force, code=code, data=data,
-                                    no_progress_bars=no_progress_bars)
-    return success
-
-
-# Default parameters subclasses ##########################################################
-
-params_2015_calib = r"""
-  A_planck:
-    prior:
-      dist: norm
-      loc: 1
-      scale: 0.0025
-    ref:
-      dist: norm
-      loc: 1
-      scale: 0.002
-    proposal: 0.0005
-    latex: y_\mathrm{cal}
-    renames: calPlanck"""
-
-params_2015_TT = r"""
-  cib_index: -1.3
-  A_cib_217:
-    prior:
-      dist: uniform
-      min: 0
-      max: 200
-    ref:
-      dist: norm
-      loc: 65
-      scale: 10
-    proposal: 1.2
-    latex: A^\mathrm{CIB}_{217}
-    renames: acib217
-  xi_sz_cib:
-    prior:
-      dist: uniform
-      min: 0
-      max: 1
-    ref:
-      dist: halfnorm
-      loc: 0
-      scale: 0.1
-    proposal: 0.1
-    latex: \xi^{\mathrm{tSZ}\times\mathrm{CIB}}
-    renames: xi
-  A_sz:
-    prior:
-      dist: uniform
-      min: 0
-      max: 10
-    ref:
-      dist: norm
-      loc: 5
-      scale: 2
-    proposal: 0.6
-    latex: A^\mathrm{tSZ}_{143}
-    renames: asz143
-  ps_A_100_100:
-    prior:
-      dist: uniform
-      min: 0
-      max: 400
-    ref:
-      dist: norm
-      loc: 250
-      scale: 24
-    proposal: 17
-    latex: A^\mathrm{PS}_{100}
-    renames: aps100
-  ps_A_143_143:
-    prior:
-      dist: uniform
-      min: 0
-      max: 400
-    ref:
-      dist: norm
-      loc: 40
-      scale: 10
-    proposal: 3
-    latex: A^\mathrm{PS}_{143}
-    renames: aps143
-  ps_A_143_217:
-    prior:
-      dist: uniform
-      min: 0
-      max: 400
-    ref:
-      dist: norm
-      loc: 40
-      scale: 12
-    proposal: 2
-    latex: A^\mathrm{PS}_{\mathrm{143}\times\mathrm{217}}
-    renames: aps143217
-  ps_A_217_217:
-    prior:
-      dist: uniform
-      min: 0
-      max: 400
-    ref:
-      dist: norm
-      loc: 100
-      scale: 13
-    proposal: 2.5
-    latex: A^\mathrm{PS}_{217}
-    renames: aps217
-  ksz_norm:
-    prior:
-      dist: uniform
-      min: 0
-      max: 10
-    ref:
-      dist: halfnorm
-      loc: 0
-      scale: 3
-    proposal: 1
-    latex: A^\mathrm{kSZ}
-    renames: aksz
-  gal545_A_100:
-    prior:
-      dist: norm
-      loc: 7
-      scale: 2
-    ref:
-      dist: norm
-      loc: 7
-      scale: 2
-    proposal: 1
-    latex: A^\mathrm{dustTT}_{100}
-    renames: kgal100
-  gal545_A_143:
-    prior:
-      dist: norm
-      loc: 9
-      scale: 2
-    ref:
-      dist: norm
-      loc: 9
-      scale: 2
-    proposal: 1
-    latex: A^\mathrm{dustTT}_{143}
-    renames: kgal143
-  gal545_A_143_217:
-    prior:
-      dist: norm
-      loc: 21
-      scale: 8.5
-    ref:
-      dist: norm
-      loc: 21
-      scale: 4
-    proposal: 1.5
-    latex: A^\mathrm{dustTT}_{\mathrm{143}\times\mathrm{217}}
-    renames: kgal143217
-  gal545_A_217:
-    prior:
-      dist: norm
-      loc: 80
-      scale: 20
-    ref:
-      dist: norm
-      loc: 80
-      scale: 15
-    proposal: 2
-    latex: A^\mathrm{dustTT}_{217}
-    renames: kgal217
-  calib_100T:
-    prior:
-      dist: norm
-      loc: 0.999
-      scale: 0.001
-    ref:
-      dist: norm
-      loc: 0.999
-      scale: 0.001
-    proposal: 0.0005
-    latex: c_{100}
-    renames: cal0
-  calib_217T:
-    prior:
-      dist: norm
-      loc: 0.995
-      scale: 0.002
-    ref:
-      dist: norm
-      loc: 0.995
-      scale: 0.002
-    proposal: 0.001
-    latex: c_{217}
-    renames: cal2"""
-
-params_2015_TEEE = r"""
-  A_pol: 1
-  calib_100P: 1
-  calib_143P: 1
-  calib_217P: 1
-  galf_EE_index: -2.4
-  galf_TE_index: -2.4
-  bleak_epsilon_0_0T_0E: 0
-  bleak_epsilon_1_0T_0E: 0
-  bleak_epsilon_2_0T_0E: 0
-  bleak_epsilon_3_0T_0E: 0
-  bleak_epsilon_4_0T_0E: 0
-  bleak_epsilon_0_0T_1E: 0
-  bleak_epsilon_1_0T_1E: 0
-  bleak_epsilon_2_0T_1E: 0
-  bleak_epsilon_3_0T_1E: 0
-  bleak_epsilon_4_0T_1E: 0
-  bleak_epsilon_0_0T_2E: 0
-  bleak_epsilon_1_0T_2E: 0
-  bleak_epsilon_2_0T_2E: 0
-  bleak_epsilon_3_0T_2E: 0
-  bleak_epsilon_4_0T_2E: 0
-  bleak_epsilon_0_1T_1E: 0
-  bleak_epsilon_1_1T_1E: 0
-  bleak_epsilon_2_1T_1E: 0
-  bleak_epsilon_3_1T_1E: 0
-  bleak_epsilon_4_1T_1E: 0
-  bleak_epsilon_0_1T_2E: 0
-  bleak_epsilon_1_1T_2E: 0
-  bleak_epsilon_2_1T_2E: 0
-  bleak_epsilon_3_1T_2E: 0
-  bleak_epsilon_4_1T_2E: 0
-  bleak_epsilon_0_2T_2E: 0
-  bleak_epsilon_1_2T_2E: 0
-  bleak_epsilon_2_2T_2E: 0
-  bleak_epsilon_3_2T_2E: 0
-  bleak_epsilon_4_2T_2E: 0
-  bleak_epsilon_0_0E_0E: 0
-  bleak_epsilon_1_0E_0E: 0
-  bleak_epsilon_2_0E_0E: 0
-  bleak_epsilon_3_0E_0E: 0
-  bleak_epsilon_4_0E_0E: 0
-  bleak_epsilon_0_0E_1E: 0
-  bleak_epsilon_1_0E_1E: 0
-  bleak_epsilon_2_0E_1E: 0
-  bleak_epsilon_3_0E_1E: 0
-  bleak_epsilon_4_0E_1E: 0
-  bleak_epsilon_0_0E_2E: 0
-  bleak_epsilon_1_0E_2E: 0
-  bleak_epsilon_2_0E_2E: 0
-  bleak_epsilon_3_0E_2E: 0
-  bleak_epsilon_4_0E_2E: 0
-  bleak_epsilon_0_1E_1E: 0
-  bleak_epsilon_1_1E_1E: 0
-  bleak_epsilon_2_1E_1E: 0
-  bleak_epsilon_3_1E_1E: 0
-  bleak_epsilon_4_1E_1E: 0
-  bleak_epsilon_0_1E_2E: 0
-  bleak_epsilon_1_1E_2E: 0
-  bleak_epsilon_2_1E_2E: 0
-  bleak_epsilon_3_1E_2E: 0
-  bleak_epsilon_4_1E_2E: 0
-  bleak_epsilon_0_2E_2E: 0
-  bleak_epsilon_1_2E_2E: 0
-  bleak_epsilon_2_2E_2E: 0
-  bleak_epsilon_3_2E_2E: 0
-  bleak_epsilon_4_2E_2E: 0
-  galf_EE_A_100:
-    prior:
-      dist: norm
-      loc: 0.060
-      scale: 0.012
-    ref:
-      dist: norm
-      loc: 0.06
-      scale: 0.012
-    proposal: 0.006
-    latex: A^\mathrm{dustEE}_{100}
-    renames: galfEE100
-  galf_EE_A_100_143:
-    prior:
-      dist: norm
-      loc: 0.050
-      scale: 0.015
-    ref:
-      dist: norm
-      loc: 0.05
-      scale: 0.015
-    proposal: 0.007
-    latex: A^\mathrm{dustEE}_{\mathrm{100}\times\mathrm{143}}
-    renames: galfEE100143
-  galf_EE_A_100_217:
-    prior:
-      dist: norm
-      loc: 0.110
-      scale: 0.033
-    ref:
-      dist: norm
-      loc: 0.11
-      scale: 0.03
-    proposal: 0.02
-    latex: A^\mathrm{dustEE}_{\mathrm{100}\times\mathrm{217}}
-    renames: galfEE100217
-  galf_EE_A_143:
-    prior:
-      dist: norm
-      loc: 0.10
-      scale: 0.02
-    ref:
-      dist: norm
-      loc: 0.1
-      scale: 0.02
-    proposal: 0.01
-    latex: A^\mathrm{dustEE}_{143}
-    renames: galfEE143
-  galf_EE_A_143_217:
-    prior:
-      dist: norm
-      loc: 0.240
-      scale: 0.048
-    ref:
-      dist: norm
-      loc: 0.24
-      scale: 0.05
-    proposal: 0.03
-    latex: A^\mathrm{dustEE}_{\mathrm{143}\times\mathrm{217}}
-    renames: galfEE143217
-  galf_EE_A_217:
-    prior:
-      dist: norm
-      loc: 0.72
-      scale: 0.14
-    ref:
-      dist: norm
-      loc: 0.72
-      scale: 0.15
-    proposal: 0.07
-    latex: A^\mathrm{dustEE}_{217}
-    renames: galfEE217
-  galf_TE_A_100:
-    prior:
-      dist: norm
-      loc: 0.140
-      scale: 0.042
-    ref:
-      dist: norm
-      loc: 0.14
-      scale: 0.04
-    proposal: 0.02
-    latex: A^\mathrm{dustTE}_{100}
-    renames: galfTE100
-  galf_TE_A_100_143:
-    prior:
-      dist: norm
-      loc: 0.120
-      scale: 0.036
-    ref:
-      dist: norm
-      loc: 0.12
-      scale: 0.04
-    proposal: 0.02
-    latex: A^\mathrm{dustTE}_{\mathrm{100}\times\mathrm{143}}
-    renames: galfTE100143
-  galf_TE_A_100_217:
-    prior:
-      dist: norm
-      loc: 0.30
-      scale: 0.09
-    ref:
-      dist: norm
-      loc: 0.3
-      scale: 0.09
-    proposal: 0.05
-    latex: A^\mathrm{dustTE}_{\mathrm{100}\times\mathrm{217}}
-    renames: galfTE100217
-  galf_TE_A_143:
-    prior:
-      dist: norm
-      loc: 0.240
-      scale: 0.072
-    ref:
-      dist: norm
-      loc: 0.24
-      scale: 0.07
-    proposal: 0.04
-    latex: A^\mathrm{dustTE}_{143}
-    renames: galfTE143
-  galf_TE_A_143_217:
-    prior:
-      dist: norm
-      loc: 0.60
-      scale: 0.18
-    ref:
-      dist: norm
-      loc: 0.60
-      scale: 0.18
-    proposal: 0.1
-    latex: A^\mathrm{dustTE}_{\mathrm{143}\times\mathrm{217}}
-    renames: galfTE143217
-  galf_TE_A_217:
-    prior:
-      dist: norm
-      loc: 1.80
-      scale: 0.54
-    ref:
-      dist: norm
-      loc: 1.8
-      scale: 0.5
-    proposal: 0.3
-    latex: A^\mathrm{dustTE}_{217}
-    renames: galfTE217"""
-
-params_2018_calib = r"""
-  A_planck:
-    prior:
-      dist: norm
-      loc: 1
-      scale: 0.0025
-    ref:
-      dist: norm
-      loc: 1
-      scale: 0.002
-    proposal: 0.0005
-    latex: y_\mathrm{cal}
-    renames: calPlanck"""
-
-params_2018_TT = r"""
-  # CIB & SZ
-  cib_index: -1.3
-  A_cib_217:
-    prior:
-      dist: uniform
-      min: 0
-      max: 200
-    ref:
-      dist: norm
-      loc: 67
-      scale: 10
-    proposal: 1.2
-    latex: A^\mathrm{CIB}_{217}
-    renames: acib217
-  xi_sz_cib:
-    prior:
-      dist: uniform
-      min: 0
-      max: 1
-    ref:
-      dist: halfnorm
-      loc: 0
-      scale: 0.1
-    proposal: 0.1
-    latex: \xi^{\mathrm{tSZ}\times\mathrm{CIB}}
-    renames: xi
-  A_sz:
-    prior:
-      dist: uniform
-      min: 0
-      max: 10
-    ref:
-      dist: norm
-      loc: 7
-      scale: 2
-    proposal: 0.6
-    latex: A^\mathrm{tSZ}_{143}
-    renames: asz143
-  ksz_norm:
-    prior:
-      dist: uniform
-      min: 0
-      max: 10
-    ref:
-      dist: halfnorm
-      loc: 0
-      scale: 3
-    proposal: 1
-    latex: A^\mathrm{kSZ}
-    renames: aksz
-  # Dust priors
-  gal545_A_100:
-    prior:
-      dist: norm
-      loc: 8.6
-      scale: 2
-    ref:
-      dist: norm
-      loc: 7
-      scale: 2
-    proposal: 1
-    latex: A^\mathrm{dustTT}_{100}
-    renames: kgal100
-  gal545_A_143:
-    prior:
-      dist: norm
-      loc: 10.6
-      scale: 2
-    ref:
-      dist: norm
-      loc: 9
-      scale: 2
-    proposal: 1
-    latex: A^\mathrm{dustTT}_{143}
-    renames: kgal143
-  gal545_A_143_217:
-    prior:
-      dist: norm
-      loc: 23.5
-      scale: 8.5
-    ref:
-      dist: norm
-      loc: 21
-      scale: 4
-    proposal: 1.5
-    latex: A^\mathrm{dustTT}_{\mathrm{143}\times\mathrm{217}}
-    renames: kgal143217
-  gal545_A_217:
-    prior:
-      dist: norm
-      loc: 91.9
-      scale: 20
-    ref:
-      dist: norm
-      loc: 80
-      scale: 15
-    proposal: 2
-    latex: A^\mathrm{dustTT}_{217}
-    renames: kgal217
-  # Calibration factors
-  calib_100T:
-    prior:
-      dist: norm
-      loc: 1.0002
-      scale: 0.0007
-    ref:
-      dist: norm
-      loc: 1.0002
-      scale: 0.001
-    proposal: 0.0005
-    latex: c_{100}
-    renames: cal0
-  calib_217T:
-    prior:
-      dist: norm
-      loc: 0.99805
-      scale: 0.00065
-    ref:
-      dist: norm
-      loc: 0.99805
-      scale: 0.001
-    proposal: 0.0005
-    latex: c_{217}
-    renames: cal2
-  # Subpixel effect
-  A_sbpx_100_100_TT: 1
-  A_sbpx_143_143_TT: 1
-  A_sbpx_143_217_TT: 1
-  A_sbpx_217_217_TT: 1
-  # Point source contributions
-  ps_A_100_100:
-    prior:
-      dist: uniform
-      min: 0
-      max: 400
-    ref:
-      dist: norm
-      loc: 257
-      scale: 24
-    proposal: 17
-    latex: A^\mathrm{PS}_{100}
-    renames: aps100
-  ps_A_143_143:
-    prior:
-      dist: uniform
-      min: 0
-      max: 400
-    ref:
-      dist: norm
-      loc: 47
-      scale: 10
-    proposal: 3
-    latex: A^\mathrm{PS}_{143}
-    renames: aps143
-  ps_A_143_217:
-    prior:
-      dist: uniform
-      min: 0
-      max: 400
-    ref:
-      dist: norm
-      loc: 40
-      scale: 12
-    proposal: 2
-    latex: A^\mathrm{PS}_{\mathrm{143}\times\mathrm{217}}
-    renames: aps143217
-  ps_A_217_217:
-    prior:
-      dist: uniform
-      min: 0
-      max: 400
-    ref:
-      dist: norm
-      loc: 104
-      scale: 13
-    proposal: 2.5
-    latex: A^\mathrm{PS}_{217}
-    renames: aps217"""
-
-params_2018_TEEE = r"""
-  # Dust priors
-  galf_TE_index: -2.4
-  galf_TE_A_100:
-    prior:
-      dist: norm
-      loc: 0.130
-      scale: 0.042
-    ref:
-      dist: norm
-      loc: 0.130
-      scale: 0.1
-    proposal: 0.1
-    latex: A^\mathrm{dustTE}_{100}
-    renames: galfTE100
-  galf_TE_A_100_143:
-    prior:
-      dist: norm
-      loc: 0.130
-      scale: 0.036
-    ref:
-      dist: norm
-      loc: 0.130
-      scale: 0.1
-    proposal: 0.1
-    latex: A^\mathrm{dustTE}_{\mathrm{100}\times\mathrm{143}}
-    renames: galfTE100143
-  galf_TE_A_100_217:
-    prior:
-      dist: norm
-      loc: 0.46
-      scale: 0.09
-    ref:
-      dist: norm
-      loc: 0.46
-      scale: 0.10
-    proposal: 0.10
-    latex: A^\mathrm{dustTE}_{\mathrm{100}\times\mathrm{217}}
-    renames: galfTE100217
-  galf_TE_A_143:
-    prior:
-      dist: norm
-      loc: 0.207
-      scale: 0.072
-    ref:
-      dist: norm
-      loc: 0.207
-      scale: 0.100
-    proposal: 0.100
-    latex: A^\mathrm{dustTE}_{143}
-    renames: galfTE143
-  galf_TE_A_143_217:
-    prior:
-      dist: norm
-      loc: 0.69
-      scale: 0.09
-    ref:
-      dist: norm
-      loc: 0.69
-      scale: 0.1
-    proposal: 0.1
-    latex: A^\mathrm{dustTE}_{\mathrm{143}\times\mathrm{217}}
-    renames: galfTE143217
-  galf_TE_A_217:
-    prior:
-      dist: norm
-      loc: 1.938
-      scale: 0.54
-    ref:
-      dist: norm
-      loc: 1.938
-      scale: 0.2
-    proposal: 0.2
-    latex: A^\mathrm{dustTE}_{217}
-    renames: galfTE217
-  # EE now recommended to be left to the central values of the stated priors
-  galf_EE_index: -2.4
-  galf_EE_A_100:
-    value: 0.055  # (± 0.014)
-    latex: A^\mathrm{dustEE}_{100}
-    renames: galfEE100
-  galf_EE_A_100_143:
-    value: 0.040  # (± 0.010)
-    latex: A^\mathrm{dustEE}_{\mathrm{100}\times\mathrm{143}}
-    renames: galfEE100143
-  galf_EE_A_100_217:
-    value: 0.094  # (± 0.023)
-    latex: A^\mathrm{dustEE}_{\mathrm{100}\times\mathrm{217}}
-    renames: galfEE100217
-  galf_EE_A_143:
-    value: 0.086  # (± 0.022)
-    latex: A^\mathrm{dustEE}_{143}
-    renames: galfEE143
-  galf_EE_A_143_217:
-    value: 0.21  # (± 0.051)
-    latex: A^\mathrm{dustEE}_{\mathrm{143}\times\mathrm{217}}
-    renames: galfEE143217
-  galf_EE_A_217:
-    value: 0.70  # (± 0.18)
-    latex: A^\mathrm{dustEE}_{217}
-    renames: galfEE217
-  # Calibration parameters
-  A_pol: 1
-  calib_100P: 1.021  # (± 0.01)
-  calib_143P: 0.966  # (± 0.01)
-  calib_217P: 1.040  # (± 0.01)
-  # EE End2End correlated noise
-  A_cnoise_e2e_100_100_EE: 1
-  A_cnoise_e2e_143_143_EE: 1
-  A_cnoise_e2e_217_217_EE: 1
-  # Subpixel effect
-  A_sbpx_100_100_EE: 1
-  A_sbpx_100_143_EE: 1
-  A_sbpx_100_217_EE: 1
-  A_sbpx_143_143_EE: 1
-  A_sbpx_143_217_EE: 1
-  A_sbpx_217_217_EE: 1"""
-
-nuisance_priors_2015_TT = """
-  SZ: "lambda ksz_norm, A_sz: stats.norm.logpdf(ksz_norm+1.6*A_sz, loc=9.5, scale=3.0)"
-"""
-
-nuisance_priors_2018_TT = nuisance_priors_2015_TT
-
-nuisance_2015_params = {
-    "calib": params_2015_calib, "TT": params_2015_TT, "TEEE": params_2015_TEEE}
-
-nuisance_2018_params = {
-    "calib": params_2018_calib, "TT": params_2018_TT, "TEEE": params_2018_TEEE}
-
-nuisance_2015_priors = {"TT": nuisance_priors_2015_TT}
-
-nuisance_2018_priors = {"TT": nuisance_priors_2018_TT}
-
-nuisance_params = {"2015": nuisance_2015_params, "2018": nuisance_2018_params}
-nuisance_priors = {"2015": nuisance_2015_priors, "2018": nuisance_2018_priors}

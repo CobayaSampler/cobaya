@@ -9,7 +9,6 @@
 # Python 2/3 compatibility
 from __future__ import absolute_import
 import numpy as np
-from copy import deepcopy
 from scipy.interpolate import RectBivariateSpline
 from six import string_types
 from itertools import chain
@@ -102,7 +101,7 @@ class _cosmo(Theory):
                         self.log, "Needs a 'sources' key, containing a dict with every "
                         "source name and definition")
                 # Check that no two sources with equal name but diff specification
-                for source, windown in v["sources"].items():
+                for source, window in v["sources"].items():
                     if source in getattr(self, "sources", {}):
                         # TODO: improve this test!!!
                         # (e.g. 2 z-vectors that fulfill np.allclose would fail a == test)

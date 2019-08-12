@@ -305,6 +305,7 @@ class minimize(Sampler):
         label_list = list(labels.keys())
         if hasattr(params, 'chi2_names'): label_list += params.chi2_names
         width = max([len(lab) for lab in label_list]) + 2
+
         def add_section(pars):
             for p, val in pars:
                 lab = labels.get(p, p)
@@ -313,6 +314,7 @@ class minimize(Sampler):
                     lines.append("%5d  %-17.9e %-*s %s" % (num, val, width, p, lab))
                 else:
                     lines.append("%5d  %-17s %-*s %s" % (num, val, width, p, lab))
+
         num_sampled = len(self.model.parameterization.sampled_params())
         num_derived = len(self.model.parameterization.derived_params())
         add_section([[p, params[p]] for p in self.model.parameterization.sampled_params()])

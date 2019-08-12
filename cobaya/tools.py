@@ -61,13 +61,19 @@ def deepcopyfix(olddict):
     return newdict
 
 
-def get_folder(name, kind, sep=os.sep, absolute="True"):
+def get_class_base_filename(name, kind):
     """
-    Gets folder, relative to the package source, of a likelihood, theory or sampler.
+    Gets absoluate file base name for a class module, relative to the package source, of a likelihood, theory or sampler.
     """
-    pre = (os.path.dirname(__file__) + sep if absolute
-           else "" + (sep if sep == "." else ""))
-    return pre + subfolders[kind] + sep + name
+    if '.' not in name: name += '.' + name
+    return os.path.join(os.path.dirname(__file__), subfolders[kind], name.replace('.', os.sep))
+
+
+def get_class_module(name, kind):
+    """
+    Gets qualified module name, relative to the package source, of a likelihood, theory or sampler.
+    """
+    return '.' + subfolders[kind] + '.' + name
 
 
 def get_class(name, kind=_likelihood, None_if_not_found=False):
@@ -86,9 +92,11 @@ def get_class(name, kind=_likelihood, None_if_not_found=False):
                 k for k in [_sampler, _theory, _likelihood] if name in get_modules(k))
         except StopIteration:
             raise LoggedError(log, "Could not determine kind of module %s", name)
-    class_folder = get_folder(name, kind, sep=".", absolute=False)
+    class_name = name.split('.')[-1]
+    class_folder = get_class_module(name, kind)
+
     try:
-        return getattr(import_module(class_folder, package=_package), name)
+        return getattr(import_module(class_folder, package=_package), class_name)
     except:
         if ((sys.exc_info()[0] is ModuleNotFoundError and
              str(sys.exc_info()[1]).rstrip("'").endswith(name))):
@@ -140,8 +148,8 @@ def get_external_function(string_or_function, name=None, or_class=False):
     if not callable(function):
         raise LoggedError(
             log, "The external function provided " +
-            ("for '%s' " % name if name else "") +
-            "is not an actual function. Got: '%r'", function)
+                 ("for '%s' " % name if name else "") +
+                 "is not an actual function. Got: '%r'", function)
     return function
 
 
@@ -161,9 +169,9 @@ def recursive_update(base, update):
     <https://stackoverflow.com/questions/3232943>`_.
     Modified for yaml input, where None and {} are almost equivalent
     """
+    base = base or odict()
     for update_key, update_value in (update or {}).items():
         update_value = update_value or odict()
-        base = base or odict()
         if isinstance(update_value, Mapping):
             base[update_key] = recursive_update(
                 base.get(update_key, odict()), update_value)
@@ -246,15 +254,15 @@ def get_scipy_1d_pdf(info):
     except AttributeError:
         raise LoggedError(
             log, "Error creating the prior for parameter '%s': "
-            "The distribution '%s' is unknown to 'scipy.stats'. "
-            "Check the list of allowed possibilities in the docs.", param, dist)
+                 "The distribution '%s' is unknown to 'scipy.stats'. "
+                 "Check the list of allowed possibilities in the docs.", param, dist)
     # Recover loc,scale from min,max
     # For coherence with scipy.stats, defaults are min,max=0,1
     if "min" in info2 or "max" in info2:
         if "loc" in info2 or "scale" in info2:
             raise LoggedError(
                 log, "You cannot use the 'loc/scale' convention and the 'min/max' "
-                "convention at the same time. Either use one or the other.")
+                     "convention at the same time. Either use one or the other.")
         minmaxvalues = {"min": 0, "max": 1}
         for limit in minmaxvalues:
             try:
@@ -404,6 +412,7 @@ def warn_deprecation_python2(logger=None):
     if not six.PY3:
         for line in create_banner(msg).split("\n"):
             getattr(logger, "warning", (lambda x: print("*WARNING*", x)))(line)
+
 
 def warn_deprecation_version(logger=None):
     msg = """

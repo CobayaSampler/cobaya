@@ -4,6 +4,7 @@ Testing and automatic generation of basic cosmological examples in the docs.
 
 from __future__ import division, absolute_import
 import os
+import sys
 
 from cobaya.yaml import yaml_dump, yaml_load
 from cobaya.input import is_equal_info
@@ -31,5 +32,6 @@ def test_cosmo_docs_basic():
             print("OLD:\n%s" % info_yaml_docs)
             print("----------------------------------------")
             print("NEW:\n%s" % info_yaml_new)
+            sys.stdout.flush()
     assert flag, ("Differences in example input file. "
                   "Files have been re-generated; check out your git diff.")

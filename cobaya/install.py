@@ -23,7 +23,7 @@ from pkg_resources import parse_version
 
 # Local
 from cobaya.log import logger_setup, LoggedError
-from cobaya.tools import get_folder, make_header, warn_deprecation, get_class
+from cobaya.tools import get_class_module, make_header, warn_deprecation, get_class
 from cobaya.input import get_modules
 from cobaya.conventions import _package, _code, _data, _likelihood, _external, _force
 from cobaya.conventions import _modules_path_arg, _modules_path_env, _path_install
@@ -44,7 +44,7 @@ def install(*infos, **kwargs):
             print("logging?")
             raise LoggedError(
                 log, "No 'path' argument given and could not extract one (and only one) "
-                "from the infos.")
+                     "from the infos.")
     abspath = os.path.abspath(path)
     log.info("Installing modules at '%s'\n", abspath)
     kwargs_install = {"force": kwargs.get("force", False),
@@ -59,24 +59,26 @@ def install(*infos, **kwargs):
                 raise LoggedError(
                     log, "Could not create the desired installation folder '%s'", spath)
     failed_modules = []
+    skip_list = os.environ.get("COBAYA_TEST_SKIP", "").replace(",", " ").lower().split()
     for kind, modules in get_modules(*infos).items():
         for module in modules:
             print(make_header(kind, module))
-            module_folder = get_folder(module, kind, sep=".", absolute=False)
+            module_folder = get_class_module(module, kind)
             try:
                 imported_module = import_module(module_folder, package=_package)
                 imported_class = get_class(module, kind)
-            except ImportError:
+                if len([s for s in skip_list if s in imported_class.__name__.lower()]):
+                    log.info("Skipping %s for test skip list %s" % (imported_class.__name__, skip_list))
+                    continue
+            except ImportError as e:
                 if kind == _likelihood:
-                    info = (next(info for info in infos
-                                 if module in info.get(_likelihood, {}))
-                    [_likelihood][module]) or {}
+                    info = (next(info for info in infos if module in info.get(_likelihood, {}))[_likelihood][module]
+                           ) or {}
                     if isinstance(info, string_types) or _external in info:
                         log.warning("Module '%s' is a custom likelihood. "
                                     "Nothing to do.\n", module)
-                        flag = False
                     else:
-                        log.error("Module '%s' not recognized.\n" % module)
+                        log.error("Module '%s' not recognized. [%s]\n" % (module, e))
                         failed_modules += ["%s:%s" % (kind, module)]
                 continue
             is_installed = getattr(imported_class, "is_installed",
@@ -120,8 +122,8 @@ def install(*infos, **kwargs):
         bullet = "\n - "
         raise LoggedError(
             log, "The installation (or installation test) of some module(s) has failed: "
-            "%s\nCheck output of the installer of each module above "
-            "for precise error info.\n",
+                 "%s\nCheck output of the installer of each module above "
+                 "for precise error info.\n",
             bullet + bullet.join(failed_modules))
 
 
@@ -132,6 +134,7 @@ def download_file(filename, path, no_progress_bars=False, decompress=False, logg
         wget_kwargs = {"out": path, "bar":
             (bar_thermometer if not no_progress_bars else None)}
         filename = download(filename, **wget_kwargs)
+        print('downloaded filename %s'%filename)
     except Exception as excpt:
         log.error(
             "Error downloading file '%s' to folder '%s': %s", filename, path, str(excpt))
@@ -141,19 +144,23 @@ def download_file(filename, path, no_progress_bars=False, decompress=False, logg
     log.debug('Got: %s' % filename)
     if not decompress:
         return True
-    import tarfile
     extension = os.path.splitext(filename)[-1][1:]
-    if extension == "tgz":
-        extension = "gz"
     try:
-        tar = tarfile.open(filename, "r:" + extension)
-        tar.extractall(path)
-        tar.close()
-        os.remove(filename)
+        if extension == "zip":
+            from zipfile import ZipFile
+            with ZipFile(filename, 'r') as zipObj:
+                zipObj.extractall(path)
+        else:
+            import tarfile
+            if extension == "tgz":
+                extension = "gz"
+            with tarfile.open(filename, "r:" + extension) as tar:
+                tar.extractall(path)
         log.debug('Decompressed: %s' % filename)
+        os.remove(filename)
         return True
-    except:
-        log.error("Error decompressing downloaded file! Corrupt file?")
+    except Exception as e:
+        log.error("Error decompressing downloaded file! Corrupt file? [%s]" % e)
         return False
 
 

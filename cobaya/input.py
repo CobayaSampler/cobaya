@@ -17,7 +17,7 @@ from importlib import import_module
 import inspect
 from six import string_types
 from itertools import chain
-import re
+import six
 
 # Local
 from cobaya.conventions import _package, _products_path, _path_install, _resume, _force
@@ -25,7 +25,7 @@ from cobaya.conventions import _output_prefix, _debug, _debug_file
 from cobaya.conventions import _params, _prior, _theory, _likelihood, _sampler, _external
 from cobaya.conventions import _p_label, _p_derived, _p_ref, _p_drop, _p_value, _p_renames
 from cobaya.conventions import _p_proposal, _input_params, _output_params
-from cobaya.tools import get_folder, recursive_update, recursive_odict_to_dict
+from cobaya.tools import get_class_module, recursive_update, recursive_odict_to_dict
 from cobaya.tools import fuzzy_match, deepcopy_where_possible, get_class
 from cobaya.yaml import yaml_load_file
 from cobaya.log import LoggedError
@@ -37,6 +37,8 @@ import logging
 
 log = logging.getLogger(__name__.split(".")[-1])
 
+yaml_extensions = (".yaml", ".yml")
+
 
 def load_input(input_file):
     """
@@ -44,7 +46,7 @@ def load_input(input_file):
     """
     file_name, extension = os.path.splitext(input_file)
     file_name = os.path.basename(file_name)
-    if extension not in (".yaml", ".yml"):
+    if extension not in yaml_extensions:
         raise LoggedError(log, "Extension of input file '%s' not recognized.", input_file)
     info = yaml_load_file(input_file) or {}
     # if output_prefix not defined, default to input_file name (sans ext.) as prefix;
@@ -89,21 +91,21 @@ def get_modules(*infos):
     return modules
 
 
-def get_default_info(module, kind, info={}):
+def get_default_info(module, kind):
     """
     Get default info for a module.
     """
     try:
         cls = get_class(module, kind, None_if_not_found=True)
-        default_module_info = cls.get_defaults() if cls else {kind: {module: {}}}
-    except:
-        raise LoggedError(log, "Failed to get defaults for module '%s:%s'", kind, module)
+        default_module_info = cls.get_defaults(kind, module) if cls else {kind: {module: {}}}
+    except Exception as e:
+        raise LoggedError(log, "Failed to get defaults for module '%s:%s' [%s]", kind, module, e)
     try:
         default_module_info[kind][module]
     except KeyError:
         raise LoggedError(
             log, "The defaults file for '%s' should be structured "
-            "as %s:%s:{[options]}.", module, kind, module)
+                 "as %s:%s:{[options]}.", module, kind, module)
     return default_module_info
 
 
@@ -128,14 +130,15 @@ def update_info(info):
             except TypeError:
                 raise LoggedError(
                     log, "Your input info is not well formatted at the '%s' block. "
-                    "It must be a dictionary {'%s':{options}, ...}. ", block, block)
+                         "It must be a dictionary {'%s':{options}, ...}. ", block, block)
             if not hasattr(input_info[block][module], "get"):
                 input_info[block][module] = {_external: input_info[block][module]}
             # Get default class options
             updated_info[block][module] = deepcopy(getattr(
                 import_module(_package + "." + block, package=_package),
                 "class_options", {}))
-            default_module_info = get_default_info(module, block, input_info[block][module])
+            default_module_info = get_default_info(module, block)
+            # TODO: check - get_default_info was ignoring this extra arg: input_info[block][module])
             updated_info[block][module].update(default_module_info[block][module] or {})
             # Update default options with input info
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
@@ -158,13 +161,13 @@ def update_info(info):
                     # Internal module
                     raise LoggedError(
                         log, "'%s' does not recognize some options: %s. "
-                        "To see the allowed options, check out the documentation of"
-                        " this module.", module, did_you_mean)
+                             "To see the allowed options, check out the documentation of"
+                             " this module.", module, did_you_mean)
                 else:
                     # External module
                     raise LoggedError(
                         log, "External %s '%s' does not recognize some options: %s. "
-                        "Check the documentation for 'external %s'.",
+                             "Check the documentation for 'external %s'.",
                         block, module, did_you_mean, block)
             updated_info[block][module].update(input_info[block][module])
             # Store default parameters and priors of class, and save to combine later
@@ -222,8 +225,8 @@ def merge_default_params_info(defaults):
                 if info != defaults_merged[p]:
                     raise LoggedError(
                         log, "Parameter '%s' multiply defined, but inconsistent info: "
-                        "For likelihood '%s' is '%r', but for some other likelihood"
-                        " it was '%r'. Check your defaults!",
+                             "For likelihood '%s' is '%r', but for some other likelihood"
+                             " it was '%r'. Check your defaults!",
                         p, lik, info, defaults_merged[p])
             defaults_merged[p] = info
     return defaults_merged
@@ -268,7 +271,10 @@ def merge_info(*infos):
     """
     Merges information dictionaries. Rightmost arguments take precedence.
     """
+    assert len(infos)
     previous_info = deepcopy(infos[0])
+    if len(infos) == 1:
+        return previous_info
     for new_info in infos[1:]:
         previous_params_info = deepcopy(previous_info.pop(_params, odict()) or odict())
         new_params_info = deepcopy(new_info).pop(_params, odict()) or odict()
@@ -317,7 +323,7 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
                 return False
             # Anything to ignore?
             for k in block1:
-                module_folder = get_folder(k, block_name, sep=".", absolute=False)
+                module_folder = get_class_module(k, block_name)
                 try:
                     ignore_k = getattr(import_module(
                         module_folder, package=_package), "ignore_at_resume", {})
@@ -376,6 +382,43 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
 class HasDefaults(object):
 
     @classmethod
+    def get_qualified_names(cls):
+        parts = cls.__module__.split('.')
+        if parts[-1] == cls.__name__:
+            return ['.'.join(parts[i:]) for i in range(len(parts))]
+        else:
+            return ['.'.join(parts[i:]) + '.' + cls.__name__ for i in range(len(parts))]
+
+    @classmethod
+    def get_module_class(cls):
+        """get cls.__name__ if class is same name as the module, otherwise module.class_name"""
+        return cls.get_qualified_names()[2]
+
+    @classmethod
+    def get_root_file_name(cls):
+        folder = os.path.dirname(inspect.getfile(cls))
+        return os.path.join(folder, cls.__name__)
+
+    @classmethod
+    def get_yaml_file(cls):
+        filename = cls.get_root_file_name() + ".yaml"
+        if os.path.exists(filename):
+            return filename
+        return None
+
+    @classmethod
+    def get_bibtex_file(cls):
+        bib = cls.get_root_file_name() + '.bibtex'
+        if os.path.exists(bib):
+            return bib
+        for base in cls.__bases__:
+            if issubclass(base, HasDefaults):
+                bib = base.get_bibtex_file()
+                if bib:
+                    return bib
+        return None
+
+    @classmethod
     def get_defaults(cls, return_yaml=False):
         """
         Return defaults for this module, with syntax:
@@ -395,9 +438,7 @@ class HasDefaults(object):
         If keyword `return_yaml` is set to True, it returns literally that,
         whereas if False (default), it returns the corresponding Python dict.
         """
-        folder = os.path.split(inspect.getfile(cls))[0]
-        name = cls.__name__
-        path_to_defaults = os.path.join(folder, name + ".yaml")
+        path_to_defaults = cls.get_yaml_file()
         if return_yaml:
             with open(path_to_defaults, "r") as filedef:
                 return "".join(filedef.readlines())

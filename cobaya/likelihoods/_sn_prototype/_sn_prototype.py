@@ -105,46 +105,19 @@ from __future__ import division, print_function
 import numpy as np
 import io
 import os
-import logging
-from getdist import IniFile
 
 # Local
-from cobaya.conventions import _package, _path_install
-from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
-from cobaya.install import download_github_release
+from cobaya.likelihoods._base_classes import _DataSetLikelihood
 
 _twopi = 2 * np.pi
 
 
-class _sn_prototype(Likelihood):
+class _sn_prototype(_DataSetLikelihood):
+    install_options = {"github_repository": "CobayaSampler/sn_data", "github_release": "v1.3"}
 
-    def initialize(self):
-        def relative_path(tag):
-            return ini.relativeFileName(tag).replace('data/', '').replace('Pantheon/', '')
+    def init_params(self, ini):
 
-        # has_absdist = F, intrinsicdisp=0, idispdataset=False
-        if not self.path:
-            if self.path_install:
-                from importlib import import_module
-                self.path = getattr(
-                    import_module(
-                        _package + ".likelihoods." + self.name, package=_package),
-                    "get_path")(self.path_install)
-            else:
-                raise LoggedError(
-                    self.log, "No path given to the %s likelihood. Set the likelihood"
-                    " property 'path' or the common property '%s'.",
-                    self.dataset_file, _path_install)
-        self.path = os.path.normpath(self.path)
-        self.dataset_file_path = os.path.normpath(os.path.join(self.path, self.dataset_file))
-        self.log.info("Reading data from %s", self.dataset_file_path)
-        if not os.path.exists(self.dataset_file_path):
-            raise LoggedError(
-                self.log, "The likelihood is not installed in the given path: "
-                "cannot find the file '%s'.", self.dataset_file_path)
-        ini = IniFile(self.dataset_file_path)
-        ini.params.update(self.dataset_params or {})
         self.twoscriptmfit = ini.bool('twoscriptmfit')
         if self.twoscriptmfit:
             scriptmcut = ini.float('scriptmcut', 10.)
@@ -374,28 +347,3 @@ class _sn_prototype(Likelihood):
                                             params_values[self.beta_name])
             else:
                 return self.alpha_beta_logp(lumdists)
-
-
-# Installation routines ##################################################################
-
-# name of the data and covmats repo/folder
-sn_data_name = "sn_data"
-sn_data_version = "v1.3"
-
-
-def get_path(path):
-    return os.path.realpath(os.path.join(path, "data", sn_data_name))
-
-
-def is_installed(**kwargs):
-    return os.path.exists(os.path.realpath(
-        os.path.join(kwargs["path"], "data", sn_data_name)))
-
-
-def install(path=None, force=False, code=False, data=True, no_progress_bars=False):
-    if not data:
-        return True
-    log = logging.getLogger(__name__.split(".")[-1])
-    log.info("Downloading Supernovae data...")
-    return download_github_release(os.path.join(path, "data"), sn_data_name,
-                                   sn_data_version, no_progress_bars=no_progress_bars)

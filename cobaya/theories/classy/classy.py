@@ -161,13 +161,15 @@ non_linear_default_code = "halofit"
 
 
 class classy(_cosmo):
+    # Name of the Class repo/folder and version to download
+    classy_repo_name = "lesgourg/class_public"
+    classy_repo_version = "v2.7.2"
 
     def initialize(self):
         """Importing CLASS from the correct path, if given, and if not, globally."""
         # If path not given, try using general path to modules
         if not self.path and self.path_install:
-            self.path = os.path.join(
-                self.path_install, "code", classy_repo_rename)
+            self.path = self.get_path(self.path_install)
         if self.path:
             self.log.info("Importing *local* classy from " + self.path)
             classy_build_path = os.path.join(self.path, "python", "build")
@@ -180,7 +182,7 @@ class classy(_cosmo):
                 else:
                     raise LoggedError(
                         self.log, "Either CLASS is not in the given folder, "
-                        "'%s', or you have not compiled it.", self.path)
+                                  "'%s', or you have not compiled it.", self.path)
             else:
                 # Inserting the previously found path into the list of import folders
                 sys.path.insert(0, classy_build_path)
@@ -191,10 +193,10 @@ class classy(_cosmo):
         except ImportError:
             raise LoggedError(
                 self.log, "Couldn't find the CLASS python interface. "
-                "Make sure that you have compiled it, and that you either\n"
-                " (a) specify a path (you didn't) or\n"
-                " (b) install the Python interface globally with\n"
-                "     '/path/to/class/python/python setup.py install --user'")
+                          "Make sure that you have compiled it, and that you either\n"
+                          " (a) specify a path (you didn't) or\n"
+                          " (b) install the Python interface globally with\n"
+                          "     '/path/to/class/python/python setup.py install --user'")
         self.classy = Class()
         # Propagate errors up
         global CosmoComputationError, CosmoSevereError
@@ -535,49 +537,46 @@ class classy(_cosmo):
     def close(self):
         self.classy.struct_cleanup()
 
+    # Installation routines ##################################################################
 
-# Installation routines ##################################################################
+    @classmethod
+    def get_path(cls, path):
+        return os.path.realpath(os.path.join(path, "code", cls.__name__))
 
-# Name of the Class repo/folder and version to download
-classy_repo_name = "lesgourg/class_public"
-classy_repo_rename = "classy"
-classy_repo_version = "v2.7.2"
+    @classmethod
+    def is_installed(cls, **kwargs):
+        if not kwargs["code"]:
+            return True
+        return os.path.isfile(os.path.join(cls.get_path(kwargs["path"]), "libclass.a"))
 
-
-def is_installed(**kwargs):
-    if not kwargs["code"]:
+    @classmethod
+    def install(cls, path=None, force=False, code=True, no_progress_bars=False, **kwargs):
+        log = logging.getLogger(cls.__name__)
+        if not code:
+            log.info("Code not requested. Nothing to do.")
+            return True
+        log.info("Installing pre-requisites...")
+        exit_status = pip_install("cython")
+        if exit_status:
+            log.error("Could not install pre-requisite: cython")
+            return False
+        log.info("Downloading classy...")
+        success = download_github_release(
+            os.path.join(path, "code"), cls.classy_repo_name, cls.classy_repo_version,
+            repo_rename=cls.__name__, no_progress_bars=no_progress_bars)
+        if not success:
+            log.error("Could not download classy.")
+            return False
+        classy_path = cls.get_path(path)
+        log.info("Compiling classy...")
+        from subprocess import Popen, PIPE
+        env = deepcopy(os.environ)
+        env.update({"PYTHON": sys.executable})
+        process_make = Popen(["make"], cwd=classy_path, stdout=PIPE, stderr=PIPE, env=env)
+        out, err = process_make.communicate()
+        if process_make.returncode:
+            log.info(out)
+            log.info(err)
+            log.error("Compilation failed!")
+            return False
         return True
-    return os.path.isfile(os.path.realpath(
-        os.path.join(kwargs["path"], "code", classy_repo_rename, "libclass.a")))
-
-
-def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs):
-    log = logging.getLogger(__name__.split(".")[-1])
-    if not code:
-        log.info("Code not requested. Nothing to do.")
-        return True
-    log.info("Installing pre-requisites...")
-    exit_status = pip_install("cython")
-    if exit_status:
-        log.error("Could not install pre-requisite: cython")
-        return False
-    log.info("Downloading classy...")
-    success = download_github_release(
-        os.path.join(path, "code"), classy_repo_name, classy_repo_version,
-        repo_rename=classy_repo_rename, no_progress_bars=no_progress_bars)
-    if not success:
-        log.error("Could not download classy.")
-        return False
-    classy_path = os.path.join(path, "code", classy_repo_rename)
-    log.info("Compiling classy...")
-    from subprocess import Popen, PIPE
-    env = deepcopy(os.environ)
-    env.update({"PYTHON": sys.executable})
-    process_make = Popen(["make"], cwd=classy_path, stdout=PIPE, stderr=PIPE, env=env)
-    out, err = process_make.communicate()
-    if process_make.returncode:
-        log.info(out)
-        log.info(err)
-        log.error("Compilation failed!")
-        return False
-    return True

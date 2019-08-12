@@ -16,21 +16,21 @@ import os
 from collections import OrderedDict as odict
 
 # Local
-from cobaya.tools import get_folder, make_header, warn_deprecation
-from cobaya.input import get_modules
+from cobaya.tools import make_header, warn_deprecation
+from cobaya.input import get_modules, get_class
 
 
 def get_citation_info(module, kind):
-    folder = get_folder(module, kind, absolute=True)
-    filename = os.path.join(folder, module + ".bibtex")
-    try:
-        with open(filename, "r") as f:
-            lines = "".join(f.readlines())
-    except IOError:
-        if not os.path.isdir(folder):
-            lines = "[Module '%s.%s' not known.]" % (kind, module)
+    cls = get_class(module, kind, None_if_not_found=True)
+    if cls:
+        filename = cls.get_bibtex_file()
+        if filename:
+            with open(filename, "r") as f:
+                lines = "".join(f.readlines())
         else:
             lines = "[no citation information found]"
+    else:
+        lines = "[Module '%s.%s' not known.]" % (kind, module)
     return lines + "\n"
 
 

@@ -1,0 +1,14 @@
+# Native python version of the plik_lite 2018 Planck likelihood, allowing multipole/bin selection
+
+likelihood:
+  planck_2018_pliklite_python:
+    # Path to the data: where the planck_supp_data_and_covmats has been cloned
+    path: null
+    dataset_file: plik_lite_v22.dataset
+    # Overriding of .dataset parameters
+    dataset_params:
+      # field: value
+    # Aliases for automatic covariance matrix
+    renames: [plik]
+    # Speed in evaluations/second
+    speed: 1000

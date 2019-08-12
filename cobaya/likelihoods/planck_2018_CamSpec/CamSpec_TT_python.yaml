@@ -1,0 +1,12 @@
+# Native python version of the plik_lite 2018 Planck likelihood, allowing multipole/bin selection
+
+defaults: [params_TT]
+
+likelihood:
+  planck_2018_CamSpec.CamSpec_TT_python:
+    dataset_params:
+      use_cl: 100x100 143x143 217x217 143x217
+    # Aliases for automatic covariance matrix
+    renames: [CamSpecHM_TT]
+    # Speed in evaluations/second
+    speed: 200

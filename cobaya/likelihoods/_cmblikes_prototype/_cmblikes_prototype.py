@@ -15,43 +15,15 @@ from __future__ import division
 # Global
 import os
 import numpy as np
-from getdist import IniFile, ParamNames
+from getdist import ParamNames
 from scipy.linalg import sqrtm
 
 # Local
-from cobaya.conventions import _path_install, _package
-from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
+from cobaya.likelihoods._base_classes import _fast_chi_square, _DataSetLikelihood
 
 
-class _cmblikes_prototype(Likelihood):
-
-    def initialize(self):
-        self.tot_theory_fields = len(self.field_names)
-        assert self.dataset_file.endswith('.dataset'), (
-            "Make sure you are passing a .dataset file!")
-        if not os.path.isabs(self.dataset_file):
-            if not self.path:
-                if self.path_install:
-                    from importlib import import_module
-                    self.path = getattr(
-                        import_module(
-                            _package + ".likelihoods." + self.name, package=_package),
-                        "get_path")(self.path_install)
-                else:
-                    raise LoggedError(
-                        self.log, "No path given to the %s likelihood. Set the likelihood"
-                        " property 'path' or the common property '%s'.",
-                        self.dataset_file, _path_install)
-            self.dataset_file_path = os.path.normpath(os.path.join(self.path, self.dataset_file))
-        else:
-            self.dataset_file_path = self.dataset_file
-        self.log.info("Reading data from %s", self.dataset_file_path)
-        if not os.path.exists(self.dataset_file_path):
-            raise LoggedError(
-                self.log, "The likelihood is not installed in the given path: "
-                "cannot find the file '%s'.", self.dataset_file_path)
-        self.loadDataset(self.dataset_file_path, self.dataset_params)
+class _cmblikes_prototype(_DataSetLikelihood):
 
     def add_theory(self):
         # State requisites to the theory code
@@ -63,8 +35,8 @@ class _cmblikes_prototype(Likelihood):
         if (getattr(self, "l_max", None) or np.inf) < requested_l_max:
             raise LoggedError(
                 self.log, "You are setting a very low l_max. "
-                "The likelihood value will probably not be correct. "
-                "Make sure to make 'l_max'>=%d", requested_l_max)
+                          "The likelihood value will probably not be correct. "
+                          "Make sure to make 'l_max'>=%d", requested_l_max)
         self.l_max = max(requested_l_max, getattr(self, "l_max", 0) or 0)
         self.theory.needs(**{"Cl": {cl: self.l_max for cl in requested_cls}})
 
@@ -192,7 +164,7 @@ class _cmblikes_prototype(Likelihood):
         if L < self.bin_max:
             raise LoggedError(
                 self.log, 'CMBLikes_ReadClArr: C_l file does not go up to maximum used: '
-                '%s', self.bin_max)
+                          '%s', self.bin_max)
         if return_full:
             return incols.split(), data, cl
         else:
@@ -243,14 +215,8 @@ class _cmblikes_prototype(Likelihood):
                 CL.CL = np.zeros(self.pcl_lmax - self.pcl_lmin + 1)
         return cls
 
-    def loadDataset(self, froot, dataset_params):
-        if '.dataset' not in froot:
-            froot += '.dataset'
-        ini = IniFile(froot)
-        ini.params.update(dataset_params or {})
-        self.readIni(ini)
-
-    def readIni(self, ini):
+    def init_params(self, ini):
+        self.tot_theory_fields = len(self.field_names)
         self.map_names = ini.split('map_names', default=[])
         self.has_map_names = len(self.map_names)
         if self.has_map_names:
@@ -403,7 +369,7 @@ class _cmblikes_prototype(Likelihood):
             if '.paramnames' not in s:
                 raise LoggedError(
                     self.log, 'calibration_param must be paramnames file unless '
-                    'nuisance_params also specified')
+                              'nuisance_params also specified')
             self.nuisance_params = ParamNames(s)
             self.calibration_param = self.nuisance_params.list()[0]
         else:
@@ -474,7 +440,7 @@ class _cmblikes_prototype(Likelihood):
         if not np.count_nonzero(self.map_cls):
             raise LoggedError(
                 self.log, "No Cl's have been computed yet. "
-                "Make sure you have evaluated the likelihood.")
+                          "Make sure you have evaluated the likelihood.")
         try:
             Cl_theo = self.theory.get_Cl(ell_factor=True, units=units)
             Cl = Cl_theo.get(column.lower())
@@ -603,6 +569,8 @@ class _cmblikes_prototype(Likelihood):
             return ((2 * L + 1) * self.fsky *
                     (np.trace(M) - self.nmaps - np.linalg.slogdet(M)[1]))
 
+    fast_chi_squared = _fast_chi_square()
+
     def logp(self, **data_params):
         Cls = self.theory.get_Cl(ell_factor=True)
         self.get_theory_map_cls(Cls, data_params)
@@ -646,7 +614,7 @@ class _cmblikes_prototype(Likelihood):
             bigX[bin * self.ncl_used:(bin + 1) * self.ncl_used] = vecp[self.cl_used_index]
         if self.like_approx == 'exact':
             return -0.5 * chisq
-        return -0.5 * np.dot(bigX, np.dot(self.covinv, bigX))
+        return -0.5 * self.fast_chi_squared(self.covinv, bigX)
 
 
 class BinWindows(object):

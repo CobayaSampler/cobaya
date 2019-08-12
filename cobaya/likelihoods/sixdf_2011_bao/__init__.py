@@ -1,2 +1,5 @@
-from .sixdf_2011_bao import sixdf_2011_bao
-from cobaya.likelihoods.sdss_dr12_consensus_final import is_installed, install, get_path
+from cobaya.likelihoods._bao_prototype import _bao_prototype
+
+
+class sixdf_2011_bao(_bao_prototype):
+    pass
