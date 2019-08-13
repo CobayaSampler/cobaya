@@ -78,7 +78,7 @@ After this, mention the path to this likelihood when you include it in an input 
 import numpy as np
 
 # Local
-from cobaya.likelihoods._cmblikes_prototype import _cmblikes_prototype
+from cobaya.likelihoods._base_classes import _cmblikes_prototype
 from cobaya.conventions import _h_J_s, _kB_J_K, _T_CMB_K
 
 # Physical constants
