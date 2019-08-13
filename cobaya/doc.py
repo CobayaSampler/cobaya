@@ -9,6 +9,7 @@
 from __future__ import absolute_import, print_function, division
 
 # Global
+from pprint import pformat
 
 # Local
 from cobaya.tools import warn_deprecation, get_class, get_modules
@@ -19,8 +20,12 @@ _kinds = [_sampler, _theory, _likelihood]
 _indent = 2 * " "
 
 
-def dump_defaults(module, kind=None):
-    return get_class(module, kind=kind).get_defaults(return_yaml=True)
+def dump_defaults(module, kind=None, return_yaml=True):
+    output = get_class(module, kind=kind).get_defaults(return_yaml=return_yaml)
+    if return_yaml:
+        return output
+    else:
+        return "from collections import OrderedDict\n\ninfo = " + pformat(output)
 
 
 # Command-line script ####################################################################
@@ -43,6 +48,8 @@ def doc_script():
     parser.add_argument("module", action="store", nargs="?", default="",
                         metavar="module_name",
                         help="Name of module whose defaults are requested.")
+    parser.add_argument("-p", "--python", action="store_true", default=False,
+                        help="Request Python instead of YAML.")
     arguments = parser.parse_args()
     # Remove plurals, for user-friendliness
     if arguments.kind in subfolders.values():
@@ -61,7 +68,7 @@ def doc_script():
             print("%s:" % arguments.kind)
             print(_indent + ("\n" + _indent).join(get_modules(arguments.kind)))
         else:
-            print(dump_defaults(arguments.kind, kind=None))
+            print(dump_defaults(arguments.kind, kind=None, return_yaml=not arguments.python))
     if arguments.kind and arguments.module:
-        print(dump_defaults(arguments.module, kind=arguments.kind))
+        print(dump_defaults(arguments.module, kind=arguments.kind, return_yaml=not arguments.python))
     return
