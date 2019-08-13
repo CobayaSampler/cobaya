@@ -25,6 +25,7 @@ from cobaya.conventions import _output_prefix, _debug, _debug_file
 from cobaya.conventions import _params, _prior, _theory, _likelihood, _sampler, _external
 from cobaya.conventions import _p_label, _p_derived, _p_ref, _p_drop, _p_value, _p_renames
 from cobaya.conventions import _p_proposal, _input_params, _output_params
+from cobaya.conventions import _yaml_extensions
 from cobaya.tools import get_class_module, recursive_update, recursive_odict_to_dict
 from cobaya.tools import fuzzy_match, deepcopy_where_possible, get_class
 from cobaya.yaml import yaml_load_file
@@ -37,8 +38,6 @@ import logging
 
 log = logging.getLogger(__name__.split(".")[-1])
 
-yaml_extensions = (".yaml", ".yml")
-
 
 def load_input(input_file):
     """
@@ -46,7 +45,7 @@ def load_input(input_file):
     """
     file_name, extension = os.path.splitext(input_file)
     file_name = os.path.basename(file_name)
-    if extension not in yaml_extensions:
+    if extension not in _yaml_extensions:
         raise LoggedError(log, "Extension of input file '%s' not recognized.", input_file)
     info = yaml_load_file(input_file) or {}
     # if output_prefix not defined, default to input_file name (sans ext.) as prefix;
