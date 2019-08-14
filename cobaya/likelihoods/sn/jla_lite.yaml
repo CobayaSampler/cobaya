@@ -3,7 +3,7 @@
 # NB: different chi2 normalization from the non-normalized version
 
 likelihood:
-  sn_jla_lite:
+  sn.jla_lite:
     # Path to the data: where the sn_data has been cloned
     path: null
     # .dataset file with settings
