@@ -2,7 +2,7 @@
 # https://arxiv.org/abs/1804.10655
 
 likelihood:
-  H0_riess2018b:
+  H0.riess2018b:
     H0: 73.52
     H0_std: 1.62
     # Aliases for automatic covariance matrix

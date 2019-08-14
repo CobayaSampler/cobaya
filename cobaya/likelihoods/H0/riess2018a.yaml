@@ -4,7 +4,7 @@
 # because it was used in the analysis of the Planck 2018 release
 
 likelihood:
-  H0_riess2018a:
+  H0.riess2018a:
     H0: 73.45
     H0_std: 1.66
     # Aliases for automatic covariance matrix
