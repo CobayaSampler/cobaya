@@ -96,7 +96,7 @@ def get_default_info(module, kind):
     """
     try:
         cls = get_class(module, kind, None_if_not_found=True)
-        default_module_info = cls.get_defaults(kind, module) if cls else {kind: {module: {}}}
+        default_module_info = cls.get_defaults() if cls else {kind: {module: {}}}
     except Exception as e:
         raise LoggedError(log, "Failed to get defaults for module '%s:%s' [%s]", kind, module, e)
     try:

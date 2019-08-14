@@ -2,7 +2,7 @@
 # https://arxiv.org/abs/1106.3366
 
 likelihood:
-  sixdf_2011_bao:
+  bao.sixdf_2011_bao:
     path: null
     # Rescaling of sound horizon
     rs_rescale: 1.027369826  # = 153.9/149.8

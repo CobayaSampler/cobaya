@@ -2,7 +2,7 @@
 # https://arxiv.org/abs/1607.03155
 
 likelihood:
-  sdss_dr12_consensus_final:
+  bao.sdss_dr12_consensus_final:
     path: null
     measurements_file: bao_data/sdss_DR12Consensus_final.dat
     cov_file: bao_data/final_consensus_covtot_dM_Hz_fsig.txt

@@ -1,4 +1,4 @@
-"""
+r"""
 .. module:: _bao_prototype
 
 :Synopsis: BAO, f_sigma8 and other measurements at single redshifts, with correlations
@@ -131,6 +131,7 @@ import logging
 from cobaya.log import LoggedError
 from cobaya.conventions import _path_install, _c_km_s
 from cobaya.likelihoods._base_classes import _InstallableLikelihood
+from cobaya.input import HasDefaults
 
 
 class _bao_prototype(_InstallableLikelihood):
@@ -156,7 +157,7 @@ class _bao_prototype(_InstallableLikelihood):
             try:
                 self.data = pd.read_csv(
                     os.path.join(data_file_path, self.measurements_file),
-                    header=None, index_col=None, sep="\s+", comment="#")
+                    header=None, index_col=None, sep=r"\s+", comment="#")
             except IOError:
                 raise LoggedError(
                     self.log, "Couldn't find measurements file '%s' in folder '%s'. " % (
