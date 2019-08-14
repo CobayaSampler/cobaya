@@ -171,7 +171,7 @@ def recursive_update(base, update):
     """
     base = base or odict()
     for update_key, update_value in (update or {}).items():
-        update_value = update_value or odict()
+        update_value = update_value if update_value is not None else odict()
         if isinstance(update_value, Mapping):
             base[update_key] = recursive_update(
                 base.get(update_key, odict()), update_value)
