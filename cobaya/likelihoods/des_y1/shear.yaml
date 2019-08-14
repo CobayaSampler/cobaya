@@ -1,7 +1,7 @@
 # DES Y1 -- Shear data
 
 likelihood:
-  des_y1_shear:
+  des_y1.shear:
     # Path to the installation folder
     path: null
     # .dataset (or original .fits file) to read

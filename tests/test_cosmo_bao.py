@@ -7,7 +7,7 @@ from .common_cosmo import body_of_test
 
 
 def test_sdss_dr12_consensus_bao_camb(modules):
-    lik = "sdss_dr12_consensus_bao"
+    lik = "bao.sdss_dr12_consensus_bao"
     info_likelihood = {lik: {}}
     info_theory = {"camb": None}
     body_of_test(modules, best_fit, info_likelihood, info_theory,
@@ -15,7 +15,7 @@ def test_sdss_dr12_consensus_bao_camb(modules):
 
 
 def test_sdss_dr12_consensus_bao_classy(modules):
-    lik = "sdss_dr12_consensus_bao"
+    lik = "bao.sdss_dr12_consensus_bao"
     info_likelihood = {lik: {}}
     info_theory = {"classy": None}
     body_of_test(modules, best_fit, info_likelihood, info_theory,
@@ -23,7 +23,7 @@ def test_sdss_dr12_consensus_bao_classy(modules):
 
 
 def test_sdss_dr12_consensus_full_shape_camb(modules):
-    lik = "sdss_dr12_consensus_full_shape"
+    lik = "bao.sdss_dr12_consensus_full_shape"
     info_likelihood = {lik: {}}
     info_theory = {"camb": None}
     body_of_test(modules, best_fit, info_likelihood, info_theory,
@@ -32,7 +32,7 @@ def test_sdss_dr12_consensus_full_shape_camb(modules):
 
 @pytest.mark.skip
 def test_sdss_dr12_consensus_full_shape_classy(modules):
-    lik = "sdss_dr12_consensus_full_shape"
+    lik = "bao.sdss_dr12_consensus_full_shape"
     info_likelihood = {lik: {}}
     info_theory = {"classy": None}
     chi2_classy = deepcopy(chi2_sdss_dr12_consensus_full_shape)
@@ -41,7 +41,7 @@ def test_sdss_dr12_consensus_full_shape_classy(modules):
 
 
 def test_sdss_dr12_consensus_final_camb(modules):
-    lik = "sdss_dr12_consensus_final"
+    lik = "bao.sdss_dr12_consensus_final"
     info_likelihood = {lik: {}}
     info_theory = {"camb": None}
     body_of_test(modules, best_fit, info_likelihood, info_theory,
@@ -50,7 +50,7 @@ def test_sdss_dr12_consensus_final_camb(modules):
 
 @pytest.mark.skip
 def test_sdss_dr12_consensus_final_classy(modules):
-    lik = "sdss_dr12_consensus_final"
+    lik = "bao.sdss_dr12_consensus_final"
     info_likelihood = {lik: {}}
     info_theory = {"classy": None}
     chi2_classy = deepcopy(chi2_sdss_dr12_consensus_final)
@@ -59,7 +59,7 @@ def test_sdss_dr12_consensus_final_classy(modules):
 
 
 def test_sixdf_2011_bao_camb(modules):
-    lik = "sixdf_2011_bao"
+    lik = "bao.sixdf_2011_bao"
     info_likelihood = {lik: {}}
     info_theory = {"camb": None}
     body_of_test(modules, best_fit, info_likelihood, info_theory,
@@ -67,7 +67,7 @@ def test_sixdf_2011_bao_camb(modules):
 
 
 def test_sixdf_2011_bao_classy(modules):
-    lik = "sixdf_2011_bao"
+    lik = "bao.sixdf_2011_bao"
     info_likelihood = {lik: {}}
     info_theory = {"classy": None}
     body_of_test(modules, best_fit, info_likelihood, info_theory,
@@ -75,7 +75,7 @@ def test_sixdf_2011_bao_classy(modules):
 
 
 def test_sdss_dr7_mgs_camb(modules):
-    lik = "sdss_dr7_mgs"
+    lik = "bao.sdss_dr7_mgs"
     info_likelihood = {lik: {}}
     info_theory = {"camb": None}
     body_of_test(modules, best_fit, info_likelihood, info_theory,
@@ -83,7 +83,7 @@ def test_sdss_dr7_mgs_camb(modules):
 
 
 def test_sdss_dr7_mgs_classy(modules):
-    lik = "sdss_dr7_mgs"
+    lik = "bao.sdss_dr7_mgs"
     info_likelihood = {lik: {}}
     info_theory = {"classy": None}
     body_of_test(modules, best_fit, info_likelihood, info_theory,
@@ -95,12 +95,12 @@ def test_sdss_dr7_mgs_classy(modules):
 best_fit = deepcopy(params_lowTEB_highTTTEEE)
 
 chi2_sdss_dr12_consensus_bao = {
-    "sdss_dr12_consensus_bao": 5.687, "tolerance": 0.04}
+    "bao.sdss_dr12_consensus_bao": 5.687, "tolerance": 0.04}
 chi2_sdss_dr12_consensus_full_shape = {
-    "sdss_dr12_consensus_full_shape": 8.154, "tolerance": 0.02}
+    "bao.sdss_dr12_consensus_full_shape": 8.154, "tolerance": 0.02}
 chi2_sdss_dr12_consensus_final = {
-    "sdss_dr12_consensus_final": 8.051, "tolerance": 0.03}
+    "bao.sdss_dr12_consensus_final": 8.051, "tolerance": 0.03}
 chi2_sixdf_2011_bao = {
-    "sixdf_2011_bao": 0.088, "tolerance": 0.02}
+    "bao.sixdf_2011_bao": 0.088, "tolerance": 0.02}
 chi2_sdss_dr7_mgs = {
-    "sdss_dr7_mgs": 0.92689, "tolerance": 0.02}
+    "bao.sdss_dr7_mgs": 0.92689, "tolerance": 0.02}

@@ -15,7 +15,7 @@ classy_extra_tolerance = 22
 
 
 def test_cosmo_des_y1_shear_camb(modules):
-    like = "des_y1_shear"
+    like = "des_y1.shear"
     info_likelihood = {like: {}}
     best_fit_shear = deepcopy(best_fit)
     best_fit_shear.update(test_params_shear)
@@ -25,7 +25,7 @@ def test_cosmo_des_y1_shear_camb(modules):
 
 
 def test_cosmo_des_y1_clustering_camb(modules):
-    like = "des_y1_clustering"
+    like = "des_y1.clustering"
     info_likelihood = {like: {}}
     best_fit_clustering = deepcopy(best_fit)
     best_fit_clustering.update(test_params_clustering)
@@ -35,7 +35,7 @@ def test_cosmo_des_y1_clustering_camb(modules):
 
 
 def test_cosmo_des_y1_galaxy_galaxy_camb(modules):
-    like = "des_y1_galaxy_galaxy"
+    like = "des_y1.galaxy_galaxy"
     info_likelihood = {like: {}}
     best_fit_galaxy_galaxy = deepcopy(best_fit)
     best_fit_galaxy_galaxy.update(test_params_shear)
@@ -46,7 +46,7 @@ def test_cosmo_des_y1_galaxy_galaxy_camb(modules):
 
 
 def test_cosmo_des_y1_joint_camb(modules):
-    like = "des_y1_joint"
+    like = "des_y1.joint"
     info_likelihood = {like: {}}
     best_fit_joint = deepcopy(best_fit)
     best_fit_joint.update(test_params_shear)
@@ -57,7 +57,7 @@ def test_cosmo_des_y1_joint_camb(modules):
 
 
 def test_cosmo_des_y1_shear_classy(modules):
-    like = "des_y1_shear"
+    like = "des_y1.shear"
     info_likelihood = {like: {}}
     best_fit_shear = deepcopy(best_fit)
     best_fit_shear.update(test_params_shear)
@@ -68,7 +68,7 @@ def test_cosmo_des_y1_shear_classy(modules):
 
 
 def test_cosmo_des_y1_clustering_classy(modules):
-    like = "des_y1_clustering"
+    like = "des_y1.clustering"
     info_likelihood = {like: {}}
     best_fit_clustering = deepcopy(best_fit)
     best_fit_clustering.update(test_params_clustering)
@@ -79,7 +79,7 @@ def test_cosmo_des_y1_clustering_classy(modules):
 
 
 def test_cosmo_des_y1_galaxy_galaxy_classy(modules):
-    like = "des_y1_galaxy_galaxy"
+    like = "des_y1.galaxy_galaxy"
     info_likelihood = {like: {}}
     best_fit_galaxy_galaxy = deepcopy(best_fit)
     best_fit_galaxy_galaxy.update(test_params_shear)

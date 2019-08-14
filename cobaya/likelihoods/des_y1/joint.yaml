@@ -1,14 +1,14 @@
-# DES Y1 -- Galaxy-Galaxy Lensing data
+# DES Y1 -- Clustering+Shear+Galaxy-galaxy data
 
 likelihood:
-  des_y1_galaxy_galaxy:
+  des_y1.joint:
     # Path to the installation folder
     path: null
     # .dataset (or original .fits file) to read
     dataset_file: DES_1YR_final.dataset
     # Parameters to override in .dataset file
     dataset_params:
-      used_data_types: gammat
+      used_data_types: wtheta gammat xip xim
     # Accuracy parameter
     acc: 1
     # Internal l_max used (If null/None, 5e4*acc used)
@@ -21,11 +21,11 @@ likelihood:
     # against integrals of bessel in each bin.
     binned_bessels: True
     # Aliases for automatic covariance matrix
-    renames: [DESwt]
+    renames: [DES]
     # Speed in evaluations/second
     speed: 20
 
-
+  
 params:
   # Lensing photo-z errors
   DES_DzL1:
