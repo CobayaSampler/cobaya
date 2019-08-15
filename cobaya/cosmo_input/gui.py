@@ -14,7 +14,8 @@ from cobaya.cosmo_input import input_database
 from cobaya.cosmo_input.create_input import create_input
 from cobaya.citation import prettyprint_citation, citation, get_citation_info
 from cobaya.tools import warn_deprecation, get_modules
-from cobaya.doc import _kinds, dump_defaults
+from cobaya.doc import _kinds
+from cobaya.input import get_default_info
 from cobaya.conventions import subfolders
 
 try:
@@ -249,7 +250,8 @@ class DefaultsDialog(QWidget):
             self.display_tabs.addTab(self.display[k], k)
         self.layout.addWidget(self.display_tabs)
         # Fill text
-        defaults_txt = dump_defaults(module, kind)
+        defaults_txt = get_default_info(
+                module, kind, return_yaml=True, fail_if_not_found=True)
         from cobaya.yaml import yaml_load
         self.display["python"].setText(
             "from collections import OrderedDict\n\ninfo = " +
