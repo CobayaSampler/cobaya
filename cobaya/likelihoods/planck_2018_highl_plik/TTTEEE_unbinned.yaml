@@ -1,0 +1,17 @@
+# Planck 2015 release: high-ell, CMB temperature+polarization likelihood
+# See https://wiki.cosmos.esa.int/planckpla2015/index.php/CMB_spectrum_%26_Likelihood_Code
+# NB: There is a typo in the wiki: the sigma of galf_TE_A_143_217 should be 0.18, not 0.018
+
+likelihood:
+  planck_2018_highl_plik.TTTEEE_unbinned:
+    path:
+    clik_file: plc_3.0/hi_l/plik/plik_rd12_HM_v22b_TTTEEE_bin1.clik
+    product_id: "151905"
+    # Aliases for automatic covariance matrix
+    renames: [plikHM_TTTEEE]
+    # Speed in evaluations/second
+    speed: 3
+
+params: !defaults [params_calib, params_TT, params_TEEE]
+
+prior: !defaults [prior_SZ]
