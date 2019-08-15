@@ -76,7 +76,22 @@ def get_class_module(name, kind):
     return '.' + subfolders[kind] + '.' + name
 
 
-def get_class(name, kind=_likelihood, None_if_not_found=False):
+def get_kind(name, fail_if_not_found=True):
+    """
+    Given a hefully unique module name, tries to determine it's kind:
+    ``sampler``, ``theory`` or ``likelihood``.
+    """
+    try:
+        return next(
+            k for k in [_sampler, _theory, _likelihood] if name in get_modules(k))
+    except StopIteration:
+        if fail_if_not_found:
+            raise LoggedError(log, "Could not determine kind of module %s", name)
+        else:
+            return None
+
+
+def get_class(name, kind=None, None_if_not_found=False):
     """
     Retrieves the requested likelihood (default) or theory class.
 
@@ -87,14 +102,9 @@ def get_class(name, kind=_likelihood, None_if_not_found=False):
     If 'kind=None' is not given, tries to guess it if the module name is unique (slow!).
     """
     if kind is None:
-        try:
-            kind = next(
-                k for k in [_sampler, _theory, _likelihood] if name in get_modules(k))
-        except StopIteration:
-            raise LoggedError(log, "Could not determine kind of module %s", name)
+        kind = get_kind(name)
     class_name = name.split('.')[-1]
     class_folder = get_class_module(name, kind)
-
     try:
         return getattr(import_module(class_folder, package=_package), class_name)
     except:

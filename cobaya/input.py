@@ -27,8 +27,8 @@ from cobaya.conventions import _p_label, _p_derived, _p_ref, _p_drop, _p_value, 
 from cobaya.conventions import _p_proposal, _input_params, _output_params
 from cobaya.conventions import _yaml_extensions
 from cobaya.tools import get_class_module, recursive_update, recursive_odict_to_dict
-from cobaya.tools import fuzzy_match, deepcopy_where_possible, get_class
-from cobaya.yaml import yaml_load_file
+from cobaya.tools import fuzzy_match, deepcopy_where_possible, get_class, get_kind
+from cobaya.yaml import yaml_load_file, yaml_load, yaml_dump
 from cobaya.log import LoggedError
 from cobaya.parameterization import expand_info_param
 from cobaya.mpi import get_mpi_comm, am_single_or_primary_process
@@ -90,17 +90,25 @@ def get_modules(*infos):
     return modules
 
 
-def get_default_info(module, kind):
+def get_default_info(module, kind=None, fail_if_not_found=False, return_yaml=False, yaml_expand_defaults=True):
     """
     Get default info for a module.
     """
     try:
-        cls = get_class(module, kind, None_if_not_found=True)
-        default_module_info = cls.get_defaults() if cls else {kind: {module: {}}}
+        if kind is None:
+            kind = get_kind(module)
+        cls = get_class(module, kind, None_if_not_found=not fail_if_not_found)
+        if cls:
+            default_module_info = cls.get_defaults(return_yaml=return_yaml)
+        else:
+            default_module_info = (
+                lambda x: yaml_dump(x) if return_yaml else x)({kind: {module: {}}})
     except Exception as e:
-        raise LoggedError(log, "Failed to get defaults for module '%s:%s' [%s]", kind, module, e)
+        raise LoggedError(log, "Failed to get defaults for module '%s' [%s]",
+                          ("%s:" % kind if kind else "") + module, e)
     try:
-        default_module_info[kind][module]
+        if not return_yaml:
+            default_module_info[kind][module]
     except KeyError:
         raise LoggedError(
             log, "The defaults file for '%s' should be structured "

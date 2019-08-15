@@ -14,18 +14,14 @@ from pprint import pformat
 # Local
 from cobaya.tools import warn_deprecation, get_class, get_modules
 from cobaya.conventions import _sampler, _theory, _likelihood, subfolders
-from cobaya.yaml import yaml_dump
+from cobaya.input import get_default_info
+
 
 _kinds = [_sampler, _theory, _likelihood]
 _indent = 2 * " "
+import_odict = "from collections import OrderedDict\n\ninfo = "
 
 
-def dump_defaults(module, kind=None, return_yaml=True):
-    output = get_class(module, kind=kind).get_defaults(return_yaml=return_yaml)
-    if return_yaml:
-        return output
-    else:
-        return "from collections import OrderedDict\n\ninfo = " + pformat(output)
 
 
 # Command-line script ####################################################################
@@ -50,6 +46,8 @@ def doc_script():
                         help="Name of module whose defaults are requested.")
     parser.add_argument("-p", "--python", action="store_true", default=False,
                         help="Request Python instead of YAML.")
+    parser.add_argument("-x", "--expand", action="store_true", default=False,
+                        help="Expand YAML defaults.")
     arguments = parser.parse_args()
     # Remove plurals, for user-friendliness
     if arguments.kind in subfolders.values():
@@ -63,12 +61,22 @@ def doc_script():
             print(_indent + ("\n" + _indent).join(get_modules(kind)))
     # Only kind given and it's actually a "kind": list all modules of that kind;
     # otherwise, check if it's a unique module name
+    do_print = True
     if arguments.kind and not arguments.module:
         if arguments.kind.lower() in _kinds:
             print("%s:" % arguments.kind)
             print(_indent + ("\n" + _indent).join(get_modules(arguments.kind)))
-        else:
-            print(dump_defaults(arguments.kind, kind=None, return_yaml=not arguments.python))
-    if arguments.kind and arguments.module:
-        print(dump_defaults(arguments.module, kind=arguments.kind, return_yaml=not arguments.python))
+            do_print = False
+    if do_print:
+        module, kind = ((arguments.module, arguments.kind) if arguments.module
+                        else (arguments.kind, None))
+        try:
+            to_print = get_default_info(
+                module, kind, return_yaml=not arguments.python, yaml_expand_defaults=arguments.expand, fail_if_not_found=True)
+            if arguments.python:
+                print(import_odict + pformat(to_print))
+            else:
+                print(to_print)
+        except:
+            pass
     return
