@@ -182,6 +182,8 @@ The likelihoods from the Planck 2015 data release have been superseeded
 by the 2018 ones, and will eventually be deprecated.
 """)
 
+pla_url_prefix = r"https://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLOGY_OID="
+
 
 class _planck_clik_prototype(Likelihood, HasDefaults):
 
@@ -296,22 +298,22 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
     @classmethod
     def is_installed(cls, **kwargs):
         code_path = common_path
-        data_path = get_data_path(cls.__name__)
+        data_path = get_data_path(cls.get_module_name())
         result = True
         if kwargs["code"]:
             result &= is_installed_clik(os.path.realpath(
                 os.path.join(kwargs["path"], "code", code_path)))
         if kwargs["data"]:
-            _, filename = get_product_id_and_clik_file(cls.get_module_class())
+            _, filename = get_product_id_and_clik_file(cls.get_module_name())
             result &= os.path.exists(os.path.realpath(
                 os.path.join(kwargs["path"], "data", data_path, filename)))
-            from cobaya.likelihoods.planck_2018_cmblikes_lensing import planck_2018_cmblikes_lensing
-            result &= planck_2018_cmblikes_lensing.is_installed(**kwargs)
+            from cobaya.likelihoods.planck_2018_lensing.native import native
+            result &= native.is_installed(**kwargs)
         return result
 
     @classmethod
     def install(cls, path=None, force=False, code=True, data=True, no_progress_bars=False):
-        name = cls.get_module_class()
+        name = cls.get_module_name()
         log = logging.getLogger(name)
         path_names = {"code": common_path, "data": get_data_path(name)}
         import platform
@@ -341,21 +343,19 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
         if data:
             # 2nd test, in case the code wasn't there but the data is:
             if force or not cls.is_installed(path=path, code=False, data=True):
-
                 product_id, _ = get_product_id_and_clik_file(name)
                 # Download and decompress the particular likelihood
-                url = (r"https://pla.esac.esa.int/pla-sl/"
-                       "data-action?COSMOLOGY.COSMOLOGY_OID=" + product_id)
+                url = pla_url_prefix + product_id
                 # url = get_default_info(name, _likelihood)[_likelihood][name].get("url", url)
                 if not download_file(url, paths["data"], decompress=True,
                                      logger=log, no_progress_bars=no_progress_bars):
                     log.error("Not possible to download this likelihood.")
                     success = False
                 # Additional data and covmats, stored in same repo as the 2018 python lensing likelihood
-                from cobaya.likelihoods.planck_2018_cmblikes_lensing import planck_2018_cmblikes_lensing
-                if not planck_2018_cmblikes_lensing.is_installed(data=True, path=path):
-                    success *= planck_2018_cmblikes_lensing.install(path=path, force=force, code=code, data=data,
-                                                                    no_progress_bars=no_progress_bars)
+                from cobaya.likelihoods.planck_2018_lensing.native import native
+                if not native.is_installed(data=True, path=path):
+                    success *= native.install(path=path, force=force, code=code, data=data,
+                                              no_progress_bars=no_progress_bars)
         return success
 
 
@@ -382,13 +382,25 @@ def get_release(name):
     return next(re for re in ["2015", "2018"] if re in name)
 
 
+def get_clik_source_folder(starting_path):
+    """Safe source install folder: crawl modules/code/planck until >1 subfolders."""
+    source_dir = starting_path
+    while True:
+        folders = [f for f in os.listdir(source_dir)
+                   if os.path.isdir(os.path.join(source_dir, f))]
+        if len(folders) > 1:
+            break
+        elif len(folders) == 0:
+            raise FileNotFoundError
+        source_dir = os.path.join(source_dir, folders[0])
+    return source_dir
+
+
 def is_installed_clik(path, log_and_fail=False, import_it=True):
     log = logging.getLogger("clik")
-    if os.path.exists(path) and len(os.listdir(path)):
-        clik_path = os.path.join(path, os.listdir(path)[0], 'lib/python/site-packages')
-    else:
-        clik_path = None
-    if not clik_path or not os.path.exists(clik_path):
+    try:
+        clik_path = os.path.join(get_clik_source_folder(path), 'lib/python/site-packages')
+    except FileNotFoundError:
         if log_and_fail:
             raise LoggedError(log, "The given folder does not exist: '%s'", clik_path or path)
         return False
@@ -439,12 +451,12 @@ def install_clik(path, no_progress_bars=False):
         if exit_status:
             raise LoggedError(log, "Failed installing '%s'.", req)
     log.info("Downloading...")
-    click_url = 'https://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLOGY_OID=151912'
+    click_url = pla_url_prefix + '151912'
     if not download_file(click_url, path, decompress=True,
                          no_progress_bars=no_progress_bars, logger=log):
         log.error("Not possible to download clik.")
         return False
-    source_dir = os.path.join(path, 'code', 'plc_3.0', 'plc-3.01')
+    source_dir = get_clik_source_folder(path)
     log.info('Installing from directory %s' % source_dir)
     # The following code patches a problem with the download source of cfitsio.
     # Left here in case the FTP server breaks again.

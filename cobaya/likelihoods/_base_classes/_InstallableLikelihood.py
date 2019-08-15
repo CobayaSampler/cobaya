@@ -40,8 +40,9 @@ class _InstallableLikelihood(Likelihood):
         if repo:
             from cobaya.install import download_github_release
             log.info("Downloading %s data..." % repo)
-            return download_github_release(os.path.join(path, "data"), repo, opts.get("github_release", "master"),
-                                           no_progress_bars=no_progress_bars)
+            return download_github_release(
+                os.path.join(path, "data"), repo, opts.get("github_release", "master"),
+                no_progress_bars=no_progress_bars, logger=log)
         else:
             full_path = cls.get_path(path)
             if not os.path.exists(full_path):

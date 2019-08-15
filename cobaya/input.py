@@ -399,7 +399,7 @@ class HasDefaults(object):
             return ['.'.join(parts[i:]) + '.' + cls.__name__ for i in range(len(parts))]
 
     @classmethod
-    def get_module_class(cls):
+    def get_module_name(cls):
         """get cls.__name__ if class is same name as the module, otherwise module.class_name"""
         return cls.get_qualified_names()[2]
 

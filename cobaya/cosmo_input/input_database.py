@@ -676,12 +676,12 @@ for name, pre in preset.items():
 install_basic = {
     _theory: {_camb: None, _classy: None},
     _likelihood: {
-        "planck_2018_lowl": None,
-        "planck_2018_cmblikes_lensing": None,
+        "planck_2018_lowl.TT": None,
+        "planck_2018_lensing.native": None,
         "bicep_keck_2015": None,
-        "sn_pantheon": None,
-        "sdss_dr12_consensus_final": None,
-        "des_y1_joint": None}}
+        "sn.pantheon": None,
+        "bao.sdss_dr12_consensus_final": None,
+        "des_y1.joint": None}}
 
 install_tests = deepcopy(install_basic)
 install_tests[_likelihood].update({"planck_2015_lowl": None,

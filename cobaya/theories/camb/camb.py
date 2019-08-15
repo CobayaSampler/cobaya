@@ -678,7 +678,7 @@ class camb(_cosmo):
         log.info("Downloading camb...")
         success = download_github_release(
             os.path.join(path, "code"), cls.camb_repo_name, cls.camb_repo_version,
-            no_progress_bars=no_progress_bars)
+            no_progress_bars=no_progress_bars, logger=log)
         if not success:
             log.error("Could not download camb.")
             return False

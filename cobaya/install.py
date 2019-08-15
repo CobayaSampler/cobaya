@@ -134,13 +134,12 @@ def download_file(filename, path, no_progress_bars=False, decompress=False, logg
         wget_kwargs = {"out": path, "bar":
             (bar_thermometer if not no_progress_bars else None)}
         filename = download(filename, **wget_kwargs)
-        print('downloaded filename %s'%filename)
+        print("")
+        log.info('Downloaded filename %s' % filename)
     except Exception as excpt:
         log.error(
             "Error downloading file '%s' to folder '%s': %s", filename, path, str(excpt))
         return False
-    finally:
-        print("")
     log.debug('Got: %s' % filename)
     if not decompress:
         return True
@@ -165,7 +164,8 @@ def download_file(filename, path, no_progress_bars=False, decompress=False, logg
 
 
 def download_github_release(directory, repo_name, release_name, repo_rename=None,
-                            no_progress_bars=False):
+                            no_progress_bars=False, logger=None):
+    log = logger or logging.getLogger(__name__)
     if "/" in repo_name:
         github_user = repo_name[:repo_name.find("/")]
         repo_name = repo_name[repo_name.find("/") + 1:]

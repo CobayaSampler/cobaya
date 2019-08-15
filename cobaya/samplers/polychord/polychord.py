@@ -373,7 +373,8 @@ def install(path=None, force=False, code=False, data=False, no_progress_bars=Fal
     log = logging.getLogger(__name__.split(".")[-1])
     log.info("Downloading PolyChord...")
     success = download_github_release(os.path.join(path, "code"), pc_repo_name,
-                                      pc_repo_version, no_progress_bars=no_progress_bars)
+                                      pc_repo_version, no_progress_bars=no_progress_bars,
+                                      logger=log)
     if not success:
         log.error("Could not download PolyChord.")
         return False

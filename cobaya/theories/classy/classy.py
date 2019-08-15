@@ -563,7 +563,7 @@ class classy(_cosmo):
         log.info("Downloading classy...")
         success = download_github_release(
             os.path.join(path, "code"), cls.classy_repo_name, cls.classy_repo_version,
-            repo_rename=cls.__name__, no_progress_bars=no_progress_bars)
+            repo_rename=cls.__name__, no_progress_bars=no_progress_bars, logger=log)
         if not success:
             log.error("Could not download classy.")
             return False
