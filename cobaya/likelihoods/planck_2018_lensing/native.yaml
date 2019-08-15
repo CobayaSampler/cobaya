@@ -1,7 +1,7 @@
 # CMBlikes version of the Planck 2015 likelihood
 
 likelihood:
-  planck_2018_cmblikes_lensing:
+  planck_2018_lensing.native:
     # Path to the data: where the planck_supp_data_and_covmats has been cloned
     path: null
     dataset_file: lensing/2018/smicadx12_Dec5_ftl_mv2_ndclpp_p_teb_consext8.dataset

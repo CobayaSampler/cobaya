@@ -10,5 +10,5 @@
 from cobaya.likelihoods.planck_2018_cmblikes_lensing import planck_2018_cmblikes_lensing
 
 
-class planck_2018_cmblikes_lensing_cmbmarged(planck_2018_cmblikes_lensing):
+class cmbmarged(planck_2018_cmblikes_lensing):
     pass
