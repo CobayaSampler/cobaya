@@ -1,1 +1,0 @@
-from .planck_2018_CamSpec_python import planck_2018_CamSpec_python

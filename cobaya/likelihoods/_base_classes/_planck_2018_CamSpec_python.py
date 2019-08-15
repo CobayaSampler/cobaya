@@ -25,7 +25,6 @@ import scipy
 
 # Local
 from cobaya.likelihoods._base_classes import _DataSetLikelihood
-from cobaya.likelihoods._planck_calibration_base import _planck_calibration_base
 
 
 use_cache = True
@@ -47,7 +46,7 @@ def range_to_ells(use_range):
         return use_range
 
 
-class planck_2018_CamSpec_python(_DataSetLikelihood, _planck_calibration_base):
+class _planck_2018_CamSpec_python(_DataSetLikelihood):
     install_options = {"download_url": r"https://cdn.cosmologist.info/cosmobox/test2019_kaml/CamSpec2018.zip",
                        "data_path": "CamSpec2018"}
 
