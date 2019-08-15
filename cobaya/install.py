@@ -262,7 +262,7 @@ def install_script():
             log.info("Installing cosmological modules (input files will be ignored)")
             from cobaya.cosmo_input import install_basic
             infos = [install_basic]
-        if arguments.files == ["cosmo-tests"]:
+        elif arguments.files == ["cosmo-tests"]:
             log.info("Installing *tested* cosmological modules "
                      "(input files will be ignored)")
             from cobaya.cosmo_input import install_tests
