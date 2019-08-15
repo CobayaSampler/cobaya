@@ -124,9 +124,20 @@ def get_modules(kind):
     """
     Gets all modules' names of a given kind.
     """
-    return sorted([
+    folders = sorted([
         m for m in os.listdir(os.path.join(os.path.dirname(__file__), subfolders[kind]))
         if not m.startswith("_") and not m.startswith(".")])
+    with_nested = []
+    for f in folders:
+        dotpy_files = sorted([
+            f for f in os.listdir(
+                os.path.join(os.path.dirname(__file__), subfolders[kind], f))
+            if f.lower().endswith(".py") and not f.startswith("__init__")])
+        if dotpy_files:
+            with_nested += [f + "." + os.path.splitext(dpyf)[0] for dpyf in dotpy_files]
+        else:
+            with_nested += [f]
+    return with_nested
 
 
 def get_external_function(string_or_function, name=None, or_class=False):
