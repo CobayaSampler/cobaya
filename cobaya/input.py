@@ -90,7 +90,8 @@ def get_modules(*infos):
     return modules
 
 
-def get_default_info(module, kind=None, fail_if_not_found=False, return_yaml=False, yaml_expand_defaults=True):
+def get_default_info(module, kind=None, fail_if_not_found=False,
+                     return_yaml=False, yaml_expand_defaults=True):
     """
     Get default info for a module.
     """
@@ -99,7 +100,8 @@ def get_default_info(module, kind=None, fail_if_not_found=False, return_yaml=Fal
             kind = get_kind(module)
         cls = get_class(module, kind, None_if_not_found=not fail_if_not_found)
         if cls:
-            default_module_info = cls.get_defaults(return_yaml=return_yaml)
+            default_module_info = cls.get_defaults(
+                return_yaml=return_yaml, yaml_expand_defaults=yaml_expand_defaults)
         else:
             default_module_info = (
                 lambda x: yaml_dump(x) if return_yaml else x)({kind: {module: {}}})
@@ -426,7 +428,7 @@ class HasDefaults(object):
         return None
 
     @classmethod
-    def get_defaults(cls, return_yaml=False):
+    def get_defaults(cls, return_yaml=False, yaml_expand_defaults=True):
         """
         Return defaults for this module, with syntax:
 
@@ -447,7 +449,10 @@ class HasDefaults(object):
         """
         path_to_defaults = cls.get_yaml_file()
         if return_yaml:
-            with open(path_to_defaults, "r") as filedef:
-                return "".join(filedef.readlines())
+            if yaml_expand_defaults:
+                return yaml_dump(yaml_load_file(path_to_defaults))
+            else:
+                with open(path_to_defaults, "r") as filedef:
+                    return "".join(filedef.readlines())
         else:
             return yaml_load_file(path_to_defaults)

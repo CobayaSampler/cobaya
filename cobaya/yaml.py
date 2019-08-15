@@ -101,13 +101,13 @@ def _construct_defaults(loader, node):
 DefaultsLoader.add_constructor('!defaults', _construct_defaults)
 
 
-def yaml_load(text_stream, file_name=None, expand_defaults=True):
+def yaml_load(text_stream, file_name=None):
     try:
         # Use a global to store the file name, to be used to locate defaults files
         # (a bit hacky, but it works)
         global current_file_name
         current_file_name = file_name
-        return yaml.load(text_stream, DefaultsLoader if expand_defaults else OrderedLoader)
+        return yaml.load(text_stream, DefaultsLoader)
     # Redefining the general exception to give more user-friendly information
     except (yaml.YAMLError, TypeError) as exception:
         errstr = "Error in your input file " + ("'" + file_name + "'" if file_name else "")

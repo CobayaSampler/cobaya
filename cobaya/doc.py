@@ -46,8 +46,9 @@ def doc_script():
                         help="Name of module whose defaults are requested.")
     parser.add_argument("-p", "--python", action="store_true", default=False,
                         help="Request Python instead of YAML.")
-    parser.add_argument("-x", "--expand", action="store_true", default=False,
-                        help="Expand YAML defaults.")
+    expand_flag, expand_flag_ishort = "expand", 1
+    parser.add_argument("-" + expand_flag[expand_flag_ishort], "--" + expand_flag,
+                        action="store_true", default=False, help="Expand YAML defaults.")
     arguments = parser.parse_args()
     # Remove plurals, for user-friendliness
     if arguments.kind in subfolders.values():
@@ -77,6 +78,10 @@ def doc_script():
                 print(import_odict + pformat(to_print))
             else:
                 print(to_print)
+                if "!defaults" in to_print:
+                    print("# This file contains defaults. "
+                          "To populate them, use the flag --%s (or -%s)." % (
+                              expand_flag, expand_flag[expand_flag_ishort]))
         except:
             pass
     return
