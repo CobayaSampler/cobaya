@@ -10,3 +10,5 @@ likelihood:
     renames: [lensing]
     # Speed in evaluations/second
     speed: 800
+
+params: !defaults [../planck_2015_plikHM_TT/params_calib_2015]

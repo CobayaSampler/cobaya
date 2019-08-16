@@ -10,3 +10,5 @@ likelihood:
     renames: [lowl]
     # Speed in evaluations/second
     speed: 3500
+
+params: !defaults [../planck_2015_plikHM_TT/params_calib_2015]

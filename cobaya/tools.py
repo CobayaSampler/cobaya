@@ -125,8 +125,9 @@ def get_modules(kind):
     Gets all modules' names of a given kind.
     """
     folders = sorted([
-        m for m in os.listdir(os.path.join(os.path.dirname(__file__), subfolders[kind]))
-        if not m.startswith("_") and not m.startswith(".")])
+        f for f in os.listdir(os.path.join(os.path.dirname(__file__), subfolders[kind]))
+        if (not f.startswith("_") and not f.startswith(".") and
+        os.path.isdir(os.path.join(os.path.dirname(__file__), subfolders[kind], f)))])
     with_nested = []
     for f in folders:
         dotpy_files = sorted([

@@ -8,9 +8,11 @@ from .common_cosmo import body_of_test, process_modules_path
 from cobaya.cosmo_input import cmb_precision
 
 # Generating plots in Travis
-import matplotlib
-
-matplotlib.use('agg')
+try:
+    import matplotlib
+    matplotlib.use('agg')
+except:
+    pass
 
 # Derived parameters not understood by CLASS
 # https://wiki.cosmos.esa.int/planckpla2015/images/b/b9/Parameter_tag_definitions_2015.pdf

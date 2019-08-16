@@ -343,6 +343,7 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
         if data:
             # 2nd test, in case the code wasn't there but the data is:
             if force or not cls.is_installed(path=path, code=False, data=True):
+                log.info("Downloading the likelihood data.")
                 product_id, _ = get_product_id_and_clik_file(name)
                 # Download and decompress the particular likelihood
                 url = pla_url_prefix + product_id
