@@ -49,7 +49,8 @@ class Likelihood(HasLogger, HasDefaults):
 
     # Generic initialization -- do not touch
     def __init__(self, info, modules=None, timing=None):
-        self.name = self.__class__.__name__
+        self.name = getattr(
+            self.__class__, "get_module_name", lambda : self.__class__.__name__)()
         self.set_logger()
         self.log = logging.getLogger(self.name)
         self.path_install = modules

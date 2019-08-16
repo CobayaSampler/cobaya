@@ -88,10 +88,16 @@ def install(*infos, **kwargs):
                 continue
             if is_installed(path=abspath, **kwargs_install):
                 log.info("External module already installed.\n")
+                if kwargs.get("just_check", False):
+                    continue
                 if kwargs_install["force"]:
                     log.info("Forcing re-installation, as requested.")
                 else:
                     log.info("Doing nothing.\n")
+                    continue
+            else:
+                if kwargs.get("just_check", False):
+                    log.info("NOT INSTALLED!")
                     continue
             try:
                 install_this = getattr(imported_class, "install",
@@ -252,6 +258,8 @@ def install_script():
                             help="Force re-installation of apparently installed modules.")
         parser.add_argument("--no-progress-bars", action="store_true", default=False,
                             help="No progress bars shown. Shorter logs (used in Travis).")
+        parser.add_argument("--just-check", action="store_true", default=False,
+                            help="Just check whether modules are installed.")
         group_just = parser.add_mutually_exclusive_group(required=False)
         group_just.add_argument("-C", "--just-code", action="store_false", default=True,
                                 help="Install code of the modules.", dest=_data)
@@ -275,4 +283,4 @@ def install_script():
         # Launch installer
         install(*infos, path=getattr(arguments, _modules_path_arg)[0],
                 **{arg: getattr(arguments, arg)
-                   for arg in ["force", _code, _data, "no_progress_bars"]})
+                   for arg in ["force", _code, _data, "no_progress_bars", "just_check"]})

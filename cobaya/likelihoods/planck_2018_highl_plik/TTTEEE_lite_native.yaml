@@ -7,7 +7,7 @@ likelihood:
     dataset_file: plik_lite_v22.dataset
     # Overriding of .dataset parameters
     dataset_params:
-      use_cl: 100x100 143x143 217x217 143x217
+      use_cl: tt te ee
     # Aliases for automatic covariance matrix
     renames: [plik]
     # Speed in evaluations/second

@@ -44,8 +44,11 @@ class _DataSetLikelihood(_InstallableLikelihood):
 
             data_file = os.path.normpath(os.path.join(self.path, self.dataset_file))
         if not os.path.exists(data_file):
-            raise LoggedError(self.log, "The data file '%s' could not be found at '%s'. "
-                                        "Check your paths!", self.dataset_file, self.path)
+            raise LoggedError(
+                self.log, "The data file '%s' could not be found at '%s'. "
+                "Either you have not installed this likelihood, "
+                "or have given the wrong modules installation path.",
+                self.dataset_file, self.path)
         self.load_dataset_file(data_file, self.dataset_params)
 
     def load_dataset_file(self, filename, dataset_params):

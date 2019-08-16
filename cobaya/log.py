@@ -126,9 +126,11 @@ class HasLogger(object):
     """
 
     def set_logger(self, lowercase=True):
+        module_name = getattr(
+            self.__class__, "get_module_name", lambda : self.__class__.__name__)()
         self.log = logging.getLogger(
             (lambda x: x.lower() if lowercase else x)(
-                getattr(self, "name", self.__class__.__name__)))
+                getattr(self, "name", module_name)))
 
     # Copying and pickling
     def __deepcopy__(self, memo={}):

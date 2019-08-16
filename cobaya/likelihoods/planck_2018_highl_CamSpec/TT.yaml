@@ -1,15 +1,15 @@
 # CLIK version of the plik_lite 2018 Planck likelihood, allowing multipole/bin selection
 
 likelihood:
-  planck_2018_highl_CamSpec.TTTEEE:
+  planck_2018_highl_CamSpec.TT:
     path:
-    clik_file: extended_camspec/plc_3.0/hi_l/camspec/camspec_10.7HM_1400_TTTEEE.clik
+    clik_file: extended_camspec/plc_3.0/hi_l/camspec/camspec_10.7HM_1400_TT_small.clik
     product_id: "151903"
     # Aliases for automatic covariance matrix
-    renames: [CamSpecHM_TTTEEE]
+    renames: [CamSpecHM_TT]
     # Speed in evaluations/second
     speed: 100
 
-params: !defaults [params_calib_CamSpec, params_TT_CamSpec, params_TE_CamSpec, params_EE_CamSpec]
+params: !defaults [params_calib_CamSpec, params_TT_CamSpec, params_TT_CamSpec_fixedcalpol]
 
 prior: !defaults [prior_SZ_CamSpec]

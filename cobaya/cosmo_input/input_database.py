@@ -683,11 +683,13 @@ install_basic = {
         "bao.sdss_dr12_consensus_final": None,
         "des_y1.joint": None}}
 
+
 install_tests = deepcopy(install_basic)
 install_tests[_likelihood].update({"planck_2015_lowl": None,
-                                   "planck_2018_pliklite_python": None,
-                                   "planck_2018_CamSpec.CamSpec_TTTEEE_python": None,
-                                   "planck_2018_CamSpec.clik_CamSpecHM_TTTEEE": None})
+                                   "planck_2018_highl_plik.TT_lite_native": None,
+                                   "planck_2018_highl_CamSpec.TT": None,
+                                   "planck_2018_highl_CamSpec.TT_native": None,
+})
 
 skip_list = os.environ.get("COBAYA_TEST_SKIP", "").replace(",", " ").lower().split()
 for key in list(install_tests.keys()):

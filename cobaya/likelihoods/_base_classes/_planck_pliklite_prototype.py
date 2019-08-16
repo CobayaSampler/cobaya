@@ -1,5 +1,5 @@
 """
-.. module:: _pliklite_prototype
+.. module:: _planck_pliklite_prototype
 
 :Synopsis: Definition of python-native nuisance-free CMB likelihoods: e.g. plik_lite
 :Author: Erminia Calabrese, Antony Lewis
@@ -22,9 +22,9 @@ from cobaya.likelihoods._base_classes import _DataSetLikelihood
 cl_names = ['tt', 'te', 'ee']
 
 
-class _pliklite_prototype(_DataSetLikelihood):
+class _planck_pliklite_prototype(_DataSetLikelihood):
     install_options = {"download_url": "https://cdn.cosmologist.info/cosmobox/test2019_kaml/plik_lite_AL.zip",
-                       "data_path": "plik_lite"}
+                       "data_path": "planck_2018_pliklite_native"}
 
     def init_params(self, ini):
         self.use_cl = [c.lower() for c in ini.list('use_cl')]

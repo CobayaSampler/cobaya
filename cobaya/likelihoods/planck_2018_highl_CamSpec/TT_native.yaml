@@ -1,7 +1,7 @@
 # Native python version of the plik_lite 2018 Planck likelihood, allowing multipole/bin selection
 
 likelihood:
-  planck_2018_CamSpec.TT_native:
+  planck_2018_highl_CamSpec.TT_native:
     # Path to the data: where the planck_supp_data_and_covmats has been cloned
     path: null
     dataset_file: CamSpec2018/CamSpecHM_10_7.dataset  
@@ -12,5 +12,6 @@ likelihood:
     # Speed in evaluations/second
     speed: 200
 
+params: !defaults [params_calib_CamSpec, params_TT_CamSpec]
 
-params: !defaults [params_TT]
+prior: !defaults [prior_SZ_CamSpec]

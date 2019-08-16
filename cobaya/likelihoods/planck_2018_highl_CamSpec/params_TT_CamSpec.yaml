@@ -1,4 +1,3 @@
-params:
   aps100:
     prior:
       dist: uniform
@@ -170,7 +169,3 @@ params:
       scale: 0.001
     proposal: 0.001
     latex: c_{217}
-
-
-prior:
-  SZ: "lambda aksz, asz143: stats.norm.logpdf(aksz+1.6*asz143, loc=9.5, scale=3.0)"

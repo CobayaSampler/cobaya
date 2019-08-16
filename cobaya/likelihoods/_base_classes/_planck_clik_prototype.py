@@ -192,7 +192,7 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
             for line in _deprecation_msg_2015.split("\n"):
                 self.log.warning(line)
         code_path = common_path
-        data_path = get_data_path(self.name)
+        data_path = get_data_path(self.__class__.get_module_name())
         if self.path:
             has_clik = False
         else:
@@ -240,16 +240,8 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
                            "initialization of incompatible likelihoods (e.g. polarised "
                            "vs non-polarised 'lite' likelihoods. See error info below:")
             raise
-        self.expected_params = list(self.clik.extra_parameter_names)
-        # py3 lensing bug
-        if "b'A_planck'" in self.expected_params:
-            self.expected_params[self.expected_params.index("b'A_planck'")] = "A_planck"
-        # line added to deal with a bug in planck likelihood release:
-        # A_planck called A_Planck in plik_lite 2015
-        if "_lite" in self.name and 'A_Planck' in self.expected_params:
-            i = self.expected_params.index('A_Planck')
-            self.expected_params[i] = 'A_planck'
         # Check that the parameters are the right ones
+        self.expected_params = list(self.clik.extra_parameter_names)
         differences = are_different_params_lists(
             self.input_params, self.expected_params, name_A="given", name_B="expected")
         if differences:
@@ -307,6 +299,7 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
             _, filename = get_product_id_and_clik_file(cls.get_module_name())
             result &= os.path.exists(os.path.realpath(
                 os.path.join(kwargs["path"], "data", data_path, filename)))
+            # Check for additional data and covmats
             from cobaya.likelihoods.planck_2018_lensing.native import native
             result &= native.is_installed(**kwargs)
         return result
