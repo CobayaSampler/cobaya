@@ -1,5 +1,5 @@
 """
-.. module:: _CMBlikes_prototype
+.. module:: _cmblikes_prototype
 
 :Synopsis: Definition of the CMBlikes class for CMB real or simulated data.
 :Author: Antony Lewis (adapted to Cobaya by Jesus Torrado with little modification)

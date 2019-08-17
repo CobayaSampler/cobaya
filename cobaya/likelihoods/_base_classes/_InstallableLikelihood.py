@@ -1,3 +1,11 @@
+r"""
+.. module:: _InstallableLikelihood
+
+:Synopsis: Prototype class adding class methods for simple installation of likelihood data.
+:Author: Jesus Torrado and Antony Lewis
+
+"""
+
 # Global
 import os
 import logging

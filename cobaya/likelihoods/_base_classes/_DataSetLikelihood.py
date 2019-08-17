@@ -1,3 +1,10 @@
+"""
+.. module:: _DataSetLikelihood
+
+:Synopsis: Base class for .dataset based likelihoods.
+:Author: Antony Lewis
+
+"""
 # Global
 import os
 from getdist import IniFile

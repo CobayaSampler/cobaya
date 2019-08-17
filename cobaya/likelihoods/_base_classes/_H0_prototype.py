@@ -1,5 +1,5 @@
 r"""
-.. module:: likelihoods._H0_prototype
+.. module:: _H0_prototype
 
 :Synopsis: Prototype class for local Hubble parameter measurements
 :Author: Jesus Torrado
