@@ -12,6 +12,6 @@ likelihood:
     # Speed in evaluations/second
     speed: 200
 
-params: !defaults [params_calib_CamSpec, params_TT_CamSpec, params_TE_CamSpec, params_EE_CamSpec]
+params: !defaults [params_calib_CamSpec_native, params_TT_CamSpec, params_TE_CamSpec, params_EE_CamSpec]
 
 prior: !defaults [prior_SZ_CamSpec]

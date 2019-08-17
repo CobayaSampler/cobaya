@@ -7,8 +7,8 @@
 
 """
 
-from cobaya.likelihoods.planck_2018_cmblikes_lensing import planck_2018_cmblikes_lensing
+from cobaya.likelihoods.planck_2018_lensing.native import native
 
 
-class cmbmarged(planck_2018_cmblikes_lensing):
+class cmbmarged(native):
     pass

@@ -113,8 +113,9 @@ def get_class(name, kind=None, None_if_not_found=False):
             if None_if_not_found:
                 return None
             raise LoggedError(
-                log, "%s '%s' not found (wrong capitalization?)",
-                kind.capitalize(), name)
+                log, "%s '%s' not found. Maybe you meant one of the following "
+                "(capitalization is important!): %s",
+                kind.capitalize(), name, fuzzy_match(name, get_modules(kind), n=3))
         else:
             log.error("There was a problem when importing %s '%s':", kind, name)
             raise sys.exc_info()[1]
@@ -459,10 +460,10 @@ def progress_bar(logger, percentage, final_text=""):
                 "@" * progress + "-" * (20 - progress), percentage, final_text)
 
 
-def fuzzy_match(in_string, choices, n=3, score_cutoff=50):
+def fuzzy_match(input_string, choices, n=3, score_cutoff=50):
     try:
         return list(zip(*(fuzzy_process.extractBests(
-            in_string, choices, score_cutoff=score_cutoff))))[0][:n]
+            input_string, choices, score_cutoff=score_cutoff))))[0][:n]
     except IndexError:
         return []
 
