@@ -686,6 +686,7 @@ install_basic = {
 
 install_tests = deepcopy(install_basic)
 install_tests[_likelihood].update({"planck_2015_lowl": None,
+                                   "planck_2018_highl_plik.TT_unbinned": None,
                                    "planck_2018_highl_plik.TT_lite_native": None,
                                    "planck_2018_highl_CamSpec.TT": None,
                                    "planck_2018_highl_CamSpec.TT_native": None,

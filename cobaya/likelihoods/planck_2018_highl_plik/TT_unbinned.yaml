@@ -3,7 +3,8 @@
 
 likelihood:
   planck_2018_highl_plik.TT_unbinned:
-    clik_file: plc_3.0/hi_l/plik/plik_rd12_HM_v22_TT_bin1.clik
+    path:
+    clik_file: extended_plik/plc_3.0/hi_l/plik/plik_rd12_HM_v22_TT_bin1.clik
     product_id: "151905"
     # Aliases for automatic covariance matrix
     renames: [plikHM_TT]

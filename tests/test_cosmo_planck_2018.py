@@ -75,6 +75,28 @@ def test_planck_2018_p_lite_native_camb(modules):
     test_planck_2018_p_lite_camb(modules, native=True)
 
 
+# UNBINNED ###############################################################################
+
+def test_planck_2018_t_unbinned_camb(modules, native=False):
+    best_fit = deepcopy(params_lowl_highTT_lensing)
+    best_fit.pop("H0")
+    like_name = "planck_2018_highl_plik.TT_unbinned"
+    info_likelihood = {like_name: None}
+    info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
+    chi2 = {like_name: 8275.93, "tolerance": 0.01}
+    body_of_test(modules, best_fit, info_likelihood, info_theory, chi2)
+
+
+def test_planck_2018_p_unbinned_camb(modules, native=False):
+    best_fit = deepcopy(params_lowTE_highTTTEEE_lensingcmblikes)
+    best_fit.pop("H0")
+    like_name = "planck_2018_highl_plik.TTTEEE_unbinned"
+    info_likelihood = {like_name: None}
+    info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
+    chi2 = {like_name: 24125.92, "tolerance": 0.01}
+    body_of_test(modules, best_fit, info_likelihood, info_theory, chi2)
+
+
 # CamSpec ################################################################################
 
 def test_planck_2018_t_CamSpec_native_camb(modules, plik=False):

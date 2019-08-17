@@ -97,7 +97,7 @@ def install(*infos, **kwargs):
                     continue
             else:
                 if kwargs.get("just_check", False):
-                    log.info("NOT INSTALLED!")
+                    log.info("NOT INSTALLED!\n")
                     continue
             try:
                 install_this = getattr(imported_class, "install",
