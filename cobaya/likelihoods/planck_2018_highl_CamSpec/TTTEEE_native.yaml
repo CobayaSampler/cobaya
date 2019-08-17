@@ -1,4 +1,6 @@
-# Native python version of the plik_lite 2018 Planck likelihood, allowing multipole/bin selection
+# Planck 2018 release: high-ell, TT+TE+TT power spectrum CamSpec likelihood
+# See https://wiki.cosmos.esa.int/planck-legacy-archive/index.php/CMB_spectrum_%26_Likelihood_Code#
+# Native python re-implemetation, allowing multipole/bin selection
 
 likelihood:
   planck_2018_highl_CamSpec.TTTEEE_native:

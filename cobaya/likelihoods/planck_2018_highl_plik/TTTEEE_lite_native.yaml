@@ -1,4 +1,7 @@
-# Native python version of the plik_lite 2018 Planck likelihood, allowing multipole/bin selection
+# Planck 2018 release: high-ell, TT+TE+EE power spectrum likelihood, marginalized over the foreground model (pliklite)
+# See https://wiki.cosmos.esa.int/planck-legacy-archive/index.php/CMB_spectrum_%26_Likelihood_Code
+
+# *Native python version*, allowing multipole/bin selection
 
 likelihood:
   planck_2018_highl_plik.TTTEEE_lite_native:

@@ -1,4 +1,6 @@
-# CMBlikes version of the Planck 2015 likelihood
+# Planck 2018 release: lensing T+P-based likelihood
+# -- Native python .dataset-based implementation
+# See https://wiki.cosmos.esa.int/planck-legacy-archive/index.php/CMB_spectrum_%26_Likelihood_Code
 
 likelihood:
   planck_2018_lensing.native:

@@ -1,4 +1,5 @@
-# CLIK version of the plik_lite 2018 Planck likelihood, allowing multipole/bin selection
+# Planck 2018 release: high-ell, TT power spectrum CamSpec likelihood
+# See https://wiki.cosmos.esa.int/planck-legacy-archive/index.php/CMB_spectrum_%26_Likelihood_Code
 
 likelihood:
   planck_2018_highl_CamSpec.TT:
