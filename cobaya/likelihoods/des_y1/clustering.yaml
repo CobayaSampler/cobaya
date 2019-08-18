@@ -21,7 +21,7 @@ likelihood:
     # against integrals of bessel in each bin.
     binned_bessels: True
     # Aliases for automatic covariance matrix
-    renames: [DESwt]
+    renames: [DESwt]  # not really its alias, but should help
     # Speed in evaluations/second
     speed: 40
 

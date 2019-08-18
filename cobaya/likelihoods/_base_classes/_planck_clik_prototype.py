@@ -184,6 +184,8 @@ by the 2018 ones, and will eventually be deprecated.
 
 pla_url_prefix = r"https://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLOGY_OID="
 
+last_version_supp_data_and_covmats = "v2.01"
+
 
 class _planck_clik_prototype(Likelihood, HasDefaults):
 

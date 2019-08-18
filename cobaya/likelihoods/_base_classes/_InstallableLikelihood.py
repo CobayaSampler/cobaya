@@ -12,10 +12,12 @@ import logging
 
 # Local
 from cobaya.likelihood import Likelihood
+from cobaya.likelihoods._base_classes._planck_clik_prototype import last_version_supp_data_and_covmats
 
 
 class _InstallableLikelihood(Likelihood):
-    install_options = {"github_repository": "CobayaSampler/planck_supp_data_and_covmats", "github_release": "master"}
+    install_options = {"github_repository": "CobayaSampler/planck_supp_data_and_covmats",
+                       "github_release": last_version_supp_data_and_covmats}
 
     @classmethod
     def get_install_options(cls):

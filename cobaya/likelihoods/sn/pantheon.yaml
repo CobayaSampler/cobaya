@@ -10,6 +10,6 @@ likelihood:
     dataset_params:
       # field: value
     # Aliases for automatic covariance matrix
-    renames: [Pantheon]
+    renames: [Pantheon, Pantheon18]
     # Speed in evaluations/second
     speed: 100

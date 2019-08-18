@@ -12,7 +12,7 @@ likelihood:
     dataset_params:
       use_cl: tt te ee
     # Aliases for automatic covariance matrix
-    renames: [plik]
+    renames: [plikHM_TTTEEE]
     # Speed in evaluations/second
     speed: 200
 

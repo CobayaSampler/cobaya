@@ -14,6 +14,6 @@ likelihood:
     # Overriding of the maximum ell computed
     l_max:
     # Aliases for automatic covariance matrix
-#    renames: [lensing]
+    renames: [lensing]
     # Speed in evaluations/second
     speed: 90

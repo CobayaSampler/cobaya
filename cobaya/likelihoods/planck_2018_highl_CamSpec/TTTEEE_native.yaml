@@ -10,7 +10,7 @@ likelihood:
     dataset_params:
       use_cl: 100x100 143x143 217x217 143x217 TE EE
     # Aliases for automatic covariance matrix
-    renames: [CamSpecHM_TT]
+    renames: [CamSpecHM_TTTEEE]
     # Speed in evaluations/second
     speed: 40
 
