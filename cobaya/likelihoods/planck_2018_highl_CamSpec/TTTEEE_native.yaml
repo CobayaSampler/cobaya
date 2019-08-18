@@ -12,7 +12,7 @@ likelihood:
     # Aliases for automatic covariance matrix
     renames: [CamSpecHM_TT]
     # Speed in evaluations/second
-    speed: 200
+    speed: 40
 
 params: !defaults [params_calib_CamSpec_native, params_TT_CamSpec, params_TE_CamSpec, params_EE_CamSpec]
 

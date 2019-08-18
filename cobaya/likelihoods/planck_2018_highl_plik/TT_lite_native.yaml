@@ -14,6 +14,6 @@ likelihood:
     # Aliases for automatic covariance matrix
     renames: [plik]
     # Speed in evaluations/second
-    speed: 1000
+    speed: 200
 
 params: !defaults [params_calib]

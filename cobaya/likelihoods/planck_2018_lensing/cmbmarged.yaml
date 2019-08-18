@@ -16,5 +16,4 @@ likelihood:
     # Aliases for automatic covariance matrix
 #    renames: [lensing]
     # Speed in evaluations/second
-    speed: 1500
-remove_params: [A_planck]
+    speed: 90

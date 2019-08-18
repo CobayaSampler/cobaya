@@ -9,6 +9,6 @@ likelihood:
     # Aliases for automatic covariance matrix
     renames: [lowE]
     # Speed in evaluations/second
-    speed: 3000
+    speed: 4000
 
 params: !defaults [../planck_2018_highl_plik/params_calib]

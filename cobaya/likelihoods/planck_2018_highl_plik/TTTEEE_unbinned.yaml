@@ -9,7 +9,7 @@ likelihood:
     # Aliases for automatic covariance matrix
     renames: [plikHM_TTTEEE]
     # Speed in evaluations/second
-    speed: 3
+    speed: 2.5
 
 params: !defaults [params_calib, params_TT, params_TEEE]
 

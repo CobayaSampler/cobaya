@@ -66,6 +66,8 @@ class Likelihood(HasLogger, HasDefaults):
         self.timing = timing
         self.n = 0
         self.time_avg = 0
+        self.time_sqsum = 0
+        self.time_std = np.inf
 
     # What you *must* implement to create your own likelihood:
 
@@ -144,7 +146,22 @@ class Likelihood(HasLogger, HasDefaults):
             self.states[i_state]["logp"] = self.logp(_derived=_derived, **params_values)
             if self.timing:
                 self.n += 1
-                self.time_avg = (time() - start + self.time_avg * (self.n - 1)) / self.n
+                delta_time = time() - start
+                # TODO: Protect against caching in first call by discarding first time if
+                # too different from second one (maybe check difference in log10 > 1)
+                # In that case, take into account that #timed_evals is now (self.n - 1)
+                if self.n == 2:
+                    log10diff = np.log10(self.time_avg/delta_time)
+                    if log10diff > 1:
+                        self.log.warning(
+                            "It seems the first call has done some caching (difference "
+                            " of a factor %g). Average timing will not be reliable "
+                            "unless many evaluations are carried out.", 10**log10diff)
+                self.time_avg = (delta_time + self.time_avg * (self.n - 1)) / self.n
+                self.time_sqsum += delta_time ** 2
+                if self.n > 1:
+                    self.time_std = np.sqrt(
+                        (self.time_sqsum - self.n * self.time_avg**2)/(self.n-1))
                 self.log.debug("Average 'logp' evaluation time: %g s", self.time_avg)
             self.states[i_state]["derived"] = deepcopy(_derived)
         # make this one the current one by decreasing the antiquity of the rest
@@ -201,6 +218,8 @@ class LikelihoodExternalFunction(Likelihood, HasLogger):
         self.timing = timing
         self.n = 0
         self.time_avg = 0
+        self.time_sqsum = 0
+        self.time_std = np.inf
         # States, to avoid recomputing
         self.n_states = 3
         self.states = [{"params": None, "logp": None, "derived": None, "last": 0}
