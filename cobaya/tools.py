@@ -134,11 +134,14 @@ def get_modules(kind):
         dotpy_files = sorted([
             f for f in os.listdir(
                 os.path.join(os.path.dirname(__file__), subfolders[kind], f))
-            if f.lower().endswith(".py") and not f.startswith("_")])
-        if dotpy_files:
-            with_nested += [f + "." + os.path.splitext(dpyf)[0] for dpyf in dotpy_files]
-        else:
+            if f.lower().endswith(".py")])
+        # if __init__, assume it containts a sigle module named as the folder
+        if "__init__.py" in [p.lower() for p in dotpy_files]:
             with_nested += [f]
+        else:
+            dotpy_files = [f for f in dotpy_files if not f.startswith("_")]
+            with_nested += [f + "." +  os.path.splitext(dpyf)[0]for dpyf in dotpy_files
+                            if os.path.splitext(dpyf)[0] != f]
     return with_nested
 
 
