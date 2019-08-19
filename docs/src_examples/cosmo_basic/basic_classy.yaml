@@ -1,8 +1,8 @@
 likelihood:
-  planck_2018_lowl:
-  planck_2018_lowE:
-  planck_2018_plikHM_TTTEEE:
-  planck_2018_cmblikes_lensing:
+  planck_2018_lowl.TT: null
+  planck_2018_lowl.EE: null
+  planck_2018_highl_plik.TTTEEE: null
+  planck_2018_lensing.clik: null
 params:
   logA:
     prior:
@@ -10,7 +10,7 @@ params:
       max: 3.91
     ref:
       dist: norm
-      loc: 3.1
+      loc: 3.05
       scale: 0.001
     proposal: 0.001
     latex: \log(10^{10} A_\mathrm{s})
@@ -24,7 +24,7 @@ params:
       max: 1.2
     ref:
       dist: norm
-      loc: 0.96
+      loc: 0.965
       scale: 0.004
     proposal: 0.002
     latex: n_\mathrm{s}
@@ -34,7 +34,7 @@ params:
       max: 10
     ref:
       dist: norm
-      loc: 1.0418
+      loc: 1.0416
       scale: 0.0004
     proposal: 0.0002
     latex: 100\theta_\mathrm{s}
@@ -50,7 +50,7 @@ params:
       max: 0.1
     ref:
       dist: norm
-      loc: 0.0221
+      loc: 0.0224
       scale: 0.0001
     proposal: 0.0001
     latex: \Omega_\mathrm{b} h^2
@@ -82,9 +82,9 @@ params:
       max: 0.8
     ref:
       dist: norm
-      loc: 0.09
-      scale: 0.01
-    proposal: 0.005
+      loc: 0.055
+      scale: 0.006
+    proposal: 0.003
     latex: \tau_\mathrm{reio}
   z_reio:
     latex: z_\mathrm{re}
@@ -110,9 +110,9 @@ params:
   rs_drag:
     latex: r_\mathrm{drag}
   chi2__CMB:
-    derived: 'lambda chi2__planck_2018_lowl, chi2__planck_2018_lowE, chi2__planck_2018_plikHM_TTTEEE,
-      chi2__planck_2018_cmblikes_lensing: sum([chi2__planck_2018_lowl, chi2__planck_2018_lowE,
-      chi2__planck_2018_plikHM_TTTEEE, chi2__planck_2018_cmblikes_lensing])'
+    derived: 'lambda chi2__planck_2018_lowl_TT, chi2__planck_2018_lowl_EE, chi2__planck_2018_highl_plik_TTTEEE,
+      chi2__planck_2018_lensing_clik: sum([chi2__planck_2018_lowl_TT, chi2__planck_2018_lowl_EE,
+      chi2__planck_2018_highl_plik_TTTEEE, chi2__planck_2018_lensing_clik])'
     latex: \chi^2_\mathrm{CMB}
 sampler:
   mcmc:

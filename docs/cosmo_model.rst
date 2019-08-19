@@ -30,13 +30,13 @@ To get (log) probabilities and derived parameters for particular parameter value
       print(list(model.parameterization.sampled_params()))
 
 
-Since there are lots of nuisance parameters (most of them coming from ``planck_2018_plikHM_TTTEEE``), let us be a little lazy and give them random values, which will help us illustrate how to use the model to sample from the prior. To do that, we will use the method :func:`~prior.Prior.sample`, where the class :class:`prior.Prior` is a member of the :class:`Model`. If we check out its documentation, we'll notice that:
+Since there are lots of nuisance parameters (most of them coming from ``planck_2018_highl_plik.TTTEEE``), let us be a little lazy and give them random values, which will help us illustrate how to use the model to sample from the prior. To do that, we will use the method :func:`~prior.Prior.sample`, where the class :class:`prior.Prior` is a member of the :class:`Model`. If we check out its documentation, we'll notice that:
 
 + It returns an array of samples (hence the ``[0]`` after the call below)
 
 + Samples are returned as arrays, not a dictionaries, so we need to add the parameter names, whose order corresponds to the output of ``model.parameterization.sampled_params()``.
 
-+ There is an :ref:`external prior <prior_external>`: a gaussian on a linear combination of SZ parameters inherited from the likelihood ``planck_2018_plikHM_TTTEEE``; thus, since we don't know how to sample from it,
++ There is an :ref:`external prior <prior_external>`: a gaussian on a linear combination of SZ parameters inherited from the likelihood ``planck_2018_highl_plik.TTTEEE``; thus, since we don't know how to sample from it,
   we need to add the ``ignore_external=True`` keyword (mind that the returned samples are not samples from the full prior, but from the separable 1-dimensional prior described in the ``params`` block.
 
 We overwrite our prior sample with some cosmological parameter values of interest, and compute the logposterior (check out the documentation of :func:`~model.Model.logposterior` below):
@@ -115,7 +115,7 @@ If you had set ``timing=True`` in the input info, :func:`~model.Model.dump_timin
 
 .. warning::
 
-   Unfortunately, not all likelihoods and cosmological codes are *instance-safe*, i.e. you can't define two models using each the unbinned TT and TTTEEE likelihoods at the same time.
+   Unfortunately, not all likelihoods and cosmological codes are *instance-safe*, e.g. you can't define two models using each the unbinned TT and TTTEEE likelihoods at the same time.
 
 
 Low-level access to the theory code
