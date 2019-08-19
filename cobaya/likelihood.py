@@ -356,7 +356,7 @@ class LikelihoodCollection(HasLogger):
                 _derived=this_derived_dict, cached=cached, **this_params_dict)]
             derived_dict.update(this_derived_dict or {})
             if _derived is not None:
-                derived_dict[_chi2 + _separator + like] = -2 * logps[-1]
+                derived_dict[_chi2 + _separator + like.replace(".", "_")] = -2 * logps[-1]
         # Turn the derived params dict into a list and return
         if _derived is not None:
             _derived += [derived_dict[p] for p in self.output_params]
@@ -455,7 +455,7 @@ class LikelihoodCollection(HasLogger):
         for p in params_assign["output"]:
             if p.startswith(_chi2 + _separator):
                 like = p[len(_chi2 + _separator):]
-                if like not in list(self):
+                if like not in [l.replace(".", "_") for l in self]:
                     raise LoggedError(
                         self.log, "Your derived parameters depend on an unknown "
                                   "likelihood: '%s'", like)

@@ -410,20 +410,20 @@ like_cmb = odict([
         _theory: {theo: {_extra_args: cmb_precision[theo]}
                   for theo in [_camb, _classy]},
         _likelihood: odict([
-            ["planck_2018_lowl", None],
-            ["planck_2018_lowE", None],
-            ["planck_2018_plikHM_TTTEEE", None],
-            ["planck_2018_cmblikes_lensing", None]])}],
+            ["planck_2018_lowl.TT", None],
+            ["planck_2018_lowl.EE", None],
+            ["planck_2018_highl_plik.TTTEEE", None],
+            ["planck_2018_lensing.clik", None]])}],
     ["planck_2018_bk15", {
         _desc: "Planck 2018 (Polarized CMB + lensing) + Bicep/Keck-Array 2015",
         _sampler: cmb_sampler_recommended,
         _theory: {theo: {_extra_args: cmb_precision[theo]}
                   for theo in [_camb, _classy]},
         _likelihood: odict([
-            ["planck_2018_lowl", None],
-            ["planck_2018_lowE", None],
-            ["planck_2018_plikHM_TTTEEE", None],
-            ["planck_2018_cmblikes_lensing", None],
+            ["planck_2018_lowl.TT", None],
+            ["planck_2018_lowl.EE", None],
+            ["planck_2018_highl_plik.TTTEEE", None],
+            ["planck_2018_lensing.clik", None],
             ["bicep_keck_2015", None]])}],
     ["planck_2018_CMBmarged_lensing", {
         _desc: "Planck 2018 CMB-marginalized lensing",
@@ -431,7 +431,7 @@ like_cmb = odict([
         _theory: {theo: {_extra_args: cmb_precision[theo]}
                   for theo in [_camb, _classy]},
         _likelihood: odict([
-            ["planck_2018_cmblikes_lensing_cmbmarged", None]])}],
+            ["planck_2018_lensing.cmbmarged", None]])}],
 ])
 like_cmb["planck_2018_bk15"][_comment] = like_cmb["planck_2018"][_comment]
 # Add common CMB derived parameters
@@ -480,7 +480,8 @@ for name, m in like_cmb.items():
 #    "thetarseq":   {"latex": r"100\theta_\mathrm{s,eq}"},
 for combination, info in like_cmb.items():
     if info:
-        likes = ", ".join([_chi2 + _separator + like for like in info[_likelihood]])
+        likes = ", ".join([_chi2 + _separator + like.replace(".", "_")
+                           for like in info[_likelihood]])
         info[_params].update(odict([
             ["chi2__CMB", odict([[_p_derived, "lambda %s: sum([%s])" % (likes, likes)],
                                  [_p_label, r"\chi^2_\mathrm{CMB}"]])]]))
@@ -491,13 +492,14 @@ like_bao = odict([
         _desc: "Baryon acoustic oscillation data from DR12, MGS and 6DF",
         _theory: {_camb: None, _classy: None},
         _likelihood: odict([
-            ["sixdf_2011_bao", None],
-            ["sdss_dr7_mgs", None],
-            ["sdss_dr12_consensus_bao", None]])}],
+            ["bao.sixdf_2011_bao", None],
+            ["bao.sdss_dr7_mgs", None],
+            ["bao.sdss_dr12_consensus_bao", None]])}],
 ])
 for combination, info in like_bao.items():
     if info:
-        likes = ", ".join([_chi2 + _separator + like for like in info[_likelihood]])
+        likes = ", ".join([_chi2 + _separator + like.replace(".", "_")
+                           for like in info[_likelihood]])
         info[_params] = odict([
             ["chi2__BAO", odict([[_p_derived, "lambda %s: sum([%s])" % (likes, likes)],
                                  [_p_label, r"\chi^2_\mathrm{BAO}"]])]])
@@ -508,22 +510,22 @@ like_des = odict([
         _desc: "Galaxy clustering from DES Y1",
         _theory: {_camb: None, _classy: None},
         _likelihood: odict([
-            ["des_y1_clustering", None]])}],
+            ["des_y1.clustering", None]])}],
     ["des_y1_galaxy_galaxy", {
         _desc: "Galaxy-galaxy lensing from DES Y1",
         _theory: {_camb: None, _classy: None},
         _likelihood: odict([
-            ["des_y1_galaxy_galaxy", None]])}],
+            ["des_y1.galaxy_galaxy", None]])}],
     ["des_y1_shear", {
         _desc: "Cosmic shear data from DES Y1",
         _theory: {_camb: None, _classy: None},
         _likelihood: odict([
-            ["des_y1_shear", None]])}],
+            ["des_y1.shear", None]])}],
     ["des_y1_joint", {
         _desc: "Combination of galaxy clustering and weak lensing data from DES Y1",
         _theory: {_camb: None, _classy: None},
         _likelihood: odict([
-            ["des_y1_joint", None]])}],
+            ["des_y1.joint", None]])}],
 ])
 
 like_sn = odict([
@@ -532,7 +534,7 @@ like_sn = odict([
         _desc: "Supernovae data from the Pantheon sample",
         _theory: {_camb: None, _classy: None},
         _likelihood: odict([
-            ["sn_pantheon", None]])}],
+            ["sn.pantheon", None]])}],
 ])
 
 like_H0 = odict([
@@ -541,12 +543,12 @@ like_H0 = odict([
         _desc: "Local H0 measurement from Riess et al. 2018a (used in Planck 2018)",
         _theory: {_camb: None, _classy: None},
         _likelihood: odict([
-            ["H0_riess2018a", None]])}],
+            ["H0.riess2018a", None]])}],
     ["Riess201903", {
         _desc: "Local H0 measurement from Riess et al. 2019",
         _theory: {_camb: None, _classy: None},
         _likelihood: odict([
-            ["H0_riess201903", None]])}],
+            ["H0.riess201903", None]])}],
 ])
 
 # SAMPLERS ###############################################################################
