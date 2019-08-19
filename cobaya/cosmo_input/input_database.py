@@ -41,7 +41,7 @@ primordial = odict([
         _params: odict([
             ["logA", odict([
                 [_prior, odict([["min", 1.61], ["max", 3.91]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 3.1], ["scale", 0.001]])],
+                [_p_ref, odict([[_p_dist, "norm"], ["loc", 3.05], ["scale", 0.001]])],
                 [_p_proposal, 0.001], [_p_label, r"\log(10^{10} A_\mathrm{s})"],
                 [_p_drop, True]])],
             ["As", odict([
@@ -49,7 +49,7 @@ primordial = odict([
                 [_p_label, r"A_\mathrm{s}"]])],
             ["ns", odict([
                 [_prior, odict([["min", 0.8], ["max", 1.2]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.96], ["scale", 0.004]])],
+                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.965], ["scale", 0.004]])],
                 [_p_proposal, 0.002], [_p_label, r"n_\mathrm{s}"]])]])}]])
 primordial.update(odict([
     ["SFSR_DESpriors", {
@@ -58,7 +58,7 @@ primordial.update(odict([
         _params: odict([
             ["As_1e9", odict([
                 [_prior, odict([["min", 0.5], ["max", 5]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 2.5], ["scale", 0.5]])],
+                [_p_ref, odict([[_p_dist, "norm"], ["loc", 2.1], ["scale", 0.5]])],
                 [_p_proposal, 0.25], [_p_label, r"10^9 A_\mathrm{s})"],
                 [_p_drop, True], [_p_renames, "A"]])],
             ["As", odict([
@@ -120,11 +120,11 @@ geometry = odict([
         _params: odict([
             ["omegak", odict([
                 [_prior, odict([["min", -0.3], ["max", 0.3]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", -0.0008], ["scale", 0.001]])],
+                [_p_ref, odict([[_p_dist, "norm"], ["loc", -0.009], ["scale", 0.001]])],
                 [_p_proposal, 0.001], [_p_label, r"\Omega_k"]])]])}], ])
 
 # Hubble parameter constraints
-H0_min, H0_max = 40, 100
+H0_min, H0_max = 20, 100
 hubble = odict([
     ["H", {
         _desc: "Hubble parameter",
@@ -132,7 +132,7 @@ hubble = odict([
         _params: odict([
             ["H0", odict([
                 [_prior, odict([["min", H0_min], ["max", H0_max]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 70], ["scale", 2]])],
+                [_p_ref, odict([[_p_dist, "norm"], ["loc", 67], ["scale", 2]])],
                 [_p_proposal, 2], [_p_label, r"H_0"]])]])}],
     ["H_DESpriors", {
         _desc: "Hubble parameter (reduced range for DES and lensing-only constraints)",
@@ -140,7 +140,7 @@ hubble = odict([
         _params: odict([
             ["H0", odict([
                 [_prior, odict([["min", 55], ["max", 91]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 70], ["scale", 2]])],
+                [_p_ref, odict([[_p_dist, "norm"], ["loc", 67], ["scale", 2]])],
                 [_p_proposal, 2], [_p_label, r"H_0"]])]])}],
     ["sound_horizon_last_scattering", {
         _desc: "Angular size of the sound horizon at last scattering "
@@ -151,7 +151,7 @@ hubble = odict([
                     ["theta_MC_100", odict([
                         [_prior, odict([["min", 0.5], ["max", 10]])],
                         [_p_ref,
-                         odict([[_p_dist, "norm"], ["loc", 1.0411], ["scale", 0.0004]])],
+                         odict([[_p_dist, "norm"], ["loc", 1.04109], ["scale", 0.0004]])],
                         [_p_proposal, 0.0002], [_p_label, r"100\theta_\mathrm{MC}"],
                         [_p_drop, True], [_p_renames, "theta"]])],
                     ["cosmomc_theta", odict([
@@ -164,7 +164,7 @@ hubble = odict([
                     ["theta_s_1e2", odict([
                         [_prior, odict([["min", 0.5], ["max", 10]])],
                         [_p_ref, odict([
-                            [_p_dist, "norm"], ["loc", 1.0418], ["scale", 0.0004]])],
+                            [_p_dist, "norm"], ["loc", 1.0416], ["scale", 0.0004]])],
                         [_p_proposal, 0.0002], [_p_label, r"100\theta_\mathrm{s}"],
                         [_p_drop, True]])],
                     ["100*theta_s", odict([
@@ -182,11 +182,11 @@ matter = odict([
         _params: odict([
             ["omegabh2", odict([
                 [_prior, odict([["min", 0.005], ["max", 0.1]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.0221], ["scale", 0.0001]])],
+                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.0224], ["scale", 0.0001]])],
                 [_p_proposal, 0.0001], [_p_label, r"\Omega_\mathrm{b} h^2"]])],
             ["omegach2", odict([
                 [_prior, odict([["min", 0.001], ["max", 0.99]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.12], ["scale", 0.001]])],
+                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.120], ["scale", 0.001]])],
                 [_p_proposal, 0.0005], [_p_label, r"\Omega_\mathrm{c} h^2"]])],
             ["omegam", {_p_label: r"\Omega_\mathrm{m}"}]])}],
     ["Omegab, Omegam", {
@@ -195,12 +195,12 @@ matter = odict([
         _params: odict([
             ["omegab", odict([
                 [_prior, odict([["min", 0.03], ["max", 0.07]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.0468], ["scale", 0.004]])],
+                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.0495], ["scale", 0.004]])],
                 [_p_proposal, 0.004], [_p_label, r"\Omega_\mathrm{b}"],
                 [_p_drop, True]])],
             ["omegam", odict([
                 [_prior, odict([["min", 0.1], ["max", 0.9]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.295], ["scale", 0.02]])],
+                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.316], ["scale", 0.02]])],
                 [_p_proposal, 0.02], [_p_label, r"\Omega_\mathrm{m}"],
                 [_p_drop, True]])],
             ["omegabh2", odict([
@@ -366,7 +366,7 @@ bbn = odict([
         _params: odict([
             ["yhe", odict([
                 [_prior, odict([["min", 0.1], ["max", 0.5]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.245], ["scale", 0.006]])],
+                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.237], ["scale", 0.006]])],
                 [_p_proposal, 0.006], [_p_label, r"Y_\mathrm{P}"]])]])}], ])
 
 # Reionization
@@ -377,8 +377,8 @@ reionization = odict([
         _params: odict([
             ["tau", odict([
                 [_prior, odict([["min", 0.01], ["max", 0.8]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.09], ["scale", 0.01]])],
-                [_p_proposal, 0.005], [_p_label, r"\tau_\mathrm{reio}"]])],
+                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.055], ["scale", 0.006]])],
+                [_p_proposal, 0.003], [_p_label, r"\tau_\mathrm{reio}"]])],
             ["zrei", {_p_label: r"z_\mathrm{re}"}]])}],
     ["gauss_prior", {
         _desc: "Standard reio, lasting delta_z=0.5, gaussian prior around tau=0.07",
