@@ -394,6 +394,7 @@ def get_clik_source_folder(starting_path):
 
 def is_installed_clik(path, log_and_fail=False, import_it=True):
     log = logging.getLogger("clik")
+    clik_path = None
     try:
         clik_path = os.path.join(get_clik_source_folder(path), 'lib/python/site-packages')
     except FileNotFoundError:
