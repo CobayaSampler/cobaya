@@ -245,17 +245,16 @@ def post(info, sample=None):
     # 4. Main loop!
     log.info("Running post-processing...")
     last_percent = 0
-    for i, point in enumerate(collection_in.data.itertuples()):
+    for i, point in collection_in.data.iterrows():
         log.debug("Point: %r", point)
-        sampled = [getattr(point, param) for param in
+        sampled = [point[param] for param in
                    dummy_model_in.parameterization.sampled_params()]
         derived = odict(
-            [[param, getattr(point, param, None)]
+            [[param, point.get(param, None)]
              for param in dummy_model_out.parameterization.derived_params()])
         inputs = odict([
-            [param, getattr(
-                point, param,
-                dummy_model_in.parameterization.constant_params().get(
+            [param, point.get(
+                param, dummy_model_in.parameterization.constant_params().get(
                     param, dummy_model_out.parameterization.constant_params().get(
                         param, None)))]
             for param in dummy_model_out.parameterization.input_params()])
@@ -266,13 +265,13 @@ def post(info, sample=None):
             if value is None:
                 func = dummy_model_out.parameterization._input_funcs[p]
                 args = dummy_model_out.parameterization._input_args[p]
-                inputs[p] = func(*[getattr(point, arg) for arg in args])
+                inputs[p] = func(*[point.get(arg) for arg in args])
         # Add/remove priors
         priors_add = prior_add.logps(sampled)
         if not prior_recompute_1d:
             priors_add = priors_add[1:]
         logpriors_add = odict(zip(mlprior_names_add, priors_add))
-        logpriors_new = [logpriors_add.get(name, - getattr(point, name, 0))
+        logpriors_new = [logpriors_add.get(name, - point.get(name, 0))
                          for name in collection_out.minuslogprior_names]
         if log.getEffectiveLevel() <= logging.DEBUG:
             log.debug(
@@ -288,7 +287,7 @@ def post(info, sample=None):
             output_like = dict(zip(likelihood_add.output_params, output_like))
         else:
             loglikes_add = dict()
-        loglikes_new = [loglikes_add.get(name, -0.5 * getattr(point, name, 0))
+        loglikes_new = [loglikes_add.get(name, -0.5 * point.get(name, 0))
                         for name in collection_out.chi2_names]
         if log.getEffectiveLevel() <= logging.DEBUG:
             log.debug(
@@ -306,7 +305,7 @@ def post(info, sample=None):
                 func = dummy_model_out.parameterization._derived_funcs[p]
                 args = dummy_model_out.parameterization._derived_args[p]
                 derived[p] = func(
-                    *[getattr(point, arg, output_like.get(arg, None)) for arg in args])
+                    *[point.get(arg, output_like.get(arg, None)) for arg in args])
         if log.getEffectiveLevel() <= logging.DEBUG:
             log.debug("New derived parameters: %r",
                       dict([[p, derived[p]]
@@ -314,7 +313,7 @@ def post(info, sample=None):
                             if p in add[_params]]))
         # Save to the collection (keep old weight for now)
         collection_out.add(
-            sampled, derived=derived.values(), weight=getattr(point, _weight),
+            sampled, derived=derived.values(), weight=point.get(_weight),
             logpriors=logpriors_new, loglikes=loglikes_new)
         # Display progress
         percent = np.round(i / collection_in.n() * 100)
