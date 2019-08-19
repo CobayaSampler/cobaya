@@ -190,7 +190,7 @@ last_version_supp_data_and_covmats = "v2.01"
 try:
     FileNotFoundError
 except NameError:
-    FileNotFoundError = IOError
+    FileNotFoundError = OSError
 
 
 class _planck_clik_prototype(Likelihood, HasDefaults):
