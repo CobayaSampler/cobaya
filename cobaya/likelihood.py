@@ -252,6 +252,10 @@ class LikelihoodExternalFunction(Likelihood, HasLogger):
                 self.log, "The external likelihood '%s' failed at evaluation. "
                           "See error info on top of this message.", self.name)
 
+    @classmethod
+    def get_module_name(cls):
+        return None
+
 
 class LikelihoodCollection(HasLogger):
     """
