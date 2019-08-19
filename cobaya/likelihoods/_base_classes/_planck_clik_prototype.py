@@ -186,6 +186,12 @@ pla_url_prefix = r"https://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLO
 
 last_version_supp_data_and_covmats = "v2.01"
 
+# py2 compatibility:
+try:
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
+
 
 class _planck_clik_prototype(Likelihood, HasDefaults):
 
