@@ -26,12 +26,16 @@
 - Changed capitalisation of some function and requests (deprecation messages and retrocompatibility added)
 
 
-## 1.3.0 – 2019-08-20 (archived version)
+## 1.2.2 – 2019-08-20 (archived version)
 
 ### General
 
 - Backported some bug fixes.
 - Fixed versions of external codes.
+
+### Cosmology:
+
+- Planck: Fix for calibration parameter being ignored in CMBlike version of lensing likelihood.
 
 
 ## 1.2.0 – 2019-06-18

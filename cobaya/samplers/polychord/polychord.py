@@ -405,6 +405,6 @@ def install(path=None, force=False, code=False, data=False, no_progress_bars=Fal
     if process_make.returncode:
         log.info(out)
         log.info(err)
-        log.erro("Python build failed!")
+        log.error("Python build failed!")
         return False
     return True
