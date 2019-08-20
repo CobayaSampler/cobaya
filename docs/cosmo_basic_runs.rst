@@ -47,9 +47,7 @@ The parameter combinations and options included in the input generator are in ge
 
 Don't forget to add your installation path for the cosmological modules as ``modules: '/path/to/modules'``, and an ``output`` prefix if you wish.
 
-.. comment::
-
-   Notice the checkbox **"Keep common parameter names"**: if checked, instead of the parameter names used by CAMB or CLASS (different from each other), the input will use a common parameter names set, understandable by both. If you are using this, you can exchange both theory codes safely (just don't forget to add the ``extra_args`` generated separately for each theory code.
+.. Notice the checkbox **"Keep common parameter names"**: if checked, instead of the parameter names used by CAMB or CLASS (different from each other), the input will use a common parameter names set, understandable by both. If you are using this, you can exchange both theory codes safely (just don't forget to add the ``extra_args`` generated separately for each theory code.
 
 
 As an example, here is the input for Planck 2015 base :math:`\Lambda\mathrm{CDM}`, both for CLASS and CAMB:
@@ -168,8 +166,8 @@ You can also do this interactively, by passing your input info, as a python dict
 
 .. code-block:: python
 
-   from cobaya.citation import citation
-   citation(info)
+   from cobaya.bib import get_bib_info
+   get_bib_info(info)
 
 .. note::
 

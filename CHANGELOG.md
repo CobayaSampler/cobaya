@@ -1,11 +1,40 @@
-## 2.0  – 2019-07-XX
+## 2.0 – 2019-08-20
+
+### General
+
+- Added fuzzy matching for names of modules and parameters in a few places. Now error messages show possible misspellings.
+- Modules can now be nested, e.g. `planck_2018_lowl.TT` and `planck_2018_lowl.EE` as `TT.py` and `EE.py` under folder `likelihoods/planck_2018_lowl`.
+
+### Getting help offline: defaults, and bibliography
+
+- `cobaya-citation` deprecated in favour of `cobaya-bib`. In addition to taking `.yaml` input files as below, can now take individual module names.
+- `cobaya-doc` added to show defaults for particular modules.
+- Added menu to `cobaya-cosmo-generator` to show defaults for modules.
 
 ### I/O
 
-- Naming conventions for output files changed! ``*.updated.yaml`` instead of ``*.full.yaml`` for updated info, `*.[#].txt` instead of ``_[#].txt`` for chains, etc (see docs).
+- Naming conventions for output files changed! ``*.updated.yaml`` instead of ``*.full.yaml`` for updated info, `*.[#].txt` instead of ``_[#].txt`` for chains, etc (see `Output` section in documentation).
+
+### Samplers:
+
+- New, more efficient minimizer: [pyBOBYQA](https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/index.html).
+
+### Cosmology:
+
+- Added full suite of Planck 2018 likelihoods.
+- Added late-time source Cl's as a cosmological observable (CAMB only, for now)
+- Changed capitalisation of some function and requests (deprecation messages and retrocompatibility added)
 
 
-## 1.2.0  – 2019-06-18
+## 1.3.0 – 2019-08-20 (archived version)
+
+### General
+
+- Backported some bug fixes.
+- Fixed versions of external codes.
+
+
+## 1.2.0 – 2019-06-18
 
 ### General
 
@@ -100,7 +129,7 @@
 - Added "citation" tab.
 
 
-## 1.0.4 – 2019-04-11
+## 1.0.4 – 2019-04-11 (archived version)
 
 ### Many bugfixes -- special thanks to Guadalupe Cañas-Herrera and Vivian Miranda!
 
