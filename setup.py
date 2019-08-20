@@ -58,7 +58,8 @@ setup(
             'cobaya-prepare-data=cobaya.containers:prepare_data_script',
             'cobaya-run=cobaya.run:run_script',
             'cobaya-doc=cobaya.doc:doc_script',
-            'cobaya-citation=cobaya.citation:citation_script',
+            'cobaya-citation=cobaya.citation:citation_script',  # to be deprecated!
+            'cobaya-bib=cobaya.bib:bib_script',
             'cobaya-grid-create=cobaya.grid_tools:MakeGridScript',
             'cobaya-grid-run=cobaya.grid_tools.runbatch:run',
             'cobaya-cosmo-generator=cobaya.cosmo_input:gui_script',

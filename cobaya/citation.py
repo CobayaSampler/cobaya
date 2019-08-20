@@ -1,70 +1,21 @@
 """
 .. module:: citation
 
-:Synopsis: Tools and script to get the references to cite
+:Synopsis: Old name for module ``bib``. Will be deprecated.
 :Author: Jesus Torrado
-
-Inspired by a similar characteristic of
-`CosmoSIS <https://bitbucket.org/joezuntz/cosmosis/wiki/Home>`_.
 
 """
 # Python 2/3 compatibility
 from __future__ import absolute_import, division, print_function
 
-# Global
-import os
-from collections import OrderedDict as odict
-
 # Local
-from cobaya.tools import make_header, warn_deprecation
-from cobaya.input import get_modules, get_class
-
-
-def get_citation_info(module, kind):
-    cls = get_class(module, kind, None_if_not_found=True)
-    if cls:
-        filename = cls.get_bibtex_file()
-        if filename:
-            with open(filename, "r") as f:
-                lines = "".join(f.readlines())
-        else:
-            lines = "[no citation information found]"
-    else:
-        lines = "[Module '%s.%s' not known.]" % (kind, module)
-    return lines + "\n"
-
-
-def citation(*infos):
-    blocks_text = odict([["Cobaya", "[Paper in preparation]"]])
-    for kind, modules in get_modules(*infos).items():
-        for module in modules:
-            blocks_text["%s:%s" % (kind, module)] = get_citation_info(module, kind)
-    return blocks_text
-
-
-def prettyprint_citation(blocks_text):
-    txt = ""
-    for block, text in blocks_text.items():
-        if not txt.endswith("\n\n"):
-            txt += "\n\n"
-        txt += make_header(*block.split(":")) + "\n" + text
-    return txt.lstrip().rstrip() + "\n"
+from cobaya.tools import warn_deprecation, create_banner
+from cobaya.bib import bib_script
 
 
 # Command-line script
 def citation_script():
     warn_deprecation()
-    from cobaya.mpi import am_single_or_primary_process
-    if am_single_or_primary_process():
-        warn_deprecation()
-        # Configure the logger ASAP
-        from cobaya.log import logger_setup
-        logger_setup()
-        # Parse arguments and launch
-        import argparse
-        parser = argparse.ArgumentParser(description="Cobaya's citation tool.")
-        parser.add_argument("files", action="store", nargs="+", metavar="input_file.yaml",
-                            help="One or more input files.")
-        from cobaya.input import load_input
-        infos = [load_input(f) for f in parser.parse_args().files]
-        print(prettyprint_citation(citation(*infos)))
+    print(create_banner(
+        "\nThis command will be deprecated soon. Use `cobaya-bib` instead.\n"))
+    bib_script()

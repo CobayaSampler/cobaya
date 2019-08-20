@@ -82,7 +82,7 @@ def doc_script():
                       "To populate them, use the flag --%s (or -%s)." % (
                           expand_flag, expand_flag[expand_flag_ishort]))
     except:
-        print("Module name not unique. "
-              "Specify its kind with '--%s [module_kind]'." % kind_opt)
+        if not arguments.kind:
+            print("Specify its kind with '--%s [module_kind]'." % kind_opt)
         return 1
     return
