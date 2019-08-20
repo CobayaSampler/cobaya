@@ -83,7 +83,8 @@ def get_kind(name, fail_if_not_found=True):
     """
     try:
         return next(
-            k for k in [_sampler, _theory, _likelihood] if name in get_modules(k))
+            k for k in [_sampler, _theory, _likelihood]
+            if name in get_available_modules(k))
     except StopIteration:
         if fail_if_not_found:
             raise LoggedError(log, "Could not determine kind of module %s", name)
@@ -115,13 +116,14 @@ def get_class(name, kind=None, None_if_not_found=False):
             raise LoggedError(
                 log, "%s '%s' not found. Maybe you meant one of the following "
                 "(capitalization is important!): %s",
-                kind.capitalize(), name, fuzzy_match(name, get_modules(kind), n=3))
+                kind.capitalize(), name,
+                fuzzy_match(name, get_available_modules(kind), n=3))
         else:
             log.error("There was a problem when importing %s '%s':", kind, name)
             raise sys.exc_info()[1]
 
 
-def get_modules(kind):
+def get_available_modules(kind):
     """
     Gets all modules' names of a given kind.
     """
@@ -135,8 +137,15 @@ def get_modules(kind):
             f for f in os.listdir(
                 os.path.join(os.path.dirname(__file__), subfolders[kind], f))
             if f.lower().endswith(".py")])
-        # if __init__, assume it containts a sigle module named as the folder
-        if "__init__.py" in [p.lower() for p in dotpy_files]:
+        # if *non-empty* __init__, assume it containts a sigle module named as the folder
+        try:
+            __init__filename = next(
+                p for p in dotpy_files if os.path.splitext(p)[0] == "__init__")
+            __init__with_path = os.path.join(
+                os.path.dirname(__file__), subfolders[kind], f, __init__filename)
+        except:
+            __init__filename = None
+        if __init__filename and os.path.getsize(__init__with_path):
             with_nested += [f]
         else:
             dotpy_files = [f for f in dotpy_files if not f.startswith("_")]

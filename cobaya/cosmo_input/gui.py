@@ -12,8 +12,8 @@ from pprint import pformat
 from cobaya.yaml import yaml_dump
 from cobaya.cosmo_input import input_database
 from cobaya.cosmo_input.create_input import create_input
-from cobaya.citation import prettyprint_citation, citation, get_citation_info
-from cobaya.tools import warn_deprecation, get_modules
+from cobaya.bib import prettyprint_bib, get_bib_info, get_bib_module
+from cobaya.tools import warn_deprecation, get_available_modules
 from cobaya.doc import _kinds
 from cobaya.input import get_default_info
 from cobaya.conventions import subfolders
@@ -52,11 +52,11 @@ class MainWindow(QWidget):
         self.show()
         # Menu bar for defaults
         self.menubar = QMenuBar()
-        defaults_menu = self.menubar.addMenu('&Show defaults for a module...')
+        defaults_menu = self.menubar.addMenu('&Show defaults and bibliography for a module...')
         menu_actions = {}
         for kind in _kinds:
             submenu = defaults_menu.addMenu(subfolders[kind])
-            modules = get_modules(kind)
+            modules = get_available_modules(kind)
             menu_actions[kind] = {}
             for module in modules:
                 menu_actions[kind][module] = QAction(module, self)
@@ -130,7 +130,7 @@ class MainWindow(QWidget):
         # RIGHT: Output + buttons
         self.display_tabs = QTabWidget()
         self.display = {}
-        for k in ["yaml", "python", "citations"]:
+        for k in ["yaml", "python", "bibliography"]:
             self.display[k] = QTextEdit()
             self.display[k].setLineWrapMode(QTextEdit.NoWrap)
             self.display[k].setFontFamily("mono")
@@ -201,15 +201,15 @@ class MainWindow(QWidget):
             "from collections import OrderedDict\n\ninfo = " +
             pformat(info) + comments_text)
         self.display["yaml"].setText(yaml_dump(info) + comments_text)
-        self.display["citations"].setText(prettyprint_citation(citation(info)))
+        self.display["bib"].setText(prettyprint_bib(get_bib_info(info)))
 
     @Slot()
     def save_file(self):
         ftype = next(k for k, w in self.display.items()
                      if w is self.display_tabs.currentWidget())
         ffilter = {"yaml": "Yaml files (*.yaml *.yml)", "python": "(*.py)",
-                   "citations": "(*.txt)"}[ftype]
-        fsuffix = {"yaml": ".yaml", "python": ".py", "citations": ".txt"}[ftype]
+                   "bib": "(*.txt)"}[ftype]
+        fsuffix = {"yaml": ".yaml", "python": ".py", "bib": ".txt"}[ftype]
         fname, path = self.save_dialog.getSaveFileName(
             self.save_dialog, "Save input file", fsuffix, ffilter, os.getcwd())
         if not fname.endswith(fsuffix):
@@ -241,7 +241,7 @@ class DefaultsDialog(QWidget):
         self.setLayout(self.layout)
         self.display_tabs = QTabWidget()
         self.display = {}
-        for k in ["yaml", "python", "citation"]:
+        for k in ["yaml", "python", "bib"]:
             self.display[k] = QTextEdit()
             self.display[k].setLineWrapMode(QTextEdit.NoWrap)
             self.display[k].setFontFamily("mono")
@@ -257,7 +257,7 @@ class DefaultsDialog(QWidget):
             "from collections import OrderedDict\n\ninfo = " +
             pformat(yaml_load(defaults_txt)))
         self.display["yaml"].setText(defaults_txt)
-        self.display["citation"].setText(get_citation_info(module, kind))
+        self.display["bib"].setText(get_bib_module(module, kind))
         # Buttons
         self.buttons = QHBoxLayout()
         self.close_button = QPushButton('Close', self)

@@ -23,7 +23,7 @@ from requests import head
 
 # Local
 from cobaya.log import logger_setup, LoggedError
-from cobaya.input import get_modules, load_input
+from cobaya.input import get_used_modules, load_input
 from cobaya.yaml import yaml_dump
 from cobaya.install import install
 from cobaya.conventions import _modules_path, _products_path, _code, _data
@@ -186,7 +186,7 @@ def create_docker_image(filenames, MPI_version=None):
         #          "It is strongly encouraged to request the one installed in your cluster,"
         #          " using '--mpi-version X.Y'. Defaulting to MPICH v%s.", MPI_version)
     dc = get_docker_client()
-    modules = yaml_dump(get_modules(*[load_input(f) for f in filenames])).strip()
+    modules = yaml_dump(get_used_modules(*[load_input(f) for f in filenames])).strip()
     echos_reqs = "RUN " + " && \\ \n    ".join(
         [r'echo "%s" >> %s' % (block, requirements_file_path)
          for block in modules.split("\n")])
@@ -216,7 +216,7 @@ def create_singularity_image(filenames, MPI_version=None):
         # log.warning("You have not specified an OpenMPI version. "
         #          "It is strongly encouraged to request the one installed in your cluster,"
         #          " using '--mpi-version X.Y.Z'. Defaulting to OpenMPI v%s.", MPI_version)
-    modules = yaml_dump(get_modules(*[load_input(f) for f in filenames])).strip()
+    modules = yaml_dump(get_used_modules(*[load_input(f) for f in filenames])).strip()
     echos_reqs = "\n    " + "\n    ".join(
         [""] + ['echo "%s" >> %s' % (block, requirements_file_path)
                 for block in modules.split("\n")])

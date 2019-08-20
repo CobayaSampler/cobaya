@@ -24,7 +24,7 @@ from pkg_resources import parse_version
 # Local
 from cobaya.log import logger_setup, LoggedError
 from cobaya.tools import get_class_module, make_header, warn_deprecation, get_class
-from cobaya.input import get_modules
+from cobaya.input import get_used_modules
 from cobaya.conventions import _package, _code, _data, _likelihood, _external, _force
 from cobaya.conventions import _modules_path_arg, _modules_path_env, _path_install
 
@@ -60,7 +60,7 @@ def install(*infos, **kwargs):
                     log, "Could not create the desired installation folder '%s'", spath)
     failed_modules = []
     skip_list = os.environ.get("COBAYA_TEST_SKIP", "").replace(",", " ").lower().split()
-    for kind, modules in get_modules(*infos).items():
+    for kind, modules in get_used_modules(*infos).items():
         for module in modules:
             print(make_header(kind, module))
             module_folder = get_class_module(module, kind)

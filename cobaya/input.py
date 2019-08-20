@@ -73,8 +73,8 @@ def load_input_MPI(input_file):
     return info
 
 
-def get_modules(*infos):
-    """Returns modules all requested as an odict ``{kind: set([modules])}``.
+def get_used_modules(*infos):
+    """Returns all requested modules as an odict ``{kind: set([modules])}``.
     Priors are not included."""
     modules = odict()
     for info in infos:
@@ -129,7 +129,7 @@ def update_info(info):
     updated_info = odict()
     default_params_info = odict()
     default_prior_info = odict()
-    modules = get_modules(input_info)
+    modules = get_used_modules(input_info)
     for block in modules:
         updated_info[block] = odict()
         for module in modules[block]:

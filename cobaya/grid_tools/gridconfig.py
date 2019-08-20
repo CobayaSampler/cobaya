@@ -18,7 +18,7 @@ import argparse
 from cobaya.yaml import yaml_load_file, yaml_dump_file
 from cobaya.conventions import _output_prefix, _path_install, _yaml_extensions, _theory
 from cobaya.conventions import _sampler, _params, _likelihood
-from cobaya.input import get_modules, merge_info, update_info
+from cobaya.input import get_used_modules, merge_info, update_info
 from cobaya.install import install as install_reqs
 from cobaya.grid_tools import batchjob
 from cobaya.cosmo_input import create_input, get_best_covmat
@@ -111,7 +111,7 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
             combined_info = merge_info(create_input(**preset), combined_info)
         combined_info[_output_prefix] = jobItem.chainRoot
         # Requisites
-        modules_used = get_modules(modules_used, combined_info)
+        modules_used = get_used_modules(modules_used, combined_info)
         if install_reqs_at:
             combined_info[_path_install] = os.path.abspath(install_reqs_at)
         # Save the info (we will write it after installation:
