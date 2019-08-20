@@ -13,11 +13,10 @@ from pprint import pformat
 
 # Local
 from cobaya.tools import warn_deprecation, get_class, get_available_modules
-from cobaya.conventions import _sampler, _theory, _likelihood, subfolders
+from cobaya.conventions import _sampler, _theory, _likelihood, subfolders, _kinds
 from cobaya.input import get_default_info
 
 
-_kinds = [_sampler, _theory, _likelihood]
 _indent = 2 * " "
 import_odict = "from collections import OrderedDict\n\ninfo = "
 

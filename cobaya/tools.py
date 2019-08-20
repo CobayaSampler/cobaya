@@ -219,12 +219,6 @@ def recursive_update(base, update):
     return base
 
 
-def make_header(kind, module=None):
-    """Creates a header for a particular module of a particular kind."""
-    return ("=" * 80).join(["", "\n %s" % kind.title() +
-                            (": %s" % module if module else "") + "\n", "\n"])
-
-
 def ensure_latex(string):
     """Inserts $'s at the beginning and end of the string, if necessary."""
     if string.strip()[0] != r"$":
@@ -425,13 +419,17 @@ def relative_to_int(numbers, precision=1 / 10):
         numbers / np.ufunc.reduce(np.frompyfunc(gcd, 2, 1), numbers), dtype=int)
 
 
-def create_banner(msg):
+def create_banner(msg, symbol="*", length=None):
     """
     Puts message into an attention-grabbing banner.
+
+    The banner is delimited by two lines of ``symbol`` (default ``*``)
+    of length ``length`` (default: length of message).
     """
     msg_clean = cleandoc(msg)
-    longest_line_len = max([len(line) for line in msg_clean.split("\n")])
-    return ("*" * longest_line_len + "\n" + msg_clean + "\n" + "*" * longest_line_len)
+    if not length:
+        length = max([len(line) for line in msg_clean.split("\n")])
+    return (symbol * length + "\n" + msg_clean + "\n" + symbol * length + "\n")
 
 
 def warn_deprecation_python2(logger=None):

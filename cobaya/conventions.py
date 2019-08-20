@@ -42,6 +42,7 @@ _resume = "resume"
 _resume_default = False
 _timing = "timing"
 _force = "force"
+_kinds = [_sampler, _theory, _likelihood]
 
 # Separator for fields in parameter names and files
 # Its manual inclusion in a string anywhere else (e.g. a parameter name) should be avoided

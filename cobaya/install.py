@@ -23,7 +23,7 @@ from pkg_resources import parse_version
 
 # Local
 from cobaya.log import logger_setup, LoggedError
-from cobaya.tools import get_class_module, make_header, warn_deprecation, get_class
+from cobaya.tools import get_class_module, create_banner, warn_deprecation, get_class
 from cobaya.input import get_used_modules
 from cobaya.conventions import _package, _code, _data, _likelihood, _external, _force
 from cobaya.conventions import _modules_path_arg, _modules_path_env, _path_install
@@ -62,7 +62,7 @@ def install(*infos, **kwargs):
     skip_list = os.environ.get("COBAYA_TEST_SKIP", "").replace(",", " ").lower().split()
     for kind, modules in get_used_modules(*infos).items():
         for module in modules:
-            print(make_header(kind, module))
+            print(create_banner(kind + ":" + module, symbol="=", length=80))
             module_folder = get_class_module(module, kind)
             try:
                 imported_module = import_module(module_folder, package=_package)
