@@ -201,15 +201,15 @@ class MainWindow(QWidget):
             "from collections import OrderedDict\n\ninfo = " +
             pformat(info) + comments_text)
         self.display["yaml"].setText(yaml_dump(info) + comments_text)
-        self.display["bib"].setText(prettyprint_bib(get_bib_info(info)))
+        self.display["bibliography"].setText(prettyprint_bib(get_bib_info(info)))
 
     @Slot()
     def save_file(self):
         ftype = next(k for k, w in self.display.items()
                      if w is self.display_tabs.currentWidget())
         ffilter = {"yaml": "Yaml files (*.yaml *.yml)", "python": "(*.py)",
-                   "bib": "(*.txt)"}[ftype]
-        fsuffix = {"yaml": ".yaml", "python": ".py", "bib": ".txt"}[ftype]
+                   "bibliography": "(*.txt)"}[ftype]
+        fsuffix = {"yaml": ".yaml", "python": ".py", "bibliography": ".txt"}[ftype]
         fname, path = self.save_dialog.getSaveFileName(
             self.save_dialog, "Save input file", fsuffix, ffilter, os.getcwd())
         if not fname.endswith(fsuffix):
@@ -241,7 +241,7 @@ class DefaultsDialog(QWidget):
         self.setLayout(self.layout)
         self.display_tabs = QTabWidget()
         self.display = {}
-        for k in ["yaml", "python", "bib"]:
+        for k in ["yaml", "python", "bibliography"]:
             self.display[k] = QTextEdit()
             self.display[k].setLineWrapMode(QTextEdit.NoWrap)
             self.display[k].setFontFamily("mono")
@@ -257,7 +257,7 @@ class DefaultsDialog(QWidget):
             "from collections import OrderedDict\n\ninfo = " +
             pformat(yaml_load(defaults_txt)))
         self.display["yaml"].setText(defaults_txt)
-        self.display["bib"].setText(get_bib_module(module, kind))
+        self.display["bibliography"].setText(get_bib_module(module, kind))
         # Buttons
         self.buttons = QHBoxLayout()
         self.close_button = QPushButton('Close', self)

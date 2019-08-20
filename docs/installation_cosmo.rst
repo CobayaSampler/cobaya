@@ -8,7 +8,7 @@ To keep it light, maintainable and easily extensible, **cobaya** does not includ
 Installing a basic set of codes and likelihoods
 -----------------------------------------------
 
-To install a comprehensive set of cosmology modules (CAMB, CLASS, Planck, BICEP-Keck, BAO, SN, PolyChord), in a ``/path/to/modules`` folders of your choice:
+To install a comprehensive set of cosmology modules (CAMB, CLASS, Planck, BICEP-Keck, BAO, SN), in a ``/path/to/modules`` folders of your choice:
 
 .. code:: bash
 
