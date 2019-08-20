@@ -6,9 +6,9 @@
 
 This code provides the following likelihoods:
 
-- ``sn_pantheon``, for the Pantheon SN Ia sample (including Pan-STARRS1 MDS and others)
-- ``sn_jla``, for the JLA SN Ia sample, based on joint SNLS/SDSS SN Ia data
-- ``sn_jla_lite``, an alternative version of ``sn_jla``, marginalized over
+- ``sn.pantheon``, for the Pantheon SN Ia sample (including Pan-STARRS1 MDS and others)
+- ``sn.jla``, for the JLA SN Ia sample, based on joint SNLS/SDSS SN Ia data
+- ``sn.jla_lite``, an alternative version of ``sn.jla``, marginalized over
   nuisance parameters
 
 .. |br| raw:: html
@@ -17,13 +17,13 @@ This code provides the following likelihoods:
 
 .. note::
 
-   - If you use ``sn_pantheon``, please cite:|br|
+   - If you use ``sn.pantheon``, please cite:|br|
      Scolnic, D. M. et al,
      `The Complete Light-curve Sample of Spectroscopically
      Confirmed Type Ia Supernovae from Pan-STARRS1 and
      Cosmological Constraints from The Combined Pantheon Sample`
      `(arXiv:1710.00845) <https://arxiv.org/abs/1710.00845>`_
-   - If you use ``sn_jla`` or ``sn_jla_lite``, please cite:|br|
+   - If you use ``sn.jla`` or ``sn.jla_lite``, please cite:|br|
      Betoule, M. et al,
      `Improved cosmological constraints from a joint analysis
      of the SDSS-II and SNLS supernova samples`
@@ -34,11 +34,11 @@ Usage
 -----
 
 To use any of these likelihoods, simply mention them in the likelihoods block
-(do not use ``sn_jla`` and its `lite` version simultaneously), or add them
+(do not use ``sn.jla`` and its `lite` version simultaneously), or add them
 using the :doc:`input generator <cosmo_basic_runs>`.
 
 The settings for each likelihood, as well as the nuisance parameters and their default
-priors (in the ``sn_jla`` case only) can be found in the ``defaults.yaml``
+priors (in the ``sn.jla`` case only) can be found in the ``defaults.yaml``
 files in the folder for the source code of each of these likelihoods,
 and are reproduced below.
 
@@ -46,13 +46,13 @@ You shouldn't need to modify any of the options of these likelihoods,
 but if you really need to, just copy the ``likelihood`` block into your input ``yaml``
 file and modify whatever options you want (you can delete the rest).
 
-.. literalinclude:: ../cobaya/likelihoods/sn_pantheon/sn_pantheon.yaml
+.. literalinclude:: ../cobaya/likelihoods/sn/pantheon.yaml
    :language: yaml
 
-.. literalinclude:: ../cobaya/likelihoods/sn_jla/sn_jla.yaml
+.. literalinclude:: ../cobaya/likelihoods/sn/jla.yaml
    :language: yaml
 
-.. literalinclude:: ../cobaya/likelihoods/sn_jla_lite/sn_jla_lite.yaml
+.. literalinclude:: ../cobaya/likelihoods/sn/jla_lite.yaml
    :language: yaml
 
 
@@ -79,7 +79,7 @@ After this, mention the path to this likelihood when you include it in an input 
 .. code-block:: yaml
 
    likelihood:
-     sn_[pantheon|jla|jla_lite]:
+     sn.[pantheon|jla|jla_lite]:
        path: /path/to/likelihoods/sn_data
 
 """

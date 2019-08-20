@@ -36,6 +36,10 @@ You can use e.g. `Valgrind <http://www.valgrind.org/>`_ to monitor memory usage.
 
    In particular, for CLASS, check out :ref:`this warning <classy_install_warn>` concerning moving the CLASS folder after compilation.
 
+.. note::
+
+   We have got reports of a memory leak when using CLASS together with PolyChord. We are investigating the issue. Please, let us know if you try this in `the corresponding GitHub issue <https://github.com/CobayaSampler/cobaya/issues/34>`_.
+
 
 Secondary MPI processes not dying
 ----------------------------------

@@ -37,6 +37,10 @@ class _cosmo(Theory):
           If can also take ``lmax: [int]``, ``limber: True`` if Limber approximation
           desired, and ``non_linear: True`` if non-linear contributions requested.
           Get with :func:`~_cosmo.get_source_Cl`.
+        - ``Pk_interpolator={...}``: Matter power spectrum interpolator in :math:`(z, k)`.
+          Takes ``"z": [list_of_evaluated_redshifts]``, ``"k_max": [k_max]``,
+          ``"extrap_kmax": [max_k_max_extrapolated]``, ``"nonlinear": [True|False]``,
+          ``"vars_pairs": [["delta_tot", "delta_tot"], ["Weyl", "Weyl"], [...]]}``.
         - ``H={'z': [z_1, ...], 'units': '1/Mpc' or 'km/s/Mpc'}``: Hubble
           rate at the redshifts requested, in the given units. Get it with
           :func:`~_cosmo.get_H`.

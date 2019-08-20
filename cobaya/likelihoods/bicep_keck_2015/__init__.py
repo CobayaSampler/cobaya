@@ -32,8 +32,8 @@ To use this likelihood, ``bicep_keck_2015``, you simply need to mention it in th
 The corresponding nuisance parameters will be added automatically,
 so you don't have to care about listing them in the ``params`` block.
 
-The nuisance parameters and their default priors can be found in the ``defaults.yaml``
-files in the folder for the source code of this module, and it's reproduced below.
+The nuisance parameters and their default priors are reproduced below, in the *defaults*
+``yaml`` file.
 
 You shouldn't need to modify any of the options of this simple likelihood,
 but if you really need to, just copy the ``likelihood`` block into your input ``yaml``

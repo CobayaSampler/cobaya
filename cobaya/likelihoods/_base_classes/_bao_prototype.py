@@ -9,11 +9,11 @@ and other redshift dependent functions.
 
 The datasets implemented at this moment are:
 
-- ``sixdf_2011_bao``
-- ``sdss_dr7_mgs``
-- ``sdss_dr12_consensus_bao``
-- ``sdss_dr12_consensus_full_shape``
-- ``sdss_dr12_consensus_final`` (combined data of the previous two)
+- ``bao.sixdf_2011_bao``
+- ``bao.sdss_dr7_mgs``
+- ``bao.sdss_dr12_consensus_bao``
+- ``bao.sdss_dr12_consensus_full_shape``
+- ``bao.sdss_dr12_consensus_final`` (combined data of the previous two)
 
 .. |br| raw:: html
 
@@ -55,7 +55,7 @@ to change (except for the installation path; see below)
 Defining your own BAO likelihood
 --------------------------------
 
-You can use the likelihood ``bao_generic`` as a template for any BAO data.
+You can use the likelihood ``bao.generic`` as a template for any BAO data.
 
 To do that, create a file containing the data points, e.g. ``myBAO.dat``, as
 
@@ -82,7 +82,7 @@ data, with the same row order as the data file.
 
 Now, add to your likelihood block:
 
-.. literalinclude:: ../cobaya/likelihoods/bao_generic/bao_generic.yaml
+.. literalinclude:: ../cobaya/likelihoods/bao/generic.yaml
    :language: yaml
 
 
@@ -109,7 +109,7 @@ After this, mention the path to this likelihood when you include it in an input 
 .. code-block:: yaml
 
    likelihood:
-     sdss_dr12_consensus_[bao|full_shape|final|...]:
+     bao.sdss_dr12_consensus_[bao|full_shape|final|...]:
        path: /path/to/likelihoods/bao_data
 
 
