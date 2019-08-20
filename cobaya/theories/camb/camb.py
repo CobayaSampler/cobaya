@@ -600,7 +600,7 @@ class camb(_cosmo):
 
 # Name of the Class repo/folder and version to download
 camb_repo_name = "cmbant/CAMB"
-camb_repo_version = "master"
+camb_repo_version = "1.0.7"
 camb_min_gcc_version = "6.4"
 
 

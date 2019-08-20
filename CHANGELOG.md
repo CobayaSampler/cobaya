@@ -1,10 +1,13 @@
-## 1.2.2 – 2019-07-XX
+## 1.2.2 – 2019-08-20 (archived version)
 
-### Cosmological likelihoods
+### General
 
-#### Planck
+- Backported some bug fixes.
+- Fixed versions of external codes.
 
-- Fix for calibration parameter being ignored in CMBlike version of lensing likelihood.
+### Cosmology:
+
+- Planck: Fix for calibration parameter being ignored in CMBlike version of lensing likelihood.
 
 
 ## 1.2.0 – 2019-06-18
