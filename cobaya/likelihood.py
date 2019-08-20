@@ -29,12 +29,13 @@ else:
 
 # Local
 from cobaya.conventions import _external, _theory, _params, _overhead_per_param
-from cobaya.conventions import _timing, _p_renames, _chi2, _separator
+from cobaya.conventions import _timing, _p_renames, _chi2, _separator, _likelihood
 from cobaya.conventions import _input_params, _output_params
 from cobaya.conventions import _input_params_prefix, _output_params_prefix
 from cobaya.tools import get_class, get_external_function, getargspec
-from cobaya.tools import compare_params_lists
-from cobaya.log import HandledException
+from cobaya.tools import are_different_params_lists
+from cobaya.log import LoggedError, HasLogger
+from cobaya.input import HasDefaults
 
 # Logger
 import logging
@@ -43,12 +44,14 @@ import logging
 class_options = {"speed": -1}
 
 
-class Likelihood(object):
+class Likelihood(HasLogger, HasDefaults):
     """Likelihood class prototype."""
 
     # Generic initialization -- do not touch
     def __init__(self, info, modules=None, timing=None):
-        self.name = self.__class__.__name__
+        self.name = getattr(
+            self.__class__, "get_module_name", lambda : self.__class__.__name__)()
+        self.set_logger()
         self.log = logging.getLogger(self.name)
         self.path_install = modules
         # Load info of the likelihood
@@ -63,6 +66,8 @@ class Likelihood(object):
         self.timing = timing
         self.n = 0
         self.time_avg = 0
+        self.time_sqsum = 0
+        self.time_std = np.inf
 
     # What you *must* implement to create your own likelihood:
 
@@ -105,8 +110,7 @@ class Likelihood(object):
         If some directions are specified (as a list, tuple or array), returns the marginal
         likelihood pdf over those directions evaluated at the given parameter values.
         """
-        self.log.error("Exact marginal likelihood not defined.")
-        raise HandledException
+        raise LoggedError(self.log, "Exact marginal likelihood not defined.")
 
     # Other general methods
 
@@ -142,7 +146,22 @@ class Likelihood(object):
             self.states[i_state]["logp"] = self.logp(_derived=_derived, **params_values)
             if self.timing:
                 self.n += 1
-                self.time_avg = (time() - start + self.time_avg * (self.n - 1)) / self.n
+                delta_time = time() - start
+                # TODO: Protect against caching in first call by discarding first time if
+                # too different from second one (maybe check difference in log10 > 1)
+                # In that case, take into account that #timed_evals is now (self.n - 1)
+                if self.n == 2:
+                    log10diff = np.log10(self.time_avg/delta_time)
+                    if log10diff > 1:
+                        self.log.warning(
+                            "It seems the first call has done some caching (difference "
+                            " of a factor %g). Average timing will not be reliable "
+                            "unless many evaluations are carried out.", 10**log10diff)
+                self.time_avg = (delta_time + self.time_avg * (self.n - 1)) / self.n
+                self.time_sqsum += delta_time ** 2
+                if self.n > 1:
+                    self.time_std = np.sqrt(
+                        (self.time_sqsum - self.n * self.time_avg**2)/(self.n-1))
                 self.log.debug("Average 'logp' evaluation time: %g s", self.time_avg)
             self.states[i_state]["derived"] = deepcopy(_derived)
         # make this one the current one by decreasing the antiquity of the rest
@@ -155,10 +174,16 @@ class Likelihood(object):
 
     def wait(self):
         if self.delay:
-            log.debug("Sleeping for %f seconds.", self.delay)
+            self.log.debug("Sleeping for %f seconds.", self.delay)
         sleep(self.delay)
 
     def d(self):
+        """
+        Dimension of the input vector.
+
+        NB: Different from dimensionality of the sampling problem, e.g. this may include
+        fixed input parameters.
+        """
         return len(self.input_params)
 
     def __exit__(self, exception_type, exception_value, traceback):
@@ -168,10 +193,10 @@ class Likelihood(object):
         self.close()
 
 
-class LikelihoodExternalFunction(Likelihood):
+class LikelihoodExternalFunction(Likelihood, HasLogger):
     def __init__(self, name, info, _theory=None, timing=None):
         self.name = name
-        self.log = logging.getLogger(self.name)
+        self.set_logger()
         # Load info of the likelihood
         for k in info:
             setattr(self, k, info[k])
@@ -193,10 +218,13 @@ class LikelihoodExternalFunction(Likelihood):
         self.timing = timing
         self.n = 0
         self.time_avg = 0
+        self.time_sqsum = 0
+        self.time_std = np.inf
         # States, to avoid recomputing
         self.n_states = 3
         self.states = [{"params": None, "logp": None, "derived": None, "last": 0}
                        for _ in range(self.n_states)]
+        self.log.info("Initialised external likelihood.")
 
     def add_theory(self):
         if self.has_theory:
@@ -210,16 +238,26 @@ class LikelihoodExternalFunction(Likelihood):
             params_values["_theory"] = self.theory
         try:
             return self.external_function(**params_values)
-        except:
-            self.log.error("".join(
-                ["-"] * 16 + ["\n\n"] + list(traceback.format_exception(*sys.exc_info())) +
-                ["\n"] + ["-"] * 37))
-            self.log.error("The external likelihood '%s' failed at evaluation. "
-                      "See traceback on top of this message.", self.name)
-            raise HandledException
+        except Exception as ex:
+            if isinstance(ex, LoggedError):
+                # Assume proper error info was written before raising LoggedError
+                pass
+            else:
+                # Print traceback
+                self.log.error("".join(
+                    ["-"] * 16 + ["\n\n"] +
+                    list(traceback.format_exception(*sys.exc_info())) +
+                    ["\n"] + ["-"] * 37))
+            raise LoggedError(
+                self.log, "The external likelihood '%s' failed at evaluation. "
+                          "See error info on top of this message.", self.name)
+
+    @classmethod
+    def get_module_name(cls):
+        return None
 
 
-class LikelihoodCollection(object):
+class LikelihoodCollection(HasLogger):
     """
     Likelihood manager:
     Initializes the theory code and the experimental likelihoods.
@@ -227,7 +265,8 @@ class LikelihoodCollection(object):
 
     def __init__(self, info_likelihood, parameterization, info_theory=None, modules=None,
                  timing=None):
-        self.log = logging.getLogger("Likelihood")
+        self.name = "likelihood"
+        self.set_logger()
         # *IF* there is a theory code, initialize it
         if info_theory:
             name = list(info_theory)[0]
@@ -247,7 +286,7 @@ class LikelihoodCollection(object):
                 self._likelihoods[name] = LikelihoodExternalFunction(
                     name, info, _theory=getattr(self, _theory, None), timing=timing)
             else:
-                like_class = get_class(name)
+                like_class = get_class(name, kind=_likelihood)
                 self._likelihoods[name] = like_class(info, modules=modules, timing=timing)
         # Assign input/output parameters
         self._assign_params(parameterization, info_likelihood, info_theory)
@@ -258,6 +297,10 @@ class LikelihoodCollection(object):
             self[like].initialize()
             self[like].theory = self.theory
             self[like].add_theory()
+        if self.theory and getattr(self.theory, "_needs", None):
+            self.log.info(
+                "The theory code will compute the following products, "
+                "requested by the likelihoods: %r", list(self.theory._needs))
         # Store the input params and likelihoods on which each sampled params depends.
         self.sampled_input_dependence = parameterization.sampled_input_dependence()
         self.sampled_like_dependence = odict(
@@ -278,8 +321,7 @@ class LikelihoodCollection(object):
         try:
             return self._likelihoods.__getitem__(key) if key != _theory else self.theory
         except KeyError:
-            self.log.error("Likelihood '%r' not known", key)
-            raise HandledException
+            raise LoggedError(self.log, "Likelihood '%r' not known", key)
 
     def __iter__(self):
         return self._likelihoods.__iter__()
@@ -318,7 +360,7 @@ class LikelihoodCollection(object):
                 _derived=this_derived_dict, cached=cached, **this_params_dict)]
             derived_dict.update(this_derived_dict or {})
             if _derived is not None:
-                derived_dict[_chi2 + _separator + like] = -2*logps[-1]
+                derived_dict[_chi2 + _separator + like.replace(".", "_")] = -2 * logps[-1]
         # Turn the derived params dict into a list and return
         if _derived is not None:
             _derived += [derived_dict[p] for p in self.output_params]
@@ -335,8 +377,7 @@ class LikelihoodCollection(object):
         return np.sum(self.logps(input_params, _derived=_derived))
 
     def marginal(self, *args):
-        self.log.error("Marginal not implemented for >1 likelihoods. Sorry!")
-        raise HandledException
+        raise LoggedError(self.log, "Marginal not implemented for >1 likelihoods. Sorry!")
 
     def _assign_params(self, parameterization, info_likelihood, info_theory=None):
         """
@@ -367,9 +408,9 @@ class LikelihoodCollection(object):
                             if kind == "input":
                                 # If external function, no problem: it may have default value
                                 if not isinstance(self[like], LikelihoodExternalFunction):
-                                    self.log.error("Parameter '%s' needed as input for '%s', "
-                                                   "but not provided.", p, like)
-                                    raise HandledException
+                                    raise LoggedError(
+                                        self.log, "Parameter '%s' needed as input for '%s', "
+                                                  "but not provided.", p, like)
                 # 2. Is there a params prefix?
                 elif getattr(self[like], prefix, None) is not None:
                     for p in params_assign[kind]:
@@ -385,10 +426,10 @@ class LikelihoodCollection(object):
                     agnostic_likes[kind] += [like]
                 # Check that there is only one non-knowledgeable element, and assign unused params
                 if len(agnostic_likes[kind]) > 1:
-                    self.log.error("More than once parameter-agnostic likelihood/theory "
-                                   "with respect to %s parameters: %r. Cannot decide "
-                                   "parameter assignements.", kind, param_agnostic_likes)
-                    raise HandledException
+                    raise LoggedError(
+                        self.log, "More than once parameter-agnostic likelihood/theory "
+                                  "with respect to %s parameters: %r. Cannot decide "
+                                  "parameter assignements.", kind, agnostic_likes)
                 elif agnostic_likes[kind]:  # if there is only one
                     for p, assigned in params_assign[kind].items():
                         if not assigned:
@@ -397,11 +438,11 @@ class LikelihoodCollection(object):
         # any likelihood (because of the theory+experimental model separation)
         if self.theory:
             for p, assigned in params_assign["input"].items():
-                 if _theory in assigned and len(assigned) > 1:
-                     self.log.error("Some parameter has been asigned to the theory code "
-                                    "AND a likelihood, and that is not allowed: {%s: %r}",
-                                    p, assigned)
-                     raise HandledException
+                if _theory in assigned and len(assigned) > 1:
+                    raise LoggedError(
+                        self.log, "Some parameter has been asigned to the theory code "
+                                  "AND a likelihood, and that is not allowed: {%s: %r}",
+                        p, assigned)
         # If unit likelihood is present, assign all *non-theory* inputs to it
         if "one" in self:
             for p, assigned in params_assign["input"].items():
@@ -411,17 +452,17 @@ class LikelihoodCollection(object):
         unassigned_input = [
             p for p, assigned in params_assign["input"].items() if not assigned]
         if unassigned_input:
-            self.log.error("Could not find whom to assign input parameters %r.",
-                           unassigned_input)
-            raise HandledException
+            raise LoggedError(
+                self.log, "Could not find whom to assign input parameters %r.",
+                unassigned_input)
         # Assign the "chi2__" output parameters
         for p in params_assign["output"]:
             if p.startswith(_chi2 + _separator):
                 like = p[len(_chi2 + _separator):]
-                if like not in list(self):
-                    self.log.error("Your derived parameters depend on an unknown "
-                                   "likelihood: '%s'", like)
-                    raise HandledException
+                if like not in [l.replace(".", "_") for l in self]:
+                    raise LoggedError(
+                        self.log, "Your derived parameters depend on an unknown "
+                                  "likelihood: '%s'", like)
                 # They may have been already assigned to an agnostic likelihood,
                 # so purge first: no "=+"
                 params_assign["output"][p] = [like]
@@ -432,14 +473,14 @@ class LikelihoodCollection(object):
             p: assigned for p, assigned in params_assign["output"].items()
             if len(assigned) > 1}
         if unassigned_output:
-            self.log.error("Could not find whom to assign output parameters %r.",
-                           unassigned_output)
-            raise HandledException
+            raise LoggedError(
+                self.log, "Could not find whom to assign output parameters %r.",
+                unassigned_output)
         if multiassigned_output:
-            self.log.error("Output params can only be computed by one likelihood/theory, "
-                           "but some were claimed by more than one: %r.",
-                           multiassigned_output)
-            raise HandledException
+            raise LoggedError(
+                self.log, "Output params can only be computed by one likelihood/theory, "
+                          "but some were claimed by more than one: %r.",
+                multiassigned_output)
         # Finished! Assign and update infos
         params_assign_inv = odict([["input", odict()], ["output", odict()]])
         for kind, option, attr in (
@@ -580,26 +621,26 @@ class LikelihoodCollection(object):
             speeds, blocks = zip(*list(blocking))
             speeds = np.array(speeds)
         except:
-            raise HandledException(
-                "Manual blocking not understood. Check documentation.")
+            raise LoggedError(
+                self.log, "Manual blocking not understood. Check documentation.")
         sampled_params = list(self.sampled_like_dependence)
-        check = compare_params_lists(
+        check = are_different_params_lists(
             list(chain(*blocks)), sampled_params)
         duplicate = check.pop("duplicate_A", None)
         missing = check.pop("B_but_not_A", None)
         unknown = check.pop("A_but_not_B", None)
         if duplicate:
-            self.log.error("Manual blocking: repeated parameters: %r", duplicate)
-            raise HandledException
+            raise LoggedError(
+                self.log, "Manual blocking: repeated parameters: %r", duplicate)
         if missing:
-            self.log.error("Manual blocking: missing parameters: %r", missing)
-            raise HandledException
+            raise LoggedError(
+                self.log, "Manual blocking: missing parameters: %r", missing)
         if unknown:
-            self.log.error("Manual blocking: unkown parameters: %r", unknown)
-            raise HandledException
+            raise LoggedError(
+                self.log, "Manual blocking: unkown parameters: %r", unknown)
         if (speeds != np.sort(speeds)).all():
-            self.log.warn("Manual blocking: speed-blocking *apparently* non-optimal: "
-                          "sort by ascending speed when possible")
+            self.log.warning("Manual blocking: speed-blocking *apparently* non-optimal: "
+                             "sort by ascending speed when possible")
         return speeds, blocks
 
     def _get_auto_covmat(self, params_info):
@@ -624,8 +665,8 @@ class LikelihoodCollection(object):
             sep = "\n   "
             self.log.info(
                 "Average computation time:" + sep + sep.join(
-                ["%s : %g s (%d evaluations)" % (name, vals["t"], vals["n"])
-                 for name, vals in avg_times_evals.items()]))
+                    ["%s : %g s (%d evaluations)" % (name, vals["t"], vals["n"])
+                     for name, vals in avg_times_evals.items()]))
 
     # Python magic for the "with" statement
     def __enter__(self):

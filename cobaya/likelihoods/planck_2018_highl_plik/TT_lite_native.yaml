@@ -1,0 +1,19 @@
+# Planck 2018 release: high-ell, TT power spectrum likelihood, marginalized over the foreground model (pliklite)
+# See https://wiki.cosmos.esa.int/planck-legacy-archive/index.php/CMB_spectrum_%26_Likelihood_Code
+
+# *Native python version*, allowing multipole/bin selection
+
+likelihood:
+  planck_2018_highl_plik.TT_lite_native:
+    # Path to the data: where the planck_supp_data_and_covmats has been cloned
+    path: null
+    dataset_file: plik_lite_v22.dataset
+    # Overriding of .dataset parameters
+    dataset_params:
+      use_cl: tt
+    # Aliases for automatic covariance matrix
+    renames: [plikHM_TT]
+    # Speed in evaluations/second
+    speed: 200
+
+params: !defaults [params_calib]

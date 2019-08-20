@@ -15,35 +15,44 @@ import sys
 import six
 import logging
 import traceback
+from copy import deepcopy
 
 # Local
 from cobaya.conventions import _debug, _debug_file
 from cobaya.mpi import get_mpi_rank, get_mpi_size, get_mpi_comm, more_than_one_process
 
 
-class HandledException(Exception):
+class LoggedError(Exception):
     """
     Dummy exception, to be raised when the originating exception
     has been cleanly handled and logged.
     """
+    def __init__(self, logger, *args, **kwargs):
+        if args:
+            logger.error(*args, **kwargs)
+        msg = args[0] if len(args) else ""
+        if msg and len(args) > 1:
+            msg = msg % args[1:]
+        super(LoggedError, self).__init__(msg, **kwargs)
 
 
 def safe_exit():
     """Closes all MPI process, if more than one present."""
     if get_mpi_size() > 1:
-        get_mpi_comm().Abort()
+        get_mpi_comm().Abort(1)
 
 
-def exception_handler(exception_type, value, trace_back):
+def exception_handler(exception_type, exception_instance, trace_back):
     # Do not print traceback if the exception has been handled and logged
-    if exception_type == HandledException:
+    if exception_type == LoggedError:
         safe_exit()
         return  # no traceback printed
     _logger_name = "exception handler"
     log = logging.getLogger(_logger_name)
     line = "-------------------------------------------------------------\n"
-    log.critical(line[len(_logger_name)+5:] + "\n" +
-                 "".join(traceback.format_exception(exception_type, value, trace_back)) +
+    log.critical(line[len(_logger_name) + 5:] + "\n" +
+                 "".join(traceback.format_exception(
+                     exception_type, exception_instance, trace_back)) +
                  line)
     if exception_type == KeyboardInterrupt:
         log.critical("Interrupted by the user.")
@@ -55,7 +64,7 @@ def exception_handler(exception_type, value, trace_back):
             "If you cannot solve it yourself and need to report it, "
             "include the debug output,\n"
             "which you can send it to a file setting '%s:[some_file_name]'.",
-        _debug, _debug_file)
+            _debug, _debug_file)
     # Exit all MPI processes
     safe_exit()
 
@@ -107,3 +116,31 @@ def logger_setup(debug=None, debug_file=None):
         logging.root.addHandler(handle_stdout)
     # Configure the logger to manage exceptions
     sys.excepthook = exception_handler
+
+
+class HasLogger(object):
+    """
+    Class having a logger with its name (or an alternative one).
+
+    Has magic methods to ignore the logger at (de)serialization.
+    """
+
+    def set_logger(self, lowercase=True):
+        module_name = getattr(
+            self.__class__, "get_module_name", lambda : self.__class__.__name__)()
+        self.log = logging.getLogger(
+            (lambda x: x.lower() if lowercase else x)(
+                getattr(self, "name", module_name)))
+
+    # Copying and pickling
+    def __deepcopy__(self, memo={}):
+        new = (lambda cls: cls.__new__(cls))(self.__class__)
+        new.__dict__ = {k: deepcopy(v) for k, v in self.__dict__.items() if k != "log"}
+        return new
+
+    def __getstate__(self):
+        return deepcopy(self).__dict__
+
+    def __setstate__(self, d):
+        self.__dict__ = d
+        self.set_logger()

@@ -6,7 +6,7 @@ from copy import deepcopy
 
 from cobaya.conventions import _theory, _likelihood, _params, _debug, _path_install
 from cobaya.model import get_model
-from cobaya.input import get_full_info
+from cobaya.input import update_info
 from cobaya.cosmo_input import create_input, planck_base_model
 from cobaya.tools import recursive_update
 from .common import process_modules_path
@@ -23,7 +23,7 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
     # used by Planck, so we take H0 instead
     planck_base_model_prime = deepcopy(planck_base_model)
     planck_base_model_prime.update(extra_model or {})
-    if theo == "classy":
+    if "H0" in best_fit:
         planck_base_model_prime["hubble"] = "H"
         best_fit_derived = deepcopy(best_fit_derived) or {}
         best_fit_derived.pop("H0", None)
@@ -33,9 +33,9 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
     info[_theory][theo]["use_planck_names"] = True
     info = recursive_update(info, {_likelihood: info_likelihood})
     info[_params].update({p: None for p in best_fit_derived or {}})
-    # We need FULL info, to get the likelihoods nuisance parameters
-    info = get_full_info(info)
-    # Notice that get_full_info adds an aux internal-only _params property to the likes
+    # We need UPDATED info, to get the likelihoods nuisance parameters
+    info = update_info(info)
+    # Notice that update_info adds an aux internal-only _params property to the likes
     for lik in info[_likelihood]:
         info[_likelihood][lik].pop(_params, None)
     info[_path_install] = process_modules_path(modules)
@@ -49,12 +49,11 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
     # Check value of likelihoods
     for like in info[_likelihood]:
         chi2 = -2 * likes[like]
-        assert abs(chi2 - ref_chi2[like]) < ref_chi2["tolerance"], (
-                "Testing likelihood '%s': | %.2f - %.2f | = %.2f >= %.2f" % (
+        msg = ("Testing likelihood '%s': | %.2f (now) - %.2f (ref) | = %.2f >= %.2f" % (
             like, chi2, ref_chi2[like], abs(chi2 - ref_chi2[like]),
             ref_chi2["tolerance"]))
-        print("Testing likelihood '%s': | %.2f - %.2f | = %.2f >= %.2f" % (
-            like, chi2, ref_chi2[like], abs(chi2 - ref_chi2[like]), ref_chi2["tolerance"]))
+        assert abs(chi2 - ref_chi2[like]) < ref_chi2["tolerance"], msg
+        print(msg)
     # Check value of derived parameters
     not_tested = []
     not_passed = []

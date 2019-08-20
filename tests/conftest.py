@@ -22,9 +22,9 @@ def modules(request):
 
 def pytest_collection_modifyitems(config, items):
     _env_var = "COBAYA_TEST_SKIP"
-    skip_keywords = os.environ.get(_env_var, "").replace(","," ").split()
+    skip_keywords = os.environ.get(_env_var, "").replace(",", " ").split()
     for k in skip_keywords:
-        skip_mark = pytest.mark.skip(reason="'%s' skipped by envvar '%s'"%(k, _env_var))
+        skip_mark = pytest.mark.skip(reason="'%s' skipped by envvar '%s'" % (k, _env_var))
         for item in items:
             if any([(k.lower() in x) for x in [item.name.lower(), item.keywords]]):
                 item.add_marker(skip_mark)

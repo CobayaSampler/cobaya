@@ -26,7 +26,7 @@ from getdist import MCSamples
 # Local
 from cobaya.conventions import _weight, _chi2, _minuslogpost, _minuslogprior
 from cobaya.conventions import _separator
-from cobaya.log import HandledException
+from cobaya.log import LoggedError, HasLogger
 
 # Suppress getdist output
 from getdist import chains
@@ -49,6 +49,7 @@ def check_index(i, imax):
         return imax + i
     return i
 
+
 # Notice that slices are never supposed to raise IndexError, but an empty list at worst!
 def check_slice(ij, imax):
     newlims = {"start": ij.start, "stop": ij.stop}
@@ -60,14 +61,13 @@ def check_slice(ij, imax):
     return slice(newlims["start"], newlims["stop"], ij.step)
 
 
-class Collection(object):
+class Collection(HasLogger):
 
     def __init__(self, model, output=None,
-                 initial_size=enlargement_size, name=None, extension=None,
+                 initial_size=enlargement_size, name=None, extension=None, file_name=None,
                  resuming=False, load=False, onload_skip=0, onload_thin=1):
         self.name = name
-        self.log = logging.getLogger(
-            "collection:" + name if name else self.__class__.__name__)
+        self.set_logger()
         self.sampled_params = list(model.parameterization.sampled_params())
         self.derived_params = list(model.parameterization.derived_params())
         self.minuslogprior_names = [
@@ -84,6 +84,8 @@ class Collection(object):
         if output:
             self.file_name, self.driver = output.prepare_collection(
                 name=self.name, extension=extension)
+            if file_name:
+                self.file_name = file_name
         else:
             self.driver = "dummy"
         if resuming or load:
@@ -91,10 +93,10 @@ class Collection(object):
                 try:
                     self._out_load(skip=onload_skip, thin=onload_thin)
                     if set(self.data.columns) != set(columns):
-                        self.log.error(
+                        raise LoggedError(
+                            self.log,
                             "Unexpected column names!\nLoaded: %s\nShould be: %s",
                             list(self.data.columns), columns)
-                        raise HandledException
                     self._n = self.data.shape[0]
                     self._n_last_out = self._n
                 except IOError:
@@ -106,8 +108,7 @@ class Collection(object):
                     elif load:
                         raise
             else:
-                self.log.error("No continuation possible if there is no output.")
-                raise HandledException
+                raise LoggedError(self.log, "No continuation possible if there is no output.")
         else:
             self._out_delete()
         if not resuming and not load:
@@ -133,9 +134,9 @@ class Collection(object):
             try:
                 logpost = sum(logpriors) + sum(loglikes)
             except ValueError:
-                self.log.error("If a log-posterior is not specified, you need to pass "
-                               "a log-likelihood and a log-prior.")
-                raise HandledException
+                raise LoggedError(
+                    self.log, "If a log-posterior is not specified, you need to pass "
+                    "a log-likelihood and a log-prior.")
         self.data.at[self._n, _minuslogpost] = -logpost
         if logpriors is not None:
             for name, value in zip(self.minuslogprior_names, logpriors):
@@ -146,16 +147,16 @@ class Collection(object):
                 self.data.at[self._n, name] = -2 * value
             self.data.at[self._n, _chi2] = -2 * sum(loglikes)
         if len(values) != len(self.sampled_params):
-            self.log.error("Got %d values for the sampled parameters. Should be %d.",
-                           len(values), len(self.sampled_params))
-            raise HandledException
+            raise LoggedError(
+                self.log, "Got %d values for the sampled parameters. Should be %d.",
+                len(values), len(self.sampled_params))
         for name, value in zip(self.sampled_params, values):
             self.data.at[self._n, name] = value
         if derived is not None:
             if len(derived) != len(self.derived_params):
-                self.log.error("Got %d values for the dervied parameters. Should be %d.",
-                               len(derived), len(self.derived_params))
-                raise HandledException
+                raise LoggedError(
+                    self.log, "Got %d values for the dervied parameters. Should be %d.",
+                    len(derived), len(self.derived_params))
             for name, value in zip(self.derived_params, derived):
                 self.data.at[self._n, name] = value
         self._n += 1
@@ -244,16 +245,25 @@ class Collection(object):
         """
         weights = (lambda w: (
             {"fweights": w} if np.allclose(np.round(w), w) else {"aweights": w}))(
-                self[_weight][first:last].values)
+            self[_weight][first:last].values)
         return np.atleast_2d(np.cov(
             self[list(self.sampled_params) +
                  (list(self.derived_params) if derived else [])][first:last].T,
             **weights))
 
+    def bestfit(self):
+        """Best fit (maximum likelihood) sample. Returns a copy."""
+        return self.data.loc[self.data[_chi2].idxmin()].copy()
+
+    def MAP(self):
+        """Maximum-a-posteriori (MAP) sample. Returns a copy."""
+        return self.data.loc[self.data[_minuslogpost].idxmin()].copy()
+
     def _sampled_to_getdist_mcsamples(self, first=None, last=None):
         """
         Basic interface with getdist -- internal use only!
-        (For analysis and plotting use `getdist.mcsamples.loadCobayaSamples`.)
+        (For analysis and plotting use `getdist.mcsamples.MCSamplesFromCobaya
+        <https://getdist.readthedocs.io/en/latest/mcsamples.html#getdist.mcsamples.loadMCSamples>`_.)
         """
         names = list(self.sampled_params)
         # No logging of warnings temporarily, so getdist won't complain unnecessarily
@@ -264,15 +274,6 @@ class Collection(object):
             loglikes=self.data[:self.n()][_minuslogpost].values[first:last], names=names)
         logging.disable(logging.NOTSET)
         return mcsamples
-
-    # Copying and pickling
-    def __deepcopy__(self, memo={}):
-        new = (lambda cls: cls.__new__(cls))(self.__class__)
-        new.__dict__  = {k: deepcopy(v) for k, v in self.__dict__.items() if k != "log"}
-        return new
-
-    def __getstate__(self):
-        return deepcopy(self).__dict__
 
     # Saving and updating
     def _get_driver(self, method):
@@ -318,8 +319,7 @@ class Collection(object):
 
     def _dump_slice__txt(self, n_min=None, n_max=None):
         if n_min is None or n_max is None:
-            self.log.error("Needs to specify the limit n's to dump.")
-            raise HandledException
+            raise LoggedError(self.log, "Needs to specify the limit n's to dump.")
         if self._n_last_out == n_max:
             return
         self._n_last_out = n_max
@@ -356,7 +356,7 @@ class OnePoint(Collection):
 
     def __init__(self, *args, **kwargs):
         kwargs["initial_size"] = 1
-        Collection.__init__(self, *args, **kwargs)
+        super(OnePoint, self).__init__(*args, **kwargs)
 
     def __getitem__(self, columns):
         if isinstance(columns, six.string_types):
@@ -369,7 +369,7 @@ class OnePoint(Collection):
 
     # Resets the counter, so the dataframe never fills up!
     def add(self, *args, **kwargs):
-        Collection.add(self, *args, **kwargs)
+        super(OnePoint, self).add(*args, **kwargs)
         self._n = 0
 
     def increase_weight(self, increase):

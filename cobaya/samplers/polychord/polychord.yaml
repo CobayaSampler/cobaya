@@ -42,7 +42,7 @@ sampler:
     # Treatment of unbounded parameters: confidence level to use
     # ----------------------------------------------------------
     # (Use with care if there are likelihood modes close to the edge of the prior)
-    confidence_for_unbounded: 0.9999995  # 5 sigmas
+    confidence_for_unbounded: 0.9999995  # 5 sigmas of the prior
     # Seeding runs
     # ------------
     seed:  # postitive integer

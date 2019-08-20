@@ -22,11 +22,12 @@ from textwrap import dedent
 from requests import head
 
 # Local
-from cobaya.log import logger_setup, HandledException
-from cobaya.input import get_modules, load_input
+from cobaya.log import logger_setup, LoggedError
+from cobaya.input import get_used_modules, load_input
 from cobaya.yaml import yaml_dump
 from cobaya.install import install
 from cobaya.conventions import _modules_path, _products_path, _code, _data
+from cobaya.conventions import _modules_path_env
 from cobaya.conventions import _requirements_file, _help_file, _modules_path_arg
 from cobaya.tools import warn_deprecation
 
@@ -53,16 +54,17 @@ RUN pip install pytest-xdist matplotlib cython astropy --upgrade
 # Prepare environment and tree for modules -----------------------------------
 ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/lib
 ENV CONTAINED TRUE
-ENV COBAYA_MODULES %s
+ENV %s %s
 ENV COBAYA_PRODUCTS %s
-RUN mkdir $COBAYA_MODULES && \
+RUN mkdir $%s && \
     mkdir $COBAYA_PRODUCTS
 # COBAYA  --------------------------------------------------------------------
 # getdist fork (it will be an automatic requisite in the future)
 RUN pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist --force
-RUN cd $COBAYA_MODULES && git clone https://github.com/JesusTorrado/cobaya.git && \
-    cd $COBAYA_MODULES/cobaya && pip install -e .
-""" % (_modules_path, _products_path)
+RUN cd $%s && git clone https://github.com/JesusTorrado/cobaya.git && \
+    cd $%s/cobaya && pip install -e .
+""" % (_modules_path_env, _modules_path, _products_path,
+       _modules_path_env, _modules_path_env, _modules_path_env)
 
 MPI_URL = {
     "mpich": "https://www.mpich.org/static/downloads/_VER_/mpich-_VER_.tar.gz",
@@ -135,8 +137,7 @@ def get_docker_client():
     try:
         import docker
     except ImportError:
-        log.error("The Python Docker interface not installed: do 'pip install docker'.")
-        raise HandledException
+        raise LoggedError(log, "The Python Docker interface not installed: do 'pip install docker'.")
     return docker.from_env(version="auto")
 
 
@@ -147,21 +148,18 @@ def create_base_image(mpi=None, version=None, sub=None):
     `sub` : (optional) the subversion of the major.minor version
     """
     if version is None:
-        log.error("Needs a major.minor version!")
-        raise HandledException
+        raise LoggedError(log, "Needs a major.minor version!")
     sub = sub or ""
     if sub:
         sub = "." + sub
     try:
         tag = "cobaya/base_%s_%s:latest" % (mpi.lower(), version + sub)
     except KeyError():
-        log.error("MPI library '%s' not recognized.")
-        raise HandledException
+        raise LoggedError(log, "MPI library '%s' not recognized.")
     URL = MPI_URL[mpi.lower()].replace("_VER_", str(version)).replace("_DOT_SUB_", sub)
     if head(URL).status_code >= 400:
-        log.error("Failed to download %s %s: couldn't reach URL: '%s'",
-                  mpi.lower(), version + sub, URL)
-        raise HandledException
+        raise LoggedError(log, "Failed to download %s %s: couldn't reach URL: '%s'",
+                          mpi.lower(), version + sub, URL)
     log.info("Creating base image %s v%s..." % (mpi.lower(), version + sub))
     this_MPI_recipe = dedent(MPI_recipe[mpi.lower()].replace("_VER_", version)
                              .replace("_DOT_SUB_", sub).replace("_URL_", URL))
@@ -188,7 +186,7 @@ def create_docker_image(filenames, MPI_version=None):
         #          "It is strongly encouraged to request the one installed in your cluster,"
         #          " using '--mpi-version X.Y'. Defaulting to MPICH v%s.", MPI_version)
     dc = get_docker_client()
-    modules = yaml_dump(get_modules(*[load_input(f) for f in filenames])).strip()
+    modules = yaml_dump(get_used_modules(*[load_input(f) for f in filenames])).strip()
     echos_reqs = "RUN " + " && \\ \n    ".join(
         [r'echo "%s" >> %s' % (block, requirements_file_path)
          for block in modules.split("\n")])
@@ -218,7 +216,7 @@ def create_singularity_image(filenames, MPI_version=None):
         # log.warning("You have not specified an OpenMPI version. "
         #          "It is strongly encouraged to request the one installed in your cluster,"
         #          " using '--mpi-version X.Y.Z'. Defaulting to OpenMPI v%s.", MPI_version)
-    modules = yaml_dump(get_modules(*[load_input(f) for f in filenames])).strip()
+    modules = yaml_dump(get_used_modules(*[load_input(f) for f in filenames])).strip()
     echos_reqs = "\n    " + "\n    ".join(
         [""] + ['echo "%s" >> %s' % (block, requirements_file_path)
                 for block in modules.split("\n")])
@@ -248,8 +246,7 @@ def create_singularity_image(filenames, MPI_version=None):
     if process_build.returncode:
         log.info(out)
         log.info(err)
-        log.error("Image creation failed! See error message above.")
-        raise HandledException
+        raise LoggedError(log, "Image creation failed! See error message above.")
     log.info("Singularity image '%s' created!", image_name)
 
 
@@ -280,9 +277,8 @@ def prepare_data_script():
     warn_deprecation()
     logger_setup()
     if "CONTAINED" not in os.environ:
-        log.error("This command should only be run within a container. "
-                  "Run 'cobaya-install' instead.")
-        raise HandledException
+        raise LoggedError(log, "This command should only be run within a container. "
+                          "Run 'cobaya-install' instead.")
     parser = argparse.ArgumentParser(
         description="Cobaya's installation tool for the data needed by a container.")
     parser.add_argument("-f", "--force", action="store_true", default=False,
@@ -291,7 +287,6 @@ def prepare_data_script():
     try:
         info = load_input(requirements_file_path)
     except IOError:
-        log.error("Cannot find the requirements file. This should not be happening.")
-        raise HandledException
+        raise LoggedError(log, "Cannot find the requirements file. This should not be happening.")
     install(info, path=_modules_path, force=arguments.force,
             **{_code: False, _data: True})

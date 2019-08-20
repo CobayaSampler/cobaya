@@ -16,6 +16,9 @@ _prior = "prior"
 _theory = "theory"
 _sampler = "sampler"
 _post = "post"
+_post_add = "add"
+_post_remove = "remove"
+_post_suffix = "suffix"
 _params = "params"
 _input_params = "input_params"
 _output_params = "output_params"
@@ -39,10 +42,12 @@ _resume = "resume"
 _resume_default = False
 _timing = "timing"
 _force = "force"
+_kinds = [_sampler, _theory, _likelihood]
 
-# Separator for different names.
-# Its manual inclusion in a string anywhere else (e.g. a parameter name) is forbidden.
+# Separator for fields in parameter names and files
+# Its manual inclusion in a string anywhere else (e.g. a parameter name) should be avoided
 _separator = "__"
+_separator_files = "."
 
 # Names for the samples' fields internally and in the output
 _weight = "weight"  # sample weight
@@ -53,13 +58,14 @@ _prior_1d_name = "0"
 
 # Output files
 _input_suffix = "input"
-_full_suffix = "full"
+_updated_suffix = "updated"
 _yaml_extensions = ".yaml", ".yml"
 _checkpoint_extension = ".checkpoint"
 _covmat_extension = ".covmat"
 
 # Installation and container definitions
-_modules_path_arg = "modules"
+_modules_path_arg = _path_install
+_modules_path_env = "COBAYA_MODULES"
 _modules_path = "/modules"
 _code = "code"
 _data = "data"

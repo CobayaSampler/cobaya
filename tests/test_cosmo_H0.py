@@ -12,19 +12,19 @@ fiducial_H0 = 70
 
 
 def test_H0_riess2018a_camb(modules):
-    body_of_test(modules, "H0_riess2018a", "camb")
+    body_of_test(modules, "H0.riess2018a", "camb")
 
 
 def test_H0_riess2018b_classy(modules):
-    body_of_test(modules, "H0_riess2018b", "classy")
+    body_of_test(modules, "H0.riess2018b", "classy")
 
 
 def test_H0_riess201903_camb(modules):
-    body_of_test(modules, "H0_riess201903", "camb")
+    body_of_test(modules, "H0.riess201903", "camb")
 
 
 def test_H0_docs_camb(modules):
-    from cobaya.likelihoods._H0_prototype import _H0_prototype
+    from cobaya.likelihoods._base_classes._H0_prototype import _H0_prototype
     doc = sys.modules[_H0_prototype.__module__].__doc__
     pre = "my_H0"
     line = next(l for l in doc.split("\n") if l.strip().startswith(pre))

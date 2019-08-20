@@ -4,7 +4,7 @@ likelihood:
   planck_2015_lensing_cmblikes:
     # Path to the data: where the planck_supp_data_and_covmats has been cloned
     path: null
-    dataset_file: lensing/smica_g30_ftl_full_pp.dataset
+    dataset_file: lensing/2015/smica_g30_ftl_full_pp.dataset
     # Overriding of .dataset parameters
     dataset_params:
       # field: value
@@ -16,16 +16,4 @@ likelihood:
     # Speed in evaluations/second
     speed: 1100
 
-params:
-  A_planck:
-    prior: 
-      dist: norm
-      loc: 1
-      scale: 0.0025
-    ref:
-      dist: norm
-      loc: 1
-      scale: 0.002
-    proposal: 0.0005
-    latex: y_\mathrm{cal}
-    renames: calPlanck
+params: !defaults [../planck_2018_highl_plik/params_calib]

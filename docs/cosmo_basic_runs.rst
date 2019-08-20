@@ -47,9 +47,7 @@ The parameter combinations and options included in the input generator are in ge
 
 Don't forget to add your installation path for the cosmological modules as ``modules: '/path/to/modules'``, and an ``output`` prefix if you wish.
 
-.. note::
-
-   Notice the checkbox **"Keep common parameter names"**: if checked, instead of the parameter names used by CAMB or CLASS (different from each other), the input will use a common parameter names set, understandable by both. If you are using this, you can exchange both theory codes safely (just don't forget to add the ``extra_args`` generated separately for each theory code.
+.. Notice the checkbox **"Keep common parameter names"**: if checked, instead of the parameter names used by CAMB or CLASS (different from each other), the input will use a common parameter names set, understandable by both. If you are using this, you can exchange both theory codes safely (just don't forget to add the ``extra_args`` generated separately for each theory code.
 
 
 As an example, here is the input for Planck 2015 base :math:`\Lambda\mathrm{CDM}`, both for CLASS and CAMB:
@@ -79,7 +77,11 @@ As an example, here is the input for Planck 2015 base :math:`\Lambda\mathrm{CDM}
    You can still add them to the input, if you want to redefine any of their properties (its prior, label, etc.). See :ref:`prior_inheritance`.
 
 
-Save the input generated to a file and run it with ``cobaya-run [your_input_file_name.yaml]``. This will create output files as explained :ref:`here <output_shell>`, and, after a couple of hours, you should be able to run ``GetDistGUI`` to generate some plots.
+Save the input generated to a file and run it with ``cobaya-run [your_input_file_name.yaml]``. This will create output files as explained :ref:`here <output_shell>`, and, after some time, you should be able to run ``GetDistGUI`` to generate some plots.
+
+Typical running times for MCMC when using computationally heavy likelihoods (e.g. those involving :math:`C_\ell`, or non-linear :math:`P(k,z)` for several redshifts) are ~10 hours running 4 MPI processes with 4 OpenMP threads per process, provided that the initial covariance matrix is a good approximation to the one of the real posterior (Cobaya tries to select it automatically from a database; check the ``[mcmc]`` output towards the top to see if it succeded), or a few hours on top of that if the initial covariance matrix is not a good approximation.
+
+It is much harder to provide typical PolyChord running times. We recommend starting with a low number of live points and a low convergence tolerance, and build up from there towards PolyChord's default settings (or higher, if needed).
 
 
 .. _cosmo_post:
@@ -137,22 +139,38 @@ Assuming we saved the sammple at ``chains/planck``, we need to define the follow
 
 .. _citations:
 
-Citations made easy!
---------------------
+Getting help and bibliography for a module
+------------------------------------------
 
-If you would like to cite the results of this run in a paper, you would need citations for all the different parts of the process: this very sampling framework, the MCMC sampler used, the CAMB or CLASS cosmological code and the Planck 2015 likelihoods.
+If you want to get the available options with their default values for a given module, use
+
+.. code-block:: bash
+
+   $ cobaya-doc [module_name]
+
+If the module name is not unique (i.e. there are more than one module with the same name but different kinds), use the option ``--kind [module_kind]`` to specify its kind: ``sampler``, ``theory`` or ``likelihood``.
+
+Call ``$ cobaya-doc`` with a kind instead of a module name (e.g. ``$ cobaya-doc likelihood``) to get a list of modules of that kind. Call with no arguments to get all available modules of all kinds.
+
+If you would like to cite the results of a run in a paper, you would need citations for all the different parts of the process. In the example above that would be this very sampling framework, the MCMC sampler, the CAMB or CLASS cosmological code and the Planck 2018 likelihoods.
 
 The ``bibtex`` for those citations, along with a short text snippet for each element, can be easily obtained and saved to some ``output_file.tex`` with
 
 .. code-block:: bash
 
-   $ cobaya-citation [your_input_file_name.yaml] > output_file.tex
+   $ cobaya-bib [your_input_file_name.yaml] > output_file.tex
 
-You can pass multiple input files this way.
+You can pass multiple input files this way, or even a (list of) module name(s), as in ``cobaya-doc``.
 
 You can also do this interactively, by passing your input info, as a python dictionary, to the function :func:`~citation.citation`:
 
 .. code-block:: python
 
-   from cobaya.citation import citation
-   citation(info)
+   from cobaya.bib import get_bib_info
+   get_bib_info(info)
+
+.. note::
+
+   Both defaults and bibliography are available in the **GUI** (menu ``Show defaults and bilbiography for a module ...``).
+
+   Bibliography for *preset* input files is displayed in the ``bibliography`` tab.

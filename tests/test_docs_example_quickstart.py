@@ -38,7 +38,7 @@ def test_example(tmpdir):
             "Inconsistent info between interactive and *loaded* yaml.")
         # Run the chain -- constant seed so results are the same!
         globals_example["info"]["sampler"]["mcmc"] = (
-            globals_example["info"]["sampler"]["mcmc"] or {})
+                globals_example["info"]["sampler"]["mcmc"] or {})
         globals_example["info"]["sampler"]["mcmc"].update({"seed": 0})
         exec(open(os.path.join(docs_src_folder, "run.py")).read(), globals_example)
         # Analyze and plot -- capture print output
@@ -52,7 +52,7 @@ def test_example(tmpdir):
         assert (KL_norm(
             m1=mean, S1=covmat, m2=globals_example["mean"], S2=globals_example["covmat"])
                 <= KL_tolerance), (
-                    "Sampling appears not to have worked too well. Run again?")
+            "Sampling appears not to have worked too well. Run again?")
     finally:
         # Back to the working directory of the tests, just in case
         os.chdir(cwd)

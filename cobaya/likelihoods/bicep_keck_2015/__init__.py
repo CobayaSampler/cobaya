@@ -32,8 +32,8 @@ To use this likelihood, ``bicep_keck_2015``, you simply need to mention it in th
 The corresponding nuisance parameters will be added automatically,
 so you don't have to care about listing them in the ``params`` block.
 
-The nuisance parameters and their default priors can be found in the ``defaults.yaml``
-files in the folder for the source code of this module, and it's reproduced below.
+The nuisance parameters and their default priors are reproduced below, in the *defaults*
+``yaml`` file.
 
 You shouldn't need to modify any of the options of this simple likelihood,
 but if you really need to, just copy the ``likelihood`` block into your input ``yaml``
@@ -75,26 +75,22 @@ After this, mention the path to this likelihood when you include it in an input 
 
 """
 
-import os
 import numpy as np
 
 # Local
-from cobaya.likelihoods._cmblikes_prototype import _cmblikes_prototype
+from cobaya.likelihoods._base_classes import _cmblikes_prototype
 from cobaya.conventions import _h_J_s, _kB_J_K, _T_CMB_K
-from cobaya.install import download_file
-
-# Logger
-import logging
 
 # Physical constants
 Ghz_Kelvin = _h_J_s / _kB_J_K * 1e9
 
 
 class bicep_keck_2015(_cmblikes_prototype):
+    install_options = {"download_url": r"http://bicepkeck.org/BK15_datarelease/BK15_cosmomc.tgz"}
 
-    def readIni(self, ini):
+    def init_params(self, ini):
 
-        super(self.__class__, self).readIni(ini)
+        super(self.__class__, self).init_params(ini)
         self.fpivot_dust = ini.float('fpivot_dust', 353.0)
         self.fpivot_sync = ini.float('fpivot_sync', 23.0)
         self.bandpasses = []
@@ -116,7 +112,7 @@ class bicep_keck_2015(_cmblikes_prototype):
         bandpass.dnu = np.hstack(
             ((nu[1] - nu[0]), (nu[2:] - nu[:-2]) / 2, (nu[-1] - nu[-2])))
         # Calculate thermodynamic temperature conversion between this bandpass
-        # and pivot frequencies 353 GHz (usedfor dust) and 150 GHz (used for sync).
+        # and pivot frequencies 353 GHz (used for dust) and 150 GHz (used for sync).
         th_int = np.sum(bandpass.dnu * bandpass.R[:, 1] * bandpass.R[:, 0] ** 4 *
                         np.exp(Ghz_Kelvin * bandpass.R[:, 0] / _T_CMB_K) /
                         (np.exp(Ghz_Kelvin * bandpass.R[:, 0] / _T_CMB_K) - 1) ** 2)
@@ -266,16 +262,16 @@ class bicep_keck_2015(_cmblikes_prototype):
                     dustsync *= np.sqrt(EEtoBB_sync * EEtoBB_dust)
 
                 if need_dust_decorr and i != j:
-                    corr_dust = self.decorrelation(delta_dust, self.bandpasses[i].nu_bar * bandcenter_err[i], \
+                    corr_dust = self.decorrelation(delta_dust, self.bandpasses[i].nu_bar * bandcenter_err[i],
                                                    self.bandpasses[j].nu_bar * bandcenter_err[j],
-                                                   self.fpivot_dust_decorr, rat, \
+                                                   self.fpivot_dust_decorr, rat,
                                                    self.lform_dust_decorr)
                 else:
                     corr_dust = 1
                 if need_sync_decorr and i != j:
-                    corr_sync = self.decorrelation(delta_sync, self.bandpasses[i].nu_bar * bandcenter_err[i], \
+                    corr_sync = self.decorrelation(delta_sync, self.bandpasses[i].nu_bar * bandcenter_err[i],
                                                    self.bandpasses[j].nu_bar * bandcenter_err[j],
-                                                   self.pivot_sync_decorr, rat, \
+                                                   self.fpivot_sync_decorr, rat,
                                                    self.lform_sync_decorr)
                 else:
                     corr_sync = 1
@@ -288,34 +284,3 @@ class bicep_keck_2015(_cmblikes_prototype):
 
 class Bandpass(object):
     pass
-
-
-# Installation routines ##################################################################
-
-def get_path(path):
-    return os.path.realpath(os.path.join(path, "data", __name__.split(".")[-1]))
-
-
-def is_installed(**kwargs):
-    if kwargs["data"]:
-        if not os.path.exists(os.path.join(get_path(kwargs["path"]), "BK15_cosmomc")):
-            return False
-    return True
-
-
-def install(path=None, name=None, force=False, code=False, data=True,
-            no_progress_bars=False):
-    log = logging.getLogger(__name__.split(".")[-1])
-    full_path = get_path(path)
-    if not os.path.exists(full_path):
-        os.makedirs(full_path)
-    if not data:
-        return True
-    log.info("Downloading likelihood data...")
-    # Refuses http[S]!  (check again after new release)
-    filename = r"http://bicepkeck.org/BK15_datarelease/BK15_cosmomc.tgz"
-    if not download_file(filename, full_path, decompress=True, logger=log,
-                         no_progress_bars=no_progress_bars):
-        return False
-    log.info("Likelihood data downloaded and uncompressed correctly.")
-    return True

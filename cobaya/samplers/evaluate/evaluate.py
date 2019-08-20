@@ -16,7 +16,7 @@ from collections import OrderedDict as odict
 # Local
 from cobaya.sampler import Sampler
 from cobaya.collection import Collection
-from cobaya.log import HandledException
+from cobaya.log import LoggedError
 
 
 class evaluate(Sampler):
@@ -29,9 +29,9 @@ class evaluate(Sampler):
         try:
             self.N = int(self.N)
         except:
-            self.log.error(
+            raise LoggedError(
+                self.log,
                 "Could not convert the number of samples to an integer: %r", self.N)
-            raise HandledException
         self.one_point = Collection(
             self.model, self.output, initial_size=self.N, name="1")
         self.log.info("Initialized!")
@@ -47,17 +47,17 @@ class evaluate(Sampler):
         """
         for i in range(self.N):
             if self.N > 1:
-                self.log.info("Evaluating sample #%d ------------------------------", i+1)
+                self.log.info("Evaluating sample #%d ------------------------------", i + 1)
             self.log.info("Looking for a reference point with non-zero prior.")
             reference_point = self.model.prior.reference()
             reference_point = odict(
                 zip(self.model.parameterization.sampled_params(), reference_point))
             for p, v in (self.override or {}).items():
                 if p not in reference_point:
-                    self.log.error("Parameter '%s' used in override not known. "
-                                   "Known parameters names are %r.",
-                                   p, self.model.parameterization.sampled_params())
-                    raise HandledException
+                    raise LoggedError(
+                        self.log, "Parameter '%s' used in override not known. "
+                        "Known parameters names are %r.",
+                        p, self.model.parameterization.sampled_params())
                 reference_point[p] = v
             self.log.info("Reference point:\n   " + "\n   ".join(
                 ["%s = %g" % pv for pv in reference_point.items()]))
@@ -69,14 +69,14 @@ class evaluate(Sampler):
                 loglikes=self.logposterior.loglikes)
             self.log.info("log-posterior  = %g", self.logposterior.logpost)
             self.log.info("log-prior      = %g", sum(self.logposterior.logpriors))
-            for i, name in enumerate(self.model.prior):
+            for j, name in enumerate(self.model.prior):
                 self.log.info(
-                    "   logprior_" + name + " = %g", self.logposterior.logpriors[i])
+                    "   logprior_" + name + " = %g", self.logposterior.logpriors[j])
             if sum(self.logposterior.logpriors) > -np.inf:
                 self.log.info("log-likelihood = %g", sum(self.logposterior.loglikes))
-                for i, name in enumerate(self.model.likelihood):
+                for j, name in enumerate(self.model.likelihood):
                     self.log.info(
-                        "   chi2_" + name + " = %g", (-2 * self.logposterior.loglikes[i]))
+                        "   chi2_" + name + " = %g", (-2 * self.logposterior.loglikes[j]))
                 self.log.info("Derived params:")
                 for name, value in zip(self.model.parameterization.derived_params(),
                                        self.logposterior.derived):

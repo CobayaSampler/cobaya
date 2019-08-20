@@ -18,7 +18,7 @@ import argparse
 from cobaya.yaml import yaml_load_file, yaml_dump_file
 from cobaya.conventions import _output_prefix, _path_install, _yaml_extensions, _theory
 from cobaya.conventions import _sampler, _params, _likelihood
-from cobaya.input import get_modules, merge_info, get_full_info
+from cobaya.input import get_used_modules, merge_info, update_info
 from cobaya.install import install as install_reqs
 from cobaya.grid_tools import batchjob
 from cobaya.cosmo_input import create_input, get_best_covmat
@@ -111,7 +111,7 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
             combined_info = merge_info(create_input(**preset), combined_info)
         combined_info[_output_prefix] = jobItem.chainRoot
         # Requisites
-        modules_used = get_modules(modules_used, combined_info)
+        modules_used = get_used_modules(modules_used, combined_info)
         if install_reqs_at:
             combined_info[_path_install] = os.path.abspath(install_reqs_at)
         # Save the info (we will write it after installation:
@@ -139,20 +139,20 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
             if not modules_path:
                 raise ValueError("Cannot assign automatic covariance matrices because no "
                                  "modules path has been defined.")
-            # Need full info for covmats: includes renames
-            full_info = get_full_info(info)
+            # Need updated info for covmats: includes renames
+            updated_info = update_info(info)
             # Ideally, we use slow+sampled parameters to look for the covariance matrix
             # but since for that we'd need to initialise a model, we approximate that set
             # as theory+sampled
             from itertools import chain
             like_params = set(chain(*[
                 list(like[_params])
-                for like in full_info[_likelihood].values()]))
-            params_info = {p: v for p, v in full_info[_params].items()
+                for like in updated_info[_likelihood].values()]))
+            params_info = {p: v for p, v in updated_info[_params].items()
                            if is_sampled_param(v) and p not in like_params}
             best_covmat = get_best_covmat(
                 os.path.abspath(modules_path),
-                params_info, full_info[_likelihood])
+                params_info, updated_info[_likelihood])
             info[_sampler][sampler]["covmat"] = os.path.join(
                 best_covmat["folder"], best_covmat["name"])
         # Write the info for this job

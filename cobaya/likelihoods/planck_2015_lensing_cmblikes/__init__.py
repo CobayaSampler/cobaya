@@ -1,1 +1,5 @@
-from .planck_2015_lensing_cmblikes import planck_2015_lensing_cmblikes, is_installed, install, get_path
+from cobaya.likelihoods.planck_2018_lensing.native import native
+
+
+class planck_2015_lensing_cmblikes(native):
+    pass

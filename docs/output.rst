@@ -26,9 +26,9 @@ Shell call
 
 When called from the shell, **cobaya** generates most commonly the following output files:
 
-- ``[prefix__]input.yaml``: a file with the same content as the input file.
-- ``[prefix__]full.yaml``: a file containing the input information plus the default values used by each module.
-- ``[prefix_][number].txt``: one or more sample files, containing one sample per line, with values separated by spaces. The first line specifies the columns.
+- ``[prefix].input.yaml``: a file with the same content as the input file.
+- ``[prefix].updated.yaml``: a file containing the input information plus the default values used by each module.
+- ``[prefix].[number].txt``: one or more sample files, containing one sample per line, with values separated by spaces. The first line specifies the columns.
 
 .. note::
 
@@ -40,6 +40,10 @@ To specify the folder where the output files will be written and their name, use
 - ``output: somefolder/something``: similar to the last case, but writes into the folder ``somefolder``, which is created at that point if necessary.
 - ``output: somefolder/``: writes into the folder ``somefolder``, which is created at that point if necessary, with no prefix for the file names.
 - ``output: null``: will produce no output files whatsoever -- the products will be just loaded in memory. Use only when invoking from the Python interpreter.
+
+.. warning::
+
+   Please, do not use a dot, ``.``, in the ``output`` prefix: it may confuse Cobaya or GetDist.
 
 If calling ``cobaya-run`` from the command line, you can also specify the output prefix with an ``--output [something]`` flag (it takes precedence over the ``output`` defined inside the yaml file, if it exists).
 

@@ -25,10 +25,11 @@ from collections import OrderedDict as odict
 import numpy as np
 
 # Local
-from cobaya.tools import prepare_comment
+from cobaya.tools import prepare_comment, recursive_update
+from cobaya.conventions import _yaml_extensions
 
 
-# Exceptions
+# Exceptions #############################################################################
 
 class InputSyntaxError(Exception):
     """Syntax error in YAML input."""
@@ -38,28 +39,75 @@ class OutputError(Exception):
     """Error when dumping YAML info."""
 
 
-def yaml_load(text_stream, Loader=yaml.Loader, object_pairs_hook=odict, file_name=None):
-    class OrderedLoader(Loader):
-        pass
+# Custom loader ##########################################################################
 
-    def construct_mapping(loader, node):
-        loader.flatten_mapping(node)
-        return object_pairs_hook(loader.construct_pairs(node))
+class ScientificLoader(yaml.Loader):
+    pass
 
-    OrderedLoader.add_constructor(
-        yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, construct_mapping)
-    OrderedLoader.add_implicit_resolver(
-        u'tag:yaml.org,2002:float',
-        re.compile(u'''^(?:
-            [-+]?(?:[0-9][0-9_]*)\\.[0-9_]*(?:[eE][-+]?[0-9]+)?
-            |[-+]?(?:[0-9][0-9_]*)(?:[eE][-+]?[0-9]+)
-            |\\.[0-9_]+(?:[eE][-+][0-9]+)?
-            |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*
-            |[-+]?\\.(?:inf|Inf|INF)
-            |\\.(?:nan|NaN|NAN))$''', re.X),
-        list(u'-+0123456789.'))
+
+ScientificLoader.add_implicit_resolver(
+    u'tag:yaml.org,2002:float',
+    re.compile(u'''^(?:
+        [-+]?(?:[0-9][0-9_]*)\\.[0-9_]*(?:[eE][-+]?[0-9]+)?
+        |[-+]?(?:[0-9][0-9_]*)(?:[eE][-+]?[0-9]+)
+        |\\.[0-9_]+(?:[eE][-+][0-9]+)?
+        |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*
+        |[-+]?\\.(?:inf|Inf|INF)
+        |\\.(?:nan|NaN|NAN))$''', re.X),
+    list(u'-+0123456789.'))
+
+
+class OrderedLoader(ScientificLoader):
+    pass
+
+
+def _construct_mapping(loader, node):
+    loader.flatten_mapping(node)
+    return odict(loader.construct_pairs(node))
+
+
+OrderedLoader.add_constructor(
+    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _construct_mapping)
+
+
+class DefaultsLoader(OrderedLoader):
+    pass
+
+
+def _construct_defaults(loader, node):
+    if current_file_name is None:
+        raise InputSyntaxError(
+            "'!defaults' directive can only be used when loading from a file.")
     try:
-        return yaml.load(text_stream, OrderedLoader)
+        defaults_files = [loader.construct_scalar(node)]
+    except yaml.constructor.ConstructorError:
+        defaults_files = loader.construct_sequence(node)
+    folder = os.path.dirname(current_file_name)
+    loaded_defaults = odict()
+    for dfile in defaults_files:
+        dfilename = os.path.abspath(os.path.join(folder, dfile))
+        try:
+            dfilename += next(ext for ext in [""] + list(_yaml_extensions)
+                              if (os.path.basename(dfilename) + ext
+                                  in os.listdir(os.path.dirname(dfilename))))
+        except StopIteration:
+            raise InputSyntaxError("Mentioned non-existent defaults file '%s', "
+                                   "searched for in folder '%s'." % (dfile, folder))
+        this_loaded_defaults = yaml_load_file(dfilename)
+        loaded_defaults = recursive_update(loaded_defaults, this_loaded_defaults)
+    return loaded_defaults
+
+
+DefaultsLoader.add_constructor('!defaults', _construct_defaults)
+
+
+def yaml_load(text_stream, file_name=None):
+    try:
+        # Use a global to store the file name, to be used to locate defaults files
+        # (a bit hacky, but it works)
+        global current_file_name
+        current_file_name = file_name
+        return yaml.load(text_stream, DefaultsLoader)
     # Redefining the general exception to give more user-friendly information
     except (yaml.YAMLError, TypeError) as exception:
         errstr = "Error in your input file " + ("'" + file_name + "'" if file_name else "")
@@ -87,11 +135,15 @@ def yaml_load(text_stream, Loader=yaml.Loader, object_pairs_hook=odict, file_nam
 
 
 def yaml_load_file(file_name):
-    """Wrapper to load a yaml file."""
+    """Wrapper to load a yaml file.
+
+    Manages !defaults directive."""
     with open(file_name, "r") as file:
         lines = "".join(file.readlines())
     return yaml_load(lines, file_name=file_name)
 
+
+# Custom dumper ##########################################################################
 
 def yaml_dump(data, stream=None, Dumper=yaml.Dumper, **kwds):
     class OrderedDumper(Dumper):

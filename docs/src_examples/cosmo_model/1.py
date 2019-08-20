@@ -1,15 +1,16 @@
 info_txt = r"""
 likelihood:
-  planck_2015_lowTEB:
-  planck_2015_plikHM_TTTEEE:
-  planck_2015_lensing:
+  planck_2018_lowl.TT:
+  planck_2018_lowl.EE:
+  planck_2018_highl_plik.TTTEEE:
+  planck_2018_lensing.clik:
 theory:
   classy:
     extra_args: {N_ur: 2.0328, N_ncdm: 1}
 params:
   logA:
     prior: {min: 2, max: 4}
-    ref: {dist: norm, loc: 3.1, scale: 0.001}
+    ref: {dist: norm, loc: 3.05, scale: 0.001}
     proposal: 0.001
     latex: \log(10^{10} A_\mathrm{s})
     drop: true
@@ -39,12 +40,13 @@ params:
   YHe: {latex: 'Y_\mathrm{P}'}
   tau_reio:
     prior: {min: 0.01, max: 0.8}
-    ref: {dist: norm, loc: 0.09, scale: 0.01}
+    ref: {dist: norm, loc: 0.06, scale: 0.01}
     proposal: 0.005
     latex: \tau_\mathrm{reio}
 """
 
 from cobaya.yaml import yaml_load
+
 info = yaml_load(info_txt)
 
 # Add your modules installation folder

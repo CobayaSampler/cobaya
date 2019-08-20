@@ -1,0 +1,171 @@
+  aps100:
+    prior:
+      dist: uniform
+      min: 0
+      max: 360
+    ref:
+      dist: norm
+      loc: 153
+      scale: 27
+    proposal: 27
+    latex: A^{PS}_{100}
+  aps143:
+    prior:
+      dist: uniform
+      min: 0
+      max: 270
+    ref:
+      dist: norm
+      loc: 54.9
+      scale: 4.5
+    proposal: 4.5
+    latex: A^{PS}_{143}
+  aps217:
+    prior:
+      dist: uniform
+      min: 0
+      max: 450
+    ref:
+      dist: norm
+      loc: 55.8
+      scale: 7.2
+    proposal: 7.2
+    latex: A^{PS}_{217}
+  acib217:
+    prior:
+      dist: uniform
+      min: 0
+      max: 80
+    ref:
+      dist: norm
+      loc: 55.5
+      scale: 3
+    proposal: 3
+    latex: A^{CIB}_{217}
+  asz143:
+    prior:
+      dist: uniform
+      min: 0
+      max: 10
+    ref:
+      dist: norm
+      loc: 4
+      scale: 1
+    proposal: 1
+    latex: A^{tSZ}_{143}
+  psr:
+    prior:
+      dist: uniform
+      min: 0
+      max: 1
+    ref:
+      dist: norm
+      loc: 0.91
+      scale: 0.04
+    proposal: 0.04
+    latex: r^{PS}_{143\times217}
+  cibr:
+    prior:
+      dist: uniform
+      min: 0
+      max: 1
+    ref:
+      dist: norm
+      loc: 0.5
+      scale: 0.1
+    proposal: 0.1
+    latex: r^{CIB}_{143\times217}
+  ncib:
+    value: 0
+    latex: \gamma^{CIB}
+  cibrun:
+    value: 0
+    latex: d\ln\gamma^{CIB}/d\ln l
+  xi:
+    prior:
+      dist: uniform
+      min: 0
+      max: 1
+    ref:
+      dist: norm
+      loc: 0.1
+      scale: 0.2
+    proposal: 0.2
+    latex: \xi^{tSZ-CIB}
+  aksz:
+    prior:
+      dist: uniform
+      min: 0
+      max: 10
+    ref:
+      dist: norm
+      loc: 1
+      scale: 0.7
+    proposal: 0.7
+    latex:  A^{kSZ}
+  dust100:
+    prior:
+      dist: norm
+      loc: 1
+      scale: 0.2
+    ref:
+      dist: norm
+      loc: 1
+      scale: 0.1
+    proposal: 0.1
+    latex:  A^{\rm dust}_{100}
+  dust143:
+    prior:
+      dist: norm
+      loc: 1
+      scale: 0.2
+    ref:
+      dist: norm
+      loc: 1
+      scale: 0.1
+    proposal: 0.1
+    latex:  A^{\rm dust}_{100}
+  dust217:
+    prior:
+      dist: norm
+      loc: 1
+      scale: 0.2
+    ref:
+      dist: norm
+      loc: 1
+      scale: 0.1
+    proposal: 0.1
+    latex:  A^{\rm dust}_{217}
+  dust143x217:
+    prior:
+      dist: norm
+      loc: 1
+      scale: 0.2
+    ref:
+      dist: norm
+      loc: 1
+      scale: 0.1
+    proposal: 0.1
+    latex:  A^{\rm dust}_{143\times217}
+  cal0:
+    prior:
+      dist: norm
+      loc: 1
+      scale: 0.002
+    ref:
+      dist: norm
+      loc: 1
+      scale: 0.0004
+    proposal: 0.0004
+    latex: c_{100}
+  cal2:
+    prior:
+      dist: norm
+      loc: 1
+      scale: 0.002
+    ref:
+      dist: norm
+      loc: 1
+      scale: 0.001
+    proposal: 0.001
+    latex: c_{217}

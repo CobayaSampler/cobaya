@@ -3,6 +3,9 @@
 \#*
 .\#*
 
+# OS-specific
+.directory
+
 # Python and packaging
 *.pyc
 *.egg-info/

@@ -23,7 +23,7 @@ from cobaya.sampler import Sampler
 from cobaya.mpi import get_mpi_comm
 from cobaya.mpi import am_single_or_primary_process, more_than_one_process, sync_processes
 from cobaya.collection import Collection
-from cobaya.log import HandledException
+from cobaya.log import LoggedError
 from cobaya.install import download_github_release
 from cobaya.yaml import yaml_dump_file
 
@@ -42,13 +42,13 @@ class polychord(Sampler):
             if am_single_or_primary_process():
                 self.log.info("Importing *local* PolyChord from " + self.path)
                 if not os.path.exists(os.path.realpath(self.path)):
-                    self.log.error("The given path does not exist.")
-                    raise HandledException
+                    raise LoggedError(self.log, "The given path does not exist. "
+                                      "Try installing PolyChord with "
+                                      "'cobaya-install polychord -m [modules_path]")
             pc_build_path = get_build_path(self.path)
             if not pc_build_path:
-                self.log.error("Either PolyChord is not in the given folder, "
-                               "'%s', or you have not compiled it.", self.path)
-                raise HandledException
+                raise LoggedError(self.log, "Either PolyChord is not in the given folder, "
+                                  "'%s', or you have not compiled it.", self.path)
             # Inserting the previously found path into the list of import folders
             sys.path.insert(0, pc_build_path)
         else:
@@ -58,13 +58,12 @@ class polychord(Sampler):
             from pypolychord.settings import PolyChordSettings
             self.pc = pypolychord
         except ImportError:
-            self.log.error(
-                "Couldn't find the PolyChord python interface. "
+            raise LoggedError(
+                self.log, "Couldn't find the PolyChord python interface. "
                 "Make sure that you have compiled it, and that you either\n"
                 " (a) specify a path (you didn't) or\n"
                 " (b) install the Python interface globally with\n"
                 "     '/path/to/PolyChord/python setup.py install --user'")
-            raise HandledException
         # Prepare arguments and settings
         self.nDims = self.model.prior.d()
         self.nDerived = (len(self.model.parameterization.derived_params()) +
@@ -116,13 +115,16 @@ class polychord(Sampler):
             speeds, blocks = self.model.likelihood._check_speeds_of_params(self.blocking)
             # Speeds need to be integer to be interpreted as # steps per block
             speeds = relative_to_int(speeds)
+            # Account for num_repeats, which is ignored when blocking set by hand:
+            # -- multiply the number of steps in the slowest block by num_repeats
+            speeds *= self.num_repeats
         else:
             speeds, blocks = self.model.likelihood._speeds_of_params(int_speeds=True)
         blocks_flat = list(chain(*blocks))
         self.ordering = [
             blocks_flat.index(p) for p in self.model.parameterization.sampled_params()]
         self.grade_dims = np.array([len(block) for block in blocks])
-        self.grade_frac = np.array(speeds)*self.grade_dims  # steps per block
+        self.grade_frac = np.array(speeds) * self.grade_dims  # steps per block
         # bugfix: pypolychord's C interface for Fortran does not like int numpy types
         self.grade_dims = [int(x) for x in self.grade_dims]
         # Assign settings
@@ -144,9 +146,9 @@ class polychord(Sampler):
         if len(inf[0]):
             params_names = self.model.parameterization.sampled_params()
             params = [params_names[i] for i in sorted(list(set(inf[0])))]
-            self.log.error("PolyChord needs bounded priors, but the parameter(s) '"
-                           "', '".join(params) + "' is(are) unbounded.")
-            raise HandledException
+            raise LoggedError(
+                self.log, "PolyChord needs bounded priors, but the parameter(s) '"
+                "', '".join(params) + "' is(are) unbounded.")
         locs = bounds[:, 0]
         scales = bounds[:, 1] - bounds[:, 0]
         # This function re-scales the parameters AND puts them in the right order
@@ -302,7 +304,7 @@ class polychord(Sampler):
                         out_evidences["clusters"][i] = odict(
                             [["logZ", self.clusters[i]["logZ"]],
                              ["logZstd", self.clusters[i]["logZstd"]]])
-                fname = os.path.join(self.output.folder, self.output.prefix+".logZ")
+                fname = os.path.join(self.output.folder, self.output.prefix + ".logZ")
                 yaml_dump_file(fname, out_evidences, comment="log-evidence", error_if_exists=False)
         # TODO: try to broadcast the collections
         #        if get_mpi():
@@ -340,7 +342,7 @@ pc_repo_version = "1.16"
 
 def get_path(path):
     return os.path.realpath(
-        os.path.join(path, "code", pc_repo_name[pc_repo_name.find("/")+1:]))
+        os.path.join(path, "code", pc_repo_name[pc_repo_name.find("/") + 1:]))
 
 
 def get_build_path(polychord_path):
@@ -376,7 +378,8 @@ def install(path=None, force=False, code=False, data=False, no_progress_bars=Fal
     log = logging.getLogger(__name__.split(".")[-1])
     log.info("Downloading PolyChord...")
     success = download_github_release(os.path.join(path, "code"), pc_repo_name,
-                                      pc_repo_version, no_progress_bars=no_progress_bars)
+                                      pc_repo_version, no_progress_bars=no_progress_bars,
+                                      logger=log)
     if not success:
         log.error("Could not download PolyChord.")
         return False
@@ -384,7 +387,7 @@ def install(path=None, force=False, code=False, data=False, no_progress_bars=Fal
     from subprocess import Popen, PIPE
     # Needs to re-define os' PWD,
     # because MakeFile calls it and is not affected by the cwd of Popen
-    cwd = os.path.join(path, "code", pc_repo_name[pc_repo_name.find("/")+1:])
+    cwd = os.path.join(path, "code", pc_repo_name[pc_repo_name.find("/") + 1:])
     my_env = os.environ.copy()
     my_env.update({"PWD": cwd})
     process_make = Popen(["make", "pypolychord", "MPI=1"], cwd=cwd, env=my_env,

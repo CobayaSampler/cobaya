@@ -11,16 +11,4 @@ likelihood:
     # Speed in evaluations/second
     speed: 800
 
-params:
-  A_planck:
-    prior:
-      dist: norm
-      loc: 1
-      scale: 0.0025
-    ref:
-      dist: norm
-      loc: 1
-      scale: 0.002
-    proposal: 0.0005
-    latex: y_\mathrm{cal}
-    renames: calPlanck
+params: !defaults [../planck_2015_plikHM_TT/params_calib_2015]

@@ -17,7 +17,7 @@ from collections import OrderedDict as odict
 
 # Local
 from cobaya.likelihood import Likelihood
-from cobaya.log import HandledException
+from cobaya.log import LoggedError
 from cobaya.mpi import get_mpi_size, get_mpi_comm, am_single_or_primary_process
 from cobaya.conventions import _likelihood, _params
 from cobaya.conventions import _input_params_prefix, _output_params_prefix
@@ -47,56 +47,56 @@ class gaussian_mixture(Likelihood):
                 self.covs = np.array([self.covs])
             cov_n_modes, cov_dim, cov_dim_2 = self.covs.shape
             if cov_dim != cov_dim_2:
-                self.log.error("The covariance matrix(/ces) do not appear to be square!\n"
-                               "Got %r", self.covs)
-                raise HandledException
+                raise LoggedError(
+                    self.log, "The covariance matrix(/ces) do not appear to be square!\n"
+                    "Got %r", self.covs)
             if mean_dim != cov_dim:
-                self.log.error(
+                raise LoggedError(
+                    self.log,
                     "The dimensionalities guessed from mean(s) and cov(s) do not match!")
-                raise HandledException
             if mean_n_modes != cov_n_modes:
-                self.log.error(
+                raise LoggedError(
+                    self.log,
                     "The numbers of modes guessed from mean(s) and cov(s) do not match!")
-                raise HandledException
             if mean_dim != self.d():
-                self.log.error(
+                raise LoggedError(
+                    self.log,
                     "The dimensionality is %d (guessed from given means and covmats) "
                     "but was passed %d parameters instead. " +
                     ("Maybe you forgot to specify the prefix by which to identify them?"
                      if self.input_params_prefix else ""), mean_dim,
                     len(self.input_params))
-                raise HandledException
             self.n_modes = mean_n_modes
             if self.derived and len(self.output_params) != self.d() * self.n_modes:
-                self.log.error(
+                raise LoggedError(
+                    self.log,
                     "The number of derived parameters must be equal to the dimensionality"
                     " times the number of modes, i.e. %d x %d = %d, but was given %d "
                     "derived parameters.", self.d(), self.n_modes, self.d() * self.n_modes,
                     len(self.output_params))
-                raise HandledException
             elif not self.derived and self.output_params:
-                self.log.error(
+                raise LoggedError(
+                    self.log,
                     "Derived parameters were requested, but 'derived' option is False. "
                     "Set to True and define as many derived parameters as the "
                     "dimensionality times the number of modes, i.e. %d x %d = %d.",
                     self.d(), self.n_modes, self.d() * self.n_modes)
-                raise HandledException
         else:
-            self.log.error("You must specify both a mean (or a list of them) and a "
-                           "covariance matrix, or a list of them.")
-            raise HandledException
+            raise LoggedError(
+                self.log, "You must specify both a mean (or a list of them) and a "
+                "covariance matrix, or a list of them.")
         self.gaussians = [multivariate_normal(mean=mean, cov=cov)
                           for mean, cov in zip(self.means, self.covs)]
         if self.weights:
             if not len(self.weights) == len(self.gaussians):
-                self.log.error("There must be as many weights as components.")
-                raise HandledException
+                raise LoggedError(self.log, "There must be as many weights as components.")
             if not np.isclose(sum(self.weights), 1):
-                self.weights = self.weights/sum(self.weights)
-                self.log.warn(
+                self.weights = self.weights / sum(self.weights)
+                self.log.warning(
                     "Weights of components renormalized to %r", list(self.weights))
         else:
-            self.weights = 1/len(self.gaussians)                
+            self.weights = 1 / len(self.gaussians)
+
         # Prepare the transformation(s) for the derived parameters
         self.choleskyL = [np.linalg.cholesky(cov) for cov in self.covs]
 
@@ -131,8 +131,8 @@ def random_mean(ranges, n_modes=1, mpi_warn=True):
     If ``n_modes>1``, returns an array of such points.
     """
     if get_mpi_size() and mpi_warn:
-        print ("WARNING! "
-               "Using with MPI: different process will produce different random results.")
+        print("WARNING! "
+              "Using with MPI: different process will produce different random results.")
     mean = np.array([uniform.rvs(loc=r[0], scale=r[1] - r[0], size=n_modes)
                      for r in ranges])
     mean = mean.T
@@ -153,8 +153,8 @@ def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1, mpi_warn=True):
     If ``n_modes>1``, returns a list of such matrices.
     """
     if get_mpi_size() and mpi_warn:
-        print ("WARNING! "
-               "Using with MPI: different process will produce different random results.")
+        print("WARNING! "
+              "Using with MPI: different process will produce different random results.")
     dim = len(ranges)
     scales = np.array([r[1] - r[0] for r in ranges])
     cov = []
@@ -212,5 +212,5 @@ def info_random_gaussian_mixture(
          for i in range(dimension)] +
         # derived
         ([[output_params_prefix + "_%d" % i, {"min": -3, "max": 3, "latex": r"\beta_{%i}" % i}]
-         for i in range(dimension * n_modes)] if derived else []))
+          for i in range(dimension * n_modes)] if derived else []))
     return info

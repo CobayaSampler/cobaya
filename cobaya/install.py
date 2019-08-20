@@ -22,11 +22,11 @@ from six import string_types
 from pkg_resources import parse_version
 
 # Local
-from cobaya.log import logger_setup, HandledException
-from cobaya.tools import get_folder, make_header, warn_deprecation
-from cobaya.input import get_modules
-from cobaya.conventions import _package, _code, _data, _likelihood, _external
-from cobaya.conventions import _modules_path_arg, _path_install
+from cobaya.log import logger_setup, LoggedError
+from cobaya.tools import get_class_module, create_banner, warn_deprecation, get_class
+from cobaya.input import get_used_modules
+from cobaya.conventions import _package, _code, _data, _likelihood, _external, _force
+from cobaya.conventions import _modules_path_arg, _modules_path_env, _path_install
 
 log = logging.getLogger(__name__.split(".")[-1])
 
@@ -42,9 +42,9 @@ def install(*infos, **kwargs):
             path = paths[0]
         else:
             print("logging?")
-            log.error("No 'path' argument given and could not extract one (and only one) "
-                      "from the infos.")
-            raise HandledException
+            raise LoggedError(
+                log, "No 'path' argument given and could not extract one (and only one) "
+                     "from the infos.")
     abspath = os.path.abspath(path)
     log.info("Installing modules at '%s'\n", abspath)
     kwargs_install = {"force": kwargs.get("force", False),
@@ -56,41 +56,53 @@ def install(*infos, **kwargs):
             try:
                 os.makedirs(spath)
             except OSError:
-                log.error("Could not create the desired installation folder '%s'", spath)
-                raise HandledException
+                raise LoggedError(
+                    log, "Could not create the desired installation folder '%s'", spath)
     failed_modules = []
-    for kind, modules in get_modules(*infos).items():
+    skip_list = os.environ.get("COBAYA_TEST_SKIP", "").replace(",", " ").lower().split()
+    for kind, modules in get_used_modules(*infos).items():
         for module in modules:
-            print(make_header(kind, module))
-            module_folder = get_folder(module, kind, sep=".", absolute=False)
+            print(create_banner(kind + ":" + module, symbol="=", length=80))
+            module_folder = get_class_module(module, kind)
             try:
                 imported_module = import_module(module_folder, package=_package)
-            except ImportError:
+                imported_class = get_class(module, kind)
+                if len([s for s in skip_list if s in imported_class.__name__.lower()]):
+                    log.info("Skipping %s for test skip list %s" % (imported_class.__name__, skip_list))
+                    continue
+            except ImportError as e:
                 if kind == _likelihood:
-                    info = (next(info for info in infos
-                                 if module in info.get(_likelihood, {}))
-                            [_likelihood][module]) or {}
+                    info = (next(info for info in infos if module in info.get(_likelihood, {}))[_likelihood][module]
+                           ) or {}
                     if isinstance(info, string_types) or _external in info:
                         log.warning("Module '%s' is a custom likelihood. "
                                     "Nothing to do.\n", module)
-                        flag = False
                     else:
-                        log.error("Module '%s' not recognized.\n" % module)
+                        log.error("Module '%s' not recognized. [%s]\n" % (module, e))
                         failed_modules += ["%s:%s" % (kind, module)]
                 continue
-            is_installed = getattr(imported_module, "is_installed", None)
+            is_installed = getattr(imported_class, "is_installed",
+                                   getattr(imported_module, "is_installed", None))
             if is_installed is None:
                 log.info("Built-in module: nothing to do.\n")
                 continue
             if is_installed(path=abspath, **kwargs_install):
                 log.info("External module already installed.\n")
+                if kwargs.get("just_check", False):
+                    continue
                 if kwargs_install["force"]:
                     log.info("Forcing re-installation, as requested.")
                 else:
                     log.info("Doing nothing.\n")
                     continue
+            else:
+                if kwargs.get("just_check", False):
+                    log.info("NOT INSTALLED!\n")
+                    continue
             try:
-                success = imported_module.install(path=abspath, **kwargs_install)
+                install_this = getattr(imported_class, "install",
+                                       getattr(imported_module, "install", None))
+                success = install_this(path=abspath, **kwargs_install)
             except:
                 traceback.print_exception(*sys.exc_info(), file=sys.stdout)
                 log.error("An unknown error occurred. Delete the modules folder and try "
@@ -114,11 +126,11 @@ def install(*infos, **kwargs):
                 failed_modules += ["%s:%s" % (kind, module)]
     if failed_modules:
         bullet = "\n - "
-        log.error("The installation (or installation test) of some module(s) has failed: "
-                  "%s\nCheck output of the installer of each module above "
-                  "for precise error info.\n",
-                  bullet + bullet.join(failed_modules))
-        raise HandledException
+        raise LoggedError(
+            log, "The installation (or installation test) of some module(s) has failed: "
+                 "%s\nCheck output of the installer of each module above "
+                 "for precise error info.\n",
+            bullet + bullet.join(failed_modules))
 
 
 def download_file(filename, path, no_progress_bars=False, decompress=False, logger=None):
@@ -128,35 +140,41 @@ def download_file(filename, path, no_progress_bars=False, decompress=False, logg
         wget_kwargs = {"out": path, "bar":
             (bar_thermometer if not no_progress_bars else None)}
         filename = download(filename, **wget_kwargs)
-    except:
-        log.error("Error downloading file '%s' to folder '%s'", filename, path)
-        return False
-    finally:
         print("")
+        log.info('Downloaded filename %s' % filename)
+    except Exception as excpt:
+        log.error(
+            "Error downloading file '%s' to folder '%s': %s", filename, path, str(excpt))
+        return False
     log.debug('Got: %s' % filename)
     if not decompress:
         return True
-    import tarfile
     extension = os.path.splitext(filename)[-1][1:]
-    if extension == "tgz":
-        extension = "gz"
     try:
-        tar = tarfile.open(filename, "r:" + extension)
-        tar.extractall(path)
-        tar.close()
-        os.remove(filename)
+        if extension == "zip":
+            from zipfile import ZipFile
+            with ZipFile(filename, 'r') as zipObj:
+                zipObj.extractall(path)
+        else:
+            import tarfile
+            if extension == "tgz":
+                extension = "gz"
+            with tarfile.open(filename, "r:" + extension) as tar:
+                tar.extractall(path)
         log.debug('Decompressed: %s' % filename)
+        os.remove(filename)
         return True
-    except:
-        log.error("Error decompressing downloaded file! Corrupt file?")
+    except Exception as e:
+        log.error("Error decompressing downloaded file! Corrupt file? [%s]" % e)
         return False
 
 
 def download_github_release(directory, repo_name, release_name, repo_rename=None,
-                            no_progress_bars=False):
+                            no_progress_bars=False, logger=None):
+    log = logger or logging.getLogger(__name__)
     if "/" in repo_name:
         github_user = repo_name[:repo_name.find("/")]
-        repo_name = repo_name[repo_name.find("/")+1:]
+        repo_name = repo_name[repo_name.find("/") + 1:]
     else:
         github_user = "CobayaSampler"
     if not os.path.exists(directory):
@@ -229,14 +247,19 @@ def install_script():
                             help="One or more input files "
                                  "(or simply 'polychord', or 'cosmo' "
                                  "for a basic collection of cosmological modules)")
+        default_modules_path = os.environ.get(_modules_path_env)
         parser.add_argument("-" + _modules_path_arg[0], "--" + _modules_path_arg,
-                            action="store", nargs=1, required=True,
-                            metavar="/install/path",
+                            action="store", nargs=1,
+                            required=not bool(default_modules_path),
+                            metavar="/modules/path", default=[default_modules_path],
                             help="Desired path where to install external modules.")
-        parser.add_argument("-f", "--force", action="store_true", default=False,
+        parser.add_argument("-" + _force[0], "--" + _force, action="store_true",
+                            default=False,
                             help="Force re-installation of apparently installed modules.")
         parser.add_argument("--no-progress-bars", action="store_true", default=False,
                             help="No progress bars shown. Shorter logs (used in Travis).")
+        parser.add_argument("--just-check", action="store_true", default=False,
+                            help="Just check whether modules are installed.")
         group_just = parser.add_mutually_exclusive_group(required=False)
         group_just.add_argument("-C", "--just-code", action="store_false", default=True,
                                 help="Install code of the modules.", dest=_data)
@@ -247,6 +270,11 @@ def install_script():
             log.info("Installing cosmological modules (input files will be ignored)")
             from cobaya.cosmo_input import install_basic
             infos = [install_basic]
+        elif arguments.files == ["cosmo-tests"]:
+            log.info("Installing *tested* cosmological modules "
+                     "(input files will be ignored)")
+            from cobaya.cosmo_input import install_tests
+            infos = [install_tests]
         elif arguments.files == ["polychord"]:
             infos = [{"sampler": {"polychord": None}}]
         else:
@@ -255,4 +283,4 @@ def install_script():
         # Launch installer
         install(*infos, path=getattr(arguments, _modules_path_arg)[0],
                 **{arg: getattr(arguments, arg)
-                   for arg in ["force", _code, _data, "no_progress_bars"]})
+                   for arg in ["force", _code, _data, "no_progress_bars", "just_check"]})

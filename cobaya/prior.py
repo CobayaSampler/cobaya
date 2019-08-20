@@ -353,18 +353,13 @@ from types import MethodType
 from cobaya.conventions import _prior, _p_ref, _prior_1d_name
 from cobaya.tools import get_external_function, get_scipy_1d_pdf, read_dnumber
 from cobaya.tools import _fast_uniform_logpdf, _fast_norm_logpdf, getargspec
-from cobaya.log import HandledException
-
-# Logger
-import logging
-
-log = logging.getLogger(__name__.split(".")[-1])
+from cobaya.log import LoggedError, HasLogger
 
 # Fast logpdf for uniforms and norms (do not understand nan masks!)
 fast_logpdfs = {"uniform": _fast_uniform_logpdf, "norm": _fast_norm_logpdf}
 
 
-class Prior(object):
+class Prior(HasLogger):
     """
     Class managing the prior and reference pdf's.
     """
@@ -373,19 +368,20 @@ class Prior(object):
         """
         Initializes the prior and reference pdf's from the input information.
         """
+        self.set_logger()
         constant_params_info = parameterization.constant_params()
         sampled_params_info = parameterization.sampled_params_info()
         if not sampled_params_info:
-            log.warning("No sampled parameters requested! "
-                        "This will fail for non-mock samplers.")
+            self.log.warning("No sampled parameters requested! "
+                             "This will fail for non-mock samplers.")
         # pdf: a list of independent components
         # in principle, separable: one per parameter
-        self.name = []
+        self.params = []
         self.pdf = []
         self.ref_pdf = []
         self._bounds = np.zeros((len(sampled_params_info), 2))
         for i, p in enumerate(sampled_params_info):
-            self.name += [p]
+            self.params += [p]
             prior = sampled_params_info[p].get(_prior)
             self.pdf += [get_scipy_1d_pdf({p: prior})]
             fast_logpdf = fast_logpdfs.get(self.pdf[-1].dist.name)
@@ -404,17 +400,16 @@ class Prior(object):
             try:
                 self._bounds[i] = self.pdf[-1].interval(1)
             except AttributeError:
-                log.error("No bounds defined for parameter '%s' "
-                          "(maybe not a scipy 1d pdf).", p)
-                raise HandledException
+                raise LoggedError(self.log, "No bounds defined for parameter '%s' "
+                                  "(maybe not a scipy 1d pdf).", p)
         # Process the external prior(s):
         self.external = odict()
         for name in (info_prior if info_prior else {}):
             if name == _prior_1d_name:
-                log.error("The name '%s' is a reserved prior name. "
-                          "Please use a different one.", _prior_1d_name)
-                raise HandledException
-            log.debug("Loading external prior '%s' from: '%s'", name, info_prior[name])
+                raise LoggedError(self.log, "The name '%s' is a reserved prior name. "
+                                  "Please use a different one.", _prior_1d_name)
+            self.log.debug(
+                "Loading external prior '%s' from: '%s'", name, info_prior[name])
             self.external[name] = (
                 {"logp": get_external_function(info_prior[name], name=name)})
             self.external[name]["argspec"] = (
@@ -427,25 +422,24 @@ class Prior(object):
                 for p in self.external[name]["argspec"].args if p in constant_params_info}
             if (not (len(self.external[name]["params"]) +
                      len(self.external[name]["constant_params"]))):
-                log.error("None of the arguments of the external prior '%s' "
-                          "are known *fixed* or *sampled* parameters. "
-                          "This prior recognizes: %r",
-                          name, self.external[name]["argspec"].args)
-                raise HandledException
+                raise LoggedError(
+                    self.log, "None of the arguments of the external prior '%s' "
+                    "are known *fixed* or *sampled* parameters. "
+                    "This prior recognizes: %r", name, self.external[name]["argspec"].args)
             params_without_default = self.external[name]["argspec"].args[
                                      :(len(self.external[name]["argspec"].args) -
                                        len(self.external[name]["argspec"].defaults or []))]
             if not all([(p in self.external[name]["params"] or
                          p in self.external[name]["constant_params"])
                         for p in params_without_default]):
-                log.error("Some of the arguments of the external prior '%s' "
-                          "cannot be found and don't have a default value either: %s",
-                          name, list(set(params_without_default)
-                                     .difference(self.external[name]["params"])
-                                     .difference(self.external[name]["constant_params"])))
-                raise HandledException
-            log.warning("External prior '%s' loaded. "
-                        "Mind that it might not be normalized!", name)
+                raise LoggedError(
+                    self.log, "Some of the arguments of the external prior '%s' cannot "
+                    "be found and don't have a default value either: %s",
+                    name, list(set(params_without_default)
+                               .difference(self.external[name]["params"])
+                               .difference(self.external[name]["constant_params"])))
+            self.log.warning("External prior '%s' loaded. "
+                             "Mind that it might not be normalized!", name)
 
     def d(self):
         """
@@ -482,15 +476,16 @@ class Prior(object):
             bounds = deepcopy(self._bounds)
             infs = list(set(np.argwhere(np.isinf(bounds)).T[0]))
             if infs:
-                log.warning("There are unbounded parameters. Prior bounds are given at %s "
-                            "confidence level. Beware of likelihood modes at the edge of "
-                            "the prior", confidence_for_unbounded)
+                self.log.warning("There are unbounded parameters. Prior bounds are given "
+                                 "at %s confidence level. Beware of likelihood modes at "
+                                 "the edge of the prior", confidence_for_unbounded)
                 bounds[infs] = [
                     self.pdf[i].interval(confidence_for_unbounded) for i in infs]
             return bounds
         except AttributeError:
-            log.error("Some parameter names (positions %r) have no bounds defined.", infs)
-            raise HandledException
+            raise LoggedError(
+                self.log,
+                "Some parameter names (positions %r) have no bounds defined.", infs)
 
     def sample(self, n=1, ignore_external=False):
         """
@@ -504,9 +499,9 @@ class Prior(object):
           Array of ``n`` samples from the prior, as vectors ``[value of param 1, ...]``.
         """
         if not ignore_external and self.external:
-            log.error("It is not possible to sample from an external prior "
-                      "(see help of this function on how to fix this).")
-            raise HandledException
+            raise LoggedError(
+                self.log, "It is not possible to sample from an external prior "
+                "(see help of this function on how to fix this).")
         return np.array([pdf.rvs(n) for pdf in self.pdf]).T
 
     def logps(self, x):
@@ -520,10 +515,10 @@ class Prior(object):
            ones (if present) are the priors specified in the ``prior`` block
            in the same order.
         """
-        log.debug("Evaluating prior at %r", x)
+        self.log.debug("Evaluating prior at %r", x)
         logps = [
                     sum([pdf.logpdf(xi) for pdf, xi in zip(self.pdf, x)])] + self.logps_external(x)
-        log.debug("Got logpriors = %r", logps)
+        self.log.debug("Got logpriors = %r", logps)
         return logps
 
     def logp(self, x):
@@ -547,9 +542,9 @@ class Prior(object):
            The covariance matrix of the prior.
         """
         if not ignore_external and self.external:
-            log.error("It is not possible to get the covariance matrix "
-                      "from an external prior.")
-            raise HandledException
+            raise LoggedError(
+                self.log,
+                "It is not possible to get the covariance matrix from an external prior.")
         return np.diag([pdf.var() for pdf in self.pdf]).T
 
     def reference(self, max_tries=np.inf, max_tries_warning="10d"):
@@ -567,8 +562,9 @@ class Prior(object):
         e.g. for an MCMC chain.
         """
         if np.nan in self.ref_pdf:
-            log.info("Reference values or pdf's for some parameters were not provided. "
-                     "Sampling from the prior instead for those parameters.")
+            self.log.info(
+                "Reference values or pdf's for some parameters were not provided. "
+                "Sampling from the prior instead for those parameters.")
         tries = 0
         max_tries_warning = read_dnumber(max_tries_warning, self.d())
         while tries < max_tries:
@@ -582,14 +578,14 @@ class Prior(object):
             if self.logp(ref_sample) > -np.inf:
                 return ref_sample
             if tries == max_tries_warning:
-                log.warning("If stuck here, maybe it is not possible to sample from the "
-                            "reference pdf a point with non-null prior. Check that they "
-                            "are consistent.")
-        log.error("Couldn't sample from the reference pdf a point with non-"
-                  "null prior density after '%d' tries. "
-                  "Maybe your prior is improper of your reference pdf is "
-                  "null-defined in the domain of the prior.", max_tries)
-        raise HandledException
+                self.log.warning("If stuck here, maybe it is not possible to sample from "
+                                 "the reference pdf a point with non-null prior. Check "
+                                 "that they are consistent.")
+        raise LoggedError(
+            self.log, "Couldn't sample from the reference pdf a point with non-"
+            "null prior density after '%d' tries. "
+            "Maybe your prior is improper of your reference pdf is "
+            "null-defined in the domain of the prior.", max_tries)
 
     def reference_covmat(self):
         """
@@ -601,8 +597,8 @@ class Prior(object):
                           for i, ref_pdf in enumerate(self.ref_pdf)])
         where_no_ref = np.isnan(covmat)
         if np.any(where_no_ref):
-            log.warning("Reference pdf not defined or improper for some parameters. "
-                        "Using prior's sigma instead for them.")
+            self.log.warning("Reference pdf not defined or improper for some parameters. "
+                             "Using prior's sigma instead for them.")
             covmat[where_no_ref] = self.covmat(ignore_external=True)[where_no_ref]
         return covmat
 

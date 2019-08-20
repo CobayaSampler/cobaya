@@ -1,0 +1,114 @@
+  #additional polarization parameters not used for TT
+  galf_TE_index: -2.4
+  galf_TE_A_100:
+    prior:
+      dist: norm
+      loc: 0.130
+      scale: 0.042
+    ref:
+      dist: norm
+      loc: 0.130
+      scale: 0.1
+    proposal: 0.1
+    latex: A^\mathrm{dustTE}_{100}
+    renames: galfTE100
+  galf_TE_A_100_143:
+    prior:
+      dist: norm
+      loc: 0.130
+      scale: 0.036
+    ref:
+      dist: norm
+      loc: 0.130
+      scale: 0.1
+    proposal: 0.1
+    latex: A^\mathrm{dustTE}_{\mathrm{100}\times\mathrm{143}}
+    renames: galfTE100143
+  galf_TE_A_100_217:
+    prior:
+      dist: norm
+      loc: 0.46
+      scale: 0.09
+    ref:
+      dist: norm
+      loc: 0.46
+      scale: 0.10
+    proposal: 0.10
+    latex: A^\mathrm{dustTE}_{\mathrm{100}\times\mathrm{217}}
+    renames: galfTE100217
+  galf_TE_A_143:
+    prior:
+      dist: norm
+      loc: 0.207
+      scale: 0.072
+    ref:
+      dist: norm
+      loc: 0.207
+      scale: 0.100
+    proposal: 0.100
+    latex: A^\mathrm{dustTE}_{143}
+    renames: galfTE143
+  galf_TE_A_143_217:
+    prior:
+      dist: norm
+      loc: 0.69
+      scale: 0.09
+    ref:
+      dist: norm
+      loc: 0.69
+      scale: 0.1
+    proposal: 0.1
+    latex: A^\mathrm{dustTE}_{\mathrm{143}\times\mathrm{217}}
+    renames: galfTE143217
+  galf_TE_A_217:
+    prior:
+      dist: norm
+      loc: 1.938
+      scale: 0.54
+    ref:
+      dist: norm
+      loc: 1.938
+      scale: 0.2
+    proposal: 0.2
+    latex: A^\mathrm{dustTE}_{217}
+    renames: galfTE217
+  # EE now recommended to be left to the central values of the stated priors
+  galf_EE_index: -2.4
+  galf_EE_A_100:
+    value: 0.055  # (± 0.014)
+    latex: A^\mathrm{dustEE}_{100}
+    renames: galfEE100
+  galf_EE_A_100_143:
+    value: 0.040  # (± 0.010)
+    latex: A^\mathrm{dustEE}_{\mathrm{100}\times\mathrm{143}}
+    renames: galfEE100143
+  galf_EE_A_100_217:
+    value: 0.094  # (± 0.023)
+    latex: A^\mathrm{dustEE}_{\mathrm{100}\times\mathrm{217}}
+    renames: galfEE100217
+  galf_EE_A_143:
+    value: 0.086  # (± 0.022)
+    latex: A^\mathrm{dustEE}_{143}
+    renames: galfEE143
+  galf_EE_A_143_217:
+    value: 0.21  # (± 0.051)
+    latex: A^\mathrm{dustEE}_{\mathrm{143}\times\mathrm{217}}
+    renames: galfEE143217
+  galf_EE_A_217:
+    value: 0.70  # (± 0.18)
+    latex: A^\mathrm{dustEE}_{217}
+    renames: galfEE217
+  A_pol: 1
+  calib_100P: 1.021  # (± 0.01)
+  calib_143P: 0.966  # (± 0.01)
+  calib_217P: 1.040  # (± 0.01)
+  # EE End2End correlated noise
+  A_cnoise_e2e_100_100_EE: 1
+  A_cnoise_e2e_143_143_EE: 1
+  A_cnoise_e2e_217_217_EE: 1
+  A_sbpx_100_100_EE: 1
+  A_sbpx_100_143_EE: 1
+  A_sbpx_100_217_EE: 1
+  A_sbpx_143_143_EE: 1
+  A_sbpx_143_217_EE: 1
+  A_sbpx_217_217_EE: 1

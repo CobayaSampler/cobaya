@@ -9,27 +9,38 @@
 # Python 2/3 compatibility
 from __future__ import absolute_import
 import numpy as np
-from copy import deepcopy
 from scipy.interpolate import RectBivariateSpline
 from six import string_types
 from itertools import chain
 
 # Local
 from cobaya.theory import Theory
-from cobaya.log import HandledException
+from cobaya.tools import fuzzy_match, create_banner
+from cobaya.log import LoggedError
 
 
 class _cosmo(Theory):
 
     def needs(self, **requirements):
-        """
+        r"""
         Specifies the quantities that each likelihood needs from the Cosmology code.
 
         Typical requisites in Cosmology (as keywords, case insensitive):
 
-        - ``Cl={[...]}``: CMB lensed power spectra, as a dictionary ``{spectrum:l_max}``,
+        - ``Cl={...}``: CMB lensed power spectra, as a dictionary ``{spectrum:l_max}``,
           where the possible spectra are combinations of "t", "e", "b" and "p"
-          (lensing potential). Get with :func:`~_cosmo.get_cl`.
+          (lensing potential). Get with :func:`~_cosmo.get_Cl`.
+        - **[BETA: CAMB only; notation may change!]** ``source_Cl={...}``:
+          :math:`C_\ell` of given sources with given windows, e.g.:
+          ``source_name: {"function": "spline"|"gaussian", [source_args]``;
+          for now, ``[source_args]`` follow the notation of ``CAMBSources``.
+          If can also take ``lmax: [int]``, ``limber: True`` if Limber approximation
+          desired, and ``non_linear: True`` if non-linear contributions requested.
+          Get with :func:`~_cosmo.get_source_Cl`.
+        - ``Pk_interpolator={...}``: Matter power spectrum interpolator in :math:`(z, k)`.
+          Takes ``"z": [list_of_evaluated_redshifts]``, ``"k_max": [k_max]``,
+          ``"extrap_kmax": [max_k_max_extrapolated]``, ``"nonlinear": [True|False]``,
+          ``"vars_pairs": [["delta_tot", "delta_tot"], ["Weyl", "Weyl"], [...]]}``.
         - ``H={'z': [z_1, ...], 'units': '1/Mpc' or 'km/s/Mpc'}``: Hubble
           rate at the redshifts requested, in the given units. Get it with
           :func:`~_cosmo.get_H`.
@@ -50,11 +61,11 @@ class _cosmo(Theory):
             self._needs = dict([[p, None] for p in self.output_params])
         # TO BE DEPRECATED IN >=1.3
         for product, capitalization in {
-                "cl": "Cl", "pk_interpolator": "Pk_interpolator"}.items():
+            "cl": "Cl", "pk_interpolator": "Pk_interpolator"}.items():
             if product in requirements:
-                self.log.error("You requested product '%s', which from now on should be "
-                               "capitalized as '%s'.", product, capitalization)
-                raise HandledException
+                raise LoggedError(
+                    self.log, "You requested product '%s', which from now on should be "
+                    "capitalized as '%s'.", product, capitalization)
         # Accumulate the requirements across several calls in a safe way;
         # e.g. take maximum of all values of a requested precision paramater
         for k, v in requirements.items():
@@ -71,11 +82,11 @@ class _cosmo(Theory):
                         vars_pairs = [vars_pairs]
                 except IndexError:
                     # Empty list: by default [delta_tot, delta_tot]
-                    vars_pairs = [2*["delta_tot"]]
+                    vars_pairs = [2 * ["delta_tot"]]
                 except:
-                    self.log("Cannot understands vars_pairs '%r' for P(k) interpolator",
-                             vars_pairs)
-                    raise HandledException
+                    raise LoggedError(
+                        self.log, "Cannot understands vars_pairs '%r' for P(k) interpolator",
+                        vars_pairs)
                 vars_pairs = set([tuple(pair) for pair in chain(
                     self._needs.get(k, {}).get("vars_pairs", []), vars_pairs)])
                 self._needs[k] = {
@@ -86,9 +97,27 @@ class _cosmo(Theory):
                         self._needs.get(k, {}).get("k_max", 0), v["k_max"]),
                     "vars_pairs": vars_pairs}
                 self._needs[k].update(v)
+            elif k == "source_Cl":
+                if k not in self._needs:
+                    self._needs[k] = {}
+                if "sources" not in v:
+                    raise LoggedError(
+                        self.log, "Needs a 'sources' key, containing a dict with every "
+                        "source name and definition")
+                # Check that no two sources with equal name but diff specification
+                for source, window in v["sources"].items():
+                    if source in getattr(self, "sources", {}):
+                        # TODO: improve this test!!!
+                        # (e.g. 2 z-vectors that fulfill np.allclose would fail a == test)
+                        if window != self.sources[source]:
+                            raise LoggedError(
+                                self.log,
+                                "Source %r requested twice with different specification: "
+                                "%r vs %r.", window, self.sources[source])
+                self._needs[k].update(v)
             elif k in ["H", "angular_diameter_distance",
-                               "comoving_radial_distance", "fsigma8"]:
-                if not k in self._needs:
+                       "comoving_radial_distance", "fsigma8"]:
+                if k not in self._needs:
                     self._needs[k] = {}
                 self._needs[k]["z"] = np.unique(np.concatenate(
                     (self._needs[k].get("z", []), v["z"])))
@@ -96,8 +125,7 @@ class _cosmo(Theory):
             elif v is None:
                 self._needs[k] = None
             else:
-                self.log.error("Unknown required product: '%s:%s'.", k, v)
-                raise HandledException
+                raise LoggedError(self.log, "Unknown required product: '%s'.", k)
 
     def requested(self):
         """
@@ -114,8 +142,8 @@ class _cosmo(Theory):
         """
         pass
 
-    def get_cl(self, ell_factor=False, units="muK2"):
-        """
+    def get_Cl(self, ell_factor=False, units="muK2"):
+        r"""
         Returns a dictionary of lensed CMB power spectra and the lensing potential ``pp`` power spectrum.
 
         Set the units with the keyword ``units='1'|'muK2'|'K2'`` (default: 'muK2',
@@ -128,7 +156,7 @@ class _cosmo(Theory):
         pass
 
     def get_H(self, z, units="km/s/Mpc"):
-        """
+        r"""
         Returns the Hubble rate at the given redshifts.
 
         The redshifts must be a subset of those requested when :func:`~_cosmo.needs`
@@ -139,7 +167,7 @@ class _cosmo(Theory):
         pass
 
     def get_angular_diameter_distance(self, z):
-        """
+        r"""
         Returns the physical angular diameter distance to the given redshifts.
 
         The redshifts must be a subset of those requested when :func:`~_cosmo.needs`
@@ -148,25 +176,21 @@ class _cosmo(Theory):
         pass
 
     def get_Pk_interpolator(self, z):
-        """
+        r"""
         Returns a (dict of) power spectrum interpolator(s)
         :class:`PowerSpectrumInterpolator`.
         """
         pass
 
-    def get_fsigma8(self, z):
+    def get_source_Cl(self):
+        r"""
+        Returns a dict of power spectra of for the computed sources, with keys a tuple of
+        sources ``([source1], [source2])``, and an additional key ``ell`` containing the
+        multipoles.
         """
-        Structure growth rate :math:`f\sigma_8`, as defined in eq. 33 of
-        `Planck 2015 results. XIII. Cosmological parameters <https://arxiv.org/pdf/1502.01589.pdf>`_,
-        at the given redshifts.
-
-        The redshifts must be a subset of those requested when :func:`~_cosmo.needs`
-        was called.
-        """
-        pass
 
     def get_fsigma8(self, z):
-        """
+        r"""
         Structure growth rate :math:`f\sigma_8`, as defined in eq. 33 of
         `Planck 2015 results. XIII. Cosmological parameters <https://arxiv.org/pdf/1502.01589.pdf>`_,
         at the given redshifts.
@@ -177,13 +201,36 @@ class _cosmo(Theory):
         pass
 
     def get_auto_covmat(self, params_info, likes_info):
-        """
+        r"""
         Tries to get match to a database of existing covariance matrix files for the current model and data.
 
         ``params_info`` should contain preferably the slow parameters only.
         """
         from cobaya.cosmo_input import get_best_covmat
         return get_best_covmat(self.path_install, params_info, likes_info)
+
+    def __getattr__(self, method):
+        try:
+            object.__getattr__(self, method)
+        except AttributeError:
+            if method.startswith("get"):
+                # Deprecated method names
+                # -- this will be deprecated in favour of the error below
+                new_names = {"get_cl": "get_Cl"}
+                if method in new_names:
+                    msg = create_banner(
+                        "Method '%s' has been re-capitalized to '%s'.\n"
+                        "Overriding for now, but please change it: "
+                        "this will produce an error in the future." % (
+                            method, new_names[method]))
+                    for line in msg.split("\n"):
+                        self.log.warning(line)
+                    return getattr(self, new_names[method])
+                # End of deprecation block ------------------------------
+                raise LoggedError(
+                    self.log, "Getter method for cosmology product %r is not known. "
+                    "Maybe you meant any of %r?",
+                    method, fuzzy_match(method, dir(self), n=3))
 
 
 class PowerSpectrumInterpolator(RectBivariateSpline):
@@ -207,7 +254,7 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
     def __init__(self, z, k, P_or_logP, extrap_kmax=None, logk=False, logP=False):
         self.logk, self.logP = logk, logP
         #  Check order
-        z, k = [np.atleast_1d(x) for x in [z,k]]
+        z, k = [np.atleast_1d(x) for x in [z, k]]
         i_z = np.argsort(z)
         i_k = np.argsort(k)
         self.z, self.k, P_or_logP = z[i_z], k[i_k], P_or_logP[i_z, :][:, i_k]
@@ -221,9 +268,9 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
             logPnew = np.empty((P_or_logP.shape[0], P_or_logP.shape[1] + 1))
             logPnew[:, :-1] = P_or_logP if self.logP else np.log(P_or_logP)
             logPnew[:, -1] = (
-                logPnew[:, -2] +
-                (logPnew[:, -2] - logPnew[:, -3]) / (logknew[-2] - logknew[-3]) *
-                (logknew[-1] - logknew[-2]))
+                    logPnew[:, -2] +
+                    (logPnew[:, -2] - logPnew[:, -3]) / (logknew[-2] - logknew[-3]) *
+                    (logknew[-1] - logknew[-2]))
             self.k, P_or_logP = np.exp(logknew), logPnew if self.logP else np.exp(logPnew)
         super(self.__class__, self).__init__(self.z, self._fk(self.k), P_or_logP)
 

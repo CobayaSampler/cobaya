@@ -21,18 +21,17 @@ code.
 # Python 2/3 compatibility
 from __future__ import division
 
-# Global
-import logging
-
 # Local
 from cobaya.conventions import _input_params, _output_params
+from cobaya.log import HasLogger
+from cobaya.input import HasDefaults
 
 # Default options for all subclasses
 class_options = {"speed": -1}
 
 
 # Theory code prototype
-class Theory(object):
+class Theory(HasLogger, HasDefaults):
     """Prototype of the theory class."""
 
     def initialize(self):
@@ -69,7 +68,7 @@ class Theory(object):
 
     def __init__(self, info_theory, modules=None, timing=None):
         self.name = self.__class__.__name__
-        self.log = logging.getLogger(self.name)
+        self.set_logger()
         self.path_install = modules
         # Load info of the code
         for k in info_theory:
@@ -80,7 +79,13 @@ class Theory(object):
         self.time_avg = 0
 
     def d(self):
-        return len(self.sampled)
+        """
+        Dimension of the input vector.
+
+        NB: Different from dimensionality of the sampling problem, e.g. this may include
+        fixed input parameters.
+        """
+        return len(self.input_params)
 
     def __exit__(self, exception_type, exception_value, traceback):
         if self.timing:

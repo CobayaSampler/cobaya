@@ -5,9 +5,9 @@ from copy import deepcopy
 from .common_cosmo import body_of_test
 from cobaya.cosmo_input import cmb_precision
 
-
 camb_extra = {"halofit_version": "takahashi"}
 camb_extra.update(cmb_precision["camb"])
+
 
 def test_bicep_keck_2015_camb(modules):
     info_theory = {"camb": {"extra_args": camb_extra}}
@@ -32,7 +32,7 @@ chi2 = {"bicep_keck_2015": 735.187, "tolerance": 0.16}
 test_point = {
     "omegabh2": 0.2235620E-01,
     "omegach2": 0.1204042E+00,
-    "theta": 0.1040871E+01,  # for CAMB
+    "theta_MC_100": 0.1040871E+01,  # for CAMB
     "H0": 0.6718506E+02,  # for CLASS
     "tau": 0.5454114E-01,
     "logA": 0.3046322E+01,

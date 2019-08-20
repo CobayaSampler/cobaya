@@ -16,9 +16,9 @@ The `post` module provides a way to post-process an existing sample in different
 
    The domain of the new pdf (after post-processing) must be well-sampled over the domain of the old one. This may not happen when the new one has a larger domain (specially after removing likelihoods or removing/relaxing priors). In that case, it may be a good idea to redo the full sampling on the new model, instead of post-processing the old one.
 
-The requested operations are detailed in a ``post`` block, which may contain one ``add`` and one ``remove`` sub-block. Under ``add``, *using standard input syntaxis*, specify what you want to add duting preprocessing, and under ``remove`` what you would like to remove (no options necessary for removed stuff: just a mention). To force an update of a prior/likelihood/derived-parameter, include it both under ``remove`` and ``add``, with the new options, if needed insinde ``add``.
+The requested operations are detailed in a ``post`` block, which may contain one ``add`` and one ``remove`` sub-block. Under ``add``, *using standard input syntax*, specify what you want to add during preprocessing, and under ``remove`` what you would like to remove (no options necessary for removed stuff: just a mention). To force an update of a prior/likelihood/derived-parameter, include it both under ``remove`` and ``add``, with the new options, if needed inside ``add``.
 
-The input sample is specified via the ``output`` option with the same value as the original sample. Cobaya will look for it and check that it is compatible with the requested operations. If multiple samples are found (e.g. from an MPI run), all of them are loaded and concatenated. The resulting sample will have a suffix ``_post_[your_suffix]``, where ``[your_suffix]`` is specified with the ``suffix`` option of ``post`` (you can also change the original prefix by setting ``output: [new prefix]`` inside ``post``.
+The input sample is specified via the ``output`` option with the same value as the original sample. Cobaya will look for it and check that it is compatible with the requested operations. If multiple samples are found (e.g. from an MPI run), all of them are loaded and concatenated. The resulting sample will have a suffix ``.post.[your_suffix]``, where ``[your_suffix]`` is specified with the ``suffix`` option of ``post`` (you can also change the original prefix by setting ``output: [new prefix]`` inside ``post``.
 
 .. note::
 
@@ -99,12 +99,12 @@ And let us define the additions and run post-processing:
    updinfo_post, results_post = post(info_post, results["sample"])
 
    # Load with GetDist and plot
-   from getdist.mcsamples import loadCobayaSamples
+   from getdist.mcsamples import MCSamplesFromCobaya
    import getdist.plots as gdplt
    # %matplotlib inline  # if on a jupyter notebook
 
-   gdsamples_gaussian = loadCobayaSamples(updinfo, results["sample"])
-   gdsamples_post = loadCobayaSamples(updinfo_post, results_post["sample"])
+   gdsamples_gaussian = MCSamplesFromCobaya(updinfo, results["sample"])
+   gdsamples_post = MCSamplesFromCobaya(updinfo_post, results_post["sample"])
 
    p = gdplt.getSubplotPlotter(width_inch=6)
    p.plot_2d([gdsamples_gaussian, gdsamples_post], ["x", "y"], filled=True)

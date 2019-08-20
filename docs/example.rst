@@ -44,11 +44,11 @@ After a few seconts, a folder named ``chains`` will be created, and inside it yo
 .. code-block:: bash
 
    chains
-   ├── gaussian__input.yaml
-   ├── gaussian__full.yaml
-   └── gaussian_1.txt
+   ├── gaussian.input.yaml
+   ├── gaussian.updated.yaml
+   └── gaussian.1.txt
 
-The first file reproduces the same information as the input file given, here ``gaussian.yaml``. The second contains the ``full`` information needed to reproduce the sample, similar to the input one, but populated with the default options for the sampler, likelihood, etc. that you have used.
+The first file reproduces the same information as the input file given, here ``gaussian.yaml``. The second contains the ``updated`` information needed to reproduce the sample, similar to the input one, but populated with the default options for the sampler, likelihood, etc. that you have used.
 
 The third file, ending in ``.txt``, contains the MCMC sample, and its first lines should look like
 
@@ -94,7 +94,7 @@ Alternatively, we can load the input from a ``yaml`` file like the one above:
 .. literalinclude:: ./src_examples/quickstart/load_info.py
    :language: python
 
-And ``info``, ``info_from_yaml`` and the file ``gaussian.yaml`` should contain the same information (minus the ``output`` prefix).
+And ``info``, ``info_from_yaml`` and the file ``gaussian.yaml`` should contain the same information (except that we have chosen not to add an ``output`` prefix to ``info``).
 
 Now, let's run the example.
 
@@ -103,7 +103,7 @@ Now, let's run the example.
 
 The ``run`` function returns two variables:
 
-- An information dictionary updated with the defaults, equivalent to the ``full`` yaml file produced by the shell invocation.
+- An information dictionary updated with the defaults, equivalent to the ``updated`` yaml file produced by the shell invocation.
 - A dictionary of ``products``, which for the ``mcmc`` sampler contains only one chain under the key ``sample``.
 
 Let's now analyse the chain and get some plots, using the interactive interface to GetDist instead of the GUI used above:
@@ -114,6 +114,15 @@ Let's now analyse the chain and get some plots, using the interactive interface 
 Output:
 
 .. literalinclude:: ./src_examples/quickstart/analyze_out.txt
-   :language: python
 
 .. image:: img/example_quickstart_plot.png
+
+Alternatively, if we had chosen to write the output as in the shell case by adding an ``output`` prefix, we could have loaded the chain in GetDist from the hard drive:
+
+.. literalinclude:: ./src_examples/quickstart/analyze_alt.py
+   :language: python
+
+If we are only interested in plotting, we do not even need to generate a GetDist ``MCSamples`` object: we can ask the plotter to load all chains in the given folder, and then just name the corresponding one when plotting:
+
+.. literalinclude:: ./src_examples/quickstart/analyze_alt2.py
+   :language: python

@@ -85,8 +85,8 @@ info = {
 def test_parameterization():
     updated_info, products = run(info)
     sample = products["sample"]
-    from getdist.mcsamples import loadCobayaSamples
-    gdsample = loadCobayaSamples(updated_info, products["sample"])
+    from getdist.mcsamples import MCSamplesFromCobaya
+    gdsample = MCSamplesFromCobaya(updated_info, products["sample"])
     for i, point in sample:
         a = info[_params]["a"]
         b = get_external_function(info[_params]["b"])(a, point["bprime"])

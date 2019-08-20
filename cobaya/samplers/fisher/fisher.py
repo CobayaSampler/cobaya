@@ -14,7 +14,7 @@ import logging
 
 # Local
 from cobaya.sampler import Sampler
-from cobaya.log import HandledException
+from cobaya.log import LoggedError
 from cobaya.mpi import get_mpi_rank, get_mpi_size, get_mpi_comm
 from cobaya.collection import Collection
 
@@ -58,7 +58,7 @@ class fisher(Sampler):
               (param, self.collection[i_point][param]))
         print("and the values of the logprior and loglikelihood are respectively %g, %g" %
               (-self.collection[i_point]["minuslogprior"],
-               -0.5*self.collection[i_point]["chi2"]))
+               -0.5 * self.collection[i_point]["chi2"]))
         # Accessing a column:
         print("All the values for parameter", param, "are\n", self.collection[param])
         # If you want to modify values for parameter/posteriors/etc, you have to COPY them

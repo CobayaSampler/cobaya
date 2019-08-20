@@ -3,7 +3,7 @@
 
 :Synopsis: Managing the CLASS cosmological code
 :Author: Jesus Torrado
-         (import and ``get_cl`` based on MontePython's CLASS wrapper Benjamin Audren)
+         (import and ``get_Cl`` based on MontePython's CLASS wrapper Benjamin Audren)
 
 .. |br| raw:: html
 
@@ -146,9 +146,10 @@ from numbers import Number
 
 # Local
 from cobaya.theories._cosmo import _cosmo, PowerSpectrumInterpolator
-from cobaya.log import HandledException
+from cobaya.log import LoggedError
 from cobaya.install import download_github_release, pip_install
 from cobaya.conventions import _c_km_s, _T_CMB_K
+from cobaya.tools import deepcopy_where_possible
 
 # Result collector
 collector = namedtuple("collector",
@@ -160,13 +161,15 @@ non_linear_default_code = "halofit"
 
 
 class classy(_cosmo):
+    # Name of the Class repo/folder and version to download
+    classy_repo_name = "lesgourg/class_public"
+    classy_repo_version = "v2.7.2"
 
     def initialize(self):
         """Importing CLASS from the correct path, if given, and if not, globally."""
         # If path not given, try using general path to modules
         if not self.path and self.path_install:
-            self.path = os.path.join(
-                self.path_install, "code", classy_repo_rename)
+            self.path = self.get_path(self.path_install)
         if self.path:
             self.log.info("Importing *local* classy from " + self.path)
             classy_build_path = os.path.join(self.path, "python", "build")
@@ -177,9 +180,9 @@ class classy(_cosmo):
                 if self.path_install:
                     self.log.info("Importing *global* CLASS (because not installed).")
                 else:
-                    self.log.error("Either CLASS is not in the given folder, "
-                                   "'%s', or you have not compiled it.", self.path)
-                    raise HandledException
+                    raise LoggedError(
+                        self.log, "Either CLASS is not in the given folder, "
+                                  "'%s', or you have not compiled it.", self.path)
             else:
                 # Inserting the previously found path into the list of import folders
                 sys.path.insert(0, classy_build_path)
@@ -188,13 +191,12 @@ class classy(_cosmo):
         try:
             from classy import Class, CosmoSevereError, CosmoComputationError
         except ImportError:
-            self.log.error(
-                "Couldn't find the CLASS python interface. "
-                "Make sure that you have compiled it, and that you either\n"
-                " (a) specify a path (you didn't) or\n"
-                " (b) install the Python interface globally with\n"
-                "     '/path/to/class/python/python setup.py install --user'")
-            raise HandledException
+            raise LoggedError(
+                self.log, "Couldn't find the CLASS python interface. "
+                          "Make sure that you have compiled it, and that you either\n"
+                          " (a) specify a path (you didn't) or\n"
+                          " (b) install the Python interface globally with\n"
+                          "     '/path/to/class/python/python setup.py install --user'")
         self.classy = Class()
         # Propagate errors up
         global CosmoComputationError, CosmoSevereError
@@ -205,7 +207,7 @@ class classy(_cosmo):
         # Dict of named tuples to collect requirements and computation methods
         self.collectors = {}
         # Additional input parameters to pass to CLASS
-        self.extra_args = self.extra_args or {}
+        self.extra_args = deepcopy_where_possible(self.extra_args) or {}
         # Add general CLASS stuff
         self.extra_args["output"] = self.extra_args.get("output", "")
         if "sBBN file" in self.extra_args:
@@ -265,8 +267,7 @@ class classy(_cosmo):
                     self.extra_args["non linear"] = non_linear_default_code
                 for pair in v.pop("vars_pairs", [["delta_tot", "delta_tot"]]):
                     if any([x != "delta_tot" for x in pair]):
-                        self.log.error("NotImplemented in CLASS: %r", pair)
-                        raise HandledException
+                        raise LoggedError(self.log, "NotImplemented in CLASS: %r", pair)
                     self._Pk_interpolator_kwargs = {
                         "logk": True, "extrap_kmax": v.pop("extrap_kmax", None)}
                     name = "Pk_interpolator_%s_%s" % (pair[0], pair[1])
@@ -280,8 +281,7 @@ class classy(_cosmo):
                 if k_translated not in self.derived_extra:
                     self.derived_extra += [k_translated]
             else:
-                self.log.error("Requested product not known: %r", {k: v})
-                raise HandledException
+                raise LoggedError(self.log, "Requested product not known: %r", {k: v})
         # Derived parameters (if some need some additional computations)
         if any([("sigma8" in s) for s in self.output_params or requirements]):
             self.extra_args["output"] += " mPk"
@@ -313,14 +313,14 @@ class classy(_cosmo):
                     self.extra_args.pop(k)
         # Finally, check that there are no repeated parameters between input and extra
         if set(self.input_params).intersection(set(self.extra_args)):
-            self.log.error(
+            raise LoggedError(
+                self.log,
                 "The following parameters appear both as input parameters and as CLASS "
                 "extra arguments: %s. Please, remove one of the definitions of each.",
                 list(set(self.input_params).intersection(set(self.extra_args))))
-            raise HandledException
 
     def add_z_for_matter_power(self, z):
-        if not hasattr(self, "z_for_matter_power"):
+        if not getattr(self, "z_for_matter_power"):
             self.z_for_matter_power = np.empty((0))
         self.z_for_matter_power = np.flip(np.sort(np.unique(np.concatenate(
             [self.z_for_matter_power, np.atleast_1d(z)]))), axis=0)
@@ -382,7 +382,7 @@ class classy(_cosmo):
                                "The parameters passed were %r and %r. "
                                "See original CLASS's error traceback below.\n",
                                self.states[i_state]["params"], self.extra_args)
-                raise  # No HandledException, so that CLASS traceback gets printed
+                raise  # No LoggedError, so that CLASS traceback gets printed
             # Gather products
             for product, collector in self.collectors.items():
                 # Special case: sigma8 needs H0, which cannot be known beforehand:
@@ -472,17 +472,16 @@ class classy(_cosmo):
                 current_state[pool].get(self.translate_param(p, force=True), None))
             if value is not None:
                 return value
-        self.log.error("Parameter not known: '%s'", p)
-        raise HandledException
+        raise LoggedError(self.log, "Parameter not known: '%s'", p)
 
-    def get_cl(self, ell_factor=False, units="muK2"):
+    def get_Cl(self, ell_factor=False, units="muK2"):
         current_state = self.current_state()
         try:
             cls = deepcopy(current_state["Cl"])
         except:
-            self.log.error(
+            raise LoggedError(
+                self.log,
                 "No Cl's were computed. Are you sure that you have requested them?")
-            raise HandledException
         # unit conversion and ell_factor
         ell_factor = ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[2:] if ell_factor else 1
         units_factors = {"1": 1,
@@ -491,9 +490,8 @@ class classy(_cosmo):
         try:
             units_factor = units_factors[units]
         except KeyError:
-            self.log.error("Units '%s' not recognized. Use one of %s.",
-                           units, list(units_factors))
-            raise HandledException
+            raise LoggedError(self.log, "Units '%s' not recognized. Use one of %s.",
+                              units, list(units_factors))
         for cl in cls:
             if cl not in ['pp', 'ell']:
                 cls[cl][2:] *= units_factor ** 2 * ell_factor
@@ -520,9 +518,9 @@ class classy(_cosmo):
         try:
             return self._get_z_dependent("H", z) * self.H_units_conv_factor[units]
         except KeyError:
-            self.log.error("Units not known for H: '%s'. Try instead one of %r.",
-                           units, list(self.H_units_conv_factor))
-            raise HandledException
+            raise LoggedError(
+                self.log, "Units not known for H: '%s'. Try instead one of %r.",
+                units, list(self.H_units_conv_factor))
 
     def get_angular_diameter_distance(self, z):
         return self._get_z_dependent("angular_diameter_distance", z)
@@ -539,49 +537,46 @@ class classy(_cosmo):
     def close(self):
         self.classy.struct_cleanup()
 
+    # Installation routines ##################################################################
 
-# Installation routines ##################################################################
+    @classmethod
+    def get_path(cls, path):
+        return os.path.realpath(os.path.join(path, "code", cls.__name__))
 
-# Name of the Class repo/folder and version to download
-classy_repo_name = "lesgourg/class_public"
-classy_repo_rename = "classy"
-classy_repo_version = "v2.7.2"
+    @classmethod
+    def is_installed(cls, **kwargs):
+        if not kwargs["code"]:
+            return True
+        return os.path.isfile(os.path.join(cls.get_path(kwargs["path"]), "libclass.a"))
 
-
-def is_installed(**kwargs):
-    if not kwargs["code"]:
+    @classmethod
+    def install(cls, path=None, force=False, code=True, no_progress_bars=False, **kwargs):
+        log = logging.getLogger(cls.__name__)
+        if not code:
+            log.info("Code not requested. Nothing to do.")
+            return True
+        log.info("Installing pre-requisites...")
+        exit_status = pip_install("cython")
+        if exit_status:
+            log.error("Could not install pre-requisite: cython")
+            return False
+        log.info("Downloading classy...")
+        success = download_github_release(
+            os.path.join(path, "code"), cls.classy_repo_name, cls.classy_repo_version,
+            repo_rename=cls.__name__, no_progress_bars=no_progress_bars, logger=log)
+        if not success:
+            log.error("Could not download classy.")
+            return False
+        classy_path = cls.get_path(path)
+        log.info("Compiling classy...")
+        from subprocess import Popen, PIPE
+        env = deepcopy(os.environ)
+        env.update({"PYTHON": sys.executable})
+        process_make = Popen(["make"], cwd=classy_path, stdout=PIPE, stderr=PIPE, env=env)
+        out, err = process_make.communicate()
+        if process_make.returncode:
+            log.info(out)
+            log.info(err)
+            log.error("Compilation failed!")
+            return False
         return True
-    return os.path.isfile(os.path.realpath(
-        os.path.join(kwargs["path"], "code", classy_repo_rename, "libclass.a")))
-
-
-def install(path=None, force=False, code=True, no_progress_bars=False, **kwargs):
-    log = logging.getLogger(__name__.split(".")[-1])
-    if not code:
-        log.info("Code not requested. Nothing to do.")
-        return True
-    log.info("Installing pre-requisites...")
-    exit_status = pip_install("cython")
-    if exit_status:
-        log.error("Could not install pre-requisite: cython")
-        return False
-    log.info("Downloading classy...")
-    success = download_github_release(
-        os.path.join(path, "code"), classy_repo_name, classy_repo_version,
-        repo_rename=classy_repo_rename, no_progress_bars=no_progress_bars)
-    if not success:
-        log.error("Could not download classy.")
-        return False
-    classy_path = os.path.join(path, "code", classy_repo_rename)
-    log.info("Compiling classy...")
-    from subprocess import Popen, PIPE
-    env = deepcopy(os.environ)
-    env.update({"PYTHON": sys.executable})
-    process_make = Popen(["make"], cwd=classy_path, stdout=PIPE, stderr=PIPE, env=env)
-    out, err = process_make.communicate()
-    if process_make.returncode:
-        log.info(out)
-        log.info(err)
-        log.error("Compilation failed!")
-        return False
-    return True

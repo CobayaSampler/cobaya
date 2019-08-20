@@ -1,1 +1,49 @@
-The posterior has been maximized using \href{https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html}{\texttt{scipy.optimize.minimize}}
+[If using BOBYQA]
+The posterior/likelihood has been maximized using the Py-BOBYQA implementation \cite{2018arXiv180400154C, 2018arXiv181211343C} of the BOBYQA algorithm \cite{BOBYQA}
+---------------------
+[If using scipy]
+The posterior/likelihood has been maximized using \href{https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html}{\texttt{scipy.optimize.minimize}}
+
+
+@article{BOBYQA,
+author = {J. D. Powell, M},
+year = {2009},
+month = {01},
+pages = {},
+title = {The BOBYQA Algorithm for Bound Constrained Optimization without Derivatives},
+journal = {Technical Report, Department of Applied Mathematics and Theoretical Physics}
+}
+
+@ARTICLE{2018arXiv180400154C,
+       author = {{Cartis}, Coralia and {Fiala}, Jan and {Marteau}, Benjamin and
+         {Roberts}, Lindon},
+        title = "{Improving the Flexibility and Robustness of Model-Based Derivative-Free Optimization Solvers}",
+      journal = {arXiv e-prints},
+     keywords = {Mathematics - Optimization and Control},
+         year = "2018",
+        month = "Mar",
+          eid = {arXiv:1804.00154},
+        pages = {arXiv:1804.00154},
+archivePrefix = {arXiv},
+       eprint = {1804.00154},
+ primaryClass = {math.OC},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2018arXiv180400154C},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+
+
+@ARTICLE{2018arXiv181211343C,
+       author = {{Cartis}, Coralia and {Roberts}, Lindon and {Sheridan-Methven}, Oliver},
+        title = "{Escaping local minima with derivative-free methods: a numerical investigation}",
+      journal = {arXiv e-prints},
+     keywords = {Mathematics - Optimization and Control},
+         year = "2018",
+        month = "Dec",
+          eid = {arXiv:1812.11343},
+        pages = {arXiv:1812.11343},
+archivePrefix = {arXiv},
+       eprint = {1812.11343},
+ primaryClass = {math.OC},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2018arXiv181211343C},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}

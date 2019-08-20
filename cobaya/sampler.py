@@ -55,15 +55,13 @@ import numpy as np
 from cobaya.conventions import _sampler, _checkpoint_extension, _covmat_extension
 from cobaya.conventions import _resume_default
 from cobaya.tools import get_class
-from cobaya.log import HandledException
+from cobaya.log import LoggedError, HasLogger
 from cobaya.yaml import yaml_load_file
 from cobaya.mpi import am_single_or_primary_process
-
-# Logger
-log = logging.getLogger(__name__.split(".")[-1])
+from cobaya.input import HasDefaults
 
 
-class Sampler(object):
+class Sampler(HasLogger, HasDefaults):
     """Prototype of the sampler class."""
 
     # What you *must* implement to create your own sampler:
@@ -118,7 +116,7 @@ class Sampler(object):
         [Do not modify this one.]
         """
         self.name = self.__class__.__name__
-        self.log = logging.getLogger(self.name)
+        self.set_logger()
         self.model = model
         self.output = output
         self.path_install = modules
@@ -131,12 +129,12 @@ class Sampler(object):
             try:
                 np.random.seed(self.seed)
             except TypeError:
-                self.log.error("Seeds must be *integer*, but got %r with type %r",
-                               self.seed, type(self.seed))
-                raise HandledException
+                raise LoggedError(
+                    self.log, "Seeds must be *integer*, but got %r with type %r",
+                    self.seed, type(self.seed))
         # Load checkpoint info, if resuming
         self.resuming = resume
-        if self.resuming:
+        if self.resuming and self.name != "minimize":
             try:
                 checkpoint_info = yaml_load_file(self.checkpoint_filename())
                 try:
@@ -147,10 +145,10 @@ class Sampler(object):
                         self.log.info("Resuming from previous sample!")
                 except KeyError:
                     if am_single_or_primary_process():
-                        self.log.error("Checkpoint file found at '%s'"
-                                       "but corresponds to a different sampler.",
-                                       self.checkpoint_filename())
-                        raise HandledException
+                        raise LoggedError(
+                            self.log, "Checkpoint file found at '%s' "
+                            "but it corresponds to a different sampler.",
+                            self.checkpoint_filename())
             except (IOError, TypeError):
                 pass
         else:
@@ -189,14 +187,14 @@ def get_sampler(info_sampler, posterior, output_file,
     """
     Auxiliary function to retrieve and initialize the requested sampler.
     """
+    log = logging.getLogger(__name__.split(".")[-1])
     if not info_sampler:
-        log.error("No sampler given!")
-        raise HandledException
+        raise LoggedError(log, "No sampler given!")
     try:
         name = list(info_sampler)[0]
     except AttributeError:
-        log.error("The sampler block must be a dictionary 'sampler: {options}'.")
-        raise HandledException
+        raise LoggedError(
+            log, "The sampler block must be a dictionary 'sampler: {options}'.")
     sampler_class = get_class(name, kind=_sampler)
     return sampler_class(
         info_sampler[name], posterior, output_file, resume=resume, modules=modules)

@@ -11,22 +11,20 @@ from __future__ import division
 
 # Global
 import numpy as np
-from copy import deepcopy
 from collections import namedtuple, OrderedDict as odict
+import logging
 
 # Local
 from cobaya.conventions import _likelihood, _prior, _params, _theory, _timing
 from cobaya.conventions import _path_install, _debug, _debug_default, _debug_file
 from cobaya.conventions import _input_params, _output_params
-from cobaya.input import get_full_info
+from cobaya.input import update_info
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection as Likelihood
-from cobaya.log import HandledException, logger_setup
+from cobaya.log import LoggedError, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
-
-# Logger
-import logging
+from cobaya.tools import deepcopy_where_possible
 
 # Log-posterior namedtuple
 logposterior = namedtuple("logposterior", ["logpost", "logpriors", "loglikes", "derived"])
@@ -43,28 +41,28 @@ def get_model(info):
     # Just a dummy import before configuring the logger, until I fix root/individual level
     import getdist
     logger_setup(info.pop(_debug, _debug_default), info.pop(_debug_file, None))
-    # Create the full input information, including defaults for each module.
-    info = deepcopy(info)
+    # Create the updated input information, including defaults for each module.
+    info = deepcopy_where_possible(info)
     ignored_info = {}
     for k in list(info):
         if k not in [_params, _likelihood, _prior, _theory, _path_install, _timing]:
             ignored_info.update({k: info.pop(k)})
     import logging
     if ignored_info:
-        logging.getLogger(__name__.split(".")[-1]).warn(
+        logging.getLogger(__name__.split(".")[-1]).warning(
             "Ignored blocks/options: %r", list(ignored_info))
-    full_info = get_full_info(info)
+    updated_info = update_info(info)
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
         logging.getLogger(__name__.split(".")[-1]).debug(
             "Input info updated with defaults (dumped to YAML):\n%s",
-            yaml_dump(full_info))
+            yaml_dump(updated_info))
     # Initialize the posterior and the sampler
-    return Model(full_info[_params], full_info[_likelihood], full_info.get(_prior),
-                 full_info.get(_theory), modules=info.get(_path_install),
-                 timing=full_info.get(_timing))
+    return Model(updated_info[_params], updated_info[_likelihood],
+                 updated_info.get(_prior), updated_info.get(_theory),
+                 modules=info.get(_path_install), timing=updated_info.get(_timing))
 
 
-class Model(object):
+class Model(HasLogger):
     """
     Class containing all the information necessary to compute the unnormalized posterior.
 
@@ -76,29 +74,28 @@ class Model(object):
 
     def __init__(self, info_params, info_likelihood, info_prior=None, info_theory=None,
                  modules=None, timing=None, allow_renames=True):
-        self.log = logging.getLogger(self.__class__.__name__)
-        self._full_info = {
-            _params: deepcopy(info_params),
-            _likelihood: deepcopy(info_likelihood)}
-        if not self._full_info[_likelihood]:
-            self.log.error("No likelihood requested!")
-            raise HandledException
+        self.set_logger(lowercase=True)
+        self._updated_info = {
+            _params: deepcopy_where_possible(info_params),
+            _likelihood: deepcopy_where_possible(info_likelihood)}
+        if not self._updated_info[_likelihood]:
+            raise LoggedError(self.log, "No likelihood requested!")
         for k, v in ((_prior, info_prior), (_theory, info_theory),
                      (_path_install, modules), (_timing, timing)):
             if v not in (None, {}):
-                self._full_info[k] = deepcopy(v)
+                self._updated_info[k] = deepcopy_where_possible(v)
         self.parameterization = Parameterization(
-            self._full_info[_params], allow_renames=allow_renames)
-        self.prior = Prior(self.parameterization, self._full_info.get(_prior, None))
+            self._updated_info[_params], allow_renames=allow_renames)
+        self.prior = Prior(self.parameterization, self._updated_info.get(_prior, None))
         self.likelihood = Likelihood(
-            self._full_info[_likelihood], self.parameterization,
-            self._full_info.get(_theory), modules=modules,timing=timing)
+            self._updated_info[_likelihood], self.parameterization,
+            self._updated_info.get(_theory), modules=modules, timing=timing)
 
     def info(self):
         """
         Returns a copy of the information used to create the model, including defaults.
         """
-        return deepcopy(self._full_info)
+        return deepcopy_where_possible(self._updated_info)
 
     def _to_sampled_array(self, params_values):
         """
@@ -110,12 +107,12 @@ class Model(object):
         else:
             params_values_array = np.atleast_1d(params_values)
             if params_values_array.shape[0] != self.prior.d():
-                self.log.error("Wrong dimensionality: it's %d and it should be %d.",
-                               len(params_values_array), self.prior.d())
-                raise HandledException
+                raise LoggedError(
+                    self.log, "Wrong dimensionality: it's %d and it should be %d.",
+                    len(params_values_array), self.prior.d())
         if len(params_values_array.shape) >= 2:
-            self.log.error("Cannot take arrays of points as inputs, just single points.")
-            raise HandledException
+            raise LoggedError(
+                self.log, "Cannot take arrays of points as inputs, just single points.")
         return params_values_array
 
     def logpriors(self, params_values, make_finite=False):
@@ -271,10 +268,9 @@ class Model(object):
                 "Posterior to be computed for parameters %s",
                 dict(zip(self.parameterization.sampled_params(), params_values_array)))
         if not np.all(np.isfinite(params_values_array)):
-            self.log.error(
-                "Got non-finite parameter values: %r",
+            raise LoggedError(
+                self.log,  "Got non-finite parameter values: %r",
                 dict(zip(self.parameterization.sampled_params(), params_values_array)))
-            raise HandledException
         # Notice that we don't use the make_finite in the prior call,
         # to correctly check if we have to compute the likelihood
         logpriors = self.logpriors(params_values_array, make_finite=False)

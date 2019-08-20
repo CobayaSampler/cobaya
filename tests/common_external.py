@@ -14,7 +14,7 @@ from copy import deepcopy
 
 # Local
 from cobaya.conventions import _output_prefix, _params, _prior
-from cobaya.conventions import _sampler, _likelihood, _full_suffix
+from cobaya.conventions import _sampler, _likelihood, _updated_suffix
 from cobaya.conventions import _chi2, _separator, _external, _input_params, _output_params
 from cobaya.run import run
 from cobaya.yaml import yaml_load
@@ -56,7 +56,7 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
     prefix = os.path.join(tmpdir, "%d" % round(1e8 * random())) + os.sep
     if os.path.exists(prefix):
         shutil.rmtree(prefix)
-    # build full info
+    # build updated info
     info = {
         _output_prefix: prefix,
         _params: {
@@ -140,9 +140,9 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
     # Test updated info -- yaml
     # For now, only if ALL external pdfs are given as strings, since the YAML load fails otherwise
     if stringy == info_logpdf:
-        full_output_file = os.path.join(prefix, _full_suffix + ".yaml")
-        with open(full_output_file) as full:
-            updated_yaml = yaml_load("".join(full.readlines()))
+        updated_output_file = os.path.join(prefix, _updated_suffix + ".yaml")
+        with open(updated_output_file) as updated:
+            updated_yaml = yaml_load("".join(updated.readlines()))
         for k, v in stringy.items():
             to_test = updated_yaml[kind][k]
             if kind == _likelihood:

@@ -1,1 +1,1 @@
-from external import external
+from .external import external

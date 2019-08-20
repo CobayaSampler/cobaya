@@ -1,0 +1,1 @@
+  SZ: "lambda ksz_norm, A_sz: stats.norm.logpdf(ksz_norm+1.6*A_sz, loc=9.5, scale=3.0)"

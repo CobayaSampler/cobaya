@@ -27,12 +27,8 @@ import numpy
 from itertools import chain
 
 # Local
-from cobaya.log import HandledException
-
-# Logger
-import logging
-
-log = logging.getLogger(__name__.split(".")[-1])
+from cobaya.tools import choleskyL
+from cobaya.log import LoggedError, HasLogger
 
 
 class IndexCycler(object):
@@ -84,7 +80,7 @@ class RandDirectionProposer(IndexCycler):
             return np.linalg.norm(np.random.normal(size=min(self.n, 2)))
 
 
-class BlockedProposer(object):
+class BlockedProposer(HasLogger):
     def __init__(self, parameter_blocks, oversampling_factors=None,
                  i_last_slow_block=None, proposal_scale=2.4):
         """
@@ -102,19 +98,20 @@ class BlockedProposer(object):
             By default, all blocks are considered slow.
         :param proposal_scale: overall scale for the proposal.
         """
+        self.set_logger(lowercase=True)
         self.proposal_scale = proposal_scale
         if oversampling_factors is None:
             self.oversampling_factors = np.array([1 for _ in parameter_blocks], dtype=int)
         else:
             if len(oversampling_factors) != len(parameter_blocks):
-                log.error("List of oversampling factors has a different length that "
-                          "list of blocks: %d vs %d.",
-                          len(oversampling_factors), len(parameter_blocks))
-                raise HandledException
+                raise LoggedError(
+                    self.log, "List of oversampling factors has a different length that "
+                              "list of blocks: %d vs %d.",
+                    len(oversampling_factors), len(parameter_blocks))
             if np.any(oversampling_factors != np.floor(np.array(oversampling_factors))):
-                log.error("Oversampling factors must be integer! Got %r.",
-                          oversampling_factors)
-                raise HandledException
+                raise LoggedError(
+                    self.log, "Oversampling factors must be integer! Got %r.",
+                    oversampling_factors)
             self.oversampling_factors = np.array(oversampling_factors, dtype=int)
         # Turn it into per-block: multiply by number of params in block
         self.oversampling_factors *= np.array([len(b) for b in parameter_blocks])
@@ -122,15 +119,14 @@ class BlockedProposer(object):
             i_last_slow_block = len(parameter_blocks) - 1
         else:
             if i_last_slow_block > len(parameter_blocks) - 1:
-                log.error("The index given for the last slow block, %d, is not valid: "
-                          "there are only %d blocks.",
-                          i_last_slow_block, len(parameter_blocks))
-                raise HandledException
+                raise LoggedError(
+                    self.log, "The index given for the last slow block, %d, is not valid: "
+                              "there are only %d blocks.",
+                    i_last_slow_block, len(parameter_blocks))
         n_all = sum([len(b) for b in parameter_blocks])
         n_slow = sum([len(b) for b in parameter_blocks[:1 + i_last_slow_block]])
         if set(list(chain(*parameter_blocks))) != set(range(n_all)):
-            log.error("The blocks do not contain all the parameter indices.")
-            raise HandledException
+            raise LoggedError(self.log, "The blocks do not contain all the parameter indices.")
         # Mapping between internal indices, sampler parameter indices and blocks:
         # let i=0,1,... be the indices of the parameters for the sampler,
         # and j=0,1,... be the indices of the parameters *as given to the proposal*
@@ -191,21 +187,16 @@ class BlockedProposer(object):
         :param propose_matrix: covariance matrix for the sampled parameters.
         """
         if propose_matrix.shape[0] != self.d():
-            log.error("The covariance matrix does not have the correct dimension: "
-                      "it's %d, but it should be %d.",
-                      propose_matrix.shape[0], self.d())
-            raise HandledException
+            raise LoggedError(
+                self.log, "The covariance matrix does not have the correct dimension: "
+                     "it's %d, but it should be %d.", propose_matrix.shape[0], self.d())
         if not (np.allclose(propose_matrix.T, propose_matrix) and
                 np.all(np.linalg.eigvals(propose_matrix) > 0)):
-            log.error("The given covmat is not a positive-definite, "
-                      "symmetric square matrix.")
-            raise HandledException
+            raise LoggedError(self.log, "The given covmat is not a positive-definite, "
+                                   "symmetric square matrix.")
         self.propose_matrix = propose_matrix.copy()
         propose_matrix_j_sorted = self.propose_matrix[np.ix_(self.i_of_j, self.i_of_j)]
-        sigmas_diag = np.diag(np.sqrt(np.diag(propose_matrix_j_sorted)))
-        invsigmas_diag = np.linalg.inv(sigmas_diag)
-        corr = invsigmas_diag.dot(propose_matrix_j_sorted).dot(invsigmas_diag)
-        L = np.linalg.cholesky(corr)
+        sigmas_diag, L = choleskyL(propose_matrix_j_sorted, return_scale_free=True)
         # Store the basis as transformation matrices
         self.transform = []
         for iblock, bp in enumerate(self.proposer):

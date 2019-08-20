@@ -27,7 +27,7 @@ from cobaya.collection import Collection, OnePoint
 from cobaya.conventions import _weight, _p_proposal, _p_renames, _sampler, _minuslogpost
 from cobaya.conventions import _line_width, _path_install
 from cobaya.samplers.mcmc.proposal import BlockedProposer
-from cobaya.log import HandledException
+from cobaya.log import LoggedError
 from cobaya.tools import get_external_function, read_dnumber, relative_to_int
 from cobaya.yaml import yaml_dump_file
 from cobaya.output import OutputDummy
@@ -59,10 +59,10 @@ class mcmc(Sampler):
         self.max_waiting = max(50, self.max_tries / self.model.prior.d())
         if am_single_or_primary_process():
             if self.resuming and (max(self.mpi_size or 0, 1) != max(get_mpi_size(), 1)):
-                self.log.error(
+                raise LoggedError(
+                    self.log,
                     "Cannot resume a sample with a different number of chains: "
                     "was %d and now is %d.", max(self.mpi_size, 1), max(get_mpi_size(), 1))
-                raise HandledException
         sync_processes()
         if not self.resuming and self.output:
             # Delete previous files (if not "forced", the run would have already failed)
@@ -93,8 +93,7 @@ class mcmc(Sampler):
         # Prepare oversampling / dragging if applicable
         self.effective_max_samples = self.max_samples
         if self.oversample and self.drag:
-            self.log.error("Choose either oversampling or dragging, not both.")
-            raise HandledException
+            raise LoggedError(self.log, "Choose either oversampling or dragging, not both.")
         if self.blocking:
             speeds, blocks = self.model.likelihood._check_speeds_of_params(self.blocking)
             if self.oversample or self.drag:
@@ -113,9 +112,9 @@ class mcmc(Sampler):
             # For now, no blocking inside either fast or slow: just 2 blocks
             self.i_last_slow_block = 0
             if np.all(speeds == speeds[0]):
-                self.log.error("All speeds are equal or too similar: cannot drag! "
-                               "Make sure to define accurate likelihoods' speeds.")
-                raise HandledException
+                raise LoggedError(
+                    self.log, "All speeds are equal or too similar: cannot drag! "
+                    "Make sure to define accurate likelihoods' speeds.")
             # Make the 1st factor 1:
             speeds = [1, speeds[1] / speeds[0]]
             # Target: dragging step taking as long as slow step
@@ -166,7 +165,6 @@ class mcmc(Sampler):
             self.log.info("Covariance matrix from checkpoint.")
         else:
             covmat = self.initial_proposal_covmat(slow_params=slow_params)
-            self.log.info("Initial covariance matrix.")
         self.log.debug(
             "Sampling with covmat:\n%s",
             DataFrame(covmat, columns=self.model.parameterization.sampled_params(),
@@ -217,46 +215,39 @@ class mcmc(Sampler):
                     header = file_covmat.readline()
                 loaded_covmat = np.loadtxt(self.covmat)
             except TypeError:
-                self.log.error("The property 'covmat' must be a file name,"
-                               "but it's '%s'.", str(self.covmat))
-                raise HandledException
+                raise LoggedError(self.log, "The property 'covmat' must be a file name,"
+                                  "but it's '%s'.", str(self.covmat))
             except IOError:
-                self.log.error("Can't open covmat file '%s'.", self.covmat)
-                raise HandledException
+                raise LoggedError(self.log, "Can't open covmat file '%s'.", self.covmat)
             if header[0] != "#":
-                self.log.error(
-                    "The first line of the covmat file '%s' "
+                raise LoggedError(
+                    self.log,  "The first line of the covmat file '%s' "
                     "must be one list of parameter names separated by spaces "
                     "and staring with '#', and the rest must be a square matrix, "
                     "with one row per line.", self.covmat)
-                raise HandledException
             loaded_params = header.strip("#").strip().split()
         elif hasattr(self.covmat, "__getitem__"):
             if not self.covmat_params:
-                self.log.error(
-                    "If a covariance matrix is passed as a numpy array, "
+                raise LoggedError(
+                    self.log,  "If a covariance matrix is passed as a numpy array, "
                     "you also need to pass the parameters it corresponds to "
                     "via 'covmat_params: [name1, name2, ...]'.")
-                raise HandledException
             loaded_params = self.covmat_params
             loaded_covmat = np.array(self.covmat)
         if self.covmat is not None:
             if len(loaded_params) != len(set(loaded_params)):
-                self.log.error(
-                    "There are duplicated parameters in the header of the "
+                raise LoggedError(
+                    self.log, "There are duplicated parameters in the header of the "
                     "covmat file '%s' ", self.covmat)
-                raise HandledException
             if len(loaded_params) != loaded_covmat.shape[0]:
-                self.log.error(
-                    "The number of parameters in the header of '%s' and the "
+                raise LoggedError(
+                    self.log,  "The number of parameters in the header of '%s' and the "
                     "dimensions of the matrix do not coincide.", self.covmat)
-                raise HandledException
             if not (np.allclose(loaded_covmat.T, loaded_covmat) and
                     np.all(np.linalg.eigvals(loaded_covmat) > 0)):
-                self.log.error(
-                    "The covmat loaded from '%s' is not a positive-definite, "
+                raise LoggedError(
+                    self.log, "The covmat loaded from '%s' is not a positive-definite, "
                     "symmetric square matrix.", self.covmat)
-                raise HandledException
             # Fill with parameters in the loaded covmat
             renames = [[p] + np.atleast_1d(v.get(_p_renames, [])).tolist()
                        for p, v in params_infos.items()]
@@ -266,20 +257,20 @@ class mcmc(Sampler):
                  [list(params_infos).index(q) for q, a in renames.items() if p in a]]
                 for p in loaded_params])
             if not any(indices_sampler):
-                self.log.error(
+                raise LoggedError(
+                    self.log,
                     "A proposal covariance matrix has been loaded, but none of its "
                     "parameters are actually sampled here. Maybe a mismatch between"
                     " parameter names in the covariance matrix and the input file?")
-                raise HandledException
             indices_used, indices_sampler = zip(*[
                 [i, j] for i, j in zip(indices_used, indices_sampler) if j])
             if any(len(j) - 1 for j in indices_sampler):
                 first = next(j for j in indices_sampler if len(j) > 1)
-                self.log.error(
+                raise LoggedError(
+                    self.log,
                     "The parameters %s have duplicated aliases. Can't assign them an "
                     "element of the covariance matrix unambiguously.",
                     ", ".join([list(params_infos)[i] for i in first]))
-                raise HandledException
             indices_sampler = list(chain(*indices_sampler))
             covmat[np.ix_(indices_sampler, indices_sampler)] = (
                 loaded_covmat[np.ix_(indices_used, indices_used)])
@@ -304,8 +295,8 @@ class mcmc(Sampler):
             # we want to start learning the covmat earlier
             self.log.info("Covariance matrix " +
                           ("not present" if np.all(where_nan) else "not complete") + ". "
-                                                                                     "We will start learning the covariance of the proposal earlier:"
-                                                                                     " R-1 = %g (was %g).",
+                          "We will start learning the covariance of the proposal earlier:"
+                          " R-1 = %g (was %g).",
                           self.learn_proposal_Rminus1_max_early,
                           self.learn_proposal_Rminus1_max)
             self.learn_proposal_Rminus1_max = self.learn_proposal_Rminus1_max_early
@@ -530,13 +521,13 @@ class mcmc(Sampler):
             max_tries_now = self.max_tries * (1 + (10 - 1) * np.sign(self.burn_in_left))
             if self.current_point[_weight] > max_tries_now:
                 self.collection._out_update()
-                self.log.error(
+                raise LoggedError(
+                    self.log,
                     "The chain has been stuck for %d attempts. Stopping sampling. "
                     "If this has happened often, try improving your "
                     "reference point/distribution. Alternatively (though not advisable) "
                     "make 'max_tries: np.inf' (or 'max_tries: .inf' in yaml)",
                     max_tries_now)
-                raise HandledException
 
     # Functions to check convergence and learn the covariance of the proposal distribution
 
@@ -554,10 +545,9 @@ class mcmc(Sampler):
             if more_than_one_process():
                 self.been_waiting += 1
                 if self.been_waiting > self.max_waiting:
-                    self.log.error(
-                        "Waiting for too long for all chains to be ready. "
+                    raise LoggedError(
+                        self.log, "Waiting for too long for all chains to be ready. "
                         "Maybe one of them is stuck or died unexpectedly?")
-                    raise HandledException
             self.model.dump_timing()
             # If not MPI size > 1, we are ready
             if not more_than_one_process():
@@ -612,9 +602,9 @@ class mcmc(Sampler):
             m = 1 + self.Rminus1_single_split
             cut = int(self.collection.n() / m)
             if cut <= 1:
-                self.log.error("Not enough points in chain to check convergence. "
-                               "Increase `check_every` or reduce `Rminus1_single_split`.")
-                raise HandledException
+                raise LoggedError(
+                    self.log, "Not enough points in chain to check convergence. "
+                    "Increase `check_every` or reduce `Rminus1_single_split`.")
             Ns = (m - 1) * [cut]
             means = np.array(
                 [self.collection.mean(first=i * cut, last=(i + 1) * cut - 1) for i in range(1, m)])
@@ -732,12 +722,13 @@ class mcmc(Sampler):
                 mean_of_covs = covs[0]
             try:
                 self.proposer.set_covariance(mean_of_covs)
+                if am_single_or_primary_process():
+                    self.log.info("Updated covariance matrix of proposal pdf.")
+                    self.log.debug("%r", mean_of_covs)
             except:
-                self.log.debug("Updating covariance matrix failed unexpectedly. "
-                               "waiting until next checkpoint.")
-            if am_single_or_primary_process():
-                self.log.info("Updated covariance matrix of proposal pdf.")
-                self.log.debug("%r", mean_of_covs)
+                if am_single_or_primary_process():
+                    self.log.debug("Updating covariance matrix failed unexpectedly. "
+                                   "waiting until next checkpoint.")
         # Save checkpoint info
         self.write_checkpoint()
 

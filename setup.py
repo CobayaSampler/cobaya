@@ -35,17 +35,17 @@ setup(
         'Environment :: Console',
         'Intended Audience :: Science/Research',
         'Topic :: Scientific/Engineering :: Astronomy',
-        'License :: OSI Approved :: '
-            'GNU Lesser General Public License v3 (LGPLv3)',
+        'License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7'
     ],
     python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*',
     keywords='montecarlo sampling cosmology',
     packages=find_packages(exclude=['docs', 'tests']),
     install_requires=['numpy>=1.12.0', 'scipy >= 1.0', 'pandas>=0.20',
-                      'PyYAML>=5.1', 'wget>=3.2', 'imageio>=2.2.0',
-                      'GetDist>=0.3.0', 'fuzzywuzzy>=0.17'],
+                      'PyYAML>=5.1', 'wget>=3.2', 'imageio>=2.2.0', 'py-bobyqa>=1.1',
+                      'GetDist>=0.3.3', 'fuzzywuzzy>=0.17'],
     extras_require={
         'test': ['pytest', 'pytest-xdist', 'flaky', 'mpi4py']},
     package_data={
@@ -57,7 +57,9 @@ setup(
             'cobaya-create-image=cobaya.containers:create_image_script',
             'cobaya-prepare-data=cobaya.containers:prepare_data_script',
             'cobaya-run=cobaya.run:run_script',
-            'cobaya-citation=cobaya.citation:citation_script',
+            'cobaya-doc=cobaya.doc:doc_script',
+            'cobaya-citation=cobaya.citation:citation_script',  # to be deprecated!
+            'cobaya-bib=cobaya.bib:bib_script',
             'cobaya-grid-create=cobaya.grid_tools:MakeGridScript',
             'cobaya-grid-run=cobaya.grid_tools.runbatch:run',
             'cobaya-cosmo-generator=cobaya.cosmo_input:gui_script',
