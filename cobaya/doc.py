@@ -12,7 +12,7 @@ from __future__ import absolute_import, print_function, division
 from pprint import pformat
 
 # Local
-from cobaya.tools import warn_deprecation, get_class, get_modules
+from cobaya.tools import warn_deprecation, get_class, get_available_modules
 from cobaya.conventions import _sampler, _theory, _likelihood, subfolders
 from cobaya.input import get_default_info
 
@@ -31,57 +31,59 @@ def doc_script():
     if not am_single_or_primary_process():
         return
     warn_deprecation()
-
     # Parse arguments
     import argparse
     parser = argparse.ArgumentParser(
         description="Prints defaults for Cobaya's internal modules.")
-    parser.add_argument("kind", action="store", nargs="?", default="",
-                        metavar="module_kind",
-                        help=("The kind of module whose defaults are requested: "
-                              ", ".join(['%s' % kind for kind in _kinds]) +
-                              "Can also be a *unique* module name."))
     parser.add_argument("module", action="store", nargs="?", default="",
                         metavar="module_name",
-                        help="Name of module whose defaults are requested.")
+                        help="The module whose defaults are requested.")
+    kind_opt, kind_opt_ishort = "kind", 0
+    parser.add_argument("-" + kind_opt[kind_opt_ishort], "--" + kind_opt, action="store",
+                        nargs=1, default=None, metavar="module_kind",
+                        help=("Kind of module whose defaults are requested: " +
+                              ", ".join(['%s' % kind for kind in _kinds]) + ". " +
+                              "Use only when module name is not unique (it would fail)."))
     parser.add_argument("-p", "--python", action="store_true", default=False,
                         help="Request Python instead of YAML.")
     expand_flag, expand_flag_ishort = "expand", 1
     parser.add_argument("-" + expand_flag[expand_flag_ishort], "--" + expand_flag,
                         action="store_true", default=False, help="Expand YAML defaults.")
     arguments = parser.parse_args()
-    # Remove plurals, for user-friendliness
-    if arguments.kind in subfolders.values():
-        arguments.kind = next(k for k in subfolders if arguments.kind == subfolders[k])
-    # Nothing given, list all
-    if not arguments.module and not arguments.kind:
+    # Remove plurals (= name of src subfolders), for user-friendliness
+    if arguments.module.lower() in subfolders.values():
+        arguments.module = next(k for k in subfolders if arguments.module == subfolders[k])
+    # Kind given, list all
+    if not arguments.module:
         msg = "Available modules: (some may need external code/data)"
         print(msg + "\n" + "-" * len(msg))
         for kind in _kinds:
             print("%s:" % kind)
-            print(_indent + ("\n" + _indent).join(get_modules(kind)))
-    # Only kind given and it's actually a "kind": list all modules of that kind;
-    # otherwise, check if it's a unique module name
-    do_print = True
-    if arguments.kind and not arguments.module:
-        if arguments.kind.lower() in _kinds:
-            print("%s:" % arguments.kind)
-            print(_indent + ("\n" + _indent).join(get_modules(arguments.kind)))
-            do_print = False
-    if do_print:
-        module, kind = ((arguments.module, arguments.kind) if arguments.module
-                        else (arguments.kind, None))
-        try:
-            to_print = get_default_info(
-                module, kind, return_yaml=not arguments.python, yaml_expand_defaults=arguments.expand, fail_if_not_found=True)
-            if arguments.python:
-                print(import_odict + pformat(to_print))
-            else:
-                print(to_print)
-                if "!defaults" in to_print:
-                    print("# This file contains defaults. "
-                          "To populate them, use the flag --%s (or -%s)." % (
-                              expand_flag, expand_flag[expand_flag_ishort]))
-        except:
-            pass
+            print(_indent + ("\n" + _indent).join(get_available_modules(kind)))
+        return
+    # Kind given: list all modules of that kind
+    if arguments.module.lower() in _kinds:
+        print("%s:" % arguments.module.lower())
+        print(_indent +
+              ("\n" + _indent).join(get_available_modules(arguments.module.lower())))
+        return
+    # Otherwise, check if it's a unique module name
+    try:
+        if arguments.kind:
+            arguments.kind = arguments.kind[0].lower()
+        to_print = get_default_info(
+            arguments.module, arguments.kind, return_yaml=not arguments.python,
+            yaml_expand_defaults=arguments.expand, fail_if_not_found=True)
+        if arguments.python:
+            print(import_odict + pformat(to_print))
+        else:
+            print(to_print)
+            if "!defaults" in to_print:
+                print("# This file contains defaults. "
+                      "To populate them, use the flag --%s (or -%s)." % (
+                          expand_flag, expand_flag[expand_flag_ishort]))
+    except:
+        print("Module name not unique. "
+              "Specify its kind with '--%s [module_kind]'." % kind_opt)
+        return 1
     return
