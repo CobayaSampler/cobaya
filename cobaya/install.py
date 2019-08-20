@@ -63,6 +63,9 @@ def install(*infos, **kwargs):
     for kind, modules in get_used_modules(*infos).items():
         for module in modules:
             print(create_banner(kind + ":" + module, symbol="=", length=80))
+            if len([s for s in skip_list if s in module.lower()]):
+                log.info("Skipping %s for test skip list %s" % (module, skip_list))
+                continue
             module_folder = get_class_module(module, kind)
             try:
                 imported_module = import_module(module_folder, package=_package)
