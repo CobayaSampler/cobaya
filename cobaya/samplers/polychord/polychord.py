@@ -116,6 +116,9 @@ class polychord(Sampler):
             speeds, blocks = self.model.likelihood._check_speeds_of_params(self.blocking)
             # Speeds need to be integer to be interpreted as # steps per block
             speeds = relative_to_int(speeds)
+            # Account for num_repeats, which is ignored when blocking set by hand:
+            # -- multiply the number of steps in the slowest block by num_repeats
+            speeds *= self.num_repeats
         else:
             speeds, blocks = self.model.likelihood._speeds_of_params(int_speeds=True)
         blocks_flat = list(chain(*blocks))
