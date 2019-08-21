@@ -1,0 +1,36 @@
+  # EE now recommended to be left to the central values of the stated priors
+  galf_EE_index: -2.4
+  galf_EE_A_100:
+    value: 0.055  # (± 0.014)
+    latex: A^\mathrm{dustEE}_{100}
+    renames: galfEE100
+  galf_EE_A_100_143:
+    value: 0.040  # (± 0.010)
+    latex: A^\mathrm{dustEE}_{\mathrm{100}\times\mathrm{143}}
+    renames: galfEE100143
+  galf_EE_A_100_217:
+    value: 0.094  # (± 0.023)
+    latex: A^\mathrm{dustEE}_{\mathrm{100}\times\mathrm{217}}
+    renames: galfEE100217
+  galf_EE_A_143:
+    value: 0.086  # (± 0.022)
+    latex: A^\mathrm{dustEE}_{143}
+    renames: galfEE143
+  galf_EE_A_143_217:
+    value: 0.21  # (± 0.051)
+    latex: A^\mathrm{dustEE}_{\mathrm{143}\times\mathrm{217}}
+    renames: galfEE143217
+  galf_EE_A_217:
+    value: 0.70  # (± 0.18)
+    latex: A^\mathrm{dustEE}_{217}
+    renames: galfEE217
+  # EE End2End correlated noise
+  A_cnoise_e2e_100_100_EE: 1
+  A_cnoise_e2e_143_143_EE: 1
+  A_cnoise_e2e_217_217_EE: 1
+  A_sbpx_100_100_EE: 1
+  A_sbpx_100_143_EE: 1
+  A_sbpx_100_217_EE: 1
+  A_sbpx_143_143_EE: 1
+  A_sbpx_143_217_EE: 1
+  A_sbpx_217_217_EE: 1

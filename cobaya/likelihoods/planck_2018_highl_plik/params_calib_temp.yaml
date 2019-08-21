@@ -1,0 +1,25 @@
+  # Calibration factors
+  calib_100T:
+    prior:
+      dist: norm
+      loc: 1.0002
+      scale: 0.0007
+    ref:
+      dist: norm
+      loc: 1.0002
+      scale: 0.001
+    proposal: 0.0005
+    latex: c_{100}
+    renames: cal0
+  calib_217T:
+    prior:
+      dist: norm
+      loc: 0.99805
+      scale: 0.00065
+    ref:
+      dist: norm
+      loc: 0.99805
+      scale: 0.001
+    proposal: 0.0005
+    latex: c_{217}
+    renames: cal2

@@ -1,0 +1,5 @@
+  # Polarization calibration parameters
+  A_pol: 1
+  calib_100P: 1.021  # (± 0.01)
+  calib_143P: 0.966  # (± 0.01)
+  calib_217P: 1.040  # (± 0.01)

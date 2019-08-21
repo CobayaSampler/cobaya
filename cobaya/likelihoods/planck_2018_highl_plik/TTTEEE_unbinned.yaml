@@ -11,6 +11,6 @@ likelihood:
     # Speed in evaluations/second
     speed: 2.5
 
-params: !defaults [params_calib, params_TT, params_TEEE]
+params: !defaults [params_calib, params_calib_temp, params_calib_pol, params_TT, params_TE, params_EE]
 
 prior: !defaults [prior_SZ]
