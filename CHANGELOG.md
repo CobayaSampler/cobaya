@@ -1,3 +1,10 @@
+## 2.0.X – 2019-09-XX
+
+### Cosmology
+
+- Bugfix in `cobaya-cosmo-generator` in Python 2 (#37)
+
+
 ## 2.0 – 2019-08-20
 
 ### General

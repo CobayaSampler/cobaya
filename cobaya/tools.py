@@ -134,9 +134,9 @@ def get_available_modules(kind):
     with_nested = []
     for f in folders:
         dotpy_files = sorted([
-            f for f in os.listdir(
+            fi for fi in os.listdir(
                 os.path.join(os.path.dirname(__file__), subfolders[kind], f))
-            if f.lower().endswith(".py")])
+            if fi.lower().endswith(".py")])
         # if *non-empty* __init__, assume it containts a sigle module named as the folder
         try:
             __init__filename = next(
@@ -148,8 +148,8 @@ def get_available_modules(kind):
         if __init__filename and os.path.getsize(__init__with_path):
             with_nested += [f]
         else:
-            dotpy_files = [f for f in dotpy_files if not f.startswith("_")]
-            with_nested += [f + "." +  os.path.splitext(dpyf)[0]for dpyf in dotpy_files
+            dotpy_files = [fi for fi in dotpy_files if not fi.startswith("_")]
+            with_nested += [f + "." +  os.path.splitext(dpyf)[0] for dpyf in dotpy_files
                             if os.path.splitext(dpyf)[0] != f]
     return with_nested
 
