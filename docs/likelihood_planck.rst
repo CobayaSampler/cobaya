@@ -1,4 +1,4 @@
-CMB from Planck 2015
+CMB from Planck 2018
 ====================
 
 Family of Planck CMB likelihoods. Contains interfaces to the official ``clik`` code and some
