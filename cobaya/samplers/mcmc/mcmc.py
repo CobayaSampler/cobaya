@@ -318,15 +318,15 @@ class mcmc(Sampler):
         self.log.info("Initial point:")
         if self.resuming and self.collection.n():
             initial_point = (self.collection[self.collection.sampled_params]
-                .ix[self.collection.n() - 1]).values.copy()
+                .iloc[self.collection.n() - 1]).values.copy()
             logpost = -(self.collection[_minuslogpost]
-                        .ix[self.collection.n() - 1].copy())
+                        .iloc[self.collection.n() - 1].copy())
             logpriors = -(self.collection[self.collection.minuslogprior_names]
-                          .ix[self.collection.n() - 1].copy())
+                          .iloc[self.collection.n() - 1].copy())
             loglikes = -0.5 * (self.collection[self.collection.chi2_names]
-                               .ix[self.collection.n() - 1].copy())
+                               .iloc[self.collection.n() - 1].copy())
             derived = (self.collection[self.collection.derived_params]
-                       .ix[self.collection.n() - 1].values.copy())
+                       .iloc[self.collection.n() - 1].values.copy())
         else:
             initial_point = self.model.prior.reference(max_tries=self.max_tries)
             logpost, logpriors, loglikes, derived = self.model.logposterior(initial_point)

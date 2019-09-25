@@ -1,5 +1,9 @@
 ## 2.0.X – 2019-09-XX
 
+### Samplers
+
+- MCMC: Bugfix in `mcmc`: using deprecated Pandas DataFrame method (#40). Thanks Zack Li (@xzackli)
+
 ### Cosmology
 
 - Bugfix in `cobaya-cosmo-generator` in Python 2 (#37)
