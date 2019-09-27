@@ -22,13 +22,15 @@ try:
     from PySide.QtGui import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
     from PySide.QtGui import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
     from PySide.QtGui import QFileDialog, QCheckBox, QLabel, QMenuBar, QAction, QDialog
-    from PySide.QtCore import Slot
+    from PySide.QtCore import Slot, QSize, QSettings, QPoint
 except ImportError:
     try:
         from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
         from PySide2.QtWidgets import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
         from PySide2.QtWidgets import QFileDialog, QCheckBox, QLabel, QMenuBar, QAction, QDialog
-        from PySide2.QtCore import Slot
+        from PySide2.QtCore import Slot, Qt, QCoreApplication, QSize, QSettings, QPoint
+
+        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)  # DPI support
     except ImportError:
         QWidget, Slot = object, (lambda: lambda *x: None)
 
@@ -41,15 +43,16 @@ def text(key, contents):
     return desc or key
 
 
+def get_settings():
+    return QSettings('cobaya', 'gui')
+
 class MainWindow(QWidget):
 
     def __init__(self):
         super(MainWindow, self).__init__()
         self.setWindowTitle("Cobaya input generator for Cosmology")
-        self.setGeometry(0, 0, 1500, 1000)
-        self.move(
-            QApplication.desktop().screenGeometry().center() - self.rect().center())
-        self.show()
+        self.setStyleSheet("* {font-size:8pt;}")
+
         # Menu bar for defaults
         self.menubar = QMenuBar()
         defaults_menu = self.menubar.addMenu('&Show defaults and bibliography for a module...')
@@ -150,6 +153,35 @@ class MainWindow(QWidget):
         self.save_dialog = QFileDialog()
         self.save_dialog.setFileMode(QFileDialog.AnyFile)
         self.save_dialog.setAcceptMode(QFileDialog.AcceptSave)
+        self.read_settings()
+
+        self.show()
+
+    def read_settings(self):
+        settings = get_settings()
+        screen = QApplication.desktop().screenGeometry()
+        h = min(screen.height() * 5 / 6., 900)
+        size = QSize(min(screen.width() * 5 / 6., 1200), h)
+        pos = settings.value("pos", None)
+        savesize = settings.value("size", size)
+        if savesize.width() > screen.width():
+            savesize.setWidth(size.width())
+        if savesize.height() > screen.height():
+            savesize.setHeight(size.height())
+        self.resize(savesize)
+        if pos is None or pos.x() + savesize.width() > screen.width() or pos.y() + savesize.height() > screen.height():
+            self.move(screen.center() - self.rect().center())
+        else:
+            self.move(pos)
+
+    def write_settings(self):
+        settings = get_settings()
+        settings.setValue("pos", self.pos())
+        settings.setValue("size", self.size())
+
+    def closeEvent(self, event):
+        self.write_settings()
+        event.accept()
 
     def create_input(self):
         return create_input(
@@ -251,7 +283,7 @@ class DefaultsDialog(QWidget):
         self.layout.addWidget(self.display_tabs)
         # Fill text
         defaults_txt = get_default_info(
-                module, kind, return_yaml=True, fail_if_not_found=True)
+            module, kind, return_yaml=True, fail_if_not_found=True)
         from cobaya.yaml import yaml_load
         self.display["python"].setText(
             "from collections import OrderedDict\n\ninfo = " +
