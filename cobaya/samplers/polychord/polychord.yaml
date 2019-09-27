@@ -27,7 +27,7 @@ sampler:
     # Callback function -- see documentation
     callback_function:
     # Numerical value of log(0) in PolyChord's Fortran code
-    logzero: null  # default: -1e300
+    logzero: null  # default: -1e30
     # Increase number of posterior samples
     boost_posterior: 0  # increase up to `num_repeats`
     # Verbosity during the sampling process. Set to one of [0,1,2,3]
