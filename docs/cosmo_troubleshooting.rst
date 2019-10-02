@@ -3,12 +3,19 @@ Troubleshooting in cosmological runs
 
 This section will be progressively filled with the most common problems that our users encounter, so don't hesitate to open an issue/PR in GitHub if you think there is something worth including here.
 
+
 General troubleshooting advice
 ------------------------------
 
 If you are getting an error whose cause is not immediately obvious, try evaluating your model at a point in parameter space where you expect it to work. To do that, either substitute your sampler for :doc:`the dummy sampler <sampler_evaluate>` ``evaluate``, or use the :doc:`model wrapper <cosmo_model>` instead of a sampler and call its ``logposterior`` method.
 
 You can increase the level of verbosity running with ``debug: True`` (or adding the ``--debug`` flag to ``cobaya-run``). Cobaya will print what each part of the code is getting and producing, as well as some other intermediate info. You can pipe the debug output to a file with ``cobaya-run [input.yaml] --debug > file`` or setting ``debug_file: [filename]``.
+
+
+Sampling stuck or not saving any point
+--------------------------------------
+
+If your sampler appears to be making no progress, your likelihood or theory code may be failing silently, and thus assuming a *null* likelihood value (this is intended default behaviour, since cosmological theory codes and likelihoods tend to fail for extreme parameter values). If that is the case, you should see messages about errors being ignored when running with ``debug: True``. To stop when one of those errors occur, set the option ``stop_at_error: True`` for the relevant likelihood or theory code.
 
 
 Low performance on a cluster
