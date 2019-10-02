@@ -69,7 +69,7 @@ class polychord(Sampler):
         self.nDerived = (len(self.model.parameterization.derived_params()) +
                          len(self.model.prior) + len(self.model.likelihood._likelihoods))
         if self.logzero is None:
-            self.logzero = -1e30
+            self.logzero = np.nan_to_num(-np.inf)
         if self.max_ndead == np.inf:
             self.max_ndead = -1
         for p in ["nlive", "num_repeats", "nprior", "max_ndead"]:

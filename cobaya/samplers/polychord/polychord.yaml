@@ -26,8 +26,9 @@ sampler:
     compression_factor: 0.36787944117144233  # = exp(-1)
     # Callback function -- see documentation
     callback_function:
-    # Numerical value of log(0) in PolyChord's Fortran code
-    logzero: null  # default: -1e30
+    # Numerical value of log(0) sent to PolyChord's Fortran code
+    # If null: `numpy.nan_to_num(-numpy.inf)` (produces an error in `ifort`!)
+    logzero: -1e300  # safer
     # Increase number of posterior samples
     boost_posterior: 0  # increase up to `num_repeats`
     # Verbosity during the sampling process. Set to one of [0,1,2,3]
