@@ -41,7 +41,7 @@ from cobaya.input import HasDefaults
 import logging
 
 # Default options for all subclasses
-class_options = {"speed": -1}
+class_options = {"speed": -1, "stop_at_error": False}
 
 
 class Likelihood(HasLogger, HasDefaults):
@@ -143,26 +143,36 @@ class Likelihood(HasLogger, HasDefaults):
             self.states[i_state]["theory_params"] = deepcopy(theory_params)
             if self.timing:
                 start = time()
-            self.states[i_state]["logp"] = self.logp(_derived=_derived, **params_values)
-            if self.timing:
-                self.n += 1
-                delta_time = time() - start
-                # TODO: Protect against caching in first call by discarding first time if
-                # too different from second one (maybe check difference in log10 > 1)
-                # In that case, take into account that #timed_evals is now (self.n - 1)
-                if self.n == 2:
-                    log10diff = np.log10(self.time_avg/delta_time)
-                    if log10diff > 1:
-                        self.log.warning(
-                            "It seems the first call has done some caching (difference "
-                            " of a factor %g). Average timing will not be reliable "
-                            "unless many evaluations are carried out.", 10**log10diff)
-                self.time_avg = (delta_time + self.time_avg * (self.n - 1)) / self.n
-                self.time_sqsum += delta_time ** 2
-                if self.n > 1:
-                    self.time_std = np.sqrt(
-                        (self.time_sqsum - self.n * self.time_avg**2)/(self.n-1))
-                self.log.debug("Average 'logp' evaluation time: %g s", self.time_avg)
+            try:
+                self.states[i_state]["logp"] = self.logp(_derived=_derived, **params_values)
+                if self.timing:
+                    self.n += 1
+                    delta_time = time() - start
+                    # TODO: Protect against caching in first call by discarding first time
+                    # if too different from second one (maybe check difference in log10 > 1)
+                    # In that case, take into account that #timed_evals is now (self.n - 1)
+                    if self.n == 2:
+                        log10diff = np.log10(self.time_avg/delta_time)
+                        if log10diff > 1:
+                            self.log.warning(
+                                "It seems the first call has done some caching (difference "
+                                " of a factor %g). Average timing will not be reliable "
+                                "unless many evaluations are carried out.", 10**log10diff)
+                    self.time_avg = (delta_time + self.time_avg * (self.n - 1)) / self.n
+                    self.time_sqsum += delta_time ** 2
+                    if self.n > 1:
+                        self.time_std = np.sqrt(
+                            (self.time_sqsum - self.n * self.time_avg**2)/(self.n-1))
+                    self.log.debug("Average 'logp' evaluation time: %g s", self.time_avg)
+            except Exception as e:
+                if self.stop_at_error:
+                    raise LoggedError(self.log, "Error at evaluation: %r", str(e))
+                else:
+                    self.log.debug(
+                        "Ignored error at evaluation and assigned 0 likelihood "
+                        "(set 'stop_at_error: True' as an option for this likelihood to stop here). "
+                        "Error message: %r", str(e))
+                    self.states[i_state]["logp"] = -np.inf
             self.states[i_state]["derived"] = deepcopy(_derived)
         # make this one the current one by decreasing the antiquity of the rest
         for i in range(self.n_states):
