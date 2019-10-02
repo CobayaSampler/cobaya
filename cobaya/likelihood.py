@@ -166,12 +166,12 @@ class Likelihood(HasLogger, HasDefaults):
                     self.log.debug("Average 'logp' evaluation time: %g s", self.time_avg)
             except Exception as e:
                 if self.stop_at_error:
-                    raise LoggedError(self.log, "Error at evaluation: %r", str(e))
+                    raise LoggedError(self.log, "Error at evaluation: %r", e)
                 else:
                     self.log.debug(
                         "Ignored error at evaluation and assigned 0 likelihood "
                         "(set 'stop_at_error: True' as an option for this likelihood to stop here). "
-                        "Error message: %r", str(e))
+                        "Error message: %r", e)
                     self.states[i_state]["logp"] = -np.inf
             self.states[i_state]["derived"] = deepcopy(_derived)
         # make this one the current one by decreasing the antiquity of the rest
