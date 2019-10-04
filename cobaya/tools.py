@@ -389,9 +389,12 @@ def cov_to_std_and_corr(cov):
 def are_different_params_lists(list_A, list_B, name_A="A", name_B="B"):
     """
     Compares two parameter lists, and returns a dict with the following keys
-    (only present if applicable):
+    (only present if applicable, and where [A] and [B] are substituted with
+    `name_A` and `name_B`):
 
-      `duplicates_[A|B]`: duplicate elemnts in list 1|2
+      `duplicates_[A|B]`: duplicate elements in list A|B
+      `[A]_but_not_[B]`: elements from A missing in B
+      `[B]_but_not_[A]`: vice versa
     """
     result = {}
     names = {"A": name_A, "B": name_B}
