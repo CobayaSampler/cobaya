@@ -125,11 +125,15 @@ def yaml_load(text_stream, file_name=None):
                          signal_right + "column %s" % column)
             post = ((("\n" + " " * len(signal) + sep).join(
                 [""] + lines[line + 1 - 1:min(line + 1 + context - 1, len(lines))]))) + "\n"
+            bullet = "\n- "
             raise InputSyntaxError(
                 errstr + " at line %d, column %d." % (line, column) +
                 pre + errorline + post +
-                "Maybe inconsistent indentation, '=' instead of ':', "
-                "no space after ':', or a missing ':' on an empty group?")
+                "Some possible causes:" + bullet +
+                bullet.join([
+                    "inconsistent indentation", "'=' instead of ':'",
+                    "no space after ':'", "a missing ':'", "an empty group",
+                    "'\' in a double-quoted string (\") not starting by 'r\"'."]))
         else:
             raise InputSyntaxError(errstr)
 
