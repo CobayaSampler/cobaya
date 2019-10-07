@@ -51,8 +51,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super(MainWindow, self).__init__()
         self.setWindowTitle("Cobaya input generator for Cosmology")
-        self.setStyleSheet("* {font-size:8pt;}")
-
+###        self.setStyleSheet("* {font-size:8pt;}")
         # Menu bar for defaults
         self.menubar = QMenuBar()
         defaults_menu = self.menubar.addMenu('&Show defaults and bibliography for a module...')
@@ -153,8 +152,7 @@ class MainWindow(QWidget):
         self.save_dialog = QFileDialog()
         self.save_dialog.setFileMode(QFileDialog.AnyFile)
         self.save_dialog.setAcceptMode(QFileDialog.AcceptSave)
-        self.read_settings()
-
+#        self.read_settings()
         self.show()
 
     def read_settings(self):
@@ -179,9 +177,9 @@ class MainWindow(QWidget):
         settings.setValue("pos", self.pos())
         settings.setValue("size", self.size())
 
-    def closeEvent(self, event):
-        self.write_settings()
-        event.accept()
+#    def closeEvent(self, event):
+#        self.write_settings()
+#        event.accept()
 
     def create_input(self):
         return create_input(
