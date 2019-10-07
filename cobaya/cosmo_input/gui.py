@@ -33,17 +33,18 @@ try:
     from PySide.QtGui import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
     from PySide.QtGui import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
     from PySide.QtGui import QFileDialog, QCheckBox, QLabel, QMenuBar, QAction, QDialog
-    from PySide.QtCore import Slot, QSize ### , QSettings
+    from PySide.QtCore import Slot, QSize, QSettings
 except ImportError:
     try:
         from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
         from PySide2.QtWidgets import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
         from PySide2.QtWidgets import QFileDialog, QCheckBox, QLabel, QMenuBar, QAction, QDialog
-        from PySide2.QtCore import Slot, Qt, QCoreApplication, QSize ### , QSettings
+        from PySide2.QtCore import Slot, Qt, QCoreApplication, QSize, QSettings
         for attribute in set_attributes:
             QApplication.setAttribute(getattr(Qt, attribute))
     except ImportError:
         QWidget, Slot = object, (lambda: lambda *x: None)
+
 
 # Quit with C-c
 signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -56,6 +57,7 @@ def text(key, contents):
 
 def get_settings():
     return QSettings('cobaya', 'gui')
+
 
 class MainWindow(QWidget):
 
@@ -163,7 +165,7 @@ class MainWindow(QWidget):
         self.save_dialog = QFileDialog()
         self.save_dialog.setFileMode(QFileDialog.AnyFile)
         self.save_dialog.setAcceptMode(QFileDialog.AcceptSave)
-#        self.read_settings()
+        self.read_settings()
         self.show()
 
     def read_settings(self):
@@ -178,7 +180,8 @@ class MainWindow(QWidget):
         if savesize.height() > screen.height():
             savesize.setHeight(size.height())
         self.resize(savesize)
-        if pos is None or pos.x() + savesize.width() > screen.width() or pos.y() + savesize.height() > screen.height():
+        if ((pos is None or pos.x() + savesize.width() > screen.width() or
+             pos.y() + savesize.height() > screen.height())):
             self.move(screen.center() - self.rect().center())
         else:
             self.move(pos)
@@ -188,9 +191,9 @@ class MainWindow(QWidget):
         settings.setValue("pos", self.pos())
         settings.setValue("size", self.size())
 
-#    def closeEvent(self, event):
-#        self.write_settings()
-#        event.accept()
+    def closeEvent(self, event):
+        self.write_settings()
+        event.accept()
 
     def create_input(self):
         return create_input(
