@@ -4,6 +4,7 @@ from __future__ import absolute_import, division
 # Global
 import os
 import sys
+import platform
 import signal
 from collections import OrderedDict as odict
 from pprint import pformat
@@ -18,19 +19,29 @@ from cobaya.doc import _kinds
 from cobaya.input import get_default_info
 from cobaya.conventions import subfolders
 
+
+# per-platform settings for correct high-DPI scaling
+if platform.system() == "Linux":
+    font_size = "15px"
+    set_attributes = []
+else:  # Windows
+    font_size = "9px"
+    set_attributes = ["AA_EnableHighDpiScaling"]
+
+
 try:
     from PySide.QtGui import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
     from PySide.QtGui import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
     from PySide.QtGui import QFileDialog, QCheckBox, QLabel, QMenuBar, QAction, QDialog
-    from PySide.QtCore import Slot, QSize, QSettings, QPoint
+    from PySide.QtCore import Slot, QSize ### , QSettings
 except ImportError:
     try:
         from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
         from PySide2.QtWidgets import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
         from PySide2.QtWidgets import QFileDialog, QCheckBox, QLabel, QMenuBar, QAction, QDialog
-        from PySide2.QtCore import Slot, Qt, QCoreApplication, QSize, QSettings, QPoint
-
-        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)  # DPI support
+        from PySide2.QtCore import Slot, Qt, QCoreApplication, QSize ### , QSettings
+        for attribute in set_attributes:
+            QApplication.setAttribute(getattr(Qt, attribute))
     except ImportError:
         QWidget, Slot = object, (lambda: lambda *x: None)
 
@@ -51,7 +62,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super(MainWindow, self).__init__()
         self.setWindowTitle("Cobaya input generator for Cosmology")
-###        self.setStyleSheet("* {font-size:8pt;}")
+        self.setStyleSheet("* {font-size:%s;}" % font_size)
         # Menu bar for defaults
         self.menubar = QMenuBar()
         defaults_menu = self.menubar.addMenu('&Show defaults and bibliography for a module...')
