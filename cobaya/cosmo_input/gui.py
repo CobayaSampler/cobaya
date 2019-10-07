@@ -25,7 +25,7 @@ if platform.system() == "Linux":
     font_size = "15px"
     set_attributes = []
 else:  # Windows
-    font_size = "9px"
+    font_size = "9pt"
     set_attributes = ["AA_EnableHighDpiScaling"]
 
 
