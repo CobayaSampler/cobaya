@@ -22,8 +22,8 @@ from cobaya.conventions import subfolders
 
 # per-platform settings for correct high-DPI scaling
 if platform.system() == "Linux":
-    font_size = "15px"
-    set_attributes = []
+    font_size = "12px"
+    set_attributes = ["AA_EnableHighDpiScaling"]
 else:  # Windows/Mac
     font_size = "9pt"
     set_attributes = ["AA_EnableHighDpiScaling"]

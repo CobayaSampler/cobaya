@@ -372,9 +372,15 @@ class classy(_cosmo):
             try:
                 self.classy.compute()
             # "Valid" failure of CLASS: parameters too extreme -> log and report
-            except CosmoComputationError:
-                self.log.debug("Computation of cosmological products failed. "
-                               "Assigning 0 likelihood and going on.")
+            except CosmoComputationError as e:
+                if ("You have asked for an unrealistic high value omega_b" in str(e) or
+                    "reionization cannot start after z_start_max" in str(e) or
+                    "Shooting failed, try optimising input_get_guess()" in str(e)):
+                    pass
+                else:
+                    self.log.debug("Computation of cosmological products failed. "
+                                   "Assigning 0 likelihood and going on. "
+                                   "The output of the CLASS error was %s" % e)
                 return 0
             # CLASS not correctly initialized, or input parameters not correct
             except CosmoSevereError:

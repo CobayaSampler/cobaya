@@ -48,7 +48,7 @@ To appropriately cite the modules (samplers, theory codes, likelihoods) that you
 Acknowledgements
 ----------------
 
-Thanks to `Julien Lesgourgues`_ for support on interfacing CLASS_, and to `Guadalupe Cañas Herrera`_ and `Vivian Miranda`_ for extensive and somewhat painful testing.
+Thanks to `Julien Lesgourgues`_ for support on interfacing CLASS_, and to `Guadalupe Cañas Herrera`_, `Vivian Miranda`_, `Andreas Finke`_,(poner link) ... (mirar issues) Morton, Hergt, for extensive and somewhat painful testing.
 
 .. _`Jesus Torrado`: https://astronomy.sussex.ac.uk/~jt386
 .. _`Antony Lewis`: https://cosmologist.info

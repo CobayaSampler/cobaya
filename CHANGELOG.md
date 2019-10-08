@@ -2,11 +2,24 @@
 
 ### Samplers
 
-- MCMC: Bugfix in `mcmc`: using deprecated Pandas DataFrame method (#40). Thanks Zack Li (@xzackli)
+#### PolyChord
+
+- see https://github.com/CobayaSampler/cobaya/issues/35 ARREGLAR ESTE!!!!
+
+- Fixes ifort compatibility (#39, PR #42). Thanks Lukas Hergt (@lukashergt)
+
+#### MCMC
+
+- Fixed: using deprecated Pandas DataFrame method (#40). Thanks Zack Li (@xzackli)
+
+### Likelihoods
+
+- Added `stop_at_error` for likelihoods -- fixes #43. Thanks Lukas Hergt (@lukashergt)
 
 ### Cosmology
 
-- Bugfix in `cobaya-cosmo-generator` in Python 2 (#37)
+- Fixed `cobaya-cosmo-generator` in Python 2 (#37). Thanks Lukas Hergt (@lukashergt)
+- CLASS: updated (fixes memory leak mentioned in #34; Thanks Lukas Hergt (@lukashergt))
 
 
 ## 2.0 – 2019-08-20

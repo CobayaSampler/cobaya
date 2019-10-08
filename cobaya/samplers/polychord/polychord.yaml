@@ -11,8 +11,8 @@ sampler:
     nlive: 25d
     # Number of slice-sampling steps each new sample.
     # Helps with curved degeneracies and thin "corners".
-    # Can be reduced to ~dimensionality ('d') if accurate evidences aren't needed.
-    num_repeats: 5d
+    # Recommended: '5d' if accurate evidences needed or weird posterior shapes.
+    num_repeats: d
     # Number of prior samples drawn before starting compression
     nprior:  # default: nlive
     # Whether to check for and explore multi-modality on the posterior
