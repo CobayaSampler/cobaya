@@ -64,6 +64,7 @@ Thanks too to `Guadalupe Cañas Herrera`_, `Andreas Finke`_, `Lukas Hergt`_, `Vi
 .. _`Julien Lesgourgues`: https://www.particle-theory.rwth-aachen.de/cms/Particle-Theory/Das-Institut/Mitarbeiter-TTK/Professoren/~gufe/Lesgourgues-Julien/?lidx=1
 .. _`Benjamin Audren`: https://baudren.github.io/
 .. _`Guadalupe Cañas Herrera`: https://gcanasherrera.github.io/pages/about-me.html#about-me
+.. _`Andreas Finke`: https://cosmology.unige.ch/users/andreas-finke
 .. _`Vivian Miranda`: https://github.com/vivianmiranda
 .. _`Lukas Hergt`: https://www.kicc.cam.ac.uk/directory/lh561
 .. _`Joe Zunz`: https://github.com/joezuntz
