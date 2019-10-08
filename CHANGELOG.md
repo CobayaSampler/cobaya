@@ -10,6 +10,10 @@
 
 - Fixed: using deprecated Pandas DataFrame method (#40). Thanks Zack Li (@xzackli)
 
+#### Minimize
+
+- Added GetDist output for best-fit (`ignore-prior: True`)
+
 ### Likelihoods
 
 - Added `stop_at_error` for likelihoods -- fixes #43. Thanks Lukas Hergt (@lukashergt)

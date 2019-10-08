@@ -42,9 +42,17 @@ for ``minimize`` with the desired options, and it will use as a starting point t
 found so far, as well as the covariance matrix of the sample for rescaling of the
 parameter jumps.
 
-As text output, it produces a ``[output prefix].minimum.txt`` if the MAP was requested, or
-``[output prefix].bestfit.txt`` if the maximum likelihood was requested
-(``ignore_prior: True``).
+As text output, it produces two different files:
+
+- ``[output prefix].minimum.txt``, in
+  :ref:`the same format as Cobaya samples <output_format>`,
+  but containing a single line.
+
+- ``[output prefix].minimum``, the equivalent **GetDist-formatted** file.
+
+If ``ignore_prior: True``, those files are named ``.bestfit[.txt]`` instead of ``minimum``,
+and contain the best-fit (maximum of the likelihood) instead of the MAP
+(maximum of the posterior).
 
 When called from a Python script, Cobaya's ``run`` function returns the updated info
 and the products described below in the method
@@ -86,6 +94,9 @@ from cobaya.tools import read_dnumber, choleskyL, recursive_update
 
 # Handling scpiy vs BOBYQA
 evals_attr = {"scipy": "fun", "bobyqa": "f"}
+
+# GetDist conventions
+getdist_ext_ignore_prior = {True: ".bestfit", False: ".minimum"}
 
 
 class minimize(Sampler):
@@ -334,9 +345,9 @@ class minimize(Sampler):
     def dump_getdist(self):
         if not self.output:
             return
-        if not self.ignore_prior:
-            # .minimum files currently assumed to be maximum of posterior
-            getdist_bf = self.getdist_point_text(self.minimum, minuslogpost=self.minimum['minuslogpost'])
-            print("\n" + getdist_bf)
-            with open(os.path.join(self.output.folder, self.output.prefix + '.minimum'), 'w') as f:
-                f.write(getdist_bf)
+        getdist_bf = self.getdist_point_text(self.minimum, minuslogpost=self.minimum['minuslogpost'])
+        out_filename = os.path.join(
+            self.output.folder,
+            self.output.prefix + getdist_ext_ignore_prior[self.ignore_prior])
+        with open(out_filename, 'w') as f:
+            f.write(getdist_bf)

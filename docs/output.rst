@@ -65,6 +65,8 @@ In all cases, the output folder is based on the invocation folder if **cobaya** 
    When the output is written into a certain folder different from the invocation one, the value of ``output`` in the output ``.yaml`` file(s) is updated such that it drops the mention to that folder.
 
 
+.. _output_format:
+
 Sample files or ``Collection`` instances
 ----------------------------------------
 
