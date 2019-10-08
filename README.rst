@@ -60,7 +60,7 @@ Thanks too to `Guadalupe Cañas Herrera`_, `Andreas Finke`_, `Lukas Hergt`_, `Vi
 .. _Camb: https://camb.info/
 .. _Class: https://class-code.net/
 .. _GetDist: https://github.com/cmbant/getdist
-.. _PolyChord: https://ccpforge.cse.rl.ac.uk/gf/project/polychord
+.. _PolyChord: https://github.com/PolyChord/PolyChordLite
 .. _`Julien Lesgourgues`: https://www.particle-theory.rwth-aachen.de/cms/Particle-Theory/Das-Institut/Mitarbeiter-TTK/Professoren/~gufe/Lesgourgues-Julien/?lidx=1
 .. _`Benjamin Audren`: https://baudren.github.io/
 .. _`Guadalupe Cañas Herrera`: https://gcanasherrera.github.io/pages/about-me.html#about-me
