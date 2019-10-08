@@ -64,6 +64,10 @@ You can use `GetDist <https://getdist.readthedocs.io/en/latest/index.html>`_ to 
 
 .. note::
 
+   You can add an option ``label: non-latex $latex$`` to your ``info``, and it will be used as legend label when plotting multiple samples.
+
+.. note::
+
    For a detailed user manual and many more examples, check out the `GetDist documentation <https://getdist.readthedocs.io/en/latest/index.html>`_!
 
 
