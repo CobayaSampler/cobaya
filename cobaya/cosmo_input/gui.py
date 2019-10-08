@@ -24,7 +24,7 @@ from cobaya.conventions import subfolders
 if platform.system() == "Linux":
     font_size = "15px"
     set_attributes = []
-else:  # Windows
+else:  # Windows/Mac
     font_size = "9pt"
     set_attributes = ["AA_EnableHighDpiScaling"]
 
