@@ -4,8 +4,6 @@
 
 #### PolyChord
 
-- see https://github.com/CobayaSampler/cobaya/issues/35 ARREGLAR ESTE!!!!
-
 - Fixes ifort compatibility (#39, PR #42). Thanks Lukas Hergt (@lukashergt)
 
 #### MCMC
@@ -18,8 +16,7 @@
 
 ### Cosmology
 
-- Fixed `cobaya-cosmo-generator` in Python 2 (#37). Thanks Lukas Hergt (@lukashergt)
-- CLASS: updated (fixes memory leak mentioned in #34; Thanks Lukas Hergt (@lukashergt))
+- Fixed `cobaya-cosmo-generator` in for Python 2 (#37, thanks Lukas Hergt, @lukashergt) and high-DPI screens (#41).
 
 
 ## 2.0 – 2019-08-20

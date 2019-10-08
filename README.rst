@@ -48,21 +48,28 @@ To appropriately cite the modules (samplers, theory codes, likelihoods) that you
 Acknowledgements
 ----------------
 
-Thanks to `Julien Lesgourgues`_ for support on interfacing CLASS_, and to `Guadalupe Cañas Herrera`_, `Vivian Miranda`_, `Andreas Finke`_,(poner link) ... (mirar issues) Morton, Hergt, for extensive and somewhat painful testing.
+Thanks to `Julien Lesgourgues`_ and `Will Handley`_ for support on interfacing CLASS_ and PolyChord_ respectively.
+
+Thanks too to `Guadalupe Cañas Herrera`_, `Andreas Finke`_, `Lukas Hergt`_, `Vivian Miranda`_, `Timothy Morton`_, `Joe Zunz`_ and many others for extensive and somewhat painful testing.
 
 .. _`Jesus Torrado`: https://astronomy.sussex.ac.uk/~jt386
 .. _`Antony Lewis`: https://cosmologist.info
 .. _CosmoMC: https://cosmologist.info/cosmomc/
 .. _CosmoCoffee: https://cosmocoffee.info/viewforum.php?f=11
 .. _`Monte Python`: https://baudren.github.io/montepython.html
-.. _`Julien Lesgourgues`: https://www.particle-theory.rwth-aachen.de/cms/Particle-Theory/Das-Institut/Mitarbeiter-TTK/Professoren/~gufe/Lesgourgues-Julien/?lidx=1
-.. _`Benjamin Audren`: https://baudren.github.io/
 .. _Camb: https://camb.info/
 .. _Class: https://class-code.net/
 .. _GetDist: https://github.com/cmbant/getdist
 .. _PolyChord: https://ccpforge.cse.rl.ac.uk/gf/project/polychord
+.. _`Julien Lesgourgues`: https://www.particle-theory.rwth-aachen.de/cms/Particle-Theory/Das-Institut/Mitarbeiter-TTK/Professoren/~gufe/Lesgourgues-Julien/?lidx=1
+.. _`Benjamin Audren`: https://baudren.github.io/
 .. _`Guadalupe Cañas Herrera`: https://gcanasherrera.github.io/pages/about-me.html#about-me
 .. _`Vivian Miranda`: https://github.com/vivianmiranda
+.. _`Lukas Hergt`: https://www.kicc.cam.ac.uk/directory/lh561
+.. _`Joe Zunz`: https://github.com/joezuntz
+.. _`Timothy Morton`: https://github.com/timothydmorton
+.. _`Will Handley`: https://www.kicc.cam.ac.uk/directory/wh260
+
 
 ===================
 
