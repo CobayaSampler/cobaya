@@ -72,7 +72,7 @@ class polychord(Sampler):
             self.logzero = np.nan_to_num(-np.inf)
         if self.max_ndead == np.inf:
             self.max_ndead = -1
-        for p in ["nlive", "num_repeats", "nprior", "max_ndead"]:
+        for p in ["nlive", "nprior", "max_ndead"]:
             setattr(self, p, read_dnumber(getattr(self, p), self.nDims, dtype=int))
         # Fill the automatic ones
         if getattr(self, "feedback", None) is None:
@@ -113,20 +113,24 @@ class polychord(Sampler):
         # Exploiting the speed hierarchy
         if self.blocking:
             speeds, blocks = self.model.likelihood._check_speeds_of_params(self.blocking)
-            # Speeds need to be integer to be interpreted as # steps per block
-            speeds = relative_to_int(speeds)
-            # Account for num_repeats, which is ignored when blocking set by hand:
-            # -- multiply the number of steps in the slowest block by num_repeats
-            speeds *= self.num_repeats
         else:
             speeds, blocks = self.model.likelihood._speeds_of_params(int_speeds=True)
         blocks_flat = list(chain(*blocks))
         self.ordering = [
             blocks_flat.index(p) for p in self.model.parameterization.sampled_params()]
         self.grade_dims = np.array([len(block) for block in blocks])
-        self.grade_frac = np.array(speeds) * self.grade_dims  # steps per block
         # bugfix: pypolychord's C interface for Fortran does not like int numpy types
         self.grade_dims = [int(x) for x in self.grade_dims]
+        # Steps per block
+        # NB: num_repeats is ignored by PolyChord when int "grade_frac" given,
+        # so needs to be applied by hand.
+        # Make sure that speeds are integer, and that the slowest is 1,
+        # for a straightforward application of num_repeats
+        speeds = relative_to_int(speeds, 1)
+        # In num_repeats, `d` is interpreted as dimension of each block
+        self.grade_frac = [
+            int(speed * read_dnumber(self.num_repeats,  dim_block))
+            for speed, dim_block in zip(speeds, self.grade_dims)]
         # Assign settings
         pc_args = ["nlive", "num_repeats", "nprior", "do_clustering",
                    "precision_criterion", "max_ndead", "boost_posterior", "feedback",
@@ -135,6 +139,8 @@ class polychord(Sampler):
                    "write_live", "write_dead", "base_dir", "grade_frac", "grade_dims",
                    "feedback", "read_resume", "base_dir", "file_root", "grade_frac",
                    "grade_dims"]
+        # As stated above, num_repeats is ignored, so let's not pass it
+        pc_args.pop(pc_args.index("num_repeats"))
         self.pc_settings = PolyChordSettings(
             self.nDims, self.nDerived, seed=(self.seed if self.seed is not None else -1),
             **{p: getattr(self, p) for p in pc_args if getattr(self, p) is not None})
