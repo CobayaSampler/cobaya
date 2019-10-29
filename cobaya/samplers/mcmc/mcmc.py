@@ -177,6 +177,11 @@ class mcmc(Sampler):
                 get_external_function(self.callback_function))
         # Useful for getting last points added inside callback function
         self.last_point_callback = 0
+        # Monitoring progress
+        if am_single_or_primary_process():
+            cols = ["N", "Rminus1", "Rminus1_cl"]
+            self.progress = DataFrame(columns=cols)
+            self.i_checkpoint = 1
 
     def initial_proposal_covmat(self, slow_params=None):
         """
@@ -351,6 +356,8 @@ class mcmc(Sampler):
             # Checking convergence and (optionally) learning the covmat of the proposal
             if self.check_all_ready():
                 self.check_convergence_and_learn_proposal()
+                if am_single_or_primary_process():
+                    self.i_checkpoint += 1
             if self.n() == self.effective_max_samples:
                 self.log.info("Reached maximum number of accepted steps allowed. "
                               "Stopping.")
@@ -628,6 +635,8 @@ class mcmc(Sampler):
                 success_bounds = False
         # Compute convergence diagnostics
         if am_single_or_primary_process():
+            self.progress.at[self.i_checkpoint, "N"] = (
+                self.n() if am_single_or_primary_process() else sum(Ns))
             # "Within" or "W" term -- our "units" for assessing convergence
             # and our prospective new covariance matrix
             mean_of_covs = np.average(covs, weights=Ns, axis=0)
@@ -662,6 +671,7 @@ class mcmc(Sampler):
                     success = False
                 if success:
                     Rminus1 = max(np.abs(eigvals))
+                    self.progress.at[self.i_checkpoint, "Rminus1"] = Rminus1
                     # For real square matrices, a possible def of the cond number is:
                     condition_number = Rminus1 / min(np.abs(eigvals))
                     self.log.debug("Condition number = %g", condition_number)
@@ -680,13 +690,15 @@ class mcmc(Sampler):
                             Rminus1_cl = (np.std(bounds, axis=0).T /
                                           np.sqrt(np.diag(mean_of_covs)))
                             self.log.debug("normalized std's of bounds = %r", Rminus1_cl)
+                            Rminus1_cl = np.max(Rminus1_cl)
+                            self.progress.at[self.i_checkpoint, "Rminus1_cl"] = Rminus1_cl
                             self.log.info(
                                 "Convergence of bounds: R-1 = %f after %d " % (
-                                    np.max(Rminus1_cl),
+                                    Rminus1_cl,
                                     (sum(Ns) if more_than_one_process() else self.n())) +
                                 "accepted steps" +
                                 (" = sum(%r)" % list(Ns) if more_than_one_process() else ""))
-                            if np.max(Rminus1_cl) < self.Rminus1_cl_stop:
+                            if Rminus1_cl < self.Rminus1_cl_stop:
                                 self.converged = True
                                 self.log.info("The run has converged!")
                             self._Ns = Ns
@@ -761,4 +773,7 @@ class mcmc(Sampler):
         Returns:
            The sample ``Collection`` containing the accepted steps.
         """
-        return {"sample": self.collection}
+        products = {"sample": self.collection}
+        if am_single_or_primary_process():
+            products.update({"progress": self.progress})
+        return products
