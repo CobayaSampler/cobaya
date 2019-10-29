@@ -179,7 +179,7 @@ class mcmc(Sampler):
         self.last_point_callback = 0
         # Monitoring progress
         if am_single_or_primary_process():
-            cols = ["N", "Rminus1", "Rminus1_cl"]
+            cols = ["N", "acceptance_rate", "Rminus1", "Rminus1_cl"]
             self.progress = DataFrame(columns=cols)
             self.i_checkpoint = 1
 
@@ -590,9 +590,11 @@ class mcmc(Sampler):
         """
         if more_than_one_process():
             # Compute and gather means, covs and CL intervals of last half of chains
-            mean = self.collection.mean(first=int(self.n() / 2))
-            cov = self.collection.cov(first=int(self.n() / 2))
-            mcsamples = self.collection._sampled_to_getdist_mcsamples(first=int(self.n() / 2))
+            use_first = int(self.n() / 2)
+            mean = self.collection.mean(first=use_first)
+            cov = self.collection.cov(first=use_first)
+            mcsamples = self.collection._sampled_to_getdist_mcsamples(first=use_first)
+            acceptance_rate = self.n() / self.collection[_weight].sum()
             try:
                 bound = np.array([[
                     mcsamples.confidence(i, limfrac=self.Rminus1_cl_level / 2., upper=which)
@@ -601,9 +603,9 @@ class mcmc(Sampler):
             except:
                 bound = None
                 success_bounds = False
-            Ns, means, covs, bounds = map(
+            Ns, means, covs, bounds, acceptance_rates = map(
                 lambda x: np.array(get_mpi_comm().gather(x)),
-                [self.n(), mean, cov, bound])
+                [self.n(), mean, cov, bound, acceptance_rate])
         else:
             # Compute and gather means, covs and CL intervals of last m-1 chain fractions
             m = 1 + self.Rminus1_single_split
@@ -624,6 +626,7 @@ class mcmc(Sampler):
                     first=i * cut, last=(i + 1) * cut - 1)
                 for i in range(1, m)]
             logging.disable(logging.NOTSET)
+            acceptance_rates = self.n() / self.collection[_weight].sum()
             try:
                 bounds = [np.array(
                     [[mcs.confidence(i, limfrac=self.Rminus1_cl_level / 2., upper=which)
@@ -636,7 +639,15 @@ class mcmc(Sampler):
         # Compute convergence diagnostics
         if am_single_or_primary_process():
             self.progress.at[self.i_checkpoint, "N"] = (
-                self.n() if am_single_or_primary_process() else sum(Ns))
+                sum(Ns) if more_than_one_process() else self.n())
+            acceptance_rate = (
+                np.average(acceptance_rates, weights=Ns)
+                if more_than_one_process() else acceptance_rates)
+            self.log.info("Acceptance rate: %.3f" +
+                          (" = avg(%r)" % list(acceptance_rates)
+                           if more_than_one_process() else ""),
+                          acceptance_rate)
+            self.progress.at[self.i_checkpoint, "acceptance_rate"] = acceptance_rate
             # "Within" or "W" term -- our "units" for assessing convergence
             # and our prospective new covariance matrix
             mean_of_covs = np.average(covs, weights=Ns, axis=0)
