@@ -70,9 +70,9 @@ And now we plot the posterior for ``x``, ``y``, the radius and the angle:
     import getdist.plots as gdplt
 
     gdsamples = MCSamplesFromCobaya(updated_info, products["sample"])
-    gdplot = gdplt.getSubplotPlotter(width_inch=5)
+    gdplot = gdplt.get_subplot_plotter(width_inch=5)
     gdplot.triangle_plot(gdsamples, ["x", "y"], filled=True)
-    gdplot = gdplt.getSubplotPlotter(width_inch=5)
+    gdplot = gdplt.get_subplot_plotter(width_inch=5)
     gdplot.plots_1d(gdsamples, ["r", "theta"], nx=2)
 
 
@@ -96,7 +96,7 @@ Let's run with the same configuration and analyse the output:
 
     gdsamples_xGTy = MCSamplesFromCobaya(
         updated_info_xGTy, products_xGTy["sample"])
-    gdplot = gdplt.getSubplotPlotter(width_inch=5)
+    gdplot = gdplt.get_subplot_plotter(width_inch=5)
     gdplot.triangle_plot(gdsamples_xGTy, ["x", "y"], filled=True)
 
 

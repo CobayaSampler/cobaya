@@ -141,12 +141,12 @@ class bicep_keck_2015(_cmblikes_prototype):
         if bandcenter_err != 1:
             nu_bar = Ghz_Kelvin * bandpass.nu_bar
             # Conversion factor error due to bandcenter error.
-            th_err = (bandcenter_err) ** 4 * \
+            th_err = bandcenter_err ** 4 * \
                      np.exp(Ghz_Kelvin * bandpass % nu_bar * (bandcenter_err - 1) / _T_CMB_K) \
                          (np.exp(nu_bar / _T_CMB_K) - 1) ** 2 / \
                      (np.exp(nu_bar * bandcenter_err / _T_CMB_K) - 1) ** 2
             # Greybody scaling error due to bandcenter error.
-            gb_err = (bandcenter_err) ** (3 + beta) * \
+            gb_err = bandcenter_err ** (3 + beta) * \
                      (np.exp(nu_bar / Tdust) - 1) / \
                      (np.exp(nu_bar * bandcenter_err / Tdust) - 1)
         else:
@@ -166,11 +166,11 @@ class bicep_keck_2015(_cmblikes_prototype):
         pl0 = nu0 ** (2 + beta)
         if bandcenter_err != 1:
             nu_bar = Ghz_Kelvin * bandpass.nu_bar
-            th_err = (bandcenter_err) ** 4 * \
+            th_err = bandcenter_err ** 4 * \
                      np.exp(nu_bar * (bandcenter_err - 1) / _T_CMB_K) * \
                      (np.exp(nu_bar / _T_CMB_K) - 1) ** 2 / \
                      (np.exp(nu_bar * bandcenter_err / _T_CMB_K) - 1) ** 2
-            pl_err = (bandcenter_err) ** (2 + beta)
+            pl_err = bandcenter_err ** (2 + beta)
         else:
             pl_err = 1
             th_err = 1

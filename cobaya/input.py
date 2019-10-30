@@ -381,7 +381,7 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
                     for kignore in [_input_params, _output_params]:
                         block1k.pop(kignore, None)
                         block2k.pop(kignore, None)
-                if (recursive_odict_to_dict(block1k) != recursive_odict_to_dict(block2k)):
+                if recursive_odict_to_dict(block1k) != recursive_odict_to_dict(block2k):
                     myprint(myname + ": different content of [%s:%s]" % (
                         block_name, k))
                     return False

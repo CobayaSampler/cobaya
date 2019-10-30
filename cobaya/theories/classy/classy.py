@@ -321,7 +321,7 @@ class classy(_cosmo):
 
     def add_z_for_matter_power(self, z):
         if not getattr(self, "z_for_matter_power"):
-            self.z_for_matter_power = np.empty((0))
+            self.z_for_matter_power = np.empty(0)
         self.z_for_matter_power = np.flip(np.sort(np.unique(np.concatenate(
             [self.z_for_matter_power, np.atleast_1d(z)]))), axis=0)
         self.extra_args["z_pk"] = " ".join(["%g" % zi for zi in self.z_for_matter_power])

@@ -17,7 +17,6 @@ import six
 
 # Global
 import os
-from copy import deepcopy
 import logging
 import numpy as np
 import pandas as pd
@@ -137,7 +136,7 @@ class Collection(HasLogger):
             except ValueError:
                 raise LoggedError(
                     self.log, "If a log-posterior is not specified, you need to pass "
-                    "a log-likelihood and a log-prior.")
+                              "a log-likelihood and a log-prior.")
         self.data.at[self._n, _minuslogpost] = -logpost
         if logpriors is not None:
             for name, value in zip(self.minuslogprior_names, logpriors):

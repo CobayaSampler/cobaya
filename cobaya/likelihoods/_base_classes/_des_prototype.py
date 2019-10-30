@@ -406,9 +406,9 @@ class _des_prototype(_DataSetLikelihood):
                 zshift = self.zs - wl_photoz_errors[b]
                 n_chi = Hs * self.zbin_sp[b](zshift)
                 n_chi[zshift < 0] = 0
-                fac = n_chi * dchis
+                _fac = n_chi * dchis
                 for i, chi in enumerate(chis):
-                    w[b].append(np.dot(fac[i:], (1 - chi / chis[i:])))
+                    w[b].append(np.dot(_fac[i:], (1 - chi / chis[i:])))
                 w_align = (Alignment_z * n_chi /
                            (chis * (1 + self.zs) * 3 * h2 * (1e5 / c) ** 2 / 2))
                 w[b] = np.asarray(w[b]) - w_align
@@ -688,14 +688,14 @@ def convert_txt(filename, root, outdir, ranges=None):
     hdulist = fits.open(filename)
     outlines = []
     outlines += ['measurements_format = DES']
-    outlines += ['kmax = 10']  # maches what DES used and is good enough for likelihood
+    outlines += ['kmax = 10']  # matches what DES used and is good enough for likelihood
     outlines += ['intrinsic_alignment_model = DES1YR']
     outlines += ['data_types = xip xim gammat wtheta']
     outlines += ['used_data_types = xip xim gammat wtheta']
     outlines += ['num_z_bins = %s' % (max(hdulist['xip'].data['BIN1']))]
     outlines += ['num_gal_bins = %s' % (max(hdulist['wtheta'].data['BIN1']))]
     ntheta = max(hdulist['wtheta'].data['ANGBIN']) + 1
-    outlines += ['num_theta_bins = %s' % (ntheta)]
+    outlines += ['num_theta_bins = %s' % ntheta]
     thetas = hdulist['xip'].data['ANG'][:ntheta]
     np.savetxt(outdir + root + '_theta_bins.dat', thetas, header='theta_arcmin')
     outlines += ['theta_bins_file = %s' % (root + '_theta_bins.dat')]
@@ -724,15 +724,15 @@ def convert_txt(filename, root, outdir, ranges=None):
         maxi -= 1
     np.savetxt(outdir + root + '_nz_source.dat', sourcedata[:maxi + 1], fmt='%.6e',
                header=" ".join(hdulist['NZ_SOURCE'].data.dtype.names))
-    outlines += ['nz_file = %s_nz_source.dat' % (root)]
+    outlines += ['nz_file = %s_nz_source.dat' % root]
     assert (np.all(np.asarray(hdulist['NZ_LENS'].data[maxi + 1][3:]) == 0))
     np.savetxt(outdir + root + '_nz_lens.dat', hdulist['NZ_LENS'].data[:maxi + 1],
                fmt='%.6e', header=" ".join(hdulist['NZ_LENS'].data.dtype.names))
-    outlines += ['nz_gal_file = %s_nz_lens.dat' % (root)]
+    outlines += ['nz_gal_file = %s_nz_lens.dat' % root]
     with open(outdir + root + '_selection.dat', 'w') as f:
         f.write('#  type bin1 bin2 theta_min theta_max\n')
         f.write("\n".join(out_ranges))
-    outlines += ['data_selection = %s_selection.dat' % (root)]
+    outlines += ['data_selection = %s_selection.dat' % root]
     outlines += ['nuisance_params = DES.paramnames']
     with open(outdir + root + '.dataset', 'w') as f:
         f.write("\n".join(outlines))

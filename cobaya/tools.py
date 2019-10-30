@@ -54,7 +54,7 @@ def deepcopyfix(olddict):
         return deepcopy(olddict)
     newdict = {}
     for key in olddict:
-        if (key == 'theory' or key == 'instance' or key == 'external'):
+        if key == 'theory' or key == 'instance' or key == 'external':
             newdict[key] = olddict[key]
         else:
             # print(key)
@@ -455,7 +455,7 @@ def create_banner(msg, symbol="*", length=None):
     msg_clean = cleandoc(msg)
     if not length:
         length = max([len(line) for line in msg_clean.split("\n")])
-    return (symbol * length + "\n" + msg_clean + "\n" + symbol * length + "\n")
+    return symbol * length + "\n" + msg_clean + "\n" + symbol * length + "\n"
 
 
 def warn_deprecation_python2(logger=None):
@@ -516,7 +516,7 @@ def deepcopy_where_possible(base):
     compromise solution.
     """
     if isinstance(base, Mapping):
-        _copy = (base.__class__)()
+        _copy = base.__class__()
         for key, value in (base or {}).items():
             key_copy = deepcopy(key)
             _copy[key_copy] = deepcopy_where_possible(value)

@@ -60,7 +60,6 @@ RUN mkdir $%s && \
     mkdir $COBAYA_PRODUCTS
 # COBAYA  --------------------------------------------------------------------
 # getdist fork (it will be an automatic requisite in the future)
-RUN pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist --force
 RUN cd $%s && git clone https://github.com/JesusTorrado/cobaya.git && \
     cd $%s/cobaya && pip install -e .
 """ % (_modules_path_env, _modules_path, _products_path,

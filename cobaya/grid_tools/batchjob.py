@@ -2,9 +2,12 @@
 .. module:: cobaya.grid_tools.batchjob
 
 :Synopsis: Classes for jobs and datasets
-:Author: Antony Lewis
+:Author: Antony Lewis, modified by Jesus Torrado
 
 """
+
+# TODO this is also part of getdist and should be refactored consistently to use getdist version
+
 from __future__ import absolute_import, print_function, division
 import os
 import shutil
@@ -13,15 +16,26 @@ import copy
 import sys
 import time
 import six
+import getdist
 from getdist import types, IniFile
 from getdist.mcsamples import loadMCSamples
 
 from .conventions import _input_folder, _script_folder, _log_folder
 
 
+def grid_cache_file(directory):
+    directory = os.path.abspath(directory)
+    if getdist.cache_dir:
+        import hashlib
+        return os.path.join(getdist.cache_dir, '_batch_'
+                            + hashlib.md5(directory.encode('utf-8')).hexdigest()[:10]) + '.pyobj'
+    return os.path.join(directory, 'batch.pyobj')
+
+
 def resetGrid(directory):
-    fname = os.path.abspath(directory) + os.sep + 'batch.pyobj'
-    if os.path.exists(fname): os.remove(fname)
+    fname = grid_cache_file(directory)
+    if os.path.exists(fname):
+        os.remove(fname)
 
 
 def readobject(directory=None):
@@ -30,7 +44,7 @@ def readobject(directory=None):
 
     if directory is None:
         directory = sys.argv[1]
-    fname = os.path.abspath(directory) + os.sep + 'batch.pyobj'
+    fname = grid_cache_file(directory)
     if not os.path.exists(fname):
         if gridconfig.pathIsGrid(directory):
             return gridconfig.makeGrid(directory, readOnly=True, interactive=False)
@@ -38,12 +52,15 @@ def readobject(directory=None):
     try:
         config_dir = os.path.abspath(directory) + os.sep + 'config'
         if os.path.exists(config_dir):
-            # set path in case using functions defined and hene imported from in settings file
+            # set path in case using functions defined and hence imported from in settings file
             sys.path.insert(0, config_dir)
         with open(fname, 'rb') as inp:
-            return pickle.load(inp)
+            grid = pickle.load(inp)
+        if not os.path.exists(grid.basePath):
+            raise FileNotFoundError('Directory not found %s' % grid.basePath)
+        return grid
     except Exception as e:
-        print('Error lading cached batch object: %s', e)
+        print('Error loading cached batch object: ', e)
         resetGrid(directory)
         if gridconfig.pathIsGrid(directory):
             return gridconfig.makeGrid(directory, readOnly=True, interactive=False)
@@ -103,11 +120,15 @@ class dataSet(object):
         if name is not None:
             self.names += [name]
             self.tag = "_".join(self.names)
+        return self
 
     def addEnd(self, name, params, dist_settings=None):
         if not dist_settings:
             dist_settings = {}
-        self.add(name, params, overrideExisting=False, dist_settings=dist_settings)
+        return self.add(name, params, overrideExisting=False, dist_settings=dist_settings)
+
+    def copy(self):
+        return copy.deepcopy(self)
 
     def extendForImportance(self, names, params):
         data = copy.deepcopy(self)
@@ -661,7 +682,7 @@ class batchJob_cosmomc(propertiesItem):
         return self.normed_name_item(root, True, True)
 
     def save(self, filename=''):
-        saveobject(self, (self.batchPath + 'batch.pyobj', filename)[filename != ''])
+        saveobject(self, (grid_cache_file(self.batchPath), filename)[filename != ''])
 
     def makeDirectories(self, setting_file=None):
         makePath(self.batchPath)

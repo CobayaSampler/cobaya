@@ -106,7 +106,7 @@ And let us define the additions and run post-processing:
    gdsamples_gaussian = MCSamplesFromCobaya(updinfo, results["sample"])
    gdsamples_post = MCSamplesFromCobaya(updinfo_post, results_post["sample"])
 
-   p = gdplt.getSubplotPlotter(width_inch=6)
+   p = gdplt.get_single_plotter(width_inch=6)
    p.plot_2d([gdsamples_gaussian, gdsamples_post], ["x", "y"], filled=True)
    p.add_x_bands(x_band_mean, x_band_std)
    p.add_legend(["Gaussian", "Post $y>0$ and $x$-band"], colored_text=True);
