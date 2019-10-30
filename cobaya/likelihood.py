@@ -666,11 +666,14 @@ class LikelihoodCollection(HasLogger):
         except:
             return None
 
-    def dump_timing(self):
-        avg_times_evals = odict([
+    def get_timing(self):
+        return odict([
             [like, {"t": self[like].time_avg, "n": self[like].n}] for like in
             (([_theory] if self.theory else []) + [like for like in self])
             if getattr(self[like], _timing)])
+
+    def dump_timing(self):
+        avg_times_evals = self.get_timing()
         if avg_times_evals:
             sep = "\n   "
             self.log.info(

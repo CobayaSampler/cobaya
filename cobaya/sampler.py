@@ -154,6 +154,7 @@ class Sampler(HasLogger, HasDefaults):
         else:
             try:
                 os.remove(self.checkpoint_filename())
+                os.remove(self.progress_filename())
             except (OSError, TypeError):
                 pass
         self.initialize()
@@ -162,6 +163,12 @@ class Sampler(HasLogger, HasDefaults):
         if self.output:
             return os.path.join(
                 self.output.folder, self.output.prefix + _checkpoint_extension)
+        return None
+
+    def progress_filename(self):
+        if self.output:
+            return os.path.join(
+                self.output.folder, self.output.prefix + _progress_extension)
         return None
 
     def covmat_filename(self):
