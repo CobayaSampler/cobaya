@@ -52,8 +52,8 @@ import logging
 import numpy as np
 
 # Local
-from cobaya.conventions import _sampler, _checkpoint_extension, _covmat_extension
-from cobaya.conventions import _resume_default
+from cobaya.conventions import _sampler, _resume_default, _checkpoint_extension
+from cobaya.conventions import _covmat_extension, _progress_extension
 from cobaya.tools import get_class
 from cobaya.log import LoggedError, HasLogger
 from cobaya.yaml import yaml_load_file

@@ -61,6 +61,7 @@ _input_suffix = "input"
 _updated_suffix = "updated"
 _yaml_extensions = ".yaml", ".yml"
 _checkpoint_extension = ".checkpoint"
+_progress_extension = ".progress"
 _covmat_extension = ".covmat"
 
 # Installation and container definitions

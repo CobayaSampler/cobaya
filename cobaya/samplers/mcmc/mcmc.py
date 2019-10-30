@@ -182,6 +182,9 @@ class mcmc(Sampler):
             cols = ["N", "acceptance_rate", "Rminus1", "Rminus1_cl"]
             self.progress = DataFrame(columns=cols)
             self.i_checkpoint = 1
+            if self.output and not self.resuming:
+                with open(self.progress_filename(), "w") as progress_file:
+                    progress_file.write("# " + " ".join(self.progress.columns) + "\n")
 
     def initial_proposal_covmat(self, slow_params=None):
         """
@@ -773,7 +776,11 @@ class mcmc(Sampler):
                              "d")],  # to avoid overweighting last point of prev. run
                 ["mpi_size", get_mpi_size()]])}}
             yaml_dump_file(checkpoint_filename, checkpoint_info, error_if_exists=False)
-            self.log.debug("Dumped checkpoint info and current covmat.")
+            if not self.progress.empty:
+                with open(self.progress_filename(), "a") as progress_file:
+                    progress_file.write(
+                        self.progress.tail(1).to_string(header=False, index=False) + "\n")
+            self.log.debug("Dumped checkpoint and progress info, and current covmat.")
 
     # Finally: returning the computed products ###########################################
 
