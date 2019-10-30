@@ -17,6 +17,7 @@ from importlib import import_module
 import six
 import numpy as np  # don't delete: necessary for get_external_function
 import scipy.stats as stats  # don't delete: necessary for get_external_function
+import pandas as pd
 from collections import OrderedDict as odict
 from ast import parse
 import warnings
@@ -245,6 +246,28 @@ def read_dnumber(n, d, dtype=float):
     except ValueError:
         raise LoggedError(log, "Could not convert '%r' to a number.", n)
     return n
+
+
+def load_DataFrame(file_name, skip=0, thin=1):
+    """
+    Loads a `pandas.DataFrame` from a text file
+    with column names in the first line, preceded by ``#``.
+
+    Can skip any number of first lines, and thin with some factor.
+    """
+    with open(file_name, "r") as inp:
+        cols = [a.strip() for a in inp.readline().lstrip("#").split()]
+        if 0 < skip < 1:
+            # turn into #lines (need to know total line number)
+            for n, line in enumerate(inp):
+                pass
+            skip = int(skip * (n + 1))
+            inp.seek(0)
+        thin = int(thin)
+        skiprows = lambda i: i < skip or i % thin
+        return pd.read_csv(
+            inp, sep=" ", header=None, names=cols, comment="#", skipinitialspace=True,
+            skiprows=skiprows, index_col=False)
 
 
 def prepare_comment(comment):

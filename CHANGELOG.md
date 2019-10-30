@@ -1,3 +1,10 @@
+## 2.X  – 2019-XX-XX
+
+### Samplers
+
+#### MCMC
+
+- Added progress tracking (incl. acceptance rate), and a plotting tool for it.
 ## 2.0.3 – 2019-09-09
 
 ### Samplers

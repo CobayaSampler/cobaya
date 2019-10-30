@@ -26,6 +26,7 @@ from getdist import MCSamples
 # Local
 from cobaya.conventions import _weight, _chi2, _minuslogpost, _minuslogprior
 from cobaya.conventions import _separator
+from cobaya.tools import load_DataFrame
 from cobaya.log import LoggedError, HasLogger
 
 # Suppress getdist output
@@ -295,20 +296,8 @@ class Collection(HasLogger):
 
     # txt driver
     def _load__txt(self, skip=0, thin=1):
-        with open(self.file_name, "r") as inp:
-            cols = [a.strip() for a in inp.readline().lstrip("#").split()]
-            if 0 < skip < 1:
-                # turn into #lines (need to know total line number)
-                for n, line in enumerate(inp):
-                    pass
-                skip = int(skip * (n + 1))
-                inp.seek(0)
-            thin = int(thin)
-            self.log.debug("Skipping %d rows and thinning with factor %d.", skip, thin)
-            skiprows = lambda i: i < skip or i % thin
-            self.data = pd.read_csv(
-                inp, sep=" ", header=None, names=cols, comment="#", skipinitialspace=True,
-                skiprows=skiprows)
+        self.log.debug("Skipping %d rows and thinning with factor %d.", skip, thin)
+        self.data = load_DataFrame(self.file_name, skip=skip, thin=thin)
         self.log.info("Loaded sample from '%s'", self.file_name)
 
     def _dump__txt(self):

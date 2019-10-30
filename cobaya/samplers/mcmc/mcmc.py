@@ -25,10 +25,11 @@ from cobaya.mpi import get_mpi_size, get_mpi_rank, get_mpi_comm
 from cobaya.mpi import more_than_one_process, am_single_or_primary_process, sync_processes
 from cobaya.collection import Collection, OnePoint
 from cobaya.conventions import _weight, _p_proposal, _p_renames, _sampler, _minuslogpost
-from cobaya.conventions import _line_width, _path_install
+from cobaya.conventions import _line_width, _path_install, _progress_extension
 from cobaya.samplers.mcmc.proposal import BlockedProposer
 from cobaya.log import LoggedError
 from cobaya.tools import get_external_function, read_dnumber, relative_to_int
+from cobaya.tools import load_DataFrame
 from cobaya.yaml import yaml_dump_file
 from cobaya.output import OutputDummy
 
@@ -795,3 +796,55 @@ class mcmc(Sampler):
         if am_single_or_primary_process():
             products.update({"progress": self.progress})
         return products
+
+
+# Plotting tool for chain progress #######################################################
+
+def plot_progress(progress, ax=None, index=None, figure_kwargs={}, legend_kwargs={}):
+    """
+    Plots progress of one or more MCMC runs: evolution of R-1
+    (for means and c.l. intervals) and acceptance rate.
+
+    Takes a ``progress`` instance (actually a ``pandas.DataFrame``,
+    returned as part of the sampler ``products``),
+    a chain ``output`` prefix, or a list of any of those
+    for plotting progress of several chains at once.
+
+    You can use ``figure_kwargs`` and ``legend_kwargs`` to pass arguments to
+    ``matplotlib.pyplot.figure`` and ``matplotlib.pyplot.legend`` respectively.
+
+    Return a subplots axes array. Display with ``matplotlib.pyplot.show()``.
+
+    """
+    if ax is None:
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(nrows=2, sharex=True, **figure_kwargs)
+    if isinstance(progress, DataFrame):
+        pass  # go on to plotting
+    elif isinstance(progress, six.string_types):
+        try:
+            if not progress.endswith(_progress_extension):
+                progress += _progress_extension
+            progress = load_DataFrame(progress)
+            # 1-based
+            progress.index = np.arange(1, len(progress) + 1)
+        except:
+            raise ValueError("Cannot load progress file %r" % progress)
+    elif hasattr(type(progress), "__iter__"):
+        # Assume is a list of progress'es
+        for i, p in enumerate(progress):
+            plot_progress(p, ax=ax, index=i+1)
+        return ax
+    else:
+        raise ValueError("Cannot understand progress argument: %r" % progress)
+    # Plot!
+    tag_pre = "" if index is None else "%d : " % index
+    p = ax[0].semilogy(progress.N, progress.Rminus1,
+                       "o-", label=tag_pre + "means")
+    ax[0].semilogy(progress.N, progress.Rminus1_cl,
+                   "x:", c=p[0].get_color(), label=tag_pre + "bounds")
+    ax[0].set_ylabel(r"$R-1$")
+    ax[0].legend(**legend_kwargs)
+    ax[1].plot(progress.N, progress.acceptance_rate, "o-")
+    ax[1].set_ylabel(r"acc. rate")
+    return ax

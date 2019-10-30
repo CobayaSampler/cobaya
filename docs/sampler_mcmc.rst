@@ -43,6 +43,30 @@ parameters to remove the degeneracy before sampling (linear degeneracies are not
 approximate initial covariance matrix).
 
 
+.. _mcmc_progress:
+
+Progress monitoring – *new in 2.1*
+----------------------------------
+
+When writing to the hard drive, the MCMC sampler produces an additional ``[output_prefix].progress`` file containing the acceptance rate and the Gelman :math:`R-1` diagnostics (for means and confidence level contours) per checkpoint, so that the user can monitor the convergence of the chain. In interactive mode (when running inside a Python script of in the Jupyter notebook), an equivalent ``progress`` table in a ``pandas.DataFrame`` is returned among the ``products``.
+
+The ``mcmc`` modules provides a plotting tool to produce a graphical representation of convergence, see :func:`~samplers.mcmc.plot_progress`. An example plot can be seen below:
+
+.. code:: Python
+
+   from cobaya.samplers.mcmc import plot_progress
+   # Assuming chain saved at `chains/gaussian`
+   plot_progress("chains/gaussian", fig_args={"figsize": (6,4)})
+   import matplotlib.pyplot as plt
+   plt.tight_layout()
+   plt.show()
+
+.. image:: img/mcmc_progress.png
+   :align: center
+
+When writing to the hard drive (i.e. when an ``[output_prefix].progress`` file exists), one can produce these plots even if the sampler is still running.
+
+
 .. _mcmc_callback:
 
 Callback functions
@@ -253,6 +277,11 @@ Sampler class
 
 .. autoclass:: samplers.mcmc.mcmc
    :members:
+
+Progress monitoring
+^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: samplers.mcmc.plot_progress
 
 Proposal
 ^^^^^^^^

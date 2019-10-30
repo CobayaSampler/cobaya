@@ -32,7 +32,10 @@ When called from the shell, **cobaya** generates most commonly the following out
 
 .. note::
 
-   Some samplers produce additional output, e.g. :doc:`PolyChord <sampler_polychord>`. In those cases, the resulting output is translated into **cobaya**'s output format, but the sampler's native output is kept too, usually under sub-folder within the output folder indicated with ``output`` (see the documentation for the particular sampler that you are using).
+   Some samplers produce additional output, e.g.
+
+   - :doc:`MCMC <sampler_mcmc>` produces an additional ``[prefix].progress`` file monitoring the convergence of the chain, that can be inspected or :ref:`plotted <mcmc_progress>`.
+   - :doc:`PolyChord <sampler_polychord>` produces native output, which is translated into **cobaya**'s output format with the usual file names, but also kept under a sub-folder within the output folder.
 
 To specify the folder where the output files will be written and their name, use the option ``output`` at the *top-level* of the input file (i.e. not inside any block, see the example input in the :doc:`example`):
 
