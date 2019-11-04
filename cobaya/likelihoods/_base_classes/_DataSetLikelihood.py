@@ -68,4 +68,4 @@ class _DataSetLikelihood(_InstallableLikelihood):
         self.init_params(ini)
 
     def init_params(self, ini):
-        assert False, "set_file_params should be inherited"
+        assert False, "init_params should be inherited"
