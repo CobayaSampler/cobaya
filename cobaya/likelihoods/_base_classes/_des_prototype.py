@@ -65,6 +65,8 @@ from cobaya.conventions import _c_km_s
 # DES data types
 def_DES_types = ['xip', 'xim', 'gammat', 'wtheta']
 
+_spline = InterpolatedUnivariateSpline
+
 
 def get_def_cuts():
     ranges = {}
@@ -135,21 +137,21 @@ def get_def_cuts():
 optimized = True
 
 try:
-    from numba import jit
+    import numba
 except ImportError:
     optimized = False
 else:
 
-    @jit(nopython=True)
+    @numba.njit("void(float64[::1],float64[::1],float64[::1],float64[::1])")
     def _get_lensing_dots(wq_b, chis, n_chi, dchis):
         for i, chi in enumerate(chis):
             wq_b[i] = np.dot(n_chi[i:], (1 - chi / chis[i:]) * dchis[i:])
 
 
-    @jit(nopython=True)
-    def _limber_PK_terms(powers, ks, ls_cl, chis, dchifac, kmax):
-        for ix, l in enumerate(ls_cl):
-            for i, chi in enumerate(chis):
+    @numba.njit("void(float64[:,::1],float64[:,::1],float64[::1],float64)")
+    def _limber_PK_terms(powers, ks, dchifac, kmax):
+        for ix in range(powers.shape[0]):
+            for i in range(powers.shape[1]):
                 if 1e-4 <= ks[ix, i] < kmax:
                     powers[ix, i] *= dchifac[i]
                 else:
@@ -313,12 +315,12 @@ class _des_prototype(_DataSetLikelihood):
         self.zmid = hdulist['NZ_SOURCE'].data.field('Z_MID')
         self.zbin_sp = []
         for b in range(self.nzbins):
-            self.zbin_sp += [InterpolatedUnivariateSpline(self.zmid, hdulist['NZ_SOURCE'].data.field(b + 3))]
+            self.zbin_sp += [_spline(self.zmid, hdulist['NZ_SOURCE'].data.field(b + 3))]
         zmid_w = hdulist['NZ_LENS'].data.field('Z_MID')
         assert (np.array_equal(zmid_w, self.zmid))
         self.zbin_w_sp = []
         for b in range(self.nwbins):
-            self.zbin_w_sp += [InterpolatedUnivariateSpline(self.zmid, hdulist['NZ_LENS'].data.field(b + 3))]
+            self.zbin_w_sp += [_spline(self.zmid, hdulist['NZ_LENS'].data.field(b + 3))]
         self.zmax = self.zmid[351]  # last non-zero
 
     def initialize_postload(self):
@@ -452,14 +454,14 @@ class _des_prototype(_DataSetLikelihood):
                 qs = chis * wq
             else:
                 qs = 3 * omegam * h2 * (1e5 / c) ** 2 * chis * (1 + self.zs) / 2 * wq
-        ls_cl = np.array(np.hstack((np.arange(2., 100 - 4 / self.acc, 4 / self.acc),
-                                    np.exp(np.linspace(np.log(100.), np.log(self.l_max), int(50 * self.acc))))))
+        ls_cl = np.hstack((np.arange(2., 100 - 4 / self.acc, 4 / self.acc),
+                           np.exp(np.linspace(np.log(100.), np.log(self.l_max), int(50 * self.acc)))))
         # Get the angular power spectra and transform back
         dchifac = dchis / chis ** 2
         if optimized:
             ks = np.outer(ls_cl + 0.5, 1 / chis)
             tmp = PKdelta.P(self.zs, ks, grid=False)
-            _limber_PK_terms(tmp, ks, ls_cl, chis, dchifac, PKdelta.kmax)
+            _limber_PK_terms(tmp, ks, dchifac, PKdelta.kmax)
         else:
             tmp = np.empty((ls_cl.shape[0], chis.shape[0]))
             weight = np.empty(chis.shape)
@@ -473,7 +475,7 @@ class _des_prototype(_DataSetLikelihood):
         if PKWeyl is not None:
             if optimized:
                 tmplens = PKWeyl.P(self.zs, ks, grid=False)
-                _limber_PK_terms(tmplens, ks, ls_cl, chis, dchifac, PKWeyl.kmax)
+                _limber_PK_terms(tmplens, ks, dchifac, PKWeyl.kmax)
             else:
                 tmplens = np.empty((ls_cl.shape[0], chis.shape[0]))
                 for ix, l in enumerate(ls_cl):
@@ -493,36 +495,36 @@ class _des_prototype(_DataSetLikelihood):
             # on what you do about L_min (e.g. 1 vs 2 vs 0 makes a difference).
             if 'xip' in self.used_types or 'xim' in self.used_types:
                 for (f1, f2) in self.bin_pairs[self.data_types.index('xip')]:
-                    cl = InterpolatedUnivariateSpline(ls_cl, np.dot(tmplens, qs[f1] * qs[f2]))
+                    cl = _spline(ls_cl, np.dot(tmplens, qs[f1] * qs[f2]))
                     fac = ((1 + shear_calibration_parameters[f1]) * (1 + shear_calibration_parameters[f2]) / 2 / np.pi)
                     corrs_th_p[f1, f2] = self.hankel0.transform(cl, self.theta_bins_radians, ret_err=False) * fac
                     corrs_th_m[f1, f2] = self.hankel4.transform(cl, self.theta_bins_radians, ret_err=False) * fac
             if 'gammat' in self.used_types:
                 for (f1, f2) in self.bin_pairs[self.data_types.index('gammat')]:
-                    cl = InterpolatedUnivariateSpline(ls_cl, np.dot(tmp, qgal[f1] * qs[f2]))
+                    cl = _spline(ls_cl, np.dot(tmp, qgal[f1] * qs[f2]))
                     fac = (1 + shear_calibration_parameters[f2]) / 2 / np.pi
                     corrs_th_t[f1, f2] = self.hankel2.transform(
                         cl, self.theta_bins_radians, ret_err=False) * fac
             if 'wtheta' in self.used_types:
                 for (f1, f2) in self.bin_pairs[self.data_types.index('wtheta')]:
-                    cl = InterpolatedUnivariateSpline(ls_cl, np.dot(tmp, qgal[f1] * qgal[f2]))
+                    cl = _spline(ls_cl, np.dot(tmp, qgal[f1] * qgal[f2]))
                     corrs_th_w[f1, f2] = self.hankel0.transform(cl, self.theta_bins_radians, ret_err=False) / 2 / np.pi
         else:
             j0s, j2s, j4s = self.bessel_cache
             ls_bessel = self.ls_bessel
             if 'xip' in self.used_types or 'xim' in self.used_types:
                 for (f1, f2) in self.bin_pairs[self.data_types.index('xip')]:
-                    cl = InterpolatedUnivariateSpline(ls_cl, np.dot(tmplens, qs[f1] * qs[f2]))(ls_bessel)
+                    cl = _spline(ls_cl, np.dot(tmplens, qs[f1] * qs[f2]))(ls_bessel)
                     fac = (1 + shear_calibration_parameters[f1]) * (1 + shear_calibration_parameters[f2])
                     corrs_th_p[f1, f2] = np.dot(cl, j0s) * fac
                     corrs_th_m[f1, f2] = np.dot(cl, j4s) * fac
             if 'gammat' in self.used_types:
                 for (f1, f2) in self.bin_pairs[self.data_types.index('gammat')]:
-                    cl = InterpolatedUnivariateSpline(ls_cl, np.dot(tmp, qgal[f1] * qs[f2]))(ls_bessel)
-                    corrs_th_t[f1, f2] = (np.dot(cl, j2s) * (1 + shear_calibration_parameters[f2]))
+                    cl = _spline(ls_cl, np.dot(tmp, qgal[f1] * qs[f2]))(ls_bessel)
+                    corrs_th_t[f1, f2] = np.dot(cl, j2s) * (1 + shear_calibration_parameters[f2])
             if 'wtheta' in self.used_types:
                 for (f1, f2) in self.bin_pairs[self.data_types.index('wtheta')]:
-                    cl = InterpolatedUnivariateSpline(ls_cl, np.dot(tmp, qgal[f1] * qgal[f2]))(ls_bessel)
+                    cl = _spline(ls_cl, np.dot(tmp, qgal[f1] * qgal[f2]))(ls_bessel)
                     corrs_th_w[f1, f2] = np.dot(cl, j0s)
         return [corrs_th_p, corrs_th_m, corrs_th_t, corrs_th_w]
 

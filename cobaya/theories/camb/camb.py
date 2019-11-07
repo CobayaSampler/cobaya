@@ -324,7 +324,7 @@ class camb(_cosmo):
                         kwargs=kwargs)
                 self.needs_perts = True
             elif k == "source_Cl":
-                if not hasattr(self, "sources"):
+                if not getattr(self, "sources", None):
                     self.sources = odict()
                 for source, window in v["sources"].items():
                     # If it was already there, _cosmo.needs() has already checked that
