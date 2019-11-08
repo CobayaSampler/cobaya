@@ -19,7 +19,7 @@ Likelihoods are specified under the `likelihood` block, together with their opti
 Likelihood parameters are specified within the ``params`` block, as explained in :doc:`params_prior`.
 
 **cobaya** comes with a number of *internal* general and cosmological likelihoods.
-You can define your *external* ones too with simple Python functions, as explained below, or as a Python class
+You can also define your *external* likelihoods with simple Python functions, or by implementing a Python class
 defined in an external module.
 
 
@@ -28,7 +28,7 @@ defined in an external module.
 *External* likelihoods: how to quickly define your own functions
 ----------------------------------------------------------------
 
-*External* likelihoods are defined as:
+*External* likelihood functions are defined as:
 
 .. code:: yaml
 
@@ -66,7 +66,7 @@ For an application, check out :doc:`cosmo_external_likelihood`.
 *Internal* likelihoods are defined inside the ``likelihoods`` directory of the source tree. Each has its own directory, named as itself, containing at least *three* files:
 
 - A trivial ``__init__.py`` file containing a single line: ``from [name] import [name]``, where ``name`` is the name of the likelihood, and it's folder.
-- A ``[name].py`` file, containing the particular class definition of the likelihood, inheriting from the :class:`Likelihood` class (see below).
+- A ``[name].py`` file, containing the particular class definition of the likelihood, inheriting from the :class:`.likelihood.Likelihood` class (see below).
 - A ``[name].yaml`` file containing allowed options for the likelihood and the default *experimental model*:
 
   .. code-block:: yaml
@@ -102,7 +102,7 @@ Even if defining likelihoods with simple Python functions is easy, you may want 
 
 Since cobaya was created to be flexible, creating your own likelihood is very easy: simply create a folder with its name under ``likelihoods`` in the source tree and follow the conventions explained above for *internal* likelihoods. Options defined in the ``[name].yaml`` are automatically accessible as attributes of your likelihood class at runtime.
 
-You only need to specify one, or at most four, functions (see the :class:`Likelihood` class documentation below):
+You only need to specify one, or at most four, functions (see the :class:`.likelihood.Likelihood` class documentation below):
 
 - A ``logp`` method taking a dictionary of (sampled) parameter values and returning a log-likelihood.
 - An (optional) ``initialize`` method preparing any computation, importing any necessary code, etc.
@@ -113,6 +113,7 @@ You can use the :doc:`Gaussian mixtures likelihood <likelihood_gaussian_mixture>
 
 .. note:: ``_theory`` and ``_derived`` are reserved parameter names: you cannot use them as options in your defaults file!
 
+For an application, check out :doc:`cosmo_external_likelihood_class`.
 
 Implementing your own *external* likelihood class
 --------------------------------------------------
@@ -142,6 +143,7 @@ Python path. You can also specify an explicit class name and path for the module
          [option 1]: [value 1]
          [...]
 
+For an example class implementation, check out :doc:`cosmo_external_likelihood_class`.
 
 Likelihood module
 -----------------

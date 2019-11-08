@@ -39,6 +39,7 @@ Table of contents
    cosmo_troubleshooting
    cosmo_model
    cosmo_external_likelihood
+   cosmo_external_likelihood_class
 
 .. toctree::
    :caption: Cosmological theory codes

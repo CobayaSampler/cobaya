@@ -1,7 +1,8 @@
 Creating your own cosmological likelihood
 =========================================
 
-Creating your own cosmological likelihood with **cobaya** is super simple:
+Creating your own cosmological likelihood with **cobaya** is super simple. You can either define a likelihood class (see :doc:`cosmo_external_likelihood_class`),
+or here we simply make a likelihood function:
 
 #. Define your likelihood as a function that takes some parameters (experimental errors, foregrounds, etc, but **not theory** parameters) and returns a log-likelihood.
 #. Take note of the observables and other cosmological quantities that you will need to request from the theory code. Look them up in the :func:`~theories._cosmo._cosmo.needs` (clickable!) method documentation. *[If you cannot find the observable that you need, do let us know!]*
