@@ -176,7 +176,7 @@ Real-world examples
 
 The simplest example are the :class:`_H0_prototype` likelihoods, which are just implemented as simple Gaussians.
 
-For an examples of more complex real-world CMB likelihoods, see the `cobaya.likelihoods.bicep_keck_2015` and lensing likelihood shown above (both
+For an examples of more complex real-world CMB likelihoods, see :class:`bicep_keck_2015` and the lensing likelihood shown above (both
 using CMBlikes format), or :class:`_planck_2018_CamSpec_python` for a full Python implementation of the
 multi-frequency Planck likelihood (based from *_DataSetLikelihood*). The :class:`_planck_pliklite_prototype`
 likelihood implements the plik-lite foreground-marginalized likelihood. Both the plik-like and CamSpec likelihoods
