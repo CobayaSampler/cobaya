@@ -28,12 +28,7 @@ _default_length = 80
 def get_bib_module(module, kind):
     cls = get_class(module, kind, None_if_not_found=True)
     if cls:
-        filename = cls.get_bibtex_file()
-        if filename:
-            with open(filename, "r") as f:
-                lines = "".join(f.readlines())
-        else:
-            lines = "[no bibliography information found]"
+        lines = cls.get_bibtex() or "[no bibliography information found]"
     else:
         lines = "[Module '%s.%s' not known.]" % (kind, module)
     return lines + "\n"

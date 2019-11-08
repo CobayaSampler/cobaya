@@ -71,18 +71,18 @@ OrderedLoader.add_constructor(
 
 
 class DefaultsLoader(OrderedLoader):
-    pass
+    current_folder = None
 
 
 def _construct_defaults(loader, node):
-    if current_file_name is None:
+    if loader.current_folder is None:
         raise InputSyntaxError(
             "'!defaults' directive can only be used when loading from a file.")
     try:
         defaults_files = [loader.construct_scalar(node)]
     except yaml.constructor.ConstructorError:
         defaults_files = loader.construct_sequence(node)
-    folder = os.path.dirname(current_file_name)
+    folder = loader.current_folder
     loaded_defaults = odict()
     for dfile in defaults_files:
         dfilename = os.path.abspath(os.path.join(folder, dfile))
@@ -103,10 +103,8 @@ DefaultsLoader.add_constructor('!defaults', _construct_defaults)
 
 def yaml_load(text_stream, file_name=None):
     try:
-        # Use a global to store the file name, to be used to locate defaults files
-        # (a bit hacky, but it works)
-        global current_file_name
-        current_file_name = file_name
+        # set current_folder to store the file name, to be used to locate relative defaults files
+        DefaultsLoader.current_folder = os.path.dirname(file_name) if file_name else None
         return yaml.load(text_stream, DefaultsLoader)
     # Redefining the general exception to give more user-friendly information
     except (yaml.YAMLError, TypeError) as exception:
@@ -138,13 +136,14 @@ def yaml_load(text_stream, file_name=None):
             raise InputSyntaxError(errstr)
 
 
-def yaml_load_file(file_name):
+def yaml_load_file(file_name, yaml_text=None):
     """Wrapper to load a yaml file.
 
     Manages !defaults directive."""
-    with open(file_name, "r") as file:
-        lines = "".join(file.readlines())
-    return yaml_load(lines, file_name=file_name)
+    if yaml_text is None:
+        with open(file_name, "r") as file:
+            yaml_text = "".join(file.readlines())
+    return yaml_load(yaml_text, file_name=file_name)
 
 
 # Custom dumper ##########################################################################

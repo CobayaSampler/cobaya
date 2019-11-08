@@ -17,6 +17,7 @@ from importlib import import_module
 import inspect
 from six import string_types
 from itertools import chain
+import pkg_resources
 import six
 
 # Local
@@ -424,16 +425,24 @@ class HasDefaults(object):
         return None
 
     @classmethod
-    def get_bibtex_file(cls):
-        bib = cls.get_root_file_name() + '.bibtex'
-        if os.path.exists(bib):
+    def get_bibtex(cls):
+        bib = cls.get_associated_file_content('.bibtex')
+        if bib:
             return bib
         for base in cls.__bases__:
             if issubclass(base, HasDefaults):
-                bib = base.get_bibtex_file()
+                bib = base.get_bibtex()
                 if bib:
                     return bib
         return None
+
+    @classmethod
+    def get_associated_file_content(cls, ext):
+        # handle extracting package files when may be inside a zipped package so files not accessible directly
+        try:
+            return pkg_resources.resource_string(cls.__module__, cls.__name__ + ext)
+        except:
+            return None
 
     @classmethod
     def get_defaults(cls, return_yaml=False, yaml_expand_defaults=True):
@@ -454,13 +463,15 @@ class HasDefaults(object):
 
         If keyword `return_yaml` is set to True, it returns literally that,
         whereas if False (default), it returns the corresponding Python dict.
+
+        Note that in external modules installed as zip_safe=True packages files cannot be accessed directly.
+        In this case using !default .yaml includes currently does not work.
         """
-        path_to_defaults = cls.get_yaml_file()
+        yaml_text = cls.get_associated_file_content('.yaml')
         if return_yaml:
             if yaml_expand_defaults:
-                return yaml_dump(yaml_load_file(path_to_defaults))
+                return yaml_dump(yaml_load_file(cls.get_yaml_file(), yaml_text))
             else:
-                with open(path_to_defaults, "r") as filedef:
-                    return "".join(filedef.readlines())
+                return yaml_text
         else:
-            return yaml_load_file(path_to_defaults)
+            return yaml_load_file(cls.get_yaml_file(), yaml_text)

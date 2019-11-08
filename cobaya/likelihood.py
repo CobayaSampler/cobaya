@@ -464,7 +464,7 @@ class LikelihoodCollection(HasLogger):
             p for p, assigned in params_assign["input"].items() if not assigned]
         if unassigned_input:
             raise LoggedError(
-                self.log, "Could not find whom to assign input parameters %r.",
+                self.log, "Could not find anything to use input parameter(s) %r.",
                 unassigned_input)
         # Assign the "chi2__" output parameters
         for p in params_assign["output"]:

@@ -123,7 +123,7 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True, cla
         if allow_external and not module_path:
             try:
                 return getattr(import_module(name), class_name)
-            except:
+            except Exception as e:
                 pass
         if ((exc_info[0] is ModuleNotFoundError and
              str(exc_info[1]).rstrip("'").endswith(name))):
