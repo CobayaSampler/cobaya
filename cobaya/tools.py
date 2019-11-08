@@ -93,7 +93,7 @@ def get_kind(name, fail_if_not_found=True):
             return None
 
 
-def get_class(name, kind=None, None_if_not_found=False):
+def get_class(name, kind=None, None_if_not_found=False, allow_external=True, class_name=None, module_path=None):
     """
     Retrieves the requested likelihood (default) or theory class.
 
@@ -102,26 +102,41 @@ def get_class(name, kind=None, None_if_not_found=False):
     Raises ``ImportError`` if class not found in the appropriate place in the source tree.
 
     If 'kind=None' is not given, tries to guess it if the module name is unique (slow!).
+
+    If allow_external=True, allows loading explicit module names from anywhere on path.
     """
     if kind is None:
         kind = get_kind(name)
-    class_name = name.split('.')[-1]
+    class_name = class_name or name.split('.')[-1]
     class_folder = get_class_module(name, kind)
     try:
-        return getattr(import_module(class_folder, package=_package), class_name)
+        if module_path:
+            sys.path.insert(0, os.path.normpath(module_path))
+            try:
+                return getattr(import_module(name), class_name)
+            finally:
+                sys.path.pop(0)
+        else:
+            return getattr(import_module(class_folder, package=_package), class_name)
     except:
-        if ((sys.exc_info()[0] is ModuleNotFoundError and
-             str(sys.exc_info()[1]).rstrip("'").endswith(name))):
+        exc_info = sys.exc_info()
+        if allow_external and not module_path:
+            try:
+                return getattr(import_module(name), class_name)
+            except:
+                pass
+        if ((exc_info[0] is ModuleNotFoundError and
+             str(exc_info[1]).rstrip("'").endswith(name))):
             if None_if_not_found:
                 return None
             raise LoggedError(
                 log, "%s '%s' not found. Maybe you meant one of the following "
-                "(capitalization is important!): %s",
+                     "(capitalization is important!): %s",
                 kind.capitalize(), name,
                 fuzzy_match(name, get_available_modules(kind), n=3))
         else:
             log.error("There was a problem when importing %s '%s':", kind, name)
-            raise sys.exc_info()[1]
+            raise exc_info[1]
 
 
 def get_available_modules(kind):
@@ -131,7 +146,7 @@ def get_available_modules(kind):
     folders = sorted([
         f for f in os.listdir(os.path.join(os.path.dirname(__file__), subfolders[kind]))
         if (not f.startswith("_") and not f.startswith(".") and
-        os.path.isdir(os.path.join(os.path.dirname(__file__), subfolders[kind], f)))])
+            os.path.isdir(os.path.join(os.path.dirname(__file__), subfolders[kind], f)))])
     with_nested = []
     for f in folders:
         dotpy_files = sorted([
@@ -150,7 +165,7 @@ def get_available_modules(kind):
             with_nested += [f]
         else:
             dotpy_files = [fi for fi in dotpy_files if not fi.startswith("_")]
-            with_nested += [f + "." +  os.path.splitext(dpyf)[0] for dpyf in dotpy_files
+            with_nested += [f + "." + os.path.splitext(dpyf)[0] for dpyf in dotpy_files
                             if os.path.splitext(dpyf)[0] != f]
     return with_nested
 
