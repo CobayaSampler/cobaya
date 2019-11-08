@@ -334,6 +334,8 @@ class camb(_cosmo):
                 self.limber = self.limber or v.get("limber", False)
                 self.non_linear_pk = self.non_linear_pk or v.get("non_linear", False)
                 self.non_linear_lens = self.non_linear_lens or v.get("non_linear", False)
+                if "lmax" in v:
+                    self.extra_args["lmax"] = max(v["lmax"], self.extra_args.get("lmax", 0))
                 self.needs_perts = True
                 # Create collector
                 self.collectors[k] = collector(method="CAMBdata.get_source_cls_dict")
@@ -488,8 +490,7 @@ class camb(_cosmo):
             # Prepare derived parameters
             if _derived == {}:
                 _derived.update(self._get_derived_all(intermediates))
-                self.states[i_state]["derived"] = odict(
-                    [[p, _derived[p]] for p in self.output_params])
+                self.states[i_state]["derived"] = odict([[p, _derived[p]] for p in self.output_params])
             # Prepare necessary extra derived parameters
             self.states[i_state]["derived_extra"] = {
                 p: self._get_derived(p, intermediates) for p in self.derived_extra}
