@@ -1,4 +1,13 @@
-def test_sources():
+from __future__ import absolute_import
+from .common import process_modules_path
+import sys
+import os
+import pytest
+
+
+def test_sources(modules):
+    sys.path.insert(0, os.path.join(process_modules_path(modules), "code", "CAMB"))
+
     import camb
     from camb.sources import GaussianSourceWindow
 
@@ -23,7 +32,8 @@ def test_sources():
     info = {
         'params': params,
         'likelihood': {'test_likelihood': test_likelihood},
-        'theory': {'camb': {'stop_at_error': True}}}
+        'theory': {'camb': {'stop_at_error': True}}
+    }
 
     from cobaya.model import get_model
     model = get_model(info)
