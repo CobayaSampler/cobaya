@@ -18,13 +18,15 @@ Likelihoods are specified under the `likelihood` block, together with their opti
 
 Likelihood parameters are specified within the ``params`` block, as explained in :doc:`params_prior`.
 
-**cobaya** comes with a number of *internal* general and cosmological likelihoods. You can define your *external* ones too with simple Python functions, as explained below.
+**cobaya** comes with a number of *internal* general and cosmological likelihoods.
+You can define your *external* ones too with simple Python functions, as explained below, or as a Python class
+defined in an external module.
 
 
 .. _likelihood_external:
 
-*External* likelihoods: how to quickly define your own
-------------------------------------------------------
+*External* likelihoods: how to quickly define your own functions
+----------------------------------------------------------------
 
 *External* likelihoods are defined as:
 
@@ -110,6 +112,35 @@ You only need to specify one, or at most four, functions (see the :class:`Likeli
 You can use the :doc:`Gaussian mixtures likelihood <likelihood_gaussian_mixture>` as a guide. If your likelihood needs a cosmological code, just define one in the input file and you can automatically access it as an attribute of your class: ``[your_likelihood].theory``. Use the :doc:`Planck likelihood <likelihood_planck>` as a guide to create your own cosmological likelihood.
 
 .. note:: ``_theory`` and ``_derived`` are reserved parameter names: you cannot use them as options in your defaults file!
+
+
+Implementing your own *external* likelihood class
+--------------------------------------------------
+
+Instead of including the likelihood within the standard Cobaya likelihood modules, you may wish to make an external
+package that can be redistributed easily. To do this you make a module containing a class defined exactly the same way
+as for internal likelihoods above (inheriting from :class:`Likelihood` as documentated below). By default the class is
+assumed to have the same name as the containing file, e.g. if you have a package called *mycodes*, containing
+a likelihood in *mycodes.mylike* you can use
+
+  .. code-block:: yaml
+
+     likelihood:
+       mycodes.mylike:
+         [option 1]: [value 1]
+         [...]
+
+This is assuming that *mycodes.mylike* contains a likelihood class called *mylike* and that the *mycodes* is on your
+Python path. You can also specify an explicit class name and path for the module, e.g.
+
+  .. code-block:: yaml
+
+     likelihood:
+       mycodes.mylike:
+         class_name: MyLikelihood
+         python_path: /path/to/mycodes_dir
+         [option 1]: [value 1]
+         [...]
 
 
 Likelihood module

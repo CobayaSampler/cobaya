@@ -43,6 +43,7 @@ _resume_default = False
 _timing = "timing"
 _force = "force"
 _module_path = "python_path"
+_module_class_name = "class_name"
 _kinds = [_sampler, _theory, _likelihood]
 
 # Separator for fields in parameter names and files

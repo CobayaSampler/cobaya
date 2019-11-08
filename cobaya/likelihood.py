@@ -50,7 +50,7 @@ class Likelihood(HasLogger, HasDefaults):
     # Generic initialization -- do not touch
     def __init__(self, info, modules=None, timing=None):
         self.name = getattr(
-            self.__class__, "get_module_name", lambda : self.__class__.__name__)()
+            self.__class__, "get_module_name", lambda: self.__class__.__name__)()
         self.set_logger()
         self.log = logging.getLogger(self.name)
         self.path_install = modules
@@ -152,17 +152,17 @@ class Likelihood(HasLogger, HasDefaults):
                     # if too different from second one (maybe check difference in log10 > 1)
                     # In that case, take into account that #timed_evals is now (self.n - 1)
                     if self.n == 2:
-                        log10diff = np.log10(self.time_avg/delta_time)
+                        log10diff = np.log10(self.time_avg / delta_time)
                         if log10diff > 1:
                             self.log.warning(
                                 "It seems the first call has done some caching (difference "
                                 " of a factor %g). Average timing will not be reliable "
-                                "unless many evaluations are carried out.", 10**log10diff)
+                                "unless many evaluations are carried out.", 10 ** log10diff)
                     self.time_avg = (delta_time + self.time_avg * (self.n - 1)) / self.n
                     self.time_sqsum += delta_time ** 2
                     if self.n > 1:
                         self.time_std = np.sqrt(
-                            (self.time_sqsum - self.n * self.time_avg**2)/(self.n-1))
+                            (self.time_sqsum - self.n * self.time_avg ** 2) / (self.n - 1))
                     self.log.debug("Average 'logp' evaluation time: %g s", self.time_avg)
             except Exception as e:
                 if self.stop_at_error:
@@ -296,7 +296,8 @@ class LikelihoodCollection(HasLogger):
                 self._likelihoods[name] = LikelihoodExternalFunction(
                     name, info, _theory=getattr(self, _theory, None), timing=timing)
             else:
-                like_class = get_class(name, kind=_likelihood)
+                like_class = get_class(name, kind=_likelihood, class_name=info.pop('class_name', None),
+                                       module_path=info.pop('module_path', None))
                 self._likelihoods[name] = like_class(info, modules=modules, timing=timing)
         # Assign input/output parameters
         self._assign_params(parameterization, info_likelihood, info_theory)

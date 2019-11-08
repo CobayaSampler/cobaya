@@ -182,6 +182,9 @@ Now we can start sampling. To do that, you can save all the definitions above in
    from cobaya.run import run
    run(info)
 
+.. note::
+
+    For the moment you must make a new info dictionary to call cobaya.run, you cannot reuse the same info previously used to call get_model for testing.
 
 Alternatively, specially if you are planning to share your likelihood, you can put its definition (including the fiducial spectrum, maybe saved as a table separately) in a separate file, say ``my_like_file.py``. In this case, to use it, use ``import_module([your_file_without_extension]).your_function``, here
 

@@ -24,7 +24,7 @@ from cobaya.conventions import _package, _products_path, _path_install, _resume,
 from cobaya.conventions import _output_prefix, _debug, _debug_file
 from cobaya.conventions import _params, _prior, _theory, _likelihood, _sampler, _external
 from cobaya.conventions import _p_label, _p_derived, _p_ref, _p_drop, _p_value, _p_renames
-from cobaya.conventions import _p_proposal, _input_params, _output_params, _module_path
+from cobaya.conventions import _p_proposal, _input_params, _output_params, _module_path, _module_class_name
 from cobaya.conventions import _yaml_extensions
 from cobaya.tools import get_class_module, recursive_update, recursive_odict_to_dict
 from cobaya.tools import fuzzy_match, deepcopy_where_possible, get_class, get_kind
@@ -91,14 +91,15 @@ def get_used_modules(*infos):
 
 
 def get_default_info(module, kind=None, fail_if_not_found=False,
-                     return_yaml=False, yaml_expand_defaults=True, module_path=None):
+                     return_yaml=False, yaml_expand_defaults=True, module_path=None, class_name=None):
     """
     Get default info for a module.
     """
     try:
         if kind is None:
             kind = get_kind(module)
-        cls = get_class(module, kind, None_if_not_found=not fail_if_not_found, module_path=module_path)
+        cls = get_class(module, kind, None_if_not_found=not fail_if_not_found,
+                        module_path=module_path, class_name=class_name)
         if cls:
             default_module_info = cls.get_defaults(
                 return_yaml=return_yaml, yaml_expand_defaults=yaml_expand_defaults)
@@ -146,13 +147,14 @@ def update_info(info):
             updated_info[block][module] = deepcopy(getattr(
                 import_module(_package + "." + block, package=_package),
                 "class_options", {}))
-            default_module_info = get_default_info(module, block,
-                                                   module_path=input_info[block][module].get(_module_path, None))
+            module_path = input_info[block][module].get(_module_path, None)
+            class_name = input_info[block][module].get(_module_class_name, None)
+            default_module_info = get_default_info(module, block, module_path=module_path, class_name=class_name)
             # TODO: check - get_default_info was ignoring this extra arg: input_info[block][module])
             updated_info[block][module].update(default_module_info[block][module] or {})
             # Update default options with input info
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
-            ignore = set([_external, _p_renames, _input_params, _output_params, _module_path])
+            ignore = set([_external, _p_renames, _input_params, _output_params, _module_path, _module_class_name])
             options_not_recognized = (set(input_info[block][module])
                                       .difference(ignore)
                                       .difference(set(updated_info[block][module])))
