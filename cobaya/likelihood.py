@@ -30,7 +30,7 @@ else:
 # Local
 from cobaya.conventions import _external, _theory, _params, _overhead_per_param
 from cobaya.conventions import _timing, _p_renames, _chi2, _separator, _likelihood
-from cobaya.conventions import _input_params, _output_params
+from cobaya.conventions import _input_params, _output_params, _module_class_name, _module_path
 from cobaya.conventions import _input_params_prefix, _output_params_prefix
 from cobaya.tools import get_class, get_external_function, getargspec
 from cobaya.tools import are_different_params_lists
@@ -296,8 +296,8 @@ class LikelihoodCollection(HasLogger):
                 self._likelihoods[name] = LikelihoodExternalFunction(
                     name, info, _theory=getattr(self, _theory, None), timing=timing)
             else:
-                like_class = get_class(name, kind=_likelihood, class_name=info.pop('class_name', None),
-                                       module_path=info.pop('module_path', None))
+                like_class = get_class(name, kind=_likelihood, class_name=info.pop(_module_class_name, None),
+                                       module_path=info.pop(_module_path, None))
                 self._likelihoods[name] = like_class(info, modules=modules, timing=timing)
         # Assign input/output parameters
         self._assign_params(parameterization, info_likelihood, info_theory)
