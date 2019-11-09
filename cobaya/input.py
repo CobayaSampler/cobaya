@@ -396,6 +396,8 @@ class HasDefaults(object):
 
     @classmethod
     def get_qualified_names(cls):
+        if cls.__module__ == '__main__':
+            return [cls.__name__]
         parts = cls.__module__.split('.')
         if parts[-1] == cls.__name__:
             return ['.'.join(parts[i:]) for i in range(len(parts))]

@@ -65,6 +65,8 @@ def test_planck_2015_l2_camb(modules):
     lik_name = "planck_2015_lensing_cmblikes"
     clik_name = "planck_2015_lensing"
     info_likelihood = {lik_name: lik_info_lensing[clik_name]}
+    info_likelihood ={lik_name: {'dataset_file':r'C:\Work\Dist\git\cosmomcplanck\data\planck_lensing\smica_g30_ftl_full_pp.dataset'}}
+
     chi2_lensing_cmblikes = deepcopy(chi2_lensing)
     chi2_lensing_cmblikes[lik_name] = chi2_lensing[clik_name]
     info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}

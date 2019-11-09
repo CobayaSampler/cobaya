@@ -48,9 +48,14 @@ class Likelihood(HasLogger, HasDefaults):
     """Likelihood class prototype."""
 
     # Generic initialization -- do not touch
-    def __init__(self, info, modules=None, timing=None):
-        self.name = getattr(
-            self.__class__, "get_module_name", lambda: self.__class__.__name__)()
+    def __init__(self, info={}, modules=None, timing=None, standalone=True, name=None):
+        self.name = name or self.get_module_name()
+        if standalone:
+            default_info = self.get_defaults()
+            if _likelihood in default_info:
+                default_info = default_info[_likelihood][self.name]
+            default_info.update(info)
+            info = default_info
         self.set_logger()
         self.log = logging.getLogger(self.name)
         self.path_install = modules
@@ -68,13 +73,15 @@ class Likelihood(HasLogger, HasDefaults):
         self.time_avg = 0
         self.time_sqsum = 0
         self.time_std = np.inf
+        if standalone:
+            self.initialize()
 
     # Optional
     def initialize(self):
         """
         Initializes the specifics of this likelihood.
         Note that at this point we know `the `self.input_params``
-        and the ``self.output_params``.
+        and the ``self.output_params`` if run from Cobaya.
         """
         pass
 
@@ -305,7 +312,7 @@ class LikelihoodCollection(HasLogger):
             else:
                 like_class = get_class(name, kind=_likelihood, class_name=info.pop(_module_class_name, None),
                                        module_path=info.pop(_module_path, None))
-                self._likelihoods[name] = like_class(info, modules=modules, timing=timing)
+                self._likelihoods[name] = like_class(info, modules=modules, timing=timing, standalone=False)
         # Assign input/output parameters
         self._assign_params(parameterization, info_likelihood, info_theory)
         # Do the user-defined post-initialisation, and assign the theory code
