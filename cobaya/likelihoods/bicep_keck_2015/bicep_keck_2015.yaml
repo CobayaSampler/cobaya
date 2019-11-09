@@ -32,7 +32,6 @@ likelihood:
       maps_use: [BK15_95_B, BK15_150_B, BK15_220_B, W023_B, P030_B, W033_B, P044_B, P070_B, P100_B, P143_B, P217_B, P353_B]
       use_min: 1
       use_max: 9
-    field_names: [T, E, B, P]
     map_separator: x
     # Actually computed l_max (takes into account the lensing window function)
     l_max: 2700

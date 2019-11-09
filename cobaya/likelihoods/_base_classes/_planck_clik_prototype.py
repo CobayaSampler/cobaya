@@ -113,7 +113,7 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
         length = (len(self.l_maxs) if self.lensing else len(self.clik.get_has_cl()))
         self.vector = np.zeros(np.sum(self.l_maxs) + length + len(self.expected_params))
 
-    def add_theory(self):
+    def get_requirements(self):
         # State requisites to the theory code
         requested_cls = ["tt", "ee", "bb", "te", "tb", "eb"]
         if self.lensing:
@@ -123,7 +123,7 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
             has_cl = self.clik.get_has_cl()
         self.requested_cls = [cl for cl, i in zip(requested_cls, has_cl) if int(i)]
         self.l_maxs_cls = [lmax for lmax, i in zip(self.l_maxs, has_cl) if int(i)]
-        self.theory.needs(Cl=dict(zip(self.requested_cls, self.l_maxs_cls)))
+        return {'Cl': dict(zip(self.requested_cls, self.l_maxs_cls))}
 
     def logp(self, **params_values):
         # get Cl's from the theory code

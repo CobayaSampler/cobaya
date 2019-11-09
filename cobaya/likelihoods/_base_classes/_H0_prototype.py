@@ -55,8 +55,8 @@ class _H0_prototype(Likelihood):
     def initialize(self):
         self.norm = norm(loc=self.H0, scale=self.H0_std)
 
-    def add_theory(self):
-        self.theory.needs(H0=None)
+    def get_requirements(self):
+        return {'H0': None}
 
     def logp(self, **params_values):
         H0_theory = self.theory.get_param("H0")

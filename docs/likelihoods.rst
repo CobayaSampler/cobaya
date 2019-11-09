@@ -106,7 +106,7 @@ You only need to specify one, or at most four, functions (see the :class:`.likel
 
 - A ``logp`` method taking a dictionary of (sampled) parameter values and returning a log-likelihood.
 - An (optional) ``initialize`` method preparing any computation, importing any necessary code, etc.
-- An (optional) ``add_theory`` method specifying the requests from the theory code, if it applies.
+- An (optional) ``get_requirements`` method returning dictionary of requests from the theory code, if needed.
 - An (optional) ``close`` method doing whatever needs to be done at the end of the sampling (e.g. releasing memory).
 
 You can use the :doc:`Gaussian mixtures likelihood <likelihood_gaussian_mixture>` as a guide. If your likelihood needs a cosmological code, just define one in the input file and you can automatically access it as an attribute of your class: ``[your_likelihood].theory``. Use the :doc:`Planck likelihood <likelihood_planck>` as a guide to create your own cosmological likelihood.
@@ -144,6 +144,7 @@ Python path. You can also specify an explicit class name and path for the module
          [...]
 
 For an example class implementation, check out :doc:`cosmo_external_likelihood_class`.
+There is also also a full example `external likelihood package <https://github.com/CobayaSampler/example_external_likelihood>`_.
 
 Likelihood module
 -----------------

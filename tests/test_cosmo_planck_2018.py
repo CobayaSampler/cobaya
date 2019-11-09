@@ -10,6 +10,7 @@ from cobaya.cosmo_input import cmb_precision
 # Generating plots in Travis
 try:
     import matplotlib
+
     matplotlib.use('agg')
 except:
     pass
@@ -34,6 +35,7 @@ def test_planck_2018_t_camb(modules):
     best_fit_derived = derived_lowl_highTT_lensing
     body_of_test(modules, best_fit, info_likelihood, info_theory,
                  chi2_lowl_highTT_lensing, best_fit_derived)
+
 
 def test_planck_2018_p_camb(modules):
     best_fit = deepcopy(params_lowTE_highTTTEEE_lensingcmblikes)
@@ -250,7 +252,6 @@ derived_lowl_highTT_lensing = {
     "thetaeq": [0.8255, 0.011],
     "thetarseq": [0.4557, 0.0057]}
 
-
 # Best fit polarization ##################################################################
 
 lik_info_lowTE_highTTTEEE_lensingcmblikes = {
@@ -323,7 +324,6 @@ derived_lowTE_highTTTEEE_lensingcmblikes = {
     "keq": [0.010393, 0.000081],
     "thetaeq": [0.81281, 0.0050],
     "thetarseq": [0.44912, 0.0026]}
-
 
 # Best fit CMB-marged lensing ############################################################
 

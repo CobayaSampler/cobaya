@@ -219,7 +219,7 @@ class _bao_prototype(_InstallableLikelihood):
             self.logpdf = lambda x: (lambda x_: -0.5 * x_.dot(self.invcov).dot(x_))(
                 x - self.data["value"].values)
 
-    def add_theory(self):
+    def get_requirements(self):
         if self.theory.__class__ == "classy":
             raise LoggedError(
                 self.log,
@@ -263,7 +263,7 @@ class _bao_prototype(_InstallableLikelihood):
         if self.has_type:
             for obs in self.data["observable"].unique():
                 requisites.update(theory_reqs[obs])
-        self.theory.needs(**requisites)
+        return requisites
 
     def theory_fun(self, z, observable):
         # Functions to get the corresponding theoretical prediction:

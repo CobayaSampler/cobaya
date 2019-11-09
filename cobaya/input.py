@@ -413,9 +413,12 @@ class HasDefaults(object):
             return qualified_names[0]
 
     @classmethod
+    def get_class_path(cls):
+        return os.path.dirname(inspect.getfile(cls))
+
+    @classmethod
     def get_root_file_name(cls):
-        folder = os.path.dirname(inspect.getfile(cls))
-        return os.path.join(folder, cls.__name__)
+        return os.path.join(cls.get_class_path(), cls.__name__)
 
     @classmethod
     def get_yaml_file(cls):

@@ -25,14 +25,13 @@ A minimal framework would look like this
 
             self.data = np.loadtxt(self.cl_file)
 
-        def add_theory(self):
+        def get_requirements(self):
             """
-             Specifying which quantities calculated by a theory code are needed
-             by calling self.theory.needs.
+             return dictionary specifying quantities calculated by a theory code are needed
 
              e.g. here we need C_L^{tt} to lmax=2500 and the H0 value
             """
-            self.theory.needs(Cl={'tt': 2500}, H0=None)
+            return {'Cl': {'tt': 2500}, 'H0': None}
 
         def logp(self, **params_values):
             """
@@ -46,8 +45,7 @@ A minimal framework would look like this
             my_foreground_amp = params_values['my_foreground_amp']
 
             chi2 = ...
-            return -chi2/2
-
+            return -chi2 / 2
 
 You can also implement an optional ``close`` method doing whatever needs to be done at the end of the sampling (e.g. releasing memory).
 
@@ -83,6 +81,14 @@ If it is more than a few milliseconds consider recoding more carefully or using 
 
 Many real-world examples are available in cobaya.likelihoods, which you may be able to adapt as needed for more
 complex cases, and a number of base class are pre-defined that you may find useful to inherit from instead of Likelihood directly.
+
+There is no fundamental difference between internal likelihood classes (in the Cobaya likelihoods pacakge) or
+distributed externally. However, if you are distributing externally you may also wish to provide a way to
+calculate the liklihood from pre-computed theory inputs as well as via Cobaya. This is easily done by extracting
+the theory results in ``logp`` and them passing them and the nuisance parametrss to a separate function,
+e.g. `log_likelihood` where the calculation is actually done. Your log_likelihood function can then be called outside
+Cobaya to calculate the likelihood for any externally provided theory results (as well as being directly usable in
+Cobaya via ``logp``).
 
 _InstallableLikelihood
 -------------------------
@@ -153,8 +159,7 @@ For example *planck_2018_lensing.native* (which is installed as an internal like
         dataset_file: lensing/2018/smicadx12_Dec5_ftl_mv2_ndclpp_p_teb_consext8.dataset
         # Overriding of .dataset parameters
         dataset_params:
-          # field: value
-        field_names: [T, E, B, P]
+
         # Overriding of the maximum ell computed
         l_max:
         # Aliases for automatic covariance matrix

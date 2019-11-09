@@ -239,9 +239,9 @@ class _sn_prototype(_DataSetLikelihood):
         elif not self.alphabeta_covmat:
             self.inverse_covariance_matrix()
 
-    def add_theory(self):
+    def get_requirements(self):
         # State requisites to the theory code
-        self.theory.needs(**{"angular_diameter_distance": {"z": self.zcmb}})
+        return {"angular_diameter_distance": {"z": self.zcmb}}
 
     def _read_covmat(self, filename):
         cov = np.loadtxt(filename)

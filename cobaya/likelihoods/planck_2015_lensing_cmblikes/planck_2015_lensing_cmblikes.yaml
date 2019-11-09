@@ -7,8 +7,6 @@ likelihood:
     dataset_file: lensing/2015/smica_g30_ftl_full_pp.dataset
     # Overriding of .dataset parameters
     dataset_params:
-      # field: value
-    field_names: [T, E, B, P]
     # Overriding of the maximum ell computed
     l_max:
     # Aliases for automatic covariance matrix

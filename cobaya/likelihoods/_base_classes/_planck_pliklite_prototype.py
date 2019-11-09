@@ -18,7 +18,6 @@ import numpy as np
 # Local
 from cobaya.likelihoods._base_classes import _DataSetLikelihood
 
-
 cl_names = ['tt', 'te', 'ee']
 
 
@@ -105,10 +104,10 @@ class _planck_pliklite_prototype(_DataSetLikelihood):
         self.cov = cov[np.ix_(self.used_indices, self.used_indices)]
         self.invcov = np.linalg.inv(self.cov)
 
-    def add_theory(self):
+    def get_requirements(self):
         # State requisites to the theory code
         self.l_max = self.lmax
-        self.theory.needs(**{"Cl": {cl: self.l_max for cl in self.use_cl}})
+        return {"Cl": {cl: self.l_max for cl in self.use_cl}}
 
     def binning_matrix(self, ix=0):
         # not used by main likelihood code
@@ -132,8 +131,9 @@ class _planck_pliklite_prototype(_DataSetLikelihood):
         return self.fast_chi_squared(self.invcov, diff)
 
     def chi_squared(self, c_l_arr, calPlanck=1):
-        """
+        r"""
         Get chi squared from CL array from file
+
         :param c_l_arr: file of L and L(L+1)CL/2\pi values for C_TT, C_TE, C_EE
         :param calPlanck: calibration parameter
         :return: chi-squared

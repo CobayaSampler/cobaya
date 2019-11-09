@@ -26,7 +26,6 @@ import scipy
 # Local
 from cobaya.likelihoods._base_classes import _DataSetLikelihood
 
-
 use_cache = True
 
 
@@ -49,7 +48,7 @@ def range_to_ells(use_range):
 class _planck_2018_CamSpec_python(_DataSetLikelihood):
     install_options = {
         "download_url":
-        r"https://cdn.cosmologist.info/cosmobox/test2019_kaml/CamSpec2018.zip",
+            r"https://cdn.cosmologist.info/cosmobox/test2019_kaml/CamSpec2018.zip",
         "data_path": "planck_2018_CamSpec_native"}
 
     def read_normalized(self, filename, pivot=None):
@@ -251,14 +250,14 @@ class _planck_2018_CamSpec_python(_DataSetLikelihood):
         Cls = self.theory.get_Cl(ell_factor=True)
         return -0.5 * self.chi_squared(Cls.get('tt'), Cls.get('te'), Cls.get('ee'), data_params)
 
-    def add_theory(self):
+    def get_requirements(self):
         # State requisites to the theory code
         l_max = np.max(self.lmax)
         used = []
         if np.any(self.cl_used[:4]): used += ['tt']
         if 'TE' in self.use_cl: used += ['te']
         if 'EE' in self.use_cl: used += ['ee']
-        self.theory.needs(**{"Cl": {cl: l_max for cl in used}})
+        return {"Cl": {cl: l_max for cl in used}}
 
     def coadded_TT(self, data_params=None, foregrounds=None, cals=None,
                    want_cov=True, data_vector=None):

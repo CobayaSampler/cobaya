@@ -20,12 +20,12 @@ from scipy.linalg import sqrtm
 
 # Local
 from cobaya.log import LoggedError
-from cobaya.likelihoods._base_classes import _fast_chi_square, _DataSetLikelihood
+from cobaya.likelihoods._base_classes import _DataSetLikelihood
 
 
 class _cmblikes_prototype(_DataSetLikelihood):
 
-    def add_theory(self):
+    def get_requirements(self):
         # State requisites to the theory code
         requested_cls = [self.field_names[i] + self.field_names[j]
                          for i, j in zip(*np.where(self.cl_lmax != 0))]
@@ -38,7 +38,7 @@ class _cmblikes_prototype(_DataSetLikelihood):
                           "The likelihood value will probably not be correct. "
                           "Make sure to make 'l_max'>=%d", requested_l_max)
         self.l_max = max(requested_l_max, getattr(self, "l_max", 0) or 0)
-        self.theory.needs(**{"Cl": {cl: self.l_max for cl in requested_cls}})
+        return {"Cl": {cl: self.l_max for cl in requested_cls}}
 
     def typeIndex(self, field):
         return self.field_names.index(field)
@@ -106,7 +106,7 @@ class _cmblikes_prototype(_DataSetLikelihood):
         else:
             return name1 + name2
 
-    def GetColsFromOrder(self, order):
+    def get_cols_from_order(self, order):
         # Converts string Order = TT TE EE XY... or AAAxBBB AAAxCCC BBxCC
         # into indices into array of power spectra (and -1 if not present)
         cols = np.empty(self.ncl, dtype=int)
@@ -120,7 +120,7 @@ class _cmblikes_prototype(_DataSetLikelihood):
                     name = self.Cl_used_i_j_name([j, i])
                 if name in names:
                     if cols[ix] != -1:
-                        raise LoggedError(self.log, 'GetColsFromOrder: duplicate CL type')
+                        raise LoggedError(self.log, 'get_cols_from_order: duplicate CL type')
                     cols[ix] = names.index(name)
                 ix += 1
         return cols
@@ -140,18 +140,18 @@ class _cmblikes_prototype(_DataSetLikelihood):
             X[ix:ix + i + 1] = M[i, 0:i + 1]
             ix += i + 1
 
-    def ReadClArr(self, ini, file_stem, return_full=False):
+    def read_cl_array(self, ini, file_stem, return_full=False):
         # read file of CL or bins (indexed by L)
         filename = ini.relativeFileName(file_stem + '_file')
         cl = np.zeros((self.ncl, self.nbins_used))
         order = ini.string(file_stem + '_order', '')
         if not order:
-            incols = lastTopComment(filename)
+            incols = last_top_comment(filename)
             if not incols:
                 raise LoggedError(self.log, 'No column order given for ' + filename)
         else:
             incols = 'L ' + order
-        cols = self.GetColsFromOrder(incols)
+        cols = self.get_cols_from_order(incols)
         data = np.loadtxt(filename)
         Ls = data[:, 0].astype(int)
         if self.binned:
@@ -170,7 +170,7 @@ class _cmblikes_prototype(_DataSetLikelihood):
         else:
             return cl
 
-    def readBinWindows(self, ini, file_stem):
+    def read_bin_windows(self, ini, file_stem):
         bins = BinWindows(self.pcl_lmin, self.pcl_lmax, self.nbins_used)
         in_cl = ini.split(file_stem + '_in_order')
         out_cl = ini.split(file_stem + '_out_order', in_cl)
@@ -185,13 +185,13 @@ class _cmblikes_prototype(_DataSetLikelihood):
         windows = ini.relativeFileName(file_stem + '_files')
         for b in range(self.nbins_used):
             window = np.loadtxt(windows % (b + 1 + self.bin_min))
-            Err = False
+            err = False
             for i, L in enumerate(window[:, 0].astype(int)):
                 if self.pcl_lmin <= L <= self.pcl_lmax:
                     bins.binning_matrix[:, b, L - self.pcl_lmin] = window[i, 1:]
                 else:
-                    Err = Err or any(window[i, 1:] != 0)
-            if Err:
+                    err = err or any(window[i, 1:] != 0)
+            if err:
                 self.log.warning('%s %u outside pcl_lmin-cl_max range: %s' %
                                  (file_stem, b, windows % (b + 1)))
         if ini.hasKey(file_stem + '_fix_cl_file'):
@@ -216,6 +216,7 @@ class _cmblikes_prototype(_DataSetLikelihood):
         return cls
 
     def init_params(self, ini):
+        self.field_names = getattr(self, 'field_names', ['T', 'E', 'B', 'P'])
         self.tot_theory_fields = len(self.field_names)
         self.map_names = ini.split('map_names', default=[])
         self.has_map_names = len(self.map_names)
@@ -296,8 +297,8 @@ class _cmblikes_prototype(_DataSetLikelihood):
             self.nbins = ini.int('nbins')
             self.bin_min = ini.int('use_min', 1) - 1
             self.bin_max = ini.int('use_max', self.nbins) - 1
-            self.nbins_used = self.bin_max - self.bin_min + 1  # needed by readBinWindows
-            self.bins = self.readBinWindows(ini, 'bin_window')
+            self.nbins_used = self.bin_max - self.bin_min + 1  # needed by read_bin_windows
+            self.bins = self.read_bin_windows(ini, 'bin_window')
         else:
             if self.nmaps != self.nmaps_required:
                 raise LoggedError(
@@ -309,15 +310,15 @@ class _cmblikes_prototype(_DataSetLikelihood):
             self.bin_max = ini.int('use_max', self.pcl_lmax)
             self.nbins_used = self.bin_max - self.bin_min + 1
         self.full_bandpower_headers, self.full_bandpowers, self.bandpowers = \
-            self.ReadClArr(ini, 'cl_hat', return_full=True)
+            self.read_cl_array(ini, 'cl_hat', return_full=True)
         if self.like_approx == 'HL':
-            self.cl_fiducial = self.ReadClArr(ini, 'cl_fiducial')
+            self.cl_fiducial = self.read_cl_array(ini, 'cl_fiducial')
         else:
             self.cl_fiducial = None
         includes_noise = ini.bool('cl_hat_includes_noise', False)
         self.cl_noise = None
         if self.like_approx != 'gaussian' or includes_noise:
-            self.cl_noise = self.ReadClArr(ini, 'cl_noise')
+            self.cl_noise = self.read_cl_array(ini, 'cl_noise')
             if not includes_noise:
                 self.bandpowers += self.cl_noise
             elif self.like_approx == 'gaussian':
@@ -350,9 +351,9 @@ class _cmblikes_prototype(_DataSetLikelihood):
             self.cov = self.ReadCovmat(ini)
             self.covinv = np.linalg.inv(self.cov)
         if 'linear_correction_fiducial_file' in ini.params:
-            self.fid_correction = self.ReadClArr(ini, 'linear_correction_fiducial')
+            self.fid_correction = self.read_cl_array(ini, 'linear_correction_fiducial')
             self.linear_correction = (
-                self.readBinWindows(ini, 'linear_correction_bin_window'))
+                self.read_bin_windows(ini, 'linear_correction_bin_window'))
         else:
             self.linear_correction = None
         if ini.hasKey('nuisance_params'):
@@ -569,13 +570,21 @@ class _cmblikes_prototype(_DataSetLikelihood):
             return ((2 * L + 1) * self.fsky *
                     (np.trace(M) - self.nmaps - np.linalg.slogdet(M)[1]))
 
-    fast_chi_squared = _fast_chi_square()
-
     def logp(self, **data_params):
-        Cls = self.theory.get_Cl(ell_factor=True)
-        self.get_theory_map_cls(Cls, data_params)
+        cls = self.theory.get_Cl(ell_factor=True)
+        return self.log_likelihood(cls, **data_params)
+
+    def log_likelihood(self, dls, **data_params):
+        r"""
+        Get log likelihood from the dls (CMB C_l scaled by L(L+1)/2\pi)
+
+        :param dls: dictionary of d_l ('tt', etc)
+        :param data_params: likelihood nuistance parameters
+        :return: log likelihood
+        """
+        self.get_theory_map_cls(dls, data_params)
         C = np.empty((self.nmaps, self.nmaps))
-        bigX = np.empty(self.nbins_used * self.ncl_used)
+        big_x = np.empty(self.nbins_used * self.ncl_used)
         vecp = np.empty(self.ncl)
         chisq = 0
         if self.binned:
@@ -611,10 +620,10 @@ class _cmblikes_prototype(_DataSetLikelihood):
             elif self.like_approx == 'gaussian':
                 C -= self.bandpower_matrix[bin]
             self.matrix_to_elements(C, vecp)
-            bigX[bin * self.ncl_used:(bin + 1) * self.ncl_used] = vecp[self.cl_used_index]
+            big_x[bin * self.ncl_used:(bin + 1) * self.ncl_used] = vecp[self.cl_used_index]
         if self.like_approx == 'exact':
             return -0.5 * chisq
-        return -0.5 * self.fast_chi_squared(self.covinv, bigX)
+        return -0.5 * self.fast_chi_squared(self.covinv, big_x)
 
 
 class BinWindows(object):
@@ -623,11 +632,11 @@ class BinWindows(object):
         self.lmax = lmax
         self.nbins = nbins
 
-    def bin(self, TheoryCls, cls=None):
+    def bin(self, theory_cl, cls=None):
         if cls is None:
             cls = np.zeros((self.nbins, max([x for x in self.cols_out if x >= 0]) + 1))
         for i, ((x, y), ix_out) in enumerate(zip(self.cols_in.T, self.cols_out)):
-            cl = TheoryCls[x, y]
+            cl = theory_cl[x, y]
             if cl is not None and ix_out >= 0:
                 cls[:, ix_out] += np.dot(self.binning_matrix[i, :, :], cl.CL)
         return cls
@@ -643,7 +652,7 @@ class BinWindows(object):
                         (L, self.binning_matrix[:, b, L]))
 
 
-def lastTopComment(fname):
+def last_top_comment(fname):
     result = None
     with open(fname) as f:
         x = f.readline()
@@ -655,16 +664,3 @@ def lastTopComment(fname):
                 result = x[1:].strip()
             x = f.readline()
     return None
-
-
-def readTextCommentColumns(fname, cols):
-    incols = lastTopComment(fname).split()
-    colnums = [incols.index(col) for col in cols]
-    return np.loadtxt(fname, usecols=colnums, unpack=True)
-
-
-def readWithHeader(fname):
-    x = lastTopComment(fname)
-    if not x:
-        raise Exception('No Comment')
-    return x.split(), np.loadtxt(fname)

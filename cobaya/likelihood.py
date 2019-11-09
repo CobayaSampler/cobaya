@@ -69,8 +69,6 @@ class Likelihood(HasLogger, HasDefaults):
         self.time_sqsum = 0
         self.time_std = np.inf
 
-    # What you *must* implement to create your own likelihood:
-
     # Optional
     def initialize(self):
         """
@@ -81,10 +79,20 @@ class Likelihood(HasLogger, HasDefaults):
         pass
 
     # Optional
+    def get_requirements(self):
+        """
+        Get a dictionary of requirements to request from the theory
+        :return: dictionary of requirements
+        """
+        return {}
+
+    # Optional
     def add_theory(self):
         """Performs any necessary initialization on the theory side,
-        e.g. requests observables"""
-        pass
+        e.g. requests observables. By default just call get_requirements and pass to theory"""
+        needs = self.get_requirements()
+        if needs:
+            self.theory.needs(**needs)
 
     # Mandatory
     def logp(self, **params_values):
@@ -203,7 +211,7 @@ class Likelihood(HasLogger, HasDefaults):
         self.close()
 
 
-class LikelihoodExternalFunction(Likelihood, HasLogger):
+class LikelihoodExternalFunction(Likelihood):
     def __init__(self, name, info, _theory=None, timing=None):
         self.name = name
         self.set_logger()
@@ -236,9 +244,8 @@ class LikelihoodExternalFunction(Likelihood, HasLogger):
                        for _ in range(self.n_states)]
         self.log.info("Initialised external likelihood.")
 
-    def add_theory(self):
-        if self.has_theory:
-            self.theory.needs(**self.needs)
+    def get_requirements(self):
+        return self.needs if self.has_theory else {}
 
     def logp(self, **params_values):
         # if no derived params defined in external func, delete the "_derived" argument

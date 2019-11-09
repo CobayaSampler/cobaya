@@ -370,8 +370,8 @@ class _des_prototype(_DataSetLikelihood):
         assert self.zmax <= 5, "z max too large!"
         self.zs_interp = np.linspace(0, self.zmax, 100)
 
-    def add_theory(self):
-        self.theory.needs(**{
+    def get_requirements(self):
+        return {
             "omegan": None,
             "omegam": None,
             "Pk_interpolator": {
@@ -380,7 +380,7 @@ class _des_prototype(_DataSetLikelihood):
                 "vars_pairs": ([["delta_tot", "delta_tot"]] +
                                ([["Weyl", "Weyl"]] if self.use_Weyl else []))},
             "comoving_radial_distance": {"z": self.zs},
-            "H": {"z": self.zs, "units": "km/s/Mpc"}})
+            "H": {"z": self.zs, "units": "km/s/Mpc"}}
 
     def get_theory(self, PKdelta, PKWeyl, bin_bias, shear_calibration_parameters,
                    intrinsic_alignment_A, intrinsic_alignment_alpha,
