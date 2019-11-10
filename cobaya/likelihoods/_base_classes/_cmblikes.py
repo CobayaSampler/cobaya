@@ -1,5 +1,5 @@
 """
-.. module:: _cmblikes_prototype
+.. module:: _cmblikes
 
 :Synopsis: Definition of the CMBlikes class for CMB real or simulated data.
 :Author: Antony Lewis (adapted to Cobaya by Jesus Torrado with little modification)
@@ -23,7 +23,7 @@ from cobaya.log import LoggedError
 from cobaya.likelihoods._base_classes import _DataSetLikelihood
 
 
-class _cmblikes_prototype(_DataSetLikelihood):
+class _CMBlikes(_DataSetLikelihood):
 
     def get_requirements(self):
         # State requisites to the theory code

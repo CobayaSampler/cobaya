@@ -120,7 +120,7 @@ Implementing your own *external* likelihood class
 
 Instead of including the likelihood within the standard Cobaya likelihood modules, you may wish to make an external
 package that can be redistributed easily. To do this you make a module containing a class defined exactly the same way
-as for internal likelihoods above (inheriting from :class:`Likelihood` as documentated below). By default the class is
+as for internal likelihoods above (inheriting from :class:`Likelihood` as documented below). By default the class is
 assumed to have the same name as the containing file, e.g. if you have a package called *mycodes*, containing
 a likelihood in *mycodes.mylike* you can use
 

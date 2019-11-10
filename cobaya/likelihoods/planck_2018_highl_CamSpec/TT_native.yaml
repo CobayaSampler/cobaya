@@ -3,7 +3,7 @@
 # Native python re-implemetation, allowing multipole/bin selection
 
 likelihood:
-  planck_2018_highl_CamSpec.TT_native:
+  __self__:
     # Path to the data: where the planck_supp_data_and_covmats has been cloned
     path: null
     dataset_file: CamSpec2018/CamSpecHM_10_7.dataset  

@@ -3,7 +3,7 @@
 # See https://wiki.cosmos.esa.int/planck-legacy-archive/index.php/CMB_spectrum_%26_Likelihood_Code
 
 likelihood:
-  planck_2018_lensing.native:
+  __self__:
     # Path to the data: where the planck_supp_data_and_covmats has been cloned
     path: null
     dataset_file: lensing/2018/smicadx12_Dec5_ftl_mv2_ndclpp_p_teb_consext8.dataset

@@ -13,14 +13,14 @@ A minimal framework would look like this
     import numpy as np
     import os
 
-    class my_likelihood(Likelihood):
+    class MyLikelihood(Likelihood):
 
         def initialize(self):
             """
              Prepare any computation, importing any necessary code, files, etc.
 
              e.g. here we load some data file, with default cl_file set in .yaml below,
-             or overriden when running cobaya.
+             or overridden when running Cobaya.
             """
 
             self.data = np.loadtxt(self.cl_file)
@@ -49,13 +49,13 @@ A minimal framework would look like this
 
 You can also implement an optional ``close`` method doing whatever needs to be done at the end of the sampling (e.g. releasing memory).
 
-The default settings for your likelihood are specified in a ``my_likelihood.yaml`` file in the same folder as the class module, for example
+The default settings for your likelihood are specified in a ``MyLikelihood.yaml`` file in the same folder as the class module, for example
 
 
 .. code:: yaml
 
     likelihood:
-      mylikes.my_likelihood:
+      __self__:
         cl_file: /path/do/data_file
         # Aliases for automatic covariance matrix
         renames: [myOld]
@@ -75,17 +75,32 @@ The default settings for your likelihood are specified in a ``my_likelihood.yaml
         latex: A^{f}_{\rm{mine}}
 
 
+You can use the special ``__self__`` likelihood name in default. yaml files instead of the explicit name of the likelihood,
+so that the .yaml does not need to be changed if you rename something or convert between internal and external installation.
+
+When running Cobaya, you reference your likelihood in the form ``module_name.ClassName``. For example,
+if your MyLikelihood class is in a module called ``mylikes` your input .yaml would be
+
+.. code:: yaml
+
+    likelihood:
+      mylikes.MyLikelihood:
+        # .. any parameters you want to override
+        # ..
+
+If your class name matches the module name, you can also just use the module name.
+
 Note that if you have several nuisance parameters, fast-slow samplers will benefit from making your
 likelihood faster even if it is already fast compared to the theory calculation.
-If it is more than a few milliseconds consider recoding more carefully or using numba where needed.
+If it is more than a few milliseconds consider recoding more carefully or using `numba <http://numba.pydata.org/>`_ where needed.
 
 Many real-world examples are available in cobaya.likelihoods, which you may be able to adapt as needed for more
 complex cases, and a number of base class are pre-defined that you may find useful to inherit from instead of Likelihood directly.
 
-There is no fundamental difference between internal likelihood classes (in the Cobaya likelihoods pacakge) or
+There is no fundamental difference between internal likelihood classes (in the Cobaya likelihoods package) or those
 distributed externally. However, if you are distributing externally you may also wish to provide a way to
-calculate the liklihood from pre-computed theory inputs as well as via Cobaya. This is easily done by extracting
-the theory results in ``logp`` and them passing them and the nuisance parametrss to a separate function,
+calculate the likelihood from pre-computed theory inputs as well as via Cobaya. This is easily done by extracting
+the theory results in ``logp`` and them passing them and the nuisance parameters to a separate function,
 e.g. `log_likelihood` where the calculation is actually done. Your log_likelihood function can then be called outside
 Cobaya to calculate the likelihood for any externally provided theory results (as well as being directly usable in
 Cobaya via ``logp``).
@@ -99,7 +114,7 @@ This supports the default auto-installation. Just add a class-level string speci
 
     from cobaya.likelihoods._base_classes import _InstallableLikelihood
 
-    class my_likelihood(_InstallableLikelihood):
+    class MyLikelihood(_InstallableLikelihood):
         install_options = {"github_repository": "MyGithub/my_repository",
                            "github_release": "master"}
 
@@ -118,7 +133,7 @@ related to the likelihood (specified as *dataset_file* in the input .yaml).
 
     from cobaya.likelihoods._base_classes import _DataSetLikelihood
 
-    class my_likelihood(_DataSetLikelihood):
+    class MyLikelihood(_DataSetLikelihood):
 
         def init_params(self, ini):
             """
@@ -131,7 +146,7 @@ related to the likelihood (specified as *dataset_file* in the input .yaml).
         ...
 
 
-_cmblikes_prototype
+_CMBlikes
 --------------------
 
 This the *CMBlikes* self-describing text .dataset format likelihood inherited from *_DataSetLikelihood* (as used by the
@@ -142,9 +157,9 @@ Extensions and optimizations are welcome as pull requests.
 
 .. code:: python
 
-    from cobaya.likelihoods._base_classes import _cmblikes_prototype
+    from cobaya.likelihoods._base_classes import _CMBlikes
 
-    class my_likelihood(_cmblikes_prototype):
+    class MyLikelihood(_CMBlikes):
         install_options = {"github_repository": "CobayaSampler/planck_supp_data_and_covmats"}
         pass
 
@@ -153,7 +168,7 @@ For example *planck_2018_lensing.native* (which is installed as an internal like
 .. code:: yaml
 
     likelihood:
-      planck_2018_lensing.native:
+      __self__:
         # Path to the data: where the planck_supp_data_and_covmats has been cloned
         path: null
         dataset_file: lensing/2018/smicadx12_Dec5_ftl_mv2_ndclpp_p_teb_consext8.dataset
@@ -191,4 +206,7 @@ The provided BAO likelihoods base from :class:`_bao_prototype`, reading from sim
 
 The  :class:`_des_prototype` likelihood (based from *_DataSetLikelihood*) implements the DES Y1 likelihood, using the
 matter power spectra to calculate shear, count and cross-correlation angular power spectra internally.
+
+The `example external CMB likelihood <https://github.com/CobayaSampler/planck_lensing_external>_` is a complete example
+of how to make a new likelihood class in an external Oython package.
 
