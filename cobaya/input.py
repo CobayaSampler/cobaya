@@ -436,7 +436,7 @@ class HasDefaults(object):
     def get_bibtex(cls):
         bib = cls.get_associated_file_content('.bibtex')
         if bib:
-            return bib
+            return bib.decode('utf-8')
         for base in cls.__bases__:
             if issubclass(base, HasDefaults):
                 bib = base.get_bibtex()
@@ -478,6 +478,10 @@ class HasDefaults(object):
         Also note that if you return a dictionary it may be modified (return a deep copy if you want to keep it).
         """
         yaml_text = cls.get_associated_file_content('.yaml')
+        if not yaml_text:
+            for base in cls.__bases__:
+                if issubclass(base, HasDefaults):
+                    return base.get_defaults(return_yaml=return_yaml, yaml_expand_defaults=yaml_expand_defaults)
         if return_yaml:
             if yaml_expand_defaults:
                 return yaml_dump(yaml_load_file(cls.get_yaml_file(), yaml_text))
