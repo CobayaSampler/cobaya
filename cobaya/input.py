@@ -25,7 +25,7 @@ from cobaya.conventions import _package, _products_path, _path_install, _resume,
 from cobaya.conventions import _output_prefix, _debug, _debug_file
 from cobaya.conventions import _params, _prior, _theory, _likelihood, _sampler, _external
 from cobaya.conventions import _p_label, _p_derived, _p_ref, _p_drop, _p_value, _p_renames
-from cobaya.conventions import _p_proposal, _input_params, _output_params, _module_path, _module_class_name
+from cobaya.conventions import _p_proposal, _input_params, _output_params, _module_path
 from cobaya.conventions import _yaml_extensions
 from cobaya.tools import get_class_module, recursive_update, recursive_odict_to_dict
 from cobaya.tools import fuzzy_match, deepcopy_where_possible, get_class, get_kind
@@ -91,32 +91,36 @@ def get_used_modules(*infos):
     return modules
 
 
-def get_default_info(module, kind=None, fail_if_not_found=False,
-                     return_yaml=False, yaml_expand_defaults=True, module_path=None, class_name=None):
+def get_default_info(module_or_class, kind=None, fail_if_not_found=False,
+                     return_yaml=False, yaml_expand_defaults=True, module_path=None):
     """
-    Get default info for a module.
+    Get default info for a module_or_class.
     """
     try:
         if kind is None:
-            kind = get_kind(module)
-        cls = get_class(module, kind, None_if_not_found=not fail_if_not_found,
-                        module_path=module_path, class_name=class_name)
+            kind = get_kind(module_or_class)
+        cls = get_class(module_or_class, kind, None_if_not_found=not fail_if_not_found,
+                        module_path=module_path)
         if cls:
             default_module_info = cls.get_defaults(
                 return_yaml=return_yaml, yaml_expand_defaults=yaml_expand_defaults)
         else:
             default_module_info = (
-                lambda x: yaml_dump(x) if return_yaml else x)({kind: {module: {}}})
+                lambda x: yaml_dump(x) if return_yaml else x)({kind: {module_or_class: {}}})
     except Exception as e:
-        raise LoggedError(log, "Failed to get defaults for module '%s' [%s]",
-                          ("%s:" % kind if kind else "") + module, e)
+        raise LoggedError(log, "Failed to get defaults for module or class '%s' [%s]",
+                          ("%s:" % kind if kind else "") + module_or_class, e)
     try:
         if not return_yaml:
-            default_module_info[kind][module]
+            info = default_module_info[kind]
+            if '__self__' not in info:
+                info[module_or_class]
+            else:
+                default_module_info[kind][module_or_class] = info.pop('__self__')
     except KeyError:
         raise LoggedError(
             log, "The defaults file for '%s' should be structured "
-                 "as %s:%s:{[options]}.", module, kind, module)
+                 "as %s:%s:{[options]}.", module_or_class, kind, module_or_class)
     return default_module_info
 
 
@@ -149,13 +153,12 @@ def update_info(info):
                 import_module(_package + "." + block, package=_package),
                 "class_options", {}))
             module_path = input_info[block][module].get(_module_path, None)
-            class_name = input_info[block][module].get(_module_class_name, None)
-            default_module_info = get_default_info(module, block, module_path=module_path, class_name=class_name)
-            # TODO: check - get_default_info was ignoring this extra arg: input_info[block][module])
+            default_module_info = get_default_info(module, block, module_path=module_path)
+            # TODO: check - get_default_info was ignoring this extra arg: input_info[block][module_or_class])
             updated_info[block][module].update(default_module_info[block][module] or {})
             # Update default options with input info
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
-            ignore = set([_external, _p_renames, _input_params, _output_params, _module_path, _module_class_name])
+            ignore = set([_external, _p_renames, _input_params, _output_params, _module_path])
             options_not_recognized = (set(input_info[block][module])
                                       .difference(ignore)
                                       .difference(set(updated_info[block][module])))
@@ -452,7 +455,7 @@ class HasDefaults(object):
     @classmethod
     def get_defaults(cls, return_yaml=False, yaml_expand_defaults=True):
         """
-        Return defaults for this module, with syntax:
+        Return defaults for this module_or_class, with syntax:
 
         .. code::
            [kind]
@@ -471,6 +474,8 @@ class HasDefaults(object):
 
         Note that in external modules installed as zip_safe=True packages files cannot be accessed directly.
         In this case using !default .yaml includes currently does not work.
+
+        Also note that if you return a dictionary it may be modified (return a deep copy if you want to keep it).
         """
         yaml_text = cls.get_associated_file_content('.yaml')
         if return_yaml:

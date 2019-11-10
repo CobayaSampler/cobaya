@@ -79,7 +79,7 @@ You can use the special ``__self__`` likelihood name in default. yaml files inst
 so that the .yaml does not need to be changed if you rename something or convert between internal and external installation.
 
 When running Cobaya, you reference your likelihood in the form ``module_name.ClassName``. For example,
-if your MyLikelihood class is in a module called ``mylikes` your input .yaml would be
+if your MyLikelihood class is in a module called ``mylikes`` your input .yaml would be
 
 .. code:: yaml
 
