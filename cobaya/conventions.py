@@ -44,6 +44,7 @@ _timing = "timing"
 _force = "force"
 _module_path = "python_path"
 _module_class_name = "class_name"
+_self_name = "__self__"
 _kinds = [_sampler, _theory, _likelihood]
 
 # Separator for fields in parameter names and files

@@ -21,6 +21,7 @@ import pandas as pd
 from collections import OrderedDict as odict
 from ast import parse
 import warnings
+import inspect
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore")
@@ -79,7 +80,7 @@ def get_class_module(name, kind):
 
 def get_kind(name, fail_if_not_found=True):
     """
-    Given a hefully unique module name, tries to determine it's kind:
+    Given a helpfully unique module name, tries to determine it's kind:
     ``sampler``, ``theory`` or ``likelihood``.
     """
     try:
@@ -93,38 +94,65 @@ def get_kind(name, fail_if_not_found=True):
             return None
 
 
-def get_class(name, kind=None, None_if_not_found=False, allow_external=True, class_name=None, module_path=None):
+def get_class(name, kind=None, None_if_not_found=False, allow_external=True, module_path=None):
     """
-    Retrieves the requested likelihood (default) or theory class.
+    Retrieves the requested likelihood (default) or theory class. The name can be a fully-qualified
+    package.module.classname string, or an internal name of the particular kind. If the last element of name is
+    not a class, assume class in module is same name as module.
 
-    ``info`` must be a dictionary of the kind ``{[class_name]: [options]}``.
+    By default tries to load internal modules first, then if that fails internal ones. module_path can be used to
+    specify a specific external location.
 
-    Raises ``ImportError`` if class not found in the appropriate place in the source tree.
+    Raises ``ImportError`` if class not found in the appropriate place in the source tree and is not a fully
+    qualified external name.
 
-    If 'kind=None' is not given, tries to guess it if the module name is unique (slow!).
+    If 'kind=None' is not given, tries to guess it if the name is unique (slow!).
 
-    If allow_external=True, allows loading explicit module names from anywhere on path.
+    If allow_external=True, allows loading explicit name from anywhere on path.
     """
     if kind is None:
         kind = get_kind(name)
-    class_name = class_name or name.split('.')[-1]
-    class_folder = get_class_module(name, kind)
+    if '.' in name:
+        module_name, class_name = name.rsplit('.', 1)
+    else:
+        allow_external = False
+        module_name = name
+        class_name = name
+
+    def return_class(_module_name, package=None):
+        _module = import_module(_module_name, package=package)
+        if hasattr(_module, class_name):
+            cls = getattr(_module, class_name)
+        else:
+            cls = getattr(import_module(_module_name + '.' + class_name, package=package), class_name)
+        if not inspect.isclass(cls):
+            return getattr(cls, class_name)
+        else:
+            return cls
+
     try:
         if module_path:
             sys.path.insert(0, os.path.normpath(module_path))
             try:
-                return getattr(import_module(name), class_name)
+                return return_class(module_name)
             finally:
                 sys.path.pop(0)
         else:
-            return getattr(import_module(class_folder, package=_package), class_name)
+            internal_module = get_class_module(module_name, kind)
+            return return_class(internal_module, package=_package)
     except:
         exc_info = sys.exc_info()
         if allow_external and not module_path:
             try:
-                return getattr(import_module(name), class_name)
-            except Exception as e:
+                imported_module = import_module(module_name)
+            except Exception:
                 pass
+            else:
+                try:
+                    return return_class(module_name)
+                except:
+                    exc_info = sys.exc_info()
+
         if ((exc_info[0] is ModuleNotFoundError and
              str(exc_info[1]).rstrip("'").endswith(name))):
             if None_if_not_found:
@@ -153,7 +181,7 @@ def get_available_modules(kind):
             fi for fi in os.listdir(
                 os.path.join(os.path.dirname(__file__), subfolders[kind], f))
             if fi.lower().endswith(".py")])
-        # if *non-empty* __init__, assume it containts a sigle module named as the folder
+        # if *non-empty* __init__, assume it contains a single module named as the folder
         try:
             __init__filename = next(
                 p for p in dotpy_files if os.path.splitext(p)[0] == "__init__")

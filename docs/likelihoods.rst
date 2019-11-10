@@ -120,31 +120,30 @@ Implementing your own *external* likelihood class
 
 Instead of including the likelihood within the standard Cobaya likelihood modules, you may wish to make an external
 package that can be redistributed easily. To do this you make a module containing a class defined exactly the same way
-as for internal likelihoods above (inheriting from :class:`Likelihood` as documentated below). By default the class is
-assumed to have the same name as the containing file, e.g. if you have a package called *mycodes*, containing
-a likelihood in *mycodes.mylike* you can use
+as for internal likelihoods above (inheriting from :class:`Likelihood` as documentated below). For example if you have a
+package called *mycodes*, containing a likelihood class called MyLike in *mycodes.mylikes* you can use
 
   .. code-block:: yaml
 
      likelihood:
-       mycodes.mylike:
+       mycodes.mylikes.MyLike:
          [option 1]: [value 1]
          [...]
 
-This is assuming that *mycodes.mylike* contains a likelihood class called *mylike* and that the *mycodes* is on your
-Python path. You can also specify an explicit class name and path for the module, e.g.
+This is assuming that *mycodes* is on your Python path (e.g. it is an installed package).
+You can also specify an explicit path for the module, e.g.
 
   .. code-block:: yaml
 
      likelihood:
-       mycodes.mylike:
-         class_name: MyLikelihood
+       mycodes.mylike.MyLike:
          python_path: /path/to/mycodes_dir
          [option 1]: [value 1]
          [...]
 
 For an example class implementation, check out :doc:`cosmo_external_likelihood_class`.
-There is also also a full example `external likelihood package <https://github.com/CobayaSampler/example_external_likelihood>`_.
+There is also a simple `external likelihood package <https://github.com/CobayaSampler/example_external_likelihood>`_
+and a real-word cosmology example in the `sample external CMB likelihood <https://github.com/CobayaSampler/planck_lensing_external>`_.
 
 Likelihood module
 -----------------
