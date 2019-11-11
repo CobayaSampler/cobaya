@@ -53,7 +53,7 @@ For an application, check out the :ref:`advanced example <example_advanced_likde
 If your external likelihood needs the products of a **theory code**:
 
 1. In your function definition, define a *keyword* argument ``_theory`` with a default value stating the *needs* of your theory code, i.e. the argument that will be passed to the ``needs`` method of the theory code, to let it know what needs to be computed at every iteration.
-2. At runtime, the current theory code instance will be passed through that keyword, so you can use it to invoke the methods that return the necessary producs.
+2. At runtime, the current theory code instance will be passed through that keyword, so you can use it to invoke the methods that return the necessary products.
 
 For an application, check out :doc:`cosmo_external_likelihood`.
 

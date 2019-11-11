@@ -208,5 +208,5 @@ The  :class:`_des_prototype` likelihood (based from *_DataSetLikelihood*) implem
 matter power spectra to calculate shear, count and cross-correlation angular power spectra internally.
 
 The `example external CMB likelihood <https://github.com/CobayaSampler/planck_lensing_external>`_ is a complete example
-of how to make a new likelihood class in an external Oython package.
+of how to make a new likelihood class in an external Python package.
 
