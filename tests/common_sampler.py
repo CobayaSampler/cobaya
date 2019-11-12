@@ -198,14 +198,14 @@ def body_of_test_speeds(info_sampler={}, manual_blocking=False, modules=None):
     # Done! --> Tests
     if sampler == "polychord":
         tolerance = 0.2
-        assert abs((n2 - n1) / (n1) / (speed2 / speed1) - 1) < tolerance, (
+        assert abs((n2 - n1) / n1 / (speed2 / speed1) - 1) < tolerance, (
                 "#evaluations off: %g > %g" % (
-            abs((n2 - n1) / (n1) / (speed2 / speed1) - 1), tolerance))
+            abs((n2 - n1) / n1 / (speed2 / speed1) - 1), tolerance))
     # For MCMC tests, notice that there is a certain tolerance to be allowed for,
     # since for every proposed step the BlockedProposer cycles once, but the likelihood
     # may is not evaluated if the proposed point falls outside the prior bounds
     elif sampler == "mcmc" and info["sampler"][sampler].get("drag"):
-        assert abs((n2 - n1) / (n1) / (speed2 / speed1) - 1) < 0.1
+        assert abs((n2 - n1) / n1 / (speed2 / speed1) - 1) < 0.1
     elif sampler == "mcmc" and info["sampler"][sampler].get("oversample"):
         # Testing oversampling: number of evaluations per param * oversampling factor
         assert abs((n2 - n1) * dim / (n1 * dim) / (speed2 / speed1) - 1) < 0.1

@@ -54,7 +54,7 @@ from __future__ import print_function
 # Global
 import numpy as np
 import scipy
-from scipy.interpolate import UnivariateSpline
+from scipy.interpolate import InterpolatedUnivariateSpline
 import copy
 
 # Local
@@ -64,6 +64,8 @@ from cobaya.conventions import _c_km_s
 
 # DES data types
 def_DES_types = ['xip', 'xim', 'gammat', 'wtheta']
+
+_spline = InterpolatedUnivariateSpline
 
 
 def get_def_cuts():
@@ -130,6 +132,30 @@ def get_def_cuts():
     for tp in def_DES_types:
         ranges[tp] = ranges[tp][1:, 1:]
     return ranges
+
+
+optimized = True
+
+try:
+    import numba
+except ImportError:
+    optimized = False
+else:
+
+    @numba.njit("void(float64[::1],float64[::1],float64[::1],float64[::1])")
+    def _get_lensing_dots(wq_b, chis, n_chi, dchis):
+        for i, chi in enumerate(chis):
+            wq_b[i] = np.dot(n_chi[i:], (1 - chi / chis[i:]) * dchis[i:])
+
+
+    @numba.njit("void(float64[:,::1],float64[:,::1],float64[::1],float64)")
+    def _limber_PK_terms(powers, ks, dchifac, kmax):
+        for ix in range(powers.shape[0]):
+            for i in range(powers.shape[1]):
+                if 1e-4 <= ks[ix, i] < kmax:
+                    powers[ix, i] *= dchifac[i]
+                else:
+                    powers[ix, i] = 0
 
 
 class _des_prototype(_DataSetLikelihood):
@@ -211,12 +237,12 @@ class _des_prototype(_DataSetLikelihood):
         self.zmid = nz_source[:, 1]
         self.zbin_sp = []
         for b in range(self.nzbins):
-            self.zbin_sp += [UnivariateSpline(self.zmid, nz_source[:, b + 3], s=0)]
+            self.zbin_sp += [InterpolatedUnivariateSpline(self.zmid, nz_source[:, b + 3])]
         nz_lens = np.loadtxt(ini.relativeFileName('nz_gal_file'))
         assert (np.array_equal(nz_lens[:, 1], self.zmid))
         self.zbin_w_sp = []
         for b in range(self.nwbins):
-            self.zbin_w_sp += [UnivariateSpline(self.zmid, nz_lens[:, b + 3], s=0)]
+            self.zbin_w_sp += [InterpolatedUnivariateSpline(self.zmid, nz_lens[:, b + 3])]
         self.zmax = self.zmid[-1]
         # k_max actually computed, assumes extrapolated beyond that
         self.k_max = ini.float('kmax', 15)
@@ -289,14 +315,12 @@ class _des_prototype(_DataSetLikelihood):
         self.zmid = hdulist['NZ_SOURCE'].data.field('Z_MID')
         self.zbin_sp = []
         for b in range(self.nzbins):
-            self.zbin_sp += [UnivariateSpline(self.zmid,
-                                              hdulist['NZ_SOURCE'].data.field(b + 3), s=0)]
+            self.zbin_sp += [_spline(self.zmid, hdulist['NZ_SOURCE'].data.field(b + 3))]
         zmid_w = hdulist['NZ_LENS'].data.field('Z_MID')
         assert (np.array_equal(zmid_w, self.zmid))
         self.zbin_w_sp = []
         for b in range(self.nwbins):
-            self.zbin_w_sp += [UnivariateSpline(self.zmid,
-                                                hdulist['NZ_LENS'].data.field(b + 3), s=0)]
+            self.zbin_w_sp += [_spline(self.zmid, hdulist['NZ_LENS'].data.field(b + 3))]
         self.zmax = self.zmid[351]  # last non-zero
 
     def initialize_postload(self):
@@ -395,68 +419,71 @@ class _des_prototype(_DataSetLikelihood):
         D_growth = np.sqrt(D_growth / PKdelta.P(0, 0.001))
         c = _c_km_s * 1e3  # m/s
 
-        def get_wq():
-            Alignment_z = (intrinsic_alignment_A *
-                           (((1 + self.zs) / (1 + intrinsic_alignment_z0)) **
-                            intrinsic_alignment_alpha) *
-                           0.0134 / D_growth)
-            w = []
-            for b in range(self.nzbins):
-                w.append([])
-                zshift = self.zs - wl_photoz_errors[b]
-                n_chi = Hs * self.zbin_sp[b](zshift)
-                n_chi[zshift < 0] = 0
-                fac = n_chi * dchis
-                for i, chi in enumerate(chis):
-                    w[b].append(np.dot(fac[i:], (1 - chi / chis[i:])))
-                w_align = (Alignment_z * n_chi /
-                           (chis * (1 + self.zs) * 3 * h2 * (1e5 / c) ** 2 / 2))
-                w[b] = np.asarray(w[b]) - w_align
-            return w
-
-        def get_qgal():
-            w = []
+        if any([t in self.used_types for t in ["gammat", "wtheta"]]):
+            qgal = []
             for b in range(self.nwbins):
-                w.append([])
+                qgal.append([])
                 zshift = self.zs - lens_photoz_errors[b]
                 n_chi = Hs * self.zbin_w_sp[b](zshift)
                 n_chi[zshift < 0] = 0
-                w[b] = n_chi * bin_bias[b]
-            return w
-
-        if any([t in self.used_types for t in ["gammat", "wtheta"]]):
-            qgal = get_qgal()
+                qgal[b] = n_chi * bin_bias[b]
         if any([t in self.used_types for t in ["gammat", "xim", "xip"]]):
-            wq = get_wq()
+
+            Alignment_z = (intrinsic_alignment_A *
+                           (((1 + self.zs) / (1 + intrinsic_alignment_z0)) **
+                            intrinsic_alignment_alpha) * 0.0134 / D_growth)
+            Alignment_z /= (chis * (1 + self.zs) * 3 * h2 * (1e5 / c) ** 2 / 2)
+
+            wq = np.empty((self.nzbins, len(chis)))
+            wq_b = np.empty(chis.shape)
+
+            for b in range(self.nzbins):
+                zshift = self.zs - wl_photoz_errors[b]
+                n_chi = Hs * self.zbin_sp[b](zshift)
+                n_chi[zshift < 0] = 0
+                if optimized:
+                    _get_lensing_dots(wq_b, chis, n_chi, dchis)
+                else:
+                    for i, chi in enumerate(chis):
+                        wq_b[i] = np.dot(n_chi[i:], (1 - chi / chis[i:]) * dchis[i:])
+                wq[b] = wq_b - Alignment_z * n_chi
+
             if PKWeyl is not None:
                 if 'gammat' in self.used_types:
-                    raise LoggedError(
-                        self.log,
-                        'DES currently only supports Weyl potential for lensing only')
+                    raise LoggedError(self.log, 'DES currently only supports Weyl potential for lensing only')
                 qs = chis * wq
             else:
                 qs = 3 * omegam * h2 * (1e5 / c) ** 2 * chis * (1 + self.zs) / 2 * wq
-        ls_cl = np.array(np.hstack(
-            (np.arange(2., 100 - 4 / self.acc, 4 / self.acc),
-             np.exp(np.linspace(np.log(100.), np.log(self.l_max), int(50 * self.acc))))))
+        ls_cl = np.hstack((np.arange(2., 100 - 4 / self.acc, 4 / self.acc),
+                           np.exp(np.linspace(np.log(100.), np.log(self.l_max), int(50 * self.acc)))))
         # Get the angular power spectra and transform back
-        weight = np.empty(chis.shape)
         dchifac = dchis / chis ** 2
-        tmp = np.empty((ls_cl.shape[0], chis.shape[0]))
-        for ix, l in enumerate(ls_cl):
-            k = (l + 0.5) / chis
-            weight[:] = dchifac
-            weight[k < 1e-4] = 0
-            weight[k >= PKdelta.kmax] = 0
-            tmp[ix, :] = weight * PKdelta.P(self.zs, k, grid=False)
-        if PKWeyl is not None:
-            tmplens = np.empty((ls_cl.shape[0], chis.shape[0]))
+        if optimized:
+            ks = np.outer(ls_cl + 0.5, 1 / chis)
+            tmp = PKdelta.P(self.zs, ks, grid=False)
+            _limber_PK_terms(tmp, ks, dchifac, PKdelta.kmax)
+        else:
+            tmp = np.empty((ls_cl.shape[0], chis.shape[0]))
+            weight = np.empty(chis.shape)
             for ix, l in enumerate(ls_cl):
                 k = (l + 0.5) / chis
                 weight[:] = dchifac
                 weight[k < 1e-4] = 0
-                weight[k >= PKWeyl.kmax] = 0
-                tmplens[ix, :] = weight * PKWeyl.P(self.zs, k, grid=False)
+                weight[k >= PKdelta.kmax] = 0
+                tmp[ix, :] = weight * PKdelta.P(self.zs, k, grid=False)
+
+        if PKWeyl is not None:
+            if optimized:
+                tmplens = PKWeyl.P(self.zs, ks, grid=False)
+                _limber_PK_terms(tmplens, ks, dchifac, PKWeyl.kmax)
+            else:
+                tmplens = np.empty((ls_cl.shape[0], chis.shape[0]))
+                for ix, l in enumerate(ls_cl):
+                    k = (l + 0.5) / chis
+                    weight[:] = dchifac
+                    weight[k < 1e-4] = 0
+                    weight[k >= PKWeyl.kmax] = 0
+                    tmplens[ix, :] = weight * PKWeyl.P(self.zs, k, grid=False)
         else:
             tmplens = tmp
         corrs_th_p = np.empty((self.nzbins, self.nzbins), dtype=np.object)
@@ -468,45 +495,36 @@ class _des_prototype(_DataSetLikelihood):
             # on what you do about L_min (e.g. 1 vs 2 vs 0 makes a difference).
             if 'xip' in self.used_types or 'xim' in self.used_types:
                 for (f1, f2) in self.bin_pairs[self.data_types.index('xip')]:
-                    cl = UnivariateSpline(ls_cl, np.dot(tmplens, qs[f1] * qs[f2]), s=0)
-                    fac = ((1 + shear_calibration_parameters[f1]) *
-                           (1 + shear_calibration_parameters[f2]) / 2 / np.pi)
-                    corrs_th_p[f1, f2] = self.hankel0.transform(
-                        cl, self.theta_bins_radians, ret_err=False) * fac
-                    corrs_th_m[f1, f2] = self.hankel4.transform(
-                        cl, self.theta_bins_radians, ret_err=False) * fac
+                    cl = _spline(ls_cl, np.dot(tmplens, qs[f1] * qs[f2]))
+                    fac = ((1 + shear_calibration_parameters[f1]) * (1 + shear_calibration_parameters[f2]) / 2 / np.pi)
+                    corrs_th_p[f1, f2] = self.hankel0.transform(cl, self.theta_bins_radians, ret_err=False) * fac
+                    corrs_th_m[f1, f2] = self.hankel4.transform(cl, self.theta_bins_radians, ret_err=False) * fac
             if 'gammat' in self.used_types:
                 for (f1, f2) in self.bin_pairs[self.data_types.index('gammat')]:
-                    cl = UnivariateSpline(ls_cl, np.dot(tmp, qgal[f1] * qs[f2]), s=0)
+                    cl = _spline(ls_cl, np.dot(tmp, qgal[f1] * qs[f2]))
                     fac = (1 + shear_calibration_parameters[f2]) / 2 / np.pi
                     corrs_th_t[f1, f2] = self.hankel2.transform(
                         cl, self.theta_bins_radians, ret_err=False) * fac
             if 'wtheta' in self.used_types:
                 for (f1, f2) in self.bin_pairs[self.data_types.index('wtheta')]:
-                    cl = UnivariateSpline(ls_cl, np.dot(tmp, qgal[f1] * qgal[f2]), s=0)
-                    corrs_th_w[f1, f2] = self.hankel0.transform(
-                        cl, self.theta_bins_radians, ret_err=False) / 2 / np.pi
+                    cl = _spline(ls_cl, np.dot(tmp, qgal[f1] * qgal[f2]))
+                    corrs_th_w[f1, f2] = self.hankel0.transform(cl, self.theta_bins_radians, ret_err=False) / 2 / np.pi
         else:
             j0s, j2s, j4s = self.bessel_cache
             ls_bessel = self.ls_bessel
             if 'xip' in self.used_types or 'xim' in self.used_types:
                 for (f1, f2) in self.bin_pairs[self.data_types.index('xip')]:
-                    cl = UnivariateSpline(
-                        ls_cl, np.dot(tmplens, qs[f1] * qs[f2]), s=0)(ls_bessel)
-                    fac = ((1 + shear_calibration_parameters[f1]) *
-                           (1 + shear_calibration_parameters[f2]))
+                    cl = _spline(ls_cl, np.dot(tmplens, qs[f1] * qs[f2]))(ls_bessel)
+                    fac = (1 + shear_calibration_parameters[f1]) * (1 + shear_calibration_parameters[f2])
                     corrs_th_p[f1, f2] = np.dot(cl, j0s) * fac
                     corrs_th_m[f1, f2] = np.dot(cl, j4s) * fac
             if 'gammat' in self.used_types:
                 for (f1, f2) in self.bin_pairs[self.data_types.index('gammat')]:
-                    cl = UnivariateSpline(
-                        ls_cl, np.dot(tmp, qgal[f1] * qs[f2]), s=0)(ls_bessel)
-                    corrs_th_t[f1, f2] = (np.dot(cl, j2s) *
-                                          (1 + shear_calibration_parameters[f2]))
+                    cl = _spline(ls_cl, np.dot(tmp, qgal[f1] * qs[f2]))(ls_bessel)
+                    corrs_th_t[f1, f2] = np.dot(cl, j2s) * (1 + shear_calibration_parameters[f2])
             if 'wtheta' in self.used_types:
                 for (f1, f2) in self.bin_pairs[self.data_types.index('wtheta')]:
-                    cl = UnivariateSpline(
-                        ls_cl, np.dot(tmp, qgal[f1] * qgal[f2]), s=0)(ls_bessel)
+                    cl = _spline(ls_cl, np.dot(tmp, qgal[f1] * qgal[f2]))(ls_bessel)
                     corrs_th_w[f1, f2] = np.dot(cl, j0s)
         return [corrs_th_p, corrs_th_m, corrs_th_t, corrs_th_w]
 
@@ -688,14 +706,14 @@ def convert_txt(filename, root, outdir, ranges=None):
     hdulist = fits.open(filename)
     outlines = []
     outlines += ['measurements_format = DES']
-    outlines += ['kmax = 10']  # maches what DES used and is good enough for likelihood
+    outlines += ['kmax = 10']  # matches what DES used and is good enough for likelihood
     outlines += ['intrinsic_alignment_model = DES1YR']
     outlines += ['data_types = xip xim gammat wtheta']
     outlines += ['used_data_types = xip xim gammat wtheta']
     outlines += ['num_z_bins = %s' % (max(hdulist['xip'].data['BIN1']))]
     outlines += ['num_gal_bins = %s' % (max(hdulist['wtheta'].data['BIN1']))]
     ntheta = max(hdulist['wtheta'].data['ANGBIN']) + 1
-    outlines += ['num_theta_bins = %s' % (ntheta)]
+    outlines += ['num_theta_bins = %s' % ntheta]
     thetas = hdulist['xip'].data['ANG'][:ntheta]
     np.savetxt(outdir + root + '_theta_bins.dat', thetas, header='theta_arcmin')
     outlines += ['theta_bins_file = %s' % (root + '_theta_bins.dat')]
@@ -724,15 +742,15 @@ def convert_txt(filename, root, outdir, ranges=None):
         maxi -= 1
     np.savetxt(outdir + root + '_nz_source.dat', sourcedata[:maxi + 1], fmt='%.6e',
                header=" ".join(hdulist['NZ_SOURCE'].data.dtype.names))
-    outlines += ['nz_file = %s_nz_source.dat' % (root)]
+    outlines += ['nz_file = %s_nz_source.dat' % root]
     assert (np.all(np.asarray(hdulist['NZ_LENS'].data[maxi + 1][3:]) == 0))
     np.savetxt(outdir + root + '_nz_lens.dat', hdulist['NZ_LENS'].data[:maxi + 1],
                fmt='%.6e', header=" ".join(hdulist['NZ_LENS'].data.dtype.names))
-    outlines += ['nz_gal_file = %s_nz_lens.dat' % (root)]
+    outlines += ['nz_gal_file = %s_nz_lens.dat' % root]
     with open(outdir + root + '_selection.dat', 'w') as f:
         f.write('#  type bin1 bin2 theta_min theta_max\n')
         f.write("\n".join(out_ranges))
-    outlines += ['data_selection = %s_selection.dat' % (root)]
+    outlines += ['data_selection = %s_selection.dat' % root]
     outlines += ['nuisance_params = DES.paramnames']
     with open(outdir + root + '.dataset', 'w') as f:
         f.write("\n".join(outlines))

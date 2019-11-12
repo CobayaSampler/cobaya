@@ -12,5 +12,5 @@ print(covmat)
 # %matplotlib inline  # uncomment if running from the Jupyter notebook
 import getdist.plots as gdplt
 
-gdplot = gdplt.getSubplotPlotter()
+gdplot = gdplt.get_subplot_plotter()
 gdplot.triangle_plot(gd_sample, ["a", "b"], filled=True)

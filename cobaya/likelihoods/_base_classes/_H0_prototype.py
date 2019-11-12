@@ -40,9 +40,6 @@ standard deviation, simply add the following likelihood, substituting ``mu_H0`` 
 
 """
 
-# Python 2/3 compatibility
-from __future__ import division
-
 # Global
 from scipy.stats import norm
 

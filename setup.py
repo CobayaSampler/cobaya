@@ -26,6 +26,11 @@ setup(
     description='Bayesian Analysis in Cosmology',
     long_description=get_long_description(),
     url=__url__,
+    project_urls={
+        'Source': 'https://github.com/CobayaSampler/cobaya',
+        'Tracker': 'https://github.com/CobayaSampler/cobaya/issues',
+        'Licensing': 'https://github.com/CobayaSampler/cobaya/blob/master/LICENCE.txt'
+    },
     author=__author__,
     license='LGPL',
     zip_safe=False,
@@ -38,14 +43,15 @@ setup(
         'License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7'
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8'
     ],
     python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*',
     keywords='montecarlo sampling cosmology',
     packages=find_packages(exclude=['docs', 'tests']),
     install_requires=['numpy>=1.12.0', 'scipy >= 1.0', 'pandas>=0.20',
                       'PyYAML>=5.1', 'wget>=3.2', 'imageio>=2.2.0', 'py-bobyqa>=1.1',
-                      'GetDist>=0.3.3', 'fuzzywuzzy>=0.17'],
+                      'GetDist>=1.0.2', 'fuzzywuzzy>=0.17'],
     extras_require={
         'test': ['pytest', 'pytest-xdist', 'flaky', 'mpi4py']},
     package_data={

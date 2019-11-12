@@ -131,7 +131,7 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
             if not hasattr(value, "get"):
                 info_likelihood[lik] = {_external: value}
             info_likelihood[lik].update({k: v for k, v in class_options.items()
-                                         if not k in info_likelihood[lik]})
+                                         if k not in info_likelihood[lik]})
             for k in [_input_params, _output_params]:
                 updated_info[_likelihood][lik].pop(k)
         assert info_likelihood == dict(updated_info[_likelihood]), (

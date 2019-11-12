@@ -65,7 +65,7 @@ class _cosmo(Theory):
             if product in requirements:
                 raise LoggedError(
                     self.log, "You requested product '%s', which from now on should be "
-                    "capitalized as '%s'.", product, capitalization)
+                              "capitalized as '%s'.", product, capitalization)
         # Accumulate the requirements across several calls in a safe way;
         # e.g. take maximum of all values of a requested precision paramater
         for k, v in requirements.items():
@@ -103,10 +103,10 @@ class _cosmo(Theory):
                 if "sources" not in v:
                     raise LoggedError(
                         self.log, "Needs a 'sources' key, containing a dict with every "
-                        "source name and definition")
+                                  "source name and definition")
                 # Check that no two sources with equal name but diff specification
                 for source, window in v["sources"].items():
-                    if source in getattr(self, "sources", {}):
+                    if source in (getattr(self, "sources", {}) or {}):
                         # TODO: improve this test!!!
                         # (e.g. 2 z-vectors that fulfill np.allclose would fail a == test)
                         if window != self.sources[source]:
@@ -121,7 +121,7 @@ class _cosmo(Theory):
                     self._needs[k] = {}
                 self._needs[k]["z"] = np.unique(np.concatenate(
                     (self._needs[k].get("z", []), v["z"])))
-            # Extra derived paramaters and other unknown stuff (keep capitalization)
+            # Extra derived parameters and other unknown stuff (keep capitalization)
             elif v is None:
                 self._needs[k] = None
             else:
@@ -229,7 +229,7 @@ class _cosmo(Theory):
                 # End of deprecation block ------------------------------
                 raise LoggedError(
                     self.log, "Getter method for cosmology product %r is not known. "
-                    "Maybe you meant any of %r?",
+                              "Maybe you meant any of %r?",
                     method, fuzzy_match(method, dir(self), n=3))
 
 
