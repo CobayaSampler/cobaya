@@ -19,7 +19,7 @@ from itertools import chain
 # Local
 from cobaya.conventions import _prior, _p_drop, _p_derived, _p_label, _p_value, _p_renames
 from cobaya.tools import get_external_function, ensure_nolatex, is_valid_variable_name
-from cobaya.tools import getargspec, deepcopy_where_possible as deepcopy
+from cobaya.tools import getfullargspec, deepcopy_where_possible as deepcopy
 from cobaya.log import LoggedError, HasLogger
 
 
@@ -132,7 +132,7 @@ class Parameterization(HasLogger):
                 else:
                     self._input[p] = None
                     self._input_funcs[p] = get_external_function(info[_p_value])
-                    self._input_args[p] = getargspec(self._input_funcs[p]).args
+                    self._input_args[p] = getfullargspec(self._input_funcs[p]).args
             if is_sampled_param(info):
                 self._sampled[p] = None
                 if not info.get(_p_drop, False):
@@ -149,7 +149,7 @@ class Parameterization(HasLogger):
                     self._output[p] = None
                 else:
                     self._derived_funcs[p] = get_external_function(info[_p_derived])
-                    self._derived_args[p] = getargspec(self._derived_funcs[p]).args
+                    self._derived_args[p] = getfullargspec(self._derived_funcs[p]).args
         # Check that the sampled and derived params are all valid python variable names
         for p in chain(self.sampled_params(), self.derived_params()):
             if not is_valid_variable_name(p):

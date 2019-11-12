@@ -201,9 +201,9 @@ class classy(_cosmo):
         # Propagate errors up
         global CosmoComputationError, CosmoSevereError
         # Generate states, to avoid recomputing
-        self.n_states = 3
-        self.states = [{"params": None, "derived": None, "derived_extra": None,
-                        "last": 0} for i in range(self.n_states)]
+        self._n_states = 3
+        self._states = [{"params": None, "derived": None, "derived_extra": None,
+                        "last": 0} for i in range(self._n_states)]
         # Dict of named tuples to collect requirements and computation methods
         self.collectors = {}
         # Additional input parameters to pass to CLASS
@@ -219,8 +219,8 @@ class classy(_cosmo):
         self.derived_extra = []
 
     def current_state(self):
-        lasts = [self.states[i]["last"] for i in range(self.n_states)]
-        return self.states[lasts.index(max(lasts))]
+        lasts = [self._states[i]["last"] for i in range(self._n_states)]
+        return self._states[lasts.index(max(lasts))]
 
     def needs(self, **requirements):
         # Computed quantities required by the likelihood
@@ -334,7 +334,7 @@ class classy(_cosmo):
 
     def set(self, params_values_dict, i_state):
         # Store them, to use them later to identify the state
-        self.states[i_state]["params"] = deepcopy(params_values_dict)
+        self._states[i_state]["params"] = deepcopy(params_values_dict)
         # Prepare parameters to be passed: this-iteration + extra
         args = {self.translate_param(p): v for p, v in params_values_dict.items()}
         args.update(self.extra_args)
@@ -344,28 +344,28 @@ class classy(_cosmo):
         self.classy.set(**args)
 
     def compute(self, _derived=None, cached=True, **params_values_dict):
-        lasts = [self.states[i]["last"] for i in range(self.n_states)]
+        lasts = [self._states[i]["last"] for i in range(self._n_states)]
         try:
             if not cached:
                 raise StopIteration
             # are the parameter values there already?
-            i_state = next(i for i in range(self.n_states)
-                           if self.states[i]["params"] == params_values_dict)
+            i_state = next(i for i in range(self._n_states)
+                           if self._states[i]["params"] == params_values_dict)
             # has any new product been requested?
             for product in self.collectors:
-                next(k for k in self.states[i_state] if k == product)
+                next(k for k in self._states[i_state] if k == product)
             reused_state = True
             # Get (pre-computed) derived parameters
             if _derived == {}:
-                _derived.update(self.states[i_state]["derived"])
+                _derived.update(self._states[i_state]["derived"])
             self.log.debug("Re-using computed results (state %d)", i_state)
         except StopIteration:
             reused_state = False
             # update the (first) oldest one and compute
             i_state = lasts.index(min(lasts))
             self.log.debug("Computing (state %d)", i_state)
-            if self.timing:
-                a = time()
+            if self.timer:
+                self.timer.start()
             # Set parameters
             self.set(params_values_dict, i_state)
             # Compute!
@@ -387,7 +387,7 @@ class classy(_cosmo):
                 self.log.error("Serious error setting parameters or computing results. "
                                "The parameters passed were %r and %r. "
                                "See original CLASS's error traceback below.\n",
-                               self.states[i_state]["params"], self.extra_args)
+                               self._states[i_state]["params"], self.extra_args)
                 raise  # No LoggedError, so that CLASS traceback gets printed
             # Gather products
             for product, collector in self.collectors.items():
@@ -397,43 +397,41 @@ class classy(_cosmo):
                 method = getattr(self.classy, collector.method)
                 arg_array = self.collectors[product].arg_array
                 if arg_array is None:
-                    self.states[i_state][product] = method(
+                    self._states[i_state][product] = method(
                         *self.collectors[product].args, **self.collectors[product].kwargs)
                 elif isinstance(arg_array, Number):
-                    self.states[i_state][product] = np.zeros(
+                    self._states[i_state][product] = np.zeros(
                         len(self.collectors[product].args[arg_array]))
                     for i, v in enumerate(self.collectors[product].args[arg_array]):
                         args = (list(self.collectors[product].args[:arg_array]) + [v] +
                                 list(self.collectors[product].args[arg_array + 1:]))
-                        self.states[i_state][product][i] = method(
+                        self._states[i_state][product][i] = method(
                             *args, **self.collectors[product].kwargs)
                 elif arg_array in self.collectors[product].kwargs:
                     value = np.atleast_1d(self.collectors[product].kwargs[arg_array])
-                    self.states[i_state][product] = np.zeros(value.shape)
+                    self._states[i_state][product] = np.zeros(value.shape)
                     for i, v in enumerate(value):
                         kwargs = deepcopy(self.collectors[product].kwargs)
                         kwargs[arg_array] = v
-                        self.states[i_state][product][i] = method(
+                        self._states[i_state][product][i] = method(
                             *self.collectors[product].args, **kwargs)
                 if collector.post:
-                    self.states[i_state][product] = collector.post(
-                        *self.states[i_state][product])
+                    self._states[i_state][product] = collector.post(
+                        *self._states[i_state][product])
             # Prepare derived parameters
             d, d_extra = self._get_derived_all(derived_requested=(_derived == {}))
             if _derived == {}:
                 _derived.update(d)
-            self.states[i_state]["derived"] = odict(
+            self._states[i_state]["derived"] = odict(
                 [[p, (_derived or {}).get(p)] for p in self.output_params])
             # Prepare necessary extra derived parameters
-            self.states[i_state]["derived_extra"] = deepcopy(d_extra)
-            if self.timing:
-                self.n += 1
-                self.time_avg = (time() - a + self.time_avg * (self.n - 1)) / self.n
-                self.log.debug("Average running time: %g seconds", self.time_avg)
+            self._states[i_state]["derived_extra"] = deepcopy(d_extra)
+            if self.timer:
+                self.timer.increment(self.log)
         # make this one the current one by decreasing the antiquity of the rest
-        for i in range(self.n_states):
-            self.states[i]["last"] -= max(lasts)
-        self.states[i_state]["last"] = 1
+        for i in range(self._n_states):
+            self._states[i]["last"] -= max(lasts)
+        self._states[i_state]["last"] = 1
         return 1 if reused_state else 2
 
     def _get_derived_all(self, derived_requested=True):

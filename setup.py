@@ -47,11 +47,11 @@ setup(
         'Programming Language :: Python :: 3.8'
     ],
     python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*',
-    keywords='montecarlo sampling cosmology',
+    keywords='montecarlo sampling MCMC cosmology',
     packages=find_packages(exclude=['docs', 'tests']),
     install_requires=['numpy>=1.12.0', 'scipy >= 1.0', 'pandas>=0.20',
                       'PyYAML>=5.1', 'wget>=3.2', 'imageio>=2.2.0', 'py-bobyqa>=1.1',
-                      'GetDist>=1.0.2', 'fuzzywuzzy>=0.17'],
+                      'GetDist>=1.0.2', 'fuzzywuzzy>=0.17', 'six'],
     extras_require={
         'test': ['pytest', 'pytest-xdist', 'flaky', 'mpi4py']},
     package_data={

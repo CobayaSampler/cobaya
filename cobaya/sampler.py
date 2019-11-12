@@ -55,13 +55,13 @@ import numpy as np
 from cobaya.conventions import _sampler, _resume_default, _checkpoint_extension
 from cobaya.conventions import _covmat_extension, _progress_extension
 from cobaya.tools import get_class
-from cobaya.log import LoggedError, HasLogger
+from cobaya.log import LoggedError
 from cobaya.yaml import yaml_load_file
 from cobaya.mpi import am_single_or_primary_process
-from cobaya.input import HasDefaults
+from cobaya.component import CobayaComponent
 
 
-class Sampler(HasLogger, HasDefaults):
+class Sampler(CobayaComponent):
     """Prototype of the sampler class."""
 
     # What you *must* implement to create your own sampler:
@@ -75,7 +75,7 @@ class Sampler(HasLogger, HasDefaults):
         automatically recognized as attributes, with the value given in the input file,
         if redefined there.
 
-        The prior and likelihood are also accesible through the attributes with the same
+        The prior and likelihood are also accessible through the attributes with the same
         names.
         """
         pass
@@ -93,13 +93,6 @@ class Sampler(HasLogger, HasDefaults):
         """
         pass
 
-    def close(self, exception_type, exception_value, traceback):
-        """
-        Finalizes the sampler, if something needs to be done
-        (e.g. generating additional output).
-        """
-        pass
-
     def products(self):
         """
         Returns the products expected in a scripted call of cobaya,
@@ -108,21 +101,19 @@ class Sampler(HasLogger, HasDefaults):
         return None
 
     # Private methods: just ignore them:
-    def __init__(self, info_sampler, model, output, resume=_resume_default, modules=None):
+    def __init__(self, info_sampler, model, output, resume=_resume_default, path_install=None, name=None):
         """
         Actual initialization of the class. Loads the default and input information and
         call the custom ``initialize`` method.
 
         [Do not modify this one.]
         """
-        self.name = self.__class__.__name__
-        self.set_logger()
+
         self.model = model
         self.output = output
-        self.path_install = modules
-        # Load info of the sampler
-        for k in info_sampler:
-            setattr(self, k, info_sampler[k])
+
+        super(Sampler, self).__init__(info_sampler, path_install=path_install, name=name)
+
         # Seed, if requested
         if getattr(self, "seed", None) is not None:
             self.log.warning("This run has been SEEDED with seed %d", self.seed)
@@ -134,7 +125,7 @@ class Sampler(HasLogger, HasDefaults):
                     self.seed, type(self.seed))
         # Load checkpoint info, if resuming
         self.resuming = resume
-        if self.resuming and self.name != "minimize":
+        if self.resuming and not isinstance(self, Minimizer):
             try:
                 checkpoint_info = yaml_load_file(self.checkpoint_filename())
                 try:
@@ -147,7 +138,7 @@ class Sampler(HasLogger, HasDefaults):
                     if am_single_or_primary_process():
                         raise LoggedError(
                             self.log, "Checkpoint file found at '%s' "
-                            "but it corresponds to a different sampler.",
+                                      "but it corresponds to a different sampler.",
                             self.checkpoint_filename())
             except (IOError, TypeError):
                 pass
@@ -177,6 +168,13 @@ class Sampler(HasLogger, HasDefaults):
                 self.output.folder, self.output.prefix + _covmat_extension)
         return None
 
+    def close(self, exception_type, exception_value, traceback):
+        """
+        Finalizes the sampler, if something needs to be done
+        (e.g. generating additional output).
+        """
+        pass
+
     # Python magic for the "with" statement
 
     def __enter__(self):
@@ -187,6 +185,13 @@ class Sampler(HasLogger, HasDefaults):
         if getattr(self, "seed", None) is not None:
             np.random.seed(self.seed)
         self.close(exception_type, exception_value, traceback)
+
+
+class Minimizer(Sampler):
+    """
+    base class for minimizers
+    """
+    pass
 
 
 def get_sampler(info_sampler, posterior, output_file,
@@ -203,5 +208,6 @@ def get_sampler(info_sampler, posterior, output_file,
         raise LoggedError(
             log, "The sampler block must be a dictionary 'sampler: {options}'.")
     sampler_class = get_class(name, kind=_sampler)
+    assert issubclass(sampler_class, Sampler)
     return sampler_class(
-        info_sampler[name], posterior, output_file, resume=resume, modules=modules)
+        info_sampler[name], posterior, output_file, resume=resume, path_install=modules, name=name)

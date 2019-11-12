@@ -37,7 +37,7 @@ re_uint = re.compile("[0-9]+")
 class Output(HasLogger):
     def __init__(self, output_prefix=None, resume=_resume_default, force_output=False):
         self.name = "output"  # so that the MPI-wrapped class conserves the name
-        self.set_logger()
+        self.set_logger(self.name)
         self.folder = os.sep.join(output_prefix.split(os.sep)[:-1]) or "."
         self.prefix = (lambda x: x if x != "." else "")(output_prefix.split(os.sep)[-1])
         self.force_output = force_output
@@ -57,7 +57,7 @@ class Output(HasLogger):
                                        ["\n"] + ["-"] * 37))
                 raise LoggedError(
                     self.log, "Could not create folder '%s'. "
-                    "See traceback on top of this message.", self.folder)
+                              "See traceback on top of this message.", self.folder)
         self.log.info("Output to be read-from/written-into folder '%s', with prefix '%s'",
                       self.folder, self.prefix)
         # Prepare file names, and check if chain exists
@@ -89,10 +89,10 @@ class Output(HasLogger):
                 else:
                     raise LoggedError(
                         self.log, "Delete the previous sample manually, automatically "
-                        "('-%s', '--%s', '%s: True')" % (
-                            _force[0], _force, _force) +
-                        " or request resuming ('-%s', '--%s', '%s: True')" % (
-                            _resume[0], _resume, _resume))
+                                  "('-%s', '--%s', '%s: True')" % (
+                                      _force[0], _force, _force) +
+                                  " or request resuming ('-%s', '--%s', '%s: True')" % (
+                                      _resume[0], _resume, _resume))
         # Output kind and collection extension
         self.kind = "txt"
         self.ext = "txt"
@@ -134,15 +134,16 @@ class Output(HasLogger):
                 if not is_equal_info(old_info, new_info, strict=False,
                                      ignore_blocks=ignore_blocks):
                     # HACK!!! NEEDS TO BE FIXED
+                    # TODO: should check any Minimizer subclass
                     if list(updated_info.get(_sampler, [None]))[0] == "minimize":
                         raise LoggedError(
                             self.log, "Old and new sample information not compatible! "
-                            "At this moment it is not possible to 'force' deletion of "
-                            "and old 'minimize' run. Please delete it by hand. "
-                            "We are working on fixing this very soon!")
+                                      "At this moment it is not possible to 'force' deletion of "
+                                      "and old 'minimize' run. Please delete it by hand. "
+                                      "We are working on fixing this very soon!")
                     raise LoggedError(
                         self.log, "Old and new sample information not compatible! "
-                        "Resuming not possible!")
+                                  "Resuming not possible!")
             except IOError:
                 # There was no previous chain
                 pass

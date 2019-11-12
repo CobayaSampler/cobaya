@@ -23,15 +23,14 @@ from __future__ import division
 
 # Local
 from cobaya.conventions import _input_params, _output_params
-from cobaya.log import HasLogger
-from cobaya.input import HasDefaults
+from cobaya.component import CobayaComponent
 
 # Default options for all subclasses
 class_options = {"speed": -1}
 
 
 # Theory code prototype
-class Theory(HasLogger, HasDefaults):
+class Theory(CobayaComponent):
     """Prototype of the theory class."""
 
     def initialize(self):
@@ -59,24 +58,7 @@ class Theory(HasLogger, HasDefaults):
         """
         pass
 
-    def close(self):
-        """Finalizes the theory code, if something needs to be done
-        (releasing memory, etc.)"""
-        pass
-
     # Generic methods: do not touch these
-
-    def __init__(self, info_theory, modules=None, timing=None):
-        self.name = self.__class__.__name__
-        self.set_logger()
-        self.path_install = modules
-        # Load info of the code
-        for k in info_theory:
-            setattr(self, k, info_theory[k])
-        # Timing
-        self.timing = timing
-        self.n = 0
-        self.time_avg = 0
 
     def d(self):
         """
@@ -86,9 +68,3 @@ class Theory(HasLogger, HasDefaults):
         fixed input parameters.
         """
         return len(self.input_params)
-
-    def __exit__(self, exception_type, exception_value, traceback):
-        if self.timing:
-            self.log.info("Average 'compute' evaluation time: %g s  (%d evaluations)" %
-                          (self.time_avg, self.n))
-        self.close()

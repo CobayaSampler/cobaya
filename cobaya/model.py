@@ -21,7 +21,7 @@ from cobaya.conventions import _input_params, _output_params
 from cobaya.input import update_info
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
-from cobaya.likelihood import LikelihoodCollection as Likelihood
+from cobaya.likelihood import LikelihoodCollection
 from cobaya.log import LoggedError, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
 from cobaya.tools import deepcopy_where_possible
@@ -59,7 +59,7 @@ def get_model(info):
     # Initialize the posterior and the sampler
     return Model(updated_info[_params], updated_info[_likelihood],
                  updated_info.get(_prior), updated_info.get(_theory),
-                 modules=info.get(_path_install), timing=updated_info.get(_timing))
+                 path_install=info.get(_path_install), timing=updated_info.get(_timing))
 
 
 class Model(HasLogger):
@@ -73,7 +73,7 @@ class Model(HasLogger):
     """
 
     def __init__(self, info_params, info_likelihood, info_prior=None, info_theory=None,
-                 modules=None, timing=None, allow_renames=True):
+                 path_install=None, timing=None, allow_renames=True):
         self.set_logger(lowercase=True)
         self._updated_info = {
             _params: deepcopy_where_possible(info_params),
@@ -81,15 +81,15 @@ class Model(HasLogger):
         if not self._updated_info[_likelihood]:
             raise LoggedError(self.log, "No likelihood requested!")
         for k, v in ((_prior, info_prior), (_theory, info_theory),
-                     (_path_install, modules), (_timing, timing)):
+                     (_path_install, path_install), (_timing, timing)):
             if v not in (None, {}):
                 self._updated_info[k] = deepcopy_where_possible(v)
         self.parameterization = Parameterization(
             self._updated_info[_params], allow_renames=allow_renames)
         self.prior = Prior(self.parameterization, self._updated_info.get(_prior, None))
-        self.likelihood = Likelihood(
+        self.likelihood = LikelihoodCollection(
             self._updated_info[_likelihood], self.parameterization,
-            self._updated_info.get(_theory), modules=modules, timing=timing)
+            self._updated_info.get(_theory), path_install=path_install, timing=timing)
 
     def info(self):
         """
@@ -182,8 +182,7 @@ class Model(HasLogger):
             params_values = self.parameterization._check_sampled(**params_values)
         _derived = [] if return_derived else None
         loglikes = self.likelihood.logps(
-            self.parameterization._to_input(params_values),
-            _derived=_derived, cached=cached)
+            self.parameterization._to_input(params_values), _derived=_derived, cached=cached)
         if make_finite:
             loglikes = np.nan_to_num(loglikes)
         if return_derived:
@@ -269,7 +268,7 @@ class Model(HasLogger):
                 dict(zip(self.parameterization.sampled_params(), params_values_array)))
         if not np.all(np.isfinite(params_values_array)):
             raise LoggedError(
-                self.log,  "Got non-finite parameter values: %r",
+                self.log, "Got non-finite parameter values: %r",
                 dict(zip(self.parameterization.sampled_params(), params_values_array)))
         # Notice that we don't use the make_finite in the prior call,
         # to correctly check if we have to compute the likelihood

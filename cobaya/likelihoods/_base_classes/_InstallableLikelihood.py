@@ -42,7 +42,7 @@ class _InstallableLikelihood(Likelihood):
     def install(cls, path=None, force=False, code=False, data=True, no_progress_bars=False):
         if not data:
             return True
-        log = logging.getLogger(cls.get_module_name())
+        log = logging.getLogger(cls.get_qualified_class_name())
         opts = cls.get_install_options()
         repo = opts.get("github_repository", None)
         if repo:

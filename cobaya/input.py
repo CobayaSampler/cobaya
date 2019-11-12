@@ -18,7 +18,6 @@ import inspect
 from six import string_types
 from itertools import chain
 import pkg_resources
-import six
 
 # Local
 from cobaya.conventions import _package, _products_path, _path_install, _resume, _force
@@ -408,7 +407,7 @@ class HasDefaults(object):
             return ['.'.join(parts[i:]) + '.' + cls.__name__ for i in range(len(parts))]
 
     @classmethod
-    def get_module_name(cls):
+    def get_qualified_class_name(cls):
         """get cls.__name__ if class is same name as the module, otherwise module.class_name"""
         qualified_names = cls.get_qualified_names()
         if qualified_names[0].startswith('cobaya.'):

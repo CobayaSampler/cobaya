@@ -234,7 +234,7 @@ def post(info, sample=None):
     prior_add = Prior(dummy_model_out.parameterization, add.get(_prior))
     likelihood_add = Likelihood(
         add[_likelihood], parameterization_like,
-        info_theory=info_theory_out, modules=info.get(_path_install))
+        info_theory=info_theory_out, path_install=info.get(_path_install))
     # Remove auxiliary "one" before dumping -- 'add' *is* info_out[_post][_post_add]
     add[_likelihood].pop("one")
     if likelihood_add.theory:

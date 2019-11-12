@@ -86,7 +86,7 @@ import logging
 from copy import deepcopy
 
 # Local
-from cobaya.sampler import Sampler
+from cobaya.sampler import Minimizer
 from cobaya.mpi import get_mpi_size, get_mpi_comm, am_single_or_primary_process
 from cobaya.collection import OnePoint
 from cobaya.log import LoggedError
@@ -99,7 +99,7 @@ evals_attr = {"scipy": "fun", "bobyqa": "f"}
 getdist_ext_ignore_prior = {True: ".bestfit", False: ".minimum"}
 
 
-class minimize(Sampler):
+class minimize(Minimizer):
     def initialize(self):
         """Prepares the arguments for `scipy.minimize`."""
         if am_single_or_primary_process():

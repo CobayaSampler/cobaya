@@ -21,7 +21,7 @@ from cobaya.conventions import _yaml_extensions, _separator_files, _updated_suff
 from cobaya.conventions import _modules_path_arg, _modules_path_env, _resume_default
 from cobaya.output import get_Output as Output
 from cobaya.model import Model
-from cobaya.sampler import get_sampler as Sampler
+from cobaya.sampler import get_sampler
 from cobaya.log import logger_setup
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info
@@ -45,6 +45,7 @@ def run(info):
     resume, force = info.get(_resume), info.get(_force)
     ignore_blocks = []
     # If minimizer, always try to re-use sample to get bestfit/covmat
+    # TODO: should check any Minimizer subclass
     if list(info[_sampler])[0] == "minimize":
         resume = True
         force = False
@@ -75,13 +76,13 @@ def run(info):
     output.dump_info(info, updated_info)
     # Initialize the posterior and the sampler
     with Model(updated_info[_params], updated_info[_likelihood], updated_info.get(_prior),
-               updated_info.get(_theory), modules=info.get(_path_install),
+               updated_info.get(_theory), path_install=info.get(_path_install),
                timing=updated_info.get(_timing), allow_renames=False) as model:
         # Update the updated info with the parameter routes
         keys = ([_likelihood, _theory] if _theory in updated_info else [_likelihood])
         updated_info.update(odict([[k, model.info()[k]] for k in keys]))
         output.dump_info(None, updated_info, check_compatible=False)
-        with Sampler(
+        with get_sampler(
                 updated_info[_sampler], model, output, resume=updated_info.get(_resume),
                 modules=info.get(_path_install)) as sampler:
             sampler.run()

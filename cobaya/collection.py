@@ -67,7 +67,7 @@ class Collection(HasLogger):
                  initial_size=enlargement_size, name=None, extension=None, file_name=None,
                  resuming=False, load=False, onload_skip=0, onload_thin=1):
         self.name = name
-        self.set_logger()
+        self.set_logger(name)
         self.sampled_params = list(model.parameterization.sampled_params())
         self.derived_params = list(model.parameterization.derived_params())
         self.minuslogprior_names = [

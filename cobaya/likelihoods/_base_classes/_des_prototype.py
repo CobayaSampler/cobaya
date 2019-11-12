@@ -161,7 +161,7 @@ else:
 class _des_prototype(_DataSetLikelihood):
     install_options = {"github_repository": "CobayaSampler/des_data", "github_release": "v1.0"}
 
-    def load_dataset_file(self, filename, dataset_params):
+    def load_dataset_file(self, filename, dataset_params={}):
         self.l_max = self.l_max or int(50000 * self.acc)  # lmax here is an internal parameter for transforms
         if filename.endswith(".fits"):
 

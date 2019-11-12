@@ -16,7 +16,7 @@ from __future__ import absolute_import, division
 import sys
 import traceback
 from collections import OrderedDict as odict
-from time import time, sleep
+from time import sleep
 import numpy as np
 from itertools import chain, permutations
 import six
@@ -32,10 +32,10 @@ from cobaya.conventions import _external, _theory, _params, _overhead_per_param
 from cobaya.conventions import _timing, _p_renames, _chi2, _separator, _likelihood, _self_name
 from cobaya.conventions import _input_params, _output_params, _module_path
 from cobaya.conventions import _input_params_prefix, _output_params_prefix
-from cobaya.tools import get_class, get_external_function, getargspec
+from cobaya.tools import get_class, get_external_function, getfullargspec
 from cobaya.tools import are_different_params_lists
 from cobaya.log import LoggedError, HasLogger
-from cobaya.input import HasDefaults
+from cobaya.component import CobayaComponent
 
 # Logger
 import logging
@@ -44,36 +44,25 @@ import logging
 class_options = {"speed": -1, "stop_at_error": False}
 
 
-class Likelihood(HasLogger, HasDefaults):
-    """Likelihood class prototype."""
+class Likelihood(CobayaComponent):
+    """Likelihood base class."""
 
     # Generic initialization -- do not touch
-    def __init__(self, info={}, modules=None, timing=None, standalone=True, name=None):
-        self.name = name or self.get_module_name()
+    def __init__(self, info={}, name=None, timing=None, path_install=None, standalone=True):
+        name = name or self.get_qualified_class_name()
         if standalone:
             default_info = self.get_defaults()
             if _likelihood in default_info:
                 default_info = default_info[_likelihood][
-                    self.name if _self_name not in default_info[_likelihood] else _self_name]
+                    name if _self_name not in default_info[_likelihood] else _self_name]
             default_info.update(info)
             info = default_info
-        self.set_logger()
-        self.log = logging.getLogger(self.name)
-        self.path_install = modules
-        # Load info of the likelihood
-        for k in info:
-            setattr(self, k, info[k])
+        super(Likelihood, self).__init__(info, name=name, timing=timing, path_install=path_install)
         # States, to avoid recomputing
-        self.n_states = 3
-        self.states = [{"params": None, "logp": None, "_derived": None,
-                        "theory_params": None, "last": 0}
-                       for _ in range(self.n_states)]
-        # Timing
-        self.timing = timing
-        self.n = 0
-        self.time_avg = 0
-        self.time_sqsum = 0
-        self.time_std = np.inf
+        self._n_states = 3
+        self._states = [{"params": None, "logp": None, "_derived": None,
+                         "theory_params": None, "last": 0}
+                        for _ in range(self._n_states)]
         if standalone:
             self.initialize()
 
@@ -111,11 +100,6 @@ class Likelihood(HasLogger, HasDefaults):
         """
         return None
 
-    # Optional
-    def close(self):
-        """Finalizes the likelihood, if something needs to be done."""
-        pass
-
     # What you *can* implement to create your own likelihood:
 
     def marginal(self, directions=None, params_values=None):
@@ -137,49 +121,32 @@ class Likelihood(HasLogger, HasDefaults):
         """
         params_values = deepcopy(params_values)
         self.log.debug("Got parameters %r", params_values)
-        lasts = [self.states[i]["last"] for i in range(self.n_states)]
+        lasts = [self._states[i]["last"] for i in range(self._n_states)]
         try:
             if not cached:
                 raise StopIteration
             # Are the parameter values there already?
-            i_state = next(i for i in range(self.n_states)
-                           if self.states[i]["params"] == params_values)
+            i_state = next(i for i in range(self._n_states)
+                           if self._states[i]["params"] == params_values)
             # StopIteration not raised, so state exists, but maybe the theory params have
             # changed? In that case, I would still have to re-compute the likelihood
-            if self.states[i_state]["theory_params"] != theory_params:
+            if self._states[i_state]["theory_params"] != theory_params:
                 self.log.debug("Recomputing logp because theory params changed.")
                 raise StopIteration
             if _derived is not None:
-                _derived.update(self.states[i_state]["derived"] or {})
+                _derived.update(self._states[i_state]["derived"] or {})
             self.log.debug("Re-using computed results.")
         except StopIteration:
             # update the (first) oldest one and compute
             i_state = lasts.index(min(lasts))
-            self.states[i_state]["params"] = params_values
-            self.states[i_state]["theory_params"] = deepcopy(theory_params)
-            if self.timing:
-                start = time()
+            self._states[i_state]["params"] = params_values
+            self._states[i_state]["theory_params"] = deepcopy(theory_params)
+            if self.timer:
+                self.timer.start()
             try:
-                self.states[i_state]["logp"] = self.logp(_derived=_derived, **params_values)
-                if self.timing:
-                    self.n += 1
-                    delta_time = time() - start
-                    # TODO: Protect against caching in first call by discarding first time
-                    # if too different from second one (maybe check difference in log10 > 1)
-                    # In that case, take into account that #timed_evals is now (self.n - 1)
-                    if self.n == 2:
-                        log10diff = np.log10(self.time_avg / delta_time)
-                        if log10diff > 1:
-                            self.log.warning(
-                                "It seems the first call has done some caching (difference "
-                                " of a factor %g). Average timing will not be reliable "
-                                "unless many evaluations are carried out.", 10 ** log10diff)
-                    self.time_avg = (delta_time + self.time_avg * (self.n - 1)) / self.n
-                    self.time_sqsum += delta_time ** 2
-                    if self.n > 1:
-                        self.time_std = np.sqrt(
-                            (self.time_sqsum - self.n * self.time_avg ** 2) / (self.n - 1))
-                    self.log.debug("Average 'logp' evaluation time: %g s", self.time_avg)
+                self._states[i_state]["logp"] = self.logp(_derived=_derived, **params_values)
+                if self.timer:
+                    self.timer.increment()
             except Exception as e:
                 if self.stop_at_error:
                     raise LoggedError(self.log, "Error at evaluation: %r", e)
@@ -188,15 +155,15 @@ class Likelihood(HasLogger, HasDefaults):
                         "Ignored error at evaluation and assigned 0 likelihood "
                         "(set 'stop_at_error: True' as an option for this likelihood to stop here). "
                         "Error message: %r", e)
-                    self.states[i_state]["logp"] = -np.inf
-            self.states[i_state]["derived"] = deepcopy(_derived)
+                    self._states[i_state]["logp"] = -np.inf
+            self._states[i_state]["derived"] = deepcopy(_derived)
         # make this one the current one by decreasing the antiquity of the rest
-        for i in range(self.n_states):
-            self.states[i]["last"] -= max(lasts)
-        self.states[i_state]["last"] = 1
+        for i in range(self._n_states):
+            self._states[i]["last"] -= max(lasts)
+        self._states[i_state]["last"] = 1
         self.log.debug("Evaluated to logp=%g with derived %r",
-                       self.states[i_state]["logp"], self.states[i_state]["derived"])
-        return self.states[i_state]["logp"]
+                       self._states[i_state]["logp"], self._states[i_state]["derived"])
+        return self._states[i_state]["logp"]
 
     def wait(self):
         if self.delay:
@@ -212,23 +179,13 @@ class Likelihood(HasLogger, HasDefaults):
         """
         return len(self.input_params)
 
-    def __exit__(self, exception_type, exception_value, traceback):
-        if self.timing:
-            self.log.info("Average 'logp' evaluation time: %g s  (%d evaluations)" %
-                          (self.time_avg, self.n))
-        self.close()
-
 
 class LikelihoodExternalFunction(Likelihood):
-    def __init__(self, name, info, _theory=None, timing=None):
-        self.name = name
-        self.set_logger()
-        # Load info of the likelihood
-        for k in info:
-            setattr(self, k, info[k])
+    def __init__(self, info, name, _theory=None, timing=None):
+        CobayaComponent.__init__(self, info, name=name, timing=timing)
         # Store the external function and its arguments
-        self.external_function = get_external_function(info[_external], name=self.name)
-        argspec = getargspec(self.external_function)
+        self.external_function = get_external_function(info[_external], name=name)
+        argspec = getfullargspec(self.external_function)
         self.input_params = [p for p in argspec.args if p not in ["_derived", "_theory"]]
         self.has_derived = "_derived" in argspec.args
         if self.has_derived:
@@ -240,17 +197,11 @@ class LikelihoodExternalFunction(Likelihood):
         if self.has_theory:
             theory_kw_index = argspec.args[-len(argspec.defaults):].index("_theory")
             self.needs = argspec.defaults[theory_kw_index]
-        # Timing
-        self.timing = timing
-        self.n = 0
-        self.time_avg = 0
-        self.time_sqsum = 0
-        self.time_std = np.inf
         # States, to avoid recomputing
-        self.n_states = 3
-        self.states = [{"params": None, "logp": None, "derived": None, "last": 0}
-                       for _ in range(self.n_states)]
-        self.log.info("Initialised external likelihood.")
+        self._n_states = 3
+        self._states = [{"params": None, "logp": None, "derived": None, "last": 0}
+                        for _ in range(self._n_states)]
+        self.log.info("Initialized external likelihood.")
 
     def get_requirements(self):
         return self.needs if self.has_theory else {}
@@ -271,15 +222,11 @@ class LikelihoodExternalFunction(Likelihood):
                 # Print traceback
                 self.log.error("".join(
                     ["-"] * 16 + ["\n\n"] +
-                    list(traceback.format_exception(*sys.exc_info())) +
+                    list(traceback.format_exception(*sys.exc_info())) | +
                     ["\n"] + ["-"] * 37))
             raise LoggedError(
                 self.log, "The external likelihood '%s' failed at evaluation. "
                           "See error info on top of this message.", self.name)
-
-    @classmethod
-    def get_module_name(cls):
-        return None
 
 
 class LikelihoodCollection(HasLogger):
@@ -288,10 +235,8 @@ class LikelihoodCollection(HasLogger):
     Initializes the theory code and the experimental likelihoods.
     """
 
-    def __init__(self, info_likelihood, parameterization, info_theory=None, modules=None,
-                 timing=None):
-        self.name = "likelihood"
-        self.set_logger()
+    def __init__(self, info_likelihood, parameterization, info_theory=None, path_install=None, timing=None):
+        self.set_logger("likelihood")
         # *IF* there is a theory code, initialize it
         if info_theory:
             name = list(info_theory)[0]
@@ -300,7 +245,7 @@ class LikelihoodCollection(HasLogger):
                 theory_class = info_theory[name][_external]
             else:
                 theory_class = get_class(name, kind=_theory)
-            self.theory = theory_class(info_theory[name], modules=modules, timing=timing)
+            self.theory = theory_class(info_theory[name], path_install=path_install, timing=timing, name=name)
         else:
             self.theory = None
         # Initialize individual Likelihoods
@@ -308,11 +253,11 @@ class LikelihoodCollection(HasLogger):
         for name, info in info_likelihood.items():
             # If it has an "external" key, wrap it up. Else, load it up
             if _external in info:
-                self._likelihoods[name] = LikelihoodExternalFunction(
-                    name, info, _theory=getattr(self, _theory, None), timing=timing)
+                self._likelihoods[name] = LikelihoodExternalFunction(info, name, _theory=getattr(self, _theory, None),
+                                                                     timing=timing)
             else:
                 like_class = get_class(name, kind=_likelihood, module_path=info.pop(_module_path, None))
-                self._likelihoods[name] = like_class(info, modules=modules, timing=timing, standalone=False)
+                self._likelihoods[name] = like_class(info, path_install=path_install, timing=timing, standalone=False)
         # Assign input/output parameters
         self._assign_params(parameterization, info_likelihood, info_theory)
         # Do the user-defined post-initialisation, and assign the theory code
@@ -681,20 +626,20 @@ class LikelihoodCollection(HasLogger):
         except:
             return None
 
-    def get_timing(self):
+    def get_timers(self):
         return odict([
-            [like, {"t": self[like].time_avg, "n": self[like].n}] for like in
+            [component, self[component].timer] for component in
             (([_theory] if self.theory else []) + [like for like in self])
-            if getattr(self[like], _timing)])
+            if self[component].timer])
 
     def dump_timing(self):
-        avg_times_evals = self.get_timing()
+        avg_times_evals = self.get_timers()
         if avg_times_evals:
             sep = "\n   "
             self.log.info(
                 "Average computation time:" + sep + sep.join(
-                    ["%s : %g s (%d evaluations)" % (name, vals["t"], vals["n"])
-                     for name, vals in avg_times_evals.items()]))
+                    ["%s : %g s (%d evaluations)" % (name, timer.time_avg, timer.n)
+                     for name, timer in avg_times_evals.items()]))
 
     # Python magic for the "with" statement
     def __enter__(self):

@@ -136,8 +136,7 @@ def body_of_test_speeds(info_sampler={}, manual_blocking=False, modules=None):
         ranges=[ranges[i] for i in range(dim, 2 * dim)], n_modes=1,
         input_params_prefix=prefix, O_std_min=0.01, O_std_max=0.2, derived=True)
                    [_likelihood]["gaussian_mixture"][p][0] for p in ["means", "covs"]]
-    global n1, n2
-    n1, n2 = 0, 0
+    n = [0, 0]
     # PolyChord measures its own speeds, so we need to "sleep"
     sleep_unit = 1 / 50
     sampler = list(info_sampler.keys())[0]
@@ -145,8 +144,7 @@ def body_of_test_speeds(info_sampler={}, manual_blocking=False, modules=None):
     def like1(a_0, a_1, a_2, _derived=["sum_like1"]):
         if sampler == "polychord":
             sleep(1 / speed1 * sleep_unit)
-        global n1
-        n1 += 1
+        n[0] += 1
         if _derived is not None:
             _derived["sum_like1"] = a_0 + a_1 + a_2
         return multivariate_normal.logpdf([a_0, a_1, a_2], mean=mean1, cov=cov1)
@@ -154,8 +152,7 @@ def body_of_test_speeds(info_sampler={}, manual_blocking=False, modules=None):
     def like2(a_3, a_4, a_5, _derived=["sum_like2"]):
         if sampler == "polychord":
             sleep(1 / speed2 * sleep_unit)
-        global n2
-        n2 += 1
+        n[1] += 1
         if _derived is not None:
             _derived["sum_like2"] = a_3 + a_4 + a_5
         return multivariate_normal.logpdf([a_3, a_4, a_5], mean=mean2, cov=cov2)
@@ -165,8 +162,8 @@ def body_of_test_speeds(info_sampler={}, manual_blocking=False, modules=None):
     shuffle(perm)
     # Create info
     info = {"params":
-                odict([ [prefix + "%d" % i, {"prior": dict(zip(["min", "max"], ranges[i]))}]
-                          for i in perm] + [["sum_like1", None], ["sum_like2", None]]),
+                odict([[prefix + "%d" % i, {"prior": dict(zip(["min", "max"], ranges[i]))}]
+                       for i in perm] + [["sum_like1", None], ["sum_like2", None]]),
             "likelihood": {"like1": {"external": like1, "speed": speed1},
                            "like2": {"external": like2, "speed": speed2}}}
     info["sampler"] = info_sampler
@@ -198,20 +195,19 @@ def body_of_test_speeds(info_sampler={}, manual_blocking=False, modules=None):
     # Done! --> Tests
     if sampler == "polychord":
         tolerance = 0.2
-        assert abs((n2 - n1) / n1 / (speed2 / speed1) - 1) < tolerance, (
-                "#evaluations off: %g > %g" % (
-            abs((n2 - n1) / n1 / (speed2 / speed1) - 1), tolerance))
+        assert abs((n[1] - n[0]) / n[0] / (speed2 / speed1) - 1) < tolerance, (
+                "#evaluations off: %g > %g" % (abs((n[1] - n[0]) / n[0] / (speed2 / speed1) - 1), tolerance))
     # For MCMC tests, notice that there is a certain tolerance to be allowed for,
     # since for every proposed step the BlockedProposer cycles once, but the likelihood
     # may is not evaluated if the proposed point falls outside the prior bounds
     elif sampler == "mcmc" and info["sampler"][sampler].get("drag"):
-        assert abs((n2 - n1) / n1 / (speed2 / speed1) - 1) < 0.1
+        assert abs((n[1] - n[0]) / n[0] / (speed2 / speed1) - 1) < 0.1
     elif sampler == "mcmc" and info["sampler"][sampler].get("oversample"):
         # Testing oversampling: number of evaluations per param * oversampling factor
-        assert abs((n2 - n1) * dim / (n1 * dim) / (speed2 / speed1) - 1) < 0.1
+        assert abs((n[1] - n[0]) * dim / (n[0] * dim) / (speed2 / speed1) - 1) < 0.1
     elif sampler == "mcmc":
         # Testing just correct blocking: same number of evaluations per param
-        assert abs((n2 - n1) * dim / (n1 * dim) - 1) < 0.1
+        assert abs((n[1] - n[0]) * dim / (n[0] * dim) - 1) < 0.1
     # Finally, test some points of the chain to reproduce the correct likes and derived
     # These are not AssertionError's to override the flakyness of the test
     for _ in range(10):
