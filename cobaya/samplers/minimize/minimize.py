@@ -133,7 +133,8 @@ class minimize(Minimizer):
                 initial_point = self.model.prior.reference()
                 this_logp = self.logp(initial_point)
             self.log.info("Starting from random initial point:")
-        self.log.info(dict(zip(self.model.parameterization.sampled_params(), initial_point)))
+        self.log.info(
+            dict(zip(self.model.parameterization.sampled_params(), initial_point)))
         # Cov and affine transformation
         self._affine_transform_matrix = None
         self._inv_affine_transform_matrix = None
@@ -149,7 +150,8 @@ class minimize(Minimizer):
         self.affine_transform = lambda x: (
             self._affine_transform_matrix.dot(x - self._affine_transform_baseline))
         self.inv_affine_transform = lambda x: (
-                self._inv_affine_transform_matrix.dot(x) + self._affine_transform_baseline)
+                self._inv_affine_transform_matrix.dot(
+                    x) + self._affine_transform_baseline)
         bounds = self.model.prior.bounds(
             confidence_for_unbounded=self.confidence_for_unbounded)
         # Re-scale
@@ -186,7 +188,8 @@ class minimize(Minimizer):
         else:
             methods = ["bobyqa", "scipy"]
             raise LoggedError(
-                self.log, "Method '%s' not recognized. Try one of %r.", self.method, methods)
+                self.log, "Method '%s' not recognized. Try one of %r.", self.method,
+                methods)
 
     def run(self):
         """
@@ -329,15 +332,19 @@ class minimize(Minimizer):
 
         num_sampled = len(self.model.parameterization.sampled_params())
         num_derived = len(self.model.parameterization.derived_params())
-        add_section([[p, params[p]] for p in self.model.parameterization.sampled_params()])
+        add_section(
+            [[p, params[p]] for p in self.model.parameterization.sampled_params()])
         lines.append('')
-        add_section([[p, value] for p, value in self.model.parameterization.constant_params().items()])
+        add_section([[p, value] for p, value in
+                     self.model.parameterization.constant_params().items()])
         lines.append('')
-        add_section([[p, params[p]] for p in self.model.parameterization.derived_params()])
+        add_section(
+            [[p, params[p]] for p in self.model.parameterization.derived_params()])
         if hasattr(params, 'chi2_names'):
             from cobaya.conventions import _chi2, _separator
             labels.update(
-                odict([[p, r'\chi^2_{\rm %s}' % (p.replace(_chi2 + _separator, '').replace("_", r"\ "))]
+                odict([[p, r'\chi^2_{\rm %s}' % (
+                    p.replace(_chi2 + _separator, '').replace("_", r"\ "))]
                        for p in params.chi2_names]))
             add_section([[chi2, params[chi2]] for chi2 in params.chi2_names])
         return "\n".join(lines)
@@ -345,7 +352,8 @@ class minimize(Minimizer):
     def dump_getdist(self):
         if not self.output:
             return
-        getdist_bf = self.getdist_point_text(self.minimum, minuslogpost=self.minimum['minuslogpost'])
+        getdist_bf = self.getdist_point_text(self.minimum,
+                                             minuslogpost=self.minimum['minuslogpost'])
         out_filename = os.path.join(
             self.output.folder,
             self.output.prefix + getdist_ext_ignore_prior[self.ignore_prior])

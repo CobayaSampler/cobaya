@@ -74,7 +74,8 @@ def post(info, sample=None):
             except:
                 raise LoggedError(log, "Failed to load some of the input samples.")
     else:
-        raise LoggedError(log, "Not output from where to load from or input collections given.")
+        raise LoggedError(log,
+                          "Not output from where to load from or input collections given.")
     log.info("Will process %d samples.", collection_in.n())
     if collection_in.n() <= 1:
         raise LoggedError(
@@ -96,7 +97,7 @@ def post(info, sample=None):
         if pinfo is None or not is_derived_param(pinfo):
             raise LoggedError(
                 log,
-                "You tried to remove parameter '%s', which is not a derived paramter. "
+                "You tried to remove parameter '%s', which is not a derived parameter. "
                 "Only derived parameters can be removed during post-processing.", p)
         out[_params].pop(p)
     mlprior_names_add = []
@@ -107,7 +108,7 @@ def post(info, sample=None):
                 # No added sampled parameters (de-marginalisation not implemented)
                 if pinfo_in is None:
                     raise LoggedError(
-                        log, "You added a new sampled parameter %r (maybe accidentaly "
+                        log, "You added a new sampled parameter %r (maybe accidentally "
                              "by adding a new likelihood that depends on it). "
                              "Adding new sampled parameters is not possible. Try fixing "
                              "it to some value.", p)
@@ -118,8 +119,8 @@ def post(info, sample=None):
                         "but it was not a sampled parameter. "
                         "To change that prior, you need to define as an external one.", p)
             if mlprior_names_add[:1] != _prior_1d_name:
-                mlprior_names_add = (
-                        [_minuslogprior + _separator + _prior_1d_name] + mlprior_names_add)
+                mlprior_names_add = ([_minuslogprior + _separator + _prior_1d_name]
+                                     + mlprior_names_add)
         elif is_derived_param(pinfo):
             if p in out[_params]:
                 raise LoggedError(
@@ -202,20 +203,21 @@ def post(info, sample=None):
                     level, x_i)
     # 3. Create output collection
     if _post_suffix not in info_post:
-        raise LoggedError(log, "You need to provide a '%s' for your chains.", _post_suffix)
+        raise LoggedError(log, "You need to provide a '%s' for your chains.",
+                          _post_suffix)
     # Use default prefix if it exists. If it does not, produce no output by default.
     # {post: {output: None}} suppresses output, and if it's a string, updates it.
     out_prefix = info_post.get(_output_prefix, info.get(_output_prefix))
     if out_prefix not in [None, False]:
-        out_prefix += _separator_files + _post + _separator_files + info_post[_post_suffix]
+        out_prefix += _separator_files + _post + _separator_files + info_post[
+            _post_suffix]
     output_out = Output(output_prefix=out_prefix, force_output=info.get(_force))
     info_out = deepcopy(info)
     info_out[_post] = info_post
     # Updated with input info and extended (updated) add info
     info_out.update(info_in)
     info_out[_post][_post_add] = add
-    dummy_model_out = DummyModel(
-        out[_params], out[_likelihood], info_prior=out[_prior])
+    dummy_model_out = DummyModel(out[_params], out[_likelihood], info_prior=out[_prior])
     if recompute_theory:
         theory = list(info_theory_out.keys())[0]
         if _input_params not in info_theory_out[theory]:
@@ -235,7 +237,8 @@ def post(info, sample=None):
     # TODO: update, should be using a Model instance here?
     assert False, "Have not updated post processing"
 
-    likelihood_add = LikelihoodCollection(add[_likelihood], path_install=info.get(_path_install))
+    likelihood_add = LikelihoodCollection(add[_likelihood],
+                                          path_install=info.get(_path_install))
     # Remove auxiliary "one" before dumping -- 'add' *is* info_out[_post][_post_add]
     add[_likelihood].pop("one")
     if likelihood_add.theory:

@@ -225,8 +225,9 @@ class camb(_cosmo):
         self.camb = camb
         # Generate states, to avoid recomputing
         self._n_states = 3
-        self._states = [{"params": None, "derived": None, "derived_extra": None, "last": 0}
-                        for i in range(self._n_states)]
+        self._states = [
+            {"params": None, "derived": None, "derived_extra": None, "last": 0}
+            for i in range(self._n_states)]
         # Dict of named tuples to collect requirements and computation methods
         self.collectors = {}
         # Additional input parameters to pass to CAMB, and attributes to set_ manually
@@ -331,7 +332,8 @@ class camb(_cosmo):
                 self.non_linear_pk = self.non_linear_pk or v.get("non_linear", False)
                 self.non_linear_lens = self.non_linear_lens or v.get("non_linear", False)
                 if "lmax" in v:
-                    self.extra_args["lmax"] = max(v["lmax"], self.extra_args.get("lmax", 0))
+                    self.extra_args["lmax"] = max(v["lmax"],
+                                                  self.extra_args.get("lmax", 0))
                 self.needs_perts = True
                 # Create collector
                 self.collectors[k] = collector(method="CAMBdata.get_source_cls_dict")
@@ -344,7 +346,8 @@ class camb(_cosmo):
                     self.extra_attrs["WantTransfer"] = True
                     self.needs_perts = True
             else:
-                raise LoggedError(self.log, "This should not be happening. Contact the developers.")
+                raise LoggedError(self.log, "This should not be happening. Contact the "
+                                            "developers.")
         # Check that there are no repeated parameters between input and extra
         if set(self.input_params).intersection(set(self.extra_args)):
             raise LoggedError(
@@ -404,14 +407,17 @@ class camb(_cosmo):
                     elif function == "gaussian":
                         SourceWindows.append(GaussianSourceWindow(**window))
                     else:
-                        raise LoggedError(self.log, "Unknown source window function type %r", function)
+                        raise LoggedError(self.log,
+                                          "Unknown source window function type %r",
+                                          function)
                     window["function"] = function
                 cambparams.SourceWindows = SourceWindows
                 cambparams.SourceTerms.limber_windows = self.limber
             return cambparams
         except self.camb.baseconfig.CAMBParamRangeError:
             if self.stop_at_error:
-                raise LoggedError(self.log, "Out of bound parameters: %r", params_values_dict)
+                raise LoggedError(self.log, "Out of bound parameters: %r",
+                                  params_values_dict)
             else:
                 self.log.debug("Out of bounds parameters. "
                                "Assigning 0 likelihood and going on.")
@@ -459,8 +465,9 @@ class camb(_cosmo):
                 return 0
             intermediates = {
                 "CAMBparams": {"result": result},
-                "CAMBdata": {"method": "get_results" if self.needs_perts else "get_background",
-                             "result": None, "derived_dic": None}}
+                "CAMBdata": {
+                    "method": "get_results" if self.needs_perts else "get_background",
+                    "result": None, "derived_dic": None}}
             # Compute the necessary products (incl. any intermediate result, if needed)
             for product, collector in self.collectors.items():
                 parent, method = collector.method.split(".")
@@ -486,7 +493,8 @@ class camb(_cosmo):
             # Prepare derived parameters
             if _derived == {}:
                 _derived.update(self._get_derived_all(intermediates))
-                self._states[i_state]["derived"] = odict([[p, _derived[p]] for p in self.output_params])
+                self._states[i_state]["derived"] = odict(
+                    [[p, _derived[p]] for p in self.output_params])
             # Prepare necessary extra derived parameters
             self._states[i_state]["derived_extra"] = {
                 p: self._get_derived(p, intermediates) for p in self.derived_extra}
@@ -556,7 +564,8 @@ class camb(_cosmo):
             derived[p] = self._get_derived(self.translate_param(p), intermediates)
             if derived[p] is None:
                 raise LoggedError(
-                    self.log, "Derived param '%s' not implemented in the CAMB interface", p)
+                    self.log, "Derived param '%s' not implemented in the CAMB interface",
+                    p)
         return derived
 
     def get_param(self, p):
@@ -575,14 +584,16 @@ class camb(_cosmo):
             cl_camb = deepcopy(current_state["Cl"]["total"])
         except:
             raise LoggedError(
-                self.log, "No Cl's were computed. Are you sure that you have requested them?")
+                self.log,
+                "No Cl's were computed. Are you sure that you have requested them?")
         mapping = {"tt": 0, "ee": 1, "bb": 2, "te": 3}
         cls = {"ell": np.arange(cl_camb.shape[0])}
         cls.update({sp: cl_camb[:, i] for sp, i in mapping.items()})
         if "lens_potential" in current_state["Cl"]:
             cls.update({"pp": deepcopy(current_state["Cl"]["lens_potential"])[:, 0]})
         # unit conversion and ell_factor
-        ell_factor = ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[2:] if ell_factor else 1
+        ell_factor = ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[
+                     2:] if ell_factor else 1
         units_factors = {"1": 1,
                          "muK2": _T_CMB_K * 1.e6,
                          "K2": _T_CMB_K}
@@ -644,15 +655,17 @@ class camb(_cosmo):
         cls_dict = dict()
         for term, cl in cls.items():
             term_tuple = tuple(
-                [(lambda x: x if x == "P" else list(self.sources)[int(x) - 1])(_.strip("W"))
-                 for _ in term.split("x")])
+                [(lambda x: x if x == "P" else list(self.sources)[int(x) - 1])(
+                    _.strip("W")) for _ in term.split("x")])
             cls_dict[term_tuple] = cl
         cls_dict["ell"] = np.arange(cls[list(cls)[0]].shape[0])
         return cls_dict
 
     @classmethod
     def get_path(cls, path):
-        return os.path.realpath(os.path.join(path, "code", cls.camb_repo_name[cls.camb_repo_name.find("/") + 1:]))
+        return os.path.realpath(os.path.join(path, "code", cls.camb_repo_name[
+                                                           cls.camb_repo_name.find(
+                                                               "/") + 1:]))
 
     @classmethod
     def is_installed(cls, **kwargs):
@@ -661,10 +674,12 @@ class camb(_cosmo):
             return True
         return os.path.isfile(os.path.realpath(
             os.path.join(cls.get_path(kwargs["path"]),
-                         "camb", "cambdll.dll" if (platform.system() == "Windows") else "camblib.so")))
+                         "camb", "cambdll.dll" if (
+                        platform.system() == "Windows") else "camblib.so")))
 
     @classmethod
-    def install(cls, path=None, force=False, code=True, data=False, no_progress_bars=False, **kwargs):
+    def install(cls, path=None, force=False, code=True, data=False,
+                no_progress_bars=False, **kwargs):
         log = logging.getLogger(cls.__name__)
         if not code:
             log.info("Code not requested. Nothing to do.")
@@ -688,8 +703,8 @@ class camb(_cosmo):
             gcc_check = check_gcc_version(cls.camb_min_gcc_version, error_returns=False)
             if not gcc_check:
                 cause = (" Possible cause: it looks like `gcc` does not have the correct "
-                         "version number (CAMB requires %s); and `ifort` is also probably "
-                         "not available.", cls.camb_min_gcc_version)
+                         "version number (CAMB requires %s); and `ifort` is also "
+                         "probably not available.", cls.camb_min_gcc_version)
             else:
                 cause = ""
             log.error("Compilation failed!" + cause)

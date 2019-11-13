@@ -71,12 +71,14 @@ def install(*infos, **kwargs):
                 imported_module = import_module(module_folder, package=_package)
                 imported_class = get_class(module, kind)
                 if len([s for s in skip_list if s in imported_class.__name__.lower()]):
-                    log.info("Skipping %s for test skip list %s" % (imported_class.__name__, skip_list))
+                    log.info(
+                        "Skipping %s for test skip list %s" % (imported_class.__name__,
+                                                               skip_list))
                     continue
             except ImportError as e:
                 if kind == _likelihood:
-                    info = (next(info for info in infos if module in info.get(_likelihood, {}))[_likelihood][module]
-                           ) or {}
+                    info = (next(info for info in infos if module in
+                                 info.get(_likelihood, {}))[_likelihood][module]) or {}
                     if isinstance(info, string_types) or _external in info:
                         log.warning("Module '%s' is a custom likelihood. "
                                     "Nothing to do.\n", module)

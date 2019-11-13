@@ -195,7 +195,8 @@ class Parameterization(HasLogger):
         # input params depend on input and sampled only, never on output/derived
         all_input_arguments = set(chain(*self._input_args.values()))
         bad_input_dependencies = all_input_arguments.difference(
-            set(self.input_params()).union(set(self.sampled_params())).union(set(self.constant_params())))
+            set(self.input_params()).union(set(self.sampled_params())).union(
+                set(self.constant_params())))
         if bad_input_dependencies:
             raise LoggedError(
                 self.log,
@@ -249,10 +250,9 @@ class Parameterization(HasLogger):
             for p in self._input_funcs:
                 if p in resolved:
                     continue
-                args = {p:
-                    self._constant.get(
-                        p, self._input.get(
-                            p, sampled_params_values.get(p, None)))
+                args = {p: self._constant.get(
+                    p, self._input.get(
+                        p, sampled_params_values.get(p, None)))
                     for p in self._input_args[p]}
                 if not all([isinstance(v, Number) for v in args.values()]):
                     continue
@@ -287,7 +287,8 @@ class Parameterization(HasLogger):
                     for p in self._derived_args[p]}
                 if not all([isinstance(v, Number) for v in args.values()]):
                     continue
-                self._derived[p] = call_param_func(p, self._derived_funcs[p], args, self.log)
+                self._derived[p] = call_param_func(p, self._derived_funcs[p], args,
+                                                   self.log)
                 resolved.append(p)
         if set(resolved) != set(self._derived_funcs):
             raise LoggedError(
@@ -342,7 +343,8 @@ class Parameterization(HasLogger):
         if sampled_input:
             not_used = set(sampled_input)
             duplicated = not_used.intersection(set(
-                chain(*[list(chain(*[[k], v])) for k, v in self._sampled_renames.items()])))
+                chain(
+                    *[list(chain(*[[k], v])) for k, v in self._sampled_renames.items()])))
             not_used = not_used.difference(duplicated)
             derived = not_used.intersection(set(self.derived_params()))
             input_ = not_used.intersection(set(self.input_params()))
@@ -354,9 +356,8 @@ class Parameterization(HasLogger):
                    ("\n   Cannot be fixed: %r " % list(input_) +
                     "--> instead, fix sampled parameters that depend on them!"
                     if input_ else "") +
-                   ("\n   "
-                    "Cannot be fixed because are derived parameters: %r " % list(derived)
-                    if derived else ""))
+                   ("\n   Cannot be fixed because are derived parameters: %r " % list(
+                       derived) if derived else ""))
             for line in msg.split("\n"):
                 self.log.error(line)
             raise LoggedError
@@ -369,7 +370,8 @@ class Parameterization(HasLogger):
         Uses the parameter name if no label has been given.
         """
         get_label = lambda p, info: (
-            ensure_nolatex(getattr(info, "get", lambda x, y: y)(_p_label, p.replace("_", r"\ "))))
+            ensure_nolatex(
+                getattr(info, "get", lambda x, y: y)(_p_label, p.replace("_", r"\ "))))
         return odict([[p, get_label(p, info)] for p, info in self._infos.items()])
 
     # Python magic for the "with" statement

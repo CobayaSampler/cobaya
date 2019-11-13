@@ -2,7 +2,7 @@
 .. module:: _des_prototype
 
 :Synopsis: DES likelihood.
-           Well tested and agrees with likelihoods in DES chains for fixednu.
+           Well tested and agrees with likelihoods in DES chains for fixed nu mass.
 :Author: Antony Lewis (little changes for Cobaya by Jesus Torrado)
 
 .. |br| raw:: html
@@ -159,10 +159,12 @@ else:
 
 
 class _des_prototype(_DataSetLikelihood):
-    install_options = {"github_repository": "CobayaSampler/des_data", "github_release": "v1.0"}
+    install_options = {"github_repository": "CobayaSampler/des_data",
+                       "github_release": "v1.0"}
 
     def load_dataset_file(self, filename, dataset_params={}):
-        self.l_max = self.l_max or int(50000 * self.acc)  # lmax here is an internal parameter for transforms
+        self.l_max = self.l_max or int(50000 * self.acc)
+        # lmax here is an internal parameter for transforms
         if filename.endswith(".fits"):
 
             if dataset_params:
@@ -450,12 +452,14 @@ class _des_prototype(_DataSetLikelihood):
 
             if PKWeyl is not None:
                 if 'gammat' in self.used_types:
-                    raise LoggedError(self.log, 'DES currently only supports Weyl potential for lensing only')
+                    raise LoggedError(self.log, "DES currently only supports Weyl "
+                                                "potential for lensing only")
                 qs = chis * wq
             else:
                 qs = 3 * omegam * h2 * (1e5 / c) ** 2 * chis * (1 + self.zs) / 2 * wq
         ls_cl = np.hstack((np.arange(2., 100 - 4 / self.acc, 4 / self.acc),
-                           np.exp(np.linspace(np.log(100.), np.log(self.l_max), int(50 * self.acc)))))
+                           np.exp(np.linspace(np.log(100.), np.log(self.l_max),
+                                              int(50 * self.acc)))))
         # Get the angular power spectra and transform back
         dchifac = dchis / chis ** 2
         if optimized:
@@ -496,9 +500,14 @@ class _des_prototype(_DataSetLikelihood):
             if 'xip' in self.used_types or 'xim' in self.used_types:
                 for (f1, f2) in self.bin_pairs[self.data_types.index('xip')]:
                     cl = _spline(ls_cl, np.dot(tmplens, qs[f1] * qs[f2]))
-                    fac = ((1 + shear_calibration_parameters[f1]) * (1 + shear_calibration_parameters[f2]) / 2 / np.pi)
-                    corrs_th_p[f1, f2] = self.hankel0.transform(cl, self.theta_bins_radians, ret_err=False) * fac
-                    corrs_th_m[f1, f2] = self.hankel4.transform(cl, self.theta_bins_radians, ret_err=False) * fac
+                    fac = ((1 + shear_calibration_parameters[f1]) * (
+                            1 + shear_calibration_parameters[f2]) / 2 / np.pi)
+                    corrs_th_p[f1, f2] = self.hankel0.transform(cl,
+                                                                self.theta_bins_radians,
+                                                                ret_err=False) * fac
+                    corrs_th_m[f1, f2] = self.hankel4.transform(cl,
+                                                                self.theta_bins_radians,
+                                                                ret_err=False) * fac
             if 'gammat' in self.used_types:
                 for (f1, f2) in self.bin_pairs[self.data_types.index('gammat')]:
                     cl = _spline(ls_cl, np.dot(tmp, qgal[f1] * qs[f2]))
@@ -508,20 +517,24 @@ class _des_prototype(_DataSetLikelihood):
             if 'wtheta' in self.used_types:
                 for (f1, f2) in self.bin_pairs[self.data_types.index('wtheta')]:
                     cl = _spline(ls_cl, np.dot(tmp, qgal[f1] * qgal[f2]))
-                    corrs_th_w[f1, f2] = self.hankel0.transform(cl, self.theta_bins_radians, ret_err=False) / 2 / np.pi
+                    corrs_th_w[f1, f2] = self.hankel0.transform(cl,
+                                                                self.theta_bins_radians,
+                                                                ret_err=False) / 2 / np.pi
         else:
             j0s, j2s, j4s = self.bessel_cache
             ls_bessel = self.ls_bessel
             if 'xip' in self.used_types or 'xim' in self.used_types:
                 for (f1, f2) in self.bin_pairs[self.data_types.index('xip')]:
                     cl = _spline(ls_cl, np.dot(tmplens, qs[f1] * qs[f2]))(ls_bessel)
-                    fac = (1 + shear_calibration_parameters[f1]) * (1 + shear_calibration_parameters[f2])
+                    fac = (1 + shear_calibration_parameters[f1]) * (
+                            1 + shear_calibration_parameters[f2])
                     corrs_th_p[f1, f2] = np.dot(cl, j0s) * fac
                     corrs_th_m[f1, f2] = np.dot(cl, j4s) * fac
             if 'gammat' in self.used_types:
                 for (f1, f2) in self.bin_pairs[self.data_types.index('gammat')]:
                     cl = _spline(ls_cl, np.dot(tmp, qgal[f1] * qs[f2]))(ls_bessel)
-                    corrs_th_t[f1, f2] = np.dot(cl, j2s) * (1 + shear_calibration_parameters[f2])
+                    corrs_th_t[f1, f2] = np.dot(cl, j2s) * (
+                            1 + shear_calibration_parameters[f2])
             if 'wtheta' in self.used_types:
                 for (f1, f2) in self.bin_pairs[self.data_types.index('wtheta')]:
                     cl = _spline(ls_cl, np.dot(tmp, qgal[f1] * qgal[f2]))(ls_bessel)
@@ -687,7 +700,8 @@ class _des_prototype(_DataSetLikelihood):
                     fac = 100 * self.theta_bins
                     data = data * fac
                 if errors and not diff:
-                    ax.errorbar(self.theta_bins, data, fac * self.errors[2][f2, f1], ls=ls)
+                    ax.errorbar(self.theta_bins, data, fac * self.errors[2][f2, f1],
+                                ls=ls)
                 else:
                     ax.semilogx(self.theta_bins, data, ls=ls)
                 if corrs_t is not None and not diff:

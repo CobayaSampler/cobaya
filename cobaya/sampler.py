@@ -101,7 +101,8 @@ class Sampler(CobayaComponent):
         return None
 
     # Private methods: just ignore them:
-    def __init__(self, info_sampler, model, output, resume=_resume_default, path_install=None, name=None):
+    def __init__(self, info_sampler, model, output, resume=_resume_default,
+                 path_install=None, name=None):
         """
         Actual initialization of the class. Loads the default and input information and
         call the custom ``initialize`` method.
@@ -209,5 +210,5 @@ def get_sampler(info_sampler, posterior, output_file,
             log, "The sampler block must be a dictionary 'sampler: {options}'.")
     sampler_class = get_class(name, kind=_sampler)
     assert issubclass(sampler_class, Sampler)
-    return sampler_class(
-        info_sampler[name], posterior, output_file, resume=resume, path_install=modules, name=name)
+    return sampler_class(info_sampler[name], posterior, output_file, resume=resume,
+                         path_install=modules, name=name)

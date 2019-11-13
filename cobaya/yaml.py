@@ -103,12 +103,14 @@ DefaultsLoader.add_constructor('!defaults', _construct_defaults)
 
 def yaml_load(text_stream, file_name=None):
     try:
-        # set current_folder to store the file name, to be used to locate relative defaults files
+        # set current_folder to store the file name, to be used to locate relative
+        # defaults files
         DefaultsLoader.current_folder = os.path.dirname(file_name) if file_name else None
         return yaml.load(text_stream, DefaultsLoader)
     # Redefining the general exception to give more user-friendly information
     except (yaml.YAMLError, TypeError) as exception:
-        errstr = "Error in your input file " + ("'" + file_name + "'" if file_name else "")
+        errstr = "Error in your input file " + (
+            "'" + file_name + "'" if file_name else "")
         if hasattr(exception, "problem_mark"):
             line = 1 + exception.problem_mark.line
             column = 1 + exception.problem_mark.column
@@ -122,7 +124,8 @@ def yaml_load(text_stream, file_name=None):
             errorline = (signal + sep + lines[line - 1] +
                          signal_right + "column %s" % column)
             post = ((("\n" + " " * len(signal) + sep).join(
-                [""] + lines[line + 1 - 1:min(line + 1 + context - 1, len(lines))]))) + "\n"
+                [""] + lines[
+                       line + 1 - 1:min(line + 1 + context - 1, len(lines))]))) + "\n"
             bullet = "\n- "
             raise InputSyntaxError(
                 errstr + " at line %d, column %d." % (line, column) +

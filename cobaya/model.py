@@ -99,10 +99,12 @@ class Model(HasLogger):
 
         # TODO: would be more logical called self.theories and self.likelihoods
         info_theory = self._updated_info.get(_theory)
-        self.theory = TheoryCollection(info_theory, path_install=path_install, timing=timing)
+        self.theory = TheoryCollection(info_theory, path_install=path_install,
+                                       timing=timing)
 
         info_likelihood = self._updated_info[_likelihood]
-        self.likelihood = LikelihoodCollection(info_likelihood, theory=self.theory, path_install=path_install,
+        self.likelihood = LikelihoodCollection(info_likelihood, theory=self.theory,
+                                               path_install=path_install,
                                                timing=timing)
 
         # Assign input/output parameters
@@ -125,14 +127,17 @@ class Model(HasLogger):
         sampled_dependence = odict()
         for p, i_s in sampled_input_dependence.items():
             sampled_dependence[p] = [component for component in self.theory.values()
-                                     if any([(i in component.input_params) for i in (i_s or [p])])]
-            # For the moment theory parameters "depend" on every likelihood, since re-computing the theory
-            # code forces recomputation of the likelihoods
+                                     if any(
+                    [(i in component.input_params) for i in (i_s or [p])])]
+            # For the moment theory parameters "depend" on every likelihood, since
+            # re-computing the theory code forces recomputation of the likelihoods
             if sampled_dependence[p]:
                 sampled_dependence[p] += list(self.likelihood.values())
             else:
-                sampled_dependence[p] = [component for component in self.likelihood.values()
-                                         if any([(i in component.input_params) for i in (i_s or [p])])]
+                sampled_dependence[p] = [component for component in
+                                         self.likelihood.values()
+                                         if any(
+                        [(i in component.input_params) for i in (i_s or [p])])]
 
         self.sampled_dependence = sampled_dependence
 
@@ -238,7 +243,8 @@ class Model(HasLogger):
         this_derived_dict = {} if return_derived else None
         for theory in self.theory.values():
             theory_params = {p: input_params[p] for p in theory.input_params}
-            theory_success = theory.compute(_derived=this_derived_dict, cached=cached, **theory_params)
+            theory_success = theory.compute(_derived=this_derived_dict, cached=cached,
+                                            **theory_params)
             if not theory_success:
                 self.log.debug(
                     "Theory code computation failed. Not computing likelihood.")
@@ -251,7 +257,8 @@ class Model(HasLogger):
         if not theory_success:
             loglikes = np.array([-np.inf for _ in self.likelihood])
         else:
-            loglikes = self.likelihood.logps(input_params, theory_params_dict, derived_dict=derived_dict, cached=cached)
+            loglikes = self.likelihood.logps(input_params, theory_params_dict,
+                                             derived_dict=derived_dict, cached=cached)
         if make_finite:
             loglikes = np.nan_to_num(loglikes)
 
@@ -403,8 +410,8 @@ class Model(HasLogger):
 
     def _assign_params(self, info_likelihood, info_theory=None):
         """
-        Assign parameters to theories and likelihoods, following the algorithm explained in
-        :doc:`DEVEL`.
+        Assign parameters to theories and likelihoods, following the algorithm explained
+        in :doc:`DEVEL`.
         """
         self.input_params = list(self.parameterization.input_params())
         self.output_params = list(self.parameterization.output_params())
@@ -412,7 +419,8 @@ class Model(HasLogger):
             ["input", odict([[p, []] for p in self.input_params])],
             ["output", odict([[p, []] for p in self.output_params])]])
         agnostic_likes = {"input": [], "output": []}
-        # All components, doing likelihoods first so unassigned can by default go to theory
+        # All components, doing likelihoods first so unassigned can by default
+        # go to theory
         components = list(self.likelihood.values()) + list(self.theory.values())
         for kind, option, prefix in (
                 ["input", _input_params, _input_params_prefix],
@@ -430,11 +438,13 @@ class Model(HasLogger):
                             params_assign[kind][p] += [component]
                         except KeyError:
                             if kind == "input":
-                                # If external function, no problem: it may have default value
+                                # If external function, no problem: it may have
+                                # default value
                                 if not isinstance(component, LikelihoodExternalFunction):
                                     raise LoggedError(
-                                        self.log, "Parameter '%s' needed as input for '%s', "
-                                                  "but not provided.", p, component.name)
+                                        self.log,
+                                        "Parameter '%s' needed as input for '%s', "
+                                        "but not provided.", p, component.name)
                 # 2. Is there a params prefix?
                 elif getattr(component, prefix, None) is not None:
                     for p in params_assign[kind]:
@@ -448,7 +458,8 @@ class Model(HasLogger):
                 # 4. No parameter knowledge: store as parameter agnostic
                 else:
                     agnostic_likes[kind] += [component]
-                # Check that there is only one non-knowledgeable element, and assign unused params
+                # Check that there is only one non-knowledgeable element, and assign
+                # unused params
                 if len(agnostic_likes[kind]) > 1:
                     raise LoggedError(
                         self.log, "More than once parameter-agnostic likelihood/theory "
@@ -463,8 +474,10 @@ class Model(HasLogger):
         # TODO: could relax this?
         if self.theory:
             for p, assigned in params_assign["input"].items():
-                if len(assigned) > 1 and [component for component in assigned if isinstance(component, Theory)] \
-                        and [component for component in assigned if isinstance(component, Likelihood)]:
+                if len(assigned) > 1 and [component for component in assigned if
+                                          isinstance(component, Theory)] \
+                        and [component for component in assigned if
+                             isinstance(component, Likelihood)]:
                     raise LoggedError(
                         self.log, "Some parameter has been assigned to the theory code "
                                   "AND a likelihood, and that is not allowed: {%s: %r}",
@@ -472,7 +485,8 @@ class Model(HasLogger):
         # If unit likelihood is present, assign all *non-theory* inputs to it
         if "one" in self.likelihood:
             for p, assigned in params_assign["input"].items():
-                if not [component for component in assigned if isinstance(component, Theory)]:
+                if not [component for component in assigned if
+                        isinstance(component, Theory)]:
                     assigned.append(self.likelihood["one"])
         # If there are unassigned input params, fail
         unassigned_input = [
@@ -512,11 +526,14 @@ class Model(HasLogger):
                 ["input", _input_params, "input_params"],
                 ["output", _output_params, "output_params"]):
             for component in components:
-                setattr(component, attr, [p for p, assign in params_assign[kind].items() if component in assign])
+                setattr(component, attr,
+                        [p for p, assign in params_assign[kind].items() if
+                         component in assign])
                 # Update infos!
                 if isinstance(component, Likelihood):
                     info_likelihood[component.get_name()].pop(_params, None)
-                    info_likelihood[component.get_name()][option] = getattr(component, attr)
+                    info_likelihood[component.get_name()][option] = getattr(component,
+                                                                            attr)
                 else:
                     info_theory[component.get_name()].pop(_params, None)
                     info_theory[component.get_name()][option] = getattr(component, attr)
@@ -545,7 +562,8 @@ class Model(HasLogger):
         """
         # Fill unknown speeds with the value of the slowest one, and clip with overhead
         components = list(self.likelihood.values()) + list(self.theory.values())
-        speeds = np.array([getattr(component, "speed", -1) for component in components], dtype=np.float64)
+        speeds = np.array([getattr(component, "speed", -1) for component in components],
+                          dtype=np.float64)
         # Add overhead to the defined ones, and clip to the slowest the undefined ones
         speeds[speeds > 0] = (speeds[speeds > 0] ** -1 + self.overhead) ** -1
         try:
@@ -617,11 +635,13 @@ class Model(HasLogger):
                                           np.log(np.min(params_speeds[i + 1:])))
                 i_max = np.argmin(log_differences)
                 blocks = (
-                    lambda l: [list(chain(*l[:i_max + 1])), list(chain(*l[i_max + 1:]))])(blocks)
+                    lambda l: [list(chain(*l[:i_max + 1])), list(chain(*l[i_max + 1:]))])(
+                    blocks)
                 # In this case, speeds must be *cumulative*, since I am squashing blocks
                 cum_inv = lambda ss: 1 / (sum(1 / ss))
                 params_speeds = (
-                    lambda l: [cum_inv(l[:i_max + 1]), cum_inv(l[i_max + 1:])])(params_speeds)
+                    lambda l: [cum_inv(l[:i_max + 1]), cum_inv(l[i_max + 1:])])(
+                    params_speeds)
                 self.log.debug("Fast-slow blocking: %r with speeds %r",
                                blocks, params_speeds)
             else:

@@ -32,18 +32,21 @@ class Timer(object):
                         " of a factor %g). Average timing will not be reliable "
                         "unless many evaluations are carried out.", 10 ** log10diff)
             else:
-                logger.warning("Timing returning zero, may be inaccurate. First call may have done some caching.")
+                logger.warning("Timing returning zero, may be inaccurate. First call may "
+                               "have done some caching.")
         self.time_avg = (delta_time + self.time_avg * (self.n - 1)) / self.n
         self.time_sqsum += delta_time ** 2
         if self.n > 1:
-            self.time_std = np.sqrt((self.time_sqsum - self.n * self.time_avg ** 2) / (self.n - 1))
+            self.time_std = np.sqrt(
+                (self.time_sqsum - self.n * self.time_avg ** 2) / (self.n - 1))
         if logger:
             logger.debug("Average evaluation time: %g s", self.time_avg)
 
 
 class CobayaComponent(HasLogger, HasDefaults):
     """
-    Base class for a theory, likelihood or sampler with associated .yaml parameter that can set attributes
+    Base class for a theory, likelihood or sampler with associated .yaml parameter
+    that can set attributes.
     """
 
     class_options = {}
@@ -51,9 +54,9 @@ class CobayaComponent(HasLogger, HasDefaults):
     def __init__(self, info={}, name=None, timing=None, path_install=None):
         self._name = name or self.get_qualified_class_name()
         self.path_install = path_install
-        # set attributes from the info (usually from yaml file)
         for k, value in self.class_options.items():
             setattr(self, k, value)
+        # set attributes from the info (usually from yaml file)
         for k, value in info.items():
             setattr(self, k, value)
         self.set_logger(name=self._name)
@@ -88,6 +91,7 @@ class ComponentCollection(OrderedDict, HasLogger):
     """
     Base class for an ordered dictionary of components (e.g. likelihoods or theories)
     """
+
     def __init__(self):
         super(ComponentCollection, self).__init__()
 
@@ -97,7 +101,8 @@ class ComponentCollection(OrderedDict, HasLogger):
             sep = "\n   "
             self.log.info(
                 "Average computation time:" + sep + sep.join(
-                    ["%s : %g s (%d evaluations)" % (component.get_name(), component.timer.time_avg, component.timer.n)
+                    ["%s : %g s (%d evaluations)" % (
+                        component.get_name(), component.timer.time_avg, component.timer.n)
                      for component in timers]))
 
     # Python magic for the "with" statement

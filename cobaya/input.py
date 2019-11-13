@@ -21,8 +21,9 @@ import pkg_resources
 
 # Local
 from cobaya.conventions import _package, _products_path, _path_install, _resume, _force
-from cobaya.conventions import _output_prefix, _debug, _debug_file
-from cobaya.conventions import _params, _prior, _theory, _likelihood, _sampler, _kinds, _external, _self_name
+from cobaya.conventions import _output_prefix, _debug, _debug_file, _external, _self_name
+from cobaya.conventions import _params, _prior, _theory, _likelihood, _sampler, _kinds
+
 from cobaya.conventions import _p_label, _p_derived, _p_ref, _p_drop, _p_value, _p_renames
 from cobaya.conventions import _p_proposal, _input_params, _output_params, _module_path
 from cobaya.conventions import _yaml_extensions
@@ -100,15 +101,17 @@ def get_default_info(module_or_class, kind=None, fail_if_not_found=False,
         cls = get_class(module_or_class, _kind, None_if_not_found=not fail_if_not_found,
                         module_path=module_path)
         if cls:
-            default_module_info = cls.get_defaults(return_yaml=return_yaml, yaml_expand_defaults=yaml_expand_defaults)
+            default_module_info = cls.get_defaults(return_yaml=return_yaml,
+                                                   yaml_expand_defaults=yaml_expand_defaults)
         else:
             default_module_info = (
-                lambda x: yaml_dump(x) if return_yaml else x)({_kind: {module_or_class: {}}})
+                lambda x: yaml_dump(x) if return_yaml else x)(
+                {_kind: {module_or_class: {}}})
     except Exception as e:
         raise LoggedError(log, "Failed to get defaults for module or class '%s' [%s]",
                           ("%s:" % _kind if _kind else "") + module_or_class, e)
 
-    # TODO: find batter place to put this definition where it doesn't give circular reference
+    # TODO: find batter place to put this definition where it doesn't give circular ref
     # TODO: and more generally should not be importing defaults more than once
     from cobaya.likelihood import Likelihood
     from cobaya.theory import Theory
@@ -119,7 +122,8 @@ def get_default_info(module_or_class, kind=None, fail_if_not_found=False,
         for kind_name, _cls in component_base_classes.items():
             if issubclass(cls, _cls):
                 if kind and kind != kind_name:
-                    raise LoggedError(log, "class %s of unexpected kind %s", cls.__name__, kind)
+                    raise LoggedError(log, "class %s of unexpected kind %s", cls.__name__,
+                                      kind)
                 _kind = kind_name
                 break
 
@@ -131,8 +135,10 @@ def get_default_info(module_or_class, kind=None, fail_if_not_found=False,
             else:
                 info[module_or_class] = info.pop(_self_name)
         except KeyError:
-            raise LoggedError(log, "The defaults file for '%s' should be structured as %s:%s:{[options]} "
-                                   "or %s:%s:{[options]}.", module_or_class, _kind, module_or_class, _kind, _self_name)
+            raise LoggedError(log,
+                              "The defaults file for '%s' should be structured as "
+                              "%s:%s:{[options]} or %s:%s:{[options]}.", module_or_class,
+                              _kind, module_or_class, _kind, _self_name)
         info = deepcopy((cls or component_base_classes[_kind]).class_options)
         info.update(default_module_info[_kind][module_or_class])
         default_module_info[_kind][module_or_class] = info
@@ -174,17 +180,20 @@ def update_info(info):
 
             module_path = input_info[block][module].get(_module_path, None)
             default_class_info = get_default_info(module, block, module_path=module_path)
-            # TODO: check - get_default_info was ignoring this extra arg: input_info[block][module_or_class])
+            # TODO: check - get_default_info was ignoring this extra arg:
+            #  input_info[block][module_or_class])
             updated_info[block][module] = default_class_info[block][module] or {}
             # Update default options with input info
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
-            ignore = set([_external, _p_renames, _input_params, _output_params, _module_path])
+            ignore = set(
+                [_external, _p_renames, _input_params, _output_params, _module_path])
             options_not_recognized = (set(input_info[block][module])
                                       .difference(ignore)
                                       .difference(set(updated_info[block][module])))
             if options_not_recognized:
                 alternatives = odict()
-                available = (set([_external, _p_renames]).union(updated_info[block][module]))
+                available = (
+                    set([_external, _p_renames]).union(updated_info[block][module]))
                 while options_not_recognized:
                     option = options_not_recognized.pop()
                     alternatives[option] = fuzzy_match(option, available, n=3)
@@ -334,11 +343,10 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
         myprint = log.info
         myprint_debug = log.debug
     myname = inspect.stack()[0][3]
-    ignore = set([]) if strict else set(
-        [_debug, _debug_file, _resume, _force, _path_install])
+    ignore = set([]) if strict else {_debug, _debug_file, _resume, _force, _path_install}
     ignore = ignore.union(set(ignore_blocks or []))
-    ignore_params = (set([]) if strict else set(
-        [_p_label, _p_renames, _p_ref, _p_proposal, "min", "max"]))
+    ignore_params = (set([]) if strict else {_p_label, _p_renames, _p_ref, _p_proposal,
+                                             "min", "max"})
     if set(info1).difference(ignore) != set(info2).difference(ignore):
         myprint(myname + ": different blocks or options: %r (old) vs %r (new)" % (
             set(info1).difference(ignore), set(info2).difference(ignore)))
@@ -428,16 +436,26 @@ class HasDefaults(object):
             except:
                 pass
             else:
-                if hasattr(imported, cls.__name__):
+                if getattr(imported, cls.__name__, None) is cls:
                     parts = parts[:-1]
         if parts[-1] == cls.__name__:
             return ['.'.join(parts[i:]) for i in range(len(parts))]
         else:
-            return ['.'.join(parts[i:]) + '.' + cls.__name__ for i in range(len(parts))]
+            return ['.'.join(parts[i:]) + '.' + cls.__name__ for i in
+                    range(len(parts) + 1)]
 
     @classmethod
     def get_qualified_class_name(cls):
-        """get cls.__name__ if class is same name as the module, otherwise module.class_name"""
+        """
+        Get the distinct shortest reference name for the class of the form
+        module.ClassName or module.submodule.ClassName etc.
+        For Cobaya modules the name is relative to subpackage for the relevant kind of
+        class (e.g. Likelihood names are relative to cobaya.likelihoods).
+
+        For external classes it loads the shortest fully qualified name of the form
+        package.ClassName or package.module.ClassName or
+        package.subpackage.module.ClassName, etc.
+        """
         qualified_names = cls.get_qualified_names()
         if qualified_names[0].startswith('cobaya.'):
             return qualified_names[2]
@@ -474,7 +492,8 @@ class HasDefaults(object):
 
     @classmethod
     def get_associated_file_content(cls, ext):
-        # handle extracting package files when may be inside a zipped package so files not accessible directly
+        # handle extracting package files when may be inside a zipped package so files
+        # not accessible directly
         try:
             return pkg_resources.resource_string(cls.__module__, cls.__name__ + ext)
         except:
@@ -500,16 +519,19 @@ class HasDefaults(object):
         If keyword `return_yaml` is set to True, it returns literally that,
         whereas if False (default), it returns the corresponding Python dict.
 
-        Note that in external modules installed as zip_safe=True packages files cannot be accessed directly.
+        Note that in external modules installed as zip_safe=True packages files cannot be
+        accessed directly.
         In this case using !default .yaml includes currently does not work.
 
-        Also note that if you return a dictionary it may be modified (return a deep copy if you want to keep it).
+        Also note that if you return a dictionary it may be modified (return a deep copy
+        if you want to keep it).
         """
         yaml_text = cls.get_associated_file_content('.yaml')
         if not yaml_text:
             for base in cls.__bases__:
                 if issubclass(base, HasDefaults):
-                    return base.get_defaults(return_yaml=return_yaml, yaml_expand_defaults=yaml_expand_defaults)
+                    return base.get_defaults(return_yaml=return_yaml,
+                                             yaml_expand_defaults=yaml_expand_defaults)
         if return_yaml:
             if yaml_expand_defaults:
                 return yaml_dump(yaml_load_file(cls.get_yaml_file(), yaml_text))

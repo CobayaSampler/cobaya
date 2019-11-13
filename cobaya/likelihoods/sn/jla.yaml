@@ -2,7 +2,7 @@
 # (For the marginalized version, use 'sn_jla_lite')
 
 likelihood:
-  sn.jla:
+  __self__:
     # Path to the data: where the sn_data has been cloned
     path: null
     # .dataset file with settings

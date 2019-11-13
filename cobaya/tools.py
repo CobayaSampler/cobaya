@@ -64,15 +64,18 @@ def deepcopyfix(olddict):
 
 def get_class_base_filename(name, kind):
     """
-    Gets absoluate file base name for a class module, relative to the package source, of a likelihood, theory or sampler.
+    Gets absoluate file base name for a class module, relative to the package source,
+    of a likelihood, theory or sampler.
     """
     if '.' not in name: name += '.' + name
-    return os.path.join(os.path.dirname(__file__), subfolders[kind], name.replace('.', os.sep))
+    return os.path.join(os.path.dirname(__file__), subfolders[kind],
+                        name.replace('.', os.sep))
 
 
 def get_class_module(name, kind):
     """
-    Gets qualified module name, relative to the package source, of a likelihood, theory or sampler.
+    Gets qualified module name, relative to the package source, of a likelihood, theory
+    or sampler.
     """
     return '.' + subfolders[kind] + '.' + name
 
@@ -93,17 +96,19 @@ def get_kind(name, fail_if_not_found=True):
             return None
 
 
-def get_class(name, kind=None, None_if_not_found=False, allow_external=True, module_path=None):
+def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
+              module_path=None):
     """
-    Retrieves the requested likelihood (default) or theory class. The name can be a fully-qualified
-    package.module.classname string, or an internal name of the particular kind. If the last element of name is
-    not a class, assume class in module is same name as module.
+    Retrieves the requested class from its reference name. The name can be a
+    fully-qualified package.module.classname string, or an internal name of the particular
+    kind. If the last element of name is not a class, assume class has the same name and
+    is in that module.
 
-    By default tries to load internal modules first, then if that fails internal ones. module_path can be used to
-    specify a specific external location.
+    By default tries to load internal modules first, then if that fails internal ones.
+    module_path can be used to specify a specific external location.
 
-    Raises ``ImportError`` if class not found in the appropriate place in the source tree and is not a fully
-    qualified external name.
+    Raises ``ImportError`` if class not found in the appropriate place in the source tree
+    and is not a fully qualified external name.
 
     If 'kind=None' is not given, tries to guess it if the name is unique (slow!).
 
@@ -123,7 +128,8 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True, mod
         if hasattr(_module, class_name):
             cls = getattr(_module, class_name)
         else:
-            cls = getattr(import_module(_module_name + '.' + class_name, package=package), class_name)
+            cls = getattr(import_module(_module_name + '.' + class_name, package=package),
+                          class_name)
         if not inspect.isclass(cls):
             return getattr(cls, class_name)
         else:
@@ -336,7 +342,8 @@ def get_scipy_1d_pdf(info):
     param = list(info.keys())[0]
     info2 = deepcopy(info[param])
     if not info2:
-        raise LoggedError(log, "No specific prior info given for sampled parameter '%s'." % param)
+        raise LoggedError(log,
+                          "No specific prior info given for sampled parameter '%s'." % param)
     # What distribution?
     try:
         dist = info2.pop(_p_dist).lower()

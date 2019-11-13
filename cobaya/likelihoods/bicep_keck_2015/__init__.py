@@ -89,7 +89,6 @@ class bicep_keck_2015(_CMBlikes):
     install_options = {"download_url": r"http://bicepkeck.org/BK15_datarelease/BK15_cosmomc.tgz"}
 
     def init_params(self, ini):
-
         super(self.__class__, self).init_params(ini)
         self.fpivot_dust = ini.float('fpivot_dust', 353.0)
         self.fpivot_sync = ini.float('fpivot_sync', 23.0)

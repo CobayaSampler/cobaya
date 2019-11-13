@@ -79,7 +79,8 @@ class TheoryCollection(ComponentCollection):
         super(TheoryCollection, self).__init__()
         self.set_logger("theory")
         # TODO: multiple theory dependence, requirements etc.
-        assert not info_theory or len(info_theory) < 2, "Currently only one theory actually supported"
+        assert not info_theory or len(info_theory) < 2, \
+            "Currently only one theory actually supported"
 
         if info_theory:
             for name, info in info_theory.items():
@@ -88,16 +89,17 @@ class TheoryCollection(ComponentCollection):
                     theory_class = info[_external]
                 else:
                     theory_class = get_class(name, kind=_theory)
-                self[name] = theory_class(info, path_install=path_install, timing=timing, name=name)
+                self[name] = theory_class(info, path_install=path_install, timing=timing,
+                                          name=name)
 
     def __getattribute__(self, name):
-        if not name.startswith('__'):
+        if not name.startswith('_'):
             # support old single-theory syntax
             try:
-                return object.__getattribute__(self, name)
+                return super(TheoryCollection, self).__getattribute__(name)
             except AttributeError:
                 pass
-            for theory in self.values():
+            for theory in object.__getattribute__(self, "values")():
                 try:
                     return getattr(theory, name)
                 except AttributeError:

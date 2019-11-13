@@ -29,7 +29,8 @@ class _fast_chi_square(object):
 
 
 class _DataSetLikelihood(_InstallableLikelihood):
-    """A likelihood reading parameters and filenames from a .dataset plain text .ini file (as CosmoMC)"""
+    """A likelihood reading parameters and filenames from a .dataset plain text
+    .ini file (as CosmoMC)"""
 
     default_dataset_params = {}
 
@@ -48,7 +49,8 @@ class _DataSetLikelihood(_InstallableLikelihood):
             if not self.path:
                 raise LoggedError(self.log,
                                   "No path given for %s. Set the likelihood property 'path' "
-                                  "or the common property '%s'.", self.dataset_file, _path_install)
+                                  "or the common property '%s'.", self.dataset_file,
+                                  _path_install)
 
             data_file = os.path.normpath(os.path.join(self.path, self.dataset_file))
         if not os.path.exists(data_file):

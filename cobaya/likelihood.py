@@ -35,7 +35,8 @@ class Likelihood(CobayaComponent):
     class_options = {"speed": -1, "stop_at_error": False}
 
     # Generic initialization -- do not touch
-    def __init__(self, info={}, name=None, timing=None, path_install=None, standalone=True):
+    def __init__(self, info={}, name=None, timing=None, path_install=None,
+                 standalone=True):
         name = name or self.get_qualified_class_name()
         if standalone:
             # TODO: would probably be more natural if defaults were already read here
@@ -45,7 +46,8 @@ class Likelihood(CobayaComponent):
                     name if _self_name not in default_info[_likelihood] else _self_name]
             default_info.update(info)
             info = default_info
-        super(Likelihood, self).__init__(info, name=name, timing=timing, path_install=path_install)
+        super(Likelihood, self).__init__(info, name=name, timing=timing,
+                                         path_install=path_install)
         # States, to avoid recomputing
         self._n_states = 3
         self._states = [{"params": None, "logp": None, "_derived": None,
@@ -73,8 +75,11 @@ class Likelihood(CobayaComponent):
 
     # Optional
     def add_theory(self):
-        """Performs any necessary initialization on the theory side,
-        e.g. requests observables. By default just call get_requirements and pass to theory"""
+        """
+        Performs any necessary initialization on the theory side,
+        e.g. requests observables.
+        By default just call get_requirements and pass to theory
+        """
         needs = self.get_requirements()
         if needs:
             self.theory.needs(**needs)
@@ -102,7 +107,8 @@ class Likelihood(CobayaComponent):
 
     # Other general methods
 
-    def _logp_cached(self, theory_params=None, cached=True, _derived=None, **params_values):
+    def _logp_cached(self, theory_params=None, cached=True, _derived=None,
+                     **params_values):
         """
         Wrapper for the `logp` method that caches logp's and derived params.
         If the theory products have been re-computed, re-computes the likelihood anyway.
@@ -132,7 +138,8 @@ class Likelihood(CobayaComponent):
             if self.timer:
                 self.timer.start()
             try:
-                self._states[i_state]["logp"] = self.logp(_derived=_derived, **params_values)
+                self._states[i_state]["logp"] = self.logp(_derived=_derived,
+                                                          **params_values)
                 if self.timer:
                     self.timer.increment()
             except Exception as e:
@@ -141,8 +148,8 @@ class Likelihood(CobayaComponent):
                 else:
                     self.log.debug(
                         "Ignored error at evaluation and assigned 0 likelihood "
-                        "(set 'stop_at_error: True' as an option for this likelihood to stop here). "
-                        "Error message: %r", e)
+                        "(set 'stop_at_error: True' as an option for this likelihood "
+                        "to stop here). Error message: %r", e)
                     self._states[i_state]["logp"] = -np.inf
             self._states[i_state]["derived"] = deepcopy(_derived)
         # make this one the current one by decreasing the antiquity of the rest
@@ -232,16 +239,19 @@ class LikelihoodCollection(ComponentCollection):
             if _external in info:
                 self[name] = LikelihoodExternalFunction(info, name, timing=timing)
             else:
-                like_class = get_class(name, kind=_likelihood, module_path=info.pop(_module_path, None))
-                self[name] = like_class(info, path_install=path_install, timing=timing, standalone=False, name=name)
+                like_class = get_class(name, kind=_likelihood,
+                                       module_path=info.pop(_module_path, None))
+                self[name] = like_class(info, path_install=path_install, timing=timing,
+                                        standalone=False, name=name)
 
-    def logps(self, input_params, theory_params_dict=None, derived_dict=None, cached=True):
+    def logps(self, input_params, theory_params_dict=None, derived_dict=None,
+              cached=True):
         """
         Computes observables and returns the (log) likelihoods *separately*.
         It takes a list of **input** parameter values, in the same order as they appear
         in the `OrderedDictionary` of the :class:`LikelihoodCollection`.
-        To compute the derived parameters, it takes an optional keyword `derived_dict` as an
-        empty list, which is then populated with the derived parameter values.
+        To compute the derived parameters, it takes an optional keyword `derived_dict`
+        as an empty list, which is then populated with the derived parameter values.
         """
         self.log.debug("Got input parameters: %r", input_params)
         # Prepare the likelihood-defined derived parameters (only computed if requested)
@@ -253,10 +263,13 @@ class LikelihoodCollection(ComponentCollection):
         for like in self.values():
             this_params_dict = {p: input_params[p] for p in like.input_params}
             logps += [like._logp_cached(theory_params=theory_params_dict,
-                                        _derived=this_derived_dict, cached=cached, **this_params_dict)]
+                                        _derived=this_derived_dict, cached=cached,
+                                        **this_params_dict)]
             if want_derived:
                 if this_derived_dict:
                     derived_dict.update(this_derived_dict)
                     this_derived_dict.clear()
-                derived_dict[_chi2 + _separator + like.get_name().replace(".", "_")] = -2 * logps[-1]
+                derived_dict[
+                    _chi2 + _separator + like.get_name().replace(".", "_")] = -2 * logps[
+                    -1]
         return np.array(logps)
