@@ -27,6 +27,7 @@ class LoggedError(Exception):
     Dummy exception, to be raised when the originating exception
     has been cleanly handled and logged.
     """
+
     def __init__(self, logger, *args, **kwargs):
         if args:
             logger.error(*args, **kwargs)
@@ -125,12 +126,9 @@ class HasLogger(object):
     Has magic methods to ignore the logger at (de)serialization.
     """
 
-    def set_logger(self, lowercase=True):
-        module_name = getattr(
-            self.__class__, "get_module_name", lambda : self.__class__.__name__)()
-        self.log = logging.getLogger(
-            (lambda x: x.lower() if lowercase else x)(
-                getattr(self, "name", module_name)))
+    def set_logger(self, lowercase=True, name=None):
+        name = name or self.__class__.__name__
+        self.log = logging.getLogger(name.lower() if lowercase else name)
 
     # Copying and pickling
     def __deepcopy__(self, memo={}):

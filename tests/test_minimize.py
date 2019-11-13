@@ -29,7 +29,7 @@ def test_minimize_gaussian():
     cov = info[_likelihood]["gaussian_mixture"]["covs"][0]
     maxloglik = multivariate_normal.logpdf(mean, mean=mean, cov=cov)
     if rank == 0:
-        print("Maximim of the gaussian mode to be found:")
+        print("Maximum of the gaussian mode to be found:")
         print(mean)
     info[_sampler] = {"minimize": {"ignore_prior": True}}
     info["debug"] = False

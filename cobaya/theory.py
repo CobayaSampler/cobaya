@@ -22,17 +22,16 @@ code.
 from __future__ import division
 
 # Local
-from cobaya.conventions import _input_params, _output_params
-from cobaya.log import HasLogger
-from cobaya.input import HasDefaults
-
-# Default options for all subclasses
-class_options = {"speed": -1}
+from cobaya.conventions import _external, _theory
+from cobaya.component import CobayaComponent, ComponentCollection
+from cobaya.tools import get_class
 
 
 # Theory code prototype
-class Theory(HasLogger, HasDefaults):
+class Theory(CobayaComponent):
     """Prototype of the theory class."""
+    # Default options for all subclasses
+    class_options = {"speed": -1}
 
     def initialize(self):
         """
@@ -41,7 +40,7 @@ class Theory(HasLogger, HasDefaults):
         """
         pass
 
-    def needs(self, arguments):
+    def needs(self, **arguments):
         """
         Function to be called by the likelihoods at their initialization,
         to specify their requests.
@@ -59,24 +58,7 @@ class Theory(HasLogger, HasDefaults):
         """
         pass
 
-    def close(self):
-        """Finalizes the theory code, if something needs to be done
-        (releasing memory, etc.)"""
-        pass
-
     # Generic methods: do not touch these
-
-    def __init__(self, info_theory, modules=None, timing=None):
-        self.name = self.__class__.__name__
-        self.set_logger()
-        self.path_install = modules
-        # Load info of the code
-        for k in info_theory:
-            setattr(self, k, info_theory[k])
-        # Timing
-        self.timing = timing
-        self.n = 0
-        self.time_avg = 0
 
     def d(self):
         """
@@ -87,8 +69,37 @@ class Theory(HasLogger, HasDefaults):
         """
         return len(self.input_params)
 
-    def __exit__(self, exception_type, exception_value, traceback):
-        if self.timing:
-            self.log.info("Average 'compute' evaluation time: %g s  (%d evaluations)" %
-                          (self.time_avg, self.n))
-        self.close()
+
+class TheoryCollection(ComponentCollection):
+    """
+    Initializes the list of theory codes.
+    """
+
+    def __init__(self, info_theory, path_install=None, timing=None):
+        super(TheoryCollection, self).__init__()
+        self.set_logger("theory")
+        # TODO: multiple theory dependence, requirements etc.
+        assert not info_theory or len(info_theory) < 2, "Currently only one theory actually supported"
+
+        if info_theory:
+            for name, info in info_theory.items():
+                # If it has an "external" key, wrap it up. Else, load it up
+                if _external in info:
+                    theory_class = info[_external]
+                else:
+                    theory_class = get_class(name, kind=_theory)
+                self[name] = theory_class(info, path_install=path_install, timing=timing, name=name)
+
+    def __getattribute__(self, name):
+        if not name.startswith('__'):
+            # support old single-theory syntax
+            try:
+                return object.__getattribute__(self, name)
+            except AttributeError:
+                pass
+            for theory in self.values():
+                try:
+                    return getattr(theory, name)
+                except AttributeError:
+                    pass
+        return object.__getattribute__(self, name)

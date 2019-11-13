@@ -294,8 +294,7 @@ class DefaultsDialog(QWidget):
             self.display_tabs.addTab(self.display[k], k)
         self.layout.addWidget(self.display_tabs)
         # Fill text
-        defaults_txt = get_default_info(
-            module, kind, return_yaml=True, fail_if_not_found=True)
+        defaults_txt = get_default_info(module, kind, return_yaml=True, fail_if_not_found=True)
         from cobaya.yaml import yaml_load
         self.display["python"].setText(
             "from collections import OrderedDict\n\ninfo = " +

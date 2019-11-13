@@ -131,7 +131,6 @@ import logging
 from cobaya.log import LoggedError
 from cobaya.conventions import _path_install, _c_km_s
 from cobaya.likelihoods._base_classes import _InstallableLikelihood
-from cobaya.input import HasDefaults
 
 
 class _bao_prototype(_InstallableLikelihood):

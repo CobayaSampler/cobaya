@@ -66,7 +66,6 @@ def run():
     if args.combine_one_job_name:
         print('Combining multiple (hopefully fast) into single job script: ' +
               args.combine_one_job_name)
-    global iniFiles
     iniFiles = []
     jobqueue.checkArguments(**args.__dict__)
 
@@ -80,7 +79,6 @@ def run():
         return base + '__' + hashlib.md5(s).hexdigest()[:16]
 
     def submitJob(ini):
-        global iniFiles
         if not args.dryrun:
             print('Submitting...' + ini)
         else:
@@ -92,7 +90,7 @@ def run():
             if args.runs_per_job > 1:
                 print('--> jobName: ', jobName())
             jobqueue.submitJob(jobName(), iniFiles, **args.__dict__)
-            iniFiles = []
+            iniFiles.clear()
 
     for jobItem in Opts.filteredBatchItems(wantSubItems=args.subitems):
         if ((not args.notexist or isMinimize and not jobItem.chainMinimumExists()

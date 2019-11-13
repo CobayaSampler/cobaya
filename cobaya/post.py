@@ -29,7 +29,7 @@ from cobaya.log import logger_setup, LoggedError
 from cobaya.input import update_info
 from cobaya.output import get_Output as Output
 from cobaya.prior import Prior
-from cobaya.likelihood import LikelihoodCollection as Likelihood
+from cobaya.likelihood import LikelihoodCollection
 from cobaya.mpi import get_mpi_rank
 from cobaya.tools import progress_bar, recursive_update
 
@@ -79,7 +79,7 @@ def post(info, sample=None):
     if collection_in.n() <= 1:
         raise LoggedError(
             log, "Not enough samples for post-processing. Try using a larger sample, "
-            "or skipping or thinning less.")
+                 "or skipping or thinning less.")
     # 2. Compare old and new info: determine what to do
     add = info_post.get(_post_add, {}) or {}
     remove = info_post.get(_post_remove, {})
@@ -108,9 +108,9 @@ def post(info, sample=None):
                 if pinfo_in is None:
                     raise LoggedError(
                         log, "You added a new sampled parameter %r (maybe accidentaly "
-                        "by adding a new likelihood that depends on it). "
-                        "Adding new sampled parameters is not possible. Try fixing "
-                        "it to some value.", p)
+                             "by adding a new likelihood that depends on it). "
+                             "Adding new sampled parameters is not possible. Try fixing "
+                             "it to some value.", p)
                 else:
                     raise LoggedError(
                         log,
@@ -124,7 +124,7 @@ def post(info, sample=None):
             if p in out[_params]:
                 raise LoggedError(
                     log, "You tried to add derived parameter '%s', which is already "
-                    "present. To force its recomputation, 'remove' it too.", p)
+                         "present. To force its recomputation, 'remove' it too.", p)
         elif is_fixed_param(pinfo):
             # Only one possibility left "fixed" parameter that was not present before:
             # input of new likelihood, or just an argument for dynamical derived (dropped)
@@ -162,7 +162,7 @@ def post(info, sample=None):
             except ValueError:
                 raise LoggedError(
                     log, "Trying to remove %s '%s', but it is not present. "
-                    "Existing ones: %r", level, pdf, out[level])
+                         "Existing ones: %r", level, pdf, out[level])
     if warn_remove:
         log.warning("You are removing a prior or likelihood pdf. "
                     "Notice that if the resulting posterior is much wider "
@@ -198,12 +198,11 @@ def post(info, sample=None):
             if x_i in list(out[level])[i + 1:]:
                 raise LoggedError(
                     log, "You have added %s '%s', which was already present. If you "
-                    "want to force its recomputation, you must also 'remove' it.",
+                         "want to force its recomputation, you must also 'remove' it.",
                     level, x_i)
     # 3. Create output collection
     if _post_suffix not in info_post:
-        raise LoggedError(
-            log, "You need to provide a '%s' for your chains.", _post_suffix)
+        raise LoggedError(log, "You need to provide a '%s' for your chains.", _post_suffix)
     # Use default prefix if it exists. If it does not, produce no output by default.
     # {post: {output: None}} suppresses output, and if it's a string, updates it.
     out_prefix = info_post.get(_output_prefix, info.get(_output_prefix))
@@ -232,14 +231,17 @@ def post(info, sample=None):
                 "The full set of input parameters are %s.",
                 theory, list(dummy_model_out.parameterization.input_params()))
     prior_add = Prior(dummy_model_out.parameterization, add.get(_prior))
-    likelihood_add = Likelihood(
-        add[_likelihood], parameterization_like,
-        info_theory=info_theory_out, modules=info.get(_path_install))
+
+    # TODO: update, should be using a Model instance here?
+    assert False, "Have not updated post processing"
+
+    likelihood_add = LikelihoodCollection(add[_likelihood], path_install=info.get(_path_install))
     # Remove auxiliary "one" before dumping -- 'add' *is* info_out[_post][_post_add]
     add[_likelihood].pop("one")
     if likelihood_add.theory:
         # Make sure that theory.needs is called at least once, for adjustments
         likelihood_add.theory.needs()
+
     collection_out = Collection(dummy_model_out, output_out, name="1")
     output_out.dump_info({}, info_out)
     # 4. Main loop!
@@ -323,8 +325,8 @@ def post(info, sample=None):
     if not collection_out.data.last_valid_index():
         raise LoggedError(
             log, "No elements in the final sample. Possible causes: "
-            "added a prior or likelihood valued zero over the full sampled domain, "
-            "or the computation of the theory failed everywhere, etc.")
+                 "added a prior or likelihood valued zero over the full sampled domain, "
+                 "or the computation of the theory failed everywhere, etc.")
     # Reweight -- account for large dynamic range!
     #   Prefer to rescale +inf to finite, and ignore final points with -inf.
     #   Remove -inf's (0-weight), and correct indices

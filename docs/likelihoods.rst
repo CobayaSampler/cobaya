@@ -165,7 +165,7 @@ You can also specify an explicit path for the module, e.g.
   .. code-block:: yaml
 
      likelihood:
-       mycodes.mylike.MyLike:
+       mycodes.mylikes.MyLike:
          python_path: /path/to/mycodes_dir
          [option 1]: [value 1]
          [...]

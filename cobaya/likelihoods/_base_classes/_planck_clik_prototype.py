@@ -17,7 +17,6 @@ import os
 import sys
 import numpy as np
 import logging
-import textwrap
 import six
 
 # Local
@@ -47,11 +46,11 @@ except NameError:
 class _planck_clik_prototype(Likelihood, HasDefaults):
 
     def initialize(self):
-        if "2015" in self.name:
+        if "2015" in self.get_name():
             for line in _deprecation_msg_2015.split("\n"):
                 self.log.warning(line)
         code_path = common_path
-        data_path = get_data_path(self.__class__.get_module_name())
+        data_path = get_data_path(self.__class__.get_qualified_class_name())
         if self.path:
             has_clik = False
         else:
@@ -149,13 +148,13 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
     @classmethod
     def is_installed(cls, **kwargs):
         code_path = common_path
-        data_path = get_data_path(cls.get_module_name())
+        data_path = get_data_path(cls.get_qualified_class_name())
         result = True
         if kwargs["code"]:
             result &= is_installed_clik(os.path.realpath(
                 os.path.join(kwargs["path"], "code", code_path)))
         if kwargs["data"]:
-            _, filename = get_product_id_and_clik_file(cls.get_module_name())
+            _, filename = get_product_id_and_clik_file(cls.get_qualified_class_name())
             result &= os.path.exists(os.path.realpath(
                 os.path.join(kwargs["path"], "data", data_path, filename)))
             # Check for additional data and covmats
@@ -165,7 +164,7 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
 
     @classmethod
     def install(cls, path=None, force=False, code=True, data=True, no_progress_bars=False):
-        name = cls.get_module_name()
+        name = cls.get_qualified_class_name()
         log = logging.getLogger(name)
         path_names = {"code": common_path, "data": get_data_path(name)}
         import platform

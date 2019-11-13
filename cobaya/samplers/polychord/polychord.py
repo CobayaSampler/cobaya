@@ -112,9 +112,9 @@ class polychord(Sampler):
                           self.base_dir)
         # Exploiting the speed hierarchy
         if self.blocking:
-            speeds, blocks = self.model.likelihood._check_speeds_of_params(self.blocking)
+            speeds, blocks = self.model._check_speeds_of_params(self.blocking)
         else:
-            speeds, blocks = self.model.likelihood._speeds_of_params(int_speeds=True)
+            speeds, blocks = self.model._speeds_of_params(int_speeds=True)
         blocks_flat = list(chain(*blocks))
         self.ordering = [
             blocks_flat.index(p) for p in self.model.parameterization.sampled_params()]

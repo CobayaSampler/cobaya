@@ -46,6 +46,8 @@ class mcmc(Sampler):
     def initialize(self):
         """Initializes the sampler:
         creates the proposal distribution and draws the initial sample."""
+        if not self.model.prior.d():
+            raise LoggedError(self.log, "No parameters being varied for sampler")
         self.log.debug("Initializing")
         for p in [
             "burn_in", "max_tries", "output_every", "check_every", "callback_every"]:
@@ -96,11 +98,11 @@ class mcmc(Sampler):
         if self.oversample and self.drag:
             raise LoggedError(self.log, "Choose either oversampling or dragging, not both.")
         if self.blocking:
-            speeds, blocks = self.model.likelihood._check_speeds_of_params(self.blocking)
+            speeds, blocks = self.model._check_speeds_of_params(self.blocking)
             if self.oversample or self.drag:
                 speeds = relative_to_int(speeds)
         else:
-            speeds, blocks = self.model.likelihood._speeds_of_params(
+            speeds, blocks = self.model._speeds_of_params(
                 int_speeds=self.oversample or self.drag, fast_slow=self.drag)
         if self.oversample:
             self.oversampling_factors = speeds
@@ -115,7 +117,7 @@ class mcmc(Sampler):
             if np.all(speeds == speeds[0]):
                 raise LoggedError(
                     self.log, "All speeds are equal or too similar: cannot drag! "
-                    "Make sure to define accurate likelihoods' speeds.")
+                              "Make sure to define accurate likelihoods' speeds.")
             # Make the 1st factor 1:
             speeds = [1, speeds[1] / speeds[0]]
             # Target: dragging step taking as long as slow step
@@ -205,7 +207,7 @@ class mcmc(Sampler):
         if isinstance(self.covmat, six.string_types) and self.covmat.lower() == "auto":
             slow_params_info = {
                 p: info for p, info in params_infos.items() if p in slow_params}
-            auto_covmat = self.model.likelihood._get_auto_covmat(slow_params_info)
+            auto_covmat = self.model._get_auto_covmat(slow_params_info)
             if auto_covmat:
                 self.covmat = os.path.join(auto_covmat["folder"], auto_covmat["name"])
                 self.log.info("Covariance matrix selected automatically: %s", self.covmat)
@@ -225,38 +227,38 @@ class mcmc(Sampler):
                 loaded_covmat = np.loadtxt(self.covmat)
             except TypeError:
                 raise LoggedError(self.log, "The property 'covmat' must be a file name,"
-                                  "but it's '%s'.", str(self.covmat))
+                                            "but it's '%s'.", str(self.covmat))
             except IOError:
                 raise LoggedError(self.log, "Can't open covmat file '%s'.", self.covmat)
             if header[0] != "#":
                 raise LoggedError(
-                    self.log,  "The first line of the covmat file '%s' "
-                    "must be one list of parameter names separated by spaces "
-                    "and staring with '#', and the rest must be a square matrix, "
-                    "with one row per line.", self.covmat)
+                    self.log, "The first line of the covmat file '%s' "
+                              "must be one list of parameter names separated by spaces "
+                              "and staring with '#', and the rest must be a square matrix, "
+                              "with one row per line.", self.covmat)
             loaded_params = header.strip("#").strip().split()
         elif hasattr(self.covmat, "__getitem__"):
             if not self.covmat_params:
                 raise LoggedError(
-                    self.log,  "If a covariance matrix is passed as a numpy array, "
-                    "you also need to pass the parameters it corresponds to "
-                    "via 'covmat_params: [name1, name2, ...]'.")
+                    self.log, "If a covariance matrix is passed as a numpy array, "
+                              "you also need to pass the parameters it corresponds to "
+                              "via 'covmat_params: [name1, name2, ...]'.")
             loaded_params = self.covmat_params
             loaded_covmat = np.array(self.covmat)
         if self.covmat is not None:
             if len(loaded_params) != len(set(loaded_params)):
                 raise LoggedError(
                     self.log, "There are duplicated parameters in the header of the "
-                    "covmat file '%s' ", self.covmat)
+                              "covmat file '%s' ", self.covmat)
             if len(loaded_params) != loaded_covmat.shape[0]:
                 raise LoggedError(
-                    self.log,  "The number of parameters in the header of '%s' and the "
-                    "dimensions of the matrix do not coincide.", self.covmat)
+                    self.log, "The number of parameters in the header of '%s' and the "
+                              "dimensions of the matrix do not coincide.", self.covmat)
             if not (np.allclose(loaded_covmat.T, loaded_covmat) and
                     np.all(np.linalg.eigvals(loaded_covmat) > 0)):
                 raise LoggedError(
                     self.log, "The covmat loaded from '%s' is not a positive-definite, "
-                    "symmetric square matrix.", self.covmat)
+                              "symmetric square matrix.", self.covmat)
             # Fill with parameters in the loaded covmat
             renames = [[p] + np.atleast_1d(v.get(_p_renames, [])).tolist()
                        for p, v in params_infos.items()]
@@ -304,8 +306,8 @@ class mcmc(Sampler):
             # we want to start learning the covmat earlier
             self.log.info("Covariance matrix " +
                           ("not present" if np.all(where_nan) else "not complete") + ". "
-                          "We will start learning the covariance of the proposal earlier:"
-                          " R-1 = %g (was %g).",
+                                                                                     "We will start learning the covariance of the proposal earlier:"
+                                                                                     " R-1 = %g (was %g).",
                           self.learn_proposal_Rminus1_max_early,
                           self.learn_proposal_Rminus1_max)
             self.learn_proposal_Rminus1_max = self.learn_proposal_Rminus1_max_early
@@ -558,7 +560,7 @@ class mcmc(Sampler):
                 if self.been_waiting > self.max_waiting:
                     raise LoggedError(
                         self.log, "Waiting for too long for all chains to be ready. "
-                        "Maybe one of them is stuck or died unexpectedly?")
+                                  "Maybe one of them is stuck or died unexpectedly?")
             self.model.dump_timing()
             # If not MPI size > 1, we are ready
             if not more_than_one_process():
@@ -617,7 +619,7 @@ class mcmc(Sampler):
             if cut <= 1:
                 raise LoggedError(
                     self.log, "Not enough points in chain to check convergence. "
-                    "Increase `check_every` or reduce `Rminus1_single_split`.")
+                              "Increase `check_every` or reduce `Rminus1_single_split`.")
             Ns = (m - 1) * [cut]
             means = np.array(
                 [self.collection.mean(first=i * cut, last=(i + 1) * cut - 1) for i in range(1, m)])
@@ -765,7 +767,7 @@ class mcmc(Sampler):
             covmat_filename = self.covmat_filename()
             np.savetxt(covmat_filename, self.proposer.get_covariance(), header=" ".join(
                 list(self.model.parameterization.sampled_params())))
-            checkpoint_info = {_sampler: {self.name: odict([
+            checkpoint_info = {_sampler: {self.get_name(): odict([
                 ["converged", bool(self.converged)],
                 ["Rminus1_last", self.Rminus1_last],
                 ["proposal_scale", self.proposer.get_scale()],
@@ -833,7 +835,7 @@ def plot_progress(progress, ax=None, index=None, figure_kwargs={}, legend_kwargs
     elif hasattr(type(progress), "__iter__"):
         # Assume is a list of progress'es
         for i, p in enumerate(progress):
-            plot_progress(p, ax=ax, index=i+1)
+            plot_progress(p, ax=ax, index=i + 1)
         return ax
     else:
         raise ValueError("Cannot understand progress argument: %r" % progress)

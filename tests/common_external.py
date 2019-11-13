@@ -18,8 +18,8 @@ from cobaya.conventions import _sampler, _likelihood, _updated_suffix
 from cobaya.conventions import _chi2, _separator, _external, _input_params, _output_params
 from cobaya.run import run
 from cobaya.yaml import yaml_load
-from cobaya.likelihood import class_options
-from cobaya.tools import getargspec
+from cobaya.tools import getfullargspec
+from cobaya.likelihood import Likelihood
 
 # Definition of external (log)pdf's
 
@@ -90,7 +90,7 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
         (info[_params]["y"][_prior]["max"] -
          info[_params]["y"][_prior]["min"]))
     logps = dict([
-        (name, logpdf(**dict([(arg, products["sample"][arg].values) for arg in getargspec(logpdf)[0]])))
+        (name, logpdf(**dict([(arg, products["sample"][arg].values) for arg in getfullargspec(logpdf)[0]])))
         for name, logpdf in {"half_ring": half_ring_func, "gaussian_y": gaussian_func}.items()])
     # Test #1: values of logpdf's
     if kind == _prior:
@@ -130,7 +130,7 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
         for lik, value in list(info_likelihood.items()):
             if not hasattr(value, "get"):
                 info_likelihood[lik] = {_external: value}
-            info_likelihood[lik].update({k: v for k, v in class_options.items()
+            info_likelihood[lik].update({k: v for k, v in Likelihood.class_options.items()
                                          if k not in info_likelihood[lik]})
             for k in [_input_params, _output_params]:
                 updated_info[_likelihood][lik].pop(k)

@@ -223,14 +223,10 @@ class camb(_cosmo):
                           " (b) install the Python interface globally with\n"
                           "     'pip install -e /path/to/camb [--user]'")
         self.camb = camb
-        # Prepare errors
-        from camb.baseconfig import CAMBParamRangeError, CAMBError
-        from camb.baseconfig import CAMBValueError, CAMBUnknownArgumentError
-        global CAMBParamRangeError, CAMBError, CAMBValueError, CAMBUnknownArgumentError
         # Generate states, to avoid recomputing
-        self.n_states = 3
-        self.states = [{"params": None, "derived": None, "derived_extra": None, "last": 0}
-                       for i in range(self.n_states)]
+        self._n_states = 3
+        self._states = [{"params": None, "derived": None, "derived_extra": None, "last": 0}
+                        for i in range(self._n_states)]
         # Dict of named tuples to collect requirements and computation methods
         self.collectors = {}
         # Additional input parameters to pass to CAMB, and attributes to set_ manually
@@ -256,8 +252,8 @@ class camb(_cosmo):
     ###        self.extra_attrs["Want_CMB"] = False
 
     def current_state(self):
-        lasts = [self.states[i]["last"] for i in range(self.n_states)]
-        return self.states[lasts.index(max(lasts))]
+        lasts = [self._states[i]["last"] for i in range(self._n_states)]
+        return self._states[lasts.index(max(lasts))]
 
     def needs(self, **requirements):
         # Computed quantities required by the likelihood
@@ -378,11 +374,11 @@ class camb(_cosmo):
 
     def set(self, params_values_dict, i_state):
         # Store them, to use them later to identify the state
-        self.states[i_state]["params"] = deepcopy(params_values_dict)
+        self._states[i_state]["params"] = deepcopy(params_values_dict)
         # Prepare parameters to be passed: this-iteration + extra
         args = {self.translate_param(p): v for p, v in params_values_dict.items()}
         args.update(self.extra_args)
-        self.states[i_state]["set_args"] = deepcopy(args)
+        self._states[i_state]["set_args"] = deepcopy(args)
         # Generate and save
         self.log.debug("Setting parameters: %r", args)
         try:
@@ -413,48 +409,48 @@ class camb(_cosmo):
                 cambparams.SourceWindows = SourceWindows
                 cambparams.SourceTerms.limber_windows = self.limber
             return cambparams
-        except CAMBParamRangeError:
+        except self.camb.baseconfig.CAMBParamRangeError:
             if self.stop_at_error:
                 raise LoggedError(self.log, "Out of bound parameters: %r", params_values_dict)
             else:
                 self.log.debug("Out of bounds parameters. "
                                "Assigning 0 likelihood and going on.")
-        except CAMBValueError:
+        except self.camb.baseconfig.CAMBValueError:
             self.log.error(
                 "Error setting parameters (see traceback below)! "
                 "Parameters sent to CAMB: %r and %r.\n"
                 "To ignore this kind of errors, make 'stop_at_error: False'.",
-                self.states[i_state]["params"], self.extra_args)
+                self._states[i_state]["params"], self.extra_args)
             raise
-        except CAMBUnknownArgumentError as e:
+        except self.camb.baseconfig.CAMBUnknownArgumentError as e:
             raise LoggedError(
                 self.log,
                 "Some of the parameters passed to CAMB were not recognized: %s" % str(e))
         return False
 
     def compute(self, _derived=None, cached=True, **params_values_dict):
-        lasts = [self.states[i]["last"] for i in range(self.n_states)]
+        lasts = [self._states[i]["last"] for i in range(self._n_states)]
         try:
             if not cached:
                 raise StopIteration
             # are the parameter values there already?
-            i_state = next(i for i in range(self.n_states)
-                           if self.states[i]["params"] == params_values_dict)
+            i_state = next(i for i in range(self._n_states)
+                           if self._states[i]["params"] == params_values_dict)
             # has any new product been requested?
             for product in self.collectors:
-                next(k for k in self.states[i_state] if k == product)
+                next(k for k in self._states[i_state] if k == product)
             reused_state = True
             # Get (pre-computed) derived parameters
             if _derived == {}:
-                _derived.update(self.states[i_state]["derived"] or {})
+                _derived.update(self._states[i_state]["derived"] or {})
             self.log.debug("Re-using computed results (state %d)", i_state)
         except StopIteration:
             reused_state = False
             # update the (first) oldest one and compute
             i_state = lasts.index(min(lasts))
             self.log.debug("Computing (state %d)", i_state)
-            if self.timing:
-                a = time()
+            if self.timer:
+                self.timer.start()
             # Set parameters
             result = self.set(params_values_dict, i_state)
             # Failed to set parameters but no error raised
@@ -474,15 +470,15 @@ class camb(_cosmo):
                             self.camb, intermediates[parent]["method"])(
                             intermediates["CAMBparams"]["result"])
                     method = getattr(intermediates[parent]["result"], method)
-                    self.states[i_state][product] = method(
+                    self._states[i_state][product] = method(
                         *self.collectors[product].args, **self.collectors[product].kwargs)
-                except CAMBError:
+                except self.camb.baseconfig.CAMBError:
                     if self.stop_at_error:
                         self.log.error(
                             "Computation error (see traceback below)! "
                             "Parameters sent to CAMB: %r and %r.\n"
                             "To ignore this kind of errors, make 'stop_at_error: False'.",
-                            self.states[i_state]["params"], self.extra_args)
+                            self._states[i_state]["params"], self.extra_args)
                         raise
                     else:
                         # Assumed to be a "parameter out of range" error.
@@ -490,18 +486,16 @@ class camb(_cosmo):
             # Prepare derived parameters
             if _derived == {}:
                 _derived.update(self._get_derived_all(intermediates))
-                self.states[i_state]["derived"] = odict([[p, _derived[p]] for p in self.output_params])
+                self._states[i_state]["derived"] = odict([[p, _derived[p]] for p in self.output_params])
             # Prepare necessary extra derived parameters
-            self.states[i_state]["derived_extra"] = {
+            self._states[i_state]["derived_extra"] = {
                 p: self._get_derived(p, intermediates) for p in self.derived_extra}
-            if self.timing:
-                self.n += 1
-                self.time_avg = (time() - a + self.time_avg * (self.n - 1)) / self.n
-                self.log.debug("Average running time: %g seconds", self.time_avg)
+            if self.timer:
+                self.timer.increment(self.log)
         # make this one the current one by decreasing the antiquity of the rest
-        for i in range(self.n_states):
-            self.states[i]["last"] -= max(lasts)
-        self.states[i_state]["last"] = 1
+        for i in range(self._n_states):
+            self._states[i]["last"] -= max(lasts)
+        self._states[i_state]["last"] = 1
         return 1 if reused_state else 2
 
     def _get_derived_from_params(self, p, intermediates):

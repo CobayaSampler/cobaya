@@ -128,7 +128,7 @@ class _sn_prototype(_DataSetLikelihood):
         self.pecz = ini.float('pecz', 0.001)
         cols = None
         self.has_third_var = False
-        data_file = os.path.join(self.path, ini.string("data_file"))
+        data_file = os.path.normpath(os.path.join(self.path, ini.string("data_file")))
         self.log.debug('Reading %s' % data_file)
         supernovae = {}
         self.names = []

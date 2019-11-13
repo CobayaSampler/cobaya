@@ -16,7 +16,6 @@ from copy import deepcopy
 from importlib import import_module
 import six
 import numpy as np  # don't delete: necessary for get_external_function
-import scipy.stats as stats  # don't delete: necessary for get_external_function
 import pandas as pd
 from collections import OrderedDict as odict
 from ast import parse
@@ -27,20 +26,20 @@ with warnings.catch_warnings():
     warnings.filterwarnings("ignore")
     # Suppress message about optional dependency
     from fuzzywuzzy import process as fuzzy_process
-if six.PY3:
-    from inspect import cleandoc, getfullargspec as getargspec
-    from math import gcd
-    from collections.abc import Mapping
-else:
+if not six.PY3:
     ModuleNotFoundError = ImportError
-    from inspect import cleandoc, getargspec
+    # noinspection PyUnresolvedReferences
+    from inspect import cleandoc, getargspec as getfullargspec
     from fractions import gcd
     from collections import Mapping
+else:
+    from inspect import cleandoc, getfullargspec
+    from math import gcd
+    from collections.abc import Mapping
 
 # Local
 from cobaya import __obsolete__
-from cobaya.conventions import _package, subfolders, _p_dist, _likelihood, _p_value
-from cobaya.conventions import _sampler, _theory
+from cobaya.conventions import _package, subfolders, _p_dist, _kinds, _p_value
 from cobaya.log import LoggedError
 
 # Logger
@@ -85,7 +84,7 @@ def get_kind(name, fail_if_not_found=True):
     """
     try:
         return next(
-            k for k in [_sampler, _theory, _likelihood]
+            k for k in _kinds
             if name in get_available_modules(k))
     except StopIteration:
         if fail_if_not_found:
@@ -144,7 +143,7 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True, mod
         exc_info = sys.exc_info()
         if allow_external and not module_path:
             try:
-                imported_module = import_module(module_name)
+                import_module(module_name)
             except Exception:
                 pass
             else:
@@ -198,7 +197,7 @@ def get_available_modules(kind):
     return with_nested
 
 
-def get_external_function(string_or_function, name=None, or_class=False):
+def get_external_function(string_or_function, name=None):
     """
     Processes an external prior or likelihood, given as a string or a function.
 
@@ -215,9 +214,13 @@ def get_external_function(string_or_function, name=None, or_class=False):
         string_or_function = string_or_function.get(_p_value, None)
     if isinstance(string_or_function, six.string_types):
         try:
+            scope = globals()
+            import scipy.stats as stats  # provide default scope for eval
+            scope['stats'] = stats
+            scope['np'] = np
             if "import_module" in string_or_function:
                 sys.path.append(os.path.realpath(os.curdir))
-            function = eval(string_or_function)
+            function = eval(string_or_function, scope)
         except Exception as e:
             raise LoggedError(
                 log, "Failed to load external function%s: '%r'",

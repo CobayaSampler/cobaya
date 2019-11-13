@@ -18,18 +18,17 @@ import inspect
 from six import string_types
 from itertools import chain
 import pkg_resources
-import six
 
 # Local
 from cobaya.conventions import _package, _products_path, _path_install, _resume, _force
 from cobaya.conventions import _output_prefix, _debug, _debug_file
-from cobaya.conventions import _params, _prior, _theory, _likelihood, _sampler, _external
+from cobaya.conventions import _params, _prior, _theory, _likelihood, _sampler, _kinds, _external, _self_name
 from cobaya.conventions import _p_label, _p_derived, _p_ref, _p_drop, _p_value, _p_renames
 from cobaya.conventions import _p_proposal, _input_params, _output_params, _module_path
 from cobaya.conventions import _yaml_extensions
 from cobaya.tools import get_class_module, recursive_update, recursive_odict_to_dict
 from cobaya.tools import fuzzy_match, deepcopy_where_possible, get_class, get_kind
-from cobaya.yaml import yaml_load_file, yaml_load, yaml_dump
+from cobaya.yaml import yaml_load_file, yaml_dump
 from cobaya.log import LoggedError
 from cobaya.parameterization import expand_info_param
 from cobaya.mpi import get_mpi_comm, am_single_or_primary_process
@@ -79,7 +78,7 @@ def get_used_modules(*infos):
     Priors are not included."""
     modules = odict()
     for info in infos:
-        for field in [_theory, _likelihood, _sampler]:
+        for field in _kinds:
             if field not in modules:
                 modules[field] = []
             modules[field] += [a for a in (info.get(field) or [])
@@ -97,30 +96,53 @@ def get_default_info(module_or_class, kind=None, fail_if_not_found=False,
     Get default info for a module_or_class.
     """
     try:
-        if kind is None:
-            kind = get_kind(module_or_class)
-        cls = get_class(module_or_class, kind, None_if_not_found=not fail_if_not_found,
+        _kind = kind or get_kind(module_or_class)
+        cls = get_class(module_or_class, _kind, None_if_not_found=not fail_if_not_found,
                         module_path=module_path)
         if cls:
-            default_module_info = cls.get_defaults(
-                return_yaml=return_yaml, yaml_expand_defaults=yaml_expand_defaults)
+            default_module_info = cls.get_defaults(return_yaml=return_yaml, yaml_expand_defaults=yaml_expand_defaults)
         else:
             default_module_info = (
-                lambda x: yaml_dump(x) if return_yaml else x)({kind: {module_or_class: {}}})
+                lambda x: yaml_dump(x) if return_yaml else x)({_kind: {module_or_class: {}}})
     except Exception as e:
         raise LoggedError(log, "Failed to get defaults for module or class '%s' [%s]",
-                          ("%s:" % kind if kind else "") + module_or_class, e)
-    try:
-        if not return_yaml:
-            info = default_module_info[kind]
-            if '__self__' not in info:
+                          ("%s:" % _kind if _kind else "") + module_or_class, e)
+
+    # TODO: find batter place to put this definition where it doesn't give circular reference
+    # TODO: and more generally should not be importing defaults more than once
+    from cobaya.likelihood import Likelihood
+    from cobaya.theory import Theory
+    from cobaya.sampler import Sampler
+    component_base_classes = {_sampler: Sampler, _theory: Theory, _likelihood: Likelihood}
+
+    if cls:
+        for kind_name, _cls in component_base_classes.items():
+            if issubclass(cls, _cls):
+                if kind and kind != kind_name:
+                    raise LoggedError(log, "class %s of unexpected kind %s", cls.__name__, kind)
+                _kind = kind_name
+                break
+
+    if not return_yaml:
+        try:
+            info = default_module_info[_kind]
+            if _self_name not in info:
                 info[module_or_class]
             else:
-                default_module_info[kind][module_or_class] = info.pop('__self__')
-    except KeyError:
-        raise LoggedError(
-            log, "The defaults file for '%s' should be structured "
-                 "as %s:%s:{[options]}.", module_or_class, kind, module_or_class)
+                info[module_or_class] = info.pop(_self_name)
+        except KeyError:
+            raise LoggedError(log, "The defaults file for '%s' should be structured as %s:%s:{[options]} "
+                                   "or %s:%s:{[options]}.", module_or_class, _kind, module_or_class, _kind, _self_name)
+        info = deepcopy((cls or component_base_classes[_kind]).class_options)
+        info.update(default_module_info[_kind][module_or_class])
+        default_module_info[_kind][module_or_class] = info
+    elif _self_name in default_module_info:
+        # replace __self__ in yaml with explicit name
+        if len(default_module_info.split(_self_name)) == 1:
+            default_module_info = default_module_info.replace(_self_name, module_or_class)
+        else:
+            raise LoggedError(log, "%s has more than one __self__" % module_or_class)
+
     return default_module_info
 
 
@@ -137,7 +159,8 @@ def update_info(info):
     default_prior_info = odict()
     modules = get_used_modules(input_info)
     for block in modules:
-        updated_info[block] = odict()
+        updated = odict()
+        updated_info[block] = updated
         for module in modules[block]:
             # Preprocess "no options" and "external function" in input
             try:
@@ -148,14 +171,11 @@ def update_info(info):
                          "It must be a dictionary {'%s':{options}, ...}. ", block, block)
             if not hasattr(input_info[block][module], "get"):
                 input_info[block][module] = {_external: input_info[block][module]}
-            # Get default class options
-            updated_info[block][module] = deepcopy(getattr(
-                import_module(_package + "." + block, package=_package),
-                "class_options", {}))
+
             module_path = input_info[block][module].get(_module_path, None)
-            default_module_info = get_default_info(module, block, module_path=module_path)
+            default_class_info = get_default_info(module, block, module_path=module_path)
             # TODO: check - get_default_info was ignoring this extra arg: input_info[block][module_or_class])
-            updated_info[block][module].update(default_module_info[block][module] or {})
+            updated_info[block][module] = default_class_info[block][module] or {}
             # Update default options with input info
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
             ignore = set([_external, _p_renames, _input_params, _output_params, _module_path])
@@ -164,8 +184,7 @@ def update_info(info):
                                       .difference(set(updated_info[block][module])))
             if options_not_recognized:
                 alternatives = odict()
-                available = (
-                    set([_external, _p_renames]).union(updated_info[block][module]))
+                available = (set([_external, _p_renames]).union(updated_info[block][module]))
                 while options_not_recognized:
                     option = options_not_recognized.pop()
                     alternatives[option] = fuzzy_match(option, available, n=3)
@@ -173,7 +192,7 @@ def update_info(info):
                     [("'%s' (did you mean %s?)" % (o, "|".join(["'%s'" % _ for _ in a]))
                       if a else "'%s'" % o)
                      for o, a in alternatives.items()])
-                if default_module_info[block][module]:
+                if default_class_info[block][module]:
                     # Internal module
                     raise LoggedError(
                         log, "'%s' does not recognize some options: %s. "
@@ -188,10 +207,10 @@ def update_info(info):
             updated_info[block][module].update(input_info[block][module])
             # Store default parameters and priors of class, and save to combine later
             if block == _likelihood:
-                params_info = default_module_info.get(_params, {})
+                params_info = default_class_info.get(_params, {})
                 updated_info[block][module].update({_params: list(params_info or [])})
                 default_params_info[module] = params_info
-                default_prior_info[module] = default_module_info.get(_prior, {})
+                default_prior_info[module] = default_class_info.get(_prior, {})
     # Add priors info, after the necessary checks
     if _prior in input_info or any(default_prior_info.values()):
         updated_info[_prior] = input_info.get(_prior, odict())
@@ -402,13 +421,22 @@ class HasDefaults(object):
         if cls.__module__ == '__main__':
             return [cls.__name__]
         parts = cls.__module__.split('.')
+        if len(parts) > 1:
+            # get shortest reference
+            try:
+                imported = import_module(".".join(parts[:-1]))
+            except:
+                pass
+            else:
+                if hasattr(imported, cls.__name__):
+                    parts = parts[:-1]
         if parts[-1] == cls.__name__:
             return ['.'.join(parts[i:]) for i in range(len(parts))]
         else:
             return ['.'.join(parts[i:]) + '.' + cls.__name__ for i in range(len(parts))]
 
     @classmethod
-    def get_module_name(cls):
+    def get_qualified_class_name(cls):
         """get cls.__name__ if class is same name as the module, otherwise module.class_name"""
         qualified_names = cls.get_qualified_names()
         if qualified_names[0].startswith('cobaya.'):

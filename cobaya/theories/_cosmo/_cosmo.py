@@ -175,7 +175,7 @@ class _cosmo(Theory):
         """
         pass
 
-    def get_Pk_interpolator(self, z):
+    def get_Pk_interpolator(self):
         r"""
         Returns a (dict of) power spectrum interpolator(s)
         :class:`PowerSpectrumInterpolator`.
