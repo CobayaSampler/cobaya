@@ -566,8 +566,8 @@ class _des_prototype(_DataSetLikelihood):
 
     def logp(self, **params_values):
         Pk_interpolators = self.theory.get_Pk_interpolator()
-        PKdelta = Pk_interpolators["delta_tot_delta_tot"]
-        PKWeyl = Pk_interpolators.get("Weyl_Weyl", None)
+        PKdelta = Pk_interpolators[("delta_tot", "delta_tot")]
+        PKWeyl = Pk_interpolators.get(("Weyl", "Weyl", None))
         wl_photoz_errors = [
             params_values.get(p, None) for p in
             ['DES_DzS1', 'DES_DzS2', 'DES_DzS3', 'DES_DzS4']]

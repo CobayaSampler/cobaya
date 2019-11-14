@@ -151,9 +151,9 @@ from cobaya.conventions import _c_km_s, _T_CMB_K
 from cobaya.tools import deepcopy_where_possible
 
 # Result collector
-collector = namedtuple("collector",
+Collector = namedtuple("collector",
                        ["method", "args", "args_names", "kwargs", "arg_array", "post"])
-collector.__new__.__defaults__ = (None, [], [], {}, None, None)
+Collector.__new__.__defaults__ = (None, [], [], {}, None, None)
 
 # default non linear code
 non_linear_default_code = "halofit"
@@ -202,7 +202,7 @@ class classy(_cosmo):
         # Generate states, to avoid recomputing
         self._n_states = 3
         self._states = [{"params": None, "derived": None, "derived_extra": None,
-                        "last": 0} for i in range(self._n_states)]
+                         "last": 0} for i in range(self._n_states)]
         # Dict of named tuples to collect requirements and computation methods
         self.collectors = {}
         # Additional input parameters to pass to CLASS
@@ -236,23 +236,23 @@ class classy(_cosmo):
                 self.extra_args["lensing"] = "yes"
                 # For l_max_scalars, remember previous entries.
                 self.extra_args["l_max_scalars"] = max(v.values())
-                self.collectors[k] = collector(
+                self.collectors[k] = Collector(
                     method="lensed_cl", kwargs={"lmax": self.extra_args["l_max_scalars"]})
             elif k == "H":
-                self.collectors[k] = collector(
+                self.collectors[k] = Collector(
                     method="Hubble",
                     args=[np.atleast_1d(v["z"])],
                     args_names=["z"],
                     arg_array=0)
                 self.H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": _c_km_s}
             elif k == "angular_diameter_distance":
-                self.collectors[k] = collector(
+                self.collectors[k] = Collector(
                     method="angular_distance",
                     args=[np.atleast_1d(v["z"])],
                     args_names=["z"],
                     arg_array=0)
             elif k == "comoving_radial_distance":
-                self.collectors[k] = collector(
+                self.collectors[k] = Collector(
                     method="z_of_r",
                     args_names=["z"],
                     args=[np.atleast_1d(v["z"])])
@@ -269,8 +269,8 @@ class classy(_cosmo):
                         raise LoggedError(self.log, "NotImplemented in CLASS: %r", pair)
                     self._Pk_interpolator_kwargs = {
                         "logk": True, "extrap_kmax": v.pop("extrap_kmax", None)}
-                    name = "Pk_interpolator_%s_%s" % (pair[0], pair[1])
-                    self.collectors[name] = collector(
+                    product = ("Pk_interpolator",) + tuple(pair)
+                    self.collectors[product] = Collector(
                         method="get_pk_and_k_and_z",
                         kwargs=v,
                         post=(lambda P, k, z: PowerSpectrumInterpolator(
@@ -373,8 +373,8 @@ class classy(_cosmo):
             # "Valid" failure of CLASS: parameters too extreme -> log and report
             except CosmoComputationError as e:
                 if ("You have asked for an unrealistic high value omega_b" in str(e) or
-                    "reionization cannot start after z_start_max" in str(e) or
-                    "Shooting failed, try optimising input_get_guess()" in str(e)):
+                        "reionization cannot start after z_start_max" in str(e) or
+                        "Shooting failed, try optimising input_get_guess()" in str(e)):
                     pass
                 else:
                     self.log.debug("Computation of cosmological products failed. "
@@ -443,7 +443,7 @@ class classy(_cosmo):
 
         To get a parameter *from a likelihood* use `get_param` instead.
         """
-        # Put all pamaremters in CLASS nomenclature (self.derived_extra already is)
+        # Put all parameters in CLASS nomenclature (self.derived_extra already is)
         requested = [self.translate_param(p) for p in (
             self.output_params if derived_requested else [])]
         requested_and_extra = {
@@ -486,7 +486,8 @@ class classy(_cosmo):
                 self.log,
                 "No Cl's were computed. Are you sure that you have requested them?")
         # unit conversion and ell_factor
-        ell_factor = ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[2:] if ell_factor else 1
+        ell_factor = ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[
+                     2:] if ell_factor else 1
         units_factors = {"1": 1,
                          "muK2": _T_CMB_K * 1.e6,
                          "K2": _T_CMB_K}
@@ -533,14 +534,13 @@ class classy(_cosmo):
 
     def get_Pk_interpolator(self):
         current_state = self.current_state()
-        prefix = "Pk_interpolator_"
-        return {k[len(prefix):]: deepcopy(v)
-                for k, v in current_state.items() if k.startswith(prefix)}
+        return {k[1:]: deepcopy(v)
+                for k, v in current_state.items() if k[0] == "Pk_interpolator"}
 
     def close(self):
         self.classy.struct_cleanup()
 
-    # Installation routines ##################################################################
+    # Installation routines
 
     @classmethod
     def get_path(cls, path):

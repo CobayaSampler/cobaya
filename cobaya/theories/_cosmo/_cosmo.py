@@ -58,7 +58,7 @@ class _cosmo(Theory):
           value the likelihood may need.
         """
         if not getattr(self, "_needs", None):
-            self._needs = dict([[p, None] for p in self.output_params])
+            self._needs = dict([(p, None) for p in self.output_params])
         # TO BE DEPRECATED IN >=1.3
         for product, capitalization in {
             "cl": "Cl", "pk_interpolator": "Pk_interpolator"}.items():
@@ -67,7 +67,7 @@ class _cosmo(Theory):
                     self.log, "You requested product '%s', which from now on should be "
                               "capitalized as '%s'.", product, capitalization)
         # Accumulate the requirements across several calls in a safe way;
-        # e.g. take maximum of all values of a requested precision paramater
+        # e.g. take maximum of all values of a requested precision parameter
         for k, v in requirements.items():
             # Products and other computations
             if k == "Cl":
@@ -85,7 +85,8 @@ class _cosmo(Theory):
                     vars_pairs = [2 * ["delta_tot"]]
                 except:
                     raise LoggedError(
-                        self.log, "Cannot understands vars_pairs '%r' for P(k) interpolator",
+                        self.log,
+                        "Cannot understands vars_pairs '%r' for P(k) interpolator",
                         vars_pairs)
                 vars_pairs = set([tuple(pair) for pair in chain(
                     self._needs.get(k, {}).get("vars_pairs", []), vars_pairs)])
@@ -144,7 +145,8 @@ class _cosmo(Theory):
 
     def get_Cl(self, ell_factor=False, units="muK2"):
         r"""
-        Returns a dictionary of lensed CMB power spectra and the lensing potential ``pp`` power spectrum.
+        Returns a dictionary of lensed CMB power spectra and the lensing potential ``pp``
+        power spectrum.
 
         Set the units with the keyword ``units='1'|'muK2'|'K2'`` (default: 'muK2',
         except for the lensing potential power spectrum, which is always unitless).
@@ -202,7 +204,8 @@ class _cosmo(Theory):
 
     def get_auto_covmat(self, params_info, likes_info):
         r"""
-        Tries to get match to a database of existing covariance matrix files for the current model and data.
+        Tries to get match to a database of existing covariance matrix files for the
+        current model and data.
 
         ``params_info`` should contain preferably the slow parameters only.
         """
@@ -250,6 +253,8 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
     :param extrap_kmax: if set, use power law extrapolation beyond kmax up to
         extrap_kmax; useful for tails of integrals.
     """
+
+    # TODO: update to be consistent with https://github.com/cmbant/CAMB/issues/61
 
     def __init__(self, z, k, P_or_logP, extrap_kmax=None, logk=False, logP=False):
         self.logk, self.logP = logk, logP

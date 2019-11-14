@@ -213,15 +213,15 @@ def info_random_gaussian_mixture(
     dimension = len(ranges)
     info = {kinds.likelihood: {"gaussian_mixture": {
         "means": mean, "covs": cov, _input_params_prefix: input_params_prefix,
-        _output_params_prefix: output_params_prefix, "derived": derived}}}
-    info[_params] = odict(
-        # sampled
-        [[input_params_prefix + "_%d" % i,
-          {"prior": {"min": ranges[i][0], "max": ranges[i][1]},
-           "latex": r"\alpha_{%i}" % i}]
-         for i in range(dimension)] +
-        # derived
-        ([[output_params_prefix + "_%d" % i,
-           {"min": -3, "max": 3, "latex": r"\beta_{%i}" % i}]
-          for i in range(dimension * n_modes)] if derived else []))
+        _output_params_prefix: output_params_prefix, "derived": derived}},
+        _params: odict(
+            # sampled
+            ([input_params_prefix + "_%d" % i,
+              {"prior": {"min": ranges[i][0], "max": ranges[i][1]},
+               "latex": r"\alpha_{%i}" % i}]
+             for i in range(dimension)) +
+            # derived
+            ([[output_params_prefix + "_%d" % i,
+               {"min": -3, "max": 3, "latex": r"\beta_{%i}" % i}]
+              for i in range(dimension * n_modes)] if derived else []))}
     return info

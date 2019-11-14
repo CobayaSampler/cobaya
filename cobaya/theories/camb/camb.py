@@ -176,8 +176,8 @@ from cobaya.conventions import _c_km_s, _T_CMB_K
 from cobaya.tools import deepcopy_where_possible
 
 # Result collector
-collector = namedtuple("collector", ["method", "args", "kwargs"])
-collector.__new__.__defaults__ = (None, [], {})
+Collector = namedtuple("collector", ["method", "args", "kwargs"])
+Collector.__new__.__defaults__ = (None, [], {})
 
 
 class camb(_cosmo):
@@ -232,12 +232,10 @@ class camb(_cosmo):
         # Additional input parameters to pass to CAMB, and attributes to set_ manually
         self.extra_args = deepcopy_where_possible(self.extra_args) or {}
         self.extra_attrs = {}
-        # Patch: if cosmomc_theta is used, CAMB needs to be passed explicitly "H0=None"
-        # This is *not* going to change on CAMB's side.
-        if all((p in self.input_params) for p in ["H0", "cosmomc_theta"]):
-            raise LoggedError(self.log, "Can't pass both H0 and cosmomc_theta to CAMB.")
-        if "cosmomc_theta" in self.input_params:
-            self.extra_args["H0"] = None
+        if len(set(self.input_params).intersection(
+                {"H0", "cosmomc_theta", "thetastar"})) > 1:
+            raise LoggedError(self.log, "Can't pass more than one of H0, "
+                                        "theta, cosmomc_theta to CAMB.")
         # Set aliases
         self.planck_to_camb = self.renames
         # Derived parameters that may not have been requested, but will be necessary later
@@ -247,6 +245,7 @@ class camb(_cosmo):
         self.limber = False
         self.non_linear_lens = False
         self.non_linear_pk = False
+        self._base_params = None
 
     ###     # TODO: This will hopefully be fixed later
     ###        self.extra_attrs["Want_CMB"] = False
@@ -272,7 +271,7 @@ class camb(_cosmo):
                 self.extra_args["lmax"] = max(
                     max(v.values()), self.extra_args.get("lmax", 0))
                 cls = [a.lower() for a in v]
-                self.collectors[k] = collector(
+                self.collectors[k] = Collector(
                     method="CAMBdata.get_cmb_power_spectra",
                     kwargs={
                         "spectra": list(set(
@@ -284,21 +283,21 @@ class camb(_cosmo):
                 self.extra_attrs["Want_CMB"] = True
                 self.non_linear_lens = True
             elif k == "H":
-                self.collectors[k] = collector(
+                self.collectors[k] = Collector(
                     method="CAMBdata.h_of_z",
                     kwargs={"z": np.atleast_1d(v["z"])})
                 self.H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": _c_km_s}
             elif k == "angular_diameter_distance":
-                self.collectors[k] = collector(
+                self.collectors[k] = Collector(
                     method="CAMBdata.angular_diameter_distance",
                     kwargs={"z": np.atleast_1d(v["z"])})
             elif k == "comoving_radial_distance":
-                self.collectors[k] = collector(
+                self.collectors[k] = Collector(
                     method="CAMBdata.comoving_radial_distance",
                     kwargs={"z": np.atleast_1d(v["z"])})
             elif k == "fsigma8":
                 self.add_to_redshifts(v["z"])
-                self.collectors[k] = collector(
+                self.collectors[k] = Collector(
                     method="CAMBdata.get_fsigma8",
                     kwargs={})
                 self.needs_perts = True
@@ -313,9 +312,9 @@ class camb(_cosmo):
                 for p in "k_max", "z", "vars_pairs":
                     kwargs.pop(p)
                 for pair in v["vars_pairs"]:
-                    name = "Pk_interpolator_%s_%s" % (pair[0], pair[1])
+                    product = ("Pk_interpolator",) + tuple(pair)
                     kwargs.update(dict(zip(["var1", "var2"], pair)))
-                    self.collectors[name] = collector(
+                    self.collectors[product] = Collector(
                         method="CAMBdata.get_matter_power_interpolator",
                         kwargs=kwargs)
                 self.needs_perts = True
@@ -335,7 +334,7 @@ class camb(_cosmo):
                                                   self.extra_args.get("lmax", 0))
                 self.needs_perts = True
                 # Create collector
-                self.collectors[k] = collector(method="CAMBdata.get_source_cls_dict")
+                self.collectors[k] = Collector(method="CAMBdata.get_source_cls_dict")
             # General derived parameters
             elif v is None:
                 k_translated = self.translate_param(k)
@@ -355,7 +354,7 @@ class camb(_cosmo):
                 "extra arguments: %s. Please, remove one of the definitions of each.",
                 list(set(self.input_params).intersection(set(self.extra_args))))
         # Remove extra args that cause an error if the associated product is not requested
-        if "Cl" not in self._needs:
+        if "Cl" not in self._needs and "source_Cl" not in self._needs:
             self.extra_args.pop("lens_potential_accuracy", None)
         # Computing non-linear corrections
         from camb import model
@@ -384,35 +383,42 @@ class camb(_cosmo):
         # Generate and save
         self.log.debug("Setting parameters: %r", args)
         try:
-            cambparams = self.camb.set_params(**args)
-            if self.extra_attrs:
-                self.log.debug("Setting attributes of CAMBParams: %r", self.extra_attrs)
-            for attr, value in self.extra_attrs.items():
-                if hasattr(cambparams, attr):
-                    setattr(cambparams, attr, value)
-                else:
-                    raise LoggedError(
-                        self.log, "Some of the attributes to be set manually were not "
-                                  "recognized: %s=%s", attr, value)
-            # Sources
-            if getattr(self, "sources", None):
-                from camb.sources import GaussianSourceWindow, SplinedSourceWindow
-                self.log.debug("Setting sources: %r", self.sources)
-                SourceWindows = []
-                for source, window in self.sources.items():
-                    function = window.pop("function", None)
-                    if function == "spline":
-                        SourceWindows.append(SplinedSourceWindow(**window))
-                    elif function == "gaussian":
-                        SourceWindows.append(GaussianSourceWindow(**window))
+            if not self._base_params:
+                cambparams = self.camb.set_params(**args)
+
+                if self.extra_attrs:
+                    self.log.debug("Setting attributes of CAMBParams: %r",
+                                   self.extra_attrs)
+                for attr, value in self.extra_attrs.items():
+                    if hasattr(cambparams, attr):
+                        setattr(cambparams, attr, value)
                     else:
-                        raise LoggedError(self.log,
-                                          "Unknown source window function type %r",
-                                          function)
-                    window["function"] = function
-                cambparams.SourceWindows = SourceWindows
-                cambparams.SourceTerms.limber_windows = self.limber
-            return cambparams
+                        raise LoggedError(
+                            self.log,
+                            "Some of the attributes to be set manually were not "
+                            "recognized: %s=%s", attr, value)
+                # Sources
+                if getattr(self, "sources", None):
+                    from camb.sources import GaussianSourceWindow, SplinedSourceWindow
+                    self.log.debug("Setting sources: %r", self.sources)
+                    source_windows = []
+                    for source, window in self.sources.items():
+                        function = window.pop("function", None)
+                        if function == "spline":
+                            source_windows.append(SplinedSourceWindow(**window))
+                        elif function == "gaussian":
+                            source_windows.append(GaussianSourceWindow(**window))
+                        else:
+                            raise LoggedError(self.log,
+                                              "Unknown source window function type %r",
+                                              function)
+                        window["function"] = function
+                    cambparams.SourceWindows = source_windows
+                    cambparams.SourceTerms.limber_windows = self.limber
+
+                self._base_params = cambparams
+
+            return self.camb.set_params(self._base_params.copy(), **args)
         except self.camb.baseconfig.CAMBParamRangeError:
             if self.stop_at_error:
                 raise LoggedError(self.log, "Out of bound parameters: %r",
@@ -493,7 +499,7 @@ class camb(_cosmo):
             if _derived == {}:
                 _derived.update(self._get_derived_all(intermediates))
                 self._states[i_state]["derived"] = odict(
-                    [[p, _derived[p]] for p in self.output_params])
+                    [(p, _derived[p]) for p in self.output_params])
             # Prepare necessary extra derived parameters
             self._states[i_state]["derived_extra"] = {
                 p: self._get_derived(p, intermediates) for p in self.derived_extra}
@@ -562,9 +568,8 @@ class camb(_cosmo):
         for p in self.output_params:
             derived[p] = self._get_derived(self.translate_param(p), intermediates)
             if derived[p] is None:
-                raise LoggedError(
-                    self.log, "Derived param '%s' not implemented in the CAMB interface",
-                    p)
+                raise LoggedError(self.log, "Derived param '%s' not implemented"
+                                            " in the CAMB interface", p)
         return derived
 
     def get_param(self, p):
@@ -638,9 +643,8 @@ class camb(_cosmo):
 
     def get_Pk_interpolator(self):
         current_state = self.current_state()
-        prefix = "Pk_interpolator_"
-        return {k[len(prefix):]: deepcopy(v)
-                for k, v in current_state.items() if k.startswith(prefix)}
+        return {k[1:]: deepcopy(v)
+                for k, v in current_state.items() if k[0] == "Pk_interpolator"}
 
     def get_source_Cl(self):
         current_state = self.current_state()
