@@ -317,6 +317,7 @@ def load_DataFrame(file_name, skip=0, thin=1):
             inp.seek(0)
         thin = int(thin)
         skiprows = lambda i: i < skip or i % thin
+        # TODO: looks like this thinning is not correctly account for weights???
         return pd.read_csv(
             inp, sep=" ", header=None, names=cols, comment="#", skipinitialspace=True,
             skiprows=skiprows, index_col=False)

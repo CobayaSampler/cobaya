@@ -82,7 +82,8 @@ class Model(HasLogger):
     """
 
     def __init__(self, info_params, info_likelihood, info_prior=None, info_theory=None,
-                 path_install=None, timing=None, allow_renames=True):
+                 path_install=None, timing=None, allow_renames=True,
+                 post=False, prior_parameterization=None):
         self.set_logger(lowercase=True)
         self._updated_info = {
             _params: deepcopy_where_possible(info_params),
@@ -93,9 +94,11 @@ class Model(HasLogger):
                      (_path_install, path_install), (_timing, timing)):
             if v not in (None, {}):
                 self._updated_info[k] = deepcopy_where_possible(v)
-        self.parameterization = Parameterization(
-            self._updated_info[_params], allow_renames=allow_renames)
-        self.prior = Prior(self.parameterization, self._updated_info.get(_prior, None))
+        self.parameterization = Parameterization(self._updated_info[_params],
+                                                 allow_renames=allow_renames,
+                                                 ignore_unused_sampled=post)
+        self.prior = Prior(prior_parameterization or self.parameterization,
+                           self._updated_info.get(_prior, None))
 
         # TODO: would be more logical called self.theories and self.likelihoods
         info_theory = self._updated_info.get(_theory)
@@ -104,8 +107,7 @@ class Model(HasLogger):
 
         info_likelihood = self._updated_info[_likelihood]
         self.likelihood = LikelihoodCollection(info_likelihood, theory=self.theory,
-                                               path_install=path_install,
-                                               timing=timing)
+                                               path_install=path_install, timing=timing)
 
         # Assign input/output parameters
         self._assign_params(info_likelihood, info_theory)
@@ -117,6 +119,9 @@ class Model(HasLogger):
             like.theory = self.theory
             like.add_theory()
         for name, theory in self.theory.items():
+            if post:
+                # Make sure that theory.needs is called at least once, for adjustments
+                theory.needs({})
             if getattr(theory, "_needs", None):
                 self.log.info(
                     "The theory %s will compute the following products, "
@@ -134,9 +139,8 @@ class Model(HasLogger):
             if sampled_dependence[p]:
                 sampled_dependence[p] += list(self.likelihood.values())
             else:
-                sampled_dependence[p] = [component for component in
-                                         self.likelihood.values()
-                                         if any(
+                sampled_dependence[p] = \
+                    [component for component in self.likelihood.values() if any(
                         [(i in component.input_params) for i in (i_s or [p])])]
 
         self.sampled_dependence = sampled_dependence
@@ -209,34 +213,8 @@ class Model(HasLogger):
             return np.nan_to_num(logprior)
         return logprior
 
-    def loglikes(self, params_values, return_derived=True, make_finite=False, cached=True,
-                 _no_check=False):
-        """
-        Takes an array or dictionary of sampled parameter values.
-        If the argument is an array, parameters must have the same order as in the input.
-        When in doubt, you can get the correct order as
-        ``list([your_model].parameterization.sampled_params())``.
-
-        Returns a tuple ``(loglikes, derived_params)``, where ``loglikes`` are the
-        log-values of the likelihoods (unnormalized, in general) in the same order as
-        it is returned by ``list([your_model].likelihood)``, and ``derived_params``
-        are the values of the derived parameters in the order given by
-        ``list([your_model].parameterization.derived_params())``.
-
-        To return just the list of log-likelihood values, make ``return_derived=False``.
-
-        If ``make_finite=True``, it will try to represent infinities as the largest real
-        numbers allowed by machine precision.
-
-        If ``cached=False`` (default: True), it ignores previously computed results that
-        could be reused.
-        """
-        if hasattr(params_values, "keys") and not _no_check:
-            params_values = self.parameterization._check_sampled(**params_values)
-
-        input_params = self.parameterization._to_input(params_values)
-
-        # Calculate required theory results
+    def logps(self, input_params, return_derived=True, cached=True, make_finite=False):
+        # Calculate required theory results and returns likelihoods
         theory_params_dict = {}
         theory_success = True
         derived_dict = {}
@@ -268,13 +246,48 @@ class Model(HasLogger):
                 derived_list = [np.nan] * len(self.output_params)
             else:
                 derived_list = [derived_dict[p] for p in self.output_params]
+            return loglikes, derived_list
+
+        return loglikes
+
+    def loglikes(self, params_values, return_derived=True, make_finite=False, cached=True,
+                 _no_check=False):
+        """
+        Takes an array or dictionary of sampled parameter values.
+        If the argument is an array, parameters must have the same order as in the input.
+        When in doubt, you can get the correct order as
+        ``list([your_model].parameterization.sampled_params())``.
+
+        Returns a tuple ``(loglikes, derived_params)``, where ``loglikes`` are the
+        log-values of the likelihoods (unnormalized, in general) in the same order as
+        it is returned by ``list([your_model].likelihood)``, and ``derived_params``
+        are the values of the derived parameters in the order given by
+        ``list([your_model].parameterization.derived_params())``.
+
+        To return just the list of log-likelihood values, make ``return_derived=False``.
+
+        If ``make_finite=True``, it will try to represent infinities as the largest real
+        numbers allowed by machine precision.
+
+        If ``cached=False`` (default: True), it ignores previously computed results that
+        could be reused.
+        """
+        if hasattr(params_values, "keys") and not _no_check:
+            params_values = self.parameterization._check_sampled(**params_values)
+
+        input_params = self.parameterization._to_input(params_values)
+
+        result = self.logps(input_params, return_derived=return_derived,
+                            cached=cached, make_finite=make_finite)
+        if return_derived:
+            loglikes, derived_list = result
             derived_sampler = self.parameterization._to_derived(derived_list)
             if self.log.getEffectiveLevel() <= logging.DEBUG:
                 self.log.debug(
                     "Computed derived parameters: %s",
                     dict(zip(self.parameterization.derived_params(), derived_sampler)))
             return loglikes, derived_sampler
-        return loglikes
+        return result
 
     def loglike(self, params_values, return_derived=True, make_finite=False, cached=True):
         """

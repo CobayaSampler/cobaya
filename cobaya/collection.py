@@ -155,7 +155,7 @@ class Collection(HasLogger):
         if derived is not None:
             if len(derived) != len(self.derived_params):
                 raise LoggedError(
-                    self.log, "Got %d values for the dervied parameters. Should be %d.",
+                    self.log, "Got %d values for the derived parameters. Should be %d.",
                     len(derived), len(self.derived_params))
             for name, value in zip(self.derived_params, derived):
                 self.data.at[self._n, name] = value

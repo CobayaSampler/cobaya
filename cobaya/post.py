@@ -32,13 +32,14 @@ from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection
 from cobaya.mpi import get_mpi_rank
 from cobaya.tools import progress_bar, recursive_update
+from cobaya.model import Model
 
 
 # Dummy classes for loading chains for post processing
 
 class DummyModel(object):
 
-    def __init__(self, info_params, info_likelihood, info_prior=None, info_theory=None):
+    def __init__(self, info_params, info_likelihood, info_prior=None):
         self.parameterization = Parameterization(info_params, ignore_unused_sampled=True)
         self.prior = [_prior_1d_name] + list(info_prior or [])
         self.likelihood = list(info_likelihood)
@@ -59,8 +60,9 @@ def post(info, sample=None):
     output_in = Output(output_prefix=info.get(_output_prefix), resume=True)
     info_in = load_input(output_in.file_updated) if output_in else deepcopy(info)
     dummy_model_in = DummyModel(info_in[_params], info_in[_likelihood],
-                                info_in.get(_prior, None), info_in.get(_theory, None))
+                                info_in.get(_prior, None))
     if output_in:
+        # TODO: could be using MPI here
         collection_in = output_in.load_collections(
             dummy_model_in, skip=info_post.get("skip", 0), thin=info_post.get("thin", 1),
             concatenate=True)
@@ -149,7 +151,6 @@ def post(info, sample=None):
         if ((is_derived_param(pinfo) and not (_p_value in pinfo)
              and p not in add.get(_params, {}))):
             out_params_like[p] = {_p_value: np.nan, _p_drop: True}
-    parameterization_like = Parameterization(out_params_like, ignore_unused_sampled=True)
     # 2.2 Manage adding/removing priors and likelihoods
     warn_remove = False
     for level in [_prior, _likelihood]:
@@ -181,10 +182,22 @@ def post(info, sample=None):
             not any([is_derived_param(pinfo) for pinfo in add.get(_params, {}).values()]))
     if recompute_theory:
         # Inherit from the original chain (needs input|output_params, renames, etc
-        theory = list(info_in[_theory].keys())[0]
-        info_theory_out = odict([
-            [theory, recursive_update(deepcopy(info_in[_theory][theory]),
-                                      add.get(_theory, {theory: {}})[theory])]])
+        add_theory = add.get(_theory)
+        if add_theory:
+            info_theory_out = odict()
+            # TODO: check with more than one theory
+            assert len(add_theory) == 1, "Currently only one theory actually tested"
+            add_theory = add_theory.copy()
+            for theory, theory_info in info_in[_theory].items():
+                theory_copy = deepcopy(theory_info)
+                if theory in add_theory:
+                    info_theory_out[theory] = \
+                        recursive_update(theory_copy, add_theory.pop(theory))
+                else:
+                    info_theory_out[theory] = theory_copy
+            info_theory_out.update(add_theory)
+        else:
+            info_theory_out = deepcopy(info_in[_theory])
     else:
         info_theory_out = None
     chi2_names_add = [_chi2 + _separator + name for name in add[_likelihood]
@@ -218,7 +231,9 @@ def post(info, sample=None):
     info_out.update(info_in)
     info_out[_post][_post_add] = add
     dummy_model_out = DummyModel(out[_params], out[_likelihood], info_prior=out[_prior])
+
     if recompute_theory:
+        # TODO: May need updating for more than one, or maybe can be removed
         theory = list(info_theory_out.keys())[0]
         if _input_params not in info_theory_out[theory]:
             raise LoggedError(
@@ -232,18 +247,17 @@ def post(info, sample=None):
                 "specify the correct set of theory parameters.\n"
                 "The full set of input parameters are %s.",
                 theory, list(dummy_model_out.parameterization.input_params()))
-    prior_add = Prior(dummy_model_out.parameterization, add.get(_prior))
 
-    # TODO: update, should be using a Model instance here?
-    assert False, "Have not updated post processing"
+    # TODO: check allow_renames=False?
+    # TODO: May well be simplifications here, this is v close to pre-refactor logic
+    # Have not gone through or understood all the parameterization  stuff
+    model_add = Model(out_params_like, add[_likelihood], info_prior=add.get(_prior),
+                      info_theory=info_theory_out, path_install=info.get(_path_install),
+                      allow_renames=False, post=True,
+                      prior_parameterization=dummy_model_out.parameterization)
 
-    likelihood_add = LikelihoodCollection(add[_likelihood],
-                                          path_install=info.get(_path_install))
     # Remove auxiliary "one" before dumping -- 'add' *is* info_out[_post][_post_add]
     add[_likelihood].pop("one")
-    if likelihood_add.theory:
-        # Make sure that theory.needs is called at least once, for adjustments
-        likelihood_add.theory.needs()
 
     collection_out = Collection(dummy_model_out, output_out, name="1")
     output_out.dump_info({}, info_out)
@@ -272,7 +286,7 @@ def post(info, sample=None):
                 args = dummy_model_out.parameterization._input_args[p]
                 inputs[p] = func(*[point.get(arg) for arg in args])
         # Add/remove priors
-        priors_add = prior_add.logps(sampled)
+        priors_add = model_add.prior.logps(sampled)
         if not prior_recompute_1d:
             priors_add = priors_add[1:]
         logpriors_add = odict(zip(mlprior_names_add, priors_add))
@@ -285,11 +299,11 @@ def post(info, sample=None):
             continue
         # Add/remove likelihoods
         output_like = []
-        if likelihood_add:
+        if model_add:  # TODO: seems always true (could we just use loglikes here?)
             # Notice "one" (last in likelihood_add) is ignored: not in chi2_names
-            loglikes_add = odict(
-                zip(chi2_names_add, likelihood_add.logps(inputs, _derived=output_like)))
-            output_like = dict(zip(likelihood_add.output_params, output_like))
+            loglikes_add, output_like = model_add.logps(inputs, return_derived=True)
+            loglikes_add = odict(zip(chi2_names_add, loglikes_add))
+            output_like = dict(zip(model_add.output_params, output_like))
         else:
             loglikes_add = dict()
         loglikes_new = [loglikes_add.get(name, -0.5 * point.get(name, 0))
