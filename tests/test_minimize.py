@@ -8,7 +8,7 @@ from mpi4py import MPI
 from scipy.stats import multivariate_normal
 from flaky import flaky
 
-from cobaya.conventions import _likelihood, _sampler
+from cobaya.conventions import kinds
 from cobaya.likelihoods.gaussian_mixture import info_random_gaussian_mixture
 
 
@@ -25,13 +25,13 @@ def test_minimize_gaussian():
     prefix = "a_"
     info = info_random_gaussian_mixture(
         ranges=ranges, n_modes=n_modes, input_params_prefix=prefix, derived=True)
-    mean = info[_likelihood]["gaussian_mixture"]["means"][0]
-    cov = info[_likelihood]["gaussian_mixture"]["covs"][0]
+    mean = info[kinds.likelihood]["gaussian_mixture"]["means"][0]
+    cov = info[kinds.likelihood]["gaussian_mixture"]["covs"][0]
     maxloglik = multivariate_normal.logpdf(mean, mean=mean, cov=cov)
     if rank == 0:
         print("Maximum of the gaussian mode to be found:")
         print(mean)
-    info[_sampler] = {"minimize": {"ignore_prior": True}}
+    info[kinds.sampler] = {"minimize": {"ignore_prior": True}}
     info["debug"] = False
     info["debug_file"] = None
     #    info["output_prefix"] = "./minigauss/"

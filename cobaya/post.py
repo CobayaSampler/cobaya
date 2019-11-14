@@ -12,15 +12,14 @@ from __future__ import absolute_import, division
 import numpy as np
 import logging
 from collections import OrderedDict as odict
-from numbers import Number
 from copy import deepcopy
 
 # Local
 from cobaya.input import load_input
-from cobaya.parameterization import Parameterization, expand_info_param
+from cobaya.parameterization import Parameterization
 from cobaya.parameterization import is_fixed_param, is_sampled_param, is_derived_param
 from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_prefix, _post
-from cobaya.conventions import _params, _prior, _likelihood, _theory, _p_drop, _weight
+from cobaya.conventions import _params, _prior, kinds, _weight
 from cobaya.conventions import _chi2, _separator, _minuslogpost, _force, _p_value, _p_drop
 from cobaya.conventions import _minuslogprior, _path_install, _input_params
 from cobaya.conventions import _separator_files, _post_add, _post_remove, _post_suffix
@@ -28,8 +27,6 @@ from cobaya.collection import Collection
 from cobaya.log import logger_setup, LoggedError
 from cobaya.input import update_info
 from cobaya.output import get_Output as Output
-from cobaya.prior import Prior
-from cobaya.likelihood import LikelihoodCollection
 from cobaya.mpi import get_mpi_rank
 from cobaya.tools import progress_bar, recursive_update
 from cobaya.model import Model
@@ -59,7 +56,7 @@ def post(info, sample=None):
     # 1. Load existing sample
     output_in = Output(output_prefix=info.get(_output_prefix), resume=True)
     info_in = load_input(output_in.file_updated) if output_in else deepcopy(info)
-    dummy_model_in = DummyModel(info_in[_params], info_in[_likelihood],
+    dummy_model_in = DummyModel(info_in[_params], info_in[kinds.likelihood],
                                 info_in.get(_prior, None))
     if output_in:
         # TODO: could be using MPI here
@@ -87,9 +84,9 @@ def post(info, sample=None):
     add = info_post.get(_post_add, {}) or {}
     remove = info_post.get(_post_remove, {})
     # Add a dummy 'one' likelihood, to absorb unused parameters
-    if not add.get(_likelihood):
-        add[_likelihood] = odict()
-    add[_likelihood].update({"one": None})
+    if not add.get(kinds.likelihood):
+        add[kinds.likelihood] = odict()
+    add[kinds.likelihood].update({"one": None})
     # Expand the "add" info
     add = update_info(add)
     # 2.1 Adding/removing derived parameters and changes in priors of sampled parameters
@@ -153,7 +150,7 @@ def post(info, sample=None):
             out_params_like[p] = {_p_value: np.nan, _p_drop: True}
     # 2.2 Manage adding/removing priors and likelihoods
     warn_remove = False
-    for level in [_prior, _likelihood]:
+    for level in [_prior, kinds.likelihood]:
         out[level] = getattr(dummy_model_in, level)
         if level == _prior:
             out[level].remove(_prior_1d_name)
@@ -177,18 +174,18 @@ def post(info, sample=None):
             mlprior_names_add[:1] == [_minuslogprior + _separator + _prior_1d_name])
     # Don't initialise the theory code if not adding/recomputing theory,
     # theory-derived params or likelihoods
-    recompute_theory = info_in.get(_theory) and not (
-            list(add[_likelihood]) == ["one"] and
+    recompute_theory = info_in.get(kinds.theory) and not (
+            list(add[kinds.likelihood]) == ["one"] and
             not any([is_derived_param(pinfo) for pinfo in add.get(_params, {}).values()]))
     if recompute_theory:
         # Inherit from the original chain (needs input|output_params, renames, etc
-        add_theory = add.get(_theory)
+        add_theory = add.get(kinds.theory)
         if add_theory:
             info_theory_out = odict()
             # TODO: check with more than one theory
             assert len(add_theory) == 1, "Currently only one theory actually tested"
             add_theory = add_theory.copy()
-            for theory, theory_info in info_in[_theory].items():
+            for theory, theory_info in info_in[kinds.theory].items():
                 theory_copy = deepcopy(theory_info)
                 if theory in add_theory:
                     info_theory_out[theory] = \
@@ -197,17 +194,17 @@ def post(info, sample=None):
                     info_theory_out[theory] = theory_copy
             info_theory_out.update(add_theory)
         else:
-            info_theory_out = deepcopy(info_in[_theory])
+            info_theory_out = deepcopy(info_in[kinds.theory])
     else:
         info_theory_out = None
-    chi2_names_add = [_chi2 + _separator + name for name in add[_likelihood]
+    chi2_names_add = [_chi2 + _separator + name for name in add[kinds.likelihood]
                       if name is not "one"]
-    out[_likelihood] += [l for l in add[_likelihood] if l is not "one"]
+    out[kinds.likelihood] += [l for l in add[kinds.likelihood] if l is not "one"]
     if recompute_theory:
         log.warning("You are recomputing the theory, but in the current version this does"
                     " not force recomputation of any likelihood or derived parameter, "
                     "unless explicitly removed+added.")
-    for level in [_prior, _likelihood]:
+    for level in [_prior, kinds.likelihood]:
         for i, x_i in enumerate(out[level]):
             if x_i in list(out[level])[i + 1:]:
                 raise LoggedError(
@@ -230,7 +227,8 @@ def post(info, sample=None):
     # Updated with input info and extended (updated) add info
     info_out.update(info_in)
     info_out[_post][_post_add] = add
-    dummy_model_out = DummyModel(out[_params], out[_likelihood], info_prior=out[_prior])
+    dummy_model_out = DummyModel(out[_params], out[kinds.likelihood],
+                                 info_prior=out[_prior])
 
     if recompute_theory:
         # TODO: May need updating for more than one, or maybe can be removed
@@ -251,13 +249,13 @@ def post(info, sample=None):
     # TODO: check allow_renames=False?
     # TODO: May well be simplifications here, this is v close to pre-refactor logic
     # Have not gone through or understood all the parameterization  stuff
-    model_add = Model(out_params_like, add[_likelihood], info_prior=add.get(_prior),
+    model_add = Model(out_params_like, add[kinds.likelihood], info_prior=add.get(_prior),
                       info_theory=info_theory_out, path_install=info.get(_path_install),
                       allow_renames=False, post=True,
                       prior_parameterization=dummy_model_out.parameterization)
 
     # Remove auxiliary "one" before dumping -- 'add' *is* info_out[_post][_post_add]
-    add[_likelihood].pop("one")
+    add[kinds.likelihood].pop("one")
 
     collection_out = Collection(dummy_model_out, output_out, name="1")
     output_out.dump_info({}, info_out)
@@ -269,13 +267,13 @@ def post(info, sample=None):
         sampled = [point[param] for param in
                    dummy_model_in.parameterization.sampled_params()]
         derived = odict(
-            [[param, point.get(param, None)]
+            [(param, point.get(param, None))
              for param in dummy_model_out.parameterization.derived_params()])
         inputs = odict([
-            [param, point.get(
+            (param, point.get(
                 param, dummy_model_in.parameterization.constant_params().get(
                     param, dummy_model_out.parameterization.constant_params().get(
-                        param, None)))]
+                        param, None))))
             for param in dummy_model_out.parameterization.input_params()])
         # Solve inputs that depend on a function and were not saved
         # (we don't use the Parameterization_to_input method in case there are references
@@ -327,7 +325,7 @@ def post(info, sample=None):
                     *[point.get(arg, output_like.get(arg, None)) for arg in args])
         if log.getEffectiveLevel() <= logging.DEBUG:
             log.debug("New derived parameters: %r",
-                      dict([[p, derived[p]]
+                      dict([(p, derived[p])
                             for p in dummy_model_out.parameterization.derived_params()
                             if p in add[_params]]))
         # Save to the collection (keep old weight for now)

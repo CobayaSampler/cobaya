@@ -22,7 +22,7 @@ code.
 from __future__ import division
 
 # Local
-from cobaya.conventions import _external, _theory
+from cobaya.conventions import _external, kinds
 from cobaya.component import CobayaComponent, ComponentCollection
 from cobaya.tools import get_class
 
@@ -88,7 +88,7 @@ class TheoryCollection(ComponentCollection):
                 if _external in info:
                     theory_class = info[_external]
                 else:
-                    theory_class = get_class(name, kind=_theory)
+                    theory_class = get_class(name, kind=kinds.theory)
                 self[name] = theory_class(info, path_install=path_install, timing=timing,
                                           name=name)
 

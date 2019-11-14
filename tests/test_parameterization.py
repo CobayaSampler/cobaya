@@ -9,7 +9,7 @@ from scipy.stats import multivariate_normal
 import numpy as np
 
 # Local
-from cobaya.conventions import _likelihood, _params, _sampler
+from cobaya.conventions import kinds, _params
 from cobaya.yaml import yaml_load
 from cobaya.run import run
 from cobaya.tools import get_external_function
@@ -32,9 +32,9 @@ def loglik(a, b, c, d, h, i, j, _derived=["x", "e"]):
 
 # Info
 info = {
-    _likelihood:
+    kinds.likelihood:
         {"test_lik": loglik},
-    _sampler: {"mcmc": {"burn_in": 0, "max_samples": 10}},
+    kinds.sampler: {"mcmc": {"burn_in": 0, "max_samples": 10}},
     _params: yaml_load("""
        # Fixed to number
        a: 0.01

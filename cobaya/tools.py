@@ -39,7 +39,7 @@ else:
 
 # Local
 from cobaya import __obsolete__
-from cobaya.conventions import _package, subfolders, _p_dist, _kinds, _p_value
+from cobaya.conventions import _package, subfolders, _p_dist, kinds, _p_value
 from cobaya.log import LoggedError
 
 # Logger
@@ -87,7 +87,7 @@ def get_kind(name, fail_if_not_found=True):
     """
     try:
         return next(
-            k for k in _kinds
+            k for k in kinds
             if name in get_available_modules(k))
     except StopIteration:
         if fail_if_not_found:

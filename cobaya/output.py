@@ -23,7 +23,7 @@ import re
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
 from cobaya.conventions import _input_suffix, _updated_suffix, _separator_files
 from cobaya.conventions import _resume, _resume_default, _force, _yaml_extensions
-from cobaya.conventions import _likelihood, _params, _sampler
+from cobaya.conventions import kinds, _params
 from cobaya.log import LoggedError, HasLogger
 from cobaya.input import is_equal_info
 from cobaya.mpi import am_single_or_primary_process, get_mpi_comm
@@ -119,7 +119,7 @@ class Output(HasLogger):
         """
         # trim known params of each likelihood: for internal use only
         updated_info_trimmed = deepcopy_where_possible(updated_info)
-        for lik_info in updated_info_trimmed.get(_likelihood, {}).values():
+        for lik_info in updated_info_trimmed.get(kinds.likelihood, {}).values():
             if hasattr(lik_info, "pop"):
                 lik_info.pop(_params, None)
         if check_compatible:
@@ -129,13 +129,13 @@ class Output(HasLogger):
                 old_info = self.reload_updated_info()
                 new_info = yaml_load(yaml_dump(updated_info_trimmed))
                 ignore_blocks = []
-                if list(new_info.get(_sampler, [None]))[0] == "minimize":
-                    ignore_blocks = [_sampler]
+                if list(new_info.get(kinds.sampler, [None]))[0] == "minimize":
+                    ignore_blocks = [kinds.sampler]
                 if not is_equal_info(old_info, new_info, strict=False,
                                      ignore_blocks=ignore_blocks):
                     # HACK!!! NEEDS TO BE FIXED
                     # TODO: should check any Minimizer subclass
-                    if list(updated_info.get(_sampler, [None]))[0] == "minimize":
+                    if list(updated_info.get(kinds.sampler, [None]))[0] == "minimize":
                         raise LoggedError(
                             self.log, "Old and new sample information not compatible! "
                                       "At this moment it is not possible to 'force' deletion of "
@@ -167,9 +167,9 @@ class Output(HasLogger):
         field, making it simply ``[folder]/[prefix].[extension]``.
         """
         if name is None:
-            name = (datetime.datetime.now().isoformat()
-                        .replace("T", "").replace(":", "").replace(".", "").replace("-", "")[
-                    :(4 + 2 + 2) + (2 + 2 + 2 + 3)])  # up to ms
+            name = (datetime.datetime.now().isoformat().replace("T", "")
+                        .replace(":", "").replace(".", "")
+                        .replace("-", "")[:(4 + 2 + 2) + (2 + 2 + 2 + 3)])  # up to ms
         file_name = os.path.join(
             self.folder,
             self.prefix + ("." if self.prefix else "") + (name + "." if name else "") +

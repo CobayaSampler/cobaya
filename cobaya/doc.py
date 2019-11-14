@@ -12,15 +12,12 @@ from __future__ import absolute_import, print_function, division
 from pprint import pformat
 
 # Local
-from cobaya.tools import warn_deprecation, get_class, get_available_modules
-from cobaya.conventions import _sampler, _theory, _likelihood, subfolders, _kinds
+from cobaya.tools import warn_deprecation, get_available_modules
+from cobaya.conventions import subfolders, kinds
 from cobaya.input import get_default_info
-
 
 _indent = 2 * " "
 import_odict = "from collections import OrderedDict\n\ninfo = "
-
-
 
 
 # Command-line script ####################################################################
@@ -41,7 +38,7 @@ def doc_script():
     parser.add_argument("-" + kind_opt[kind_opt_ishort], "--" + kind_opt, action="store",
                         nargs=1, default=None, metavar="module_kind",
                         help=("Kind of module whose defaults are requested: " +
-                              ", ".join(['%s' % kind for kind in _kinds]) + ". " +
+                              ", ".join(['%s' % kind for kind in kinds]) + ". " +
                               "Use only when module name is not unique (it would fail)."))
     parser.add_argument("-p", "--python", action="store_true", default=False,
                         help="Request Python instead of YAML.")
@@ -51,17 +48,18 @@ def doc_script():
     arguments = parser.parse_args()
     # Remove plurals (= name of src subfolders), for user-friendliness
     if arguments.module.lower() in subfolders.values():
-        arguments.module = next(k for k in subfolders if arguments.module == subfolders[k])
+        arguments.module = next(
+            k for k in subfolders if arguments.module == subfolders[k])
     # Kind given, list all
     if not arguments.module:
         msg = "Available modules: (some may need external code/data)"
         print(msg + "\n" + "-" * len(msg))
-        for kind in _kinds:
+        for kind in kinds:
             print("%s:" % kind)
             print(_indent + ("\n" + _indent).join(get_available_modules(kind)))
         return
     # Kind given: list all modules of that kind
-    if arguments.module.lower() in _kinds:
+    if arguments.module.lower() in kinds:
         print("%s:" % arguments.module.lower())
         print(_indent +
               ("\n" + _indent).join(get_available_modules(arguments.module.lower())))

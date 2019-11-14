@@ -8,7 +8,7 @@ from six import string_types
 
 # Local
 from cobaya.input import get_default_info, merge_info
-from cobaya.conventions import _theory, _sampler, _params
+from cobaya.conventions import kinds, _params
 from cobaya.conventions import _p_drop, _p_renames, _p_derived, _p_value
 from cobaya.parameterization import reduce_info_param
 from . import input_database
@@ -61,13 +61,13 @@ def create_input(**kwargs):
         except KeyError:
             raise ValueError("Unknown value '%s' for '%s'" %
                              (kwargs.get(k, input_database._none), k))
-    theory_requested = kwargs.get(_theory)
+    theory_requested = kwargs.get(kinds.theory)
     for i, (field, info) in enumerate(infos.items()):
         if not info:
             continue
         error_msg = info.pop(input_database._error_msg, None)
         try:
-            info[_theory] = {theory_requested: info[_theory][theory_requested]}
+            info[kinds.theory] = {theory_requested: info[kinds.theory][theory_requested]}
         except KeyError:
             return ("There is no preset for\n'%s'" % (
                 info.get(input_database._desc, field)) +
@@ -79,7 +79,7 @@ def create_input(**kwargs):
         if _params not in info:
             info[_params] = odict()
         info[_params].update(
-            (info[_theory][theory_requested] or odict()).pop(_params, odict()))
+            (info[kinds.theory][theory_requested] or odict()).pop(_params, odict()))
         # Remove the *derived* parameters mentioned by the likelihoods that
         # are already *sampled* by some part of the model
         if field.startswith("like_") and _params in info:
@@ -91,15 +91,16 @@ def create_input(**kwargs):
             for p in remove_derived:
                 info[_params].pop(p)
     # Prepare sampler info
-    info_sampler = deepcopy(input_database.sampler.get(kwargs.get(_sampler), {}))
+    info_sampler = deepcopy(input_database.sampler.get(kwargs.get(kinds.sampler), {}))
     if info_sampler:
-        sampler_name = list(info_sampler[_sampler])[0]
-        info_sampler[_sampler][sampler_name] = info_sampler[_sampler][sampler_name] or {}
+        sampler_name = list(info_sampler[kinds.sampler])[0]
+        info_sampler[kinds.sampler][sampler_name] = info_sampler[kinds.sampler][
+                                                        sampler_name] or {}
         # Add recommended options for samplers
         for info in infos.values():
-            this_info_sampler = info.pop(_sampler, {})
+            this_info_sampler = info.pop(kinds.sampler, {})
             if sampler_name in this_info_sampler:
-                info_sampler[_sampler][sampler_name].update(
+                info_sampler[kinds.sampler][sampler_name].update(
                     this_info_sampler[sampler_name])
     # Reorder, to have the *parameters* shown in the correct order, and *merge*
     all_infos = [info_sampler] + [infos[k]
@@ -112,10 +113,13 @@ def create_input(**kwargs):
     for p, info in merged[_params].items():
         merged[_params][p] = reduce_info_param(info)
     # Translate from Planck param names
-    planck_to_theo = get_default_info(theory_requested, _theory)[_theory][theory_requested][_p_renames]
+    planck_to_theo = \
+        get_default_info(theory_requested, kinds.theory)[kinds.theory][theory_requested][
+            _p_renames]
     if kwargs.get("planck_names", False):
-        merged[_theory][theory_requested] = merged[_theory][theory_requested] or {}
-        merged[_theory][theory_requested]["use_planck_names"] = True
+        merged[kinds.theory][theory_requested] = merged[kinds.theory][
+                                                     theory_requested] or {}
+        merged[kinds.theory][theory_requested]["use_planck_names"] = True
     else:
         merged_params_translated = odict([
             translate(p, info, planck_to_theo)

@@ -6,15 +6,14 @@
 :Author: Jesus Torrado
 
 """
+from collections import namedtuple
+
 # Package name (for importlib)
 # (apparently __package__ is only defined if you import something locally.
 _package = __name__.rpartition('.')[0]
 
 # Names for block and fields in the input
-_likelihood = "likelihood"
 _prior = "prior"
-_theory = "theory"
-_sampler = "sampler"
 _post = "post"
 _post_add = "add"
 _post_remove = "remove"
@@ -45,9 +44,12 @@ _force = "force"
 _module_path = "python_path"
 _module_class_name = "class_name"
 _self_name = "__self__"
-_kinds = [_sampler, _theory, _likelihood]
 
-# Separator for fields in parameter names and files
+ComponentKinds = namedtuple('ComponentKinds', ("sampler", "theory", "likelihood"))
+kinds = ComponentKinds(*ComponentKinds._fields)
+
+# Separator for
+# fields in parameter names and files
 # Its manual inclusion in a string anywhere else (e.g. a parameter name) should be avoided
 _separator = "__"
 _separator_files = "."
@@ -79,9 +81,9 @@ _requirements_file = "requirements.yaml"
 _help_file = "readme.md"
 
 # Internal package structure
-subfolders = {_likelihood: "likelihoods",
-              _sampler: "samplers",
-              _theory: "theories"}
+subfolders = {kinds.likelihood: "likelihoods",
+              kinds.sampler: "samplers",
+              kinds.theory: "theories"}
 
 # Approximate overhead of cobaya per posterior evaluation. Useful for blocking speeds
 # After testing, it's mostly due to evaluating logpdf of scipy.stats 1d pdf's,

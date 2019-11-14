@@ -9,7 +9,7 @@ from flaky import flaky
 from cobaya.run import run
 from cobaya.post import post
 from cobaya.tools import KL_norm
-from cobaya.conventions import _output_prefix, _params, _force, _likelihood, _sampler
+from cobaya.conventions import _output_prefix, _params, _force, kinds
 from cobaya.conventions import _prior, _p_dist, _p_proposal, _p_derived, _separator_files
 from cobaya.conventions import _post, _post_add, _post_remove, _post_suffix
 from getdist.mcsamples import loadMCSamples
@@ -34,9 +34,9 @@ def target_pdf(a, b, c=0, _derived=["cprime"]):
 range = {"min": -2, "max": 2}
 ref_pdf = {_p_dist: "norm", "loc": 0, "scale": 0.1}
 info_params = odict([
-    ["a", {"prior": range, "ref": ref_pdf, _p_proposal: sigma}],
-    ["b", {"prior": range, "ref": ref_pdf, _p_proposal: sigma}],
-    ["a_plus_b", {_p_derived: lambda a, b: a + b}]])
+    ("a", {"prior": range, "ref": ref_pdf, _p_proposal: sigma}),
+    ("b", {"prior": range, "ref": ref_pdf, _p_proposal: sigma}),
+    ("a_plus_b", {_p_derived: lambda a, b: a + b})])
 
 info_sampler = {"mcmc": {"Rminus1_stop": 0.01}}
 info_sampler_dummy = {"evaluate": {"N": 10}}
@@ -47,8 +47,8 @@ def test_post_prior(tmpdir):
     # Generate original chain
     info = {
         _output_prefix: os.path.join(str(tmpdir), "gaussian"), _force: True,
-        _params: info_params, _sampler: info_sampler,
-        _likelihood: {"one": None}, _prior: {"gaussian": sampled_pdf}}
+        _params: info_params, kinds.sampler: info_sampler,
+        kinds.likelihood: {"one": None}, _prior: {"gaussian": sampled_pdf}}
     run(info)
     info_post = {
         _output_prefix: info[_output_prefix], _force: True,
@@ -69,14 +69,14 @@ def test_post_likelihood(tmpdir):
     # Generate original chain
     info = {
         _output_prefix: os.path.join(str(tmpdir), "gaussian"), _force: True,
-        _params: info_params, _sampler: info_sampler,
-        _likelihood: {"gaussian": sampled_pdf}}
+        _params: info_params, kinds.sampler: info_sampler,
+        kinds.likelihood: {"gaussian": sampled_pdf}}
     run(info)
     info_post = {
         _output_prefix: info[_output_prefix], _force: True,
         _post: {_post_suffix: "foo",
-                _post_remove: {_likelihood: {"gaussian": None}},
-                _post_add: {_likelihood: {"target": target_pdf}}}}
+                _post_remove: {kinds.likelihood: {"gaussian": None}},
+                _post_add: {kinds.likelihood: {"target": target_pdf}}}}
     post(info_post)
     # Load with GetDist and compare
     mcsamples = loadMCSamples(
@@ -93,24 +93,26 @@ def test_post_params():
     # - added new fixed input "c" + new derived-from-external-function "cprime"
     # Generate original chain
     info = {
-        _params: info_params, _sampler: info_sampler_dummy,
-        _likelihood: {"gaussian": sampled_pdf}}
+        _params: info_params, kinds.sampler: info_sampler_dummy,
+        kinds.likelihood: {"gaussian": sampled_pdf}}
     updated_info_gaussian, products_gaussian = run(info)
     info_post = {
         _post: {_post_suffix: "foo",
                 _post_remove: {_params: {"a_plus_b": None}},
                 _post_add: {
-                    _likelihood: {"target": target_pdf},
+                    kinds.likelihood: {"target": target_pdf},
                     _params: {
                         "c": 1.234,
                         "a_minus_b": {_p_derived: "lambda a,b: a-b"},
-                        "my_chi2__target": {_p_derived: "lambda chi2__target: chi2__target"},
+                        "my_chi2__target": {
+                            _p_derived: "lambda chi2__target: chi2__target"},
                         "cprime": None}}}}
     info_post.update(updated_info_gaussian)
     updated_info, products = post(info_post, products_gaussian["sample"])
     # Compare parameters
     assert np.allclose(
-        products["sample"]["a"] - products["sample"]["b"], products["sample"]["a_minus_b"])
+        products["sample"]["a"] - products["sample"]["b"],
+        products["sample"]["a_minus_b"])
     assert np.allclose(
         products["sample"]["cprime"], info_post[_post][_post_add][_params]["c"])
     assert np.allclose(

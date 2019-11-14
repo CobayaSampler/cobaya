@@ -15,9 +15,8 @@ from cobaya.cosmo_input import input_database
 from cobaya.cosmo_input.create_input import create_input
 from cobaya.bib import prettyprint_bib, get_bib_info, get_bib_module
 from cobaya.tools import warn_deprecation, get_available_modules
-from cobaya.doc import _kinds
 from cobaya.input import get_default_info
-from cobaya.conventions import subfolders
+from cobaya.conventions import subfolders, kinds
 
 
 # per-platform settings for correct high-DPI scaling
@@ -69,7 +68,7 @@ class MainWindow(QWidget):
         self.menubar = QMenuBar()
         defaults_menu = self.menubar.addMenu('&Show defaults and bibliography for a module...')
         menu_actions = {}
-        for kind in _kinds:
+        for kind in kinds:
             submenu = defaults_menu.addMenu(subfolders[kind])
             modules = get_available_modules(kind)
             menu_actions[kind] = {}

@@ -141,7 +141,6 @@ import numpy as np
 from copy import deepcopy
 import logging
 from collections import namedtuple, OrderedDict as odict
-from time import time
 from numbers import Number
 
 # Local

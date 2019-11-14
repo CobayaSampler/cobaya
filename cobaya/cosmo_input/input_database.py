@@ -18,7 +18,7 @@ from copy import deepcopy
 import os
 
 # Local
-from cobaya.conventions import _theory, _params, _likelihood, _sampler, _prior, _p_derived
+from cobaya.conventions import kinds, _params, _prior, _p_derived
 from cobaya.conventions import _p_ref, _p_proposal, _p_label, _p_dist, _p_drop, _p_value
 from cobaya.conventions import _p_renames, _chi2, _separator
 
@@ -31,30 +31,30 @@ _error_msg = "error_msg"
 _none = "(None)"
 
 # Theory codes
-theory = odict([[_camb, None], [_classy, None]])
+theory = odict([(_camb, None), (_classy, None)])
 
 # Primordial perturbations
 primordial = odict([
-    ["SFSR", {
+    ("SFSR", {
         _desc: "Adiabatic scalar perturbations, power law spectrum",
-        _theory: {_camb: None, _classy: None},
+        kinds.theory: {_camb: None, _classy: None},
         _params: odict([
             ["logA", odict([
-                [_prior, odict([["min", 1.61], ["max", 3.91]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 3.05], ["scale", 0.001]])],
-                [_p_proposal, 0.001], [_p_label, r"\log(10^{10} A_\mathrm{s})"],
-                [_p_drop, True]])],
-            ["As", odict([
-                [_p_value, "lambda logA: 1e-10*np.exp(logA)"],
-                [_p_label, r"A_\mathrm{s}"]])],
-            ["ns", odict([
-                [_prior, odict([["min", 0.8], ["max", 1.2]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.965], ["scale", 0.004]])],
-                [_p_proposal, 0.002], [_p_label, r"n_\mathrm{s}"]])]])}]])
+                (_prior, odict([("min", 1.61), ("max", 3.91)])),
+                (_p_ref, odict([(_p_dist, "norm"), ("loc", 3.05), ("scale", 0.001)])),
+                (_p_proposal, 0.001), (_p_label, r"\log(10^{10} A_\mathrm{s})"),
+                (_p_drop, True)])],
+            ("As", odict([
+                (_p_value, "lambda logA: 1e-10*np.exp(logA)"),
+                (_p_label, r"A_\mathrm{s}")])),
+            ("ns", odict([
+                (_prior, odict([("min", 0.8), ("max", 1.2)])),
+                (_p_ref, odict([(_p_dist, "norm"), ("loc", 0.965), ("scale", 0.004)])),
+                (_p_proposal, 0.002), (_p_label, r"n_\mathrm{s}")]))])})])
 primordial.update(odict([
     ["SFSR_DESpriors", {
         _desc: "Adiabatic scalar perturbations, power law + running spectrum -- DESpriors",
-        _theory: {_camb: None, _classy: None},
+        kinds.theory: {_camb: None, _classy: None},
         _params: odict([
             ["As_1e9", odict([
                 [_prior, odict([["min", 0.5], ["max", 5]])],
@@ -68,7 +68,7 @@ primordial.update(odict([
 primordial.update(odict([
     ["SFSR_run", {
         _desc: "Adiabatic scalar perturbations, power law + running spectrum",
-        _theory: {_camb: None, _classy: None},
+        kinds.theory: {_camb: None, _classy: None},
         _params: odict(
             (list(primordial["SFSR"][_params].items()) +
              [["nrun", odict([
@@ -78,7 +78,7 @@ primordial.update(odict([
 primordial.update(odict([
     ["SFSR_runrun", {
         _desc: "Adiabatic scalar perturbations, power law + 2nd-order running spectrum",
-        _theory: {_camb: None, _classy: None},
+        kinds.theory: {_camb: None, _classy: None},
         _params: odict(
             (list(primordial["SFSR_run"][_params].items()) +
              [["nrunrun", odict([
@@ -89,8 +89,8 @@ primordial.update(odict([
     ["SFSR_t", {
         _desc: "Adiabatic scalar+tensor perturbations, "
                "power law spectrum (inflation consistency)",
-        _theory: {_camb: {_extra_args: {"nt": None}},
-                  _classy: {_extra_args: {"n_t": "scc", "alpha_t": "scc"}}},
+        kinds.theory: {_camb: {_extra_args: {"nt": None}},
+                       _classy: {_extra_args: {"n_t": "scc", "alpha_t": "scc"}}},
         _params: odict(
             (list(primordial["SFSR"][_params].items()) +
              [["r", odict([
@@ -101,10 +101,12 @@ primordial.update(odict([
     ["SFSR_t_nrun", {
         _desc: "Adiabatic scalar+tensor perturbations, "
                "power law + running spectrum (inflation consistency)",
-        _theory: {_camb:
-                      {_extra_args: primordial["SFSR_t"][_theory][_camb][_extra_args]},
-                  _classy:
-                      {_extra_args: primordial["SFSR_t"][_theory][_classy][_extra_args]}},
+        kinds.theory: {_camb:
+                           {_extra_args: primordial["SFSR_t"][kinds.theory][_camb][
+                               _extra_args]},
+                       _classy:
+                           {_extra_args: primordial["SFSR_t"][kinds.theory][_classy][
+                               _extra_args]}},
         _params: odict(
             (list(primordial["SFSR_run"][_params].items()) +
              list(primordial["SFSR_t"][_params].items())))}]]))
@@ -113,10 +115,10 @@ primordial.update(odict([
 geometry = odict([
     ["flat", {
         _desc: "Flat FLRW universe",
-        _theory: {_camb: None, _classy: None}}],
+        kinds.theory: {_camb: None, _classy: None}}],
     ["omegak", {
         _desc: "FLRW model with varying curvature (prior on Omega_k)",
-        _theory: {_camb: None, _classy: None},
+        kinds.theory: {_camb: None, _classy: None},
         _params: odict([
             ["omegak", odict([
                 [_prior, odict([["min", -0.3], ["max", 0.3]])],
@@ -128,7 +130,7 @@ H0_min, H0_max = 20, 100
 hubble = odict([
     ["H", {
         _desc: "Hubble parameter",
-        _theory: {_camb: None, _classy: None},
+        kinds.theory: {_camb: None, _classy: None},
         _params: odict([
             ["H0", odict([
                 [_prior, odict([["min", H0_min], ["max", H0_max]])],
@@ -136,7 +138,7 @@ hubble = odict([
                 [_p_proposal, 2], [_p_label, r"H_0"]])]])}],
     ["H_DESpriors", {
         _desc: "Hubble parameter (reduced range for DES and lensing-only constraints)",
-        _theory: {_camb: None, _classy: None},
+        kinds.theory: {_camb: None, _classy: None},
         _params: odict([
             ["H0", odict([
                 [_prior, odict([["min", 55], ["max", 91]])],
@@ -145,7 +147,7 @@ hubble = odict([
     ["sound_horizon_last_scattering", {
         _desc: "Angular size of the sound horizon at last scattering "
                "(approximate, if using CAMB)",
-        _theory: {
+        kinds.theory: {
             _camb: {
                 _params: odict([
                     ["theta_MC_100", odict([
@@ -178,7 +180,7 @@ nu_mass_fac = 94.0708
 matter = odict([
     ["omegab_h2, omegac_h2", {
         _desc: "Flat prior on Omega*h^2 for barions and cold dark matter",
-        _theory: {_camb: None, _classy: None},
+        kinds.theory: {_camb: None, _classy: None},
         _params: odict([
             ["omegabh2", odict([
                 [_prior, odict([["min", 0.005], ["max", 0.1]])],
@@ -191,7 +193,7 @@ matter = odict([
             ["omegam", {_p_label: r"\Omega_\mathrm{m}"}]])}],
     ["Omegab, Omegam", {
         _desc: "Flat prior on Omega for barions and total matter",
-        _theory: {_camb: None, _classy: None},
+        kinds.theory: {_camb: None, _classy: None},
         _params: odict([
             ["omegab", odict([
                 [_prior, odict([["min", 0.03], ["max", 0.07]])],
@@ -221,7 +223,7 @@ for m in matter.values():
 neutrinos = odict([
     ["one_heavy_planck", {
         _desc: "Two massless nu and one with m=0.06. Neff=3.046",
-        _theory: {
+        kinds.theory: {
             _camb: {_extra_args: {"num_massive_neutrinos": 1, "nnu": 3.046},
                     _params: odict([["mnu", 0.06]])},
             _classy: {_extra_args: {"N_ncdm": 1, "N_ur": 2.0328},
@@ -229,7 +231,7 @@ neutrinos = odict([
                           ["m_ncdm", {_p_value: 0.06, _p_renames: "mnu"}]])}}}],
     ["varying_mnu", {
         _desc: "Varying total mass of 3 degenerate nu's, with N_eff=3.046",
-        _theory: {
+        kinds.theory: {
             _camb: {_extra_args: {"num_massive_neutrinos": 3, "nnu": 3.046},
                     _params: odict([
                         ["mnu", odict([
@@ -248,7 +250,7 @@ neutrinos = odict([
                                          [_p_label, r"\sum m_\nu"]])]])}}}],
     ["varying_Neff", {
         _desc: "Varying Neff with two massless nu and one with m=0.06",
-        _theory: {
+        kinds.theory: {
             _camb: {_extra_args: {"num_massive_neutrinos": 1},
                     _params: odict([
                         ["mnu", 0.06],
@@ -271,14 +273,15 @@ neutrinos = odict([
 neutrinos.update(odict([
     ["varying_mnu_Neff", {
         _desc: "Varying Neff and total mass of 3 degenerate nu's",
-        _theory: {
+        kinds.theory: {
             _camb: {
                 _extra_args: {"num_massive_neutrinos": 3},
                 _params: odict([
                     ["mnu", deepcopy(
-                        neutrinos["varying_mnu"][_theory]["camb"][_params]["mnu"])],
+                        neutrinos["varying_mnu"][kinds.theory]["camb"][_params]["mnu"])],
                     ["nnu", deepcopy(
-                        neutrinos["varying_Neff"][_theory]["camb"][_params]["nnu"])]])},
+                        neutrinos["varying_Neff"][kinds.theory]["camb"][_params][
+                            "nnu"])]])},
             #            _classy: {
             #                _extra_args: {"N_ncdm": 1, "deg_ncdm": 3},
             #                _params: odict([
@@ -315,13 +318,13 @@ neutrinos.update(odict([
 dark_energy = odict([
     ["lambda", {
         _desc: "Cosmological constant (w=-1)",
-        _theory: {_camb: None, _classy: None},
+        kinds.theory: {_camb: None, _classy: None},
         _params: odict([
             ["omegal", {_p_label: r"\Omega_\Lambda"}]])}],
     ["de_w", {
         _desc: "Varying constant eq of state",
-        _theory: {_camb: None,
-                  _classy: {_params: {"Omega_Lambda": 0}}},
+        kinds.theory: {_camb: None,
+                       _classy: {_params: {"Omega_Lambda": 0}}},
         _params: odict([
             ["w", odict([
                 [_prior, odict([["min", -3], ["max", -0.333]])],
@@ -329,8 +332,8 @@ dark_energy = odict([
                 [_p_proposal, 0.02], [_p_label, r"w_\mathrm{DE}"]])]])}],
     ["de_w_wa", {
         _desc: "Varying constant eq of state with w(a) = w0 + (1-a) wa",
-        _theory: {_camb: None,
-                  _classy: {_params: {"Omega_Lambda": 0}}},
+        kinds.theory: {_camb: None,
+                       _classy: {_params: {"Omega_Lambda": 0}}},
         _params: odict([
             ["w", odict([
                 [_prior, odict([["min", -3], ["max", 1]])],
@@ -349,20 +352,20 @@ bbn_derived_camb = odict([
 bbn = odict([
     ["consistency", {
         _desc: "Primordial Helium fraction inferred from BBN consistency",
-        _theory: {_camb: {_params: bbn_derived_camb},
-                  _classy: None},
+        kinds.theory: {_camb: {_params: bbn_derived_camb},
+                       _classy: None},
         _params: odict([
             ["yheused", {_p_label: r"Y_\mathrm{P}"}]])}],
     ["YHe_des_y1", {
         _desc: "Fixed Y_P = 0.245341 (used in DES Y1)",
-        _theory: {_camb: None,
-                  _classy: None},
+        kinds.theory: {_camb: None,
+                       _classy: None},
         _params: odict([
             ["yhe", 0.245341]])}],
     ["YHe", {
         _desc: "Varying primordial Helium fraction",
-        _theory: {_camb: None,
-                  _classy: None},
+        kinds.theory: {_camb: None,
+                       _classy: None},
         _params: odict([
             ["yhe", odict([
                 [_prior, odict([["min", 0.1], ["max", 0.5]])],
@@ -373,7 +376,7 @@ bbn = odict([
 reionization = odict([
     ["std", {
         _desc: "Standard reio, lasting delta_z=0.5",
-        _theory: {_camb: None, _classy: None},
+        kinds.theory: {_camb: None, _classy: None},
         _params: odict([
             ["tau", odict([
                 [_prior, odict([["min", 0.01], ["max", 0.8]])],
@@ -382,7 +385,7 @@ reionization = odict([
             ["zrei", {_p_label: r"z_\mathrm{re}"}]])}],
     ["gauss_prior", {
         _desc: "Standard reio, lasting delta_z=0.5, gaussian prior around tau=0.07",
-        _theory: {_camb: None, _classy: None},
+        kinds.theory: {_camb: None, _classy: None},
         _params: odict([
             ["tau", odict([
                 [_prior, odict([[_p_dist, "norm"], ["loc", 0.07], ["scale", 0.02]])],
@@ -391,7 +394,7 @@ reionization = odict([
             ["zrei", {_p_label: r"z_\mathrm{re}"}]])}],
     ["irrelevant", {
         _desc: "Irrelevant (NB: only valid for non-CMB or CMB-marged datasets!)",
-        _theory: {_camb: None, _classy: None},
+        kinds.theory: {_camb: None, _classy: None},
         _params: odict([])}], ])
 
 # EXPERIMENTS ############################################################################
@@ -406,20 +409,20 @@ like_cmb = odict([
     ["planck_2018", {
         _desc: "Planck 2018 (Polarized CMB + lensing)",
         _comment: None,
-        _sampler: cmb_sampler_recommended,
-        _theory: {theo: {_extra_args: cmb_precision[theo]}
-                  for theo in [_camb, _classy]},
-        _likelihood: odict([
+        kinds.sampler: cmb_sampler_recommended,
+        kinds.theory: {theo: {_extra_args: cmb_precision[theo]}
+                       for theo in [_camb, _classy]},
+        kinds.likelihood: odict([
             ["planck_2018_lowl.TT", None],
             ["planck_2018_lowl.EE", None],
             ["planck_2018_highl_plik.TTTEEE", None],
             ["planck_2018_lensing.clik", None]])}],
     ["planck_2018_bk15", {
         _desc: "Planck 2018 (Polarized CMB + lensing) + Bicep/Keck-Array 2015",
-        _sampler: cmb_sampler_recommended,
-        _theory: {theo: {_extra_args: cmb_precision[theo]}
-                  for theo in [_camb, _classy]},
-        _likelihood: odict([
+        kinds.sampler: cmb_sampler_recommended,
+        kinds.theory: {theo: {_extra_args: cmb_precision[theo]}
+                       for theo in [_camb, _classy]},
+        kinds.likelihood: odict([
             ["planck_2018_lowl.TT", None],
             ["planck_2018_lowl.EE", None],
             ["planck_2018_highl_plik.TTTEEE", None],
@@ -427,10 +430,10 @@ like_cmb = odict([
             ["bicep_keck_2015", None]])}],
     ["planck_2018_CMBmarged_lensing", {
         _desc: "Planck 2018 CMB-marginalized lensing",
-        _sampler: cmb_sampler_recommended,
-        _theory: {theo: {_extra_args: cmb_precision[theo]}
-                  for theo in [_camb, _classy]},
-        _likelihood: odict([
+        kinds.sampler: cmb_sampler_recommended,
+        kinds.theory: {theo: {_extra_args: cmb_precision[theo]}
+                       for theo in [_camb, _classy]},
+        kinds.likelihood: odict([
             ["planck_2018_lensing.cmbmarged", None]])}],
 ])
 like_cmb["planck_2018_bk15"][_comment] = like_cmb["planck_2018"][_comment]
@@ -481,7 +484,7 @@ for name, m in like_cmb.items():
 for combination, info in like_cmb.items():
     if info:
         likes = ", ".join([_chi2 + _separator + like.replace(".", "_")
-                           for like in info[_likelihood]])
+                           for like in info[kinds.likelihood]])
         info[_params].update(odict([
             ["chi2__CMB", odict([[_p_derived, "lambda %s: sum([%s])" % (likes, likes)],
                                  [_p_label, r"\chi^2_\mathrm{CMB}"]])]]))
@@ -490,8 +493,8 @@ like_bao = odict([
     [_none, {}],
     ["BAO_planck_2018", {
         _desc: "Baryon acoustic oscillation data from DR12, MGS and 6DF",
-        _theory: {_camb: None, _classy: None},
-        _likelihood: odict([
+        kinds.theory: {_camb: None, _classy: None},
+        kinds.likelihood: odict([
             ["bao.sixdf_2011_bao", None],
             ["bao.sdss_dr7_mgs", None],
             ["bao.sdss_dr12_consensus_bao", None]])}],
@@ -499,7 +502,7 @@ like_bao = odict([
 for combination, info in like_bao.items():
     if info:
         likes = ", ".join([_chi2 + _separator + like.replace(".", "_")
-                           for like in info[_likelihood]])
+                           for like in info[kinds.likelihood]])
         info[_params] = odict([
             ["chi2__BAO", odict([[_p_derived, "lambda %s: sum([%s])" % (likes, likes)],
                                  [_p_label, r"\chi^2_\mathrm{BAO}"]])]])
@@ -508,23 +511,23 @@ like_des = odict([
     [_none, {}],
     ["des_y1_clustering", {
         _desc: "Galaxy clustering from DES Y1",
-        _theory: {_camb: None, _classy: None},
-        _likelihood: odict([
+        kinds.theory: {_camb: None, _classy: None},
+        kinds.likelihood: odict([
             ["des_y1.clustering", None]])}],
     ["des_y1_galaxy_galaxy", {
         _desc: "Galaxy-galaxy lensing from DES Y1",
-        _theory: {_camb: None, _classy: None},
-        _likelihood: odict([
+        kinds.theory: {_camb: None, _classy: None},
+        kinds.likelihood: odict([
             ["des_y1.galaxy_galaxy", None]])}],
     ["des_y1_shear", {
         _desc: "Cosmic shear data from DES Y1",
-        _theory: {_camb: None, _classy: None},
-        _likelihood: odict([
+        kinds.theory: {_camb: None, _classy: None},
+        kinds.likelihood: odict([
             ["des_y1.shear", None]])}],
     ["des_y1_joint", {
         _desc: "Combination of galaxy clustering and weak lensing data from DES Y1",
-        _theory: {_camb: None, _classy: None},
-        _likelihood: odict([
+        kinds.theory: {_camb: None, _classy: None},
+        kinds.likelihood: odict([
             ["des_y1.joint", None]])}],
 ])
 
@@ -532,8 +535,8 @@ like_sn = odict([
     [_none, {}],
     ["Pantheon", {
         _desc: "Supernovae data from the Pantheon sample",
-        _theory: {_camb: None, _classy: None},
-        _likelihood: odict([
+        kinds.theory: {_camb: None, _classy: None},
+        kinds.likelihood: odict([
             ["sn.pantheon", None]])}],
 ])
 
@@ -541,13 +544,13 @@ like_H0 = odict([
     [_none, {}],
     ["Riess2018a", {
         _desc: "Local H0 measurement from Riess et al. 2018a (used in Planck 2018)",
-        _theory: {_camb: None, _classy: None},
-        _likelihood: odict([
+        kinds.theory: {_camb: None, _classy: None},
+        kinds.likelihood: odict([
             ["H0.riess2018a", None]])}],
     ["Riess201903", {
         _desc: "Local H0 measurement from Riess et al. 2019",
-        _theory: {_camb: None, _classy: None},
-        _likelihood: odict([
+        kinds.theory: {_camb: None, _classy: None},
+        kinds.likelihood: odict([
             ["H0.riess201903", None]])}],
 ])
 
@@ -556,10 +559,10 @@ like_H0 = odict([
 sampler = odict([
     ["MCMC", {
         _desc: "MCMC sampler with covmat learning",
-        _sampler: {"mcmc": {"covmat": "auto"}}}],
+        kinds.sampler: {"mcmc": {"covmat": "auto"}}}],
     ["PolyChord", {
         _desc: "Nested sampler, affine invariant and multi-modal",
-        _sampler: {"polychord": None}}], ])
+        kinds.sampler: {"polychord": None}}], ])
 
 # PRESETS ################################################################################
 
@@ -671,13 +674,14 @@ lensingonly_model = {
 for name, pre in preset.items():
     if "lensingonly" in name:
         pre.update(
-            {field: value for field, value in lensingonly_model.items() if field not in pre})
+            {field: value for field, value in lensingonly_model.items() if
+             field not in pre})
         pre.update(default_sampler)
 
 # BASIC INSTALLATION ######################################################################
 install_basic = {
-    _theory: {_camb: None, _classy: None},
-    _likelihood: {
+    kinds.theory: {_camb: None, _classy: None},
+    kinds.likelihood: {
         "planck_2018_lowl.TT": None,
         "planck_2018_lensing.native": None,
         "bicep_keck_2015": None,
@@ -685,14 +689,13 @@ install_basic = {
         "bao.sdss_dr12_consensus_final": None,
         "des_y1.joint": None}}
 
-
 install_tests = deepcopy(install_basic)
-install_tests[_likelihood].update({"planck_2015_lowl": None,
-                                   "planck_2018_highl_plik.TT_unbinned": None,
-                                   "planck_2018_highl_plik.TT_lite_native": None,
-                                   "planck_2018_highl_CamSpec.TT": None,
-                                   "planck_2018_highl_CamSpec.TT_native": None,
-})
+install_tests[kinds.likelihood].update({"planck_2015_lowl": None,
+                                        "planck_2018_highl_plik.TT_unbinned": None,
+                                        "planck_2018_highl_plik.TT_lite_native": None,
+                                        "planck_2018_highl_CamSpec.TT": None,
+                                        "planck_2018_highl_CamSpec.TT_native": None,
+                                        })
 
 skip_list = os.environ.get("COBAYA_TEST_SKIP", "").replace(",", " ").lower().split()
 for key in list(install_tests.keys()):

@@ -167,7 +167,6 @@ import logging
 from copy import deepcopy
 import numpy as np
 from collections import namedtuple, OrderedDict as odict
-from time import time
 
 # Local
 from cobaya.theories._cosmo import _cosmo

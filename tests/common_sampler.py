@@ -10,7 +10,7 @@ from getdist.mcsamples import MCSamplesFromCobaya
 from time import sleep
 from itertools import chain
 
-from cobaya.conventions import _likelihood, _sampler, _params, _output_prefix
+from cobaya.conventions import kinds, _params, _output_prefix
 from cobaya.conventions import _debug, _debug_file, _path_install
 from cobaya.likelihoods.gaussian_mixture import info_random_gaussian_mixture
 from cobaya.tools import KL_norm
@@ -45,10 +45,10 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
         print(info["likelihood"]["gaussian_mixture"]["means"])
         print("Original covmat of the gaussian mode:")
         print(info["likelihood"]["gaussian_mixture"]["covs"])
-    info[_sampler] = info_sampler
+    info[kinds.sampler] = info_sampler
     if list(info_sampler.keys())[0] == "mcmc":
         if "covmat" in info_sampler["mcmc"]:
-            info[_sampler]["mcmc"]["covmat_params"] = (
+            info[kinds.sampler]["mcmc"]["covmat_params"] = (
                 list(info["params"].keys())[:dimension])
     info[_debug] = False
     info[_debug_file] = None
@@ -79,8 +79,8 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
             import getdist.plots as gdplots
             from getdist.gaussian_mixtures import MixtureND
             mixture = MixtureND(
-                info[_likelihood]["gaussian_mixture"]["means"],
-                info[_likelihood]["gaussian_mixture"]["covs"],
+                info[kinds.likelihood]["gaussian_mixture"]["means"],
+                info[kinds.likelihood]["gaussian_mixture"]["covs"],
                 names=[p for p in info[_params] if "deriv" not in p], label="truth")
             g = gdplots.getSubplotPlotter()
             to_plot = [mixture, results]
@@ -93,8 +93,8 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
         # 1st test: KL divergence
         if n_modes == 1:
             cov_sample, mean_sample = results.getCov(), results.getMeans()
-            KL_final = KL_norm(m1=info[_likelihood]["gaussian_mixture"]["means"][0],
-                               S1=info[_likelihood]["gaussian_mixture"]["covs"][0],
+            KL_final = KL_norm(m1=info[kinds.likelihood]["gaussian_mixture"]["means"][0],
+                               S1=info[kinds.likelihood]["gaussian_mixture"]["covs"][0],
                                m2=mean_sample[:dimension],
                                S2=cov_sample[:dimension, :dimension])
             print("Final KL: ", KL_final)
@@ -106,11 +106,13 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
                     "Not all clusters detected!")
                 for i, c2 in enumerate(clusters):
                     cov_c2, mean_c2 = c2.getCov(), c2.getMeans()
-                    KLs = [KL_norm(m1=info[_likelihood]["gaussian_mixture"]["means"][i_c1],
-                                   S1=info[_likelihood]["gaussian_mixture"]["covs"][i_c1],
-                                   m2=mean_c2[:dimension],
-                                   S2=cov_c2[:dimension, :dimension])
-                           for i_c1 in range(n_modes)]
+                    KLs = [
+                        KL_norm(
+                            m1=info[kinds.likelihood]["gaussian_mixture"]["means"][i_c1],
+                            S1=info[kinds.likelihood]["gaussian_mixture"]["covs"][i_c1],
+                            m2=mean_c2[:dimension],
+                            S2=cov_c2[:dimension, :dimension])
+                        for i_c1 in range(n_modes)]
                     extra_tol = 4 * n_modes if n_modes > 1 else 1
                     print("Final KL for cluster %d: %g", i, min(KLs))
                     assert min(KLs) <= KL_tolerance * extra_tol
@@ -132,11 +134,13 @@ def body_of_test_speeds(info_sampler={}, manual_blocking=False, modules=None):
     mean1, cov1 = [info_random_gaussian_mixture(
         ranges=[ranges[i] for i in range(dim)], n_modes=1, input_params_prefix=prefix,
         O_std_min=0.01, O_std_max=0.2, derived=True)
-                   [_likelihood]["gaussian_mixture"][p][0] for p in ["means", "covs"]]
+                   [kinds.likelihood]["gaussian_mixture"][p][0] for p in
+                   ["means", "covs"]]
     mean2, cov2 = [info_random_gaussian_mixture(
         ranges=[ranges[i] for i in range(dim, 2 * dim)], n_modes=1,
         input_params_prefix=prefix, O_std_min=0.01, O_std_max=0.2, derived=True)
-                   [_likelihood]["gaussian_mixture"][p][0] for p in ["means", "covs"]]
+                   [kinds.likelihood]["gaussian_mixture"][p][0] for p in
+                   ["means", "covs"]]
     n = [0, 0]
     # PolyChord measures its own speeds, so we need to "sleep"
     sleep_unit = 1 / 50
@@ -162,10 +166,12 @@ def body_of_test_speeds(info_sampler={}, manual_blocking=False, modules=None):
     perm = list(range(2 * dim))
     shuffle(perm)
     # Create info
-    info = {"params": odict([[prefix + "%d" % i, {"prior": dict(zip(["min", "max"], ranges[i]))}]
-                             for i in perm] + [["sum_like1", None], ["sum_like2", None]]),
-            "likelihood": {"like1": {"external": like1, "speed": speed1},
-                           "like2": {"external": like2, "speed": speed2}}, "sampler": info_sampler}
+    info = {"params": odict(
+        [(prefix + "%d" % i, {"prior": dict(zip(["min", "max"], ranges[i]))})
+         for i in perm] + [("sum_like1", None), ("sum_like2", None)]),
+        "likelihood": {"like1": {"external": like1, "speed": speed1},
+                       "like2": {"external": like2, "speed": speed2}},
+        "sampler": info_sampler}
     if manual_blocking:
         info["sampler"][sampler]["blocking"] = [
             [speed1, ["a_0", "a_1", "a_2"]],
@@ -195,7 +201,8 @@ def body_of_test_speeds(info_sampler={}, manual_blocking=False, modules=None):
     if sampler == "polychord":
         tolerance = 0.2
         assert abs((n[1] - n[0]) / n[0] / (speed2 / speed1) - 1) < tolerance, (
-                "#evaluations off: %g > %g" % (abs((n[1] - n[0]) / n[0] / (speed2 / speed1) - 1), tolerance))
+                "#evaluations off: %g > %g" % (
+            abs((n[1] - n[0]) / n[0] / (speed2 / speed1) - 1), tolerance))
     # For MCMC tests, notice that there is a certain tolerance to be allowed for,
     # since for every proposed step the BlockedProposer cycles once, but the likelihood
     # may is not evaluated if the proposed point falls outside the prior bounds

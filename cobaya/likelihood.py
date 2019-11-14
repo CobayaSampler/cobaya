@@ -17,12 +17,11 @@ import sys
 import traceback
 from time import sleep
 import numpy as np
-import six
 from copy import deepcopy
 
 # Local
 from cobaya.conventions import _external
-from cobaya.conventions import _chi2, _separator, _likelihood, _self_name
+from cobaya.conventions import kinds, _chi2, _separator, _self_name
 from cobaya.conventions import _module_path
 from cobaya.tools import get_class, get_external_function, getfullargspec
 from cobaya.log import LoggedError
@@ -41,9 +40,10 @@ class Likelihood(CobayaComponent):
         if standalone:
             # TODO: would probably be more natural if defaults were already read here
             default_info = self.get_defaults()
-            if _likelihood in default_info:
-                default_info = default_info[_likelihood][
-                    name if _self_name not in default_info[_likelihood] else _self_name]
+            if kinds.likelihood in default_info:
+                default_info = default_info[kinds.likelihood][
+                    name if _self_name not in default_info[kinds.likelihood]
+                    else _self_name]
             default_info.update(info)
             info = default_info
         super(Likelihood, self).__init__(info, name=name, timing=timing,
@@ -239,7 +239,7 @@ class LikelihoodCollection(ComponentCollection):
             if _external in info:
                 self[name] = LikelihoodExternalFunction(info, name, timing=timing)
             else:
-                like_class = get_class(name, kind=_likelihood,
+                like_class = get_class(name, kind=kinds.likelihood,
                                        module_path=info.pop(_module_path, None))
                 self[name] = like_class(info, path_install=path_install, timing=timing,
                                         standalone=False, name=name)

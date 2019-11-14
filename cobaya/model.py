@@ -21,8 +21,8 @@ from itertools import chain, permutations
 import logging
 
 # Local
-from cobaya.conventions import _likelihood, _prior, _timing, _p_renames
-from cobaya.conventions import _theory, _params, _overhead_per_param
+from cobaya.conventions import kinds, _prior, _timing, _p_renames
+from cobaya.conventions import _params, _overhead_per_param
 from cobaya.conventions import _path_install, _debug, _debug_default, _debug_file
 from cobaya.conventions import _input_params, _output_params, _chi2, _separator
 from cobaya.conventions import _input_params_prefix, _output_params_prefix
@@ -54,7 +54,8 @@ def get_model(info):
     info = deepcopy_where_possible(info)
     ignored_info = {}
     for k in list(info):
-        if k not in [_params, _likelihood, _prior, _theory, _path_install, _timing]:
+        if k not in [_params, kinds.likelihood, _prior, kinds.theory, _path_install,
+                     _timing]:
             ignored_info.update({k: info.pop(k)})
     import logging
     if ignored_info:
@@ -66,8 +67,8 @@ def get_model(info):
             "Input info updated with defaults (dumped to YAML):\n%s",
             yaml_dump(updated_info))
     # Initialize the parameters and posterior
-    return Model(updated_info[_params], updated_info[_likelihood],
-                 updated_info.get(_prior), updated_info.get(_theory),
+    return Model(updated_info[_params], updated_info[kinds.likelihood],
+                 updated_info.get(_prior), updated_info.get(kinds.theory),
                  path_install=info.get(_path_install), timing=updated_info.get(_timing))
 
 
@@ -87,10 +88,10 @@ class Model(HasLogger):
         self.set_logger(lowercase=True)
         self._updated_info = {
             _params: deepcopy_where_possible(info_params),
-            _likelihood: deepcopy_where_possible(info_likelihood)}
-        if not self._updated_info[_likelihood]:
+            kinds.likelihood: deepcopy_where_possible(info_likelihood)}
+        if not self._updated_info[kinds.likelihood]:
             raise LoggedError(self.log, "No likelihood requested!")
-        for k, v in ((_prior, info_prior), (_theory, info_theory),
+        for k, v in ((_prior, info_prior), (kinds.theory, info_theory),
                      (_path_install, path_install), (_timing, timing)):
             if v not in (None, {}):
                 self._updated_info[k] = deepcopy_where_possible(v)
@@ -101,11 +102,11 @@ class Model(HasLogger):
                            self._updated_info.get(_prior, None))
 
         # TODO: would be more logical called self.theories and self.likelihoods
-        info_theory = self._updated_info.get(_theory)
+        info_theory = self._updated_info.get(kinds.theory)
         self.theory = TheoryCollection(info_theory, path_install=path_install,
                                        timing=timing)
 
-        info_likelihood = self._updated_info[_likelihood]
+        info_likelihood = self._updated_info[kinds.likelihood]
         self.likelihood = LikelihoodCollection(info_likelihood, theory=self.theory,
                                                path_install=path_install, timing=timing)
 
@@ -429,8 +430,8 @@ class Model(HasLogger):
         self.input_params = list(self.parameterization.input_params())
         self.output_params = list(self.parameterization.output_params())
         params_assign = odict([
-            ["input", odict([[p, []] for p in self.input_params])],
-            ["output", odict([[p, []] for p in self.output_params])]])
+            ("input", odict([(p, []) for p in self.input_params])),
+            ("output", odict([(p, []) for p in self.output_params]))])
         agnostic_likes = {"input": [], "output": []}
         # All components, doing likelihoods first so unassigned can by default
         # go to theory
@@ -560,7 +561,7 @@ class Model(HasLogger):
     def _speeds_of_params(self, int_speeds=False, fast_slow=False):
         """
         Separates the sampled parameters in blocks according to the likelihood (or theory)
-        re-evaluation that changing each one of them involves. Using the appoximate speed
+        re-evaluation that changing each one of them involves. Using the approximate speed
         (i.e. inverse evaluation time in seconds) of each likelihood, sorts the blocks in
         an optimal way, in ascending order of speed *per full block iteration*.
 

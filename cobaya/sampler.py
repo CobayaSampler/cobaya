@@ -52,7 +52,7 @@ import logging
 import numpy as np
 
 # Local
-from cobaya.conventions import _sampler, _resume_default, _checkpoint_extension
+from cobaya.conventions import kinds, _resume_default, _checkpoint_extension
 from cobaya.conventions import _covmat_extension, _progress_extension
 from cobaya.tools import get_class
 from cobaya.log import LoggedError
@@ -130,7 +130,7 @@ class Sampler(CobayaComponent):
             try:
                 checkpoint_info = yaml_load_file(self.checkpoint_filename())
                 try:
-                    for k, v in checkpoint_info[_sampler][self.get_name()].items():
+                    for k, v in checkpoint_info[kinds.sampler][self.get_name()].items():
                         setattr(self, k, v)
                     self.resuming = True
                     if am_single_or_primary_process():
@@ -208,7 +208,7 @@ def get_sampler(info_sampler, posterior, output_file,
     except AttributeError:
         raise LoggedError(
             log, "The sampler block must be a dictionary 'sampler: {options}'.")
-    sampler_class = get_class(name, kind=_sampler)
+    sampler_class = get_class(name, kind=kinds.sampler)
     assert issubclass(sampler_class, Sampler)
     return sampler_class(info_sampler[name], posterior, output_file, resume=resume,
                          path_install=modules, name=name)

@@ -24,7 +24,7 @@ from cobaya.sampler import Sampler
 from cobaya.mpi import get_mpi_size, get_mpi_rank, get_mpi_comm
 from cobaya.mpi import more_than_one_process, am_single_or_primary_process, sync_processes
 from cobaya.collection import Collection, OnePoint
-from cobaya.conventions import _weight, _p_proposal, _p_renames, _sampler, _minuslogpost
+from cobaya.conventions import kinds, _weight, _p_proposal, _p_renames, _minuslogpost
 from cobaya.conventions import _line_width, _path_install, _progress_extension
 from cobaya.samplers.mcmc.proposal import BlockedProposer
 from cobaya.log import LoggedError
@@ -65,7 +65,8 @@ class mcmc(Sampler):
                 raise LoggedError(
                     self.log,
                     "Cannot resume a sample with a different number of chains: "
-                    "was %d and now is %d.", max(self.mpi_size, 1), max(get_mpi_size(), 1))
+                    "was %d and now is %d.", max(self.mpi_size, 1),
+                    max(get_mpi_size(), 1))
         sync_processes()
         if not self.resuming and self.output:
             # Delete previous files (if not "forced", the run would have already failed)
@@ -96,7 +97,8 @@ class mcmc(Sampler):
         # Prepare oversampling / dragging if applicable
         self.effective_max_samples = self.max_samples
         if self.oversample and self.drag:
-            raise LoggedError(self.log, "Choose either oversampling or dragging, not both.")
+            raise LoggedError(self.log,
+                              "Choose either oversampling or dragging, not both.")
         if self.blocking:
             speeds, blocks = self.model._check_speeds_of_params(self.blocking)
             if self.oversample or self.drag:
@@ -107,7 +109,8 @@ class mcmc(Sampler):
         if self.oversample:
             self.oversampling_factors = speeds
             self.log.info("Oversampling with factors:\n" + "\n".join([
-                "   %d : %r" % (f, b) for f, b in zip(self.oversampling_factors, blocks)]))
+                "   %d : %r" % (f, b) for f, b in
+                zip(self.oversampling_factors, blocks)]))
             self.i_last_slow_block = None
             # No way right now to separate slow and fast
             slow_params = list(self.model.parameterization.sampled_params())
@@ -144,7 +147,8 @@ class mcmc(Sampler):
             slow_params = list(chain(*blocks[:1 + self.i_last_slow_block]))
             self.n_slow = len(slow_params)
             for p in ["check_every", "callback_every"]:
-                setattr(self, p, int(getattr(self, p) * self.n_slow / self.model.prior.d()))
+                setattr(self, p,
+                        int(getattr(self, p) * self.n_slow / self.model.prior.d()))
             self.log.info(
                 "Dragging with oversampling per step:\n" +
                 "\n".join(["   %d : %r" % (f, b)
@@ -305,9 +309,10 @@ class mcmc(Sampler):
                  for info in params_infos.values()])[where_nan]
             # we want to start learning the covmat earlier
             self.log.info("Covariance matrix " +
-                          ("not present" if np.all(where_nan) else "not complete") + ". "
-                                                                                     "We will start learning the covariance of the proposal earlier:"
-                                                                                     " R-1 = %g (was %g).",
+                          ("not present" if np.all(where_nan) else "not complete") +
+                          ". "
+                          "We will start learning the covariance of the proposal earlier:"
+                          " R-1 = %g (was %g).",
                           self.learn_proposal_Rminus1_max_early,
                           self.learn_proposal_Rminus1_max)
             self.learn_proposal_Rminus1_max = self.learn_proposal_Rminus1_max_early
@@ -396,7 +401,8 @@ class mcmc(Sampler):
         """
         trial = deepcopy(self.current_point[self.model.parameterization._sampled])
         self.proposer.get_proposal(trial)
-        logpost_trial, logprior_trial, loglikes_trial, derived = self.model.logposterior(trial)
+        logpost_trial, logprior_trial, loglikes_trial, derived = self.model.logposterior(
+            trial)
         accept = self.metropolis_accept(logpost_trial,
                                         -self.current_point["minuslogpost"])
         self.process_accept_or_reject(accept, trial, derived,
@@ -473,7 +479,8 @@ class mcmc(Sampler):
                                                      current_interp_logpost)
             else:
                 accept_drag = False
-            self.log.debug("Dragging step: %s", ("accepted" if accept_drag else "rejected"))
+            self.log.debug("Dragging step: %s",
+                           ("accepted" if accept_drag else "rejected"))
             # If the dragging step was accepted, do the drag
             if accept_drag:
                 current_start_point = proposal_start_point
@@ -510,7 +517,8 @@ class mcmc(Sampler):
             return np.random.exponential() > (logp_current - logp_trial)
 
     def process_accept_or_reject(self, accept_state, trial=None, derived=None,
-                                 logpost_trial=None, logprior_trial=None, loglikes_trial=None):
+                                 logpost_trial=None, logprior_trial=None,
+                                 loglikes_trial=None):
         """Processes the acceptance/rejection of the new point."""
         if accept_state:
             # add the old point to the collection (if not burning or initial point)
@@ -526,7 +534,8 @@ class mcmc(Sampler):
                     self.log.info("Finished burn-in phase: discarded %d accepted steps.",
                                   self.burn_in)
             # set the new point as the current one, with weight one
-            self.current_point.add(trial, derived=derived, weight=1, logpost=logpost_trial,
+            self.current_point.add(trial, derived=derived, weight=1,
+                                   logpost=logpost_trial,
                                    logpriors=logprior_trial, loglikes=loglikes_trial)
         else:  # not accepted
             self.current_point.increase_weight(1)
@@ -603,7 +612,8 @@ class mcmc(Sampler):
             acceptance_rate = self.n() / self.collection[_weight].sum()
             try:
                 bound = np.array([[
-                    mcsamples.confidence(i, limfrac=self.Rminus1_cl_level / 2., upper=which)
+                    mcsamples.confidence(i, limfrac=self.Rminus1_cl_level / 2.,
+                                         upper=which)
                     for i in range(self.model.prior.d())] for which in [False, True]]).T
                 success_bounds = True
             except:
@@ -622,9 +632,11 @@ class mcmc(Sampler):
                               "Increase `check_every` or reduce `Rminus1_single_split`.")
             Ns = (m - 1) * [cut]
             means = np.array(
-                [self.collection.mean(first=i * cut, last=(i + 1) * cut - 1) for i in range(1, m)])
+                [self.collection.mean(first=i * cut, last=(i + 1) * cut - 1) for i in
+                 range(1, m)])
             covs = np.array(
-                [self.collection.cov(first=i * cut, last=(i + 1) * cut - 1) for i in range(1, m)])
+                [self.collection.cov(first=i * cut, last=(i + 1) * cut - 1) for i in
+                 range(1, m)])
             # No logging of warnings temporarily, so getdist won't complain unnecessarily
             logging.disable(logging.WARNING)
             mcsampleses = [
@@ -714,7 +726,8 @@ class mcmc(Sampler):
                                     Rminus1_cl,
                                     (sum(Ns) if more_than_one_process() else self.n())) +
                                 "accepted steps" +
-                                (" = sum(%r)" % list(Ns) if more_than_one_process() else ""))
+                                (" = sum(%r)" % list(
+                                    Ns) if more_than_one_process() else ""))
                             if Rminus1_cl < self.Rminus1_cl_stop:
                                 self.converged = True
                                 self.log.info("The run has converged!")
@@ -767,7 +780,7 @@ class mcmc(Sampler):
             covmat_filename = self.covmat_filename()
             np.savetxt(covmat_filename, self.proposer.get_covariance(), header=" ".join(
                 list(self.model.parameterization.sampled_params())))
-            checkpoint_info = {_sampler: {self.get_name(): odict([
+            checkpoint_info = {kinds.sampler: {self.get_name(): odict([
                 ["converged", bool(self.converged)],
                 ["Rminus1_last", self.Rminus1_last],
                 ["proposal_scale", self.proposer.get_scale()],

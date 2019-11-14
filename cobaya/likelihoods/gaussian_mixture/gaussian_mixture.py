@@ -19,7 +19,7 @@ from collections import OrderedDict as odict
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
 from cobaya.mpi import get_mpi_size, get_mpi_comm, am_single_or_primary_process
-from cobaya.conventions import _likelihood, _params
+from cobaya.conventions import kinds, _params
 from cobaya.conventions import _input_params_prefix, _output_params_prefix
 
 derived_suffix = "_derived"
@@ -49,7 +49,7 @@ class gaussian_mixture(Likelihood):
             if cov_dim != cov_dim_2:
                 raise LoggedError(
                     self.log, "The covariance matrix(/ces) do not appear to be square!\n"
-                    "Got %r", self.covs)
+                              "Got %r", self.covs)
             if mean_dim != cov_dim:
                 raise LoggedError(
                     self.log,
@@ -72,7 +72,8 @@ class gaussian_mixture(Likelihood):
                     self.log,
                     "The number of derived parameters must be equal to the dimensionality"
                     " times the number of modes, i.e. %d x %d = %d, but was given %d "
-                    "derived parameters.", self.d(), self.n_modes, self.d() * self.n_modes,
+                    "derived parameters.", self.d(), self.n_modes,
+                    self.d() * self.n_modes,
                     len(self.output_params))
             elif not self.derived and self.output_params:
                 raise LoggedError(
@@ -84,12 +85,13 @@ class gaussian_mixture(Likelihood):
         else:
             raise LoggedError(
                 self.log, "You must specify both a mean (or a list of them) and a "
-                "covariance matrix, or a list of them.")
+                          "covariance matrix, or a list of them.")
         self.gaussians = [multivariate_normal(mean=mean, cov=cov)
                           for mean, cov in zip(self.means, self.covs)]
         if self.weights:
             if not len(self.weights) == len(self.gaussians):
-                raise LoggedError(self.log, "There must be as many weights as components.")
+                raise LoggedError(self.log,
+                                  "There must be as many weights as components.")
             if not np.isclose(sum(self.weights), 1):
                 self.weights = self.weights / sum(self.weights)
                 self.log.warning(
@@ -114,7 +116,8 @@ class gaussian_mixture(Likelihood):
                 standard = np.linalg.inv(self.choleskyL[i]).dot((x - self.means[i]))
                 derived.update(dict(
                     [(p, v) for p, v in
-                     zip(list(self.output_params)[i * self.d():(i + 1) * self.d()], standard)]))
+                     zip(list(self.output_params)[i * self.d():(i + 1) * self.d()],
+                         standard)]))
         # Compute the likelihood and return
         return logsumexp([gauss.logpdf(x) for gauss in self.gaussians], b=self.weights)
 
@@ -191,7 +194,8 @@ def info_random_gaussian_mixture(
         for i in range(n_modes):
             std = np.sqrt(cov[i].diagonal())
             factor = 3
-            ranges_mean = [[l[0] + factor * s, l[1] - +factor * s] for l, s in zip(ranges, std)]
+            ranges_mean = [[l[0] + factor * s, l[1] - +factor * s] for l, s in
+                           zip(ranges, std)]
             # If this implies min>max, take the centre
             ranges_mean = [
                 (l if l[0] <= l[1] else 2 * [(l[0] + l[1]) / 2]) for l in ranges_mean]
@@ -201,7 +205,7 @@ def info_random_gaussian_mixture(
     if mpi_aware:
         mean, cov = get_mpi_comm().bcast(mean, root=0), get_mpi_comm().bcast(cov, root=0)
     dimension = len(ranges)
-    info = {_likelihood: {"gaussian_mixture": {
+    info = {kinds.likelihood: {"gaussian_mixture": {
         "means": mean, "covs": cov, _input_params_prefix: input_params_prefix,
         _output_params_prefix: output_params_prefix, "derived": derived}}}
     info[_params] = odict(
@@ -211,6 +215,7 @@ def info_random_gaussian_mixture(
            "latex": r"\alpha_{%i}" % i}]
          for i in range(dimension)] +
         # derived
-        ([[output_params_prefix + "_%d" % i, {"min": -3, "max": 3, "latex": r"\beta_{%i}" % i}]
+        ([[output_params_prefix + "_%d" % i,
+           {"min": -3, "max": 3, "latex": r"\beta_{%i}" % i}]
           for i in range(dimension * n_modes)] if derived else []))
     return info

@@ -22,7 +22,7 @@ import pkg_resources
 # Local
 from cobaya.conventions import _package, _products_path, _path_install, _resume, _force
 from cobaya.conventions import _output_prefix, _debug, _debug_file, _external, _self_name
-from cobaya.conventions import _params, _prior, _theory, _likelihood, _sampler, _kinds
+from cobaya.conventions import _params, _prior, kinds
 
 from cobaya.conventions import _p_label, _p_derived, _p_ref, _p_drop, _p_value, _p_renames
 from cobaya.conventions import _p_proposal, _input_params, _output_params, _module_path
@@ -79,7 +79,7 @@ def get_used_modules(*infos):
     Priors are not included."""
     modules = odict()
     for info in infos:
-        for field in _kinds:
+        for field in kinds:
             if field not in modules:
                 modules[field] = []
             modules[field] += [a for a in (info.get(field) or [])
@@ -96,8 +96,8 @@ def get_default_info(module_or_class, kind=None, fail_if_not_found=False,
     """
     Get default info for a module_or_class.
     """
+    _kind = kind or get_kind(module_or_class)
     try:
-        _kind = kind or get_kind(module_or_class)
         cls = get_class(module_or_class, _kind, None_if_not_found=not fail_if_not_found,
                         module_path=module_path)
         if cls:
@@ -116,7 +116,8 @@ def get_default_info(module_or_class, kind=None, fail_if_not_found=False,
     from cobaya.likelihood import Likelihood
     from cobaya.theory import Theory
     from cobaya.sampler import Sampler
-    component_base_classes = {_sampler: Sampler, _theory: Theory, _likelihood: Likelihood}
+    component_base_classes = {kinds.sampler: Sampler, kinds.theory: Theory,
+                              kinds.likelihood: Likelihood}
 
     if cls:
         for kind_name, _cls in component_base_classes.items():
@@ -215,7 +216,7 @@ def update_info(info):
                         block, module, did_you_mean, block)
             updated_info[block][module].update(input_info[block][module])
             # Store default parameters and priors of class, and save to combine later
-            if block == _likelihood:
+            if block == kinds.likelihood:
                 params_info = default_class_info.get(_params, {})
                 updated_info[block][module].update({_params: list(params_info or [])})
                 default_params_info[module] = params_info
@@ -234,8 +235,8 @@ def update_info(info):
     updated_info[_params] = merge_params_info(
         defaults_merged, input_info.get(_params, {}))
     # Add aliases for theory params (after merging!)
-    if _theory in updated_info:
-        renames = list(updated_info[_theory].values())[0].get(_p_renames)
+    if kinds.theory in updated_info:
+        renames = list(updated_info[kinds.theory].values())[0].get(_p_renames)
         str_to_list = lambda x: ([x] if isinstance(x, string_types) else x)
         renames_flat = [set([k] + str_to_list(v)) for k, v in (renames or {}).items()]
         for p in updated_info.get(_params, {}):
@@ -247,7 +248,7 @@ def update_info(info):
                 updated_info[_params][p][_p_renames] = list(
                     set(this_renames).union(set(
                         str_to_list(updated_info[_params][p].get(_p_renames, []))))
-                        .difference(set([p])))
+                        .difference({p}))
     # Rest of the options
     for k, v in input_info.items():
         if k not in updated_info:
@@ -359,7 +360,7 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
             if block1 != block2:
                 myprint(myname + ": different option '%s'" % block_name)
                 return False
-        if block_name in [_sampler, _theory]:
+        if block_name in [kinds.sampler, kinds.theory]:
             # Internal order does NOT matter
             if set(block1) != set(block2):
                 myprint(myname + ": different [%s]" % block_name)
@@ -372,7 +373,7 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
                         module_folder, package=_package), "ignore_at_resume", {})
                 except ImportError:
                     ignore_k = {}
-                if block_name == _theory:
+                if block_name == kinds.theory:
                     ignore_k.update({_input_params: None, _output_params: None})
                 block1k, block2k = deepcopy(block1[k]), deepcopy(block2[k])
                 if not strict:
@@ -389,7 +390,7 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
                         recursive_odict_to_dict(block1k),
                         recursive_odict_to_dict(block2k)))
                     return False
-        elif block_name in [_params, _likelihood, _prior]:
+        elif block_name in [_params, kinds.likelihood, _prior]:
             # Internal order DOES matter, but just up to 1st level
             f = list if strict else set
             if f(block1) != f(block2):
@@ -411,7 +412,7 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
                         for b in [block1k, block2k]:
                             if _p_value in b:
                                 b.pop(_p_derived, None)
-                if block_name == _likelihood and not strict:
+                if block_name == kinds.likelihood and not strict:
                     for kignore in [_input_params, _output_params]:
                         block1k.pop(kignore, None)
                         block2k.pop(kignore, None)

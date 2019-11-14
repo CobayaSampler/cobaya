@@ -14,7 +14,7 @@ from collections import OrderedDict as odict
 
 # Local
 from cobaya import __version__
-from cobaya.conventions import _likelihood, _prior, _params, _theory, _sampler
+from cobaya.conventions import kinds, _prior, _params
 from cobaya.conventions import _path_install, _debug, _debug_file, _output_prefix
 from cobaya.conventions import _resume, _timing, _debug_default, _force, _post
 from cobaya.conventions import _yaml_extensions, _separator_files, _updated_suffix
@@ -26,7 +26,7 @@ from cobaya.log import logger_setup
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info
 from cobaya.mpi import import_MPI, am_single_or_primary_process
-from cobaya.tools import warn_deprecation, deepcopy_where_possible
+from cobaya.tools import warn_deprecation
 from cobaya.post import post
 
 
@@ -46,7 +46,7 @@ def run(info):
     ignore_blocks = []
     # If minimizer, always try to re-use sample to get bestfit/covmat
     # TODO: should check any Minimizer subclass
-    if list(info[_sampler])[0] == "minimize":
+    if list(info[kinds.sampler])[0] == "minimize":
         resume = True
         force = False
     output = Output(output_prefix=info.get(_output_prefix),
@@ -75,15 +75,18 @@ def run(info):
     # to check if resuming is possible asap (old and new infos are consistent)
     output.dump_info(info, updated_info)
     # Initialize the posterior and the sampler
-    with Model(updated_info[_params], updated_info[_likelihood], updated_info.get(_prior),
-               updated_info.get(_theory), path_install=info.get(_path_install),
+    with Model(updated_info[_params], updated_info[kinds.likelihood],
+               updated_info.get(_prior),
+               updated_info.get(kinds.theory), path_install=info.get(_path_install),
                timing=updated_info.get(_timing), allow_renames=False) as model:
         # Update the updated info with the parameter routes
-        keys = ([_likelihood, _theory] if _theory in updated_info else [_likelihood])
+        keys = ([kinds.likelihood, kinds.theory] if kinds.theory in updated_info else [
+            kinds.likelihood])
         updated_info.update(odict([[k, model.info()[k]] for k in keys]))
         output.dump_info(None, updated_info, check_compatible=False)
         with get_sampler(
-                updated_info[_sampler], model, output, resume=updated_info.get(_resume),
+                updated_info[kinds.sampler], model, output,
+                resume=updated_info.get(_resume),
                 modules=info.get(_path_install)) as sampler:
             sampler.run()
     # For scripted calls:

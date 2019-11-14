@@ -22,7 +22,7 @@ import six
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
-from cobaya.conventions import _path_install, _likelihood
+from cobaya.conventions import _path_install, kinds
 from cobaya.input import get_default_info, HasDefaults
 from cobaya.install import pip_install, download_file
 from cobaya.tools import are_different_params_lists, create_banner
@@ -344,5 +344,5 @@ def install_clik(path, no_progress_bars=False):
 
 def get_product_id_and_clik_file(name):
     """Gets the PLA product info from the defaults file."""
-    defaults = get_default_info(name, _likelihood)[_likelihood][name]
+    defaults = get_default_info(name, kinds.likelihood)[kinds.likelihood][name]
     return defaults.get("product_id"), defaults.get("clik_file")

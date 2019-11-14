@@ -16,7 +16,7 @@ import os
 from collections import OrderedDict as odict
 
 # Local
-from cobaya.conventions import _yaml_extensions, _kinds
+from cobaya.conventions import _yaml_extensions, kinds
 from cobaya.tools import create_banner, warn_deprecation
 from cobaya.input import load_input, get_used_modules, get_class
 
@@ -70,7 +70,7 @@ def bib_script():
                         nargs=1, default=None, metavar="module_kind",
                         help=("If module name given, "
                               "kind of module whose bib is requested: " +
-                              ", ".join(['%s' % kind for kind in _kinds]) + ". " +
+                              ", ".join(['%s' % kind for kind in kinds]) + ". " +
                               "Use only when module name is not unique (it would fail)."))
     arguments = parser.parse_args()
     # Case of files

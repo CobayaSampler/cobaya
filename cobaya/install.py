@@ -25,7 +25,7 @@ from pkg_resources import parse_version
 from cobaya.log import logger_setup, LoggedError
 from cobaya.tools import get_class_module, create_banner, warn_deprecation, get_class
 from cobaya.input import get_used_modules
-from cobaya.conventions import _package, _code, _data, _likelihood, _external, _force
+from cobaya.conventions import _package, _code, _data, kinds, _external, _force
 from cobaya.conventions import _modules_path_arg, _modules_path_env, _path_install
 
 log = logging.getLogger(__name__.split(".")[-1])
@@ -76,9 +76,9 @@ def install(*infos, **kwargs):
                                                                skip_list))
                     continue
             except ImportError as e:
-                if kind == _likelihood:
+                if kind == kinds.likelihood:
                     info = (next(info for info in infos if module in
-                                 info.get(_likelihood, {}))[_likelihood][module]) or {}
+                                 info.get(kinds.likelihood, {}))[kinds.likelihood][module]) or {}
                     if isinstance(info, string_types) or _external in info:
                         log.warning("Module '%s' is a custom likelihood. "
                                     "Nothing to do.\n", module)
