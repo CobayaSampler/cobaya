@@ -58,17 +58,6 @@ class Theory(CobayaComponent):
         """
         pass
 
-    # Generic methods: do not touch these
-
-    def d(self):
-        """
-        Dimension of the input vector.
-
-        NB: Different from dimensionality of the sampling problem, e.g. this may include
-        fixed input parameters.
-        """
-        return len(self.input_params)
-
 
 class TheoryCollection(ComponentCollection):
     """

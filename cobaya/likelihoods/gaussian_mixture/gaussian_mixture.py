@@ -30,6 +30,12 @@ class gaussian_mixture(Likelihood):
     Gaussian likelihood.
     """
 
+    def d(self):
+        """
+        Dimension of the input vector.
+        """
+        return len(self.input_params)
+
     def initialize(self):
         """
         Initializes the gaussian distributions.

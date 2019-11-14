@@ -165,15 +165,6 @@ class Likelihood(CobayaComponent):
             self.log.debug("Sleeping for %f seconds.", self.delay)
         sleep(self.delay)
 
-    def d(self):
-        """
-        Dimension of the input vector.
-
-        NB: Different from dimensionality of the sampling problem, e.g. this may include
-        fixed input parameters.
-        """
-        return len(self.input_params)
-
 
 class LikelihoodExternalFunction(Likelihood):
     def __init__(self, info, name, timing=None):
@@ -192,6 +183,8 @@ class LikelihoodExternalFunction(Likelihood):
         if self.has_theory:
             theory_kw_index = argspec.args[-len(argspec.defaults):].index("_theory")
             self.needs = argspec.defaults[theory_kw_index]
+            if isinstance(self.needs, (set, tuple, list)):
+                self.needs = {p: None for p in self.needs}
         # States, to avoid recomputing
         self._n_states = 3
         self._states = [{"params": None, "logp": None, "derived": None, "last": 0}
