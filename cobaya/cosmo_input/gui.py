@@ -154,7 +154,7 @@ class MainWindow(QWidget):
         self.layout_output.addWidget(self.display_tabs)
         # Buttons
         self.buttons = QHBoxLayout()
-        self.save_button = QPushButton('Save', self)
+        self.save_button = QPushButton('Save as...', self)
         self.copy_button = QPushButton('Copy to clipboard', self)
         self.buttons.addWidget(self.save_button)
         self.buttons.addWidget(self.copy_button)
