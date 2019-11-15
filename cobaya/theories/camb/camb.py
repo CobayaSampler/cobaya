@@ -173,7 +173,7 @@ from cobaya.theories._cosmo import _cosmo
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, check_gcc_version
 from cobaya.conventions import _c_km_s, _T_CMB_K
-from cobaya.tools import deepcopy_where_possible
+from cobaya.tools import deepcopy_where_possible, getfullargspec
 
 # Result collector
 Collector = namedtuple("collector", ["method", "args", "kwargs"])
@@ -231,7 +231,9 @@ class camb(_cosmo):
         self.collectors = {}
         # Additional input parameters to pass to CAMB, and attributes to set_ manually
         self.extra_args = deepcopy_where_possible(self.extra_args) or {}
-        self.extra_attrs = {}
+        self.extra_attrs = {"Want_CMB": False, "Want_cl_2D_array": False,
+                            'WantCls': False}
+
         if len(set(self.input_params).intersection(
                 {"H0", "cosmomc_theta", "thetastar"})) > 1:
             raise LoggedError(self.log, "Can't pass more than one of H0, "
@@ -246,9 +248,6 @@ class camb(_cosmo):
         self.non_linear_lens = False
         self.non_linear_pk = False
         self._base_params = None
-
-    ###     # TODO: This will hopefully be fixed later
-    ###        self.extra_attrs["Want_CMB"] = False
 
     def current_state(self):
         lasts = [self._states[i]["last"] for i in range(self._n_states)]
@@ -281,6 +280,7 @@ class camb(_cosmo):
                         "raw_cl": True})
                 self.needs_perts = True
                 self.extra_attrs["Want_CMB"] = True
+                self.extra_attrs["WantCls"] = True
                 self.non_linear_lens = True
             elif k == "H":
                 self.collectors[k] = Collector(
@@ -304,7 +304,7 @@ class camb(_cosmo):
             elif k == "Pk_interpolator":
                 self.extra_args["kmax"] = max(v["k_max"], self.extra_args.get("kmax", 0))
                 self.add_to_redshifts(v["z"])
-                v["vars_pairs"] = v["vars_pairs"] or [["total", "total"]]
+                v["vars_pairs"] = v["vars_pairs"] or [("delta_tot", "delta_tot")]
                 kwargs = deepcopy(v)
                 # change of defaults:
                 kwargs["hubble_units"] = kwargs.get("hubble_units", False)
@@ -326,7 +326,7 @@ class camb(_cosmo):
                     # old info == new info
                     if source not in self.sources:
                         self.sources[source] = window
-                self.limber = self.limber or v.get("limber", False)
+                self.limber = v.get("limber", True)
                 self.non_linear_pk = self.non_linear_pk or v.get("non_linear", False)
                 self.non_linear_lens = self.non_linear_lens or v.get("non_linear", False)
                 if "lmax" in v:
@@ -335,6 +335,8 @@ class camb(_cosmo):
                 self.needs_perts = True
                 # Create collector
                 self.collectors[k] = Collector(method="CAMBdata.get_source_cls_dict")
+                self.extra_attrs["Want_cl_2D_array"] = True
+                self.extra_attrs["WantCls"] = True
             # General derived parameters
             elif v is None:
                 k_translated = self.translate_param(k)
@@ -353,9 +355,11 @@ class camb(_cosmo):
                 "The following parameters appear both as input parameters and as CAMB "
                 "extra arguments: %s. Please, remove one of the definitions of each.",
                 list(set(self.input_params).intersection(set(self.extra_args))))
-        # Remove extra args that cause an error if the associated product is not requested
-        if "Cl" not in self._needs and "source_Cl" not in self._needs:
-            self.extra_args.pop("lens_potential_accuracy", None)
+        # Remove extra args that might
+        # cause an error if the associated product is not requested
+        if not self.extra_attrs["WantCls"]:
+            for not_needed in getfullargspec(self.camb.CAMBparams.set_for_lmax).args[1:]:
+                self.extra_args.pop(not_needed, None)
         # Computing non-linear corrections
         from camb import model
         self.extra_attrs["NonLinear"] = {
@@ -378,20 +382,30 @@ class camb(_cosmo):
         self._states[i_state]["params"] = deepcopy(params_values_dict)
         # Prepare parameters to be passed: this-iteration + extra
         args = {self.translate_param(p): v for p, v in params_values_dict.items()}
-        args.update(self.extra_args)
-        self._states[i_state]["set_args"] = deepcopy(args)
         # Generate and save
         self.log.debug("Setting parameters: %r", args)
         try:
-            if not self._base_params:
-                cambparams = self.camb.set_params(**args)
+            if not self._base_params and True:
+                base_args = args.copy()
+                base_args.update(self.extra_args)
+                params = self.camb.set_params(**base_args)
+
+                # pre-set the parameters that are not varying
+                for non_param_func in ['set_classes', 'set_matter_power', 'set_for_lmax']:
+                    for fixed_param in getfullargspec(
+                            getattr(self.camb.CAMBparams, non_param_func)).args[1:]:
+                        if fixed_param in args:
+                            raise LoggedError(self.log,
+                                              "Trying to sample fixed theory parameter %s",
+                                              fixed_param)
+                        self.extra_args.pop(fixed_param, None)
 
                 if self.extra_attrs:
                     self.log.debug("Setting attributes of CAMBParams: %r",
                                    self.extra_attrs)
                 for attr, value in self.extra_attrs.items():
-                    if hasattr(cambparams, attr):
-                        setattr(cambparams, attr, value)
+                    if hasattr(params, attr):
+                        setattr(params, attr, value)
                     else:
                         raise LoggedError(
                             self.log,
@@ -413,11 +427,14 @@ class camb(_cosmo):
                                               "Unknown source window function type %r",
                                               function)
                         window["function"] = function
-                    cambparams.SourceWindows = source_windows
-                    cambparams.SourceTerms.limber_windows = self.limber
+                    params.SourceWindows = source_windows
+                    params.SourceTerms.limber_windows = self.limber
 
-                self._base_params = cambparams
+                self._base_params = params
+            else:
+                args.update(self.extra_args)
 
+            self._states[i_state]["set_args"] = deepcopy(args)
             return self.camb.set_params(self._base_params.copy(), **args)
         except self.camb.baseconfig.CAMBParamRangeError:
             if self.stop_at_error:
