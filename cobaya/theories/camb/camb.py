@@ -179,6 +179,8 @@ from cobaya.tools import deepcopy_where_possible, getfullargspec
 Collector = namedtuple("collector", ["method", "args", "kwargs"])
 Collector.__new__.__defaults__ = (None, [], {})
 
+CAMBOutputs = namedtuple("CAMBOutputs", ["CAMBparams", "CAMBdata", "derived"])
+
 
 class camb(_cosmo):
     # Name of the Class repo/folder and version to download
@@ -264,6 +266,7 @@ class camb(_cosmo):
         # The following super call makes sure that the requirements are properly
         # accumulated, i.e. taking the max of precision requests, etc.
         super(camb, self).needs(**requirements)
+        CAMBdata = self.camb.CAMBdata
         for k, v in self._needs.items():
             # Products and other computations
             if k == "Cl":
@@ -271,7 +274,7 @@ class camb(_cosmo):
                     max(v.values()), self.extra_args.get("lmax", 0))
                 cls = [a.lower() for a in v]
                 self.collectors[k] = Collector(
-                    method="CAMBdata.get_cmb_power_spectra",
+                    method=CAMBdata.get_cmb_power_spectra,
                     kwargs={
                         "spectra": list(set(
                             (self.collectors[k].kwargs.get("spectra", [])
@@ -284,21 +287,17 @@ class camb(_cosmo):
                 self.non_linear_lens = True
             elif k == "H":
                 self.collectors[k] = Collector(
-                    method="CAMBdata.h_of_z",
+                    method=CAMBdata.h_of_z,
                     kwargs={"z": np.atleast_1d(v["z"])})
                 self.H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": _c_km_s}
-            elif k == "angular_diameter_distance":
+            elif k in ("angular_diameter_distance", "comoving_radial_distance"):
                 self.collectors[k] = Collector(
-                    method="CAMBdata.angular_diameter_distance",
-                    kwargs={"z": np.atleast_1d(v["z"])})
-            elif k == "comoving_radial_distance":
-                self.collectors[k] = Collector(
-                    method="CAMBdata.comoving_radial_distance",
+                    method=getattr(CAMBdata, k),
                     kwargs={"z": np.atleast_1d(v["z"])})
             elif k == "fsigma8":
                 self.add_to_redshifts(v["z"])
                 self.collectors[k] = Collector(
-                    method="CAMBdata.get_fsigma8",
+                    method=CAMBdata.get_fsigma8,
                     kwargs={})
                 self.needs_perts = True
             elif k == "Pk_interpolator":
@@ -315,7 +314,7 @@ class camb(_cosmo):
                     product = ("Pk_interpolator",) + tuple(pair)
                     kwargs.update(dict(zip(["var1", "var2"], pair)))
                     self.collectors[product] = Collector(
-                        method="CAMBdata.get_matter_power_interpolator",
+                        method=CAMBdata.get_matter_power_interpolator,
                         kwargs=kwargs)
                 self.needs_perts = True
             elif k == "source_Cl":
@@ -334,11 +333,14 @@ class camb(_cosmo):
                                                   self.extra_args.get("lmax", 0))
                 self.needs_perts = True
                 # Create collector
-                self.collectors[k] = Collector(method="CAMBdata.get_source_cls_dict")
+                self.collectors[k] = Collector(method=CAMBdata.get_source_cls_dict)
                 self.extra_attrs["Want_cl_2D_array"] = True
                 self.extra_attrs["WantCls"] = True
-            # General derived parameters
+            elif k == 'CAMBdata':
+                # Just get
+                self.collectors[k] = None
             elif v is None:
+                # General derived parameters
                 k_translated = self.translate_param(k)
                 if k_translated not in self.derived_extra:
                     self.derived_extra += [k_translated]
@@ -385,7 +387,7 @@ class camb(_cosmo):
         # Generate and save
         self.log.debug("Setting parameters: %r", args)
         try:
-            if not self._base_params and True:
+            if not self._base_params:
                 base_args = args.copy()
                 base_args.update(self.extra_args)
                 self.full_extra_args = self.extra_args.copy()
@@ -402,7 +404,7 @@ class camb(_cosmo):
                         self.extra_args.pop(fixed_param, None)
 
                 if self.extra_attrs:
-                    self.log.debug("Setting attributes of CAMBParams: %r",
+                    self.log.debug("Setting attributes of CAMBparams: %r",
                                    self.extra_attrs)
                 for attr, value in self.extra_attrs.items():
                     if hasattr(params, attr):
@@ -444,7 +446,7 @@ class camb(_cosmo):
             else:
                 self.log.debug("Out of bounds parameters. "
                                "Assigning 0 likelihood and going on.")
-        except self.camb.baseconfig.CAMBValueError:
+        except self.camb.CAMBValueError:
             self.log.error(
                 "Error setting parameters (see traceback below)! "
                 "Parameters sent to CAMB: %r and %r.\n"
@@ -481,28 +483,26 @@ class camb(_cosmo):
             if self.timer:
                 self.timer.start()
             # Set parameters
-            result = self.set(params_values_dict, i_state)
+            camb_params = self.set(params_values_dict, i_state)
             # Failed to set parameters but no error raised
             # (e.g. out of computationally feasible range): lik=0
-            if not result:
+            if not camb_params:
                 return 0
-            intermediates = {
-                "CAMBparams": {"result": result},
-                "CAMBdata": {
-                    "method": "get_results" if self.needs_perts else "get_background",
-                    "result": None, "derived_dic": None}}
+
             # Compute the necessary products (incl. any intermediate result, if needed)
+            if self.collectors:
+                results = self.camb.get_results(camb_params) if self.needs_perts else \
+                    self.camb.get_background(camb_params)
+            else:
+                results = None
             for product, collector in self.collectors.items():
-                parent, method = collector.method.split(".")
                 try:
-                    if intermediates[parent]["result"] is None:
-                        intermediates[parent]["result"] = getattr(
-                            self.camb, intermediates[parent]["method"])(
-                            intermediates["CAMBparams"]["result"])
-                    method = getattr(intermediates[parent]["result"], method)
-                    self._states[i_state][product] = method(
-                        *self.collectors[product].args, **self.collectors[product].kwargs)
-                except self.camb.baseconfig.CAMBError:
+                    if collector.method:
+                        self._states[i_state][product] = \
+                            collector.method(results, *collector.args, **collector.kwargs)
+                    else:
+                        self._states[i_state][product] = results
+                except self.camb.CAMBError:
                     if self.stop_at_error:
                         self.log.error(
                             "Computation error (see traceback below)! "
@@ -514,10 +514,11 @@ class camb(_cosmo):
                         # Assumed to be a "parameter out of range" error.
                         return 0
             # Prepare derived parameters
+            intermediates = CAMBOutputs(camb_params, results,
+                                        results.get_derived_params() if results else None)
             if _derived == {}:
                 _derived.update(self._get_derived_all(intermediates))
-                self._states[i_state]["derived"] = odict(
-                    [(p, _derived[p]) for p in self.output_params])
+                self._states[i_state]["derived"] = _derived.copy()
             # Prepare necessary extra derived parameters
             self._states[i_state]["derived_extra"] = {
                 p: self._get_derived(p, intermediates) for p in self.derived_extra}
@@ -530,8 +531,7 @@ class camb(_cosmo):
         return 1 if reused_state else 2
 
     def _get_derived_from_params(self, p, intermediates):
-        for origin in ["CAMBdata", "CAMBparams"]:
-            result = intermediates[origin].get("result")
+        for result in intermediates[:2]:
             if result is None:
                 continue
             for thing in [result, getattr(result, "Params", {})]:
@@ -545,18 +545,8 @@ class camb(_cosmo):
                             pass
         return None
 
-    def _get_derived_from_std(self, p, intermediates):
-        dic = intermediates["CAMBdata"].get("derived_dic", None)
-        if dic is None:
-            result = intermediates["CAMBdata"].get("result", None)
-            if result is None:
-                return None
-            dic = result.get_derived_params()
-            intermediates["CAMBdata"]["derived_dic"] = dic
-        return dic.get(p, None)
-
     def _get_derived_from_getter(self, p, intermediates):
-        return getattr(intermediates["CAMBparams"]["result"], "get_" + p, lambda: None)()
+        return getattr(intermediates.CAMBparams, "get_" + p, lambda: None)()
 
     def _get_derived(self, p, intermediates):
         """
@@ -566,10 +556,11 @@ class camb(_cosmo):
         """
         # Specific calls, if general ones fail:
         if p == "sigma8":
-            return intermediates["CAMBdata"]["result"].get_sigma8()[-1]
-        for f in [self._get_derived_from_params,
-                  self._get_derived_from_std,
-                  self._get_derived_from_getter]:
+            return intermediates.CAMBdata.get_sigma8()[-1]
+        derived = intermediates.derived.get(p, None)
+        if derived is not None:
+            return derived
+        for f in [self._get_derived_from_params, self._get_derived_from_getter]:
             derived = f(p, intermediates)
             if derived is not None:
                 return derived
@@ -681,6 +672,14 @@ class camb(_cosmo):
             cls_dict[term_tuple] = cl
         cls_dict["ell"] = np.arange(cls[list(cls)[0]].shape[0])
         return cls_dict
+
+    def get_CAMBdata(self):
+        """
+        Get the CAMB result object (must have been requested as a requirement).
+
+        :return: CAMB's CAMBdata result instance for the current parameters
+        """
+        return self.current_state['CAMBdata']
 
     @classmethod
     def get_path(cls, path):

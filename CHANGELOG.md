@@ -1,10 +1,35 @@
-## 2.X  – 2019-XX-XX
+## 2.1  – 2019-XX-XX
 
-### Samplers
+### General
+
+- Some significant internal refactoring to tidy up some code and make it easier to make
+ future generalizations (e.g. multiple theory codes). New base classes CobayaComponent
+  and ComponentCollection.
+- Fix for more accurate timing with Python 3
+- Updates for GetDist 1.x
+- More documentation for how to make internal and external likelihood classes
+
+### Likelihoods
+
+- Support for external likelihoods, referenced by fully qualified package name.
+- Allow referencing likelihood class names directly (model.ClassName)
+- Ability to instantiate Likelihood classes directly outside Cobaya (for testing of
+  external likelihoods or use in other packages)
+- Inherited likelihoods inherit .yaml file from parent if no new one is defined
+- DES likelihood now use numba if installed to give nearly twice faster performance
+- get_requirements() function alternative to add_theory()
 
 #### MCMC
 
 - Added progress tracking (incl. acceptance rate), and a plotting tool for it.
+
+### Cosmology
+
+- CAMB optimizations for which quantities computed. 
+- Pk_interpolator dictionary now indexed by tuple of the two fields
+- Option to request "CAMBdata" object from CAMB to access computed results directly 
+- Fix for getting source windows power spectra 
+
 ## 2.0.3 – 2019-09-09
 
 ### Samplers
