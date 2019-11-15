@@ -172,7 +172,9 @@ class classy(_cosmo):
         if self.path:
             self.log.info("Importing *local* classy from " + self.path)
             classy_build_path = os.path.join(self.path, "python", "build")
-            post = next(d for d in os.listdir(classy_build_path) if d.startswith("lib."))
+            py_version = "%d.%d" % (sys.version_info.major, sys.version_info.minor)
+            post = next(d for d in os.listdir(classy_build_path)
+                        if (d.startswith("lib.") and py_version in d))
             classy_build_path = os.path.join(classy_build_path, post)
             if not os.path.exists(classy_build_path):
                 # If path was given as an install path, try to install global one anyway
