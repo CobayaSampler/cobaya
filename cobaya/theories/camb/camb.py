@@ -388,6 +388,7 @@ class camb(_cosmo):
             if not self._base_params and True:
                 base_args = args.copy()
                 base_args.update(self.extra_args)
+                self.full_extra_args = self.extra_args.copy()
                 params = self.camb.set_params(**base_args)
 
                 # pre-set the parameters that are not varying
@@ -507,7 +508,7 @@ class camb(_cosmo):
                             "Computation error (see traceback below)! "
                             "Parameters sent to CAMB: %r and %r.\n"
                             "To ignore this kind of errors, make 'stop_at_error: False'.",
-                            self._states[i_state]["params"], self.extra_args)
+                            self._states[i_state]["params"], self.full_extra_args)
                         raise
                     else:
                         # Assumed to be a "parameter out of range" error.
@@ -632,7 +633,7 @@ class camb(_cosmo):
 
     def _get_z_dependent(self, quantity, z):
         if quantity == "fsigma8":
-            computed_redshifts = self.extra_args["redshifts"]
+            computed_redshifts = self.full_extra_args["redshifts"]
         else:
             z_name = next(k for k in ["redshifts", "z"]
                           if k in self.collectors[quantity].kwargs)

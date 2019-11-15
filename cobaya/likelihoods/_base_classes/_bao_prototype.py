@@ -134,7 +134,8 @@ from cobaya.likelihoods._base_classes import _InstallableLikelihood
 
 
 class _bao_prototype(_InstallableLikelihood):
-    install_options = {"github_repository": "CobayaSampler/bao_data", "github_release": "v1.1"}
+    install_options = {"github_repository": "CobayaSampler/bao_data",
+                       "github_release": "v1.1"}
 
     def initialize(self):
         self.log.info("Initialising.")
@@ -219,7 +220,7 @@ class _bao_prototype(_InstallableLikelihood):
                 x - self.data["value"].values)
 
     def get_requirements(self):
-        if self.theory.__class__ == "classy":
+        if any(p.__class__ == "classy" for p in self.theory.values()):
             raise LoggedError(
                 self.log,
                 "BAO likelihood not yet compatible with CLASS (help appreciated!)")
