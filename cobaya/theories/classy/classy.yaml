@@ -3,6 +3,9 @@ theory:
     path: null
     # Speed in evaluations/second
     speed: 0.2
+    # False to fail and stop sampling on *any* computation error
+    # (it also prints debug info)
+    stop_at_error: False
     # Other precision parameters to be passed to CLASS
     # e.g. precision parameters or non-numerical parameters
     extra_args:

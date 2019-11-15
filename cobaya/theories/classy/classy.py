@@ -172,7 +172,9 @@ class classy(_cosmo):
         if self.path:
             self.log.info("Importing *local* classy from " + self.path)
             classy_build_path = os.path.join(self.path, "python", "build")
-            post = next(d for d in os.listdir(classy_build_path) if d.startswith("lib."))
+            py_version = "%d.%d" % (sys.version_info.major, sys.version_info.minor)
+            post = next(d for d in os.listdir(classy_build_path)
+                        if (d.startswith("lib.") and py_version in d))
             classy_build_path = os.path.join(classy_build_path, post)
             if not os.path.exists(classy_build_path):
                 # If path was given as an install path, try to install global one anyway
@@ -372,10 +374,13 @@ class classy(_cosmo):
                 self.classy.compute()
             # "Valid" failure of CLASS: parameters too extreme -> log and report
             except CosmoComputationError as e:
-                if ("You have asked for an unrealistic high value omega_b" in str(e) or
-                        "reionization cannot start after z_start_max" in str(e) or
-                        "Shooting failed, try optimising input_get_guess()" in str(e)):
-                    pass
+                if self.stop_at_error:
+                    self.log.error(
+                        "Computation error (see traceback below)! "
+                        "Parameters sent to CLASS: %r and %r.\n"
+                        "To ignore this kind of errors, make 'stop_at_error: False'.",
+                        self._states[i_state]["params"], self.extra_args)
+                    raise
                 else:
                     self.log.debug("Computation of cosmological products failed. "
                                    "Assigning 0 likelihood and going on. "

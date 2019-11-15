@@ -65,9 +65,12 @@ class polychord(Sampler):
                 " (b) install the Python interface globally with\n"
                 "     '/path/to/PolyChord/python setup.py install --user'")
         # Prepare arguments and settings
+        self.n_sampled = len(self.model.parameterization.sampled_params())
+        self.n_derived = len(self.model.parameterization.derived_params())
+        self.n_priors = len(self.model.prior)
+        self.n_likes = len(self.model.likelihood)
         self.nDims = self.model.prior.d()
-        self.nDerived = (len(self.model.parameterization.derived_params()) +
-                         len(self.model.prior) + len(self.model.likelihood._likelihoods))
+        self.nDerived = (self.n_derived + self.n_priors + self.n_likes)
         if self.logzero is None:
             self.logzero = np.nan_to_num(-np.inf)
         if self.max_ndead == np.inf:
@@ -170,10 +173,6 @@ class polychord(Sampler):
         self.live = Collection(
             self.model, None, name="live", initial_size=self.pc_settings.nlive)
         self.dead = Collection(self.model, self.output, name="dead")
-        self.n_sampled = len(self.model.parameterization.sampled_params())
-        self.n_derived = len(self.model.parameterization.derived_params())
-        self.n_priors = len(self.model.prior)
-        self.n_likes = len(self.model.likelihood._likelihoods)
         # Done!
         if am_single_or_primary_process():
             self.log.info("Calling PolyChord with arguments:")
@@ -220,12 +219,10 @@ class polychord(Sampler):
         def logpost(params_values):
             logposterior, logpriors, loglikes, derived = (
                 self.model.logposterior(params_values))
-            if len(derived) != len(self.model.parameterization.derived_params()):
-                derived = np.full(
-                    len(self.model.parameterization.derived_params()), np.nan)
-            if len(loglikes) != len(self.model.likelihood._likelihoods):
-                loglikes = np.full(
-                    len(self.model.likelihood._likelihoods), np.nan)
+            if len(derived) != self.n_derived:
+                derived = np.full(self.n_derived, np.nan)
+            if len(loglikes) != self.n_likes:
+                loglikes = np.full(self.n_likes, np.nan)
             derived = list(derived) + list(logpriors) + list(loglikes)
             return (
                 max(logposterior + self.logvolume, 0.99 * self.pc_settings.logzero), derived)
