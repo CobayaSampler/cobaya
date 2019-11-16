@@ -26,7 +26,7 @@ from cobaya.log import logger_setup
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info
 from cobaya.mpi import import_MPI, am_single_or_primary_process
-from cobaya.tools import warn_deprecation
+from cobaya.tools import warn_deprecation, deepcopy_where_possible
 from cobaya.post import post
 
 
@@ -66,6 +66,7 @@ def run(info):
     # TO BE DEPRECATED IN >1.2!!! #####################
     _force_reproducible = "force_reproducible"
     if _force_reproducible in info:
+        info = deepcopy_where_possible(info)
         info.pop(_force_reproducible)
         logging.getLogger(__name__.split(".")[-1]).warning(
             "Option '%s' is no longer necessary. Please remove it!" % _force_reproducible)

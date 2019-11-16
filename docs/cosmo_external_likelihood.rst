@@ -40,13 +40,13 @@ First of all, we will need to simulate the fictitious power spectrum of the fict
 
    # Declare our desired theory product
    # (there is no cosmological likelihood doing it for us)
-   model_fiducial.likelihood.theory.needs(Cl={'tt': l_max})
+   model_fiducial.theory.needs(Cl={'tt': l_max})
 
    # Compute and extract the CMB power spectrum
    # (In muK^-2, without l(l+1)/(2pi) factor)
    # notice the empty dictionary below: all parameters are fixed
    model_fiducial.logposterior({})
-   Cls = model_fiducial.likelihood.theory.get_Cl(ell_factor=False)
+   Cls = model_fiducial.theory.get_Cl(ell_factor=False)
 
    # Our fiducial power spectrum
    Cl_est = Cls['tt'][:l_max+1]

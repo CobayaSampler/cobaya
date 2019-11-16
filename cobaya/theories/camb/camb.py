@@ -45,7 +45,7 @@ You can specify any parameter that CAMB understands in the ``params`` block:
 
 
 If you want to use your own version of CAMB, you need to specify its location with a
-``path`` option inside the ``classy`` block. If you do not specify a ``path``,
+``path`` option inside the ``camb`` block. If you do not specify a ``path``,
 CAMB will be loaded from the automatic-install ``modules`` folder, if specified, or
 otherwise imported as a globally-installed Python package. Cobaya will print at
 initialisation where it is getting CAMB from.
@@ -64,7 +64,7 @@ Cobaya.
 You can use the :doc:`model wrapper <cosmo_model>` to test your modification by
 evaluating observables or getting derived quantities at known points in the parameter
 space (set ``debug: True`` to get more detailed information of what exactly is passed to
-CLASS).
+CAMB).
 
 In your CAMB modification, remember that you can raise a ``CAMBParamRangeError`` or a
 ``CAMBError`` whenever the computation of any observable would fail, but you do not
@@ -94,6 +94,12 @@ to install gfortran (contact your local IT service).
 CAMB comes with binaries pre-built for Windows, so if you don't need to modify the CAMB
 source code, no Fortran compiler is needed.
 
+If you are using Anaconda you can also install a pre-compiled CAMB package from conda
+forge using
+
+.. code::
+
+  conda install -c conda-forge camb
 
 Automatic installation
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -124,7 +130,13 @@ best adapts to your needs:
       $ python setup.py build
 
   To update to the last changes in CAMB (master), run ``git pull`` from CAMB's folder and
-  re-build using the last command.
+  re-build using the last command. If you do not want to use multiple versions of CAMB,
+  you can also make your local installation available to python generally by installing
+  it using
+
+.. code:: bash
+
+     $ pip install -e /path/to/CAMB
 
 * [**Recommended for modifying CAMB**]
   First, `fork the CAMB repository in Github <https://github.com/cmbant/CAMB>`_
@@ -369,6 +381,8 @@ class camb(_cosmo):
             (True, False): model.NonLinear_lens,
             (False, True): model.NonLinear_pk,
             (False, False): False}[(self.non_linear_lens, self.non_linear_pk)]
+        # set-set base CAMB params if anything might have changed
+        self._base_params = None
 
     def add_to_redshifts(self, z):
         self.extra_args["redshifts"] = np.sort(np.unique(np.concatenate(
@@ -390,7 +404,7 @@ class camb(_cosmo):
             if not self._base_params:
                 base_args = args.copy()
                 base_args.update(self.extra_args)
-                self.full_extra_args = self.extra_args.copy()
+                self._reduced_extra_args = self.extra_args.copy()
                 params = self.camb.set_params(**base_args)
 
                 # pre-set the parameters that are not varying
@@ -401,7 +415,7 @@ class camb(_cosmo):
                             raise LoggedError(self.log,
                                               "Trying to sample fixed theory parameter %s",
                                               fixed_param)
-                        self.extra_args.pop(fixed_param, None)
+                        self._reduced_extra_args.pop(fixed_param, None)
 
                 if self.extra_attrs:
                     self.log.debug("Setting attributes of CAMBparams: %r",
@@ -435,7 +449,7 @@ class camb(_cosmo):
 
                 self._base_params = params
             else:
-                args.update(self.extra_args)
+                args.update(self._reduced_extra_args)
 
             self._states[i_state]["set_args"] = deepcopy(args)
             return self.camb.set_params(self._base_params.copy(), **args)
@@ -508,7 +522,7 @@ class camb(_cosmo):
                             "Computation error (see traceback below)! "
                             "Parameters sent to CAMB: %r and %r.\n"
                             "To ignore this kind of errors, make 'stop_at_error: False'.",
-                            self._states[i_state]["params"], self.full_extra_args)
+                            self._states[i_state]["params"], self.extra_args)
                         raise
                     else:
                         # Assumed to be a "parameter out of range" error.
@@ -624,7 +638,7 @@ class camb(_cosmo):
 
     def _get_z_dependent(self, quantity, z):
         if quantity == "fsigma8":
-            computed_redshifts = self.full_extra_args["redshifts"]
+            computed_redshifts = self.extra_args["redshifts"]
         else:
             z_name = next(k for k in ["redshifts", "z"]
                           if k in self.collectors[quantity].kwargs)
@@ -677,7 +691,8 @@ class camb(_cosmo):
         """
         Get the CAMB result object (must have been requested as a requirement).
 
-        :return: CAMB's CAMBdata result instance for the current parameters
+        :return: CAMB's `CAMBdata <https://camb.readthedocs.io/en/latest/results.html>`_
+                 result instance for the current parameters
         """
         return self.current_state['CAMBdata']
 

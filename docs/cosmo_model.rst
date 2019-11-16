@@ -71,7 +71,7 @@ We can also use the :class:`Model` to get the cosmological observables that were
 
 .. code:: python
 
-   print(model.likelihood.theory.requested())
+   print(model.theory.requested())
 
 
 Which will print something like
@@ -121,7 +121,7 @@ If you had set ``timing=True`` in the input info, :func:`~model.Model.dump_timin
 Low-level access to the theory code
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-You can access the imported CAMB or CLASS module as, respectively, ``Model.likelihood.theory.camb`` and ``Model.likelihood.theory.classy``. But be careful about manually changing their settings: it may unexpectedly influence subsequent cosmological observable computations for the present model instance.
+You can access the imported CAMB or CLASS module as, respectively, ``Model.theory.camb`` and ``Model.theory.classy``. But be careful about manually changing their settings: it may unexpectedly influence subsequent cosmological observable computations for the present model instance.
 
 
 Model wrapper class

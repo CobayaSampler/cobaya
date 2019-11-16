@@ -257,7 +257,7 @@ class _planck_2018_CamSpec_python(_DataSetLikelihood):
         for i, (cal, n) in enumerate(zip(cals, self.used_sizes)):
             if n > 0:
                 if i <= 3:
-                    delta_vector[ix:ix + n] -= (CT[self.ell_ranges[i]] + \
+                    delta_vector[ix:ix + n] -= (CT[self.ell_ranges[i]] +
                                                 foregrounds[i][self.ell_ranges[i]]) / cal
                 elif i == 4:
                     delta_vector[ix:ix + n] -= CTE[self.ell_ranges[i]] / cal

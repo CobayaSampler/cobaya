@@ -49,9 +49,9 @@ def get_model(info):
     # Configure the logger ASAP
     # TODO: Just a dummy import before configuring the logger, until I fix root/individual level
     import getdist
-    logger_setup(info.pop(_debug, _debug_default), info.pop(_debug_file, None))
-    # Create the updated input information, including defaults for each module.
     info = deepcopy_where_possible(info)
+    # Create the updated input information, including defaults for each module.
+    logger_setup(info.pop(_debug, _debug_default), info.pop(_debug_file, None))
     ignored_info = {}
     for k in list(info):
         if k not in [_params, kinds.likelihood, _prior, kinds.theory, _path_install,
