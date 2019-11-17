@@ -39,7 +39,7 @@ To run this example, save the text above in a file called ``gaussian.yaml`` in a
 
    which will converge faster!
 
-After a few seconts, a folder named ``chains`` will be created, and inside it you will find three files:
+After a few seconds, a folder named ``chains`` will be created, and inside it you will find three files:
 
 .. code-block:: bash
 

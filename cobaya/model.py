@@ -8,12 +8,7 @@
 # Python 2/3 compatibility
 from __future__ import absolute_import
 from __future__ import division
-import six
 
-if not six.PY3:
-    from fractions import gcd
-else:
-    from math import gcd
 # Global
 import numpy as np
 from collections import namedtuple, OrderedDict as odict
@@ -33,7 +28,7 @@ from cobaya.likelihood import Likelihood, LikelihoodCollection, LikelihoodExtern
 from cobaya.theory import Theory, TheoryCollection
 from cobaya.log import LoggedError, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
-from cobaya.tools import deepcopy_where_possible, are_different_params_lists
+from cobaya.tools import gcd, deepcopy_where_possible, are_different_params_lists
 
 # Log-posterior namedtuple
 logposterior = namedtuple("logposterior", ["logpost", "logpriors", "loglikes", "derived"])
@@ -660,7 +655,7 @@ class Model(HasLogger):
                                blocks, params_speeds)
             else:
                 self.log.warning("Requested fast/slow separation, "
-                                 "but all pararameters have the same speed.")
+                                 "but all parameters have the same speed.")
         return params_speeds, blocks
 
     def _check_speeds_of_params(self, blocking):
@@ -691,7 +686,7 @@ class Model(HasLogger):
                 self.log, "Manual blocking: missing parameters: %r", missing)
         if unknown:
             raise LoggedError(
-                self.log, "Manual blocking: unkown parameters: %r", unknown)
+                self.log, "Manual blocking: unknown parameters: %r", unknown)
         if (speeds != np.sort(speeds)).all():
             self.log.warning("Manual blocking: speed-blocking *apparently* non-optimal: "
                              "sort by ascending speed when possible")

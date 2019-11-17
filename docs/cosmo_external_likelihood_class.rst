@@ -202,7 +202,7 @@ multi-frequency Planck likelihood (based from *_DataSetLikelihood*). The :class:
 likelihood implements the plik-lite foreground-marginalized likelihood. Both the plik-like and CamSpec likelihoods
 support doing general multipole and spectrum cuts on the fly by setting override dataset parameters in the input .yaml.
 
-The provided BAO likelihoods base from :class:`_bao_prototype`, reading from simlpe text files.
+The provided BAO likelihoods base from :class:`_bao_prototype`, reading from simple text files.
 
 The  :class:`_des_prototype` likelihood (based from *_DataSetLikelihood*) implements the DES Y1 likelihood, using the
 matter power spectra to calculate shear, count and cross-correlation angular power spectra internally.

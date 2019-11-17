@@ -26,7 +26,10 @@
 ### Cosmology
 
 - CAMB optimizations for which quantities computed. 
-- Pk_interpolator dictionary now indexed by tuple of the two fields
+- Added matter_power_spectrum theory output for z,k,P(k) unsplined arrays
+- Fixed several bugs with Pk_interpolator (e.g. conflicts between likelihoods)
+- Pk_interpolator calling arguments now different
+- Fixed problems with getting same background array theory results from different likelihoods
 - Option to request "CAMBdata" object from CAMB to access computed results directly 
 - Fix for getting source windows power spectra 
 

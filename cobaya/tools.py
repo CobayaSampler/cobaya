@@ -28,13 +28,15 @@ with warnings.catch_warnings():
     from fuzzywuzzy import process as fuzzy_process
 if not six.PY3:
     ModuleNotFoundError = ImportError
-    # noinspection PyUnresolvedReferences
+    # noinspection PyUnresolvedReferences,PyDeprecation
     from inspect import cleandoc, getargspec as getfullargspec
+    # noinspection PyDeprecation
     from fractions import gcd
     from collections import Mapping
 else:
     from inspect import cleandoc, getfullargspec
     from math import gcd
+    # noinspection PyCompatibility
     from collections.abc import Mapping
 
 # Local
@@ -64,18 +66,19 @@ def deepcopyfix(olddict):
 
 def get_class_base_filename(name, kind):
     """
-    Gets absoluate file base name for a class module, relative to the package source,
+    Gets absolute file base name for a class module, relative to the package source,
     of a likelihood, theory or sampler.
     """
-    if '.' not in name: name += '.' + name
+    if '.' not in name:
+        name += '.' + name
     return os.path.join(os.path.dirname(__file__), subfolders[kind],
                         name.replace('.', os.sep))
 
 
 def get_class_module(name, kind):
     """
-    Gets qualified module name, relative to the package source, of a likelihood, theory
-    or sampler.
+    Gets qualified name of internal module, relative to the package source,
+    of a likelihood, theory or sampler.
     """
     return '.' + subfolders[kind] + '.' + name
 
@@ -94,6 +97,16 @@ def get_kind(name, fail_if_not_found=True):
             raise LoggedError(log, "Could not determine kind of module %s", name)
         else:
             return None
+
+
+def load_module(name, package=None, path=None):
+    if path:
+        sys.path.insert(0, os.path.normpath(path))
+    try:
+        return import_module(name, package=package)
+    finally:
+        if path:
+            sys.path.pop(0)
 
 
 def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
@@ -124,11 +137,12 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
         class_name = name
 
     def return_class(_module_name, package=None):
-        _module = import_module(_module_name, package=package)
+        _module = load_module(_module_name, package=package, path=module_path)
         if hasattr(_module, class_name):
             cls = getattr(_module, class_name)
         else:
-            cls = getattr(import_module(_module_name + '.' + class_name, package=package),
+            cls = getattr(load_module(_module_name + '.' + class_name,
+                                      package=package, path=module_path),
                           class_name)
         if not inspect.isclass(cls):
             return getattr(cls, class_name)
@@ -137,11 +151,7 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
 
     try:
         if module_path:
-            sys.path.insert(0, os.path.normpath(module_path))
-            try:
-                return return_class(module_name)
-            finally:
-                sys.path.pop(0)
+            return return_class(module_name)
         else:
             internal_module = get_class_module(module_name, kind)
             return return_class(internal_module, package=_package)

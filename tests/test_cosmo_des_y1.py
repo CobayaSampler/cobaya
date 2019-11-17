@@ -5,7 +5,6 @@ import pytest
 from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE
 from .common_cosmo import body_of_test
 
-
 best_fit = deepcopy(params_lowTEB_highTTTEEE)
 camb_extra = {"halofit_version": "mead"}
 classy_extra = {"non linear": "hmcode"}

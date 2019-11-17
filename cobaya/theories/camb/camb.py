@@ -181,7 +181,7 @@ import numpy as np
 from collections import namedtuple, OrderedDict as odict
 
 # Local
-from cobaya.theories._cosmo import _cosmo
+from cobaya.theories._cosmo import _cosmo, PowerSpectrumInterpolator
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, check_gcc_version
 from cobaya.conventions import _c_km_s, _T_CMB_K
@@ -279,6 +279,7 @@ class camb(_cosmo):
         # accumulated, i.e. taking the max of precision requests, etc.
         super(camb, self).needs(**requirements)
         CAMBdata = self.camb.CAMBdata
+
         for k, v in self._needs.items():
             # Products and other computations
             if k == "Cl":
@@ -300,34 +301,50 @@ class camb(_cosmo):
             elif k == "H":
                 self.collectors[k] = Collector(
                     method=CAMBdata.h_of_z,
-                    kwargs={"z": np.atleast_1d(v["z"])})
+                    kwargs={"z": self._combine_z(k, v)})
                 self.H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": _c_km_s}
             elif k in ("angular_diameter_distance", "comoving_radial_distance"):
                 self.collectors[k] = Collector(
                     method=getattr(CAMBdata, k),
-                    kwargs={"z": np.atleast_1d(v["z"])})
+                    kwargs={"z": self._combine_z(k, v)})
             elif k == "fsigma8":
                 self.add_to_redshifts(v["z"])
                 self.collectors[k] = Collector(
                     method=CAMBdata.get_fsigma8,
                     kwargs={})
                 self.needs_perts = True
-            elif k == "Pk_interpolator":
+            elif k in ["Pk_interpolator", "matter_power_spectrum"]:
                 self.extra_args["kmax"] = max(v["k_max"], self.extra_args.get("kmax", 0))
                 self.add_to_redshifts(v["z"])
                 v["vars_pairs"] = v["vars_pairs"] or [("delta_tot", "delta_tot")]
                 kwargs = deepcopy(v)
-                # change of defaults:
-                kwargs["hubble_units"] = kwargs.get("hubble_units", False)
-                kwargs["k_hunit"] = kwargs.get("k_hunit", False)
+                # need to ensure can't have conflicts between requests from
+                # different likelihoods. Store results without Hubble units.
+                if kwargs.get("hubble_units", False) or kwargs.get("k_hunit", False):
+                    raise LoggedError(self.log, "hubble_units and k_hunit must be False"
+                                                "for consistency")
+
+                kwargs["hubble_units"] = False
+                kwargs["k_hunit"] = False
+                if k != "Pk_interpolator":
+                    if "nonlinear" in kwargs:
+                        raise LoggedError(self.log, "cannot use 'nonlinear' with "
+                                                    "xxx_matter_power_spectrum")
+                    from packaging import version
+                    if version.parse(self.camb.__version__) < version.parse("1.0.11"):
+                        raise LoggedError(self.log, "update CAMB to 1.0.11+")
+
+                kwargs["nonlinear"] = bool(kwargs.get("nonlinear", True))
+                if kwargs["nonlinear"]:
+                    self.non_linear_pk = True
+
                 for p in "k_max", "z", "vars_pairs":
                     kwargs.pop(p)
                 for pair in v["vars_pairs"]:
-                    product = ("Pk_interpolator",) + tuple(pair)
+                    product = ("matter_power_spectrum", kwargs["nonlinear"]) + tuple(pair)
                     kwargs.update(dict(zip(["var1", "var2"], pair)))
                     self.collectors[product] = Collector(
-                        method=CAMBdata.get_matter_power_interpolator,
-                        kwargs=kwargs)
+                        method=CAMBdata.get_linear_matter_power_spectrum, kwargs=kwargs)
                 self.needs_perts = True
             elif k == "source_Cl":
                 if not getattr(self, "sources", None):
@@ -338,18 +355,16 @@ class camb(_cosmo):
                     if source not in self.sources:
                         self.sources[source] = window
                 self.limber = v.get("limber", True)
-                self.non_linear_pk = self.non_linear_pk or v.get("non_linear", False)
                 self.non_linear_lens = self.non_linear_lens or v.get("non_linear", False)
                 if "lmax" in v:
                     self.extra_args["lmax"] = max(v["lmax"],
                                                   self.extra_args.get("lmax", 0))
                 self.needs_perts = True
-                # Create collector
                 self.collectors[k] = Collector(method=CAMBdata.get_source_cls_dict)
                 self.extra_attrs["Want_cl_2D_array"] = True
                 self.extra_attrs["WantCls"] = True
             elif k == 'CAMBdata':
-                # Just get
+                # Just get CAMB results object
                 self.collectors[k] = None
             elif v is None:
                 # General derived parameters
@@ -383,6 +398,14 @@ class camb(_cosmo):
             (False, False): False}[(self.non_linear_lens, self.non_linear_pk)]
         # set-set base CAMB params if anything might have changed
         self._base_params = None
+
+    def _combine_z(self, k, v):
+        c = self.collectors.get(k, None)
+        if c:
+            return np.sort(
+                np.unique(np.concatenate(c.kwargs['z'], np.atleast_1d(v['z']))))
+        else:
+            return np.sort(np.atleast_1d(v['z']))
 
     def add_to_redshifts(self, z):
         self.extra_args["redshifts"] = np.sort(np.unique(np.concatenate(
@@ -571,9 +594,10 @@ class camb(_cosmo):
         # Specific calls, if general ones fail:
         if p == "sigma8":
             return intermediates.CAMBdata.get_sigma8()[-1]
-        derived = intermediates.derived.get(p, None)
-        if derived is not None:
-            return derived
+        if intermediates.derived:
+            derived = intermediates.derived.get(p, None)
+            if derived is not None:
+                return derived
         for f in [self._get_derived_from_params, self._get_derived_from_getter]:
             derived = f(p, intermediates)
             if derived is not None:
@@ -639,12 +663,11 @@ class camb(_cosmo):
     def _get_z_dependent(self, quantity, z):
         if quantity == "fsigma8":
             computed_redshifts = self.extra_args["redshifts"]
+            i_kwarg_z = np.concatenate(
+                [np.where(computed_redshifts == zi)[0] for zi in np.atleast_1d(z)])
         else:
-            z_name = next(k for k in ["redshifts", "z"]
-                          if k in self.collectors[quantity].kwargs)
-            computed_redshifts = self.collectors[quantity].kwargs[z_name]
-        i_kwarg_z = np.concatenate(
-            [np.where(computed_redshifts == zi)[0] for zi in np.atleast_1d(z)])
+            computed_redshifts = self.collectors[quantity].kwargs["z"]
+            i_kwarg_z = np.searchsorted(computed_redshifts, np.atleast_1d(z))
         return np.array(deepcopy(self.current_state()[quantity]))[i_kwarg_z]
 
     def get_H(self, z, units="km/s/Mpc"):
@@ -664,14 +687,65 @@ class camb(_cosmo):
     def get_fsigma8(self, z):
         return self._get_z_dependent("fsigma8", z)
 
-    def get_Pk_interpolator(self):
+    def get_matter_power(self, var_pair=("delta_tot", "delta_tot"), nonlinear=True,
+                         _state=None):
+        """
+        Get  matter power spectrum, e.g. suitable for splining.
+        Returned arrays may be bigger or more densely sampled than requested, but will
+        include required values. Neither k nor PK are in h^{-1} units.
+        z and k are in ascending order.
+
+        :param nonlinear: whether the linear or nonlinear spectrum
+        :param var_pair: which power spectrum
+        :return: k, z, PK, where k and z are arrays,
+                 and PK[i,j] is the value at z[i], k[j]
+        """
+        if nonlinear and not self.non_linear_pk:
+            raise ValueError("Getting non-linear matter power but nonlinear "
+                             "not specified in requirements")
+        current_state = _state or self.current_state()
+        nonlinear = bool(nonlinear)
+        try:
+            return current_state[("matter_power_spectrum", nonlinear) + tuple(var_pair)]
+        except KeyError:
+            raise ValueError("Matter power %s, %s not computed" % var_pair)
+
+    def get_Pk_interpolator(self, var_pair=("delta_tot", "delta_tot"), nonlinear=True,
+                            extrap_kmax=None):
+        """
+        Get P(z,k) bicubic interpolation object (:class:`PowerSpectrumInterpolator`).
+        Neither k nor PK are in h^{-1} units.
+
+        :param var_pair: variable pair for power spectrum
+        :param nonlinear: non-linear spectrum (default True)
+        :param extrap_kmax: log linear extrapolation beyond max computed k to extrap_kmax
+        :return: :class:`PowerSpectrumInterpolator` instance.
+        """
+
         current_state = self.current_state()
-        return {k[1:]: deepcopy(v)
-                for k, v in current_state.items() if k[0] == "Pk_interpolator"}
+        nonlinear = bool(nonlinear)
+        key = ("Pk_interpolator", nonlinear, extrap_kmax) + tuple(var_pair)
+        if key in current_state:
+            return current_state[key]
+
+        k, z, pk = self.get_matter_power(var_pair=var_pair, nonlinear=nonlinear,
+                                         _state=current_state)
+        log_p = np.all(pk > 0)
+        if log_p:
+            pk = np.log(pk)
+        elif extrap_kmax > k[-1]:
+            raise ValueError('cannot do log extrapolation with negative pk for %s, %s'
+                             % var_pair)
+
+        result = PowerSpectrumInterpolator(z, k, pk, logP=log_p, extrap_kmax=extrap_kmax)
+        current_state[key] = result
+        return result
 
     def get_source_Cl(self):
+
         current_state = self.current_state()
         # get C_l^XX from the cosmological code
+
         try:
             cls = deepcopy(current_state["source_Cl"])
         except:
@@ -694,7 +768,7 @@ class camb(_cosmo):
         :return: CAMB's `CAMBdata <https://camb.readthedocs.io/en/latest/results.html>`_
                  result instance for the current parameters
         """
-        return self.current_state['CAMBdata']
+        return self.current_state()['CAMBdata']
 
     @classmethod
     def get_path(cls, path):

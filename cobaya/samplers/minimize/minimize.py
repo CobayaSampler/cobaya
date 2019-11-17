@@ -4,7 +4,7 @@ r"""
 :Synopsis: Posterior/likelihood *maximization* (i.e. -log(post) and chi^2 minimization).
 :Author: Jesus Torrado
 
-This is a **maximizator** for posteriors or likelihoods, based on
+This is a **maximizer** for posteriors or likelihoods, based on
 `scipy.optimize.minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_
 and `Py-BOBYQA <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/index.html>`_
 (added in 2.0).

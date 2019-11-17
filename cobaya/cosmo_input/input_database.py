@@ -192,7 +192,7 @@ matter = odict([
                 [_p_proposal, 0.0005], [_p_label, r"\Omega_\mathrm{c} h^2"]])],
             ["omegam", {_p_label: r"\Omega_\mathrm{m}"}]])}],
     ["Omegab, Omegam", {
-        _desc: "Flat prior on Omega for barions and total matter",
+        _desc: "Flat prior on Omega for baryons and total matter",
         kinds.theory: {_camb: None, _classy: None},
         _params: odict([
             ["omegab", odict([

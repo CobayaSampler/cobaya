@@ -401,10 +401,9 @@ class _des_prototype(_DataSetLikelihood):
             "omegan": None,
             "omegam": None,
             "Pk_interpolator": {
-                "z": self.zs_interp, "k_max": 15 * self.acc,
-                "extrap_kmax": 500 * self.acc, "nonlinear": True,
-                "vars_pairs": ([["delta_tot", "delta_tot"]] +
-                               ([["Weyl", "Weyl"]] if self.use_Weyl else []))},
+                "z": self.zs_interp, "k_max": 15 * self.acc, "nonlinear": True,
+                "vars_pairs": ([("delta_tot", "delta_tot")] +
+                               ([("Weyl", "Weyl")] if self.use_Weyl else []))},
             "comoving_radial_distance": {"z": self.zs},
             "H": {"z": self.zs, "units": "km/s/Mpc"}}
 
@@ -421,7 +420,7 @@ class _des_prototype(_DataSetLikelihood):
         D_growth = np.sqrt(D_growth / PKdelta.P(0, 0.001))
         c = _c_km_s * 1e3  # m/s
 
-        if any([t in self.used_types for t in ["gammat", "wtheta"]]):
+        if any(t in self.used_types for t in ["gammat", "wtheta"]):
             qgal = []
             for b in range(self.nwbins):
                 qgal.append([])
@@ -429,7 +428,7 @@ class _des_prototype(_DataSetLikelihood):
                 n_chi = Hs * self.zbin_w_sp[b](zshift)
                 n_chi[zshift < 0] = 0
                 qgal[b] = n_chi * bin_bias[b]
-        if any([t in self.used_types for t in ["gammat", "xim", "xip"]]):
+        if any(t in self.used_types for t in ["gammat", "xim", "xip"]):
 
             Alignment_z = (intrinsic_alignment_A *
                            (((1 + self.zs) / (1 + intrinsic_alignment_z0)) **
@@ -565,9 +564,14 @@ class _des_prototype(_DataSetLikelihood):
             return chi2
 
     def logp(self, **params_values):
-        Pk_interpolators = self.theory.get_Pk_interpolator()
-        PKdelta = Pk_interpolators[("delta_tot", "delta_tot")]
-        PKWeyl = Pk_interpolators.get(("Weyl", "Weyl", None))
+        PKdelta = self.theory.get_Pk_interpolator(("delta_tot", "delta_tot"),
+                                                  extrap_kmax=500 * self.acc)
+        if self.use_Weyl:
+            PKWeyl = self.theory.get_Pk_interpolator(("Weyl", "Weyl"),
+                                                     extrap_kmax=500 * self.acc)
+        else:
+            PKWeyl = None
+
         wl_photoz_errors = [
             params_values.get(p, None) for p in
             ['DES_DzS1', 'DES_DzS2', 'DES_DzS3', 'DES_DzS4']]

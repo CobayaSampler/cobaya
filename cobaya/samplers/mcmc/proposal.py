@@ -173,9 +173,9 @@ class BlockedProposer(HasLogger):
         self.get_block_proposal(P, current_iblock_fast)
 
     def get_block_proposal(self, P, iblock):
-        vec_standarized = self.proposer[iblock].propose_vec(self.proposal_scale)
+        vec_standardized = self.proposer[iblock].propose_vec(self.proposal_scale)
         P[self.i_of_j[self.j_start[iblock]:]] += (self.transform[iblock]
-                                                  .dot(vec_standarized))
+                                                  .dot(vec_standardized))
 
     def set_covariance(self, propose_matrix):
         """

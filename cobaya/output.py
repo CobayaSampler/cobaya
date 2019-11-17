@@ -68,7 +68,7 @@ class Output(HasLogger):
         self.resuming = False
         if os.path.isfile(self.file_updated):
             self.log.info(
-                "Found existing products with the requested ouput prefix: '%s'",
+                "Found existing products with the requested output prefix: '%s'",
                 output_prefix)
             if self.force_output:
                 self.log.info("Deleting previous chain ('force' was requested).")

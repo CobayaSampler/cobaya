@@ -639,7 +639,7 @@ class mcmc(Sampler):
                  range(1, m)])
             # No logging of warnings temporarily, so getdist won't complain unnecessarily
             logging.disable(logging.WARNING)
-            mcsampleses = [
+            mcsamples_list = [
                 self.collection._sampled_to_getdist_mcsamples(
                     first=i * cut, last=(i + 1) * cut - 1)
                 for i in range(1, m)]
@@ -649,7 +649,7 @@ class mcmc(Sampler):
                 bounds = [np.array(
                     [[mcs.confidence(i, limfrac=self.Rminus1_cl_level / 2., upper=which)
                       for i in range(self.model.prior.d())] for which in [False, True]]).T
-                          for mcs in mcsampleses]
+                          for mcs in mcsamples_list]
                 success_bounds = True
             except:
                 bounds = None

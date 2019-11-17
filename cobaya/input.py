@@ -186,15 +186,13 @@ def update_info(info):
             updated_info[block][module] = default_class_info[block][module] or {}
             # Update default options with input info
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
-            ignore = set(
-                [_external, _p_renames, _input_params, _output_params, _module_path])
+            ignore = {_external, _p_renames, _input_params, _output_params, _module_path}
             options_not_recognized = (set(input_info[block][module])
                                       .difference(ignore)
                                       .difference(set(updated_info[block][module])))
             if options_not_recognized:
                 alternatives = odict()
-                available = (
-                    set([_external, _p_renames]).union(updated_info[block][module]))
+                available = ({_external, _p_renames}.union(updated_info[block][module]))
                 while options_not_recognized:
                     option = options_not_recognized.pop()
                     alternatives[option] = fuzzy_match(option, available, n=3)

@@ -38,7 +38,7 @@ Release checklist
 + Bump version number in ``__init__.py`` and ``CHANGELOG.md`` (also date)
 + If archived version:
   - make ``__obsolete__ = True`` in ``__init__.py``
-  - Fix CAMB's version to latest relase (right now, it installs ``master`` by default)
+  - Fix CAMB's version to latest release (right now, it installs ``master`` by default)
 + Update year of copyright in ``__init__.py``.
 + Update year of copyright in ``LICENCE.txt``.
 + Commit + tag with new version + ``git push`` + ``git push --tags``
