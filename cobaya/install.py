@@ -23,9 +23,9 @@ from pkg_resources import parse_version
 
 # Local
 from cobaya.log import logger_setup, LoggedError
-from cobaya.tools import get_class_module, create_banner, warn_deprecation, get_class
+from cobaya.tools import create_banner, warn_deprecation, get_class
 from cobaya.input import get_used_modules
-from cobaya.conventions import _package, _code, _data, kinds, _external, _force
+from cobaya.conventions import _module_path, _code, _data, kinds, _external, _force
 from cobaya.conventions import _modules_path_arg, _modules_path_env, _path_install
 
 log = logging.getLogger(__name__.split(".")[-1])
@@ -37,7 +37,7 @@ def install(*infos, **kwargs):
     path = kwargs.get("path", ".")
     if not path:
         # See if we can get one (and only one) from infos
-        paths = set([p for p in [info.get(_path_install) for info in infos] if p])
+        paths = set(p for p in [info.get(_path_install) for info in infos] if p)
         if len(paths) == 1:
             path = paths[0]
         else:
@@ -63,33 +63,35 @@ def install(*infos, **kwargs):
     for kind, modules in get_used_modules(*infos).items():
         for module in modules:
             print(create_banner(kind + ":" + module, symbol="=", length=80))
-            if len([s for s in skip_list if s in module.lower()]):
+            if any(True for s in skip_list if s in module.lower()):
                 log.info("Skipping %s for test skip list %s" % (module, skip_list))
                 continue
-            module_folder = get_class_module(module, kind)
+            info = (next(info for info in infos if module in
+                         info.get(kind, {}))[kind][module]) or {}
+            if isinstance(info, string_types) or _external in info:
+                log.warning("Module '%s' is a custom function. "
+                            "Nothing to do.\n", module)
+                continue
+
             try:
-                imported_module = import_module(module_folder, package=_package)
-                imported_class = get_class(module, kind)
-                if len([s for s in skip_list if s in imported_class.__name__.lower()]):
+                imported_class, imported_module = \
+                    get_class(module, kind, module_path=info.pop(_module_path, None),
+                              return_module=True)
+            except ImportError as e:
+                log.error("Module '%s' not recognized. [%s]\n" % (module, e))
+                failed_modules += ["%s:%s" % (kind, module)]
+                continue
+            else:
+                if any(True for s in skip_list if s in imported_class.__name__.lower()):
                     log.info(
                         "Skipping %s for test skip list %s" % (imported_class.__name__,
                                                                skip_list))
                     continue
-            except ImportError as e:
-                if kind == kinds.likelihood:
-                    info = (next(info for info in infos if module in
-                                 info.get(kinds.likelihood, {}))[kinds.likelihood][module]) or {}
-                    if isinstance(info, string_types) or _external in info:
-                        log.warning("Module '%s' is a custom likelihood. "
-                                    "Nothing to do.\n", module)
-                    else:
-                        log.error("Module '%s' not recognized. [%s]\n" % (module, e))
-                        failed_modules += ["%s:%s" % (kind, module)]
-                continue
+
             is_installed = getattr(imported_class, "is_installed",
                                    getattr(imported_module, "is_installed", None))
             if is_installed is None:
-                log.info("Built-in module: nothing to do.\n")
+                log.info("Built-in module %s: nothing to do.\n" % imported_class.__name__)
                 continue
             if is_installed(path=abspath, **kwargs_install):
                 log.info("External module already installed.\n")
@@ -144,7 +146,7 @@ def download_file(filename, path, no_progress_bars=False, decompress=False, logg
         from wget import download, bar_thermometer
         wget_kwargs = {"out": path, "bar":
             (bar_thermometer if not no_progress_bars else None)}
-        filename = download(filename, **wget_kwargs)
+        filename = os.path.normpath(download(filename, **wget_kwargs))
         print("")
         log.info('Downloaded filename %s' % filename)
     except Exception as excpt:
@@ -289,3 +291,7 @@ def install_script():
         install(*infos, path=getattr(arguments, _modules_path_arg)[0],
                 **{arg: getattr(arguments, arg)
                    for arg in ["force", _code, _data, "no_progress_bars", "just_check"]})
+
+
+if __name__ == '__main__':
+    install_script()

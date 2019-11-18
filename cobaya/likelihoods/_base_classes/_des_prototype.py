@@ -641,7 +641,7 @@ class _des_prototype(_DataSetLikelihood):
 
     def plot_lensing(self, corrs_p=None, corrs_m=None, errors=True,
                      diff=False, axs=None, ls='-'):
-        if any([t not in self.used_types for t in ["xip", "xim"]]):
+        if any(t not in self.used_types for t in ["xip", "xim"]):
             self.log.warning("Shear not computed. Nothing to plot.")
             return
         import matplotlib.pyplot as plt

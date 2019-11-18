@@ -177,13 +177,13 @@ class Parameterization(HasLogger):
         # Useful sets: directly-sampled input parameters and directly "output-ed" derived
         self._directly_sampled = [p for p in self._input if p in self._sampled]
         self._directly_output = [p for p in self._derived if p in self._output]
-        # Useful mapping: input params that vary if each sampled is varied
+        # Useful mapping: input params that vary if each sample is varied
         self._sampled_input_dependence = odict(
-            [[s, [i for i in self._input if s in self._input_args.get(i, {})]]
+            [(s, [i for i in self._input if s in self._input_args.get(i, {})])
              for s in self._sampled])
         # From here on, some error control.
         dropped_but_never_used = (
-            set([p for p, v in self._sampled_input_dependence.items() if not v])
+            set(p for p, v in self._sampled_input_dependence.items() if not v)
                 .difference(set(self._directly_sampled)))
         if dropped_but_never_used and not ignore_unused_sampled:
             raise LoggedError(

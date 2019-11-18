@@ -127,17 +127,17 @@ class Model(HasLogger):
         sampled_input_dependence = self.parameterization.sampled_input_dependence()
         sampled_dependence = odict()
         for p, i_s in sampled_input_dependence.items():
-            sampled_dependence[p] = [component for component in self.theory.values()
-                                     if any(
-                    [(i in component.input_params) for i in (i_s or [p])])]
+            sampled_dependence[p] = \
+                [component for component in self.theory.values()
+                 if any((i in component.input_params) for i in (i_s or [p]))]
             # For the moment theory parameters "depend" on every likelihood, since
             # re-computing the theory code forces recomputation of the likelihoods
             if sampled_dependence[p]:
                 sampled_dependence[p] += list(self.likelihood.values())
             else:
                 sampled_dependence[p] = \
-                    [component for component in self.likelihood.values() if any(
-                        [(i in component.input_params) for i in (i_s or [p])])]
+                    [component for component in self.likelihood.values()
+                     if any((i in component.input_params) for i in (i_s or [p]))]
 
         self.sampled_dependence = sampled_dependence
 

@@ -176,7 +176,7 @@ def post(info, sample=None):
     # theory-derived params or likelihoods
     recompute_theory = info_in.get(kinds.theory) and not (
             list(add[kinds.likelihood]) == ["one"] and
-            not any([is_derived_param(pinfo) for pinfo in add.get(_params, {}).values()]))
+            not any(is_derived_param(pinfo) for pinfo in add.get(_params, {}).values()))
     if recompute_theory:
         # Inherit from the original chain (needs input|output_params, renames, etc
         add_theory = add.get(kinds.theory)

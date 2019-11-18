@@ -239,7 +239,7 @@ class _CMBlikes(_DataSetLikelihood):
             use_theory_field = [True] * self.tot_theory_fields
         maps_use = ini.split('maps_use', [])
         if len(maps_use):
-            if np.any([not i for i in use_theory_field]):
+            if np.any(not i for i in use_theory_field):
                 self.log.warning('maps_use overrides fields_use')
             self.use_map = np.zeros(len(self.map_names), dtype=bool)
             for j, map_used in enumerate(maps_use):

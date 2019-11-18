@@ -122,7 +122,7 @@ def run_script():
                                    "(use with care!)")
     parser.add_argument("--version", action="version", version=__version__)
     args = parser.parse_args()
-    if any([(os.path.splitext(f)[0] in ("input", "updated")) for f in args.input_file]):
+    if any((os.path.splitext(f)[0] in ("input", "updated")) for f in args.input_file):
         raise ValueError("'input' and 'updated' are reserved file names. "
                          "Please, use a different one.")
     load_input = import_MPI(".input", "load_input")

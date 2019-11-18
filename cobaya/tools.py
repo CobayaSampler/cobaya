@@ -110,7 +110,7 @@ def load_module(name, package=None, path=None):
 
 
 def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
-              module_path=None):
+              module_path=None, return_module=False):
     """
     Retrieves the requested class from its reference name. The name can be a
     fully-qualified package.module.classname string, or an internal name of the particular
@@ -136,18 +136,24 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
         module_name = name
         class_name = name
 
+    def get_return(_cls, _mod):
+        if return_module:
+            return _cls, _mod
+        else:
+            return _cls
+
     def return_class(_module_name, package=None):
         _module = load_module(_module_name, package=package, path=module_path)
         if hasattr(_module, class_name):
             cls = getattr(_module, class_name)
         else:
-            cls = getattr(load_module(_module_name + '.' + class_name,
-                                      package=package, path=module_path),
-                          class_name)
+            _module = load_module(_module_name + '.' + class_name,
+                                  package=package, path=module_path)
+            cls = getattr(_module, class_name)
         if not inspect.isclass(cls):
-            return getattr(cls, class_name)
+            return get_return(getattr(cls, class_name), cls)
         else:
-            return cls
+            return get_return(cls, _module)
 
     try:
         if module_path:
@@ -171,7 +177,7 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
         if ((exc_info[0] is ModuleNotFoundError and
              str(exc_info[1]).rstrip("'").endswith(name))):
             if None_if_not_found:
-                return None
+                return get_return(None, None)
             raise LoggedError(
                 log, "%s '%s' not found. Maybe you meant one of the following "
                      "(capitalization is important!): %s",
