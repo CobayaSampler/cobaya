@@ -13,7 +13,7 @@ proposing changes to each, then generate a new random basis.
 The distance proposal in the random direction is given by a two-D Gaussian
 radial function mixed with an exponential, which is quite robust to wrong width estimates
 
-See https://cosmologist.info/notes/CosmoMC.pdf
+See https://arxiv.org/abs/1304.4473
 """
 
 # Python 2/3 compatibility

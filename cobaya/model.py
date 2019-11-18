@@ -686,7 +686,7 @@ class Model(HasLogger):
                 self.log, "Manual blocking: missing parameters: %r", missing)
         if unknown:
             raise LoggedError(
-                self.log, "Manual blocking: unknown parameters: %r", unknown)
+                self.log, "Manual blocking: unkown parameters: %r", unknown)
         if (speeds != np.sort(speeds)).all():
             self.log.warning("Manual blocking: speed-blocking *apparently* non-optimal: "
                              "sort by ascending speed when possible")

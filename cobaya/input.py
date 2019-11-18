@@ -464,7 +464,7 @@ class HasDefaults(object):
 
     @classmethod
     def get_class_path(cls):
-        return os.path.dirname(inspect.getfile(cls))
+        return os.path.abspath(os.path.dirname(inspect.getfile(cls)))
 
     @classmethod
     def get_root_file_name(cls):
@@ -483,7 +483,7 @@ class HasDefaults(object):
         if bib:
             return bib.decode('utf-8')
         for base in cls.__bases__:
-            if issubclass(base, HasDefaults):
+            if issubclass(base, HasDefaults) and base is not HasDefaults:
                 bib = base.get_bibtex()
                 if bib:
                     return bib
@@ -495,7 +495,7 @@ class HasDefaults(object):
         # not accessible directly
         try:
             return pkg_resources.resource_string(cls.__module__, cls.__name__ + ext)
-        except:
+        except Exception as e:
             return None
 
     @classmethod
@@ -528,7 +528,7 @@ class HasDefaults(object):
         yaml_text = cls.get_associated_file_content('.yaml')
         if not yaml_text:
             for base in cls.__bases__:
-                if issubclass(base, HasDefaults):
+                if issubclass(base, HasDefaults) and base is not HasDefaults:
                     return base.get_defaults(return_yaml=return_yaml,
                                              yaml_expand_defaults=yaml_expand_defaults)
         if return_yaml:

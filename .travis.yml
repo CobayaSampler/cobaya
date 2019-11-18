@@ -63,7 +63,7 @@ matrix:
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="defaults"
       python: "3.7"
-    - name: "Bleeding Edge: gcc-9, Python 3.7 Anaconda (conda-forge)"
+    - name: "Bleeding Edge: gcc-9, Python 3.8 Anaconda (conda-forge)"
       addons:
         apt:
           sources:
@@ -77,7 +77,7 @@ matrix:
         - PYVER="3"
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="conda-forge"
-      python: "3.7"
+      python: "3.8"
 
 before_install:
   # Configure right compilers version
@@ -125,11 +125,11 @@ script:
   - pytest tests/ -v -s -k "cosmo" --modules=$MODULES --boxed
   - python $MODULES/code/CAMB/setup.py install
   - git clone --depth=1 https://github.com/CobayaSampler/planck_lensing_external
-  - python planck_lensing_external/setup.py install
-  - python planck_lensing_external/setup.py test
+  - pip install ./planck_lensing_external --quiet
+  - python -m unittest plancklens.tests.test_likes
   - git clone --depth=1 https://github.com/CobayaSampler/example_external_likelihood
-  - python example_external_likelihood/setup.py install
-  - python example_external_likelihood/setup.py test
+  - pip install ./example_external_likelihood --quiet
+  - python -m unittest test_package.tests.test
 
 ###############################################################################
 deploy: # only if it builds and if the commit has been tagged

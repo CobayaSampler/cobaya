@@ -12,7 +12,7 @@
 ### Likelihoods
 
 - Support for external likelihoods, referenced by fully qualified package name.
-- Allow referencing likelihood class names directly (model.ClassName)
+- Allow referencing likelihood class names directly (module.ClassName)
 - Ability to instantiate Likelihood classes directly outside Cobaya (for testing of
   external likelihoods or use in other packages)
 - Inherited likelihoods inherit .yaml file from parent if no new one is defined

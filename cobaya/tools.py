@@ -101,7 +101,7 @@ def get_kind(name, fail_if_not_found=True):
 
 def load_module(name, package=None, path=None):
     if path:
-        sys.path.insert(0, os.path.normpath(path))
+        sys.path.insert(0, os.path.abspath(os.path.normpath(path)))
     try:
         return import_module(name, package=package)
     finally:
