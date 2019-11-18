@@ -1,1 +1,1 @@
-from .mcmc import mcmc, ignore_at_resume, plot_progress
+from .mcmc import mcmc, plot_progress

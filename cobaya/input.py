@@ -20,14 +20,14 @@ from itertools import chain
 import pkg_resources
 
 # Local
-from cobaya.conventions import _package, _products_path, _path_install, _resume, _force
+from cobaya.conventions import _products_path, _path_install, _resume, _force
 from cobaya.conventions import _output_prefix, _debug, _debug_file, _external, _self_name
 from cobaya.conventions import _params, _prior, kinds
 
 from cobaya.conventions import _p_label, _p_derived, _p_ref, _p_drop, _p_value, _p_renames
 from cobaya.conventions import _p_proposal, _input_params, _output_params, _module_path
 from cobaya.conventions import _yaml_extensions
-from cobaya.tools import get_class_module, recursive_update, recursive_odict_to_dict
+from cobaya.tools import recursive_update, recursive_odict_to_dict
 from cobaya.tools import fuzzy_match, deepcopy_where_possible, get_class, get_kind
 from cobaya.yaml import yaml_load_file, yaml_dump
 from cobaya.log import LoggedError
@@ -365,10 +365,11 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
                 return False
             # Anything to ignore?
             for k in block1:
-                module_folder = get_class_module(k, block_name)
                 try:
-                    ignore_k = getattr(import_module(
-                        module_folder, package=_package), "ignore_at_resume", {})
+                    module_path = block1[k].pop(_module_path, None) \
+                        if isinstance(block1[k], odict) else None
+                    cls = get_class(k, block_name, module_path=module_path)
+                    ignore_k = getattr(cls, "ignore_at_resume", {})
                 except ImportError:
                     ignore_k = {}
                 if block_name == kinds.theory:

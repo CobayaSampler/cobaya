@@ -64,18 +64,7 @@ def deepcopyfix(olddict):
     return newdict
 
 
-def get_class_base_filename(name, kind):
-    """
-    Gets absolute file base name for a class module, relative to the package source,
-    of a likelihood, theory or sampler.
-    """
-    if '.' not in name:
-        name += '.' + name
-    return os.path.join(os.path.dirname(__file__), subfolders[kind],
-                        name.replace('.', os.sep))
-
-
-def get_class_module(name, kind):
+def get_internal_class_module(name, kind):
     """
     Gets qualified name of internal module, relative to the package source,
     of a likelihood, theory or sampler.
@@ -159,7 +148,7 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
         if module_path:
             return return_class(module_name)
         else:
-            internal_module = get_class_module(module_name, kind)
+            internal_module = get_internal_class_module(module_name, kind)
             return return_class(internal_module, package=_package)
     except:
         exc_info = sys.exc_info()
