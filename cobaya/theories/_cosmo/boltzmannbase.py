@@ -1,5 +1,5 @@
 """
-.. module:: _cosmo
+.. module:: BoltzmannBase
 
 :Synopsis: Template for Cosmological theory codes.
            Mostly here to document how to compute and get observables.
@@ -15,11 +15,22 @@ from itertools import chain
 
 # Local
 from cobaya.theory import Theory
-from cobaya.tools import fuzzy_match, create_banner
+from cobaya.tools import fuzzy_match, create_banner, deepcopy_where_possible
 from cobaya.log import LoggedError
 
 
-class _cosmo(Theory):
+class BoltzmannBase(Theory):
+
+    def initialize(self):
+        # Generate states, to avoid recomputing
+        self._n_states = 3
+        self._states = [
+            {"params": None, "derived": None, "derived_extra": None, "last": 0}
+            for _ in range(self._n_states)]
+        # Dict of named tuples to collect requirements and computation methods
+        self.collectors = {}
+        # Additional input parameters to pass to CAMB, and attributes to set_ manually
+        self.extra_args = deepcopy_where_possible(self.extra_args) or {}
 
     def needs(self, **requirements):
         r"""
@@ -29,30 +40,30 @@ class _cosmo(Theory):
 
         - ``Cl={...}``: CMB lensed power spectra, as a dictionary ``{spectrum:l_max}``,
           where the possible spectra are combinations of "t", "e", "b" and "p"
-          (lensing potential). Get with :func:`~_cosmo.get_Cl`.
+          (lensing potential). Get with :func:`~BoltzmannBase.get_Cl`.
         - **[BETA: CAMB only; notation may change!]** ``source_Cl={...}``:
           :math:`C_\ell` of given sources with given windows, e.g.:
           ``source_name: {"function": "spline"|"gaussian", [source_args]``;
           for now, ``[source_args]`` follow the notation of ``CAMBSources``.
           If can also take ``lmax: [int]``, ``limber: True`` if Limber approximation
           desired, and ``non_linear: True`` if non-linear contributions requested.
-          Get with :func:`~_cosmo.get_source_Cl`.
+          Get with :func:`~BoltzmannBase.get_source_Cl`.
         - ``Pk_interpolator={...}``: Matter power spectrum interpolator in :math:`(z, k)`.
           Takes ``"z": [list_of_evaluated_redshifts]``, ``"k_max": [k_max]``,
           ``"extrap_kmax": [max_k_max_extrapolated]``, ``"nonlinear": [True|False]``,
           ``"vars_pairs": [["delta_tot", "delta_tot"], ["Weyl", "Weyl"], [...]]}``.
         - ``H={'z': [z_1, ...], 'units': '1/Mpc' or 'km/s/Mpc'}``: Hubble
           rate at the redshifts requested, in the given units. Get it with
-          :func:`~_cosmo.get_H`.
+          :func:`~BoltzmannBase.get_H`.
         - ``angular_diameter_distance={'z': [z_1, ...]}``: Physical angular
           diameter distance to the redshifts requested. Get it with
-          :func:`~_cosmo.get_angular_diameter_distance`.
+          :func:`~BoltzmannBase.get_angular_diameter_distance`.
         - ``comoving_radial_distance={'z': [z_1, ...]}``: Comoving radial distance
           from us to the redshifts requested. Get it with
-          :func:`~_cosmo.get_comoving_radial_distance`.
+          :func:`~BoltzmannBase.get_comoving_radial_distance`.
         - ``fsigma8={'z': [z_1, ...]}``: Structure growth rate
           :math:`f\sigma_8` at the redshifts requested. Get it with
-          :func:`~_cosmo.get_fsigma8`.
+          :func:`~BoltzmannBase.get_fsigma8`.
         - ``k_max=[...]``: Fixes the maximum comoving wavenumber considered.
         - **Other derived parameters** that are not included in the input but whose
           value the likelihood may need.
@@ -128,10 +139,44 @@ class _cosmo(Theory):
             else:
                 raise LoggedError(self.log, "Unknown required product: '%s'.", k)
 
+    def compute(self, _derived=None, cached=True, **params_values_dict):
+        lasts = [self._states[i]["last"] for i in range(self._n_states)]
+        try:
+            if not cached:
+                raise StopIteration
+            # are the parameter values there already?
+            i_state = next(i for i in range(self._n_states)
+                           if self._states[i]["params"] == params_values_dict)
+            # has any new product been requested?
+            for product in self.collectors:
+                next(k for k in self._states[i_state] if k == product)
+            reused_state = True
+            # Get (pre-computed) derived parameters
+            if _derived == {}:
+                _derived.update(self._states[i_state]["derived"] or {})
+            self.log.debug("Re-using computed results (state %d)", i_state)
+        except StopIteration:
+            reused_state = False
+            # update the (first) oldest one and compute
+            i_state = lasts.index(min(lasts))
+            self.log.debug("Computing (state %d)", i_state)
+            if self.timer:
+                self.timer.start()
+            if not self.run_calculation(_derived, i_state, **params_values_dict):
+                return 0
+            if self.timer:
+                self.timer.increment(self.log)
+
+        # make this one the current one by decreasing the antiquity of the rest
+        for i in range(self._n_states):
+            self._states[i]["last"] -= max(lasts)
+        self._states[i_state]["last"] = 1
+        return 1 if reused_state else 2
+
     def requested(self):
         """
-        Returns the full set of cosmological products and parameters requested by the
-        likelihoods.
+        Returns the full set of cosmological products and parameters requested from
+        anywhere.
         """
         return self._needs
 
@@ -161,28 +206,82 @@ class _cosmo(Theory):
         r"""
         Returns the Hubble rate at the given redshifts.
 
-        The redshifts must be a subset of those requested when :func:`~_cosmo.needs`
+        The redshifts must be a subset of those requested when :func:`~BoltzmannBase.needs`
         was called.
 
         The available units are ``km/s/Mpc`` (i.e. ``c*H(Mpc^-1)``) and ``1/Mpc``.
         """
-        pass
+        try:
+            return self._get_z_dependent("H", z) * self.H_units_conv_factor[units]
+        except KeyError:
+            raise LoggedError(
+                self.log, "Units not known for H: '%s'. Try instead one of %r.",
+                units, list(self.H_units_conv_factor))
 
     def get_angular_diameter_distance(self, z):
         r"""
-        Returns the physical angular diameter distance to the given redshifts.
+        Returns the physical angular diameter distance to the given redshifts in Mpc.
 
-        The redshifts must be a subset of those requested when :func:`~_cosmo.needs`
+        The redshifts must be a subset of those requested when :func:`~BoltzmannBase.needs`
         was called.
         """
-        pass
+        return self._get_z_dependent("angular_diameter_distance", z)
 
-    def get_Pk_interpolator(self):
+    def get_comoving_radial_distance(self, z):
         r"""
-        Returns a (dict of) power spectrum interpolator(s)
-        :class:`PowerSpectrumInterpolator`.
+        Returns the comoving radial distance to the given redshifts in Mpc.
+
+        The redshifts must be a subset of those requested when :func:`~BoltzmannBase.needs`
+        was called.
         """
-        pass
+        return self._get_z_dependent("comoving_radial_distance", z)
+
+    def get_matter_power(self, var_pair=("delta_tot", "delta_tot"), nonlinear=True,
+                         _state=None):
+        """
+        Get  matter power spectrum, e.g. suitable for splining.
+        Returned arrays may be bigger or more densely sampled than requested, but will
+        include required values. Neither k nor PK are in h^{-1} units.
+        z and k are in ascending order.
+
+        :param nonlinear: whether the linear or nonlinear spectrum
+        :param var_pair: which power spectrum
+        :return: k, z, PK, where k and z are arrays,
+                 and PK[i,j] is the value at z[i], k[j]
+        """
+        return None, None, None
+
+    def get_Pk_interpolator(self, var_pair=("delta_tot", "delta_tot"), nonlinear=True,
+                            extrap_kmax=None):
+        """
+        Get P(z,k) bicubic interpolation object (:class:`PowerSpectrumInterpolator`).
+        Neither k nor PK are in h^{-1} units.
+
+        :param var_pair: variable pair for power spectrum
+        :param nonlinear: non-linear spectrum (default True)
+        :param extrap_kmax: use log linear extrapolation beyond max k computed up to
+                            extrap_kmax
+        :return: :class:`PowerSpectrumInterpolator` instance.
+        """
+
+        current_state = self.current_state()
+        nonlinear = bool(nonlinear)
+        key = ("Pk_interpolator", nonlinear, extrap_kmax) + tuple(var_pair)
+        if key in current_state:
+            return current_state[key]
+
+        k, z, pk = self.get_matter_power(var_pair=var_pair, nonlinear=nonlinear,
+                                         _state=current_state)
+        log_p = np.all(pk > 0)
+        if log_p:
+            pk = np.log(pk)
+        elif extrap_kmax > k[-1]:
+            raise ValueError('cannot do log extrapolation with negative pk for %s, %s'
+                             % var_pair)
+
+        result = PowerSpectrumInterpolator(z, k, pk, logP=log_p, extrap_kmax=extrap_kmax)
+        current_state[key] = result
+        return result
 
     def get_source_Cl(self):
         r"""
@@ -197,7 +296,7 @@ class _cosmo(Theory):
         `Planck 2015 results. XIII. Cosmological parameters <https://arxiv.org/pdf/1502.01589.pdf>`_,
         at the given redshifts.
 
-        The redshifts must be a subset of those requested when :func:`~_cosmo.needs`
+        The redshifts must be a subset of those requested when :func:`~BoltzmannBase.needs`
         was called.
         """
         pass
@@ -211,6 +310,10 @@ class _cosmo(Theory):
         """
         from cobaya.cosmo_input import get_best_covmat
         return get_best_covmat(self.path_install, params_info, likes_info)
+
+    def current_state(self):
+        lasts = [self._states[i]["last"] for i in range(self._n_states)]
+        return self._states[lasts.index(max(lasts))]
 
     def __getattr__(self, method):
         try:

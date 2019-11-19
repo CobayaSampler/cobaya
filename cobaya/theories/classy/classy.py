@@ -144,7 +144,7 @@ from collections import namedtuple, OrderedDict as odict
 from numbers import Number
 
 # Local
-from cobaya.theories._cosmo import _cosmo, PowerSpectrumInterpolator
+from cobaya.theories._cosmo import BoltzmannBase, PowerSpectrumInterpolator
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, pip_install
 from cobaya.conventions import _c_km_s, _T_CMB_K
@@ -159,7 +159,7 @@ Collector.__new__.__defaults__ = (None, [], [], {}, None, None)
 non_linear_default_code = "halofit"
 
 
-class classy(_cosmo):
+class classy(BoltzmannBase):
     # Name of the Class repo/folder and version to download
     classy_repo_name = "lesgourg/class_public"
     classy_repo_version = "v2.7.2"
@@ -201,14 +201,8 @@ class classy(_cosmo):
         self.classy = Class()
         # Propagate errors up
         global CosmoComputationError, CosmoSevereError
-        # Generate states, to avoid recomputing
-        self._n_states = 3
-        self._states = [{"params": None, "derived": None, "derived_extra": None,
-                         "last": 0} for i in range(self._n_states)]
-        # Dict of named tuples to collect requirements and computation methods
-        self.collectors = {}
-        # Additional input parameters to pass to CLASS
-        self.extra_args = deepcopy_where_possible(self.extra_args) or {}
+
+        super(classy, self).initialize()
         # Add general CLASS stuff
         self.extra_args["output"] = self.extra_args.get("output", "")
         if "sBBN file" in self.extra_args:
@@ -218,10 +212,6 @@ class classy(_cosmo):
         self.planck_to_classy = self.renames
         # Derived parameters that may not have been requested, but will be necessary later
         self.derived_extra = []
-
-    def current_state(self):
-        lasts = [self._states[i]["last"] for i in range(self._n_states)]
-        return self._states[lasts.index(max(lasts))]
 
     def needs(self, **requirements):
         # Computed quantities required by the likelihood
@@ -344,99 +334,70 @@ class classy(_cosmo):
         self.classy.struct_cleanup()
         self.classy.set(**args)
 
-    def compute(self, _derived=None, cached=True, **params_values_dict):
-        lasts = [self._states[i]["last"] for i in range(self._n_states)]
+    def run_calculation(self, _derived, i_state, **params_values_dict):
+        # Set parameters
+        self.set(params_values_dict, i_state)
+        # Compute!
         try:
-            if not cached:
-                raise StopIteration
-            # are the parameter values there already?
-            i_state = next(i for i in range(self._n_states)
-                           if self._states[i]["params"] == params_values_dict)
-            # has any new product been requested?
-            for product in self.collectors:
-                next(k for k in self._states[i_state] if k == product)
-            reused_state = True
-            # Get (pre-computed) derived parameters
-            if _derived == {}:
-                _derived.update(self._states[i_state]["derived"])
-            self.log.debug("Re-using computed results (state %d)", i_state)
-        except StopIteration:
-            reused_state = False
-            # update the (first) oldest one and compute
-            i_state = lasts.index(min(lasts))
-            self.log.debug("Computing (state %d)", i_state)
-            if self.timer:
-                self.timer.start()
-            # Set parameters
-            self.set(params_values_dict, i_state)
-            # Compute!
-            try:
-                self.classy.compute()
-            # "Valid" failure of CLASS: parameters too extreme -> log and report
-            except CosmoComputationError as e:
-                if self.stop_at_error:
-                    self.log.error(
-                        "Computation error (see traceback below)! "
-                        "Parameters sent to CLASS: %r and %r.\n"
-                        "To ignore this kind of errors, make 'stop_at_error: False'.",
-                        self._states[i_state]["params"], self.extra_args)
-                    raise
-                else:
-                    self.log.debug("Computation of cosmological products failed. "
-                                   "Assigning 0 likelihood and going on. "
-                                   "The output of the CLASS error was %s" % e)
-                return 0
-            # CLASS not correctly initialized, or input parameters not correct
-            except CosmoSevereError:
-                self.log.error("Serious error setting parameters or computing results. "
-                               "The parameters passed were %r and %r. "
-                               "See original CLASS's error traceback below.\n",
-                               self._states[i_state]["params"], self.extra_args)
-                raise  # No LoggedError, so that CLASS traceback gets printed
-            # Gather products
-            for product, collector in self.collectors.items():
-                # Special case: sigma8 needs H0, which cannot be known beforehand:
-                if "sigma8" in self.collectors:
-                    self.collectors["sigma8"].args[0] = 8 / self.classy.h()
-                method = getattr(self.classy, collector.method)
-                arg_array = self.collectors[product].arg_array
-                if arg_array is None:
-                    self._states[i_state][product] = method(
-                        *self.collectors[product].args, **self.collectors[product].kwargs)
-                elif isinstance(arg_array, Number):
-                    self._states[i_state][product] = np.zeros(
-                        len(self.collectors[product].args[arg_array]))
-                    for i, v in enumerate(self.collectors[product].args[arg_array]):
-                        args = (list(self.collectors[product].args[:arg_array]) + [v] +
-                                list(self.collectors[product].args[arg_array + 1:]))
-                        self._states[i_state][product][i] = method(
-                            *args, **self.collectors[product].kwargs)
-                elif arg_array in self.collectors[product].kwargs:
-                    value = np.atleast_1d(self.collectors[product].kwargs[arg_array])
-                    self._states[i_state][product] = np.zeros(value.shape)
-                    for i, v in enumerate(value):
-                        kwargs = deepcopy(self.collectors[product].kwargs)
-                        kwargs[arg_array] = v
-                        self._states[i_state][product][i] = method(
-                            *self.collectors[product].args, **kwargs)
-                if collector.post:
-                    self._states[i_state][product] = collector.post(
-                        *self._states[i_state][product])
-            # Prepare derived parameters
-            d, d_extra = self._get_derived_all(derived_requested=(_derived == {}))
-            if _derived == {}:
-                _derived.update(d)
-            self._states[i_state]["derived"] = odict(
-                [[p, (_derived or {}).get(p)] for p in self.output_params])
-            # Prepare necessary extra derived parameters
-            self._states[i_state]["derived_extra"] = deepcopy(d_extra)
-            if self.timer:
-                self.timer.increment(self.log)
-        # make this one the current one by decreasing the antiquity of the rest
-        for i in range(self._n_states):
-            self._states[i]["last"] -= max(lasts)
-        self._states[i_state]["last"] = 1
-        return 1 if reused_state else 2
+            self.classy.compute()
+        # "Valid" failure of CLASS: parameters too extreme -> log and report
+        except CosmoComputationError as e:
+            if self.stop_at_error:
+                self.log.error(
+                    "Computation error (see traceback below)! "
+                    "Parameters sent to CLASS: %r and %r.\n"
+                    "To ignore this kind of errors, make 'stop_at_error: False'.",
+                    self._states[i_state]["params"], self.extra_args)
+                raise
+            else:
+                self.log.debug("Computation of cosmological products failed. "
+                               "Assigning 0 likelihood and going on. "
+                               "The output of the CLASS error was %s" % e)
+            return False
+        # CLASS not correctly initialized, or input parameters not correct
+        except CosmoSevereError:
+            self.log.error("Serious error setting parameters or computing results. "
+                           "The parameters passed were %r and %r. "
+                           "See original CLASS's error traceback below.\n",
+                           self._states[i_state]["params"], self.extra_args)
+            raise  # No LoggedError, so that CLASS traceback gets printed
+        # Gather products
+        for product, collector in self.collectors.items():
+            # Special case: sigma8 needs H0, which cannot be known beforehand:
+            if "sigma8" in self.collectors:
+                self.collectors["sigma8"].args[0] = 8 / self.classy.h()
+            method = getattr(self.classy, collector.method)
+            arg_array = self.collectors[product].arg_array
+            if arg_array is None:
+                self._states[i_state][product] = method(
+                    *self.collectors[product].args, **self.collectors[product].kwargs)
+            elif isinstance(arg_array, Number):
+                self._states[i_state][product] = np.zeros(
+                    len(self.collectors[product].args[arg_array]))
+                for i, v in enumerate(self.collectors[product].args[arg_array]):
+                    args = (list(self.collectors[product].args[:arg_array]) + [v] +
+                            list(self.collectors[product].args[arg_array + 1:]))
+                    self._states[i_state][product][i] = method(
+                        *args, **self.collectors[product].kwargs)
+            elif arg_array in self.collectors[product].kwargs:
+                value = np.atleast_1d(self.collectors[product].kwargs[arg_array])
+                self._states[i_state][product] = np.zeros(value.shape)
+                for i, v in enumerate(value):
+                    kwargs = deepcopy(self.collectors[product].kwargs)
+                    kwargs[arg_array] = v
+                    self._states[i_state][product][i] = method(
+                        *self.collectors[product].args, **kwargs)
+            if collector.post:
+                self._states[i_state][product] = collector.post(
+                    *self._states[i_state][product])
+        # Prepare derived parameters
+        d, d_extra = self._get_derived_all(derived_requested=(_derived == {}))
+        if _derived == {}:
+            _derived.update(d)
+        self._states[i_state]["derived"] = odict(
+            (p, (_derived or {}).get(p)) for p in self.output_params)
+        # Prepare necessary extra derived parameters
+        self._states[i_state]["derived_extra"] = deepcopy(d_extra)
 
     def _get_derived_all(self, derived_requested=True):
         """
@@ -523,24 +484,6 @@ class classy(_cosmo):
             values = values[0]
         return values[i_kwarg_z]
 
-    def get_H(self, z, units="km/s/Mpc"):
-        try:
-            return self._get_z_dependent("H", z) * self.H_units_conv_factor[units]
-        except KeyError:
-            raise LoggedError(
-                self.log, "Units not known for H: '%s'. Try instead one of %r.",
-                units, list(self.H_units_conv_factor))
-
-    def get_angular_diameter_distance(self, z):
-        return self._get_z_dependent("angular_diameter_distance", z)
-
-    def get_comoving_radial_distance(self, z):
-        return self._get_z_dependent("comoving_radial_distance", z)
-
-    def get_Pk_interpolator(self):
-        current_state = self.current_state()
-        return {k[1:]: deepcopy(v)
-                for k, v in current_state.items() if k[0] == "Pk_interpolator"}
 
     def close(self):
         self.classy.struct_cleanup()

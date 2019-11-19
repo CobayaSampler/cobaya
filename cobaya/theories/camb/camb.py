@@ -181,20 +181,20 @@ import numpy as np
 from collections import namedtuple, OrderedDict as odict
 
 # Local
-from cobaya.theories._cosmo import _cosmo, PowerSpectrumInterpolator
+from cobaya.theories._cosmo import BoltzmannBase
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, check_gcc_version
 from cobaya.conventions import _c_km_s, _T_CMB_K
-from cobaya.tools import deepcopy_where_possible, getfullargspec
+from cobaya.tools import getfullargspec, load_module
 
 # Result collector
 Collector = namedtuple("collector", ["method", "args", "kwargs"])
 Collector.__new__.__defaults__ = (None, [], {})
 
-CAMBOutputs = namedtuple("CAMBOutputs", ["CAMBparams", "CAMBdata", "derived"])
+CAMBOutputs = namedtuple("CAMBOutputs", ["camb_params", "results", "derived"])
 
 
-class camb(_cosmo):
+class camb(BoltzmannBase):
     # Name of the Class repo/folder and version to download
     camb_repo_name = "cmbant/CAMB"
     camb_repo_version = "master"
@@ -204,6 +204,7 @@ class camb(_cosmo):
         """Importing CAMB from the correct path, if given."""
         if not self.path and self.path_install:
             self.path = self.get_path(self.path_install)
+        pycamb_path = None
         if self.path and not os.path.exists(self.path):
             # Fail if this was a directly specified path,
             # or ignore and try to global-import if it came from a path_install
@@ -227,7 +228,7 @@ class camb(_cosmo):
         else:
             self.log.info("Importing *global* CAMB.")
         try:
-            import camb
+            self.camb = load_module("camb", path=pycamb_path)
         except ImportError:
             raise LoggedError(
                 self.log, "Couldn't find the CAMB python interface.\n"
@@ -235,16 +236,9 @@ class camb(_cosmo):
                           " (a) specify a path (you didn't) or\n"
                           " (b) install the Python interface globally with\n"
                           "     'pip install -e /path/to/camb [--user]'")
-        self.camb = camb
-        # Generate states, to avoid recomputing
-        self._n_states = 3
-        self._states = [
-            {"params": None, "derived": None, "derived_extra": None, "last": 0}
-            for i in range(self._n_states)]
-        # Dict of named tuples to collect requirements and computation methods
-        self.collectors = {}
-        # Additional input parameters to pass to CAMB, and attributes to set_ manually
-        self.extra_args = deepcopy_where_possible(self.extra_args) or {}
+
+        super(camb, self).initialize()
+
         self.extra_attrs = {"Want_CMB": False, "Want_cl_2D_array": False,
                             'WantCls': False}
 
@@ -262,10 +256,6 @@ class camb(_cosmo):
         self.non_linear_lens = False
         self.non_linear_pk = False
         self._base_params = None
-
-    def current_state(self):
-        lasts = [self._states[i]["last"] for i in range(self._n_states)]
-        return self._states[lasts.index(max(lasts))]
 
     def needs(self, **requirements):
         # Computed quantities required by the likelihood
@@ -350,7 +340,7 @@ class camb(_cosmo):
                 if not getattr(self, "sources", None):
                     self.sources = odict()
                 for source, window in v["sources"].items():
-                    # If it was already there, _cosmo.needs() has already checked that
+                    # If it was already there, BoltzmannBase.needs() has already checked that
                     # old info == new info
                     if source not in self.sources:
                         self.sources[source] = window
@@ -496,76 +486,49 @@ class camb(_cosmo):
                 "Some of the parameters passed to CAMB were not recognized: %s" % str(e))
         return False
 
-    def compute(self, _derived=None, cached=True, **params_values_dict):
-        lasts = [self._states[i]["last"] for i in range(self._n_states)]
-        try:
-            if not cached:
-                raise StopIteration
-            # are the parameter values there already?
-            i_state = next(i for i in range(self._n_states)
-                           if self._states[i]["params"] == params_values_dict)
-            # has any new product been requested?
-            for product in self.collectors:
-                next(k for k in self._states[i_state] if k == product)
-            reused_state = True
-            # Get (pre-computed) derived parameters
-            if _derived == {}:
-                _derived.update(self._states[i_state]["derived"] or {})
-            self.log.debug("Re-using computed results (state %d)", i_state)
-        except StopIteration:
-            reused_state = False
-            # update the (first) oldest one and compute
-            i_state = lasts.index(min(lasts))
-            self.log.debug("Computing (state %d)", i_state)
-            if self.timer:
-                self.timer.start()
-            # Set parameters
-            camb_params = self.set(params_values_dict, i_state)
-            # Failed to set parameters but no error raised
-            # (e.g. out of computationally feasible range): lik=0
-            if not camb_params:
-                return 0
+    def run_calculation(self, _derived, i_state, **params_values_dict):
+        # Set parameters
+        camb_params = self.set(params_values_dict, i_state)
+        # Failed to set parameters but no error raised
+        # (e.g. out of computationally feasible range): lik=0
+        if not camb_params:
+            return False
 
-            # Compute the necessary products (incl. any intermediate result, if needed)
-            if self.collectors:
-                results = self.camb.get_results(camb_params) if self.needs_perts else \
-                    self.camb.get_background(camb_params)
-            else:
-                results = None
-            for product, collector in self.collectors.items():
-                try:
-                    if collector.method:
-                        self._states[i_state][product] = \
-                            collector.method(results, *collector.args, **collector.kwargs)
-                    else:
-                        self._states[i_state][product] = results
-                except self.camb.CAMBError:
-                    if self.stop_at_error:
-                        self.log.error(
-                            "Computation error (see traceback below)! "
-                            "Parameters sent to CAMB: %r and %r.\n"
-                            "To ignore this kind of errors, make 'stop_at_error: False'.",
-                            self._states[i_state]["params"], self.extra_args)
-                        raise
-                    else:
-                        # Assumed to be a "parameter out of range" error.
-                        return 0
-            # Prepare derived parameters
-            intermediates = CAMBOutputs(camb_params, results,
-                                        results.get_derived_params() if results else None)
-            if _derived == {}:
-                _derived.update(self._get_derived_all(intermediates))
-                self._states[i_state]["derived"] = _derived.copy()
-            # Prepare necessary extra derived parameters
-            self._states[i_state]["derived_extra"] = {
-                p: self._get_derived(p, intermediates) for p in self.derived_extra}
-            if self.timer:
-                self.timer.increment(self.log)
-        # make this one the current one by decreasing the antiquity of the rest
-        for i in range(self._n_states):
-            self._states[i]["last"] -= max(lasts)
-        self._states[i_state]["last"] = 1
-        return 1 if reused_state else 2
+        # Compute the necessary products (incl. any intermediate result, if needed)
+        if self.collectors:
+            results = self.camb.get_results(camb_params) if self.needs_perts else \
+                self.camb.get_background(camb_params)
+        else:
+            results = None
+        for product, collector in self.collectors.items():
+            try:
+                if collector.method:
+                    self._states[i_state][product] = \
+                        collector.method(results, *collector.args, **collector.kwargs)
+                else:
+                    self._states[i_state][product] = results
+            except self.camb.CAMBError:
+                if self.stop_at_error:
+                    self.log.error(
+                        "Computation error (see traceback below)! "
+                        "Parameters sent to CAMB: %r and %r.\n"
+                        "To ignore this kind of errors, make 'stop_at_error: False'.",
+                        self._states[i_state]["params"], self.extra_args)
+                    raise
+                else:
+                    # Assumed to be a "parameter out of range" error.
+                    return False
+        # Prepare derived parameters
+        intermediates = CAMBOutputs(camb_params, results,
+                                    results.get_derived_params() if results else None)
+        if _derived == {}:
+            _derived.update(self._get_derived_all(intermediates))
+            self._states[i_state]["derived"] = _derived.copy()
+        # Prepare necessary extra derived parameters
+        self._states[i_state]["derived_extra"] = {
+            p: self._get_derived(p, intermediates) for p in self.derived_extra}
+
+        return True
 
     def _get_derived_from_params(self, p, intermediates):
         for result in intermediates[:2]:
@@ -583,7 +546,7 @@ class camb(_cosmo):
         return None
 
     def _get_derived_from_getter(self, p, intermediates):
-        return getattr(intermediates.CAMBparams, "get_" + p, lambda: None)()
+        return getattr(intermediates.camb_params, "get_" + p, lambda: None)()
 
     def _get_derived(self, p, intermediates):
         """
@@ -593,7 +556,7 @@ class camb(_cosmo):
         """
         # Specific calls, if general ones fail:
         if p == "sigma8":
-            return intermediates.CAMBdata.get_sigma8()[-1]
+            return intermediates.results.get_sigma8()[-1]
         if intermediates.derived:
             derived = intermediates.derived.get(p, None)
             if derived is not None:
@@ -670,20 +633,6 @@ class camb(_cosmo):
             i_kwarg_z = np.searchsorted(computed_redshifts, np.atleast_1d(z))
         return np.array(deepcopy(self.current_state()[quantity]))[i_kwarg_z]
 
-    def get_H(self, z, units="km/s/Mpc"):
-        try:
-            return self._get_z_dependent("H", z) * self.H_units_conv_factor[units]
-        except KeyError:
-            raise LoggedError(
-                self.log, "Units not known for H: '%s'. Try instead one of %r.",
-                units, list(self.H_units_conv_factor))
-
-    def get_angular_diameter_distance(self, z):
-        return self._get_z_dependent("angular_diameter_distance", z)
-
-    def get_comoving_radial_distance(self, z):
-        return self._get_z_dependent("comoving_radial_distance", z)
-
     def get_fsigma8(self, z):
         return self._get_z_dependent("fsigma8", z)
 
@@ -709,37 +658,6 @@ class camb(_cosmo):
             return current_state[("matter_power_spectrum", nonlinear) + tuple(var_pair)]
         except KeyError:
             raise ValueError("Matter power %s, %s not computed" % var_pair)
-
-    def get_Pk_interpolator(self, var_pair=("delta_tot", "delta_tot"), nonlinear=True,
-                            extrap_kmax=None):
-        """
-        Get P(z,k) bicubic interpolation object (:class:`PowerSpectrumInterpolator`).
-        Neither k nor PK are in h^{-1} units.
-
-        :param var_pair: variable pair for power spectrum
-        :param nonlinear: non-linear spectrum (default True)
-        :param extrap_kmax: log linear extrapolation beyond max computed k to extrap_kmax
-        :return: :class:`PowerSpectrumInterpolator` instance.
-        """
-
-        current_state = self.current_state()
-        nonlinear = bool(nonlinear)
-        key = ("Pk_interpolator", nonlinear, extrap_kmax) + tuple(var_pair)
-        if key in current_state:
-            return current_state[key]
-
-        k, z, pk = self.get_matter_power(var_pair=var_pair, nonlinear=nonlinear,
-                                         _state=current_state)
-        log_p = np.all(pk > 0)
-        if log_p:
-            pk = np.log(pk)
-        elif extrap_kmax > k[-1]:
-            raise ValueError('cannot do log extrapolation with negative pk for %s, %s'
-                             % var_pair)
-
-        result = PowerSpectrumInterpolator(z, k, pk, logP=log_p, extrap_kmax=extrap_kmax)
-        current_state[key] = result
-        return result
 
     def get_source_Cl(self):
 
@@ -772,9 +690,9 @@ class camb(_cosmo):
 
     @classmethod
     def get_path(cls, path):
-        return os.path.realpath(os.path.join(path, "code", cls.camb_repo_name[
-                                                           cls.camb_repo_name.find(
-                                                               "/") + 1:]))
+        return os.path.realpath(
+            os.path.join(path, "code",
+                         cls.camb_repo_name[cls.camb_repo_name.find("/") + 1:]))
 
     @classmethod
     def is_installed(cls, **kwargs):
