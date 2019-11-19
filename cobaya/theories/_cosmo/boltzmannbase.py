@@ -166,7 +166,6 @@ class BoltzmannBase(Theory):
                 return 0
             if self.timer:
                 self.timer.increment(self.log)
-
         # make this one the current one by decreasing the antiquity of the rest
         for i in range(self._n_states):
             self._states[i]["last"] -= max(lasts)
@@ -175,8 +174,7 @@ class BoltzmannBase(Theory):
 
     def requested(self):
         """
-        Returns the full set of cosmological products and parameters requested from
-        anywhere.
+        Returns the full set of requested cosmological products and parameters.
         """
         return self._needs
 
@@ -236,7 +234,7 @@ class BoltzmannBase(Theory):
         """
         return self._get_z_dependent("comoving_radial_distance", z)
 
-    def get_matter_power(self, var_pair=("delta_tot", "delta_tot"), nonlinear=True,
+    def get_Pk_grid(self, var_pair=("delta_tot", "delta_tot"), nonlinear=True,
                          _state=None):
         """
         Get  matter power spectrum, e.g. suitable for splining.
@@ -263,22 +261,19 @@ class BoltzmannBase(Theory):
                             extrap_kmax
         :return: :class:`PowerSpectrumInterpolator` instance.
         """
-
         current_state = self.current_state()
         nonlinear = bool(nonlinear)
         key = ("Pk_interpolator", nonlinear, extrap_kmax) + tuple(var_pair)
         if key in current_state:
             return current_state[key]
-
-        k, z, pk = self.get_matter_power(var_pair=var_pair, nonlinear=nonlinear,
-                                         _state=current_state)
+        k, z, pk = self.get_Pk_grid(var_pair=var_pair, nonlinear=nonlinear,
+                                    _state=current_state)
         log_p = np.all(pk > 0)
         if log_p:
             pk = np.log(pk)
         elif extrap_kmax > k[-1]:
             raise ValueError('cannot do log extrapolation with negative pk for %s, %s'
                              % var_pair)
-
         result = PowerSpectrumInterpolator(z, k, pk, logP=log_p, extrap_kmax=extrap_kmax)
         current_state[key] = result
         return result

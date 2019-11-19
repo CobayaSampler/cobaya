@@ -636,19 +636,8 @@ class camb(BoltzmannBase):
     def get_fsigma8(self, z):
         return self._get_z_dependent("fsigma8", z)
 
-    def get_matter_power(self, var_pair=("delta_tot", "delta_tot"), nonlinear=True,
+    def get_Pk_grid(self, var_pair=("delta_tot", "delta_tot"), nonlinear=True,
                          _state=None):
-        """
-        Get  matter power spectrum, e.g. suitable for splining.
-        Returned arrays may be bigger or more densely sampled than requested, but will
-        include required values. Neither k nor PK are in h^{-1} units.
-        z and k are in ascending order.
-
-        :param nonlinear: whether the linear or nonlinear spectrum
-        :param var_pair: which power spectrum
-        :return: k, z, PK, where k and z are arrays,
-                 and PK[i,j] is the value at z[i], k[j]
-        """
         if nonlinear and not self.non_linear_pk:
             raise ValueError("Getting non-linear matter power but nonlinear "
                              "not specified in requirements")
@@ -660,10 +649,8 @@ class camb(BoltzmannBase):
             raise ValueError("Matter power %s, %s not computed" % var_pair)
 
     def get_source_Cl(self):
-
         current_state = self.current_state()
         # get C_l^XX from the cosmological code
-
         try:
             cls = deepcopy(current_state["source_Cl"])
         except:

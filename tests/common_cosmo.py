@@ -49,7 +49,7 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
     # Check value of likelihoods
     for like in info[kinds.likelihood]:
         chi2 = -2 * likes[like]
-        msg = ("Testing likelihood '%s': | %.2f (now) - %.2f (ref) | = %.2f >= %.2f" % (
+        msg = ("Testing likelihood '%s': | %.2f (now) - %.2f (ref) | = %.2f >=? %.2f" % (
             like, chi2, ref_chi2[like], abs(chi2 - ref_chi2[like]),
             ref_chi2["tolerance"]))
         assert abs(chi2 - ref_chi2[like]) < ref_chi2["tolerance"], msg
