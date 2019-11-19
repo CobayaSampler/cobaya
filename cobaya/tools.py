@@ -41,7 +41,7 @@ else:
 
 # Local
 from cobaya import __obsolete__
-from cobaya.conventions import _package, subfolders, _p_dist, kinds, _p_value
+from cobaya.conventions import _package, subfolders, partag, kinds
 from cobaya.log import LoggedError
 
 # Logger
@@ -222,7 +222,7 @@ def get_external_function(string_or_function, name=None):
     Returns the function.
     """
     if hasattr(string_or_function, "keys"):
-        string_or_function = string_or_function.get(_p_value, None)
+        string_or_function = string_or_function.get(partag.value, None)
     if isinstance(string_or_function, six.string_types):
         try:
             scope = globals()
@@ -352,7 +352,7 @@ def get_scipy_1d_pdf(info):
                           "No specific prior info given for sampled parameter '%s'." % param)
     # What distribution?
     try:
-        dist = info2.pop(_p_dist).lower()
+        dist = info2.pop(partag.dist).lower()
     # Not specified: uniform by default
     except KeyError:
         dist = "uniform"

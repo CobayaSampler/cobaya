@@ -20,7 +20,7 @@ from cobaya.parameterization import Parameterization
 from cobaya.parameterization import is_fixed_param, is_sampled_param, is_derived_param
 from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_prefix, _post
 from cobaya.conventions import _params, _prior, kinds, _weight
-from cobaya.conventions import _chi2, _separator, _minuslogpost, _force, _p_value, _p_drop
+from cobaya.conventions import _chi2, _separator, _minuslogpost, _force, partag
 from cobaya.conventions import _minuslogprior, _path_install, _input_params
 from cobaya.conventions import _separator_files, _post_add, _post_remove, _post_suffix
 from cobaya.collection import Collection
@@ -129,7 +129,7 @@ def post(info, sample=None):
             # Only one possibility left "fixed" parameter that was not present before:
             # input of new likelihood, or just an argument for dynamical derived (dropped)
             if ((p in info_in[_params] and
-                 pinfo[_p_value] != (pinfo_in or {}).get(_p_value, None))):
+                 pinfo[partag.value] != (pinfo_in or {}).get(partag.value, None))):
                 raise LoggedError(
                     log,
                     "You tried to add a fixed parameter '%s: %r' that was already present"
@@ -145,9 +145,9 @@ def post(info, sample=None):
     # (which in "updated info" turns into "derived: 'lambda [x]: [x]'")
     out_params_like = deepcopy(out[_params])
     for p, pinfo in out_params_like.items():
-        if ((is_derived_param(pinfo) and not (_p_value in pinfo)
+        if ((is_derived_param(pinfo) and not (partag.value in pinfo)
              and p not in add.get(_params, {}))):
-            out_params_like[p] = {_p_value: np.nan, _p_drop: True}
+            out_params_like[p] = {partag.value: np.nan, partag.drop: True}
     # 2.2 Manage adding/removing priors and likelihoods
     warn_remove = False
     for level in [_prior, kinds.likelihood]:

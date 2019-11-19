@@ -18,9 +18,7 @@ from copy import deepcopy
 import os
 
 # Local
-from cobaya.conventions import kinds, _params, _prior, _p_derived
-from cobaya.conventions import _p_ref, _p_proposal, _p_label, _p_dist, _p_drop, _p_value
-from cobaya.conventions import _p_renames, _chi2, _separator
+from cobaya.conventions import kinds, partag as p, _params, _chi2, _separator
 
 _camb = "camb"
 _classy = "classy"
@@ -40,30 +38,31 @@ primordial = odict([
         kinds.theory: {_camb: None, _classy: None},
         _params: odict([
             ["logA", odict([
-                (_prior, odict([("min", 1.61), ("max", 3.91)])),
-                (_p_ref, odict([(_p_dist, "norm"), ("loc", 3.05), ("scale", 0.001)])),
-                (_p_proposal, 0.001), (_p_label, r"\log(10^{10} A_\mathrm{s})"),
-                (_p_drop, True)])],
+                (p.prior, odict([("min", 1.61), ("max", 3.91)])),
+                (p.ref, odict([(p.dist, "norm"), ("loc", 3.05), ("scale", 0.001)])),
+                (p.proposal, 0.001), (p.latex, r"\log(10^{10} A_\mathrm{s})"),
+                (p.drop, True)])],
             ("As", odict([
-                (_p_value, "lambda logA: 1e-10*np.exp(logA)"),
-                (_p_label, r"A_\mathrm{s}")])),
+                (p.value, "lambda logA: 1e-10*np.exp(logA)"),
+                (p.latex, r"A_\mathrm{s}")])),
             ("ns", odict([
-                (_prior, odict([("min", 0.8), ("max", 1.2)])),
-                (_p_ref, odict([(_p_dist, "norm"), ("loc", 0.965), ("scale", 0.004)])),
-                (_p_proposal, 0.002), (_p_label, r"n_\mathrm{s}")]))])})])
+                (p.prior, odict([("min", 0.8), ("max", 1.2)])),
+                (p.ref, odict([(p.dist, "norm"), ("loc", 0.965), ("scale", 0.004)])),
+                (p.proposal, 0.002), (p.latex, r"n_\mathrm{s}")]))])})])
 primordial.update(odict([
     ["SFSR_DESpriors", {
         _desc: "Adiabatic scalar perturbations, power law + running spectrum -- DESpriors",
         kinds.theory: {_camb: None, _classy: None},
         _params: odict([
             ["As_1e9", odict([
-                [_prior, odict([["min", 0.5], ["max", 5]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 2.1], ["scale", 0.5]])],
-                [_p_proposal, 0.25], [_p_label, r"10^9 A_\mathrm{s})"],
-                [_p_drop, True], [_p_renames, "A"]])],
+                [p.prior, odict([["min", 0.5], ["max", 5]])],
+                [p.ref,
+                 odict([[p.dist, "norm"], ["loc", 2.1], ["scale", 0.5]])],
+                [p.proposal, 0.25], [p.latex, r"10^9 A_\mathrm{s})"],
+                [p.drop, True], [p.renames, "A"]])],
             ["As", odict([
-                [_p_value, "lambda As_1e9: 1e-9 * As_1e9"],
-                [_p_label, r"A_\mathrm{s}"]])],
+                [p.value, "lambda As_1e9: 1e-9 * As_1e9"],
+                [p.latex, r"A_\mathrm{s}"]])],
             ["ns", primordial["SFSR"][_params]["ns"]]])}]]))
 primordial.update(odict([
     ["SFSR_run", {
@@ -72,9 +71,10 @@ primordial.update(odict([
         _params: odict(
             (list(primordial["SFSR"][_params].items()) +
              [["nrun", odict([
-                 [_prior, odict([["min", -1], ["max", 1]])],
-                 [_p_ref, odict([[_p_dist, "norm"], ["loc", 0], ["scale", 0.005]])],
-                 [_p_proposal, 0.001], [_p_label, r"n_\mathrm{run}"]])]]))}]]))
+                 [p.prior, odict([["min", -1], ["max", 1]])],
+                 [p.ref,
+                  odict([[p.dist, "norm"], ["loc", 0], ["scale", 0.005]])],
+                 [p.proposal, 0.001], [p.latex, r"n_\mathrm{run}"]])]]))}]]))
 primordial.update(odict([
     ["SFSR_runrun", {
         _desc: "Adiabatic scalar perturbations, power law + 2nd-order running spectrum",
@@ -82,9 +82,11 @@ primordial.update(odict([
         _params: odict(
             (list(primordial["SFSR_run"][_params].items()) +
              [["nrunrun", odict([
-                 [_prior, odict([["min", -1], ["max", 1]])],
-                 [_p_ref, odict([[_p_dist, "norm"], ["loc", 0], ["scale", 0.002]])],
-                 [_p_proposal, 0.001], [_p_label, r"n_\mathrm{run,run}"]])]]))}]]))
+                 [p.prior, odict([["min", -1], ["max", 1]])],
+                 [p.ref,
+                  odict([[p.dist, "norm"], ["loc", 0], ["scale", 0.002]])],
+                 [p.proposal, 0.001],
+                 [p.latex, r"n_\mathrm{run,run}"]])]]))}]]))
 primordial.update(odict([
     ["SFSR_t", {
         _desc: "Adiabatic scalar+tensor perturbations, "
@@ -94,9 +96,10 @@ primordial.update(odict([
         _params: odict(
             (list(primordial["SFSR"][_params].items()) +
              [["r", odict([
-                 [_prior, odict([["min", 0], ["max", 3]])],
-                 [_p_ref, odict([[_p_dist, "norm"], ["loc", 0], ["scale", 0.03]])],
-                 [_p_proposal, 0.03], [_p_label, r"r_{0.05}"]])]]))}]]))
+                 [p.prior, odict([["min", 0], ["max", 3]])],
+                 [p.ref,
+                  odict([[p.dist, "norm"], ["loc", 0], ["scale", 0.03]])],
+                 [p.proposal, 0.03], [p.latex, r"r_{0.05}"]])]]))}]]))
 primordial.update(odict([
     ["SFSR_t_nrun", {
         _desc: "Adiabatic scalar+tensor perturbations, "
@@ -121,9 +124,10 @@ geometry = odict([
         kinds.theory: {_camb: None, _classy: None},
         _params: odict([
             ["omegak", odict([
-                [_prior, odict([["min", -0.3], ["max", 0.3]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", -0.009], ["scale", 0.001]])],
-                [_p_proposal, 0.001], [_p_label, r"\Omega_k"]])]])}], ])
+                [p.prior, odict([["min", -0.3], ["max", 0.3]])],
+                [p.ref,
+                 odict([[p.dist, "norm"], ["loc", -0.009], ["scale", 0.001]])],
+                [p.proposal, 0.001], [p.latex, r"\Omega_k"]])]])}], ])
 
 # Hubble parameter constraints
 H0_min, H0_max = 20, 100
@@ -133,17 +137,17 @@ hubble = odict([
         kinds.theory: {_camb: None, _classy: None},
         _params: odict([
             ["H0", odict([
-                [_prior, odict([["min", H0_min], ["max", H0_max]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 67], ["scale", 2]])],
-                [_p_proposal, 2], [_p_label, r"H_0"]])]])}],
+                [p.prior, odict([["min", H0_min], ["max", H0_max]])],
+                [p.ref, odict([[p.dist, "norm"], ["loc", 67], ["scale", 2]])],
+                [p.proposal, 2], [p.latex, r"H_0"]])]])}],
     ["H_DESpriors", {
         _desc: "Hubble parameter (reduced range for DES and lensing-only constraints)",
         kinds.theory: {_camb: None, _classy: None},
         _params: odict([
             ["H0", odict([
-                [_prior, odict([["min", 55], ["max", 91]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 67], ["scale", 2]])],
-                [_p_proposal, 2], [_p_label, r"H_0"]])]])}],
+                [p.prior, odict([["min", 55], ["max", 91]])],
+                [p.ref, odict([[p.dist, "norm"], ["loc", 67], ["scale", 2]])],
+                [p.proposal, 2], [p.latex, r"H_0"]])]])}],
     ["sound_horizon_last_scattering", {
         _desc: "Angular size of the sound horizon at last scattering "
                "(approximate, if using CAMB)",
@@ -151,28 +155,31 @@ hubble = odict([
             _camb: {
                 _params: odict([
                     ["theta_MC_100", odict([
-                        [_prior, odict([["min", 0.5], ["max", 10]])],
-                        [_p_ref,
-                         odict([[_p_dist, "norm"], ["loc", 1.04109], ["scale", 0.0004]])],
-                        [_p_proposal, 0.0002], [_p_label, r"100\theta_\mathrm{MC}"],
-                        [_p_drop, True], [_p_renames, "theta"]])],
+                        [p.prior, odict([["min", 0.5], ["max", 10]])],
+                        [p.ref,
+                         odict([[p.dist, "norm"], ["loc", 1.04109],
+                                ["scale", 0.0004]])],
+                        [p.proposal, 0.0002],
+                        [p.latex, r"100\theta_\mathrm{MC}"],
+                        [p.drop, True], [p.renames, "theta"]])],
                     ["cosmomc_theta", odict([
-                        [_p_value, "lambda theta_MC_100: 1.e-2*theta_MC_100"],
-                        [_p_derived, False]])],
-                    ["H0", {_p_label: r"H_0", "min": H0_min, "max": H0_max}]]),
+                        [p.value, "lambda theta_MC_100: 1.e-2*theta_MC_100"],
+                        [p.derived, False]])],
+                    ["H0", {p.latex: r"H_0", "min": H0_min, "max": H0_max}]]),
                 _extra_args: odict([["theta_H0_range", [H0_min, H0_max]]])},
             _classy: {
                 _params: odict([
                     ["theta_s_1e2", odict([
-                        [_prior, odict([["min", 0.5], ["max", 10]])],
-                        [_p_ref, odict([
-                            [_p_dist, "norm"], ["loc", 1.0416], ["scale", 0.0004]])],
-                        [_p_proposal, 0.0002], [_p_label, r"100\theta_\mathrm{s}"],
-                        [_p_drop, True]])],
+                        [p.prior, odict([["min", 0.5], ["max", 10]])],
+                        [p.ref, odict([
+                            [p.dist, "norm"], ["loc", 1.0416], ["scale", 0.0004]])],
+                        [p.proposal, 0.0002],
+                        [p.latex, r"100\theta_\mathrm{s}"],
+                        [p.drop, True]])],
                     ["100*theta_s", odict([
-                        [_p_value, "lambda theta_s_1e2: theta_s_1e2"],
-                        [_p_derived, False]])],
-                    ["H0", {_p_label: r"H_0"}]])}}}]])
+                        [p.value, "lambda theta_s_1e2: theta_s_1e2"],
+                        [p.derived, False]])],
+                    ["H0", {p.latex: r"H_0"}]])}}}]])
 
 # Matter sector (minus light species)
 N_eff_std = 3.046
@@ -183,41 +190,45 @@ matter = odict([
         kinds.theory: {_camb: None, _classy: None},
         _params: odict([
             ["omegabh2", odict([
-                [_prior, odict([["min", 0.005], ["max", 0.1]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.0224], ["scale", 0.0001]])],
-                [_p_proposal, 0.0001], [_p_label, r"\Omega_\mathrm{b} h^2"]])],
+                [p.prior, odict([["min", 0.005], ["max", 0.1]])],
+                [p.ref,
+                 odict([[p.dist, "norm"], ["loc", 0.0224], ["scale", 0.0001]])],
+                [p.proposal, 0.0001], [p.latex, r"\Omega_\mathrm{b} h^2"]])],
             ["omegach2", odict([
-                [_prior, odict([["min", 0.001], ["max", 0.99]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.120], ["scale", 0.001]])],
-                [_p_proposal, 0.0005], [_p_label, r"\Omega_\mathrm{c} h^2"]])],
-            ["omegam", {_p_label: r"\Omega_\mathrm{m}"}]])}],
+                [p.prior, odict([["min", 0.001], ["max", 0.99]])],
+                [p.ref,
+                 odict([[p.dist, "norm"], ["loc", 0.120], ["scale", 0.001]])],
+                [p.proposal, 0.0005], [p.latex, r"\Omega_\mathrm{c} h^2"]])],
+            ["omegam", {p.latex: r"\Omega_\mathrm{m}"}]])}],
     ["Omegab, Omegam", {
         _desc: "Flat prior on Omega for baryons and total matter",
         kinds.theory: {_camb: None, _classy: None},
         _params: odict([
             ["omegab", odict([
-                [_prior, odict([["min", 0.03], ["max", 0.07]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.0495], ["scale", 0.004]])],
-                [_p_proposal, 0.004], [_p_label, r"\Omega_\mathrm{b}"],
-                [_p_drop, True]])],
+                [p.prior, odict([["min", 0.03], ["max", 0.07]])],
+                [p.ref,
+                 odict([[p.dist, "norm"], ["loc", 0.0495], ["scale", 0.004]])],
+                [p.proposal, 0.004], [p.latex, r"\Omega_\mathrm{b}"],
+                [p.drop, True]])],
             ["omegam", odict([
-                [_prior, odict([["min", 0.1], ["max", 0.9]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.316], ["scale", 0.02]])],
-                [_p_proposal, 0.02], [_p_label, r"\Omega_\mathrm{m}"],
-                [_p_drop, True]])],
+                [p.prior, odict([["min", 0.1], ["max", 0.9]])],
+                [p.ref,
+                 odict([[p.dist, "norm"], ["loc", 0.316], ["scale", 0.02]])],
+                [p.proposal, 0.02], [p.latex, r"\Omega_\mathrm{m}"],
+                [p.drop, True]])],
             ["omegabh2", odict([
-                [_p_value, "lambda omegab, H0: omegab*(H0/100)**2"],
-                [_p_label, r"\Omega_\mathrm{b} h^2"]])],
+                [p.value, "lambda omegab, H0: omegab*(H0/100)**2"],
+                [p.latex, r"\Omega_\mathrm{b} h^2"]])],
             ["omegach2", odict([
-                [_p_value, ("lambda omegam, omegab, mnu, H0: "
-                            "(omegam-omegab)*(H0/100)**2-(mnu*(%g/3)**0.75)/%g" % (
-                                N_eff_std, nu_mass_fac))],
-                [_p_label, r"\Omega_\mathrm{c} h^2"]])]
+                [p.value, ("lambda omegam, omegab, mnu, H0: "
+                           "(omegam-omegab)*(H0/100)**2-(mnu*(%g/3)**0.75)/%g" % (
+                               N_eff_std, nu_mass_fac))],
+                [p.latex, r"\Omega_\mathrm{c} h^2"]])]
         ])}]])
 for m in matter.values():
     m[_params]["omegamh2"] = odict([
-        [_p_derived, "lambda omegam, H0: omegam*(H0/100)**2"],
-        [_p_label, r"\Omega_\mathrm{m} h^2"]])
+        [p.derived, "lambda omegam, H0: omegam*(H0/100)**2"],
+        [p.latex, r"\Omega_\mathrm{m} h^2"]])
 
 # Neutrinos and other extra matter
 neutrinos = odict([
@@ -228,26 +239,27 @@ neutrinos = odict([
                     _params: odict([["mnu", 0.06]])},
             _classy: {_extra_args: {"N_ncdm": 1, "N_ur": 2.0328},
                       _params: odict([
-                          ["m_ncdm", {_p_value: 0.06, _p_renames: "mnu"}]])}}}],
+                          ["m_ncdm", {p.value: 0.06, p.renames: "mnu"}]])}}}],
     ["varying_mnu", {
         _desc: "Varying total mass of 3 degenerate nu's, with N_eff=3.046",
         kinds.theory: {
             _camb: {_extra_args: {"num_massive_neutrinos": 3, "nnu": 3.046},
                     _params: odict([
                         ["mnu", odict([
-                            [_prior, odict([["min", 0], ["max", 5]])],
-                            [_p_ref, odict([
-                                [_p_dist, "norm"], ["loc", 0.02], ["scale", 0.1]])],
-                            [_p_proposal, 0.03], [_p_label, r"\sum m_\nu"]])]])},
+                            [p.prior, odict([["min", 0], ["max", 5]])],
+                            [p.ref, odict([
+                                [p.dist, "norm"], ["loc", 0.02], ["scale", 0.1]])],
+                            [p.proposal, 0.03], [p.latex, r"\sum m_\nu"]])]])},
             _classy: {_extra_args: {"N_ncdm": 1, "deg_ncdm": 3, "N_ur": 0.00641},
                       _params: odict([
                           ["m_ncdm", odict([
-                              [_prior, odict([["min", 0], ["max", 1.667]])],
-                              [_p_ref, odict([
-                                  [_p_dist, "norm"], ["loc", 0.0067], ["scale", 0.033]])],
-                              [_p_proposal, 0.01], [_p_label, r"m_\nu"]])],
-                          ["mnu", odict([[_p_derived, "lambda m_ncdm: 3 * m_ncdm"],
-                                         [_p_label, r"\sum m_\nu"]])]])}}}],
+                              [p.prior, odict([["min", 0], ["max", 1.667]])],
+                              [p.ref, odict([
+                                  [p.dist, "norm"], ["loc", 0.0067],
+                                  ["scale", 0.033]])],
+                              [p.proposal, 0.01], [p.latex, r"m_\nu"]])],
+                          ["mnu", odict([[p.derived, "lambda m_ncdm: 3 * m_ncdm"],
+                                         [p.latex, r"\sum m_\nu"]])]])}}}],
     ["varying_Neff", {
         _desc: "Varying Neff with two massless nu and one with m=0.06",
         kinds.theory: {
@@ -255,21 +267,25 @@ neutrinos = odict([
                     _params: odict([
                         ["mnu", 0.06],
                         ["nnu", odict([
-                            [_prior, odict([["min", 0.05], ["max", 10]])],
-                            [_p_ref, odict([
-                                [_p_dist, "norm"], ["loc", 3.046], ["scale", 0.05]])],
-                            [_p_proposal, 0.05], [_p_label, r"N_\mathrm{eff}"]])]])},
+                            [p.prior, odict([["min", 0.05], ["max", 10]])],
+                            [p.ref, odict([
+                                [p.dist, "norm"], ["loc", 3.046], ["scale", 0.05]])],
+                            [p.proposal, 0.05],
+                            [p.latex, r"N_\mathrm{eff}"]])]])},
             _classy: {_extra_args: {"N_ncdm": 1},
                       _params: odict([
-                          ["m_ncdm", odict([[_p_value, 0.06], [_p_renames, "mnu"]])],
+                          ["m_ncdm",
+                           odict([[p.value, 0.06], [p.renames, "mnu"]])],
                           ["N_ur", odict([
-                              [_prior, odict([["min", 0.0001], ["max", 9]])],
-                              [_p_ref, odict([
-                                  [_p_dist, "norm"], ["loc", 2.0328], ["scale", 0.05]])],
-                              [_p_proposal, 0.05], [_p_label, r"N_\mathrm{ur}"]])],
+                              [p.prior, odict([["min", 0.0001], ["max", 9]])],
+                              [p.ref, odict([
+                                  [p.dist, "norm"], ["loc", 2.0328],
+                                  ["scale", 0.05]])],
+                              [p.proposal, 0.05],
+                              [p.latex, r"N_\mathrm{ur}"]])],
                           ["nnu", odict([
-                              [_p_derived, "lambda Neff: Neff"],
-                              [_p_label, r"N_\mathrm{eff}"]])]])}}}]])
+                              [p.derived, "lambda Neff: Neff"],
+                              [p.latex, r"N_\mathrm{eff}"]])]])}}}]])
 neutrinos.update(odict([
     ["varying_mnu_Neff", {
         _desc: "Varying Neff and total mass of 3 degenerate nu's",
@@ -295,7 +311,7 @@ neutrinos.update(odict([
             #                        neutrinos["varying_Neff"][_theory]["classy"][_params]["nnu"])]
             #                ])}
         }}]]))
-# neutrinos["varying_mnu_Neff"][_theory][_classy][_params]["N_ur"][_p_ref]["loc"] = 0.00641
+# neutrinos["varying_mnu_Neff"][_theory][_classy][_params]["N_ur"][p.ref]["loc"] = 0.00641
 
 #    # ["varying_Neff+1sterile", {
 #    #     _desc: "Varying Neff plus 1 sterile neutrino (SM nu's with m=0,0,0.06)",
@@ -305,14 +321,14 @@ neutrinos.update(odict([
 #    #             [["accuracy_level", 1.2]])}},
 #    #     _params: odict([
 #    #         ["nnu", odict([
-#    #             [_prior, odict([["min", 3.046], ["max", 10]])],
-#    #             [_p_ref, odict([[_p_dist, "norm"], ["loc", 3.046], ["scale", 0.05]])],
-#    #             [_p_proposal, 0.05], [_p_label, r"N_\mathrm{eff}"]])],
+#    #             [p.prior, odict([["min", 3.046], ["max", 10]])],
+#    #             [p.ref, odict([[p.dist, "norm"], ["loc", 3.046], ["scale", 0.05]])],
+#    #             [p.proposal, 0.05], [p.latex, r"N_\mathrm{eff}"]])],
 #    #         ["meffsterile", odict([
-#    #             [_prior, odict([["min", 0], ["max", 3]])#,
-#    #             [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.1], ["scale", 0.1]])],
-#    #             [_p_proposal, 0.03],
-#    #             [_p_label, r"m_{\nu,\mathrm{sterile}}^\mathrm{eff}"]])]])}]
+#    #             [p.prior, odict([["min", 0], ["max", 3]])#,
+#    #             [p.ref, odict([[p.dist, "norm"], ["loc", 0.1], ["scale", 0.1]])],
+#    #             [p.proposal, 0.03],
+#    #             [p.latex, r"m_{\nu,\mathrm{sterile}}^\mathrm{eff}"]])]])}]
 
 # Dark Energy
 dark_energy = odict([
@@ -320,42 +336,44 @@ dark_energy = odict([
         _desc: "Cosmological constant (w=-1)",
         kinds.theory: {_camb: None, _classy: None},
         _params: odict([
-            ["omegal", {_p_label: r"\Omega_\Lambda"}]])}],
+            ["omegal", {p.latex: r"\Omega_\Lambda"}]])}],
     ["de_w", {
         _desc: "Varying constant eq of state",
         kinds.theory: {_camb: None,
                        _classy: {_params: {"Omega_Lambda": 0}}},
         _params: odict([
             ["w", odict([
-                [_prior, odict([["min", -3], ["max", -0.333]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", -0.99], ["scale", 0.02]])],
-                [_p_proposal, 0.02], [_p_label, r"w_\mathrm{DE}"]])]])}],
+                [p.prior, odict([["min", -3], ["max", -0.333]])],
+                [p.ref,
+                 odict([[p.dist, "norm"], ["loc", -0.99], ["scale", 0.02]])],
+                [p.proposal, 0.02], [p.latex, r"w_\mathrm{DE}"]])]])}],
     ["de_w_wa", {
         _desc: "Varying constant eq of state with w(a) = w0 + (1-a) wa",
         kinds.theory: {_camb: None,
                        _classy: {_params: {"Omega_Lambda": 0}}},
         _params: odict([
             ["w", odict([
-                [_prior, odict([["min", -3], ["max", 1]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", -0.99], ["scale", 0.02]])],
-                [_p_proposal, 0.02], [_p_label, r"w_{0,\mathrm{DE}}"]])],
+                [p.prior, odict([["min", -3], ["max", 1]])],
+                [p.ref,
+                 odict([[p.dist, "norm"], ["loc", -0.99], ["scale", 0.02]])],
+                [p.proposal, 0.02], [p.latex, r"w_{0,\mathrm{DE}}"]])],
             ["wa", odict([
-                [_prior, odict([["min", -3], ["max", 2]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0], ["scale", 0.05]])],
-                [_p_proposal, 0.05], [_p_label, r"w_{a,\mathrm{DE}}"]])]])}]])
+                [p.prior, odict([["min", -3], ["max", 2]])],
+                [p.ref, odict([[p.dist, "norm"], ["loc", 0], ["scale", 0.05]])],
+                [p.proposal, 0.05], [p.latex, r"w_{a,\mathrm{DE}}"]])]])}]])
 
 # BBN
 bbn_derived_camb = odict([
-    ["YpBBN", odict([[_p_label, r"Y_P^\mathrm{BBN}"]])],
-    ["DHBBN", odict([[_p_derived, r"lambda DH: 10**5*DH"],
-                     [_p_label, r"10^5 \mathrm{D}/\mathrm{H}"]])]])
+    ["YpBBN", odict([[p.latex, r"Y_P^\mathrm{BBN}"]])],
+    ["DHBBN", odict([[p.derived, r"lambda DH: 10**5*DH"],
+                     [p.latex, r"10^5 \mathrm{D}/\mathrm{H}"]])]])
 bbn = odict([
     ["consistency", {
         _desc: "Primordial Helium fraction inferred from BBN consistency",
         kinds.theory: {_camb: {_params: bbn_derived_camb},
                        _classy: None},
         _params: odict([
-            ["yheused", {_p_label: r"Y_\mathrm{P}"}]])}],
+            ["yheused", {p.latex: r"Y_\mathrm{P}"}]])}],
     ["YHe_des_y1", {
         _desc: "Fixed Y_P = 0.245341 (used in DES Y1)",
         kinds.theory: {_camb: None,
@@ -368,9 +386,10 @@ bbn = odict([
                        _classy: None},
         _params: odict([
             ["yhe", odict([
-                [_prior, odict([["min", 0.1], ["max", 0.5]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.237], ["scale", 0.006]])],
-                [_p_proposal, 0.006], [_p_label, r"Y_\mathrm{P}"]])]])}], ])
+                [p.prior, odict([["min", 0.1], ["max", 0.5]])],
+                [p.ref,
+                 odict([[p.dist, "norm"], ["loc", 0.237], ["scale", 0.006]])],
+                [p.proposal, 0.006], [p.latex, r"Y_\mathrm{P}"]])]])}], ])
 
 # Reionization
 reionization = odict([
@@ -379,19 +398,22 @@ reionization = odict([
         kinds.theory: {_camb: None, _classy: None},
         _params: odict([
             ["tau", odict([
-                [_prior, odict([["min", 0.01], ["max", 0.8]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.055], ["scale", 0.006]])],
-                [_p_proposal, 0.003], [_p_label, r"\tau_\mathrm{reio}"]])],
-            ["zrei", {_p_label: r"z_\mathrm{re}"}]])}],
+                [p.prior, odict([["min", 0.01], ["max", 0.8]])],
+                [p.ref,
+                 odict([[p.dist, "norm"], ["loc", 0.055], ["scale", 0.006]])],
+                [p.proposal, 0.003], [p.latex, r"\tau_\mathrm{reio}"]])],
+            ["zrei", {p.latex: r"z_\mathrm{re}"}]])}],
     ["gauss_prior", {
         _desc: "Standard reio, lasting delta_z=0.5, gaussian prior around tau=0.07",
         kinds.theory: {_camb: None, _classy: None},
         _params: odict([
             ["tau", odict([
-                [_prior, odict([[_p_dist, "norm"], ["loc", 0.07], ["scale", 0.02]])],
-                [_p_ref, odict([[_p_dist, "norm"], ["loc", 0.07], ["scale", 0.01]])],
-                [_p_proposal, 0.005], [_p_label, r"\tau_\mathrm{reio}"]])],
-            ["zrei", {_p_label: r"z_\mathrm{re}"}]])}],
+                [p.prior,
+                 odict([[p.dist, "norm"], ["loc", 0.07], ["scale", 0.02]])],
+                [p.ref,
+                 odict([[p.dist, "norm"], ["loc", 0.07], ["scale", 0.01]])],
+                [p.proposal, 0.005], [p.latex, r"\tau_\mathrm{reio}"]])],
+            ["zrei", {p.latex: r"z_\mathrm{re}"}]])}],
     ["irrelevant", {
         _desc: "Irrelevant (NB: only valid for non-CMB or CMB-marged datasets!)",
         kinds.theory: {_camb: None, _classy: None},
@@ -445,26 +467,26 @@ for name, m in like_cmb.items():
     if _params not in m:
         m[_params] = odict()
     m[_params].update(odict([
-        ["sigma8", {_p_label: r"\sigma_8"}],
+        ["sigma8", {p.latex: r"\sigma_8"}],
         ["s8h5", odict([
-            [_p_derived, "lambda sigma8, H0: sigma8*(H0*1e-2)**(-0.5)"],
-            [_p_label, r"\sigma_8/h^{0.5}"]])],
+            [p.derived, "lambda sigma8, H0: sigma8*(H0*1e-2)**(-0.5)"],
+            [p.latex, r"\sigma_8/h^{0.5}"]])],
         ["s8omegamp5", odict([
-            [_p_derived, "lambda sigma8, omegam: sigma8*omegam**0.5"],
-            [_p_label, r"\sigma_8 \Omega_\mathrm{m}^{0.5}"]])],
+            [p.derived, "lambda sigma8, omegam: sigma8*omegam**0.5"],
+            [p.latex, r"\sigma_8 \Omega_\mathrm{m}^{0.5}"]])],
         ["s8omegamp25", odict([
-            [_p_derived, "lambda sigma8, omegam: sigma8*omegam**0.25"],
-            [_p_label, r"\sigma_8 \Omega_\mathrm{m}^{0.25}"]])],
+            [p.derived, "lambda sigma8, omegam: sigma8*omegam**0.25"],
+            [p.latex, r"\sigma_8 \Omega_\mathrm{m}^{0.25}"]])],
         ["A", odict([
-            [_p_derived, "lambda As: 1e9*As"],
-            [_p_label, r"10^9 A_\mathrm{s}"]])],
+            [p.derived, "lambda As: 1e9*As"],
+            [p.latex, r"10^9 A_\mathrm{s}"]])],
         ["clamp", odict([
-            [_p_derived, "lambda As, tau: 1e9*As*np.exp(-2*tau)"],
-            [_p_label, r"10^9 A_\mathrm{s} e^{-2\tau}"]])],
+            [p.derived, "lambda As, tau: 1e9*As*np.exp(-2*tau)"],
+            [p.latex, r"10^9 A_\mathrm{s} e^{-2\tau}"]])],
         ["age", odict([
-            [_p_label, r"{\rm{Age}}/\mathrm{Gyr}"]])],
+            [p.latex, r"{\rm{Age}}/\mathrm{Gyr}"]])],
         ["rdrag", odict([
-            [_p_label, r"r_\mathrm{drag}"]])]]))
+            [p.latex, r"r_\mathrm{drag}"]])]]))
     if "cmbmarged" in name.lower():
         m[_params].pop("A")
         m[_params].pop("clamp")
@@ -486,8 +508,9 @@ for combination, info in like_cmb.items():
         likes = ", ".join([_chi2 + _separator + like.replace(".", "_")
                            for like in info[kinds.likelihood]])
         info[_params].update(odict([
-            ["chi2__CMB", odict([[_p_derived, "lambda %s: sum([%s])" % (likes, likes)],
-                                 [_p_label, r"\chi^2_\mathrm{CMB}"]])]]))
+            ["chi2__CMB",
+             odict([[p.derived, "lambda %s: sum([%s])" % (likes, likes)],
+                    [p.latex, r"\chi^2_\mathrm{CMB}"]])]]))
 
 like_bao = odict([
     [_none, {}],
@@ -504,8 +527,9 @@ for combination, info in like_bao.items():
         likes = ", ".join([_chi2 + _separator + like.replace(".", "_")
                            for like in info[kinds.likelihood]])
         info[_params] = odict([
-            ["chi2__BAO", odict([[_p_derived, "lambda %s: sum([%s])" % (likes, likes)],
-                                 [_p_label, r"\chi^2_\mathrm{BAO}"]])]])
+            ["chi2__BAO",
+             odict([[p.derived, "lambda %s: sum([%s])" % (likes, likes)],
+                    [p.latex, r"\chi^2_\mathrm{BAO}"]])]])
 
 like_des = odict([
     [_none, {}],

@@ -23,14 +23,6 @@ _input_params = "input_params"
 _output_params = "output_params"
 _input_params_prefix = "input_params_prefix"
 _output_params_prefix = "output_params_prefix"
-_p_value = "value"
-_p_dist = "dist"
-_p_ref = "ref"
-_p_label = "latex"
-_p_renames = "renames"
-_p_drop = "drop"
-_p_derived = "derived"
-_p_proposal = "proposal"
 _debug = "debug"
 _debug_default = False
 _debug_file = "debug_file"
@@ -44,6 +36,10 @@ _force = "force"
 _module_path = "python_path"
 _module_class_name = "class_name"
 _self_name = "__self__"
+
+ParTags = namedtuple('ParTags', ("prior", "ref", "proposal", "value", "dist", "drop",
+                                 "derived", "latex", "renames"))
+partag = ParTags(*ParTags._fields)
 
 ComponentKinds = namedtuple('ComponentKinds', ("sampler", "theory", "likelihood"))
 kinds = ComponentKinds(*ComponentKinds._fields)

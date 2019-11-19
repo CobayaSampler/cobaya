@@ -16,7 +16,7 @@ from itertools import chain, permutations
 import logging
 
 # Local
-from cobaya.conventions import kinds, _prior, _timing, _p_renames
+from cobaya.conventions import kinds, partag, _prior, _timing
 from cobaya.conventions import _params, _overhead_per_param
 from cobaya.conventions import _path_install, _debug, _debug_default, _debug_file
 from cobaya.conventions import _input_params, _output_params, _chi2, _separator
@@ -698,7 +698,7 @@ class Model(HasLogger):
 
         ``params_info`` should contain preferably the slow parameters only.
         """
-        likes_renames = {like: {_p_renames: getattr(like, _p_renames, [])}
+        likes_renames = {like: {partag.renames: getattr(like, partag.renames, [])}
                          for like in self.likelihood}
         try:
             # TODO: get_auto_covmat has nothing to do with cosmology, move to model?

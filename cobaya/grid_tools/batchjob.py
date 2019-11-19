@@ -16,20 +16,11 @@ import copy
 import sys
 import time
 import six
-import getdist
 from getdist import types, IniFile
 from getdist.mcsamples import loadMCSamples
 
 from .conventions import _input_folder, _script_folder, _log_folder
-
-
-def grid_cache_file(directory):
-    directory = os.path.abspath(directory)
-    if getdist.cache_dir:
-        import hashlib
-        return os.path.join(getdist.cache_dir, '_batch_'
-                            + hashlib.md5(directory.encode('utf-8')).hexdigest()[:10]) + '.pyobj'
-    return os.path.join(directory, 'batch.pyobj')
+from paramgrid.batchjob import grid_cache_file
 
 
 def resetGrid(directory):

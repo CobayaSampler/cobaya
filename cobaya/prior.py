@@ -350,7 +350,7 @@ from copy import deepcopy
 from types import MethodType
 
 # Local
-from cobaya.conventions import _prior, _p_ref, _prior_1d_name
+from cobaya.conventions import _prior, partag, _prior_1d_name
 from cobaya.tools import get_external_function, get_scipy_1d_pdf, read_dnumber
 from cobaya.tools import _fast_uniform_logpdf, _fast_norm_logpdf, getfullargspec
 from cobaya.log import LoggedError, HasLogger
@@ -388,7 +388,7 @@ class Prior(HasLogger):
             if fast_logpdf:
                 self.pdf[-1].logpdf = MethodType(fast_logpdf, self.pdf[-1])
             # Get the reference (1d) pdf
-            ref = sampled_params_info[p].get(_p_ref)
+            ref = sampled_params_info[p].get(partag.ref)
             # Cases: number, pdf (something, but not a number), nothing
             if isinstance(ref, numbers.Number):
                 self.ref_pdf += [float(ref)]
@@ -401,13 +401,13 @@ class Prior(HasLogger):
                 self._bounds[i] = self.pdf[-1].interval(1)
             except AttributeError:
                 raise LoggedError(self.log, "No bounds defined for parameter '%s' "
-                                  "(maybe not a scipy 1d pdf).", p)
+                                            "(maybe not a scipy 1d pdf).", p)
         # Process the external prior(s):
         self.external = odict()
         for name in (info_prior if info_prior else {}):
             if name == _prior_1d_name:
                 raise LoggedError(self.log, "The name '%s' is a reserved prior name. "
-                                  "Please use a different one.", _prior_1d_name)
+                                            "Please use a different one.", _prior_1d_name)
             self.log.debug(
                 "Loading external prior '%s' from: '%s'", name, info_prior[name])
             self.external[name] = (
@@ -424,17 +424,19 @@ class Prior(HasLogger):
                      len(self.external[name]["constant_params"]))):
                 raise LoggedError(
                     self.log, "None of the arguments of the external prior '%s' "
-                    "are known *fixed* or *sampled* parameters. "
-                    "This prior recognizes: %r", name, self.external[name]["argspec"].args)
+                              "are known *fixed* or *sampled* parameters. "
+                              "This prior recognizes: %r", name,
+                    self.external[name]["argspec"].args)
             params_without_default = self.external[name]["argspec"].args[
                                      :(len(self.external[name]["argspec"].args) -
-                                       len(self.external[name]["argspec"].defaults or []))]
+                                       len(self.external[name][
+                                               "argspec"].defaults or []))]
             if not all([(p in self.external[name]["params"] or
                          p in self.external[name]["constant_params"])
                         for p in params_without_default]):
                 raise LoggedError(
                     self.log, "Some of the arguments of the external prior '%s' cannot "
-                    "be found and don't have a default value either: %s",
+                              "be found and don't have a default value either: %s",
                     name, list(set(params_without_default)
                                .difference(self.external[name]["params"])
                                .difference(self.external[name]["constant_params"])))
@@ -501,7 +503,7 @@ class Prior(HasLogger):
         if not ignore_external and self.external:
             raise LoggedError(
                 self.log, "It is not possible to sample from an external prior "
-                "(see help of this function on how to fix this).")
+                          "(see help of this function on how to fix this).")
         return np.array([pdf.rvs(n) for pdf in self.pdf]).T
 
     def logps(self, x):
@@ -517,7 +519,8 @@ class Prior(HasLogger):
         """
         self.log.debug("Evaluating prior at %r", x)
         logps = [
-                    sum([pdf.logpdf(xi) for pdf, xi in zip(self.pdf, x)])] + self.logps_external(x)
+                    sum([pdf.logpdf(xi) for pdf, xi in
+                         zip(self.pdf, x)])] + self.logps_external(x)
         self.log.debug("Got logpriors = %r", logps)
         return logps
 
@@ -583,9 +586,9 @@ class Prior(HasLogger):
                                  "that they are consistent.")
         raise LoggedError(
             self.log, "Couldn't sample from the reference pdf a point with non-"
-            "null prior density after '%d' tries. "
-            "Maybe your prior is improper of your reference pdf is "
-            "null-defined in the domain of the prior.", max_tries)
+                      "null prior density after '%d' tries. "
+                      "Maybe your prior is improper of your reference pdf is "
+                      "null-defined in the domain of the prior.", max_tries)
 
     def reference_covmat(self):
         """

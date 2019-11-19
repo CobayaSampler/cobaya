@@ -170,7 +170,7 @@ You can also specify an explicit path for the module, e.g.
          [option 1]: [value 1]
          [...]
 
-For an example class implementation, check out :doc:`cosmo_external_likelihood_class`.
+For an example class implementation and how to support data file auto-installation, check out :doc:`cosmo_external_likelihood_class`.
 There is also a simple `external likelihood package <https://github.com/CobayaSampler/example_external_likelihood>`_
 and a real-word cosmology example in the `sample external CMB likelihood <https://github.com/CobayaSampler/planck_lensing_external>`_.
 

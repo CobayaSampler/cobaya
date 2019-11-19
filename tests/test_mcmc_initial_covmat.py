@@ -10,8 +10,7 @@ from random import shuffle
 from collections import OrderedDict as odict
 
 from cobaya.likelihoods.gaussian_mixture import random_cov
-from cobaya.conventions import kinds, _prior, _params
-from cobaya.conventions import _p_ref, _p_proposal, _p_dist
+from cobaya.conventions import kinds, partag,_prior, _params
 from cobaya.run import run
 
 
@@ -49,12 +48,12 @@ def body_of_test(dim, tmpdir=None):
     info = {kinds.likelihood: {"one": None}, _params: odict()}
     for i in input_order:
         p = prefix + str(i)
-        info[_params][p] = {_prior: {_p_dist: "norm", "loc": 0, "scale": 1000}}
+        info[_params][p] = {_prior: {partag.dist: "norm", "loc": 0, "scale": 1000}}
         sigma = np.sqrt(initial_random_covmat[i, i])
         if i in i_proposal:
-            info[_params][p][_p_proposal] = sigma
+            info[_params][p][partag.proposal] = sigma
         elif i in i_ref:
-            info[_params][prefix + str(i)][_p_ref] = {_p_dist: "norm", "scale": sigma}
+            info[_params][prefix + str(i)][partag.ref] = {partag.dist: "norm", "scale": sigma}
         elif i in i_prior:
             info[_params][prefix + str(i)][_prior]["scale"] = sigma
     reduced_covmat = initial_random_covmat[np.ix_(i_covmat, i_covmat)]

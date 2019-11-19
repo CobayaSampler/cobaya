@@ -8,8 +8,7 @@ from six import string_types
 
 # Local
 from cobaya.input import get_default_info, merge_info
-from cobaya.conventions import kinds, _params
-from cobaya.conventions import _p_drop, _p_renames, _p_derived, _p_value
+from cobaya.conventions import kinds, partag, _params
 from cobaya.parameterization import reduce_info_param
 from . import input_database
 
@@ -17,7 +16,7 @@ from . import input_database
 def translate(p, info=None, dictionary=None):
     dictionary = dictionary or {}
     # Ignore if dropped
-    if not (info if hasattr(info, "keys") else {}).get(_p_drop, False):
+    if not (info if hasattr(info, "keys") else {}).get(partag.drop, False):
         p = dictionary.get(p, p)
     # Try to modify lambda parameters too!
     if isinstance(info, string_types):
@@ -29,12 +28,12 @@ def translate(p, info=None, dictionary=None):
             arguments_t = [translate(pi, dictionary=dictionary)[0] for pi in arguments]
             for pi, pit in zip(arguments, arguments_t):
                 info = info.replace(pi, pit)
-    if ((hasattr(info, "keys") and _p_derived in info and
-         isinstance(info[_p_derived], string_types))):
-        info[_p_derived] = translate(p, info[_p_derived], dictionary=dictionary)[1]
-    elif (hasattr(info, "keys") and _p_value in info and
-          isinstance(info[_p_value], string_types)):
-        info[_p_value] = translate(p, info[_p_value], dictionary=dictionary)[1]
+    if ((hasattr(info, "keys") and partag.derived in info and
+         isinstance(info[partag.derived], string_types))):
+        info[partag.derived] = translate(p, info[partag.derived], dictionary=dictionary)[1]
+    elif (hasattr(info, "keys") and partag.value in info and
+          isinstance(info[partag.value], string_types)):
+        info[partag.value] = translate(p, info[partag.value], dictionary=dictionary)[1]
     return p, info
 
 
@@ -115,7 +114,7 @@ def create_input(**kwargs):
     # Translate from Planck param names
     planck_to_theo = \
         get_default_info(theory_requested, kinds.theory)[kinds.theory][theory_requested][
-            _p_renames]
+            partag.renames]
     if kwargs.get("planck_names", False):
         merged[kinds.theory][theory_requested] = merged[kinds.theory][
                                                      theory_requested] or {}

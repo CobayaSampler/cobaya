@@ -24,7 +24,7 @@ from cobaya.sampler import Sampler
 from cobaya.mpi import get_mpi_size, get_mpi_rank, get_mpi_comm
 from cobaya.mpi import more_than_one_process, am_single_or_primary_process, sync_processes
 from cobaya.collection import Collection, OnePoint
-from cobaya.conventions import kinds, _weight, _p_proposal, _p_renames, _minuslogpost
+from cobaya.conventions import kinds, partag, _weight, _minuslogpost
 from cobaya.conventions import _line_width, _path_install, _progress_extension
 from cobaya.samplers.mcmc.proposal import BlockedProposer
 from cobaya.log import LoggedError
@@ -263,7 +263,7 @@ class mcmc(Sampler):
                     self.log, "The covmat loaded from '%s' is not a positive-definite, "
                               "symmetric square matrix.", self.covmat)
             # Fill with parameters in the loaded covmat
-            renames = [[p] + np.atleast_1d(v.get(_p_renames, [])).tolist()
+            renames = [[p] + np.atleast_1d(v.get(partag.renames, [])).tolist()
                        for p, v in params_infos.items()]
             renames = odict([[a[0], a] for a in renames])
             indices_used, indices_sampler = zip(*[
@@ -304,7 +304,7 @@ class mcmc(Sampler):
         where_nan = np.isnan(covmat.diagonal())
         if np.any(where_nan):
             covmat[where_nan, where_nan] = np.array(
-                [info.get(_p_proposal, np.nan) ** 2
+                [info.get(partag.proposal, np.nan) ** 2
                  for info in params_infos.values()])[where_nan]
             # we want to start learning the covmat earlier
             self.log.info("Covariance matrix " +

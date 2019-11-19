@@ -6,8 +6,7 @@ from copy import deepcopy
 import pytest
 
 # Local
-from cobaya.conventions import kinds, _prior
-from cobaya.conventions import _params, _p_label
+from cobaya.conventions import kinds, partag, _prior, _params
 from cobaya.run import run
 from cobaya.log import LoggedError
 from cobaya.input import get_default_info
@@ -61,7 +60,7 @@ def test_inherit_label_and_bounds():
     likname = list(test_info_common[kinds.likelihood].keys())[0]
     default_info_params = get_default_info(likname, kinds.likelihood)[_params]
     test_info[_params] = deepcopy(default_info_params)
-    test_info[_params]["a1"].pop(_p_label, None)
+    test_info[_params]["a1"].pop(partag.latex, None)
     # Remove limits, so they are inherited
     test_info = deepcopy(test_info_common)
     test_info[_params] = deepcopy(default_info_params)

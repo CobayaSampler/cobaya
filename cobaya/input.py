@@ -24,8 +24,7 @@ from cobaya.conventions import _products_path, _path_install, _resume, _force
 from cobaya.conventions import _output_prefix, _debug, _debug_file, _external, _self_name
 from cobaya.conventions import _params, _prior, kinds
 
-from cobaya.conventions import _p_label, _p_derived, _p_ref, _p_drop, _p_value, _p_renames
-from cobaya.conventions import _p_proposal, _input_params, _output_params, _module_path
+from cobaya.conventions import partag, _input_params, _output_params, _module_path
 from cobaya.conventions import _yaml_extensions
 from cobaya.tools import recursive_update, recursive_odict_to_dict
 from cobaya.tools import fuzzy_match, deepcopy_where_possible, get_class, get_kind
@@ -186,13 +185,15 @@ def update_info(info):
             updated_info[block][module] = default_class_info[block][module] or {}
             # Update default options with input info
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
-            ignore = {_external, _p_renames, _input_params, _output_params, _module_path}
+            ignore = {_external, partag.renames, _input_params, _output_params,
+                      _module_path}
             options_not_recognized = (set(input_info[block][module])
                                       .difference(ignore)
                                       .difference(set(updated_info[block][module])))
             if options_not_recognized:
                 alternatives = odict()
-                available = ({_external, _p_renames}.union(updated_info[block][module]))
+                available = (
+                    {_external, partag.renames}.union(updated_info[block][module]))
                 while options_not_recognized:
                     option = options_not_recognized.pop()
                     alternatives[option] = fuzzy_match(option, available, n=3)
@@ -234,7 +235,7 @@ def update_info(info):
         defaults_merged, input_info.get(_params, {}))
     # Add aliases for theory params (after merging!)
     if kinds.theory in updated_info:
-        renames = list(updated_info[kinds.theory].values())[0].get(_p_renames)
+        renames = list(updated_info[kinds.theory].values())[0].get(partag.renames)
         str_to_list = lambda x: ([x] if isinstance(x, string_types) else x)
         renames_flat = [set([k] + str_to_list(v)) for k, v in (renames or {}).items()]
         for p in updated_info.get(_params, {}):
@@ -243,9 +244,9 @@ def update_info(info):
             if renames_pairs:
                 this_renames = reduce(
                     lambda x, y: x.union(y), [a for a in renames_flat if p in a])
-                updated_info[_params][p][_p_renames] = list(
+                updated_info[_params][p][partag.renames] = list(
                     set(this_renames).union(set(
-                        str_to_list(updated_info[_params][p].get(_p_renames, []))))
+                        str_to_list(updated_info[_params][p].get(partag.renames, []))))
                         .difference({p}))
     # Rest of the options
     for k, v in input_info.items():
@@ -285,7 +286,7 @@ def merge_params_info(*params_infos):
     to avoid surprises, the other one is set to None=+/-inf)
     """
     current_info = odict(
-        [[p, expand_info_param(v)] for p, v in params_infos[0].items() or {}])
+        (p, expand_info_param(v)) for p, v in params_infos[0].items() or {})
     for new_info in params_infos[1:]:
         if not new_info:
             continue
@@ -295,9 +296,11 @@ def merge_params_info(*params_infos):
             new_info_p = expand_info_param(new_info_p)
             current_info[p].update(deepcopy(new_info_p))
             # Account for incompatibilities: "prior" and ("value" or "derived"+bounds)
-            incompatibilities = {_prior: [_p_value, _p_derived, "min", "max"],
-                                 _p_value: [_prior, _p_ref, _p_proposal],
-                                 _p_derived: [_prior, _p_drop, _p_ref, _p_proposal]}
+            incompatibilities = {_prior: [partag.value, partag.derived, "min", "max"],
+                                 partag.value: [partag.prior, partag.ref,
+                                                partag.proposal],
+                                 partag.derived: [partag.prior, partag.drop, partag.ref,
+                                                  partag.proposal]}
             for f1, incomp in incompatibilities.items():
                 if f1 in new_info_p:
                     for f2 in incomp:
@@ -306,7 +309,7 @@ def merge_params_info(*params_infos):
     new_order = chain(*[list(params) for params in params_infos[::-1]])
     # The following removes duplicates maintaining order (keeps the first occurrence)
     new_order = list(odict.fromkeys(new_order))
-    current_info = odict([[p, current_info[p]] for p in new_order])
+    current_info = odict((p, current_info[p]) for p in new_order)
     return current_info
 
 
@@ -344,8 +347,9 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
     myname = inspect.stack()[0][3]
     ignore = set([]) if strict else {_debug, _debug_file, _resume, _force, _path_install}
     ignore = ignore.union(set(ignore_blocks or []))
-    ignore_params = (set([]) if strict else {_p_label, _p_renames, _p_ref, _p_proposal,
-                                             "min", "max"})
+    ignore_params = (
+        set([]) if strict else {partag.latex, partag.renames, partag.ref, partag.proposal,
+                                "min", "max"})
     if set(info1).difference(ignore) != set(info2).difference(ignore):
         myprint(myname + ": different blocks or options: %r (old) vs %r (new)" % (
             set(info1).difference(ignore), set(info2).difference(ignore)))
@@ -409,8 +413,8 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
                             block2k.pop(kignore, None)
                         # Fixed params, it doesn't matter if they are saved as derived
                         for b in [block1k, block2k]:
-                            if _p_value in b:
-                                b.pop(_p_derived, None)
+                            if partag.value in b:
+                                b.pop(partag.derived, None)
                 if block_name == kinds.likelihood and not strict:
                     for kignore in [_input_params, _output_params]:
                         block1k.pop(kignore, None)

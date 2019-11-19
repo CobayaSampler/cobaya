@@ -16,7 +16,6 @@ import sys
 import subprocess
 import traceback
 import logging
-from importlib import import_module
 import shutil
 from six import string_types
 from pkg_resources import parse_version
@@ -25,7 +24,7 @@ from pkg_resources import parse_version
 from cobaya.log import logger_setup, LoggedError
 from cobaya.tools import create_banner, warn_deprecation, get_class
 from cobaya.input import get_used_modules
-from cobaya.conventions import _module_path, _code, _data, kinds, _external, _force
+from cobaya.conventions import _module_path, _code, _data, _external, _force
 from cobaya.conventions import _modules_path_arg, _modules_path_env, _path_install
 
 log = logging.getLogger(__name__.split(".")[-1])
@@ -63,7 +62,7 @@ def install(*infos, **kwargs):
     for kind, modules in get_used_modules(*infos).items():
         for module in modules:
             print(create_banner(kind + ":" + module, symbol="=", length=80))
-            if any(True for s in skip_list if s in module.lower()):
+            if any(s in module.lower() for s in skip_list):
                 log.info("Skipping %s for test skip list %s" % (module, skip_list))
                 continue
             info = (next(info for info in infos if module in
@@ -82,7 +81,7 @@ def install(*infos, **kwargs):
                 failed_modules += ["%s:%s" % (kind, module)]
                 continue
             else:
-                if any(True for s in skip_list if s in imported_class.__name__.lower()):
+                if any(s in imported_class.__name__.lower() for s in skip_list):
                     log.info(
                         "Skipping %s for test skip list %s" % (imported_class.__name__,
                                                                skip_list))
@@ -231,7 +230,7 @@ def check_gcc_version(min_version="6.4", error_returns=None):
     except:
         return error_returns
     # Change in gcc >= 7: -dumpversion only dumps major version
-    if not "." in version:
+    if "." not in version:
         version = subprocess.check_output(
             "gcc -dumpfullversion", shell=True, stderr=subprocess.STDOUT).decode().strip()
     return parse_version(str(min_version)) <= parse_version(version)
