@@ -398,6 +398,7 @@ class classy(BoltzmannBase):
             (p, (_derived or {}).get(p)) for p in self.output_params)
         # Prepare necessary extra derived parameters
         self._states[i_state]["derived_extra"] = deepcopy(d_extra)
+        return True
 
     def _get_derived_all(self, derived_requested=True):
         """

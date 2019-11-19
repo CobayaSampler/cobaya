@@ -52,7 +52,7 @@ Thanks to `Julien Lesgourgues`_ and `Will Handley`_ for support on interfacing C
 
 Thanks too to `Guadalupe Cañas Herrera`_, `Andreas Finke`_, `Lukas Hergt`_, `Vivian Miranda`_, `Timothy Morton`_, `Joe Zunz`_ and many others for extensive and somewhat painful testing.
 
-.. _`Jesus Torrado`: https://astronomy.sussex.ac.uk/~jt386
+.. _`Jesus Torrado`: https://web.physik.rwth-aachen.de/user/torrado
 .. _`Antony Lewis`: https://cosmologist.info
 .. _CosmoMC: https://cosmologist.info/cosmomc/
 .. _CosmoCoffee: https://cosmocoffee.info/viewforum.php?f=11
