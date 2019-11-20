@@ -236,12 +236,9 @@ class camb(BoltzmannBase):
                           " (a) specify a path (you didn't) or\n"
                           " (b) install the Python interface globally with\n"
                           "     'pip install -e /path/to/camb [--user]'")
-
         super(camb, self).initialize()
-
         self.extra_attrs = {"Want_CMB": False, "Want_cl_2D_array": False,
                             'WantCls': False}
-
         if len(set(self.input_params).intersection(
                 {"H0", "cosmomc_theta", "thetastar"})) > 1:
             raise LoggedError(self.log, "Can't pass more than one of H0, "

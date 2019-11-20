@@ -256,17 +256,19 @@ class classy(BoltzmannBase):
                 # Use halofit by default if non-linear requested but no code specified
                 if v.get("nonlinear", False) and "non linear" not in self.extra_args:
                     self.extra_args["non linear"] = non_linear_default_code
-                for pair in v.pop("vars_pairs", [["delta_tot", "delta_tot"]]):
-                    if any([x != "delta_tot" for x in pair]):
+                kwargs = deepcopy(v)
+                for pair in v.pop("vars_pairs", [("delta_tot", "delta_tot")]):
+                    if pair == ("delta_tot", "delta_tot"):
+                        kwargs["only_clustering_species"] = False
+                    elif pair == ("delta_nonu", "delta_nonu"):
+                        kwargs["only_clustering_species"] = True
+                    else:
                         raise LoggedError(self.log, "NotImplemented in CLASS: %r", pair)
-                    self._Pk_interpolator_kwargs = {
-                        "logk": True, "extrap_kmax": v.pop("extrap_kmax", None)}
-                    product = ("Pk_interpolator",) + tuple(pair)
+                    product = ("Pk_grid", v["nonlinear"]) + tuple(pair)
                     self.collectors[product] = Collector(
                         method="get_pk_and_k_and_z",
                         kwargs=v,
-                        post=(lambda P, k, z: PowerSpectrumInterpolator(
-                            z, k, P.T, **self._Pk_interpolator_kwargs)))
+                        post=(lambda P, k, z: (k, z, np.array(P).T)))
             elif v is None:
                 k_translated = self.translate_param(k, force=True)
                 if k_translated not in self.derived_extra:

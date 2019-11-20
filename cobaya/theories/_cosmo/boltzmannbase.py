@@ -281,8 +281,9 @@ class BoltzmannBase(Theory):
         if log_p:
             pk = np.log(pk)
         elif extrap_kmax > k[-1]:
-            raise ValueError('cannot do log extrapolation with negative pk for %s, %s'
-                             % var_pair)
+            raise LoggedError(self.log,
+                              'Cannot do log extrapolation with negative pk for %s, %s'
+                              % var_pair)
         result = PowerSpectrumInterpolator(z, k, pk, logP=log_p, extrap_kmax=extrap_kmax)
         current_state[key] = result
         return result
