@@ -423,7 +423,7 @@ reionization = odict([
 cmb_precision = {_camb: {"halofit_version": "mead",
                          "bbn_predictor": "PArthENoPE_880.2_standard.dat",
                          "lens_potential_accuracy": 1},
-                 _classy: {"non linear": "halofit"}}
+                 _classy: {"non linear": "hmcode"}}
 cmb_sampler_recommended = {"mcmc": {"drag": True, "proposal_scale": 1.9}}
 
 like_cmb = odict([
