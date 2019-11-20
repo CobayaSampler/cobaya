@@ -303,7 +303,7 @@ class camb(BoltzmannBase):
                     method=CAMBdata.get_fsigma8,
                     kwargs={})
                 self.needs_perts = True
-            elif k in ["Pk_interpolator", "matter_power_spectrum"]:
+            elif k in ["Pk_interpolator", "Pk_grid"]:
                 self.extra_args["kmax"] = max(v["k_max"], self.extra_args.get("kmax", 0))
                 self.add_to_redshifts(v["z"])
                 v["vars_pairs"] = v["vars_pairs"] or [("delta_tot", "delta_tot")]
@@ -313,7 +313,6 @@ class camb(BoltzmannBase):
                 if kwargs.get("hubble_units", False) or kwargs.get("k_hunit", False):
                     raise LoggedError(self.log, "hubble_units and k_hunit must be False"
                                                 "for consistency")
-
                 kwargs["hubble_units"] = False
                 kwargs["k_hunit"] = False
                 if k != "Pk_interpolator":
@@ -323,15 +322,12 @@ class camb(BoltzmannBase):
                     from packaging import version
                     if version.parse(self.camb.__version__) < version.parse("1.0.11"):
                         raise LoggedError(self.log, "update CAMB to 1.0.11+")
-
-                kwargs["nonlinear"] = bool(kwargs.get("nonlinear", True))
-                if kwargs["nonlinear"]:
-                    self.non_linear_pk = True
-
                 for p in "k_max", "z", "vars_pairs":
                     kwargs.pop(p)
+                if kwargs["nonlinear"]:
+                    self.non_linear_pk = True
                 for pair in v["vars_pairs"]:
-                    product = ("matter_power_spectrum", kwargs["nonlinear"]) + tuple(pair)
+                    product = ("Pk_grid", kwargs["nonlinear"]) + tuple(pair)
                     kwargs.update(dict(zip(["var1", "var2"], pair)))
                     self.collectors[product] = Collector(
                         method=CAMBdata.get_linear_matter_power_spectrum, kwargs=kwargs)
@@ -635,18 +631,6 @@ class camb(BoltzmannBase):
 
     def get_fsigma8(self, z):
         return self._get_z_dependent("fsigma8", z)
-
-    def get_Pk_grid(self, var_pair=("delta_tot", "delta_tot"), nonlinear=True,
-                         _state=None):
-        if nonlinear and not self.non_linear_pk:
-            raise ValueError("Getting non-linear matter power but nonlinear "
-                             "not specified in requirements")
-        current_state = _state or self.current_state()
-        nonlinear = bool(nonlinear)
-        try:
-            return current_state[("matter_power_spectrum", nonlinear) + tuple(var_pair)]
-        except KeyError:
-            raise ValueError("Matter power %s, %s not computed" % var_pair)
 
     def get_source_Cl(self):
         current_state = self.current_state()

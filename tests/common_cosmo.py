@@ -39,7 +39,11 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
     for lik in info[kinds.likelihood]:
         info[kinds.likelihood][lik].pop(_params, None)
     info[_path_install] = process_modules_path(modules)
+    # Ask for debug output and force stopping at any error
     info[_debug] = True
+    for k in [kinds.theory, kinds.likelihood]:
+        for m in info[k]:
+            info[k][m].update({"stop_at_error": True})
     # Create the model and compute likelihood and derived parameters at best fit
     model = get_model(info)
     best_fit_values = {p: best_fit[p] for p in model.parameterization.sampled_params()}

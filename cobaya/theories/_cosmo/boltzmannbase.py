@@ -85,14 +85,14 @@ class BoltzmannBase(Theory):
                 self._needs["Cl"] = {
                     cl: max(self._needs.get("Cl", {}).get(cl, 0), v.get(cl, 0))
                     for cl in set(self._needs.get("Cl", {})).union(v)}
-            elif k == "Pk_interpolator":
+            elif k in ["Pk_interpolator", "Pk_grid"]:
                 # Make sure vars_pairs is a list of [list of 2 vars pairs]
                 vars_pairs = v.pop("vars_pairs", [])
                 try:
                     if isinstance(vars_pairs[0], string_types):
                         vars_pairs = [vars_pairs]
                 except IndexError:
-                    # Empty list: by default [delta_tot, delta_tot]
+                    # Empty list: default to *total matter*: CMB + Baryon + MassiveNu
                     vars_pairs = [2 * ["delta_tot"]]
                 except:
                     raise LoggedError(
@@ -101,6 +101,7 @@ class BoltzmannBase(Theory):
                         vars_pairs)
                 vars_pairs = set([tuple(pair) for pair in chain(
                     self._needs.get(k, {}).get("vars_pairs", []), vars_pairs)])
+                v["nonlinear"] = bool(v.get("nonlinear", True))
                 self._needs[k] = {
                     "z": np.unique(np.concatenate(
                         (self._needs.get(k, {}).get("z", []),
@@ -247,7 +248,15 @@ class BoltzmannBase(Theory):
         :return: k, z, PK, where k and z are arrays,
                  and PK[i,j] is the value at z[i], k[j]
         """
-        return None, None, None
+        current_state = _state or self.current_state()
+        try:
+            return current_state[("Pk_grid", bool(nonlinear)) + tuple(var_pair)]
+        except KeyError:
+            if ("Pk_grid", False) + tuple(var_pair) in current_state:
+                raise LoggedError(self.log,
+                                  "Getting non-linear matter power but nonlinear "
+                                  "not specified in requirements")
+            raise LoggedError(self.log, "Matter power %s, %s not computed" % var_pair)
 
     def get_Pk_interpolator(self, var_pair=("delta_tot", "delta_tot"), nonlinear=True,
                             extrap_kmax=None):
