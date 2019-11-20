@@ -45,6 +45,8 @@ class_options = {"speed": -1, "stop_at_error": False}
 
 
 class Likelihood(HasLogger, HasDefaults):
+
+    _defaults = None
     """Likelihood class prototype."""
 
     # Generic initialization -- do not touch
@@ -76,6 +78,18 @@ class Likelihood(HasLogger, HasDefaults):
         self.time_std = np.inf
         if standalone:
             self.initialize()
+
+    @classmethod
+    def get_defaults(cls, **kwargs):
+        try:
+            defaults = super().get_defaults(**kwargs)
+        except TypeError:
+            logging.info('No YAML defaults available; relying on ._defaults class attribute if provided.')
+            defaults = odict([('likelihood', odict([('__self__', {})]))])
+
+        class_defaults = odict(cls._defaults) if cls._defaults is not None else {}
+        defaults['likelihood']['__self__'].update(class_defaults)
+        return defaults
 
     # Optional
     def initialize(self):
