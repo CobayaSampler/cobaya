@@ -87,8 +87,12 @@ class Likelihood(HasLogger, HasDefaults):
             logging.info('No YAML defaults available; relying on ._defaults class attribute if provided.')
             defaults = odict([('likelihood', odict([('__self__', {})]))])
 
-        class_defaults = odict(cls._defaults) if cls._defaults is not None else {}
-        defaults['likelihood']['__self__'].update(class_defaults)
+        # Specifically for externally defined likelihoods?
+        if 'likelihood' in defaults:
+            if '__self__' in defaults['likelihood']:
+                class_defaults = odict(cls._defaults) if cls._defaults is not None else {}
+                defaults['likelihood']['__self__'].update(class_defaults)
+
         return defaults
 
     # Optional
