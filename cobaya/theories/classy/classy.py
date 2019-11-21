@@ -349,7 +349,7 @@ class classy(BoltzmannBase):
                     "Computation error (see traceback below)! "
                     "Parameters sent to CLASS: %r and %r.\n"
                     "To ignore this kind of errors, make 'stop_at_error: False'.",
-                    self._states[i_state]["params"], self.extra_args)
+                    self._states[i_state]["params"], dict(self.extra_args))
                 raise
             else:
                 self.log.debug("Computation of cosmological products failed. "

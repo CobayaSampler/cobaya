@@ -405,14 +405,12 @@ class camb(BoltzmannBase):
         # Prepare parameters to be passed: this-iteration + extra
         args = {self.translate_param(p): v for p, v in params_values_dict.items()}
         # Generate and save
-        self.log.debug("Setting parameters: %r", args)
         try:
             if not self._base_params:
                 base_args = args.copy()
                 base_args.update(self.extra_args)
                 self._reduced_extra_args = self.extra_args.copy()
                 params = self.camb.set_params(**base_args)
-
                 # pre-set the parameters that are not varying
                 for non_param_func in ['set_classes', 'set_matter_power', 'set_for_lmax']:
                     for fixed_param in getfullargspec(
@@ -422,7 +420,6 @@ class camb(BoltzmannBase):
                                               "Trying to sample fixed theory parameter %s",
                                               fixed_param)
                         self._reduced_extra_args.pop(fixed_param, None)
-
                 if self.extra_attrs:
                     self.log.debug("Setting attributes of CAMBparams: %r",
                                    self.extra_attrs)
@@ -452,12 +449,11 @@ class camb(BoltzmannBase):
                         window["function"] = function
                     params.SourceWindows = source_windows
                     params.SourceTerms.limber_windows = self.limber
-
                 self._base_params = params
             else:
                 args.update(self._reduced_extra_args)
-
             self._states[i_state]["set_args"] = deepcopy(args)
+            self.log.debug("Setting parameters: %r", args)
             return self.camb.set_params(self._base_params.copy(), **args)
         except self.camb.baseconfig.CAMBParamRangeError:
             if self.stop_at_error:
@@ -466,13 +462,14 @@ class camb(BoltzmannBase):
             else:
                 self.log.debug("Out of bounds parameters. "
                                "Assigning 0 likelihood and going on.")
-        except self.camb.CAMBValueError:
-            self.log.error(
-                "Error setting parameters (see traceback below)! "
-                "Parameters sent to CAMB: %r and %r.\n"
-                "To ignore this kind of errors, make 'stop_at_error: False'.",
-                self._states[i_state]["params"], self.extra_args)
-            raise
+        except (self.camb.baseconfig.CAMBValueError, self.camb.baseconfig.CAMBError) as e:
+            if self.stop_at_error:
+                self.log.error(
+                    "Error setting parameters (see traceback below)! "
+                    "Parameters sent to CAMB: %r and %r.\n"
+                    "To ignore this kind of errors, make 'stop_at_error: False'.",
+                    self._states[i_state]["params"], self.extra_args)
+                raise
         except self.camb.baseconfig.CAMBUnknownArgumentError as e:
             raise LoggedError(
                 self.log,
@@ -486,31 +483,33 @@ class camb(BoltzmannBase):
         # (e.g. out of computationally feasible range): lik=0
         if not camb_params:
             return False
-
         # Compute the necessary products (incl. any intermediate result, if needed)
-        if self.collectors:
-            results = self.camb.get_results(camb_params) if self.needs_perts else \
-                self.camb.get_background(camb_params)
-        else:
-            results = None
-        for product, collector in self.collectors.items():
-            try:
+        try:
+            if self.collectors:
+                results = self.camb.get_results(camb_params) if self.needs_perts else \
+                    self.camb.get_background(camb_params)
+            else:
+                results = None
+            for product, collector in self.collectors.items():
                 if collector.method:
                     self._states[i_state][product] = \
                         collector.method(results, *collector.args, **collector.kwargs)
                 else:
                     self._states[i_state][product] = results
-            except self.camb.CAMBError:
-                if self.stop_at_error:
-                    self.log.error(
-                        "Computation error (see traceback below)! "
-                        "Parameters sent to CAMB: %r and %r.\n"
-                        "To ignore this kind of errors, make 'stop_at_error: False'.",
-                        self._states[i_state]["params"], self.extra_args)
-                    raise
-                else:
-                    # Assumed to be a "parameter out of range" error.
-                    return False
+        except self.camb.baseconfig.CAMBError as e:
+            if self.stop_at_error:
+                self.log.error(
+                    "Computation error (see traceback below)! "
+                    "Parameters sent to CAMB: %r and %r.\n"
+                    "To ignore this kind of errors, make 'stop_at_error: False'.",
+                    self._states[i_state]["params"], self.extra_args)
+                raise
+            else:
+                # Assumed to be a "parameter out of range" error.
+                self.log.debug("Computation of cosmological products failed. "
+                               "Assigning 0 likelihood and going on. "
+                               "The output of the CAMB error was %s" % e)
+                return False
         # Prepare derived parameters
         intermediates = CAMBOutputs(camb_params, results,
                                     results.get_derived_params() if results else None)
@@ -520,7 +519,6 @@ class camb(BoltzmannBase):
         # Prepare necessary extra derived parameters
         self._states[i_state]["derived_extra"] = {
             p: self._get_derived(p, intermediates) for p in self.derived_extra}
-
         return True
 
     def _get_derived_from_params(self, p, intermediates):
