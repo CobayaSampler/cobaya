@@ -405,6 +405,8 @@ class camb(BoltzmannBase):
         # Prepare parameters to be passed: this-iteration + extra
         args = {self.translate_param(p): v for p, v in params_values_dict.items()}
         # Generate and save
+        self.log.debug("Setting parameters: %r and %r",
+                       dict(args), dict(self.extra_args))
         try:
             if not self._base_params:
                 base_args = args.copy()
@@ -453,7 +455,6 @@ class camb(BoltzmannBase):
             else:
                 args.update(self._reduced_extra_args)
             self._states[i_state]["set_args"] = deepcopy(args)
-            self.log.debug("Setting parameters: %r", args)
             return self.camb.set_params(self._base_params.copy(), **args)
         except self.camb.baseconfig.CAMBParamRangeError:
             if self.stop_at_error:
@@ -468,7 +469,7 @@ class camb(BoltzmannBase):
                     "Error setting parameters (see traceback below)! "
                     "Parameters sent to CAMB: %r and %r.\n"
                     "To ignore this kind of errors, make 'stop_at_error: False'.",
-                    self._states[i_state]["params"], self.extra_args)
+                    dict(self._states[i_state]["params"]), dict(self.extra_args))
                 raise
         except self.camb.baseconfig.CAMBUnknownArgumentError as e:
             raise LoggedError(
@@ -502,7 +503,7 @@ class camb(BoltzmannBase):
                     "Computation error (see traceback below)! "
                     "Parameters sent to CAMB: %r and %r.\n"
                     "To ignore this kind of errors, make 'stop_at_error: False'.",
-                    self._states[i_state]["params"], self.extra_args)
+                    dict(self._states[i_state]["params"]), dict(self.extra_args))
                 raise
             else:
                 # Assumed to be a "parameter out of range" error.
