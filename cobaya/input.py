@@ -428,6 +428,8 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
 
 class HasDefaults(object):
 
+    class_options = None
+
     @classmethod
     def get_qualified_names(cls):
         if cls.__module__ == '__main__':
@@ -505,6 +507,22 @@ class HasDefaults(object):
 
     @classmethod
     def get_defaults(cls, return_yaml=False, yaml_expand_defaults=True):
+        python_defaults = cls.get_defaults_python()
+
+        try:
+            defaults = cls.get_defaults_yaml()
+            # Allow for python .class_options to supercede YAML
+            defaults = cls.update_defaults(defaults, python_defaults)
+        except (TypeError, LoggedError):
+            defaults = python_defaults
+
+        if return_yaml:
+            return yaml_dump(defaults)
+
+        return defaults
+
+    @classmethod
+    def get_defaults_yaml(cls, return_yaml=False, yaml_expand_defaults=True):
         """
         Return defaults for this module_or_class, with syntax:
 
@@ -534,8 +552,8 @@ class HasDefaults(object):
         if not yaml_text:
             for base in cls.__bases__:
                 if issubclass(base, HasDefaults) and base is not HasDefaults:
-                    return base.get_defaults(return_yaml=return_yaml,
-                                             yaml_expand_defaults=yaml_expand_defaults)
+                    return base.get_defaults_yaml(return_yaml=return_yaml,
+                                                  yaml_expand_defaults=yaml_expand_defaults)
         if return_yaml:
             if yaml_expand_defaults:
                 return yaml_dump(yaml_load_file(cls.get_yaml_file(), yaml_text))
@@ -543,3 +561,25 @@ class HasDefaults(object):
                 return yaml_text
         else:
             return yaml_load_file(cls.get_yaml_file(), yaml_text)
+
+    @classmethod
+    def update_defaults(cls, old, new):
+        """Old and new are both dictionaries
+        """
+        old.update(new)
+        return old
+
+    @classmethod
+    def get_defaults_python(cls):
+        defaults = odict()
+        for base in cls.__bases__:
+            if hasattr(base, 'get_defaults'):
+                base_defaults = base.get_defaults()
+                if base_defaults is not None:
+                    defaults = cls.update_defaults(defaults, base.get_defaults())
+
+        if cls.class_options is not None:
+            defaults = cls.update_defaults(defaults, odict(cls.class_options))
+
+        return defaults
+

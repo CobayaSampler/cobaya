@@ -18,6 +18,7 @@ import traceback
 from time import sleep
 import numpy as np
 from copy import deepcopy
+from collections import OrderedDict as odict
 
 # Local
 from cobaya.conventions import _external
@@ -37,6 +38,7 @@ class Likelihood(CobayaComponent):
     def __init__(self, info={}, name=None, timing=None, path_install=None,
                  standalone=True):
         name = name or self.get_qualified_class_name()
+        self.set_logger(name=name)
         if standalone:
             # TODO: would probably be more natural if defaults were already read here
             default_info = self.get_defaults()
@@ -55,6 +57,16 @@ class Likelihood(CobayaComponent):
                         for _ in range(self._n_states)]
         if standalone:
             self.initialize()
+
+    @classmethod
+    def update_defaults(cls, old, new):
+        if 'likelihood' not in old:
+            old['likelihood'] = odict([('__self__', odict())])
+        if 'likelihood' in new:
+            old['likelihood']['__self__'].update(new['likelihood']['__self__'])
+        else:
+            old['likelihood']['__self__'].update(new)
+        return old
 
     # Optional
     def initialize(self):
