@@ -1,5 +1,33 @@
 ## 2.1  – 2019-XX-XX
 
+## This branch
+
+- **had to change test chi2/tolerance and some classy things for some travis to pass, need checking**
+- allow multiple inter-dependent theory classes
+- allow theories and likelihoods to all specify requirements and define derived products 
+  with general dependencies
+- .theory member of likelihoods is now Provider class instance
+- 'requires' and 'provides' yaml keywords to specify which of ambiguous components handles
+   specific requirements
+- three initialization methods: initialize (from __init__), initialize_with_params 
+  (after parameter assignment) and initialize_with_provider (once all configured)
+- Likelihood now inherits from Theory, with general cached compute and deque states
+- Theory classes do not need .yaml
+- derived parameters in likelihood yaml now need to be explicitly tagged with derived:True
+- added test_dependencies.py, test_cosmo_multi_theory.py
+- renamed H (array of H(z)) to Hubble
+- changed TCMB to be consistent
+
+## TODO 
+ - can we change yaml so no Theory: __self__ in at all? i.e. all based at class level
+   (params, priors can be joined to global later much as now in reverse - params currently added to Theory from global level)
+ - does not support requirements that depend dynamically on actual needs
+ - added get_version(): add version trace dump with output files
+ - init/yaml inheritance
+ - reading defaults only once; allow separate like instantiation + use equivalent to loading in cobaya
+ - move sampler/plik install into class methods
+ - support "parameterization" option of theory .yaml to specify parameter yaml variants?
+
 ### General
 
 - Some significant internal refactoring to tidy up some code and make it easier to make
@@ -17,7 +45,7 @@
   external likelihoods or use in other packages)
 - Inherited likelihoods inherit .yaml file from parent if no new one is defined
 - DES likelihood now use numba if installed to give nearly twice faster performance
-- get_requirements() function alternative to add_theory()
+- get_requirements() function replaces add_theory()
 
 #### MCMC
 

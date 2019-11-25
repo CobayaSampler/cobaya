@@ -14,13 +14,16 @@ import numpy as np
 from collections import namedtuple, OrderedDict as odict
 from itertools import chain, permutations
 import logging
+import six
+import copy
+from copy import deepcopy
 
 # Local
 from cobaya.conventions import kinds, partag, _prior, _timing
-from cobaya.conventions import _params, _overhead_per_param
+from cobaya.conventions import _params, _overhead_per_param, _provides
 from cobaya.conventions import _path_install, _debug, _debug_default, _debug_file
 from cobaya.conventions import _input_params, _output_params, _chi2, _separator
-from cobaya.conventions import _input_params_prefix, _output_params_prefix
+from cobaya.conventions import _input_params_prefix, _output_params_prefix, _requires
 from cobaya.input import update_info
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
@@ -29,6 +32,7 @@ from cobaya.theory import Theory, TheoryCollection
 from cobaya.log import LoggedError, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
 from cobaya.tools import gcd, deepcopy_where_possible, are_different_params_lists
+from cobaya.component import Provider
 
 # Log-posterior namedtuple
 logposterior = namedtuple("logposterior", ["logpost", "logpriors", "loglikes", "derived"])
@@ -52,7 +56,6 @@ def get_model(info):
         if k not in [_params, kinds.likelihood, _prior, kinds.theory, _path_install,
                      _timing]:
             ignored_info.update({k: info.pop(k)})
-    import logging
     if ignored_info:
         logging.getLogger(__name__.split(".")[-1]).warning(
             "Ignored blocks/options: %r", list(ignored_info))
@@ -107,39 +110,8 @@ class Model(HasLogger):
 
         # Assign input/output parameters
         self._assign_params(info_likelihood, info_theory)
-        # Do the user-defined post-initialisation, and assign the theory code
-        for theory in self.theory.values():
-            theory.initialize()
-        for like in self.likelihood.values():
-            like.initialize()
-            like.theory = self.theory
-            like.add_theory()
-        for name, theory in self.theory.items():
-            if post:
-                # Make sure that theory.needs is called at least once, for adjustments
-                theory.needs({})
-            if getattr(theory, "_needs", None):
-                self.log.info(
-                    "The theory %s will compute the following products, "
-                    "requested by the likelihoods: %r" % (name, list(theory._needs)))
 
-        # Store the input params and components on which each sampled params depends.
-        sampled_input_dependence = self.parameterization.sampled_input_dependence()
-        sampled_dependence = odict()
-        for p, i_s in sampled_input_dependence.items():
-            sampled_dependence[p] = \
-                [component for component in self.theory.values()
-                 if any((i in component.input_params) for i in (i_s or [p]))]
-            # For the moment theory parameters "depend" on every likelihood, since
-            # re-computing the theory code forces recomputation of the likelihoods
-            if sampled_dependence[p]:
-                sampled_dependence[p] += list(self.likelihood.values())
-            else:
-                sampled_dependence[p] = \
-                    [component for component in self.likelihood.values()
-                     if any((i in component.input_params) for i in (i_s or [p]))]
-
-        self.sampled_dependence = sampled_dependence
+        self._set_dependencies_and_providers()
 
         # Overhead per likelihood evaluation
         self.overhead = _overhead_per_param * len(self.parameterization.sampled_params())
@@ -210,35 +182,45 @@ class Model(HasLogger):
         return logprior
 
     def logps(self, input_params, return_derived=True, cached=True, make_finite=False):
-        # Calculate required theory results and returns likelihoods
-        theory_params_dict = {}
-        theory_success = True
+        # Calculate required results and returns likelihoods
         derived_dict = {}
-        this_derived_dict = {} if return_derived else None
-        for theory in self.theory.values():
-            theory_params = {p: input_params[p] for p in theory.input_params}
-            theory_success = theory.compute(_derived=this_derived_dict, cached=cached,
-                                            **theory_params)
-            if not theory_success:
-                self.log.debug(
-                    "Theory code computation failed. Not computing likelihood.")
-                break
-            theory_params_dict.update(theory_params)
-            if this_derived_dict:
-                derived_dict.update(this_derived_dict)
-                this_derived_dict.clear()
+        compute_success = True
+        self.provider.set_current_input_params(input_params)
+        self.log.debug("Got input parameters: %r", input_params)
+        n_theory = len(self.theory)
+        loglikes = np.empty(len(self.likelihood))
 
-        if not theory_success:
-            loglikes = np.array([-np.inf for _ in self.likelihood])
-        else:
-            loglikes = self.likelihood.logps(input_params, theory_params_dict,
-                                             derived_dict=derived_dict, cached=cached)
+        for (component, index), dependence in zip(self._component_order.items(),
+                                                  self._ordered_param_dependence):
+
+            depend_list = [input_params[p] for p in dependence]
+            params = {p: input_params[p] for p in component.input_params}
+            compute_success = component.check_cache_and_compute(
+                want_derived=return_derived,
+                dependency_params=depend_list,
+                cached=cached, **params)
+            if not compute_success:
+                loglikes[:] = -np.inf
+                self.log.debug(
+                    "Calculation failed, skipping rest of calculations ")
+                break
+
+            if return_derived:
+                derived_dict.update(component.get_current_derived())
+
+            if isinstance(component, Likelihood):
+                loglikes[index - n_theory] = component.get_current_logp()
+                if return_derived:
+                    derived_dict[_chi2 + _separator +
+                                 component.get_name().replace(".", "_")] \
+                        = -2 * loglikes[index - n_theory]
+
         if make_finite:
             loglikes = np.nan_to_num(loglikes)
 
         if return_derived:
             # Turn the derived params dict into a list and return
-            if not theory_success:
+            if not compute_success:
                 derived_list = [np.nan] * len(self.output_params)
             else:
                 derived_list = [derived_dict[p] for p in self.output_params]
@@ -417,6 +399,149 @@ class Model(HasLogger):
     def close(self):
         self.__exit__()
 
+    def get_version(self):
+        return dict(theory=self.theory.get_version(),
+                    likelihood=self.likelihood.get_version())
+
+    def _set_component_order(self, components, dependencies):
+        dependence_order = []
+        deps = {p: s.copy() for p, s in dependencies.items()}
+        comps = components[:]
+        _last = 0
+        while len(dependence_order) < len(components):
+            for component in copy.copy(comps):
+                if not deps.get(component):
+                    dependence_order.append(component)
+                    comps.remove(component)
+                    for p, dep in deps.items():
+                        dep.discard(component)
+            if len(dependence_order) == _last:
+                raise LoggedError(self.log, "Circular dependency, cannot calculate "
+                                            "%r" % comps)
+            _last = len(dependence_order)
+
+        self._component_order = odict(zip(dependence_order,
+                                          (components.index(c) for c in
+                                           dependence_order)))
+        if self.log.getEffectiveLevel() <= logging.DEBUG:
+            self.log.debug("Components will be computed in the order:")
+            self.log.debug(" - %r" % dependence_order)
+
+        self._ordered_param_dependence = [[] for _ in components]
+        for component, param_dep in zip(self._component_order,
+                                        self._ordered_param_dependence):
+            for dep in dependencies.get(component, []):
+                param_dep += dep.input_params
+
+    def _set_dependencies_and_providers(self):
+        requirements = []
+        dependencies = {}
+        providers = {}
+
+        components = list(self.theory.values()) + list(self.likelihood.values())
+        # Get the requirements and providers
+        for component in components:
+            if hasattr(component, "add_theory"):
+                raise LoggedError(self.log,
+                                  "Please remove add_theory from %r and return "
+                                  "requirement dictionary from get_requirements() "
+                                  "instead" % component)
+            component.initialize_with_params()
+            require = component.get_requirements().copy()
+            if isinstance(require, (set, tuple, list)):
+                require = {p: None for p in require}
+            for par in self.input_params:
+                # requirements that are sampled parameters automatically satisfied
+                require.pop(par, None)
+            requirements.append(require)
+            methods = component.get_can_provide_methods()
+            # parameters that can be provided but not already explicitly assigned
+            provide_params = [p for p in component.get_can_provide_params() if
+                              p not in self.output_params and p not in
+                              getattr(component, 'requires', [])]
+
+            for k in list(methods) + component.output_params + provide_params:
+                providers[k] = providers.get(k, []) + [component]
+
+        requirement_providers = {}
+        needs = {c: [] for c in components}
+        # Check supplier for each requirement, get dependency and needs
+        for component, requires in zip(components, requirements):
+            for requirement in requires:
+                suppliers = providers.get(requirement)
+                if suppliers:
+                    supplier = None
+                    if len(suppliers) > 1:
+                        for sup in suppliers:
+                            provide = getattr(sup, 'provides', [])
+                            if isinstance(provide, six.string_types):
+                                provide = [provide]
+                            if requirement in provide:
+                                if supplier:
+                                    raise LoggedError(self.log,
+                                                      "more than one component provides"
+                                                      " %s" % requirement)
+                                supplier = sup
+                        if not supplier:
+                            raise LoggedError(self.log,
+                                              "requirement %s is provided by more "
+                                              "than one component: %s. Use 'provides' "
+                                              "keyword to specify which provides it " % (
+                                                  requirement, suppliers))
+                    else:
+                        supplier = suppliers[0]
+                    if supplier is component:
+                        raise LoggedError(self.log,
+                                          "Component %r cannot provide %s to "
+                                          "itself!" % (component, requirement))
+                    requirement_providers[requirement] = supplier.get_provider()
+                    needs[supplier] += [{requirement: requires[requirement]}]
+                    dependencies[component] = \
+                        dependencies.get(component, set()) | {supplier}
+                else:
+                    raise LoggedError(self.log,
+                                      "Requirement %s of %r is not provided by any "
+                                      "component" % (requirement, component))
+
+        self._set_component_order(components, dependencies)
+
+        def depends_on(c1, c2):
+            # Does c2 depend on c1? (don't yet worry if circular)
+            for c in dependencies.get(c2, []):
+                if c is c1 or depends_on(c1, c):
+                    return True
+            return False
+
+        # Store the input params and components on which each sampled params depends.
+        sampled_input_dependence = self.parameterization.sampled_input_dependence()
+        sampled_dependence = odict((p, []) for p in sampled_input_dependence)
+        for p, i_s in sampled_input_dependence.items():
+            for component in components:
+                if p in component.input_params or i_s and \
+                        any(p_i in component.input_params for p_i in i_s):
+                    sampled_dependence[p].append(component)
+                    for comp in components:
+                        if comp is not component and depends_on(component, comp):
+                            sampled_dependence[p].append(comp)
+
+        self.sampled_dependence = sampled_dependence
+
+        if self.log.getEffectiveLevel() <= logging.DEBUG:
+            self.log.debug("Requirements will be calculated by these components:")
+            for requirement, provider in requirement_providers.items():
+                self.log.debug("- %s: %s" % (requirement, provider))
+
+        self.provider = Provider(self, requirement_providers)
+
+        # tell each component what it needs to calculate
+        for component in components:
+            if needs[component]:
+                for need in needs[component]:
+                    component.needs(**need)
+            else:
+                component.needs()
+            component.initialize_with_provider(self.provider)
+
     def _assign_params(self, info_likelihood, info_theory=None):
         """
         Assign parameters to theories and likelihoods, following the algorithm explained
@@ -425,19 +550,31 @@ class Model(HasLogger):
         self.input_params = list(self.parameterization.input_params())
         self.output_params = list(self.parameterization.output_params())
         params_assign = odict([
-            ("input", odict([(p, []) for p in self.input_params])),
-            ("output", odict([(p, []) for p in self.output_params]))])
+            ("input", odict((p, []) for p in self.input_params)),
+            ("output", odict((p, []) for p in self.output_params))])
         agnostic_likes = {"input": [], "output": []}
         # All components, doing likelihoods first so unassigned can by default
         # go to theory
         components = list(self.likelihood.values()) + list(self.theory.values())
-        for kind, option, prefix in (
-                ["input", _input_params, _input_params_prefix],
-                ["output", _output_params, _output_params_prefix]):
+        for kind, option, prefix, derived_param in (
+                ["input", _input_params, _input_params_prefix, False],
+                ["output", _output_params, _output_params_prefix, True]):
             for component in components:
                 # "one" only takes leftover parameters
                 if component.get_name() == "one":
                     continue
+                if component.get_allow_agnostic():
+                    supports_params = None
+                elif kind == 'output':
+                    supports_params = set(component.get_can_provide_params())
+                    provide = getattr(component, _provides, [])
+                    if not isinstance(provide, list):
+                        raise LoggedError(self.log, "'%s' must be a list of "
+                                                    "parameter names" % _provides)
+                    supports_params |= set(provide)
+                else:
+                    supports_params = component.get_requirements()
+
                 # Identify parameters understood by this likelihood/theory
                 # 1a. Does it have input/output params list?
                 #     (takes into account that for callables, we can ignore elements)
@@ -449,7 +586,8 @@ class Model(HasLogger):
                             if kind == "input":
                                 # If external function, no problem: it may have
                                 # default value
-                                if not isinstance(component, LikelihoodExternalFunction):
+                                if not isinstance(component,
+                                                  LikelihoodExternalFunction):
                                     raise LoggedError(
                                         self.log,
                                         "Parameter '%s' needed as input for '%s', "
@@ -459,38 +597,41 @@ class Model(HasLogger):
                     for p in params_assign[kind]:
                         if p.startswith(getattr(component, prefix)):
                             params_assign[kind][p] += [component]
-                # 3. Does it have a general (mixed) list of params?
-                elif getattr(component, _params, None) is not None:
-                    for p in getattr(component, _params):
+                # 3. Does it have a general (mixed) list of params? (set from default)
+                elif getattr(component, _params, None):
+                    for p, options in getattr(component, _params).items():
                         if p in params_assign[kind]:
-                            params_assign[kind][p] += [component]
-                # 4. No parameter knowledge: store as parameter agnostic
-                else:
+                            if not hasattr(options, 'get') or \
+                                    options.get('derived',
+                                                derived_param) is derived_param:
+                                params_assign[kind][p] += [component]
+                # 4. otherwise explicitly supported?
+                elif supports_params:
+                    # outputs this parameter unless explicitly told
+                    # another component provides it
+                    for p in supports_params:
+                        if p in params_assign[kind]:
+                            if not any((c is not component and p in
+                                        getattr(c, _provides, [])) for c in components):
+                                params_assign[kind][p] += [component]
+                # 5. No parameter knowledge: store as parameter agnostic
+                elif supports_params is None:
                     agnostic_likes[kind] += [component]
-                # Check that there is only one non-knowledgeable element, and assign
-                # unused params
-                if len(agnostic_likes[kind]) > 1:
-                    raise LoggedError(
-                        self.log, "More than once parameter-agnostic likelihood/theory "
-                                  "with respect to %s parameters: %r. Cannot decide "
-                                  "parameter assignments.", kind, agnostic_likes)
-                elif agnostic_likes[kind]:  # if there is only one
-                    for p, assigned in params_assign[kind].items():
-                        if not assigned:
-                            params_assign[kind][p] = [agnostic_likes[kind][0]]
-        # Check that, if a theory code is present, it does not share input parameters with
-        # any likelihood (because of the theory+experimental model separation)
-        # TODO: could relax this?
-        if self.theory:
-            for p, assigned in params_assign["input"].items():
-                if len(assigned) > 1 and [component for component in assigned if
-                                          isinstance(component, Theory)] \
-                        and [component for component in assigned if
-                             isinstance(component, Likelihood)]:
-                    raise LoggedError(
-                        self.log, "Some parameter has been assigned to the theory code "
-                                  "AND a likelihood, and that is not allowed: {%s: %r}",
-                        p, [component.get_name() for component in assigned])
+
+            # Check that there is only one non-knowledgeable element, and assign
+            # unused params
+            if len(agnostic_likes[kind]) > 1 and not all(params_assign[kind].values()):
+                raise LoggedError(
+                    self.log, "More than one parameter-agnostic likelihood/theory "
+                              "with respect to %s parameters: %r. Cannot decide "
+                              "parameter assignments.", kind, agnostic_likes)
+            elif agnostic_likes[kind]:  # if there is only one
+                component = agnostic_likes[kind][0]
+                for p, assigned in params_assign[kind].items():
+                    if not assigned or not derived_param and \
+                            p in getattr(component, _requires, []):
+                        params_assign[kind][p] += [component]
+
         # If unit likelihood is present, assign all *non-theory* inputs to it
         if "one" in self.likelihood:
             for p, assigned in params_assign["input"].items():
@@ -498,8 +639,8 @@ class Model(HasLogger):
                         isinstance(component, Theory)]:
                     assigned.append(self.likelihood["one"])
         # If there are unassigned input params, fail
-        unassigned_input = [
-            p for p, assigned in params_assign["input"].items() if not assigned]
+        unassigned_input = [p for p, assigned in params_assign["input"].items()
+                            if not assigned]
         if unassigned_input:
             raise LoggedError(
                 self.log, "Could not find anything to use input parameter(s) %r.",
@@ -527,8 +668,9 @@ class Model(HasLogger):
                 unassigned_output)
         if multiassigned_output:
             raise LoggedError(
-                self.log, "Output params can only be computed by one likelihood/theory, "
-                          "but some were claimed by more than one: %r.",
+                self.log,
+                "Output params can only be computed by one likelihood/theory, "
+                "but some were claimed by more than one: %r.",
                 multiassigned_output)
         # Finished! Assign and update infos
         for kind, option, attr in (
@@ -539,13 +681,9 @@ class Model(HasLogger):
                         [p for p, assign in params_assign[kind].items() if
                          component in assign])
                 # Update infos!
-                if isinstance(component, Likelihood):
-                    info_likelihood[component.get_name()].pop(_params, None)
-                    info_likelihood[component.get_name()][option] = getattr(component,
-                                                                            attr)
-                else:
-                    info_theory[component.get_name()].pop(_params, None)
-                    info_theory[component.get_name()][option] = getattr(component, attr)
+                inf = (info_theory, info_likelihood)[isinstance(component, Likelihood)]
+                inf[component.get_name()].pop(_params, None)
+                inf[component.get_name()][option] = getattr(component, attr)
         if self.log.getEffectiveLevel() <= logging.DEBUG:
             self.log.debug("Parameters were assigned as follows:")
             for component in components:
@@ -571,8 +709,9 @@ class Model(HasLogger):
         """
         # Fill unknown speeds with the value of the slowest one, and clip with overhead
         components = list(self.likelihood.values()) + list(self.theory.values())
-        speeds = np.array([getattr(component, "speed", -1) for component in components],
-                          dtype=np.float64)
+        speeds = np.array(
+            [getattr(component, "speed", -1) for component in components],
+            dtype=np.float64)
         # Add overhead to the defined ones, and clip to the slowest the undefined ones
         speeds[speeds > 0] = (speeds[speeds > 0] ** -1 + self.overhead) ** -1
         try:
@@ -584,12 +723,13 @@ class Model(HasLogger):
             component.speed = speeds[i]
         # Compute "footprint"
         # i.e. likelihoods (and theory) that we must recompute when each parameter changes
-        footprints = np.zeros((len(self.sampled_dependence), len(components)), dtype=int)
+        footprints = np.zeros((len(self.sampled_dependence), len(components)),
+                              dtype=int)
         for i, ls in enumerate(self.sampled_dependence.values()):
             for j, like in enumerate(components):
                 footprints[i, j] = like in ls
         # Group parameters by footprint
-        different_footprints = list(set([tuple(row) for row in footprints.tolist()]))
+        different_footprints = list(set(tuple(row) for row in footprints.tolist()))
         blocks = [[p for ip, p in enumerate(self.sampled_dependence)
                    if all(footprints[ip] == fp)] for fp in different_footprints]
         # Find optimal ordering, such that one minimises the time it takes to vary every
@@ -644,7 +784,8 @@ class Model(HasLogger):
                                           np.log(np.min(params_speeds[i + 1:])))
                 i_max = np.argmin(log_differences)
                 blocks = (
-                    lambda l: [list(chain(*l[:i_max + 1])), list(chain(*l[i_max + 1:]))])(
+                    lambda l: [list(chain(*l[:i_max + 1])),
+                               list(chain(*l[i_max + 1:]))])(
                     blocks)
                 # In this case, speeds must be *cumulative*, since I am squashing blocks
                 cum_inv = lambda ss: 1 / (sum(1 / ss))
@@ -688,8 +829,9 @@ class Model(HasLogger):
             raise LoggedError(
                 self.log, "Manual blocking: unkown parameters: %r", unknown)
         if (speeds != np.sort(speeds)).all():
-            self.log.warning("Manual blocking: speed-blocking *apparently* non-optimal: "
-                             "sort by ascending speed when possible")
+            self.log.warning(
+                "Manual blocking: speed-blocking *apparently* non-optimal: "
+                "sort by ascending speed when possible")
         return speeds, blocks
 
     def _get_auto_covmat(self, params_info):

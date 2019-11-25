@@ -121,7 +121,8 @@ class Parameterization(HasLogger):
         self._derived_funcs = dict()
         self._derived_args = dict()
         # Notice here that expand_info_param *always* adds a partag.derived:True tag
-        # to infos without _prior or partag.value, and a partag.value field to fixed params
+        # to infos without _prior or partag.value, and a partag.value field
+        # to fixed params
         for p, info in info_params.items():
             self._infos[p] = deepcopy(info)
             if is_fixed_param(info):
@@ -166,7 +167,8 @@ class Parameterization(HasLogger):
                     "" if is_in else " remove it and",
                     "sampled" if is_in else "derived",
                     eg_in if is_in else eg_out)
-        # Assume that the *un*known function arguments are likelihood output parameters
+        # Assume that the *un*known function arguments are likelihood/theory
+        # output parameters
         args = (set(chain(*self._input_args.values()))
                 .union(chain(*self._derived_args.values())))
         for p in (list(self._constant) + list(self._input) +
@@ -188,8 +190,8 @@ class Parameterization(HasLogger):
         if dropped_but_never_used and not ignore_unused_sampled:
             raise LoggedError(
                 self.log,
-                "Parameters %r are sampled but not passed to the likelihood or theory "
-                "code, neither ever used as arguments for any parameters. "
+                "Parameters %r are sampled but not passed to a likelihood or theory "
+                "code, and never used as arguments for any parameter functions. "
                 "Check that you are not using the '%s' tag unintentionally.",
                 list(dropped_but_never_used), partag.drop)
         # input params depend on input and sampled only, never on output/derived
@@ -202,7 +204,8 @@ class Parameterization(HasLogger):
                 self.log,
                 "Input parameters defined as functions can only depend on other "
                 "input parameters that are not defined as functions. "
-                "In particular, an input parameter cannot depend on %r",
+                "In particular, an input parameter cannot depend on %r."
+                "Use an explicit Theory calculator for more complex dependencies.",
                 list(bad_input_dependencies))
 
     def input_params(self):
@@ -238,15 +241,18 @@ class Parameterization(HasLogger):
         elif not isinstance(sampled_params_values, odict):
             sampled_params_values = odict(
                 (p, sampled_params_values[p]) for p in self.sampled_params())
-        self._sampled = deepcopy(sampled_params_values)
+        else:
+            sampled_params_values = sampled_params_values.copy()
+
+        self._sampled = sampled_params_values
         # Fill first directly sampled input parameters
         self._input.update(
             {p: sampled_params_values[p] for p in self._directly_sampled})
         # Then evaluate the functions
-        resolved_old = None
+        n_resolved = -1
         resolved = []
-        while resolved != resolved_old:
-            resolved_old = deepcopy(resolved)
+        while len(resolved) != n_resolved:
+            n_resolved = len(resolved)
             for p in self._input_funcs:
                 if p in resolved:
                     continue
@@ -273,17 +279,17 @@ class Parameterization(HasLogger):
         self._derived.update(
             {p: output_params_values[p] for p in self._directly_output})
         # Then evaluate the functions
-        resolved_old = None
+        n_resolved = -1
         resolved = []
-        while resolved != resolved_old:
-            resolved_old = deepcopy(resolved)
+        while len(resolved) != n_resolved:
+            n_resolved = len(resolved)
             for p in self._derived_funcs:
                 if p in resolved:
                     continue
                 args = {p: (self.input_params().get(
                     p, self.sampled_params().get(p, output_params_values.get(
                         p, self._derived.get(p, None))))) for p in self._derived_args[p]}
-                if not all([isinstance(v, Number) for v in args.values()]):
+                if not all(isinstance(v, Number) for v in args.values()):
                     continue
                 self._derived[p] = call_param_func(p, self._derived_funcs[p], args,
                                                    self.log)

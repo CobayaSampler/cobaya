@@ -456,7 +456,7 @@ like_cmb = odict([
         kinds.theory: {theo: {_extra_args: cmb_precision[theo]}
                        for theo in [_camb, _classy]},
         kinds.likelihood: odict([
-            ["planck_2018_lensing.cmbmarged", None]])}],
+            ["planck_2018_lensing.CMBMarged", None]])}],
 ])
 like_cmb["planck_2018_bk15"][_comment] = like_cmb["planck_2018"][_comment]
 # Add common CMB derived parameters

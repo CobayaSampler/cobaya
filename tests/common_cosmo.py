@@ -69,7 +69,9 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
                best_fit_derived[p][1])
         if rel > tolerance_derived * (
                 2 if p in (
-                "YHe", "Y_p", "DH", "sigma8", "s8omegamp5", "thetastar") else 1):
+                        "YHe", "Y_p", "DH", "sigma8", "s8omegamp5", "thetastar") else 1):
             not_passed += [(p, rel)]
-    print("Derived parameters not tested because not implemented: %r" % not_tested)
-    assert not not_passed, "Some derived parameters were off. Fractions of test tolerance: %r" % not_passed
+    if not_tested:
+        print("Derived parameters not tested because not implemented: %r" % not_tested)
+    assert not not_passed, "Some derived parameters were off. Fractions of " \
+                           "test tolerance: %r" % not_passed

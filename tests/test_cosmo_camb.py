@@ -1,21 +1,19 @@
 from __future__ import absolute_import
 from .common import process_modules_path
-import sys
 import os
-import pytest
+import numpy as np
+from cobaya.model import get_model
+from cobaya.tools import load_module
+
+params = {'ombh2': 0.02242, 'omch2': 0.11933, 'H0': 67.66, 'tau': 0.0561,
+          'mnu': 0.06, 'nnu': 3.046, 'num_massive_neutrinos': 1, 'ns': 0.9665,
+          'YHe': 0.2454, 'As': 2e-9}
 
 
 def test_sources(modules):
-    sys.path.insert(0, os.path.join(process_modules_path(modules), "code", "CAMB"))
-    try:
-        import camb
-    finally:
-        sys.path.pop(0)
+    camb = load_module("camb",
+                       path=os.path.join(process_modules_path(modules), "code", "CAMB"))
     from camb.sources import GaussianSourceWindow
-
-    params = {'ombh2': 0.02242, 'omch2': 0.11933, 'H0': 67.66, 'tau': 0.0561,
-              'mnu': 0.06, 'nnu': 3.046, 'num_massive_neutrinos': 1, 'ns': 0.9665,
-              'YHe': 0.2454, 'As': 2e-9}
 
     pars = camb.set_params(**params)
     pars.set_for_lmax(500)
@@ -41,6 +39,21 @@ def test_sources(modules):
         'theory': {'camb': {'stop_at_error': True}}
     }
 
-    from cobaya.model import get_model
     model = get_model(info)
     model.loglike({})
+
+
+def test_CAMBdata(modules):
+    def test_likelihood(
+            _theory={'CAMBdata': None, 'Pk_grid': dict(k_max=2, z=[0, 2])}):
+        return _theory.get_CAMBdata().tau0
+
+    info = {
+        'params': params,
+        'likelihood': {'test_likelihood': test_likelihood},
+        'theory': {'camb': {'stop_at_error': True}},
+        'modules': process_modules_path(modules)}
+
+    model = get_model(info)
+    assert np.isclose(model.loglike({})[0], 14165.63, rtol=1e-4), \
+        "CAMBdata object result failed"

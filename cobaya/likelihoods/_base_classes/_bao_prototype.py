@@ -220,21 +220,17 @@ class _bao_prototype(_InstallableLikelihood):
                 x - self.data["value"].values)
 
     def get_requirements(self):
-        if any(p.__class__ == "classy" for p in self.theory.values()):
-            raise LoggedError(
-                self.log,
-                "BAO likelihood not yet compatible with CLASS (help appreciated!)")
         # Requisites
         zs = {obs: self.data.loc[self.data["observable"] == obs, "z"].values
               for obs in self.data["observable"].unique()}
         theory_reqs = {
             "DV_over_rs": {
                 "angular_diameter_distance": {"z": zs.get("DV_over_rs", None)},
-                "H": {"z": zs.get("DV_over_rs", None)},
+                "Hubble": {"z": zs.get("DV_over_rs", None)},
                 "rdrag": None},
             "rs_over_DV": {
                 "angular_diameter_distance": {"z": zs.get("rs_over_DV", None)},
-                "H": {"z": zs.get("rs_over_DV", None)},
+                "Hubble": {"z": zs.get("rs_over_DV", None)},
                 "rdrag": None},
             "DM_over_rs": {
                 "angular_diameter_distance": {"z": zs.get("DM_over_rs", None)},
@@ -243,14 +239,14 @@ class _bao_prototype(_InstallableLikelihood):
                 "angular_diameter_distance": {"z": zs.get("DA_over_rs", None)},
                 "rdrag": None},
             "Hz_rs": {
-                "H": {"z": zs.get("Hz_rs", None)},
+                "Hubble": {"z": zs.get("Hz_rs", None)},
                 "rdrag": None},
             "f_sigma8": {
                 "fsigma8": {"z": zs.get("f_sigma8", None)},
-                "H": {"z": zs.get("Hz_rs", None)}},
+                "Hubble": {"z": zs.get("Hz_rs", None)}},
             "F_AP": {
                 "angular_diameter_distance": {"z": zs.get("F_AP", None)},
-                "H": {"z": zs.get("F_AP", None)}}}
+                "Hubble": {"z": zs.get("F_AP", None)}}}
         obs_used_not_implemented = np.unique([obs for obs in self.data["observable"]
                                               if obs not in theory_reqs])
         if len(obs_used_not_implemented):
@@ -265,18 +261,28 @@ class _bao_prototype(_InstallableLikelihood):
                 requisites.update(theory_reqs[obs])
         return requisites
 
+    def initialize_with_provider(self, provider):
+        # TODO: is this needed any more?
+
+        # if "classy" in provider.model.theory:
+        #     raise LoggedError(
+        #         self.log,
+        #         "BAO likelihood not yet compatible with CLASS (help appreciated!)")
+        super(_bao_prototype, self).initialize_with_provider(provider)
+
     def theory_fun(self, z, observable):
         # Functions to get the corresponding theoretical prediction:
         # Spherically-averaged distance, over sound horizon radius
         if observable == "DV_over_rs":
             return np.cbrt(
                 ((1 + z) * self.theory.get_angular_diameter_distance(z)) ** 2 *
-                _c_km_s * z / self.theory.get_H(z, units="km/s/Mpc")) / self.rs()
+                _c_km_s * z / self.theory.get_Hubble(z, units="km/s/Mpc")) / self.rs()
         # Idem, inverse
         elif observable == "rs_over_DV":
             return np.cbrt(
                 ((1 + z) * self.theory.get_angular_diameter_distance(z)) ** 2 *
-                _c_km_s * z / self.theory.get_H(z, units="km/s/Mpc")) ** (-1) * self.rs()
+                _c_km_s * z / self.theory.get_Hubble(z, units="km/s/Mpc")) ** (
+                       -1) * self.rs()
         # Comoving angular diameter distance, over sound horizon radius
         elif observable == "DM_over_rs":
             return (1 + z) * self.theory.get_angular_diameter_distance(z) / self.rs()
@@ -285,14 +291,14 @@ class _bao_prototype(_InstallableLikelihood):
             return self.theory.get_angular_diameter_distance(z) / self.rs()
         # Hubble parameter, times sound horizon radius
         elif observable == "Hz_rs":
-            return self.theory.get_H(z, units="km/s/Mpc") * self.rs()
+            return self.theory.get_Hubble(z, units="km/s/Mpc") * self.rs()
         # Diff Linear Growth Rate times present amplitude
         elif observable == "f_sigma8":
             return self.theory.get_fsigma8(z)
         # Anisotropy (Alcock-Paczynski) parameter
         elif observable == "F_AP":
             return ((1 + z) * self.theory.get_angular_diameter_distance(z) *
-                    self.theory.get_H(z, units="km/s/Mpc")) / _c_km_s
+                    self.theory.get_Hubble(z, units="km/s/Mpc")) / _c_km_s
 
     def rs(self):
         return self.theory.get_param("rdrag") * self.rs_rescale

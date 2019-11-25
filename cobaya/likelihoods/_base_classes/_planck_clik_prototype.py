@@ -82,8 +82,8 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
         # Differences in the wrapper for lensing and non-lensing likes
         self.lensing = clik.try_lensing(self.clik_file)
         try:
-            self.clik = (
-                clik.clik_lensing(self.clik_file) if self.lensing else clik.clik(self.clik_file))
+            self.clik = clik.clik_lensing(self.clik_file) if self.lensing \
+                else clik.clik(self.clik_file)
         except clik.lkl.CError:
             # Is it that the file was not found?
             if not os.path.exists(self.clik_file):
@@ -98,6 +98,9 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
                            "initialization of incompatible likelihoods (e.g. polarised "
                            "vs non-polarised 'lite' likelihoods. See error info below:")
             raise
+        self.l_maxs = self.clik.get_lmax()
+
+    def initialize_with_params(self):
         # Check that the parameters are the right ones
         self.expected_params = list(self.clik.extra_parameter_names)
         differences = are_different_params_lists(
@@ -108,7 +111,6 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
                           "If this has happened without you fiddling with the defaults, "
                           "please open an issue in GitHub.", differences)
         # Placeholder for vector passed to clik
-        self.l_maxs = self.clik.get_lmax()
         length = (len(self.l_maxs) if self.lensing else len(self.clik.get_has_cl()))
         self.vector = np.zeros(np.sum(self.l_maxs) + length + len(self.expected_params))
 
@@ -158,12 +160,13 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
             result &= os.path.exists(os.path.realpath(
                 os.path.join(kwargs["path"], "data", data_path, filename)))
             # Check for additional data and covmats
-            from cobaya.likelihoods.planck_2018_lensing.native import native
+            from cobaya.likelihoods.planck_2018_lensing import native
             result &= native.is_installed(**kwargs)
         return result
 
     @classmethod
-    def install(cls, path=None, force=False, code=True, data=True, no_progress_bars=False):
+    def install(cls, path=None, force=False, code=True, data=True,
+                no_progress_bars=False):
         name = cls.get_qualified_class_name()
         log = logging.getLogger(name)
         path_names = {"code": common_path, "data": get_data_path(name)}
@@ -204,9 +207,10 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
                     log.error("Not possible to download this likelihood.")
                     success = False
                 # Additional data and covmats, stored in same repo as the 2018 python lensing likelihood
-                from cobaya.likelihoods.planck_2018_lensing.native import native
+                from cobaya.likelihoods.planck_2018_lensing import native
                 if not native.is_installed(data=True, path=path):
-                    success *= native.install(path=path, force=force, code=code, data=data,
+                    success *= native.install(path=path, force=force, code=code,
+                                              data=data,
                                               no_progress_bars=no_progress_bars)
         return success
 
@@ -255,7 +259,8 @@ def is_installed_clik(path, log_and_fail=False, import_it=True):
         clik_path = os.path.join(get_clik_source_folder(path), 'lib/python/site-packages')
     except FileNotFoundError:
         if log_and_fail:
-            raise LoggedError(log, "The given folder does not exist: '%s'", clik_path or path)
+            raise LoggedError(log, "The given folder does not exist: '%s'",
+                              clik_path or path)
         return False
     sys.path.insert(0, clik_path)
     try:

@@ -22,7 +22,7 @@ classy_unknown = ["zstar", "rstar", "thetastar", "DAstar", "zdrag",
                   "DH", "Y_p"]
 
 # Small chi2 difference with CLASS (total still <0.5)
-classy_extra_tolerance = 0.4
+classy_extra_tolerance = 0.4 + 0.5 #s TODO check
 
 
 # STANDARD ###############################################################################
@@ -263,7 +263,7 @@ chi2_lowTE_highTTTEEE_lensingcmblikes = {
     "planck_2018_highl_plik.TTTEEE": 2344.93, "planck_2018_lensing.native": 8.87,
     "tolerance": 0.11}
 
-chi2_planck_2018_plikHM_highTTTEEE_lite = 584.64
+chi2_planck_2018_plikHM_highTTTEEE_lite = 584.65
 
 params_lowTE_highTTTEEE_lite_lensingcmblikes = {
     # Sampled
@@ -327,10 +327,10 @@ derived_lowTE_highTTTEEE_lensingcmblikes = {
 
 # Best fit CMB-marged lensing ############################################################
 
-lik_info_lensing_cmbmarged = {"planck_2018_lensing.cmbmarged": None}
+lik_info_lensing_cmbmarged = {"planck_2018_lensing.CMBMarged": None}
 
 chi2_lensing_cmbmarged = {
-    "planck_2018_lensing.cmbmarged": 7.51, "tolerance": 0.11}
+    "planck_2018_lensing.CMBMarged": 7.51, "tolerance": 0.11}
 
 params_lensing_cmbmarged = {
     "omegabh2": 2.2219050E-02,

@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function
 # Global
 import os
 import sys
-from copy import deepcopy
+from copy import deepcopy, copy
 from importlib import import_module
 import six
 import numpy as np  # don't delete: necessary for get_external_function
@@ -50,18 +50,24 @@ import logging
 log = logging.getLogger(__name__.split(".")[-1])
 
 
-# Deepcopy workaround:
-def deepcopyfix(olddict):
-    if not hasattr(olddict, "keys"):
-        return deepcopy(olddict)
-    newdict = {}
-    for key in olddict:
-        if key == 'theory' or key == 'instance' or key == 'external':
-            newdict[key] = olddict[key]
+def change_key(info, old, new, value):
+    """
+    Change dictionary key without making new dict or changing order
+    :param info: dictionary
+    :param old: old key name
+    :param new: new key name
+    :param value: value for key
+    :return: info (same instance)
+    """
+    k = list(info.keys())
+    v = list(info.values())
+    info.clear()
+    for key, oldv in zip(k, v):
+        if key == old:
+            info[new] = value
         else:
-            # print(key)
-            newdict[key] = deepcopy(olddict[key])
-    return newdict
+            info[key] = oldv
+    return info
 
 
 def get_internal_class_module(name, kind):
@@ -88,14 +94,48 @@ def get_kind(name, fail_if_not_found=True):
             return None
 
 
-def load_module(name, package=None, path=None):
-    if path:
-        sys.path.insert(0, os.path.abspath(os.path.normpath(path)))
-    try:
-        return import_module(name, package=package)
-    finally:
-        if path:
-            sys.path.pop(0)
+class PythonPath:
+    """
+    A context that keeps sys.path unchanged, optionally adding path during the context.
+    """
+
+    def __init__(self, path=None, when=True):
+        self.path = path if when else None
+
+    def __enter__(self):
+        self.old_path = sys.path[:]
+        if self.path:
+            sys.path.insert(0, os.path.abspath(self.path))
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        sys.path[:] = self.old_path
+
+
+class VersionCheckError(ValueError):
+    pass
+
+
+def check_module_version(module, min_version=None):
+    if min_version:
+        try:
+            from packaging import version
+        except ModuleNotFoundError:
+            raise LoggedError(log, "packaging not found, install with "
+                                   "'pip install packaging'")
+        else:
+            if version.parse(module.__version__) < version.parse(min_version):
+                raise VersionCheckError(
+                    "module %s at %s, is version %s but require %s or higher" %
+                    (module.__name__, os.path.dirname(module.__file__),
+                     module.__version__, min_version))
+
+
+def load_module(name, package=None, path=None, min_version=None):
+    with PythonPath(path):
+        module = import_module(name, package=package)
+    check_module_version(module, min_version)
+    return module
 
 
 def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
@@ -229,9 +269,8 @@ def get_external_function(string_or_function, name=None):
             import scipy.stats as stats  # provide default scope for eval
             scope['stats'] = stats
             scope['np'] = np
-            if "import_module" in string_or_function:
-                sys.path.append(os.path.realpath(os.curdir))
-            function = eval(string_or_function, scope)
+            with PythonPath(os.curdir, when="import_module" in string_or_function):
+                function = eval(string_or_function, scope)
         except Exception as e:
             raise LoggedError(
                 log, "Failed to load external function%s: '%r'",
@@ -585,3 +624,17 @@ def deepcopy_where_possible(base):
             return deepcopy(base)
         except:
             return base
+
+
+def get_class_methods(cls, not_base=None, start='get_', excludes=(), first='self'):
+    methods = {}
+    for k, v in inspect.getmembers(cls):
+        if k.startswith(start) and k not in excludes and \
+                (not_base is None or not hasattr(not_base, k)) and \
+                getfullargspec(v).args[:1] == [first]:
+            methods[k[len(start):]] = v
+    return methods
+
+
+def get_properties(cls):
+    return [k for k, v in inspect.getmembers(cls) if isinstance(v, property)]

@@ -122,6 +122,6 @@ sampler:
 theory:
   classy:
     extra_args:
-      non linear: halofit
+      non linear: hmcode
       N_ncdm: 1
       N_ur: 2.0328

@@ -80,7 +80,7 @@ Which will print something like
 
    {'cl': {'pp': 2048, 'bb': 29, 'ee': 2508, 'tt': 2508, 'eb': 0, 'te': 2508, 'tb': 0}}
 
-If we take a look at the documentation of :func:`~theories.BoltzmannBase.BoltzmannBase.needs` (clickable!), we will see that to request the power spectrum we would use the method ``get_Cl``:
+If we take a look at the documentation of :func:`~theories.boltzmannbase.BoltzmannBase.needs` (clickable!), we will see that to request the power spectrum we would use the method ``get_Cl``:
 
 .. literalinclude:: ./src_examples/cosmo_model/4.py
    :language: python
@@ -93,7 +93,7 @@ If we take a look at the documentation of :func:`~theories.BoltzmannBase.Boltzma
    Cosmological observables requested this way **always correspond to the last set of parameters with which the likelihood was evaluated**.
 
 
-If we want to request additional observables not already requested by the likelihoods, we can use the method :func:`~theories.BoltzmannBase.BoltzmannBase.needs` (clickable!) of the theory code (check out its documentation for the syntax).
+If we want to request additional observables not already requested by the likelihoods, we can use the method :func:`~theories.boltzmannbase.BoltzmannBase.needs` (clickable!) of the theory code (check out its documentation for the syntax).
 
 As a final example, let us request the Hubble parameter for a number of redshifts and plot both it and the power spectrum for a range of values of :math:`\Omega_\mathrm{CDM}h^2`:
 
@@ -121,7 +121,7 @@ If you had set ``timing=True`` in the input info, :func:`~model.Model.dump_timin
 Low-level access to the theory code
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-You can access the imported CAMB or CLASS module as, respectively, ``Model.theory.camb`` and ``Model.theory.classy``. But be careful about manually changing their settings: it may unexpectedly influence subsequent cosmological observable computations for the present model instance.
+You can access the imported CAMB module or CLASS 'Class' instance as, respectively, ``Model.theory["camb"].camb`` and ``Model.theory["classy"].classy``. But be careful about manually changing their settings: it may unexpectedly influence subsequent cosmological observable computations for the present model instance. If you want to directly access CAMB's results object, the likelihood can request 'CAMBdata' as a requirement and retrieve it from a likelihood using ``self.provider.get_CAMBdata()``.
 
 
 Model wrapper class

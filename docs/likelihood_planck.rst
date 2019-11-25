@@ -32,7 +32,7 @@ The Planck 2018 likelihoods defined here are: (*new in 2.0*)
 - ``planck_2018_highl_CamSpec.[TT|TTTEEE][_native]``: ``clik`` and native Python versions of the alternative high-:math:`\ell` ``CamSpec`` likelihoods.
 - ``planck_2018_lensing.clik``: lensing temperature+polarisation-based; official ``clik`` code.
 - ``planck_2018_lensing.native``: lensing temperature+polarisation-based; native Python version (more customizable)
-- ``planck_2018_lensing.cmbmarged``: CMB-marginalized, temperature+polarisation-based lensing likelihood; native Python version (more customizable). Do not combine with any of the ones above!
+- ``planck_2018_lensing.CMBMarged``: CMB-marginalized, temperature+polarisation-based lensing likelihood; native Python version (more customizable). Do not combine with any of the ones above!
 
 The Planck 2015 likelihoods defined here are:
 

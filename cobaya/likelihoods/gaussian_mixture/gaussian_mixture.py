@@ -36,7 +36,7 @@ class gaussian_mixture(Likelihood):
         """
         return len(self.input_params)
 
-    def initialize(self):
+    def initialize_with_params(self):
         """
         Initializes the gaussian distributions.
         """
@@ -216,9 +216,9 @@ def info_random_gaussian_mixture(
         _output_params_prefix: output_params_prefix, "derived": derived}}}
     info[_params] = odict(
         # sampled
-        [[input_params_prefix + "_%d" % i,
+        [(input_params_prefix + "_%d" % i,
           {"prior": {"min": ranges[i][0], "max": ranges[i][1]},
-           "latex": r"\alpha_{%i}" % i}]
+           "latex": r"\alpha_{%i}" % i})
          for i in range(dimension)] +
         # derived
         ([[output_params_prefix + "_%d" % i,

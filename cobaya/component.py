@@ -1,5 +1,6 @@
 from cobaya.log import HasLogger
 from cobaya.input import HasDefaults
+from cobaya.log import LoggedError
 import numpy as np
 import time
 from collections import OrderedDict
@@ -51,7 +52,8 @@ class CobayaComponent(HasLogger, HasDefaults):
 
     class_options = {}
 
-    def __init__(self, info={}, name=None, timing=None, path_install=None):
+    def __init__(self, info={}, name=None, timing=None, path_install=None,
+                 initialize=True):
         self._name = name or self.get_qualified_class_name()
         self.path_install = path_install
         for k, value in self.class_options.items():
@@ -64,6 +66,15 @@ class CobayaComponent(HasLogger, HasDefaults):
             self.timer = Timer()
         else:
             self.timer = None
+        try:
+            if initialize:
+                self.initialize()
+        except AttributeError as e:
+            if '_params' in str(e):
+                raise LoggedError(self.log, "use 'initialize_with_params' if you need to "
+                                            "initialize after input and output parameters"
+                                            " are set (%s, %s)", self, e)
+            raise
 
     def get_name(self):
         return self._name
@@ -71,17 +82,24 @@ class CobayaComponent(HasLogger, HasDefaults):
     def __repr__(self):
         return self.get_name()
 
-    # Optional
     def close(self):
         """Finalizes the class, if something needs to be cleaned up."""
         pass
 
-    # Optional
     def initialize(self):
         """
-        Initializes the class.
+        Initializes the class (before getting requirements and before input_params,
+        output_params and provider assigned).
         """
         pass
+
+    def get_version(self):
+        """
+        Get a dictionary of version information for this component.
+
+        :return: string or dict of values or None
+        """
+        return None
 
     def __exit__(self, exception_type, exception_value, traceback):
         if self.timer:
@@ -108,6 +126,10 @@ class ComponentCollection(OrderedDict, HasLogger):
                         component.get_name(), component.timer.time_avg, component.timer.n)
                      for component in timers]))
 
+    def get_version(self):
+        return {component.get_name(): component.get_version()
+                for component in self.values()}
+
     # Python magic for the "with" statement
     def __enter__(self):
         return self
@@ -115,3 +137,33 @@ class ComponentCollection(OrderedDict, HasLogger):
     def __exit__(self, exception_type, exception_value, traceback):
         for component in self.values():
             component.__exit__(exception_type, exception_value, traceback)
+
+
+class Provider(object):
+    """
+    Class used to retrieve computed requirements.
+    Just passes on get_X and get_param methods to the correct component.
+    """
+
+    def __init__(self, model, requirement_providers):
+        self.model = model
+        self.requirement_providers = requirement_providers
+        self.params = None
+
+    def set_current_input_params(self, params):
+        self.params = params
+
+    def get_param(self, param):
+        if param in self.params:
+            return self.params[param]
+        else:
+            return self.requirement_providers[param].get_param(param)
+
+    def __getattribute__(self, name):
+        if name.startswith('get_'):
+            requirement = name[4:]
+            if requirement == 'param':
+                return object.__getattribute__(self, name)
+            else:
+                return getattr(self.requirement_providers[requirement], name)
+        return object.__getattribute__(self, name)

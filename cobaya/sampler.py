@@ -113,7 +113,8 @@ class Sampler(CobayaComponent):
         self.model = model
         self.output = output
 
-        super(Sampler, self).__init__(info_sampler, path_install=path_install, name=name)
+        super(Sampler, self).__init__(info_sampler, path_install=path_install,
+                                      name=name, initialize=False)
 
         # Seed, if requested
         if getattr(self, "seed", None) is not None:

@@ -52,7 +52,8 @@ def test_cosmo_docs_model_classy(modules):
         # Instead, let's just check that no error is raised
         for filename in ["4.py", "5.py"]:
             try:
-                exec(open(os.path.join(docs_src_folder, filename)).read(), globals_example)
+                exec(open(os.path.join(docs_src_folder, filename)).read(),
+                     globals_example)
             except:
                 assert False, "File %s failed." % filename
     #        if test_figs:

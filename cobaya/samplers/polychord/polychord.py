@@ -42,13 +42,15 @@ class polychord(Sampler):
             if am_single_or_primary_process():
                 self.log.info("Importing *local* PolyChord from " + self.path)
                 if not os.path.exists(os.path.realpath(self.path)):
-                    raise LoggedError(self.log, "The given path does not exist. "
+                    raise LoggedError(self.log,
+                                      "The given path does not exist. "
                                       "Try installing PolyChord with "
                                       "'cobaya-install polychord -m [modules_path]")
             pc_build_path = get_build_path(self.path)
             if not pc_build_path:
-                raise LoggedError(self.log, "Either PolyChord is not in the given folder, "
-                                  "'%s', or you have not compiled it.", self.path)
+                raise LoggedError(self.log, "Either PolyChord is not in the given folder,"
+                                            " '%s', or you have not compiled it.",
+                                  self.path)
             # Inserting the previously found path into the list of import folders
             sys.path.insert(0, pc_build_path)
         else:
@@ -60,10 +62,10 @@ class polychord(Sampler):
         except ImportError:
             raise LoggedError(
                 self.log, "Couldn't find the PolyChord python interface. "
-                "Make sure that you have compiled it, and that you either\n"
-                " (a) specify a path (you didn't) or\n"
-                " (b) install the Python interface globally with\n"
-                "     '/path/to/PolyChord/python setup.py install --user'")
+                          "Make sure that you have compiled it, and that you either\n"
+                          " (a) specify a path (you didn't) or\n"
+                          " (b) install the Python interface globally with\n"
+                          "     '/path/to/PolyChord/python setup.py install --user'")
         # Prepare arguments and settings
         self.n_sampled = len(self.model.parameterization.sampled_params())
         self.n_derived = len(self.model.parameterization.derived_params())
@@ -132,7 +134,7 @@ class polychord(Sampler):
         speeds = relative_to_int(speeds, 1)
         # In num_repeats, `d` is interpreted as dimension of each block
         self.grade_frac = [
-            int(speed * read_dnumber(self.num_repeats,  dim_block))
+            int(speed * read_dnumber(self.num_repeats, dim_block))
             for speed, dim_block in zip(speeds, self.grade_dims)]
         # Assign settings
         pc_args = ["nlive", "num_repeats", "nprior", "do_clustering",
@@ -157,7 +159,7 @@ class polychord(Sampler):
             params = [params_names[i] for i in sorted(list(set(inf[0])))]
             raise LoggedError(
                 self.log, "PolyChord needs bounded priors, but the parameter(s) '"
-                "', '".join(params) + "' is(are) unbounded.")
+                          "', '".join(params) + "' is(are) unbounded.")
         locs = bounds[:, 0]
         scales = bounds[:, 1] - bounds[:, 0]
         # This function re-scales the parameters AND puts them in the right order
@@ -225,7 +227,8 @@ class polychord(Sampler):
                 loglikes = np.full(self.n_likes, np.nan)
             derived = list(derived) + list(logpriors) + list(loglikes)
             return (
-                max(logposterior + self.logvolume, 0.99 * self.pc_settings.logzero), derived)
+                max(logposterior + self.logvolume, 0.99 * self.pc_settings.logzero),
+                derived)
 
         sync_processes()
         if am_single_or_primary_process():
@@ -267,9 +270,10 @@ class polychord(Sampler):
                     if not f.startswith(self.pc_settings.file_root):
                         continue
                     if do_output:
-                        cluster_folder = os.path.join(
-                            self.output.folder, self.output.prefix +
-                                                ("_" if self.output.prefix else "") + clusters)
+                        cluster_folder = os.path.join(self.output.folder,
+                                                      self.output.prefix +
+                                                      ("_" if self.output.prefix else "")
+                                                      + clusters)
                         if not os.path.exists(cluster_folder):
                             os.mkdir(cluster_folder)
                     try:
@@ -287,7 +291,6 @@ class polychord(Sampler):
             # Prepare the evidence(s) and write to file
             pre = "log(Z"
             active = "(Still active)"
-            lines = []
             with open(prefix + ".stats", "r") as statsfile:
                 lines = [l for l in statsfile.readlines() if l.startswith(pre)]
             for l in lines:
@@ -300,20 +303,21 @@ class polychord(Sampler):
                     i = int(component)
                     self.clusters[i]["logZ"], self.clusters[i]["logZstd"] = logZ, logZstd
             if do_output:
-                out_evidences = odict([["logZ", self.logZ], ["logZstd", self.logZstd]])
+                out_evidences = odict(logZ=self.logZ, logZstd=self.logZstd)
                 if self.clusters:
                     out_evidences["clusters"] = odict()
                     for i in sorted(list(self.clusters.keys())):
                         out_evidences["clusters"][i] = odict(
-                            [["logZ", self.clusters[i]["logZ"]],
-                             ["logZstd", self.clusters[i]["logZstd"]]])
+                            logZ=self.clusters[i]["logZ"],
+                            logZstd=self.clusters[i]["logZstd"])
                 fname = os.path.join(self.output.folder, self.output.prefix + ".logZ")
-                yaml_dump_file(fname, out_evidences, comment="log-evidence", error_if_exists=False)
+                yaml_dump_file(fname, out_evidences, comment="log-evidence",
+                               error_if_exists=False)
         # TODO: try to broadcast the collections
-        #        if get_mpi():
-        #            bcast_from_0 = lambda attrname: setattr(self,
-        #                attrname, get_mpi_comm().bcast(getattr(self, attrname, None), root=0))
-        #            map(bcast_from_0, ["collection", "logZ", "logZstd", "clusters"])
+        # if get_mpi():
+        #     bcast_from_0 = lambda attrname: setattr(self,
+        #         attrname, get_mpi_comm().bcast(getattr(self, attrname, None), root=0))
+        #     map(bcast_from_0, ["collection", "logZ", "logZstd", "clusters"])
         if am_single_or_primary_process():
             self.log.info("Finished! Raw PolyChord output stored in '%s', "
                           "with prefix '%s'",

@@ -5,6 +5,7 @@ from contextlib import contextmanager
 
 
 def process_modules_path(modules):
+    modules = os.getenv('COBAYA_FORCE_MODULES_PATH', modules)
     if not modules:
         if os.path.exists(os.path.join(os.getcwd(), '..', 'modules')):
             modules = os.path.join('..', 'modules')

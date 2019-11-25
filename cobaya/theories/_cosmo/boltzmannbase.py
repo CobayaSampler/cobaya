@@ -12,25 +12,32 @@ import numpy as np
 from scipy.interpolate import RectBivariateSpline
 from six import string_types
 from itertools import chain
+from collections import deque
 
 # Local
 from cobaya.theory import Theory
-from cobaya.tools import fuzzy_match, create_banner, deepcopy_where_possible
+from cobaya.tools import deepcopy_where_possible
 from cobaya.log import LoggedError
+from cobaya.conventions import _requires, _c_km_s
+
+H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": _c_km_s}
 
 
 class BoltzmannBase(Theory):
 
     def initialize(self):
-        # Generate states, to avoid recomputing
-        self._n_states = 3
-        self._states = [
-            {"params": None, "derived": None, "derived_extra": None, "last": 0}
-            for _ in range(self._n_states)]
+
         # Dict of named tuples to collect requirements and computation methods
         self.collectors = {}
         # Additional input parameters to pass to CAMB, and attributes to set_ manually
         self.extra_args = deepcopy_where_possible(self.extra_args) or {}
+        self._needs = None
+
+    def get_requirements(self):
+        return {p: None for p in getattr(self, _requires, [])}
+
+    def get_allow_agnostic(self):
+        return True
 
     def needs(self, **requirements):
         r"""
@@ -52,9 +59,9 @@ class BoltzmannBase(Theory):
           Takes ``"z": [list_of_evaluated_redshifts]``, ``"k_max": [k_max]``,
           ``"extrap_kmax": [max_k_max_extrapolated]``, ``"nonlinear": [True|False]``,
           ``"vars_pairs": [["delta_tot", "delta_tot"], ["Weyl", "Weyl"], [...]]}``.
-        - ``H={'z': [z_1, ...], 'units': '1/Mpc' or 'km/s/Mpc'}``: Hubble
+        - ``Hubble={'z': [z_1, ...], 'units': '1/Mpc' or 'km/s/Mpc'}``: Hubble
           rate at the redshifts requested, in the given units. Get it with
-          :func:`~BoltzmannBase.get_H`.
+          :func:`~BoltzmannBase.get_Hubble`.
         - ``angular_diameter_distance={'z': [z_1, ...]}``: Physical angular
           diameter distance to the redshifts requested. Get it with
           :func:`~BoltzmannBase.get_angular_diameter_distance`.
@@ -68,8 +75,10 @@ class BoltzmannBase(Theory):
         - **Other derived parameters** that are not included in the input but whose
           value the likelihood may need.
         """
-        if not getattr(self, "_needs", None):
-            self._needs = dict([(p, None) for p in self.output_params])
+
+        super(BoltzmannBase, self).needs(**requirements)
+
+        self._needs = self._needs or {p: None for p in self.output_params}
         # TO BE DEPRECATED IN >=1.3
         for product, capitalization in {
             "cl": "Cl", "pk_interpolator": "Pk_interpolator"}.items():
@@ -128,7 +137,7 @@ class BoltzmannBase(Theory):
                                 "Source %r requested twice with different specification: "
                                 "%r vs %r.", window, self.sources[source])
                 self._needs[k].update(v)
-            elif k in ["H", "angular_diameter_distance",
+            elif k in ["Hubble", "angular_diameter_distance",
                        "comoving_radial_distance", "fsigma8"]:
                 if k not in self._needs:
                     self._needs[k] = {}
@@ -140,52 +149,11 @@ class BoltzmannBase(Theory):
             else:
                 raise LoggedError(self.log, "Unknown required product: '%s'.", k)
 
-    def compute(self, _derived=None, cached=True, **params_values_dict):
-        lasts = [self._states[i]["last"] for i in range(self._n_states)]
-        try:
-            if not cached:
-                raise StopIteration
-            # are the parameter values there already?
-            i_state = next(i for i in range(self._n_states)
-                           if self._states[i]["params"] == params_values_dict)
-            # has any new product been requested?
-            for product in self.collectors:
-                next(k for k in self._states[i_state] if k == product)
-            reused_state = True
-            # Get (pre-computed) derived parameters
-            if _derived == {}:
-                _derived.update(self._states[i_state]["derived"] or {})
-            self.log.debug("Re-using computed results (state %d)", i_state)
-        except StopIteration:
-            reused_state = False
-            # update the (first) oldest one and compute
-            i_state = lasts.index(min(lasts))
-            self.log.debug("Computing (state %d)", i_state)
-            if self.timer:
-                self.timer.start()
-            if not self.run_calculation(_derived, i_state, **params_values_dict):
-                return 0
-            if self.timer:
-                self.timer.increment(self.log)
-        # make this one the current one by decreasing the antiquity of the rest
-        for i in range(self._n_states):
-            self._states[i]["last"] -= max(lasts)
-        self._states[i_state]["last"] = 1
-        return 1 if reused_state else 2
-
     def requested(self):
         """
         Returns the full set of requested cosmological products and parameters.
         """
         return self._needs
-
-    def get_param(self, p):
-        """
-        Interface function for likelihoods to get sampled and derived parameters.
-
-        Always use this one; don't try to access theory code attributes directly!
-        """
-        pass
 
     def get_Cl(self, ell_factor=False, units="muK2"):
         r"""
@@ -201,7 +169,7 @@ class BoltzmannBase(Theory):
         """
         pass
 
-    def get_H(self, z, units="km/s/Mpc"):
+    def get_Hubble(self, z, units="km/s/Mpc"):
         r"""
         Returns the Hubble rate at the given redshifts.
 
@@ -211,11 +179,11 @@ class BoltzmannBase(Theory):
         The available units are ``km/s/Mpc`` (i.e. ``c*H(Mpc^-1)``) and ``1/Mpc``.
         """
         try:
-            return self._get_z_dependent("H", z) * self.H_units_conv_factor[units]
+            return self._get_z_dependent("Hubble", z) * H_units_conv_factor[units]
         except KeyError:
             raise LoggedError(
                 self.log, "Units not known for H: '%s'. Try instead one of %r.",
-                units, list(self.H_units_conv_factor))
+                units, list(H_units_conv_factor))
 
     def get_angular_diameter_distance(self, z):
         r"""
@@ -235,8 +203,7 @@ class BoltzmannBase(Theory):
         """
         return self._get_z_dependent("comoving_radial_distance", z)
 
-    def get_Pk_grid(self, var_pair=("delta_tot", "delta_tot"), nonlinear=True,
-                         _state=None):
+    def get_Pk_grid(self, var_pair=("delta_tot", "delta_tot"), nonlinear=True):
         """
         Get  matter power spectrum, e.g. suitable for splining.
         Returned arrays may be bigger or more densely sampled than requested, but will
@@ -248,11 +215,10 @@ class BoltzmannBase(Theory):
         :return: k, z, PK, where k and z are arrays,
                  and PK[i,j] is the value at z[i], k[j]
         """
-        current_state = _state or self.current_state()
         try:
-            return current_state[("Pk_grid", bool(nonlinear)) + tuple(var_pair)]
+            return self._current_state[("Pk_grid", bool(nonlinear)) + tuple(var_pair)]
         except KeyError:
-            if ("Pk_grid", False) + tuple(var_pair) in current_state:
+            if ("Pk_grid", False) + tuple(var_pair) in self._current_state:
                 raise LoggedError(self.log,
                                   "Getting non-linear matter power but nonlinear "
                                   "not specified in requirements")
@@ -270,13 +236,11 @@ class BoltzmannBase(Theory):
                             extrap_kmax
         :return: :class:`PowerSpectrumInterpolator` instance.
         """
-        current_state = self.current_state()
         nonlinear = bool(nonlinear)
         key = ("Pk_interpolator", nonlinear, extrap_kmax) + tuple(var_pair)
-        if key in current_state:
-            return current_state[key]
-        k, z, pk = self.get_Pk_grid(var_pair=var_pair, nonlinear=nonlinear,
-                                    _state=current_state)
+        if key in self._current_state:
+            return self._current_state[key]
+        k, z, pk = self.get_Pk_grid(var_pair=var_pair, nonlinear=nonlinear)
         log_p = np.all(pk > 0)
         if log_p:
             pk = np.log(pk)
@@ -285,7 +249,7 @@ class BoltzmannBase(Theory):
                               'Cannot do log extrapolation with negative pk for %s, %s'
                               % var_pair)
         result = PowerSpectrumInterpolator(z, k, pk, logP=log_p, extrap_kmax=extrap_kmax)
-        current_state[key] = result
+        self._current_state[key] = result
         return result
 
     def get_source_Cl(self):
@@ -316,33 +280,6 @@ class BoltzmannBase(Theory):
         from cobaya.cosmo_input import get_best_covmat
         return get_best_covmat(self.path_install, params_info, likes_info)
 
-    def current_state(self):
-        lasts = [self._states[i]["last"] for i in range(self._n_states)]
-        return self._states[lasts.index(max(lasts))]
-
-    def __getattr__(self, method):
-        try:
-            object.__getattr__(self, method)
-        except AttributeError:
-            if method.startswith("get"):
-                # Deprecated method names
-                # -- this will be deprecated in favour of the error below
-                new_names = {"get_cl": "get_Cl"}
-                if method in new_names:
-                    msg = create_banner(
-                        "Method '%s' has been re-capitalized to '%s'.\n"
-                        "Overriding for now, but please change it: "
-                        "this will produce an error in the future." % (
-                            method, new_names[method]))
-                    for line in msg.split("\n"):
-                        self.log.warning(line)
-                    return getattr(self, new_names[method])
-                # End of deprecation block ------------------------------
-                raise LoggedError(
-                    self.log, "Getter method for cosmology product %r is not known. "
-                              "Maybe you meant any of %r?",
-                    method, fuzzy_match(method, dir(self), n=3))
-
 
 class PowerSpectrumInterpolator(RectBivariateSpline):
     r"""
@@ -355,50 +292,40 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
     :param z: values of z for which the power spectrum was evaluated.
     :param k: values of k for which the power spectrum was evaluated.
     :param P_or_logP: Values of the power spectrum (or log-values, if logP=True).
-    :param logk: if True (default: False), assumes that k's are log-spaced.
     :param logP: if True (default: False), log of power spectrum are given and used
         for the underlying interpolator.
     :param extrap_kmax: if set, use power law extrapolation beyond kmax up to
         extrap_kmax; useful for tails of integrals.
     """
 
-    def __init__(self, z, k, P_or_logP, extrap_kmax=None, logk=False, logP=False):
-        # TODO: here assuming at least 3 redshifts?
-        # AL I renamed self.logP here to islog since was overriding logP() function
-        self.logk, self.islog = logk, logP
+    def __init__(self, z, k, P_or_logP, extrap_kmax=None, logP=False):
+        self.islog = logP
         #  Check order
         z, k = (np.atleast_1d(x) for x in [z, k])
+        if len(z) < 3:
+            raise ValueError('Require at least three redshifts for interpolation')
         i_z = np.argsort(z)
         i_k = np.argsort(k)
         self.z, self.k, P_or_logP = z[i_z], k[i_k], P_or_logP[i_z, :][:, i_k]
-        self.zmin, self.zmax = np.min(self.z), np.max(self.z)
-        self._fk = (lambda k: k if logk else np.log(k))
-        # TODO: _finvk looks redundant
-        self._finvk = (lambda k: np.exp(k) if logk else k)
-        self.kmin, self.kmax = np.min(self.k), np.max(self.k)
+        self.zmin, self.zmax = self.z[0], self.z[-1]
+        self.kmin, self.kmax = self.k[0], self.k[-1]
+        logk = np.log(self.k)
         # Continue until extrap_kmax using a (log,log)-linear extrapolation
         if extrap_kmax and extrap_kmax > self.kmax:
-            # TODO: here assuming k is k, but _fk seems to assume k is log(k) if
-            #  logk=True. (doc string only refers to spacing, not actually being log(k))
-            #  just remove logk option, avoiding doing log(exp(log(k)))?
-            #  (depending on what CLASS is doing)
-            assert not logk  # only trying to make for for False
-            logknew = np.hstack(
-                [np.log(self.k), np.log(self.kmax) * 0.1 + np.log(extrap_kmax) * 0.9,
+            logk = np.hstack(
+                [logk, np.log(self.kmax) * 0.1 + np.log(extrap_kmax) * 0.9,
                  np.log(extrap_kmax)])
             logPnew = np.empty((P_or_logP.shape[0], P_or_logP.shape[1] + 2))
             logPnew[:, :-2] = P_or_logP if self.islog else np.log(P_or_logP)
-            diff = (logPnew[:, -3] - logPnew[:, -4]) / (logknew[-3] - logknew[-4])
-            delta = diff * (logknew[-1] - logknew[-3])
+            diff = (logPnew[:, -3] - logPnew[:, -4]) / (logk[-3] - logk[-4])
+            delta = diff * (logk[-1] - logk[-3])
             logPnew[:, -1] = logPnew[:, -3] + delta
             logPnew[:, -2] = logPnew[:, -3] + delta * 0.9
             self.kmax = extrap_kmax  # Added for consistency with CAMB
 
             P_or_logP = logPnew if self.islog else np.exp(logPnew)
-            super(self.__class__, self).__init__(self.z, logknew, P_or_logP)
 
-        else:
-            super(self.__class__, self).__init__(self.z, self._fk(self.k), P_or_logP)
+        super(self.__class__, self).__init__(self.z, logk, P_or_logP)
 
     def P(self, z, k, grid=None):
         """
@@ -407,9 +334,9 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
         if grid is None:
             grid = not np.isscalar(z) and not np.isscalar(k)
         if self.islog:
-            return np.exp(self.logP(z, k, grid=grid))
+            return np.exp(self(z, np.log(k), grid=grid))
         else:
-            return self(z, self._fk(k), grid=grid)
+            return self(z, np.log(k), grid=grid)
 
     def logP(self, z, k, grid=None):
         """
@@ -418,6 +345,6 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
         if grid is None:
             grid = not np.isscalar(z) and not np.isscalar(k)
         if self.islog:
-            return self(z, self._fk(k), grid=grid)
+            return self(z, np.log(k), grid=grid)
         else:
-            return self.P(z, k, grid=grid)
+            return np.log(self(z, np.log(k), grid=grid))

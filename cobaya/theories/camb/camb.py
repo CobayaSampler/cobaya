@@ -9,8 +9,7 @@
    <br />
 
 This module imports and manages the CAMB cosmological code.
-It requires CAMB 1.0 or higher (for compatibility with older versions, you can temporarily
-use cobaya 1.0.4, but update asap, since that version is not maintained any more).
+It requires CAMB 1.0.11 or higher.
 
 .. note::
 
@@ -184,8 +183,9 @@ from collections import namedtuple, OrderedDict as odict
 from cobaya.theories._cosmo import BoltzmannBase
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, check_gcc_version
-from cobaya.conventions import _c_km_s, _T_CMB_K
-from cobaya.tools import getfullargspec, load_module
+from cobaya.conventions import _T_CMB_K
+from cobaya.tools import getfullargspec, get_class_methods, get_properties
+from cobaya.tools import load_module, VersionCheckError, check_module_version
 
 # Result collector
 Collector = namedtuple("collector", ["method", "args", "kwargs"])
@@ -197,8 +197,9 @@ CAMBOutputs = namedtuple("CAMBOutputs", ["camb_params", "results", "derived"])
 class camb(BoltzmannBase):
     # Name of the Class repo/folder and version to download
     camb_repo_name = "cmbant/CAMB"
-    camb_repo_version = "master"
+    camb_repo_version = os.environ.get("CAMB_REPO_VERSION", "master")
     camb_min_gcc_version = "6.4"
+    min_camb_version = '1.0.10'
 
     def initialize(self):
         """Importing CAMB from the correct path, if given."""
@@ -224,11 +225,11 @@ class camb(BoltzmannBase):
                     self.log,
                     "Either CAMB is not in the given folder, '%s', or you are using a "
                     "very old version without the Python interface.", self.path)
-            sys.path.insert(0, pycamb_path)
         else:
             self.log.info("Importing *global* CAMB.")
         try:
-            self.camb = load_module("camb", path=pycamb_path)
+            self.camb = load_module("camb", path=pycamb_path,
+                                    min_version=self.min_camb_version)
         except ImportError:
             raise LoggedError(
                 self.log, "Couldn't find the CAMB python interface.\n"
@@ -236,13 +237,12 @@ class camb(BoltzmannBase):
                           " (a) specify a path (you didn't) or\n"
                           " (b) install the Python interface globally with\n"
                           "     'pip install -e /path/to/camb [--user]'")
+        except VersionCheckError as e:
+            raise LoggedError(self.log, e.msg)
+
         super(camb, self).initialize()
         self.extra_attrs = {"Want_CMB": False, "Want_cl_2D_array": False,
                             'WantCls': False}
-        if len(set(self.input_params).intersection(
-                {"H0", "cosmomc_theta", "thetastar"})) > 1:
-            raise LoggedError(self.log, "Can't pass more than one of H0, "
-                                        "theta, cosmomc_theta to CAMB.")
         # Set aliases
         self.planck_to_camb = self.renames
         # Derived parameters that may not have been requested, but will be necessary later
@@ -254,8 +254,17 @@ class camb(BoltzmannBase):
         self.non_linear_pk = False
         self._base_params = None
 
+    def initialize_with_params(self):
+        # TODO: supports params function could specifiy list of parameters accepted
+        #  (allowing set entries)
+        if len(set(self.input_params).intersection(
+                {"H0", "cosmomc_theta", "thetastar"})) > 1:
+            raise LoggedError(self.log, "Can't pass more than one of H0, "
+                                        "theta, cosmomc_theta to CAMB.")
+        super(camb, self).initialize_with_params()
+
     def needs(self, **requirements):
-        # Computed quantities required by the likelihood
+        # Computed quantities required by the likelihoods
         # Note that redshifts below are treated differently for background quantities,
         #   were no additional transfer computation is needed (e.g. H(z)),
         #   and matter-power-related quantities, that require additional computation
@@ -285,11 +294,10 @@ class camb(BoltzmannBase):
                 self.extra_attrs["Want_CMB"] = True
                 self.extra_attrs["WantCls"] = True
                 self.non_linear_lens = True
-            elif k == "H":
+            elif k == "Hubble":
                 self.collectors[k] = Collector(
                     method=CAMBdata.h_of_z,
                     kwargs={"z": self._combine_z(k, v)})
-                self.H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": _c_km_s}
             elif k in ("angular_diameter_distance", "comoving_radial_distance"):
                 self.collectors[k] = Collector(
                     method=getattr(CAMBdata, k),
@@ -301,6 +309,7 @@ class camb(BoltzmannBase):
                     kwargs={})
                 self.needs_perts = True
             elif k in ["Pk_interpolator", "Pk_grid"]:
+                check_module_version(self.camb, "1.0.11")
                 self.extra_args["kmax"] = max(v["k_max"], self.extra_args.get("kmax", 0))
                 self.add_to_redshifts(v["z"])
                 v["vars_pairs"] = v["vars_pairs"] or [("delta_tot", "delta_tot")]
@@ -312,13 +321,7 @@ class camb(BoltzmannBase):
                                                 "for consistency")
                 kwargs["hubble_units"] = False
                 kwargs["k_hunit"] = False
-                if k != "Pk_interpolator":
-                    if "nonlinear" in kwargs:
-                        raise LoggedError(self.log, "cannot use 'nonlinear' with "
-                                                    "xxx_matter_power_spectrum")
-                    from packaging import version
-                    if version.parse(self.camb.__version__) < version.parse("1.0.11"):
-                        raise LoggedError(self.log, "update CAMB to 1.0.11+")
+
                 for p in "k_max", "z", "vars_pairs":
                     kwargs.pop(p)
                 if kwargs["nonlinear"]:
@@ -333,8 +336,8 @@ class camb(BoltzmannBase):
                 if not getattr(self, "sources", None):
                     self.sources = odict()
                 for source, window in v["sources"].items():
-                    # If it was already there, BoltzmannBase.needs() has already checked that
-                    # old info == new info
+                    # If it was already there, BoltzmannBase.needs() has already
+                    # checked that old info == new info
                     if source not in self.sources:
                         self.sources[source] = window
                 self.limber = v.get("limber", True)
@@ -373,7 +376,7 @@ class camb(BoltzmannBase):
             for not_needed in getfullargspec(self.camb.CAMBparams.set_for_lmax).args[1:]:
                 self.extra_args.pop(not_needed, None)
         # Computing non-linear corrections
-        from camb import model
+        model = self.camb.model
         self.extra_attrs["NonLinear"] = {
             (True, True): model.NonLinear_both,
             (True, False): model.NonLinear_lens,
@@ -386,7 +389,7 @@ class camb(BoltzmannBase):
         c = self.collectors.get(k, None)
         if c:
             return np.sort(
-                np.unique(np.concatenate(c.kwargs['z'], np.atleast_1d(v['z']))))
+                np.unique(np.concatenate((c.kwargs['z'], np.atleast_1d(v['z'])))))
         else:
             return np.sort(np.atleast_1d(v['z']))
 
@@ -399,9 +402,7 @@ class camb(BoltzmannBase):
             return self.planck_to_camb.get(p, p)
         return p
 
-    def set(self, params_values_dict, i_state):
-        # Store them, to use them later to identify the state
-        self._states[i_state]["params"] = deepcopy(params_values_dict)
+    def set(self, params_values_dict, state):
         # Prepare parameters to be passed: this-iteration + extra
         args = {self.translate_param(p): v for p, v in params_values_dict.items()}
         # Generate and save
@@ -454,7 +455,6 @@ class camb(BoltzmannBase):
                 self._base_params = params
             else:
                 args.update(self._reduced_extra_args)
-            self._states[i_state]["set_args"] = deepcopy(args)
             return self.camb.set_params(self._base_params.copy(), **args)
         except self.camb.baseconfig.CAMBParamRangeError:
             if self.stop_at_error:
@@ -469,7 +469,7 @@ class camb(BoltzmannBase):
                     "Error setting parameters (see traceback below)! "
                     "Parameters sent to CAMB: %r and %r.\n"
                     "To ignore this kind of errors, make 'stop_at_error: False'.",
-                    dict(self._states[i_state]["params"]), dict(self.extra_args))
+                    dict(state["params"]), dict(self.extra_args))
                 raise
         except self.camb.baseconfig.CAMBUnknownArgumentError as e:
             raise LoggedError(
@@ -477,9 +477,9 @@ class camb(BoltzmannBase):
                 "Some of the parameters passed to CAMB were not recognized: %s" % str(e))
         return False
 
-    def run_calculation(self, _derived, i_state, **params_values_dict):
+    def calculate(self, state, want_derived=True, **params_values_dict):
         # Set parameters
-        camb_params = self.set(params_values_dict, i_state)
+        camb_params = self.set(params_values_dict, state)
         # Failed to set parameters but no error raised
         # (e.g. out of computationally feasible range): lik=0
         if not camb_params:
@@ -492,18 +492,18 @@ class camb(BoltzmannBase):
             else:
                 results = None
             for product, collector in self.collectors.items():
-                if collector.method:
-                    self._states[i_state][product] = \
+                if collector:
+                    state[product] = \
                         collector.method(results, *collector.args, **collector.kwargs)
                 else:
-                    self._states[i_state][product] = results
+                    state[product] = results
         except self.camb.baseconfig.CAMBError as e:
             if self.stop_at_error:
                 self.log.error(
                     "Computation error (see traceback below)! "
                     "Parameters sent to CAMB: %r and %r.\n"
                     "To ignore this kind of errors, make 'stop_at_error: False'.",
-                    dict(self._states[i_state]["params"]), dict(self.extra_args))
+                    dict(state["params"]), dict(self.extra_args))
                 raise
             else:
                 # Assumed to be a "parameter out of range" error.
@@ -514,31 +514,11 @@ class camb(BoltzmannBase):
         # Prepare derived parameters
         intermediates = CAMBOutputs(camb_params, results,
                                     results.get_derived_params() if results else None)
-        if _derived == {}:
-            _derived.update(self._get_derived_all(intermediates))
-            self._states[i_state]["derived"] = _derived.copy()
+        if want_derived:
+            state["derived"] = self._get_derived_output(intermediates)
         # Prepare necessary extra derived parameters
-        self._states[i_state]["derived_extra"] = {
+        state["derived_extra"] = {
             p: self._get_derived(p, intermediates) for p in self.derived_extra}
-        return True
-
-    def _get_derived_from_params(self, p, intermediates):
-        for result in intermediates[:2]:
-            if result is None:
-                continue
-            for thing in [result, getattr(result, "Params", {})]:
-                try:
-                    return getattr(thing, p)
-                except AttributeError:
-                    for mod in ["InitPower", "Reion", "Recomb", "Transfer", "DarkEnergy"]:
-                        try:
-                            return getattr(getattr(thing, mod), p)
-                        except AttributeError:
-                            pass
-        return None
-
-    def _get_derived_from_getter(self, p, intermediates):
-        return getattr(intermediates.camb_params, "get_" + p, lambda: None)()
 
     def _get_derived(self, p, intermediates):
         """
@@ -546,19 +526,22 @@ class camb(BoltzmannBase):
 
         To get a parameter *from a likelihood* use `get_param` instead.
         """
-        # Specific calls, if general ones fail:
-        if p == "sigma8":
-            return intermediates.results.get_sigma8()[-1]
         if intermediates.derived:
             derived = intermediates.derived.get(p, None)
             if derived is not None:
                 return derived
-        for f in [self._get_derived_from_params, self._get_derived_from_getter]:
-            derived = f(p, intermediates)
-            if derived is not None:
-                return derived
+        # Specific calls, if general ones fail:
+        if p == "sigma8":
+            return intermediates.results.get_sigma8()[-1]
+        try:
+            return getattr(intermediates.camb_params, p)
+        except AttributeError:
+            try:
+                return getattr(intermediates.results, p)
+            except AttributeError:
+                return getattr(intermediates.camb_params, "get_" + p, lambda: None)()
 
-    def _get_derived_all(self, intermediates):
+    def _get_derived_output(self, intermediates):
         """
         Returns a dictionary of derived parameters with their values,
         using the *current* state (i.e. it should only be called from
@@ -575,23 +558,28 @@ class camb(BoltzmannBase):
         return derived
 
     def get_param(self, p):
-        current_state = self.current_state()
+        # TODO: if this would work for classy, move to base
+        translated = self.translate_param(p)
         for pool in ["params", "derived", "derived_extra"]:
-            value = deepcopy(
-                (current_state[pool] or {}).get(self.translate_param(p), None))
+            value = (self._current_state[pool] or {}).get(translated, None)
             if value is not None:
-                return value
+                return deepcopy(value)
+            if p != translated:
+                # allow both translated and not
+                value = (self._current_state[pool] or {}).get(p, None)
+                if value is not None:
+                    return deepcopy(value)
+
         raise LoggedError(self.log, "Parameter not known: '%s'", p)
 
     def get_Cl(self, ell_factor=False, units="muK2"):
-        current_state = self.current_state()
+        current_state = self._current_state
         # get C_l^XX from the cosmological code
         try:
             cl_camb = deepcopy(current_state["Cl"]["total"])
         except:
-            raise LoggedError(
-                self.log,
-                "No Cl's were computed. Are you sure that you have requested them?")
+            raise LoggedError(self.log, "No Cl's were computed. Are you sure that you "
+                                        "have requested them?")
         mapping = {"tt": 0, "ee": 1, "bb": 2, "te": 3}
         cls = {"ell": np.arange(cl_camb.shape[0])}
         cls.update({sp: cl_camb[:, i] for sp, i in mapping.items()})
@@ -623,16 +611,15 @@ class camb(BoltzmannBase):
         else:
             computed_redshifts = self.collectors[quantity].kwargs["z"]
             i_kwarg_z = np.searchsorted(computed_redshifts, np.atleast_1d(z))
-        return np.array(deepcopy(self.current_state()[quantity]))[i_kwarg_z]
+        return np.array(deepcopy(self._current_state[quantity]))[i_kwarg_z]
 
     def get_fsigma8(self, z):
         return self._get_z_dependent("fsigma8", z)
 
     def get_source_Cl(self):
-        current_state = self.current_state()
         # get C_l^XX from the cosmological code
         try:
-            cls = deepcopy(current_state["source_Cl"])
+            cls = deepcopy(self._current_state["source_Cl"])
         except:
             raise LoggedError(
                 self.log, "No source Cl's were computed. "
@@ -640,8 +627,8 @@ class camb(BoltzmannBase):
         cls_dict = dict()
         for term, cl in cls.items():
             term_tuple = tuple(
-                [(lambda x: x if x == "P" else list(self.sources)[int(x) - 1])(
-                    _.strip("W")) for _ in term.split("x")])
+                (lambda x: x if x == "P" else list(self.sources)[int(x) - 1])(
+                    _.strip("W")) for _ in term.split("x"))
             cls_dict[term_tuple] = cl
         cls_dict["ell"] = np.arange(cls[list(cls)[0]].shape[0])
         return cls_dict
@@ -653,7 +640,32 @@ class camb(BoltzmannBase):
         :return: CAMB's `CAMBdata <https://camb.readthedocs.io/en/latest/results.html>`_
                  result instance for the current parameters
         """
-        return self.current_state()['CAMBdata']
+        return self._current_state['CAMBdata']
+
+    def get_can_provide_params(self):
+        # This is currently not used since get_allow_agnostic() returns True.
+        # possible derived parameters for derived_extra, excluding things that are
+        # only input parameters.
+        import ctypes
+        params_derived = list(get_class_methods(self.camb.CAMBparams))
+        params_derived.remove("custom_source_names")
+        fields = []
+        for f, tp in self.camb.CAMBparams._fields_:
+            if tp is ctypes.c_double and 'max_eta_k' not in f \
+                    and f not in ['Alens', 'num_nu_massless']:
+                fields.append(f)
+        fields += ['omega_de', 'sigma8']  # only parameters from CAMBdata
+        properties = get_properties(self.camb.CAMBparams)
+        names = self.camb.model.derived_names + properties + fields + params_derived
+        if self.use_planck_names:
+            for name, mapped in self.planck_to_camb.items():
+                if mapped in names:
+                    names.append(name)
+
+        return names
+
+    def get_version(self):
+        return self.camb.__version__
 
     @classmethod
     def get_path(cls, path):

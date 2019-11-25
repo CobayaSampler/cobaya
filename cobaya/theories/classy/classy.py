@@ -144,11 +144,11 @@ from collections import namedtuple, OrderedDict as odict
 from numbers import Number
 
 # Local
-from cobaya.theories._cosmo import BoltzmannBase, PowerSpectrumInterpolator
+from cobaya.theories._cosmo import BoltzmannBase
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, pip_install
-from cobaya.conventions import _c_km_s, _T_CMB_K
-from cobaya.tools import deepcopy_where_possible
+from cobaya.conventions import _T_CMB_K
+from cobaya.tools import load_module
 
 # Result collector
 Collector = namedtuple("collector",
@@ -162,13 +162,16 @@ non_linear_default_code = "halofit"
 class classy(BoltzmannBase):
     # Name of the Class repo/folder and version to download
     classy_repo_name = "lesgourg/class_public"
-    classy_repo_version = "v2.7.2"
+    classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', "2.8")
+
+    # classy_repo_version = "v2.8.0" # TODO update
 
     def initialize(self):
         """Importing CLASS from the correct path, if given, and if not, globally."""
         # If path not given, try using general path to modules
         if not self.path and self.path_install:
             self.path = self.get_path(self.path_install)
+        classy_build_path = None
         if self.path:
             self.log.info("Importing *local* classy from " + self.path)
             classy_build_path = os.path.join(self.path, "python", "build")
@@ -219,9 +222,9 @@ class classy(BoltzmannBase):
         for k, v in self._needs.items():
             # Products and other computations
             if k == "Cl":
-                if any([("t" in cl.lower()) for cl in v]):
+                if any(("t" in cl.lower()) for cl in v):
                     self.extra_args["output"] += " tCl"
-                if any([(("e" in cl.lower()) or ("b" in cl.lower())) for cl in v]):
+                if any((("e" in cl.lower()) or ("b" in cl.lower())) for cl in v):
                     self.extra_args["output"] += " pCl"
                 # For modern experiments, always lensed Cl's!
                 self.extra_args["output"] += " lCl"
@@ -230,13 +233,12 @@ class classy(BoltzmannBase):
                 self.extra_args["l_max_scalars"] = max(v.values())
                 self.collectors[k] = Collector(
                     method="lensed_cl", kwargs={"lmax": self.extra_args["l_max_scalars"]})
-            elif k == "H":
+            elif k == "Hubble":
                 self.collectors[k] = Collector(
                     method="Hubble",
                     args=[np.atleast_1d(v["z"])],
                     args_names=["z"],
                     arg_array=0)
-                self.H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": _c_km_s}
             elif k == "angular_diameter_distance":
                 self.collectors[k] = Collector(
                     method="angular_distance",
@@ -250,18 +252,18 @@ class classy(BoltzmannBase):
                     args=[np.atleast_1d(v["z"])])
             elif k in ["Pk_interpolator", "Pk_grid"]:
                 self.extra_args["output"] += " mPk"
-                self.extra_args["P_k_max_h/Mpc"] = max(
-                    v.pop("k_max"), self.extra_args.get("P_k_max_h/Mpc", 0))
+                v = deepcopy(v)
+                self.extra_args["P_k_max_1/Mpc"] = max(
+                    v.pop("k_max"), self.extra_args.get("P_k_max_1/Mpc", 0))
                 self.add_z_for_matter_power(v.pop("z"))
                 # Use halofit by default if non-linear requested but no code specified
                 if v.get("nonlinear", False) and "non linear" not in self.extra_args:
                     self.extra_args["non linear"] = non_linear_default_code
-                kwargs = deepcopy(v)
                 for pair in v.pop("vars_pairs", [("delta_tot", "delta_tot")]):
                     if pair == ("delta_tot", "delta_tot"):
-                        kwargs["only_clustering_species"] = False
+                        v["only_clustering_species"] = False
                     elif pair == ("delta_nonu", "delta_nonu"):
-                        kwargs["only_clustering_species"] = True
+                        v["only_clustering_species"] = True
                     else:
                         raise LoggedError(self.log, "NotImplemented in CLASS: %r", pair)
                     product = ("Pk_grid", v["nonlinear"]) + tuple(pair)
@@ -276,8 +278,9 @@ class classy(BoltzmannBase):
             else:
                 raise LoggedError(self.log, "Requested product not known: %r", {k: v})
         # Derived parameters (if some need some additional computations)
-        if any([("sigma8" in s) for s in self.output_params or requirements]):
+        if any(("sigma8" in s) for s in self.output_params or requirements):
             self.extra_args["output"] += " mPk"
+            # TODO: consistent P_k_max_h vs P_k_max_1
             self.extra_args["P_k_max_h/Mpc"] = (
                 max(1, self.extra_args.get("P_k_max_h/Mpc", 0)))
         # Adding tensor modes if requested
@@ -285,9 +288,9 @@ class classy(BoltzmannBase):
             self.extra_args["modes"] = "s,t"
         # If B spectrum with l>50, or lensing, recommend using Halofit
         cls = self._needs.get("Cl", {})
-        if (((any([("b" in cl.lower()) for cl in cls]) and
-              max([cls[cl] for cl in cls if "b" in cl.lower()]) > 50) or
-             any([("p" in cl.lower()) for cl in cls]) and
+        if (((any(("b" in cl.lower()) for cl in cls) and
+              max(cls[cl] for cl in cls if "b" in cl.lower()) > 50) or
+             any(("p" in cl.lower()) for cl in cls) and
              not self.extra_args.get("non linear"))):
             self.log.warning("Requesting BB for ell>50 or lensing Cl's: "
                              "using a non-linear code is recommended (and you are not "
@@ -313,11 +316,11 @@ class classy(BoltzmannBase):
                 list(set(self.input_params).intersection(set(self.extra_args))))
 
     def add_z_for_matter_power(self, z):
-        if not getattr(self, "z_for_matter_power"):
+        if not hasattr(self, "z_for_matter_power"):
             self.z_for_matter_power = np.empty(0)
         self.z_for_matter_power = np.flip(np.sort(np.unique(np.concatenate(
             [self.z_for_matter_power, np.atleast_1d(z)]))), axis=0)
-        self.extra_args["z_pk"] = " ".join(["%g" % zi for zi in self.z_for_matter_power])
+        self.extra_args["z_pk"] = " ".join("%g" % zi for zi in self.z_for_matter_power)
 
     def translate_param(self, p, force=False):
         # "force=True" is used when communicating with likelihoods, which speak "planck"
@@ -325,9 +328,7 @@ class classy(BoltzmannBase):
             return self.planck_to_classy.get(p, p)
         return p
 
-    def set(self, params_values_dict, i_state):
-        # Store them, to use them later to identify the state
-        self._states[i_state]["params"] = deepcopy(params_values_dict)
+    def set(self, params_values_dict):
         # Prepare parameters to be passed: this-iteration + extra
         args = {self.translate_param(p): v for p, v in params_values_dict.items()}
         args.update(self.extra_args)
@@ -336,9 +337,9 @@ class classy(BoltzmannBase):
         self.classy.struct_cleanup()
         self.classy.set(**args)
 
-    def run_calculation(self, _derived, i_state, **params_values_dict):
+    def calculate(self, state, want_derived=True, **params_values_dict):
         # Set parameters
-        self.set(params_values_dict, i_state)
+        self.set(params_values_dict)
         # Compute!
         try:
             self.classy.compute()
@@ -349,7 +350,7 @@ class classy(BoltzmannBase):
                     "Computation error (see traceback below)! "
                     "Parameters sent to CLASS: %r and %r.\n"
                     "To ignore this kind of errors, make 'stop_at_error: False'.",
-                    self._states[i_state]["params"], dict(self.extra_args))
+                    state["params"], dict(self.extra_args))
                 raise
             else:
                 self.log.debug("Computation of cosmological products failed. "
@@ -361,7 +362,7 @@ class classy(BoltzmannBase):
             self.log.error("Serious error setting parameters or computing results. "
                            "The parameters passed were %r and %r. "
                            "See original CLASS's error traceback below.\n",
-                           self._states[i_state]["params"], self.extra_args)
+                           state["params"], self.extra_args)
             raise  # No LoggedError, so that CLASS traceback gets printed
         # Gather products
         for product, collector in self.collectors.items():
@@ -371,36 +372,33 @@ class classy(BoltzmannBase):
             method = getattr(self.classy, collector.method)
             arg_array = self.collectors[product].arg_array
             if arg_array is None:
-                self._states[i_state][product] = method(
+                print(collector.method)
+                state[product] = method(
                     *self.collectors[product].args, **self.collectors[product].kwargs)
             elif isinstance(arg_array, Number):
-                self._states[i_state][product] = np.zeros(
+                state[product] = np.zeros(
                     len(self.collectors[product].args[arg_array]))
                 for i, v in enumerate(self.collectors[product].args[arg_array]):
                     args = (list(self.collectors[product].args[:arg_array]) + [v] +
                             list(self.collectors[product].args[arg_array + 1:]))
-                    self._states[i_state][product][i] = method(
+                    state[product][i] = method(
                         *args, **self.collectors[product].kwargs)
             elif arg_array in self.collectors[product].kwargs:
                 value = np.atleast_1d(self.collectors[product].kwargs[arg_array])
-                self._states[i_state][product] = np.zeros(value.shape)
+                state[product] = np.zeros(value.shape)
                 for i, v in enumerate(value):
                     kwargs = deepcopy(self.collectors[product].kwargs)
                     kwargs[arg_array] = v
-                    self._states[i_state][product][i] = method(
+                    state[product][i] = method(
                         *self.collectors[product].args, **kwargs)
             if collector.post:
-                self._states[i_state][product] = collector.post(
-                    *self._states[i_state][product])
+                state[product] = collector.post(*state[product])
         # Prepare derived parameters
-        d, d_extra = self._get_derived_all(derived_requested=(_derived == {}))
-        if _derived == {}:
-            _derived.update(d)
-        self._states[i_state]["derived"] = odict(
-            (p, (_derived or {}).get(p)) for p in self.output_params)
-        # Prepare necessary extra derived parameters
-        self._states[i_state]["derived_extra"] = deepcopy(d_extra)
-        return True
+        d, d_extra = self._get_derived_all(derived_requested=want_derived)
+        if want_derived:
+            state["derived"] = odict((p, d.get(p)) for p in self.output_params)
+            # Prepare necessary extra derived parameters
+        state["derived_extra"] = deepcopy(d_extra)
 
     def _get_derived_all(self, derived_requested=True):
         """
@@ -438,18 +436,16 @@ class classy(BoltzmannBase):
         return derived, derived_extra
 
     def get_param(self, p):
-        current_state = self.current_state()
         for pool in ["params", "derived", "derived_extra"]:
-            value = deepcopy(
-                current_state[pool].get(self.translate_param(p, force=True), None))
+            value = self._current_state[pool].get(self.translate_param(p, force=True),
+                                                  None)
             if value is not None:
-                return value
+                return deepcopy(value)
         raise LoggedError(self.log, "Parameter not known: '%s'", p)
 
     def get_Cl(self, ell_factor=False, units="muK2"):
-        current_state = self.current_state()
         try:
-            cls = deepcopy(current_state["Cl"])
+            cls = deepcopy(self._current_state["Cl"])
         except:
             raise LoggedError(
                 self.log,
@@ -482,14 +478,25 @@ class classy(BoltzmannBase):
                 self.collectors[quantity].args_names.index("z")]
         i_kwarg_z = np.concatenate(
             [np.where(computed_redshifts == zi)[0] for zi in np.atleast_1d(z)])
-        values = np.array(deepcopy(self.current_state()[quantity]))
+        values = np.array(deepcopy(self._current_state[quantity]))
         if quantity == "comoving_radial_distance":
             values = values[0]
         return values[i_kwarg_z]
 
-
     def close(self):
         self.classy.struct_cleanup()
+
+    def get_can_provide_params(self):
+        # This is currently not used since get_allow_agnostic() returns True.
+        # TODO: check with get_param OK with both variants
+        names = ['Omega_Lambda', 'Omega_cdm', 'Omega_b', 'Omega_m', 'rs_drag', 'z_reio',
+                 'YHe', 'Omega_k', 'age', 'sigma8']
+
+        if self.use_planck_names:
+            for name, map in self.planck_to_classy.items():
+                if map in names:
+                    names.append(name)
+        return names
 
     # Installation routines
 

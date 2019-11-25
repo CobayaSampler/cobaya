@@ -398,14 +398,14 @@ class _des_prototype(_DataSetLikelihood):
 
     def get_requirements(self):
         return {
-            "omegan": None,
+            "H0": None,
             "omegam": None,
             "Pk_interpolator": {
                 "z": self.zs_interp, "k_max": 15 * self.acc, "nonlinear": True,
                 "vars_pairs": ([("delta_tot", "delta_tot")] +
                                ([("Weyl", "Weyl")] if self.use_Weyl else []))},
             "comoving_radial_distance": {"z": self.zs},
-            "H": {"z": self.zs, "units": "km/s/Mpc"}}
+            "Hubble": {"z": self.zs}}
 
     def get_theory(self, PKdelta, PKWeyl, bin_bias, shear_calibration_parameters,
                    intrinsic_alignment_A, intrinsic_alignment_alpha,
@@ -413,7 +413,7 @@ class _des_prototype(_DataSetLikelihood):
         h2 = (self.theory.get_param("H0") / 100) ** 2
         omegam = self.theory.get_param("omegam")
         chis = self.theory.get_comoving_radial_distance(self.zs)
-        Hs = self.theory.get_H(self.zs, units="1/Mpc")
+        Hs = self.theory.get_Hubble(self.zs, units="1/Mpc")
         dchis = np.hstack(
             ((chis[1] + chis[0]) / 2, (chis[2:] - chis[:-2]) / 2, (chis[-1] - chis[-2])))
         D_growth = PKdelta.P(self.zs, 0.001)
