@@ -119,7 +119,7 @@ script:
     fi
   - if [ -n "${CAMB_BRANCH}" ]; then
       rm -rf $MODULES/code/CAMB ;
-      git clone --recursive -b $CAMB_BRANCH https://github.com/cmbant/CAMB $MODULES/code/CAMB ;
+      git clone --recursive --depth 1 -b $CAMB_BRANCH https://github.com/cmbant/CAMB $MODULES/code/CAMB ;
       python $MODULES/code/CAMB/setup.py build ;
     fi
   - pytest tests/ -v -s -k "cosmo" --modules=$MODULES --boxed

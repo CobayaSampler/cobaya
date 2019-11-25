@@ -1,3 +1,2 @@
-theory:
-  external:
-    instance: null
+
+instance: null

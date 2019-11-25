@@ -171,7 +171,7 @@ class classy(BoltzmannBase):
         # If path not given, try using general path to modules
         if not self.path and self.path_install:
             self.path = self.get_path(self.path_install)
-        classy_build_path = None
+
         if self.path:
             self.log.info("Importing *local* classy from " + self.path)
             classy_build_path = os.path.join(self.path, "python", "build")
@@ -187,12 +187,11 @@ class classy(BoltzmannBase):
                     raise LoggedError(
                         self.log, "Either CLASS is not in the given folder, "
                                   "'%s', or you have not compiled it.", self.path)
-            else:
-                # Inserting the previously found path into the list of import folders
-                sys.path.insert(0, classy_build_path)
         else:
+            classy_build_path = None
             self.log.info("Importing *global* CLASS.")
         try:
+            load_module('classy', path=classy_build_path)
             from classy import Class, CosmoSevereError, CosmoComputationError
         except ImportError:
             raise LoggedError(

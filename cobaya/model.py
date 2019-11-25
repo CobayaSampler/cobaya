@@ -840,7 +840,7 @@ class Model(HasLogger):
 
         ``params_info`` should contain preferably the slow parameters only.
         """
-        likes_renames = {like: {partag.renames: getattr(like, partag.renames, [])}
+        likes_renames = {like: {_aliases: getattr(like, _aliases, [])}
                          for like in self.likelihood}
         try:
             # TODO: get_auto_covmat has nothing to do with cosmology, move to model?

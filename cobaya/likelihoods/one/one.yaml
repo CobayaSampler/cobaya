@@ -1,8 +1,6 @@
 # Constant (unit) likelihood
 
-likelihood:
-  one:
-    # 1. artificial delay in lik computation  
-    delay: 0  # seconds
-    # Noise (to aide computation of flat prior volume)
-    noise:  # set to a small number, necessarily smaller than 1/volume
+# 1. artificial delay in lik computation
+delay: 0  # seconds
+# Noise (to aide computation of flat prior volume)
+noise:  # set to a small number, necessarily smaller than 1/volume

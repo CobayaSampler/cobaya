@@ -113,8 +113,7 @@ def create_input(**kwargs):
         merged[_params][p] = reduce_info_param(info)
     # Translate from Planck param names
     planck_to_theo = \
-        get_default_info(theory_requested, kinds.theory)[kinds.theory][theory_requested][
-            partag.renames]
+        get_default_info(theory_requested, kinds.theory)[partag.renames]
     if kwargs.get("planck_names", False):
         merged[kinds.theory][theory_requested] = merged[kinds.theory][
                                                      theory_requested] or {}

@@ -1,12 +1,10 @@
 # Mock test likelihood
 
-likelihood:
-  _test:
-    # Mock-likelihood properties:
-    # 1. artificial delay in lik computation  
-    delay: 0  # seconds
-    # 2. prefix of the parameters names
-    prefix: ""
+# Mock-likelihood properties:
+# 1. artificial delay in lik computation
+delay: 0  # seconds
+# 2. prefix of the parameters names
+prefix: ""
 
 params:
   a1:

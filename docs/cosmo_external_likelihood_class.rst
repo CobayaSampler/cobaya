@@ -54,13 +54,11 @@ The default settings for your likelihood are specified in a ``MyLikelihood.yaml`
 
 .. code:: yaml
 
-    likelihood:
-      __self__:
-        cl_file: /path/do/data_file
-        # Aliases for automatic covariance matrix
-        renames: [myOld]
-        # Speed in evaluations/second (after theory inputs calculated).
-        speed: 500
+    cl_file: /path/do/data_file
+    # Aliases for automatic covariance matrix
+    aliases: [myOld]
+    # Speed in evaluations/second (after theory inputs calculated).
+    speed: 500
     params:
       my_foreground_amp:
         prior:
@@ -74,9 +72,6 @@ The default settings for your likelihood are specified in a ``MyLikelihood.yaml`
         proposal: 27
         latex: A^{f}_{\rm{mine}}
 
-
-You can use the special ``__self__`` likelihood name in default. yaml files instead of the explicit name of the likelihood,
-so that the .yaml does not need to be changed if you rename something or convert between internal and external installation.
 
 When running Cobaya, you reference your likelihood in the form ``module_name.ClassName``. For example,
 if your MyLikelihood class is in a module called ``mylikes`` your input .yaml would be
@@ -167,20 +162,18 @@ For example *planck_2018_lensing.native* (which is installed as an internal like
 
 .. code:: yaml
 
-    likelihood:
-      __self__:
-        # Path to the data: where the planck_supp_data_and_covmats has been cloned
-        path: null
-        dataset_file: lensing/2018/smicadx12_Dec5_ftl_mv2_ndclpp_p_teb_consext8.dataset
-        # Overriding of .dataset parameters
-        dataset_params:
+    # Path to the data: where the planck_supp_data_and_covmats has been cloned
+    path: null
+    dataset_file: lensing/2018/smicadx12_Dec5_ftl_mv2_ndclpp_p_teb_consext8.dataset
+    # Overriding of .dataset parameters
+    dataset_params:
 
-        # Overriding of the maximum ell computed
-        l_max:
-        # Aliases for automatic covariance matrix
-        renames: [lensing]
-        # Speed in evaluations/second
-        speed: 50
+    # Overriding of the maximum ell computed
+    l_max:
+    # Aliases for automatic covariance matrix
+    aliases: [lensing]
+    # Speed in evaluations/second
+    speed: 50
 
     params: !defaults [../planck_2018_highl_plik/params_calib]
 

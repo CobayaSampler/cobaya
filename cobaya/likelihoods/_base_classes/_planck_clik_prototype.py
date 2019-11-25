@@ -201,12 +201,13 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
                 product_id, _ = get_product_id_and_clik_file(name)
                 # Download and decompress the particular likelihood
                 url = pla_url_prefix + product_id
-                # url = get_default_info(name, _likelihood)[_likelihood][name].get("url", url)
+
                 if not download_file(url, paths["data"], decompress=True,
                                      logger=log, no_progress_bars=no_progress_bars):
                     log.error("Not possible to download this likelihood.")
                     success = False
-                # Additional data and covmats, stored in same repo as the 2018 python lensing likelihood
+                # Additional data and covmats, stored in same repo as the
+                # 2018 python lensing likelihood
                 from cobaya.likelihoods.planck_2018_lensing import native
                 if not native.is_installed(data=True, path=path):
                     success *= native.install(path=path, force=force, code=code,
@@ -349,5 +350,5 @@ def install_clik(path, no_progress_bars=False):
 
 def get_product_id_and_clik_file(name):
     """Gets the PLA product info from the defaults file."""
-    defaults = get_default_info(name, kinds.likelihood)[kinds.likelihood][name]
+    defaults = get_default_info(name, kinds.likelihood)
     return defaults.get("product_id"), defaults.get("clik_file")

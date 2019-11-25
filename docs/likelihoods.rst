@@ -73,12 +73,10 @@ The subpackage contains at least two files:
   .. code-block:: yaml
 
      # Default options
-     likelihood:
-       __self__:
-         [option 1]: [value 1]
-         [...]
+     [option 1]: [value 1]
+     [...]
 
-     # Experimental model
+     # Experimental model parameters
      params:
        [param 1]:
          prior:

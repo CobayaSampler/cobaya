@@ -20,7 +20,7 @@ import numpy as np
 import inspect
 
 # Local
-from cobaya.conventions import kinds, _self_name, _external, _module_path
+from cobaya.conventions import kinds, _external, _module_path
 from cobaya.tools import get_class, get_external_function, getfullargspec
 from cobaya.log import LoggedError
 from cobaya.component import ComponentCollection
@@ -29,25 +29,6 @@ from cobaya.theory import Theory
 
 class Likelihood(Theory):
     """Likelihood base class. Extends general theory calculation by adding likelihoods."""
-
-    # Generic initialization -- do not touch
-    def __init__(self, info={}, name=None, timing=None, path_install=None,
-                 standalone=True):
-        if standalone:
-            # TODO: would probably be more natural if defaults were already read here
-            # TODO: mode standalone support to Theory
-            default_info = self.get_defaults()
-            if default_info:
-                if kinds.likelihood in default_info:
-                    name = name or self.get_qualified_class_name()
-                    default_info = default_info[kinds.likelihood][
-                        name if _self_name not in default_info[kinds.likelihood]
-                        else _self_name]
-                default_info.update(info)
-                info = default_info
-        super(Likelihood, self).__init__(info, name=name, timing=timing,
-                                         path_install=path_install)
-
     @property
     def theory(self):
         # for backwards compatibility

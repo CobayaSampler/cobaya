@@ -21,12 +21,12 @@ import pkg_resources
 
 # Local
 from cobaya.conventions import _products_path, _path_install, _resume, _force
-from cobaya.conventions import _output_prefix, _debug, _debug_file, _external, _self_name
+from cobaya.conventions import _output_prefix, _debug, _debug_file, _external
 from cobaya.conventions import _params, _prior, kinds, _provides, _requires
 
 from cobaya.conventions import partag, _input_params, _output_params, _module_path
-from cobaya.conventions import _yaml_extensions
-from cobaya.tools import recursive_update, recursive_odict_to_dict, change_key
+from cobaya.conventions import _yaml_extensions, _aliases
+from cobaya.tools import recursive_update, recursive_odict_to_dict
 from cobaya.tools import fuzzy_match, deepcopy_where_possible, get_class, get_kind
 from cobaya.yaml import yaml_load_file, yaml_dump
 from cobaya.log import LoggedError
@@ -95,6 +95,13 @@ def get_default_info(module_or_class, kind=None, fail_if_not_found=False,
     """
     Get default info for a module_or_class.
     """
+
+    from cobaya.likelihood import Likelihood
+    from cobaya.theory import Theory
+    from cobaya.sampler import Sampler
+    component_base_classes = {kinds.sampler: Sampler, kinds.likelihood: Likelihood,
+                              kinds.theory: Theory}
+
     _kind = kind
     try:
         if inspect.isclass(module_or_class):
@@ -105,57 +112,28 @@ def get_default_info(module_or_class, kind=None, fail_if_not_found=False,
                             None_if_not_found=not fail_if_not_found,
                             module_path=module_path)
         if cls:
-            default_module_info = cls.get_defaults(return_yaml=return_yaml,
-                                                   yaml_expand_defaults=yaml_expand_defaults)
+            default_module_info = \
+                cls.get_defaults(return_yaml=return_yaml,
+                                 yaml_expand_defaults=yaml_expand_defaults)
         else:
-            default_module_info = (
-                lambda x: yaml_dump(x) if return_yaml else x)(
-                {_kind: {module_or_class: {}}})
+            default_module_info = component_base_classes[_kind].class_options.copy()
     except Exception as e:
-        raise LoggedError(log, "Failed to get defaults for module or class '%s' "
-                               "(no yaml?).' [%s]",
+        raise LoggedError(log, "Failed to get defaults for module or class '%s' [%s]",
                           ("%s:" % _kind if _kind else "") + module_or_class, e)
 
-    # TODO: find batter place to put this definition where it doesn't give circular ref
-    #       and more generally should not be importing defaults more than once
-    from cobaya.likelihood import Likelihood
-    from cobaya.theory import Theory
-    from cobaya.sampler import Sampler
-    component_base_classes = {kinds.sampler: Sampler, kinds.likelihood: Likelihood,
-                              kinds.theory: Theory}
-
-    if cls:
+    if cls and kind:
         for kind_name, _cls in component_base_classes.items():
             if issubclass(cls, _cls):
-                if kind and kind != kind_name:
+                if kind != kind_name:
                     raise LoggedError(log, "class %s of unexpected kind %s", cls.__name__,
                                       kind)
-                _kind = kind_name
                 break
 
-    if not return_yaml:
-        try:
-            info = default_module_info[_kind]
-            if _self_name not in info:
-                info[module_or_class]
-            else:
-                info[module_or_class] = info.pop(_self_name)
-        except KeyError:
-            raise LoggedError(log,
-                              "The defaults file for '%s' should be structured as "
-                              "%s:%s:{[options]} or %s:%s:{[options]}.", module_or_class,
-                              _kind, module_or_class, _kind, _self_name)
-        info = deepcopy((cls or component_base_classes[_kind]).class_options)
-        info.update(default_module_info[_kind][module_or_class])
-        default_module_info[_kind][module_or_class] = info
-    elif _self_name in default_module_info:
-        # replace __self__ in yaml with explicit name
-        if len(default_module_info.split(_self_name)) == 1:
-            default_module_info = default_module_info.replace(_self_name, module_or_class)
-        else:
-            raise LoggedError(log, "%s has more than one __self__" % module_or_class)
-
     return default_module_info
+
+
+def str_to_list(x):
+    return [x] if isinstance(x, string_types) else x
 
 
 def update_info(info):
@@ -201,19 +179,15 @@ def update_info(info):
                     not hasattr(input_block[module], "get"):
                 input_block[module] = {_external: input_block[module]}
 
-            if inspect.isclass(input_block[module].get(_external, None)):
-                default_class_info = get_default_info(module, block)
-            else:
-                module_path = input_block[module].get(_module_path, None)
-                default_class_info = get_default_info(module, block,
-                                                      module_path=module_path)
-            # TODO: check - get_default_info was ignoring this extra arg:
-            #  input_info[block][module_or_class])
-            updated[module] = default_class_info[block][module] or {}
+            module_path = input_block[module].get(_module_path, None)
+            default_class_info = get_default_info(module, block,
+                                                  module_path=module_path)
+
+            updated[module] = default_class_info or {}
             # Update default options with input info
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
             ignore = {_external, _provides, _requires, partag.renames, _input_params,
-                      _output_params, _module_path}
+                      _output_params, _module_path, _aliases}
             options_not_recognized = (set(input_block[module])
                                       .difference(ignore)
                                       .difference(set(updated[module])))
@@ -228,27 +202,15 @@ def update_info(info):
                     [("'%s' (did you mean %s?)" % (o, "|".join(["'%s'" % _ for _ in a]))
                       if a else "'%s'" % o)
                      for o, a in alternatives.items()])
-                if default_class_info[block][module]:  # TODO check this
-                    # Internal module
-                    raise LoggedError(
-                        log, "'%s' does not recognize some options: %s. "
-                             "To see the allowed options, check out the documentation of"
-                             " this module.", module, did_you_mean)
-                else:
-                    # External module
-                    raise LoggedError(
-                        log, "External %s '%s' does not recognize some options: %s. "
-                             "Check the documentation for 'external %s'.",
-                        block, module, did_you_mean, block)
+                raise LoggedError(
+                    log, "%s '%s' does not recognize some options: %s. "
+                         "Check the documentation for '%s'.",
+                    block, module, did_you_mean, block)
             updated[module].update(input_block[module])
-            # Store default parameters and priors of class, and save to combine later
-            params_info = default_class_info.get(_params)
-            # TODO, why was _params a list not a dictionary here?
-            # updated[module].update({_params: list(params_info or [])})
-            if params_info:
-                updated[module].update({_params: params_info})
-                default_params_info[module] = params_info or {}
+            # save params and priors of class to combine later
+            default_params_info[module] = default_class_info.get(_params, {})
             default_prior_info[module] = default_class_info.get(_prior, {})
+
     # Add priors info, after the necessary checks
     if _prior in input_info or any(default_prior_info.values()):
         updated_info[_prior] = input_info.get(_prior, odict())
@@ -263,20 +225,24 @@ def update_info(info):
     updated_info[_params] = merge_params_info(defaults_merged,
                                               input_info.get(_params, {}))
     # Add aliases for theory params (after merging!)
-    if kinds.theory in updated_info:  # TODO: could allow for likelihoods too?
-        renames = list(updated_info[kinds.theory].values())[0].get(partag.renames)
-        str_to_list = lambda x: ([x] if isinstance(x, string_types) else x)
-        renames_flat = [set([k] + str_to_list(v)) for k, v in (renames or {}).items()]
-        for p in updated_info.get(_params, {}):
-            # Probably could be made faster by inverting the renames dicts *just once*
-            renames_pairs = [a for a in renames_flat if p in a]
-            if renames_pairs:
-                this_renames = reduce(
-                    lambda x, y: x.union(y), [a for a in renames_flat if p in a])
-                updated_info[_params][p][partag.renames] = list(
-                    set(this_renames).union(set(
-                        str_to_list(updated_info[_params][p].get(partag.renames, []))))
-                        .difference({p}))
+    for kind in [k for k in [kinds.theory, kinds.likelihood] if k in updated_info]:
+        for item in updated_info[kind].values():
+            renames = item.get(partag.renames)
+            if renames:
+                if isinstance(renames, (list, tuple)):
+                    raise LoggedError(log, "'renames' should be a dictionary of name mappings "
+                                           "(or you meant to use 'aliases')")
+                renames_flat = [set([k] + str_to_list(v)) for k, v in renames.items()]
+                for p in updated_info[_params]:
+                    # Probably could be made faster by inverting the renames dicts *once*
+                    renames_pairs = [a for a in renames_flat if p in a]
+                    if renames_pairs:
+                        this_renames = reduce(
+                            lambda x, y: x.union(y), [a for a in renames_flat if p in a])
+                        updated_info[_params][p][partag.renames] = \
+                            list(set(this_renames).union(set(str_to_list(
+                                updated_info[_params][p].get(partag.renames, []))))
+                                 .difference({p}))
     # Rest of the options
     for k, v in input_info.items():
         if k not in updated_info:
@@ -456,6 +422,7 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
 
 
 class HasDefaults(object):
+    class_options = {}
 
     @classmethod
     def get_qualified_names(cls):
@@ -561,17 +528,36 @@ class HasDefaults(object):
 
         if yaml_expand_defaults then !default: file includes will be expanded
         """
+
         yaml_text = cls.get_associated_file_content('.yaml')
-        if not yaml_text:
+        options = cls.__dict__.get('class_options', {}).copy()
+        params = cls.__dict__.get(_params)
+        if params:
+            if _params in options:
+                raise LoggedError(log, "class %s cannot have 'params' and params "
+                                       "element of class_options" %
+                                  cls.get_qualified_class_name())
+            options[_params] = params
+        if options and yaml_text:
+            raise LoggedError(log,
+                              "%s: any class can either have .yaml or class variables "
+                              "class_options or params, but not both",
+                              cls.get_qualified_class_name())
+        if return_yaml and not yaml_expand_defaults:
+            return yaml_text or ""
+
+        defaults = odict()
+        if not return_yaml:
             for base in cls.__bases__:
                 if issubclass(base, HasDefaults) and base is not HasDefaults:
-                    return base.get_defaults(return_yaml=return_yaml,
-                                             yaml_expand_defaults=yaml_expand_defaults)
-            return "" if return_yaml else odict()
-        if return_yaml:
-            if yaml_expand_defaults:
-                return yaml_dump(yaml_load_file(cls.get_yaml_file(), yaml_text))
-            else:
-                return yaml_text
+                    defaults.update(base.get_defaults())
+
+        if yaml_text:
+            defaults.update(yaml_load_file(cls.get_yaml_file(), yaml_text))
         else:
-            return yaml_load_file(cls.get_yaml_file(), yaml_text)
+            defaults.update(deepcopy_where_possible(options))
+
+        if return_yaml:
+            return yaml_dump(defaults)
+        else:
+            return defaults

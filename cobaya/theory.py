@@ -33,9 +33,12 @@ class Theory(CobayaComponent):
     # Default options for all subclasses
     class_options = {"speed": -1, "stop_at_error": False}
 
-    def __init__(self, info={}, name=None, timing=None, path_install=None):
+    def __init__(self, info={}, name=None, timing=None, path_install=None,
+                 standalone=True):
+
         super(Theory, self).__init__(info, name=name, timing=timing,
-                                     path_install=path_install)
+                                     path_install=path_install, standalone=standalone)
+
         self.provider = None  # set to Provider instance before calculations
         # Generate cache states, to avoid recomputing
         # TODO: size of the cache should be set by the sampler

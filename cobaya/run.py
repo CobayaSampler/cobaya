@@ -43,7 +43,6 @@ def run(info):
     import logging
     # Initialize output, if required
     resume, force = info.get(_resume), info.get(_force)
-    ignore_blocks = []
     # If minimizer, always try to re-use sample to get bestfit/covmat
     # TODO: should check any Minimizer subclass
     if list(info[kinds.sampler])[0] == "minimize":
@@ -81,9 +80,9 @@ def run(info):
                updated_info.get(kinds.theory), path_install=info.get(_path_install),
                timing=updated_info.get(_timing), allow_renames=False) as model:
         # Update the updated info with the parameter routes
-        keys = ([kinds.likelihood, kinds.theory] if kinds.theory in updated_info else [
-            kinds.likelihood])
-        updated_info.update(odict([[k, model.info()[k]] for k in keys]))
+        keys = ([kinds.likelihood, kinds.theory]
+                if kinds.theory in updated_info else [kinds.likelihood])
+        updated_info.update(odict([(k, model.info()[k]) for k in keys]))
         output.dump_info(None, updated_info, check_compatible=False)
         with get_sampler(
                 updated_info[kinds.sampler], model, output,

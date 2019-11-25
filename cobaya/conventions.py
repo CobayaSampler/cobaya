@@ -37,7 +37,7 @@ _timing = "timing"
 _force = "force"
 _module_path = "python_path"
 _module_class_name = "class_name"
-_self_name = "__self__"
+_aliases = "aliases"
 
 ParTags = namedtuple('ParTags', ("prior", "ref", "proposal", "value", "dist", "drop",
                                  "derived", "latex", "renames"))

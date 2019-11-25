@@ -11,7 +11,7 @@ import numpy as np
 
 # Local
 from cobaya.yaml import yaml_load_file, yaml_dump_file
-from cobaya.conventions import _covmats_file, partag, _path_install
+from cobaya.conventions import _covmats_file, _aliases, _path_install
 
 # Logger
 import logging
@@ -61,7 +61,7 @@ def get_best_covmat(modules, slow_params_info, likelihoods_info, cached=True):
     # Select first based on number of slow parameters
     str_to_list = lambda x: ([x] if isinstance(x, string_types) else x)
     params_renames = set(chain(*[
-        [p] + str_to_list(info.get(partag.renames, [])) for p, info in
+        [p] + str_to_list(info.get(_aliases, [])) for p, info in
         slow_params_info.items()]))
     get_score_params = (
         lambda covmat_params: len(set(covmat_params).intersection(params_renames)))
@@ -81,7 +81,7 @@ def get_best_covmat(modules, slow_params_info, likelihoods_info, cached=True):
             "No covariance matrix found including at least one of the given parameters")
         return None
     # Sub-select by number of likelihoods
-    likes_renames = set(chain(*[[like] + str_to_list(info.get(partag.renames, []))
+    likes_renames = set(chain(*[[like] + str_to_list(info.get(_aliases, []))
                                 for like, info in likelihoods_info.items()]))
     get_score_likes = (
         lambda covmat_name: len([0 for like in likes_renames if like in covmat_name]))

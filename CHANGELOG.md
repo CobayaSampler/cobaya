@@ -2,7 +2,6 @@
 
 ## This branch
 
-- **had to change test chi2/tolerance and some classy things for some travis to pass, need checking**
 - allow multiple inter-dependent theory classes
 - allow theories and likelihoods to all specify requirements and define derived products 
   with general dependencies
@@ -12,21 +11,28 @@
 - three initialization methods: initialize (from __init__), initialize_with_params 
   (after parameter assignment) and initialize_with_provider (once all configured)
 - Likelihood now inherits from Theory, with general cached compute and deque states
-- Theory classes do not need .yaml
-- derived parameters in likelihood yaml now need to be explicitly tagged with derived:True
+- Likelihood and Theory instantiated from {external: class}
+- derived parameters in likelihood yaml can be explicitly tagged with derived:True
 - added test_dependencies.py, test_cosmo_multi_theory.py
+- .yaml default files are now entirely at the class level, with no kind:module: embedding
+- inheritance of yaml and class_options (with normal dict update, so e.g. all inherited nuisance parameters can be removed using "params:").
+  Each class can either define a .yaml or class_options, or neither, but not both. 
+   Optionally also class 'params' option (equivalent to class_options:{'params':..}) 
+- standalone instantiation of all CobayaComponent
+- renamed "renames" of likelihood to "aliases" (to avoid clash with "renames" for parameters)
 - renamed H (array of H(z)) to Hubble
 - changed TCMB to be consistent
 
+## TODO specifically for Jesus
+ - had to change test chi2/tolerance and some classy things for some travis to pass, need checking
+ - "alias" in polychord.yaml is never used anywhere?
 ## TODO 
- - can we change yaml so no Theory: __self__ in at all? i.e. all based at class level
-   (params, priors can be joined to global later much as now in reverse - params currently added to Theory from global level)
  - does not support requirements that depend dynamically on actual needs
- - added get_version(): add version trace dump with output files
- - init/yaml inheritance
- - reading defaults only once; allow separate like instantiation + use equivalent to loading in cobaya
+ - already added get_version(): should add as version trace dump with output files
+ - allow separate like instantiation + use equivalent to loading in cobaya
  - move sampler/plik install into class methods
  - support "parameterization" option of theory .yaml to specify parameter yaml variants?
+ - require py 3.7+? remove all six, odict, copy(list)..
 
 ### General
 

@@ -50,10 +50,14 @@ class CobayaComponent(HasLogger, HasDefaults):
     that can set attributes.
     """
 
-    class_options = {}
-
     def __init__(self, info={}, name=None, timing=None, path_install=None,
-                 initialize=True):
+                 initialize=True, standalone=True):
+        if standalone:
+            # TODO: would probably be more natural if defaults were always read here
+            default_info = self.get_defaults()
+            default_info.update(info)
+            info = default_info
+
         self._name = name or self.get_qualified_class_name()
         self.path_install = path_install
         for k, value in self.class_options.items():
