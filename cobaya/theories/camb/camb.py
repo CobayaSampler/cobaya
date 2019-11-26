@@ -183,7 +183,6 @@ from collections import namedtuple, OrderedDict as odict
 from cobaya.theories._cosmo import BoltzmannBase
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, check_gcc_version
-from cobaya.conventions import _T_CMB_K
 from cobaya.tools import getfullargspec, get_class_methods, get_properties
 from cobaya.tools import load_module, VersionCheckError, check_module_version
 
@@ -241,10 +240,9 @@ class camb(BoltzmannBase):
             raise LoggedError(self.log, e.msg)
 
         super(camb, self).initialize()
+
         self.extra_attrs = {"Want_CMB": False, "Want_cl_2D_array": False,
                             'WantCls': False}
-        # Set aliases
-        self.planck_to_camb = self.renames
         # Derived parameters that may not have been requested, but will be necessary later
         self.derived_extra = []
         # Some default settings
@@ -294,6 +292,8 @@ class camb(BoltzmannBase):
                 self.extra_attrs["Want_CMB"] = True
                 self.extra_attrs["WantCls"] = True
                 self.non_linear_lens = True
+                if 'TCMB' not in self.derived_extra:
+                    self.derived_extra += ['TCMB']
             elif k == "Hubble":
                 self.collectors[k] = Collector(
                     method=CAMBdata.h_of_z,
@@ -398,8 +398,8 @@ class camb(BoltzmannBase):
             (np.atleast_1d(z), self.extra_args.get("redshifts", [])))))[::-1]
 
     def translate_param(self, p):
-        if self.use_planck_names:
-            return self.planck_to_camb.get(p, p)
+        if self.use_renames:
+            return self.renames.get(p, p)
         return p
 
     def set(self, params_values_dict, state):
@@ -588,9 +588,11 @@ class camb(BoltzmannBase):
         # unit conversion and ell_factor
         ell_factor = ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[
                      2:] if ell_factor else 1
+
+        temp = current_state['derived_extra']['TCMB']
         units_factors = {"1": 1,
-                         "muK2": _T_CMB_K * 1.e6,
-                         "K2": _T_CMB_K}
+                         "muK2": temp * 1.e6,
+                         "K2": temp}
         try:
             units_factor = units_factors[units]
         except KeyError:
@@ -657,8 +659,8 @@ class camb(BoltzmannBase):
         fields += ['omega_de', 'sigma8']  # only parameters from CAMBdata
         properties = get_properties(self.camb.CAMBparams)
         names = self.camb.model.derived_names + properties + fields + params_derived
-        if self.use_planck_names:
-            for name, mapped in self.planck_to_camb.items():
+        if self.use_renames:
+            for name, mapped in self.renames.items():
                 if mapped in names:
                     names.append(name)
 

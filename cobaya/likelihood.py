@@ -27,19 +27,36 @@ from cobaya.component import ComponentCollection
 from cobaya.theory import Theory
 
 
-class Likelihood(Theory):
-    """Likelihood base class. Extends general theory calculation by adding likelihoods."""
+class LikelihoodInterface(object):
+    """
+    Interface functions for likelihoods. Can descend from Theory class and this
+    to make a likelihood (there the calculate() method stores state['logp'] for the
+    current parameter, or likelihoods can directly inherit from Likelihood instead.
+    """
+
+    def get_current_logp(self):
+        return self._current_state["logp"]
+
+
+class Likelihood(Theory, LikelihoodInterface):
+    """Likelihood base class. Extends general Theory calculation
+    by adding functions to return likelihoods functions (logp function for a given
+    point, ."""
+
     @property
     def theory(self):
         # for backwards compatibility
         return self.provider
 
-    # Mandatory
     def logp(self, **params_values):
         """
         Computes and returns the log likelihood value.
         Takes as keyword arguments the parameter values.
         To get the derived parameters, pass a `_derived` keyword with an empty dictionary.
+
+        Alternatively you can just implement calculate() and save the log likelihood into
+        state['logp']; this may be more convenient if you also need to also calculate
+        other quantities.
         """
         return None
 
@@ -56,6 +73,7 @@ class Likelihood(Theory):
     def calculate(self, state, want_derived=True, **params_values_dict):
         """
         Calculates the likelihood and any derived parameters or needs.
+        Return False is the calculation fails.
 
         """
         derived = {} if want_derived else None
@@ -75,9 +93,6 @@ class Likelihood(Theory):
             if want_derived:
                 state["derived"] = derived.copy()
 
-    def get_current_logp(self):
-        return self._current_state["logp"]
-
     def wait(self):
         if self.delay:
             self.log.debug("Sleeping for %f seconds.", self.delay)
@@ -86,7 +101,7 @@ class Likelihood(Theory):
 
 class LikelihoodExternalFunction(Likelihood):
     def __init__(self, info, name, timing=None):
-        Theory.__init__(self, info, name=name, timing=timing)
+        Theory.__init__(self, info, name=name, timing=timing, standalone=False)
 
         # Store the external function and its arguments
         self.external_function = get_external_function(info[_external], name=name)
@@ -142,17 +157,19 @@ class LikelihoodCollection(ComponentCollection):
         self.theory = theory
         # Get the individual likelihood classes
         for name, info in info_likelihood.items():
-            if isinstance(name, Likelihood):
+            if isinstance(name, Theory):
                 name, info = name.get_name(), info
-            if isinstance(info, Likelihood):
+            if isinstance(info, Theory):
                 self[name] = info
             elif _external in info:
-                if isinstance(info[_external], Likelihood):
+                if isinstance(info[_external], Theory):
                     self[name] = info[_external]
                 elif inspect.isclass(info[_external]):
-                    if not issubclass(info[_external], Likelihood):
+                    if not hasattr(info[_external], "get_current_logp") or \
+                            not issubclass(info[_external], Theory):
                         raise LoggedError(self.log, "external class likelihoods must be "
-                                                    "a subclass of Likelihood")
+                                                    "a subclass of Theory and have"
+                                                    "logp, get_current_logp functions")
                     self[name] = info[_external](info, path_install=path_install,
                                                  timing=timing,
                                                  standalone=False, name=name)
@@ -164,3 +181,8 @@ class LikelihoodCollection(ComponentCollection):
                                        module_path=info.pop(_module_path, None))
                 self[name] = like_class(info, path_install=path_install, timing=timing,
                                         standalone=False, name=name)
+
+            if not hasattr(self[name], "get_current_logp"):
+                raise LoggedError(self.log, "'Likelihood' %s is not actually a "
+                                            "likelihood (no get_current_logp function)",
+                                  name)

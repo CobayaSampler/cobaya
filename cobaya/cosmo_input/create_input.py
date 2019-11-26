@@ -117,7 +117,7 @@ def create_input(**kwargs):
     if kwargs.get("planck_names", False):
         merged[kinds.theory][theory_requested] = merged[kinds.theory][
                                                      theory_requested] or {}
-        merged[kinds.theory][theory_requested]["use_planck_names"] = True
+        merged[kinds.theory][theory_requested]["use_renames"] = True
     else:
         merged_params_translated = odict([
             translate(p, info, planck_to_theo)

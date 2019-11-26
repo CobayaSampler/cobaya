@@ -148,7 +148,7 @@ from cobaya.theories._cosmo import BoltzmannBase
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, pip_install
 from cobaya.conventions import _T_CMB_K
-from cobaya.tools import load_module
+from cobaya.tools import load_module, VersionCheckError
 
 # Result collector
 Collector = namedtuple("collector",
@@ -162,9 +162,7 @@ non_linear_default_code = "halofit"
 class classy(BoltzmannBase):
     # Name of the Class repo/folder and version to download
     classy_repo_name = "lesgourg/class_public"
-    classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', "2.8")
-
-    # classy_repo_version = "v2.8.0" # TODO update
+    classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', "v2.8.1")
 
     def initialize(self):
         """Importing CLASS from the correct path, if given, and if not, globally."""
@@ -191,7 +189,8 @@ class classy(BoltzmannBase):
             classy_build_path = None
             self.log.info("Importing *global* CLASS.")
         try:
-            load_module('classy', path=classy_build_path)
+            load_module('classy', path=classy_build_path,
+                        min_version=self.classy_repo_version)
             from classy import Class, CosmoSevereError, CosmoComputationError
         except ImportError:
             raise LoggedError(
@@ -200,6 +199,8 @@ class classy(BoltzmannBase):
                           " (a) specify a path (you didn't) or\n"
                           " (b) install the Python interface globally with\n"
                           "     '/path/to/class/python/python setup.py install --user'")
+        except VersionCheckError as e:
+            raise LoggedError(self.log, e.msg)
         self.classy = Class()
         # Propagate errors up
         global CosmoComputationError, CosmoSevereError
@@ -210,8 +211,6 @@ class classy(BoltzmannBase):
         if "sBBN file" in self.extra_args:
             self.extra_args["sBBN file"] = (
                 self.extra_args["sBBN file"].format(classy=self.path))
-        # Set aliases
-        self.planck_to_classy = self.renames
         # Derived parameters that may not have been requested, but will be necessary later
         self.derived_extra = []
 
@@ -323,8 +322,8 @@ class classy(BoltzmannBase):
 
     def translate_param(self, p, force=False):
         # "force=True" is used when communicating with likelihoods, which speak "planck"
-        if self.use_planck_names or force:
-            return self.planck_to_classy.get(p, p)
+        if self.use_renames or force:
+            return self.renames.get(p, p)
         return p
 
     def set(self, params_values_dict):
@@ -491,8 +490,8 @@ class classy(BoltzmannBase):
         names = ['Omega_Lambda', 'Omega_cdm', 'Omega_b', 'Omega_m', 'rs_drag', 'z_reio',
                  'YHe', 'Omega_k', 'age', 'sigma8']
 
-        if self.use_planck_names:
-            for name, map in self.planck_to_classy.items():
+        if self.use_renames:
+            for name, map in self.renames.items():
                 if map in names:
                     names.append(name)
         return names

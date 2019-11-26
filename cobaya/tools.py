@@ -21,6 +21,7 @@ from collections import OrderedDict as odict
 from ast import parse
 import warnings
 import inspect
+from six import string_types
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore")
@@ -424,6 +425,10 @@ def get_scipy_1d_pdf(info):
                     limit, value, param)
         info2["loc"] = minmaxvalues["min"]
         info2["scale"] = minmaxvalues["max"] - minmaxvalues["min"]
+
+    for x in ["loc", "scale", "min", "max"]:
+        if isinstance(info2.get(x), string_types):
+            raise LoggedError(log, "%s should be a number (got '%s')", x, info2.get(x))
     # Check for improper priors
     if not np.all(np.isfinite([info2.get(x, 0) for x in ["loc", "scale", "min", "max"]])):
         raise LoggedError(log, "Improper prior for parameter '%s'.", param)

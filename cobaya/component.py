@@ -158,6 +158,8 @@ class Provider(object):
         self.params = params
 
     def get_param(self, param):
+        if isinstance(param, (list, tuple)):
+            return [self.get_param(p) for p in param]
         if param in self.params:
             return self.params[param]
         else:

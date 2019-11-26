@@ -21,18 +21,22 @@
 - standalone instantiation of all CobayaComponent
 - renamed "renames" of likelihood to "aliases" (to avoid clash with "renames" for parameters)
 - renamed H (array of H(z)) to Hubble
-- changed TCMB to be consistent
+- changed TCMB in conventions to be consistent. CAMB now independent of that and consistent with varying TCMB.
+- changed use_planck_names to more general use_renames etc.
 
 ## TODO specifically for Jesus
  - had to change test chi2/tolerance and some classy things for some travis to pass, need checking
  - "alias" in polychord.yaml is never used anywhere?
+ - handle TCMB consistently in classy?
+ - convention for parameter/value ordering - does class_options/inheritance cause possible issues?
 ## TODO 
- - does not support requirements that depend dynamically on actual needs
  - already added get_version(): should add as version trace dump with output files
- - allow separate like instantiation + use equivalent to loading in cobaya
+ - let classes do all defaults combining; allow separate like instantiation + use equivalent to loading in cobaya
  - move sampler/plik install into class methods
  - support "parameterization" option of theory .yaml to specify parameter yaml variants?
+ - does not support requirements that depend dynamically on actual needs
  - require py 3.7+? remove all six, odict, copy(list)..
+ - remove TCMB from conventions - in general a free parameter
 
 ### General
 

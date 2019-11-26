@@ -9,7 +9,7 @@ stop_at_error: False
 extra_args:
   # e.g AccuracyBoost: [larger than 1]
 # Use Planck parameter names, for fast switching CLASS<-->(Planck+CAMB)
-use_planck_names: False
+use_renames: False
 # Dictionary of (Planck+CAMB)->CLASS names
 renames:
   omegabh2: ombh2

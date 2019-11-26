@@ -114,7 +114,7 @@ class Sampler(CobayaComponent):
         self.output = output
 
         super(Sampler, self).__init__(info_sampler, path_install=path_install,
-                                      name=name, initialize=False)
+                                      name=name, initialize=False, standalone=False)
 
         # Seed, if requested
         if getattr(self, "seed", None) is not None:
@@ -171,6 +171,7 @@ class Sampler(CobayaComponent):
         return None
 
     def close(self, exception_type, exception_value, traceback):
+        # TODO: should rename if not same arguments as inherited
         """
         Finalizes the sampler, if something needs to be done
         (e.g. generating additional output).

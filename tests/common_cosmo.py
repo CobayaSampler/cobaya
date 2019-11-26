@@ -30,7 +30,7 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
     info = create_input(planck_names=True, theory=theo, **planck_base_model_prime)
     # Add specifics for the test: theory, likelihoods and derived parameters
     info = recursive_update(info, {kinds.theory: info_theory})
-    info[kinds.theory][theo]["use_planck_names"] = True
+    info[kinds.theory][theo]["use_renames"] = True
     info = recursive_update(info, {kinds.likelihood: info_likelihood})
     info[_params].update({p: None for p in best_fit_derived or {}})
     # We need UPDATED info, to get the likelihoods nuisance parameters

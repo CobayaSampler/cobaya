@@ -19,15 +19,15 @@ import copy
 from copy import deepcopy
 
 # Local
-from cobaya.conventions import kinds, partag, _prior, _timing
+from cobaya.conventions import kinds, _prior, _timing
 from cobaya.conventions import _params, _overhead_per_param, _provides
 from cobaya.conventions import _path_install, _debug, _debug_default, _debug_file
 from cobaya.conventions import _input_params, _output_params, _chi2, _separator
 from cobaya.conventions import _input_params_prefix, _output_params_prefix, _requires
-from cobaya.input import update_info
+from cobaya.input import update_info, str_to_list
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
-from cobaya.likelihood import Likelihood, LikelihoodCollection, LikelihoodExternalFunction
+from cobaya.likelihood import LikelihoodCollection, LikelihoodExternalFunction
 from cobaya.theory import Theory, TheoryCollection
 from cobaya.log import LoggedError, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
@@ -156,7 +156,7 @@ class Model(HasLogger):
         numbers allowed by machine precision.
         """
         if hasattr(params_values, "keys"):
-            params_values = self.parameterization._check_sampled(**params_values)
+            params_values = self.parameterization.check_sampled(**params_values)
         params_values_array = self._to_sampled_array(params_values)
         logpriors = self.prior.logps(params_values_array)
         if make_finite:
@@ -208,7 +208,7 @@ class Model(HasLogger):
             if return_derived:
                 derived_dict.update(component.get_current_derived())
 
-            if isinstance(component, Likelihood):
+            if hasattr(component, "get_current_logp"):
                 loglikes[index - n_theory] = component.get_current_logp()
                 if return_derived:
                     derived_dict[_chi2 + _separator +
@@ -228,8 +228,8 @@ class Model(HasLogger):
 
         return loglikes
 
-    def loglikes(self, params_values, return_derived=True, make_finite=False, cached=True,
-                 _no_check=False):
+    def loglikes(self, params_values=None, return_derived=True, make_finite=False,
+                 cached=True, _no_check=False):
         """
         Takes an array or dictionary of sampled parameter values.
         If the argument is an array, parameters must have the same order as in the input.
@@ -250,16 +250,18 @@ class Model(HasLogger):
         If ``cached=False`` (default: True), it ignores previously computed results that
         could be reused.
         """
+        if params_values is None:
+            params_values = []
         if hasattr(params_values, "keys") and not _no_check:
-            params_values = self.parameterization._check_sampled(**params_values)
+            params_values = self.parameterization.check_sampled(**params_values)
 
-        input_params = self.parameterization._to_input(params_values)
+        input_params = self.parameterization.to_input(params_values)
 
         result = self.logps(input_params, return_derived=return_derived,
                             cached=cached, make_finite=make_finite)
         if return_derived:
             loglikes, derived_list = result
-            derived_sampler = self.parameterization._to_derived(derived_list)
+            derived_sampler = self.parameterization.to_derived(derived_list)
             if self.log.getEffectiveLevel() <= logging.DEBUG:
                 self.log.debug(
                     "Computed derived parameters: %s",
@@ -267,7 +269,8 @@ class Model(HasLogger):
             return loglikes, derived_sampler
         return result
 
-    def loglike(self, params_values, return_derived=True, make_finite=False, cached=True):
+    def loglike(self, params_values=None, return_derived=True, make_finite=False,
+                cached=True):
         """
         Takes an array or dictionary of sampled parameter values.
         If the argument is an array, parameters must have the same order as in the input.
@@ -333,7 +336,7 @@ class Model(HasLogger):
         could be reused.
         """
         if hasattr(params_values, "keys"):
-            params_values = self.parameterization._check_sampled(**params_values)
+            params_values = self.parameterization.check_sampled(**params_values)
         params_values_array = self._to_sampled_array(params_values)
         if self.log.getEffectiveLevel() <= logging.DEBUG:
             self.log.debug(
@@ -567,10 +570,7 @@ class Model(HasLogger):
                     supports_params = None
                 elif kind == 'output':
                     supports_params = set(component.get_can_provide_params())
-                    provide = getattr(component, _provides, [])
-                    if not isinstance(provide, list):
-                        raise LoggedError(self.log, "'%s' must be a list of "
-                                                    "parameter names" % _provides)
+                    provide = str_to_list(getattr(component, _provides, []))
                     supports_params |= set(provide)
                 else:
                     supports_params = component.get_requirements()
@@ -612,7 +612,8 @@ class Model(HasLogger):
                     for p in supports_params:
                         if p in params_assign[kind]:
                             if not any((c is not component and p in
-                                        getattr(c, _provides, [])) for c in components):
+                                        str_to_list(getattr(c, _provides, []))) for c in
+                                       components):
                                 params_assign[kind][p] += [component]
                 # 5. No parameter knowledge: store as parameter agnostic
                 elif supports_params is None:
@@ -681,7 +682,8 @@ class Model(HasLogger):
                         [p for p, assign in params_assign[kind].items() if
                          component in assign])
                 # Update infos!
-                inf = (info_theory, info_likelihood)[isinstance(component, Likelihood)]
+                inf = (info_theory, info_likelihood)[
+                    hasattr(component, "get_current_logp")]
                 inf[component.get_name()].pop(_params, None)
                 inf[component.get_name()][option] = getattr(component, attr)
         if self.log.getEffectiveLevel() <= logging.DEBUG:

@@ -44,7 +44,7 @@ def is_derived_param(info_param):
     return expand_info_param(info_param).get(partag.derived, False)
 
 
-def expand_info_param(info_param):
+def expand_info_param(info_param, default_derived=True):
     """
     Expands the info of a parameter, from the user friendly, shorter format
     to a more unambiguous one.
@@ -56,7 +56,7 @@ def expand_info_param(info_param):
         else:
             info_param = odict([(partag.value, info_param)])
     if all(f not in info_param for f in [partag.prior, partag.value, partag.derived]):
-        info_param[partag.derived] = True
+        info_param[partag.derived] = default_derived
     # Dynamical input parameters: save as derived by default
     value = info_param.get(partag.value, None)
     if isinstance(value, string_types) or callable(value):
@@ -233,7 +233,7 @@ class Parameterization(HasLogger):
     def sampled_input_dependence(self):
         return deepcopy(self._sampled_input_dependence)
 
-    def _to_input(self, sampled_params_values):
+    def to_input(self, sampled_params_values):
         # Store sampled params, so that derived can depend on them
         if not hasattr(sampled_params_values, "keys"):
             sampled_params_values = odict(
@@ -271,7 +271,7 @@ class Parameterization(HasLogger):
                 list(set(self._input_funcs).difference(set(resolved))))
         return self.input_params()
 
-    def _to_derived(self, output_params_values):
+    def to_derived(self, output_params_values):
         if not hasattr(output_params_values, "keys"):
             output_params_values = dict(
                 zip(self.output_params(), output_params_values))
@@ -302,7 +302,7 @@ class Parameterization(HasLogger):
                 list(set(self._derived_funcs).difference(set(resolved))))
         return list(self._derived.values())
 
-    def _check_sampled(self, **sampled_params):
+    def check_sampled(self, **sampled_params):
         """
         Check that the input dictionary contains all the sampled parameters,
         and just them. Is aware of known renamings.

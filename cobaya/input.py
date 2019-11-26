@@ -96,12 +96,6 @@ def get_default_info(module_or_class, kind=None, fail_if_not_found=False,
     Get default info for a module_or_class.
     """
 
-    from cobaya.likelihood import Likelihood
-    from cobaya.theory import Theory
-    from cobaya.sampler import Sampler
-    component_base_classes = {kinds.sampler: Sampler, kinds.likelihood: Likelihood,
-                              kinds.theory: Theory}
-
     _kind = kind
     try:
         if inspect.isclass(module_or_class):
@@ -111,23 +105,13 @@ def get_default_info(module_or_class, kind=None, fail_if_not_found=False,
             cls = get_class(module_or_class, _kind,
                             None_if_not_found=not fail_if_not_found,
                             module_path=module_path)
-        if cls:
-            default_module_info = \
-                cls.get_defaults(return_yaml=return_yaml,
-                                 yaml_expand_defaults=yaml_expand_defaults)
-        else:
-            default_module_info = component_base_classes[_kind].class_options.copy()
+        default_module_info = \
+            cls.get_defaults(return_yaml=return_yaml,
+                             yaml_expand_defaults=yaml_expand_defaults)
+
     except Exception as e:
         raise LoggedError(log, "Failed to get defaults for module or class '%s' [%s]",
-                          ("%s:" % _kind if _kind else "") + module_or_class, e)
-
-    if cls and kind:
-        for kind_name, _cls in component_base_classes.items():
-            if issubclass(cls, _cls):
-                if kind != kind_name:
-                    raise LoggedError(log, "class %s of unexpected kind %s", cls.__name__,
-                                      kind)
-                break
+                          module_or_class, e)
 
     return default_module_info
 
@@ -141,6 +125,12 @@ def update_info(info):
     Creates an updated info starting from the defaults for each module and updating it
     with the input info.
     """
+    from cobaya.likelihood import Likelihood
+    from cobaya.theory import Theory
+    from cobaya.sampler import Sampler
+    component_base_classes = {kinds.sampler: Sampler, kinds.likelihood: Likelihood,
+                              kinds.theory: Theory}
+
     # Don't modify the original input!
     input_info = deepcopy_where_possible(info)
     # Creates an equivalent info using only the defaults
@@ -179,9 +169,17 @@ def update_info(info):
                     not hasattr(input_block[module], "get"):
                 input_block[module] = {_external: input_block[module]}
 
-            module_path = input_block[module].get(_module_path, None)
-            default_class_info = get_default_info(module, block,
-                                                  module_path=module_path)
+            ext = input_block[module].get(_external)
+            if ext:
+                if inspect.isclass(ext):
+                    default_class_info = get_default_info(ext, block)
+                else:
+                    default_class_info = deepcopy_where_possible(
+                        component_base_classes[block].class_options.copy())
+            else:
+                module_path = input_block[module].get(_module_path, None)
+                default_class_info = get_default_info(module, block,
+                                                      module_path=module_path)
 
             updated[module] = default_class_info or {}
             # Update default options with input info
@@ -222,16 +220,18 @@ def update_info(info):
             updated_info[_prior][name] = prior
     # Add parameters info, after the necessary updates and checks
     defaults_merged = merge_default_params_info(default_params_info)
-    updated_info[_params] = merge_params_info(defaults_merged,
-                                              input_info.get(_params, {}))
+    updated_info[_params] = merge_params_info([defaults_merged,
+                                               input_info.get(_params, {})],
+                                              default_derived=False)
     # Add aliases for theory params (after merging!)
     for kind in [k for k in [kinds.theory, kinds.likelihood] if k in updated_info]:
         for item in updated_info[kind].values():
             renames = item.get(partag.renames)
             if renames:
                 if isinstance(renames, (list, tuple)):
-                    raise LoggedError(log, "'renames' should be a dictionary of name mappings "
-                                           "(or you meant to use 'aliases')")
+                    raise LoggedError(log,
+                                      "'renames' should be a dictionary of name mappings "
+                                      "(or you meant to use 'aliases')")
                 renames_flat = [set([k] + str_to_list(v)) for k, v in renames.items()]
                 for p in updated_info[_params]:
                     # Probably could be made faster by inverting the renames dicts *once*
@@ -271,7 +271,7 @@ def merge_default_params_info(defaults):
     return defaults_merged
 
 
-def merge_params_info(*params_infos):
+def merge_params_info(params_infos, default_derived=True):
     """
     Merges parameter infos, starting from the first one
     and updating with each additional one.
@@ -281,7 +281,8 @@ def merge_params_info(*params_infos):
     to avoid surprises, the other one is set to None=+/-inf)
     """
     current_info = odict(
-        (p, expand_info_param(v)) for p, v in params_infos[0].items() or {})
+        (p, expand_info_param(v, default_derived)) for p, v in
+        params_infos[0].items() or {})
     for new_info in params_infos[1:]:
         if not new_info:
             continue
@@ -321,7 +322,7 @@ def merge_info(*infos):
         new_params_info = deepcopy(new_info).pop(_params, odict()) or odict()
         # NS: params have been popped, since they have their own merge function
         current_info = recursive_update(deepcopy(previous_info), new_info)
-        current_info[_params] = merge_params_info(previous_params_info, new_params_info)
+        current_info[_params] = merge_params_info([previous_params_info, new_params_info])
         previous_info = current_info
     return current_info
 
@@ -537,7 +538,7 @@ class HasDefaults(object):
                 raise LoggedError(log, "class %s cannot have 'params' and params "
                                        "element of class_options" %
                                   cls.get_qualified_class_name())
-            options[_params] = params
+            options[_params] = odict(params)
         if options and yaml_text:
             raise LoggedError(log,
                               "%s: any class can either have .yaml or class variables "

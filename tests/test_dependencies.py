@@ -128,11 +128,7 @@ def test_dependencies(modules):
         _test_loglike([('A', A), ('B', B2), ('C', C)])
     assert "Bout is provided by more than one component" in str(e.value)
 
-    with pytest.raises(LoggedError) as e:
-        _test_loglike([('A', A), ('B', B2), ('C', {'external': C, 'provides': 'Bout'})])
-    assert "must be a list of parameter names" in str(e.value)
-
-    _test_loglike([('A', A), ('B', B2), ('C', {'external': C, 'provides': ['Bout']})])
+    _test_loglike([('A', A), ('B', B2), ('C', {'external': C, 'provides': 'Bout'})])
     _test_loglike([('A', A), ('B', {'external': B2, 'provides': ['Bout']}),
                    ('C', {'external': C})])
 
