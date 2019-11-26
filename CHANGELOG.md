@@ -19,6 +19,7 @@
   Each class can either define a .yaml or class_options, or neither, but not both. 
    Optionally also class 'params' option (equivalent to class_options:{'params':..}) 
 - standalone instantiation of all CobayaComponent
+- sampler method now sets cache size
 - renamed "renames" of likelihood to "aliases" (to avoid clash with "renames" for parameters)
 - renamed H (array of H(z)) to Hubble
 - changed TCMB in conventions to be consistent. CAMB now independent of that and consistent with varying TCMB.

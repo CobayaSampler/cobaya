@@ -21,7 +21,7 @@ def test_minimize_gaussian():
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     # Info of likelihood and prior
-    ranges = np.array([[0, 1] for i in range(dimension)])
+    ranges = np.array([[0, 1] for _ in range(dimension)])
     prefix = "a_"
     info = info_random_gaussian_mixture(
         ranges=ranges, n_modes=n_modes, input_params_prefix=prefix, derived=True)

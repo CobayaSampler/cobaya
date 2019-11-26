@@ -53,7 +53,7 @@ import numpy as np
 
 # Local
 from cobaya.conventions import kinds, _resume_default, _checkpoint_extension
-from cobaya.conventions import _covmat_extension, _progress_extension
+from cobaya.conventions import _covmat_extension, _progress_extension, _module_path
 from cobaya.tools import get_class
 from cobaya.log import LoggedError
 from cobaya.yaml import yaml_load_file
@@ -151,6 +151,7 @@ class Sampler(CobayaComponent):
             except (OSError, TypeError):
                 pass
         self.initialize()
+        self.model.set_cache_size(self._get_requested_cache_size())
 
     def checkpoint_filename(self):
         if self.output:
@@ -171,12 +172,20 @@ class Sampler(CobayaComponent):
         return None
 
     def close(self, exception_type, exception_value, traceback):
-        # TODO: should rename if not same arguments as inherited
         """
         Finalizes the sampler, if something needs to be done
         (e.g. generating additional output).
         """
         pass
+
+    def _get_requested_cache_size(self):
+        """
+        Override this for samplers than need more than 3 states cached
+        per theory/likelihood.
+
+        :return: number of points to cache
+        """
+        return 3
 
     # Python magic for the "with" statement
 
@@ -197,7 +206,17 @@ class Minimizer(Sampler):
     pass
 
 
-def get_sampler(info_sampler, posterior, output_file,
+def get_sampler_class(info):
+    info_sampler = info.get(kinds.sampler)
+    if info_sampler:
+        name = list(info_sampler)[0]
+        if name:
+            module_path = (info_sampler[name] or {}).get(_module_path)
+            return get_class(name, kinds.sampler, None_if_not_found=True,
+                             module_path=module_path)
+
+
+def get_sampler(info_sampler, model, output_file,
                 resume=_resume_default, modules=None):
     """
     Auxiliary function to retrieve and initialize the requested sampler.
@@ -210,7 +229,10 @@ def get_sampler(info_sampler, posterior, output_file,
     except AttributeError:
         raise LoggedError(
             log, "The sampler block must be a dictionary 'sampler: {options}'.")
+    if len(info_sampler) > 1:
+        raise LoggedError(log, "nly one sampler currently supported at a time.")
+
     sampler_class = get_class(name, kind=kinds.sampler)
     assert issubclass(sampler_class, Sampler)
-    return sampler_class(info_sampler[name], posterior, output_file, resume=resume,
+    return sampler_class(info_sampler[name], model, output_file, resume=resume,
                          path_install=modules, name=name)

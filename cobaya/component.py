@@ -86,7 +86,7 @@ class CobayaComponent(HasLogger, HasDefaults):
     def __repr__(self):
         return self.get_name()
 
-    def close(self):
+    def close(self, *args):
         """Finalizes the class, if something needs to be cleaned up."""
         pass
 

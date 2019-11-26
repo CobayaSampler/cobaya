@@ -362,6 +362,8 @@ def load_DataFrame(file_name, skip=0, thin=1):
             inp.seek(0)
         thin = int(thin)
         skiprows = lambda i: i < skip or i % thin
+        if thin != 1:
+            raise LoggedError(log, "thin is not supported yet")
         # TODO: looks like this thinning is not correctly account for weights???
         return pd.read_csv(
             inp, sep=" ", header=None, names=cols, comment="#", skipinitialspace=True,
@@ -388,8 +390,8 @@ def get_scipy_1d_pdf(info):
     param = list(info.keys())[0]
     info2 = deepcopy(info[param])
     if not info2:
-        raise LoggedError(log,
-                          "No specific prior info given for sampled parameter '%s'." % param)
+        raise LoggedError(log, "No specific prior info given for "
+                               "sampled parameter '%s'." % param)
     # What distribution?
     try:
         dist = info2.pop(partag.dist).lower()

@@ -253,7 +253,7 @@ class camb(BoltzmannBase):
         self._base_params = None
 
     def initialize_with_params(self):
-        # TODO: supports params function could specifiy list of parameters accepted
+        # TODO: supports params function could specify list of parameters accepted
         #  (allowing set entries)
         if len(set(self.input_params).intersection(
                 {"H0", "cosmomc_theta", "thetastar"})) > 1:

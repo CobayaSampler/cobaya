@@ -21,7 +21,7 @@ from cobaya.conventions import _yaml_extensions, _separator_files, _updated_suff
 from cobaya.conventions import _modules_path_arg, _modules_path_env, _resume_default
 from cobaya.output import get_Output as Output
 from cobaya.model import Model
-from cobaya.sampler import get_sampler
+from cobaya.sampler import get_sampler, get_sampler_class, Minimizer
 from cobaya.log import logger_setup
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info
@@ -43,15 +43,14 @@ def run(info):
     import logging
     # Initialize output, if required
     resume, force = info.get(_resume), info.get(_force)
+    # Create the updated input information, including defaults for each module.
+    updated_info = update_info(info)
     # If minimizer, always try to re-use sample to get bestfit/covmat
-    # TODO: should check any Minimizer subclass
-    if list(info[kinds.sampler])[0] == "minimize":
+    if issubclass(get_sampler_class(updated_info) or type, Minimizer):
         resume = True
         force = False
     output = Output(output_prefix=info.get(_output_prefix),
                     resume=resume, force_output=force)
-    # Create the updated input information, including defaults for each module.
-    updated_info = update_info(info)
     if output:
         updated_info[_output_prefix] = output.updated_output_prefix()
         updated_info[_resume] = output.is_resuming()

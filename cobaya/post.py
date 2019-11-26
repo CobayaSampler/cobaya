@@ -182,8 +182,9 @@ def post(info, sample=None):
         add_theory = add.get(kinds.theory)
         if add_theory:
             info_theory_out = odict()
-            # TODO: check with more than one theory
-            assert len(add_theory) == 1, "Currently only one theory actually tested"
+            if len(add_theory) > 1:
+                log.warning('Importance sampling with more than one theory is '
+                            'not really tested')
             add_theory = add_theory.copy()
             for theory, theory_info in info_in[kinds.theory].items():
                 theory_copy = deepcopy(theory_info)

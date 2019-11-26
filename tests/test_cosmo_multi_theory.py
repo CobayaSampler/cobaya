@@ -159,12 +159,12 @@ def test_bbn_likelihood(modules):
     BBN_likelihood.bbn = BBN_table_interpolator(bbn_table)
     info_error['modules'] = modules
     model = get_model(info_error)
-    assert np.allclose(model.loglikes({'YHe': 0.246})[0], [0.246, -0.84340],
-                       rtol=1e-4), \
+    assert np.allclose(model.loglikes({'YHe': 0.246})[0], [0.246, -0.84340], rtol=1e-4), \
         "Failed BBN likelihood with %s" % info_error
 
     # second case, BBN likelihood has to be calculated before CAMB
     BBN_with_theory_errors.bbn = BBN_likelihood.bbn
     info_error2['modules'] = modules
     model = get_model(info_error2)
-    assert np.allclose(model.loglikes({'BBN_delta': 1})[0], [0.24594834, -0.5], rtol=1e-4)
+    assert np.allclose(model.loglikes({'BBN_delta': 1.0})[0], [0.24594834, -0.5],
+                       rtol=1e-4)

@@ -16,10 +16,9 @@ from itertools import chain, permutations
 import logging
 import six
 import copy
-from copy import deepcopy
 
 # Local
-from cobaya.conventions import kinds, _prior, _timing
+from cobaya.conventions import kinds, _prior, _timing, _aliases
 from cobaya.conventions import _params, _overhead_per_param, _provides
 from cobaya.conventions import _path_install, _debug, _debug_default, _debug_file
 from cobaya.conventions import _input_params, _output_params, _chi2, _separator
@@ -99,7 +98,6 @@ class Model(HasLogger):
         self.prior = Prior(prior_parameterization or self.parameterization,
                            self._updated_info.get(_prior, None))
 
-        # TODO: would be more logical called self.theories and self.likelihoods
         info_theory = self._updated_info.get(kinds.theory)
         self.theory = TheoryCollection(info_theory, path_install=path_install,
                                        timing=timing)
@@ -829,12 +827,22 @@ class Model(HasLogger):
                 self.log, "Manual blocking: missing parameters: %r", missing)
         if unknown:
             raise LoggedError(
-                self.log, "Manual blocking: unkown parameters: %r", unknown)
+                self.log, "Manual blocking: unknown parameters: %r", unknown)
         if (speeds != np.sort(speeds)).all():
             self.log.warning(
                 "Manual blocking: speed-blocking *apparently* non-optimal: "
                 "sort by ascending speed when possible")
         return speeds, blocks
+
+    def set_cache_size(self, n_states):
+        """
+        Sets the number of different parameter points to cache for all theories
+        and likelihood.
+
+        :param n_states: number of cached points
+        """
+        for theory in chain(self.theory.values(), self.likelihood.values()):
+            theory.set_cache_size(n_states)
 
     def _get_auto_covmat(self, params_info):
         """
@@ -845,7 +853,8 @@ class Model(HasLogger):
         likes_renames = {like: {_aliases: getattr(like, _aliases, [])}
                          for like in self.likelihood}
         try:
-            # TODO: get_auto_covmat has nothing to do with cosmology, move to model?
+            # TODO: get_auto_covmat has nothing to do with cosmology, move to model
+            #  or somewhere else?
             return self.theory.values[0].get_auto_covmat(params_info, likes_renames)
         except:
             return None

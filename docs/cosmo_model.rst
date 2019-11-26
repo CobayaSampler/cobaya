@@ -67,11 +67,11 @@ And this will print something like
    If you want to use any of the wrapper log-probability methods with an external code, especially with C or Fortran, consider setting the keyword ``make_finite=True`` in those methods, which will return the largest (or smallest) machine-representable floating point numbers, instead of ``numpy``'s infinities.
 
 
-We can also use the :class:`Model` to get the cosmological observables that were computed for the likelihood. To see what has been requested from the theory code, do
+We can also use the :class:`Model` to get the cosmological observables that were computed for the likelihood. To see what has been requested from, e.g.,  the camb theory code, do
 
 .. code:: python
 
-   print(model.theory.requested())
+   print(model.theory["camb"].requested())
 
 
 Which will print something like

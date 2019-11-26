@@ -15,7 +15,6 @@ import sys
 import six
 import traceback
 import datetime
-from copy import deepcopy
 from itertools import chain
 import re
 
@@ -129,17 +128,19 @@ class Output(HasLogger):
                 old_info = self.reload_updated_info()
                 new_info = yaml_load(yaml_dump(updated_info_trimmed))
                 ignore_blocks = []
-                if list(new_info.get(kinds.sampler, [None]))[0] == "minimize":
+                from cobaya.sampler import get_sampler_class, Minimizer
+                if issubclass(get_sampler_class(new_info) or type, Minimizer):
                     ignore_blocks = [kinds.sampler]
                 if not is_equal_info(old_info, new_info, strict=False,
                                      ignore_blocks=ignore_blocks):
                     # HACK!!! NEEDS TO BE FIXED
-                    # TODO: should check any Minimizer subclass
-                    if list(updated_info.get(kinds.sampler, [None]))[0] == "minimize":
+                    if issubclass(get_sampler_class(updated_info) or type, Minimizer):
+                        # TODO: says work in progress!
                         raise LoggedError(
                             self.log, "Old and new sample information not compatible! "
-                                      "At this moment it is not possible to 'force' deletion of "
-                                      "and old 'minimize' run. Please delete it by hand. "
+                                      "At this moment it is not possible to 'force' "
+                                      "deletion of and old 'minimize' run. Please delete "
+                                      "it by hand. "
                                       "We are working on fixing this very soon!")
                     raise LoggedError(
                         self.log, "Old and new sample information not compatible! "

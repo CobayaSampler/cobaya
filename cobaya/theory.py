@@ -41,8 +41,8 @@ class Theory(CobayaComponent):
                                      standalone=standalone)
 
         self.provider = None  # set to Provider instance before calculations
-        # Generate cache states, to avoid recomputing
-        # TODO: size of the cache should be set by the sampler
+        # Generate cache states, to avoid recomputing.
+        # Default 3, but can be changed by sampler
         self.set_cache_size(3)
 
     def get_requirements(self):
@@ -217,17 +217,12 @@ class TheoryCollection(ComponentCollection):
                     self[name] = theory_class(info, path_install=path_install,
                                               timing=timing, name=name)
 
-    # TODO: think about better syntax
     def __getattribute__(self, name):
         if not name.startswith('_'):
-            # support old single-theory syntax
             try:
                 return super(TheoryCollection, self).__getattribute__(name)
             except AttributeError:
+                self.log.warn("No attribute %s of TheoryCollection. Use model.provider "
+                              "if you want to access computed requests" % name)
                 pass
-            for theory in object.__getattribute__(self, "values")():
-                try:
-                    return getattr(theory, name)
-                except AttributeError:
-                    pass
         return object.__getattribute__(self, name)
