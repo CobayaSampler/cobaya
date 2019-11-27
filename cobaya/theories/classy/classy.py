@@ -491,8 +491,8 @@ class classy(BoltzmannBase):
                  'YHe', 'Omega_k', 'age', 'sigma8']
 
         if self.use_renames:
-            for name, map in self.renames.items():
-                if map in names:
+            for name, mapped in self.renames.items():
+                if mapped in names:
                     names.append(name)
         return names
 

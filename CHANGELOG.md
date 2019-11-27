@@ -11,9 +11,11 @@
 - three initialization methods: initialize (from __init__), initialize_with_params 
   (after parameter assignment) and initialize_with_provider (once all configured)
 - Likelihood now inherits from Theory, with general cached compute and deque states
-- Likelihood and Theory instantiated from {external: class}
+- Likelihood and Theory can instantiated from {external: class}
+- needs() function can now return a dictionary of requirements conditional on those needs
 - derived parameters in likelihood yaml can be explicitly tagged with derived:True
-- added test_dependencies.py, test_cosmo_multi_theory.py
+- added test_dependencies.py, test_cosmo_multi_theory.py (H0 test no longer depends on CAMB/classy 
+  since new dependency code gives an error using theory component that is not actually needed)
 - .yaml default files are now entirely at the class level, with no kind:module: embedding
 - inheritance of yaml and class_options (with normal dict update, so e.g. all inherited nuisance parameters can be removed using "params:").
   Each class can either define a .yaml or class_options, or neither, but not both. 
@@ -30,12 +32,12 @@
  - "alias" in polychord.yaml is never used anywhere?
  - handle TCMB consistently in classy?
  - convention for parameter/value ordering - does class_options/inheritance cause possible issues?
+ - are there areas not covered by tests that need checking?
 ## TODO 
- - already added get_version(): should add as version trace dump with output files
+ - already added get_version(): should add as version trace dump with output files. Where?
  - let classes do all defaults combining; allow separate like instantiation + use equivalent to loading in cobaya
  - move sampler/plik install into class methods
  - support "parameterization" option of theory .yaml to specify parameter yaml variants?
- - does not support requirements that depend dynamically on actual needs
  - require py 3.7+? remove all six, odict, copy(list)..
  - remove TCMB from conventions - in general a free parameter
 

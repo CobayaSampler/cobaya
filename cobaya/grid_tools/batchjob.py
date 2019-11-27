@@ -204,7 +204,7 @@ class importanceSetting(object):
 
 class importanceFilter(importanceSetting):
     # class for trivial importance sampling filters that can be done in python,
-    # e.g. restricting a parameter to a new range
+    # e.g. restricting a parameter to a new _range
 
     def __init__(self, names, dist_settings=None, minimize=False):
         self.names = names

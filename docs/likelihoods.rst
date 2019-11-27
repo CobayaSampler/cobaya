@@ -184,6 +184,12 @@ Likelihood class
 .. autoclass:: likelihood.Likelihood
    :members:
 
+Likelihood interface
+^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: likelihood.LikelihoodInterface
+   :members:
+
 LikelihoodCollection class
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 

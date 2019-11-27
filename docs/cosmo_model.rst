@@ -71,14 +71,14 @@ We can also use the :class:`Model` to get the cosmological observables that were
 
 .. code:: python
 
-   print(model.theory["camb"].requested())
+   print(model.requested())
 
 
 Which will print something like
 
 .. code:: python
 
-   {'cl': {'pp': 2048, 'bb': 29, 'ee': 2508, 'tt': 2508, 'eb': 0, 'te': 2508, 'tb': 0}}
+   {classy: [{'Cl': {'pp': 2048, 'bb': 29, 'ee': 2508, 'tt': 2508, 'eb': 0, 'te': 2508, 'tb': 0}}]}
 
 If we take a look at the documentation of :func:`~theories.boltzmannbase.BoltzmannBase.needs` (clickable!), we will see that to request the power spectrum we would use the method ``get_Cl``:
 

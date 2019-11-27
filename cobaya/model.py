@@ -14,8 +14,6 @@ import numpy as np
 from collections import namedtuple, OrderedDict as odict
 from itertools import chain, permutations
 import logging
-import six
-import copy
 
 # Local
 from cobaya.conventions import kinds, _prior, _timing, _aliases
@@ -26,8 +24,9 @@ from cobaya.conventions import _input_params_prefix, _output_params_prefix, _req
 from cobaya.input import update_info, str_to_list
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
-from cobaya.likelihood import LikelihoodCollection, LikelihoodExternalFunction
-from cobaya.theory import Theory, TheoryCollection
+from cobaya.likelihood import LikelihoodCollection, LikelihoodExternalFunction, \
+    AbsorbUnusedParamsLikelihood
+from cobaya.theory import TheoryCollection
 from cobaya.log import LoggedError, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
 from cobaya.tools import gcd, deepcopy_where_possible, are_different_params_lists
@@ -36,6 +35,13 @@ from cobaya.component import Provider
 # Log-posterior namedtuple
 logposterior = namedtuple("logposterior", ["logpost", "logpriors", "loglikes", "derived"])
 logposterior.__new__.__defaults__ = (None, None, [], [])
+
+
+def _dict_list_items(dict_list):
+    result = []
+    for item in dict_list:
+        result += list(item.items())
+    return result
 
 
 def get_model(info):
@@ -410,7 +416,7 @@ class Model(HasLogger):
         comps = components[:]
         _last = 0
         while len(dependence_order) < len(components):
-            for component in copy.copy(comps):
+            for component in list(comps):
                 if not deps.get(component):
                     dependence_order.append(component)
                     comps.remove(component)
@@ -421,25 +427,32 @@ class Model(HasLogger):
                                             "%r" % comps)
             _last = len(dependence_order)
 
-        self._component_order = odict(zip(dependence_order,
-                                          (components.index(c) for c in
-                                           dependence_order)))
-        if self.log.getEffectiveLevel() <= logging.DEBUG:
-            self.log.debug("Components will be computed in the order:")
-            self.log.debug(" - %r" % dependence_order)
-
-        self._ordered_param_dependence = [[] for _ in components]
-        for component, param_dep in zip(self._component_order,
-                                        self._ordered_param_dependence):
-            for dep in dependencies.get(component, []):
-                param_dep += dep.input_params
+        self._component_order = odict(zip(dependence_order, (components.index(c) for c in
+                                                             dependence_order)))
 
     def _set_dependencies_and_providers(self):
         requirements = []
         dependencies = {}
+        self._needs = {}
         providers = {}
-
         components = list(self.theory.values()) + list(self.likelihood.values())
+        direct_param_dependence = {c: set() for c in components}
+
+        def _tidy_requirements(_component, _require):
+            if not _require:
+                return {}
+            if isinstance(_require, (set, tuple, list)):
+                _require = {p: None for p in _require}
+            else:
+                _require = _require.copy()
+            for par in self.input_params:
+                if par in _require:
+                    direct_param_dependence[_component].add(par)
+                    # requirements that are sampled parameters automatically satisfied
+                    _require.pop(par, None)
+
+            return _require
+
         # Get the requirements and providers
         for component in components:
             if hasattr(component, "add_theory"):
@@ -447,71 +460,116 @@ class Model(HasLogger):
                                   "Please remove add_theory from %r and return "
                                   "requirement dictionary from get_requirements() "
                                   "instead" % component)
+            self._needs[component] = []
             component.initialize_with_params()
-            require = component.get_requirements().copy()
-            if isinstance(require, (set, tuple, list)):
-                require = {p: None for p in require}
-            for par in self.input_params:
-                # requirements that are sampled parameters automatically satisfied
-                require.pop(par, None)
-            requirements.append(require)
+            require = _tidy_requirements(component, component.get_requirements())
+
+            requirements.append([require])
             methods = component.get_can_provide_methods()
             # parameters that can be provided but not already explicitly assigned
             provide_params = [p for p in component.get_can_provide_params() if
                               p not in self.output_params and p not in
-                              getattr(component, 'requires', [])]
+                              str_to_list(getattr(component, 'requires', []))]
 
             for k in list(methods) + component.output_params + provide_params:
                 providers[k] = providers.get(k, []) + [component]
 
         requirement_providers = {}
-        needs = {c: [] for c in components}
-        # Check supplier for each requirement, get dependency and needs
-        for component, requires in zip(components, requirements):
-            for requirement in requires:
-                suppliers = providers.get(requirement)
-                if suppliers:
-                    supplier = None
-                    if len(suppliers) > 1:
-                        for sup in suppliers:
-                            provide = getattr(sup, 'provides', [])
-                            if isinstance(provide, six.string_types):
-                                provide = [provide]
-                            if requirement in provide:
-                                if supplier:
-                                    raise LoggedError(self.log,
-                                                      "more than one component provides"
-                                                      " %s" % requirement)
-                                supplier = sup
-                        if not supplier:
+        has_more_requirements = True
+        loop = 1
+        while has_more_requirements:
+            # list of dictionary of needs for each component
+            needs = {c: [] for c in components}
+            # Check supplier for each requirement, get dependency and needs
+            for component, requires in zip(components, requirements):
+                for requirement, requirement_option in _dict_list_items(requires):
+                    suppliers = providers.get(requirement)
+                    if suppliers:
+                        supplier = None
+                        if len(suppliers) > 1:
+                            for sup in suppliers:
+                                provide = str_to_list(getattr(sup, 'provides', []))
+                                if requirement in provide:
+                                    if supplier:
+                                        raise LoggedError(self.log, "more than one "
+                                                                    "component provides"
+                                                                    " %s" % requirement)
+                                    supplier = sup
+                            if not supplier:
+                                raise LoggedError(self.log,
+                                                  "requirement %s is provided by more "
+                                                  "than one component: %s. Use 'provides'"
+                                                  " keyword to specify which provides it "
+                                                  % (requirement, suppliers))
+                        else:
+                            supplier = suppliers[0]
+                        if supplier is component:
                             raise LoggedError(self.log,
-                                              "requirement %s is provided by more "
-                                              "than one component: %s. Use 'provides' "
-                                              "keyword to specify which provides it " % (
-                                                  requirement, suppliers))
+                                              "Component %r cannot provide %s to "
+                                              "itself!" % (component, requirement))
+                        requirement_providers[requirement] = supplier.get_provider()
+                        req = {requirement: requirement_option}
+                        if req not in self._needs[supplier] and \
+                                req not in needs[supplier]:
+                            needs[supplier] += [req]
+                        dependencies[component] = \
+                            dependencies.get(component, set()) | {supplier}
                     else:
-                        supplier = suppliers[0]
-                    if supplier is component:
                         raise LoggedError(self.log,
-                                          "Component %r cannot provide %s to "
-                                          "itself!" % (component, requirement))
-                    requirement_providers[requirement] = supplier.get_provider()
-                    needs[supplier] += [{requirement: requires[requirement]}]
-                    dependencies[component] = \
-                        dependencies.get(component, set()) | {supplier}
-                else:
-                    raise LoggedError(self.log,
-                                      "Requirement %s of %r is not provided by any "
-                                      "component" % (requirement, component))
+                                          "Requirement %s of %r is not provided by any "
+                                          "component" % (requirement, component))
 
-        self._set_component_order(components, dependencies)
+            # tell each component what it needs to calculate, and collect the
+            # conditional requirements for those needs
+            has_more_requirements = False
+            for component, requires in zip(components, requirements):
+                requires[:] = []
+                if needs[component]:
+                    for need in needs[component]:
+                        conditional_requirements = \
+                            _tidy_requirements(component, component.needs(**need))
+                        self._needs[component].append(need)
+                        if conditional_requirements:
+                            has_more_requirements = True
+                            requires.append(conditional_requirements)
+                elif loop == 1:  # always call at least once (#TODO is this needed?)
+                    component.needs()
+            loop += 1
+            # set component compute order and raise error if circular dependence
+            self._set_component_order(components, dependencies)
 
-        def depends_on(c1, c2):
-            # Does c2 depend on c1? (don't yet worry if circular)
-            for c in dependencies.get(c2, []):
-                if c is c1 or depends_on(c1, c):
-                    return True
-            return False
+        if self._unassigned_input:
+            self._unassigned_input.difference_update(*direct_param_dependence.values())
+            if self._unassigned_input:
+                raise LoggedError(
+                    self.log, "Could not find anything to use input parameter(s) %r.",
+                    self._unassigned_input)
+
+        if self.log.getEffectiveLevel() <= logging.DEBUG:
+            self.log.debug("Components will be computed in the order:")
+            self.log.debug(" - %r" % list(self._component_order))
+
+        def dependencies_of(_component):
+            deps = set()
+            for c in dependencies.get(_component, []):
+                deps.add(c)
+                deps.update(dependencies_of(c))
+            return deps
+
+        self._dependencies = {c: dependencies_of(c) for c in components}
+
+        self._ordered_param_dependence = [set() for _ in components]
+        for component, param_dep in zip(self._component_order,
+                                        self._ordered_param_dependence):
+            param_dep.update(direct_param_dependence.get(component))
+            for dep in self._dependencies.get(component, []):
+                param_dep.update(set(dep.input_params))
+            param_dep -= set(component.input_params)
+            if not len(component.input_params) and not param_dep \
+                    and component.get_name() != 'one':
+                raise LoggedError(self.log, "Component '%r' seems not to depend on any "
+                                            "parameters (neither directly nor "
+                                            "indirectly)", component)
 
         # Store the input params and components on which each sampled params depends.
         sampled_input_dependence = self.parameterization.sampled_input_dependence()
@@ -522,7 +580,8 @@ class Model(HasLogger):
                         any(p_i in component.input_params for p_i in i_s):
                     sampled_dependence[p].append(component)
                     for comp in components:
-                        if comp is not component and depends_on(component, comp):
+                        if comp is not component and \
+                                component in self._dependencies.get(comp, []):
                             sampled_dependence[p].append(comp)
 
         self.sampled_dependence = sampled_dependence
@@ -534,14 +593,17 @@ class Model(HasLogger):
 
         self.provider = Provider(self, requirement_providers)
 
-        # tell each component what it needs to calculate
         for component in components:
-            if needs[component]:
-                for need in needs[component]:
-                    component.needs(**need)
-            else:
-                component.needs()
             component.initialize_with_provider(self.provider)
+
+    def requested(self):
+        """
+        Get all the requested requirements that will be computed.
+
+        :return: dictionary giving list of requirement dictionaries calculated by
+                each component name
+        """
+        return dict(("%r" % c, v) for c, v in self._needs.items() if v)
 
     def _assign_params(self, info_likelihood, info_theory=None):
         """
@@ -561,8 +623,8 @@ class Model(HasLogger):
                 ["input", _input_params, _input_params_prefix, False],
                 ["output", _output_params, _output_params_prefix, True]):
             for component in components:
-                # "one" only takes leftover parameters
-                if component.get_name() == "one":
+                if isinstance(component, AbsorbUnusedParamsLikelihood):
+                    # take leftover parameters
                     continue
                 if component.get_allow_agnostic():
                     supports_params = None
@@ -631,19 +693,18 @@ class Model(HasLogger):
                             p in getattr(component, _requires, []):
                         params_assign[kind][p] += [component]
 
-        # If unit likelihood is present, assign all *non-theory* inputs to it
-        if "one" in self.likelihood:
-            for p, assigned in params_assign["input"].items():
-                if not [component for component in assigned if
-                        isinstance(component, Theory)]:
-                    assigned.append(self.likelihood["one"])
-        # If there are unassigned input params, fail
-        unassigned_input = [p for p, assigned in params_assign["input"].items()
-                            if not assigned]
-        if unassigned_input:
-            raise LoggedError(
-                self.log, "Could not find anything to use input parameter(s) %r.",
-                unassigned_input)
+        # If unit likelihood is present, assign all unassigned inputs to it
+        for like in self.likelihood.values():
+            if isinstance(like, AbsorbUnusedParamsLikelihood):
+                for p, assigned in params_assign["input"].items():
+                    if not assigned:
+                        assigned.append(like)
+                break
+        # If there are unassigned input params, check later that they are used by
+        # requirements of a component (and if not raise error)
+        self._unassigned_input = set(p for p, assigned in params_assign["input"].items()
+                                     if not assigned)
+
         # Assign the "chi2__" output parameters
         for p in params_assign["output"]:
             if p.startswith(_chi2 + _separator):
@@ -681,7 +742,7 @@ class Model(HasLogger):
                          component in assign])
                 # Update infos!
                 inf = (info_theory, info_likelihood)[
-                    hasattr(component, "get_current_logp")]
+                    component in self.likelihood.values()]
                 inf[component.get_name()].pop(_params, None)
                 inf[component.get_name()][option] = getattr(component, attr)
         if self.log.getEffectiveLevel() <= logging.DEBUG:

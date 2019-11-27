@@ -17,7 +17,7 @@
 #   * Uses all nine ell bins.
 #   * Gaussian priors on beta_dust and beta_sync.
 #   * Dust blackbody temperature fixed to 19.6 K because this parameter
-#     is degenerate with A_dust for our frequency range.
+#     is degenerate with A_dust for our frequency _range.
 #   * Dust and sync decorrelation turned off by default.
 #   * EE/BB ratio for dust and sync fixed to 2 (not relevant for analysis
 #     with B modes only)
@@ -108,8 +108,8 @@ params:
     proposal: 0.02
     latex: \beta_{B,\mathrm{sync}}
   # correlation between dust and sync
-  # NOTE: For BK15 analysis, we are allowing this parameter to range
-  #       from -1 to 1 (allowed range was 0 to 1 for BK14).
+  # NOTE: For BK15 analysis, we are allowing this parameter to _range
+  #       from -1 to 1 (allowed _range was 0 to 1 for BK14).
   BBdustsynccorr:
     prior:
       min: -1.0

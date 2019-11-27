@@ -138,3 +138,98 @@ def test_dependencies(modules):
     assert "more than one component provides Bout" in str(e.value)
 
 
+# test conditional requirements
+class D(Theory):
+
+    def calculate(self, state, want_derived=True, **params_values_dict):
+        state['D'] = self.provider.get_Aresult()[0] * 2
+
+    def get_Dresult(self):
+        return self._current_state['D']
+
+    def needs(self, **needs):
+        if 'Dresult' in needs:
+            return {'Aresult'}
+
+
+class E(Theory):
+
+    def calculate(self, state, want_derived=True, **params_values_dict):
+        state['E'] = self.provider.get_Dresult() * 2
+
+    def get_Eresult(self):
+        return self._current_state['E']
+
+    def needs(self, **needs):
+        if 'Eresult' in needs:
+            return {'Dresult'}
+
+
+class Like2(Likelihood):
+
+    def get_requirements(self):
+        return {'Dresult'}
+
+    def calculate(self, state, want_derived=True, **params_values_dict):
+        state["logp"] = self.provider.get_Dresult() * 2
+
+
+class Like3(Likelihood):
+
+    def get_requirements(self):
+        return {'Eresult'}
+
+    def calculate(self, state, want_derived=True, **params_values_dict):
+        state["logp"] = self.provider.get_Eresult()
+
+
+# circular
+class F(Theory):
+
+    def get_Fresult(self):
+        pass
+
+    def needs(self, **needs):
+        if 'Fresult' in needs:
+            return {'LikeDerived'}
+
+
+class Like4(Likelihood):
+
+    def get_requirements(self):
+        return {'Fresult'}
+
+    def get_LikeDerived(self):
+        pass
+
+
+info2 = {'likelihood': {'like': Like2},
+         'params': {'Ain': 5},
+         'debug': True}
+
+
+def _test_loglike2(theories):
+    for th in theories, theories[::-1]:
+        info2['theory'] = OrderedDict(th)
+        model = get_model(info2)
+        assert model.loglike()[0] == 20., "fail conditional dependency for %s" % th
+
+
+def test_conditional_dependencies(modules):
+    theories = [('A', A), ('D', D)]
+    _test_loglike2(theories)
+
+    theories = [('A', A), ('D', D), ('E', E)]
+    with pytest.raises(LoggedError) as e:
+        _test_loglike2(theories)
+    assert "seems not to depend on any parameters" in str(e.value)
+
+    info2['likelihood']['like'] = Like3
+    theories = [('A', A), ('D', D), ('E', E)]
+    _test_loglike2(theories)
+
+    info2['likelihood']['like'] = Like4
+    theories = [('A', A), ('E', E), ('F', F), ('D', D)]
+    with pytest.raises(LoggedError) as e:
+        _test_loglike2(theories)
+    assert "Circular dependency" in str(e.value)

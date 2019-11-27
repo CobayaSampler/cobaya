@@ -31,11 +31,11 @@ def target_pdf(a, b, c=0, _derived=["cprime"]):
     return multivariate_normal.logpdf([a, b], mean=target["mean"], cov=target["cov"])
 
 
-range = {"min": -2, "max": 2}
+_range = {"min": -2, "max": 2}
 ref_pdf = {partag.dist: "norm", "loc": 0, "scale": 0.1}
 info_params = odict([
-    ("a", {"prior": range, "ref": ref_pdf, partag.proposal: sigma}),
-    ("b", {"prior": range, "ref": ref_pdf, partag.proposal: sigma}),
+    ("a", {"prior": _range, "ref": ref_pdf, partag.proposal: sigma}),
+    ("b", {"prior": _range, "ref": ref_pdf, partag.proposal: sigma}),
     ("a_plus_b", {partag.derived: lambda a, b: a + b})])
 
 info_sampler = {"mcmc": {"Rminus1_stop": 0.01}}

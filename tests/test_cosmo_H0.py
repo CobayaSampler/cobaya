@@ -11,19 +11,15 @@ from .common import process_modules_path
 fiducial_H0 = 70
 
 
-def test_H0_riess2018a_camb(modules):
-    body_of_test(modules, "H0.riess2018a", "camb")
+def test_H0_riess2018a(modules):
+    body_of_test(modules, "H0.riess2018a")
 
 
-def test_H0_riess2018b_classy(modules):
-    body_of_test(modules, "H0.riess2018b", "classy")
+def test_H0_riess201903(modules):
+    body_of_test(modules, "H0.riess201903")
 
 
-def test_H0_riess201903_camb(modules):
-    body_of_test(modules, "H0.riess201903", "camb")
-
-
-def test_H0_docs_camb(modules):
+def test_H0_docs(modules):
     from cobaya.likelihoods._base_classes._H0_prototype import _H0_prototype
     doc = sys.modules[_H0_prototype.__module__].__doc__
     pre = "my_H0"
@@ -31,12 +27,11 @@ def test_H0_docs_camb(modules):
     line = line[line.find("lambda"):].strip("'\"")
     line = line.replace("mu_H0", "%g" % fiducial_H0)
     line = line.replace("sigma_H0", "1")
-    body_of_test(modules, line, "camb")
+    body_of_test(modules, line)
 
 
-def body_of_test(modules, lik_name, theory):
+def body_of_test(modules, lik_name):
     info = {_path_install: process_modules_path(modules),
-            kinds.theory: {theory: None},
             kinds.sampler: {"evaluate": None}}
     if lik_name.startswith("lambda"):
         line = copy(lik_name)

@@ -1,20 +1,27 @@
 """
 .. module:: theory
 
-:Synopsis: Prototype theory class and theory loader
-:Author: Jesus Torrado
+:Synopsis: base class and for theory codes and likelihoods.
 
-If you are using a experimental likelihood, chances are the you will need a theoretical
-code to compute the observables needed to compute the likelihood.
+Both likelihoods and theories calculate something. Likelihoods are distinguished
+because they calculate a log likelihood. Both theory codes and likelihoods can calculate
+other things, and they may have complex dependencies between them: e.g. the likelihood
+depends on observable A that is computed by theory code B than in turn requires
+calculation on input calculation by code C.
 
-This module contains the prototype of the theory code and the loader for the requested
-code.
+This module contains the base class for all of these calculation components. It handles
+caching of results, so that calculations do not need to be redone when the parameters on
+which a component directly (or indirectly) depends have not changed.
 
-.. note::
+Subclasses generally provide the ``get_requirements``, ``calculate`` and initialization
+methods as required. The ``needs`` method is used to tell a code which requirements are
+actually needed by other components, and may return of additional conditional
+requirements based on those needs.
 
-   At this moment, of all modules of cobaya, this is the one with the least fixed
-   structure. Don't pay much attention to it for now. Just go on to the documentation of
-   :doc:`CAMB <theory_camb>` and :doc:`CLASS <theory_class>`.
+The ``calculate`` method saves all needed results in the state dictionary (which is
+cached and reused as needed). Subclasses define ``get_X`` methods to return the
+actual result of the calculation for X for the current cache state. The ``get_param``
+method returns the value of a derived parameter for the current state.
 
 """
 
@@ -47,8 +54,11 @@ class Theory(CobayaComponent):
 
     def get_requirements(self):
         """
-        Get a dictionary of requirements (e.g. calculated by a another component)
-        :return: dictionary of requirements
+        Get a dictionary of requirements that are always needed (e.g. must be calculated
+        by a another component or provided as input parameters).
+
+        :return: dictionary of requirements (or list of requirement names if no optional
+        parameters are needed)
         """
         return {}
 
@@ -57,9 +67,12 @@ class Theory(CobayaComponent):
         Function to be called specifying any output products that are needed and hence
         should be calculated by this component.
         Requirements is a dictionary of requirement names with optional parameters for
-        each.
+        each. This function may be called more than once with different requirements,
+        and will always be called at least once (possibly with empty requirements).
+
+        :return: optional dictionary of conditional requirements for these needs
         """
-        # set-set states whenever needs change
+        # reset states whenever needs change
         self._states.clear()
 
     def calculate(self, state, want_derived=True, **params_values_dict):
@@ -75,7 +88,7 @@ class Theory(CobayaComponent):
     def initialize_with_params(self):
         """
         Additional initialization after requirements called and input_params and
-        output_params have been assigned (but provider and needs assigned).
+        output_params have been assigned (but provider and needs unassigned).
         """
 
     def initialize_with_provider(self, provider):

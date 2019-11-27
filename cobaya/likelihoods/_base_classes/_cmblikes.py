@@ -192,7 +192,7 @@ class _CMBlikes(_DataSetLikelihood):
                 else:
                     err = err or any(window[i, 1:] != 0)
             if err:
-                self.log.warning('%s %u outside pcl_lmin-cl_max range: %s' %
+                self.log.warning('%s %u outside pcl_lmin-cl_max _range: %s' %
                                  (file_stem, b, windows % (b + 1)))
         if ini.hasKey(file_stem + '_fix_cl_file'):
             raise LoggedError(self.log, 'fix_cl_file not implemented yet')

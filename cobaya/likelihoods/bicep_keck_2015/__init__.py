@@ -195,7 +195,7 @@ class bicep_keck_2015(_CMBlikes):
         # Even for small cval, correlation can become negative for sufficiently large frequency
         # difference or ell value (with linear or quadratic scaling).
         # Following Vansyngel et al, A&A, 603, A62 (2017), we use an exponential function to
-        # remap the correlation coefficient on to the range [0,1].
+        # remap the correlation coefficient on to the _range [0,1].
         # We symmetrically extend this function to (non-physical) correlation coefficients
         # greater than 1 -- this is only used for validation tests of the likelihood model.
         if delta > 1:

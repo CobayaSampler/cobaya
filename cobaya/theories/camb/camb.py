@@ -481,7 +481,7 @@ class camb(BoltzmannBase):
         # Set parameters
         camb_params = self.set(params_values_dict, state)
         # Failed to set parameters but no error raised
-        # (e.g. out of computationally feasible range): lik=0
+        # (e.g. out of computationally feasible _range): lik=0
         if not camb_params:
             return False
         # Compute the necessary products (incl. any intermediate result, if needed)
@@ -506,7 +506,7 @@ class camb(BoltzmannBase):
                     dict(state["params"]), dict(self.extra_args))
                 raise
             else:
-                # Assumed to be a "parameter out of range" error.
+                # Assumed to be a "parameter out of _range" error.
                 self.log.debug("Computation of cosmological products failed. "
                                "Assigning 0 likelihood and going on. "
                                "The output of the CAMB error was %s" % e)

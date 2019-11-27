@@ -13,10 +13,10 @@ from __future__ import division
 from random import random
 
 # Local
-from cobaya.likelihood import Likelihood
+from cobaya.likelihood import AbsorbUnusedParamsLikelihood
 
 
-class one(Likelihood):
+class one(AbsorbUnusedParamsLikelihood):
     """
     Likelihood that evaluates to 1.
     """

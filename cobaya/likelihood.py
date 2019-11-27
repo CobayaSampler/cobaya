@@ -1,12 +1,24 @@
 """
 .. module:: likelihood
 
-:Synopsis: Likelihood class and likelihood manager
-:Author: Jesus Torrado
+:Synopsis: Likelihood class and likelihood collection
+:Author: Jesus Torrado and Antony Lewis
 
 This module defines the main :class:`Likelihood` class, from which every likelihood
-inherits, and the :class:`LikelihoodCollection` class, which groups and manages all the
-individual likelihoods and is the actual instance passed to the sampler.
+usually inherits, and the :class:`LikelihoodCollection` class, which groups and manages
+all the individual likelihoods.
+
+Likelihoods inherit from :class:`.theory.Theory`, adding an additional method
+to return the likelihood. As with all theories, likelihoods cache results, and the
+function ``get_current_logp`` is used by :class:`model.Model` to calculate the total
+likelihood. The default Likelihood implementation does the actual calculation of the log
+likelihood in the `logp` function, which is then called by ``calculate`` to save the
+result into the current state.
+
+Subclasses typically just provide the `logp` function to define their likelihood result,
+and use ``get_requirements`` to specify which inputs are needed from other theory
+codes (or likelihoods). Other methods of the :class:`.theory.Theory` base class can be
+used as and when needed.
 
 """
 # Python 2/3 compatibility
@@ -32,6 +44,8 @@ class LikelihoodInterface(object):
     Interface functions for likelihoods. Can descend from Theory class and this
     to make a likelihood (there the calculate() method stores state['logp'] for the
     current parameter, or likelihoods can directly inherit from Likelihood instead.
+    The get_current_logp function returns the current state's logp, and does not normally
+    need to be changed.
     """
 
     def get_current_logp(self):
@@ -97,6 +111,10 @@ class Likelihood(Theory, LikelihoodInterface):
         if self.delay:
             self.log.debug("Sleeping for %f seconds.", self.delay)
         sleep(self.delay)
+
+
+class AbsorbUnusedParamsLikelihood(Likelihood):
+    pass
 
 
 class LikelihoodExternalFunction(Likelihood):
