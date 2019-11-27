@@ -241,14 +241,21 @@ class BoltzmannBase(Theory):
         if key in self._current_state:
             return self._current_state[key]
         k, z, pk = self.get_Pk_grid(var_pair=var_pair, nonlinear=nonlinear)
-        log_p = np.all(pk > 0)
+        log_p = True
+        sign = 1
+        if np.any(pk < 0):
+            if np.all(pk < 0):
+                sign = -1
+            else:
+                log_p = False
         if log_p:
-            pk = np.log(pk)
+            pk = np.log(sign * pk)
         elif extrap_kmax > k[-1]:
             raise LoggedError(self.log,
-                              'Cannot do log extrapolation with negative pk for %s, %s'
-                              % var_pair)
-        result = PowerSpectrumInterpolator(z, k, pk, logP=log_p, extrap_kmax=extrap_kmax)
+                              'Cannot do log extrapolation with zero-crossing pk '
+                              'for %s, %s' % var_pair)
+        result = PowerSpectrumInterpolator(z, k, pk, logP=log_p, logsign=sign,
+                                           extrap_kmax=extrap_kmax)
         self._current_state[key] = result
         return result
 
@@ -294,11 +301,12 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
     :param P_or_logP: Values of the power spectrum (or log-values, if logP=True).
     :param logP: if True (default: False), log of power spectrum are given and used
         for the underlying interpolator.
+    :param logsign: if logP is True, P_or_logP is log(logsign*Pk)
     :param extrap_kmax: if set, use power law extrapolation beyond kmax up to
         extrap_kmax; useful for tails of integrals.
     """
 
-    def __init__(self, z, k, P_or_logP, extrap_kmax=None, logP=False):
+    def __init__(self, z, k, P_or_logP, extrap_kmax=None, logP=False, logsign=1):
         self.islog = logP
         #  Check order
         z, k = (np.atleast_1d(x) for x in [z, k])
@@ -306,24 +314,27 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
             raise ValueError('Require at least three redshifts for interpolation')
         i_z = np.argsort(z)
         i_k = np.argsort(k)
+        self.logsign = logsign
         self.z, self.k, P_or_logP = z[i_z], k[i_k], P_or_logP[i_z, :][:, i_k]
         self.zmin, self.zmax = self.z[0], self.z[-1]
         self.kmin, self.kmax = self.k[0], self.k[-1]
         logk = np.log(self.k)
         # Continue until extrap_kmax using a (log,log)-linear extrapolation
         if extrap_kmax and extrap_kmax > self.kmax:
+            if not logP:
+                raise ValueError('extrap_kmax must use logP')
             logk = np.hstack(
                 [logk, np.log(self.kmax) * 0.1 + np.log(extrap_kmax) * 0.9,
                  np.log(extrap_kmax)])
             logPnew = np.empty((P_or_logP.shape[0], P_or_logP.shape[1] + 2))
-            logPnew[:, :-2] = P_or_logP if self.islog else np.log(P_or_logP)
+            logPnew[:, :-2] = P_or_logP
             diff = (logPnew[:, -3] - logPnew[:, -4]) / (logk[-3] - logk[-4])
             delta = diff * (logk[-1] - logk[-3])
             logPnew[:, -1] = logPnew[:, -3] + delta
             logPnew[:, -2] = logPnew[:, -3] + delta * 0.9
             self.kmax = extrap_kmax  # Added for consistency with CAMB
 
-            P_or_logP = logPnew if self.islog else np.exp(logPnew)
+            P_or_logP = logPnew
 
         super(self.__class__, self).__init__(self.z, logk, P_or_logP)
 
@@ -334,13 +345,14 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
         if grid is None:
             grid = not np.isscalar(z) and not np.isscalar(k)
         if self.islog:
-            return np.exp(self(z, np.log(k), grid=grid))
+            return self.logsign * np.exp(self(z, np.log(k), grid=grid))
         else:
             return self(z, np.log(k), grid=grid)
 
     def logP(self, z, k, grid=None):
         """
-        Get the log power spectrum at (z,k).
+        Get the log power spectrum at (z,k). (or minus log power spectrum if
+        islog and logsign=-1)
         """
         if grid is None:
             grid = not np.isscalar(z) and not np.isscalar(k)
