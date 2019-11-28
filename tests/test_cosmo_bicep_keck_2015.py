@@ -5,8 +5,11 @@ from copy import deepcopy
 from .common_cosmo import body_of_test
 from cobaya.cosmo_input import cmb_precision
 
-camb_extra = {"halofit_version": "takahashi"}
-camb_extra.update(cmb_precision["camb"])
+camb_extra = deepcopy(cmb_precision["camb"])
+camb_extra.update({"halofit_version": "takahashi"})
+classy_extra = deepcopy(cmb_precision["classy"])
+classy_extra.update({"non linear": "halofit"})
+classy_extra.update({"halofit_min_k_max": 20})
 
 
 def test_bicep_keck_2015_camb(modules):
@@ -16,10 +19,10 @@ def test_bicep_keck_2015_camb(modules):
 
 
 def test_bicep_keck_2015_classy(modules):
-    info_theory = {"classy": {"extra_args": cmb_precision["classy"]}}
+    info_theory = {"classy": {"extra_args": classy_extra}}
     # extra tolerance for CLASS
     chi2_classy = deepcopy(chi2)
-    chi2_classy["tolerance"] *= 20 #TODO check
+    chi2_classy["tolerance"] *= 2
     body_of_test(modules, test_point, lik_info, info_theory, chi2_classy,
                  extra_model={"primordial": "SFSR_t"})
 

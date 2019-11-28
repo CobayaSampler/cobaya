@@ -59,6 +59,7 @@ class BoltzmannBase(Theory):
           Takes ``"z": [list_of_evaluated_redshifts]``, ``"k_max": [k_max]``,
           ``"extrap_kmax": [max_k_max_extrapolated]``, ``"nonlinear": [True|False]``,
           ``"vars_pairs": [["delta_tot", "delta_tot"], ["Weyl", "Weyl"], [...]]}``.
+          All ``k`` values should be in units of ``1/Mpc``.
         - ``Hubble={'z': [z_1, ...], 'units': '1/Mpc' or 'km/s/Mpc'}``: Hubble
           rate at the redshifts requested, in the given units. Get it with
           :func:`~BoltzmannBase.get_Hubble`.
