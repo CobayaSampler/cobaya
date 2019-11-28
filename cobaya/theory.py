@@ -84,7 +84,7 @@ class Theory(CobayaComponent):
         :param state: dictionary to store results
         :param want_derived: whether to set state['derived'] derived parameters
         :param params_values_dict: parameter values
-        :return: None or True or None if success, False for fail
+        :return: None or True if success, False for fail
         """
 
     def initialize_with_params(self):
@@ -97,7 +97,7 @@ class Theory(CobayaComponent):
         """
         Final initialization after parameters, provider and needs assigned.
         The provider is used to get the requirements of this theory using provider.get_X()
-        and provider.get_params('Y').
+        and provider.get_param('Y').
 
         :param provider: the :class:`component.Provider` instance that should be used by
                          this component to get computed requirements
@@ -157,11 +157,11 @@ class Theory(CobayaComponent):
         If want_derived, the derived parameters are saved in the computed state
         (retrieved using get_current_derived()).
         """
-        params_values_dict = params_values_dict.copy()
         self.log.debug("Got parameters %r", params_values_dict)
 
         for set_param in getattr(self, _requires, []):
             # mess handling optional parameters that may be computed elsewhere, eg. YHe
+            params_values_dict = params_values_dict.copy()
             params_values_dict[set_param] = self.provider.get_param(set_param)
         state = None
         if cached:

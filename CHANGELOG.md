@@ -26,6 +26,7 @@
 - renamed H (array of H(z)) to Hubble
 - changed TCMB in conventions to be consistent. CAMB now independent of that and consistent with varying TCMB.
 - changed use_planck_names to more general use_renames etc.
+- Greatly reduced deepcopy time overhead in loglike evaluation/faster uniform prior
 
 ## TODO specifically for Jesus
  - had to change test chi2/tolerance and some classy things for some travis to pass, need checking
@@ -34,6 +35,7 @@
  - convention for parameter/value ordering - does class_options/inheritance cause possible issues?
  - are there areas not covered by tests that need checking?
 ## TODO 
+ - update example notebook to match example in paper (+ updates)
  - already added get_version(): should add as version trace dump with output files. Where?
  - let classes do all defaults combining; allow separate like instantiation + use equivalent to loading in cobaya
  - move sampler/plik install into class methods

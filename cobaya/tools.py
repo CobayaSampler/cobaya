@@ -446,7 +446,7 @@ def get_scipy_1d_pdf(info):
             str(tp), dist)
 
 
-def _fast_uniform_logpdf(self, x):
+def _fast_uniform_logpdf_array(self, x):
     """WARNING: logpdf(nan) = -inf"""
     if not hasattr(self, "_cobaya_mlogscale"):
         self._cobaya_mlogscale = -np.log(self.kwds["scale"])
@@ -455,6 +455,16 @@ def _fast_uniform_logpdf(self, x):
     return np.where(np.logical_and(x_ >= self.kwds["loc"], x_ <= self._cobaya_max),
                     self._cobaya_mlogscale, -np.inf)
 
+def _fast_uniform_logpdf(self, x):
+    """WARNING: logpdf(nan) = -inf"""
+    if not hasattr(self, "_cobaya_mlogscale"):
+        self._cobaya_mlogscale = -np.log(self.kwds["scale"])
+        self._cobaya_max = self.kwds["loc"] + self.kwds["scale"]
+        self._cobaya_loc = self.kwds['loc']
+    if self._cobaya_loc <= x <= self._cobaya_max:
+        return self._cobaya_mlogscale
+    else:
+        return -np.inf
 
 def _fast_norm_logpdf(self, x):
     """WARNING: logpdf(nan) = -inf"""

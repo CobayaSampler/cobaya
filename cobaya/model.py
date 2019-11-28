@@ -33,7 +33,7 @@ from cobaya.tools import gcd, deepcopy_where_possible, are_different_params_list
 from cobaya.component import Provider
 
 # Log-posterior namedtuple
-LogPosterior = namedtuple("logposterior", ["logpost", "logpriors", "loglikes", "derived"])
+LogPosterior = namedtuple("LogPosterior", ["logpost", "logpriors", "loglikes", "derived"])
 LogPosterior.__new__.__defaults__ = (None, None, [], [])
 
 
@@ -259,7 +259,7 @@ class Model(HasLogger):
         if hasattr(params_values, "keys") and not _no_check:
             params_values = self.parameterization.check_sampled(**params_values)
 
-        input_params = self.parameterization.to_input(params_values)
+        input_params = self.parameterization.to_input(params_values, copied=False)
 
         result = self.logps(input_params, return_derived=return_derived,
                             cached=cached, make_finite=make_finite)
