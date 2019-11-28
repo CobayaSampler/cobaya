@@ -251,8 +251,7 @@ class classy(BoltzmannBase):
             elif k in ["Pk_interpolator", "Pk_grid"]:
                 self.extra_args["output"] += " mPk"
                 v = deepcopy(v)
-                self.extra_args["P_k_max_1/Mpc"] = max(
-                    v.pop("k_max"), self.extra_args.get("P_k_max_1/Mpc", 0))
+                self.add_P_k_max(v.pop("k_max"), units="1/Mpc")
                 self.add_z_for_matter_power(v.pop("z"))
                 # Use halofit by default if non-linear requested but no code specified
                 if v.get("nonlinear", False) and "non linear" not in self.extra_args:
@@ -278,9 +277,7 @@ class classy(BoltzmannBase):
         # Derived parameters (if some need some additional computations)
         if any(("sigma8" in s) for s in self.output_params or requirements):
             self.extra_args["output"] += " mPk"
-            # TODO: consistent P_k_max_h vs P_k_max_1
-            self.extra_args["P_k_max_h/Mpc"] = (
-                max(1, self.extra_args.get("P_k_max_h/Mpc", 0)))
+            self.add_P_k_max(1, units="1/Mpc")
         # Adding tensor modes if requested
         if self.extra_args.get("r") or "r" in self.input_params:
             self.extra_args["modes"] = "s,t"
@@ -318,7 +315,23 @@ class classy(BoltzmannBase):
             self.z_for_matter_power = np.empty(0)
         self.z_for_matter_power = np.flip(np.sort(np.unique(np.concatenate(
             [self.z_for_matter_power, np.atleast_1d(z)]))), axis=0)
-        self.extra_args["z_pk"] = " ".join("%g" % zi for zi in self.z_for_matter_power)
+        self.extra_args["z_pk"] = " ".join(["%g" % zi for zi in self.z_for_matter_power])
+
+    def add_P_k_max(self, k_max, units):
+        r"""
+        Unifies treatment of :math:`k_\mathrm{max}` for matter power spectrum:
+        ``P_k_max_[1|h]/Mpc]``.
+
+        Make ``units="1/Mpc"|"h/Mpc"``.
+        """
+        # Fiducial h conversion (high, though it may slow the computations)
+        h_fid = 1
+        if units == "h/Mpc":
+            k_max *= h_fid
+        # Take into account possible manual set of P_k_max_***h/Mpc*** through extra_args
+        k_max_old = self.extra_args.pop(
+            "P_k_max_1/Mpc", h_fid * self.extra_args.pop("P_k_max_h/Mpc", 0))
+        self.extra_args["P_k_max_1/Mpc"] = max(k_max, k_max_old)
 
     def translate_param(self, p, force=False):
         # "force=True" is used when communicating with likelihoods, which speak "planck"
@@ -332,7 +345,6 @@ class classy(BoltzmannBase):
         args.update(self.extra_args)
         # Generate and save
         self.log.debug("Setting parameters: %r", args)
-        self.classy.struct_cleanup()
         self.classy.set(**args)
 
     def calculate(self, state, want_derived=True, **params_values_dict):
@@ -482,7 +494,7 @@ class classy(BoltzmannBase):
         return values[i_kwarg_z]
 
     def close(self):
-        self.classy.struct_cleanup()
+        self.classy.empty()
 
     def get_can_provide_params(self):
         # This is currently not used since get_allow_agnostic() returns True.
