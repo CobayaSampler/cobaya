@@ -33,8 +33,8 @@ from cobaya.tools import gcd, deepcopy_where_possible, are_different_params_list
 from cobaya.component import Provider
 
 # Log-posterior namedtuple
-logposterior = namedtuple("logposterior", ["logpost", "logpriors", "loglikes", "derived"])
-logposterior.__new__.__defaults__ = (None, None, [], [])
+LogPosterior = namedtuple("logposterior", ["logpost", "logpriors", "loglikes", "derived"])
+LogPosterior.__new__.__defaults__ = (None, None, [], [])
 
 
 def _dict_list_items(dict_list):
@@ -365,7 +365,7 @@ class Model(HasLogger):
         if make_finite:
             logpriors = np.nan_to_num(logpriors)
             logpost = np.nan_to_num(logpost)
-        return logposterior(logpost=logpost, logpriors=logpriors,
+        return LogPosterior(logpost=logpost, logpriors=logpriors,
                             loglikes=loglikes, derived=derived_sampler)
 
     def logpost(self, params_values, make_finite=False, cached=True):

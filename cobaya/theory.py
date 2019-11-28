@@ -1,7 +1,7 @@
 """
 .. module:: theory
 
-:Synopsis: Theory is a base class for theory codes and likelihoods.
+:Synopsis: :class:`Theory` is a base class for theory codes and likelihoods.
 
 Both likelihoods and theories calculate something. Likelihoods are distinguished
 because they calculate a log likelihood. Both theory codes and likelihoods can calculate
@@ -13,15 +13,17 @@ This module contains the base class for all of these calculation components. It 
 caching of results, so that calculations do not need to be redone when the parameters on
 which a component directly (or indirectly) depends have not changed.
 
-Subclasses generally provide the ``get_requirements``, ``calculate`` and initialization
-methods as required. The ``needs`` method is used to tell a code which requirements are
+Subclasses generally provide the :meth:`Theory.get_requirements`,
+:meth:`Theory.calculate` and initialization methods as required. The :meth:Theory.needs`
+method is used to tell a code which requirements are
 actually needed by other components, and may return of additional conditional
 requirements based on those needs.
 
-The ``calculate`` method saves all needed results in the state dictionary (which is
-cached and reused as needed). Subclasses define ``get_X`` methods to return the
-actual result of the calculation for X for the current cache state. The ``get_param``
-method returns the value of a derived parameter for the current state.
+The :meth:`Theory.calculate` method saves all needed results in the state dictionary
+(which is cached and reused as needed). Subclasses define ``get_X`` methods to return the
+actual result of the calculation for X for the current cache state. The
+:meth:`Theory.get_param` method returns the value of a derived parameter for the
+current state.
 
 """
 
@@ -82,7 +84,7 @@ class Theory(CobayaComponent):
         :param state: dictionary to store results
         :param want_derived: whether to set state['derived'] derived parameters
         :param params_values_dict: parameter values
-        :return: None or True if success, False for fail
+        :return: None or True or None if success, False for fail
         """
 
     def initialize_with_params(self):
@@ -96,12 +98,16 @@ class Theory(CobayaComponent):
         Final initialization after parameters, provider and needs assigned.
         The provider is used to get the requirements of this theory using provider.get_X()
         and provider.get_params('Y').
+
+        :param provider: the :class:`component.Provider` instance that should be used by
+                         this component to get computed requirements
         """
         self.provider = provider
 
     def get_param(self, p):
         """
-        Interface function for likelihoods to get derived parameters.
+        Interface function for likelihoods and other theory components to get derived
+        parameters.
         """
         return self._current_state["derived"][p]
 

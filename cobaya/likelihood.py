@@ -10,15 +10,15 @@ all the individual likelihoods.
 
 Likelihoods inherit from :class:`.theory.Theory`, adding an additional method
 to return the likelihood. As with all theories, likelihoods cache results, and the
-function ``get_current_logp`` is used by :class:`model.Model` to calculate the total
-likelihood. The default Likelihood implementation does the actual calculation of the log
-likelihood in the `logp` function, which is then called by ``calculate`` to save the
-result into the current state.
+function :meth:`LikelihoodInterface.get_current_logp` is used by :class:`model.Model` to
+calculate the total likelihood. The default Likelihood implementation does the actual
+calculation of the log likelihood in the `logp` function, which is then called
+by :meth:`Likelihood.calculate` to save the result into the current state.
 
 Subclasses typically just provide the `logp` function to define their likelihood result,
-and use ``get_requirements`` to specify which inputs are needed from other theory
-codes (or likelihoods). Other methods of the :class:`.theory.Theory` base class can be
-used as and when needed.
+and use :meth:`theory.Theory.get_requirements` to specify which inputs are needed from
+other theory codes (or likelihoods). Other methods of the :class:`.theory.Theory` base
+class can be used as and when needed.
 
 """
 # Python 2/3 compatibility
@@ -41,21 +41,28 @@ from cobaya.theory import Theory
 
 class LikelihoodInterface(object):
     """
-    Interface functions for likelihoods. Can descend from Theory class and this
-    to make a likelihood (there the calculate() method stores state['logp'] for the
-    current parameter, or likelihoods can directly inherit from Likelihood instead.
+    Interface function for likelihoods. Can descend from a :class:`theory.Theory` class
+    and this to make a likelihood (where the calculate() method stores state['logp'] for
+    the current parameters), or likelihoods can directly inherit from :class:`Likelihood`
+    instead.
+
     The get_current_logp function returns the current state's logp, and does not normally
     need to be changed.
     """
 
     def get_current_logp(self):
+        """
+        Gets log likelihood for the current point
+
+        :return:  log likelihood from the current state
+        """
         return self._current_state["logp"]
 
 
 class Likelihood(Theory, LikelihoodInterface):
-    """Likelihood base class. Extends general Theory calculation
-    by adding functions to return likelihoods functions (logp function for a given
-    point, ."""
+    """Likelihood base class. Extends from :class:`LikelihoodInterface` and the general
+    :class:`theory.Theory` class by adding functions to return likelihoods functions
+    (logp function for a given point)."""
 
     @property
     def theory(self):
@@ -166,7 +173,8 @@ class LikelihoodExternalFunction(Likelihood):
 
 class LikelihoodCollection(ComponentCollection):
     """
-    Manages list of experimental likelihoods.
+    A dictionary storing experimental likelihood :class:`Likelihood` instances index
+    by their names.
     """
 
     def __init__(self, info_likelihood, path_install=None, timing=None, theory=None):

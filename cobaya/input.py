@@ -423,6 +423,12 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
 
 
 class HasDefaults(object):
+    """
+    Base class for components that can read settings from a .yaml file.
+    Class methods provide the methods needed to get the defaults information
+    and associated data.
+
+    """
     class_options = {}
 
     @classmethod
@@ -466,6 +472,9 @@ class HasDefaults(object):
 
     @classmethod
     def get_class_path(cls):
+        """
+        Get the file path for the class.
+        """
         return os.path.abspath(os.path.dirname(inspect.getfile(cls)))
 
     @classmethod
@@ -474,6 +483,10 @@ class HasDefaults(object):
 
     @classmethod
     def get_yaml_file(cls):
+        """
+        Gets the file name of the .yaml file for this component if it exists on file
+        (otherwise None).
+        """
         filename = cls.get_root_file_name() + ".yaml"
         if os.path.exists(filename):
             return filename
@@ -481,6 +494,11 @@ class HasDefaults(object):
 
     @classmethod
     def get_bibtex(cls):
+        """
+        Get the content of .bibtex file for this component. If no specific bibtex
+        from this class, it will return the result from an inherited class if that
+        provides bibtex.
+        """
         bib = cls.get_associated_file_content('.bibtex')
         if bib:
             return bib.decode('utf-8')
@@ -506,10 +524,9 @@ class HasDefaults(object):
         Return defaults for this module_or_class, with syntax:
 
         .. code::
-           [kind]
-             [module_name]:
-               option: value
-               [...]
+
+           option: value
+           [...]
 
            params:
              [...]  # if required

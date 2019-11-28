@@ -40,6 +40,7 @@
  - support "parameterization" option of theory .yaml to specify parameter yaml variants?
  - require py 3.7+? remove all six, odict, copy(list)..
  - remove TCMB from conventions - in general a free parameter
+ - in the docs "Bases" (and UML diagram) not hyperlinked correctly (not sure how to fix)
 
 ### General
 
