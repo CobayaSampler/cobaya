@@ -1,13 +1,13 @@
 """
 .. module:: theory
 
-:Synopsis: base class and for theory codes and likelihoods.
+:Synopsis: Theory is a base class for theory codes and likelihoods.
 
 Both likelihoods and theories calculate something. Likelihoods are distinguished
 because they calculate a log likelihood. Both theory codes and likelihoods can calculate
 other things, and they may have complex dependencies between them: e.g. the likelihood
 depends on observable A that is computed by theory code B than in turn requires
-calculation on input calculation by code C.
+calculation of input calculation by code C.
 
 This module contains the base class for all of these calculation components. It handles
 caching of results, so that calculations do not need to be redone when the parameters on
@@ -58,7 +58,7 @@ class Theory(CobayaComponent):
         by a another component or provided as input parameters).
 
         :return: dictionary of requirements (or list of requirement names if no optional
-        parameters are needed)
+                 parameters are needed)
         """
         return {}
 
@@ -116,6 +116,8 @@ class Theory(CobayaComponent):
     def get_can_provide_params(self):
         """
         Get a list of derived parameters that this component can calculate.
+        The default implementation returns the result based on the params attribute set
+        via the .yaml file or class params (with derived:True for derived parameters).
 
         :return: list of parameter names
         """

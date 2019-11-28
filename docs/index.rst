@@ -70,7 +70,7 @@ Table of contents
    :maxdepth: 1
 
    devel
-
+   inheritance
 
 Indices and tables
 ==================
