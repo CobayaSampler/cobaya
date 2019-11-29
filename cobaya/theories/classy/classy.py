@@ -147,7 +147,6 @@ from numbers import Number
 from cobaya.theories._cosmo import BoltzmannBase
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, pip_install
-from cobaya.conventions import _T_CMB_K
 from cobaya.tools import load_module, VersionCheckError
 
 # Result collector
@@ -173,17 +172,20 @@ class classy(BoltzmannBase):
             self.log.info("Importing *local* classy from " + self.path)
             classy_build_path = os.path.join(self.path, "python", "build")
             py_version = "%d.%d" % (sys.version_info.major, sys.version_info.minor)
-            post = next(d for d in os.listdir(classy_build_path)
-                        if (d.startswith("lib.") and py_version in d))
-            classy_build_path = os.path.join(classy_build_path, post)
-            if not os.path.exists(classy_build_path):
-                # If path was given as an install path, try to install global one anyway
-                if self.path_install:
-                    self.log.info("Importing *global* CLASS (because not installed).")
-                else:
-                    raise LoggedError(
-                        self.log, "Either CLASS is not in the given folder, "
-                                  "'%s', or you have not compiled it.", self.path)
+            try:
+                post = next(d for d in os.listdir(classy_build_path)
+                            if (d.startswith("lib.") and py_version in d))
+                classy_build_path = os.path.join(classy_build_path, post)
+                if not os.path.exists(classy_build_path):
+                    # If path was given as an install path, try to load global one anyway
+                    if self.path_install:
+                        self.log.info("Importing *global* CLASS (because not compiled?).")
+                    else:
+                        raise StopIteration
+            except StopIteration:
+                raise LoggedError(
+                    self.log, "Either CLASS is not in the given folder, "
+                              "'%s', or you have not compiled it.", self.path)
         else:
             classy_build_path = None
             self.log.info("Importing *global* CLASS.")
@@ -199,8 +201,7 @@ class classy(BoltzmannBase):
                           " (b) install the Python interface globally with\n"
                           "     '/path/to/class/python/python setup.py install --user'")
         except VersionCheckError as e:
-            raise LoggedError(self.log, e.msg)
-
+            raise LoggedError(self.log, str(e))
         self.classy = Class()
         # Propagate errors up
         global CosmoComputationError, CosmoSevereError
@@ -230,6 +231,8 @@ class classy(BoltzmannBase):
                 self.extra_args["l_max_scalars"] = max(v.values())
                 self.collectors[k] = Collector(
                     method="lensed_cl", kwargs={"lmax": self.extra_args["l_max_scalars"]})
+                if 'T_cmb' not in self.derived_extra:
+                    self.derived_extra += ['T_cmb']
             elif k == "Hubble":
                 self.collectors[k] = Collector(
                     method="Hubble",
@@ -427,8 +430,10 @@ class classy(BoltzmannBase):
         # Parameters with their own getters
         if "rs_drag" in requested_and_extra:
             requested_and_extra["rs_drag"] = self.classy.rs_drag()
-        elif "Omega_nu" in requested_and_extra:
+        if "Omega_nu" in requested_and_extra:
             requested_and_extra["Omega_nu"] = self.classy.Omega_nu
+        if "T_cmb" in requested_and_extra:
+            requested_and_extra["T_cmb"] = self.classy.T_cmb()
         # Get the rest using the general derived param getter
         # No need for error control: classy.get_current_derived_parameters is passed
         # every derived parameter not excluded before, and cause an error, indicating
@@ -462,9 +467,10 @@ class classy(BoltzmannBase):
         # unit conversion and ell_factor
         ells_factor = ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[
                       2:] if ell_factor else 1
+        t_cmb = self._current_state['derived_extra']['T_cmb']
         units_factors = {"1": 1,
-                         "muK2": _T_CMB_K * 1.e6,
-                         "K2": _T_CMB_K}
+                         "muK2": t_cmb * 1.e6,
+                         "K2": t_cmb}
         try:
             units_factor = units_factors[units]
         except KeyError:

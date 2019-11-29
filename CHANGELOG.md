@@ -24,7 +24,7 @@
 - sampler method now sets cache size
 - renamed "renames" of likelihood to "aliases" (to avoid clash with "renames" for parameters)
 - renamed H (array of H(z)) to Hubble
-- changed TCMB in conventions to be consistent. CAMB now independent of that and consistent with varying TCMB.
+- Boltzmann now consistent with varying TCMB.
 - changed use_planck_names to more general use_renames etc.
 - Greatly reduced deepcopy time overhead in loglike evaluation, faster uniform prior and sample collection
 

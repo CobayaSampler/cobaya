@@ -96,6 +96,5 @@ _line_width = 120
 # ------------------
 # Light speed
 _c_km_s = 299792.458  # speed of light
-_T_CMB_K = 2.7255  # CMB temperature
 _h_J_s = 6.626070040e-34  # Planck's constant
 _kB_J_K = 1.38064852e-23  # Boltzmann constant
