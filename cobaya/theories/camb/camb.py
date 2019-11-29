@@ -375,11 +375,7 @@ class camb(BoltzmannBase):
                 "The following parameters appear both as input parameters and as CAMB "
                 "extra arguments: %s. Please, remove one of the definitions of each.",
                 list(set(self.input_params).intersection(set(self.extra_args))))
-        # Remove extra args that might
-        # cause an error if the associated product is not requested
-        if not self.extra_attrs["WantCls"]:
-            for not_needed in getfullargspec(self.camb.CAMBparams.set_for_lmax).args[1:]:
-                self.extra_args.pop(not_needed, None)
+
         # Computing non-linear corrections
         model = self.camb.model
         self.extra_attrs["NonLinear"] = {
@@ -417,6 +413,12 @@ class camb(BoltzmannBase):
             if not self._base_params:
                 base_args = args.copy()
                 base_args.update(self.extra_args)
+                # Remove extra args that might
+                # cause an error if the associated product is not requested
+                if not self.extra_attrs["WantCls"]:
+                    for not_needed in getfullargspec(
+                            self.camb.CAMBparams.set_for_lmax).args[1:]:
+                        base_args.pop(not_needed, None)
                 self._reduced_extra_args = self.extra_args.copy()
                 params = self.camb.set_params(**base_args)
                 # pre-set the parameters that are not varying

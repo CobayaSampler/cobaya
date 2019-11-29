@@ -521,12 +521,12 @@ class mcmc(Sampler):
             # add the old point to the collection (if not burning or initial point)
             if self.burn_in_left <= 0:
                 self.current_point.add_to_collection(self.collection)
-                self.log.debug("New sample, #%d: \n   %r", self.n(), self.current_point)
+                self.log.debug("New sample, #%d: \n   %s", self.n(), self.current_point)
                 if self.n() % self.output_every == 0:
                     self.collection._out_update()
             else:
                 self.burn_in_left -= 1
-                self.log.debug("Burn-in sample:\n   %r", self.current_point)
+                self.log.debug("Burn-in sample:\n   %s", self.current_point)
                 if self.burn_in_left == 0 and self.burn_in:
                     self.log.info("Finished burn-in phase: discarded %d accepted steps.",
                                   self.burn_in)
