@@ -338,7 +338,7 @@ class classy(BoltzmannBase):
         # Needed for facilitating post-processing
         if not self.extra_args["output"]:
             for k in ["non linear"]:
-                self.extra_args.pop(k)
+                self.extra_args.pop(k, None)
         # Prepare parameters to be passed: this-iteration + extra
         args = {self.translate_param(p): v for p, v in params_values_dict.items()}
         args.update(self.extra_args)
