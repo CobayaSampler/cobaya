@@ -188,8 +188,8 @@ class classy(BoltzmannBase):
             classy_build_path = None
             self.log.info("Importing *global* CLASS.")
         try:
-            load_module('classy', path=classy_build_path,
-                        min_version=self.classy_repo_version)
+            self.classy_module = load_module('classy', path=classy_build_path,
+                                             min_version=self.classy_repo_version)
             from classy import Class, CosmoSevereError, CosmoComputationError
         except ImportError:
             raise LoggedError(
@@ -200,6 +200,7 @@ class classy(BoltzmannBase):
                           "     '/path/to/class/python/python setup.py install --user'")
         except VersionCheckError as e:
             raise LoggedError(self.log, e.msg)
+
         self.classy = Class()
         # Propagate errors up
         global CosmoComputationError, CosmoSevereError
@@ -459,8 +460,8 @@ class classy(BoltzmannBase):
                 self.log,
                 "No Cl's were computed. Are you sure that you have requested them?")
         # unit conversion and ell_factor
-        ell_factor = ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[
-                     2:] if ell_factor else 1
+        ells_factor = ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[
+                      2:] if ell_factor else 1
         units_factors = {"1": 1,
                          "muK2": _T_CMB_K * 1.e6,
                          "K2": _T_CMB_K}
@@ -471,9 +472,9 @@ class classy(BoltzmannBase):
                               units, list(units_factors))
         for cl in cls:
             if cl not in ['pp', 'ell']:
-                cls[cl][2:] *= units_factor ** 2 * ell_factor
-        if "pp" in cls and ell_factor is not 1:
-            cls['pp'][2:] *= ell_factor ** 2 * (2 * np.pi)
+                cls[cl][2:] *= units_factor ** 2 * ells_factor
+        if "pp" in cls and ell_factor:
+            cls['pp'][2:] *= ells_factor ** 2 * (2 * np.pi)
         return cls
 
     def _get_z_dependent(self, quantity, z):
@@ -505,6 +506,9 @@ class classy(BoltzmannBase):
                 if mapped in names:
                     names.append(name)
         return names
+
+    def get_version(self):
+        return getattr(self.classy_module, '__version__', None)
 
     # Installation routines
 

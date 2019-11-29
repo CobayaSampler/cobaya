@@ -15,11 +15,12 @@ import numpy as np
 from collections import OrderedDict as odict
 from numbers import Number
 from itertools import chain
+from copy import deepcopy
 
 # Local
 from cobaya.conventions import partag
 from cobaya.tools import get_external_function, ensure_nolatex, is_valid_variable_name
-from cobaya.tools import getfullargspec, deepcopy_where_possible as deepcopy
+from cobaya.tools import getfullargspec, deepcopy_where_possible
 from cobaya.log import LoggedError, HasLogger
 
 
@@ -49,7 +50,7 @@ def expand_info_param(info_param, default_derived=True):
     Expands the info of a parameter, from the user friendly, shorter format
     to a more unambiguous one.
     """
-    info_param = deepcopy(info_param)
+    info_param = deepcopy_where_possible(info_param)
     if not hasattr(info_param, "keys"):
         if info_param is None:
             info_param = odict()
@@ -69,7 +70,7 @@ def reduce_info_param(info_param):
     Compresses the info of a parameter, suppressing default values.
     This is the opposite of :func:`~input.expand_info_param`.
     """
-    info_param = deepcopy(info_param)
+    info_param = deepcopy_where_possible(info_param)
     if not hasattr(info_param, "keys"):
         return
     # All parameters without a prior are derived parameters unless otherwise specified
@@ -124,7 +125,7 @@ class Parameterization(HasLogger):
         # to infos without _prior or partag.value, and a partag.value field
         # to fixed params
         for p, info in info_params.items():
-            self._infos[p] = deepcopy(info)
+            self._infos[p] = deepcopy_where_possible(info)
             if is_fixed_param(info):
                 if isinstance(info[partag.value], Number):
                     self._constant[p] = info[partag.value]
@@ -142,7 +143,7 @@ class Parameterization(HasLogger):
                     (lambda x: [x] if isinstance(x, string_types) else x)
                     (info.get(partag.renames, [])))
             if is_derived_param(info):
-                self._derived[p] = deepcopy(info)
+                self._derived[p] = deepcopy_where_possible(info)
                 # Dynamical parameters whose value we want to save
                 if info[partag.derived] is True and is_fixed_param(info):
                     info[partag.derived] = "lambda %s: %s" % (p, p)
@@ -222,7 +223,7 @@ class Parameterization(HasLogger):
 
     def sampled_params_info(self):
         return odict(
-            (p, deepcopy(info)) for p, info in self._infos.items() if p in self._sampled)
+            (p, deepcopy_where_possible(info)) for p, info in self._infos.items() if p in self._sampled)
 
     def sampled_params_renames(self):
         return deepcopy(self._sampled_renames)

@@ -23,7 +23,7 @@ from pandas import DataFrame
 from cobaya.sampler import Sampler
 from cobaya.mpi import get_mpi_size, get_mpi_rank, get_mpi_comm
 from cobaya.mpi import more_than_one_process, am_single_or_primary_process, sync_processes
-from cobaya.collection import Collection, OnePoint
+from cobaya.collection import Collection, OnePointDict
 from cobaya.conventions import kinds, partag, _weight, _minuslogpost
 from cobaya.conventions import _line_width, _path_install, _progress_extension
 from cobaya.samplers.mcmc.proposal import BlockedProposer
@@ -31,7 +31,6 @@ from cobaya.log import LoggedError
 from cobaya.tools import get_external_function, read_dnumber, relative_to_int
 from cobaya.tools import load_DataFrame
 from cobaya.yaml import yaml_dump_file
-from cobaya.output import OutputDummy
 
 
 class mcmc(Sampler):
@@ -89,8 +88,7 @@ class mcmc(Sampler):
         name = str(1 + (lambda r: r if r is not None else 0)(get_mpi_rank()))
         self.collection = Collection(
             self.model, self.output, name=name, resuming=self.resuming)
-        self.current_point = OnePoint(
-            self.model, OutputDummy({}), name=name)
+        self.current_point = OnePointDict(self.model, name=name)
         # Use standard MH steps by default
         self.get_new_sample = self.get_new_sample_metropolis
         # Prepare oversampling / dragging if applicable
@@ -347,8 +345,7 @@ class mcmc(Sampler):
             logpost, logpriors, loglikes, derived = self.model.logposterior(initial_point)
         self.current_point.add(initial_point, derived=derived, logpost=logpost,
                                logpriors=logpriors, loglikes=loglikes)
-        self.log.info("\n%s", self.current_point.data.to_string(
-            index=False, line_width=_line_width))
+        self.log.info("\n%s", list(self.current_point))
         # Initial dummy checkpoint (needed when 1st checkpoint not reached in prev. run)
         self.write_checkpoint()
         # Main loop!

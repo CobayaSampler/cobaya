@@ -145,8 +145,12 @@ class D(Theory):
     def calculate(self, state, want_derived=True, **params_values_dict):
         state['D'] = self.provider.get_Aresult()[0] * 2
 
-    def get_Dresult(self):
-        return self._current_state['D']
+    def get_result(self, result_name, **kwargs):
+        if result_name == 'Dresult':
+            return self._current_state['D']
+
+    def get_can_provide(self):
+        return ['Dresult']
 
     def needs(self, **needs):
         if 'Dresult' in needs:
@@ -156,7 +160,7 @@ class D(Theory):
 class E(Theory):
 
     def calculate(self, state, want_derived=True, **params_values_dict):
-        state['E'] = self.provider.get_Dresult() * 2
+        state['E'] = self.provider.get_result('Dresult') * 2
 
     def get_Eresult(self):
         return self._current_state['E']
@@ -172,7 +176,7 @@ class Like2(Likelihood):
         return {'Dresult'}
 
     def calculate(self, state, want_derived=True, **params_values_dict):
-        state["logp"] = self.provider.get_Dresult() * 2
+        state["logp"] = self.provider.get_result('Dresult') * 2
 
 
 class Like3(Likelihood):

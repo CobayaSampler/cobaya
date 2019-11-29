@@ -466,12 +466,13 @@ class Model(HasLogger):
 
             requirements.append([require])
             methods = component.get_can_provide_methods()
+            can_provide = list(component.get_can_provide()) + list(methods)
             # parameters that can be provided but not already explicitly assigned
             provide_params = [p for p in component.get_can_provide_params() if
                               p not in self.output_params and p not in
                               str_to_list(getattr(component, 'requires', []))]
 
-            for k in list(methods) + component.output_params + provide_params:
+            for k in can_provide + component.output_params + provide_params:
                 providers[k] = providers.get(k, []) + [component]
 
         requirement_providers = {}

@@ -185,11 +185,11 @@ class Provider(object):
         else:
             return self.requirement_providers[param].get_param(param)
 
-    def __getattribute__(self, name):
+    def get_result(self, result_name, **kwargs):
+        return self.requirement_providers[result_name].get_result(result_name, **kwargs)
+
+    def __getattr__(self, name):
         if name.startswith('get_'):
             requirement = name[4:]
-            if requirement == 'param':
-                return object.__getattribute__(self, name)
-            else:
-                return getattr(self.requirement_providers[requirement], name)
+            return getattr(self.requirement_providers[requirement], name)
         return object.__getattribute__(self, name)

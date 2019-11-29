@@ -518,9 +518,8 @@ class Prior(HasLogger):
            in the same order.
         """
         self.log.debug("Evaluating prior at %r", x)
-        logps = [
-                    sum([pdf.logpdf(xi) for pdf, xi in
-                         zip(self.pdf, x)])] + self.logps_external(x)
+        logps = [sum([pdf.logpdf(xi) for pdf, xi in
+                      zip(self.pdf, x)])] + self.logps_external(x)
         self.log.debug("Got logpriors = %r", logps)
         return logps
 

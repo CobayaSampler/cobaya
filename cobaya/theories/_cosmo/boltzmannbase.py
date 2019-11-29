@@ -218,9 +218,10 @@ class BoltzmannBase(Theory):
                  and PK[i,j] is the value at z[i], k[j]
         """
         try:
-            return self._current_state[("Pk_grid", bool(nonlinear)) + tuple(var_pair)]
+            return self._current_state[
+                ("Pk_grid", bool(nonlinear)) + tuple(sorted(var_pair))]
         except KeyError:
-            if ("Pk_grid", False) + tuple(var_pair) in self._current_state:
+            if ("Pk_grid", False) + tuple(sorted(var_pair)) in self._current_state:
                 raise LoggedError(self.log,
                                   "Getting non-linear matter power but nonlinear "
                                   "not specified in requirements")
@@ -239,7 +240,7 @@ class BoltzmannBase(Theory):
         :return: :class:`PowerSpectrumInterpolator` instance.
         """
         nonlinear = bool(nonlinear)
-        key = ("Pk_interpolator", nonlinear, extrap_kmax) + tuple(var_pair)
+        key = ("Pk_interpolator", nonlinear, extrap_kmax) + tuple(sorted(var_pair))
         if key in self._current_state:
             return self._current_state[key]
         k, z, pk = self.get_Pk_grid(var_pair=var_pair, nonlinear=nonlinear)

@@ -9,7 +9,7 @@
    <br />
 
 This module imports and manages the CAMB cosmological code.
-It requires CAMB 1.0.11 or higher.
+It requires CAMB 1.0.12 or higher.
 
 .. note::
 
@@ -198,7 +198,7 @@ class camb(BoltzmannBase):
     camb_repo_name = "cmbant/CAMB"
     camb_repo_version = os.environ.get("CAMB_REPO_VERSION", "master")
     camb_min_gcc_version = "6.4"
-    min_camb_version = '1.0.10'
+    min_camb_version = '1.0.12'
 
     def initialize(self):
         """Importing CAMB from the correct path, if given."""
@@ -251,6 +251,7 @@ class camb(BoltzmannBase):
         self.non_linear_lens = False
         self.non_linear_pk = False
         self._base_params = None
+        self._needs_lensing_cross = False
 
     def initialize_with_params(self):
         # TODO: supports params function could specify list of parameters accepted
@@ -280,18 +281,23 @@ class camb(BoltzmannBase):
                 self.extra_args["lmax"] = max(
                     max(v.values()), self.extra_args.get("lmax", 0))
                 cls = [a.lower() for a in v]
+                needs_lensing = set(cls).intersection({"pp", "pt", "pe", "tp", "ep"})
                 self.collectors[k] = Collector(
                     method=CAMBdata.get_cmb_power_spectra,
                     kwargs={
                         "spectra": list(set(
                             (self.collectors[k].kwargs.get("spectra", [])
                              if k in self.collectors else []) +
-                            ["total"] + (["lens_potential"] if "pp" in cls else []))),
-                        "raw_cl": True})
+                            ["total"] + (["lens_potential"] if needs_lensing else []))),
+                        "raw_cl": False})
                 self.needs_perts = True
                 self.extra_attrs["Want_CMB"] = True
                 self.extra_attrs["WantCls"] = True
                 self.non_linear_lens = True
+                if "pp" in cls and not self.extra_args.get("lens_potential_accuracy"):
+                    self.extra_args["lens_potential_accuracy"] = 1
+                if set(cls).intersection({"pt", "pe", "tp", "ep"}):
+                    self._needs_lensing_cross = True
                 if 'TCMB' not in self.derived_extra:
                     self.derived_extra += ['TCMB']
             elif k == "Hubble":
@@ -309,7 +315,6 @@ class camb(BoltzmannBase):
                     kwargs={})
                 self.needs_perts = True
             elif k in ["Pk_interpolator", "Pk_grid"]:
-                check_module_version(self.camb, "1.0.11")
                 self.extra_args["kmax"] = max(v["k_max"], self.extra_args.get("kmax", 0))
                 self.add_to_redshifts(v["z"])
                 v["vars_pairs"] = v["vars_pairs"] or [("delta_tot", "delta_tot")]
@@ -327,7 +332,7 @@ class camb(BoltzmannBase):
                 if kwargs["nonlinear"]:
                     self.non_linear_pk = True
                 for pair in v["vars_pairs"]:
-                    product = ("Pk_grid", kwargs["nonlinear"]) + tuple(pair)
+                    product = ("Pk_grid", kwargs["nonlinear"]) + tuple(sorted(pair))
                     kwargs.update(dict(zip(["var1", "var2"], pair)))
                     self.collectors[product] = Collector(
                         method=CAMBdata.get_linear_matter_power_spectrum, kwargs=kwargs)
@@ -563,12 +568,12 @@ class camb(BoltzmannBase):
         for pool in ["params", "derived", "derived_extra"]:
             value = (self._current_state[pool] or {}).get(translated, None)
             if value is not None:
-                return deepcopy(value)
+                return value
             if p != translated:
                 # allow both translated and not
                 value = (self._current_state[pool] or {}).get(p, None)
                 if value is not None:
-                    return deepcopy(value)
+                    return value
 
         raise LoggedError(self.log, "Parameter not known: '%s'", p)
 
@@ -576,18 +581,10 @@ class camb(BoltzmannBase):
         current_state = self._current_state
         # get C_l^XX from the cosmological code
         try:
-            cl_camb = deepcopy(current_state["Cl"]["total"])
+            cl_camb = current_state["Cl"]["total"].copy()
         except:
             raise LoggedError(self.log, "No Cl's were computed. Are you sure that you "
                                         "have requested them?")
-        mapping = {"tt": 0, "ee": 1, "bb": 2, "te": 3}
-        cls = {"ell": np.arange(cl_camb.shape[0])}
-        cls.update({sp: cl_camb[:, i] for sp, i in mapping.items()})
-        if "lens_potential" in current_state["Cl"]:
-            cls.update({"pp": deepcopy(current_state["Cl"]["lens_potential"])[:, 0]})
-        # unit conversion and ell_factor
-        ell_factor = ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[
-                     2:] if ell_factor else 1
 
         temp = current_state['derived_extra']['TCMB']
         units_factors = {"1": 1,
@@ -598,11 +595,31 @@ class camb(BoltzmannBase):
         except KeyError:
             raise LoggedError(self.log, "Units '%s' not recognized. Use one of %s.",
                               units, list(units_factors))
-        for cl in cls:
-            if cl not in ['pp', 'ell']:
-                cls[cl][2:] *= units_factor ** 2 * ell_factor
-        if 'pp' in cls and ell_factor is not 1:
-            cls['pp'][2:] *= ell_factor ** 2 * (2 * np.pi)
+
+        ls = np.arange(cl_camb.shape[0], dtype=np.int64)
+        if not ell_factor:
+            # unit conversion and ell_factor. CAMB output is *with* the factors already
+            ells_factor = ls[1:] * (ls[1:] + 1)
+            cl_camb[1:, :] /= ells_factor[..., np.newaxis]
+            cl_camb[1:, :] *= (2 * np.pi) * units_factor ** 2
+        elif units_factor != 1:
+            cl_camb *= units_factor ** 2
+
+        mapping = {"tt": 0, "ee": 1, "bb": 2, "te": 3, "et": 3}
+        cls = {"ell": ls}
+        cls.update({sp: cl_camb[:, i] for sp, i in mapping.items()})
+
+        cl_lens = current_state["Cl"].get("lens_potential")
+        if cl_lens is not None:
+            cls["pp"] = cl_lens[:, 0].copy()
+            if not ell_factor:
+                cls["pp"][1:] /= ells_factor ** 2 / (2 * np.pi)
+            if self._needs_lensing_cross:
+                for i, cross in enumerate(['pt', 'pe']):
+                    cls[cross] = cl_lens[:, i + 1].copy() * units_factor
+                    if not ell_factor:
+                        cls[cross][1:] /= ells_factor ** (3. / 2) / (2 * np.pi)
+                    cls[cross[::-1]] = cls[cross]
         return cls
 
     def _get_z_dependent(self, quantity, z):
@@ -613,7 +630,7 @@ class camb(BoltzmannBase):
         else:
             computed_redshifts = self.collectors[quantity].kwargs["z"]
             i_kwarg_z = np.searchsorted(computed_redshifts, np.atleast_1d(z))
-        return np.array(deepcopy(self._current_state[quantity]))[i_kwarg_z]
+        return np.array(self._current_state[quantity], copy=True)[i_kwarg_z]
 
     def get_fsigma8(self, z):
         return self._get_z_dependent("fsigma8", z)

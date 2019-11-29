@@ -199,7 +199,7 @@ class MainWindow(QWidget):
             get_comments=True,
             #           planck_names=self.planck_names.isChecked(),
             **{field: list(getattr(input_database, field).keys())[combo.currentIndex()]
-               for field, combo in self.combos.items() if field is not "preset"})
+               for field, combo in self.combos.items() if field != "preset"})
 
     @Slot()
     def refresh_keep_preset(self):

@@ -111,6 +111,18 @@ class Theory(CobayaComponent):
         """
         return self._current_state["derived"][p]
 
+    def get_result(self, result_name, **kwargs):
+        """
+        Interface function for likelihood and other theory components to get
+        quantities calculated by this component. By default assumes the quantity
+        is just directly saved into the current state.
+
+        :param result_name: name of quantity
+        :param kwargs: options specific to X or this component
+        :return: result
+        """
+        return self._current_state[result_name]
+
     def get_can_provide_methods(self):
         """
         Get a dictionary of quantities X that can be retrieved using get_X methods.
@@ -118,6 +130,15 @@ class Theory(CobayaComponent):
         :return: dictionary of the form {X: get_X method}
         """
         return get_class_methods(self.get_provider().__class__, not_base=Theory)
+
+    def get_can_provide(self):
+        """
+        Get a list of names of quantities that can be retrieved using a general
+        get_result(X) method.
+
+        :return: list of quantities
+        """
+        return []
 
     def get_can_provide_params(self):
         """
@@ -204,7 +225,8 @@ class Theory(CobayaComponent):
 
     def get_provider(self):
         """
-        Return object containing get_X, get_param methods to get computed results.
+        Return object containing get_X, get_param, get_result methods to get computed
+        results.
         This defaults to self, but can change to delegate provision to another object
 
         :return: object instance
