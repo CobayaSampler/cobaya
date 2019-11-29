@@ -2,9 +2,13 @@ from __future__ import division, print_function, absolute_import
 
 from mpi4py import MPI
 from flaky import flaky
+from collections import OrderedDict
+import numpy as np
 
 from cobaya.likelihoods.gaussian_mixture import random_cov
 from cobaya.tools import KL_norm
+from cobaya.likelihood import Likelihood
+from cobaya.run import run
 
 from .common_sampler import body_of_test, body_of_test_speeds
 
@@ -33,14 +37,16 @@ def test_mcmc(tmpdir, modules=None):
         "covmat": S0, }}
 
     def check_gaussian(sampler_instance):
-        KL_proposer = KL_norm(S1=sampler_instance.model.likelihood["gaussian_mixture"].covs[0],
-                              S2=sampler_instance.proposer.get_covariance())
-        KL_sample = KL_norm(m1=sampler_instance.model.likelihood["gaussian_mixture"].means[0],
-                            S1=sampler_instance.model.likelihood["gaussian_mixture"].covs[0],
-                            m2=sampler_instance.collection.mean(
-                                first=int(sampler_instance.n() / 2)),
-                            S2=sampler_instance.collection.cov(
-                                first=int(sampler_instance.n() / 2)))
+        KL_proposer = KL_norm(
+            S1=sampler_instance.model.likelihood["gaussian_mixture"].covs[0],
+            S2=sampler_instance.proposer.get_covariance())
+        KL_sample = KL_norm(
+            m1=sampler_instance.model.likelihood["gaussian_mixture"].means[0],
+            S1=sampler_instance.model.likelihood["gaussian_mixture"].covs[0],
+            m2=sampler_instance.collection.mean(
+                first=int(sampler_instance.n() / 2)),
+            S2=sampler_instance.collection.cov(
+                first=int(sampler_instance.n() / 2)))
         print("KL proposer: %g ; KL sample: %g" % (KL_proposer, KL_sample))
 
     if rank == 0:
@@ -78,3 +84,40 @@ def test_mcmc_dragging():
                           # For tests
                           "drag_limits": [None, None]}}
     body_of_test_speeds(info_mcmc)
+
+
+def _make_gaussian_like(nparam):
+    class LikeTest(Likelihood):
+        params = OrderedDict(
+            [('x' + str(name), {'prior': {'min': -5, 'max': 5}, 'proposal': 1})
+             for name in range(nparam)])
+
+        def calculate(self, state, want_derived=True, **params_values_dict):
+            state["logp"] = -np.sum(np.array(list(params_values_dict.values())) ** 2 / 2)
+
+    return LikeTest
+
+
+def _test_overhead_timing():
+    # prints timing for simple Gaussian vanilla mcmc
+    import pstats
+    from cProfile import Profile
+    import six
+
+    LikeTest = _make_gaussian_like(15)
+    info = {'likelihood': {'like': LikeTest}, 'debug': False, 'sampler': {
+        'mcmc': {'max_samples': 1000, 'burn_in': 0, "learn_proposal": False,
+                 "Rminus1_stop": 0.0001}}}
+    prof = Profile()
+    prof.enable()
+    run(info)
+    prof.disable()
+    s = six.StringIO()
+    ps = pstats.Stats(prof, stream=s)
+    ps.strip_dirs()
+    ps.sort_stats('time')
+    ps.print_stats(10)
+    ps.sort_stats('cumtime')
+    ps.print_stats(10)
+    print(s.getvalue())
+    res = s.getvalue().split("\n")
