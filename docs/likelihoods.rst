@@ -182,6 +182,7 @@ Likelihood class
 ^^^^^^^^^^^^^^^^
 
 .. autoclass:: likelihood.Likelihood
+   :show-inheritance:
    :members:
 
 Likelihood interface
@@ -194,4 +195,5 @@ LikelihoodCollection class
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: likelihood.LikelihoodCollection
+   :show-inheritance:
    :members:

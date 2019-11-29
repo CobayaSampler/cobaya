@@ -46,7 +46,7 @@ class Timer(object):
 
 class CobayaComponent(HasLogger, HasDefaults):
     """
-    Base class for a theory, likelihood or sampler with associated .yaml parameter
+    Base class for a theory, likelihood or sampler with associated .yaml parameter file
     that can set attributes.
     """
 
@@ -81,6 +81,12 @@ class CobayaComponent(HasLogger, HasDefaults):
             raise
 
     def get_name(self):
+        """
+        Get the name. This is usually set by the name used in the input .yaml, but
+        otherwise defaults to the fully-qualified class name.
+
+        :return: name string
+        """
         return self._name
 
     def __repr__(self):
@@ -92,8 +98,7 @@ class CobayaComponent(HasLogger, HasDefaults):
 
     def initialize(self):
         """
-        Initializes the class (before getting requirements and before input_params,
-        output_params and provider assigned).
+        Initializes the class (called from __init__, before other initializations).
         """
         pass
 
@@ -131,6 +136,10 @@ class ComponentCollection(OrderedDict, HasLogger):
                      for component in timers]))
 
     def get_version(self):
+        """
+        Get version dictionary
+        :return: dictionary of versions for all components
+        """
         return {component.get_name(): component.get_version()
                 for component in self.values()}
 
@@ -146,7 +155,10 @@ class ComponentCollection(OrderedDict, HasLogger):
 class Provider(object):
     """
     Class used to retrieve computed requirements.
-    Just passes on get_X and get_param methods to the correct component.
+    Just passes on get_X and get_param methods to the component assigned to compute them.
+
+    For get_param it will also take values directly from the current sampling parameters
+    if the parameter is defined there.
     """
 
     def __init__(self, model, requirement_providers):
@@ -158,6 +170,14 @@ class Provider(object):
         self.params = params
 
     def get_param(self, param):
+        """
+        Returns the value of a derived (or sampled) parameter. If it is not a sampled
+        parameter it calls :meth:`Theory.get_param` on component assigned to compute
+        this derived parameter.
+
+        :param param: parameter name, or a list of parameter names
+        :return: value of parameter, or list of parameter values
+        """
         if isinstance(param, (list, tuple)):
             return [self.get_param(p) for p in param]
         if param in self.params:

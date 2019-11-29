@@ -141,7 +141,7 @@ hubble = odict([
                 [p.ref, odict([[p.dist, "norm"], ["loc", 67], ["scale", 2]])],
                 [p.proposal, 2], [p.latex, r"H_0"]])]])}],
     ["H_DESpriors", {
-        _desc: "Hubble parameter (reduced _range for DES and lensing-only constraints)",
+        _desc: "Hubble parameter (reduced range for DES and lensing-only constraints)",
         kinds.theory: {_camb: None, _classy: None},
         _params: odict([
             ["H0", odict([

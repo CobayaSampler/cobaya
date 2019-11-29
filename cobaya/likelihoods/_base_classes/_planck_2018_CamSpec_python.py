@@ -11,7 +11,7 @@ The Planck likelihood code (clik) is not required.
 Use dataset_params : { 'use_cl': '100x100 143x143 217x217 143x217'} to use e.g. just TT ,
 or other combination with TE and EE.
 
-Set use_range to string representation of L _range to use, e.g. 50-100, 200-500, 1470-2500,
+Set use_range to string representation of L range to use, e.g. 50-100, 200-500, 1470-2500,
 or pass a dictionary of ranges for each spectrum.
 
 ##TODO: calPlanck vs Aplanck
@@ -34,7 +34,7 @@ use_cache = True
 
 
 def range_to_ells(use_range):
-    """splits _range string like '2-5 7 15-3000' into list of specific numbers"""
+    """splits range string like '2-5 7 15-3000' into list of specific numbers"""
 
     if isinstance(use_range, six.string_types):
         ranges = []
@@ -73,11 +73,11 @@ class _planck_2018_CamSpec_python(_DataSetLikelihood):
         if ini.hasKey('use_range'):
             used_ell = ini.params['use_range']
             if isinstance(used_ell, dict):
-                print('Using _range %s' % used_ell)
+                print('Using range %s' % used_ell)
                 for key, value in used_ell.items():
                     used_ell[key] = range_to_ells(value)
             else:
-                if silent: print('CamSpec using _range: %s' % used_ell)
+                if silent: print('CamSpec using range: %s' % used_ell)
                 used_ell = range_to_ells(used_ell)
         else:
             used_ell = None
@@ -359,7 +359,7 @@ class _planck_2018_CamSpec_python(_DataSetLikelihood):
         :param spec1: name of spectrum 1
         :param spec2:  name of spectrum 2
         :param data_params: dictionary of parameters
-        :return: ell _range array, difference array, covariance matrix
+        :return: ell range array, difference array, covariance matrix
         """
         foregrounds = self.get_foregrounds(data_params)
         cals = self.get_cals(data_params)

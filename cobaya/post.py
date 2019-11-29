@@ -343,7 +343,7 @@ def post(info, sample=None):
             log, "No elements in the final sample. Possible causes: "
                  "added a prior or likelihood valued zero over the full sampled domain, "
                  "or the computation of the theory failed everywhere, etc.")
-    # Reweight -- account for large dynamic _range!
+    # Reweight -- account for large dynamic range!
     #   Prefer to rescale +inf to finite, and ignore final points with -inf.
     #   Remove -inf's (0-weight), and correct indices
     difflogmax = max(collection_in[_minuslogpost] - collection_out[_minuslogpost])

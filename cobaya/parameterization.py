@@ -152,9 +152,9 @@ class Parameterization(HasLogger):
                     self._derived_funcs[p] = get_external_function(info[partag.derived])
                     self._derived_args[p] = getfullargspec(self._derived_funcs[p]).args
         # Check that the sampled and derived params are all valid python variable names
-        for p in chain(self.sampled_params(), self.derived_params()):
+        for p in chain(self._sampled, self.derived_params()):
             if not is_valid_variable_name(p):
-                is_in = p in self.sampled_params()
+                is_in = p in self._sampled
                 eg_in = "  p_prime:\n    prior: ...\n  %s: 'lambda p_prime: p_prime'\n" % p
                 eg_out = "  p_prime: 'lambda %s: %s'\n" % (p, p)
                 raise LoggedError(
@@ -233,14 +233,14 @@ class Parameterization(HasLogger):
     def sampled_input_dependence(self):
         return deepcopy(self._sampled_input_dependence)
 
-    def to_input(self, sampled_params_values):
+    def to_input(self, sampled_params_values, copied=True):
         # Store sampled params, so that derived can depend on them
         if not hasattr(sampled_params_values, "keys"):
             sampled_params_values = odict(
-                zip(self.sampled_params(), sampled_params_values))
+                zip(self._sampled, sampled_params_values))
         elif not isinstance(sampled_params_values, odict):
             sampled_params_values = odict(
-                (p, sampled_params_values[p]) for p in self.sampled_params())
+                (p, sampled_params_values[p]) for p in self._sampled)
         else:
             sampled_params_values = sampled_params_values.copy()
 
@@ -269,12 +269,12 @@ class Parameterization(HasLogger):
                 "Could not resolve arguments for input parameters %s. Maybe there "
                 "is a circular dependency between derived parameters?",
                 list(set(self._input_funcs).difference(set(resolved))))
-        return self.input_params()
+        return self.input_params() if copied else self._input
 
     def to_derived(self, output_params_values):
         if not hasattr(output_params_values, "keys"):
             output_params_values = dict(
-                zip(self.output_params(), output_params_values))
+                zip(self._output, output_params_values))
         # Fill first derived parameters which are direct output parameters
         self._derived.update(
             {p: output_params_values[p] for p in self._directly_output})
@@ -286,8 +286,8 @@ class Parameterization(HasLogger):
             for p in self._derived_funcs:
                 if p in resolved:
                     continue
-                args = {p: (self.input_params().get(
-                    p, self.sampled_params().get(p, output_params_values.get(
+                args = {p: (self._input.get(
+                    p, self._sampled.get(p, output_params_values.get(
                         p, self._derived.get(p, None))))) for p in self._derived_args[p]}
                 if not all(isinstance(v, Number) for v in args.values()):
                     continue

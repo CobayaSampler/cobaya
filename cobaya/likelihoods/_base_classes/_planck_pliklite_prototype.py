@@ -69,13 +69,13 @@ class _planck_pliklite_prototype(_DataSetLikelihood):
         self.lav = self.lav[:maxbin]
 
         if len(use_bins) and np.max(use_bins) >= maxbin:
-            raise ValueError('use_bins has bin index out of _range')
+            raise ValueError('use_bins has bin index out of range')
         if len(bins_for_L_range):
             if len(use_bins): raise ValueError('can only use one bin filter')
             use_bins = [use_bin for use_bin in range(maxbin)
                         if
                         bins_for_L_range[0] <= (self.blmin[use_bin] + self.blmax[use_bin]) / 2 <= bins_for_L_range[1]]
-            print('Actual L _range: %s - %s' % (self.blmin[use_bins[0]], self.blmax[use_bins[-1]]))
+            print('Actual L range: %s - %s' % (self.blmin[use_bins[0]], self.blmax[use_bins[-1]]))
 
         self.used = np.zeros(3, dtype=bool)
         self.used_bins = []

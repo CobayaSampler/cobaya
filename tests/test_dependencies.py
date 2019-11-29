@@ -103,6 +103,7 @@ def _test_loglike(theories):
     for th in theories, theories[::-1]:
         info['theory'] = OrderedDict(th)
         model = get_model(info)
+
         assert model.loglikes({})[0] == 8, "test loglike failed for %s" % th
 
 
