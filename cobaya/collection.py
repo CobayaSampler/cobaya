@@ -385,6 +385,9 @@ class OnePointDict(BaseCollection, odict):
     def increase_weight(self, increase):
         self[_weight] += increase
 
+    def __str__(self):
+        return ", ".join(['%s:%.7g' % (k, v) for k, v in self.items()])
+
 
 class OnePoint(Collection):
     """Wrapper of Collection to hold a single point, e.g. the current point of an MCMC."""

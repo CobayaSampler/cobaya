@@ -18,6 +18,9 @@ class Timer(object):
     def start(self):
         self._start = self._time_func()
 
+    def time_from_start(self):
+        return self._time_func() - self._start
+
     def increment(self, logger=None):
         delta_time = self._time_func() - self._start
         self.n += 1

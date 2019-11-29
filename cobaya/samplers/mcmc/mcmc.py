@@ -304,15 +304,16 @@ class mcmc(Sampler):
             covmat[where_nan, where_nan] = np.array(
                 [info.get(partag.proposal, np.nan) ** 2
                  for info in params_infos.values()])[where_nan]
-            # we want to start learning the covmat earlier
-            self.log.info("Covariance matrix " +
-                          ("not present" if np.all(where_nan) else "not complete") +
-                          ". "
-                          "We will start learning the covariance of the proposal earlier:"
-                          " R-1 = %g (was %g).",
-                          self.learn_proposal_Rminus1_max_early,
-                          self.learn_proposal_Rminus1_max)
-            self.learn_proposal_Rminus1_max = self.learn_proposal_Rminus1_max_early
+            if self.learn_proposal:
+                # we want to start learning the covmat earlier
+                self.log.info("Covariance matrix " +
+                              ("not present" if np.all(where_nan) else "not complete") +
+                              ". "
+                              "We will start learning the covariance of the proposal "
+                              "earlier: R-1 = %g (was %g).",
+                              self.learn_proposal_Rminus1_max_early,
+                              self.learn_proposal_Rminus1_max)
+                self.learn_proposal_Rminus1_max = self.learn_proposal_Rminus1_max_early
         where_nan = np.isnan(covmat.diagonal())
         if np.any(where_nan):
             covmat[where_nan, where_nan] = (
@@ -345,7 +346,7 @@ class mcmc(Sampler):
             logpost, logpriors, loglikes, derived = self.model.logposterior(initial_point)
         self.current_point.add(initial_point, derived=derived, logpost=logpost,
                                logpriors=logpriors, loglikes=loglikes)
-        self.log.info("\n%s", list(self.current_point))
+        self.log.info("\n%s", self.current_point)
         # Initial dummy checkpoint (needed when 1st checkpoint not reached in prev. run)
         self.write_checkpoint()
         # Main loop!
