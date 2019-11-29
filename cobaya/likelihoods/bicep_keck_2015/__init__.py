@@ -79,10 +79,11 @@ import numpy as np
 
 # Local
 from cobaya.likelihoods._base_classes import _CMBlikes
-from cobaya.conventions import _h_J_s, _kB_J_K, _T_CMB_K
+from cobaya.conventions import _h_J_s, _kB_J_K
 
 # Physical constants
 Ghz_Kelvin = _h_J_s / _kB_J_K * 1e9
+T_CMB_K = 2.7255  # fiducial CMB temperature
 
 
 class bicep_keck_2015(_CMBlikes):
@@ -113,15 +114,15 @@ class bicep_keck_2015(_CMBlikes):
         # Calculate thermodynamic temperature conversion between this bandpass
         # and pivot frequencies 353 GHz (used for dust) and 150 GHz (used for sync).
         th_int = np.sum(bandpass.dnu * bandpass.R[:, 1] * bandpass.R[:, 0] ** 4 *
-                        np.exp(Ghz_Kelvin * bandpass.R[:, 0] / _T_CMB_K) /
-                        (np.exp(Ghz_Kelvin * bandpass.R[:, 0] / _T_CMB_K) - 1) ** 2)
+                        np.exp(Ghz_Kelvin * bandpass.R[:, 0] / T_CMB_K) /
+                        (np.exp(Ghz_Kelvin * bandpass.R[:, 0] / T_CMB_K) - 1) ** 2)
         nu0 = self.fpivot_dust
-        th0 = (nu0 ** 4 * np.exp(Ghz_Kelvin * nu0 / _T_CMB_K) /
-               (np.exp(Ghz_Kelvin * nu0 / _T_CMB_K) - 1) ** 2)
+        th0 = (nu0 ** 4 * np.exp(Ghz_Kelvin * nu0 / T_CMB_K) /
+               (np.exp(Ghz_Kelvin * nu0 / T_CMB_K) - 1) ** 2)
         bandpass.th_dust = th_int / th0
         nu0 = self.fpivot_sync
-        th0 = (nu0 ** 4 * np.exp(Ghz_Kelvin * nu0 / _T_CMB_K) /
-               (np.exp(Ghz_Kelvin * nu0 / _T_CMB_K) - 1) ** 2)
+        th0 = (nu0 ** 4 * np.exp(Ghz_Kelvin * nu0 / T_CMB_K) /
+               (np.exp(Ghz_Kelvin * nu0 / T_CMB_K) - 1) ** 2)
         bandpass.th_sync = th_int / th0
         # Calculate bandpass center-of-mass (i.e. mean frequency).
         bandpass.nu_bar = np.dot(bandpass.dnu, bandpass.R[:, 0] * bandpass.R[:, 1]) / np.dot(bandpass.dnu,
@@ -141,9 +142,9 @@ class bicep_keck_2015(_CMBlikes):
             nu_bar = Ghz_Kelvin * bandpass.nu_bar
             # Conversion factor error due to bandcenter error.
             th_err = bandcenter_err ** 4 * \
-                     np.exp(Ghz_Kelvin * bandpass % nu_bar * (bandcenter_err - 1) / _T_CMB_K) \
-                         (np.exp(nu_bar / _T_CMB_K) - 1) ** 2 / \
-                     (np.exp(nu_bar * bandcenter_err / _T_CMB_K) - 1) ** 2
+                     np.exp(Ghz_Kelvin * bandpass % nu_bar * (bandcenter_err - 1) / T_CMB_K) \
+                         (np.exp(nu_bar / T_CMB_K) - 1) ** 2 / \
+                     (np.exp(nu_bar * bandcenter_err / T_CMB_K) - 1) ** 2
             # Greybody scaling error due to bandcenter error.
             gb_err = bandcenter_err ** (3 + beta) * \
                      (np.exp(nu_bar / Tdust) - 1) / \
@@ -166,9 +167,9 @@ class bicep_keck_2015(_CMBlikes):
         if bandcenter_err != 1:
             nu_bar = Ghz_Kelvin * bandpass.nu_bar
             th_err = bandcenter_err ** 4 * \
-                     np.exp(nu_bar * (bandcenter_err - 1) / _T_CMB_K) * \
-                     (np.exp(nu_bar / _T_CMB_K) - 1) ** 2 / \
-                     (np.exp(nu_bar * bandcenter_err / _T_CMB_K) - 1) ** 2
+                     np.exp(nu_bar * (bandcenter_err - 1) / T_CMB_K) * \
+                     (np.exp(nu_bar / T_CMB_K) - 1) ** 2 / \
+                     (np.exp(nu_bar * bandcenter_err / T_CMB_K) - 1) ** 2
             pl_err = bandcenter_err ** (2 + beta)
         else:
             pl_err = 1

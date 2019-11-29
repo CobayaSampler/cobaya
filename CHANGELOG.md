@@ -28,12 +28,6 @@
 - changed use_planck_names to more general use_renames etc.
 - Greatly reduced deepcopy time overhead in loglike evaluation/faster uniform prior
 
-## TODO specifically for Jesus
- - had to change test chi2/tolerance and some classy things for some travis to pass, need checking
- - "alias" in polychord.yaml is never used anywhere?
- - handle TCMB consistently in classy?
- - convention for parameter/value ordering - does class_options/inheritance cause possible issues?
- - are there areas not covered by tests that need checking?
 ## TODO 
  - update example notebook to match example in paper (+ updates)
  - already added get_version(): should add as version trace dump with output files. Where?

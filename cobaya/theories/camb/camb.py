@@ -237,10 +237,8 @@ class camb(BoltzmannBase):
                           " (b) install the Python interface globally with\n"
                           "     'pip install -e /path/to/camb [--user]'")
         except VersionCheckError as e:
-            raise LoggedError(self.log, e.msg)
-
+            raise LoggedError(self.log, str(e))
         super(camb, self).initialize()
-
         self.extra_attrs = {"Want_CMB": False, "Want_cl_2D_array": False,
                             'WantCls': False}
         # Derived parameters that may not have been requested, but will be necessary later
