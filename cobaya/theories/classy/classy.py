@@ -155,8 +155,8 @@ Collector = namedtuple("collector",
                        ["method", "args", "args_names", "kwargs", "arg_array", "post"])
 Collector.__new__.__defaults__ = (None, [], [], {}, None, None)
 
-# default non linear code
-non_linear_default_code = "halofit"
+# default non linear code -- same as CAMB
+non_linear_default_code = "hmcode"
 
 
 class classy(BoltzmannBase):
@@ -169,7 +169,6 @@ class classy(BoltzmannBase):
         # If path not given, try using general path to modules
         if not self.path and self.path_install:
             self.path = self.get_path(self.path_install)
-
         if self.path:
             self.log.info("Importing *local* classy from " + self.path)
             classy_build_path = os.path.join(self.path, "python", "build")
@@ -204,7 +203,6 @@ class classy(BoltzmannBase):
         self.classy = Class()
         # Propagate errors up
         global CosmoComputationError, CosmoSevereError
-
         super(classy, self).initialize()
         # Add general CLASS stuff
         self.extra_args["output"] = self.extra_args.get("output", "")
@@ -252,9 +250,12 @@ class classy(BoltzmannBase):
                 self.extra_args["output"] += " mPk"
                 v = deepcopy(v)
                 self.add_P_k_max(v.pop("k_max"), units="1/Mpc")
+                # NB: Actually, only the max z is used, and the actual sampling in z
+                # for computing P(k,z) is controlled by `perturb_sampling_stepsize`
+                # (default: 0.1). But let's leave it like this in case this changes
+                # in the future.
                 self.add_z_for_matter_power(v.pop("z"))
-                # Use halofit by default if non-linear requested but no code specified
-                if v.get("nonlinear", False) and "non linear" not in self.extra_args:
+                if v["nonlinear"] and "non linear" not in self.extra_args:
                     self.extra_args["non linear"] = non_linear_default_code
                 for pair in v.pop("vars_pairs", [("delta_tot", "delta_tot")]):
                     if pair == ("delta_tot", "delta_tot"):
@@ -293,15 +294,6 @@ class classy(BoltzmannBase):
                              "'non_linear: halofit|hmcode|...' in classy's 'extra_args'.")
         # Cleanup of products string
         self.extra_args["output"] = " ".join(set(self.extra_args["output"].split()))
-        # If no output requested, remove arguments that produce an error
-        # (e.g. complaints if halofit requested but no Cl's computed.)
-        # Needed for facilitating post-processing
-        if not self.extra_args["output"]:
-            for k in ["non linear"]:
-                if k in self.extra_args:
-                    self.log.info("Ignoring {%s: %r}, since no products requested.",
-                                  k, self.extra_args[k])
-                    self.extra_args.pop(k)
         # Finally, check that there are no repeated parameters between input and extra
         if set(self.input_params).intersection(set(self.extra_args)):
             raise LoggedError(
@@ -340,6 +332,12 @@ class classy(BoltzmannBase):
         return p
 
     def set(self, params_values_dict):
+        # If no output requested, remove arguments that produce an error
+        # (e.g. complaints if halofit requested but no Cl's computed.)
+        # Needed for facilitating post-processing
+        if not self.extra_args["output"]:
+            for k in ["non linear"]:
+                self.extra_args.pop(k)
         # Prepare parameters to be passed: this-iteration + extra
         args = {self.translate_param(p): v for p, v in params_values_dict.items()}
         args.update(self.extra_args)

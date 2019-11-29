@@ -4,10 +4,12 @@ import pytest
 
 from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE
 from .common_cosmo import body_of_test
+from cobaya.cosmo_input import base_precision
 
 best_fit = deepcopy(params_lowTEB_highTTTEEE)
-info_camb = {"camb": {"extra_args": {"halofit_version": "mead"}}}
-info_classy = {"classy": {"extra_args": {"non linear": "hmcode"}}}
+
+info_camb = {"camb": {"extra_args": base_precision["camb"]}}
+info_classy = {"classy": {"extra_args": base_precision["classy"]}}
 
 
 def test_cosmo_des_y1_shear_camb(modules, info_theory=info_camb):
@@ -62,7 +64,7 @@ def test_cosmo_des_y1_galaxy_galaxy_classy(modules, info_theory=info_classy):
 
 ref_chi2 = {"shear": 242.825, "clustering": 100.997,
             "galaxy_galaxy": 208.005, "joint": 570.428}
-tolerance = 0.2 + 2  # TODO: check, big number here
+tolerance = 0.2
 
 test_params_shear = {
     # wl_photoz_errors

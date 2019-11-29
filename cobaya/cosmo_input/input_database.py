@@ -420,10 +420,11 @@ reionization = odict([
         _params: odict([])}], ])
 
 # EXPERIMENTS ############################################################################
-cmb_precision = {_camb: {"halofit_version": "mead",
-                         "bbn_predictor": "PArthENoPE_880.2_standard.dat",
-                         "lens_potential_accuracy": 1},
-                 _classy: {"non linear": "hmcode", "hmcode_min_k_max": 20}}
+base_precision = {_camb: {"halofit_version": "mead"},
+                  _classy: {"non linear": "hmcode", "hmcode_min_k_max": 20}}
+cmb_precision = deepcopy(base_precision)
+cmb_precision[_camb].update({"bbn_predictor": "PArthENoPE_880.2_standard.dat",
+                             "lens_potential_accuracy": 1})
 cmb_sampler_recommended = {"mcmc": {"drag": True, "proposal_scale": 1.9}}
 
 like_cmb = odict([
@@ -535,22 +536,26 @@ like_des = odict([
     [_none, {}],
     ["des_y1_clustering", {
         _desc: "Galaxy clustering from DES Y1",
-        kinds.theory: {_camb: None, _classy: None},
+        kinds.theory: {theo: {_extra_args: base_precision[theo]}
+                       for theo in [_camb, _classy]},
         kinds.likelihood: odict([
             ["des_y1.clustering", None]])}],
     ["des_y1_galaxy_galaxy", {
         _desc: "Galaxy-galaxy lensing from DES Y1",
-        kinds.theory: {_camb: None, _classy: None},
+        kinds.theory: {theo: {_extra_args: base_precision[theo]}
+                       for theo in [_camb, _classy]},
         kinds.likelihood: odict([
             ["des_y1.galaxy_galaxy", None]])}],
     ["des_y1_shear", {
         _desc: "Cosmic shear data from DES Y1",
-        kinds.theory: {_camb: None, _classy: None},
+        kinds.theory: {theo: {_extra_args: base_precision[theo]}
+                       for theo in [_camb, _classy]},
         kinds.likelihood: odict([
             ["des_y1.shear", None]])}],
     ["des_y1_joint", {
         _desc: "Combination of galaxy clustering and weak lensing data from DES Y1",
-        kinds.theory: {_camb: None, _classy: None},
+        kinds.theory: {theo: {_extra_args: base_precision[theo]}
+                       for theo in [_camb, _classy]},
         kinds.likelihood: odict([
             ["des_y1.joint", None]])}],
 ])
