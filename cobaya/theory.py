@@ -204,7 +204,7 @@ class Theory(CobayaComponent):
             try:
                 if self.calculate(state, want_derived, **params_values_dict) is False:
                     return False
-            except LoggedError:
+            except (LoggedError, KeyboardInterrupt, SystemExit):
                 raise
             except Exception as e:
                 if self.stop_at_error:

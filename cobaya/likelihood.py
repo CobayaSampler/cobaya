@@ -100,6 +100,8 @@ class Likelihood(Theory, LikelihoodInterface):
         derived = {} if want_derived else None
         try:
             state["logp"] = self.logp(_derived=derived, **params_values_dict)
+        except (KeyboardInterrupt, SystemExit):
+            raise
         except Exception as e:
             if not self.stop_at_error:
                 state["logp"] = -np.inf

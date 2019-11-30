@@ -125,11 +125,12 @@ def check_module_version(module, min_version=None):
             raise LoggedError(log, "packaging not found, install with "
                                    "'pip install packaging'")
         else:
-            if version.parse(module.__version__) < version.parse(min_version):
+            if not hasattr(module, "__version__") or \
+                    version.parse(module.__version__) < version.parse(min_version):
                 raise VersionCheckError(
                     "module %s at %s, is version %s but require %s or higher" %
                     (module.__name__, os.path.dirname(module.__file__),
-                     module.__version__, min_version))
+                     getattr(module, "__version__", "(non-given)"), min_version))
 
 
 def load_module(name, package=None, path=None, min_version=None):
@@ -455,6 +456,7 @@ def _fast_uniform_logpdf_array(self, x):
     return np.where(np.logical_and(x_ >= self.kwds["loc"], x_ <= self._cobaya_max),
                     self._cobaya_mlogscale, -np.inf)
 
+
 def _fast_uniform_logpdf(self, x):
     """WARNING: logpdf(nan) = -inf"""
     if not hasattr(self, "_cobaya_mlogscale"):
@@ -465,6 +467,7 @@ def _fast_uniform_logpdf(self, x):
         return self._cobaya_mlogscale
     else:
         return -np.inf
+
 
 def _fast_norm_logpdf(self, x):
     """WARNING: logpdf(nan) = -inf"""
