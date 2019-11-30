@@ -291,9 +291,11 @@ class camb(BoltzmannBase):
                 self.needs_perts = True
                 self.extra_attrs["Want_CMB"] = True
                 self.extra_attrs["WantCls"] = True
-                self.non_linear_lens = True
-                if "pp" in cls and not self.extra_args.get("lens_potential_accuracy"):
+                if "pp" in cls and self.extra_args.get(
+                        "lens_potential_accuracy") is None:
                     self.extra_args["lens_potential_accuracy"] = 1
+                self.non_linear_lens = self.extra_args.get("lens_potential_accuracy",
+                                                           1) >= 1
                 if set(cls).intersection({"pt", "pe", "tp", "ep"}):
                     self._needs_lensing_cross = True
                 if 'TCMB' not in self.derived_extra:
