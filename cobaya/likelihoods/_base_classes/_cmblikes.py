@@ -25,6 +25,11 @@ from cobaya.likelihoods._base_classes import _DataSetLikelihood
 
 class _CMBlikes(_DataSetLikelihood):
 
+    def initialize(self):
+        super(_CMBlikes, self).initialize()
+        # Set data type for aggregated chi2 (case sensitive)
+        self.type = "CMB"
+
     def get_requirements(self):
         # State requisites to the theory code
         requested_cls = [self.field_names[i] + self.field_names[j]

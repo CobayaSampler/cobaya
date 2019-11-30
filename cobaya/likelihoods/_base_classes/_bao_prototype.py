@@ -218,6 +218,8 @@ class _bao_prototype(_InstallableLikelihood):
                         data_file_path) + "Check your paths.")
             self.logpdf = lambda x: (lambda x_: -0.5 * x_.dot(self.invcov).dot(x_))(
                 x - self.data["value"].values)
+        # Set data type for aggregated chi2 (case sensitive)
+        self.type = "BAO"
 
     def get_requirements(self):
         # Requisites

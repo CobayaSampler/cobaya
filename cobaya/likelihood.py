@@ -30,6 +30,7 @@ import traceback
 from time import sleep
 import numpy as np
 import inspect
+import six
 
 # Local
 from cobaya.conventions import kinds, _external, _module_path
@@ -63,6 +64,15 @@ class Likelihood(Theory, LikelihoodInterface):
     """Likelihood base class. Extends from :class:`LikelihoodInterface` and the general
     :class:`theory.Theory` class by adding functions to return likelihoods functions
     (logp function for a given point)."""
+
+    def __init__(self, info={}, name=None, timing=None, path_install=None,
+                 initialize=True, standalone=True):
+        super(Likelihood, self).__init__(info, name=name, timing=timing,
+                                         path_install=path_install, initialize=initialize,
+                                         standalone=standalone)
+        # Make sure `types` is a list of data types, for aggregated chi2
+        self.type = (lambda x: [x] if isinstance(x, six.string_types) else x)(
+            getattr(self, "type", []))
 
     @property
     def theory(self):

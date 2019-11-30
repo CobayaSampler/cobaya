@@ -208,20 +208,22 @@ class Model(HasLogger):
                 self.log.debug(
                     "Calculation failed, skipping rest of calculations ")
                 break
-
             if return_derived:
                 derived_dict.update(component.get_current_derived())
-
+            # Add chi2's to derived parameters
             if hasattr(component, "get_current_logp"):
                 loglikes[index - n_theory] = component.get_current_logp()
                 if return_derived:
                     derived_dict[_chi2 + _separator +
                                  component.get_name().replace(".", "_")] \
                         = -2 * loglikes[index - n_theory]
-
+                    for this_type in getattr(component, "type", []):
+                        aggr_chi2_name = _chi2 + _separator + this_type
+                        if not aggr_chi2_name in derived_dict:
+                            derived_dict[aggr_chi2_name] = 0
+                        derived_dict[aggr_chi2_name] += -2 * loglikes[index - n_theory]
         if make_finite:
             loglikes = np.nan_to_num(loglikes)
-
         if return_derived:
             # Turn the derived params dict into a list and return
             if not compute_success:
@@ -229,7 +231,6 @@ class Model(HasLogger):
             else:
                 derived_list = [derived_dict[p] for p in self.output_params]
             return loglikes, derived_list
-
         return loglikes
 
     def loglikes(self, params_values=None, return_derived=True, make_finite=False,

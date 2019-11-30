@@ -238,6 +238,8 @@ class _sn_prototype(_DataSetLikelihood):
                     self.invcovs[i] = self.inverse_covariance_matrix(alpha, beta)
         elif not self.alphabeta_covmat:
             self.inverse_covariance_matrix()
+        # Set data type for aggregated chi2 (case sensitive)
+        self.type = "SN"
 
     def get_requirements(self):
         # State requisites to the theory code
