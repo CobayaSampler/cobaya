@@ -115,11 +115,6 @@ params:
     latex: '{\rm{Age}}/\mathrm{Gyr}'
   rdrag:
     latex: r_\mathrm{drag}
-  chi2__CMB:
-    derived: 'lambda chi2__planck_2018_lowl_TT, chi2__planck_2018_lowl_EE, chi2__planck_2018_highl_plik_TTTEEE,
-      chi2__planck_2018_lensing_clik: sum([chi2__planck_2018_lowl_TT, chi2__planck_2018_lowl_EE,
-      chi2__planck_2018_highl_plik_TTTEEE, chi2__planck_2018_lensing_clik])'
-    latex: \chi^2_\mathrm{CMB}
 sampler:
   mcmc:
     covmat: auto

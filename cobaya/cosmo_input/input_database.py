@@ -18,7 +18,7 @@ from copy import deepcopy
 import os
 
 # Local
-from cobaya.conventions import kinds, partag as p, _params, _chi2, _separator
+from cobaya.conventions import kinds, partag as p, _params
 
 _camb = "camb"
 _classy = "classy"
@@ -504,14 +504,6 @@ for name, m in like_cmb.items():
 #    "keq":         {"latex": r"k_\mathrm{eq}"},
 #    "thetaeq":     {"latex": r"100\theta_\mathrm{eq}"},
 #    "thetarseq":   {"latex": r"100\theta_\mathrm{s,eq}"},
-for combination, info in like_cmb.items():
-    if info:
-        likes = ", ".join([_chi2 + _separator + like.replace(".", "_")
-                           for like in info[kinds.likelihood]])
-        info[_params].update(odict([
-            ["chi2__CMB",
-             odict([[p.derived, "lambda %s: sum([%s])" % (likes, likes)],
-                    [p.latex, r"\chi^2_\mathrm{CMB}"]])]]))
 
 like_bao = odict([
     [_none, {}],
@@ -523,14 +515,6 @@ like_bao = odict([
             ["bao.sdss_dr7_mgs", None],
             ["bao.sdss_dr12_consensus_bao", None]])}],
 ])
-for combination, info in like_bao.items():
-    if info:
-        likes = ", ".join([_chi2 + _separator + like.replace(".", "_")
-                           for like in info[kinds.likelihood]])
-        info[_params] = odict([
-            ["chi2__BAO",
-             odict([[p.derived, "lambda %s: sum([%s])" % (likes, likes)],
-                    [p.latex, r"\chi^2_\mathrm{BAO}"]])]])
 
 like_des = odict([
     [_none, {}],

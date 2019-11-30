@@ -99,6 +99,8 @@ class _planck_clik_prototype(Likelihood, HasDefaults):
                            "vs non-polarised 'lite' likelihoods. See error info below:")
             raise
         self.l_maxs = self.clik.get_lmax()
+        # Set data type for aggregated chi2 (case sensitive)
+        self.type = "CMB"
 
     def initialize_with_params(self):
         # Check that the parameters are the right ones

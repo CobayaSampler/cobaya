@@ -28,16 +28,6 @@
 - changed use_planck_names to more general use_renames etc.
 - Greatly reduced deepcopy time overhead in loglike evaluation, faster uniform prior and sample collection
 
-## TODO 
- - update example notebook to match example in paper (+ updates)
- - update setting for model.overhead
- - already added get_version(): should add as version trace dump with output files. Where?
- - let classes do all defaults combining; allow separate like instantiation + use equivalent to loading in cobaya
- - move sampler/plik install into class methods
- - support "parameterization" option of theory .yaml to specify parameter yaml variants?
- - require py 3.7+? remove all six, odict, copy(list)..
- - in the docs "Bases" (and UML diagram) not hyperlinked correctly (not sure how to fix)
-
 ### General
 
 - Some significant internal refactoring to tidy up some code and make it easier to make

@@ -51,6 +51,8 @@ class _H0_prototype(Likelihood):
 
     def initialize(self):
         self.norm = norm(loc=self.H0, scale=self.H0_std)
+        # Set data type for aggregated chi2 (case sensitive)
+        self.type = "H0"
 
     def get_requirements(self):
         return {'H0': None}
