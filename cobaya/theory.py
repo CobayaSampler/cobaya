@@ -151,13 +151,13 @@ class Theory(CobayaComponent):
         params = getattr(self, _params, None)
         if params:
             return [k for k, v in params.items() if
-                    hasattr(v, 'get') and v.get('derived')]
+                    hasattr(v, 'get') and v.get('derived') is True]
         else:
             return []
 
     def get_allow_agnostic(self):
         """
-        Whether it is allowed to pass all unassigned input and output parameters to this
+        Whether it is allowed to pass all unassigned input parameters to this
         component (True) or whether parameters must be explicitly specified (False).
 
         :return: True or False
