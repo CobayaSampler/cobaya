@@ -30,7 +30,7 @@ from cobaya.tools import warn_deprecation, deepcopy_where_possible
 from cobaya.post import post
 
 
-def run(info):
+def run(info, stop_at_error=None):
     assert hasattr(info, "keys"), (
         "The first argument must be a dictionary with the info needed for the run. "
         "If you were trying to pass the name of an input file instead, "
@@ -41,6 +41,7 @@ def run(info):
     import getdist
     logger_setup(info.get(_debug), info.get(_debug_file))
     import logging
+    info_stop = info.get("stop_at_error", False)
     # Initialize output, if required
     resume, force = info.get(_resume), info.get(_force)
     # Create the updated input information, including defaults for each module.
@@ -75,9 +76,10 @@ def run(info):
     output.dump_info(info, updated_info)
     # Initialize the posterior and the sampler
     with Model(updated_info[_params], updated_info[kinds.likelihood],
-               updated_info.get(_prior),
-               updated_info.get(kinds.theory), path_install=info.get(_path_install),
-               timing=updated_info.get(_timing), allow_renames=False) as model:
+               updated_info.get(_prior), updated_info.get(kinds.theory),
+               path_install=info.get(_path_install), timing=updated_info.get(_timing),
+               allow_renames=False,
+               stop_at_error=info_stop if stop_at_error is None else stop_at_error) as model:
         # Update the updated info with the parameter routes
         keys = ([kinds.likelihood, kinds.theory]
                 if kinds.theory in updated_info else [kinds.likelihood])

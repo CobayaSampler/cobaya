@@ -37,6 +37,10 @@ class LoggedError(Exception):
         super(LoggedError, self).__init__(msg, **kwargs)
 
 
+always_stop_exceptions = (LoggedError, KeyboardInterrupt, AssertionError,
+                          SystemExit, NameError, SyntaxError, AttributeError)
+
+
 def safe_exit():
     """Closes all MPI process, if more than one present."""
     if get_mpi_size() > 1:

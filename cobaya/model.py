@@ -76,7 +76,7 @@ def _dict_equal(d1, d2):
     return d1 == d2
 
 
-def get_model(info):
+def get_model(info, stop_at_error=None):
     assert hasattr(info, "keys"), (
         "The first argument must be a dictionary with the info needed for the model. "
         "If you were trying to pass the name of an input file instead, "
@@ -88,6 +88,7 @@ def get_model(info):
     info = deepcopy_where_possible(info)
     # Create the updated input information, including defaults for each module.
     logger_setup(info.pop(_debug, _debug_default), info.pop(_debug_file, None))
+    info_stop = info.pop("stop_at_error", False)
     ignored_info = {}
     for k in list(info):
         if k not in [_params, kinds.likelihood, _prior, kinds.theory, _path_install,
@@ -104,7 +105,8 @@ def get_model(info):
     # Initialize the parameters and posterior
     return Model(updated_info[_params], updated_info[kinds.likelihood],
                  updated_info.get(_prior), updated_info.get(kinds.theory),
-                 path_install=info.get(_path_install), timing=updated_info.get(_timing))
+                 path_install=info.get(_path_install), timing=updated_info.get(_timing),
+                 stop_at_error=info_stop if stop_at_error is None else stop_at_error)
 
 
 class Model(HasLogger):
@@ -118,7 +120,7 @@ class Model(HasLogger):
     """
 
     def __init__(self, info_params, info_likelihood, info_prior=None, info_theory=None,
-                 path_install=None, timing=None, allow_renames=True,
+                 path_install=None, timing=None, allow_renames=True, stop_at_error=False,
                  post=False, prior_parameterization=None):
         self.set_logger(lowercase=True)
         self._updated_info = {
@@ -143,6 +145,10 @@ class Model(HasLogger):
         info_likelihood = self._updated_info[kinds.likelihood]
         self.likelihood = LikelihoodCollection(info_likelihood, theory=self.theory,
                                                path_install=path_install, timing=timing)
+
+        if stop_at_error:
+            for component in chain(self.likelihood.values(), self.theory.values()):
+                component.stop_at_error = stop_at_error
 
         # Assign input/output parameters
         self._assign_params(info_likelihood, info_theory)

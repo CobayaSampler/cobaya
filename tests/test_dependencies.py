@@ -210,14 +210,13 @@ class Like4(Likelihood):
 
 info2 = {'likelihood': {'like': Like2},
          'params': {'Ain': 5},
-         'debug': True}
+         'debug': True, 'stop_at_error': True}
 
 
 def _test_loglike2(theories):
     for th in theories, theories[::-1]:
         info2['theory'] = OrderedDict(th)
         model = get_model(info2)
-        print(model.requested())
         assert model.loglike()[0] == 20., "fail conditional dependency for %s" % th
 
 

@@ -27,6 +27,7 @@
 - Boltzmann now consistent with varying TCMB.
 - changed use_planck_names to more general use_renames etc.
 - Greatly reduced deepcopy time overhead in loglike evaluation, faster uniform prior and sample collection
+- Global stop_at_error option to stop at error in any component
 
 ### General
 

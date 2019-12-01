@@ -1,3 +1,6 @@
+# to check
+## log.always_stop_exceptions for what exceptions to not stop_at_error and what not. 
+
 ## Update example notebook to match example in paper (+ updates)
 ## Update setting for model.overhead
 ## Already added get_version(): should add as version trace dump with output files. Where?
@@ -10,3 +13,5 @@
 ## Finish implementation of aggregated-by-data-type chi2
 ## Faster Collections for MCMC: numpy cache for merging OnePoint into Collection
 - `_out_update` method would take care of flushing into the Pandas table.
+## check uniform bounds priors as array before calculating others
+
