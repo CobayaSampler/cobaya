@@ -103,6 +103,7 @@ def _test_overhead_timing():
     import pstats
     from cProfile import Profile
     import six
+    from cobaya.samplers.mcmc import proposal  # one-time numba compile out of profiling
 
     LikeTest = _make_gaussian_like(15)
     info = {'likelihood': {'like': LikeTest}, 'debug': False, 'sampler': {
@@ -120,4 +121,3 @@ def _test_overhead_timing():
     ps.sort_stats('cumtime')
     ps.print_stats(10)
     print(s.getvalue())
-    res = s.getvalue().split("\n")

@@ -518,7 +518,6 @@ class Model(HasLogger):
 
         requirement_providers = {}
         has_more_requirements = True
-        loop = 1
         while has_more_requirements:
             # list of dictionary of needs for each component
             needs = {c: [] for c in components}
@@ -575,11 +574,13 @@ class Model(HasLogger):
                         if conditional_requirements:
                             has_more_requirements = True
                             requires += conditional_requirements
-                elif loop == 1:  # always call at least once (#TODO is this needed?)
-                    component.needs()
-            loop += 1
             # set component compute order and raise error if circular dependence
             self._set_component_order(components, dependencies)
+
+        # always call needs at least once (#TODO is this needed? e.g. for post)
+        for component in components:
+            if not self._needs[component]:
+                component.needs()
 
         if self._unassigned_input:
             self._unassigned_input.difference_update(*direct_param_dependence.values())

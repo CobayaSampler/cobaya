@@ -14,4 +14,6 @@
 ## Faster Collections for MCMC: numpy cache for merging OnePoint into Collection
 - `_out_update` method would take care of flushing into the Pandas table.
 ## check uniform bounds priors as array before calculating others
+## Update get_available_modules to handle classes
+## Allow improper prior, e.g. 0-inf?
 

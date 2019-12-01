@@ -402,6 +402,18 @@ class Prior(HasLogger):
             except AttributeError:
                 raise LoggedError(self.log, "No bounds defined for parameter '%s' "
                                             "(maybe not a scipy 1d pdf).", p)
+        self._uniform_indices = np.array(
+            [i for i, pdf in enumerate(self.pdf) if pdf.dist.name == 'uniform'],
+            dtype=int)
+        self._non_uniform_indices = np.array(
+            [i for i in range(len(self.pdf)) if i not in self._uniform_indices],
+            dtype=int)
+        self._non_uniform_logpdf = [self.pdf[i].logpdf for i in self._non_uniform_indices]
+        self._upper_limits = self._bounds[:, 1].copy()
+        self._lower_limits = self._bounds[:, 0].copy()
+        self._uniform_logp = -np.sum(np.log(self._upper_limits[self._uniform_indices] -
+                                            self._lower_limits[self._uniform_indices]))
+
         # Process the external prior(s):
         self.external = odict()
         for name in (info_prior if info_prior else {}):
@@ -518,8 +530,14 @@ class Prior(HasLogger):
            in the same order.
         """
         self.log.debug("Evaluating prior at %r", x)
-        logps = [sum([pdf.logpdf(xi) for pdf, xi in
-                      zip(self.pdf, x)])] + self.logps_external(x)
+        if all(x <= self._upper_limits) and all(x >= self._lower_limits):
+            logps = [self._uniform_logp + sum([logpdf(xi) for logpdf, xi in
+                                               zip(self._non_uniform_logpdf,
+                                                   x[self._non_uniform_indices])])] \
+                    + self.logps_external(x)
+        else:
+            logps = [-np.inf] * (1 + len(self.external))
+
         self.log.debug("Got logpriors = %r", logps)
         return logps
 
