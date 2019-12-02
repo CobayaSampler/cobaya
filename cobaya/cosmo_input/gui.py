@@ -14,10 +14,9 @@ from cobaya.yaml import yaml_dump
 from cobaya.cosmo_input import input_database
 from cobaya.cosmo_input.create_input import create_input
 from cobaya.bib import prettyprint_bib, get_bib_info, get_bib_module
-from cobaya.tools import warn_deprecation, get_available_modules
+from cobaya.tools import warn_deprecation, get_available_internal_class_names
 from cobaya.input import get_default_info
 from cobaya.conventions import subfolders, kinds
-
 
 # per-platform settings for correct high-DPI scaling
 if platform.system() == "Linux":
@@ -27,7 +26,6 @@ else:  # Windows/Mac
     font_size = "9pt"
     set_attributes = ["AA_EnableHighDpiScaling"]
 
-
 try:
     from PySide.QtGui import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
     from PySide.QtGui import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
@@ -35,15 +33,18 @@ try:
     from PySide.QtCore import Slot, QSize, QSettings
 except ImportError:
     try:
-        from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
-        from PySide2.QtWidgets import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
-        from PySide2.QtWidgets import QFileDialog, QCheckBox, QLabel, QMenuBar, QAction, QDialog
+        from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, \
+            QGroupBox
+        from PySide2.QtWidgets import QScrollArea, QTabWidget, QComboBox, QPushButton, \
+            QTextEdit
+        from PySide2.QtWidgets import QFileDialog, QCheckBox, QLabel, QMenuBar, QAction, \
+            QDialog
         from PySide2.QtCore import Slot, Qt, QCoreApplication, QSize, QSettings
+
         for attribute in set_attributes:
             QApplication.setAttribute(getattr(Qt, attribute))
     except ImportError:
         QWidget, Slot = object, (lambda: lambda *x: None)
-
 
 # Quit with C-c
 signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -66,11 +67,12 @@ class MainWindow(QWidget):
         self.setStyleSheet("* {font-size:%s;}" % font_size)
         # Menu bar for defaults
         self.menubar = QMenuBar()
-        defaults_menu = self.menubar.addMenu('&Show defaults and bibliography for a module...')
+        defaults_menu = self.menubar.addMenu(
+            '&Show defaults and bibliography for a module...')
         menu_actions = {}
         for kind in kinds:
             submenu = defaults_menu.addMenu(subfolders[kind])
-            modules = get_available_modules(kind)
+            modules = get_available_internal_class_names(kind)
             menu_actions[kind] = {}
             for module in modules:
                 menu_actions[kind][module] = QAction(module, self)
@@ -293,7 +295,8 @@ class DefaultsDialog(QWidget):
             self.display_tabs.addTab(self.display[k], k)
         self.layout.addWidget(self.display_tabs)
         # Fill text
-        defaults_txt = get_default_info(module, kind, return_yaml=True, fail_if_not_found=True)
+        defaults_txt = get_default_info(module, kind, return_yaml=True,
+                                        fail_if_not_found=True)
         from cobaya.yaml import yaml_load
         self.display["python"].setText(
             "from collections import OrderedDict\n\ninfo = " +

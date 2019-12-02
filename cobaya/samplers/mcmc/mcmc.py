@@ -779,16 +779,16 @@ class mcmc(Sampler):
             np.savetxt(covmat_filename, self.proposer.get_covariance(), header=" ".join(
                 list(self.model.parameterization.sampled_params())))
             checkpoint_info = {kinds.sampler: {self.get_name(): odict([
-                ["converged", bool(self.converged)],
-                ["Rminus1_last", self.Rminus1_last],
-                ["proposal_scale", self.proposer.get_scale()],
-                ["blocks", self.blocks],
-                ["oversampling_factors", self.oversampling_factors],
-                ["i_last_slow_block", self.i_last_slow_block],
-                ["burn_in", (self.burn_in  # initial: repeat burn-in if not finished
+                ("converged", bool(self.converged)),
+                ("Rminus1_last", self.Rminus1_last),
+                ("proposal_scale", self.proposer.get_scale()),
+                ("blocks", self.blocks),
+                ("oversampling_factors", self.oversampling_factors),
+                ("i_last_slow_block", self.i_last_slow_block),
+                ("burn_in", (self.burn_in  # initial: repeat burn-in if not finished
                              if not self.n() and self.burn_in_left else
-                             "d")],  # to avoid overweighting last point of prev. run
-                ["mpi_size", get_mpi_size()]])}}
+                             "d")),  # to avoid overweighting last point of prev. run
+                ("mpi_size", get_mpi_size())])}}
             yaml_dump_file(checkpoint_filename, checkpoint_info, error_if_exists=False)
             if not self.progress.empty:
                 with open(self.progress_filename(), "a") as progress_file:

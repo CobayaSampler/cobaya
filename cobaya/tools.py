@@ -87,7 +87,7 @@ def get_kind(name, fail_if_not_found=True):
     try:
         return next(
             k for k in kinds
-            if name in get_available_modules(k))
+            if name in get_available_internal_class_names(k))
     except StopIteration:
         if fail_if_not_found:
             raise LoggedError(log, "Could not determine kind of module %s", name)
@@ -212,41 +212,51 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
                 log, "%s '%s' not found. Maybe you meant one of the following "
                      "(capitalization is important!): %s",
                 kind.capitalize(), name,
-                fuzzy_match(name, get_available_modules(kind), n=3))
+                fuzzy_match(name, get_available_internal_class_names(kind), n=3))
         else:
             log.error("There was a problem when importing %s '%s':", kind, name)
             raise exc_info[1]
 
 
-def get_available_modules(kind):
+def import_all_classes(path, pkg, subclass_of, hidden=False):
+    import pkgutil
+    result = set()
+    for (module_loader, name, ispkg) in pkgutil.iter_modules([path]):
+        if hidden or not name.startswith('_'):
+            module_name = pkg + '.' + name
+            m = load_module(module_name)
+            for class_name, cls in inspect.getmembers(m, inspect.isclass):
+                if issubclass(cls, subclass_of):
+                    if cls.__module__ == module_name:
+                        result.add(cls)
+            if ispkg:
+                result.update(import_all_classes(os.path.dirname(m.__file__), m.__name__,
+                                                 subclass_of, hidden))
+    return result
+
+
+def get_available_internal_classes(kind, hidden=False):
     """
-    Gets all modules' names of a given kind.
+    Gets all clases names of a given kind.
     """
-    folders = sorted([
-        f for f in os.listdir(os.path.join(os.path.dirname(__file__), subfolders[kind]))
-        if (not f.startswith("_") and not f.startswith(".") and
-            os.path.isdir(os.path.join(os.path.dirname(__file__), subfolders[kind], f)))])
-    with_nested = []
-    for f in folders:
-        dotpy_files = sorted([
-            fi for fi in os.listdir(
-                os.path.join(os.path.dirname(__file__), subfolders[kind], f))
-            if fi.lower().endswith(".py")])
-        # if *non-empty* __init__, assume it contains a single module named as the folder
-        try:
-            __init__filename = next(
-                p for p in dotpy_files if os.path.splitext(p)[0] == "__init__")
-            __init__with_path = os.path.join(
-                os.path.dirname(__file__), subfolders[kind], f, __init__filename)
-        except:
-            __init__filename = None
-        if __init__filename and os.path.getsize(__init__with_path):
-            with_nested += [f]
-        else:
-            dotpy_files = [fi for fi in dotpy_files if not fi.startswith("_")]
-            with_nested += [f + "." + os.path.splitext(dpyf)[0] for dpyf in dotpy_files
-                            if os.path.splitext(dpyf)[0] != f]
-    return with_nested
+
+    from cobaya.component import CobayaComponent
+    path = os.path.join(os.path.dirname(__file__), subfolders[kind])
+    return import_all_classes(path, 'cobaya.%s' % subfolders[kind], CobayaComponent,
+                              hidden)
+
+
+def get_all_available_internal_classes(hidden=False):
+    result = set()
+    for classes in [get_available_internal_classes(k, hidden) for k in kinds]:
+        result.update(classes)
+    return result
+
+
+def get_available_internal_class_names(kind, hidden=False):
+    return sorted(set(
+        cls.get_qualified_class_name() for cls in
+        get_available_internal_classes(kind, hidden)))
 
 
 def get_external_function(string_or_function, name=None):
@@ -455,6 +465,7 @@ def _fast_uniform_logpdf_array(self, x):
     return np.where(np.logical_and(x_ >= self.kwds["loc"], x_ <= self._cobaya_max),
                     self._cobaya_mlogscale, -np.inf)
 
+
 def _fast_uniform_logpdf(self, x):
     """WARNING: logpdf(nan) = -inf"""
     if not hasattr(self, "_cobaya_mlogscale"):
@@ -465,6 +476,7 @@ def _fast_uniform_logpdf(self, x):
         return self._cobaya_mlogscale
     else:
         return -np.inf
+
 
 def _fast_norm_logpdf(self, x):
     """WARNING: logpdf(nan) = -inf"""

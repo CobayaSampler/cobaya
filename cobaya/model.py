@@ -918,6 +918,6 @@ class Model(HasLogger):
         try:
             # TODO: get_auto_covmat has nothing to do with cosmology, move to model
             #  or somewhere else?
-            return self.theory.values[0].get_auto_covmat(params_info, likes_renames)
+            return list(self.theory.values)[0].get_auto_covmat(params_info, likes_renames)
         except:
             return None

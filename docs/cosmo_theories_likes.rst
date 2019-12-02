@@ -31,3 +31,10 @@ Cosmological theory code
 
 .. autoclass:: theories._cosmo.PowerSpectrumInterpolator
    :members:
+
+
+Cosmological theory code inheritance
+--------------------------------------
+
+.. inheritance-diagram:: cobaya._internal_classes.theory
+   :parts: 1

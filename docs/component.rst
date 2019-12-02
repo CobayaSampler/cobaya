@@ -25,7 +25,7 @@ Provider class
 
 
 HasDefaults class
----------------
+------------------
 
 .. autoclass:: input.HasDefaults
    :members:

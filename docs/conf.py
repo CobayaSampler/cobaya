@@ -40,6 +40,8 @@ extensions = [
     'sphinx.ext.graphviz'
 ]
 
+inheritance_graph_attrs = dict(rankdir="LR", size='""')
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates', 'theme_customisation']
 
