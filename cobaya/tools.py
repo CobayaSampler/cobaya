@@ -231,7 +231,7 @@ def import_all_classes(path, pkg, subclass_of, hidden=False):
                         result.add(cls)
             if ispkg:
                 result.update(import_all_classes(os.path.dirname(m.__file__), m.__name__,
-                                                 subclass_of))
+                                                 subclass_of, hidden))
     return result
 
 
@@ -244,6 +244,13 @@ def get_available_internal_classes(kind, hidden=False):
     path = os.path.join(os.path.dirname(__file__), subfolders[kind])
     return import_all_classes(path, 'cobaya.%s' % subfolders[kind], CobayaComponent,
                               hidden)
+
+
+def get_all_available_internal_classes(hidden=False):
+    result = set()
+    for classes in [get_available_internal_classes(k, hidden) for k in kinds]:
+        result.update(classes)
+    return result
 
 
 def get_available_internal_class_names(kind, hidden=False):
