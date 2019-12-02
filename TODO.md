@@ -1,4 +1,5 @@
 ## Update example notebook to match example in paper (+ updates)
+## Make numba a requirement?
 ## Update setting for model.overhead
 ## Already added get_version(): should add as version trace dump with output files. Where?
 ## Let classes do all defaults combining; allow separate like instantiation + use equivalent to loading in cobaya
@@ -10,3 +11,4 @@
 ## Finish implementation of aggregated-by-data-type chi2
 ## Faster Collections for MCMC: numpy cache for merging OnePoint into Collection
 - `_out_update` method would take care of flushing into the Pandas table.
+
