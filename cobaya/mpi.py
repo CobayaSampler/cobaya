@@ -77,13 +77,23 @@ def get_mpi_rank():
 
 
 # Aliases for simpler use
-def am_single_or_primary_process():
-    return not bool(get_mpi_rank())
+def am_single_or_primary_process(no_mpi=False):
+    """Returns true if primary process or MPI not available.
+
+    Use the no_mpi keyword to avoid checking for MPI via import, 
+    which can die ungracefully (e.g. on head nodes at NERSC).
+    """
+    if not no_mpi:
+        return not bool(get_mpi_rank())
+    else:
+        return True
 
 
-def more_than_one_process():
-    return bool(max(get_mpi_size(), 1) - 1)
-
+def more_than_one_process(no_mpi=False):
+    if not no_mpi:
+        return bool(max(get_mpi_size(), 1) - 1)
+    else:
+        return False
 
 def sync_processes():
     if get_mpi_size():
