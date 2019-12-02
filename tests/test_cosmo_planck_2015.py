@@ -18,6 +18,9 @@ cmb_precision["camb"].update({
     "halofit_version": "takahashi",
     "bbn_predictor": "BBN_fitting_parthenope"
 })
+cmb_precision["classy"].update({
+    "non linear": "halofit",
+})
 
 # Derived parameters not understood by CLASS
 # https://wiki.cosmos.esa.int/planckpla2015/images/b/b9/Parameter_tag_definitions_2015.pdf
