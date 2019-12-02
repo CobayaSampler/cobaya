@@ -36,5 +36,5 @@ Cosmological theory code
 Cosmological theory code inheritance
 --------------------------------------
 
-.. inheritance-diagram:: cobaya._internal_classes.theory
+.. inheritance-diagram:: cobaya.theories.all
    :parts: 1
