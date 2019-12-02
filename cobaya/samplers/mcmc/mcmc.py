@@ -34,12 +34,13 @@ from cobaya.yaml import yaml_dump_file
 
 
 class mcmc(Sampler):
-    ignore_at_resume = ["burn_in", "callback_function", "callback_every", "max_tries",
-                        "check_every", "output_every", "learn_proposal_Rminus1_max",
-                        "learn_proposal_Rminus1_max_early", "learn_proposal_Rminus1_min",
-                        "max_samples", "Rminus1_stop", "Rminus1_cl_stop",
-                        "Rminus1_cl_level", "covmat", "covmat_params", "proposal_scale",
-                        "Rminus1_last", "converged"]
+    ignore_at_resume = Sampler.ignore_at_resume + [
+        "burn_in", "callback_function", "callback_every", "max_tries",
+        "check_every", "output_every", "learn_proposal_Rminus1_max",
+        "learn_proposal_Rminus1_max_early", "learn_proposal_Rminus1_min",
+        "max_samples", "Rminus1_stop", "Rminus1_cl_stop",
+        "Rminus1_cl_level", "covmat", "covmat_params", "proposal_scale",
+        "Rminus1_last", "converged"]
 
     def initialize(self):
         """Initializes the sampler:

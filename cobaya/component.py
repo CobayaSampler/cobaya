@@ -1,6 +1,7 @@
 from cobaya.log import HasLogger
 from cobaya.input import HasDefaults
 from cobaya.log import LoggedError
+from cobaya.conventions import _version
 import numpy as np
 import time
 from collections import OrderedDict
@@ -52,6 +53,9 @@ class CobayaComponent(HasLogger, HasDefaults):
     Base class for a theory, likelihood or sampler with associated .yaml parameter file
     that can set attributes.
     """
+    # The next list of options is ignored then resuming or reusing an updated info.
+    # When defining it for subclasses, *append* to this list.
+    ignore_at_resume = [_version]
 
     def __init__(self, info={}, name=None, timing=None, path_install=None,
                  initialize=True, standalone=True):

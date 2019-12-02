@@ -38,6 +38,7 @@ _force = "force"
 _module_path = "python_path"
 _module_class_name = "class_name"
 _aliases = "aliases"
+_version = "version"
 
 ParTags = namedtuple('ParTags', ("prior", "ref", "proposal", "value", "dist", "drop",
                                  "derived", "latex", "renames"))

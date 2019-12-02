@@ -16,7 +16,7 @@ from collections import OrderedDict as odict
 from cobaya import __version__
 from cobaya.conventions import kinds, _prior, _params
 from cobaya.conventions import _path_install, _debug, _debug_file, _output_prefix
-from cobaya.conventions import _resume, _timing, _debug_default, _force, _post
+from cobaya.conventions import _resume, _timing, _debug_default, _force, _post, _version
 from cobaya.conventions import _yaml_extensions, _separator_files, _updated_suffix
 from cobaya.conventions import _modules_path_arg, _modules_path_env, _resume_default
 from cobaya.output import get_Output as Output
@@ -26,7 +26,7 @@ from cobaya.log import logger_setup
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info
 from cobaya.mpi import import_MPI, am_single_or_primary_process
-from cobaya.tools import warn_deprecation, deepcopy_where_possible
+from cobaya.tools import warn_deprecation, deepcopy_where_possible, recursive_update
 from cobaya.post import post
 
 
@@ -82,6 +82,11 @@ def run(info):
         keys = ([kinds.likelihood, kinds.theory]
                 if kinds.theory in updated_info else [kinds.likelihood])
         updated_info.update(odict([(k, model.info()[k]) for k in keys]))
+        # Add versions of components
+        updated_info = recursive_update(updated_info, dict(
+            [kind, dict([comp, {_version: version}]
+                        for comp, version in comp_info.items() if version)]
+            for kind, comp_info in model.get_version().items()))
         output.dump_info(None, updated_info, check_compatible=False)
         with get_sampler(
                 updated_info[kinds.sampler], model, output,

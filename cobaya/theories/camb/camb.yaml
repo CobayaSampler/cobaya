@@ -1,3 +1,6 @@
+# Specify a CAMB version, if desired
+version: null
+# Path to local CAMB, if desired
 path: null
 # Speed in evaluations/second
 speed: 0.3
