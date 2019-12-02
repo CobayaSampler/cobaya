@@ -205,7 +205,7 @@ of how to make a new likelihood class in an external Python package.
 Inheritance diagram for internal cosmology likelihoods
 -------------------------------------------------------
 
-.. inheritance-diagram:: cobaya._internal_classes.likelihood
+.. inheritance-diagram:: cobaya.likelihoods.all
     :parts: 1
     :private-bases:
     :top-classes: cobaya.likelihood.Likelihood
