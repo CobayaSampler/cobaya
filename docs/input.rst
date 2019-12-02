@@ -104,6 +104,9 @@ In this case, the new input will be compared to the existing one, and an error w
 
    Differences in options that do not affect the statistics will be ignored (e.g. parameter labels). In this case, the new ones will be used.
 
+.. note::
+
+   Resuming by invoking ``run`` interactively (inside a Python notebook/script), it is *safer* to pass it the **updated** info of the previous run, instead of the one passed to the first call (otherwise, e.g. version checks are not possible).
 
 An alternative way of resuming a sample *from the command line* is passing, instead of a ``yaml`` file, the ``output`` of an existing one:
 
