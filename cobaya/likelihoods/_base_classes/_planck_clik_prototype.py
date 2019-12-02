@@ -23,7 +23,7 @@ import six
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
 from cobaya.conventions import _path_install, kinds
-from cobaya.input import get_default_info, HasDefaults
+from cobaya.input import get_default_info
 from cobaya.install import pip_install, download_file
 from cobaya.tools import are_different_params_lists, create_banner
 
@@ -43,7 +43,7 @@ except NameError:
     FileNotFoundError = OSError
 
 
-class _planck_clik_prototype(Likelihood, HasDefaults):
+class _planck_clik_prototype(Likelihood):
 
     def initialize(self):
         if "2015" in self.get_name():

@@ -345,9 +345,6 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
     myname = inspect.stack()[0][3]
     ignore = set([]) if strict else {_debug, _debug_file, _resume, _force, _path_install}
     ignore = ignore.union(set(ignore_blocks or []))
-    ignore_params = (
-        set([]) if strict else {partag.latex, partag.renames, partag.ref, partag.proposal,
-                                "min", "max"})
     if set(info1).difference(ignore) != set(info2).difference(ignore):
         myprint(myname + ": different blocks or options: %r (old) vs %r (new)" % (
             set(info1).difference(ignore), set(info2).difference(ignore)))
@@ -355,72 +352,72 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
     for block_name in info1:
         if block_name in ignore:
             continue
-        block1, block2 = info1[block_name], info2[block_name]
+        block1 = deepcopy_where_possible(info1[block_name])
+        block2 = deepcopy_where_possible(info2[block_name])
+        # First, deal with root-level options (force, output, ...)
         if not hasattr(block1, "keys"):
             if block1 != block2:
                 myprint(myname + ": different option '%s'" % block_name)
                 return False
-        if block_name in [kinds.sampler, kinds.theory]:
-            # Internal order does NOT matter
-            if set(block1) != set(block2):
-                myprint(myname + ": different [%s]" % block_name)
-                return False
-            # Anything to ignore?
-            for k in block1:
-                try:
-                    module_path = block1[k].pop(_module_path, None) \
-                        if isinstance(block1[k], odict) else None
-                    cls = get_class(k, block_name, module_path=module_path)
-                    ignore_k = getattr(cls, "ignore_at_resume", {})
-                except ImportError:
-                    ignore_k = {}
-                if block_name == kinds.theory:
-                    ignore_k.update({_input_params: None, _output_params: None})
-                block1k, block2k = deepcopy(block1[k]), deepcopy(block2[k])
-                if not strict:
-                    for kignore in ignore_k:
-                        try:
-                            block1k.pop(kignore, None)
-                            block2k.pop(kignore, None)
-                        except:
-                            pass
-                if recursive_odict_to_dict(block1k) != recursive_odict_to_dict(block2k):
-                    myprint(
-                        myname + ": different content of [%s:%s]" % (block_name, k))
-                    myprint_debug("%r (old) vs %r (new)" % (
-                        recursive_odict_to_dict(block1k),
-                        recursive_odict_to_dict(block2k)))
-                    return False
-        elif block_name in [_params, kinds.likelihood, _prior]:
-            # Internal order DOES matter, but just up to 1st level
-            f = list if strict else set
-            if f(block1) != f(block2):
-                myprint(
-                    myname + ": different [%s] or different order of them: %r vs %r" % (
-                        block_name, list(block1), list(block2)))
-                return False
-            for k in block1:
-                block1k, block2k = deepcopy(block1[k]), deepcopy(block2[k])
-                if block_name == _params:
+            continue
+        # Now let's do components and params
+        # 1. check order (it DOES matter, but just up to 1st level)
+        f = list if strict else set
+        if f(block1) != f(block2):
+            myprint(
+                myname + ": different [%s] or different order of them: %r vs %r" % (
+                    block_name, list(block1), list(block2)))
+            return False
+        # 2. Gather general options to be ignored
+        if not strict:
+            ignore_k = set()
+            if block_name in [kinds.theory, kinds.likelihood]:
+                ignore_k = ignore_k.union({_input_params, _output_params})
+            elif block_name == _params:
+                for param in block1:
                     # Unify notation
-                    block1k = expand_info_param(block1k)
-                    block2k = expand_info_param(block2k)
-                    if not strict:
-                        for kignore in ignore_params:
-                            block1k.pop(kignore, None)
-                            block2k.pop(kignore, None)
-                        # Fixed params, it doesn't matter if they are saved as derived
-                        for b in [block1k, block2k]:
-                            if partag.value in b:
-                                b.pop(partag.derived, None)
-                if block_name == kinds.likelihood and not strict:
-                    for kignore in [_input_params, _output_params]:
-                        block1k.pop(kignore, None)
-                        block2k.pop(kignore, None)
-                if recursive_odict_to_dict(block1k) != recursive_odict_to_dict(block2k):
-                    myprint(myname + ": different content of [%s:%s]" % (
-                        block_name, k))
-                    return False
+                    block1[param] = expand_info_param(block1[param])
+                    block2[param] = expand_info_param(block2[param])
+                    ignore_k = ignore_k.union({partag.latex, partag.renames, partag.ref,
+                                               partag.proposal, "min", "max"})
+                    # Fixed params, it doesn't matter if they are saved as derived
+                    if partag.value in block1[param]:
+                        block1[param].pop(partag.derived, None)
+                    if partag.value in block2[param]:
+                        block2[param].pop(partag.derived, None)
+                    # Renames: order does not matter
+                    block1[param][partag.renames] = set(
+                        block1[param].get(partag.renames, []))
+                    block2[param][partag.renames] = set(
+                        block2[param].get(partag.renames, []))
+        # 3. Now check component/parameters one-by-one
+        for k in block1:
+            if not strict:
+                # Add component-specific options to be ignored
+                if block_name in kinds:
+                    ignore_k_this = ignore_k.copy()
+                    try:
+                        module_path = block1[k].pop(_module_path, None) \
+                            if isinstance(block1[k], odict) else None
+                        cls = get_class(k, block_name, module_path=module_path)
+                        ignore_k_this = ignore_k_this.union(
+                            set(getattr(cls, "ignore_at_resume", {})))
+                    except ImportError:
+                        pass
+                # Pop ignored options
+                [(block1[k].pop(j, None), block2[k].pop(j, None)) for j in ignore_k_this]
+            if recursive_odict_to_dict(block1[k]) != recursive_odict_to_dict(block2[k]):
+                # For clarity, pop common stuff before printing
+                to_pop = [j for j in block1[k] if (
+                    recursive_odict_to_dict(block1[k][j]) ==
+                    recursive_odict_to_dict(block2[k][j]))]
+                [(block1[k].pop(j, None), block2[k].pop(j, None)) for j in to_pop]
+                myprint(
+                    myname + ": different content of [%s:%s]" % (block_name, k))
+                myprint_debug("%r (old) vs %r (new)" % (
+                    recursive_odict_to_dict(block1[k]),
+                    recursive_odict_to_dict(block2[k])))
+                return False
     return True
 
 

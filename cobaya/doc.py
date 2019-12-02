@@ -12,7 +12,7 @@ from __future__ import absolute_import, print_function, division
 from pprint import pformat
 
 # Local
-from cobaya.tools import warn_deprecation, get_available_modules
+from cobaya.tools import warn_deprecation, get_available_internal_class_names
 from cobaya.conventions import subfolders, kinds
 from cobaya.input import get_default_info
 
@@ -56,13 +56,15 @@ def doc_script():
         print(msg + "\n" + "-" * len(msg))
         for kind in kinds:
             print("%s:" % kind)
-            print(_indent + ("\n" + _indent).join(get_available_modules(kind)))
+            print(
+                _indent + ("\n" + _indent).join(get_available_internal_class_names(kind)))
         return
     # Kind given: list all modules of that kind
     if arguments.module.lower() in kinds:
         print("%s:" % arguments.module.lower())
         print(_indent +
-              ("\n" + _indent).join(get_available_modules(arguments.module.lower())))
+              ("\n" + _indent).join(
+                  get_available_internal_class_names(arguments.module.lower())))
         return
     # Otherwise, check if it's a unique module name
     try:

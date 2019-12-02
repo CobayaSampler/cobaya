@@ -40,8 +40,8 @@ A minimal framework would look like this
 
             e.g. here we calculate chi^2  using cls['tt'], H0_theory, my_foreground_amp
             """
-            H0_theory = self.theory.get_param("H0")
-            cls = self.theory.get_Cl(ell_factor=True)
+            H0_theory = self.provider.get_param("H0")
+            cls = self.provider.get_Cl(ell_factor=True)
             my_foreground_amp = params_values['my_foreground_amp']
 
             chi2 = ...
@@ -81,7 +81,6 @@ if your MyLikelihood class is in a module called ``mylikes`` your input .yaml wo
     likelihood:
       mylikes.MyLikelihood:
         # .. any parameters you want to override
-        # ..
 
 If your class name matches the module name, you can also just use the module name.
 
@@ -202,4 +201,12 @@ matter power spectra to calculate shear, count and cross-correlation angular pow
 
 The `example external CMB likelihood <https://github.com/CobayaSampler/planck_lensing_external>`_ is a complete example
 of how to make a new likelihood class in an external Python package.
+
+Inheritance diagram for internal cosmology likelihoods
+-------------------------------------------------------
+
+.. inheritance-diagram:: cobaya._internal_classes.likelihood
+    :parts: 1
+    :private-bases:
+    :top-classes: cobaya.likelihood.Likelihood
 
