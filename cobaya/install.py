@@ -239,39 +239,48 @@ def check_gcc_version(min_version="6.4", error_returns=None):
 # Command-line script ####################################################################
 
 def install_script():
+    warn_deprecation()
+
+    # Parse arguments
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Cobaya's installation tool for external modules.")
+    parser.add_argument("files", action="store", nargs="+", metavar="input_file.yaml",
+                        help="One or more input files "
+                             "(or simply 'polychord', or 'cosmo' "
+                             "for a basic collection of cosmological modules)")
+    default_modules_path = os.environ.get(_modules_path_env)
+    parser.add_argument("-" + _modules_path_arg[0], "--" + _modules_path_arg,
+                        action="store", nargs=1,
+                        required=not bool(default_modules_path),
+                        metavar="/modules/path", default=[default_modules_path],
+                        help="Desired path where to install external modules.")
+    parser.add_argument("-" + _force[0], "--" + _force, action="store_true",
+                        default=False,
+                        help="Force re-installation of apparently installed modules.")
+    parser.add_argument("--no-progress-bars", action="store_true", default=False,
+                        help="No progress bars shown. Shorter logs (used in Travis).")
+    parser.add_argument("--no-mpi", action="store_true", default=False,
+                        help="Do not attempt to check for MPI availability. " +
+                             "Use for running cobaya-install on head node of " +
+                             "cluster where mpi4py cannot be used (e.g., NERSC).")
+    parser.add_argument("--just-check", action="store_true", default=False,
+                        help="Just check whether modules are installed.")
+    group_just = parser.add_mutually_exclusive_group(required=False)
+    group_just.add_argument("-C", "--just-code", action="store_false", default=True,
+                            help="Install code of the modules.", dest=_data)
+    group_just.add_argument("-D", "--just-data", action="store_false", default=True,
+                            help="Install data of the modules.", dest=_code)
+    arguments = parser.parse_args()
+
     from cobaya.mpi import am_single_or_primary_process
-    if am_single_or_primary_process():
-        warn_deprecation()
-        # Configure the logger ASAP
-        logger_setup()
-        log = logging.getLogger(__name__.split(".")[-1])
-        # Parse arguments
-        import argparse
-        parser = argparse.ArgumentParser(
-            description="Cobaya's installation tool for external modules.")
-        parser.add_argument("files", action="store", nargs="+", metavar="input_file.yaml",
-                            help="One or more input files "
-                                 "(or simply 'polychord', or 'cosmo' "
-                                 "for a basic collection of cosmological modules)")
-        default_modules_path = os.environ.get(_modules_path_env)
-        parser.add_argument("-" + _modules_path_arg[0], "--" + _modules_path_arg,
-                            action="store", nargs=1,
-                            required=not bool(default_modules_path),
-                            metavar="/modules/path", default=[default_modules_path],
-                            help="Desired path where to install external modules.")
-        parser.add_argument("-" + _force[0], "--" + _force, action="store_true",
-                            default=False,
-                            help="Force re-installation of apparently installed modules.")
-        parser.add_argument("--no-progress-bars", action="store_true", default=False,
-                            help="No progress bars shown. Shorter logs (used in Travis).")
-        parser.add_argument("--just-check", action="store_true", default=False,
-                            help="Just check whether modules are installed.")
-        group_just = parser.add_mutually_exclusive_group(required=False)
-        group_just.add_argument("-C", "--just-code", action="store_false", default=True,
-                                help="Install code of the modules.", dest=_data)
-        group_just.add_argument("-D", "--just-data", action="store_false", default=True,
-                                help="Install data of the modules.", dest=_code)
-        arguments = parser.parse_args()
+    is_primary_process = am_single_or_primary_process(no_mpi=arguments.no_mpi)
+
+    # Configure the logger ASAP
+    logger_setup(no_mpi=arguments.no_mpi)
+    log = logging.getLogger(__name__.split(".")[-1])
+
+    if is_primary_process:
         if arguments.files == ["cosmo"]:
             log.info("Installing cosmological modules (input files will be ignored)")
             from cobaya.cosmo_input import install_basic
