@@ -1,6 +1,3 @@
-# to check
-## log.always_stop_exceptions for what exceptions to not stop_at_error and what not. 
-
 ## Update example notebook to match example in paper (+ updates)
 ## Make numba a requirement?
 ## Update setting for model.overhead

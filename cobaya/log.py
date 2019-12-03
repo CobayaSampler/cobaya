@@ -37,8 +37,8 @@ class LoggedError(Exception):
         super(LoggedError, self).__init__(msg, **kwargs)
 
 
-always_stop_exceptions = (LoggedError, KeyboardInterrupt, AssertionError,
-                          SystemExit, NameError, SyntaxError, AttributeError)
+always_stop_exceptions = (LoggedError, KeyboardInterrupt, SystemExit, NameError,
+                          SyntaxError, AttributeError)
 
 
 def safe_exit():
@@ -94,7 +94,8 @@ def logger_setup(debug=None, debug_file=None, no_mpi=False):
     class MyFormatter(logging.Formatter):
         def format(self, record):
             fmt = ((" %(asctime)s " if debug else "") +
-                   "[" + ("%d : " % get_mpi_rank() if more_than_one_process(no_mpi=no_mpi) else "") +
+                   "[" + ("%d : " % get_mpi_rank() if more_than_one_process(
+                        no_mpi=no_mpi) else "") +
                    "%(name)s" + "] " +
                    {logging.ERROR: "*ERROR* ",
                     logging.WARNING: "*WARNING* "}.get(record.levelno, "") +
