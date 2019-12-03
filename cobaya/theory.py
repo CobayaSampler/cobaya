@@ -33,7 +33,7 @@ from collections import deque
 from cobaya.conventions import _external, kinds, _requires, _params
 from cobaya.component import CobayaComponent, ComponentCollection
 from cobaya.tools import get_class
-from cobaya.log import LoggedError
+from cobaya.log import LoggedError, always_stop_exceptions
 from cobaya.tools import get_class_methods
 
 
@@ -133,7 +133,7 @@ class Theory(CobayaComponent):
 
     def get_can_provide(self):
         """
-        Get a list of names of quantities that can be retrieved using a general
+        Get a list of names of quantities that can be retrieved using the general
         get_result(X) method.
 
         :return: list of quantities
@@ -204,13 +204,17 @@ class Theory(CobayaComponent):
             try:
                 if self.calculate(state, want_derived, **params_values_dict) is False:
                     return False
-            except LoggedError:
+            except always_stop_exceptions:
                 raise
             except Exception as e:
                 if self.stop_at_error:
                     raise LoggedError(self.log, "Error at evaluation: %r", e)
                 else:
-                    raise
+                    self.log.debug(
+                        "Ignored error at evaluation and assigned 0 likelihood "
+                        "(set 'stop_at_error: True' as an option for this component "
+                        "to stop here). Error message: %r", e)
+                    return False
 
             if self.timer:
                 self.timer.increment(self.log)
