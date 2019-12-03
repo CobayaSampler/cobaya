@@ -22,8 +22,6 @@ from __future__ import division
 
 # Global
 import numpy as np
-import scipy
-import numpy
 from itertools import chain
 
 # Local
@@ -52,7 +50,7 @@ class CyclicIndexRandomizer(IndexCycler):
 
 try:
     import numba
-    from numpy.random import normal
+    from np.random import normal
     import warnings
 
 
@@ -118,7 +116,7 @@ class RandDirectionProposer(IndexCycler):
             if self.n > 1:
                 self.R = random_SO_N(self.n)
             else:
-                self.R = np.eye(1) * numpy.random.choice((-1, 1))
+                self.R = np.eye(1) * np.random.choice((-1, 1))
         return self.R[:, self.loop_index] * self.propose_r() * scale
 
     def propose_r(self):
