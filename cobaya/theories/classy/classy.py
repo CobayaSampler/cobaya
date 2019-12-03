@@ -161,7 +161,7 @@ non_linear_default_code = "hmcode"
 class classy(BoltzmannBase):
     # Name of the Class repo/folder and version to download
     classy_repo_name = "lesgourg/class_public"
-    classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', "900bb6b")
+    classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', "032cd4b0")
 
     def initialize(self):
         """Importing CLASS from the correct path, if given, and if not, globally."""
