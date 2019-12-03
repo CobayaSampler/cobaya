@@ -74,7 +74,7 @@ def exception_handler(exception_type, exception_instance, trace_back):
     safe_exit()
 
 
-def logger_setup(debug=None, debug_file=None):
+def logger_setup(debug=None, debug_file=None, no_mpi=False):
     """
     Configuring the root logger, for its children to inherit level, format and handlers.
 
@@ -94,7 +94,7 @@ def logger_setup(debug=None, debug_file=None):
     class MyFormatter(logging.Formatter):
         def format(self, record):
             fmt = ((" %(asctime)s " if debug else "") +
-                   "[" + ("%d : " % get_mpi_rank() if more_than_one_process() else "") +
+                   "[" + ("%d : " % get_mpi_rank() if more_than_one_process(no_mpi=no_mpi) else "") +
                    "%(name)s" + "] " +
                    {logging.ERROR: "*ERROR* ",
                     logging.WARNING: "*WARNING* "}.get(record.levelno, "") +
