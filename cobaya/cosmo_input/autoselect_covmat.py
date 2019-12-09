@@ -11,7 +11,7 @@ import numpy as np
 # Local
 from cobaya.yaml import yaml_load_file, yaml_dump_file
 from cobaya.conventions import _covmats_file, _aliases, _path_install, partag
-from cobaya.tools import str_to_list
+from cobaya.input import str_to_list
 
 # Logger
 import logging
