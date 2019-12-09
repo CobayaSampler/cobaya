@@ -128,7 +128,7 @@ def check_module_version(module, min_version=None):
             if not hasattr(module, "__version__") or \
                     version.parse(module.__version__) < version.parse(min_version):
                 raise VersionCheckError(
-                    "module %s at %s, is version %s but require %s or higher" %
+                    "module %s at %s is version %s but require %s or higher" %
                     (module.__name__, os.path.dirname(module.__file__),
                      getattr(module, "__version__", "(non-given)"), min_version))
 

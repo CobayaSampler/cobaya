@@ -6,12 +6,12 @@ import os
 from random import choice
 from itertools import chain
 from collections import OrderedDict as odict
-from six import string_types
 import numpy as np
 
 # Local
 from cobaya.yaml import yaml_load_file, yaml_dump_file
-from cobaya.conventions import _covmats_file, _aliases, _path_install
+from cobaya.conventions import _covmats_file, _aliases, _path_install, partag
+from cobaya.tools import str_to_list
 
 # Logger
 import logging
@@ -59,9 +59,8 @@ def get_covmat_database(modules, cached=True):
 def get_best_covmat(modules, slow_params_info, likelihoods_info, cached=True):
     covmats_database = get_covmat_database(modules, cached=cached)
     # Select first based on number of slow parameters
-    str_to_list = lambda x: ([x] if isinstance(x, string_types) else x)
     params_renames = set(chain(*[
-        [p] + str_to_list(info.get(_aliases, [])) for p, info in
+        [p] + str_to_list(info.get(partag.renames, [])) for p, info in
         slow_params_info.items()]))
     get_score_params = (
         lambda covmat_params: len(set(covmat_params).intersection(params_renames)))
