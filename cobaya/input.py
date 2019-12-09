@@ -23,10 +23,9 @@ import pkg_resources
 from cobaya.conventions import _products_path, _path_install, _resume, _force
 from cobaya.conventions import _output_prefix, _debug, _debug_file, _external
 from cobaya.conventions import _params, _prior, kinds, _provides, _requires
-
 from cobaya.conventions import partag, _input_params, _output_params, _module_path
 from cobaya.conventions import _yaml_extensions, _aliases
-from cobaya.tools import recursive_update, recursive_odict_to_dict
+from cobaya.tools import recursive_update, recursive_odict_to_dict, str_to_list
 from cobaya.tools import fuzzy_match, deepcopy_where_possible, get_class, get_kind
 from cobaya.yaml import yaml_load_file, yaml_dump
 from cobaya.log import LoggedError
@@ -115,10 +114,6 @@ def get_default_info(module_or_class, kind=None, fail_if_not_found=False,
                           module_or_class, e)
 
     return default_module_info
-
-
-def str_to_list(x):
-    return [x] if isinstance(x, string_types) else x
 
 
 def update_info(info):
@@ -409,8 +404,8 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
             if recursive_odict_to_dict(block1[k]) != recursive_odict_to_dict(block2[k]):
                 # For clarity, pop common stuff before printing
                 to_pop = [j for j in block1[k] if (
-                    recursive_odict_to_dict(block1[k][j]) ==
-                    recursive_odict_to_dict(block2[k][j]))]
+                        recursive_odict_to_dict(block1[k][j]) ==
+                        recursive_odict_to_dict(block2[k][j]))]
                 [(block1[k].pop(j, None), block2[k].pop(j, None)) for j in to_pop]
                 myprint(
                     myname + ": different content of [%s:%s]" % (block_name, k))

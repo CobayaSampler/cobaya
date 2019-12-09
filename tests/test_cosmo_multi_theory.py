@@ -58,10 +58,10 @@ debug = True
 info = {'likelihood': {'cmb': cmb_likelihood},
         'theory': OrderedDict({
             'camb': {"extra_args": {"lens_potential_accuracy": 1},
-                     "requires": ['YHe', 'ombh2'], "stop_at_error": True},
+                     "requires": ['YHe', 'ombh2']},
             'bbn': {'external': BBN, 'provides': ['YHe']}}),
         'params': camb_params,
-        'debug': debug}
+        'debug': debug, 'stop_at_error': True}
 
 info2 = {'likelihood': {'cmb': {'external': cmb_likelihood}},
          'theory': OrderedDict({

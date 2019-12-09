@@ -178,13 +178,17 @@ import logging
 from copy import deepcopy
 import numpy as np
 from collections import namedtuple, OrderedDict as odict
+import numbers
+import ctypes
 
 # Local
 from cobaya.theories._cosmo import BoltzmannBase
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, check_gcc_version
 from cobaya.tools import getfullargspec, get_class_methods, get_properties
-from cobaya.tools import load_module, VersionCheckError, check_module_version
+from cobaya.tools import load_module, VersionCheckError, str_to_list
+from cobaya.theory import HelperTheory
+from cobaya.conventions import _requires
 
 # Result collector
 Collector = namedtuple("collector", ["method", "args", "kwargs"])
@@ -198,13 +202,13 @@ class camb(BoltzmannBase):
     camb_repo_name = "cmbant/CAMB"
     camb_repo_version = os.environ.get("CAMB_REPO_VERSION", "master")
     camb_min_gcc_version = "6.4"
-    min_camb_version = '1.0.12'
+    min_camb_version = '1.0.12.2'
 
     def initialize(self):
         """Importing CAMB from the correct path, if given."""
         if not self.path and self.path_install:
             self.path = self.get_path(self.path_install)
-        pycamb_path = None
+        camb_path = None
         if self.path and not os.path.exists(self.path):
             # Fail if this was a directly specified path,
             # or ignore and try to global-import if it came from a path_install
@@ -218,7 +222,7 @@ class camb(BoltzmannBase):
             if not os.path.exists(self.path):
                 raise LoggedError(
                     self.log, "The given folder does not exist: '%s'", self.path)
-            pycamb_path = self.path
+            camb_path = self.path
             if not os.path.exists(os.path.join(self.path, "setup.py")):
                 raise LoggedError(
                     self.log,
@@ -229,7 +233,7 @@ class camb(BoltzmannBase):
         try:
             # Check min version compatibility (if resuming/reusing-info, use given one)
             min_version = getattr(self, "version", False) or self.min_camb_version
-            self.camb = load_module("camb", path=pycamb_path, min_version=min_version)
+            self.camb = load_module("camb", path=camb_path, min_version=min_version)
         except ImportError:
             raise LoggedError(
                 self.log, "Couldn't find the CAMB python interface.\n"
@@ -247,19 +251,47 @@ class camb(BoltzmannBase):
         # Some default settings
         self.needs_perts = False
         self.limber = False
-        self.non_linear_lens = False
+        self.non_linear_sources = False
         self.non_linear_pk = False
         self._base_params = None
         self._needs_lensing_cross = False
 
+        power_spectrum = self.camb.CAMBparams.make_class_named(
+            self.extra_args.get('initial_power_model',
+                                self.camb.initialpower.InitialPowerLaw),
+            self.camb.initialpower.InitialPower)
+        self.initial_power_args = {}
+        self.power_params = []
+
+        nonlin = self.camb.CAMBparams.make_class_named(
+            self.extra_args.get('non_linear_model',
+                                self.camb.nonlinear.Halofit),
+            self.camb.nonlinear.NonLinearModel)
+        self.nonlin_args = {}
+        self.nonlin_params = []
+        for model, args, params in [(nonlin, self.nonlin_args, self.nonlin_params),
+                                    (power_spectrum, self.initial_power_args,
+                                     self.power_params)]:
+            pars = getfullargspec(model.set_params)
+            for arg, v in zip(pars.args[1:], pars.defaults[1:]):
+                if arg in self.extra_args:
+                    args[arg] = self.extra_args.pop(arg)
+                elif isinstance(v, numbers.Number) or v is None:
+                    params.append(arg)
+        self.requires = str_to_list(getattr(self, _requires, []))
+        self._transfer_requires = [p for p in self.requires if
+                                   p not in self.get_can_support_params()]
+        self.requires = [p for p in self.requires if p not in self._transfer_requires]
+
     def initialize_with_params(self):
-        # TODO: supports params function could specify list of parameters accepted
-        #  (allowing set entries)
-        if len(set(self.input_params).intersection(
-                {"H0", "cosmomc_theta", "thetastar"})) > 1:
-            raise LoggedError(self.log, "Can't pass more than one of H0, "
-                                        "theta, cosmomc_theta to CAMB.")
-        super(camb, self).initialize_with_params()
+        if set(self.input_params).intersection({'r', 'At'}):
+            self.extra_attrs["WantTensors"] = True
+
+    def get_can_support_params(self):
+        return self.power_params + self.nonlin_params
+
+    def get_allow_agnostic(self):
+        return False
 
     def needs(self, **requirements):
         # Computed quantities required by the likelihoods
@@ -295,8 +327,8 @@ class camb(BoltzmannBase):
                 if "pp" in cls and self.extra_args.get(
                         "lens_potential_accuracy") is None:
                     self.extra_args["lens_potential_accuracy"] = 1
-                self.non_linear_lens = self.extra_args.get("lens_potential_accuracy",
-                                                           1) >= 1
+                self.non_linear_sources = self.extra_args.get("lens_potential_accuracy",
+                                                              1) >= 1
                 if set(cls).intersection({"pt", "pe", "tp", "ep"}):
                     self._needs_lensing_cross = True
                 if 'TCMB' not in self.derived_extra:
@@ -347,7 +379,8 @@ class camb(BoltzmannBase):
                     if source not in self.sources:
                         self.sources[source] = window
                 self.limber = v.get("limber", True)
-                self.non_linear_lens = self.non_linear_lens or v.get("non_linear", False)
+                self.non_linear_sources = self.non_linear_sources or \
+                                          v.get("non_linear", False)
                 if "lmax" in v:
                     self.extra_args["lmax"] = max(v["lmax"],
                                                   self.extra_args.get("lmax", 0))
@@ -383,9 +416,17 @@ class camb(BoltzmannBase):
             (True, True): model.NonLinear_both,
             (True, False): model.NonLinear_lens,
             (False, True): model.NonLinear_pk,
-            (False, False): False}[(self.non_linear_lens, self.non_linear_pk)]
+            (False, False): False}[(self.non_linear_sources, self.non_linear_pk)]
         # set-set base CAMB params if anything might have changed
         self._base_params = None
+
+        return {'CAMB_transfers':
+                    {'non_linear': self.non_linear_sources,
+                     'needs_perts': self.needs_perts}}
+
+    def add_to_redshifts(self, z):
+        self.extra_args["redshifts"] = np.sort(np.unique(np.concatenate(
+            (np.atleast_1d(z), self.extra_args.get("redshifts", [])))))[::-1]
 
     def _combine_z(self, k, v):
         c = self.collectors.get(k, None)
@@ -395,103 +436,20 @@ class camb(BoltzmannBase):
         else:
             return np.sort(np.atleast_1d(v['z']))
 
-    def add_to_redshifts(self, z):
-        self.extra_args["redshifts"] = np.sort(np.unique(np.concatenate(
-            (np.atleast_1d(z), self.extra_args.get("redshifts", [])))))[::-1]
-
-    def set(self, params_values_dict, state):
-        # Prepare parameters to be passed: this-iteration + extra
-        args = {self.translate_param(p): v for p, v in params_values_dict.items()}
-        # Generate and save
-        self.log.debug("Setting parameters: %r and %r",
-                       dict(args), dict(self.extra_args))
-        try:
-            if not self._base_params:
-                base_args = args.copy()
-                base_args.update(self.extra_args)
-                # Remove extra args that might
-                # cause an error if the associated product is not requested
-                if not self.extra_attrs["WantCls"]:
-                    for not_needed in getfullargspec(
-                            self.camb.CAMBparams.set_for_lmax).args[1:]:
-                        base_args.pop(not_needed, None)
-                self._reduced_extra_args = self.extra_args.copy()
-                params = self.camb.set_params(**base_args)
-                # pre-set the parameters that are not varying
-                for non_param_func in ['set_classes', 'set_matter_power', 'set_for_lmax']:
-                    for fixed_param in getfullargspec(
-                            getattr(self.camb.CAMBparams, non_param_func)).args[1:]:
-                        if fixed_param in args:
-                            raise LoggedError(self.log,
-                                              "Trying to sample fixed theory parameter %s",
-                                              fixed_param)
-                        self._reduced_extra_args.pop(fixed_param, None)
-                if self.extra_attrs:
-                    self.log.debug("Setting attributes of CAMBparams: %r",
-                                   self.extra_attrs)
-                for attr, value in self.extra_attrs.items():
-                    if hasattr(params, attr):
-                        setattr(params, attr, value)
-                    else:
-                        raise LoggedError(
-                            self.log,
-                            "Some of the attributes to be set manually were not "
-                            "recognized: %s=%s", attr, value)
-                # Sources
-                if getattr(self, "sources", None):
-                    from camb.sources import GaussianSourceWindow, SplinedSourceWindow
-                    self.log.debug("Setting sources: %r", self.sources)
-                    source_windows = []
-                    for source, window in self.sources.items():
-                        function = window.pop("function", None)
-                        if function == "spline":
-                            source_windows.append(SplinedSourceWindow(**window))
-                        elif function == "gaussian":
-                            source_windows.append(GaussianSourceWindow(**window))
-                        else:
-                            raise LoggedError(self.log,
-                                              "Unknown source window function type %r",
-                                              function)
-                        window["function"] = function
-                    params.SourceWindows = source_windows
-                    params.SourceTerms.limber_windows = self.limber
-                self._base_params = params
-            else:
-                args.update(self._reduced_extra_args)
-            return self.camb.set_params(self._base_params.copy(), **args)
-        except self.camb.baseconfig.CAMBParamRangeError:
-            if self.stop_at_error:
-                raise LoggedError(self.log, "Out of bound parameters: %r",
-                                  params_values_dict)
-            else:
-                self.log.debug("Out of bounds parameters. "
-                               "Assigning 0 likelihood and going on.")
-        except (self.camb.baseconfig.CAMBValueError, self.camb.baseconfig.CAMBError) as e:
-            if self.stop_at_error:
-                self.log.error(
-                    "Error setting parameters (see traceback below)! "
-                    "Parameters sent to CAMB: %r and %r.\n"
-                    "To ignore this kind of errors, make 'stop_at_error: False'.",
-                    dict(state["params"]), dict(self.extra_args))
-                raise
-        except self.camb.baseconfig.CAMBUnknownArgumentError as e:
-            raise LoggedError(
-                self.log,
-                "Some of the parameters passed to CAMB were not recognized: %s" % str(e))
-        return False
-
     def calculate(self, state, want_derived=True, **params_values_dict):
-        # Set parameters
-        camb_params = self.set(params_values_dict, state)
-        # Failed to set parameters but no error raised
-        # (e.g. out of computationally feasible range): lik=0
-        if not camb_params:
-            return False
-        # Compute the necessary products (incl. any intermediate result, if needed)
         try:
+            params, results = self.provider.get_CAMB_transfers()
             if self.collectors:
-                results = self.camb.get_results(camb_params) if self.needs_perts else \
-                    self.camb.get_background(camb_params)
+                args = {self.translate_param(p): v for p, v in
+                        params_values_dict.items() if p in self.power_params}
+                args.update(self.initial_power_args)
+                results.Params.InitPower.set_params(**args)
+                if self.non_linear_sources or self.non_linear_pk:
+                    args = {self.translate_param(p): v for p, v in
+                            params_values_dict.items() if p in self.nonlin_params}
+                    args.update(self.nonlin_args)
+                    results.Params.NonLinearModel.set_params(**args)
+                results.power_spectra_from_transfer()
             else:
                 results = None
             for product, collector in self.collectors.items():
@@ -514,8 +472,8 @@ class camb(BoltzmannBase):
                                "Assigning 0 likelihood and going on. "
                                "The output of the CAMB error was %s" % e)
                 return False
-        # Prepare derived parameters
-        intermediates = CAMBOutputs(camb_params, results,
+            # Prepare derived parameters
+        intermediates = CAMBOutputs(params, results,
                                     results.get_derived_params() if results else None)
         if want_derived:
             state["derived"] = self._get_derived_output(intermediates)
@@ -647,7 +605,6 @@ class camb(BoltzmannBase):
     def get_can_provide_params(self):
         # possible derived parameters for derived_extra, excluding things that are
         # only input parameters.
-        import ctypes
         params_derived = list(get_class_methods(self.camb.CAMBparams))
         params_derived.remove("custom_source_names")
         fields = []
@@ -661,11 +618,109 @@ class camb(BoltzmannBase):
         for name, mapped in self.renames.items():
             if mapped in names:
                 names.append(name)
-
-        return names
+        # remove any parameters explicitly tagged as input requirements
+        return list(
+            set(names).difference(set(self._transfer_requires).union(set(self.requires))))
 
     def get_version(self):
         return self.camb.__version__
+
+    def set(self, params_values_dict, state):
+        # Prepare parameters to be passed: this is called from the CambTransfers instance
+        args = {self.translate_param(p): v for p, v in params_values_dict.items()}
+        # Generate and save
+        self.log.debug("Setting parameters: %r and %r",
+                       dict(args), dict(self.extra_args))
+        try:
+            if not self._base_params:
+                base_args = args.copy()
+                base_args.update(self.extra_args)
+                # Remove extra args that might
+                # cause an error if the associated product is not requested
+                if not self.extra_attrs["WantCls"]:
+                    for not_needed in getfullargspec(
+                            self.camb.CAMBparams.set_for_lmax).args[1:]:
+                        base_args.pop(not_needed, None)
+                self._reduced_extra_args = self.extra_args.copy()
+                params = self.camb.set_params(**base_args)
+                # pre-set the parameters that are not varying
+                for non_param_func in ['set_classes', 'set_matter_power', 'set_for_lmax']:
+                    for fixed_param in getfullargspec(
+                            getattr(self.camb.CAMBparams, non_param_func)).args[1:]:
+                        if fixed_param in args:
+                            raise LoggedError(self.log,
+                                              "Trying to sample fixed theory parameter %s",
+                                              fixed_param)
+                        self._reduced_extra_args.pop(fixed_param, None)
+                if self.extra_attrs:
+                    self.log.debug("Setting attributes of CAMBparams: %r",
+                                   self.extra_attrs)
+                for attr, value in self.extra_attrs.items():
+                    if hasattr(params, attr):
+                        setattr(params, attr, value)
+                    else:
+                        raise LoggedError(
+                            self.log,
+                            "Some of the attributes to be set manually were not "
+                            "recognized: %s=%s", attr, value)
+                # Sources
+                if getattr(self, "sources", None):
+                    from camb.sources import GaussianSourceWindow, SplinedSourceWindow
+                    self.log.debug("Setting sources: %r", self.sources)
+                    source_windows = []
+                    for source, window in self.sources.items():
+                        function = window.pop("function", None)
+                        if function == "spline":
+                            source_windows.append(SplinedSourceWindow(**window))
+                        elif function == "gaussian":
+                            source_windows.append(GaussianSourceWindow(**window))
+                        else:
+                            raise LoggedError(self.log,
+                                              "Unknown source window function type %r",
+                                              function)
+                        window["function"] = function
+                    params.SourceWindows = source_windows
+                    params.SourceTerms.limber_windows = self.limber
+                self._base_params = params
+            else:
+                args.update(self._reduced_extra_args)
+            return self.camb.set_params(self._base_params.copy(), **args)
+        except self.camb.baseconfig.CAMBParamRangeError:
+            if self.stop_at_error:
+                raise LoggedError(self.log, "Out of bound parameters: %r",
+                                  params_values_dict)
+            else:
+                self.log.debug("Out of bounds parameters. "
+                               "Assigning 0 likelihood and going on.")
+        except (self.camb.baseconfig.CAMBValueError, self.camb.baseconfig.CAMBError) as e:
+            if self.stop_at_error:
+                self.log.error(
+                    "Error setting parameters (see traceback below)! "
+                    "Parameters sent to CAMB: %r and %r.\n"
+                    "To ignore this kind of errors, make 'stop_at_error: False'.",
+                    dict(state["params"]), dict(self.extra_args))
+                raise
+        except self.camb.baseconfig.CAMBUnknownArgumentError as e:
+            raise LoggedError(
+                self.log,
+                "Some of the parameters passed to CAMB were not recognized: %s" % str(e))
+        return False
+
+    def get_helper_theories(self):
+        self._camb_transfers = CambTransfers(self, 'camb.transfers',
+                                             dict(stop_at_error=self.stop_at_error),
+                                             timing=self.timer)
+        setattr(self._camb_transfers, _requires, self._transfer_requires)
+        return {'camb.transfers': self._camb_transfers}
+
+    def get_speed(self):
+        if self._measured_speed:
+            return self._measured_speed
+        if not self.non_linear_sources:
+            return self.speed * 10
+        if {'omk', 'omegak'}.intersection(set(self._camb_transfers.input_params)):
+            return self.speed / 1.5
+        return self.speed * 3
 
     @classmethod
     def get_path(cls, path):
@@ -716,3 +771,82 @@ class camb(BoltzmannBase):
             log.error("Compilation failed!" + cause)
             return False
         return True
+
+
+class CambTransfers(HelperTheory):
+    """
+    Helper theory class that calculates transfer functions only. The result is cached
+    when only initial power spectrum or non-linear model parameters change
+    """
+
+    def __init__(self, cobaya_camb, name, info, timing=None):
+        self.needs_perts = False
+        self.non_linear_sources = False
+        super(CambTransfers, self).__init__(info, name, timing=timing)
+        self.cobaya_camb = cobaya_camb
+        self.camb = cobaya_camb.camb
+        self.speed = self.cobaya_camb.speed * 1.5
+
+    def needs(self, **requirements):
+        super(CambTransfers, self).needs(**requirements)
+        opts = requirements.get('CAMB_transfers')
+        if opts:
+            self.non_linear_sources = opts['non_linear']
+            self.needs_perts = opts['needs_perts']
+
+            # Check that there are no repeated parameters between input and extra
+            if set(self.input_params).intersection(set(self.cobaya_camb.extra_args)):
+                raise LoggedError(self.log,
+                                  "The following parameters appear both as input "
+                                  "parameters and as CAMB extra arguments: %s. Please, "
+                                  "remove one of the definitions of each.",
+                                  list(set(self.input_params).intersection(
+                                      set(self.cobaya_camb.extra_args))))
+
+    def get_CAMB_transfers(self):
+        return self._current_state['results']
+
+    def calculate(self, state, want_derived=True, **params_values_dict):
+        # Set parameters
+        camb_params = self.cobaya_camb.set(params_values_dict, state)
+        # Failed to set parameters but no error raised
+        # (e.g. out of computationally feasible range): lik=0
+        if not camb_params:
+            return False
+        # Compute the transfer functions
+        try:
+            if self.non_linear_sources:
+                # only need time sources if non-linear lensing or other non-linear
+                # sources. Not needed just for non-linear PK.
+                results = self.camb.get_transfer_functions(camb_params,
+                                                           only_time_sources=True)
+            else:
+                results = self.camb.get_transfer_functions(camb_params) \
+                    if self.needs_perts else self.camb.get_background(camb_params)
+            state['results'] = (camb_params, results)
+        except self.camb.baseconfig.CAMBError as e:
+            if self.stop_at_error:
+                self.log.error(
+                    "Computation error (see traceback below)! "
+                    "Parameters sent to CAMB: %r and %r.\n"
+                    "To ignore this kind of errors, make 'stop_at_error: False'.",
+                    dict(state["params"]), dict(self.cobaya_camb.extra_args))
+                raise
+            else:
+                # Assumed to be a "parameter out of range" error.
+                self.log.debug("Computation of cosmological products failed. "
+                               "Assigning 0 likelihood and going on. "
+                               "The output of the CAMB error was %s" % e)
+                return False
+
+    def get_allow_agnostic(self):
+        return True
+
+    def initialize_with_params(self):
+        # TODO: supports params function could specify list of parameters accepted
+        #  (allowing set entries)
+        if len(set(self.input_params).intersection(
+                {"H0", "cosmomc_theta", "thetastar"})) > 1:
+            raise LoggedError(self.log, "Can't pass more than one of H0, "
+                                        "theta, cosmomc_theta to CAMB.")
+        super(CambTransfers, self).initialize_with_params()

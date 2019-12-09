@@ -10,9 +10,13 @@ params = {'ombh2': 0.02242, 'omch2': 0.11933, 'H0': 67.66, 'tau': 0.0561,
           'YHe': 0.2454, 'As': 2e-9}
 
 
-def test_sources(modules):
-    camb = load_module("camb",
+def get_camb(modules):
+    return load_module("camb",
                        path=os.path.join(process_modules_path(modules), "code", "CAMB"))
+
+
+def test_sources(modules):
+    camb = get_camb(modules)
     from camb.sources import GaussianSourceWindow
 
     pars = camb.set_params(**params)
@@ -57,3 +61,28 @@ def test_CAMBdata(modules):
     model = get_model(info)
     assert np.isclose(model.loglike({})[0], 14165.63, rtol=1e-4), \
         "CAMBdata object result failed"
+
+
+def test_CAMB_transfer(modules):
+    camb = get_camb(modules)
+
+    pars = camb.set_params(**params)
+    pars.set_matter_power(redshifts=[0, 2], kmax=2)
+    pars.WantCls = False
+    results = camb.get_results(pars)
+    k, z, PK1 = results.get_nonlinear_matter_power_spectrum(hubble_units=False)
+
+    def test_likelihood(
+            _theory={'Pk_grid': dict(k_max=2, z=[0, 2])}):
+        k, z, PK = _theory.get_Pk_grid()
+        assert np.isclose(PK[1, 30], 10294.3285)
+        np.testing.assert_allclose(PK, PK1, rtol=1e-4)
+        return 1
+
+    info = {'params': params,
+            'likelihood': {'test_likelihood': test_likelihood},
+            'theory': {'camb': {'stop_at_error': True}},
+            'modules': process_modules_path(modules)}
+
+    model = get_model(info)
+    model.loglike()

@@ -12,11 +12,10 @@ import numpy as np
 from scipy.interpolate import RectBivariateSpline
 from six import string_types
 from itertools import chain
-from collections import deque
 
 # Local
 from cobaya.theory import Theory
-from cobaya.tools import deepcopy_where_possible
+from cobaya.tools import deepcopy_where_possible, str_to_list
 from cobaya.log import LoggedError
 from cobaya.conventions import _requires, _c_km_s
 
@@ -32,9 +31,6 @@ class BoltzmannBase(Theory):
         # Additional input parameters to pass to CAMB, and attributes to set_ manually
         self.extra_args = deepcopy_where_possible(self.extra_args) or {}
         self._needs = None
-
-    def get_requirements(self):
-        return {p: None for p in getattr(self, _requires, [])}
 
     def get_allow_agnostic(self):
         return True

@@ -11,7 +11,7 @@ import numpy as np
 # Local
 from cobaya.yaml import yaml_load_file, yaml_dump_file
 from cobaya.conventions import _covmats_file, _aliases, _path_install, partag
-from cobaya.input import str_to_list
+from cobaya.tools import str_to_list
 
 # Logger
 import logging
@@ -23,6 +23,7 @@ covmat_folders = ["{%s}/data/planck_supp_data_and_covmats/covmats/" % _path_inst
 
 
 def get_covmat_database(modules, cached=True):
+    from cobaya.mpi import am_single_or_primary_process
     # Get folders with corresponding modules installed
     installed_folders = [folder for folder in covmat_folders
                          if os.path.exists(folder.format(**{_path_install: modules}))]
@@ -51,7 +52,7 @@ def get_covmat_database(modules, cached=True):
             except:
                 continue
             covmat_database[folder].append({"name": filename, "params": params})
-    if cached:
+    if cached and am_single_or_primary_process():
         yaml_dump_file(covmats_database_fullpath, covmat_database, error_if_exists=False)
     return covmat_database
 

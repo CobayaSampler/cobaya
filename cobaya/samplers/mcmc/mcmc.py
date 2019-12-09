@@ -21,7 +21,7 @@ from pandas import DataFrame
 
 # Local
 from cobaya.sampler import Sampler
-from cobaya.mpi import get_mpi_size, get_mpi_rank, get_mpi_comm
+from cobaya.mpi import get_mpi_size, get_mpi_rank, get_mpi_comm, get_mpi
 from cobaya.mpi import more_than_one_process, am_single_or_primary_process, sync_processes
 from cobaya.collection import Collection, OnePointDict
 from cobaya.conventions import kinds, partag, _weight, _minuslogpost
@@ -66,7 +66,11 @@ class mcmc(Sampler):
                     "Cannot resume a sample with a different number of chains: "
                     "was %d and now is %d.", max(self.mpi_size, 1),
                     max(get_mpi_size(), 1))
-        sync_processes()
+        if more_than_one_process():
+            if am_single_or_primary_process() and get_mpi().Get_version()[0] < 3:
+                raise LoggedError(self.log, 'MPI use requires MPI version 3.0 or higher '
+                                            'to support IALLGATHER.')
+            sync_processes()
         if not self.resuming and self.output:
             # Delete previous files (if not "forced", the run would have already failed)
             if ((os.path.abspath(self.covmat_filename()) !=
@@ -209,7 +213,7 @@ class mcmc(Sampler):
         if isinstance(self.covmat, six.string_types) and self.covmat.lower() == "auto":
             slow_params_info = {
                 p: info for p, info in params_infos.items() if p in slow_params}
-            auto_covmat = self.model._get_auto_covmat(slow_params_info)
+            auto_covmat = self.model.get_auto_covmat(slow_params_info)
             if auto_covmat:
                 self.covmat = os.path.join(auto_covmat["folder"], auto_covmat["name"])
                 self.log.info("Covariance matrix selected automatically: %s", self.covmat)
@@ -330,7 +334,6 @@ class mcmc(Sampler):
         # Still, we need to compute derived parameters, since, as the proposal "blocked",
         # we may be saving the initial state of some block.
         # NB: if resuming but nothing was written (burn-in not finished): re-start
-        self.log.info("Initial point:")
         if self.resuming and self.collection.n():
             initial_point = (self.collection[self.collection.sampled_params]
                 .iloc[self.collection.n() - 1]).values.copy()
@@ -347,7 +350,7 @@ class mcmc(Sampler):
             logpost, logpriors, loglikes, derived = self.model.logposterior(initial_point)
         self.current_point.add(initial_point, derived=derived, logpost=logpost,
                                logpriors=logpriors, loglikes=loglikes)
-        self.log.info("\n%s", self.current_point)
+        self.log.info("Initial point: %s", self.current_point)
         # Initial dummy checkpoint (needed when 1st checkpoint not reached in prev. run)
         self.write_checkpoint()
         # Main loop!
@@ -397,7 +400,7 @@ class mcmc(Sampler):
         Returns:
            ``True`` for an accepted step, ``False`` for a rejected one.
         """
-        trial = deepcopy(self.current_point[self.model.parameterization._sampled])
+        trial = self.current_point[self.model.parameterization._sampled]
         self.proposer.get_proposal(trial)
         logpost_trial, logprior_trial, loglikes_trial, derived = self.model.logposterior(
             trial)
@@ -423,7 +426,7 @@ class mcmc(Sampler):
         # "start_" and "end_" mean here the extremes in the SLOW subspace
         start_slow_point = self.current_point[self.model.parameterization._sampled]
         start_slow_logpost = -self.current_point["minuslogpost"]
-        end_slow_point = deepcopy(start_slow_point)
+        end_slow_point = start_slow_point.copy()
         self.proposer.get_proposal_slow(end_slow_point)
         self.log.debug("Proposed slow end-point: %r", end_slow_point)
         # Save derived parameters of delta_slow jump, in case I reject all the dragging
@@ -440,7 +443,7 @@ class mcmc(Sampler):
         current_end_logpost = end_slow_logpost
         current_end_logprior = end_slow_logprior
         current_end_loglikes = end_slow_loglikes
-        # accumulators for the "dragging" probabilities to be metropolist-tested
+        # accumulators for the "dragging" probabilities to be metropolis-tested
         # at the end of the interpolation
         start_drag_logpost_acc = start_slow_logpost
         end_drag_logpost_acc = end_slow_logpost
@@ -451,21 +454,18 @@ class mcmc(Sampler):
             delta_fast = np.zeros(len(current_start_point))
             self.proposer.get_proposal_fast(delta_fast)
             self.log.debug("Proposed fast step delta: %r", delta_fast)
-            proposal_start_point = deepcopy(current_start_point)
-            proposal_start_point += delta_fast
-            proposal_end_point = deepcopy(current_end_point)
-            proposal_end_point += delta_fast
+            proposal_start_point = current_start_point + delta_fast
+            proposal_end_point = current_end_point + delta_fast
             # get the new extremes for the interpolated probability
             # (reject if any of them = -inf; avoid evaluating both if just one fails)
             # Force the computation of the (slow blocks) derived params at the starting
             # point, but discard them, since they contain the starting point's fast ones,
             # not used later -- save the end point's ones.
             proposal_start_logpost = self.model.logposterior(proposal_start_point)[0]
-            proposal_end_logpost, proposal_end_logprior, \
-            proposal_end_loglikes, derived_proposal_end = (
-                self.model.logposterior(proposal_end_point)
-                if proposal_start_logpost > -np.inf
-                else (-np.inf, None, [], []))
+            (proposal_end_logpost, proposal_end_logprior, proposal_end_loglikes,
+             derived_proposal_end) = (self.model.logposterior(proposal_end_point)
+                                      if proposal_start_logpost > -np.inf
+                                      else (-np.inf, None, [], []))
             if proposal_start_logpost > -np.inf and proposal_end_logpost > -np.inf:
                 # create the interpolated probability and do a Metropolis test
                 frac = i_step / (1 + self.drag_interp_steps)

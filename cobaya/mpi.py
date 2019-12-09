@@ -9,10 +9,7 @@
 # Python 2/3 compatibility
 from __future__ import absolute_import
 from __future__ import division
-
-# Global
 import os
-
 # Local
 from cobaya.conventions import _package
 
@@ -21,6 +18,8 @@ _mpi = -1
 _mpi_size = -1
 _mpi_comm = -1
 _mpi_rank = -1
+
+disabled = os.environ.get('COBAYA_NOMPI', False)
 
 
 def get_mpi():
@@ -31,6 +30,9 @@ def get_mpi():
     """
     global _mpi
     if _mpi == -1:
+        if disabled:
+            _mpi = None
+            return None
         try:
             from mpi4py import MPI
             _mpi = MPI
@@ -95,8 +97,9 @@ def more_than_one_process(no_mpi=False):
     else:
         return False
 
+
 def sync_processes():
-    if get_mpi_size():
+    if get_mpi_size() > 1:
         get_mpi_comm().barrier()
 
 

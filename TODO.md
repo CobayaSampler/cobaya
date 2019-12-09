@@ -11,4 +11,9 @@
 ## Finish implementation of aggregated-by-data-type chi2
 ## Faster Collections for MCMC: numpy cache for merging OnePoint into Collection
 - `_out_update` method would take care of flushing into the Pandas table.
-
+## Check blocking/dragging when slowest block has all parameters fixed
+## Option to set speeds dynamically based on actual timing for number of threads used (e.g. at first propose update)
+## No output to files while burn in makes it hard to see if working OK (default no burn?)
+## ,, related, how to set intermediate debugging level so see regular short output
+## dump log info along with each chain file if saving to file (currently in stdout)
+## check parameter default proposal widths not too large

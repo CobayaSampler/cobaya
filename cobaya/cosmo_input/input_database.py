@@ -186,7 +186,7 @@ N_eff_std = 3.046
 nu_mass_fac = 94.0708
 matter = odict([
     ["omegab_h2, omegac_h2", {
-        _desc: "Flat prior on Omega*h^2 for barions and cold dark matter",
+        _desc: "Flat prior on Omega*h^2 for baryons and cold dark matter",
         kinds.theory: {_camb: None, _classy: None},
         _params: odict([
             ["omegabh2", odict([

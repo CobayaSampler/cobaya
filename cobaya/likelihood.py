@@ -163,7 +163,7 @@ class LikelihoodExternalFunction(Likelihood):
                 # Print traceback
                 self.log.error("".join(
                     ["-"] * 16 + ["\n\n"] +
-                    list(traceback.format_exception(*sys.exc_info())) | +
+                    list(traceback.format_exception(*sys.exc_info()))  +
                     ["\n"] + ["-"] * 37))
             raise LoggedError(
                 self.log, "The external likelihood '%s' failed at evaluation. "

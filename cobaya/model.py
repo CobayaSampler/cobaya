@@ -22,7 +22,7 @@ from cobaya.conventions import _params, _overhead_per_param, _provides
 from cobaya.conventions import _path_install, _debug, _debug_default, _debug_file
 from cobaya.conventions import _input_params, _output_params, _chi2, _separator
 from cobaya.conventions import _input_params_prefix, _output_params_prefix, _requires
-from cobaya.input import update_info, str_to_list
+from cobaya.input import update_info
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection, LikelihoodExternalFunction, \
@@ -30,7 +30,8 @@ from cobaya.likelihood import LikelihoodCollection, LikelihoodExternalFunction, 
 from cobaya.theory import TheoryCollection
 from cobaya.log import LoggedError, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
-from cobaya.tools import gcd, deepcopy_where_possible, are_different_params_lists
+from cobaya.tools import gcd, deepcopy_where_possible, are_different_params_lists, \
+    str_to_list
 from cobaya.component import Provider
 
 # Log-posterior namedtuple
@@ -145,6 +146,9 @@ class Model(HasLogger):
         info_likelihood = self._updated_info[kinds.likelihood]
         self.likelihood = LikelihoodCollection(info_likelihood, theory=self.theory,
                                                path_install=path_install, timing=timing)
+
+        for component in list(self.likelihood.values()) + list(self.theory.values()):
+            self.theory.update(component.get_helper_theories())
 
         if stop_at_error:
             for component in chain(self.likelihood.values(), self.theory.values()):
@@ -511,7 +515,7 @@ class Model(HasLogger):
             # parameters that can be provided but not already explicitly assigned
             provide_params = [p for p in component.get_can_provide_params() if
                               p not in self.output_params and p not in
-                              str_to_list(getattr(component, 'requires', []))]
+                              str_to_list(getattr(component, _requires, []))]
 
             for k in can_provide + component.output_params + provide_params:
                 providers[k] = providers.get(k, []) + [component]
@@ -677,7 +681,8 @@ class Model(HasLogger):
                     provide = str_to_list(getattr(component, _provides, []))
                     supports_params |= set(provide)
                 else:
-                    supports_params = component.get_requirements()
+                    supports_params = set(list(component.get_requirements())).union(
+                        set(component.get_can_support_params()))
 
                 # Identify parameters understood by this likelihood/theory
                 # 1a. Does it have input/output params list?
@@ -787,8 +792,10 @@ class Model(HasLogger):
                 # Update infos!
                 inf = (info_theory, info_likelihood)[
                     component in self.likelihood.values()]
-                inf[component.get_name()].pop(_params, None)
-                inf[component.get_name()][option] = getattr(component, attr)
+                inf = inf.get(component.get_name())
+                if inf:
+                    inf.pop(_params, None)
+                    inf[option] = getattr(component, attr)
         if self.log.getEffectiveLevel() <= logging.DEBUG:
             self.log.debug("Parameters were assigned as follows:")
             for component in components:
@@ -812,11 +819,10 @@ class Model(HasLogger):
         If ``fast_slow=True``, returns just 2 blocks: a fast and a slow one, each one
         assigned its slowest per-parameter speed.
         """
-        # Fill unknown speeds with the value of the slowest one, and clip with overhead
+        # Fill unknown speeds with the value of the slowest one`, and clip with overhead
         components = list(self.likelihood.values()) + list(self.theory.values())
-        speeds = np.array(
-            [getattr(component, "speed", -1) for component in components],
-            dtype=np.float64)
+        speeds = np.array([component.get_speed() for component in components],
+                          dtype=np.float64)
         # Add overhead to the defined ones, and clip to the slowest the undefined ones
         speeds[speeds > 0] = (speeds[speeds > 0] ** -1 + self.overhead) ** -1
         try:
@@ -949,7 +955,7 @@ class Model(HasLogger):
         for theory in chain(self.theory.values(), self.likelihood.values()):
             theory.set_cache_size(n_states)
 
-    def _get_auto_covmat(self, params_info):
+    def get_auto_covmat(self, params_info):
         """
         Tries to get an automatic covariance matrix for the current model and data.
 
@@ -958,9 +964,8 @@ class Model(HasLogger):
         likes_renames = {like.get_name(): {_aliases: getattr(like, _aliases, [])}
                          for like in self.likelihood.values()}
         try:
-            # TODO: get_auto_covmat has nothing to do with cosmology, move to model
-            #  or somewhere else? And generalize to more theories
-            return list(self.theory.values())[0].get_auto_covmat(params_info,
-                                                                 likes_renames)
+            for theory in self.theory.values():
+                if hasattr(theory, 'get_auto_covmat'):
+                    return theory.get_auto_covmat(params_info, likes_renames)
         except:
             return None

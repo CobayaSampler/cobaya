@@ -21,7 +21,6 @@ from collections import OrderedDict as odict
 from ast import parse
 import warnings
 import inspect
-from six import string_types
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore")
@@ -49,6 +48,10 @@ from cobaya.log import LoggedError
 import logging
 
 log = logging.getLogger(__name__.split(".")[-1])
+
+
+def str_to_list(x):
+    return [x] if isinstance(x, six.string_types) else x
 
 
 def change_key(info, old, new, value):
@@ -219,17 +222,19 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
             raise exc_info[1]
 
 
-def import_all_classes(path, pkg, subclass_of, hidden=False):
+def import_all_classes(path, pkg, subclass_of, hidden=False, helpers=False):
     import pkgutil
     result = set()
+    from cobaya.theory import HelperTheory
     for (module_loader, name, ispkg) in pkgutil.iter_modules([path]):
         if hidden or not name.startswith('_'):
             module_name = pkg + '.' + name
             m = load_module(module_name)
             for class_name, cls in inspect.getmembers(m, inspect.isclass):
-                if issubclass(cls, subclass_of):
-                    if cls.__module__ == module_name:
-                        result.add(cls)
+                if issubclass(cls, subclass_of) and \
+                        (helpers or not issubclass(cls, HelperTheory)) and \
+                        cls.__module__ == module_name:
+                    result.add(cls)
             if ispkg:
                 result.update(import_all_classes(os.path.dirname(m.__file__), m.__name__,
                                                  subclass_of, hidden))
@@ -440,7 +445,7 @@ def get_scipy_1d_pdf(info):
         info2["scale"] = minmaxvalues["max"] - minmaxvalues["min"]
 
     for x in ["loc", "scale", "min", "max"]:
-        if isinstance(info2.get(x), string_types):
+        if isinstance(info2.get(x), six.string_types):
             raise LoggedError(log, "%s should be a number (got '%s')", x, info2.get(x))
     # Check for improper priors
     if not np.all(np.isfinite([info2.get(x, 0) for x in ["loc", "scale", "min", "max"]])):

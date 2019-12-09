@@ -14,15 +14,15 @@ caching of results, so that calculations do not need to be redone when the param
 which a component directly (or indirectly) depends have not changed.
 
 Subclasses generally provide the :meth:`Theory.get_requirements`,
-:meth:`Theory.calculate` and initialization methods as required. The :meth:Theory.needs`
+:meth:`Theory.calculate` and initialization methods as required. The :meth:`Theory.needs`
 method is used to tell a code which requirements are
-actually needed by other components, and may return of additional conditional
+actually needed by other components, and may return a dictionary of additional conditional
 requirements based on those needs.
 
 The :meth:`Theory.calculate` method saves all needed results in the state dictionary
-(which is cached and reused as needed). Subclasses define ``get_X`` methods to return the
-actual result of the calculation for X for the current cache state. The
-:meth:`Theory.get_param` method returns the value of a derived parameter for the
+(which is cached and reused as needed). Subclasses define ``get_X`` or ``get_result(X)``
+methods to return the actual result of the calculation for X for the current cache state.
+The :meth:`Theory.get_param` method returns the value of a derived parameter for the
 current state.
 
 """
@@ -32,7 +32,7 @@ from collections import deque
 # Local
 from cobaya.conventions import _external, kinds, _requires, _params
 from cobaya.component import CobayaComponent, ComponentCollection
-from cobaya.tools import get_class
+from cobaya.tools import get_class, str_to_list
 from cobaya.log import LoggedError, always_stop_exceptions
 from cobaya.tools import get_class_methods
 
@@ -45,6 +45,9 @@ class Theory(CobayaComponent):
     def __init__(self, info={}, name=None, timing=None, path_install=None,
                  initialize=True, standalone=True):
 
+        self.stop_at_error = False
+        self.speed = -1
+        self._measured_speed = None
         super(Theory, self).__init__(info, name=name, timing=timing,
                                      path_install=path_install, initialize=initialize,
                                      standalone=standalone)
@@ -62,7 +65,8 @@ class Theory(CobayaComponent):
         :return: dictionary of requirements (or list of requirement names if no optional
                  parameters are needed)
         """
-        return {}
+
+        return {p: None for p in str_to_list(getattr(self, _requires, []))}
 
     def needs(self, **requirements):
         """
@@ -115,7 +119,8 @@ class Theory(CobayaComponent):
         """
         Interface function for likelihood and other theory components to get
         quantities calculated by this component. By default assumes the quantity
-        is just directly saved into the current state.
+        is just directly saved into the current state (i.e. returns
+        ``state[result_name]``).
 
         :param result_name: name of quantity
         :param kwargs: options specific to X or this component
@@ -154,6 +159,16 @@ class Theory(CobayaComponent):
                     hasattr(v, 'get') and v.get('derived') is True]
         else:
             return []
+
+    def get_can_support_params(self):
+        """
+        Get a list of parameters supported by this component, can be used to support
+        parameters that don't explicitly appear in the .yaml or class_options params
+        or are otherwise explicitly supported (e.g. via requirements)
+
+        :return: list of names of parameters
+        """
+        return []
 
     def get_allow_agnostic(self):
         """
@@ -237,6 +252,18 @@ class Theory(CobayaComponent):
         """
         return self
 
+    def get_helper_theories(self):
+        """
+        Return dictionary of optional names and helper Theory instances that should be
+        used in conjunction with this component.
+
+        :return: dictionary of names and Theory instances
+        """
+        return {}
+
+    def get_speed(self):
+        return self._measured_speed or self.speed
+
 
 class TheoryCollection(ComponentCollection):
     """
@@ -273,3 +300,7 @@ class TheoryCollection(ComponentCollection):
                               "if you want to access computed requests" % name)
                 pass
         return object.__getattribute__(self, name)
+
+
+class HelperTheory(Theory):
+    pass

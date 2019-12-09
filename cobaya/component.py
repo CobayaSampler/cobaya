@@ -1,20 +1,18 @@
-from cobaya.log import HasLogger
-from cobaya.input import HasDefaults
-from cobaya.log import LoggedError
-from cobaya.conventions import _version
-import numpy as np
 import time
 from collections import OrderedDict
+
+from cobaya.log import HasLogger, LoggedError
+from cobaya.input import HasDefaults
+from cobaya.conventions import _version
 
 
 class Timer(object):
     def __init__(self):
         self.n = 0
-        self.time_avg = 0
-        self.time_sqsum = 0
-        self.time_std = np.inf  # not actually used?
+        self.time_sum = 0.
         self._start = None
         self._time_func = getattr(time, "perf_counter", time.time)
+        self._first_time = None
 
     def start(self):
         self._start = self._time_func()
@@ -22,30 +20,28 @@ class Timer(object):
     def time_from_start(self):
         return self._time_func() - self._start
 
+    def get_time_avg(self):
+        if self.n > 1:
+            return self.time_sum / (self.n - 1)
+        else:
+            return self._first_time
+
     def increment(self, logger=None):
         delta_time = self._time_func() - self._start
-        self.n += 1
-        # TODO: Protect against caching in first call by discarding first time
-        # if too different from second one (maybe check difference in log10 > 1)
-        # In that case, take into account that #timed_evals is now (self.n - 1)
-        if logger and self.n == 2:
-            if delta_time:
-                log10diff = np.log10(self.time_avg / delta_time)
-                if log10diff > 1:
-                    logger.warning(
-                        "It seems the first call has done some caching (difference "
-                        " of a factor %g). Average timing will not be reliable "
-                        "unless many evaluations are carried out.", 10 ** log10diff)
-            else:
-                logger.warning("Timing returning zero, may be inaccurate. First call may "
-                               "have done some caching.")
-        self.time_avg = (delta_time + self.time_avg * (self.n - 1)) / self.n
-        self.time_sqsum += delta_time ** 2
-        if self.n > 1:
-            self.time_std = np.sqrt(
-                (self.time_sqsum - self.n * self.time_avg ** 2) / (self.n - 1))
+        if self._first_time is None:
+            if not delta_time:
+                logger.warning("Timing returning zero, may be inaccurate")
+            # first may differ due to cacheing, discard
+            self._first_time = delta_time
+            self.n = 1
+            if logger:
+                logger.debug("First evaluation time: %g s", delta_time)
+
+        else:
+            self.n += 1
+            self.time_sum += delta_time
         if logger:
-            logger.debug("Average evaluation time: %g s", self.time_avg)
+            logger.debug("Average evaluation time: %g s", self.get_time_avg())
 
 
 class CobayaComponent(HasLogger, HasDefaults):
@@ -118,9 +114,9 @@ class CobayaComponent(HasLogger, HasDefaults):
         return None
 
     def __exit__(self, exception_type, exception_value, traceback):
-        if self.timer:
+        if self.timer and self.timer.n:
             self.log.info("Average evaluation time for %s: %g s  (%d evaluations)" % (
-                self.get_name(), self.timer.time_avg, self.timer.n))
+                self.get_name(), self.timer.get_time_avg(), self.timer.n))
         self.close()
 
 
@@ -138,8 +134,9 @@ class ComponentCollection(OrderedDict, HasLogger):
             sep = "\n   "
             self.log.info(
                 "Average computation time:" + sep + sep.join(
-                    ["%s : %g s (%d evaluations)" % (
-                        component.get_name(), component.timer.time_avg, component.timer.n)
+                    ["%s : %g s (%d evaluations, %g s total)" % (
+                        component.get_name(), component.timer.get_time_avg(),
+                        component.timer.n, component.timer.time_sum)
                      for component in timers]))
 
     def get_version(self):
