@@ -422,36 +422,36 @@ class Prior(HasLogger):
                                             "Please use a different one.", _prior_1d_name)
             self.log.debug(
                 "Loading external prior '%s' from: '%s'", name, info_prior[name])
-            self.external[name] = (
-                {"logp": get_external_function(info_prior[name], name=name)})
-            self.external[name]["argspec"] = (
-                getfullargspec(self.external[name]["logp"]))
-            self.external[name]["params"] = {
+            opts = {"logp": get_external_function(info_prior[name], name=name)}
+            self.external[name] = opts
+            opts["argspec"] = (
+                getfullargspec(opts["logp"]))
+            opts["params"] = {
                 p: list(sampled_params_info).index(p)
-                for p in self.external[name]["argspec"].args if p in sampled_params_info}
-            self.external[name]["constant_params"] = {
+                for p in opts["argspec"].args if p in sampled_params_info}
+            opts["constant_params"] = {
                 p: constant_params_info[p]
-                for p in self.external[name]["argspec"].args if p in constant_params_info}
-            if (not (len(self.external[name]["params"]) +
-                     len(self.external[name]["constant_params"]))):
+                for p in opts["argspec"].args if p in constant_params_info}
+            if (not (len(opts["params"]) +
+                     len(opts["constant_params"]))):
                 raise LoggedError(
                     self.log, "None of the arguments of the external prior '%s' "
                               "are known *fixed* or *sampled* parameters. "
                               "This prior recognizes: %r", name,
-                    self.external[name]["argspec"].args)
-            params_without_default = self.external[name]["argspec"].args[
-                                     :(len(self.external[name]["argspec"].args) -
-                                       len(self.external[name][
+                    opts["argspec"].args)
+            params_without_default = opts["argspec"].args[
+                                     :(len(opts["argspec"].args) -
+                                       len(opts[
                                                "argspec"].defaults or []))]
-            if not all((p in self.external[name]["params"] or
-                        p in self.external[name]["constant_params"])
+            if not all((p in opts["params"] or
+                        p in opts["constant_params"])
                        for p in params_without_default):
                 raise LoggedError(
                     self.log, "Some of the arguments of the external prior '%s' cannot "
                               "be found and don't have a default value either: %s",
                     name, list(set(params_without_default)
-                               .difference(self.external[name]["params"])
-                               .difference(self.external[name]["constant_params"])))
+                               .difference(opts["params"])
+                               .difference(opts["constant_params"])))
             self.log.warning("External prior '%s' loaded. "
                              "Mind that it might not be normalized!", name)
 
@@ -487,12 +487,14 @@ class Prior(HasLogger):
         if confidence_for_unbounded >= 1:
             return self._bounds
         try:
-            bounds = deepcopy(self._bounds)
+            bounds = self._bounds.copy()
             infs = list(set(np.argwhere(np.isinf(bounds)).T[0]))
             if infs:
-                self.log.warning("There are unbounded parameters. Prior bounds are given "
-                                 "at %s confidence level. Beware of likelihood modes at "
-                                 "the edge of the prior", confidence_for_unbounded)
+                self.log.warning("There are unbounded parameters (%r). Prior bounds are "
+                                 "given at %s confidence level. Beware of likelihood "
+                                 "modes at the edge of the prior",
+                                 [self.params[ix] for ix in infs],
+                                 confidence_for_unbounded)
                 bounds[infs] = [
                     self.pdf[i].interval(confidence_for_unbounded) for i in infs]
             return bounds

@@ -393,8 +393,10 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
                             set(getattr(cls, "ignore_at_resume", {})))
                     except ImportError:
                         pass
-                # Pop ignored options
-                [(block1[k].pop(j, None), block2[k].pop(j, None)) for j in ignore_k_this]
+                    # Pop ignored options
+                    for j in ignore_k_this:
+                        block1[k].pop(j, None)
+                        block2[k].pop(j, None)
             if recursive_odict_to_dict(block1[k]) != recursive_odict_to_dict(block2[k]):
                 # For clarity, pop common stuff before printing
                 to_pop = [j for j in block1[k] if (
