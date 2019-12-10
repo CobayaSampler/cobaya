@@ -19,13 +19,13 @@ from cobaya.conventions import _path_install, _debug, _debug_file, _output_prefi
 from cobaya.conventions import _resume, _timing, _debug_default, _force, _post, _version
 from cobaya.conventions import _yaml_extensions, _separator_files, _updated_suffix
 from cobaya.conventions import _modules_path_arg, _modules_path_env, _resume_default
-from cobaya.output import get_Output as Output
+from cobaya.output import get_output
 from cobaya.model import Model
 from cobaya.sampler import get_sampler, get_sampler_class, Minimizer
 from cobaya.log import logger_setup
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info
-from cobaya.mpi import import_MPI, am_single_or_primary_process
+from cobaya.mpi import import_MPI, is_main_process
 from cobaya.tools import warn_deprecation, deepcopy_where_possible, recursive_update
 from cobaya.post import post
 
@@ -38,6 +38,7 @@ def run(info, stop_at_error=None):
         "or, if you were passing a yaml string, load it with 'cobaya.yaml.yaml_load'.")
     # Configure the logger ASAP
     # Just a dummy import before configuring the logger, until I fix root/individual level
+    # TODO: check getdist import
     import getdist
     logger_setup(info.get(_debug), info.get(_debug_file))
     import logging
@@ -50,15 +51,15 @@ def run(info, stop_at_error=None):
     if issubclass(get_sampler_class(updated_info) or type, Minimizer):
         resume = True
         force = False
-    output = Output(output_prefix=info.get(_output_prefix),
-                    resume=resume, force_output=force)
+    output = get_output(output_prefix=info.get(_output_prefix),
+                        resume=resume, force_output=force)
     if output:
         updated_info[_output_prefix] = output.updated_output_prefix()
         updated_info[_resume] = output.is_resuming()
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
         # Don't dump unless we are doing output, just in case something not serializable
         # May be fixed in the future if we find a way to serialize external functions
-        if info.get(_output_prefix) and am_single_or_primary_process():
+        if info.get(_output_prefix) and is_main_process():
             logging.getLogger(__name__.split(".")[-1]).info(
                 "Input info updated with defaults (dumped to YAML):\n%s",
                 yaml_dump(updated_info))
@@ -79,15 +80,16 @@ def run(info, stop_at_error=None):
                updated_info.get(_prior), updated_info.get(kinds.theory),
                path_install=info.get(_path_install), timing=updated_info.get(_timing),
                allow_renames=False,
-               stop_at_error=info_stop if stop_at_error is None else stop_at_error) as model:
+               stop_at_error=info_stop if stop_at_error is None else stop_at_error) \
+            as model:
         # Update the updated info with the parameter routes
         keys = ([kinds.likelihood, kinds.theory]
                 if kinds.theory in updated_info else [kinds.likelihood])
         updated_info.update(odict([(k, model.info()[k]) for k in keys]))
         # Add versions of components
         updated_info = recursive_update(updated_info, dict(
-            [kind, dict([comp, {_version: version}]
-                        for comp, version in comp_info.items() if version)]
+            (kind, {comp: {_version: version}
+                    for comp, version in comp_info.items() if version})
             for kind, comp_info in model.get_version().items()))
         output.dump_info(None, updated_info, check_compatible=False)
         with get_sampler(

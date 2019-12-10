@@ -17,3 +17,6 @@
 ## ,, related, how to set intermediate debugging level so see regular short output
 ## dump log info along with each chain file if saving to file (currently in stdout)
 ## check parameter default proposal widths not too large
+## turn dragging off if only one block or no speeds differ by more than factor 2
+## specify how to calibrate speed factors (2018 defaults looks wrong, TTTEEE slower than TT)
+## If non-linear lensing on, model the non-linear correction via limber for faster semi-slow parameters

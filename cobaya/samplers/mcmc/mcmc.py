@@ -12,7 +12,6 @@ import six
 
 # Global
 import os
-from copy import deepcopy
 from itertools import chain
 import numpy as np
 from collections import OrderedDict as odict
@@ -21,8 +20,8 @@ from pandas import DataFrame
 
 # Local
 from cobaya.sampler import Sampler
-from cobaya.mpi import get_mpi_size, get_mpi_rank, get_mpi_comm, get_mpi
-from cobaya.mpi import more_than_one_process, am_single_or_primary_process, sync_processes
+from cobaya.mpi import get_mpi_size, get_mpi_rank, get_mpi_comm, get_mpi, share_mpi
+from cobaya.mpi import more_than_one_process, is_main_process, sync_processes
 from cobaya.collection import Collection, OnePointDict
 from cobaya.conventions import kinds, partag, _weight, _minuslogpost
 from cobaya.conventions import _line_width, _path_install, _progress_extension
@@ -48,10 +47,10 @@ class mcmc(Sampler):
         if not self.model.prior.d():
             raise LoggedError(self.log, "No parameters being varied for sampler")
         self.log.debug("Initializing")
-        for p in [
-            "burn_in", "max_tries", "output_every", "check_every", "callback_every"]:
-            setattr(
-                self, p, read_dnumber(getattr(self, p), self.model.prior.d(), dtype=int))
+        for p in ["burn_in", "max_tries", "output_every", "check_every",
+                  "callback_every"]:
+            setattr(self, p, read_dnumber(getattr(self, p), self.model.prior.d(),
+                                          dtype=int))
         if self.callback_every is None:
             self.callback_every = self.check_every
         # Burning-in countdown -- the +1 accounts for the initial point (always accepted)
@@ -59,22 +58,22 @@ class mcmc(Sampler):
         # Max # checkpoints to wait, in case one process dies without sending MPI_ABORT
         self.been_waiting = 0
         self.max_waiting = max(50, self.max_tries / self.model.prior.d())
-        if am_single_or_primary_process():
+        if is_main_process():
             if self.resuming and (max(self.mpi_size or 0, 1) != max(get_mpi_size(), 1)):
                 raise LoggedError(
                     self.log,
                     "Cannot resume a sample with a different number of chains: "
                     "was %d and now is %d.", max(self.mpi_size, 1),
                     max(get_mpi_size(), 1))
-        if more_than_one_process():
-            if am_single_or_primary_process() and get_mpi().Get_version()[0] < 3:
-                raise LoggedError(self.log, 'MPI use requires MPI version 3.0 or higher '
-                                            'to support IALLGATHER.')
-            sync_processes()
+            if more_than_one_process():
+                if get_mpi().Get_version()[0] < 3:
+                    raise LoggedError(self.log, "MPI use requires MPI version 3.0 or "
+                                                "higher to support IALLGATHER.")
+        sync_processes()
         if not self.resuming and self.output:
             # Delete previous files (if not "forced", the run would have already failed)
-            if ((os.path.abspath(self.covmat_filename()) !=
-                 os.path.abspath(str(self.covmat)))):
+            if (os.path.abspath(self.covmat_filename()) != os.path.abspath(
+                    str(self.covmat)) and is_main_process()):
                 try:
                     os.remove(self.covmat_filename())
                 except OSError:
@@ -102,12 +101,14 @@ class mcmc(Sampler):
             raise LoggedError(self.log,
                               "Choose either oversampling or dragging, not both.")
         if self.blocking:
+            # already stored
             speeds, blocks = self.model._check_speeds_of_params(self.blocking)
             if self.oversample or self.drag:
                 speeds = relative_to_int(speeds)
         else:
-            speeds, blocks = self.model._speeds_of_params(
-                int_speeds=self.oversample or self.drag, fast_slow=self.drag)
+            speeds, blocks = self.model._speeds_of_params(int_speeds=
+                                                          self.oversample or self.drag)
+        sampled_list = list(self.model.parameterization.sampled_params())
         if self.oversample:
             self.oversampling_factors = speeds
             self.log.info("Oversampling with factors:\n" + "\n".join([
@@ -115,25 +116,32 @@ class mcmc(Sampler):
                 zip(self.oversampling_factors, blocks)]))
             self.i_last_slow_block = None
             # No way right now to separate slow and fast
-            slow_params = list(self.model.parameterization.sampled_params())
+            slow_params = sampled_list
         elif self.drag:
-            # For now, no blocking inside either fast or slow: just 2 blocks
-            self.i_last_slow_block = 0
+            # Fast-slow separation: chooses separation that maximizes log-difference in
+            # speed (speed per parameter in a combination of blocks is the slowest one)
+            if len(blocks) == 1:
+                raise LoggedError(self.log, "Requested fast/slow dragging, but only "
+                                            "one parameter block")
+            last_nondrag_block = self._get_last_nondragging_block(blocks, speeds)
+            self.i_last_slow_block = last_nondrag_block
             if np.all(speeds == speeds[0]):
                 raise LoggedError(
                     self.log, "All speeds are equal or too similar: cannot drag! "
-                              "Make sure to define accurate likelihoods' speeds.")
-            # Make the 1st factor 1:
-            speeds = [1, speeds[1] / speeds[0]]
+                              "Make sure to define accurate likelihood speeds.")
             # Target: dragging step taking as long as slow step
-            self.drag_interp_steps = self.drag * speeds[1]
+            # TODO: integrate with block/oversampling optimization, updating block
+            #       ordering to account for dragging, etc. just ad-hoc recipe for now
+            self.drag_interp_steps = (self.drag * min(speeds[last_nondrag_block + 1:])
+                                      / max(speeds[:last_nondrag_block + 1]))
             # Per dragging step, the (fast) posterior is evaluated *twice*,
             self.drag_interp_steps /= 2
             self.drag_interp_steps = int(np.round(self.drag_interp_steps))
-            fast_params = list(chain(*blocks[1 + self.i_last_slow_block:]))
+            fast_params = list(chain(*blocks[last_nondrag_block + 1:]))
             # Not too much or too little dragging
-            drag_limits = [(int(l) * len(fast_params) if l is not None else l)
-                           for l in self.drag_limits]
+            # TODO: do we actually need to clip this?
+            drag_limits = [(int(lim) * len(fast_params) if lim is not None else lim)
+                           for lim in self.drag_limits]
             if drag_limits[0] is not None and self.drag_interp_steps < drag_limits[0]:
                 self.log.warning("Number of dragging steps clipped from below: was not "
                                  "enough to efficiently explore the fast directions -- "
@@ -146,34 +154,32 @@ class mcmc(Sampler):
                                  "avoid this limit by increasing 'drag_limits[1]'.")
                 self.drag_interp_steps = drag_limits[1]
             # Re-scale steps between checkpoint and callback to the slow dimensions only
-            slow_params = list(chain(*blocks[:1 + self.i_last_slow_block]))
+            slow_params = list(chain(*blocks[:last_nondrag_block + 1]))
             self.n_slow = len(slow_params)
             for p in ["check_every", "callback_every"]:
                 setattr(self, p,
                         int(getattr(self, p) * self.n_slow / self.model.prior.d()))
-            self.log.info(
-                "Dragging with oversampling per step:\n" +
-                "\n".join(["   %d : %r" % (f, b)
-                           for f, b in zip([1, self.drag_interp_steps],
-                                           [blocks[0], fast_params])]))
+            self.log.info("Dragging with factor %g oversampling per step: %r",
+                          self.drag_interp_steps, fast_params)
+            self.log.info("Slow parameters: %r", slow_params)
             self.get_new_sample = self.get_new_sample_dragging
         else:
-            self.oversampling_factors = [1 for b in blocks]
-            slow_params = list(self.model.parameterization.sampled_params())
+            self.oversampling_factors = np.ones(len(blocks), dtype=int)
+            slow_params = sampled_list
             self.n_slow = len(slow_params)
         # Turn parameter names into indices
-        self.blocks = [
-            [list(self.model.parameterization.sampled_params()).index(p) for p in b]
-            for b in blocks]
+        self.blocks = [[sampled_list.index(p) for p in b] for b in blocks]
         self.proposer = BlockedProposer(
             self.blocks, oversampling_factors=self.oversampling_factors,
             i_last_slow_block=self.i_last_slow_block, proposal_scale=self.proposal_scale)
         # Build the initial covariance matrix of the proposal, or load from checkpoint
         if self.resuming:
-            covmat = np.loadtxt(self.covmat_filename())
+            covmat = share_mpi(np.loadtxt(
+                self.covmat_filename()) if is_main_process() else None)
             self.log.info("Covariance matrix from checkpoint.")
         else:
-            covmat = self.initial_proposal_covmat(slow_params=slow_params)
+            covmat = share_mpi(self.initial_proposal_covmat(slow_params=slow_params) if
+                               is_main_process() else None)
         self.log.debug(
             "Sampling with covmat:\n%s",
             DataFrame(covmat, columns=self.model.parameterization.sampled_params(),
@@ -187,13 +193,22 @@ class mcmc(Sampler):
         # Useful for getting last points added inside callback function
         self.last_point_callback = 0
         # Monitoring progress
-        if am_single_or_primary_process():
+        if is_main_process():
             cols = ["N", "acceptance_rate", "Rminus1", "Rminus1_cl"]
             self.progress = DataFrame(columns=cols)
             self.i_checkpoint = 1
             if self.output and not self.resuming:
                 with open(self.progress_filename(), "w") as progress_file:
                     progress_file.write("# " + " ".join(self.progress.columns) + "\n")
+
+    def _get_last_nondragging_block(self, blocks, speeds):
+        # blocks and speeds are already sorted
+        log_differences = np.zeros(len(blocks) - 1)
+        for i in range(len(blocks) - 1):
+            log_differences[i] = (np.log(np.min(speeds[:i + 1])) -
+                                  np.log(np.min(speeds[i + 1:])))
+        i_max = np.argmin(log_differences)
+        return i_max
 
     def initial_proposal_covmat(self, slow_params=None):
         """
@@ -240,8 +255,8 @@ class mcmc(Sampler):
                 raise LoggedError(
                     self.log, "The first line of the covmat file '%s' "
                               "must be one list of parameter names separated by spaces "
-                              "and staring with '#', and the rest must be a square matrix, "
-                              "with one row per line.", self.covmat)
+                              "and staring with '#', and the rest must be a square "
+                              "matrix, with one row per line.", self.covmat)
             loaded_params = header.strip("#").strip().split()
         elif hasattr(self.covmat, "__getitem__"):
             if not self.covmat_params:
@@ -268,7 +283,7 @@ class mcmc(Sampler):
             # Fill with parameters in the loaded covmat
             renames = [[p] + np.atleast_1d(v.get(partag.renames, [])).tolist()
                        for p, v in params_infos.items()]
-            renames = odict([[a[0], a] for a in renames])
+            renames = odict([(a[0], a) for a in renames])
             indices_used, indices_sampler = zip(*[
                 [loaded_params.index(p),
                  [list(params_infos).index(q) for q, a in renames.items() if p in a]]
@@ -368,7 +383,7 @@ class mcmc(Sampler):
             # Checking convergence and (optionally) learning the covmat of the proposal
             if self.check_all_ready():
                 self.check_convergence_and_learn_proposal()
-                if am_single_or_primary_process():
+                if is_main_process():
                     self.i_checkpoint += 1
             if self.n() == self.effective_max_samples:
                 self.log.info("Reached maximum number of accepted steps allowed. "
@@ -379,7 +394,7 @@ class mcmc(Sampler):
             Ns = (lambda x: np.array(get_mpi_comm().gather(x)))(self.n())
         else:
             Ns = [self.n()]
-        if am_single_or_primary_process():
+        if is_main_process():
             self.log.info("Sampling complete after %d accepted steps.", sum(Ns))
 
     def n(self, burn_in=False):
@@ -400,7 +415,7 @@ class mcmc(Sampler):
         Returns:
            ``True`` for an accepted step, ``False`` for a rejected one.
         """
-        trial = self.current_point[self.model.parameterization._sampled]
+        trial = self.current_point.get_sampled()
         self.proposer.get_proposal(trial)
         logpost_trial, logprior_trial, loglikes_trial, derived = self.model.logposterior(
             trial)
@@ -424,7 +439,7 @@ class mcmc(Sampler):
         """
         # Prepare starting and ending points *in the SLOW subspace*
         # "start_" and "end_" mean here the extremes in the SLOW subspace
-        start_slow_point = self.current_point[self.model.parameterization._sampled]
+        start_slow_point = self.current_point.get_sampled()
         start_slow_logpost = -self.current_point["minuslogpost"]
         end_slow_point = start_slow_point.copy()
         self.proposer.get_proposal_slow(end_slow_point)
@@ -586,7 +601,7 @@ class mcmc(Sampler):
             # Sanity check: actually all processes have finished
             assert np.all(self.all_ready == 1), (
                 "This should not happen! Notify the developers. (Got %r)", self.all_ready)
-            if more_than_one_process() and am_single_or_primary_process():
+            if more_than_one_process() and is_main_process():
                 self.log.info("All chains are r" + msg_ready[1:])
             delattr(self, "req")
             self.been_waiting = 0
@@ -653,7 +668,7 @@ class mcmc(Sampler):
                 bounds = None
                 success_bounds = False
         # Compute convergence diagnostics
-        if am_single_or_primary_process():
+        if is_main_process():
             self.progress.at[self.i_checkpoint, "N"] = (
                 sum(Ns) if more_than_one_process() else self.n())
             acceptance_rate = (
@@ -733,47 +748,40 @@ class mcmc(Sampler):
                         else:
                             self.log.info("Computation of the bounds was not possible. "
                                           "Waiting until the next checkpoint")
-        if more_than_one_process():
-            # Broadcast and save the convergence status and the last R-1 of means
-            success = get_mpi_comm().bcast(
-                (success if am_single_or_primary_process() else None), root=0)
-            if success:
-                self.Rminus1_last = get_mpi_comm().bcast(
-                    (Rminus1 if am_single_or_primary_process() else None), root=0)
-                self.converged = get_mpi_comm().bcast(
-                    (self.converged if am_single_or_primary_process() else None), root=0)
-        else:
-            if success:
-                self.Rminus1_last = Rminus1
+        # Broadcast and save the convergence status and the last R-1 of means
+        success = share_mpi(success if is_main_process() else None)
+        if success:
+            self.Rminus1_last, self.converged = share_mpi(
+                (Rminus1, self.converged) if is_main_process() else None)
         # Do we want to learn a better proposal pdf?
         if self.learn_proposal and not self.converged and success:
             good_Rminus1 = (self.learn_proposal_Rminus1_max >
                             self.Rminus1_last > self.learn_proposal_Rminus1_min)
             if not good_Rminus1:
-                if am_single_or_primary_process():
+                if is_main_process():
                     self.log.info("Bad convergence statistics: "
                                   "waiting until the next checkpoint.")
                 return
             if more_than_one_process():
-                if not am_single_or_primary_process():
+                if not is_main_process():
                     mean_of_covs = np.empty((self.model.prior.d(), self.model.prior.d()))
                 get_mpi_comm().Bcast(mean_of_covs, root=0)
             else:
                 mean_of_covs = covs[0]
             try:
                 self.proposer.set_covariance(mean_of_covs)
-                if am_single_or_primary_process():
+                if is_main_process():
                     self.log.info("Updated covariance matrix of proposal pdf.")
                     self.log.debug("%r", mean_of_covs)
             except:
-                if am_single_or_primary_process():
+                if is_main_process():
                     self.log.debug("Updating covariance matrix failed unexpectedly. "
                                    "waiting until next checkpoint.")
         # Save checkpoint info
         self.write_checkpoint()
 
     def write_checkpoint(self):
-        if am_single_or_primary_process() and self.output:
+        if is_main_process() and self.output:
             checkpoint_filename = self.checkpoint_filename()
             covmat_filename = self.covmat_filename()
             np.savetxt(covmat_filename, self.proposer.get_covariance(), header=" ".join(
@@ -806,7 +814,7 @@ class mcmc(Sampler):
            The sample ``Collection`` containing the accepted steps.
         """
         products = {"sample": self.collection}
-        if am_single_or_primary_process():
+        if is_main_process():
             products.update({"progress": self.progress})
         return products
 

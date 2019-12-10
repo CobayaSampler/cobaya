@@ -28,6 +28,8 @@
 - changed use_planck_names to more general use_renames etc.
 - Greatly reduced deepcopy time overhead in loglike evaluation, faster uniform prior and sample collection
 - Global stop_at_error option to stop at error in any component
+- CAMB calculation using transfer functions for speed up with initial power spectrum parameters (even for non-linear lensing)
+- dragging now exploits blocks within slow and fast groups
 
 ### General
 

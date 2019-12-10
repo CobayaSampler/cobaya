@@ -18,7 +18,7 @@ from collections import OrderedDict as odict
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
-from cobaya.mpi import get_mpi_size, get_mpi_comm, am_single_or_primary_process
+from cobaya.mpi import get_mpi_size, share_mpi, is_main_process
 from cobaya.conventions import kinds, _params
 from cobaya.conventions import _input_params_prefix, _output_params_prefix
 
@@ -190,7 +190,7 @@ def info_random_gaussian_mixture(
     If ``mpi_aware=True``, it draws the random stuff only once, and communicates it to
     the rest of the MPI processes.
     """
-    if am_single_or_primary_process() or not mpi_aware:
+    if is_main_process() or not mpi_aware:
         cov = random_cov(ranges, n_modes=n_modes,
                          O_std_min=O_std_min, O_std_max=O_std_max, mpi_warn=False)
         if n_modes == 1:
@@ -206,10 +206,8 @@ def info_random_gaussian_mixture(
             ranges_mean = [
                 (l if l[0] <= l[1] else 2 * [(l[0] + l[1]) / 2]) for l in ranges_mean]
             mean[i] = random_mean(ranges_mean, n_modes=1, mpi_warn=False)
-    elif not am_single_or_primary_process() and mpi_aware:
-        mean, cov = None, None
     if mpi_aware:
-        mean, cov = get_mpi_comm().bcast(mean, root=0), get_mpi_comm().bcast(cov, root=0)
+        mean, cov = share_mpi((mean, cov) if is_main_process() else None)
     dimension = len(ranges)
     info = {kinds.likelihood: {"gaussian_mixture": {
         "means": mean, "covs": cov, _input_params_prefix: input_params_prefix,

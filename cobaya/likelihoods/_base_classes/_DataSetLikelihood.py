@@ -20,7 +20,7 @@ class _fast_chi_square(object):
         # delay testing active camb until run time
         try:
             from camb.mathutils import chi_squared as fast_chi_squared
-        except:
+        except ImportError:
             def fast_chi_squared(covinv, x):
                 return covinv.dot(x).dot(x)
 
@@ -29,7 +29,7 @@ class _fast_chi_square(object):
 
 
 class _DataSetLikelihood(_InstallableLikelihood):
-    """A likelihood reading parameters and filenames from a .dataset plain text
+    """A likelihood reading parameters and file names from a .dataset plain text
     .ini file (as CosmoMC)"""
 
     default_dataset_params = {}

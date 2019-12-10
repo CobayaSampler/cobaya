@@ -7,7 +7,7 @@ product_id: "151902"
 # Aliases for automatic covariance matrix
 aliases: [plikHM_TTTEEE]
 # Speed in evaluations/second
-speed: 7
+speed: 30
 
 params: !defaults [params_calib, params_calib_temp, params_calib_pol, params_TT, params_TE, params_EE]
 

@@ -57,7 +57,7 @@ from cobaya.conventions import _covmat_extension, _progress_extension, _module_p
 from cobaya.tools import get_class
 from cobaya.log import LoggedError
 from cobaya.yaml import yaml_load_file
-from cobaya.mpi import am_single_or_primary_process
+from cobaya.mpi import is_main_process
 from cobaya.component import CobayaComponent
 
 
@@ -134,10 +134,10 @@ class Sampler(CobayaComponent):
                     for k, v in checkpoint_info[kinds.sampler][self.get_name()].items():
                         setattr(self, k, v)
                     self.resuming = True
-                    if am_single_or_primary_process():
+                    if is_main_process():
                         self.log.info("Resuming from previous sample!")
                 except KeyError:
-                    if am_single_or_primary_process():
+                    if is_main_process():
                         raise LoggedError(
                             self.log, "Checkpoint file found at '%s' "
                                       "but it corresponds to a different sampler.",

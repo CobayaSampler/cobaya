@@ -87,7 +87,7 @@ from copy import deepcopy
 
 # Local
 from cobaya.sampler import Minimizer
-from cobaya.mpi import get_mpi_size, get_mpi_comm, am_single_or_primary_process
+from cobaya.mpi import get_mpi_size, get_mpi_comm, is_main_process
 from cobaya.collection import OnePoint
 from cobaya.log import LoggedError
 from cobaya.tools import read_dnumber, choleskyL, recursive_update
@@ -102,7 +102,7 @@ getdist_ext_ignore_prior = {True: ".bestfit", False: ".minimum"}
 class minimize(Minimizer):
     def initialize(self):
         """Prepares the arguments for `scipy.minimize`."""
-        if am_single_or_primary_process():
+        if is_main_process():
             self.log.info("Initializing")
         self.max_evals = read_dnumber(self.max_evals, self.model.prior.d())
         # Configure target
@@ -244,12 +244,12 @@ class minimize(Minimizer):
                 self._inv_affine_transform_matrix, root=0)
             _affine_transform_baselines = get_mpi_comm().gather(
                 self._affine_transform_baseline, root=0)
-            if am_single_or_primary_process():
+            if is_main_process():
                 i_min = np.argmin([getattr(r, evals_attr_) for r in results])
                 self.result = results[i_min]
                 self._inv_affine_transform_matrix = _inv_affine_transform_matrices[i_min]
                 self._affine_transform_baseline = _affine_transform_baselines[i_min]
-        if am_single_or_primary_process():
+        if is_main_process():
             if not self.success:
                 raise LoggedError(
                     self.log, "Minimization failed! Here is the raw result object:\n%s",
@@ -303,7 +303,7 @@ class minimize(Minimizer):
         transformation needs to be applied to the coordinates appearing inside the
         ``result_object``.
         """
-        if am_single_or_primary_process():
+        if is_main_process():
             return {"minimum": self.minimum, "result_object": self.result,
                     "M": self._inv_affine_transform_matrix,
                     "X0": self._affine_transform_baseline}
@@ -330,10 +330,10 @@ class minimize(Minimizer):
                 else:
                     lines.append("%5d  %-17s %-*s %s" % (num, val, width, p, lab))
 
-        num_sampled = len(self.model.parameterization.sampled_params())
-        num_derived = len(self.model.parameterization.derived_params())
+        # num_sampled = len(self.model.parameterization.sampled_params())
+        # num_derived = len(self.model.parameterization.derived_params())
         add_section(
-            [[p, params[p]] for p in self.model.parameterization.sampled_params()])
+            [(p, params[p]) for p in self.model.parameterization.sampled_params()])
         lines.append('')
         add_section([[p, value] for p, value in
                      self.model.parameterization.constant_params().items()])
@@ -343,8 +343,8 @@ class minimize(Minimizer):
         if hasattr(params, 'chi2_names'):
             from cobaya.conventions import _chi2, _separator
             labels.update(
-                odict([[p, r'\chi^2_{\rm %s}' % (
-                    p.replace(_chi2 + _separator, '').replace("_", r"\ "))]
+                odict([(p, r'\chi^2_{\rm %s}' % (
+                    p.replace(_chi2 + _separator, '').replace("_", r"\ ")))
                        for p in params.chi2_names]))
             add_section([[chi2, params[chi2]] for chi2 in params.chi2_names])
         return "\n".join(lines)

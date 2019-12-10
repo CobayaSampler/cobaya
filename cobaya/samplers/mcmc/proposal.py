@@ -50,7 +50,7 @@ class CyclicIndexRandomizer(IndexCycler):
 
 try:
     import numba
-    from np.random import normal
+    from numpy.random import normal
     import warnings
 
 
@@ -177,8 +177,8 @@ class BlockedProposer(HasLogger):
                     "The index given for the last slow block, %d, is not valid: "
                     "there are only %d blocks.",
                     i_last_slow_block, len(parameter_blocks))
-        n_all = sum([len(b) for b in parameter_blocks])
-        n_slow = sum([len(b) for b in parameter_blocks[:1 + i_last_slow_block]])
+        n_all = sum(len(b) for b in parameter_blocks)
+        n_slow = sum(len(b) for b in parameter_blocks[:1 + i_last_slow_block])
         if set(list(chain(*parameter_blocks))) != set(range(n_all)):
             raise LoggedError(self.log,
                               "The blocks do not contain all the parameter indices.")
@@ -258,8 +258,8 @@ class BlockedProposer(HasLogger):
         for iblock, bp in enumerate(self.proposer):
             j_start = self.j_start[iblock]
             j_end = j_start + bp.n
-            self.transform += [sigmas_diag[j_start:, j_start:]
-                                   .dot(L[j_start:, j_start:j_end])]
+            self.transform += [sigmas_diag[j_start:, j_start:].dot(L[j_start:,
+                                                                   j_start:j_end])]
 
     def get_covariance(self):
         return self.propose_matrix.copy()

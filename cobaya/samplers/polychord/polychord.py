@@ -16,12 +16,12 @@ import logging
 import inspect
 from itertools import chain
 from collections import OrderedDict as odict
+from random import random
 
 # Local
 from cobaya.tools import read_dnumber, get_external_function, relative_to_int
 from cobaya.sampler import Sampler
-from cobaya.mpi import get_mpi_comm
-from cobaya.mpi import am_single_or_primary_process, more_than_one_process, sync_processes
+from cobaya.mpi import is_main_process, share_mpi, sync_processes
 from cobaya.collection import Collection
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release
@@ -33,13 +33,13 @@ clusters = "clusters"
 class polychord(Sampler):
     def initialize(self):
         """Imports the PolyChord sampler and prepares its arguments."""
-        if am_single_or_primary_process():  # rank = 0 (MPI master) or None (no MPI)
+        if is_main_process():  # rank = 0 (MPI master) or None (no MPI)
             self.log.info("Initializing")
         # If path not given, try using general path to modules
         if not self.path and self.path_install:
             self.path = get_path(self.path_install)
         if self.path:
-            if am_single_or_primary_process():
+            if is_main_process():
                 self.log.info("Importing *local* PolyChord from " + self.path)
                 if not os.path.exists(os.path.realpath(self.path)):
                     raise LoggedError(self.log,
@@ -93,16 +93,11 @@ class polychord(Sampler):
             self.read_resume = False
             from tempfile import gettempdir
             output_folder = gettempdir()
-            if am_single_or_primary_process():
-                from random import random
-                output_prefix = hex(int(random() * 16 ** 6))[2:]
-            else:
-                output_prefix = None
-            if more_than_one_process():
-                output_prefix = get_mpi_comm().bcast(output_prefix, root=0)
+            output_prefix = share_mpi(hex(int(random() * 16 ** 6))[2:]
+                                      if is_main_process() else None)
         self.base_dir = os.path.join(output_folder, self.base_dir)
         self.file_root = output_prefix
-        if am_single_or_primary_process():
+        if is_main_process():
             # Creating output folder, if it does not exist (just one process)
             if not os.path.exists(self.base_dir):
                 os.makedirs(self.base_dir)
@@ -176,7 +171,7 @@ class polychord(Sampler):
             self.model, None, name="live", initial_size=self.pc_settings.nlive)
         self.dead = Collection(self.model, self.output, name="dead")
         # Done!
-        if am_single_or_primary_process():
+        if is_main_process():
             self.log.info("Calling PolyChord with arguments:")
             for p, v in inspect.getmembers(self.pc_settings, lambda a: not (callable(a))):
                 if not p.startswith("_"):
@@ -231,7 +226,7 @@ class polychord(Sampler):
                 derived)
 
         sync_processes()
-        if am_single_or_primary_process():
+        if is_main_process():
             self.log.info("Sampling!")
         self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
                               self.pc_prior, self.dumper)
@@ -259,7 +254,7 @@ class polychord(Sampler):
         """
         if exception_type:
             raise
-        if am_single_or_primary_process():
+        if is_main_process():
             self.log.info("Loading PolyChord's results: samples and evidences.")
             prefix = os.path.join(self.pc_settings.base_dir, self.pc_settings.file_root)
             self.collection = self.save_sample(prefix + ".txt", "1")
@@ -318,7 +313,7 @@ class polychord(Sampler):
         #     bcast_from_0 = lambda attrname: setattr(self,
         #         attrname, get_mpi_comm().bcast(getattr(self, attrname, None), root=0))
         #     map(bcast_from_0, ["collection", "logZ", "logZstd", "clusters"])
-        if am_single_or_primary_process():
+        if is_main_process():
             self.log.info("Finished! Raw PolyChord output stored in '%s', "
                           "with prefix '%s'",
                           self.pc_settings.base_dir, self.pc_settings.file_root)
@@ -330,7 +325,7 @@ class polychord(Sampler):
         Returns:
            The sample ``Collection`` containing the sequentially discarded live points.
         """
-        if am_single_or_primary_process():
+        if is_main_process():
             products = {
                 "sample": self.collection, "logZ": self.logZ, "logZstd": self.logZstd}
             if self.pc_settings.do_clustering:

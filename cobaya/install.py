@@ -273,8 +273,8 @@ def install_script():
                             help="Install data of the modules.", dest=_code)
     arguments = parser.parse_args()
 
-    from cobaya.mpi import am_single_or_primary_process
-    is_primary_process = am_single_or_primary_process(no_mpi=arguments.no_mpi)
+    from cobaya.mpi import is_main_process
+    is_primary_process = is_main_process(no_mpi=arguments.no_mpi)
 
     # Configure the logger ASAP
     logger_setup(no_mpi=arguments.no_mpi)

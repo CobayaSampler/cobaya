@@ -46,7 +46,7 @@ oversample: False  # produces potentially MANY samples
 # Set to True, or a factor of the time of a jump on the slow block
 drag: False
 # Min and max number of times the fast block is iterated
-drag_limits : [1, 10]
+drag_limits: [1, 10]
 # Manual blocking
 # ---------------
 # To take full advantage of speed-blocking, sort the blocks by ascending speeds

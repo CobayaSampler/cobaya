@@ -26,7 +26,7 @@ from cobaya.conventions import _separator_files, _post_add, _post_remove, _post_
 from cobaya.collection import Collection
 from cobaya.log import logger_setup, LoggedError
 from cobaya.input import update_info
-from cobaya.output import get_Output as Output
+from cobaya.output import get_output
 from cobaya.mpi import get_mpi_rank
 from cobaya.tools import progress_bar, recursive_update
 from cobaya.model import Model
@@ -54,7 +54,7 @@ def post(info, sample=None):
             "Post-processing is not yet MPI-able. Doing nothing for rank > 1 processes.")
         return
     # 1. Load existing sample
-    output_in = Output(output_prefix=info.get(_output_prefix), resume=True)
+    output_in = get_output(output_prefix=info.get(_output_prefix), resume=True)
     info_in = load_input(output_in.file_updated) if output_in else deepcopy(info)
     dummy_model_in = DummyModel(info_in[_params], info_in[kinds.likelihood],
                                 info_in.get(_prior, None))
@@ -222,7 +222,7 @@ def post(info, sample=None):
     if out_prefix not in [None, False]:
         out_prefix += _separator_files + _post + _separator_files + info_post[
             _post_suffix]
-    output_out = Output(output_prefix=out_prefix, force_output=info.get(_force))
+    output_out = get_output(output_prefix=out_prefix, force_output=info.get(_force))
     info_out = deepcopy(info)
     info_out[_post] = info_post
     # Updated with input info and extended (updated) add info

@@ -79,7 +79,7 @@ def get_mpi_rank():
 
 
 # Aliases for simpler use
-def am_single_or_primary_process(no_mpi=False):
+def is_main_process(no_mpi=False):
     """Returns true if primary process or MPI not available.
 
     Use the no_mpi keyword to avoid checking for MPI via import, 
@@ -110,3 +110,11 @@ def import_MPI(module, target):
     if get_mpi_rank() is not None:
         target_name = target + "_MPI"
     return getattr(import_module(module, package=_package), target_name)
+
+
+def share_mpi(data=None):
+    comm = get_mpi_comm()
+    if comm and more_than_one_process():
+        return comm.bcast(data, root=0)
+    else:
+        return data

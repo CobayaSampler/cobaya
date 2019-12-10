@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function
 # Global
 import os
 import sys
-from copy import deepcopy, copy
+from copy import deepcopy
 from importlib import import_module
 import six
 import numpy as np  # don't delete: necessary for get_external_function
@@ -599,7 +599,7 @@ def warn_deprecation_python2(logger=None):
 
 def warn_deprecation_version(logger=None):
     msg = """
-    You are using an archived version of Cobaya, which is no loger maintained.
+    You are using an archived version of Cobaya, which is no longer maintained.
     Unless intentionally doing so, please, update asap to the latest version
     (e.g. with ``pip install cobaya --upgrade``).
     """

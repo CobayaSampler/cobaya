@@ -222,8 +222,8 @@ class Parameterization(HasLogger):
         return deepcopy(self._sampled)
 
     def sampled_params_info(self):
-        return odict(
-            (p, deepcopy_where_possible(info)) for p, info in self._infos.items() if p in self._sampled)
+        return odict((p, deepcopy_where_possible(info)) for p, info
+                     in self._infos.items() if p in self._sampled)
 
     def sampled_params_renames(self):
         return deepcopy(self._sampled_renames)
@@ -374,10 +374,11 @@ class Parameterization(HasLogger):
 
         Uses the parameter name if no label has been given.
         """
-        get_label = lambda p, info: (
-            ensure_nolatex(
-                getattr(info, "get", lambda x, y: y)(partag.latex,
-                                                     p.replace("_", r"\ "))))
+
+        def get_label(p, info):
+            return ensure_nolatex(getattr(info, "get", lambda x, y: y)
+                                  (partag.latex, p.replace("_", r"\ ")))
+
         return odict((p, get_label(p, info)) for p, info in self._infos.items())
 
     # Python magic for the "with" statement

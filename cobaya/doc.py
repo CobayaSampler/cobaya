@@ -23,8 +23,8 @@ import_odict = "from collections import OrderedDict\n\ninfo = "
 # Command-line script ####################################################################
 
 def doc_script():
-    from cobaya.mpi import am_single_or_primary_process
-    if not am_single_or_primary_process():
+    from cobaya.mpi import is_main_process
+    if not is_main_process():
         return
     warn_deprecation()
     # Parse arguments

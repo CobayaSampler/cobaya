@@ -15,7 +15,6 @@ from collections import OrderedDict as odict
 from copy import deepcopy
 from importlib import import_module
 import inspect
-from six import string_types
 from itertools import chain
 import pkg_resources
 
@@ -30,7 +29,7 @@ from cobaya.tools import fuzzy_match, deepcopy_where_possible, get_class, get_ki
 from cobaya.yaml import yaml_load_file, yaml_dump
 from cobaya.log import LoggedError
 from cobaya.parameterization import expand_info_param
-from cobaya.mpi import get_mpi_comm, am_single_or_primary_process
+from cobaya.mpi import share_mpi, is_main_process
 
 # Logger
 import logging
@@ -64,12 +63,7 @@ def load_input(input_file):
 
 # MPI wrapper for loading the input info
 def load_input_MPI(input_file):
-    if am_single_or_primary_process():
-        info = load_input(input_file)
-    else:
-        info = None
-    info = get_mpi_comm().bcast(info, root=0)
-    return info
+    return share_mpi(load_input(input_file) if is_main_process() else None)
 
 
 def get_used_modules(*infos):

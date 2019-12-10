@@ -25,7 +25,7 @@ from cobaya.conventions import _resume, _resume_default, _force, _yaml_extension
 from cobaya.conventions import kinds, _params
 from cobaya.log import LoggedError, HasLogger
 from cobaya.input import is_equal_info
-from cobaya.mpi import am_single_or_primary_process, get_mpi_comm
+from cobaya.mpi import is_main_process, more_than_one_process, share_mpi
 from cobaya.collection import Collection
 from cobaya.tools import deepcopy_where_possible
 
@@ -244,21 +244,21 @@ class Output_MPI(Output):
     """
 
     def __init__(self, *args, **kwargs):
-        to_broadcast = ("folder", "prefix", "kind", "ext", "resuming")
-        if am_single_or_primary_process():
+        if is_main_process():
             Output.__init__(self, *args, **kwargs)
-        else:
-            for var in to_broadcast:
-                setattr(self, var, None)
-        for var in to_broadcast:
-            setattr(self, var, get_mpi_comm().bcast(getattr(self, var), root=0))
+        if more_than_one_process():
+            to_broadcast = ("folder", "prefix", "kind", "ext", "resuming")
+            values = share_mpi([getattr(self, var) for var in to_broadcast]
+                               if is_main_process() else None)
+            for name, var in zip(to_broadcast, values):
+                setattr(self, name, var)
 
     def dump_info(self, *args, **kwargs):
-        if am_single_or_primary_process():
+        if is_main_process():
             Output.dump_info(self, *args, **kwargs)
 
 
-def get_Output(*args, **kwargs):
+def get_output(*args, **kwargs):
     """
     Auxiliary function to retrieve the output driver.
     """

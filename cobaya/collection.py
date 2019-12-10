@@ -111,15 +111,6 @@ class BaseCollection(HasLogger):
             for name, value in zip(self.derived_params, derived):
                 dic[name] = value
 
-    def add_to_collection(self, collection):
-        """Adds this point at the end of a given collection."""
-        collection.add(
-            self[self.sampled_params],
-            derived=(self[self.derived_params] if self.derived_params else None),
-            logpost=-self[_minuslogpost], weight=self[_weight],
-            logpriors=-np.array(self[self.minuslogprior_names]),
-            loglikes=-0.5 * np.array(self[self.chi2_names]))
-
 
 class Collection(BaseCollection):
 
@@ -373,14 +364,27 @@ class OnePointDict(BaseCollection, odict):
         for p in self.columns:
             self[p] = np.nan
 
-    def __getitem__(self, columns):
-        if isinstance(columns, six.string_types):
-            return odict.__getitem__(self, columns)
-        else:
-            return np.array([odict.__getitem__(self, c) for c in columns])
-
     def add(self, values, **kwargs):
         self._add_dict(self, values, **kwargs)
+
+    def add_to_collection(self, collection):
+        """Adds this point at the end of a given collection."""
+        collection.add(self.get_sampled(), derived=self.get_derived(),
+                       logpost=-self[_minuslogpost], weight=self[_weight],
+                       logpriors=-self.get_array(self.minuslogprior_names),
+                       loglikes=-0.5 * self.get_array(self.chi2_names))
+
+    def get_array(self, names):
+        return np.array([odict.__getitem__(self, c) for c in names])
+
+    def get_sampled(self):
+        return self.get_array(self.sampled_params)
+
+    def get_derived(self):
+        if self.derived_params:
+            return self.get_array(self.derived_params)
+        else:
+            return None
 
     def increase_weight(self, increase):
         self[_weight] += increase

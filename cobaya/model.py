@@ -261,7 +261,7 @@ class Model(HasLogger):
                         = -2 * loglikes[index - n_theory]
                     for this_type in getattr(component, "type", []):
                         aggr_chi2_name = _chi2 + _separator + this_type
-                        if not aggr_chi2_name in derived_dict:
+                        if aggr_chi2_name not in derived_dict:
                             derived_dict[aggr_chi2_name] = 0
                         derived_dict[aggr_chi2_name] += -2 * loglikes[index - n_theory]
         if make_finite:
@@ -398,9 +398,9 @@ class Model(HasLogger):
         logpriors = self.logpriors(params_values_array, make_finite=False)
         logpost = sum(logpriors)
         if -np.inf not in logpriors:
-            l = self.loglikes(params_values, return_derived=return_derived,
-                              make_finite=make_finite, cached=cached, _no_check=True)
-            loglikes, derived_sampler = l if return_derived else (l, [])
+            like = self.loglikes(params_values, return_derived=return_derived,
+                                 make_finite=make_finite, cached=cached, _no_check=True)
+            loglikes, derived_sampler = like if return_derived else (like, [])
             logpost += sum(loglikes)
         else:
             loglikes = []
@@ -803,7 +803,7 @@ class Model(HasLogger):
                 self.log.debug("     Input:  %r", component.input_params)
                 self.log.debug("     Output: %r", component.output_params)
 
-    def _speeds_of_params(self, int_speeds=False, fast_slow=False):
+    def _speeds_of_params(self, int_speeds=False):
         """
         Separates the sampled parameters in blocks according to the likelihood (or theory)
         re-evaluation that changing each one of them involves. Using the approximate speed
@@ -816,8 +816,6 @@ class Model(HasLogger):
 
         If ``int_speeds=True``, returns integer speeds, instead of speeds in 1/s.
 
-        If ``fast_slow=True``, returns just 2 blocks: a fast and a slow one, each one
-        assigned its slowest per-parameter speed.
         """
         # Fill unknown speeds with the value of the slowest one`, and clip with overhead
         components = list(self.likelihood.values()) + list(self.theory.values())
@@ -834,11 +832,10 @@ class Model(HasLogger):
             component.speed = speeds[i]
         # Compute "footprint"
         # i.e. likelihoods (and theory) that we must recompute when each parameter changes
-        footprints = np.zeros((len(self.sampled_dependence), len(components)),
-                              dtype=int)
-        for i, ls in enumerate(self.sampled_dependence.values()):
-            for j, like in enumerate(components):
-                footprints[i, j] = like in ls
+        footprints = np.zeros((len(self.sampled_dependence), len(components)), dtype=int)
+        for i, deps in enumerate(self.sampled_dependence.values()):
+            for j, component in enumerate(components):
+                footprints[i, j] = component in deps
         # Group parameters by footprint
         different_footprints = list(set(tuple(row) for row in footprints.tolist()))
         blocks = [[p for ip, p in enumerate(self.sampled_dependence)
@@ -885,29 +882,6 @@ class Model(HasLogger):
                 speeds / np.ufunc.reduce(np.frompyfunc(gcd, 2, 1), speeds), dtype=int)
         self.log.debug("Optimal ordering of parameter blocks: %r with speeds %r",
                        blocks, params_speeds)
-        # Fast-slow separation: chooses separation that maximizes log-difference in speed
-        # (speed per parameter in a combination of blocks is the slowest one)
-        if fast_slow:
-            if len(blocks) > 1:
-                log_differences = np.zeros(len(blocks) - 1)
-                for i in range(len(blocks) - 1):
-                    log_differences[i] = (np.log(np.min(params_speeds[:i + 1])) -
-                                          np.log(np.min(params_speeds[i + 1:])))
-                i_max = np.argmin(log_differences)
-                blocks = (
-                    lambda l: [list(chain(*l[:i_max + 1])),
-                               list(chain(*l[i_max + 1:]))])(
-                    blocks)
-                # In this case, speeds must be *cumulative*, since I am squashing blocks
-                cum_inv = lambda ss: 1 / (sum(1 / ss))
-                params_speeds = (
-                    lambda l: [cum_inv(l[:i_max + 1]), cum_inv(l[i_max + 1:])])(
-                    params_speeds)
-                self.log.debug("Fast-slow blocking: %r with speeds %r",
-                               blocks, params_speeds)
-            else:
-                self.log.warning("Requested fast/slow separation, "
-                                 "but all parameters have the same speed.")
         return params_speeds, blocks
 
     def _check_speeds_of_params(self, blocking):
