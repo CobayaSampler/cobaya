@@ -19,7 +19,8 @@ from copy import deepcopy
 
 # Local
 from cobaya.conventions import _debug, _debug_file
-from cobaya.mpi import get_mpi_rank, get_mpi_size, get_mpi_comm, more_than_one_process
+from cobaya.mpi import get_mpi_rank, get_mpi_size, get_mpi_comm, \
+    more_than_one_process, is_main_process
 
 
 class LoggedError(Exception):
@@ -147,3 +148,11 @@ class HasLogger(object):
     def __setstate__(self, d):
         self.__dict__ = d
         self.set_logger()
+
+    def mpi_warning(self, msg, *args, **kwargs):
+        if is_main_process():
+            self.log.warning(msg, *args, **kwargs)
+
+    def mpi_info(self, msg, *args, **kwargs):
+        if is_main_process():
+            self.log.info(msg, *args, **kwargs)

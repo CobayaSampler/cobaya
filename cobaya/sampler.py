@@ -165,12 +165,6 @@ class Sampler(CobayaComponent):
                 self.output.folder, self.output.prefix + _progress_extension)
         return None
 
-    def covmat_filename(self):
-        if self.output:
-            return os.path.join(
-                self.output.folder, self.output.prefix + _covmat_extension)
-        return None
-
     def close(self, exception_type, exception_value, traceback):
         """
         Finalizes the sampler, if something needs to be done

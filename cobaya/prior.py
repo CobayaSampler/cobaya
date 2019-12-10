@@ -346,7 +346,6 @@ from __future__ import division
 from collections import OrderedDict as odict
 import numpy as np
 import numbers
-from copy import deepcopy
 from types import MethodType
 
 # Local
@@ -372,7 +371,7 @@ class Prior(HasLogger):
         constant_params_info = parameterization.constant_params()
         sampled_params_info = parameterization.sampled_params_info()
         if not sampled_params_info:
-            self.log.warning("No sampled parameters requested! "
+            self.mpi_warning("No sampled parameters requested! "
                              "This will fail for non-mock samplers.")
         # pdf: a list of independent components
         # in principle, separable: one per parameter
@@ -452,7 +451,7 @@ class Prior(HasLogger):
                     name, list(set(params_without_default)
                                .difference(opts["params"])
                                .difference(opts["constant_params"])))
-            self.log.warning("External prior '%s' loaded. "
+            self.mpi_warning("External prior '%s' loaded. "
                              "Mind that it might not be normalized!", name)
 
     def d(self):
@@ -490,9 +489,9 @@ class Prior(HasLogger):
             bounds = self._bounds.copy()
             infs = list(set(np.argwhere(np.isinf(bounds)).T[0]))
             if infs:
-                self.log.warning("There are unbounded parameters (%r). Prior bounds are "
-                                 "given at %s confidence level. Beware of likelihood "
-                                 "modes at the edge of the prior",
+                self.mpi_warning("There are unbounded parameters (%r). Prior bounds "
+                                 "are given at %s confidence level. Beware of "
+                                 "likelihood modes at the edge of the prior",
                                  [self.params[ix] for ix in infs],
                                  confidence_for_unbounded)
                 bounds[infs] = [
@@ -620,7 +619,7 @@ class Prior(HasLogger):
                           for i, ref_pdf in enumerate(self.ref_pdf)])
         where_no_ref = np.isnan(covmat)
         if np.any(where_no_ref):
-            self.log.warning("Reference pdf not defined or improper for some parameters. "
+            self.mpi_warning("Reference pdf not defined or improper for some parameters. "
                              "Using prior's sigma instead for them.")
             covmat[where_no_ref] = self.covmat(ignore_external=True)[where_no_ref]
         return covmat

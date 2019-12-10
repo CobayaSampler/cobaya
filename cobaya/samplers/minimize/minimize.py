@@ -87,10 +87,13 @@ from copy import deepcopy
 
 # Local
 from cobaya.sampler import Minimizer
-from cobaya.mpi import get_mpi_size, get_mpi_comm, is_main_process
-from cobaya.collection import OnePoint
+from cobaya.mpi import get_mpi_size, get_mpi_comm, is_main_process, get_mpi_rank, \
+    more_than_one_process, share_mpi
+from cobaya.collection import OnePoint, Collection
 from cobaya.log import LoggedError
 from cobaya.tools import read_dnumber, choleskyL, recursive_update
+from cobaya.conventions import _covmat_extension
+from cobaya.samplers.mcmc.mcmc import CovmatSampler
 
 # Handling scpiy vs BOBYQA
 evals_attr = {"scipy": "fun", "bobyqa": "f"}
@@ -99,11 +102,10 @@ evals_attr = {"scipy": "fun", "bobyqa": "f"}
 getdist_ext_ignore_prior = {True: ".bestfit", False: ".minimum"}
 
 
-class minimize(Minimizer):
+class minimize(Minimizer, CovmatSampler):
     def initialize(self):
         """Prepares the arguments for `scipy.minimize`."""
-        if is_main_process():
-            self.log.info("Initializing")
+        self.mpi_info("Initializing")
         self.max_evals = read_dnumber(self.max_evals, self.model.prior.d())
         # Configure target
         method = self.model.loglike if self.ignore_prior else self.model.logpost
@@ -114,10 +116,18 @@ class minimize(Minimizer):
         # Try to load info from previous samples.
         # If none, sample from reference (make sure that it has finite like/post)
         initial_point = None
-        covmat = None
         if self.output:
-            collection_in = self.output.load_collections(
-                self.model, skip=0, thin=1, concatenate=True)
+            files = self.output.find_collections()
+            collection_in = None
+            if files:
+                if more_than_one_process():
+                    if 1 + get_mpi_rank() <= len(files):
+                        collection_in = Collection(
+                            self.model, self.output, name=str(1 + get_mpi_rank()),
+                            resuming=True)
+                else:
+                    collection_in = self.output.load_collections(self.model,
+                                                                 concatenate=True)
             if collection_in:
                 initial_point = (
                     collection_in.bestfit() if self.ignore_prior else collection_in.MAP())
@@ -125,8 +135,7 @@ class minimize(Minimizer):
                     list(self.model.parameterization.sampled_params())].values
                 self.log.info("Starting from %s of previous chain:",
                               "best fit" if self.ignore_prior else "MAP")
-                # TODO: if ignore_prior, one should use *like* covariance (this is *post*)
-                covmat = collection_in.cov()
+
         if initial_point is None:
             this_logp = -np.inf
             while not np.isfinite(this_logp):
@@ -135,29 +144,28 @@ class minimize(Minimizer):
             self.log.info("Starting from random initial point:")
         self.log.info(
             dict(zip(self.model.parameterization.sampled_params(), initial_point)))
-        # Cov and affine transformation
-        self._affine_transform_matrix = None
-        self._inv_affine_transform_matrix = None
-        self._affine_transform_baseline = None
-        if covmat is None:
-            # Use as much info as we have from ref & prior
-            covmat = self.model.prior.reference_covmat()
-        # Transform to space where initial point is at centre, and cov is normalised
-        sigmas_diag, L = choleskyL(covmat, return_scale_free=True)
-        self._affine_transform_matrix = np.linalg.inv(sigmas_diag)
-        self._inv_affine_transform_matrix = sigmas_diag
-        self._affine_transform_baseline = initial_point
-        self.affine_transform = lambda x: (
-            self._affine_transform_matrix.dot(x - self._affine_transform_baseline))
-        self.inv_affine_transform = lambda x: (
-                self._inv_affine_transform_matrix.dot(
-                    x) + self._affine_transform_baseline)
-        bounds = self.model.prior.bounds(
+
+        self._bounds = self.model.prior.bounds(
             confidence_for_unbounded=self.confidence_for_unbounded)
-        # Re-scale
-        self.logp_transf = lambda x: self.logp(self.inv_affine_transform(x))
+
+        # TODO: if ignore_prior, one should use *like* covariance (this is *post*)
+        covmat = self._load_covmat(self.output)[0]
+
+        # scale by conditional parameter widths (since not using correlation structure)
+        scales = np.minimum(1 / np.sqrt(np.diag(np.linalg.inv(covmat))),
+                            (self._bounds[:, 1] - self._bounds[:, 0]) / 3)
+
+        # Cov and affine transformation
+        # Transform to space where initial point is at centre, and cov is normalised
+        # Cannot do rotation, as supported minimization routines assume bounds aligned
+        # with the parameter axes.
+        self._affine_transform_matrix = np.diag(1 / scales)
+        self._inv_affine_transform_matrix = np.diag(scales)
+        self._scales = scales
+        self._affine_transform_baseline = initial_point
         initial_point = self.affine_transform(initial_point)
-        bounds = np.array([self.affine_transform(bounds[:, i]) for i in range(2)]).T
+        np.testing.assert_allclose(initial_point, np.zeros(initial_point.shape))
+        bounds = np.array([self.affine_transform(self._bounds[:, i]) for i in range(2)]).T
         # Configure method
         if self.method.lower() == "bobyqa":
             self.minimizer = pybobyqa.solve
@@ -190,6 +198,17 @@ class minimize(Minimizer):
             raise LoggedError(
                 self.log, "Method '%s' not recognized. Try one of %r.", self.method,
                 methods)
+
+    def affine_transform(self, x):
+        return (x - self._affine_transform_baseline) / self._scales
+
+    def inv_affine_transform(self, x):
+        # fix up rounding errors on bounds to avoid -np.inf likelihoods
+        return np.clip(x * self._scales + self._affine_transform_baseline,
+                       self._bounds[:, 0], self._bounds[:, 1])
+
+    def logp_transf(self, x):
+        return self.logp(self.inv_affine_transform(x))
 
     def run(self):
         """
@@ -240,20 +259,23 @@ class minimize(Minimizer):
             return
         if get_mpi_size():
             results = get_mpi_comm().gather(self.result, root=0)
-            _inv_affine_transform_matrices = get_mpi_comm().gather(
-                self._inv_affine_transform_matrix, root=0)
+            successes = get_mpi_comm().gather(self.success, root=0)
             _affine_transform_baselines = get_mpi_comm().gather(
                 self._affine_transform_baseline, root=0)
             if is_main_process():
-                i_min = np.argmin([getattr(r, evals_attr_) for r in results])
+                i_min = np.argmin([(getattr(r, evals_attr_) if s else np.inf)
+                                   for r, s in zip(results, successes)])
                 self.result = results[i_min]
-                self._inv_affine_transform_matrix = _inv_affine_transform_matrices[i_min]
                 self._affine_transform_baseline = _affine_transform_baselines[i_min]
+        else:
+            successes = [self.success]
         if is_main_process():
-            if not self.success:
+            if not any(successes):
                 raise LoggedError(
                     self.log, "Minimization failed! Here is the raw result object:\n%s",
                     str(self.result))
+            elif not all(successes):
+                self.log.warning('Some minimizations failed!')
             logp_min = -np.array(getattr(self.result, evals_attr_))
             x_min = self.inv_affine_transform(self.result.x)
             self.log.info("-log(%s) minimized to %g",
@@ -261,11 +283,11 @@ class minimize(Minimizer):
             recomputed_post_min = self.model.logposterior(x_min, cached=False)
             recomputed_logp_min = (sum(recomputed_post_min.loglikes) if self.ignore_prior
                                    else recomputed_post_min.logpost)
-            if not np.allclose(logp_min, recomputed_logp_min):
+            if not np.allclose(logp_min, recomputed_logp_min, atol=1e-2):
                 raise LoggedError(
-                    self.log,
-                    "Cannot reproduce result. Maybe yout likelihood is stochastic? "
-                    "Recomputed min: %g (was %g) at %r",
+                    self.log, "Cannot reproduce log minimum to within 0.01. Maybe your "
+                              "likelihood is stochastic or large numerical error? "
+                              "Recomputed min: %g (was %g) at %r",
                     recomputed_logp_min, logp_min, x_min)
             self.minimum = OnePoint(
                 self.model, self.output, name="",
@@ -318,7 +340,8 @@ class minimize(Minimizer):
         lines.append('')
         labels = self.model.parameterization.labels()
         label_list = list(labels.keys())
-        if hasattr(params, 'chi2_names'): label_list += params.chi2_names
+        if hasattr(params, 'chi2_names'):
+            label_list += params.chi2_names
         width = max([len(lab) for lab in label_list]) + 2
 
         def add_section(pars):

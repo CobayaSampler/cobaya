@@ -21,5 +21,6 @@ override_scipy:
 #  - https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/advanced.html
 override_bobyqa:
   # option: value
-  # Relaxed convergence criterion for numerically-noisiy likelihoods
+  # Relaxed convergence criterion for numerically-noisy likelihoods
   rhoend: 0.05
+covmat: auto
