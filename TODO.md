@@ -11,13 +11,12 @@
 ## Finish implementation of aggregated-by-data-type chi2
 ## Faster Collections for MCMC: numpy cache for merging OnePoint into Collection
 - `_out_update` method would take care of flushing into the Pandas table.
-## Option to set speeds dynamically based on actual timing for number of threads used (e.g. at first propose update)
 ## No output to files while burn in makes it hard to see if working OK (default no burn?)
 ## ,, related, how to set intermediate debugging level so see regular short output
 ## dump log info along with each chain file if saving to file (currently in stdout)
 ## check parameter default proposal widths not too large
 ## turn dragging off if only one block or no speeds differ by more than factor 2
-## specify how to calibrate speed factors (2018 defaults looked wrong, TTTEEE slower than TT)
 ## If non-linear lensing on, model the non-linear correction via limber for faster semi-slow parameters
 ## minimize run with -f does not work. Check resuming.
 ## unbounded parameters with flat prior (this would make it safe to rotate the unbounded ones in minimize)
+## ordering of helper theories

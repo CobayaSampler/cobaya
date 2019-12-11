@@ -88,11 +88,10 @@ from copy import deepcopy
 # Local
 from cobaya.sampler import Minimizer
 from cobaya.mpi import get_mpi_size, get_mpi_comm, is_main_process, get_mpi_rank, \
-    more_than_one_process, share_mpi
+    more_than_one_process
 from cobaya.collection import OnePoint, Collection
 from cobaya.log import LoggedError
-from cobaya.tools import read_dnumber, choleskyL, recursive_update
-from cobaya.conventions import _covmat_extension
+from cobaya.tools import read_dnumber, recursive_update
 from cobaya.samplers.mcmc.mcmc import CovmatSampler
 
 # Handling scpiy vs BOBYQA
@@ -257,14 +256,15 @@ class minimize(Minimizer, CovmatSampler):
         # If something failed
         if not hasattr(self, "result"):
             return
-        if get_mpi_size():
+        if more_than_one_process():
             results = get_mpi_comm().gather(self.result, root=0)
             successes = get_mpi_comm().gather(self.success, root=0)
             _affine_transform_baselines = get_mpi_comm().gather(
                 self._affine_transform_baseline, root=0)
             if is_main_process():
-                i_min = np.argmin([(getattr(r, evals_attr_) if s else np.inf)
-                                   for r, s in zip(results, successes)])
+                mins = [(getattr(r, evals_attr_) if s else np.inf)
+                        for r, s in zip(results, successes)]
+                i_min = np.argmin(mins)
                 self.result = results[i_min]
                 self._affine_transform_baseline = _affine_transform_baselines[i_min]
         else:
@@ -276,6 +276,12 @@ class minimize(Minimizer, CovmatSampler):
                     str(self.result))
             elif not all(successes):
                 self.log.warning('Some minimizations failed!')
+            elif more_than_one_process():
+                if max(mins) - min(mins) > 1:
+                    self.log.warning('Big spread in minima: %r', mins)
+                elif max(mins) - min(mins) > 0.2:
+                    self.log.warning('Modest spread in minima: %r', mins)
+
             logp_min = -np.array(getattr(self.result, evals_attr_))
             x_min = self.inv_affine_transform(self.result.x)
             self.log.info("-log(%s) minimized to %g",

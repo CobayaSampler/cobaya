@@ -1,7 +1,7 @@
 # Default arguments for the Markov Chain Monte Carlo sampler
 # ('Xd' means 'X steps per dimension')
 
-# Number of discarded burn-in samples
+# Number of discarded burn-in samples per dimension
 burn_in: 20d
 # Error criterion: max attempts (= weight-1) before deciding that the chain
 # is stuck and failing. Set to `.inf` to ignore this kind of errors.
@@ -14,7 +14,7 @@ covmat:
 covmat_params:
 # Overall scale of the proposal pdf (increase for longer steps)
 proposal_scale: 2.4
-# Number of steps between convergence checks & proposal learn
+# Number of distinct accepted points between convergence checks & proposal learn
 check_every: 40d
 # Update output file(s) every X accepted samples
 output_every: 20
@@ -40,6 +40,9 @@ Rminus1_cl_level: 0.95
 Rminus1_single_split: 4
 # Exploiting speed hierarchy
 # --------------------------
+# whether to measure actual speeds for your machine/threading at starting rather
+# than using stored values
+measured_speeds: True
 # Method I: Oversampling of each parameters block relative to it speed
 oversample: False  # produces potentially MANY samples
 # Method II: Dragging: simulates jumps on slow params when varying fast ones
@@ -61,10 +64,3 @@ callback_every:  # default: every checkpoint
 # Seeding runs
 # ------------
 seed:  # integer between 0 and 2**32 - 1
-# Checkpointing -- do not modify!
-Rminus1_last: .inf
-converged:
-blocks:
-oversampling_factors:
-i_last_slow_block:
-mpi_size:

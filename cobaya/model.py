@@ -33,6 +33,7 @@ from cobaya.yaml import yaml_dump
 from cobaya.tools import gcd, deepcopy_where_possible, are_different_params_lists, \
     str_to_list
 from cobaya.component import Provider
+from cobaya.mpi import more_than_one_process, get_mpi_comm
 
 # Log-posterior namedtuple
 LogPosterior = namedtuple("LogPosterior", ["logpost", "logpriors", "loglikes", "derived"])
@@ -139,6 +140,8 @@ class Model(HasLogger):
         self.prior = Prior(prior_parameterization or self.parameterization,
                            self._updated_info.get(_prior, None))
 
+        self.timing = timing
+
         info_theory = self._updated_info.get(kinds.theory)
         self.theory = TheoryCollection(info_theory, path_install=path_install,
                                        timing=timing)
@@ -147,17 +150,19 @@ class Model(HasLogger):
         self.likelihood = LikelihoodCollection(info_likelihood, theory=self.theory,
                                                path_install=path_install, timing=timing)
 
-        for component in list(self.likelihood.values()) + list(self.theory.values()):
+        for component in self.components:
             self.theory.update(component.get_helper_theories())
 
         if stop_at_error:
-            for component in chain(self.likelihood.values(), self.theory.values()):
+            for component in self.components:
                 component.stop_at_error = stop_at_error
 
         # Assign input/output parameters
         self._assign_params(info_likelihood, info_theory)
 
         self._set_dependencies_and_providers()
+
+        self._measured_speeds = None
 
         # Overhead per likelihood evaluation
         self.overhead = _overhead_per_param * len(self.parameterization.sampled_params())
@@ -666,7 +671,7 @@ class Model(HasLogger):
         agnostic_likes = {"input": [], "output": []}
         # All components, doing likelihoods first so unassigned can by default
         # go to theory
-        components = list(self.likelihood.values()) + list(self.theory.values())
+        components = self.components
         for kind, option, prefix, derived_param in (
                 ["input", _input_params, _input_params_prefix, False],
                 ["output", _output_params, _output_params_prefix, True]):
@@ -803,6 +808,10 @@ class Model(HasLogger):
                 self.log.debug("     Input:  %r", component.input_params)
                 self.log.debug("     Output: %r", component.output_params)
 
+    @property
+    def components(self):
+        return list(chain(self.likelihood.values(), self.theory.values()))
+
     def _speeds_of_params(self, int_speeds=False):
         """
         Separates the sampled parameters in blocks according to the likelihood (or theory)
@@ -818,7 +827,7 @@ class Model(HasLogger):
 
         """
         # Fill unknown speeds with the value of the slowest one`, and clip with overhead
-        components = list(self.likelihood.values()) + list(self.theory.values())
+        components = self.components
         speeds = np.array([component.get_speed() for component in components],
                           dtype=np.float64)
         # Add overhead to the defined ones, and clip to the slowest the undefined ones
@@ -926,7 +935,7 @@ class Model(HasLogger):
 
         :param n_states: number of cached points
         """
-        for theory in chain(self.theory.values(), self.likelihood.values()):
+        for theory in self.components:
             theory.set_cache_size(n_states)
 
     def get_auto_covmat(self, params_info):
@@ -943,3 +952,33 @@ class Model(HasLogger):
                     return theory.get_auto_covmat(params_info, likes_renames)
         except:
             return None
+
+    def set_timing_on(self, on):
+        self.timing = on
+        for component in self.components:
+            component.set_timing_on(on)
+
+    def set_measured_speeds(self, test_point, speeds=None):
+        if not speeds:
+            timing_on = self.timing
+            if not timing_on:
+                self.set_timing_on(True)
+            self.log.debug("measuring speeds")
+            # call all components (at least) a second time
+            test_point *= 1.00001
+            self.loglikes(test_point, cached=False)
+            times = [component.timer.get_time_avg() for component in self.components]
+            if more_than_one_process():
+                # average for different points
+                times = np.average(get_mpi_comm().allgather(times), axis=0)
+            self._measured_speeds = [1 / (1e-7 + time) for time in times]
+            self.mpi_info('Setting measured speeds: %r',
+                          {component: float("%.3g" % speed) for component, speed in
+                           zip(self.components, self._measured_speeds)})
+            if not timing_on:
+                self.set_timing_on(False)
+        else:
+            self._measured_speeds = speeds
+        for component, speed in zip(self.components, self._measured_speeds):
+            component.set_measured_speed(speed)
+        return self._measured_speeds

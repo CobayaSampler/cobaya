@@ -38,7 +38,7 @@ class CovmatSampler(Sampler):
         if from_old_chain and os.path.exists(self.covmat_filename()):
             covmat = share_mpi(np.loadtxt(
                 self.covmat_filename()) if is_main_process() else None)
-            self.log.info("Covariance matrix from checkpoint.")
+            self.mpi_info("Covariance matrix from checkpoint.")
             return covmat, []
         else:
             if slow_params is None:
@@ -181,8 +181,16 @@ class mcmc(CovmatSampler):
         "check_every", "output_every", "learn_proposal_Rminus1_max",
         "learn_proposal_Rminus1_max_early", "learn_proposal_Rminus1_min",
         "max_samples", "Rminus1_stop", "Rminus1_cl_stop",
-        "Rminus1_cl_level", "covmat", "covmat_params", "proposal_scale",
-        "Rminus1_last", "converged"]
+        "Rminus1_cl_level", "covmat", "covmat_params", "proposal_scale"]
+
+    # checkpoint variables
+    Rminus1_last = np.inf
+    converged = None
+    blocks = None
+    oversampling_factors = None
+    i_last_slow_block = None
+    mpi_size = None
+    measured_speed_list = None
 
     def initialize(self):
         """Initializes the sampler:
@@ -190,8 +198,8 @@ class mcmc(CovmatSampler):
         if not self.model.prior.d():
             raise LoggedError(self.log, "No parameters being varied for sampler")
         self.log.debug("Initializing")
-        for p in ["burn_in", "max_tries", "output_every", "check_every",
-                  "callback_every"]:
+        for p in ["max_tries", "output_every", "check_every",
+                  "callback_every"] + (["burn_in"] if not self.resuming else []):
             setattr(self, p, read_dnumber(getattr(self, p), self.model.prior.d(),
                                           dtype=int))
         if self.callback_every is None:
@@ -243,6 +251,22 @@ class mcmc(CovmatSampler):
         if self.oversample and self.drag:
             raise LoggedError(self.log,
                               "Choose either oversampling or dragging, not both.")
+        # Prepare callback function
+        if self.callback_function is not None:
+            self.callback_function_callable = (
+                get_external_function(self.callback_function))
+        # Useful for getting last points added inside callback function
+        self.last_point_callback = 0
+        # Monitoring progress
+        if is_main_process():
+            cols = ["N", "acceptance_rate", "Rminus1", "Rminus1_cl"]
+            self.progress = DataFrame(columns=cols)
+            self.i_checkpoint = 1
+            if self.output and not self.resuming:
+                with open(self.progress_filename(), "w") as progress_file:
+                    progress_file.write("# " + " ".join(self.progress.columns) + "\n")
+
+    def set_blocking(self, load_covmat=False):
         if self.blocking:
             # already stored
             speeds, blocks = self.model._check_speeds_of_params(self.blocking)
@@ -252,6 +276,8 @@ class mcmc(CovmatSampler):
             speeds, blocks = self.model._speeds_of_params(int_speeds=
                                                           self.oversample or self.drag)
         sampled_list = list(self.model.parameterization.sampled_params())
+        self._slow_params = sampled_list
+        self.n_slow = len(self._slow_params)
         if self.oversample:
             self.oversampling_factors = speeds
             self.mpi_info("Oversampling with factors:\n" + "\n".join([
@@ -259,7 +285,6 @@ class mcmc(CovmatSampler):
                 zip(self.oversampling_factors, blocks)]))
             self.i_last_slow_block = None
             # No way right now to separate slow and fast
-            slow_params = sampled_list
         elif self.drag:
             # Fast-slow separation: chooses separation that maximizes log-difference in
             # speed (speed per parameter in a combination of blocks is the slowest one)
@@ -297,57 +322,45 @@ class mcmc(CovmatSampler):
                                  "avoid this limit by increasing 'drag_limits[1]'.")
                 self.drag_interp_steps = drag_limits[1]
             # Re-scale steps between checkpoint and callback to the slow dimensions only
-            slow_params = list(chain(*blocks[:last_nondrag_block + 1]))
-            self.n_slow = len(slow_params)
+            self._slow_params = list(chain(*blocks[:last_nondrag_block + 1]))
+            self.n_slow = len(self._slow_params)
             for p in ["check_every", "callback_every"]:
                 setattr(self, p,
                         int(getattr(self, p) * self.n_slow / self.model.prior.d()))
             self.mpi_info("Dragging with factor %g oversampling per step: %r",
                           self.drag_interp_steps, fast_params)
-            self.mpi_info("Slow parameters: %r", slow_params)
+            self.mpi_info("Slow parameters: %r", self._slow_params)
             self.get_new_sample = self.get_new_sample_dragging
         else:
             self.oversampling_factors = np.ones(len(blocks), dtype=int)
-            slow_params = sampled_list
-            self.n_slow = len(slow_params)
         # Turn parameter names into indices
         self.blocks = [[sampled_list.index(p) for p in b] for b in blocks]
         self.proposer = BlockedProposer(
             self.blocks, oversampling_factors=self.oversampling_factors,
             i_last_slow_block=self.i_last_slow_block, proposal_scale=self.proposal_scale)
-        # Build the initial covariance matrix of the proposal, or load from checkpoint
-        covmat, where_nan = self._load_covmat(self.resuming, slow_params)
-        if np.any(where_nan) and self.learn_proposal:
-            # we want to start learning the covmat earlier
-            self.mpi_info("Covariance matrix " +
-                          ("not present" if np.all(where_nan) else "not complete") +
-                          ". "
-                          "We will start learning the covariance of the proposal "
-                          "earlier: R-1 = %g (was %g).",
-                          self.learn_proposal_Rminus1_max_early,
-                          self.learn_proposal_Rminus1_max)
-            self.learn_proposal_Rminus1_max = self.learn_proposal_Rminus1_max_early
 
-        self.log.debug(
-            "Sampling with covmat:\n%s",
-            DataFrame(covmat, columns=self.model.parameterization.sampled_params(),
-                      index=self.model.parameterization.sampled_params()).to_string(
-                line_width=_line_width))
-        self.proposer.set_covariance(covmat)
-        # Prepare callback function
-        if self.callback_function is not None:
-            self.callback_function_callable = (
-                get_external_function(self.callback_function))
-        # Useful for getting last points added inside callback function
-        self.last_point_callback = 0
-        # Monitoring progress
-        if is_main_process():
-            cols = ["N", "acceptance_rate", "Rminus1", "Rminus1_cl"]
-            self.progress = DataFrame(columns=cols)
-            self.i_checkpoint = 1
-            if self.output and not self.resuming:
-                with open(self.progress_filename(), "w") as progress_file:
-                    progress_file.write("# " + " ".join(self.progress.columns) + "\n")
+        if load_covmat:
+            # Build the initial covariance matrix of the proposal, or load from checkpoint
+            self._covmat, where_nan = self._load_covmat(self.resuming, self._slow_params)
+            if np.any(where_nan) and self.learn_proposal:
+                # we want to start learning the covmat earlier
+                self.mpi_info("Covariance matrix " +
+                              ("not present" if np.all(where_nan) else "not complete") +
+                              ". "
+                              "We will start learning the covariance of the proposal "
+                              "earlier: R-1 = %g (was %g).",
+                              self.learn_proposal_Rminus1_max_early,
+                              self.learn_proposal_Rminus1_max)
+                self.learn_proposal_Rminus1_max = self.learn_proposal_Rminus1_max_early
+
+            self.log.debug(
+                "Sampling with covmat:\n%s",
+                DataFrame(self._covmat,
+                          columns=self.model.parameterization.sampled_params(),
+                          index=self.model.parameterization.sampled_params()).to_string(
+                    line_width=_line_width))
+
+        self.proposer.set_covariance(self._covmat)
 
     def _get_last_nondragging_block(self, blocks, speeds):
         # blocks and speeds are already sorted
@@ -377,9 +390,25 @@ class mcmc(CovmatSampler):
                                .iloc[self.collection.n() - 1].copy())
             derived = (self.collection[self.collection.derived_params]
                        .iloc[self.collection.n() - 1].values.copy())
+            if self.measured_speeds and self.measured_speed_list:
+                self.model.set_measured_speeds(initial_point, self.measured_speed_list)
         else:
-            initial_point = self.model.prior.reference(max_tries=self.max_tries)
-            logpost, logpriors, loglikes, derived = self.model.logposterior(initial_point)
+            valid_point = False
+            for i in range(self.max_tries // self.model.prior.d()):
+                initial_point = self.model.prior.reference(max_tries=self.max_tries)
+                logpost, logpriors, loglikes, derived = self.model.logposterior(
+                    initial_point)
+                valid_point = -np.inf not in loglikes
+                if valid_point:
+                    break
+            if not valid_point:
+                raise LoggedError(self.log, "Could not find random point giving finite "
+                                            "likelihood after %g tries", self.max_tries)
+            if self.measured_speeds:
+                self.measured_speed_list = self.model.set_measured_speeds(initial_point)
+
+        self.set_blocking(load_covmat=True)
+
         self.current_point.add(initial_point, derived=derived, logpost=logpost,
                                logpriors=logpriors, loglikes=loglikes)
         self.log.info("Initial point: %s", self.current_point)
@@ -588,11 +617,13 @@ class mcmc(CovmatSampler):
         learn a new covariance matrix for the proposal distribution.
         """
         msg_ready = ("Ready to check convergence" +
-                     (" and learn a new proposal covmat" if self.learn_proposal else ""))
+                     (" and learn a new proposal covmat"
+                      if self.learn_proposal else ""))
+
+        n = self.collection.n()
         # If *just* (weight==1) got ready to check+learn
-        if (self.n() > 0 and self.current_point[_weight] == 1 and
-                not (self.n() % self.check_every)):
-            self.log.info("Checkpoint: %d samples accepted.", self.n())
+        if not (n % self.check_every) and n > 0 and self.current_point[_weight] == 1:
+            self.log.info("Checkpoint: %d samples accepted.", n)
             if more_than_one_process():
                 self.been_waiting += 1
                 if self.been_waiting > self.max_waiting:
@@ -602,8 +633,7 @@ class mcmc(CovmatSampler):
             self.model.dump_timing()
             # If not MPI size > 1, we are ready
             if not more_than_one_process():
-                if msg_ready:
-                    self.log.info(msg_ready)
+                self.log.info(msg_ready)
                 return True
             # If MPI, tell the rest that we are ready -- we use a "gather"
             # ("reduce" was problematic), but we are in practice just pinging
@@ -708,6 +738,7 @@ class mcmc(CovmatSampler):
             diagSinvsqrt = np.diag(np.power(np.diag(cov_of_means), -0.5))
             corr_of_means = diagSinvsqrt.dot(cov_of_means).dot(diagSinvsqrt)
             norm_mean_of_covs = diagSinvsqrt.dot(mean_of_covs).dot(diagSinvsqrt)
+            success = False
             # Cholesky of (normalized) mean of covs and eigvals of Linv*cov_of_means*L
             try:
                 L = np.linalg.cholesky(norm_mean_of_covs)
@@ -717,7 +748,6 @@ class mcmc(CovmatSampler):
                     "This may mean that the covariance of the samples does not "
                     "contain enough information at this point. "
                     "Skipping this checkpoint")
-                success = False
             else:
                 Linv = np.linalg.inv(L)
                 try:
@@ -726,8 +756,7 @@ class mcmc(CovmatSampler):
                 except np.linalg.LinAlgError:
                     self.log.warning("Could not compute eigenvalues. "
                                      "Skipping this checkpoint.")
-                    success = False
-                if success:
+                else:
                     Rminus1 = max(np.abs(eigvals))
                     self.progress.at[self.i_checkpoint, "Rminus1"] = Rminus1
                     # For real square matrices, a possible def of the cond number is:
@@ -769,29 +798,30 @@ class mcmc(CovmatSampler):
         if success:
             self.Rminus1_last, self.converged = share_mpi(
                 (Rminus1, self.converged) if is_main_process() else None)
-        # Do we want to learn a better proposal pdf?
-        if self.learn_proposal and not self.converged and success:
-            good_Rminus1 = (self.learn_proposal_Rminus1_max >
-                            self.Rminus1_last > self.learn_proposal_Rminus1_min)
-            if not good_Rminus1:
-                self.mpi_info("Bad convergence statistics: "
-                              "waiting until the next checkpoint.")
-                return
-            if more_than_one_process():
-                if not is_main_process():
-                    mean_of_covs = np.empty((self.model.prior.d(), self.model.prior.d()))
-                get_mpi_comm().Bcast(mean_of_covs, root=0)
-            else:
-                mean_of_covs = covs[0]
-            try:
-                self.proposer.set_covariance(mean_of_covs)
-                if is_main_process():
-                    self.log.info("Updated covariance matrix of proposal pdf.")
-                    self.log.debug("%r", mean_of_covs)
-            except:
-                if is_main_process():
-                    self.log.debug("Updating covariance matrix failed unexpectedly. "
-                                   "waiting until next checkpoint.")
+            # Do we want to learn a better proposal pdf?
+            if self.learn_proposal and not self.converged:
+                good_Rminus1 = (self.learn_proposal_Rminus1_max >
+                                self.Rminus1_last > self.learn_proposal_Rminus1_min)
+                if not good_Rminus1:
+                    self.mpi_info("Convergence less than requested for updates: "
+                                  "waiting until the next checkpoint.")
+                    return
+                if more_than_one_process():
+                    if not is_main_process():
+                        mean_of_covs = np.empty((self.model.prior.d(),
+                                                 self.model.prior.d()))
+                    get_mpi_comm().Bcast(mean_of_covs, root=0)
+                else:
+                    mean_of_covs = covs[0]
+                try:
+                    self.proposer.set_covariance(mean_of_covs)
+                    if is_main_process():
+                        self.log.info("Updated covariance matrix of proposal pdf.")
+                        self.log.debug("%r", mean_of_covs)
+                except:
+                    if is_main_process():
+                        self.log.debug("Updating covariance matrix failed unexpectedly. "
+                                       "waiting until next checkpoint.")
         # Save checkpoint info
         self.write_checkpoint()
 
@@ -810,8 +840,9 @@ class mcmc(CovmatSampler):
                 ("i_last_slow_block", self.i_last_slow_block),
                 ("burn_in", (self.burn_in  # initial: repeat burn-in if not finished
                              if not self.n() and self.burn_in_left else
-                             "d")),  # to avoid overweighting last point of prev. run
-                ("mpi_size", get_mpi_size())])}}
+                             0)),  # to avoid overweighting last point of prev. run
+                ("mpi_size", get_mpi_size()),
+                ("measured_speed_list", self.measured_speed_list)])}}
             yaml_dump_file(checkpoint_filename, checkpoint_info, error_if_exists=False)
             if not self.progress.empty:
                 with open(self.progress_filename(), "a") as progress_file:

@@ -126,6 +126,9 @@ class Output(HasLogger):
                 # We will test the old info against the dumped+loaded new info.
                 # This is because we can't actually check if python objects do change
                 old_info = self.reload_updated_info()
+                if not old_info:
+                    raise LoggedError(self.log, "No old sample information: %s",
+                                      self.file_updated)
                 new_info = yaml_load(yaml_dump(updated_info_trimmed))
                 ignore_blocks = []
                 from cobaya.sampler import get_sampler_class, Minimizer

@@ -399,9 +399,10 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
                         block2[k].pop(j, None)
             if recursive_odict_to_dict(block1[k]) != recursive_odict_to_dict(block2[k]):
                 # For clarity, pop common stuff before printing
-                to_pop = [j for j in block1[k] if (
-                        recursive_odict_to_dict(block1[k][j]) ==
-                        recursive_odict_to_dict(block2[k][j]))]
+                to_pop = [j for j in block1[k] if
+                          (j in block2[k] and
+                           recursive_odict_to_dict(block1[k][j]) ==
+                           recursive_odict_to_dict(block2[k][j]))]
                 [(block1[k].pop(j, None), block2[k].pop(j, None)) for j in to_pop]
                 myprint(
                     myname + ": different content of [%s:%s]" % (block_name, k))

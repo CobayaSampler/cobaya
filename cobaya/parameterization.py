@@ -249,27 +249,29 @@ class Parameterization(HasLogger):
         # Fill first directly sampled input parameters
         self._input.update(
             {p: sampled_params_values[p] for p in self._directly_sampled})
-        # Then evaluate the functions
-        n_resolved = -1
-        resolved = []
-        while len(resolved) != n_resolved:
-            n_resolved = len(resolved)
-            for p in self._input_funcs:
-                if p in resolved:
-                    continue
-                args = {p: self._constant.get(
-                    p, self._input.get(p, sampled_params_values.get(p, None)))
-                    for p in self._input_args[p]}
-                if not all(isinstance(v, Number) for v in args.values()):
-                    continue
-                self._input[p] = call_param_func(p, self._input_funcs[p], args, self.log)
-                resolved.append(p)
-        if set(resolved) != set(self._input_funcs):
-            raise LoggedError(
-                self.log,
-                "Could not resolve arguments for input parameters %s. Maybe there "
-                "is a circular dependency between derived parameters?",
-                list(set(self._input_funcs).difference(set(resolved))))
+        if self._input_funcs:
+            # Then evaluate the functions
+            n_resolved = -1
+            resolved = []
+            while len(resolved) != n_resolved:
+                n_resolved = len(resolved)
+                for p in self._input_funcs:
+                    if p in resolved:
+                        continue
+                    args = {p: self._constant.get(
+                        p, self._input.get(p, sampled_params_values.get(p, None)))
+                        for p in self._input_args[p]}
+                    if not all(isinstance(v, Number) for v in args.values()):
+                        continue
+                    self._input[p] = call_param_func(p, self._input_funcs[p], args,
+                                                     self.log)
+                    resolved.append(p)
+            if set(resolved) != set(self._input_funcs):
+                raise LoggedError(
+                    self.log,
+                    "Could not resolve arguments for input parameters %s. Maybe there "
+                    "is a circular dependency between derived parameters?",
+                    list(set(self._input_funcs).difference(set(resolved))))
         return self.input_params() if copied else self._input
 
     def to_derived(self, output_params_values):

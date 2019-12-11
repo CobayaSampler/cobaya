@@ -20,6 +20,9 @@ class Timer(object):
     def time_from_start(self):
         return self._time_func() - self._start
 
+    def n_avg(self):
+        return self.n - 1 if self.n > 1 else self.n
+
     def get_time_avg(self):
         if self.n > 1:
             return self.time_sum / (self.n - 1)
@@ -69,10 +72,7 @@ class CobayaComponent(HasLogger, HasDefaults):
         for k, value in info.items():
             setattr(self, k, value)
         self.set_logger(name=self._name)
-        if timing:
-            self.timer = Timer()
-        else:
-            self.timer = None
+        self.set_timing_on(timing)
         try:
             if initialize:
                 self.initialize()
@@ -82,6 +82,9 @@ class CobayaComponent(HasLogger, HasDefaults):
                                             "initialize after input and output parameters"
                                             " are set (%s, %s)", self, e)
             raise
+
+    def set_timing_on(self, on):
+        self.timer = Timer() if on else None
 
     def get_name(self):
         """
@@ -116,7 +119,7 @@ class CobayaComponent(HasLogger, HasDefaults):
     def __exit__(self, exception_type, exception_value, traceback):
         if self.timer and self.timer.n:
             self.log.info("Average evaluation time for %s: %g s  (%d evaluations)" % (
-                self.get_name(), self.timer.get_time_avg(), self.timer.n))
+                self.get_name(), self.timer.get_time_avg(), self.timer.n_avg()))
         self.close()
 
 
@@ -136,7 +139,7 @@ class ComponentCollection(OrderedDict, HasLogger):
                 "Average computation time:" + sep + sep.join(
                     ["%s : %g s (%d evaluations, %g s total)" % (
                         component.get_name(), component.timer.get_time_avg(),
-                        component.timer.n, component.timer.time_sum)
+                        component.timer.n_avg(), component.timer.time_sum)
                      for component in timers]))
 
     def get_version(self):

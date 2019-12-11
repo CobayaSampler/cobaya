@@ -134,8 +134,7 @@ class Sampler(CobayaComponent):
                     for k, v in checkpoint_info[kinds.sampler][self.get_name()].items():
                         setattr(self, k, v)
                     self.resuming = True
-                    if is_main_process():
-                        self.log.info("Resuming from previous sample!")
+                    self.mpi_info("Resuming from previous sample!")
                 except KeyError:
                     if is_main_process():
                         raise LoggedError(

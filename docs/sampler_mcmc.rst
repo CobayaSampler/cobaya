@@ -183,30 +183,31 @@ Taking advantage of a speed hierarchy
 
 The proposal pdf is *blocked* by speeds, i.e. it allows for efficient sampling of a
 mixture of *fast* and *slow* parameters, such that we can avoid recomputing the slowest
-parts of the likelihood when sampling along the fast directions only. This is often very useful when the likelihoods
+parts of the likelihood calculation when sampling along the fast directions only. This is often very useful when the likelihoods
 have large numbers of nuisance parameters, but recomputing the likelihood for different sets of nuisance parameters is fast.
 
-Two different sampling schemes are available to take additional advantage from a speed
+Two different sampling schemes are available in the ``mcmcm`` sampler to take additional advantage of a speed
 hierarchy:
 
 - **Dragging the fast parameters:** implies a number of intermediate steps when jumping between fast+slow combinations, such that the jump in the fast parameters is optimized with respect to the jump in the slow parameters to explore any possible degeneracy between them. If enabled (``drag: True``), tries to spend the same amount of time doing dragging steps as it takes to compute a jump in the slow direction (make sure your likelihoods ``speed``'s are accurate; see below).
 
 - **Oversampling the fast parameters:** consists simply of taking a larger proportion of steps in the faster directions, useful when exploring their conditional distributions is cheap. If enabled (``oversample: True``), it tries to spend the same amount of time in each block.
 
-In general, the *dragging* method is the recommended one if there are non-trivial degeneracies between fast and slow parameters.
+In general, the *dragging* method is the recommended one if there are non-trivial degeneracies between fast and slow parameters and you have a fairly large speed hierarchy.
 Oversampling can potentially produce very large output files; dragging outputs
 smaller chain files since fast parameters are effectively partially marginalized over internally. For a thorough description of both methods and references, see
 `A. Lewis, "Efficient sampling of fast and slow cosmological parameters" (arXiv:1304.4473) <https://arxiv.org/abs/1304.4473>`_.
 
 The relative speeds can be specified per likelihood/theory, with the option ``speed``,
 preferably in evaluations per second (approximately).
+The speeds can also be measured automatically when you run a chain (with mcmc, ``measured_speeds: True``), allowing for variations with the number of threads used and machine differences.
+This option only tests the speed on one point (per mpi instance), so if your speed varies significantly with where you are in parameter space it may be better ot turn the automatic selection off
+and keep to manually specified average speeds. To measure the average speeds, set ``timing: True`` at the highest level of your input (i.e. not inside any of the blocks), set the ``mcmc`` options ``burn_in: 0`` and ``max_samples`` to a reasonably large number (so that it will be done in a few minutes), and check the output: it should have printed, towards the end, computation times for the likelihood and theory codes in seconds, the *inverse* of which are the speeds.
 
-To measure the speed of your likelihood, set ``timing: True`` at the highest level of your input (i.e. not inside any of the blocks), set the ``mcmc`` options ``burn_in: 0`` and ``max_samples`` to a reasonably large number (so that it will be done in a few minutes), and check the output: it should have printed, towards the end, computation times for the likelihoods and the theory code in seconds, the *inverse* of which are the speeds.
-
-If the speed has not been specified for a likelihood, it is assigned the slowest one in
-the set. If two or more likelihoods with different speeds share a parameter,
+If the speed has not been specified for a component, it is assigned the slowest one in
+the set. If two or more components with different speeds share a parameter,
 said parameter is assigned to a separate block with a speed that takes into account the
-computation time of all the likelihoods it belongs to.
+computation time of all the codes that depends on it.
 
 For example:
 
