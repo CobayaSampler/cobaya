@@ -23,6 +23,26 @@ _mpi_comm = -1
 _mpi_rank = -1
 
 
+def disable_mpi():
+    """Disable checking MPI state, for use on systems where MPI disallowed
+    """
+    global _mpi, _mpi_size, _mpi_comm, _mpi_rank
+    _mpi = None
+    _mpi_size = 0
+    _mpi_comm = None
+    _mpi_rank = None
+
+
+def enable_mpi():
+    """Reset globals to defaults, undoing disable_mpi
+    """
+    global _mpi, _mpi_size, _mpi_comm, _mpi_rank
+    _mpi = -1
+    _mpi_size = -1
+    _mpi_comm = -1
+    _mpi_rank = -1
+
+
 def get_mpi():
     """
     Import and returns the MPI object, or None if not running with MPI.
@@ -77,23 +97,15 @@ def get_mpi_rank():
 
 
 # Aliases for simpler use
-def am_single_or_primary_process(no_mpi=False):
+def am_single_or_primary_process():
     """Returns true if primary process or MPI not available.
-
-    Use the no_mpi keyword to avoid checking for MPI via import, 
-    which can die ungracefully (e.g. on head nodes at NERSC).
     """
-    if not no_mpi:
-        return not bool(get_mpi_rank())
-    else:
-        return True
+    return not bool(get_mpi_rank())
 
 
-def more_than_one_process(no_mpi=False):
-    if not no_mpi:
-        return bool(max(get_mpi_size(), 1) - 1)
-    else:
-        return False
+def more_than_one_process():
+    return bool(max(get_mpi_size(), 1) - 1)
+
 
 def sync_processes():
     if get_mpi_size():
