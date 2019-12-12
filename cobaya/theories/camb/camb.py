@@ -184,7 +184,8 @@ from cobaya.theories._cosmo import BoltzmannBase
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, check_gcc_version
 from cobaya.tools import getfullargspec, get_class_methods, get_properties
-from cobaya.tools import load_module, VersionCheckError, check_module_version
+from cobaya.tools import load_module, VersionCheckError
+from cobaya.conventions import _version
 
 # Result collector
 Collector = namedtuple("collector", ["method", "args", "kwargs"])
@@ -228,7 +229,7 @@ class camb(BoltzmannBase):
             self.log.info("Importing *global* CAMB.")
         try:
             # Check min version compatibility (if resuming/reusing-info, use given one)
-            min_version = getattr(self, "version", False) or self.min_camb_version
+            min_version = getattr(self, _version, False) or self.min_camb_version
             self.camb = load_module("camb", path=pycamb_path, min_version=min_version)
         except ImportError:
             raise LoggedError(

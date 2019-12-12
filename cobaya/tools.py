@@ -22,6 +22,7 @@ from ast import parse
 import warnings
 import inspect
 from six import string_types
+from packaging import version
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore")
@@ -117,25 +118,19 @@ class VersionCheckError(ValueError):
     pass
 
 
-def check_module_version(module, min_version=None):
-    if min_version:
-        try:
-            from packaging import version
-        except ModuleNotFoundError:
-            raise LoggedError(log, "packaging not found, install with "
-                                   "'pip install packaging'")
-        else:
-            if version.parse(module.__version__) < version.parse(min_version):
-                raise VersionCheckError(
-                    "module %s at %s, is version %s but require %s or higher" %
-                    (module.__name__, os.path.dirname(module.__file__),
-                     module.__version__, min_version))
+def check_module_version(module, min_version):
+    if version.parse(module.__version__) < version.parse(min_version):
+        raise VersionCheckError(
+            "module %s at %s is version %s, but version %s or higher is required" %
+            (module.__name__, os.path.dirname(module.__file__),
+             module.__version__, min_version))
 
 
 def load_module(name, package=None, path=None, min_version=None):
     with PythonPath(path):
         module = import_module(name, package=package)
-    check_module_version(module, min_version)
+    if min_version:
+        check_module_version(module, min_version)
     return module
 
 
