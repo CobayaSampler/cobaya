@@ -14,6 +14,7 @@ import numpy as np
 from collections import namedtuple, OrderedDict as odict
 from itertools import chain, permutations
 import logging
+import six
 
 # Local
 from cobaya.conventions import kinds, _prior, _timing, _aliases
@@ -37,14 +38,45 @@ LogPosterior = namedtuple("LogPosterior", ["logpost", "logpriors", "loglikes", "
 LogPosterior.__new__.__defaults__ = (None, None, [], [])
 
 
-def _dict_list_items(dict_list):
-    result = []
-    for item in dict_list:
-        result += list(item.items())
-    return result
+class Requirement(namedtuple("Requirement", ["name", "options"])):
+
+    def __eq__(self, other):
+        return self.name == other.name and _dict_equal(self.options, other.options)
+
+    def __repr__(self):
+        return "{%r:%r}" % (self.name, self.options)
 
 
-def get_model(info):
+def _dict_equal(d1, d2):
+    # dict/None equality test accounting for numpy arrays not supporting standard eq
+    if type(d1) != type(d2):
+        return False
+    if isinstance(d1, np.ndarray):
+        return np.array_equal(d1, d2)
+    if not d1 and not d2:
+        return True
+    if bool(d1) != bool(d2):
+        return False
+    if isinstance(d1, six.string_types):
+        return d1 == d2
+    if isinstance(d1, dict):
+        if set(list(d1)) != set(list(d2)):
+            return False
+        for k, v in d1.items():
+            if not _dict_equal(v, d2[k]):
+                return False
+        return True
+    if hasattr(d1, '__len__'):
+        if len(d1) != len(d2):
+            return False
+        for k1, k2 in zip(d1, d2):
+            if not _dict_equal(k1, k2):
+                return False
+        return True
+    return d1 == d2
+
+
+def get_model(info, stop_at_error=None):
     assert hasattr(info, "keys"), (
         "The first argument must be a dictionary with the info needed for the model. "
         "If you were trying to pass the name of an input file instead, "
@@ -56,6 +88,7 @@ def get_model(info):
     info = deepcopy_where_possible(info)
     # Create the updated input information, including defaults for each module.
     logger_setup(info.pop(_debug, _debug_default), info.pop(_debug_file, None))
+    info_stop = info.pop("stop_at_error", False)
     ignored_info = {}
     for k in list(info):
         if k not in [_params, kinds.likelihood, _prior, kinds.theory, _path_install,
@@ -72,7 +105,8 @@ def get_model(info):
     # Initialize the parameters and posterior
     return Model(updated_info[_params], updated_info[kinds.likelihood],
                  updated_info.get(_prior), updated_info.get(kinds.theory),
-                 path_install=info.get(_path_install), timing=updated_info.get(_timing))
+                 path_install=info.get(_path_install), timing=updated_info.get(_timing),
+                 stop_at_error=info_stop if stop_at_error is None else stop_at_error)
 
 
 class Model(HasLogger):
@@ -86,7 +120,7 @@ class Model(HasLogger):
     """
 
     def __init__(self, info_params, info_likelihood, info_prior=None, info_theory=None,
-                 path_install=None, timing=None, allow_renames=True,
+                 path_install=None, timing=None, allow_renames=True, stop_at_error=False,
                  post=False, prior_parameterization=None):
         self.set_logger(lowercase=True)
         self._updated_info = {
@@ -111,6 +145,10 @@ class Model(HasLogger):
         info_likelihood = self._updated_info[kinds.likelihood]
         self.likelihood = LikelihoodCollection(info_likelihood, theory=self.theory,
                                                path_install=path_install, timing=timing)
+
+        if stop_at_error:
+            for component in chain(self.likelihood.values(), self.theory.values()):
+                component.stop_at_error = stop_at_error
 
         # Assign input/output parameters
         self._assign_params(info_likelihood, info_theory)
@@ -440,8 +478,10 @@ class Model(HasLogger):
         direct_param_dependence = {c: set() for c in components}
 
         def _tidy_requirements(_component, _require):
+            # take input requirement dictionary and split into list of tuples of
+            # requirement names and requirement options
             if not _require:
-                return {}
+                return []
             if isinstance(_require, (set, tuple, list)):
                 _require = {p: None for p in _require}
             else:
@@ -452,7 +492,7 @@ class Model(HasLogger):
                     # requirements that are sampled parameters automatically satisfied
                     _require.pop(par, None)
 
-            return _require
+            return [Requirement(p, v) for p, v in _require.items()]
 
         # Get the requirements and providers
         for component in components:
@@ -463,9 +503,9 @@ class Model(HasLogger):
                                   "instead" % component)
             self._needs[component] = []
             component.initialize_with_params()
-            require = _tidy_requirements(component, component.get_requirements())
+            requirements.append(
+                _tidy_requirements(component, component.get_requirements()))
 
-            requirements.append([require])
             methods = component.get_can_provide_methods()
             can_provide = list(component.get_can_provide()) + list(methods)
             # parameters that can be provided but not already explicitly assigned
@@ -478,48 +518,46 @@ class Model(HasLogger):
 
         requirement_providers = {}
         has_more_requirements = True
-        loop = 1
         while has_more_requirements:
             # list of dictionary of needs for each component
             needs = {c: [] for c in components}
             # Check supplier for each requirement, get dependency and needs
             for component, requires in zip(components, requirements):
-                for requirement, requirement_option in _dict_list_items(requires):
-                    suppliers = providers.get(requirement)
+                for requirement in requires:
+                    suppliers = providers.get(requirement.name)
                     if suppliers:
                         supplier = None
                         if len(suppliers) > 1:
                             for sup in suppliers:
                                 provide = str_to_list(getattr(sup, 'provides', []))
-                                if requirement in provide:
+                                if requirement.name in provide:
                                     if supplier:
                                         raise LoggedError(self.log, "more than one "
                                                                     "component provides"
-                                                                    " %s" % requirement)
+                                                                    " %s" %
+                                                          requirement.name)
                                     supplier = sup
                             if not supplier:
                                 raise LoggedError(self.log,
                                                   "requirement %s is provided by more "
                                                   "than one component: %s. Use 'provides'"
                                                   " keyword to specify which provides it "
-                                                  % (requirement, suppliers))
+                                                  % (requirement.name, suppliers))
                         else:
                             supplier = suppliers[0]
                         if supplier is component:
                             raise LoggedError(self.log,
                                               "Component %r cannot provide %s to "
-                                              "itself!" % (component, requirement))
-                        requirement_providers[requirement] = supplier.get_provider()
-                        req = {requirement: requirement_option}
-                        if req not in self._needs[supplier] and \
-                                req not in needs[supplier]:
-                            needs[supplier] += [req]
+                                              "itself!" % (component, requirement.name))
+                        requirement_providers[requirement.name] = supplier.get_provider()
+                        if requirement not in self._needs[supplier] + needs[supplier]:
+                            needs[supplier] += [requirement]
                         dependencies[component] = \
                             dependencies.get(component, set()) | {supplier}
                     else:
                         raise LoggedError(self.log,
                                           "Requirement %s of %r is not provided by any "
-                                          "component" % (requirement, component))
+                                          "component" % (requirement.name, component))
 
             # tell each component what it needs to calculate, and collect the
             # conditional requirements for those needs
@@ -529,16 +567,20 @@ class Model(HasLogger):
                 if needs[component]:
                     for need in needs[component]:
                         conditional_requirements = \
-                            _tidy_requirements(component, component.needs(**need))
+                            _tidy_requirements(component,
+                                               component.needs(
+                                                   **{need.name: need.options}))
                         self._needs[component].append(need)
                         if conditional_requirements:
                             has_more_requirements = True
-                            requires.append(conditional_requirements)
-                elif loop == 1:  # always call at least once (#TODO is this needed?)
-                    component.needs()
-            loop += 1
+                            requires += conditional_requirements
             # set component compute order and raise error if circular dependence
             self._set_component_order(components, dependencies)
+
+        # always call needs at least once (#TODO is this needed? e.g. for post)
+        for component in components:
+            if not self._needs[component]:
+                component.needs()
 
         if self._unassigned_input:
             self._unassigned_input.difference_update(*direct_param_dependence.values())
@@ -602,7 +644,7 @@ class Model(HasLogger):
         """
         Get all the requested requirements that will be computed.
 
-        :return: dictionary giving list of requirement dictionaries calculated by
+        :return: dictionary giving list of requirements calculated by
                 each component name
         """
         return dict(("%r" % c, v) for c, v in self._needs.items() if v)
@@ -913,11 +955,12 @@ class Model(HasLogger):
 
         ``params_info`` should contain preferably the slow parameters only.
         """
-        likes_renames = {like: {_aliases: getattr(like, _aliases, [])}
-                         for like in self.likelihood}
+        likes_renames = {like.get_name(): {_aliases: getattr(like, _aliases, [])}
+                         for like in self.likelihood.values()}
         try:
             # TODO: get_auto_covmat has nothing to do with cosmology, move to model
-            #  or somewhere else?
-            return list(self.theory.values)[0].get_auto_covmat(params_info, likes_renames)
+            #  or somewhere else? And generalize to more theories
+            return list(self.theory.values())[0].get_auto_covmat(params_info,
+                                                                 likes_renames)
         except:
             return None

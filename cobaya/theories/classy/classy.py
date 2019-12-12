@@ -277,7 +277,7 @@ class classy(BoltzmannBase):
                         kwargs=v,
                         post=(lambda P, k, z: (k, z, np.array(P).T)))
             elif v is None:
-                k_translated = self.translate_param(k, force=True)
+                k_translated = self.translate_param(k)
                 if k_translated not in self.derived_extra:
                     self.derived_extra += [k_translated]
             else:
@@ -332,12 +332,6 @@ class classy(BoltzmannBase):
             "P_k_max_1/Mpc", h_fid * self.extra_args.pop("P_k_max_h/Mpc", 0))
         self.extra_args["P_k_max_1/Mpc"] = max(k_max, k_max_old)
 
-    def translate_param(self, p, force=False):
-        # "force=True" is used when communicating with likelihoods, which speak "planck"
-        if self.use_renames or force:
-            return self.renames.get(p, p)
-        return p
-
     def set(self, params_values_dict):
         # If no output requested, remove arguments that produce an error
         # (e.g. complaints if halofit requested but no Cl's computed.)
@@ -387,7 +381,6 @@ class classy(BoltzmannBase):
             method = getattr(self.classy, collector.method)
             arg_array = self.collectors[product].arg_array
             if arg_array is None:
-                print(collector.method)
                 state[product] = method(
                     *self.collectors[product].args, **self.collectors[product].kwargs)
             elif isinstance(arg_array, Number):
@@ -452,13 +445,6 @@ class classy(BoltzmannBase):
         derived_extra = {p: requested_and_extra[p] for p in self.derived_extra}
         return derived, derived_extra
 
-    def get_param(self, p):
-        for pool in ["params", "derived", "derived_extra"]:
-            value = self._current_state[pool].get(self.translate_param(p, force=True),
-                                                  None)
-            if value is not None:
-                return deepcopy(value)
-        raise LoggedError(self.log, "Parameter not known: '%s'", p)
 
     def get_Cl(self, ell_factor=False, units="muK2"):
         try:
@@ -505,15 +491,12 @@ class classy(BoltzmannBase):
         self.classy.empty()
 
     def get_can_provide_params(self):
-        # This is currently not used since get_allow_agnostic() returns True.
-        # TODO: check with get_param OK with both variants
         names = ['Omega_Lambda', 'Omega_cdm', 'Omega_b', 'Omega_m', 'rs_drag', 'z_reio',
                  'YHe', 'Omega_k', 'age', 'sigma8']
 
-        if self.use_renames:
-            for name, mapped in self.renames.items():
-                if mapped in names:
-                    names.append(name)
+        for name, mapped in self.renames.items():
+            if mapped in names:
+                names.append(name)
         return names
 
     def get_version(self):

@@ -22,8 +22,6 @@ from __future__ import division
 
 # Global
 import numpy as np
-import scipy
-import numpy
 from itertools import chain
 
 # Local
@@ -50,6 +48,61 @@ class CyclicIndexRandomizer(IndexCycler):
         return self.indices[self.loop_index]
 
 
+try:
+    import numba
+    from np.random import normal
+    import warnings
+
+
+    def random_SO_N(dim):
+        """
+        Draw random samples from SO(N).
+        Equivalent to scipy function but about 10x faster
+        Parameters
+        ----------
+        dim : integer
+            Dimension of rotation space (N).
+        Returns
+        -------
+        rvs : Random size N-dimensional matrices, dimension (dim, dim)
+
+        """
+        dim = np.int64(dim)
+        H = np.eye(dim)
+        xx = normal(size=(dim + 2) * (dim - 1) // 2)
+        _rvs(dim, xx, H)
+        return H
+
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+
+
+        @numba.njit("void(int64,float64[::1],float64[:,::1])")
+        def _rvs(dim, xx, H):
+            D = np.empty((dim,))
+            ix = 0
+            for n in range(dim - 1):
+                x = xx[ix:ix + dim - n]
+                ix += dim - n
+                norm2 = np.dot(x, x)
+                x0 = x[0].item()
+                D[n] = np.sign(x[0]) if x[0] != 0 else 1
+                x[0] += D[n] * np.sqrt(norm2)
+                x /= np.sqrt((norm2 - x0 ** 2 + x[0] ** 2) / 2.)
+                # Householder transformation
+                tmp = np.dot(H[:, n:], x)
+                H[:, n:] -= np.outer(tmp, x)
+            D[-1] = (-1) ** (dim - 1) * D[:-1].prod()
+            H[:, :] = (D * H.T).T
+
+
+except Exception as e:
+    from scipy.stats import special_ortho_group
+
+    random_SO_N = special_ortho_group.rvs
+
+
 class RandDirectionProposer(IndexCycler):
     def propose_vec(self, scale=1):
         """
@@ -61,9 +114,9 @@ class RandDirectionProposer(IndexCycler):
         self.loop_index = (self.loop_index + 1) % self.n
         if self.loop_index == 0:
             if self.n > 1:
-                self.R = scipy.stats.special_ortho_group.rvs(self.n)
+                self.R = random_SO_N(self.n)
             else:
-                self.R = np.eye(1) * numpy.random.choice((-1, 1))
+                self.R = np.eye(1) * np.random.choice((-1, 1))
         return self.R[:, self.loop_index] * self.propose_r() * scale
 
     def propose_r(self):
@@ -120,13 +173,15 @@ class BlockedProposer(HasLogger):
         else:
             if i_last_slow_block > len(parameter_blocks) - 1:
                 raise LoggedError(
-                    self.log, "The index given for the last slow block, %d, is not valid: "
-                              "there are only %d blocks.",
+                    self.log,
+                    "The index given for the last slow block, %d, is not valid: "
+                    "there are only %d blocks.",
                     i_last_slow_block, len(parameter_blocks))
         n_all = sum([len(b) for b in parameter_blocks])
         n_slow = sum([len(b) for b in parameter_blocks[:1 + i_last_slow_block]])
         if set(list(chain(*parameter_blocks))) != set(range(n_all)):
-            raise LoggedError(self.log, "The blocks do not contain all the parameter indices.")
+            raise LoggedError(self.log,
+                              "The blocks do not contain all the parameter indices.")
         # Mapping between internal indices, sampler parameter indices and blocks:
         # let i=0,1,... be the indices of the parameters for the sampler,
         # and j=0,1,... be the indices of the parameters *as given to the proposal*
@@ -189,11 +244,12 @@ class BlockedProposer(HasLogger):
         if propose_matrix.shape[0] != self.d():
             raise LoggedError(
                 self.log, "The covariance matrix does not have the correct dimension: "
-                     "it's %d, but it should be %d.", propose_matrix.shape[0], self.d())
+                          "it's %d, but it should be %d.", propose_matrix.shape[0],
+                self.d())
         if not (np.allclose(propose_matrix.T, propose_matrix) and
                 np.all(np.linalg.eigvals(propose_matrix) > 0)):
             raise LoggedError(self.log, "The given covmat is not a positive-definite, "
-                                   "symmetric square matrix.")
+                                        "symmetric square matrix.")
         self.propose_matrix = propose_matrix.copy()
         propose_matrix_j_sorted = self.propose_matrix[np.ix_(self.i_of_j, self.i_of_j)]
         sigmas_diag, L = choleskyL(propose_matrix_j_sorted, return_scale_free=True)

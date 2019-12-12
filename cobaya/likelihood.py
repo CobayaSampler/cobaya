@@ -35,7 +35,7 @@ import six
 # Local
 from cobaya.conventions import kinds, _external, _module_path
 from cobaya.tools import get_class, get_external_function, getfullargspec
-from cobaya.log import LoggedError
+from cobaya.log import LoggedError, always_stop_exceptions
 from cobaya.component import ComponentCollection
 from cobaya.theory import Theory
 
@@ -108,21 +108,10 @@ class Likelihood(Theory, LikelihoodInterface):
 
         """
         derived = {} if want_derived else None
-        try:
-            state["logp"] = self.logp(_derived=derived, **params_values_dict)
-        except Exception as e:
-            if not self.stop_at_error:
-                state["logp"] = -np.inf
-                self.log.debug(
-                    "Ignored error at evaluation and assigned 0 likelihood "
-                    "(set 'stop_at_error: True' as an option for this likelihood "
-                    "to stop here). Error message: %r", e)
-                return False
-            else:
-                raise
-        else:
-            if want_derived:
-                state["derived"] = derived.copy()
+        state["logp"] = -np.inf  # in case of exception
+        state["logp"] = self.logp(_derived=derived, **params_values_dict)
+        if want_derived:
+            state["derived"] = derived.copy()
 
     def wait(self):
         if self.delay:

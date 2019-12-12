@@ -400,11 +400,6 @@ class camb(BoltzmannBase):
         self.extra_args["redshifts"] = np.sort(np.unique(np.concatenate(
             (np.atleast_1d(z), self.extra_args.get("redshifts", [])))))[::-1]
 
-    def translate_param(self, p):
-        if self.use_renames:
-            return self.renames.get(p, p)
-        return p
-
     def set(self, params_values_dict, state):
         # Prepare parameters to be passed: this-iteration + extra
         args = {self.translate_param(p): v for p, v in params_values_dict.items()}
@@ -566,21 +561,6 @@ class camb(BoltzmannBase):
                                             " in the CAMB interface", p)
         return derived
 
-    def get_param(self, p):
-        # TODO: if this would work for classy, move to base
-        translated = self.translate_param(p)
-        for pool in ["params", "derived", "derived_extra"]:
-            value = (self._current_state[pool] or {}).get(translated, None)
-            if value is not None:
-                return value
-            if p != translated:
-                # allow both translated and not
-                value = (self._current_state[pool] or {}).get(p, None)
-                if value is not None:
-                    return value
-
-        raise LoggedError(self.log, "Parameter not known: '%s'", p)
-
     def get_Cl(self, ell_factor=False, units="muK2"):
         current_state = self._current_state
         # get C_l^XX from the cosmological code
@@ -666,7 +646,6 @@ class camb(BoltzmannBase):
         return self._current_state['CAMBdata']
 
     def get_can_provide_params(self):
-        # This is currently not used since get_allow_agnostic() returns True.
         # possible derived parameters for derived_extra, excluding things that are
         # only input parameters.
         import ctypes
@@ -680,10 +659,9 @@ class camb(BoltzmannBase):
         fields += ['omega_de', 'sigma8']  # only parameters from CAMBdata
         properties = get_properties(self.camb.CAMBparams)
         names = self.camb.model.derived_names + properties + fields + params_derived
-        if self.use_renames:
-            for name, mapped in self.renames.items():
-                if mapped in names:
-                    names.append(name)
+        for name, mapped in self.renames.items():
+            if mapped in names:
+                names.append(name)
 
         return names
 

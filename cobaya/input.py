@@ -96,6 +96,7 @@ def get_default_info(module_or_class, kind=None, fail_if_not_found=False,
     Get default info for a module_or_class.
     """
 
+    # TODO: do we need fail_if_not_found=False, can always fail?
     _kind = kind
     try:
         if inspect.isclass(module_or_class):
@@ -179,6 +180,7 @@ def update_info(info):
             else:
                 module_path = input_block[module].get(_module_path, None)
                 default_class_info = get_default_info(module, block,
+                                                      fail_if_not_found=True,
                                                       module_path=module_path)
 
             updated[module] = default_class_info or {}

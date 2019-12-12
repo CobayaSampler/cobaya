@@ -210,7 +210,7 @@ class Like4(Likelihood):
 
 info2 = {'likelihood': {'like': Like2},
          'params': {'Ain': 5},
-         'debug': True}
+         'debug': True, 'stop_at_error': True}
 
 
 def _test_loglike2(theories):

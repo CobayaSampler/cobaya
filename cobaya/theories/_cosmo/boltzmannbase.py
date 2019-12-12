@@ -39,6 +39,18 @@ class BoltzmannBase(Theory):
     def get_allow_agnostic(self):
         return True
 
+    def translate_param(self, p):
+        return self.renames.get(p, p)
+
+    def get_param(self, p):
+        translated = self.translate_param(p)
+        for pool in ["params", "derived", "derived_extra"]:
+            value = (self._current_state[pool] or {}).get(translated, None)
+            if value is not None:
+                return value
+
+        raise LoggedError(self.log, "Parameter not known: '%s'", p)
+
     def needs(self, **requirements):
         r"""
         Specifies the quantities that each likelihood needs from the Cosmology code.
