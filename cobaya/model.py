@@ -972,7 +972,7 @@ class Model(HasLogger):
                 # average for different points
                 times = np.average(get_mpi_comm().allgather(times), axis=0)
             self._measured_speeds = [1 / (1e-7 + time) for time in times]
-            self.mpi_info('Setting measured speeds: %r',
+            self.mpi_info('Setting measured speeds (per sec): %r',
                           {component: float("%.3g" % speed) for component, speed in
                            zip(self.components, self._measured_speeds)})
             if not timing_on:

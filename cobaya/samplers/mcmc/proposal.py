@@ -50,6 +50,12 @@ class CyclicIndexRandomizer(IndexCycler):
 
 try:
     import numba
+except ImportError as e:
+    from scipy.stats import special_ortho_group
+
+    random_SO_N = special_ortho_group.rvs
+    numba = None
+else:
     from numpy.random import normal
     import warnings
 
@@ -95,12 +101,6 @@ try:
                 H[:, n:] -= np.outer(tmp, x)
             D[-1] = (-1) ** (dim - 1) * D[:-1].prod()
             H[:, :] = (D * H.T).T
-
-
-except Exception as e:
-    from scipy.stats import special_ortho_group
-
-    random_SO_N = special_ortho_group.rvs
 
 
 class RandDirectionProposer(IndexCycler):
@@ -223,8 +223,8 @@ class BlockedProposer(HasLogger):
         self.get_block_proposal(P, current_iblock_slow)
 
     def get_proposal_fast(self, P):
-        current_iblock_fast = self.iblock_of_j[
-            self.cycler_slow.n + self.cycler_fast.next()]
+        current_iblock_fast = self.iblock_of_j[self.cycler_slow.n
+                                               + self.cycler_fast.next()]
         self.get_block_proposal(P, current_iblock_fast)
 
     def get_block_proposal(self, P, iblock):
