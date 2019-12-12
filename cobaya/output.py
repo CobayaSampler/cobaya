@@ -154,13 +154,12 @@ class Output(HasLogger):
         # We write the new one anyway (maybe updated debug, resuming...)
         for f, info in [(self.file_input, input_info),
                         (self.file_updated, updated_info_trimmed)]:
-            if not info:
-                pass
-            with open(f, "w") as f_out:
-                try:
-                    f_out.write(yaml_dump(info))
-                except OutputError as e:
-                    raise LoggedError(self.log, str(e))
+            if info:
+                with open(f, "w") as f_out:
+                    try:
+                        f_out.write(yaml_dump(info))
+                    except OutputError as e:
+                        raise LoggedError(self.log, str(e))
 
     def prepare_collection(self, name=None, extension=None):
         """

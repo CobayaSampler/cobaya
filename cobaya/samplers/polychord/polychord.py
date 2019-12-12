@@ -226,8 +226,7 @@ class polychord(Sampler):
                 derived)
 
         sync_processes()
-        if is_main_process():
-            self.log.info("Sampling!")
+        self.mpi_info("Sampling!")
         self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
                               self.pc_prior, self.dumper)
 
