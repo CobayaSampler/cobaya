@@ -606,8 +606,8 @@ class mcmc(CovmatSampler):
                     "The chain has been stuck for %d attempts. Stopping sampling. "
                     "If this has happened often, try improving your "
                     "reference point/distribution. Alternatively (though not advisable) "
-                    "make 'max_tries: np.inf' (or 'max_tries: .inf' in yaml)",
-                    max_tries_now)
+                    "make 'max_tries: np.inf' (or 'max_tries: .inf' in yaml).\n"
+                    "Current point: %s", max_tries_now, self.current_point)
 
     # Functions to check convergence and learn the covariance of the proposal distribution
 

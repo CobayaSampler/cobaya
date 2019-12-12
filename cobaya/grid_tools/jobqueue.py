@@ -14,6 +14,15 @@ import six
 from cobaya.conventions import _yaml_extensions
 from .conventions import _script_folder, _script_ext, _log_folder, _jobid_ext
 
+code_prefix = 'COSMOMC'
+default_program = './cosmomc'
+
+
+def set_default_program(program, env_prefix):
+    global code_prefix, default_program
+    code_prefix = env_prefix
+    default_program = program
+
 
 def addArguments(parser, combinedJobs=False):
     parser.add_argument('--nodes', type=int)
@@ -26,13 +35,14 @@ def addArguments(parser, combinedJobs=False):
                             help=('run all one after another, under one job submission '
                                   '(good for many fast operations)'))
         parser.add_argument('--runs-per-job', type=int,
-                            default=1,
-                            #                            default=int(os.environ.get('COSMOMC_runsPerJob', '1')),
+                            default=int(
+                                os.environ.get(code_prefix + '_runsPerJob', '1')),
                             help=('submit multiple mpi runs at once from each job script '
                                   '(e.g. to get more than one run per node)'))
     parser.add_argument('--job-template',
                         help="template file for the job submission script")
-    parser.add_argument('--program', help='actual program to run (default: cobaya-run)')
+    parser.add_argument('--program',
+                        help='actual program to run (default: %s)' % default_program)
     parser.add_argument('--queue', help='name of queue to submit to')
     parser.add_argument('--jobclass', help='any class name of the job')
     parser.add_argument('--qsub', help='option to change qsub command to something else')
@@ -58,8 +68,9 @@ class jobSettings(object):
                     grid_engine = 'OGS'  # Open Grid Scheduler, as on StarCluster
             except:
                 pass
-        self.job_template = getDefaulted('job_template', 'job_script', **kwargs)
-        if not kwargs.get("job_template"):
+        self.job_template = getDefaulted('job-template', 'job_script', **kwargs)
+        if not self.job_template or self.job_template == 'job_script' \
+                and not os.path.exists(self.job_template):
             raise ValueError("You must provide a script template with '--job-template'.")
         try:
             with open(self.job_template, 'r') as f:
@@ -74,7 +85,7 @@ class jobSettings(object):
         except:
             cores = 8
         self.cores_per_node = getDefaulted(
-            'cores_per_node', cores, tp=int, template=template, **kwargs)
+            'cores-per-node', cores, tp=int, template=template, **kwargs)
         if cores == 4:
             perNode = 2
         elif cores % 4 == 0:
@@ -84,7 +95,7 @@ class jobSettings(object):
         else:
             perNode = 1
         self.chains_per_node = getDefaulted(
-            'chains_per_node', perNode, tp=int, template=template, **kwargs)
+            'chains-per-node', perNode, tp=int, template=template, **kwargs)
         self.nodes = getDefaulted(
             'nodes', max(1, 4 // perNode), tp=int, template=template, **kwargs)
         self.nchains = self.nodes * self.chains_per_node
@@ -95,15 +106,16 @@ class jobSettings(object):
         if self.omp != np.floor(self.omp):
             raise Exception('Chains must each have equal number of cores')
         if msg:
-            print('Job parameters: %i cosmomc runs of %i chains on %i nodes, '
+            print('Job parameters: %i runs of %i chains on %i nodes, '
                   'each node with %i MPI chains, each chain using %i OpenMP cores '
                   '(%i cores per node)' % (
                       self.runsPerJob, self.nchains, self.nodes, self.chains_per_node,
                       self.omp, self.cores_per_node))
         self.mem_per_node = getDefaulted(
-            'mem_per_node', 63900, tp=int, template=template, **kwargs)
+            'mem-per-node', 63900, tp=int, template=template, **kwargs)
         self.walltime = getDefaulted('walltime', '24:00:00', template=template, **kwargs)
-        self.program = getDefaulted('program', 'cobaya-run', template=template, **kwargs)
+        self.program = getDefaulted('program', default_program, template=template,
+                                    **kwargs)
         self.queue = getDefaulted('queue', '', template=template, **kwargs)
         self.jobclass = getDefaulted('jobclass', '', template=template, **kwargs)
         self.gridEngine = getDefaulted(
@@ -281,6 +293,7 @@ def submitJob(jobName, inputFiles, sequential=False, msg=False, **kwargs):
     j.omp = j.cores_per_node // (j.chains_per_node * j.runsPerJob)
     j.path = os.getcwd()
     j.onerun = (0, 1)[len(inputFiles) == 1 or sequential]
+    base_path = os.path.abspath(kwargs.get('batchPath', './'))
     vals = dict()
     vals['JOBNAME'] = jobName
     vals['OMP'] = j.omp
@@ -298,7 +311,7 @@ def submitJob(jobName, inputFiles, sequential=False, msg=False, **kwargs):
     vals['ONERUN'] = j.onerun
     vals['PROGRAM'] = j.program
     vals['QUEUE'] = j.queue
-    vals['LOGDIR'] = os.path.join(os.path.abspath(kwargs.get('batchPath')), _log_folder)
+    vals['LOGDIR'] = os.path.join(base_path, _log_folder)
     if hasattr(j, 'jobclass'):
         vals['JOBCLASS'] = j.jobclass
     j.names = [os.path.basename(param) for param in inputFiles]
@@ -319,15 +332,19 @@ def submitJob(jobName, inputFiles, sequential=False, msg=False, **kwargs):
         template = "\n".join(
             [line for line in template.split("\n") if not line.startswith("##")])
         script = replacePlaceholders(template, vals)
-        scriptRoot = os.path.join(os.path.abspath(kwargs.get('batchPath')),
-                                  _script_folder, os.path.splitext(jobName)[0])
+        scriptRoot = os.path.join(base_path, _script_folder, os.path.splitext(jobName)[0])
         scriptName = scriptRoot + _script_ext
         open(scriptName, 'w').write(script)
         if len(inputFiles) > 1:
             open(scriptRoot + '.batch', 'w').write("\n".join(inputFiles))
         if not kwargs.get('no_sub', False):
-            res = str(subprocess.check_output(
-                replacePlaceholders(j.qsub, vals) + ' ' + scriptName, shell=True)).strip()
+            try:
+                res = str(subprocess.check_output(
+                    replacePlaceholders(j.qsub, vals) + ' ' + scriptName, shell=True,
+                    stderr=subprocess.STDOUT)).strip()
+            except subprocess.CalledProcessError as e:
+                print('Error calling %s: %s' % (j.qsub, e.output.decode().strip()))
+                return
             if not res:
                 print('No qsub output')
             else:
@@ -422,7 +439,7 @@ def getDefaulted(key_name, default=None, tp=str, template=None, ext_env=None, **
     if val is None and template is not None:
         val = extractValue(template, 'DEFAULT_' + key_name)
     if val is None:
-        val = os.environ.get('COSMOMC_' + key_name, None)
+        val = os.environ.get(code_prefix + '_' + key_name.replace('-', '_'), None)
     if val is None and ext_env:
         val = os.environ.get('ext_env', None)
     if val is None:

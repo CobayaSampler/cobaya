@@ -68,6 +68,7 @@ setup(
             'cobaya-bib=cobaya.bib:bib_script',
             'cobaya-grid-create=cobaya.grid_tools:MakeGridScript',
             'cobaya-grid-run=cobaya.grid_tools.runbatch:run',
+            'cobaya-run-job=cobaya.grid_tools.runMPI:run_single',
             'cobaya-cosmo-generator=cobaya.cosmo_input:gui_script',
         ],
     },

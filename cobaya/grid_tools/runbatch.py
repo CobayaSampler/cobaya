@@ -24,10 +24,11 @@ def run():
     Opts.parser.add_argument('--minimize_failed', action='store_true',
                              help='run where minimization previously failed')
     Opts.parser.add_argument('--checkpoint_run', nargs='?', default=None, const=0,
-                             type=float, help=(
-            'run if stopped and not finished; if optional value '
-            'given then only run chains with convergence worse than '
-            'the given value'))
+                             type=float,
+                             help=(
+                                 'run if stopped and not finished; if optional value '
+                                 'given then only run chains with convergence worse than '
+                                 'the given value'))
     Opts.parser.add_argument('--importance_ready', action='store_true',
                              help='where parent chain has converged and stopped')
     Opts.parser.add_argument('--importance_changed', action='store_true',
@@ -96,18 +97,23 @@ def run():
         if ((not args.notexist or isMinimize and not jobItem.chainMinimumExists()
              or not isMinimize and not jobItem.chainExists()) and (
                     not args.minimize_failed or not jobItem.chainMinimumConverged())
-            and (isMinimize or args.notall is None or not jobItem.allChainExists(args.notall))) \
+            and (isMinimize or args.notall is None or not jobItem.allChainExists(
+                    args.notall))) \
                 and (not isMinimize or getattr(jobItem, 'want_minimize', True)):
             if not args.parent_converge or not jobItem.isImportanceJob or jobItem.parent.hasConvergeBetterThan(
                     args.parent_converge):
-                if args.converge == 0 or not jobItem.hasConvergeBetterThan(args.converge, returnNotExist=True):
+                if args.converge == 0 or not jobItem.hasConvergeBetterThan(args.converge,
+                                                                           returnNotExist=True):
                     if args.checkpoint_run is None or jobItem.wantCheckpointContinue(
                             args.checkpoint_run) and jobItem.notRunning():
                         if (not jobItem.isImportanceJob or isMinimize
-                                or (args.importance_ready and jobItem.parent.chainFinished()
-                                    or not args.importance_ready and jobItem.parent.chainExists())
-                                and (not args.importance_changed or jobItem.parentChanged())
-                                and (not args.parent_stopped or jobItem.parent.notRunning())):
+                                or (
+                                        args.importance_ready and jobItem.parent.chainFinished()
+                                        or not args.importance_ready and jobItem.parent.chainExists())
+                                and (
+                                        not args.importance_changed or jobItem.parentChanged())
+                                and (
+                                        not args.parent_stopped or jobItem.parent.notRunning())):
                             if not args.not_queued or notQueued(jobItem.name):
                                 submitJob(jobItem.iniFile(variant))
 
