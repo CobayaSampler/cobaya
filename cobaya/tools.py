@@ -118,6 +118,14 @@ class VersionCheckError(ValueError):
     pass
 
 
+def check_module_path(module, path):
+    if not os.path.realpath(os.path.abspath(module.__file__)).startswith(
+            os.path.realpath(os.path.abspath(path))):
+        raise LoggedError(
+            log, "Module %s successfully loaded, but not from requested path: %s.",
+            module.__name__, path)
+
+
 def check_module_version(module, min_version):
     if version.parse(module.__version__) < version.parse(min_version):
         raise VersionCheckError(
@@ -129,6 +137,8 @@ def check_module_version(module, min_version):
 def load_module(name, package=None, path=None, min_version=None):
     with PythonPath(path):
         module = import_module(name, package=package)
+    if path:
+        check_module_path(module, path)
     if min_version:
         check_module_version(module, min_version)
     return module
