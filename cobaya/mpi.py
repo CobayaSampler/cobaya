@@ -14,12 +14,28 @@ import os
 from cobaya.conventions import _package
 
 # Vars to keep track of MPI parameters
-_mpi = -1
+_mpi = None if os.environ.get('COBAYA_NOMPI', False) else -1
 _mpi_size = -1
 _mpi_comm = -1
 _mpi_rank = -1
 
-disabled = os.environ.get('COBAYA_NOMPI', False)
+
+def set_mpi_disabled(disabled):
+    """
+    Disable MPI, e.g. for use on cluster head nodes where mpi4py may be installed
+    but not MPI functions will work.
+    """
+    global _mpi, _mpi_size, _mpi_rank, _mpi_comm
+    if disabled:
+        _mpi = None
+        _mpi_size = 0
+        _mpi_comm = None
+        _mpi_rank = None
+    else:
+        _mpi = -1
+        _mpi_size = -1
+        _mpi_comm = -1
+        _mpi_rank = -1
 
 
 def get_mpi():
@@ -30,9 +46,6 @@ def get_mpi():
     """
     global _mpi
     if _mpi == -1:
-        if disabled:
-            _mpi = None
-            return None
         try:
             from mpi4py import MPI
             _mpi = MPI
@@ -79,23 +92,15 @@ def get_mpi_rank():
 
 
 # Aliases for simpler use
-def is_main_process(no_mpi=False):
-    """Returns true if primary process or MPI not available.
-
-    Use the no_mpi keyword to avoid checking for MPI via import, 
-    which can die ungracefully (e.g. on head nodes at NERSC).
+def is_main_process():
     """
-    if not no_mpi:
-        return not bool(get_mpi_rank())
-    else:
-        return True
+    Returns true if primary process or MPI not available.
+    """
+    return not bool(get_mpi_rank())
 
 
-def more_than_one_process(no_mpi=False):
-    if not no_mpi:
-        return bool(max(get_mpi_size(), 1) - 1)
-    else:
-        return False
+def more_than_one_process():
+    return bool(max(get_mpi_size(), 1) - 1)
 
 
 def sync_processes():

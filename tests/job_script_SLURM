@@ -51,8 +51,8 @@ echo `which python`
 ##RUN: time srun --mpi=pmi2 {PROGRAM} {INI} > ./scripts/{INIBASE}.log 2>&1 ##
 ### defaults for this script
 ##DEFAULT_qsub: qsub ##
-##DEFAULT_cores-per-node: 16 ##
-##DEFAULT_chains-per-node: 4 ##
+##DEFAULT_cores_per_node: 16 ##
+##DEFAULT_chains_per_node: 4 ##
 ##DEFAULT_program: cobaya-run -r ##
 ##DEFAULT_walltime: 8:00:00##
 

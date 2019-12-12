@@ -68,7 +68,7 @@ class jobSettings(object):
                     grid_engine = 'OGS'  # Open Grid Scheduler, as on StarCluster
             except:
                 pass
-        self.job_template = getDefaulted('job-template', 'job_script', **kwargs)
+        self.job_template = getDefaulted('job_template', 'job_script', **kwargs)
         if not self.job_template or self.job_template == 'job_script' \
                 and not os.path.exists(self.job_template):
             raise ValueError("You must provide a script template with '--job-template'.")
@@ -85,7 +85,7 @@ class jobSettings(object):
         except:
             cores = 8
         self.cores_per_node = getDefaulted(
-            'cores-per-node', cores, tp=int, template=template, **kwargs)
+            'cores_per_node', cores, tp=int, template=template, **kwargs)
         if cores == 4:
             perNode = 2
         elif cores % 4 == 0:
@@ -95,7 +95,7 @@ class jobSettings(object):
         else:
             perNode = 1
         self.chains_per_node = getDefaulted(
-            'chains-per-node', perNode, tp=int, template=template, **kwargs)
+            'chains_per_node', perNode, tp=int, template=template, **kwargs)
         self.nodes = getDefaulted(
             'nodes', max(1, 4 // perNode), tp=int, template=template, **kwargs)
         self.nchains = self.nodes * self.chains_per_node
@@ -112,7 +112,7 @@ class jobSettings(object):
                       self.runsPerJob, self.nchains, self.nodes, self.chains_per_node,
                       self.omp, self.cores_per_node))
         self.mem_per_node = getDefaulted(
-            'mem-per-node', 63900, tp=int, template=template, **kwargs)
+            'mem_per_node', 63900, tp=int, template=template, **kwargs)
         self.walltime = getDefaulted('walltime', '24:00:00', template=template, **kwargs)
         self.program = getDefaulted('program', default_program, template=template,
                                     **kwargs)
@@ -439,7 +439,7 @@ def getDefaulted(key_name, default=None, tp=str, template=None, ext_env=None, **
     if val is None and template is not None:
         val = extractValue(template, 'DEFAULT_' + key_name)
     if val is None:
-        val = os.environ.get(code_prefix + '_' + key_name.replace('-', '_'), None)
+        val = os.environ.get(code_prefix + '_' + key_name, None)
     if val is None and ext_env:
         val = os.environ.get('ext_env', None)
     if val is None:

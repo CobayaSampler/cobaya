@@ -26,6 +26,7 @@ from cobaya.tools import create_banner, warn_deprecation, get_class
 from cobaya.input import get_used_modules
 from cobaya.conventions import _module_path, _code, _data, _external, _force
 from cobaya.conventions import _modules_path_arg, _modules_path_env, _path_install
+from cobaya.mpi import set_mpi_disabled
 
 log = logging.getLogger(__name__.split(".")[-1])
 
@@ -239,6 +240,7 @@ def check_gcc_version(min_version="6.4", error_returns=None):
 # Command-line script ####################################################################
 
 def install_script():
+    set_mpi_disabled(True)
     warn_deprecation()
 
     # Parse arguments
@@ -260,10 +262,6 @@ def install_script():
                         help="Force re-installation of apparently installed modules.")
     parser.add_argument("--no-progress-bars", action="store_true", default=False,
                         help="No progress bars shown. Shorter logs (used in Travis).")
-    parser.add_argument("--no-mpi", action="store_true", default=False,
-                        help="Do not attempt to check for MPI availability. " +
-                             "Use for running cobaya-install on head node of " +
-                             "cluster where mpi4py cannot be used (e.g., NERSC).")
     parser.add_argument("--just-check", action="store_true", default=False,
                         help="Just check whether modules are installed.")
     group_just = parser.add_mutually_exclusive_group(required=False)
@@ -273,32 +271,28 @@ def install_script():
                             help="Install data of the modules.", dest=_code)
     arguments = parser.parse_args()
 
-    from cobaya.mpi import is_main_process
-    is_primary_process = is_main_process(no_mpi=arguments.no_mpi)
-
     # Configure the logger ASAP
-    logger_setup(no_mpi=arguments.no_mpi)
+    logger_setup()
     log = logging.getLogger(__name__.split(".")[-1])
 
-    if is_primary_process:
-        if arguments.files == ["cosmo"]:
-            log.info("Installing cosmological modules (input files will be ignored)")
-            from cobaya.cosmo_input import install_basic
-            infos = [install_basic]
-        elif arguments.files == ["cosmo-tests"]:
-            log.info("Installing *tested* cosmological modules "
-                     "(input files will be ignored)")
-            from cobaya.cosmo_input import install_tests
-            infos = [install_tests]
-        elif arguments.files == ["polychord"]:
-            infos = [{"sampler": {"polychord": None}}]
-        else:
-            from cobaya.input import load_input
-            infos = [load_input(f) for f in arguments.files]
-        # Launch installer
-        install(*infos, path=getattr(arguments, _modules_path_arg)[0],
-                **{arg: getattr(arguments, arg)
-                   for arg in ["force", _code, _data, "no_progress_bars", "just_check"]})
+    if arguments.files == ["cosmo"]:
+        log.info("Installing cosmological modules (input files will be ignored)")
+        from cobaya.cosmo_input import install_basic
+        infos = [install_basic]
+    elif arguments.files == ["cosmo-tests"]:
+        log.info("Installing *tested* cosmological modules "
+                 "(input files will be ignored)")
+        from cobaya.cosmo_input import install_tests
+        infos = [install_tests]
+    elif arguments.files == ["polychord"]:
+        infos = [{"sampler": {"polychord": None}}]
+    else:
+        from cobaya.input import load_input
+        infos = [load_input(f) for f in arguments.files]
+    # Launch installer
+    install(*infos, path=getattr(arguments, _modules_path_arg)[0],
+            **{arg: getattr(arguments, arg)
+               for arg in ["force", _code, _data, "no_progress_bars", "just_check"]})
 
 
 if __name__ == '__main__':
