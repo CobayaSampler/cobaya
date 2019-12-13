@@ -78,39 +78,6 @@ class BaseCollection(HasLogger):
         columns += [_chi2] + self.chi2_names
         self.columns = columns
 
-    def _add_dict(self, dic, values, derived=None, weight=1, logpost=None, logpriors=None,
-                  loglikes=None):
-        dic[_weight] = weight
-        if logpost is None:
-            try:
-                logpost = sum(logpriors) + sum(loglikes)
-            except ValueError:
-                raise LoggedError(
-                    self.log, "If a log-posterior is not specified, you need to pass "
-                              "a log-likelihood and a log-prior.")
-        dic[_minuslogpost] = -logpost
-        if logpriors is not None:
-            for name, value in zip(self.minuslogprior_names, logpriors):
-                dic[name] = -value
-            dic[_minuslogprior] = -sum(logpriors)
-        if loglikes is not None:
-            for name, value in zip(self.chi2_names, loglikes):
-                dic[name] = -2 * value
-            dic[_chi2] = -2 * sum(loglikes)
-        if len(values) != len(self.sampled_params):
-            raise LoggedError(
-                self.log, "Got %d values for the sampled parameters. Should be %d.",
-                len(values), len(self.sampled_params))
-        for name, value in zip(self.sampled_params, values):
-            dic[name] = value
-        if derived is not None:
-            if len(derived) != len(self.derived_params):
-                raise LoggedError(
-                    self.log, "Got %d values for the derived parameters. Should be %d.",
-                    len(derived), len(self.derived_params))
-            for name, value in zip(self.derived_params, derived):
-                dic[name] = value
-
 
 class Collection(BaseCollection):
 
@@ -175,6 +142,39 @@ class Collection(BaseCollection):
                        loglikes)
         self.data.iloc[self._n] = np.array(list(self._value_dict.values()))
         self._n += 1
+
+    def _add_dict(self, dic, values, derived=None, weight=1, logpost=None, logpriors=None,
+                  loglikes=None):
+        dic[_weight] = weight
+        if logpost is None:
+            try:
+                logpost = sum(logpriors) + sum(loglikes)
+            except ValueError:
+                raise LoggedError(
+                    self.log, "If a log-posterior is not specified, you need to pass "
+                              "a log-likelihood and a log-prior.")
+        dic[_minuslogpost] = -logpost
+        if logpriors is not None:
+            for name, value in zip(self.minuslogprior_names, logpriors):
+                dic[name] = -value
+            dic[_minuslogprior] = -sum(logpriors)
+        if loglikes is not None:
+            for name, value in zip(self.chi2_names, loglikes):
+                dic[name] = -2 * value
+            dic[_chi2] = -2 * sum(loglikes)
+        if len(values) != len(self.sampled_params):
+            raise LoggedError(
+                self.log, "Got %d values for the sampled parameters. Should be %d.",
+                len(values), len(self.sampled_params))
+        for name, value in zip(self.sampled_params, values):
+            dic[name] = value
+        if derived is not None:
+            if len(derived) != len(self.derived_params):
+                raise LoggedError(
+                    self.log, "Got %d values for the derived parameters. Should be %d.",
+                    len(derived), len(self.derived_params))
+            for name, value in zip(self.derived_params, derived):
+                dic[name] = value
 
     def _enlarge_if_needed(self):
         if self._n >= self.data.shape[0]:
@@ -355,42 +355,39 @@ class Collection(BaseCollection):
         pass
 
 
-class OnePointDict(BaseCollection, odict):
-    """Wrapper of Collection to hold a single point, e.g. the current point of an MCMC."""
+class OneSamplePoint:
+    """Wrapper to hold a single point, e.g. the current point of an MCMC."""
 
-    def __init__(self, *args, **kwargs):
-        BaseCollection.__init__(self, args[0], name=kwargs['name'])
-        odict.__init__(self)
-        for p in self.columns:
-            self[p] = np.nan
+    def __init__(self, model, output_thin=1):
+        self.sampled_params = list(model.parameterization.sampled_params())
+        self.output_thin = output_thin
+        self._added_weight = 0
 
-    def add(self, values, **kwargs):
-        self._add_dict(self, values, **kwargs)
+    def add(self, values, weight=1, **kwargs):
+        self.values = values
+        self.kwargs = kwargs
+        self.weight = weight
+
+    @property
+    def logpost(self):
+        return self.kwargs['logpost']
 
     def add_to_collection(self, collection):
         """Adds this point at the end of a given collection."""
-        collection.add(self.get_sampled(), derived=self.get_derived(),
-                       logpost=-self[_minuslogpost], weight=self[_weight],
-                       logpriors=-self.get_array(self.minuslogprior_names),
-                       loglikes=-0.5 * self.get_array(self.chi2_names))
-
-    def get_array(self, names):
-        return np.array([odict.__getitem__(self, c) for c in names])
-
-    def get_sampled(self):
-        return self.get_array(self.sampled_params)
-
-    def get_derived(self):
-        if self.derived_params:
-            return self.get_array(self.derived_params)
+        if self.output_thin > 1:
+            self._added_weight += self.weight
+            if self._added_weight >= self.output_thin:
+                weight = self._added_weight // self.output_thin
+                self._added_weight = self._added_weight % self.output_thin
+            else:
+                return
         else:
-            return None
-
-    def increase_weight(self, increase):
-        self[_weight] += increase
+            weight = self.weight
+        collection.add(self.values, weight=weight, **self.kwargs)
 
     def __str__(self):
-        return ", ".join(['%s:%.7g' % (k, v) for k, v in self.items()])
+        return ", ".join(
+            ['%s:%.7g' % (k, v) for k, v in zip(self.sampled_params, self.values)])
 
 
 class OnePoint(Collection):

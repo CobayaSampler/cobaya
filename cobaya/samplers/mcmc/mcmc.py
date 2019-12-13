@@ -22,7 +22,7 @@ from pandas import DataFrame
 from cobaya.sampler import Sampler
 from cobaya.mpi import get_mpi_size, get_mpi_rank, get_mpi_comm, get_mpi, share_mpi
 from cobaya.mpi import more_than_one_process, is_main_process, sync_processes
-from cobaya.collection import Collection, OnePointDict
+from cobaya.collection import Collection, OneSamplePoint
 from cobaya.conventions import kinds, partag, _weight, _minuslogpost, _covmat_extension
 from cobaya.conventions import _line_width, _path_install, _progress_extension
 from cobaya.samplers.mcmc.proposal import BlockedProposer
@@ -243,7 +243,7 @@ class mcmc(CovmatSampler):
         name = str(1 + (lambda r: r if r is not None else 0)(get_mpi_rank()))
         self.collection = Collection(
             self.model, self.output, name=name, resuming=self.resuming)
-        self.current_point = OnePointDict(self.model, name=name)
+        self.current_point = OneSamplePoint(self.model)
         # Use standard MH steps by default
         self.get_new_sample = self.get_new_sample_metropolis
         # Prepare oversampling / dragging if applicable
@@ -394,7 +394,7 @@ class mcmc(CovmatSampler):
                 self.model.set_measured_speeds(initial_point, self.measured_speed_list)
         else:
             valid_point = False
-            for i in range(self.max_tries // self.model.prior.d()):
+            for i in range(max(1, self.max_tries // self.model.prior.d())):
                 initial_point = self.model.prior.reference(max_tries=self.max_tries)
                 logpost, logpriors, loglikes, derived = self.model.logposterior(
                     initial_point)
@@ -423,7 +423,7 @@ class mcmc(CovmatSampler):
             # Callback function
             if (hasattr(self, "callback_function_callable") and
                     not (max(self.n(), 1) % self.callback_every) and
-                    self.current_point[_weight] == 1):
+                    self.current_point.weight == 1):
                 self.callback_function_callable(self)
                 self.last_point_callback = self.collection.n()
             # Checking convergence and (optionally) learning the covmat of the proposal
@@ -460,12 +460,11 @@ class mcmc(CovmatSampler):
         Returns:
            ``True`` for an accepted step, ``False`` for a rejected one.
         """
-        trial = self.current_point.get_sampled()
+        trial = self.current_point.values.copy()
         self.proposer.get_proposal(trial)
         logpost_trial, logprior_trial, loglikes_trial, derived = self.model.logposterior(
             trial)
-        accept = self.metropolis_accept(logpost_trial,
-                                        -self.current_point["minuslogpost"])
+        accept = self.metropolis_accept(logpost_trial, self.current_point.logpost)
         self.process_accept_or_reject(accept, trial, derived,
                                       logpost_trial, logprior_trial, loglikes_trial)
         return accept
@@ -484,8 +483,8 @@ class mcmc(CovmatSampler):
         """
         # Prepare starting and ending points *in the SLOW subspace*
         # "start_" and "end_" mean here the extremes in the SLOW subspace
-        start_slow_point = self.current_point.get_sampled()
-        start_slow_logpost = -self.current_point["minuslogpost"]
+        start_slow_point = self.current_point.values.copy()
+        start_slow_logpost = self.current_point.logpost
         end_slow_point = start_slow_point.copy()
         self.proposer.get_proposal_slow(end_slow_point)
         self.log.debug("Proposed slow end-point: %r", end_slow_point)
@@ -494,7 +493,7 @@ class mcmc(CovmatSampler):
         end_slow_logpost, end_slow_logprior, end_slow_loglikes, derived = (
             self.model.logposterior(end_slow_point))
         if end_slow_logpost == -np.inf:
-            self.current_point.increase_weight(1)
+            self.current_point.weight += 1
             return False
         # trackers of the dragging
         current_start_point = start_slow_point
@@ -592,14 +591,13 @@ class mcmc(CovmatSampler):
                     self.log.info("Finished burn-in phase: discarded %d accepted steps.",
                                   self.burn_in)
             # set the new point as the current one, with weight one
-            self.current_point.add(trial, derived=derived, weight=1,
-                                   logpost=logpost_trial,
+            self.current_point.add(trial, derived=derived, logpost=logpost_trial,
                                    logpriors=logprior_trial, loglikes=loglikes_trial)
         else:  # not accepted
-            self.current_point.increase_weight(1)
+            self.current_point.weight += 1
             # Failure criterion: chain stuck! (but be more permissive during burn_in)
             max_tries_now = self.max_tries * (1 + (10 - 1) * np.sign(self.burn_in_left))
-            if self.current_point[_weight] > max_tries_now:
+            if self.current_point.weight > max_tries_now:
                 self.collection._out_update()
                 raise LoggedError(
                     self.log,
@@ -622,7 +620,7 @@ class mcmc(CovmatSampler):
 
         n = self.collection.n()
         # If *just* (weight==1) got ready to check+learn
-        if not (n % self.check_every) and n > 0 and self.current_point[_weight] == 1:
+        if not (n % self.check_every) and n > 0 and self.current_point.weight == 1:
             self.log.info("Checkpoint: %d samples accepted.", n)
             if more_than_one_process():
                 self.been_waiting += 1
