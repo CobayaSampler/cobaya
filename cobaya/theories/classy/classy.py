@@ -148,6 +148,7 @@ from cobaya.theories._cosmo import BoltzmannBase
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, pip_install
 from cobaya.tools import load_module, VersionCheckError
+from cobaya.conventions import _version
 
 # Result collector
 Collector = namedtuple("collector",
@@ -161,7 +162,7 @@ non_linear_default_code = "hmcode"
 class classy(BoltzmannBase):
     # Name of the Class repo/folder and version to download
     classy_repo_name = "lesgourg/class_public"
-    classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', "032cd4b0")
+    classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', "v2.8.2")
 
     def initialize(self):
         """Importing CLASS from the correct path, if given, and if not, globally."""
@@ -190,8 +191,10 @@ class classy(BoltzmannBase):
             classy_build_path = None
             self.log.info("Importing *global* CLASS.")
         try:
+            # Check min version compatibility (if resuming/reusing-info, use given one)
+            min_version = getattr(self, _version, False) or self.classy_repo_version
             self.classy_module = load_module('classy', path=classy_build_path,
-                                             min_version=self.classy_repo_version)
+                                             min_version=min_version)
             from classy import Class, CosmoSevereError, CosmoComputationError
         except ImportError:
             raise LoggedError(

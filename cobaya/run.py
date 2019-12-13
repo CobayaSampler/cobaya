@@ -63,15 +63,6 @@ def run(info, stop_at_error=None):
             logging.getLogger(__name__.split(".")[-1]).info(
                 "Input info updated with defaults (dumped to YAML):\n%s",
                 yaml_dump(updated_info))
-    # TO BE DEPRECATED IN >1.2!!! #####################
-    _force_reproducible = "force_reproducible"
-    if _force_reproducible in info:
-        info = deepcopy_where_possible(info)
-        info.pop(_force_reproducible)
-        logging.getLogger(__name__.split(".")[-1]).warning(
-            "Option '%s' is no longer necessary. Please remove it!" % _force_reproducible)
-    # CHECK THAT THIS WARNING WORKS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ###################################################
     # We dump the info now, before modules initialization, to better track errors and
     # to check if resuming is possible asap (old and new infos are consistent)
     output.dump_info(info, updated_info)

@@ -52,7 +52,8 @@ class CobayaComponent(HasLogger, HasDefaults):
     Base class for a theory, likelihood or sampler with associated .yaml parameter file
     that can set attributes.
     """
-    # The next list of options is ignored then resuming or reusing an updated info.
+    # The next list of options is ignored when comparing info
+    # at resuming or reusing an updated info.
     # When defining it for subclasses, *append* to this list.
     ignore_at_resume = [_version]
 

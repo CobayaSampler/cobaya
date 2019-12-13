@@ -21,6 +21,7 @@ from collections import OrderedDict as odict
 from ast import parse
 import warnings
 import inspect
+from packaging import version
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore")
@@ -120,26 +121,30 @@ class VersionCheckError(ValueError):
     pass
 
 
-def check_module_version(module, min_version=None):
-    if min_version:
-        try:
-            from packaging import version
-        except ModuleNotFoundError:
-            raise LoggedError(log, "packaging not found, install with "
-                                   "'pip install packaging'")
-        else:
-            if not hasattr(module, "__version__") or \
-                    version.parse(module.__version__) < version.parse(min_version):
-                raise VersionCheckError(
-                    "module %s at %s is version %s but require %s or higher" %
-                    (module.__name__, os.path.dirname(module.__file__),
-                     getattr(module, "__version__", "(non-given)"), min_version))
+def check_module_path(module, path):
+    if not os.path.realpath(os.path.abspath(module.__file__)).startswith(
+            os.path.realpath(os.path.abspath(path))):
+        raise LoggedError(
+            log, "Module %s successfully loaded, but not from requested path: %s.",
+            module.__name__, path)
+
+
+def check_module_version(module, min_version):
+    if not hasattr(module, "__version__") or \
+            version.parse(module.__version__) < version.parse(min_version):
+        raise VersionCheckError(
+            "module %s at %s is version %s but required %s or higher" %
+            (module.__name__, os.path.dirname(module.__file__),
+             getattr(module, "__version__", "(non-given)"), min_version))
 
 
 def load_module(name, package=None, path=None, min_version=None):
     with PythonPath(path):
         module = import_module(name, package=package)
-    check_module_version(module, min_version)
+    if path:
+        check_module_path(module, path)
+    if min_version:
+        check_module_version(module, min_version)
     return module
 
 

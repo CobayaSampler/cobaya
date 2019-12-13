@@ -17,10 +17,11 @@ import traceback
 import datetime
 from itertools import chain
 import re
+from packaging import version
 
 # Local
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
-from cobaya.conventions import _input_suffix, _updated_suffix, _separator_files
+from cobaya.conventions import _input_suffix, _updated_suffix, _separator_files, _version
 from cobaya.conventions import _resume, _resume_default, _force, _yaml_extensions
 from cobaya.conventions import kinds, _params
 from cobaya.log import LoggedError, HasLogger
@@ -123,7 +124,8 @@ class Output(HasLogger):
            - the input info.
            - idem, populated with the modules' defaults.
 
-        If resuming a sample, checks first that old and new infos are consistent.
+        If resuming a sample, checks first that old and new infos and versions are
+        consistent.
         """
         # trim known params of each likelihood: for internal use only
         updated_info_trimmed = deepcopy_where_possible(updated_info)
@@ -157,6 +159,23 @@ class Output(HasLogger):
                     raise LoggedError(
                         self.log, "Old and new sample information not compatible! "
                                   "Resuming not possible!")
+                # Deal with version comparison separately:
+                # - If not specified now, take the one used in resumed info
+                # - If specified both now and before, check new not higher than old one
+                for k in kinds:
+                    for c in updated_info[k]:
+                        new_version = updated_info[k][c].get(_version)
+                        old_version = old_info[k][c].get(_version)
+                        if new_version is None:
+                            updated_info[k][c][_version] = old_version
+                            updated_info_trimmed[k][c][_version] = old_version
+                        elif old_version is not None:
+                            if version.parse(new_version) > version.parse(old_version):
+                                raise LoggedError(
+                                    self.log, "You have requested version %r for %s:%s, "
+                                              "but you are trying to resume a sample that "
+                                              "used and older one, %r.",
+                                    new_version, k, c, old_version)
             except IOError:
                 # There was no previous chain
                 pass

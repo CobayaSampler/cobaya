@@ -30,7 +30,7 @@ current state.
 import inspect
 from collections import deque
 # Local
-from cobaya.conventions import _external, kinds, _requires, _params
+from cobaya.conventions import _external, kinds, _requires, _params, _version
 from cobaya.component import CobayaComponent, ComponentCollection
 from cobaya.tools import get_class, str_to_list
 from cobaya.log import LoggedError, always_stop_exceptions
@@ -40,7 +40,7 @@ from cobaya.tools import get_class_methods
 class Theory(CobayaComponent):
     """Base class theory that can calculate something."""
     # Default options for all subclasses
-    class_options = {"speed": -1, "stop_at_error": False}
+    class_options = {"speed": -1, "stop_at_error": False, _version: None}
 
     def __init__(self, info={}, name=None, timing=None, path_install=None,
                  initialize=True, standalone=True):

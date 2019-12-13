@@ -53,7 +53,7 @@ import numpy as np
 
 # Local
 from cobaya.conventions import kinds, _resume_default, _checkpoint_extension
-from cobaya.conventions import _covmat_extension, _progress_extension, _module_path
+from cobaya.conventions import _progress_extension, _module_path
 from cobaya.tools import get_class
 from cobaya.log import LoggedError
 from cobaya.yaml import yaml_load_file

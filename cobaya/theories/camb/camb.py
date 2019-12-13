@@ -188,7 +188,7 @@ from cobaya.install import download_github_release, check_gcc_version
 from cobaya.tools import getfullargspec, get_class_methods, get_properties
 from cobaya.tools import load_module, VersionCheckError, str_to_list
 from cobaya.theory import HelperTheory
-from cobaya.conventions import _requires
+from cobaya.conventions import _requires, _version
 
 # Result collector
 Collector = namedtuple("collector", ["method", "args", "kwargs"])
@@ -232,7 +232,7 @@ class camb(BoltzmannBase):
             self.log.info("Importing *global* CAMB.")
         try:
             # Check min version compatibility (if resuming/reusing-info, use given one)
-            min_version = getattr(self, "version", False) or self.min_camb_version
+            min_version = getattr(self, _version, False) or self.min_camb_version
             self.camb = load_module("camb", path=camb_path, min_version=min_version)
         except ImportError:
             raise LoggedError(
