@@ -54,7 +54,8 @@ def post(info, sample=None):
             "Post-processing is not yet MPI-able. Doing nothing for rank > 1 processes.")
         return
     # 1. Load existing sample
-    output_in = get_output(output_prefix=info.get(_output_prefix), resume=True)
+    output_in = get_output(output_prefix=info.get(_output_prefix),
+                           resume=True, must_exist=True)
     info_in = load_input(output_in.file_updated) if output_in else deepcopy(info)
     dummy_model_in = DummyModel(info_in[_params], info_in[kinds.likelihood],
                                 info_in.get(_prior, None))

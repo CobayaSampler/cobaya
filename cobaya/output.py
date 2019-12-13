@@ -34,7 +34,8 @@ re_uint = re.compile("[0-9]+")
 
 
 class Output(HasLogger):
-    def __init__(self, output_prefix=None, resume=_resume_default, force_output=False):
+    def __init__(self, output_prefix=None, resume=_resume_default,
+                 force_output=False, must_exist=False):
         self.name = "output"  # so that the MPI-wrapped class conserves the name
         self.set_logger(self.name)
         self.folder = os.sep.join(output_prefix.split(os.sep)[:-1]) or "."
@@ -65,13 +66,19 @@ class Output(HasLogger):
         self.file_input = info_file_prefix + _input_suffix + _yaml_extensions[0]
         self.file_updated = info_file_prefix + _updated_suffix + _yaml_extensions[0]
         self.resuming = False
+        # Output kind and collection extension
+        self.kind = "txt"
+        self.ext = "txt"
         if os.path.isfile(self.file_updated):
             self.log.info(
                 "Found existing products with the requested output prefix: '%s'",
                 output_prefix)
-            if self.force_output:
+            if not must_exist and not self.find_collections():
+                self.log.info("Previous output empty, starting anew.")
+                self.delete_infos()
+            elif self.force_output:
                 self.log.info("Deleting previous chain ('force' was requested).")
-                [os.remove(f) for f in [self.file_input, self.file_updated]]
+                self.delete_infos()
             elif resume:
                 # Only in this case we can be sure that we are actually resuming
                 self.resuming = True
@@ -83,7 +90,7 @@ class Output(HasLogger):
                 same_prefix_noinfo = [f for f in os.listdir(self.folder) if
                                       f.startswith(self.prefix) and f not in info_files]
                 if not same_prefix_noinfo:
-                    [os.remove(f) for f in [self.file_input, self.file_updated]]
+                    self.delete_infos()
                     self.log.info("Overwritten old failed chain files.")
                 else:
                     raise LoggedError(
@@ -92,9 +99,11 @@ class Output(HasLogger):
                                       _force[0], _force, _force) +
                                   " or request resuming ('-%s', '--%s', '%s: True')" % (
                                       _resume[0], _resume, _resume))
-        # Output kind and collection extension
-        self.kind = "txt"
-        self.ext = "txt"
+
+    def delete_infos(self):
+        for f in [self.file_input, self.file_updated]:
+            if os.path.exists(f):
+                os.remove(f)
 
     def updated_output_prefix(self):
         """

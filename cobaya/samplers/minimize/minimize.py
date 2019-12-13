@@ -103,7 +103,6 @@ getdist_ext_ignore_prior = {True: ".bestfit", False: ".minimum"}
 
 class minimize(Minimizer, CovmatSampler):
     def initialize(self):
-        """Prepares the arguments for `scipy.minimize`."""
         self.mpi_info("Initializing")
         self.max_evals = read_dnumber(self.max_evals, self.model.prior.d())
         # Configure target

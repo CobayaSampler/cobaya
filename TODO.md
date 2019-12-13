@@ -20,3 +20,4 @@
 ## minimize run with -f does not work. Check resuming.
 ## unbounded parameters with flat prior (this would make it safe to rotate the unbounded ones in minimize)
 ## ordering of helper theories
+## minimize updated yaml will overwrite chain updated yaml?

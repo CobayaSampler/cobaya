@@ -30,6 +30,7 @@ def test_mcmc(tmpdir, modules=None):
     S0 = comm.bcast(S0, root=0)
     info_sampler = {"mcmc": {
         # Bad guess for covmat, so big burn in and max_tries
+        # TODO: why * dimension here?
         "max_tries": 1000 * dimension, "burn_in": 100 * dimension,
         # Learn proposal
         # "learn_proposal": True,  # default now!
