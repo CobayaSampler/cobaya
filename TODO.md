@@ -21,3 +21,5 @@
 ## unbounded parameters with flat prior (this would make it safe to rotate the unbounded ones in minimize)
 ## ordering of helper theories
 ## minimize updated yaml will overwrite chain updated yaml?
+## Lots of batchjob stuff (hasConvergeBetterThan,wantCheckpointContinue etc) now broken
+## More pythonic alternative to class_options (e.g class or object attributes/properties)

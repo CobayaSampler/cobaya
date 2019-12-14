@@ -20,7 +20,7 @@ _mpi_comm = -1
 _mpi_rank = -1
 
 
-def set_mpi_disabled(disabled):
+def set_mpi_disabled(disabled=True):
     """
     Disable MPI, e.g. for use on cluster head nodes where mpi4py may be installed
     but not MPI functions will work.

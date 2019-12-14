@@ -25,8 +25,8 @@ from cobaya.sampler import get_sampler, get_sampler_class, Minimizer
 from cobaya.log import logger_setup
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info
-from cobaya.mpi import import_MPI, is_main_process
-from cobaya.tools import warn_deprecation, deepcopy_where_possible, recursive_update
+from cobaya.mpi import import_MPI, is_main_process, set_mpi_disabled
+from cobaya.tools import warn_deprecation, recursive_update
 from cobaya.post import post
 
 
@@ -119,7 +119,12 @@ def run_script():
                               help="Overwrites previous output, if it exists "
                                    "(use with care!)")
     parser.add_argument("--version", action="version", version=__version__)
+    parser.add_argument("--no-mpi", action='store_true',
+                        help="disable MPI when mpi4py installed but MPI does "
+                             "not actually work")
     args = parser.parse_args()
+    if args.no_mpi:
+        set_mpi_disabled()
     if any((os.path.splitext(f)[0] in ("input", "updated")) for f in args.input_file):
         raise ValueError("'input' and 'updated' are reserved file names. "
                          "Please, use a different one.")
