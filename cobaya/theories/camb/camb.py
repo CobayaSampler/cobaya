@@ -674,7 +674,7 @@ class camb(BoltzmannBase):
             return False
         # Do sth here about the other components versions
         # e.g. do not resume with takahashi if mead used, because it's worse
-        if (version_a["submodule_version"] != version_b["submodule_version"]:
+        if version_a["submodule_version"] != version_b["submodule_version"]:
             self.log.error("Different submodule version!")
             return False
         return True
