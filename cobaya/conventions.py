@@ -85,10 +85,7 @@ subfolders = {kinds.likelihood: "likelihoods",
               kinds.theory: "theories"}
 
 # Approximate overhead of cobaya per posterior evaluation. Useful for blocking speeds
-# After testing, it's mostly due to evaluating logpdf of scipy.stats 1d pdf's,
-# in particular ~0.1ms per param
-# (faster for most common cases, after manual override of logpdf)
-_overhead_per_param = 5e-6
+_overhead_time = 0.0003
 
 # Line width for console printing
 _line_width = 120

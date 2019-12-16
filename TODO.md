@@ -1,7 +1,5 @@
 ## Update example notebook to match example in paper (+ updates)
 ## Make numba a requirement?
-## Update setting for model.overhead
-## Already added get_version(): should add as version trace dump with output files. Where?
 ## Let classes do all defaults combining; allow separate like instantiation + use equivalent to loading in cobaya
 ## Move sampler/plik install into class methods
 ## Support "parameterization" option of theory .yaml to specify parameter yaml variants?

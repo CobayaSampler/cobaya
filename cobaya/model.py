@@ -18,7 +18,7 @@ import six
 
 # Local
 from cobaya.conventions import kinds, _prior, _timing, _aliases
-from cobaya.conventions import _params, _overhead_per_param, _provides
+from cobaya.conventions import _params, _overhead_time, _provides
 from cobaya.conventions import _path_install, _debug, _debug_default, _debug_file
 from cobaya.conventions import _input_params, _output_params, _chi2, _separator
 from cobaya.conventions import _input_params_prefix, _output_params_prefix, _requires
@@ -165,7 +165,7 @@ class Model(HasLogger):
         self._measured_speeds = None
 
         # Overhead per likelihood evaluation
-        self.overhead = _overhead_per_param * len(self.parameterization.sampled_params())
+        self.overhead = _overhead_time
 
     def info(self):
         """
@@ -400,7 +400,7 @@ class Model(HasLogger):
                 dict(zip(self.parameterization.sampled_params(), params_values_array)))
         # Notice that we don't use the make_finite in the prior call,
         # to correctly check if we have to compute the likelihood
-        logpriors = self.logpriors(params_values_array, make_finite=False)
+        logpriors = self.prior.logps(params_values_array)
         logpost = sum(logpriors)
         if -np.inf not in logpriors:
             like = self.loglikes(params_values, return_derived=return_derived,

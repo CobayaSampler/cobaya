@@ -95,7 +95,7 @@ class Output(HasLogger):
                     self.log.info("Overwritten old failed chain files.")
                 else:
                     raise LoggedError(
-                        self.log, "Delete the previous sample manually, automatically "
+                        self.log, "Delete the previous output manually, automatically "
                                   "('-%s', '--%s', '%s: True')" % (
                                       _force[0], _force, _force) +
                                   " or request resuming ('-%s', '--%s', '%s: True')" % (
