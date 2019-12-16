@@ -71,15 +71,12 @@ def run(info, stop_at_error=None):
                path_install=info.get(_path_install), timing=updated_info.get(_timing),
                allow_renames=False,
                stop_at_error=info_stop if stop_at_error is None else stop_at_error) as model:
-        # Update the updated info with the parameter routes
+        # Update the updated info with the parameter routes and version info
         keys = ([kinds.likelihood, kinds.theory]
                 if kinds.theory in updated_info else [kinds.likelihood])
         updated_info.update(odict([(k, model.info()[k]) for k in keys]))
-        # Add versions of components
-        updated_info = recursive_update(updated_info, dict(
-            [kind, dict([comp, {_version: version}]
-                        for comp, version in comp_info.items() if version)]
-            for kind, comp_info in model.get_version().items()))
+        updated_info = recursive_update(
+            updated_info, model.get_version(add_version_field=True))
         output.dump_info(None, updated_info, check_compatible=False)
         with get_sampler(
                 updated_info[kinds.sampler], model, output,

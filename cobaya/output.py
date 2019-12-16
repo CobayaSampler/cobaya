@@ -17,7 +17,6 @@ import traceback
 import datetime
 from itertools import chain
 import re
-from packaging import version
 
 # Local
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
@@ -149,7 +148,7 @@ class Output(HasLogger):
                                   "Resuming not possible!")
                 # Deal with version comparison separately:
                 # - If not specified now, take the one used in resumed info
-                # - If specified both now and before, check new not higher than old one
+                # - If specified both now and before, check new older than old one
                 for k in kinds:
                     for c in updated_info[k]:
                         new_version = updated_info[k][c].get(_version)
@@ -158,11 +157,13 @@ class Output(HasLogger):
                             updated_info[k][c][_version] = old_version
                             updated_info_trimmed[k][c][_version] = old_version
                         elif old_version is not None:
-                            if version.parse(new_version) > version.parse(old_version):
+                            cls = get_class(c, k, None_if_not_found=True)
+                            if cls and cls.compare_versions(
+                                    old_version, new_version, equal=False):
                                 raise LoggedError(
-                                    self.log, "You have requested version %r for %s:%s, "
-                                              "but you are trying to resume a sample that "
-                                              "used and older one, %r.",
+                                    self.log, "You have requested version %r for "
+                                              "%s:%s, but you are trying to resume a "
+                                              "sample that used a newer version: %r.",
                                     new_version, k, c, old_version)
             except IOError:
                 # There was no previous chain

@@ -228,9 +228,7 @@ class camb(BoltzmannBase):
         else:
             self.log.info("Importing *global* CAMB.")
         try:
-            # Check min version compatibility (if resuming/reusing-info, use given one)
-            min_version = getattr(self, _version, False) or self.min_camb_version
-            self.camb = load_module("camb", path=pycamb_path, min_version=min_version)
+            self.camb = load_module("camb", path=pycamb_path, min_version=self.min_camb_version)
         except ImportError:
             raise LoggedError(
                 self.log, "Couldn't find the CAMB python interface.\n"
@@ -666,7 +664,20 @@ class camb(BoltzmannBase):
         return names
 
     def get_version(self):
-        return self.camb.__version__
+        return {"module_version": self.camb.__version__,
+                "submodule_version": "some number"}
+
+    @classmethod
+    def compare_versions(self, version_a, version_b):
+        if not super(camb, self).compare_versions(version_a["module_version"],
+                                                  version_b["module_version"]):
+            return False
+        # Do sth here about the other components versions
+        # e.g. do not resume with takahashi if mead used, because it's worse
+        if (version_a["submodule_version"] != version_b["submodule_version"]:
+            self.log.error("Different submodule version!")
+            return False
+        return True
 
     @classmethod
     def get_path(cls, path):
