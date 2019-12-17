@@ -102,61 +102,34 @@ class mcmc(Sampler):
             if self.oversample or self.drag:
                 speeds = relative_to_int(speeds)
         else:
-            speeds, blocks = self.model._speeds_of_params(
-                int_speeds=self.oversample or self.drag, fast_slow=self.drag)
+            if not self.oversample and not self.drag:
+                self.oversample_power = 0
+            blocks, costs, self.oversampling_factors = \
+                self.model.get_param_blocking_for_sampler(
+                    oversample_power=self.oversample_power, split_fast_slow=self.drag)
+        # We will take the slowest block as slow paramters,
+        # for purposes of checkpoints, callbacks and thinning
+        if self.oversample or self.drag:
+            self.i_last_slow_block = 0
+            slow_params = list(chain(*blocks[:1 + self.i_last_slow_block]))
+            self.n_slow = len(slow_params)
+        else:
+            self.n_slow = len(self.model.parameterization.sampled_params())
+        for p in ["check_every", "callback_every"]:
+            setattr(self, p,
+                    int(getattr(self, p) * self.n_slow / self.model.prior.d()))
         if self.oversample:
-            self.oversampling_factors = speeds
             self.log.info("Oversampling with factors:\n" + "\n".join([
                 "   %d : %r" % (f, b) for f, b in
                 zip(self.oversampling_factors, blocks)]))
-            self.i_last_slow_block = None
-            # No way right now to separate slow and fast
-            slow_params = list(self.model.parameterization.sampled_params())
         elif self.drag:
-            # For now, no blocking inside either fast or slow: just 2 blocks
-            self.i_last_slow_block = 0
-            if np.all(speeds == speeds[0]):
-                raise LoggedError(
-                    self.log, "All speeds are equal or too similar: cannot drag! "
-                              "Make sure to define accurate likelihoods' speeds.")
-            # Make the 1st factor 1:
-            speeds = [1, speeds[1] / speeds[0]]
-            # Target: dragging step taking as long as slow step
-            self.drag_interp_steps = self.drag * speeds[1]
-            # Per dragging step, the (fast) posterior is evaluated *twice*,
-            self.drag_interp_steps /= 2
-            self.drag_interp_steps = int(np.round(self.drag_interp_steps))
-            fast_params = list(chain(*blocks[1 + self.i_last_slow_block:]))
-            # Not too much or too little dragging
-            drag_limits = [(int(l) * len(fast_params) if l is not None else l)
-                           for l in self.drag_limits]
-            if drag_limits[0] is not None and self.drag_interp_steps < drag_limits[0]:
-                self.log.warning("Number of dragging steps clipped from below: was not "
-                                 "enough to efficiently explore the fast directions -- "
-                                 "avoid this limit by decreasing 'drag_limits[0]'.")
-                self.drag_interp_steps = drag_limits[0]
-            if drag_limits[1] is not None and self.drag_interp_steps > drag_limits[1]:
-                self.log.warning("Number of dragging steps clipped from above: "
-                                 "excessive, probably inefficient, exploration of the "
-                                 "fast directions -- "
-                                 "avoid this limit by increasing 'drag_limits[1]'.")
-                self.drag_interp_steps = drag_limits[1]
-            # Re-scale steps between checkpoint and callback to the slow dimensions only
-            slow_params = list(chain(*blocks[:1 + self.i_last_slow_block]))
-            self.n_slow = len(slow_params)
-            for p in ["check_every", "callback_every"]:
-                setattr(self, p,
-                        int(getattr(self, p) * self.n_slow / self.model.prior.d()))
+            self.drag_interp_steps = int(np.round(self.oversampling_factors[1]/2))
             self.log.info(
                 "Dragging with oversampling per step:\n" +
                 "\n".join(["   %d : %r" % (f, b)
                            for f, b in zip([1, self.drag_interp_steps],
                                            [blocks[0], fast_params])]))
             self.get_new_sample = self.get_new_sample_dragging
-        else:
-            self.oversampling_factors = [1 for b in blocks]
-            slow_params = list(self.model.parameterization.sampled_params())
-            self.n_slow = len(slow_params)
         # Turn parameter names into indices
         self.blocks = [
             [list(self.model.parameterization.sampled_params()).index(p) for p in b]

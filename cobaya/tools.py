@@ -23,6 +23,7 @@ import warnings
 import inspect
 from six import string_types
 from packaging import version
+from itertools import permutations
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore")
@@ -664,3 +665,42 @@ def get_class_methods(cls, not_base=None, start='get_', excludes=(), first='self
 
 def get_properties(cls):
     return [k for k, v in inspect.getmembers(cls) if isinstance(v, property)]
+
+
+def sort_parameter_blocks(blocks, speeds, footprints, oversample_power=0):
+    """
+    Find optimal ordering, such that one minimises the time it takes to vary every
+    parameter, one by one, in a basis in which they are mixed-down (i.e after a
+    Cholesky transformation). To do that, compute that "total cost" for every permutation
+    of the blocks order, and find the minumum.
+
+    This algorithm is described in the appendix of the Cobaya paper (TODO: add reference!)
+
+    NB: Rows in ``footprints`` must be in the same order as ``blocks`` and columns in the
+    same order as ``speeds``.
+
+    Returns: (sorted_blocks, cumulative_per_param_costs, oversample_factors)
+    """
+    n_params_per_block = np.array([len(b) for b in blocks])
+    all_costs = 1 / np.array(speeds)
+    all_footprints = np.array(footprints)
+    tri_lower = np.tri(len(n_params_per_block))
+    get_cost_per_param_per_block = lambda ordering: (
+        np.minimum(1, tri_lower.T.dot(all_footprints[ordering])).dot(all_costs))
+    orderings = list(permutations(np.arange(len(n_params_per_block))))
+    permuted_costs_per_param_per_block = np.array(
+        [get_cost_per_param_per_block(list(o)) for o in orderings])
+    permuted_oversample_factors = np.array(
+        [np.floor((this_cost[0]/this_cost)**oversample_power)
+         for this_cost in permuted_costs_per_param_per_block])
+    total_costs = np.array(
+        [(n_params_per_block[list(o)]*permuted_oversample_factors[i])
+         .dot(permuted_costs_per_param_per_block[i])
+         for i, o in enumerate(orderings)])
+    i_optimal = np.argmin(total_costs)
+    optimal_ordering = orderings[i_optimal]
+    blocks = [blocks[i] for i in optimal_ordering]
+    footprints = all_footprints[list(orderings[i_optimal])]
+    costs = permuted_costs_per_param_per_block[i_optimal]
+    oversample_factors = np.array(permuted_oversample_factors[i_optimal], dtype=int)
+    return blocks, footprints, costs, oversample_factors

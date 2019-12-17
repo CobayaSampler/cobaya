@@ -31,6 +31,7 @@ from cobaya.theory import TheoryCollection
 from cobaya.log import LoggedError, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
 from cobaya.tools import gcd, deepcopy_where_possible, are_different_params_lists
+from cobaya.tools import sort_parameter_blocks
 from cobaya.component import Provider
 
 # Log-posterior namedtuple
@@ -796,113 +797,80 @@ class Model(HasLogger):
                 self.log.debug("     Input:  %r", component.input_params)
                 self.log.debug("     Output: %r", component.output_params)
 
-    def _speeds_of_params(self, int_speeds=False, fast_slow=False):
+    def get_param_blocking_for_sampler(self, split_fast_slow=False, oversample_power=0):
         """
         Separates the sampled parameters in blocks according to the likelihood (or theory)
-        re-evaluation that changing each one of them involves. Using the approximate speed
-        (i.e. inverse evaluation time in seconds) of each likelihood, sorts the blocks in
-        an optimal way, in ascending order of speed *per full block iteration*.
+        re-evaluation that changing each one of them involves. The sorts these blocks
+        in an optimal way using the appoximate speed (i.e. inverse evaluation time in
+        seconds) of each component.
 
-        Returns tuples of ``(speeds), (params_in_block)``, sorted by ascending speeds,
-        where speeds are *per param* (though optimal blocking is chosen by speed
-        *per full block*).
+        Returns tuples of ``(params_in_block), (costs) (oversample_factor)``,
+        sorted by descending variation cost-per-parameter.
 
-        If ``int_speeds=True``, returns integer speeds, instead of speeds in 1/s.
+        Set ``oversample_power`` to some value between 0 and 1 to control the amount of
+        oversampling (default: 0 -- no oversampling). If 1, chooses oversampling factors
+        such that the same amount of time is spent in each block.
 
-        If ``fast_slow=True``, returns just 2 blocks: a fast and a slow one, each one
-        assigned its slowest per-parameter speed.
+        If ``split_fast_slow=True``, returns just 2 blocks: a slow and a fast one.
         """
-        # Fill unknown speeds with the value of the slowest one, and clip with overhead
-        components = list(self.likelihood.values()) + list(self.theory.values())
-        speeds = np.array(
-            [getattr(component, "speed", -1) for component in components],
-            dtype=np.float64)
-        # Add overhead to the defined ones, and clip to the slowest the undefined ones
-        speeds[speeds > 0] = (speeds[speeds > 0] ** -1 + self.overhead) ** -1
+        # Get a list of components and their speeds
+        speeds = odict(
+            [[name, getattr(like, "speed", -1)] for name, like in self.likelihood.items()] +
+            [[name, getattr(theo, "speed", -1)] for name, theo in self.theory.items()])
+        # Add overhead to defined ones (positives)
+        # and clip undefined ones to the slowest one
         try:
-            speeds = np.clip(speeds, min(speeds[speeds > 0]), None)
+            min_speed = min(speed for speed in speeds.values() if speed > 0)
         except ValueError:
-            # No speeds specified
-            speeds = np.ones(len(speeds))
-        for i, component in enumerate(components):
-            component.speed = speeds[i]
+            # No speeds defined <-- empty sequence passed to min
+            min_speed = 1
+        for comp in speeds:
+            speeds[comp] = max(speeds[comp], min_speed)
+            # TODO: add new oversampling model
+            speeds[comp] = (speeds[comp] ** -1 + self.overhead) ** -1
         # Compute "footprint"
         # i.e. likelihoods (and theory) that we must recompute when each parameter changes
-        footprints = np.zeros((len(self.sampled_dependence), len(components)),
-                              dtype=int)
-        for i, ls in enumerate(self.sampled_dependence.values()):
-            for j, like in enumerate(components):
-                footprints[i, j] = like in ls
+        # TODO: update for the case of multiple theories
+        footprints = np.zeros((len(self.sampled_dependence), len(speeds)), dtype=int)
+        sampled_dependence_names = odict(
+            [k,[l.get_name() for l in v]] for k,v in self.sampled_dependence.items())
+        for i, ls in enumerate(sampled_dependence_names.values()):
+            for j, comp in enumerate(speeds):
+                footprints[i, j] = comp in ls
         # Group parameters by footprint
-        different_footprints = list(set(tuple(row) for row in footprints.tolist()))
+        different_footprints = list(set([tuple(row) for row in footprints.tolist()]))
         blocks = [[p for ip, p in enumerate(self.sampled_dependence)
                    if all(footprints[ip] == fp)] for fp in different_footprints]
-        # Find optimal ordering, such that one minimises the time it takes to vary every
-        # parameter, one by one, in a basis in which they are mixed-down (i.e after a
-        # Cholesky transformation)
-        # To do that, compute that "total cost" for every permutation of the blocks order,
-        # and find the minimum.
-        n_params_per_block = np.array([len(b) for b in blocks])
-        self._costs = 1 / np.array(speeds)
-        self._footprints = np.array(different_footprints)
-        self._lower = np.tri(len(n_params_per_block))
-
-        def get_cost_per_param_per_block(ordering):
-            """
-            Computes cumulative cost per parameter for each block, given ordering.
-            """
-            footprints_chol = np.minimum(
-                1, self._footprints[ordering].T.dot(self._lower).T)
-            return footprints_chol.dot(self._costs)
-
-        orderings = list(permutations(np.arange(len(n_params_per_block))))
-        costs_per_param_per_block = np.array(
-            [get_cost_per_param_per_block(list(o)) for o in orderings])
-        total_costs = np.array(
-            [n_params_per_block[list(o)].dot(costs_per_param_per_block[i])
-             for i, o in enumerate(orderings)])
-        i_optimal = np.argmin(total_costs)
-        optimal_ordering = orderings[i_optimal]
-        blocks = [blocks[i] for i in optimal_ordering]
-        costs_per_param_per_block = costs_per_param_per_block[i_optimal]
-        # This costs are *cumulative-down* (i.e. take into account the cost of varying the
-        # parameters below the present one). Subtract that effect so that its inverse,
-        # the speeds, are equivalent to oversampling factors
-        costs_per_param_per_block[:-1] -= costs_per_param_per_block[1:]
-        params_speeds = 1 / costs_per_param_per_block
-        if int_speeds:
-            # Oversampling precision: smallest difference in oversampling to be ignored.
-            speed_precision = 1 / 10
-            speeds = np.array(np.round(np.array(
-                params_speeds) / min(params_speeds) / speed_precision), dtype=int)
-            params_speeds = np.array(
-                speeds / np.ufunc.reduce(np.frompyfunc(gcd, 2, 1), speeds), dtype=int)
-        self.log.debug("Optimal ordering of parameter blocks: %r with speeds %r",
-                       blocks, params_speeds)
-        # Fast-slow separation: chooses separation that maximizes log-difference in speed
-        # (speed per parameter in a combination of blocks is the slowest one)
-        if fast_slow:
-            if len(blocks) > 1:
-                log_differences = np.zeros(len(blocks) - 1)
-                for i in range(len(blocks) - 1):
-                    log_differences[i] = (np.log(np.min(params_speeds[:i + 1])) -
-                                          np.log(np.min(params_speeds[i + 1:])))
-                i_max = np.argmin(log_differences)
-                blocks = (
-                    lambda l: [list(chain(*l[:i_max + 1])),
-                               list(chain(*l[i_max + 1:]))])(
-                    blocks)
-                # In this case, speeds must be *cumulative*, since I am squashing blocks
-                cum_inv = lambda ss: 1 / (sum(1 / ss))
-                params_speeds = (
-                    lambda l: [cum_inv(l[:i_max + 1]), cum_inv(l[i_max + 1:])])(
-                    params_speeds)
-                self.log.debug("Fast-slow blocking: %r with speeds %r",
-                               blocks, params_speeds)
-            else:
-                self.log.warning("Requested fast/slow separation, "
-                                 "but all parameters have the same speed.")
-        return params_speeds, blocks
+        # 2-block fast-slow separation: maximizes log-difference in speeds
+        if split_fast_slow:
+            if len(blocks) == 1:
+                raise LoggedError(self.log, "Requested fast/slow separation, "
+                                            "but all pararameters have the same speed.")
+            # First sort them optimally (w/o oversampling)
+            blocks_split, footprints_split, costs_split, oversample_factors = \
+                sort_parameter_blocks(
+                    blocks, np.array(list(speeds.values()), dtype=np.float),
+                    different_footprints, oversample_power=0)
+            # Then, find the split that maxes cost LOG-differences,
+            # (costs are already accumulated, so we can take the max one,
+            #  i.e. the 1st one in each segment, which is the 1st one for the slow block)
+            log_differences = np.log(costs_split[0]) - np.log(costs_split[1:])
+            # TODO: still need to think about whether this is optimal
+            i_max = np.argmax(log_differences)
+            blocks = (lambda l: [list(chain(*l[:i_max + 1])),
+                                 list(chain(*l[i_max + 1:]))])(blocks)
+            different_footprints = ([np.array(footprints_split[:i_max+1]).sum(axis=0)] +
+                                    [np.array(footprints_split[i_max+1:]).sum(axis=0)])
+            different_footprints = np.clip(np.array(different_footprints), 0, 1)
+            # Now go back to the general calculation of accumulated costs and oversampling
+        blocks, _, costs, oversample_factors = sort_parameter_blocks(
+            blocks, np.array(list(speeds.values()), dtype=np.float), different_footprints,
+            oversample_power=oversample_power)
+        self.log.debug(
+            "Cost, oversampling factor and parameters per block, in optimal order:")
+        for c,o,b in zip(costs, oversample_factors, blocks):
+            self.log.debug("* %g : %r : %r", c, o, b)
+        return blocks, costs, oversample_factors
 
     def _check_speeds_of_params(self, blocking):
         """
