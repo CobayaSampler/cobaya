@@ -1,5 +1,6 @@
 import time
 from collections import OrderedDict
+from packaging import version
 
 from cobaya.log import HasLogger, LoggedError
 from cobaya.input import HasDefaults
@@ -111,11 +112,25 @@ class CobayaComponent(HasLogger, HasDefaults):
 
     def get_version(self):
         """
-        Get a dictionary of version information for this component.
+        Get version information for this component.
 
         :return: string or dict of values or None
         """
         return None
+
+    @classmethod
+    def compare_versions(self, version_a, version_b, equal=True):
+        """
+        Checks whether ``version_a`` is equal or higher than ``version_b``.
+
+        For strictly higher, pass ``equal=False`` (default: ``True``).
+
+        :return: bool
+        """
+        va, vb = version.parse(version_a), version.parse(version_b)
+        if (va >= vb if equal else va > vb):
+            return True
+        return False
 
     def __exit__(self, exception_type, exception_value, traceback):
         if self.timer and self.timer.n:
@@ -143,12 +158,13 @@ class ComponentCollection(OrderedDict, HasLogger):
                         component.timer.n_avg(), component.timer.time_sum)
                      for component in timers]))
 
-    def get_version(self):
+    def get_version(self, add_version_field=False):
         """
         Get version dictionary
         :return: dictionary of versions for all components
         """
-        return {component.get_name(): component.get_version()
+        format_version = lambda x: {_version: x} if add_version_field else x
+        return {component.get_name(): format_version(component.get_version())
                 for component in self.values()}
 
     # Python magic for the "with" statement

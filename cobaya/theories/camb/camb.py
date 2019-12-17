@@ -231,9 +231,8 @@ class camb(BoltzmannBase):
         else:
             self.log.info("Importing *global* CAMB.")
         try:
-            # Check min version compatibility (if resuming/reusing-info, use given one)
-            min_version = getattr(self, _version, False) or self.min_camb_version
-            self.camb = load_module("camb", path=camb_path, min_version=min_version)
+            self.camb = load_module("camb", path=camb_path,
+                                    min_version=self.min_camb_version)
         except ImportError:
             raise LoggedError(
                 self.log, "Couldn't find the CAMB python interface.\n"
