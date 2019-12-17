@@ -269,77 +269,45 @@ class mcmc(CovmatSampler):
 
     def set_blocking(self, load_covmat=False):
         if self.blocking:
-            # already stored
             speeds, blocks = self.model._check_speeds_of_params(self.blocking)
             if self.oversample or self.drag:
                 speeds = relative_to_int(speeds)
         else:
-            speeds, blocks = self.model._speeds_of_params(int_speeds=
-                                                          self.oversample or self.drag)
-        sampled_list = list(self.model.parameterization.sampled_params())
-        self._slow_params = sampled_list
-        self.n_slow = len(self._slow_params)
+            if not self.oversample and not self.drag:
+                self.oversample_power = 0
+            blocks, costs, self.oversampling_factors = \
+                self.model.get_param_blocking_for_sampler(
+                    oversample_power=self.oversample_power, split_fast_slow=self.drag)
+        # We will take the slowest block as slow paramters,
+        # for purposes of checkpoints, callbacks and thinning
+        if self.oversample or self.drag:
+            self.i_last_slow_block = 0
+            slow_params = list(chain(*blocks[:1 + self.i_last_slow_block]))
+            self.n_slow = len(slow_params)
+        else:
+            self.n_slow = len(self.model.parameterization.sampled_params())
+        for p in ["check_every", "callback_every"]:
+            setattr(self, p,
+                    int(getattr(self, p) * self.n_slow / self.model.prior.d()))
         if self.oversample:
-            self.oversampling_factors = speeds
-            self.mpi_info("Oversampling with factors:\n" + "\n".join([
+            self.log.info("Oversampling with factors:\n" + "\n".join([
                 "   %d : %r" % (f, b) for f, b in
                 zip(self.oversampling_factors, blocks)]))
-            self.i_last_slow_block = None
-            # No way right now to separate slow and fast
         elif self.drag:
-            # Fast-slow separation: chooses separation that maximizes log-difference in
-            # speed (speed per parameter in a combination of blocks is the slowest one)
-            if len(blocks) == 1:
-                raise LoggedError(self.log, "Requested fast/slow dragging, but only "
-                                            "one parameter block")
-            last_nondrag_block = self._get_last_nondragging_block(blocks, speeds)
-            self.i_last_slow_block = last_nondrag_block
-            if np.all(speeds == speeds[0]):
-                raise LoggedError(
-                    self.log, "All speeds are equal or too similar: cannot drag! "
-                              "Make sure to define accurate likelihood speeds.")
-            # Target: dragging step taking as long as slow step
-            # TODO: integrate with block/oversampling optimization, updating block
-            #       ordering to account for dragging, etc. just ad-hoc recipe for now
-            self.drag_interp_steps = (self.drag * min(speeds[last_nondrag_block + 1:])
-                                      / max(speeds[:last_nondrag_block + 1]))
-            # Per dragging step, the (fast) posterior is evaluated *twice*,
-            self.drag_interp_steps /= 2
-            self.drag_interp_steps = int(np.round(self.drag_interp_steps))
-            fast_params = list(chain(*blocks[last_nondrag_block + 1:]))
-            # Not too much or too little dragging
-            # TODO: do we actually need to clip this?
-            drag_limits = [(int(lim) * len(fast_params) if lim is not None else lim)
-                           for lim in self.drag_limits]
-            if drag_limits[0] is not None and self.drag_interp_steps < drag_limits[0]:
-                self.mpi_warning("Number of dragging steps clipped from below: was not "
-                                 "enough to efficiently explore the fast directions -- "
-                                 "avoid this limit by decreasing 'drag_limits[0]'.")
-                self.drag_interp_steps = drag_limits[0]
-            if drag_limits[1] is not None and self.drag_interp_steps > drag_limits[1]:
-                self.mpi_warning("Number of dragging steps clipped from above: "
-                                 "excessive, probably inefficient, exploration of the "
-                                 "fast directions -- "
-                                 "avoid this limit by increasing 'drag_limits[1]'.")
-                self.drag_interp_steps = drag_limits[1]
-            # Re-scale steps between checkpoint and callback to the slow dimensions only
-            self._slow_params = list(chain(*blocks[:last_nondrag_block + 1]))
-            self.n_slow = len(self._slow_params)
-            for p in ["check_every", "callback_every"]:
-                setattr(self, p,
-                        int(getattr(self, p) * self.n_slow / self.model.prior.d()))
-            self.mpi_info("Dragging with factor %g oversampling per step: %r",
-                          self.drag_interp_steps, fast_params)
-            self.mpi_info("Slow parameters: %r", self._slow_params)
+            self.drag_interp_steps = int(np.round(self.oversampling_factors[1]/2))
+            self.log.info(
+                "Dragging with oversampling per step:\n" +
+                "\n".join(["   %d : %r" % (f, b)
+                           for f, b in zip([1, self.drag_interp_steps],
+                                           [blocks[0], fast_params])]))
             self.get_new_sample = self.get_new_sample_dragging
-        else:
-            self.oversampling_factors = np.ones(len(blocks), dtype=int)
         # Turn parameter names into indices
-        self.blocks = [[sampled_list.index(p) for p in b] for b in blocks]
+        self.blocks = [
+            [list(self.model.parameterization.sampled_params()).index(p) for p in b]
+            for b in blocks]
         self.proposer = BlockedProposer(
             self.blocks, oversampling_factors=self.oversampling_factors,
             i_last_slow_block=self.i_last_slow_block, proposal_scale=self.proposal_scale)
-
         if load_covmat:
             # Build the initial covariance matrix of the proposal, or load from checkpoint
             self._covmat, where_nan = self._load_covmat(self.resuming, self._slow_params)

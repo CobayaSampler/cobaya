@@ -46,10 +46,9 @@ measured_speeds: True
 # Method I: Oversampling of each parameters block relative to it speed
 oversample: False  # produces potentially MANY samples
 # Method II: Dragging: simulates jumps on slow params when varying fast ones
-# Set to True, or a factor of the time of a jump on the slow block
 drag: False
-# Min and max number of times the fast block is iterated
-drag_limits: [1, 10]
+# Oversampling power: amount of oversampling or dragging. Value in [0, 1]
+oversample_power: 0.7
 # Manual blocking
 # ---------------
 # To take full advantage of speed-blocking, sort the blocks by ascending speeds
