@@ -163,7 +163,7 @@ class LikelihoodExternalFunction(Likelihood):
                 # Print traceback
                 self.log.error("".join(
                     ["-"] * 16 + ["\n\n"] +
-                    list(traceback.format_exception(*sys.exc_info()))  +
+                    list(traceback.format_exception(*sys.exc_info())) +
                     ["\n"] + ["-"] * 37))
             raise LoggedError(
                 self.log, "The external likelihood '%s' failed at evaluation. "
@@ -185,27 +185,31 @@ class LikelihoodCollection(ComponentCollection):
             if isinstance(name, Theory):
                 name, info = name.get_name(), info
             if isinstance(info, Theory):
-                self[name] = info
+                self.add_instance(name, info)
             elif _external in info:
                 if isinstance(info[_external], Theory):
-                    self[name] = info[_external]
+                    self.add_instance(name, info[_external])
                 elif inspect.isclass(info[_external]):
                     if not hasattr(info[_external], "get_current_logp") or \
                             not issubclass(info[_external], Theory):
                         raise LoggedError(self.log, "external class likelihoods must be "
                                                     "a subclass of Theory and have"
                                                     "logp, get_current_logp functions")
-                    self[name] = info[_external](info, path_install=path_install,
-                                                 timing=timing,
-                                                 standalone=False, name=name)
+                    self.add_instance(name,
+                                      info[_external](info, path_install=path_install,
+                                                      timing=timing,
+                                                      standalone=False,
+                                                      name=name))
                 else:
                     # If it has an "external" key, wrap it up. Else, load it up
-                    self[name] = LikelihoodExternalFunction(info, name, timing=timing)
+                    self.add_instance(name, LikelihoodExternalFunction(info, name,
+                                                                       timing=timing))
             else:
                 like_class = get_class(name, kind=kinds.likelihood,
                                        module_path=info.pop(_module_path, None))
-                self[name] = like_class(info, path_install=path_install, timing=timing,
-                                        standalone=False, name=name)
+                self.add_instance(name, like_class(info, path_install=path_install,
+                                                   timing=timing, standalone=False,
+                                                   name=name))
 
             if not hasattr(self[name], "get_current_logp"):
                 raise LoggedError(self.log, "'Likelihood' %s is not actually a "

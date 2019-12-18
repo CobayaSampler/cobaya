@@ -147,6 +147,10 @@ class ComponentCollection(OrderedDict, HasLogger):
     def __init__(self):
         super(ComponentCollection, self).__init__()
 
+    def add_instance(self, name, component):
+        self.update(component.get_helper_theories())
+        self[name] = component
+
     def dump_timing(self):
         timers = [component for component in self.values() if component.timer]
         if timers:

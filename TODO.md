@@ -17,7 +17,6 @@
 ## If non-linear lensing on, model the non-linear correction via limber for faster semi-slow parameters
 ## minimize run with -f does not work. Check resuming.
 ## unbounded parameters with flat prior (this would make it safe to rotate the unbounded ones in minimize)
-## ordering of helper theories
 ## minimize updated yaml will overwrite chain updated yaml?
 ## Lots of batchjob stuff (hasConvergeBetterThan,wantCheckpointContinue etc) now broken
 ## More pythonic alternative to class_options (e.g class or object attributes/properties)

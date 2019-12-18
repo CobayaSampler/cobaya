@@ -281,7 +281,7 @@ class TheoryCollection(ComponentCollection):
             for name, info in info_theory.items():
                 # If it has an "external" key, wrap it up. Else, load it up
                 if isinstance(info, Theory):
-                    self[name] = info
+                    self.add_instance(name, info)
                 else:
                     if _external in info:
                         theory_class = info[_external]
@@ -291,8 +291,8 @@ class TheoryCollection(ComponentCollection):
                                               "Theory %s is not a Theory subclass", name)
                     else:
                         theory_class = get_class(name, kind=kinds.theory)
-                    self[name] = theory_class(info, path_install=path_install,
-                                              timing=timing, name=name)
+                    self.add_instance(name, theory_class(info, path_install=path_install,
+                                                         timing=timing, name=name))
 
     def __getattribute__(self, name):
         if not name.startswith('_'):

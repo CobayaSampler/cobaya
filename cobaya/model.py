@@ -150,9 +150,6 @@ class Model(HasLogger):
         self.likelihood = LikelihoodCollection(info_likelihood, theory=self.theory,
                                                path_install=path_install, timing=timing)
 
-        for component in self.components:
-            self.theory.update(component.get_helper_theories())
-
         if stop_at_error:
             for component in self.components:
                 component.stop_at_error = stop_at_error
@@ -456,7 +453,8 @@ class Model(HasLogger):
 
     def get_version(self, add_version_field=False):
         return dict(theory=self.theory.get_version(add_version_field=add_version_field),
-                    likelihood=self.likelihood.get_version(add_version_field=add_version_field))
+                    likelihood=self.likelihood.get_version(
+                        add_version_field=add_version_field))
 
     def _set_component_order(self, components, dependencies):
         dependence_order = []
