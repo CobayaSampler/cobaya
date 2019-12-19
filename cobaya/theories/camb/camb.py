@@ -664,15 +664,15 @@ class camb(BoltzmannBase):
                             "recognized: %s=%s", attr, value)
                 # Sources
                 if getattr(self, "sources", None):
-                    from camb.sources import GaussianSourceWindow, SplinedSourceWindow
                     self.log.debug("Setting sources: %r", self.sources)
+                    sources = self.camb.sources
                     source_windows = []
                     for source, window in self.sources.items():
                         function = window.pop("function", None)
                         if function == "spline":
-                            source_windows.append(SplinedSourceWindow(**window))
+                            source_windows.append(sources.SplinedSourceWindow(**window))
                         elif function == "gaussian":
-                            source_windows.append(GaussianSourceWindow(**window))
+                            source_windows.append(sources.GaussianSourceWindow(**window))
                         else:
                             raise LoggedError(self.log,
                                               "Unknown source window function type %r",

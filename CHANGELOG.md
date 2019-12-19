@@ -1,66 +1,73 @@
 ## 2.1  – 2019-XX-XX
 
-## This branch
+### General
 
-- allow multiple inter-dependent theory classes
-- allow theories and likelihoods to all specify requirements and define derived products 
-  with general dependencies
-- .theory member of likelihoods is now Provider class instance
+- Significant internal refactoring including support for multiple inter-dependent theory codes.  
+- Greatly reduced Python overhead timing, faster for fast likelihoods 
+- New base classes CobayaComponent and ComponentCollection, with support for standalone instantiation of all CobayaComponent
+- .yaml can now reference class names rather than modules, allowing multiple classes in one module
+- .yaml default files are now entirely at the class level, with no kind:module: embedding
+- inheritance of yaml and class_options (with normal dict update, so e.g. all inherited nuisance parameters can be removed using "params:").
+  Each class can either define a .yaml or class_options, or neither, but not both. 
+   Optionally also class 'params' option (equivalent to class_options:{'params':..}) 
+- The .theory member of likelihoods is now Provider class instance
+- Global stop_at_error option to stop at error in any component
+- Fix for more accurate timing with Python 3
+- Updates for GetDist 1.x
+- Module version information stored and checked
+- cobaya-run --no-mpi option to enable testing without mpi even on nodes with mpi4py installed
+- cobaya-run-job command to make a single job script and submit 
+- docs include inheritance diagrams for key classes
+
+### Likelihoods and Theories
+
+- Support for external likelihoods and theories, referenced by fully qualified package name.
+- Allow referencing likelihood class names directly (module.ClassName)
+- Ability to instantiate Likelihood classes directly outside Cobaya (for testing of
+  external likelihoods or use in other packages)
+- Inherited likelihoods inherit .yaml file from parent if no new one is defined
+- Theories and likelihoods specify requirements and define derived products 
+  with general dependencies. get_requirements() function replaces add_theory()
+- needs() function can now return a dictionary of requirements conditional on those needs
 - 'requires' and 'provides' yaml keywords to specify which of ambiguous components handles
    specific requirements
 - three initialization methods: initialize (from __init__), initialize_with_params 
   (after parameter assignment) and initialize_with_provider (once all configured)
 - Likelihood now inherits from Theory, with general cached compute and deque states
 - Likelihood and Theory can instantiated from {external: class}
-- needs() function can now return a dictionary of requirements conditional on those needs
-- derived parameters in likelihood yaml can be explicitly tagged with derived:True
-- added test_dependencies.py, test_cosmo_multi_theory.py (H0 test no longer depends on CAMB/classy 
-  since new dependency code gives an error using theory component that is not actually needed)
-- .yaml default files are now entirely at the class level, with no kind:module: embedding
-- inheritance of yaml and class_options (with normal dict update, so e.g. all inherited nuisance parameters can be removed using "params:").
-  Each class can either define a .yaml or class_options, or neither, but not both. 
-   Optionally also class 'params' option (equivalent to class_options:{'params':..}) 
-- standalone instantiation of all CobayaComponent
-- sampler method now sets cache size
+- Derived parameters in likelihood yaml can be explicitly tagged with derived:True
 - renamed "renames" of likelihood to "aliases" (to avoid clash with "renames" for parameters)
-- renamed H (array of H(z)) to Hubble
-- Boltzmann now consistent with varying TCMB.
-- changed use_planck_names to more general use_renames etc.
-- Greatly reduced deepcopy time overhead in loglike evaluation, faster uniform prior and sample collection
-- Global stop_at_error option to stop at error in any component
-- CAMB calculation using transfer functions for speed up with initial power spectrum parameters (even for non-linear lensing)
-- dragging now exploits blocks within slow and fast groups
-
-### General
-
-- Some significant internal refactoring to tidy up some code and make it easier to make
- future generalizations (e.g. multiple theory codes). New base classes CobayaComponent
-  and ComponentCollection.
-- Fix for more accurate timing with Python 3
-- Updates for GetDist 1.x
 - More documentation for how to make internal and external likelihood classes
+- Support for HelperTheory classes to do sub-calculations for any Theory class with separate nuisance parameters and speeds
+- Added tests: test_dependencies.py, test_cosmo_multi_theory.py
 
-### Likelihoods
-
-- Support for external likelihoods, referenced by fully qualified package name.
-- Allow referencing likelihood class names directly (module.ClassName)
-- Ability to instantiate Likelihood classes directly outside Cobaya (for testing of
-  external likelihoods or use in other packages)
-- Inherited likelihoods inherit .yaml file from parent if no new one is defined
-- DES likelihood now use numba if installed to give nearly twice faster performance
-- get_requirements() function replaces add_theory()
-
-#### MCMC
+#### Sampler
 
 - Added progress tracking (incl. acceptance rate), and a plotting tool for it.
+- Sampler method now sets cache size
+- Dragging now exploits blocks within slow and fast groups
+- Automatic timing of likelihood and theory components to determine speed before constructing optimized blocking
+
+#### Minimize
+- Support for auto-covmat as for mcmc
+- Fix for different starting points starting from existing chains using mpi
+- Fixes for bounds and rounding errors
+- Steps set from diagonal of inverse of covariance (still no use of correlation structure)
+- Warnings for differences between mpi starting points
 
 ### Cosmology
-
-- CAMB optimizations for which quantities computed. 
 - Added matter_power_spectrum theory output for z,k,P(k) unsplined arrays
 - Fixed several bugs with Pk_interpolator (e.g. conflicts between likelihoods)
 - Pk_interpolator calling arguments now different
 - Fixed problems with getting same background array theory results from different likelihoods
+- renamed H (array of H(z)) to Hubble
+- Boltzmann codes now consistent with varying TCMB.
+- changed use_planck_names to more general use_renames etc.
+- DES likelihood now use numba if installed to give nearly twice faster performance
+
+#### CAMB 
+- Calculation using transfer functions for speed up when only initial power spectrum and non-linear model parameters changed (even for non-linear lensing)
+- Optimizations for which quantities computed
 - Option to request "CAMBdata" object from CAMB to access computed results directly 
 - Fix for getting source windows power spectra 
 

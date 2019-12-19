@@ -138,10 +138,10 @@ def check_module_version(module, min_version):
              getattr(module, "__version__", "(non-given)"), min_version))
 
 
-def load_module(name, package=None, path=None, min_version=None):
+def load_module(name, package=None, path=None, min_version=None, check_path=False):
     with PythonPath(path):
         module = import_module(name, package=package)
-    if path:
+    if path and check_path:
         check_module_path(module, path)
     if min_version:
         check_module_version(module, min_version)
