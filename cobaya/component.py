@@ -72,7 +72,10 @@ class CobayaComponent(HasLogger, HasDefaults):
             setattr(self, k, value)
         # set attributes from the info (usually from yaml file)
         for k, value in info.items():
-            setattr(self, k, value)
+            try:
+                setattr(self, k, value)
+            except AttributeError:
+                raise AttributeError("Cannot set {} attribute for {}!".format(k, self))
         self.set_logger(name=self._name)
         self.set_timing_on(timing)
         try:
