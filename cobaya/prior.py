@@ -146,7 +146,7 @@ b) **As a string,** which will be passed to ``eval()``. The string can be a
    parameters. This may be extended in the future to dependence on **derived** parameters,
    probably just for dynamically defined ones, but not for those computed by the theory
    code, since otherwise the full prior could not be computed **before** the likelihood,
-   preventing us from avoiding computating the likelihood when the prior is null, or
+   preventing us from avoiding computing the likelihood when the prior is null, or
    forcing a *post-call* to the prior.
 
    **Workaround #1:** If the derived parameter(s) can be computed easily from sampled and
@@ -196,7 +196,7 @@ gaussian ring. This is done in a simple way at
 :ref:`the end of the example <example_advanced_rtheta>`.
 Let us discuss the general case here.
 
-To enble this, **cobaya** creates a `re-parameterization` layer between the `sampled`
+To enable this, **cobaya** creates a `re-parameterization` layer between the `sampled`
 parameters, and the `input` parameters of the likelihood. E.g. if we want to **sample**
 from the logarithm of an **input** parameter of the likelihood, we would do:
 
@@ -268,7 +268,7 @@ parameters, we insert the functions defining them under a ``derived`` property
 
    If you want to fix the value of a parameter whose only role is being an argument of a
    dynamically defined one and is *not supposed to be passed to the likelihood*, you need
-   to explicilty *drop* it. E.g. suppose that you want to sample from a likelihood that
+   to explicitly *drop* it. E.g. suppose that you want to sample from a likelihood that
    depends on ``x``, but want to use ``log(x)`` as the sampled parameter; you would do it
    like this:
 

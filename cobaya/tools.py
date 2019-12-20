@@ -248,7 +248,7 @@ def import_all_classes(path, pkg, subclass_of, hidden=False, helpers=False):
 
 def get_available_internal_classes(kind, hidden=False):
     """
-    Gets all clases names of a given kind.
+    Gets all class names of a given kind.
     """
 
     from cobaya.component import CobayaComponent

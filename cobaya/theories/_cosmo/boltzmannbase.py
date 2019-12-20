@@ -15,9 +15,9 @@ from itertools import chain
 
 # Local
 from cobaya.theory import Theory
-from cobaya.tools import deepcopy_where_possible, str_to_list
+from cobaya.tools import deepcopy_where_possible
 from cobaya.log import LoggedError
-from cobaya.conventions import _requires, _c_km_s
+from cobaya.conventions import _c_km_s
 
 H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": _c_km_s}
 

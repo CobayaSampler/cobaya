@@ -77,7 +77,7 @@
 
 #### PolyChord
 
-- Fixed too much oversampling when manual bloking (#35). Thanks Lukas Hergt (@lukashergt), Vivian Miranda (@vivianmiranda) and Will Handley (@williamjameshandley)
+- Fixed too much oversampling when manual blocking (#35). Thanks Lukas Hergt (@lukashergt), Vivian Miranda (@vivianmiranda) and Will Handley (@williamjameshandley)
 - Fixed ifort compatibility (#39, PR #42). Thanks Lukas Hergt (@lukashergt)
 
 #### MCMC
@@ -238,7 +238,7 @@
 
 ### I/O
 
-- More permisive resuming.
+- More permissive resuming.
 
 ### Parameterization and priors
 

@@ -35,7 +35,7 @@ import six
 # Local
 from cobaya.conventions import kinds, _external, _module_path
 from cobaya.tools import get_class, get_external_function, getfullargspec
-from cobaya.log import LoggedError, always_stop_exceptions
+from cobaya.log import LoggedError
 from cobaya.component import ComponentCollection
 from cobaya.theory import Theory
 

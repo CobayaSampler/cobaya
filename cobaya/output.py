@@ -24,7 +24,7 @@ from cobaya.conventions import _input_suffix, _updated_suffix, _separator_files,
 from cobaya.conventions import _resume, _resume_default, _force, _yaml_extensions
 from cobaya.conventions import kinds, _params
 from cobaya.log import LoggedError, HasLogger
-from cobaya.input import is_equal_info
+from cobaya.input import is_equal_info, get_class
 from cobaya.mpi import is_main_process, more_than_one_process, share_mpi
 from cobaya.collection import Collection
 from cobaya.tools import deepcopy_where_possible
