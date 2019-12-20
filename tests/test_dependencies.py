@@ -238,3 +238,39 @@ def test_conditional_dependencies(modules):
     with pytest.raises(LoggedError) as e:
         _test_loglike2(theories)
     assert "Circular dependency" in str(e.value)
+
+    from cobaya.theory import Theory
+
+    class ACalculator(Theory):
+
+        def initialize(self):
+            """called from __init__ to initialize"""
+
+        def initialize_with_provider(self, provider):
+            """
+            Initialization after other components initialized, using Provider class
+            instance which is used to return any dependencies (see calculate below).
+            """
+            self.provider = provider
+
+        def get_requirements(self):
+            """
+            Return dictionary of derived parameters or other quantities that are needed
+            by this component and should be calculated by another theory class.
+            """
+            return {'b_derived': None}
+
+        def needs(self, **requirements):
+            if 'A' in requirements:
+                # e.g. calculating A requires B computed using same kmax (default 10)
+                return {'B': {'kmax': requirements['A'].get('kmax', 10)}}
+
+        def get_can_provide_params(self):
+            return ['Aderived']
+
+        def calculate(self, state, want_derived=True, **params_values_dict):
+            state['A'] = self.provider.get_B() * self.provider.get_param('b_derived')
+            state['derived'] = {'Aderived': 10}
+
+        def get_A(self, normalization=1):
+            return self._current_state['A'] * normalization

@@ -22,6 +22,7 @@ Table of contents
    likelihood_one
    likelihood_gaussian_mixture
    theory
+   theories_and_dependencies
    sampler
    sampler_evaluate
    sampler_mcmc

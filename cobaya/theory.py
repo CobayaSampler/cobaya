@@ -25,6 +25,9 @@ methods to return the actual result of the calculation for X for the current cac
 The :meth:`Theory.get_param` method returns the value of a derived parameter for the
 current state.
 
+For details and examples of how to handle multiple theory codes with complex dependencies
+see :doc:`theories_and_dependencies`.
+
 """
 
 import inspect
