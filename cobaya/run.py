@@ -30,7 +30,7 @@ from cobaya.tools import warn_deprecation, deepcopy_where_possible
 from cobaya.post import post
 
 
-def run(info):
+def run(info,return_sampler=False):
     assert hasattr(info, "keys"), (
         "The first argument must be a dictionary with the info needed for the run. "
         "If you were trying to pass the name of an input file instead, "
@@ -89,7 +89,10 @@ def run(info):
     # Restore the original output_prefix: the script has not changed folder!
     if _output_prefix in info:
         updated_info[_output_prefix] = info.get(_output_prefix)
-    return updated_info, sampler.products()
+    if return_sampler:
+        return updated_info, sampler.products(), sampler
+    else:
+        return updated_info, sampler.products()
 
 
 # Command-line script

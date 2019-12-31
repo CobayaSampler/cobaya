@@ -289,15 +289,15 @@ class LikelihoodCollection(HasLogger):
         else:
             self.theory = None
         # Initialize individual Likelihoods
-        self._likelihoods = odict()
+        self.likelihoods = odict()
         for name, info in info_likelihood.items():
             # If it has an "external" key, wrap it up. Else, load it up
             if _external in info:
-                self._likelihoods[name] = LikelihoodExternalFunction(
+                self.likelihoods[name] = LikelihoodExternalFunction(
                     name, info, _theory=getattr(self, _theory, None), timing=timing)
             else:
                 like_class = get_class(name, kind=_likelihood)
-                self._likelihoods[name] = like_class(info, modules=modules, timing=timing)
+                self.likelihoods[name] = like_class(info, modules=modules, timing=timing)
         # Assign input/output parameters
         self._assign_params(parameterization, info_likelihood, info_theory)
         # Do the user-defined post-initialisation, and assign the theory code
@@ -321,7 +321,7 @@ class LikelihoodCollection(HasLogger):
         # code forces recomputation of the likelihoods
         for p, ls in self.sampled_like_dependence.items():
             if _theory in ls:
-                self.sampled_like_dependence[p] = ([_theory] + list(self._likelihoods))
+                self.sampled_like_dependence[p] = ([_theory] + list(self.likelihoods))
         # Overhead per likelihood evaluation
         self.overhead = _overhead_per_param * len(parameterization.sampled_params())
 
@@ -329,12 +329,12 @@ class LikelihoodCollection(HasLogger):
     # notice that "get" can get "theory", but the iterator does not!
     def __getitem__(self, key):
         try:
-            return self._likelihoods.__getitem__(key) if key != _theory else self.theory
+            return self.likelihoods.__getitem__(key) if key != _theory else self.theory
         except KeyError:
             raise LoggedError(self.log, "Likelihood '%r' not known", key)
 
     def __iter__(self):
-        return self._likelihoods.__iter__()
+        return self.likelihoods.__iter__()
 
     def logps(self, input_params, _derived=None, cached=True):
         """

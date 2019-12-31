@@ -67,7 +67,7 @@ class polychord(Sampler):
         # Prepare arguments and settings
         self.nDims = self.model.prior.d()
         self.nDerived = (len(self.model.parameterization.derived_params()) +
-                         len(self.model.prior) + len(self.model.likelihood._likelihoods))
+                         len(self.model.prior) + len(self.model.likelihood.likelihoods))
         if self.logzero is None:
             self.logzero = np.nan_to_num(-np.inf)
         if self.max_ndead == np.inf:
@@ -173,7 +173,7 @@ class polychord(Sampler):
         self.n_sampled = len(self.model.parameterization.sampled_params())
         self.n_derived = len(self.model.parameterization.derived_params())
         self.n_priors = len(self.model.prior)
-        self.n_likes = len(self.model.likelihood._likelihoods)
+        self.n_likes = len(self.model.likelihood.likelihoods)
         # Done!
         if am_single_or_primary_process():
             self.log.info("Calling PolyChord with arguments:")
@@ -223,9 +223,9 @@ class polychord(Sampler):
             if len(derived) != len(self.model.parameterization.derived_params()):
                 derived = np.full(
                     len(self.model.parameterization.derived_params()), np.nan)
-            if len(loglikes) != len(self.model.likelihood._likelihoods):
+            if len(loglikes) != len(self.model.likelihood.likelihoods):
                 loglikes = np.full(
-                    len(self.model.likelihood._likelihoods), np.nan)
+                    len(self.model.likelihood.likelihoods), np.nan)
             derived = list(derived) + list(logpriors) + list(loglikes)
             return (
                 max(logposterior + self.logvolume, 0.99 * self.pc_settings.logzero), derived)
