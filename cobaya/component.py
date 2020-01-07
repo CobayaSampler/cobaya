@@ -121,6 +121,12 @@ class CobayaComponent(HasLogger, HasDefaults):
         """
         return None
 
+    def has_version(self):
+        """
+        Whether to track version information for this component
+        """
+        return True
+
     @classmethod
     def compare_versions(self, version_a, version_b, equal=True):
         """
@@ -131,7 +137,7 @@ class CobayaComponent(HasLogger, HasDefaults):
         :return: bool
         """
         va, vb = version.parse(version_a), version.parse(version_b)
-        if (va >= vb if equal else va > vb):
+        if va >= vb if equal else va > vb:
             return True
         return False
 
@@ -172,7 +178,7 @@ class ComponentCollection(OrderedDict, HasLogger):
         """
         format_version = lambda x: {_version: x} if add_version_field else x
         return {component.get_name(): format_version(component.get_version())
-                for component in self.values()}
+                for component in self.values() if component.has_version()}
 
     # Python magic for the "with" statement
     def __enter__(self):

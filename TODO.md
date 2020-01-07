@@ -1,3 +1,4 @@
+## Thinning of output when oversampling
 ## Update example notebook to match example in paper (+ updates)
 ## Make numba a requirement?
 ## Let classes do all defaults combining; allow separate like instantiation + use equivalent to loading in cobaya
@@ -20,3 +21,4 @@
 ## minimize updated yaml will overwrite chain updated yaml?
 ## Lots of batchjob stuff (hasConvergeBetterThan,wantCheckpointContinue etc) now broken
 ## More pythonic alternative to class_options (e.g class or object attributes/properties)
+## Add test for resuming CAMB run

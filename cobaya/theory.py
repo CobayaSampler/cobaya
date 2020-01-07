@@ -309,4 +309,7 @@ class TheoryCollection(ComponentCollection):
 
 
 class HelperTheory(Theory):
-    pass
+
+    def has_version(self):
+        # assume the main component handles all version checking
+        return False
