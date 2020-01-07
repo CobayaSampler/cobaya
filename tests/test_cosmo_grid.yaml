@@ -82,7 +82,7 @@ grid:
 # Below this line (upper level), defaults ########################
 
 # Presets for shorter input
-# Any other field ovewrites the presets
+# Any other field overwrites the presets
 preset:
   # Base model
   primordial: SFSR

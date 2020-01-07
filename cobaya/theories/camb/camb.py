@@ -9,7 +9,7 @@
    <br />
 
 This module imports and manages the CAMB cosmological code.
-It requires CAMB 1.0.12 or higher.
+It requires CAMB 1.1 or higher.
 
 .. note::
 
@@ -161,10 +161,9 @@ the input block for CAMB (otherwise a system-wide CAMB may be used instead):
 
 .. note::
 
-   In any of these methods, you should **not** install CAMB as python package using
+   In any of these methods, if you intent to switch between different versions or
+   modifications of CAMB you should not  install CAMB as python package using
    ``python setup.py install --user``, as the official instructions suggest.
-   It is actually safer not to do so if you intend to switch between different versions or
-   modifications of CAMB.
 """
 
 # Python 2/3 compatibility
@@ -188,7 +187,7 @@ from cobaya.install import download_github_release, check_gcc_version
 from cobaya.tools import getfullargspec, get_class_methods, get_properties
 from cobaya.tools import load_module, VersionCheckError, str_to_list
 from cobaya.theory import HelperTheory
-from cobaya.conventions import _requires, _version
+from cobaya.conventions import _requires
 
 # Result collector
 Collector = namedtuple("collector", ["method", "args", "kwargs"])
@@ -202,7 +201,7 @@ class camb(BoltzmannBase):
     camb_repo_name = "cmbant/CAMB"
     camb_repo_version = os.environ.get("CAMB_REPO_VERSION", "master")
     camb_min_gcc_version = "6.4"
-    min_camb_version = '1.0.12.2'
+    min_camb_version = '1.1'
 
     def initialize(self):
         """Importing CAMB from the correct path, if given."""
@@ -706,6 +705,10 @@ class camb(BoltzmannBase):
         return False
 
     def get_helper_theories(self):
+        """
+        Transfer functions are computed separately by camb.transfers, then this
+        class uses the transfer functions to calculate power spectra (using A_s, n_s etc).
+        """
         self._camb_transfers = CambTransfers(self, 'camb.transfers',
                                              dict(stop_at_error=self.stop_at_error),
                                              timing=self.timer)

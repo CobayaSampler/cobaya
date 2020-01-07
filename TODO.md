@@ -13,7 +13,6 @@
 ## No output to files while burn in makes it hard to see if working OK (default no burn?)
 ## ,, related, how to set intermediate debugging level so see regular short output
 ## dump log info along with each chain file if saving to file (currently in stdout)
-## check parameter default proposal widths not too large
 ## turn dragging off if only one block or no speeds differ by more than factor 2
 ## If non-linear lensing on, model the non-linear correction via limber for faster semi-slow parameters
 ## minimize run with -f does not work. Check resuming.

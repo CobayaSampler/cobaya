@@ -128,7 +128,7 @@ class CobayaComponent(HasLogger, HasDefaults):
         return True
 
     @classmethod
-    def compare_versions(self, version_a, version_b, equal=True):
+    def compare_versions(cls, version_a, version_b, equal=True):
         """
         Checks whether ``version_a`` is equal or higher than ``version_b``.
 

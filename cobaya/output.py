@@ -295,7 +295,6 @@ def get_output(*args, **kwargs):
     """
     if kwargs.get("output_prefix"):
         from cobaya.mpi import import_MPI
-        Output = import_MPI(".output", "Output")
-        return Output(*args, **kwargs)
+        return import_MPI(".output", "Output")(*args, **kwargs)
     else:
         return OutputDummy(*args, **kwargs)
