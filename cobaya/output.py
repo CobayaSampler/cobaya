@@ -161,7 +161,7 @@ class Output(HasLogger):
                 # Deal with version comparison separately:
                 # - If not specified now, take the one used in resumed info
                 # - If specified both now and before, check new older than old one
-                for k in kinds:
+                for k in (kind for kind in kinds if kind in updated_info):
                     for c in updated_info[k]:
                         new_version = updated_info[k][c].get(_version)
                         old_version = old_info[k][c].get(_version)

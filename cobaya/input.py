@@ -334,12 +334,15 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
     myname = inspect.stack()[0][3]
     ignore = set([]) if strict else {_debug, _debug_file, _resume, _force, _path_install}
     ignore = ignore.union(set(ignore_blocks or []))
-    if set(info1).difference(ignore) != set(info2).difference(ignore):
+    if set([info for info in info1 if info1[info] is not None]
+           ).difference(ignore) \
+            != set([info for info in info2 if info2[info] is not None]
+                   ).difference(ignore):
         myprint(myname + ": different blocks or options: %r (old) vs %r (new)" % (
             set(info1).difference(ignore), set(info2).difference(ignore)))
         return False
     for block_name in info1:
-        if block_name in ignore:
+        if block_name in ignore or block_name not in info2:
             continue
         block1 = deepcopy_where_possible(info1[block_name])
         block2 = deepcopy_where_possible(info2[block_name])
@@ -385,14 +388,15 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
                 # Add component-specific options to be ignored
                 if block_name in kinds:
                     ignore_k_this = ignore_k.copy()
-                    try:
-                        module_path = block1[k].pop(_module_path, None) \
-                            if isinstance(block1[k], odict) else None
-                        cls = get_class(k, block_name, module_path=module_path)
-                        ignore_k_this = ignore_k_this.union(
-                            set(getattr(cls, "ignore_at_resume", {})))
-                    except ImportError:
-                        pass
+                    if _external not in block1[k]:
+                        try:
+                            module_path = block1[k].pop(_module_path, None) \
+                                if isinstance(block1[k], odict) else None
+                            cls = get_class(k, block_name, module_path=module_path)
+                            ignore_k_this = ignore_k_this.union(
+                                set(getattr(cls, "ignore_at_resume", {})))
+                        except ImportError:
+                            pass
                     # Pop ignored options
                     for j in ignore_k_this:
                         block1[k].pop(j, None)

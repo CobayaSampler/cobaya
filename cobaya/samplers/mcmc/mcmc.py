@@ -36,8 +36,8 @@ class CovmatSampler(Sampler):
 
     def _load_covmat(self, from_old_chain, slow_params=None):
         if from_old_chain and os.path.exists(self.covmat_filename()):
-            covmat = share_mpi(np.loadtxt(
-                self.covmat_filename()) if is_main_process() else None)
+            covmat = np.atleast_2d(share_mpi(np.loadtxt(
+                self.covmat_filename()) if is_main_process() else None))
             self.mpi_info("Covariance matrix from checkpoint.")
             return covmat, []
         else:
