@@ -14,7 +14,7 @@ def run_single():
 
     args = parser.parse_args()
 
-    ini = [ini.replace('.ini', '') for ini in args.input_file]
+    ini = [ini.replace('.ini', '').replace('.yaml', '') for ini in args.input_file]
 
     jobqueue.submitJob(os.path.basename(ini[0]), ini, msg=True, **args.__dict__)
 

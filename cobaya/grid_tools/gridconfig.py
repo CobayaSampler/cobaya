@@ -44,6 +44,11 @@ def getArgs(vals=None):
     return parser.parse_args(vals)
 
 
+def pathIsGrid(batchPath):
+    return os.path.exists(batchjob.grid_cache_file(batchPath)) or os.path.exists(
+        os.path.join(batchPath, 'config', 'config.ini'))
+
+
 def MakeGridScript():
     warn_deprecation()
     args = getArgs()
@@ -71,7 +76,7 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
             raise NotImplementedError("Using a python script is work in progress...")
             # In this case, info-as-dict would be passed
             # settings = __import__(settingName, fromlist=['dummy'])
-    batch = batchjob.batchJob(batchPath, settings.get("yaml_dir", None))
+    batch = batchjob.batchJob(batchPath)
     # batch.skip = settings.get("skip", False)
     batch.makeItems(settings, messages=not read_only)
     if read_only:
@@ -156,11 +161,8 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
             info[kinds.sampler][sampler]["covmat"] = os.path.join(
                 best_covmat["folder"], best_covmat["name"])
         # Write the info for this job
-        try:
-            yaml_dump_file(jobItem.iniFile(), info, error_if_exists=True)
-        except IOError:
-            raise IOError("Can't write chain input file. Maybe the chain configuration "
-                          "files already exists?")
+        # Allow overwrite since often will want to regenerate grid with tweaks
+        yaml_dump_file(jobItem.iniFile(), info, error_if_exists=False)
 
         # Non-translated old code
         # if not start_at_bestfit:
