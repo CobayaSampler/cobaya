@@ -81,7 +81,7 @@ class CovmatSampler(Sampler):
                 self.covmat = self.covmat.format(
                     **{_path_install: self.path_install}).replace("/", os.sep)
             try:
-                with open(self.covmat, "r", encoding="utf-8") as file_covmat:
+                with open(self.covmat, "r", encoding="utf-8-sig") as file_covmat:
                     header = file_covmat.readline()
                 loaded_covmat = np.loadtxt(self.covmat)
             except TypeError:

@@ -77,7 +77,7 @@ class jobSettings(object):
                 and not os.path.exists(self.job_template):
             raise ValueError("You must provide a script template with '--job-template'.")
         try:
-            with open(self.job_template, 'r', encoding="utf-8") as f:
+            with open(self.job_template, 'r', encoding="utf-8-sig") as f:
                 template = f.read()
         except IOError:
             raise ValueError("Job template '%s' not found." % self.job_template)
@@ -330,7 +330,7 @@ def submitJob(jobName, inputFiles, sequential=False, msg=False, **kwargs):
             command = ('mpirun -np %i %s %s' % (j.nchains, j.program, ini))
         commands.append(command)
     vals['COMMAND'] = "\n".join(commands)
-    with open(j.job_template, 'r', encoding="utf-8") as f:
+    with open(j.job_template, 'r', encoding="utf-8-sig") as f:
         template = f.read()
         # Remove definition lines
         template = "\n".join(

@@ -288,7 +288,7 @@ class polychord(Sampler):
             # Prepare the evidence(s) and write to file
             pre = "log(Z"
             active = "(Still active)"
-            with open(prefix + ".stats", "r", encoding="utf-8") as statsfile:
+            with open(prefix + ".stats", "r", encoding="utf-8-sig") as statsfile:
                 lines = [l for l in statsfile.readlines() if l.startswith(pre)]
             for l in lines:
                 logZ, logZstd = [float(n.replace(active, "")) for n in

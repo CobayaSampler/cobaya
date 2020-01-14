@@ -149,7 +149,7 @@ def yaml_load_file(file_name, yaml_text=None):
 
     Manages !defaults directive."""
     if yaml_text is None:
-        with open(file_name, "r", encoding="utf-8") as file:
+        with open(file_name, "r", encoding="utf-8-sig") as file:
             yaml_text = "".join(file.readlines())
     return yaml_load(yaml_text, file_name=file_name)
 

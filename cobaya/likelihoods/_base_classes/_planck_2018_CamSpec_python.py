@@ -85,7 +85,7 @@ class _planck_2018_CamSpec_python(_DataSetLikelihood):
         data_vector = []
         nX = 0
         used_indices = []
-        with open(ini.relativeFileName('data_ranges', "r", encoding="utf-8")) as f:
+        with open(ini.relativeFileName('data_ranges', "r", encoding="utf-8-sig")) as f:
             lines = f.readlines()
             while not lines[-1].strip(): lines = lines[:-1]
             self.Nspec = len(lines)
