@@ -30,7 +30,7 @@ from cobaya.samplers.mcmc.proposal import BlockedProposer
 from cobaya.log import LoggedError
 from cobaya.tools import get_external_function, read_dnumber, relative_to_int
 from cobaya.tools import load_DataFrame
-from cobaya.yaml import yaml_dump_file
+from cobaya.yaml import yaml_dump_file, force_unicode
 
 
 class CovmatSampler(Sampler):
@@ -265,7 +265,7 @@ class mcmc(CovmatSampler):
             self.i_checkpoint = 1
             if self.output and not self.resuming:
                 with open(self.progress_filename(), "w", encoding="utf-8") as progress_file:
-                    progress_file.write("# " + " ".join(self.progress.columns) + "\n")
+                    progress_file.write(force_unicode("# " + " ".join(self.progress.columns) + "\n"))
 
     def set_blocking(self, load_covmat=False):
         if self.blocking:
