@@ -9,8 +9,10 @@
 
 """
 # Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
+from __future__ import absolute_import, division
+import six
+if six.PY2:
+    from io import open
 
 # Global
 import os
@@ -423,7 +425,7 @@ class _CMBlikes(_DataSetLikelihood):
         np.savetxt(froot + '_cov.dat', self.cov)
         # self.saveCl(froot + '_fid_cl.dat', self.fid_cl[:, 1:],
         #             cols=['TT', 'EE', 'TE', 'PP'])
-        with open(froot + '_bandpowers.dat', 'w') as f:
+        with open(froot + '_bandpowers.dat', 'w', encoding="utf-8") as f:
             f.write("#%4s %5s %5s %8s %12s %10s %7s\n" %
                     ('bin', 'L_min', 'L_max', 'L_av', 'PP', 'Error', 'Ahat'))
             for b in range(self.nbins):
@@ -434,7 +436,7 @@ class _CMBlikes(_DataSetLikelihood):
         if self.linear_correction is not None:
             self.linear_correction.write(froot, 'linear_correction_bin')
 
-        with open(froot + '_lensing_fiducial_correction', 'w') as f:
+        with open(froot + '_lensing_fiducial_correction', 'w', encoding="utf-8") as f:
             f.write("#%4s %12s \n" % ('bin', 'PP'))
             for b in range(self.nbins):
                 f.write("%5u %12.5e\n" % (b + 1, self.fid_correction[b]))
@@ -531,7 +533,7 @@ class _CMBlikes(_DataSetLikelihood):
     def write_likelihood_data(self, filename, data_params={}):
         cls = self.init_map_cls(self.nmaps_required, self.required_order)
         self.add_foregrounds(cls, data_params)
-        with open(filename, 'w') as f:
+        with open(filename, 'w', encoding="utf-8") as f:
             cols = []
             for i in range(self.nmaps_required):
                 for j in range(i + 1):
@@ -650,7 +652,8 @@ class BinWindows(object):
         if not os.path.exists(froot + stem + '_window'):
             os.mkdir(froot + '_window')
         for b in range(self.nbins):
-            with open(froot + stem + '_window/window%u.dat' % (b + 1), 'w') as f:
+            with open(froot + stem + '_window/window%u.dat' % (b + 1),
+                      'w', encoding="utf-8") as f:
                 for L in np.arange(self.lmin[b], self.lmax[b] + 1):
                     f.write(
                         ("%5u " + "%10e" * len(self.cols_in) + "\n") %
@@ -659,7 +662,7 @@ class BinWindows(object):
 
 def last_top_comment(fname):
     result = None
-    with open(fname) as f:
+    with open(fname, encoding="utf-8") as f:
         x = f.readline()
         while x:
             x = x.strip()

@@ -11,9 +11,10 @@ Basically, a wrapper around a `pandas.DataFrame`.
 """
 
 # Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
+from __future__ import absolute_import, division
 import six
+if six.PY2:
+    from io import open
 
 # Global
 import os
@@ -22,6 +23,7 @@ import numpy as np
 import pandas as pd
 from getdist import MCSamples
 from collections import OrderedDict as odict
+
 # Local
 from cobaya.conventions import _weight, _chi2, _minuslogpost, _minuslogprior
 from cobaya.conventions import _separator
@@ -329,7 +331,7 @@ class Collection(BaseCollection):
         self._n_last_out = n_max
         n_float = 8
         do_header = not n_min
-        with open(self.file_name, "a") as out:
+        with open(self.file_name, "a", encoding="utf-8") as out:
             lines = self.data[n_min:n_max].to_string(
                 header=do_header, index=False, na_rep="nan", justify="right",
                 float_format=(lambda x: ("%%.%dg" % n_float) % x))

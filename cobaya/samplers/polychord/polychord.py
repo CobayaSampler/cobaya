@@ -7,6 +7,9 @@
 """
 # Python 2/3 compatibility
 from __future__ import absolute_import, division, print_function
+import six
+if six.PY2:
+    from io import open
 
 # Global
 import os
@@ -285,7 +288,7 @@ class polychord(Sampler):
             # Prepare the evidence(s) and write to file
             pre = "log(Z"
             active = "(Still active)"
-            with open(prefix + ".stats", "r") as statsfile:
+            with open(prefix + ".stats", "r", encoding="utf-8") as statsfile:
                 lines = [l for l in statsfile.readlines() if l.startswith(pre)]
             for l in lines:
                 logZ, logZstd = [float(n.replace(active, "")) for n in

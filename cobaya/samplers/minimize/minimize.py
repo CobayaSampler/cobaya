@@ -71,8 +71,10 @@ it will finally pick the best among the results.
 
 """
 # Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
+from __future__ import absolute_import, division
+import six
+if six.PY2:
+    from io import open
 
 # Global
 import os
@@ -385,5 +387,5 @@ class minimize(Minimizer, CovmatSampler):
         out_filename = os.path.join(
             self.output.folder,
             self.output.prefix + getdist_ext_ignore_prior[self.ignore_prior])
-        with open(out_filename, 'w') as f:
+        with open(out_filename, 'w', encoding="utf-8") as f:
             f.write(getdist_bf)

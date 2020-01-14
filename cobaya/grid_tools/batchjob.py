@@ -6,16 +6,20 @@
 
 """
 
+# Python 2/3 compatibility
+from __future__ import absolute_import, division, print_function
+import six
+if six.PY2:
+    from io import open
+
 # TODO many things not yet updated for cobaya formats
 
-from __future__ import absolute_import, print_function, division
 import os
 import shutil
 import pickle
 import copy
 import sys
 import time
-import six
 from getdist import types, IniFile
 from getdist.mcsamples import loadMCSamples
 
@@ -48,7 +52,7 @@ def readobject(directory=None):
         if os.path.exists(config_dir):
             # set path in case using functions defined and hence imported from in settings file
             sys.path.insert(0, config_dir)
-        with open(fname, 'rb') as inp:
+        with open(fname, 'rb', encoding="utf-8") as inp:
             grid = pickle.load(inp)
         if not os.path.exists(grid.basePath):
             raise FileNotFoundError('Directory not found %s' % grid.basePath)
@@ -62,7 +66,7 @@ def readobject(directory=None):
 
 
 def saveobject(obj, filename):
-    with open(filename, 'wb') as output:
+    with open(filename, 'wb', encoding="utf-8") as output:
         pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
 
 
@@ -343,7 +347,7 @@ class jobItem(propertiesItem):
         return self.chainPath
 
     def writeIniLines(self, f):
-        outfile = open(self.iniFile(), 'w')
+        outfile = open(self.iniFile(), 'w', encoding="utf-8")
         outfile.write("\n".join(f))
         outfile.close()
 
@@ -402,7 +406,7 @@ class jobItem(propertiesItem):
     def convergeStat(self):
         fname = self.chainRoot + '.converge_stat'
         if not nonEmptyFile(fname): return None, None
-        textFileHandle = open(fname)
+        textFileHandle = open(fname, encoding="utf-8")
         textFileLines = textFileHandle.readlines()
         textFileHandle.close()
         return float(textFileLines[0].strip()), len(textFileLines) > 1 and textFileLines[

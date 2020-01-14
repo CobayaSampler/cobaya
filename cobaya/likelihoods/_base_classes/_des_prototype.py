@@ -47,9 +47,10 @@ This likelihood can be installed automatically as explained in :doc:`installatio
 """
 
 # Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+import six
+if six.PY2:
+    from io import open
 
 # Global
 import numpy as np
@@ -193,7 +194,7 @@ class _des_prototype(_DataSetLikelihood):
         self.iintrinsic_alignment_model = ini.string('intrinsic_alignment_model')
         self.data_types = ini.string('data_types').split()
         self.used_types = ini.list('used_data_types', self.data_types)
-        with open(ini.relativeFileName('data_selection')) as f:
+        with open(ini.relativeFileName('data_selection'), encoding="utf-8") as f:
             header = f.readline()
             assert ('#  type bin1 bin2 theta_min theta_max' == header.strip())
             lines = f.readlines()
@@ -765,10 +766,10 @@ def convert_txt(filename, root, outdir, ranges=None):
     np.savetxt(outdir + root + '_nz_lens.dat', hdulist['NZ_LENS'].data[:maxi + 1],
                fmt='%.6e', header=" ".join(hdulist['NZ_LENS'].data.dtype.names))
     outlines += ['nz_gal_file = %s_nz_lens.dat' % root]
-    with open(outdir + root + '_selection.dat', 'w') as f:
+    with open(outdir + root + '_selection.dat', 'w', encoding="utf-8") as f:
         f.write('#  type bin1 bin2 theta_min theta_max\n')
         f.write("\n".join(out_ranges))
     outlines += ['data_selection = %s_selection.dat' % root]
     outlines += ['nuisance_params = DES.paramnames']
-    with open(outdir + root + '.dataset', 'w') as f:
+    with open(outdir + root + '.dataset', 'w', encoding="utf-8") as f:
         f.write("\n".join(outlines))

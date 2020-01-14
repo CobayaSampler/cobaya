@@ -1,5 +1,8 @@
 # Python 2/3 compatibility
 from __future__ import absolute_import, division
+import six
+if six.PY2:
+    from io import open
 
 # Global
 import os
@@ -259,7 +262,7 @@ class MainWindow(QWidget):
             self.save_dialog, "Save input file", fsuffix, ffilter, os.getcwd())
         if not fname.endswith(fsuffix):
             fname += fsuffix
-        with open(fname, "w+") as f:
+        with open(fname, "w+", encoding="utf-8") as f:
             f.write(self.display_tabs.currentWidget().toPlainText())
 
     @Slot()

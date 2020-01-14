@@ -18,12 +18,13 @@ or pass a dictionary of ranges for each spectrum.
 
 """
 # Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
+from __future__ import absolute_import, division
+import six
+if six.PY2:
+    from io import open
 
 # Global
 import numpy as np
-import six
 import os
 import scipy
 
@@ -84,7 +85,7 @@ class _planck_2018_CamSpec_python(_DataSetLikelihood):
         data_vector = []
         nX = 0
         used_indices = []
-        with open(ini.relativeFileName('data_ranges', "r")) as f:
+        with open(ini.relativeFileName('data_ranges', "r", encoding="utf-8")) as f:
             lines = f.readlines()
             while not lines[-1].strip(): lines = lines[:-1]
             self.Nspec = len(lines)
@@ -123,7 +124,7 @@ class _planck_2018_CamSpec_python(_DataSetLikelihood):
         self.cl_used = np.array([name in self.use_cl for name in self.cl_names],
                                 dtype=bool)
         covfile = ini.relativeFileName('covmat_fiducial')
-        with open(covfile, "rb") as f:
+        with open(covfile, "rb", encoding="utf-8") as f:
             cov = np.fromfile(f, dtype=[np.float32, np.float64]['64.bin' in covfile])
         assert (nX ** 2 == cov.shape[0])
         used_indices = np.concatenate(used_indices)

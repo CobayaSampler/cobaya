@@ -1,5 +1,8 @@
 # Python 2/3 compatibility
 from __future__ import absolute_import, division
+import six
+if six.PY2:
+    from io import open
 
 # Global
 import os
@@ -44,7 +47,7 @@ def get_covmat_database(modules, cached=True):
         folder_full = folder.format(**{_path_install: modules}).replace("/", os.sep)
         for filename in os.listdir(folder_full):
             try:
-                with open(os.path.join(folder_full, filename)) as covmat:
+                with open(os.path.join(folder_full, filename), encoding="utf-8") as covmat:
                     header = covmat.readline()
                 assert header.strip().startswith("#")
                 params = header.strip().lstrip("#").split()

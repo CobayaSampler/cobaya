@@ -6,9 +6,10 @@
 """
 
 # Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
+from __future__ import absolute_import, division
 import six
+if six.PY2:
+    from io import open
 
 # Global
 import os
@@ -80,7 +81,7 @@ class CovmatSampler(Sampler):
                 self.covmat = self.covmat.format(
                     **{_path_install: self.path_install}).replace("/", os.sep)
             try:
-                with open(self.covmat, "r") as file_covmat:
+                with open(self.covmat, "r", encoding="utf-8") as file_covmat:
                     header = file_covmat.readline()
                 loaded_covmat = np.loadtxt(self.covmat)
             except TypeError:
@@ -263,7 +264,7 @@ class mcmc(CovmatSampler):
             self.progress = DataFrame(columns=cols)
             self.i_checkpoint = 1
             if self.output and not self.resuming:
-                with open(self.progress_filename(), "w") as progress_file:
+                with open(self.progress_filename(), "w", encoding="utf-8") as progress_file:
                     progress_file.write("# " + " ".join(self.progress.columns) + "\n")
 
     def set_blocking(self, load_covmat=False):
@@ -843,7 +844,7 @@ class mcmc(CovmatSampler):
                 ("measured_speed_list", self.measured_speed_list)])}}
             yaml_dump_file(checkpoint_filename, checkpoint_info, error_if_exists=False)
             if not self.progress.empty:
-                with open(self.progress_filename(), "a") as progress_file:
+                with open(self.progress_filename(), "a", encoding="utf-8") as progress_file:
                     progress_file.write(
                         self.progress.tail(1).to_string(header=False, index=False) + "\n")
             self.log.debug("Dumped checkpoint and progress info, and current covmat.")

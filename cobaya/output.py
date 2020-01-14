@@ -8,11 +8,13 @@
 
 # Python 2/3 compatibility
 from __future__ import absolute_import, division
+import six
+if six.PY2:
+    from io import open
 
 # Global
 import os
 import sys
-import six
 import traceback
 import datetime
 from itertools import chain
@@ -184,7 +186,7 @@ class Output(HasLogger):
         for f, info in [(self.file_input, input_info),
                         (self.file_updated, updated_info_trimmed)]:
             if info:
-                with open(f, "w") as f_out:
+                with open(f, "w", encoding="utf-8") as f_out:
                     try:
                         f_out.write(yaml_dump(info))
                     except OutputError as e:

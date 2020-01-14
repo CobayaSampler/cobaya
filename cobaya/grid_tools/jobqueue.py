@@ -1,4 +1,9 @@
-from __future__ import absolute_import, print_function, division
+# Python 2/3 compatibility
+from __future__ import absolute_import, division, print_function
+import six
+if six.PY2:
+    from io import open
+
 import subprocess
 import os
 import numpy as np
@@ -9,7 +14,6 @@ import shutil
 import multiprocessing
 
 from distutils import spawn
-import six
 
 from cobaya.conventions import _yaml_extensions
 from .conventions import _script_folder, _script_ext, _log_folder, _jobid_ext
@@ -73,7 +77,7 @@ class jobSettings(object):
                 and not os.path.exists(self.job_template):
             raise ValueError("You must provide a script template with '--job-template'.")
         try:
-            with open(self.job_template, 'r') as f:
+            with open(self.job_template, 'r', encoding="utf-8") as f:
                 template = f.read()
         except IOError:
             raise ValueError("Job template '%s' not found." % self.job_template)
@@ -166,7 +170,7 @@ def loadJobIndex(batchPath, must_exist=False):
         batchPath = os.path.join(".", _script_folder)
     fileName = os.path.join(batchPath, 'jobIndex.pyobj')
     if os.path.exists(fileName):
-        with open(fileName, 'rb') as inp:
+        with open(fileName, 'rb', encoding="utf-8") as inp:
             return pickle.load(inp)
     else:
         if not must_exist:
@@ -178,7 +182,7 @@ def saveJobIndex(obj, batchPath=None):
     if batchPath is None:
         batchPath = os.path.join(".", _script_folder)
     fname = os.path.join(batchPath, 'jobIndex.pyobj')
-    with open(fname + '_tmp', 'wb') as output:
+    with open(fname + '_tmp', 'wb', encoding="utf-8") as output:
         pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
     # try to prevent corruption from error mid-write
     if os.path.exists(fname):
@@ -326,7 +330,7 @@ def submitJob(jobName, inputFiles, sequential=False, msg=False, **kwargs):
             command = ('mpirun -np %i %s %s' % (j.nchains, j.program, ini))
         commands.append(command)
     vals['COMMAND'] = "\n".join(commands)
-    with open(j.job_template, 'r') as f:
+    with open(j.job_template, 'r', encoding="utf-8") as f:
         template = f.read()
         # Remove definition lines
         template = "\n".join(
@@ -334,9 +338,9 @@ def submitJob(jobName, inputFiles, sequential=False, msg=False, **kwargs):
         script = replacePlaceholders(template, vals)
         scriptRoot = os.path.join(base_path, _script_folder, os.path.splitext(jobName)[0])
         scriptName = scriptRoot + _script_ext
-        open(scriptName, 'w').write(script)
+        open(scriptName, 'w', encoding="utf-8").write(script)
         if len(inputFiles) > 1:
-            open(scriptRoot + '.batch', 'w').write("\n".join(inputFiles))
+            open(scriptRoot + '.batch', 'w', encoding="utf-8").write("\n".join(inputFiles))
         if not kwargs.get('no_sub', False):
             try:
                 res = str(subprocess.check_output(
@@ -354,7 +358,7 @@ def submitJob(jobName, inputFiles, sequential=False, msg=False, **kwargs):
                     res = m.group(1)
                 j.jobId = res
                 j.subTime = time.time()
-                open(scriptRoot + _jobid_ext, 'w').write(res)
+                open(scriptRoot + _jobid_ext, 'w', encoding="utf-8").write(res)
                 addJobIndex(kwargs.get('batchPath'), j)
 
 

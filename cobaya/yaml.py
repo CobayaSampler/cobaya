@@ -14,8 +14,10 @@ Customization of YAML's loaded and dumper:
 """
 
 # Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
+from __future__ import absolute_import, division
+import six
+if six.PY2:
+    from io import open
 
 # Global
 import os
@@ -144,7 +146,7 @@ def yaml_load_file(file_name, yaml_text=None):
 
     Manages !defaults directive."""
     if yaml_text is None:
-        with open(file_name, "r") as file:
+        with open(file_name, "r", encoding="utf-8") as file:
             yaml_text = "".join(file.readlines())
     return yaml_load(yaml_text, file_name=file_name)
 
@@ -195,13 +197,13 @@ def yaml_dump(data, stream=None, Dumper=yaml.Dumper, **kwds):
     OrderedDumper.add_multi_representer(object, _null_representer)
 
     # Dump!
-    return yaml.dump(data, stream, OrderedDumper, **kwds)
+    return yaml.dump(data, stream, OrderedDumper, allow_unicode=True, **kwds)
 
 
 def yaml_dump_file(file_name, data, comment=None, error_if_exists=True):
     if error_if_exists and os.path.isfile(file_name):
         raise IOError("File exists: '%s'" % file_name)
-    with open(file_name, "w+") as f:
+    with open(file_name, "w+", encoding="utf-8") as f:
         if comment:
             f.write(prepare_comment(comment))
         f.write(yaml_dump(data))
