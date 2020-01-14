@@ -170,7 +170,7 @@ def loadJobIndex(batchPath, must_exist=False):
         batchPath = os.path.join(".", _script_folder)
     fileName = os.path.join(batchPath, 'jobIndex.pyobj')
     if os.path.exists(fileName):
-        with open(fileName, 'rb', encoding="utf-8") as inp:
+        with open(fileName, 'rb') as inp:
             return pickle.load(inp)
     else:
         if not must_exist:
@@ -182,7 +182,7 @@ def saveJobIndex(obj, batchPath=None):
     if batchPath is None:
         batchPath = os.path.join(".", _script_folder)
     fname = os.path.join(batchPath, 'jobIndex.pyobj')
-    with open(fname + '_tmp', 'wb', encoding="utf-8") as output:
+    with open(fname + '_tmp', 'wb') as output:
         pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
     # try to prevent corruption from error mid-write
     if os.path.exists(fname):

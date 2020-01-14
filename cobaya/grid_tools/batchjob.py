@@ -52,7 +52,7 @@ def readobject(directory=None):
         if os.path.exists(config_dir):
             # set path in case using functions defined and hence imported from in settings file
             sys.path.insert(0, config_dir)
-        with open(fname, 'rb', encoding="utf-8") as inp:
+        with open(fname, 'rb') as inp:
             grid = pickle.load(inp)
         if not os.path.exists(grid.basePath):
             raise FileNotFoundError('Directory not found %s' % grid.basePath)
@@ -66,7 +66,7 @@ def readobject(directory=None):
 
 
 def saveobject(obj, filename):
-    with open(filename, 'wb', encoding="utf-8") as output:
+    with open(filename, 'wb') as output:
         pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
 
 

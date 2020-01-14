@@ -30,6 +30,9 @@ import numpy as np
 from cobaya.tools import prepare_comment, recursive_update
 from cobaya.conventions import _yaml_extensions
 
+# More Python2/3 compatibility
+force_unicode = lambda x: x if six.PY3 else x.decode("utf-8")
+
 
 # Exceptions #############################################################################
 
@@ -197,7 +200,7 @@ def yaml_dump(data, stream=None, Dumper=yaml.Dumper, **kwds):
     OrderedDumper.add_multi_representer(object, _null_representer)
 
     # Dump!
-    return yaml.dump(data, stream, OrderedDumper, allow_unicode=True, **kwds)
+    return force_unicode(yaml.dump(data, stream, OrderedDumper, allow_unicode=True, **kwds))
 
 
 def yaml_dump_file(file_name, data, comment=None, error_if_exists=True):
