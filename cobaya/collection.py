@@ -29,6 +29,7 @@ from cobaya.conventions import _weight, _chi2, _minuslogpost, _minuslogprior
 from cobaya.conventions import _separator
 from cobaya.tools import load_DataFrame
 from cobaya.log import LoggedError, HasLogger
+from cobaya.yaml import force_unicode
 
 # Suppress getdist output
 from getdist import chains
@@ -338,7 +339,7 @@ class Collection(BaseCollection):
             # if header, add comment marker by hand (messes with align if auto)
             if do_header:
                 lines = "#" + (lines[1:] if lines[0] == " " else lines)
-            out.write(lines + "\n")
+            out.write(force_unicode(lines + "\n"))
 
     def _delete__txt(self):
         try:
