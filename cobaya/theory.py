@@ -268,7 +268,7 @@ class Theory(CobayaComponent):
         return self._measured_speed or self.speed
 
     def set_measured_speed(self, speed):
-        self._measured_speed = speed
+        self.speed = speed
 
 
 class TheoryCollection(ComponentCollection):

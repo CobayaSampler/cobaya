@@ -191,7 +191,6 @@ class mcmc(CovmatSampler):
     oversampling_factors = None
     i_last_slow_block = None
     mpi_size = None
-    measured_speed_list = None
 
     def initialize(self):
         """Initializes the sampler:
@@ -359,8 +358,6 @@ class mcmc(CovmatSampler):
                                .iloc[self.collection.n() - 1].copy())
             derived = (self.collection[self.collection.derived_params]
                        .iloc[self.collection.n() - 1].values.copy())
-            if self.measured_speeds and self.measured_speed_list:
-                self.model.set_measured_speeds(initial_point, self.measured_speed_list)
         else:
             valid_point = False
             for i in range(max(1, self.max_tries // self.model.prior.d())):
@@ -373,11 +370,11 @@ class mcmc(CovmatSampler):
             if not valid_point:
                 raise LoggedError(self.log, "Could not find random point giving finite "
                                             "likelihood after %g tries", self.max_tries)
-            if self.measured_speeds:
-                self.measured_speed_list = self.model.set_measured_speeds(initial_point)
 
         self.set_blocking(load_covmat=True)
 
+            if self.measure_speeds:
+                self.model.measure_and_set_speeds(initial_point)
         self.current_point.add(initial_point, derived=derived, logpost=logpost,
                                logpriors=logpriors, loglikes=loglikes)
         self.log.info("Initial point: %s", self.current_point)
@@ -808,8 +805,7 @@ class mcmc(CovmatSampler):
                 ("burn_in", (self.burn_in  # initial: repeat burn-in if not finished
                              if not self.n() and self.burn_in_left else
                              0)),  # to avoid overweighting last point of prev. run
-                ("mpi_size", get_mpi_size()),
-                ("measured_speed_list", self.measured_speed_list)])}}
+                ("mpi_size", get_mpi_size())])}}
             yaml_dump_file(checkpoint_filename, checkpoint_info, error_if_exists=False)
             if not self.progress.empty:
                 with open(self.progress_filename(), "a", encoding="utf-8") as progress_file:

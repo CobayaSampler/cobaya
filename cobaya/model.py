@@ -159,8 +159,6 @@ class Model(HasLogger):
 
         self._set_dependencies_and_providers()
 
-        self._measured_speeds = None
-
         # Overhead per likelihood evaluation
         self.overhead = _overhead_time
 
@@ -827,9 +825,7 @@ class Model(HasLogger):
         If ``split_fast_slow=True``, returns just 2 blocks: a slow and a fast one.
         """
         # Get a list of components and their speeds
-        speeds = odict(
-            [[name, getattr(like, "speed", -1)] for name, like in self.likelihood.items()] +
-            [[name, getattr(theo, "speed", -1)] for name, theo in self.theory.items()])
+        speeds = odict((c.get_name(), getattr(c, "speed", -1)) for c in self.components)
         # Add overhead to defined ones (positives)
         # and clip undefined ones to the slowest one
         try:
@@ -950,27 +946,23 @@ class Model(HasLogger):
         for component in self.components:
             component.set_timing_on(on)
 
-    def set_measured_speeds(self, test_point, speeds=None):
-        if not speeds:
-            timing_on = self.timing
-            if not timing_on:
-                self.set_timing_on(True)
-            self.log.debug("measuring speeds")
-            # call all components (at least) a second time
-            test_point *= 1.00001
-            self.loglikes(test_point, cached=False)
-            times = [component.timer.get_time_avg() for component in self.components]
-            if more_than_one_process():
-                # average for different points
-                times = np.average(get_mpi_comm().allgather(times), axis=0)
-            self._measured_speeds = [1 / (1e-7 + time) for time in times]
-            self.mpi_info('Setting measured speeds (per sec): %r',
-                          {component: float("%.3g" % speed) for component, speed in
-                           zip(self.components, self._measured_speeds)})
-            if not timing_on:
-                self.set_timing_on(False)
-        else:
-            self._measured_speeds = speeds
-        for component, speed in zip(self.components, self._measured_speeds):
+    def measure_and_set_speeds(self, test_point):
+        timing_on = self.timing
+        if not timing_on:
+            self.set_timing_on(True)
+        self.log.debug("Measuring speeds")
+        # call all components (at least) a second time
+        test_point *= 1.00001
+        self.loglikes(test_point, cached=False)
+        times = [component.timer.get_time_avg() for component in self.components]
+        if more_than_one_process():
+            # average for different points
+            times = np.average(get_mpi_comm().allgather(times), axis=0)
+        measured_speeds = [1 / (1e-7 + time) for time in times]
+        self.mpi_info('Setting measured speeds (per sec): %r',
+                      {component: float("%.3g" % speed) for component, speed in
+                       zip(self.components, measured_speeds)})
+        if not timing_on:
+            self.set_timing_on(False)
+        for component, speed in zip(self.components, measured_speeds):
             component.set_measured_speed(speed)
-        return self._measured_speeds

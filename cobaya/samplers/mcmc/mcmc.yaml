@@ -42,7 +42,7 @@ Rminus1_single_split: 4
 # --------------------------
 # whether to measure actual speeds for your machine/threading at starting rather
 # than using stored values
-measured_speeds: True
+measure_speeds: True
 # Method I: Oversampling of each parameters block relative to it speed
 oversample: False  # produces potentially MANY samples
 # Method II: Dragging: simulates jumps on slow params when varying fast ones
