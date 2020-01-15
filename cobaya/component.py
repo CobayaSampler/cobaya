@@ -35,7 +35,7 @@ class Timer(object):
         if self._first_time is None:
             if not delta_time:
                 logger.warning("Timing returning zero, may be inaccurate")
-            # first may differ due to cacheing, discard
+            # first may differ due to caching, discard
             self._first_time = delta_time
             self.n = 1
             if logger:

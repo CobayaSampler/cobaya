@@ -324,14 +324,14 @@ def install_clik(path, no_progress_bars=False):
     if True:  # should be fixed: maybe a ping to the FTP server???
         log.info("Patching origin of cfitsio")
         cfitsio_filename = os.path.join(source_dir, "waf_tools", "cfitsio.py")
-        with open(cfitsio_filename, "r", encoding="utf-8-sig") as cfitsio_file:
+        with open(cfitsio_filename, "r") as cfitsio_file:
             lines = cfitsio_file.readlines()
 
             i_offending = next(i for i, l in enumerate(lines) if ".tar.gz" in l)
             lines[i_offending] = lines[i_offending].replace(
                 "ftp://heasarc.gsfc.nasa.gov/software/fitsio/c/cfitsio3280.tar.gz",
                 "https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio3280.tar.gz")
-        with open(cfitsio_filename, "w", encoding="utf-8") as cfitsio_file:
+        with open(cfitsio_filename, "w") as cfitsio_file:
             cfitsio_file.write("".join(lines))
     cwd = os.getcwd()
     try:

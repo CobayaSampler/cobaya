@@ -124,7 +124,7 @@ class _planck_2018_CamSpec_python(_DataSetLikelihood):
         self.cl_used = np.array([name in self.use_cl for name in self.cl_names],
                                 dtype=bool)
         covfile = ini.relativeFileName('covmat_fiducial')
-        with open(covfile, "rb", encoding="utf-8") as f:
+        with open(covfile, "rb") as f:
             cov = np.fromfile(f, dtype=[np.float32, np.float64]['64.bin' in covfile])
         assert (nX ** 2 == cov.shape[0])
         used_indices = np.concatenate(used_indices)
