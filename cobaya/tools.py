@@ -696,7 +696,7 @@ def sort_parameter_blocks(blocks, speeds, footprints, oversample_power=0):
     permuted_costs_per_param_per_block = np.array(
         [get_cost_per_param_per_block(list(o)) for o in orderings])
     permuted_oversample_factors = np.array(
-        [np.floor((this_cost[0]/this_cost)**oversample_power)
+        [((this_cost[0]/this_cost)**oversample_power)
          for this_cost in permuted_costs_per_param_per_block])
     total_costs = np.array(
         [(n_params_per_block[list(o)]*permuted_oversample_factors[i])
@@ -707,5 +707,5 @@ def sort_parameter_blocks(blocks, speeds, footprints, oversample_power=0):
     blocks = [blocks[i] for i in optimal_ordering]
     footprints = all_footprints[list(orderings[i_optimal])]
     costs = permuted_costs_per_param_per_block[i_optimal]
-    oversample_factors = np.array(permuted_oversample_factors[i_optimal], dtype=int)
+    oversample_factors = np.floor(permuted_oversample_factors[i_optimal]).astype(int)
     return blocks, footprints, costs, oversample_factors

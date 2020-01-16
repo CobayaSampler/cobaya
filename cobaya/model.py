@@ -824,6 +824,11 @@ class Model(HasLogger):
 
         If ``split_fast_slow=True``, returns just 2 blocks: a slow and a fast one.
         """
+        # NB: optimal order may be flipped if oversample_power >= 1
+        eps = 1e-6
+        if oversample_power >= 1:
+            oversample_power = 1 - eps
+            self.log.warning("Oversampling factor capped to 1 - %g.", eps)
         # Get a list of components and their speeds
         speeds = odict((c.get_name(), getattr(c, "speed", -1)) for c in self.components)
         # Add overhead to defined ones (positives)
