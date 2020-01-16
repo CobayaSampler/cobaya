@@ -266,7 +266,7 @@ class mcmc(CovmatSampler):
                 with open(self.progress_filename(), "w", encoding="utf-8") as progress_file:
                     progress_file.write(force_unicode("# " + " ".join(self.progress.columns) + "\n"))
 
-    def set_blocking(self, load_covmat=False):
+    def set_proposer_blocking(self):
         if self.blocking:
             speeds, blocks = self.model._check_speeds_of_params(self.blocking)
             if self.oversample or self.drag:
@@ -281,8 +281,8 @@ class mcmc(CovmatSampler):
         # for purposes of checkpoints, callbacks and thinning
         if self.oversample or self.drag:
             self.i_last_slow_block = 0
-            slow_params = list(chain(*blocks[:1 + self.i_last_slow_block]))
-            self.n_slow = len(slow_params)
+            self._slow_params = list(chain(*blocks[:1 + self.i_last_slow_block]))
+            self.n_slow = len(self._slow_params)
         else:
             self.n_slow = len(self.model.parameterization.sampled_params())
         for p in ["check_every", "callback_every"]:
@@ -307,7 +307,9 @@ class mcmc(CovmatSampler):
         self.proposer = BlockedProposer(
             self.blocks, oversampling_factors=self.oversampling_factors,
             i_last_slow_block=self.i_last_slow_block, proposal_scale=self.proposal_scale)
-        if load_covmat:
+
+    def set_proposer_covmat(self, load=False):
+        if load:
             # Build the initial covariance matrix of the proposal, or load from checkpoint
             self._covmat, where_nan = self._load_covmat(self.resuming, self._slow_params)
             if np.any(where_nan) and self.learn_proposal:
@@ -320,14 +322,12 @@ class mcmc(CovmatSampler):
                               self.learn_proposal_Rminus1_max_early,
                               self.learn_proposal_Rminus1_max)
                 self.learn_proposal_Rminus1_max = self.learn_proposal_Rminus1_max_early
-
             self.log.debug(
                 "Sampling with covmat:\n%s",
                 DataFrame(self._covmat,
                           columns=self.model.parameterization.sampled_params(),
                           index=self.model.parameterization.sampled_params()).to_string(
                     line_width=_line_width))
-
         self.proposer.set_covariance(self._covmat)
 
     def _get_last_nondragging_block(self, blocks, speeds):
@@ -370,11 +370,10 @@ class mcmc(CovmatSampler):
             if not valid_point:
                 raise LoggedError(self.log, "Could not find random point giving finite "
                                             "likelihood after %g tries", self.max_tries)
-
-        self.set_blocking(load_covmat=True)
-
             if self.measure_speeds:
                 self.model.measure_and_set_speeds(initial_point)
+        self.set_proposer_blocking()
+        self.set_proposer_covmat(load=True)
         self.current_point.add(initial_point, derived=derived, logpost=logpost,
                                logpriors=logpriors, loglikes=loglikes)
         self.log.info("Initial point: %s", self.current_point)
