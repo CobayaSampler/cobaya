@@ -282,9 +282,9 @@ class mcmc(CovmatSampler):
         if self.oversample or self.drag:
             self.i_last_slow_block = 0
             self._slow_params = list(chain(*blocks[:1 + self.i_last_slow_block]))
-            self.n_slow = len(self._slow_params)
         else:
-            self.n_slow = len(self.model.parameterization.sampled_params())
+            self._slow_params = self.model.parameterization.sampled_params()
+        self.n_slow = len(self._slow_params)
         for p in ["check_every", "callback_every"]:
             setattr(self, p,
                     int(getattr(self, p) * self.n_slow / self.model.prior.d()))
