@@ -172,7 +172,7 @@ def body_of_test_speeds(info_sampler={}, manual_blocking=False, modules=None):
         "likelihood": {"like1": {"external": like1, "speed": speed1},
                        "like2": {"external": like2, "speed": speed2}},
         "sampler": info_sampler}
-    info["sampler"][sampler]["measured_speeds"] = False
+    info["sampler"][sampler]["measure_speeds"] = False
     if manual_blocking:
         info["sampler"][sampler]["blocking"] = [
             [speed1, ["a_0", "a_1", "a_2"]],
