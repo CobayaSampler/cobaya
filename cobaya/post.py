@@ -266,8 +266,8 @@ def post(info, sample=None):
     last_percent = 0
     for i, point in collection_in.data.iterrows():
         log.debug("Point: %r", point)
-        sampled = [point[param] for param in
-                   dummy_model_in.parameterization.sampled_params()]
+        sampled = np.array([point[param] for param in
+                            dummy_model_in.parameterization.sampled_params()])
         derived = odict(
             [(param, point.get(param, None))
              for param in dummy_model_out.parameterization.derived_params()])
