@@ -16,8 +16,11 @@ from .common_sampler import body_of_test, body_of_test_speeds
 ### import pytest
 ### @pytest.mark.mpi
 
+# Max number of tries per test
+max_runs = 3
 
-@flaky(max_runs=3, min_passes=1)
+
+@flaky(max_runs=max_runs, min_passes=1)
 def test_mcmc(tmpdir, modules=None):
     dimension = 3
     # Random initial proposal
@@ -58,19 +61,20 @@ def test_mcmc(tmpdir, modules=None):
         dimension=dimension, n_modes=1, info_sampler=info_sampler, tmpdir=str(tmpdir))
 
 
-@flaky(max_runs=3, min_passes=1)
+@flaky(max_runs=max_runs, min_passes=1)
 def test_mcmc_blocking():
     info_mcmc = {"mcmc": {"burn_in": 0, "learn_proposal": False}}
     body_of_test_speeds(info_mcmc)
 
 
-@flaky(max_runs=3, min_passes=1)
+@flaky(max_runs=max_runs, min_passes=1)
 def test_mcmc_oversampling():
-    info_mcmc = {"mcmc": {"burn_in": 0, "learn_proposal": False, "oversample": True}}
+    info_mcmc = {"mcmc": {"burn_in": 0, "learn_proposal": False,
+                          "oversample": True, "oversample_power": 1}}
     body_of_test_speeds(info_mcmc)
 
 
-@flaky(max_runs=3, min_passes=1)
+@flaky(max_runs=max_runs, min_passes=1)
 def test_mcmc_oversampling_manual():
     info_mcmc = {"mcmc": {"burn_in": 0, "learn_proposal": False, "oversample": True}}
     body_of_test_speeds(info_mcmc, manual_blocking=True)
@@ -78,12 +82,11 @@ def test_mcmc_oversampling_manual():
 
 # The flaky test fails if likes or derived at chain points are not reproduced directly
 # (dragging is somewhat delicate)
-@flaky(max_runs=3, min_passes=1,
+@flaky(max_runs=max_runs, min_passes=1,
        rerun_filter=(lambda err, *args: issubclass(err[0], AssertionError)))
 def test_mcmc_dragging():
-    info_mcmc = {"mcmc": {"burn_in": 0, "learn_proposal": False, "drag": True,
-                          # For tests
-                          "drag_limits": [None, None]}}
+    info_mcmc = {"mcmc": {"burn_in": 0, "learn_proposal": False,
+                          "drag": True, "oversample_power": 1}}
     body_of_test_speeds(info_mcmc)
 
 

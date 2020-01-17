@@ -844,7 +844,6 @@ class Model(HasLogger):
             speeds[comp] = (speeds[comp] ** -1 + self.overhead) ** -1
         # Compute "footprint"
         # i.e. likelihoods (and theory) that we must recompute when each parameter changes
-        # TODO: update for the case of multiple theories
         footprints = np.zeros((len(self.sampled_dependence), len(speeds)), dtype=int)
         sampled_dependence_names = odict(
             [k,[l.get_name() for l in v]] for k,v in self.sampled_dependence.items())
@@ -872,7 +871,7 @@ class Model(HasLogger):
             # TODO: still need to think about whether this is optimal
             i_max = np.argmax(log_differences)
             blocks = (lambda l: [list(chain(*l[:i_max + 1])),
-                                 list(chain(*l[i_max + 1:]))])(blocks)
+                                 list(chain(*l[i_max + 1:]))])(blocks_split)
             different_footprints = ([np.array(footprints_split[:i_max+1]).sum(axis=0)] +
                                     [np.array(footprints_split[i_max+1:]).sum(axis=0)])
             different_footprints = np.clip(np.array(different_footprints), 0, 1)

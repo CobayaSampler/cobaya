@@ -49,6 +49,8 @@ oversample: False  # produces potentially MANY samples
 drag: False
 # Oversampling power: amount of oversampling or dragging. Value in [0, 1]
 oversample_power: 0.7
+# TO BE DEPRECATED -- do not set
+drag_limits:
 # Manual blocking
 # ---------------
 # To take full advantage of speed-blocking, sort the blocks by ascending speeds

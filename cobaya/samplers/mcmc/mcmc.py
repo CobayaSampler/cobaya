@@ -293,12 +293,15 @@ class mcmc(CovmatSampler):
                 "   %d : %r" % (f, b) for f, b in
                 zip(self.oversampling_factors, blocks)]))
         elif self.drag:
+            if getattr(self, "drag_limits", None) is not None:
+                raise LoggedError(
+                    self.log, "'drag_limits' has been deprecated. Use 'oversample_power' "
+                              "to control the amount of dragging steps.")
             self.drag_interp_steps = int(np.round(self.oversampling_factors[1]/2))
             self.log.info(
-                "Dragging with oversampling per step:\n" +
+                "Dragging with number of interpolating steps:\n" +
                 "\n".join(["   %d : %r" % (f, b)
-                           for f, b in zip([1, self.drag_interp_steps],
-                                           [blocks[0], fast_params])]))
+                           for f, b in zip([1, self.drag_interp_steps], blocks)]))
             self.get_new_sample = self.get_new_sample_dragging
         # Turn parameter names into indices
         self.blocks = [

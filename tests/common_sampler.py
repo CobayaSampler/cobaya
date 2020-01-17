@@ -208,13 +208,16 @@ def body_of_test_speeds(info_sampler={}, manual_blocking=False, modules=None):
     # since for every proposed step the BlockedProposer cycles once, but the likelihood
     # may is not evaluated if the proposed point falls outside the prior bounds
     elif sampler == "mcmc" and info["sampler"][sampler].get("drag"):
-        assert abs((n[1] - n[0]) / n[0] / (speed2 / speed1) - 1) < 0.1
+        test = abs((n[1] - n[0]) / n[0] / (speed2 / speed1) - 1)
+        assert test < 0.1, str(test)
     elif sampler == "mcmc" and info["sampler"][sampler].get("oversample"):
         # Testing oversampling: number of evaluations per param * oversampling factor
-        assert abs((n[1] - n[0]) * dim / (n[0] * dim) / (speed2 / speed1) - 1) < 0.1
+        test = abs((n[1] - n[0]) * dim / (n[0] * dim) / (speed2 / speed1) - 1)
+        assert test < 0.1, str(test)
     elif sampler == "mcmc":
         # Testing just correct blocking: same number of evaluations per param
-        assert abs((n[1] - n[0]) * dim / (n[0] * dim) - 1) < 0.1
+        test = abs((n[1] - n[0]) * dim / (n[0] * dim) - 1)
+        assert test < 0.1, str(test)
     # Finally, test some points of the chain to reproduce the correct likes and derived
     # These are not AssertionError's to override the flakyness of the test
     for _ in range(10):
