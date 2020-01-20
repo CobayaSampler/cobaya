@@ -292,7 +292,7 @@ class Theory(CobayaComponent):
         :param attr: attr name
         :return: combined list
         """
-        values = getattr(self, attr).copy()
+        values = list(getattr(self, attr))
         for helper in self._helpers.values():
             values.extend(getattr(helper, attr))
         return values
