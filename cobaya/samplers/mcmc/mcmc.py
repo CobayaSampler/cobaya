@@ -267,49 +267,51 @@ class mcmc(CovmatSampler):
                     progress_file.write(force_unicode("# " + " ".join(self.progress.columns) + "\n"))
 
     def set_proposer_blocking(self):
-        if self.blocking:
-            speeds, blocks = self.model._check_speeds_of_params(self.blocking)
-            if self.oversample or self.drag:
-                speeds = relative_to_int(speeds)
-        else:
-            if not self.oversample and not self.drag:
-                self.oversample_power = 0
-            blocks, costs, self.oversampling_factors = \
-                self.model.get_param_blocking_for_sampler(
-                    oversample_power=self.oversample_power, split_fast_slow=self.drag)
-        # We will take the slowest block as slow paramters,
-        # for purposes of checkpoints, callbacks and thinning
-        if self.oversample or self.drag:
-            self.i_last_slow_block = 0
-            self._slow_params = list(chain(*blocks[:1 + self.i_last_slow_block]))
-        else:
-            self._slow_params = self.model.parameterization.sampled_params()
-        self.n_slow = len(self._slow_params)
-        for p in ["check_every", "callback_every"]:
-            setattr(self, p,
-                    int(getattr(self, p) * self.n_slow / self.model.prior.d()))
+        if not self.resuming:
+            if self.blocking:
+                speeds, blocks = self.model._check_speeds_of_params(self.blocking)
+                if self.oversample or self.drag:
+                    speeds = relative_to_int(speeds)
+            else:
+                if not self.oversample and not self.drag:
+                    self.oversample_power = 0
+                self.blocks, costs, self.oversampling_factors = \
+                    self.model.get_param_blocking_for_sampler(
+                        oversample_power=self.oversample_power, split_fast_slow=self.drag)
+            # TODO: may want to re-define this -- for now, only 1st block is slow
+            # if oversampling of dragging, else all params are slow
+            self.i_last_slow_block = (
+                0 if (self.oversample or self.drag) else len(self.blocks) - 1)
+        # Define proposer and other blocking-related quantities
         if self.oversample:
             self.log.info("Oversampling with factors:\n" + "\n".join([
                 "   %d : %r" % (f, b) for f, b in
-                zip(self.oversampling_factors, blocks)]))
+                zip(self.oversampling_factors, self.blocks)]))
         elif self.drag:
+            # TO BE DEPRECATED
             if getattr(self, "drag_limits", None) is not None:
                 raise LoggedError(
                     self.log, "'drag_limits' has been deprecated. Use 'oversample_power' "
                               "to control the amount of dragging steps.")
             self.drag_interp_steps = int(np.round(self.oversampling_factors[1]/2))
+            self.get_new_sample = self.get_new_sample_dragging
             self.log.info(
                 "Dragging with number of interpolating steps:\n" +
                 "\n".join(["   %d : %r" % (f, b)
-                           for f, b in zip([1, self.drag_interp_steps], blocks)]))
-            self.get_new_sample = self.get_new_sample_dragging
-        # Turn parameter names into indices
-        self.blocks = [
-            [list(self.model.parameterization.sampled_params()).index(p) for p in b]
-            for b in blocks]
+                           for f, b in zip([1, self.drag_interp_steps], self.blocks)]))
+        sampled_params_list = list(self.model.parameterization.sampled_params())
+        blocks_indices = [[sampled_params_list.index(p) for p in b] for b in self.blocks]
         self.proposer = BlockedProposer(
-            self.blocks, oversampling_factors=self.oversampling_factors,
+            blocks_indices, oversampling_factors=self.oversampling_factors,
             i_last_slow_block=self.i_last_slow_block, proposal_scale=self.proposal_scale)
+        # We will take the slowest block as slow paramters,
+        # for purposes of checkpoints, callbacks and thinning
+        self._slow_params = list(chain(*self.blocks[:1 + self.i_last_slow_block]))
+        self.log.debug("Slow parameters: %r", self._slow_params)
+        self.n_slow = len(self._slow_params)
+        for p in ["check_every", "callback_every"]:
+            setattr(self, p,
+                    int(getattr(self, p) * self.n_slow / self.model.prior.d()))
 
     def set_proposer_covmat(self, load=False):
         if load:
