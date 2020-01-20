@@ -158,8 +158,8 @@ class Model(HasLogger):
         self._assign_params(info_likelihood, info_theory)
 
         self._set_dependencies_and_providers()
-
-        # Overhead per likelihood evaluation
+        # Overhead per likelihood evaluation, approximately ind from # input params
+        # Evaluation of non-uniform priors will add some overhead per parameter.
         self.overhead = _overhead_time
 
     def info(self):
@@ -840,7 +840,7 @@ class Model(HasLogger):
             min_speed = 1
         for comp in speeds:
             speeds[comp] = max(speeds[comp], min_speed)
-            # TODO: add new oversampling model
+            # For now, overhead is constant re # params and very small
             speeds[comp] = (speeds[comp] ** -1 + self.overhead) ** -1
         # Compute "footprint"
         # i.e. likelihoods (and theory) that we must recompute when each parameter changes
