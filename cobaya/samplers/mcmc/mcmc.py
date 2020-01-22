@@ -335,7 +335,7 @@ class mcmc(CovmatSampler):
         self.proposer = BlockedProposer(
             blocks_indices, oversampling_factors=self.oversampling_factors,
             i_last_slow_block=self.i_last_slow_block, proposal_scale=self.proposal_scale)
-        # We will take the slowest block as slow paramters,
+        # We will take the slowest block as slow parameters,
         # for purposes of checkpoints, callbacks and thinning
         self.log.debug("Slow parameters: %r", self.slow_params)
         for p in ["check_every", "callback_every"]:
