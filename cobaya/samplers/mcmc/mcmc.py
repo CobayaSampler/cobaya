@@ -298,7 +298,8 @@ class mcmc(CovmatSampler):
     def set_proposer_blocking(self):
         if not self.resuming:
             if self.blocking:
-                speeds, blocks = self.model._check_speeds_of_params(self.blocking)
+                self.blocks, self.oversampling_factors = \
+                    self.model._check_blocking(self.blocking, check_draggable=self.drag)
             else:
                 if not self.oversample and not self.drag:
                     self.oversample_power = 0

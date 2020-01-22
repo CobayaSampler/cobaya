@@ -174,9 +174,10 @@ def body_of_test_speeds(info_sampler={}, manual_blocking=False, modules=None):
         "sampler": info_sampler}
     info["sampler"][sampler]["measure_speeds"] = False
     if manual_blocking:
+        over1, over2 = speed1, speed2
         info["sampler"][sampler]["blocking"] = [
-            [speed1, ["a_0", "a_1", "a_2"]],
-            [speed2, ["a_3", "a_4", "a_5"]]]
+            [over1, ["a_0", "a_1", "a_2"]],
+            [over2, ["a_3", "a_4", "a_5"]]]
     print("Parameter order:", list(info["params"]))
     # info["debug"] = True
     info["modules"] = modules

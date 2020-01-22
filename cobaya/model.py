@@ -910,17 +910,19 @@ class Model(HasLogger):
             self.log.debug("* %g : %r : %r", c, o, b)
         return blocks_sorted, oversample_factors
 
-    def _check_speeds_of_params(self, blocking):
+    def _check_blocking(self, blocking, check_draggable=False):
         """
-        Checks the correct formatting of the given parameter blocking.
+        Checks the correct formatting of the given parameter blocking and oversampling:
+        that it consists of tuples `(oversampling_factor, (param1, param2, etc))`, with
+        growing oversampling factors, and containing all parameters.
 
-        `blocking` is a list of tuples `(speed, (param1, param2, etc))`.
+        Returns the input, once checked as ``(blocks), (oversampling_factors)``.
 
-        Returns tuples of ``(speeds), (params_in_block)``.
+        If ``draggable=True`` (default: ``False``), checks that the oversampling factors
+        are compatible with dragging.
         """
         try:
-            speeds, blocks = zip(*list(blocking))
-            speeds = np.array(speeds)
+            oversampling_factors, blocks = zip(*list(blocking))
         except:
             raise LoggedError(
                 self.log, "Manual blocking not understood. Check documentation.")
@@ -939,11 +941,18 @@ class Model(HasLogger):
         if unknown:
             raise LoggedError(
                 self.log, "Manual blocking: unknown parameters: %r", unknown)
-        if (speeds != np.sort(speeds)).all():
+        oversampling_factors = np.array(oversampling_factors)
+        if (oversampling_factors != np.sort(oversampling_factors)).all():
             self.log.warning(
                 "Manual blocking: speed-blocking *apparently* non-optimal: "
-                "sort by ascending speed when possible")
-        return speeds, blocks
+                "oversampling factors must go from small (slow) to large (fast).")
+        # Draggable: only 2 different oversampling factors (already sorted)
+        if check_draggable:
+            if len(blocks) < 2 or len(np.unique(oversampling_factors)) != 2:
+                raise LoggedError(
+                    self.log, "Blocking given not compatible with dragging: there must be"
+                              " at least 2 blocks and 2 different oversampling factors.")
+        return blocks, oversampling_factors
 
     def set_cache_size(self, n_states):
         """
