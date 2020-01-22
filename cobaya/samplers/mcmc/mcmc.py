@@ -306,6 +306,9 @@ class mcmc(CovmatSampler):
                 self.blocks, self.oversampling_factors = \
                     self.model.get_param_blocking_for_sampler(
                         oversample_power=self.oversample_power, split_fast_slow=self.drag)
+        # Turn oversampling on if manual oversampling factors given, also if resuming
+        if self.blocking and not self.drag and np.any(self.oversampling_factors != 1):
+            self.oversample = True
         # Define proposer and other blocking-related quantities
         if self.oversample:
             self.log.info("Oversampling with factors:\n" + "\n".join([
@@ -396,7 +399,10 @@ class mcmc(CovmatSampler):
             if not valid_point:
                 raise LoggedError(self.log, "Could not find random point giving finite "
                                             "likelihood after %g tries", self.max_tries)
-            if self.measure_speeds:
+            if self.measure_speeds and self.blocking:
+                self.log.warning(
+                    "Parameter blocking manually fixed: speeds will not be measured.")
+            elif self.measure_speeds:
                 self.model.measure_and_set_speeds(initial_point)
         self.set_proposer_blocking()
         self.set_proposer_covmat(load=True)

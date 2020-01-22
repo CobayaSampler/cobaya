@@ -53,10 +53,12 @@ oversample_power: 0.7
 drag_limits:
 # Manual blocking
 # ---------------
-# To take full advantage of speed-blocking, sort the blocks by ascending speeds
-# (unless not possible due to the architecture of your likelihood)
+# Specify parameter blocks and their correspondent oversampling factors
+# (may be useful e.g. if your likelihood has some internal caching).
+# If used in combination with dragging, assign 1 to all slow parameters,
+# and a common oversampling factor to the fast ones.
 blocking:
-#  - [speed_1, [params_1]]
+#  - [oversampling_factor_1, [param_1, param_2, ...]]
 #  - etc.
 # Callback function
 # -----------------
