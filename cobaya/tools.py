@@ -684,7 +684,8 @@ def sort_parameter_blocks(blocks, speeds, footprints, oversample_power=0):
     NB: Rows in ``footprints`` must be in the same order as ``blocks`` and columns in the
     same order as ``speeds``.
 
-    Returns: (sorted_blocks, cumulative_per_param_costs, oversample_factors)
+    Returns: ``(i_optimal_ordering, cumulative_per_param_costs, oversample_factors)``,
+               with costs and oversampling factors following optimal ordering.
     """
     n_params_per_block = np.array([len(b) for b in blocks])
     all_costs = 1 / np.array(speeds)
@@ -704,8 +705,6 @@ def sort_parameter_blocks(blocks, speeds, footprints, oversample_power=0):
          for i, o in enumerate(orderings)])
     i_optimal = np.argmin(total_costs)
     optimal_ordering = orderings[i_optimal]
-    blocks = [blocks[i] for i in optimal_ordering]
-    footprints = all_footprints[list(orderings[i_optimal])]
     costs = permuted_costs_per_param_per_block[i_optimal]
     oversample_factors = np.floor(permuted_oversample_factors[i_optimal]).astype(int)
-    return blocks, footprints, costs, oversample_factors
+    return optimal_ordering, costs, oversample_factors

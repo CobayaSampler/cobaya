@@ -189,7 +189,6 @@ class mcmc(CovmatSampler):
     converged = None
     blocks = None
     oversampling_factors = None
-    i_last_slow_block = None
     mpi_size = None
 
     def initialize(self):
@@ -266,26 +265,50 @@ class mcmc(CovmatSampler):
                 with open(self.progress_filename(), "w", encoding="utf-8") as progress_file:
                     progress_file.write(force_unicode("# " + " ".join(self.progress.columns) + "\n"))
 
+    @property
+    def i_last_slow_block(self):
+        if self.oversample:
+            # TODO: may want to re-define this -- for now, only 1st block is slow
+            return 0
+        elif self.drag:
+            return next(i for i, o in enumerate(self.oversampling_factors) if o != 1) - 1
+        else:
+            return len(self.blocks) - 1
+
+    @property
+    def slow_blocks(self):
+        return self.blocks[:1 + self.i_last_slow_block]
+
+    @property
+    def slow_params(self):
+        return list(chain(*self.slow_blocks))
+
+    @property
+    def n_slow(self):
+        return len(self.slow_params)
+
+    @property
+    def fast_blocks(self):
+        return self.blocks[self.i_last_slow_block + 1:]
+
+    @property
+    def fast_params(self):
+        return list(chain(*self.fast_blocks))
+
     def set_proposer_blocking(self):
         if not self.resuming:
             if self.blocking:
                 speeds, blocks = self.model._check_speeds_of_params(self.blocking)
-                if self.oversample or self.drag:
-                    speeds = relative_to_int(speeds)
             else:
                 if not self.oversample and not self.drag:
                     self.oversample_power = 0
-                self.blocks, costs, self.oversampling_factors = \
+                self.blocks, self.oversampling_factors = \
                     self.model.get_param_blocking_for_sampler(
                         oversample_power=self.oversample_power, split_fast_slow=self.drag)
-            # TODO: may want to re-define this -- for now, only 1st block is slow
-            # if oversampling of dragging, else all params are slow
-            self.i_last_slow_block = (
-                0 if (self.oversample or self.drag) else len(self.blocks) - 1)
         # Define proposer and other blocking-related quantities
         if self.oversample:
             self.log.info("Oversampling with factors:\n" + "\n".join([
-                "   %d : %r" % (f, b) for f, b in
+                "* %d : %r" % (f, b) for f, b in
                 zip(self.oversampling_factors, self.blocks)]))
         elif self.drag:
             # TO BE DEPRECATED
@@ -293,12 +316,11 @@ class mcmc(CovmatSampler):
                 raise LoggedError(
                     self.log, "'drag_limits' has been deprecated. Use 'oversample_power' "
                               "to control the amount of dragging steps.")
-            self.drag_interp_steps = int(np.round(self.oversampling_factors[1]/2))
+            self.drag_interp_steps = int(np.round(self.oversampling_factors[self.i_last_slow_block+1]/2))
             self.get_new_sample = self.get_new_sample_dragging
-            self.log.info(
-                "Dragging with number of interpolating steps:\n" +
-                "\n".join(["   %d : %r" % (f, b)
-                           for f, b in zip([1, self.drag_interp_steps], self.blocks)]))
+            self.log.info("Dragging with number of interpolating steps:")
+            self.log.info("* %d : %r", 1, self.slow_blocks)
+            self.log.info("* %d : %r", self.drag_interp_steps, self.fast_blocks)
         sampled_params_list = list(self.model.parameterization.sampled_params())
         blocks_indices = [[sampled_params_list.index(p) for p in b] for b in self.blocks]
         self.proposer = BlockedProposer(
@@ -306,9 +328,7 @@ class mcmc(CovmatSampler):
             i_last_slow_block=self.i_last_slow_block, proposal_scale=self.proposal_scale)
         # We will take the slowest block as slow paramters,
         # for purposes of checkpoints, callbacks and thinning
-        self._slow_params = list(chain(*self.blocks[:1 + self.i_last_slow_block]))
-        self.log.debug("Slow parameters: %r", self._slow_params)
-        self.n_slow = len(self._slow_params)
+        self.log.debug("Slow parameters: %r", self.slow_params)
         for p in ["check_every", "callback_every"]:
             setattr(self, p,
                     int(getattr(self, p) * self.n_slow / self.model.prior.d()))
@@ -316,7 +336,7 @@ class mcmc(CovmatSampler):
     def set_proposer_covmat(self, load=False):
         if load:
             # Build the initial covariance matrix of the proposal, or load from checkpoint
-            self._covmat, where_nan = self._load_covmat(self.resuming, self._slow_params)
+            self._covmat, where_nan = self._load_covmat(self.resuming, self.slow_params)
             if np.any(where_nan) and self.learn_proposal:
                 # we want to start learning the covmat earlier
                 self.mpi_info("Covariance matrix " +
@@ -805,7 +825,6 @@ class mcmc(CovmatSampler):
                 ("proposal_scale", self.proposer.get_scale()),
                 ("blocks", self.blocks),
                 ("oversampling_factors", self.oversampling_factors),
-                ("i_last_slow_block", self.i_last_slow_block),
                 ("burn_in", (self.burn_in  # initial: repeat burn-in if not finished
                              if not self.n() and self.burn_in_left else
                              0)),  # to avoid overweighting last point of prev. run
