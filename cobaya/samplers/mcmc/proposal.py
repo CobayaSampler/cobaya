@@ -168,17 +168,20 @@ class BlockedProposer(HasLogger):
             self.oversampling_factors = np.array(oversampling_factors, dtype=int)
         # Turn it into per-block: multiply by number of params in block
         self.oversampling_factors *= np.array([len(b) for b in parameter_blocks])
-        if i_last_slow_block is None:
-            i_last_slow_block = len(parameter_blocks) - 1
+        self.i_last_slow_block = i_last_slow_block
+        if self.i_last_slow_block is None:
+            self.i_last_slow_block = len(parameter_blocks) - 1
         else:
-            if i_last_slow_block > len(parameter_blocks) - 1:
+            if self.i_last_slow_block > len(parameter_blocks) - 1:
                 raise LoggedError(
                     self.log,
                     "The index given for the last slow block, %d, is not valid: "
                     "there are only %d blocks.",
-                    i_last_slow_block, len(parameter_blocks))
+                    self.i_last_slow_block, len(parameter_blocks))
         n_all = sum(len(b) for b in parameter_blocks)
-        n_slow = sum(len(b) for b in parameter_blocks[:1 + i_last_slow_block])
+        n_slow = sum(len(b) for b in parameter_blocks[:1 + self.i_last_slow_block])
+        self.nsamples_slow = 0
+        self.nsamples_fast = 0
         if set(list(chain(*parameter_blocks))) != set(range(n_all)):
             raise LoggedError(self.log,
                               "The blocks do not contain all the parameter indices.")
@@ -212,6 +215,10 @@ class BlockedProposer(HasLogger):
         if self.samples_left:
             self.get_block_proposal(P, self.current_iblock)
             self.samples_left -= 1
+            if self.current_iblock <= self.i_last_slow_block:
+                self.nsamples_slow += 1
+            else:
+                self.nsamples_fast += 1
         # otherwise, choose a block
         else:
             self.current_iblock = self.iblock_of_j[self.cycler_all.next()]
@@ -220,9 +227,11 @@ class BlockedProposer(HasLogger):
 
     def get_proposal_slow(self, P):
         current_iblock_slow = self.iblock_of_j[self.cycler_slow.next()]
+        self.nsamples_slow += 1
         self.get_block_proposal(P, current_iblock_slow)
 
     def get_proposal_fast(self, P):
+        self.nsamples_fast += 1
         current_iblock_fast = self.iblock_of_j[self.cycler_slow.n
                                                + self.cycler_fast.next()]
         self.get_block_proposal(P, current_iblock_fast)

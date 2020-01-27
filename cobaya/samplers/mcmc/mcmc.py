@@ -18,6 +18,7 @@ import numpy as np
 from collections import OrderedDict as odict
 import logging
 from pandas import DataFrame
+import datetime
 
 # Local
 from cobaya.sampler import Sampler
@@ -295,6 +296,10 @@ class mcmc(CovmatSampler):
     def fast_params(self):
         return list(chain(*self.fast_blocks))
 
+    @property
+    def n_fast(self):
+        return len(self.fast_params)
+
     def set_proposer_blocking(self):
         if not self.resuming:
             if self.blocking:
@@ -412,11 +417,21 @@ class mcmc(CovmatSampler):
         # Initial dummy checkpoint (needed when 1st checkpoint not reached in prev. run)
         self.write_checkpoint()
         # Main loop!
-        self.log.info("Sampling!" + (
-            " (NB: nothing will be printed until %d burn-in samples " % self.burn_in +
-            "have been obtained)" if self.burn_in else ""))
+        self.log.info(
+            "Sampling!" + (
+                " (NB: no accepted step will be saved until %d burn-in samples " % (
+                    self.burn_in) +
+                "have been obtained)" if self.burn_in else ""))
+        self.n_steps_raw = 0
+        last_diag = 0
         while self.n() < self.effective_max_samples and not self.converged:
             self.get_new_sample()
+            self.n_steps_raw += 1
+            now = datetime.datetime.now()
+            now_sec = now.timestamp()
+            if self.diag_every and now_sec >= last_diag + self.diag_every:
+                self.log_diagnosis(now)
+                last_diag = now_sec
             # Callback function
             if (hasattr(self, "callback_function_callable") and
                     not (max(self.n(), 1) % self.callback_every) and
@@ -819,6 +834,15 @@ class mcmc(CovmatSampler):
                                        "waiting until next checkpoint.")
         # Save checkpoint info
         self.write_checkpoint()
+
+    def log_diagnosis(self, datetime):
+        msg = "Progress at [%s] : " % datetime.strftime("%Y-%m-%d %H:%M:%S")
+        msg += "%d steps taken" % self.n_steps_raw
+        if self.burn_in_left and self.burn_in:  # NB: burn_in_left = 1 even if no burn_in
+            msg += " -- still burning in, %d accepted steps left." % self.burn_in_left
+        else:
+            msg += ", and %d accepted." % self.n()
+        self.log.info(msg)
 
     def write_checkpoint(self):
         if is_main_process() and self.output:

@@ -18,6 +18,8 @@ proposal_scale: 2.4
 check_every: 40d
 # Update output file(s) every X accepted samples
 output_every: 20
+# Print diagnose input every (in seconds)
+diag_every: 60
 # Proposal covariance matrix learning
 # -----------------------------------
 learn_proposal: True
