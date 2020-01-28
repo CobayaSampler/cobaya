@@ -677,7 +677,7 @@ def sort_parameter_blocks(blocks, speeds, footprints, oversample_power=0):
     Find optimal ordering, such that one minimises the time it takes to vary every
     parameter, one by one, in a basis in which they are mixed-down (i.e after a
     Cholesky transformation). To do that, compute that "total cost" for every permutation
-    of the blocks order, and find the minumum.
+    of the blocks order, and find the minimum.
 
     This algorithm is described in the appendix of the Cobaya paper (TODO: add reference!)
 

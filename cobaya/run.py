@@ -16,7 +16,7 @@ from collections import OrderedDict as odict
 from cobaya import __version__
 from cobaya.conventions import kinds, _prior, _params
 from cobaya.conventions import _path_install, _debug, _debug_file, _output_prefix
-from cobaya.conventions import _resume, _timing, _debug_default, _force, _post, _version
+from cobaya.conventions import _resume, _timing, _debug_default, _force, _post
 from cobaya.conventions import _yaml_extensions, _separator_files, _updated_suffix
 from cobaya.conventions import _modules_path_arg, _modules_path_env, _resume_default
 from cobaya.output import get_output

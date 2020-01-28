@@ -12,7 +12,7 @@ from __future__ import division
 # Global
 import numpy as np
 from collections import namedtuple, OrderedDict as odict
-from itertools import chain, permutations
+from itertools import chain
 import logging
 import six
 
@@ -30,7 +30,7 @@ from cobaya.likelihood import LikelihoodCollection, LikelihoodExternalFunction, 
 from cobaya.theory import TheoryCollection
 from cobaya.log import LoggedError, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
-from cobaya.tools import gcd, deepcopy_where_possible, are_different_params_lists, \
+from cobaya.tools import deepcopy_where_possible, are_different_params_lists, \
     str_to_list, sort_parameter_blocks
 from cobaya.component import Provider
 from cobaya.mpi import more_than_one_process, get_mpi_comm
@@ -848,7 +848,7 @@ class Model(HasLogger):
         # i.e. likelihoods (and theory) that we must recompute when each parameter changes
         footprints = np.zeros((len(self.sampled_dependence), len(speeds)), dtype=int)
         sampled_dependence_names = odict(
-            [k,[l.get_name() for l in v]] for k,v in self.sampled_dependence.items())
+            (k, [c.get_name() for c in v]) for k, v in self.sampled_dependence.items())
         for i, ls in enumerate(sampled_dependence_names.values()):
             for j, comp in enumerate(speeds):
                 footprints[i, j] = comp in ls
@@ -866,7 +866,7 @@ class Model(HasLogger):
         else:
             if len(blocks) == 1:
                 raise LoggedError(self.log, "Requested fast/slow separation, "
-                                            "but all pararameters have the same speed.")
+                                            "but all parameters have the same speed.")
             # First sort them optimally (w/o oversampling)
             i_optimal_ordering, costs, oversample_factors = sort_parameter_blocks(
                 blocks, np.array(list(speeds.values()), dtype=np.float),
@@ -880,10 +880,11 @@ class Model(HasLogger):
             # Split them so that "adding the next block to the slow ones" has max cost
             log_differences = np.log(costs_perblock[:-1]) - np.log(costs_perblock[1:])
             i_last_slow = np.argmax(log_differences)
-            blocks_split = (lambda l: [list(chain(*l[:i_last_slow+1])),
-                                       list(chain(*l[i_last_slow+1:]))])(blocks_sorted)
-            footprints_split = ([np.array(footprints_sorted[:i_last_slow+1]).sum(axis=0)] +
-                                [np.array(footprints_sorted[i_last_slow+1:]).sum(axis=0)])
+            blocks_split = (lambda l: [list(chain(*l[:i_last_slow + 1])),
+                                       list(chain(*l[i_last_slow + 1:]))])(blocks_sorted)
+            footprints_split = (
+                    [np.array(footprints_sorted[:i_last_slow + 1]).sum(axis=0)] +
+                    [np.array(footprints_sorted[i_last_slow + 1:]).sum(axis=0)])
             footprints_split = np.clip(np.array(footprints_split), 0, 1)
             # Recalculate oversampling factor with 2 blocks
             _, _, oversample_factors = sort_parameter_blocks(
@@ -900,13 +901,13 @@ class Model(HasLogger):
             # taking into account that that of the fast blocks should be interpreted as a
             # global one for all of them.
             oversample_factors = (
-                [oversample_factors[0]] * (1 + i_last_slow) +
-                [oversample_factors[1]] * (len(blocks) - (1 + i_last_slow)))
+                    [oversample_factors[0]] * (1 + i_last_slow) +
+                    [oversample_factors[1]] * (len(blocks) - (1 + i_last_slow)))
             self.log.debug("Doing slow/fast split. The oversampling factors for the fast "
                            "blocks should be interpreted as a global one for all of them")
         self.log.debug(
             "Cost, oversampling factor and parameters per block, in optimal order:")
-        for c,o,b in zip(costs, oversample_factors, blocks_sorted):
+        for c, o, b in zip(costs, oversample_factors, blocks_sorted):
             self.log.debug("* %g : %r : %r", c, o, b)
         return blocks_sorted, oversample_factors
 
