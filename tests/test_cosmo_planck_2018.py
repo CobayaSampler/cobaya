@@ -1,10 +1,8 @@
 # Tries to evaluate the likelihood at LCDM's best fit of Planck 2015, with CAMB and CLASS
-from __future__ import absolute_import
 import pytest
 from copy import deepcopy
-import os
 
-from .common_cosmo import body_of_test, process_modules_path
+from .common_cosmo import body_of_test
 from cobaya.cosmo_input import cmb_precision
 
 # Generating plots in Travis

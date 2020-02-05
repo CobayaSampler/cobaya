@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 from .common import process_modules_path
 import os
 import numpy as np
@@ -26,6 +25,7 @@ def test_sources(modules):
     results = camb.get_results(pars)
     dic = results.get_source_cls_dict()
 
+    # noinspection PyDefaultArgument
     def test_likelihood(
             _theory={'source_Cl': {'sources': {'source1':
                                                    {'function': 'gaussian',
@@ -48,6 +48,7 @@ def test_sources(modules):
 
 
 def test_CAMBdata(modules):
+    # noinspection PyDefaultArgument
     def test_likelihood(
             _theory={'CAMBdata': None, 'Pk_grid': dict(k_max=2, z=[0, 2])}):
         return _theory.get_CAMBdata().tau0
@@ -72,6 +73,7 @@ def test_CAMB_transfer(modules):
     results = camb.get_results(pars)
     k, z, PK1 = results.get_nonlinear_matter_power_spectrum(hubble_units=False)
 
+    # noinspection PyDefaultArgument
     def test_likelihood(
             _theory={'Pk_grid': dict(k_max=2, z=[0, 2])}):
         k, z, PK = _theory.get_Pk_grid()

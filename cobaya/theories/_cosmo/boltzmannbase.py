@@ -6,23 +6,23 @@
 :Author: Jesus Torrado
 
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
-from six import string_types
 from itertools import chain
+from typing import Mapping
 
 # Local
 from cobaya.theory import Theory
 from cobaya.tools import deepcopy_where_possible
 from cobaya.log import LoggedError
-from cobaya.conventions import _c_km_s
+from cobaya.conventions import _c_km_s, empty_dict
 
 H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": _c_km_s}
 
 
 class BoltzmannBase(Theory):
+    _get_z_dependent: callable  # defined by inheriting classes
+    renames: Mapping[str, str] = empty_dict
 
     def initialize(self):
 
@@ -86,7 +86,7 @@ class BoltzmannBase(Theory):
           value the likelihood may need.
         """
 
-        super(BoltzmannBase, self).needs(**requirements)
+        super().needs(**requirements)
 
         self._needs = self._needs or {p: None for p in self.output_params}
         # TO BE DEPRECATED IN >=1.3
@@ -108,7 +108,7 @@ class BoltzmannBase(Theory):
                 # Make sure vars_pairs is a list of [list of 2 vars pairs]
                 vars_pairs = v.pop("vars_pairs", [])
                 try:
-                    if isinstance(vars_pairs[0], string_types):
+                    if isinstance(vars_pairs[0], str):
                         vars_pairs = [vars_pairs]
                 except IndexError:
                     # Empty list: default to *total matter*: CMB + Baryon + MassiveNu
@@ -137,15 +137,16 @@ class BoltzmannBase(Theory):
                         self.log, "Needs a 'sources' key, containing a dict with every "
                                   "source name and definition")
                 # Check that no two sources with equal name but diff specification
-                for source, window in v["sources"].items():
-                    if source in (getattr(self, "sources", {}) or {}):
-                        # TODO: improve this test!!!
-                        # (e.g. 2 z-vectors that fulfill np.allclose would fail a == test)
-                        if window != self.sources[source]:
-                            raise LoggedError(
-                                self.log,
-                                "Source %r requested twice with different specification: "
-                                "%r vs %r.", window, self.sources[source])
+                # TODO: commented, what is self.sources?
+                # for source, window in v["sources"].items():
+                #     if source in (getattr(self, "sources", {}) or {}):
+                #         # TODO: improve this test!!!
+                #         # (e.g. 2 z-vectors that fulfill np.allclose would fail a == test)
+                #         if window != self.sources[source]:
+                #             raise LoggedError(
+                #                 self.log,
+                #                 "Source %r requested twice with different specification: "
+                #                 "%r vs %r.", window, self.sources[source])
                 self._needs[k].update(v)
             elif k in ["Hubble", "angular_diameter_distance",
                        "comoving_radial_distance", "fsigma8"]:
@@ -347,7 +348,7 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
 
             P_or_logP = logPnew
 
-        super(self.__class__, self).__init__(self.z, logk, P_or_logP)
+        super().__init__(self.z, logk, P_or_logP)
 
     def P(self, z, k, grid=None):
         """

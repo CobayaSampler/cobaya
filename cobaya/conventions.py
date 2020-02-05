@@ -7,10 +7,12 @@
 
 """
 from collections import namedtuple
+from types import MappingProxyType
 
 # Package name (for importlib)
 # (apparently __package__ is only defined if you import something locally.
 _package = __name__.rpartition('.')[0]
+empty_dict = MappingProxyType({})
 
 # Names for block and fields in the input
 _prior = "prior"
@@ -46,6 +48,8 @@ partag = ParTags(*ParTags._fields)
 
 ComponentKinds = namedtuple('ComponentKinds', ("sampler", "theory", "likelihood"))
 kinds = ComponentKinds(*ComponentKinds._fields)
+
+reserved_attributes = {_input_params, _output_params, "install_options"}
 
 # Separator for
 # fields in parameter names and files

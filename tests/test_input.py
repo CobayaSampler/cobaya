@@ -1,7 +1,6 @@
 # Tests to check correct input parsing and inheritance of defaults
 
 # Global
-from __future__ import division
 from copy import deepcopy
 import pytest
 

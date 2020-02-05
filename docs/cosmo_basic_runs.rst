@@ -16,7 +16,7 @@ Creating *from scratch* the input for a realistic cosmological case is quite a b
 
 .. note::
 
-   If ``PySide`` is not installed, this will fail. To fix it:
+   If ``PySide2`` is not installed, this will fail. To fix it:
 
    .. code:: bash
 
@@ -28,18 +28,6 @@ Creating *from scratch* the input for a realistic cosmological case is quite a b
    .. code:: bash
 
       $ conda install -c conda-forge pyside2
-
-   .. warning::
-
-      In Python 2 (soon to be discontinued!) try **one** of the following:
-
-      .. code:: bash
-
-         $ sudo apt install python-pyside
-
-      .. code:: bash
-
-         $ pip install PySide2  # add --user if it fails
 
 Start by choosing a preset, maybe modify some aspects using the options provided, and copy or save the generated input to a file, either in ``yaml`` form or as a python dictionary.
 

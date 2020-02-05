@@ -6,18 +6,13 @@
 
 """
 
-# Python 2/3 compatibility
-from __future__ import absolute_import, division, print_function
-
 # Global
 import os
 import sys
 from copy import deepcopy
 from importlib import import_module
-import six
 import numpy as np  # don't delete: necessary for get_external_function
 import pandas as pd
-from collections import OrderedDict as odict
 from ast import parse
 import warnings
 import inspect
@@ -28,18 +23,9 @@ with warnings.catch_warnings():
     warnings.filterwarnings("ignore")
     # Suppress message about optional dependency
     from fuzzywuzzy import process as fuzzy_process
-if not six.PY3:
-    ModuleNotFoundError = ImportError
-    # noinspection PyUnresolvedReferences,PyDeprecation
-    from inspect import cleandoc, getargspec as getfullargspec
-    # noinspection PyDeprecation
-    from fractions import gcd
-    from collections import Mapping
-else:
-    from inspect import cleandoc, getfullargspec
-    from math import gcd
-    # noinspection PyCompatibility
-    from collections.abc import Mapping
+from inspect import cleandoc, getfullargspec
+from math import gcd
+from collections.abc import Mapping
 
 # Local
 from cobaya import __obsolete__
@@ -53,7 +39,7 @@ log = logging.getLogger(__name__.split(".")[-1])
 
 
 def str_to_list(x):
-    return [x] if isinstance(x, six.string_types) else x
+    return [x] if isinstance(x, str) else x
 
 
 def change_key(info, old, new, value):
@@ -286,7 +272,7 @@ def get_external_function(string_or_function, name=None):
     """
     if hasattr(string_or_function, "keys"):
         string_or_function = string_or_function.get(partag.value, None)
-    if isinstance(string_or_function, six.string_types):
+    if isinstance(string_or_function, str):
         try:
             scope = globals()
             import scipy.stats as stats  # provide default scope for eval
@@ -308,14 +294,15 @@ def get_external_function(string_or_function, name=None):
     return function
 
 
-def recursive_odict_to_dict(dictio):
+def recursive_mappings_to_dict(mapping):
     """
-    Recursively converts every ``OrderedDict`` inside the argument into ``dict``.
+    Recursively converts every ``OrderedDict``, `MappingProxyType`` etc. inside the
+    argument into ``dict``.
     """
-    if hasattr(dictio, "keys"):
-        return {k: recursive_odict_to_dict(v) for k, v in dictio.items()}
+    if isinstance(mapping, Mapping):
+        return {k: recursive_mappings_to_dict(v) for k, v in mapping.items()}
     else:
-        return dictio
+        return mapping
 
 
 def recursive_update(base, update):
@@ -324,12 +311,12 @@ def recursive_update(base, update):
     <https://stackoverflow.com/questions/3232943>`_.
     Modified for yaml input, where None and {} are almost equivalent
     """
-    base = base or odict()
+    base = base or {}
     for update_key, update_value in (update or {}).items():
-        update_value = update_value if update_value is not None else odict()
+        update_value = update_value if update_value is not None else {}
         if isinstance(update_value, Mapping):
             base[update_key] = recursive_update(
-                base.get(update_key, odict()), update_value)
+                base.get(update_key, {}), update_value)
         else:
             base[update_key] = update_value
     # Trim terminal (o)dicts
@@ -344,7 +331,7 @@ def ensure_latex(string):
     if string.strip()[0] != r"$":
         string = r"$" + string
     if string.strip()[-1] != r"$":
-        string = string + r"$"
+        string += r"$"
     return string
 
 
@@ -356,7 +343,7 @@ def ensure_nolatex(string):
 def read_dnumber(n, d, dtype=float):
     """Reads number as multiples of a given dimension."""
     try:
-        if isinstance(n, six.string_types):
+        if isinstance(n, str):
             if n[-1].lower() == "d":
                 if n.lower() == "d":
                     return d
@@ -451,7 +438,7 @@ def get_scipy_1d_pdf(info):
         info2["scale"] = minmaxvalues["max"] - minmaxvalues["min"]
 
     for x in ["loc", "scale", "min", "max"]:
-        if isinstance(info2.get(x), six.string_types):
+        if isinstance(info2.get(x), str):
             raise LoggedError(log, "%s should be a number (got '%s')", x, info2.get(x))
     # Check for improper priors
     if not np.all(np.isfinite([info2.get(x, 0) for x in ["loc", "scale", "min", "max"]])):
@@ -588,21 +575,6 @@ def create_banner(msg, symbol="*", length=None):
     return symbol * length + "\n" + msg_clean + "\n" + symbol * length + "\n"
 
 
-def warn_deprecation_python2(logger=None):
-    msg = """
-    Python 2 support will eventually be dropped
-    (it is already unsupported by many scientific Python modules).
-
-    Please use Python 3!
-
-    In some systems, the Python 3 command may be `python3` instead of `python`.
-    If that is the case, use `pip3` instead of `pip` to install Cobaya.
-    """
-    if not six.PY3:
-        for line in create_banner(msg).split("\n"):
-            getattr(logger, "warning", (lambda x: print("*WARNING*", x)))(line)
-
-
 def warn_deprecation_version(logger=None):
     msg = """
     You are using an archived version of Cobaya, which is no longer maintained.
@@ -615,7 +587,6 @@ def warn_deprecation_version(logger=None):
 
 
 def warn_deprecation(logger=None):
-    warn_deprecation_python2(logger=logger)
     warn_deprecation_version(logger=logger)
 
 
@@ -638,15 +609,16 @@ def deepcopy_where_possible(base):
     """
     Deepcopies an object whenever possible. If the object cannot be copied, returns a
     reference to the original object (this applies recursively to keys and values of
-    a dictionary).
+    a dictionary, and converts all Mapping objects into dict).
 
     Rationale: cobaya tries to manipulate its input as non-destructively as possible,
     and to do that it works on a copy of it; but some of the values passed to cobaya
     may not be copyable (if they are not pickleable). This function provides a
-    compromise solution.
+    compromise solution. To allow dict comparisons and make the copy mutable it converts
+    MappingProxyType, OrderedDict and other Mapping types into plain dict.
     """
     if isinstance(base, Mapping):
-        _copy = base.__class__()
+        _copy = {}
         for key, value in (base or {}).items():
             key_copy = deepcopy(key)
             _copy[key_copy] = deepcopy_where_possible(value)
@@ -697,11 +669,11 @@ def sort_parameter_blocks(blocks, speeds, footprints, oversample_power=0):
     permuted_costs_per_param_per_block = np.array(
         [get_cost_per_param_per_block(list(o)) for o in orderings])
     permuted_oversample_factors = np.array(
-        [((this_cost[0]/this_cost)**oversample_power)
+        [((this_cost[0] / this_cost) ** oversample_power)
          for this_cost in permuted_costs_per_param_per_block])
     total_costs = np.array(
-        [(n_params_per_block[list(o)]*permuted_oversample_factors[i])
-         .dot(permuted_costs_per_param_per_block[i])
+        [(n_params_per_block[list(o)] * permuted_oversample_factors[i])
+             .dot(permuted_costs_per_param_per_block[i])
          for i, o in enumerate(orderings)])
     i_optimal = np.argmin(total_costs)
     optimal_ordering = orderings[i_optimal]

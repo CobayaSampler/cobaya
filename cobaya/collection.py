@@ -10,26 +10,18 @@ Basically, a wrapper around a `pandas.DataFrame`.
 
 """
 
-# Python 2/3 compatibility
-from __future__ import absolute_import, division
-import six
-if six.PY2:
-    from io import open
-
 # Global
 import os
 import logging
 import numpy as np
 import pandas as pd
 from getdist import MCSamples
-from collections import OrderedDict as odict
 
 # Local
 from cobaya.conventions import _weight, _chi2, _minuslogpost, _minuslogprior
 from cobaya.conventions import _separator
 from cobaya.tools import load_DataFrame
 from cobaya.log import LoggedError, HasLogger
-from cobaya.yaml import force_unicode
 
 # Suppress getdist output
 from getdist import chains
@@ -88,8 +80,8 @@ class Collection(BaseCollection):
                  initial_size=enlargement_size, name=None, extension=None, file_name=None,
                  resuming=False, load=False, onload_skip=0, onload_thin=1):
 
-        super(Collection, self).__init__(model, name)
-        self._value_dict = odict([(p, np.nan) for p in self.columns])
+        super().__init__(model, name)
+        self._value_dict = {p: np.nan for p in self.columns}
         # Create/load the main data frame and the tracking indices
         # Create the dataframe structure
         if output:
@@ -228,7 +220,7 @@ class Collection(BaseCollection):
         if len(args) > 1:
             raise ValueError("Use just one index/column, or use .loc[row, column]. "
                              "(Notice that slices in .loc *include* the last point.)")
-        if isinstance(args[0], six.string_types):
+        if isinstance(args[0], str):
             return self.data.iloc[:self._n, self.data.columns.get_loc(args[0])]
         elif hasattr(args[0], "__len__"):
             try:
@@ -236,7 +228,7 @@ class Collection(BaseCollection):
                        [self.data.columns.get_loc(c) for c in args[0]]]
             except KeyError:
                 raise ValueError("Some of the indices are not valid columns.")
-        elif isinstance(args[0], six.integer_types):
+        elif isinstance(args[0], int):
             return self.data.iloc[check_index(args[0], self._n)]
         elif isinstance(args[0], slice):
             return self.data.iloc[check_slice(args[0], self._n)]
@@ -339,7 +331,7 @@ class Collection(BaseCollection):
             # if header, add comment marker by hand (messes with align if auto)
             if do_header:
                 lines = "#" + (lines[1:] if lines[0] == " " else lines)
-            out.write(force_unicode(lines + "\n"))
+            out.write(lines + "\n")
 
     def _delete__txt(self):
         try:
@@ -381,7 +373,7 @@ class OneSamplePoint:
             self._added_weight += self.weight
             if self._added_weight >= self.output_thin:
                 weight = self._added_weight // self.output_thin
-                self._added_weight = self._added_weight % self.output_thin
+                self._added_weight %= self.output_thin
             else:
                 return
         else:
@@ -398,10 +390,10 @@ class OnePoint(Collection):
 
     def __init__(self, *args, **kwargs):
         kwargs["initial_size"] = 1
-        super(OnePoint, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def __getitem__(self, columns):
-        if isinstance(columns, six.string_types):
+        if isinstance(columns, str):
             return self.data.values[0, self.data.columns.get_loc(columns)]
         else:
             try:
@@ -410,9 +402,9 @@ class OnePoint(Collection):
             except KeyError:
                 raise ValueError("Some of the indices are not valid columns.")
 
-    # Resets the counter, so the dataframe never fills up!
+    # Resets the counter, so the DataFrame never fills up!
     def add(self, *args, **kwargs):
-        super(OnePoint, self).add(*args, **kwargs)
+        super().add(*args, **kwargs)
         self._n = 0
 
     def increase_weight(self, increase):

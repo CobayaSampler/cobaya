@@ -1,13 +1,12 @@
 import time
-from collections import OrderedDict
 from packaging import version
 
 from cobaya.log import HasLogger, LoggedError
 from cobaya.input import HasDefaults
-from cobaya.conventions import _version
+from cobaya.conventions import _version, empty_dict
 
 
-class Timer(object):
+class Timer:
     def __init__(self):
         self.n = 0
         self.time_sum = 0.
@@ -55,10 +54,10 @@ class CobayaComponent(HasLogger, HasDefaults):
     """
     # The next list of options is ignored when comparing info
     # at resuming or reusing an updated info.
-    # When defining it for subclasses, *append* to this list.
-    ignore_at_resume = [_version]
+    # When defining it for subclasses, redefine append adding this list to new entries.
+    _ignore_at_resume = [_version]
 
-    def __init__(self, info={}, name=None, timing=None, path_install=None,
+    def __init__(self, info=empty_dict, name=None, timing=None, path_install=None,
                  initialize=True, standalone=True):
         if standalone:
             # TODO: would probably be more natural if defaults were always read here
@@ -66,11 +65,10 @@ class CobayaComponent(HasLogger, HasDefaults):
             default_info.update(info)
             info = default_info
 
+        self.set_instance_defaults()
         self._name = name or self.get_qualified_class_name()
         self.path_install = path_install
-        for k, value in self.class_options.items():
-            setattr(self, k, value)
-        # set attributes from the info (usually from yaml file)
+        # set attributes from the info (from yaml file or directly input dictionary)
         for k, value in info.items():
             try:
                 setattr(self, k, value)
@@ -105,6 +103,13 @@ class CobayaComponent(HasLogger, HasDefaults):
 
     def close(self, *args):
         """Finalizes the class, if something needs to be cleaned up."""
+        pass
+
+    def set_instance_defaults(self):
+        """
+        Can use this to define any default instance attributes before setting to the
+        input dictionary (from inputs or defaults)
+        """
         pass
 
     def initialize(self):
@@ -148,13 +153,10 @@ class CobayaComponent(HasLogger, HasDefaults):
         self.close()
 
 
-class ComponentCollection(OrderedDict, HasLogger):
+class ComponentCollection(dict, HasLogger):
     """
     Base class for an ordered dictionary of components (e.g. likelihoods or theories)
     """
-
-    def __init__(self):
-        super(ComponentCollection, self).__init__()
 
     def add_instance(self, name, component):
         self.update(component.get_helper_theories())
@@ -189,7 +191,7 @@ class ComponentCollection(OrderedDict, HasLogger):
             component.__exit__(exception_type, exception_value, traceback)
 
 
-class Provider(object):
+class Provider:
     """
     Class used to retrieve computed requirements.
     Just passes on get_X and get_param methods to the component assigned to compute them.

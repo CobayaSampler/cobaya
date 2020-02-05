@@ -48,6 +48,9 @@ from cobaya.likelihood import Likelihood
 
 
 class _H0_prototype(Likelihood):
+    # variables from yaml
+    H0: float
+    H0_std: float
 
     def initialize(self):
         self.norm = norm(loc=self.H0, scale=self.H0_std)

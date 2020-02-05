@@ -5,16 +5,12 @@
 :Author: Jesus Torrado
 
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
-
 # Global
 import numpy as np
-from collections import namedtuple, OrderedDict as odict
+from collections import namedtuple
+from collections.abc import Mapping
 from itertools import chain
 import logging
-import six
 
 # Local
 from cobaya.conventions import kinds, _prior, _timing, _aliases
@@ -34,6 +30,11 @@ from cobaya.tools import deepcopy_where_possible, are_different_params_lists, \
     str_to_list, sort_parameter_blocks
 from cobaya.component import Provider
 from cobaya.mpi import more_than_one_process, get_mpi_comm
+
+# Configure the logger ASAP
+# TODO: Just a dummy import before configuring the logger, until fix root/individual level
+# TODO: AL commented this, not clear why needed - check?
+# import getdist
 
 # Log-posterior namedtuple
 LogPosterior = namedtuple("LogPosterior", ["logpost", "logpriors", "loglikes", "derived"])
@@ -59,9 +60,9 @@ def _dict_equal(d1, d2):
         return True
     if bool(d1) != bool(d2):
         return False
-    if isinstance(d1, six.string_types):
+    if isinstance(d1, str):
         return d1 == d2
-    if isinstance(d1, dict):
+    if hasattr(d1, "keys"):
         if set(list(d1)) != set(list(d2)):
             return False
         for k, v in d1.items():
@@ -79,14 +80,11 @@ def _dict_equal(d1, d2):
 
 
 def get_model(info, stop_at_error=None):
-    assert hasattr(info, "keys"), (
+    assert isinstance(info, Mapping), (
         "The first argument must be a dictionary with the info needed for the model. "
         "If you were trying to pass the name of an input file instead, "
         "load it first with 'cobaya.input.load_input', "
         "or, if you were passing a yaml string, load it with 'cobaya.yaml.yaml_load'.")
-    # Configure the logger ASAP
-    # TODO: Just a dummy import before configuring the logger, until I fix root/individual level
-    import getdist
     info = deepcopy_where_possible(info)
     # Create the updated input information, including defaults for each module.
     logger_setup(info.pop(_debug, _debug_default), info.pop(_debug_file, None))
@@ -471,8 +469,8 @@ class Model(HasLogger):
                                             "%r" % comps)
             _last = len(dependence_order)
 
-        self._component_order = odict(zip(dependence_order, (components.index(c) for c in
-                                                             dependence_order)))
+        self._component_order = dict(zip(dependence_order, (components.index(c) for c in
+                                                            dependence_order)))
 
     def _set_dependencies_and_providers(self):
         requirements = []
@@ -622,7 +620,7 @@ class Model(HasLogger):
 
         # Store the input params and components on which each sampled params depends.
         sampled_input_dependence = self.parameterization.sampled_input_dependence()
-        sampled_dependence = odict((p, []) for p in sampled_input_dependence)
+        sampled_dependence = {p: [] for p in sampled_input_dependence}
         for p, i_s in sampled_input_dependence.items():
             for component in components:
                 if p in component.input_params or i_s and \
@@ -661,9 +659,8 @@ class Model(HasLogger):
         """
         self.input_params = list(self.parameterization.input_params())
         self.output_params = list(self.parameterization.output_params())
-        params_assign = odict([
-            ("input", odict((p, []) for p in self.input_params)),
-            ("output", odict((p, []) for p in self.output_params))])
+        params_assign = {"input": {p: [] for p in self.input_params},
+                         "output": {p: [] for p in self.output_params}}
         agnostic_likes = {"input": [], "output": []}
         # All components, doing likelihoods first so unassigned can by default
         # go to theory
@@ -682,7 +679,7 @@ class Model(HasLogger):
                     provide = str_to_list(getattr(component, _provides, []))
                     supports_params |= set(provide)
                 else:
-                    supports_params = set(list(component.get_requirements())).union(
+                    supports_params = set(component.get_requirements()).union(
                         set(component.get_can_support_params()))
 
                 # Identify parameters understood by this likelihood/theory
@@ -819,7 +816,7 @@ class Model(HasLogger):
         sorted by descending variation cost-per-parameter.
 
         Set ``oversample_power`` to some value between 0 and 1 to control the amount of
-        oversampling (default: 0 -- no oversampling). If close enoguh to 1, it chooses
+        oversampling (default: 0 -- no oversampling). If close enough to 1, it chooses
         oversampling factors such that the same amount of time is spent in each block.
 
         If ``split_fast_slow=True``, it separates blocks in two sets, only the second one
@@ -832,7 +829,7 @@ class Model(HasLogger):
             oversample_power = 1 - eps
             self.log.warning("Oversampling factor capped to 1 - %g.", eps)
         # Get a list of components and their speeds
-        speeds = odict((c.get_name(), getattr(c, "speed", -1)) for c in self.components)
+        speeds = {c.get_name(): getattr(c, "speed", -1) for c in self.components}
         # Add overhead to defined ones (positives)
         # and clip undefined ones to the slowest one
         try:
@@ -847,13 +844,13 @@ class Model(HasLogger):
         # Compute "footprint"
         # i.e. likelihoods (and theory) that we must recompute when each parameter changes
         footprints = np.zeros((len(self.sampled_dependence), len(speeds)), dtype=int)
-        sampled_dependence_names = odict(
-            (k, [c.get_name() for c in v]) for k, v in self.sampled_dependence.items())
+        sampled_dependence_names = {k: [c.get_name() for c in v] for
+                                    k, v in self.sampled_dependence.items()}
         for i, ls in enumerate(sampled_dependence_names.values()):
             for j, comp in enumerate(speeds):
                 footprints[i, j] = comp in ls
         # Group parameters by footprint
-        different_footprints = list(set([tuple(row) for row in footprints.tolist()]))
+        different_footprints = list(set(tuple(row) for row in footprints.tolist()))
         blocks = [[p for ip, p in enumerate(self.sampled_dependence)
                    if all(footprints[ip] == fp)] for fp in different_footprints]
         # a) Multiple blocks
@@ -896,7 +893,6 @@ class Model(HasLogger):
                 self.log.warning(
                     "Oversampling would be trivial due to small speed difference or "
                     "small `oversample_power`. Set to %d.", min_factor)
-                oversample_factors[1] == min_factor
             # Finally, unfold `oversampling_factors` to have the right number of elements,
             # taking into account that that of the fast blocks should be interpreted as a
             # global one for all of them.

@@ -1,14 +1,7 @@
-# Python 2/3 compatibility
-from __future__ import absolute_import, division
-import six
-if six.PY2:
-    from io import open
-
 # Global
 import os
 from random import choice
 from itertools import chain
-from collections import OrderedDict as odict
 import numpy as np
 
 # Local
@@ -41,7 +34,7 @@ def get_covmat_database(modules, cached=True):
                      "Will be re-created and cached.")
             pass
     # Create it (again)
-    covmat_database = odict()
+    covmat_database = {}
     for folder in installed_folders:
         covmat_database[folder] = []
         folder_full = folder.format(**{_path_install: modules}).replace("/", os.sep)

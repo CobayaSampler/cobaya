@@ -1,8 +1,5 @@
-from __future__ import division, print_function, absolute_import
-
 from mpi4py import MPI
 from flaky import flaky
-from collections import OrderedDict
 import numpy as np
 
 from cobaya.likelihoods.gaussian_mixture import random_cov
@@ -11,7 +8,6 @@ from cobaya.likelihood import Likelihood
 from cobaya.run import run
 
 from .common_sampler import body_of_test, body_of_test_speeds
-
 
 ### import pytest
 ### @pytest.mark.mpi
@@ -92,9 +88,8 @@ def test_mcmc_dragging():
 
 def _make_gaussian_like(nparam):
     class LikeTest(Likelihood):
-        params = OrderedDict(
-            [('x' + str(name), {'prior': {'min': -5, 'max': 5}, 'proposal': 1})
-             for name in range(nparam)])
+        params = {'x' + str(name): {'prior': {'min': -5, 'max': 5}, 'proposal': 1}
+                  for name in range(nparam)}
 
         def calculate(self, state, want_derived=True, **params_values_dict):
             state["logp"] = -np.sum(np.array(list(params_values_dict.values())) ** 2 / 2)
@@ -106,7 +101,7 @@ def _test_overhead_timing():
     # prints timing for simple Gaussian vanilla mcmc
     import pstats
     from cProfile import Profile
-    import six
+    from io import StringIO
     from cobaya.samplers.mcmc import proposal  # one-time numba compile out of profiling
 
     LikeTest = _make_gaussian_like(15)
@@ -117,7 +112,7 @@ def _test_overhead_timing():
     prof.enable()
     run(info)
     prof.disable()
-    s = six.StringIO()
+    s = StringIO()
     ps = pstats.Stats(prof, stream=s)
     ps.strip_dirs()
     ps.sort_stats('time')

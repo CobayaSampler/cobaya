@@ -25,7 +25,7 @@ cache:
 # (Pre)Installation
 matrix:
   include:
-    - name: "Minimum requisites for Cosmology: gcc-6, Python 2.7"
+    - name: "Minimum requisites for Cosmology: gcc-6, Python 3.6"
       addons:
         apt:
           sources:
@@ -36,8 +36,8 @@ matrix:
             - g++-6
       env:
         - GCC_VERSION="6"
-        - PYVER="2"
-      python: "2.7"
+        - PYVER="3"
+      python: "3.6"
     - name: "Typical scenario: latest Ubuntu LTS"
       dist: bionic
       addons:
@@ -113,10 +113,6 @@ script:
   - pytest tests/ -k "not cosmo" --modules=$MODULES
   # Cosmology tests:
   - cobaya-install cosmo-tests --modules=$MODULES --no-progress-bars
-  # Python 2 problem: astropy downgrades pytest
-  - if [[ "$PYVER" == "2" ]]; then
-      pip install pytest-xdist --upgrade ;
-    fi
   - if [ -n "${CAMB_BRANCH}" ]; then
       rm -rf $MODULES/code/CAMB ;
       git clone --recursive --depth 1 -b $CAMB_BRANCH https://github.com/cmbant/CAMB $MODULES/code/CAMB ;

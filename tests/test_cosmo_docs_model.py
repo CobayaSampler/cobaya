@@ -3,12 +3,11 @@ Automatic tests of the cosmo_model example in the documentation,
 to make sure it remains up to date.
 """
 
-from __future__ import division, absolute_import
 import os
 import numpy as np
 from imageio import imread
 import pytest
-from six import StringIO
+from io import StringIO
 
 from cobaya.conventions import _path_install
 from .common import process_modules_path, stdout_redirector

@@ -5,26 +5,23 @@
 :Author: Jesus Torrado
 
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import, division, print_function
-from functools import reduce
 
 # Global
 import os
-from collections import OrderedDict as odict
 from copy import deepcopy
 from importlib import import_module
 import inspect
 from itertools import chain
 import pkg_resources
+from functools import reduce
 
 # Local
 from cobaya.conventions import _products_path, _path_install, _resume, _force
 from cobaya.conventions import _output_prefix, _debug, _debug_file, _external
 from cobaya.conventions import _params, _prior, kinds, _provides, _requires
 from cobaya.conventions import partag, _input_params, _output_params, _module_path
-from cobaya.conventions import _yaml_extensions, _aliases
-from cobaya.tools import recursive_update, recursive_odict_to_dict, str_to_list
+from cobaya.conventions import _yaml_extensions, _aliases, reserved_attributes
+from cobaya.tools import recursive_update, str_to_list
 from cobaya.tools import fuzzy_match, deepcopy_where_possible, get_class, get_kind
 from cobaya.yaml import yaml_load_file, yaml_dump
 from cobaya.log import LoggedError
@@ -67,9 +64,9 @@ def load_input_MPI(input_file):
 
 
 def get_used_modules(*infos):
-    """Returns all requested modules as an odict ``{kind: set([modules])}``.
+    """Returns all requested modules as an dict ``{kind: set([modules])}``.
     Priors are not included."""
-    modules = odict()
+    modules = {}
     for info in infos:
         for field in kinds:
             if field not in modules:
@@ -124,13 +121,13 @@ def update_info(info):
     # Don't modify the original input!
     input_info = deepcopy_where_possible(info)
     # Creates an equivalent info using only the defaults
-    updated_info = odict()
-    default_params_info = odict()
-    default_prior_info = odict()
+    updated_info = {}
+    default_params_info = {}
+    default_prior_info = {}
     modules = get_used_modules(input_info)
     from cobaya.component import CobayaComponent
     for block in modules:
-        updated = odict()
+        updated = {}
         updated_info[block] = updated
         input_block = input_info[block]
         for module in modules[block]:
@@ -165,7 +162,7 @@ def update_info(info):
                     default_class_info = get_default_info(ext, block)
                 else:
                     default_class_info = deepcopy_where_possible(
-                        component_base_classes[block].class_options.copy())
+                        component_base_classes[block].get_defaults())
             else:
                 module_path = input_block[module].get(_module_path, None)
                 default_class_info = get_default_info(module, block,
@@ -181,7 +178,7 @@ def update_info(info):
                                       .difference(ignore)
                                       .difference(set(updated[module])))
             if options_not_recognized:
-                alternatives = odict()
+                alternatives = {}
                 available = (
                     {_external, partag.renames}.union(updated_info[block][module]))
                 while options_not_recognized:
@@ -202,7 +199,7 @@ def update_info(info):
 
     # Add priors info, after the necessary checks
     if _prior in input_info or any(default_prior_info.values()):
-        updated_info[_prior] = input_info.get(_prior, odict())
+        updated_info[_prior] = input_info.get(_prior, {})
     for prior_info in default_prior_info.values():
         for name, prior in prior_info.items():
             if updated_info[_prior].get(name, prior) != prior:
@@ -246,7 +243,7 @@ def merge_default_params_info(defaults):
     Merges default parameters info for all likelihoods.
     Checks that multiple defined (=shared) parameters have equal info.
     """
-    defaults_merged = odict()
+    defaults_merged = {}
     for lik, params in defaults.items():
         for p, info in (params or {}).items():
             # if already there, check consistency
@@ -271,15 +268,14 @@ def merge_params_info(params_infos, default_derived=True):
     (but not if one of min/max is re-defined: in that case,
     to avoid surprises, the other one is set to None=+/-inf)
     """
-    current_info = odict(
-        (p, expand_info_param(v, default_derived)) for p, v in
-        params_infos[0].items() or {})
+    current_info = {p: expand_info_param(v, default_derived) for p, v in
+                    params_infos[0].items() or {}}
     for new_info in params_infos[1:]:
         if not new_info:
             continue
         for p, new_info_p in new_info.items():
             if p not in current_info:
-                current_info[p] = odict()
+                current_info[p] = {}
             new_info_p = expand_info_param(new_info_p)
             current_info[p].update(deepcopy(new_info_p))
             # Account for incompatibilities: "prior" and ("value" or "derived"+bounds)
@@ -295,8 +291,8 @@ def merge_params_info(params_infos, default_derived=True):
     # Re-sort, so that rightmost info takes precedence *also* in the sorting
     new_order = chain(*[list(params) for params in params_infos[::-1]])
     # The following removes duplicates maintaining order (keeps the first occurrence)
-    new_order = list(odict.fromkeys(new_order))
-    current_info = odict((p, current_info[p]) for p in new_order)
+    new_order = list(dict.fromkeys(new_order))
+    current_info = {p: current_info[p] for p in new_order}
     return current_info
 
 
@@ -309,8 +305,8 @@ def merge_info(*infos):
     if len(infos) == 1:
         return previous_info
     for new_info in infos[1:]:
-        previous_params_info = deepcopy(previous_info.pop(_params, odict()) or odict())
-        new_params_info = deepcopy(new_info).pop(_params, odict()) or odict()
+        previous_params_info = deepcopy(previous_info.pop(_params, {}) or {})
+        new_params_info = deepcopy(new_info).pop(_params, {}) or {}
         # NS: params have been popped, since they have their own merge function
         current_info = recursive_update(deepcopy(previous_info), new_info)
         current_info[_params] = merge_params_info([previous_params_info, new_params_info])
@@ -318,12 +314,15 @@ def merge_info(*infos):
     return current_info
 
 
-def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=[]):
+def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=()):
     """
     Compares two information dictionaries.
 
     Set ``strict=False`` (default: ``True``) to ignore options that would not affect
     the statistics of a posterior sample, including order of params/priors/likelihoods.
+
+    Assumes info1 and info2 only contains dict mappings, use recursive_mappings_to_dict
+    if on the inputs if they might be mixing dict, OrderedDicts or other Mappings.
     """
     if print_not_log:
         myprint = print
@@ -332,12 +331,10 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
         myprint = log.info
         myprint_debug = log.debug
     myname = inspect.stack()[0][3]
-    ignore = set([]) if strict else {_debug, _debug_file, _resume, _force, _path_install}
+    ignore = set() if strict else {_debug, _debug_file, _resume, _force, _path_install}
     ignore = ignore.union(set(ignore_blocks or []))
-    if set([info for info in info1 if info1[info] is not None]
-           ).difference(ignore) \
-            != set([info for info in info2 if info2[info] is not None]
-                   ).difference(ignore):
+    if set(info for info in info1 if info1[info] is not None).difference(ignore) \
+            != set(info for info in info2 if info2[info] is not None).difference(ignore):
         myprint(myname + ": different blocks or options: %r (old) vs %r (new)" % (
             set(info1).difference(ignore), set(info2).difference(ignore)))
         return False
@@ -391,39 +388,34 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
                     if _external not in block1[k]:
                         try:
                             module_path = block1[k].pop(_module_path, None) \
-                                if isinstance(block1[k], odict) else None
+                                if hasattr(block1[k], "keys") else None
                             cls = get_class(k, block_name, module_path=module_path)
                             ignore_k_this = ignore_k_this.union(
-                                set(getattr(cls, "ignore_at_resume", {})))
+                                set(getattr(cls, "_ignore_at_resume", {})))
                         except ImportError:
                             pass
                     # Pop ignored options
                     for j in ignore_k_this:
                         block1[k].pop(j, None)
                         block2[k].pop(j, None)
-            if recursive_odict_to_dict(block1[k]) != recursive_odict_to_dict(block2[k]):
+            if block1[k] != block2[k]:
                 # For clarity, pop common stuff before printing
-                to_pop = [j for j in block1[k] if (
-                        recursive_odict_to_dict(block1[k].get(j)) ==
-                        recursive_odict_to_dict(block2[k].get(j)))]
+                to_pop = [j for j in block1[k] if (block1[k].get(j) == block2[k].get(j))]
                 [(block1[k].pop(j, None), block2[k].pop(j, None)) for j in to_pop]
                 myprint(
                     myname + ": different content of [%s:%s]" % (block_name, k))
-                myprint_debug("%r (old) vs %r (new)" % (
-                    recursive_odict_to_dict(block1[k]),
-                    recursive_odict_to_dict(block2[k])))
+                myprint_debug("%r (old) vs %r (new)" % (block1[k], block2[k]))
                 return False
     return True
 
 
-class HasDefaults(object):
+class HasDefaults:
     """
     Base class for components that can read settings from a .yaml file.
     Class methods provide the methods needed to get the defaults information
     and associated data.
 
     """
-    class_options = {}
 
     @classmethod
     def get_qualified_names(cls):
@@ -434,7 +426,7 @@ class HasDefaults(object):
             # get shortest reference
             try:
                 imported = import_module(".".join(parts[:-1]))
-            except:
+            except ImportError:
                 pass
             else:
                 if getattr(imported, cls.__name__, None) is cls:
@@ -509,8 +501,22 @@ class HasDefaults(object):
         # not accessible directly
         try:
             return pkg_resources.resource_string(cls.__module__, cls.__name__ + ext)
-        except Exception as e:
+        except Exception:
             return None
+
+    @classmethod
+    def get_class_options(cls):
+        """
+        Returns dictionary of names and values for class variables that can also be
+        input and output in yaml files, by default it takes all the
+        (non-inherited and non-private)  attributes of the class excluding known
+        specials.
+
+        :return:  dict of names and values
+        """
+        return {k: v for k, v in cls.__dict__.items() if not k.startswith('_') and
+                k not in reserved_attributes and not inspect.isroutine(v)
+                and not isinstance(v, property)}
 
     @classmethod
     def get_defaults(cls, return_yaml=False, yaml_expand_defaults=True):
@@ -541,33 +547,34 @@ class HasDefaults(object):
         if yaml_expand_defaults then !default: file includes will be expanded
         """
 
+        if 'class_options' in cls.__dict__:
+            raise LoggedError(log, "class_options (in %s) should now be replaced by "
+                                   "public attributes defined directly in the class" %
+                              cls.get_qualified_class_name())
         yaml_text = cls.get_associated_file_content('.yaml')
-        options = cls.__dict__.get('class_options', {}).copy()
-        params = cls.__dict__.get(_params)
-        if params:
-            if _params in options:
-                raise LoggedError(log, "class %s cannot have 'params' and params "
-                                       "element of class_options" %
-                                  cls.get_qualified_class_name())
-            options[_params] = odict(params)
+        options = cls.get_class_options()
+
         if options and yaml_text:
             raise LoggedError(log,
                               "%s: any class can either have .yaml or class variables "
-                              "class_options or params, but not both",
-                              cls.get_qualified_class_name())
+                              "but not both (type declarations without values are fine "
+                              "also with yaml file). You have class attributes: %s",
+                              cls.get_qualified_class_name(), list(options))
         if return_yaml and not yaml_expand_defaults:
             return yaml_text or ""
 
-        defaults = odict()
+        this_defaults = yaml_load_file(cls.get_yaml_file(), yaml_text) \
+            if yaml_text else deepcopy_where_possible(options)
+
+        # start with this one to keep the order such that most recent class options
+        # near the top. Update below to actually override parameters with these.
+        defaults = this_defaults.copy()
         if not return_yaml:
             for base in cls.__bases__:
                 if issubclass(base, HasDefaults) and base is not HasDefaults:
                     defaults.update(base.get_defaults())
 
-        if yaml_text:
-            defaults.update(yaml_load_file(cls.get_yaml_file(), yaml_text))
-        else:
-            defaults.update(deepcopy_where_possible(options))
+        defaults.update(this_defaults)
 
         if return_yaml:
             return yaml_dump(defaults)

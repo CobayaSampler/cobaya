@@ -6,12 +6,9 @@
 
 """
 
-# Python 2/3 compatibility
-from __future__ import division, print_function, absolute_import
-
 # Global
 import numpy as np
-from collections import OrderedDict as odict
+from typing import Mapping
 
 # Local
 from cobaya.sampler import Sampler
@@ -20,6 +17,7 @@ from cobaya.log import LoggedError
 
 
 class evaluate(Sampler):
+    override: Mapping[str, float]
 
     def initialize(self):
         """
@@ -47,16 +45,17 @@ class evaluate(Sampler):
         """
         for i in range(self.N):
             if self.N > 1:
-                self.log.info("Evaluating sample #%d ------------------------------", i + 1)
+                self.log.info("Evaluating sample #%d ------------------------------",
+                              i + 1)
             self.log.info("Looking for a reference point with non-zero prior.")
             reference_point = self.model.prior.reference()
-            reference_point = odict(
+            reference_point = dict(
                 zip(self.model.parameterization.sampled_params(), reference_point))
             for p, v in (self.override or {}).items():
                 if p not in reference_point:
                     raise LoggedError(
                         self.log, "Parameter '%s' used in override not known. "
-                        "Known parameters names are %r.",
+                                  "Known parameters names are %r.",
                         p, self.model.parameterization.sampled_params())
                 reference_point[p] = v
             self.log.info("Reference point:\n   " + "\n   ".join(

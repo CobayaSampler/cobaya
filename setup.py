@@ -1,7 +1,6 @@
 # Always prefer setuptools over distutils
 from setuptools import setup, find_packages
 # To use a consistent encoding
-from codecs import open
 from os import path
 from itertools import chain
 # Package data and conventions
@@ -41,17 +40,16 @@ setup(
         'Intended Audience :: Science/Research',
         'Topic :: Scientific/Engineering :: Astronomy',
         'License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8'
     ],
-    python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*',
+    python_requires='>=3.6',
     keywords='montecarlo sampling MCMC cosmology',
     packages=find_packages(exclude=['docs', 'tests']),
     install_requires=['numpy>=1.12.0', 'scipy >= 1.0', 'pandas>=0.20',
                       'PyYAML>=5.1', 'wget>=3.2', 'imageio>=2.2.0', 'py-bobyqa>=1.1',
-                      'GetDist>=1.0.3', 'fuzzywuzzy>=0.17', 'six', 'packaging'],
+                      'GetDist>=1.0.3', 'fuzzywuzzy>=0.17', 'packaging'],
     extras_require={
         'test': ['pytest', 'pytest-xdist', 'flaky', 'mpi4py']},
     package_data={

@@ -338,12 +338,7 @@ Just give it a try and it should work fine, but, in case you need the details:
 
 """
 
-# Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
-
 # Global
-from collections import OrderedDict as odict
 import numpy as np
 import numbers
 from types import MethodType
@@ -414,7 +409,7 @@ class Prior(HasLogger):
                                             self._lower_limits[self._uniform_indices]))
 
         # Process the external prior(s):
-        self.external = odict()
+        self.external = {}
         for name in (info_prior if info_prior else {}):
             if name == _prior_1d_name:
                 raise LoggedError(self.log, "The name '%s' is a reserved prior name. "

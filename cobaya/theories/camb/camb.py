@@ -166,17 +166,13 @@ the input block for CAMB (otherwise a system-wide CAMB may be used instead):
    ``python setup.py install --user``, as the official instructions suggest.
 """
 
-# Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
-
 # Global
 import sys
 import os
 import logging
 from copy import deepcopy
 import numpy as np
-from collections import namedtuple, OrderedDict as odict
+from collections import namedtuple
 import numbers
 import ctypes
 
@@ -198,10 +194,10 @@ CAMBOutputs = namedtuple("CAMBOutputs", ["camb_params", "results", "derived"])
 
 class camb(BoltzmannBase):
     # Name of the Class repo/folder and version to download
-    camb_repo_name = "cmbant/CAMB"
-    camb_repo_version = os.environ.get("CAMB_REPO_VERSION", "master")
-    camb_min_gcc_version = "6.4"
-    min_camb_version = '1.1'
+    _camb_repo_name = "cmbant/CAMB"
+    _camb_repo_version = os.environ.get("CAMB_REPO_VERSION", "master")
+    _camb_min_gcc_version = "6.4"
+    _min_camb_version = '1.1'
 
     def initialize(self):
         """Importing CAMB from the correct path, if given."""
@@ -231,7 +227,7 @@ class camb(BoltzmannBase):
             self.log.info("Importing *global* CAMB.")
         try:
             self.camb = load_module("camb", path=camb_path,
-                                    min_version=self.min_camb_version)
+                                    min_version=self._min_camb_version)
         except ImportError:
             raise LoggedError(
                 self.log, "Couldn't find the CAMB python interface.\n"
@@ -241,7 +237,7 @@ class camb(BoltzmannBase):
                           "     'pip install -e /path/to/camb [--user]'")
         except VersionCheckError as e:
             raise LoggedError(self.log, str(e))
-        super(camb, self).initialize()
+        super().initialize()
         self.extra_attrs = {"Want_CMB": False, "Want_cl_2D_array": False,
                             'WantCls': False}
         # Derived parameters that may not have been requested, but will be necessary later
@@ -301,7 +297,7 @@ class camb(BoltzmannBase):
         #   since all CAMB related functions return quantities in that implicit order
         # The following super call makes sure that the requirements are properly
         # accumulated, i.e. taking the max of precision requests, etc.
-        super(camb, self).needs(**requirements)
+        super().needs(**requirements)
         CAMBdata = self.camb.CAMBdata
 
         for k, v in self._needs.items():
@@ -370,7 +366,7 @@ class camb(BoltzmannBase):
                 self.needs_perts = True
             elif k == "source_Cl":
                 if not getattr(self, "sources", None):
-                    self.sources = odict()
+                    self.sources = {}
                 for source, window in v["sources"].items():
                     # If it was already there, BoltzmannBase.needs() has already
                     # checked that old info == new info
@@ -728,7 +724,7 @@ class camb(BoltzmannBase):
     def get_path(cls, path):
         return os.path.realpath(
             os.path.join(path, "code",
-                         cls.camb_repo_name[cls.camb_repo_name.find("/") + 1:]))
+                         cls._camb_repo_name[cls._camb_repo_name.find("/") + 1:]))
 
     @classmethod
     def is_installed(cls, **kwargs):
@@ -749,7 +745,7 @@ class camb(BoltzmannBase):
             return True
         log.info("Downloading camb...")
         success = download_github_release(
-            os.path.join(path, "code"), cls.camb_repo_name, cls.camb_repo_version,
+            os.path.join(path, "code"), cls._camb_repo_name, cls._camb_repo_version,
             no_progress_bars=no_progress_bars, logger=log)
         if not success:
             log.error("Could not download camb.")
@@ -763,11 +759,11 @@ class camb(BoltzmannBase):
         if process_make.returncode:
             log.info(out)
             log.info(err)
-            gcc_check = check_gcc_version(cls.camb_min_gcc_version, error_returns=False)
+            gcc_check = check_gcc_version(cls._camb_min_gcc_version, error_returns=False)
             if not gcc_check:
                 cause = (" Possible cause: it looks like `gcc` does not have the correct "
                          "version number (CAMB requires %s); and `ifort` is also "
-                         "probably not available.", cls.camb_min_gcc_version)
+                         "probably not available.", cls._camb_min_gcc_version)
             else:
                 cause = ""
             log.error("Compilation failed!" + cause)
@@ -784,13 +780,13 @@ class CambTransfers(HelperTheory):
     def __init__(self, cobaya_camb, name, info, timing=None):
         self.needs_perts = False
         self.non_linear_sources = False
-        super(CambTransfers, self).__init__(info, name, timing=timing)
+        super().__init__(info, name, timing=timing)
         self.cobaya_camb = cobaya_camb
         self.camb = cobaya_camb.camb
         self.speed = self.cobaya_camb.speed * 1.5
 
     def needs(self, **requirements):
-        super(CambTransfers, self).needs(**requirements)
+        super().needs(**requirements)
         opts = requirements.get('CAMB_transfers')
         if opts:
             self.non_linear_sources = opts['non_linear']
@@ -851,4 +847,4 @@ class CambTransfers(HelperTheory):
                 {"H0", "cosmomc_theta", "thetastar"})) > 1:
             raise LoggedError(self.log, "Can't pass more than one of H0, "
                                         "theta, cosmomc_theta to CAMB.")
-        super(CambTransfers, self).initialize_with_params()
+        super().initialize_with_params()

@@ -87,10 +87,11 @@ T_CMB_K = 2.7255  # fiducial CMB temperature
 
 
 class bicep_keck_2015(_CMBlikes):
-    install_options = {"download_url": r"http://bicepkeck.org/BK15_datarelease/BK15_cosmomc.tgz"}
+    install_options = {
+        "download_url": r"http://bicepkeck.org/BK15_datarelease/BK15_cosmomc.tgz"}
 
     def init_params(self, ini):
-        super(self.__class__, self).init_params(ini)
+        super().init_params(ini)
         self.fpivot_dust = ini.float('fpivot_dust', 353.0)
         self.fpivot_sync = ini.float('fpivot_sync', 23.0)
         self.bandpasses = []
@@ -98,10 +99,10 @@ class bicep_keck_2015(_CMBlikes):
             self.bandpasses += [
                 self.read_bandpass(ini.relativeFileName('bandpass[%s]' % used))]
 
-        self.fpivot_dust_decorr = [ini.array_float('fpivot_dust_decorr', i, default) for i, default in
-                                   zip([1, 2], [217., 353.])]
-        self.fpivot_sync_decorr = [ini.array_float('fpivot_sync_decorr', i, default) for i, default in
-                                   zip([1, 2], [22., 33.])]
+        self.fpivot_dust_decorr = [ini.array_float('fpivot_dust_decorr', i, default) for
+                                   i, default in zip([1, 2], [217., 353.])]
+        self.fpivot_sync_decorr = [ini.array_float('fpivot_sync_decorr', i, default) for
+                                   i, default in zip([1, 2], [22., 33.])]
         self.lform_dust_decorr = ini.string('lform_dust_decorr', 'flat')
         self.lform_sync_decorr = ini.string('lform_sync_decorr', 'flat')
 
@@ -125,8 +126,10 @@ class bicep_keck_2015(_CMBlikes):
                (np.exp(Ghz_Kelvin * nu0 / T_CMB_K) - 1) ** 2)
         bandpass.th_sync = th_int / th0
         # Calculate bandpass center-of-mass (i.e. mean frequency).
-        bandpass.nu_bar = np.dot(bandpass.dnu, bandpass.R[:, 0] * bandpass.R[:, 1]) / np.dot(bandpass.dnu,
-                                                                                             bandpass.R[:, 1])
+        bandpass.nu_bar = np.dot(bandpass.dnu,
+                                 bandpass.R[:, 0] * bandpass.R[:, 1]) / np.dot(
+            bandpass.dnu,
+            bandpass.R[:, 1])
 
         return bandpass
 
@@ -141,13 +144,13 @@ class bicep_keck_2015(_CMBlikes):
         if bandcenter_err != 1:
             nu_bar = Ghz_Kelvin * bandpass.nu_bar
             # Conversion factor error due to bandcenter error.
-            th_err = bandcenter_err ** 4 * \
-                     np.exp(Ghz_Kelvin * bandpass % nu_bar * (bandcenter_err - 1) / T_CMB_K) \
-                         (np.exp(nu_bar / T_CMB_K) - 1) ** 2 / \
-                     (np.exp(nu_bar * bandcenter_err / T_CMB_K) - 1) ** 2
+            th_err = bandcenter_err ** 4 * (np.exp(Ghz_Kelvin * bandpass % nu_bar *
+                                                   (bandcenter_err - 1) / T_CMB_K) *
+                                            (np.exp(nu_bar / T_CMB_K) - 1) ** 2 /
+                                            (np.exp(nu_bar * bandcenter_err
+                                                    / T_CMB_K) - 1) ** 2)
             # Greybody scaling error due to bandcenter error.
-            gb_err = bandcenter_err ** (3 + beta) * \
-                     (np.exp(nu_bar / Tdust) - 1) / \
+            gb_err = bandcenter_err ** (3 + beta) * (np.exp(nu_bar / Tdust) - 1) / \
                      (np.exp(nu_bar * bandcenter_err / Tdust) - 1)
         else:
             th_err = 1
@@ -193,12 +196,13 @@ class bicep_keck_2015(_CMBlikes):
         else:
             scl_ell = 1.0
 
-        # Even for small cval, correlation can become negative for sufficiently large frequency
-        # difference or ell value (with linear or quadratic scaling).
-        # Following Vansyngel et al, A&A, 603, A62 (2017), we use an exponential function to
-        # remap the correlation coefficient on to the range [0,1].
+        # Even for small cval, correlation can become negative for sufficiently
+        # large frequency difference or ell value (with linear or quadratic scaling).
+        # Following Vansyngel et al, A&A, 603, A62 (2017), we use an exponential function
+        # to remap the correlation coefficient on to the range [0,1].
         # We symmetrically extend this function to (non-physical) correlation coefficients
-        # greater than 1 -- this is only used for validation tests of the likelihood model.
+        # greater than 1 -- this is only used for validation tests of the likelihood
+        # model.
         if delta > 1:
             return 2.0 - np.exp(np.log(2.0 - delta) * scl_nu * scl_ell)
         else:
@@ -262,25 +266,31 @@ class bicep_keck_2015(_CMBlikes):
                     dustsync *= np.sqrt(EEtoBB_sync * EEtoBB_dust)
 
                 if need_dust_decorr and i != j:
-                    corr_dust = self.decorrelation(delta_dust, self.bandpasses[i].nu_bar * bandcenter_err[i],
-                                                   self.bandpasses[j].nu_bar * bandcenter_err[j],
+                    corr_dust = self.decorrelation(delta_dust, self.bandpasses[i].nu_bar *
+                                                   bandcenter_err[i],
+                                                   self.bandpasses[j].nu_bar *
+                                                   bandcenter_err[j],
                                                    self.fpivot_dust_decorr, rat,
                                                    self.lform_dust_decorr)
                 else:
                     corr_dust = 1
                 if need_sync_decorr and i != j:
-                    corr_sync = self.decorrelation(delta_sync, self.bandpasses[i].nu_bar * bandcenter_err[i],
-                                                   self.bandpasses[j].nu_bar * bandcenter_err[j],
+                    corr_sync = self.decorrelation(delta_sync, self.bandpasses[i].nu_bar *
+                                                   bandcenter_err[i],
+                                                   self.bandpasses[j].nu_bar *
+                                                   bandcenter_err[j],
                                                    self.fpivot_sync_decorr, rat,
                                                    self.lform_sync_decorr)
                 else:
                     corr_sync = 1
                 #  Add foreground model to theory spectrum.
-                # NOTE: Decorrelation is not implemented for the dust/sync correlated component.
-                #      In BK15, we never turned on correlation and decorrelation parameters
-                #       simultaneously.
-                CL.CL += dust * dustpow * corr_dust + sync * syncpow * corr_sync + dustsync * dustsyncpow
+                # NOTE: Decorrelation is not implemented for the dust/sync
+                # correlated component.
+                # In BK15, we never turned on correlation and decorrelation parameters
+                # simultaneously.
+                CL.CL += dust * dustpow * corr_dust + sync * syncpow * corr_sync \
+                         + dustsync * dustsyncpow
 
 
-class Bandpass(object):
+class Bandpass:
     pass

@@ -5,12 +5,6 @@
 :Author: Jesus Torrado
 
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
-
-# Global
-from collections import OrderedDict as odict
 
 # Local
 from cobaya import __version__
@@ -28,18 +22,15 @@ from cobaya.input import update_info
 from cobaya.mpi import import_MPI, is_main_process, set_mpi_disabled
 from cobaya.tools import warn_deprecation, recursive_update
 from cobaya.post import post
+from collections.abc import Mapping
 
 
 def run(info, stop_at_error=None):
-    assert hasattr(info, "keys"), (
+    assert isinstance(info, Mapping), (
         "The first argument must be a dictionary with the info needed for the run. "
         "If you were trying to pass the name of an input file instead, "
         "load it first with 'cobaya.input.load_input', "
         "or, if you were passing a yaml string, load it with 'cobaya.yaml.yaml_load'.")
-    # Configure the logger ASAP
-    # Just a dummy import before configuring the logger, until I fix root/individual level
-    # TODO: check getdist import
-    import getdist
     logger_setup(info.get(_debug), info.get(_debug_file))
     import logging
     info_stop = info.get("stop_at_error", False)
@@ -76,7 +67,7 @@ def run(info, stop_at_error=None):
         # Update the updated info with the parameter routes and version info
         keys = ([kinds.likelihood, kinds.theory]
                 if kinds.theory in updated_info else [kinds.likelihood])
-        updated_info.update(odict([(k, model.info()[k]) for k in keys]))
+        updated_info.update({k: model.info()[k] for k in keys})
         updated_info = recursive_update(
             updated_info, model.get_version(add_version_field=True))
         output.dump_info(None, updated_info, check_compatible=False)

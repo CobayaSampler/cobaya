@@ -5,11 +5,6 @@
 :Author: Jesus Torrado
 
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import division
-
 # Global
 import os
 import sys
@@ -17,7 +12,6 @@ import subprocess
 import traceback
 import logging
 import shutil
-from six import string_types
 from pkg_resources import parse_version
 
 # Local
@@ -31,6 +25,7 @@ from cobaya.mpi import set_mpi_disabled
 log = logging.getLogger(__name__.split(".")[-1])
 
 
+# noinspection PyUnresolvedReferences
 def install(*infos, **kwargs):
     if not log.root.handlers:
         logger_setup()
@@ -39,7 +34,7 @@ def install(*infos, **kwargs):
         # See if we can get one (and only one) from infos
         paths = set(p for p in [info.get(_path_install) for info in infos] if p)
         if len(paths) == 1:
-            path = paths[0]
+            path = list(paths)[0]
         else:
             print("logging?")
             raise LoggedError(
@@ -68,7 +63,7 @@ def install(*infos, **kwargs):
                 continue
             info = (next(info for info in infos if module in
                          info.get(kind, {}))[kind][module]) or {}
-            if isinstance(info, string_types) or _external in info:
+            if isinstance(info, str) or _external in info:
                 log.warning("Module '%s' is a custom function. "
                             "Nothing to do.\n", module)
                 continue

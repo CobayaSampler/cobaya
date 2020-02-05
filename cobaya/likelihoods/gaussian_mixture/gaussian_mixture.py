@@ -5,15 +5,11 @@
 :Author: Jesus Torrado
 
 """
-
-# Python 2/3 compatibility
-from __future__ import division
-
 # Global
 import numpy as np
 from scipy.stats import multivariate_normal, uniform, random_correlation
 from scipy.special import logsumexp
-from collections import OrderedDict as odict
+from typing import Sequence, Optional
 
 # Local
 from cobaya.likelihood import Likelihood
@@ -29,6 +25,14 @@ class gaussian_mixture(Likelihood):
     """
     Gaussian likelihood.
     """
+
+    # yaml variables
+    means: Optional[Sequence]
+    covs: Optional[Sequence]
+    weights: Optional[Sequence[float]]
+    derived: bool
+    input_params_prefix: str
+    output_params_prefix: str
 
     def d(self):
         """
@@ -212,7 +216,7 @@ def info_random_gaussian_mixture(
     info = {kinds.likelihood: {"gaussian_mixture": {
         "means": mean, "covs": cov, _input_params_prefix: input_params_prefix,
         _output_params_prefix: output_params_prefix, "derived": derived}}}
-    info[_params] = odict(
+    info[_params] = dict(
         # sampled
         [(input_params_prefix + "_%d" % i,
           {"prior": {"min": ranges[i][0], "max": ranges[i][1]},

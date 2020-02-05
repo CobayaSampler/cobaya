@@ -3,12 +3,10 @@ Common tools for testing external priors and likelihoods.
 """
 
 # Global
-from __future__ import division
 import os
 import shutil
 from random import random
 import numpy as np
-import six
 import scipy.stats as stats
 from copy import deepcopy
 
@@ -30,8 +28,8 @@ derived_funcs = {"r": lambda x, y: np.sqrt(x ** 2 + y ** 2),
                  "theta": lambda x, y: np.arctan2(x, y) / np.pi}
 
 
-def half_ring_func_derived(x, y=0.5, _derived=["r", "theta"]):
-    _derived.update(dict([[p, derived_funcs[p](x, y)] for p in ["r", "theta"]]))
+def half_ring_func_derived(x, y=0.5, _derived=("r", "theta")):
+    _derived.update({p: derived_funcs[p](x, y) for p in ["r", "theta"]})
     return eval(half_ring_str)(x, y)
 
 
@@ -78,8 +76,7 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
     else:
         raise ValueError("Kind of test not known.")
     # If there is an ext function that is not a string, don't write output!
-    stringy = dict(
-        [(k, v) for k, v in info_logpdf.items() if isinstance(v, six.string_types)])
+    stringy = {k: v for k, v in info_logpdf.items() if isinstance(v, str)}
     if stringy != info_logpdf:
         info.pop(_output_prefix)
     # Run
@@ -90,11 +87,9 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
          info[_params]["x"][_prior]["min"]) *
         (info[_params]["y"][_prior]["max"] -
          info[_params]["y"][_prior]["min"]))
-    logps = dict([
-        (name, logpdf(**dict([(arg, products["sample"][arg].values) for arg in
-                              getfullargspec(logpdf)[0]])))
-        for name, logpdf in
-        {"half_ring": half_ring_func, "gaussian_y": gaussian_func}.items()])
+    logps = {name: logpdf(**{arg: products["sample"][arg].values for arg in
+                             getfullargspec(logpdf)[0]}) for name, logpdf in
+             {"half_ring": half_ring_func, "gaussian_y": gaussian_func}.items()}
     # Test #1: values of logpdf's
     if kind == _prior:
         columns_priors = [c for c in products["sample"].data.columns
@@ -116,13 +111,11 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
         "The value of the posterior is not reproduced correctly.")
     # Test derived parameters, if present -- for now just for "r"
     if derived:
-        derived_values = dict([
-            (param,
-             func(**dict([(arg, products["sample"][arg].values) for arg in ["x", "y"]])))
-            for param, func in derived_funcs.items()])
-        assert np.all(
-            [np.allclose(v, products["sample"][p].values)
-             for p, v in derived_values.items()]), (
+        derived_values = {param: func(**{arg: products["sample"][arg].values
+                                         for arg in ["x", "y"]})
+                          for param, func in derived_funcs.items()}
+        assert all(np.allclose(v, products["sample"][p].values)
+                   for p, v in derived_values.items()), (
             "The value of the derived parameters is not reproduced correctly.")
     # Test updated info -- scripted
     if kind == _prior:
@@ -134,15 +127,17 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
         for lik, value in list(info_likelihood.items()):
             if not hasattr(value, "get"):
                 info_likelihood[lik] = {_external: value}
-            info_likelihood[lik].update({k: v for k, v in Likelihood.class_options.items()
+            info_likelihood[lik].update({k: v for k, v in
+                                         Likelihood.get_defaults().items()
                                          if k not in info_likelihood[lik]})
             for k in [_input_params, _output_params]:
                 updated_info[kinds.likelihood][lik].pop(k)
-        assert info_likelihood == dict(updated_info[kinds.likelihood]), (
-                "The likelihood information has not been updated correctly\n %r vs %r" % (
-            info_likelihood, dict(updated_info[kinds.likelihood])))
+        assert info_likelihood == updated_info[kinds.likelihood], (
+                "The likelihood information has not been updated correctly\n %r vs %r"
+                % (info_likelihood, updated_info[kinds.likelihood]))
     # Test updated info -- yaml
-    # For now, only if ALL external pdfs are given as strings, since the YAML load fails otherwise
+    # For now, only if ALL external pdfs are given as strings,
+    # since the YAML load fails otherwise
     if stringy == info_logpdf:
         updated_output_file = os.path.join(prefix, _updated_suffix + ".yaml")
         with open(updated_output_file) as updated:

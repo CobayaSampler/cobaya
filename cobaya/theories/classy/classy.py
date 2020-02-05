@@ -131,8 +131,6 @@ If the instructions above failed, follow those in the
 `official CLASS web page <http://class-code.net/>`_ to get CLASS compiled with the Python
 interface ready.
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import, division
 
 # Global
 import sys
@@ -140,7 +138,7 @@ import os
 import numpy as np
 from copy import deepcopy
 import logging
-from collections import namedtuple, OrderedDict as odict
+from collections import namedtuple
 from numbers import Number
 
 # Local
@@ -148,7 +146,6 @@ from cobaya.theories._cosmo import BoltzmannBase
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, pip_install
 from cobaya.tools import load_module, VersionCheckError
-from cobaya.conventions import _version
 
 # Result collector
 Collector = namedtuple("collector",
@@ -161,9 +158,9 @@ non_linear_default_code = "hmcode"
 
 class classy(BoltzmannBase):
     # Name of the Class repo/folder and version to download
-    classy_repo_name = "lesgourg/class_public"
-    min_classy_version = "v2.8.2"
-    classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', min_classy_version)
+    _classy_repo_name = "lesgourg/class_public"
+    _min_classy_version = "v2.8.2"
+    _classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', _min_classy_version)
 
     def initialize(self):
         """Importing CLASS from the correct path, if given, and if not, globally."""
@@ -193,7 +190,7 @@ class classy(BoltzmannBase):
             self.log.info("Importing *global* CLASS.")
         try:
             self.classy_module = load_module('classy', path=classy_build_path,
-                                             min_version=self.classy_repo_version)
+                                             min_version=self._classy_repo_version)
             from classy import Class, CosmoSevereError, CosmoComputationError
         except ImportError:
             raise LoggedError(
@@ -207,7 +204,7 @@ class classy(BoltzmannBase):
         self.classy = Class()
         # Propagate errors up
         global CosmoComputationError, CosmoSevereError
-        super(classy, self).initialize()
+        super().initialize()
         # Add general CLASS stuff
         self.extra_args["output"] = self.extra_args.get("output", "")
         if "sBBN file" in self.extra_args:
@@ -218,7 +215,7 @@ class classy(BoltzmannBase):
 
     def needs(self, **requirements):
         # Computed quantities required by the likelihood
-        super(classy, self).needs(**requirements)
+        super().needs(**requirements)
         for k, v in self._needs.items():
             # Products and other computations
             if k == "Cl":
@@ -309,7 +306,7 @@ class classy(BoltzmannBase):
                 list(set(self.input_params).intersection(set(self.extra_args))))
 
     def add_z_for_matter_power(self, z):
-        if not hasattr(self, "z_for_matter_power"):
+        if getattr(self, "z_for_matter_power", None) is None:
             self.z_for_matter_power = np.empty(0)
         self.z_for_matter_power = np.flip(np.sort(np.unique(np.concatenate(
             [self.z_for_matter_power, np.atleast_1d(z)]))), axis=0)
@@ -403,7 +400,7 @@ class classy(BoltzmannBase):
         # Prepare derived parameters
         d, d_extra = self._get_derived_all(derived_requested=want_derived)
         if want_derived:
-            state["derived"] = odict((p, d.get(p)) for p in self.output_params)
+            state["derived"] = {p: d.get(p) for p in self.output_params}
             # Prepare necessary extra derived parameters
         state["derived_extra"] = deepcopy(d_extra)
 
@@ -443,7 +440,6 @@ class classy(BoltzmannBase):
             p: requested_and_extra[self.translate_param(p)] for p in self.output_params}
         derived_extra = {p: requested_and_extra[p] for p in self.derived_extra}
         return derived, derived_extra
-
 
     def get_Cl(self, ell_factor=False, units="muK2"):
         try:
@@ -526,7 +522,7 @@ class classy(BoltzmannBase):
             return False
         log.info("Downloading classy...")
         success = download_github_release(
-            os.path.join(path, "code"), cls.classy_repo_name, cls.classy_repo_version,
+            os.path.join(path, "code"), cls._classy_repo_name, cls._classy_repo_version,
             repo_rename=cls.__name__, no_progress_bars=no_progress_bars, logger=log)
         if not success:
             log.error("Could not download classy.")

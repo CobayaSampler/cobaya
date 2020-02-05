@@ -43,13 +43,11 @@ Your class needs to inherit from the :class:`cobaya.Sampler` class below, and ne
 implement only the methods ``initialize``, ``run``, ``close``, and ``products``.
 
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import, division, print_function
-
 # Global
 import os
 import logging
 import numpy as np
+from typing import Optional
 
 # Local
 from cobaya.conventions import kinds, _resume_default, _checkpoint_extension
@@ -65,6 +63,8 @@ class Sampler(CobayaComponent):
     """Prototype of the sampler class."""
 
     # What you *must* implement to create your own sampler:
+
+    seed: Optional[int]
 
     def initialize(self):
         """
@@ -113,13 +113,14 @@ class Sampler(CobayaComponent):
         self.model = model
         self.output = output
 
-        super(Sampler, self).__init__(info_sampler, path_install=path_install,
-                                      name=name, initialize=False, standalone=False)
+        super().__init__(info_sampler, path_install=path_install,
+                         name=name, initialize=False, standalone=False)
 
         # Seed, if requested
         if getattr(self, "seed", None) is not None:
             self.log.warning("This run has been SEEDED with seed %d", self.seed)
             try:
+                # TODO, says this is deprecated
                 np.random.seed(self.seed)
             except TypeError:
                 raise LoggedError(

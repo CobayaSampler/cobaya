@@ -8,12 +8,9 @@ Inspired by a similar characteristic of
 `CosmoSIS <https://bitbucket.org/joezuntz/cosmosis/wiki/Home>`_.
 
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import, division, print_function
 
 # Global
 import os
-from collections import OrderedDict as odict
 
 # Local
 from cobaya.conventions import _yaml_extensions, kinds
@@ -35,7 +32,7 @@ def get_bib_module(module, kind):
 
 
 def get_bib_info(*infos):
-    blocks_text = odict([["Cobaya", "[Paper in preparation]"]])
+    blocks_text = {"Cobaya": "[Paper in preparation]"}
     for kind, modules in get_used_modules(*infos).items():
         for module in modules:
             blocks_text["%s:%s" % (kind, module)] = get_bib_module(module, kind)

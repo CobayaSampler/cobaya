@@ -17,11 +17,6 @@ or pass a dictionary of ranges for each spectrum.
 ##TODO: calPlanck vs Aplanck
 
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import, division
-import six
-if six.PY2:
-    from io import open
 
 # Global
 import numpy as np
@@ -37,7 +32,7 @@ use_cache = True
 def range_to_ells(use_range):
     """splits range string like '2-5 7 15-3000' into list of specific numbers"""
 
-    if isinstance(use_range, six.string_types):
+    if isinstance(use_range, str):
         ranges = []
         for ell_range in use_range.split():
             if '-' in ell_range:
@@ -265,7 +260,7 @@ class _planck_2018_CamSpec_python(_DataSetLikelihood):
                 elif i == 5:
                     delta_vector[ix:ix + n] -= CEE[self.ell_ranges[i]] / cal
                 ix += n
-        return self.fast_chi_squared(self.covinv, delta_vector)
+        return self._fast_chi_squared(self.covinv, delta_vector)
 
     def logp(self, **data_params):
         Cls = self.theory.get_Cl(ell_factor=True)

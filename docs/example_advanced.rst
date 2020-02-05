@@ -31,11 +31,9 @@ Our likelihood will be a gaussian ring centred at 0 with radius 1. We define it 
 
 .. code:: python
 
-    from collections import OrderedDict as odict
-
-    info["params"] = odict([
-        ["x", {"prior": {"min": -2, "max": 2}, "ref": 1, "proposal": 0.2}],
-        ["y", {"prior": {"min": -2, "max": 2}, "ref": 0, "proposal": 0.2}]])
+    info["params"] = {
+        {"x": {"prior": {"min": -2, "max": 2}, "ref": 1, "proposal": 0.2},
+        {"y": {"prior": {"min": -2, "max": 2}, "ref": 0, "proposal": 0.2}}
 
 
 Now, let's assume that we want to track the radius of the ring, whose posterior will be approximately gaussian, and the angle, whose posterior will be uniform. We can define them as function of known input parameters:
@@ -126,7 +124,7 @@ And remove the definition (but not the mention!) of ``r`` and ``theta`` in the `
 
 .. code:: python
 
-   info_alt["params"] = odict([
+   info_alt["params"] = dict([
        ["x", {"prior": {"min": -2, "max": 2}, "ref": 1, "proposal": 0.2}],
        ["y", {"prior": {"min": -2, "max": 2}, "ref": 0, "proposal": 0.2}],
        ["r", None],
@@ -154,7 +152,7 @@ Still, this can be done in a simple way at the level of the parameters, i.e. wit
 
     from copy import deepcopy
     info_rtheta = deepcopy(info)
-    info_rtheta["params"] = odict([
+    info_rtheta["params"] = dict([
         ["r", {"prior": {"min": 0, "max": 2}, "ref": 1,
                "proposal": 0.5, "drop": True}],
         ["theta", {"prior": {"min": -0.75*np.pi, "max": np.pi/4}, "ref": 0,

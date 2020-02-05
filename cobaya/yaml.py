@@ -8,30 +8,19 @@ Customization of YAML's loaded and dumper:
 
 1. Matches 1e2 as 100 (no need for dot, or sign after e),
    from https://stackoverflow.com/a/30462009
-2. Wrapper to load mappings as OrderedDict (for likelihoods and params),
-   from https://stackoverflow.com/a/21912744
 
 """
-
-# Python 2/3 compatibility
-from __future__ import absolute_import, division
-import six
-if six.PY2:
-    from io import open
-
 # Global
 import os
 import yaml
+from yaml.resolver import BaseResolver
+from yaml.constructor import ConstructorError
 import re
-from collections import OrderedDict as odict
 import numpy as np
 
 # Local
 from cobaya.tools import prepare_comment, recursive_update
 from cobaya.conventions import _yaml_extensions
-
-# More Python2/3 compatibility
-force_unicode = lambda x: x if six.PY3 else x.decode("utf-8")
 
 
 # Exceptions #############################################################################
@@ -62,20 +51,7 @@ ScientificLoader.add_implicit_resolver(
     list(u'-+0123456789.'))
 
 
-class OrderedLoader(ScientificLoader):
-    pass
-
-
-def _construct_mapping(loader, node):
-    loader.flatten_mapping(node)
-    return odict(loader.construct_pairs(node))
-
-
-OrderedLoader.add_constructor(
-    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _construct_mapping)
-
-
-class DefaultsLoader(OrderedLoader):
+class DefaultsLoader(ScientificLoader):
     current_folder = None
 
 
@@ -85,10 +61,10 @@ def _construct_defaults(loader, node):
             "'!defaults' directive can only be used when loading from a file.")
     try:
         defaults_files = [loader.construct_scalar(node)]
-    except yaml.constructor.ConstructorError:
+    except ConstructorError:
         defaults_files = loader.construct_sequence(node)
     folder = loader.current_folder
-    loaded_defaults = odict()
+    loaded_defaults = {}
     for dfile in defaults_files:
         dfilename = os.path.abspath(os.path.join(folder, dfile))
         try:
@@ -157,27 +133,28 @@ def yaml_load_file(file_name, yaml_text=None):
 # Custom dumper ##########################################################################
 
 def yaml_dump(data, stream=None, Dumper=yaml.Dumper, **kwds):
+    from collections import OrderedDict
     class OrderedDumper(Dumper):
         pass
 
     # Dump OrderedDict's as plain dictionaries, but keeping the order
     def _dict_representer(dumper, data):
         return dumper.represent_mapping(
-            yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, data.items())
+            BaseResolver.DEFAULT_MAPPING_TAG, data.items())
 
-    OrderedDumper.add_representer(odict, _dict_representer)
+    OrderedDumper.add_representer(OrderedDict, _dict_representer)
 
     # Dump tuples as yaml "sequences"
     def _tuple_representer(dumper, data):
         return dumper.represent_sequence(
-            yaml.resolver.BaseResolver.DEFAULT_SEQUENCE_TAG, list(data))
+            BaseResolver.DEFAULT_SEQUENCE_TAG, list(data))
 
     OrderedDumper.add_representer(tuple, _tuple_representer)
 
     # Numpy arrays and numbers
     def _numpy_array_representer(dumper, data):
         return dumper.represent_sequence(
-            yaml.resolver.BaseResolver.DEFAULT_SEQUENCE_TAG, data.tolist())
+            BaseResolver.DEFAULT_SEQUENCE_TAG, data.tolist())
 
     OrderedDumper.add_representer(np.ndarray, _numpy_array_representer)
 
@@ -200,7 +177,7 @@ def yaml_dump(data, stream=None, Dumper=yaml.Dumper, **kwds):
     OrderedDumper.add_multi_representer(object, _null_representer)
 
     # Dump!
-    return force_unicode(yaml.dump(data, stream, OrderedDumper, allow_unicode=True, **kwds))
+    return yaml.dump(data, stream, OrderedDumper, allow_unicode=True, **kwds)
 
 
 def yaml_dump_file(file_name, data, comment=None, error_if_exists=True):

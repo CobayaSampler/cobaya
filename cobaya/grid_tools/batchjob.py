@@ -6,12 +6,6 @@
 
 """
 
-# Python 2/3 compatibility
-from __future__ import absolute_import, division, print_function
-import six
-if six.PY2:
-    from io import open
-
 # TODO many things not yet updated for cobaya formats
 
 import os
@@ -82,7 +76,9 @@ def getCodeRootPath():
     return os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..')) + os.sep
 
 
-class propertiesItem(object):
+class propertiesItem:
+    propertiesIniFile: callable
+
     def propertiesIni(self):
         if os.path.exists(self.propertiesIniFile()):
             return IniFile(self.propertiesIniFile())
@@ -92,11 +88,11 @@ class propertiesItem(object):
             return ini
 
 
-class dataSet(object):
+class dataSet:
     def __init__(self, names, params=None, covmat=None, dist_settings=None):
         if not dist_settings:
             dist_settings = {}
-        if isinstance(names, six.string_types): names = [names]
+        if isinstance(names, str): names = [names]
         if params is None:
             params = [(name + '.ini') for name in names]
         else:
@@ -145,21 +141,21 @@ class dataSet(object):
         return data
 
     def standardizeParams(self, params):
-        if isinstance(params, dict) or isinstance(params, six.string_types):
+        if isinstance(params, dict) or isinstance(params, str):
             params = [params]
         for i in range(len(params)):
-            if isinstance(params[i], six.string_types) and not '.ini' in params[i]:
+            if isinstance(params[i], str) and not '.ini' in params[i]:
                 params[i] += '.ini'
         return params
 
     def hasName(self, name):
-        if isinstance(name, six.string_types):
+        if isinstance(name, str):
             return name in self.names
         else:
             return any(True for i in name if i in self.names)
 
     def hasAll(self, name):
-        if isinstance(name, six.string_types):
+        if isinstance(name, str):
             return name in self.names
         else:
             return all((i in self.names) for i in name)
@@ -190,7 +186,7 @@ class dataSet(object):
         return "_".join(sorted(self.namesReplacing(dic)))
 
 
-class jobGroup(object):
+class jobGroup:
     def __init__(self, name, params=None, importanceRuns=None, datasets=None):
         if importanceRuns is None:
             importanceRuns = []
@@ -204,7 +200,7 @@ class jobGroup(object):
             self.datasets = datasets
 
 
-class importanceSetting(object):
+class importanceSetting:
     def __init__(self, names, inis=None, dist_settings=None, minimize=True):
         if not inis:
             inis = []
@@ -222,10 +218,8 @@ class importanceFilter(importanceSetting):
     # e.g. restricting a parameter to a new range
 
     def __init__(self, names, dist_settings=None, minimize=False):
-        self.names = names
-        self.inis = [self]
-        self.dist_settings = dist_settings or {}
-        self.want_minimize = minimize
+        super().__init__(names, inis=[self], dist_settings=dist_settings,
+                         minimize=minimize)
 
 
 class jobItem(propertiesItem):
@@ -249,6 +243,7 @@ class jobItem(propertiesItem):
         self.want_minimize = minimize
         self.result_converge = None
         self.group = None
+        self.parent = None
         self.dist_settings = copy.copy(data_set.dist_settings)
         self.makeIDs()
         self.iniFile_path = _input_folder
@@ -321,7 +316,7 @@ class jobItem(propertiesItem):
                                                      tagList]
 
     def hasParam(self, name):
-        if isinstance(name, six.string_types):
+        if isinstance(name, str):
             return name in self.param_set
         else:
             return any([True for i in name if i in self.param_set])
@@ -473,7 +468,7 @@ class jobItem(propertiesItem):
             elif not silent:
                 print('missing: ' + marge_root)
 
-    def getMCSamples(self, ini=None, settings={}):
+    def getMCSamples(self, ini=None, settings=None):
         return loadMCSamples(self.chainRoot, jobItem=self, ini=ini, settings=settings)
 
 
@@ -499,7 +494,7 @@ class batchJob(propertiesItem):
             for data_set in group["datasets"]:
                 for param_set in group["models"]:
                     if any(data_set in (x.get("skip", {}) or {}).get(param_set, {})
-                            for x in (settings["grid"], group)):
+                           for x in (settings["grid"], group)):
                         continue
                     item = jobItem(self.batchPath, param_set, data_set, base=group_name)
                     if hasattr(group, 'groupName'):
@@ -566,7 +561,7 @@ class batchJob(propertiesItem):
                     raiseError=True, base='base',
                     returnJobItem=False):
         if paramtag:
-            if isinstance(paramtag, six.string_types):
+            if isinstance(paramtag, str):
                 paramtag = paramtag.split('_')
             paramtags = [base] + sorted(paramtag)
         else:

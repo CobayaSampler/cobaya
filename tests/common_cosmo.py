@@ -1,10 +1,9 @@
 """
 Body of the best-fit test for cosmological likelihoods
 """
-from __future__ import absolute_import, division
 from copy import deepcopy
 
-from cobaya.conventions import kinds, _params, _debug, _path_install
+from cobaya.conventions import kinds, _params, _debug, _path_install, empty_dict
 from cobaya.model import get_model
 from cobaya.input import update_info
 from cobaya.cosmo_input import create_input, planck_base_model
@@ -16,7 +15,7 @@ tolerance_derived = 0.055
 
 
 def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
-                 best_fit_derived=None, extra_model={}):
+                 best_fit_derived=None, extra_model=empty_dict):
     # Create base info
     theo = list(info_theory)[0]
     # In Class, theta_s is exact, but different from the approximate one cosmomc_theta

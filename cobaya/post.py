@@ -5,13 +5,10 @@
 :Author: Jesus Torrado
 
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import, division
 
 # Global
 import numpy as np
 import logging
-from collections import OrderedDict as odict
 from copy import deepcopy
 
 # Local
@@ -34,7 +31,7 @@ from cobaya.model import Model
 
 # Dummy classes for loading chains for post processing
 
-class DummyModel(object):
+class DummyModel:
 
     def __init__(self, info_params, info_likelihood, info_prior=None):
         self.parameterization = Parameterization(info_params, ignore_unused_sampled=True)
@@ -86,7 +83,7 @@ def post(info, sample=None):
     remove = info_post.get(_post_remove, {})
     # Add a dummy 'one' likelihood, to absorb unused parameters
     if not add.get(kinds.likelihood):
-        add[kinds.likelihood] = odict()
+        add[kinds.likelihood] = {}
     add[kinds.likelihood].update({"one": None})
     # Expand the "add" info
     add = update_info(add)
@@ -182,7 +179,7 @@ def post(info, sample=None):
         # Inherit from the original chain (needs input|output_params, renames, etc
         add_theory = add.get(kinds.theory)
         if add_theory:
-            info_theory_out = odict()
+            info_theory_out = {}
             if len(add_theory) > 1:
                 log.warning('Importance sampling with more than one theory is '
                             'not really tested')
@@ -268,15 +265,13 @@ def post(info, sample=None):
         log.debug("Point: %r", point)
         sampled = [point[param] for param in
                    dummy_model_in.parameterization.sampled_params()]
-        derived = odict(
-            [(param, point.get(param, None))
-             for param in dummy_model_out.parameterization.derived_params()])
-        inputs = odict([
-            (param, point.get(
-                param, dummy_model_in.parameterization.constant_params().get(
-                    param, dummy_model_out.parameterization.constant_params().get(
-                        param, None))))
-            for param in dummy_model_out.parameterization.input_params()])
+        derived = {param: point.get(param, None)
+                   for param in dummy_model_out.parameterization.derived_params()}
+        inputs = {param: point.get(
+            param, dummy_model_in.parameterization.constant_params().get(
+                param, dummy_model_out.parameterization.constant_params().get(
+                    param, None)))
+            for param in dummy_model_out.parameterization.input_params()}
         # Solve inputs that depend on a function and were not saved
         # (we don't use the Parameterization_to_input method in case there are references
         #  to functions that cannot be loaded at the moment)
@@ -289,7 +284,7 @@ def post(info, sample=None):
         priors_add = model_add.prior.logps(sampled)
         if not prior_recompute_1d:
             priors_add = priors_add[1:]
-        logpriors_add = odict(zip(mlprior_names_add, priors_add))
+        logpriors_add = dict(zip(mlprior_names_add, priors_add))
         logpriors_new = [logpriors_add.get(name, - point.get(name, 0))
                          for name in collection_out.minuslogprior_names]
         if log.getEffectiveLevel() <= logging.DEBUG:
@@ -302,7 +297,7 @@ def post(info, sample=None):
         if model_add:  # TODO: seems always true (could we just use loglikes here?)
             # Notice "one" (last in likelihood_add) is ignored: not in chi2_names
             loglikes_add, output_like = model_add.logps(inputs, return_derived=True)
-            loglikes_add = odict(zip(chi2_names_add, loglikes_add))
+            loglikes_add = dict(zip(chi2_names_add, loglikes_add))
             output_like = dict(zip(model_add.output_params, output_like))
         else:
             loglikes_add = dict()

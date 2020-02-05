@@ -6,13 +6,6 @@ r"""
          (initially based on MontePython's version by Julien Lesgourgues and Benjamin Audren)
 
 """
-
-# Python 2/3 compatibility
-from __future__ import absolute_import, division, print_function
-import six
-if six.PY2:
-    from io import open
-
 # Global
 import os
 import sys
@@ -28,7 +21,7 @@ from cobaya.install import pip_install, download_file
 from cobaya.tools import are_different_params_lists, create_banner
 
 _deprecation_msg_2015 = create_banner("""
-The likelihoods from the Planck 2015 data release have been superseeded
+The likelihoods from the Planck 2015 data release have been superseded
 by the 2018 ones, and will eventually be deprecated.
 """)
 
@@ -36,14 +29,9 @@ pla_url_prefix = r"https://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLO
 
 last_version_supp_data_and_covmats = "v2.01"
 
-# py2 compatibility:
-try:
-    FileNotFoundError
-except NameError:
-    FileNotFoundError = OSError
-
 
 class _planck_clik_prototype(Likelihood):
+    path: str
 
     def initialize(self):
         if "2015" in self.get_name():
@@ -58,6 +46,7 @@ class _planck_clik_prototype(Likelihood):
                 import clik
                 has_clik = True
             except ImportError:
+                clik = None
                 has_clik = False
         if not has_clik:
             if not self.path:
@@ -89,9 +78,9 @@ class _planck_clik_prototype(Likelihood):
             if not os.path.exists(self.clik_file):
                 raise LoggedError(
                     self.log, "The .clik file was not found where specified in the "
-                              "'clik_file' field of the settings of this likelihood. Maybe the "
-                              "'path' given is not correct? The full path where the .clik file was "
-                              "searched for is '%s'", self.clik_file)
+                              "'clik_file' field of the settings of this likelihood. "
+                              "Maybe the 'path' given is not correct? The full path where"
+                              " the .clik file was searched for is '%s'", self.clik_file)
             # Else: unknown clik error
             self.log.error("An unexpected error occurred in clik (possibly related to "
                            "multiple simultaneous initialization, or simultaneous "
@@ -180,7 +169,8 @@ class _planck_clik_prototype(Likelihood):
         if _clik_install_failed:
             log.info("Previous clik install failed, skipping")
             return False
-        # Create common folders: all planck likelihoods share install folder for code and data
+        # Create common folders: all planck likelihoods share install
+        # folder for code and data
         paths = {}
         for s in ("code", "data"):
             if eval(s):
@@ -286,10 +276,7 @@ def execute(command):
             nextline = process.stdout.readline()
             if nextline == b"" and process.poll() is not None:
                 break
-            if six.PY3:
-                sys.stdout.buffer.write(nextline)
-            else:
-                sys.stdout.write(nextline)
+            sys.stdout.buffer.write(nextline)
             out.append(nextline)
             sys.stdout.flush()
         _, err = process.communicate()

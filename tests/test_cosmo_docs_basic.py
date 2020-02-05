@@ -2,7 +2,6 @@
 Testing and automatic generation of basic cosmological examples in the docs.
 """
 
-from __future__ import division, absolute_import
 import os
 import sys
 

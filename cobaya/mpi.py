@@ -6,9 +6,6 @@
 
 """
 
-# Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
 import os
 # Local
 from cobaya.conventions import _package
@@ -38,6 +35,7 @@ def set_mpi_disabled(disabled=True):
         _mpi_rank = -1
 
 
+# noinspection PyUnresolvedReferences
 def get_mpi():
     """
     Import and returns the MPI object, or None if not running with MPI.

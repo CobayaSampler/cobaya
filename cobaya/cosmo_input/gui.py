@@ -1,15 +1,8 @@
-# Python 2/3 compatibility
-from __future__ import absolute_import, division
-import six
-if six.PY2:
-    from io import open
-
 # Global
 import os
 import sys
 import platform
 import signal
-from collections import OrderedDict as odict
 from pprint import pformat
 
 # Local
@@ -30,24 +23,17 @@ else:  # Windows/Mac
     set_attributes = ["AA_EnableHighDpiScaling"]
 
 try:
-    from PySide.QtGui import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
-    from PySide.QtGui import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
-    from PySide.QtGui import QFileDialog, QCheckBox, QLabel, QMenuBar, QAction, QDialog
-    from PySide.QtCore import Slot, QSize, QSettings
-except ImportError:
-    try:
-        from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, \
-            QGroupBox
-        from PySide2.QtWidgets import QScrollArea, QTabWidget, QComboBox, QPushButton, \
-            QTextEdit
-        from PySide2.QtWidgets import QFileDialog, QCheckBox, QLabel, QMenuBar, QAction, \
-            QDialog
-        from PySide2.QtCore import Slot, Qt, QCoreApplication, QSize, QSettings
+    # noinspection PyUnresolvedReferences
+    from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, \
+        QGroupBox, QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit, \
+        QFileDialog, QCheckBox, QLabel, QMenuBar, QAction, QDialog
+    # noinspection PyUnresolvedReferences
+    from PySide2.QtCore import Slot, Qt, QCoreApplication, QSize, QSettings
 
-        for attribute in set_attributes:
-            QApplication.setAttribute(getattr(Qt, attribute))
-    except ImportError:
-        QWidget, Slot = object, (lambda: lambda *x: None)
+    for attribute in set_attributes:
+        QApplication.setAttribute(getattr(Qt, attribute))
+except ImportError:
+    QWidget, Slot = object, (lambda: lambda *x: None)
 
 # Quit with C-c
 signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -64,8 +50,9 @@ def get_settings():
 
 class MainWindow(QWidget):
 
+    # noinspection PyUnresolvedReferences
     def __init__(self):
-        super(MainWindow, self).__init__()
+        super().__init__()
         self.setWindowTitle("Cobaya input generator for Cosmology")
         self.setStyleSheet("* {font-size:%s;}" % font_size)
         # Menu bar for defaults
@@ -100,9 +87,9 @@ class MainWindow(QWidget):
         self.options_scroll.setWidget(self.options)
         self.options_scroll.setWidgetResizable(True)
         self.layout_left.addWidget(self.options_scroll)
-        titles = odict([
-            ["Presets", odict([["preset", "Presets"]])],
-            ["Cosmological Model", odict([
+        titles = dict([
+            ["Presets", {"preset": "Presets"}],
+            ["Cosmological Model", dict([
                 ["theory", "Theory code"],
                 ["primordial", "Primordial perturbations"],
                 ["geometry", "Geometry"],
@@ -112,14 +99,14 @@ class MainWindow(QWidget):
                 ["dark_energy", "Lambda / Dark energy"],
                 ["bbn", "BBN"],
                 ["reionization", "Reionization history"]])],
-            ["Data sets", odict([
+            ["Data sets", dict([
                 ["like_cmb", "CMB experiments"],
                 ["like_bao", "BAO experiments"],
                 ["like_des", "DES measurements"],
                 ["like_sn", "SN experiments"],
                 ["like_H0", "Local H0 measurements"]])],
-            ["Sampler", odict([["sampler", "Samplers"]])]])
-        self.combos = odict()
+            ["Sampler", {"sampler": "Samplers"}]])
+        self.combos = dict()
         for group, fields in titles.items():
             group_box = QGroupBox(group)
             self.layout_options.addWidget(group_box)
@@ -174,6 +161,7 @@ class MainWindow(QWidget):
 
     def read_settings(self):
         settings = get_settings()
+        # noinspection PyArgumentList
         screen = QApplication.desktop().screenGeometry()
         h = min(screen.height() * 5 / 6., 900)
         size = QSize(min(screen.width() * 5 / 6., 1200), h)
@@ -245,9 +233,7 @@ class MainWindow(QWidget):
         except (TypeError,  # No comments
                 AttributeError):  # Failed to generate info (returned str instead)
             comments_text = ""
-        self.display["python"].setText(
-            "from collections import OrderedDict\n\ninfo = " +
-            pformat(info) + comments_text)
+        self.display["python"].setText("info = " + pformat(info) + comments_text)
         self.display["yaml"].setText(yaml_dump(info) + comments_text)
         self.display["bibliography"].setText(prettyprint_bib(get_bib_info(info)))
 
@@ -274,13 +260,15 @@ class MainWindow(QWidget):
         self.current_defaults_diag = DefaultsDialog(kind, module, parent=self)
 
 
+# noinspection PyUnresolvedReferences
 class DefaultsDialog(QWidget):
 
     def __init__(self, kind, module, parent=None):
-        super(DefaultsDialog, self).__init__()
+        super().__init__()
         self.clipboard = parent.clipboard
         self.setWindowTitle("%s : %s" % (kind, module))
         self.setGeometry(0, 0, 500, 500)
+        # noinspection PyArgumentList
         self.move(
             QApplication.desktop().screenGeometry().center() - self.rect().center())
         self.show()
@@ -301,9 +289,7 @@ class DefaultsDialog(QWidget):
         defaults_txt = get_default_info(module, kind, return_yaml=True,
                                         fail_if_not_found=True)
         from cobaya.yaml import yaml_load
-        self.display["python"].setText(
-            "from collections import OrderedDict\n\ninfo = " +
-            pformat(yaml_load(defaults_txt)))
+        self.display["python"].setText("info = " + pformat(yaml_load(defaults_txt)))
         self.display["yaml"].setText(defaults_txt)
         self.display["bibliography"].setText(get_bib_module(module, kind))
         # Buttons
@@ -332,7 +318,7 @@ def gui_script():
         import logging
         raise LoggedError(
             logging.getLogger("cosmo_generator"),
-            "PySide or PySide2 is not installed! "
+            "PySide2 is not installed! "
             "Check Cobaya's documentation for the cosmo_generator "
             "('Basic cosmology runs').")
     clip = app.clipboard()

@@ -6,13 +6,8 @@
 :Author: Jesus Torrado
 
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import, division, print_function
-from six import string_types
-
 # Global
 import numpy as np
-from collections import OrderedDict as odict
 from numbers import Number
 from itertools import chain
 from copy import deepcopy
@@ -53,14 +48,14 @@ def expand_info_param(info_param, default_derived=True):
     info_param = deepcopy_where_possible(info_param)
     if not hasattr(info_param, "keys"):
         if info_param is None:
-            info_param = odict()
+            info_param = {}
         else:
-            info_param = odict([(partag.value, info_param)])
+            info_param = {partag.value: info_param}
     if all(f not in info_param for f in [partag.prior, partag.value, partag.derived]):
         info_param[partag.derived] = default_derived
     # Dynamical input parameters: save as derived by default
     value = info_param.get(partag.value, None)
-    if isinstance(value, string_types) or callable(value):
+    if isinstance(value, str) or callable(value):
         info_param[partag.derived] = info_param.get(partag.derived, True)
     return info_param
 
@@ -110,15 +105,15 @@ class Parameterization(HasLogger):
         # `input` contains the parameters (expected to be) understood by the likelihood,
         #   with its fixed value, its fixing function, or None if their value is given
         #   directly by the sampler.
-        self._infos = odict()
-        self._input = odict()
+        self._infos = {}
+        self._input = {}
         self._input_funcs = dict()
         self._input_args = dict()
-        self._output = odict()
-        self._constant = odict()
-        self._sampled = odict()
-        self._sampled_renames = odict()
-        self._derived = odict()
+        self._output = {}
+        self._constant = {}
+        self._sampled = {}
+        self._sampled_renames = {}
+        self._derived = {}
         self._derived_funcs = dict()
         self._derived_args = dict()
         # Notice here that expand_info_param *always* adds a partag.derived:True tag
@@ -140,7 +135,7 @@ class Parameterization(HasLogger):
                 if not info.get(partag.drop, False):
                     self._input[p] = None
                 self._sampled_renames[p] = (
-                    (lambda x: [x] if isinstance(x, string_types) else x)
+                    (lambda x: [x] if isinstance(x, str) else x)
                     (info.get(partag.renames, [])))
             if is_derived_param(info):
                 self._derived[p] = deepcopy_where_possible(info)
@@ -181,9 +176,9 @@ class Parameterization(HasLogger):
         self._directly_sampled = [p for p in self._input if p in self._sampled]
         self._directly_output = [p for p in self._derived if p in self._output]
         # Useful mapping: input params that vary if each sample is varied
-        self._sampled_input_dependence = odict(
-            (s, [i for i in self._input if s in self._input_args.get(i, {})])
-            for s in self._sampled)
+        self._sampled_input_dependence = {s: [i for i in self._input
+                                              if s in self._input_args.get(i, {})]
+                                          for s in self._sampled}
         # From here on, some error control.
         dropped_but_never_used = (
             set(p for p, v in self._sampled_input_dependence.items() if not v)
@@ -222,8 +217,8 @@ class Parameterization(HasLogger):
         return deepcopy(self._sampled)
 
     def sampled_params_info(self):
-        return odict((p, deepcopy_where_possible(info)) for p, info
-                     in self._infos.items() if p in self._sampled)
+        return {p: deepcopy_where_possible(info) for p, info
+                in self._infos.items() if p in self._sampled}
 
     def sampled_params_renames(self):
         return deepcopy(self._sampled_renames)
@@ -237,11 +232,10 @@ class Parameterization(HasLogger):
     def to_input(self, sampled_params_values, copied=True):
         # Store sampled params, so that derived can depend on them
         if not hasattr(sampled_params_values, "keys"):
-            sampled_params_values = odict(
+            sampled_params_values = dict(
                 zip(self._sampled, sampled_params_values))
-        elif not isinstance(sampled_params_values, odict):
-            sampled_params_values = odict(
-                (p, sampled_params_values[p]) for p in self._sampled)
+        elif not isinstance(sampled_params_values, dict):
+            sampled_params_values = {p: sampled_params_values[p] for p in self._sampled}
         else:
             sampled_params_values = sampled_params_values.copy()
 
@@ -310,9 +304,9 @@ class Parameterization(HasLogger):
         Check that the input dictionary contains all the sampled parameters,
         and just them. Is aware of known renamings.
 
-        Returns `OrderedDict` of parameters (model's naming) and their values.
+        Returns dict of parameters (model's naming) and their values.
         """
-        sampled_output = odict()
+        sampled_output = {}
         sampled_input = deepcopy(sampled_params)
         for p, renames in self._sampled_renames.items():
             for pprime in sampled_input:
@@ -381,7 +375,7 @@ class Parameterization(HasLogger):
             return ensure_nolatex(getattr(info, "get", lambda x, y: y)
                                   (partag.latex, p.replace("_", r"\ ")))
 
-        return odict((p, get_label(p, info)) for p, info in self._infos.items())
+        return {p: get_label(p, info) for p, info in self._infos.items()}
 
     # Python magic for the "with" statement
     def __enter__(self):

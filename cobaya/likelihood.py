@@ -21,8 +21,6 @@ other theory codes (or likelihoods). Other methods of the :class:`.theory.Theory
 class can be used as and when needed.
 
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import, division
 
 # Global
 import sys
@@ -30,17 +28,17 @@ import traceback
 from time import sleep
 import numpy as np
 import inspect
-import six
+from typing import Mapping
 
 # Local
-from cobaya.conventions import kinds, _external, _module_path
+from cobaya.conventions import kinds, _external, _module_path, empty_dict
 from cobaya.tools import get_class, get_external_function, getfullargspec
 from cobaya.log import LoggedError
 from cobaya.component import ComponentCollection
 from cobaya.theory import Theory
 
 
-class LikelihoodInterface(object):
+class LikelihoodInterface:
     """
     Interface function for likelihoods. Can descend from a :class:`theory.Theory` class
     and this to make a likelihood (where the calculate() method stores state['logp'] for
@@ -50,6 +48,8 @@ class LikelihoodInterface(object):
     The get_current_logp function returns the current state's logp, and does not normally
     need to be changed.
     """
+
+    _current_state: Mapping[str, Mapping]
 
     def get_current_logp(self):
         """
@@ -65,13 +65,14 @@ class Likelihood(Theory, LikelihoodInterface):
     :class:`theory.Theory` class by adding functions to return likelihoods functions
     (logp function for a given point)."""
 
-    def __init__(self, info={}, name=None, timing=None, path_install=None,
+    def __init__(self, info=empty_dict, name=None, timing=None, path_install=None,
                  initialize=True, standalone=True):
-        super(Likelihood, self).__init__(info, name=name, timing=timing,
-                                         path_install=path_install, initialize=initialize,
-                                         standalone=standalone)
+        self.delay = 0
+        super().__init__(info, name=name, timing=timing,
+                         path_install=path_install, initialize=initialize,
+                         standalone=standalone)
         # Make sure `types` is a list of data types, for aggregated chi2
-        self.type = (lambda x: [x] if isinstance(x, six.string_types) else x)(
+        self.type = (lambda x: [x] if isinstance(x, str) else x)(
             getattr(self, "type", []))
 
     @property
@@ -177,7 +178,7 @@ class LikelihoodCollection(ComponentCollection):
     """
 
     def __init__(self, info_likelihood, path_install=None, timing=None, theory=None):
-        super(LikelihoodCollection, self).__init__()
+        super().__init__()
         self.set_logger("likelihood")
         self.theory = theory
         # Get the individual likelihood classes

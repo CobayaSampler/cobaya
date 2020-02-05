@@ -5,20 +5,14 @@
 :Author: Antony Lewis (for the CosmoMC sampler, wrapped for cobaya by Jesus Torrado)
 """
 
-# Python 2/3 compatibility
-from __future__ import absolute_import, division
-import six
-if six.PY2:
-    from io import open
-
 # Global
 import os
 from itertools import chain
 import numpy as np
-from collections import OrderedDict as odict
 import logging
 from pandas import DataFrame
 import datetime
+from typing import Sequence, Optional
 
 # Local
 from cobaya.sampler import Sampler
@@ -26,15 +20,16 @@ from cobaya.mpi import get_mpi_size, get_mpi_rank, get_mpi_comm, get_mpi, share_
 from cobaya.mpi import more_than_one_process, is_main_process, sync_processes
 from cobaya.collection import Collection, OneSamplePoint
 from cobaya.conventions import kinds, partag, _weight, _minuslogpost, _covmat_extension
-from cobaya.conventions import _line_width, _path_install, _progress_extension
+from cobaya.conventions import _line_width, _path_install, _progress_extension, empty_dict
 from cobaya.samplers.mcmc.proposal import BlockedProposer
 from cobaya.log import LoggedError
-from cobaya.tools import get_external_function, read_dnumber, relative_to_int
+from cobaya.tools import get_external_function, read_dnumber
 from cobaya.tools import load_DataFrame
-from cobaya.yaml import yaml_dump_file, force_unicode
+from cobaya.yaml import yaml_dump_file
 
 
 class CovmatSampler(Sampler):
+    covmat_params: Sequence[str]
 
     def _load_covmat(self, from_old_chain, slow_params=None):
         if from_old_chain and os.path.exists(self.covmat_filename()):
@@ -64,7 +59,7 @@ class CovmatSampler(Sampler):
         covmat = np.diag([np.nan] * len(params_infos))
         # Try to generate it automatically
         self.covmat = getattr(self, 'covmat', None)
-        if isinstance(self.covmat, six.string_types) and self.covmat.lower() == "auto":
+        if isinstance(self.covmat, str) and self.covmat.lower() == "auto":
             slow_params_info = {
                 p: info for p, info in params_infos.items() if p in slow_params}
             auto_covmat = self.model.get_auto_covmat(slow_params_info)
@@ -76,7 +71,7 @@ class CovmatSampler(Sampler):
                 self.log.info("Could not automatically find a good covmat. "
                               "Will generate from parameter info (proposal and prior).")
         # If given, load and test the covariance matrix
-        if isinstance(self.covmat, six.string_types):
+        if isinstance(self.covmat, str):
             covmat_pre = "{%s}" % _path_install
             if self.covmat.startswith(covmat_pre):
                 self.covmat = self.covmat.format(
@@ -105,6 +100,9 @@ class CovmatSampler(Sampler):
                               "via 'covmat_params: [name1, name2, ...]'.")
             loaded_params = self.covmat_params
             loaded_covmat = np.array(self.covmat)
+        elif self.covmat:
+            raise LoggedError(self.log, "Invalid covmat")
+
         if self.covmat is not None:
             if len(loaded_params) != len(set(loaded_params)):
                 raise LoggedError(
@@ -122,7 +120,7 @@ class CovmatSampler(Sampler):
             # Fill with parameters in the loaded covmat
             renames = [[p] + np.atleast_1d(v.get(partag.renames, [])).tolist()
                        for p, v in params_infos.items()]
-            renames = odict([(a[0], a) for a in renames])
+            renames = {a[0]: a for a in renames}
             indices_used, indices_sampler = zip(*[
                 [loaded_params.index(p),
                  [list(params_infos).index(q) for q, a in renames.items() if p in a]]
@@ -149,7 +147,7 @@ class CovmatSampler(Sampler):
                 "Covariance matrix loaded for params %r",
                 [list(params_infos)[i] for i in indices_sampler])
             missing_params = set(params_infos).difference(
-                set([list(params_infos)[i] for i in indices_sampler]))
+                set(list(params_infos)[i] for i in indices_sampler))
             if missing_params:
                 self.log.info(
                     "Missing proposal covariance for params %r",
@@ -178,19 +176,41 @@ class CovmatSampler(Sampler):
 
 
 class mcmc(CovmatSampler):
-    ignore_at_resume = Sampler.ignore_at_resume + [
+    _ignore_at_resume = CovmatSampler._ignore_at_resume + [
         "burn_in", "callback_function", "callback_every", "max_tries",
         "check_every", "output_every", "learn_proposal_Rminus1_max",
         "learn_proposal_Rminus1_max_early", "learn_proposal_Rminus1_min",
         "max_samples", "Rminus1_stop", "Rminus1_cl_stop",
         "Rminus1_cl_level", "covmat", "covmat_params", "proposal_scale"]
 
-    # checkpoint variables
-    Rminus1_last = np.inf
-    converged = None
-    blocks = None
-    oversampling_factors = None
-    mpi_size = None
+    # instance variables from yaml
+    check_every: int
+    burn_in: int
+    max_tries: int
+    max_samples: int
+    drag: bool
+    callback_function: Optional[callable]
+    blocking: Optional[Sequence]
+    proposal_scale: float
+    learn_proposal: bool
+    learn_proposal_Rminus1_max_early: float
+    Rminus1_cl_level: float
+    Rminus1_stop: float
+    Rminus1_cl_stop: float
+    Rminus1_single_split: float
+    learn_proposal_Rminus1_min: float
+    measure_speeds: bool
+    diag_every: int
+    output_every: int
+
+    def set_instance_defaults(self):
+        super().set_instance_defaults()
+        # checkpoint variables
+        self.converged = None
+        self.blocks = None
+        self.oversampling_factors = None
+        self.mpi_size = None
+        self.Rminus1_last = np.inf
 
     def initialize(self):
         """Initializes the sampler:
@@ -263,8 +283,9 @@ class mcmc(CovmatSampler):
             self.progress = DataFrame(columns=cols)
             self.i_checkpoint = 1
             if self.output and not self.resuming:
-                with open(self.progress_filename(), "w", encoding="utf-8") as progress_file:
-                    progress_file.write(force_unicode("# " + " ".join(self.progress.columns) + "\n"))
+                with open(self.progress_filename(), "w",
+                          encoding="utf-8") as progress_file:
+                    progress_file.write("# " + " ".join(self.progress.columns) + "\n")
 
     @property
     def i_last_slow_block(self):
@@ -325,7 +346,8 @@ class mcmc(CovmatSampler):
                 raise LoggedError(
                     self.log, "'drag_limits' has been deprecated. Use 'oversample_power' "
                               "to control the amount of dragging steps.")
-            self.drag_interp_steps = int(np.round(self.oversampling_factors[self.i_last_slow_block+1]/2))
+            self.drag_interp_steps = int(
+                np.round(self.oversampling_factors[self.i_last_slow_block + 1] / 2))
             self.get_new_sample = self.get_new_sample_dragging
             self.log.info("Dragging with number of interpolating steps:")
             self.log.info("* %d : %r", 1, self.slow_blocks)
@@ -393,15 +415,13 @@ class mcmc(CovmatSampler):
             derived = (self.collection[self.collection.derived_params]
                        .iloc[self.collection.n() - 1].values.copy())
         else:
-            valid_point = False
             for i in range(max(1, self.max_tries // self.model.prior.d())):
                 initial_point = self.model.prior.reference(max_tries=self.max_tries)
                 logpost, logpriors, loglikes, derived = self.model.logposterior(
                     initial_point)
-                valid_point = -np.inf not in loglikes
-                if valid_point:
+                if -np.inf not in loglikes:
                     break
-            if not valid_point:
+            else:
                 raise LoggedError(self.log, "Could not find random point giving finite "
                                             "likelihood after %g tries", self.max_tries)
             if self.measure_speeds and self.blocking:
@@ -803,8 +823,12 @@ class mcmc(CovmatSampler):
                         else:
                             self.log.info("Computation of the bounds was not possible. "
                                           "Waiting until the next checkpoint")
+        else:
+            mean_of_covs = np.empty((self.model.prior.d(), self.model.prior.d()))
+            success = None
+            Rminus1 = None
         # Broadcast and save the convergence status and the last R-1 of means
-        success = share_mpi(success if is_main_process() else None)
+        success = share_mpi(success)
         if success:
             self.Rminus1_last, self.converged = share_mpi(
                 (Rminus1, self.converged) if is_main_process() else None)
@@ -817,9 +841,6 @@ class mcmc(CovmatSampler):
                                   "waiting until the next checkpoint.")
                     return
                 if more_than_one_process():
-                    if not is_main_process():
-                        mean_of_covs = np.empty((self.model.prior.d(),
-                                                 self.model.prior.d()))
                     get_mpi_comm().Bcast(mean_of_covs, root=0)
                 else:
                     mean_of_covs = covs[0]
@@ -850,7 +871,7 @@ class mcmc(CovmatSampler):
             covmat_filename = self.covmat_filename()
             np.savetxt(covmat_filename, self.proposer.get_covariance(), header=" ".join(
                 list(self.model.parameterization.sampled_params())))
-            checkpoint_info = {kinds.sampler: {self.get_name(): odict([
+            checkpoint_info = {kinds.sampler: {self.get_name(): dict([
                 ("converged", bool(self.converged)),
                 ("Rminus1_last", self.Rminus1_last),
                 ("proposal_scale", self.proposer.get_scale()),
@@ -862,7 +883,8 @@ class mcmc(CovmatSampler):
                 ("mpi_size", get_mpi_size())])}}
             yaml_dump_file(checkpoint_filename, checkpoint_info, error_if_exists=False)
             if not self.progress.empty:
-                with open(self.progress_filename(), "a", encoding="utf-8") as progress_file:
+                with open(self.progress_filename(), "a",
+                          encoding="utf-8") as progress_file:
                     progress_file.write(
                         self.progress.tail(1).to_string(header=False, index=False) + "\n")
             self.log.debug("Dumped checkpoint and progress info, and current covmat.")
@@ -884,7 +906,8 @@ class mcmc(CovmatSampler):
 
 # Plotting tool for chain progress #######################################################
 
-def plot_progress(progress, ax=None, index=None, figure_kwargs={}, legend_kwargs={}):
+def plot_progress(progress, ax=None, index=None,
+                  figure_kwargs=empty_dict, legend_kwargs=empty_dict):
     """
     Plots progress of one or more MCMC runs: evolution of R-1
     (for means and c.l. intervals) and acceptance rate.
@@ -905,7 +928,7 @@ def plot_progress(progress, ax=None, index=None, figure_kwargs={}, legend_kwargs
         fig, ax = plt.subplots(nrows=2, sharex=True, **figure_kwargs)
     if isinstance(progress, DataFrame):
         pass  # go on to plotting
-    elif isinstance(progress, six.string_types):
+    elif isinstance(progress, str):
         try:
             if not progress.endswith(_progress_extension):
                 progress += _progress_extension

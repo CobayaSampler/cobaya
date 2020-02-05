@@ -1,6 +1,5 @@
 import os
 import numpy as np
-from collections import OrderedDict
 from cobaya.model import get_model
 from cobaya.theory import Theory
 from cobaya.tools import load_module
@@ -13,7 +12,7 @@ from .common import process_modules_path
 # agnostic theory
 
 class BBN(Theory):
-    bbn = None
+    bbn: object
 
     def get_requirements(self):
         return {'ombh2', 'nnu'}
@@ -29,7 +28,7 @@ class BBN(Theory):
 
 class BBN2(Theory):
     params = {'ombh2': None, 'nnu': None, 'YHe': {'derived': True}}
-    bbn = None
+    bbn: object
 
     def calculate(self, state, want_derived=True, **params_values_dict):
         if want_derived:
@@ -37,6 +36,7 @@ class BBN2(Theory):
                                                      params_values_dict['nnu'] - 3.046)}
 
 
+# noinspection PyDefaultArgument
 def cmb_likelihood(_derived={'check'},
                    _theory={'Hubble': {'z': [0.5]}, 'CAMBdata': None}):
     results = _theory.get_CAMBdata()
@@ -56,17 +56,15 @@ camb_params = {
 bbn_table = "PRIMAT_Yp_DH_Error.dat"
 debug = True
 info = {'likelihood': {'cmb': cmb_likelihood},
-        'theory': OrderedDict({
+        'theory': {
             'camb': {"extra_args": {"lens_potential_accuracy": 1},
                      "requires": ['YHe', 'ombh2']},
-            'bbn': {'external': BBN, 'provides': ['YHe']}}),
+            'bbn': {'external': BBN, 'provides': ['YHe']}},
         'params': camb_params,
         'debug': debug, 'stop_at_error': True}
 
 info2 = {'likelihood': {'cmb': {'external': cmb_likelihood}},
-         'theory': OrderedDict({
-             'camb': {"requires": ['YHe', 'ombh2']},
-             'bbn': BBN2}),
+         'theory': {'camb': {"requires": ['YHe', 'ombh2']}, 'bbn': BBN2},
          'params': camb_params, 'debug': debug}
 
 
@@ -91,8 +89,7 @@ def test_bbn_yhe(modules):
                     "wrong Yhe value: %s" % vals
                 inf['params']["YHe"] = explicit_derived
             inf['params'].pop('YHe')
-            inf['theory'] = OrderedDict(
-                (p, v) for p, v in reversed(list(inf['theory'].items())))
+            inf['theory'] = {p: v for p, v in reversed(list(inf['theory'].items()))}
 
 
 # Not inherit from BBN to derive likelihoods that account for the theory error
@@ -101,7 +98,7 @@ class BBN_likelihood(BBN2, LikelihoodInterface):
     """
     Sample YHe and just calculate a direct theory likelihood
     """
-    params = zip(['ombh2', 'nnu', 'YHe'], [None] * 3)
+    params = dict(zip(['ombh2', 'nnu', 'YHe'], [None] * 3))
 
     def calculate(self, state, want_derived=True, **params_values_dict):
         ombh2 = params_values_dict['ombh2']
@@ -136,19 +133,18 @@ class BBN_with_theory_errors(BBN, LikelihoodInterface):
         state['logp'] = -params_values_dict['BBN_delta'] ** 2 / 2
 
 
-info_error = {'likelihood': OrderedDict([('cmb', {'external': cmb_likelihood}),
-                                         ('BBN', BBN_likelihood)]),
-              'theory': OrderedDict({
-                  'camb': {"requires": ['YHe', 'ombh2']}}),
+info_error = {'likelihood': dict([('cmb', {'external': cmb_likelihood}),
+                                  ('BBN', BBN_likelihood)]),
+              'theory': {'camb': {"requires": ['YHe', 'ombh2']}},
               'params': dict(YHe={'prior': {'min': 0, 'max': 1}}, **camb_params),
               'debug': debug}
 
-info_error2 = {'likelihood': OrderedDict([('cmb', {'external': cmb_likelihood}),
-                                          ('BBN', {'external': BBN_with_theory_errors,
-                                                   'provides': 'YHe'})]),
-               'theory': OrderedDict({
-                   'camb': {"requires": ['YHe', 'ombh2']}}),
-               'params': dict(BBN_delta={'prior': {'min': -5, 'max': 5}}, **camb_params),
+info_error2 = {'likelihood': {'cmb': {'external': cmb_likelihood},
+                              'BBN': {'external': BBN_with_theory_errors,
+                                      'provides': 'YHe'}},
+               'theory': {'camb': {"requires": ['YHe', 'ombh2']}},
+               'params': dict(BBN_delta={'prior': {'min': -5, 'max': 5}},
+                              **camb_params),
                'debug': debug}
 
 

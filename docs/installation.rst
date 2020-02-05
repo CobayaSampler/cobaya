@@ -4,13 +4,13 @@ Installing cobaya
 Pre-requisites
 --------------
 
-The only pre-requisites are **Python** (version ≥ 2.7 or ≥ 3.6) and the Python package manager **pip** (external modules may have additional dependencies).
+The only pre-requisites are **Python** (version ≥ 3.6) and the Python package manager **pip** (external modules may have additional dependencies).
 
-To check if you have Python installed, type ``python --version`` in the shell, and you should get ``Python 2.7.[whatever]`` or ``Python 3.6.[whatever]``. Then, type ``pip`` in the shell, and if you get usage instructions instead of a ``command not found`` message, you are golden. If you don't have any of those two installed, use your system's package manager or contact your local IT service.
+To check if you have Python installed, type ``python --version`` in the shell, and you should get ``Python 3.[whatever]``. Then, type ``pip`` in the shell, and if you get usage instructions instead of a ``command not found`` message, you are golden. If you don't have any of those two installed, use your system's package manager or contact your local IT service.
 
 .. warning::
 
-   Python 2 support will eventually be dropped (it is already unsupported by many scientific Python modules). Please use Python 3.
+   Python 2 is no longer supported. Please use Python 3.
 
    In some systems, the Python 3 command may be ``python3`` instead of ``python``. If that is the case, use ``pip3`` instead of ``pip`` in all the instructions below.
 

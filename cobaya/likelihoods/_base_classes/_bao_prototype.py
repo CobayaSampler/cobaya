@@ -115,17 +115,13 @@ After this, mention the path to this likelihood when you include it in an input 
 
 """
 
-# Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 # Global
 import os
 import numpy as np
 from scipy.interpolate import UnivariateSpline
 import pandas as pd
 import logging
+from typing import Optional, Sequence
 
 # Local
 from cobaya.log import LoggedError
@@ -137,6 +133,13 @@ class _bao_prototype(_InstallableLikelihood):
     install_options = {"github_repository": "CobayaSampler/bao_data",
                        "github_release": "v1.1"}
 
+    prob_dist_bounds: Optional[Sequence[float]]
+    measurements_file: str
+    rs_fid: Optional[float]
+    prob_dist: Optional[str]
+    cov_file: Optional[str]
+    invcov_file: Optional[str]
+
     def initialize(self):
         self.log.info("Initialising.")
         if not getattr(self, "path", None) and not getattr(self, "path_install", None):
@@ -147,13 +150,13 @@ class _bao_prototype(_InstallableLikelihood):
         data_file_path = os.path.normpath(getattr(self, "path", None) or
                                           os.path.join(self.path_install, "data"))
         # Rescaling by a fiducial value of the sound horizon
-        if not hasattr(self, "rs_rescale"):
-            if hasattr(self, "rs_fid"):
+        if getattr(self, "rs_rescale", None) is None:
+            if getattr(self, "rs_fid", None) is not None:
                 self.rs_rescale = 1 / self.rs_fid
             else:
                 self.rs_rescale = 1
         # Load "measurements file" and covmat of requested
-        if hasattr(self, "measurements_file"):
+        if getattr(self, "measurements_file", None):
             try:
                 self.data = pd.read_csv(
                     os.path.join(data_file_path, self.measurements_file),
@@ -177,7 +180,7 @@ class _bao_prototype(_InstallableLikelihood):
         self.data["observable"] = [(c[len(prefix):] if c.startswith(prefix) else c)
                                    for c in self.data["observable"]]
         # Probability distribution
-        if hasattr(self, "prob_dist"):
+        if getattr(self, "prob_dist", None):
             try:
                 chi2 = np.loadtxt(os.path.join(data_file_path, self.prob_dist))
             except IOError:
@@ -199,9 +202,9 @@ class _bao_prototype(_InstallableLikelihood):
         # Covariance --> read and re-sort as self.data
         else:
             try:
-                if hasattr(self, "cov_file"):
+                if getattr(self, "cov_file", None):
                     self.cov = np.loadtxt(os.path.join(data_file_path, self.cov_file))
-                elif hasattr(self, "invcov_file"):
+                elif getattr(self, "invcov_file", None):
                     invcov = np.loadtxt(os.path.join(data_file_path, self.invcov_file))
                     self.cov = np.linalg.inv(invcov)
                 elif "error" in self.data.columns:
@@ -270,7 +273,7 @@ class _bao_prototype(_InstallableLikelihood):
         #     raise LoggedError(
         #         self.log,
         #         "BAO likelihood not yet compatible with CLASS (help appreciated!)")
-        super(_bao_prototype, self).initialize_with_provider(provider)
+        super().initialize_with_provider(provider)
 
     def theory_fun(self, z, observable):
         # Functions to get the corresponding theoretical prediction:

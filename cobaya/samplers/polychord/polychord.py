@@ -5,12 +5,6 @@
 :Author: Will Handley, Mike Hobson and Anthony Lasenby (for PolyChord),
          Jesus Torrado (for the cobaya wrapper only)
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import, division, print_function
-import six
-if six.PY2:
-    from io import open
-
 # Global
 import os
 import sys
@@ -18,8 +12,8 @@ import numpy as np
 import logging
 import inspect
 from itertools import chain
-from collections import OrderedDict as odict
 from random import random
+from typing import Any
 
 # Local
 from cobaya.tools import read_dnumber, get_external_function, relative_to_int
@@ -34,6 +28,13 @@ clusters = "clusters"
 
 
 class polychord(Sampler):
+    # variables from yaml
+    do_clustering: bool
+    num_repeats: int
+    confidence_for_unbounded: float
+    callback_function: callable
+    blocking: Any
+
     def initialize(self):
         """Imports the PolyChord sampler and prepares its arguments."""
         if is_main_process():  # rank = 0 (MPI master) or None (no MPI)
@@ -114,6 +115,7 @@ class polychord(Sampler):
             self.log.info("Storing raw PolyChord output in '%s'.",
                           self.base_dir)
         # Exploiting the speed hierarchy
+        # TODO broken
         if self.blocking:
             speeds, blocks = self.model._check_speeds_of_params(self.blocking)
         else:
@@ -300,11 +302,11 @@ class polychord(Sampler):
                     i = int(component)
                     self.clusters[i]["logZ"], self.clusters[i]["logZstd"] = logZ, logZstd
             if do_output:
-                out_evidences = odict(logZ=self.logZ, logZstd=self.logZstd)
+                out_evidences = dict(logZ=self.logZ, logZstd=self.logZstd)
                 if self.clusters:
-                    out_evidences["clusters"] = odict()
+                    out_evidences["clusters"] = {}
                     for i in sorted(list(self.clusters.keys())):
-                        out_evidences["clusters"][i] = odict(
+                        out_evidences["clusters"][i] = dict(
                             logZ=self.clusters[i]["logZ"],
                             logZstd=self.clusters[i]["logZstd"])
                 fname = os.path.join(self.output.folder, self.output.prefix + ".logZ")

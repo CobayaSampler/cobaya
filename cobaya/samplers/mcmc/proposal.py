@@ -16,10 +16,6 @@ radial function mixed with an exponential, which is quite robust to wrong width 
 See https://arxiv.org/abs/1304.4473
 """
 
-# Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
-
 # Global
 import numpy as np
 from itertools import chain
@@ -29,7 +25,7 @@ from cobaya.tools import choleskyL
 from cobaya.log import LoggedError, HasLogger
 
 
-class IndexCycler(object):
+class IndexCycler:
     def __init__(self, n):
         self.n = n
         self.loop_index = -1
@@ -50,7 +46,7 @@ class CyclicIndexRandomizer(IndexCycler):
 
 try:
     import numba
-except ImportError as e:
+except ImportError:
     from scipy.stats import special_ortho_group
 
     random_SO_N = special_ortho_group.rvs
@@ -182,7 +178,7 @@ class BlockedProposer(HasLogger):
         n_slow = sum(len(b) for b in parameter_blocks[:1 + self.i_last_slow_block])
         self.nsamples_slow = 0
         self.nsamples_fast = 0
-        if set(list(chain(*parameter_blocks))) != set(range(n_all)):
+        if set(chain(*parameter_blocks)) != set(range(n_all)):
             raise LoggedError(self.log,
                               "The blocks do not contain all the parameter indices.")
         # Mapping between internal indices, sampler parameter indices and blocks:

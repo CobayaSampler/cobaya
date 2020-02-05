@@ -171,7 +171,7 @@ Some common YAML *gotchas*
 
 .. note::
 
-   For the YAML *connoisseur*, notice that the YAML parser used here has been modified to simplify the input/output notation: it now retains the ordering of parameters and likelihoods (loads mappings as `OrderedDict <https://docs.python.org/2/library/collections.html#ordereddict-examples-and-recipes>`_) and prints arrays as lists.
+   For the YAML *connoisseur*, notice that the YAML parser used here has been modified to simplify the input/output notation: it now retains the ordering of parameters and likelihoods and prints arrays as lists.
 
 
 

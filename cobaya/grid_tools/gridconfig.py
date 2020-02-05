@@ -6,8 +6,6 @@
          (based on Antony Lewis' CosmoMC version of the same code)
 
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import, print_function, division
 
 # Global
 import os

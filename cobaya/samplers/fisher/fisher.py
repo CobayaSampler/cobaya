@@ -5,21 +5,17 @@
 :Author: ???
 """
 
-# Python 2/3 compatibility
-from __future__ import absolute_import, division, print_function
-
 # Global
 import numpy as np
-import logging
 
 # Local
 from cobaya.sampler import Sampler
-from cobaya.log import LoggedError
-from cobaya.mpi import get_mpi_rank, get_mpi_size, get_mpi_comm
 from cobaya.collection import Collection
 
 
 class fisher(Sampler):
+    example_option: str
+
     def initialize(self):
         self.log.info("Initializing.")
         # Example for setting default options

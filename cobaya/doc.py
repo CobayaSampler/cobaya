@@ -5,8 +5,6 @@
 :Author: Jesus Torrado
 
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import, print_function, division
 
 # Global
 from pprint import pformat
@@ -17,8 +15,6 @@ from cobaya.conventions import subfolders, kinds
 from cobaya.input import get_default_info
 
 _indent = 2 * " "
-import_odict = "from collections import OrderedDict\n\ninfo = "
-
 
 # Command-line script ####################################################################
 
@@ -74,7 +70,7 @@ def doc_script():
             arguments.module, arguments.kind, return_yaml=not arguments.python,
             yaml_expand_defaults=arguments.expand, fail_if_not_found=True)
         if arguments.python:
-            print(import_odict + pformat(to_print))
+            print("info = " + pformat(to_print))
         else:
             print(to_print)
             if "!defaults" in to_print:

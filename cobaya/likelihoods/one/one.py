@@ -6,11 +6,9 @@ r"""
 
 """
 
-# Python 2/3 compatibility
-from __future__ import division
-
 # Global
 from random import random
+from typing import Optional
 
 # Local
 from cobaya.likelihood import AbsorbUnusedParamsLikelihood
@@ -20,6 +18,7 @@ class one(AbsorbUnusedParamsLikelihood):
     """
     Likelihood that evaluates to 1.
     """
+    noise: Optional[float]
 
     def initialize(self):
         if self.noise:

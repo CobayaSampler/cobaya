@@ -1,5 +1,4 @@
 # Tries to evaluate the likelihood at LCDM's best fit of Planck 2015, with CAMB and CLASS
-from __future__ import absolute_import
 import pytest
 from copy import deepcopy
 

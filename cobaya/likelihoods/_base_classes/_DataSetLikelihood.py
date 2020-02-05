@@ -15,7 +15,7 @@ from cobaya.log import LoggedError
 from ._InstallableLikelihood import _InstallableLikelihood
 
 
-class _fast_chi_square(object):
+class _fast_chi_square:
     def __get__(self, instance, owner):
         # delay testing active camb until run time
         try:
@@ -32,9 +32,12 @@ class _DataSetLikelihood(_InstallableLikelihood):
     """A likelihood reading parameters and file names from a .dataset plain text
     .ini file (as CosmoMC)"""
 
-    default_dataset_params = {}
+    _default_dataset_params = {}
 
-    fast_chi_squared = _fast_chi_square()
+    _fast_chi_squared = _fast_chi_square()
+
+    # variables defined in yaml or input dictionary
+    dataset_file: str
 
     def initialize(self):
 
@@ -47,10 +50,9 @@ class _DataSetLikelihood(_InstallableLikelihood):
                 self.path = self.get_path(self.path_install)
             self.path = self.path or self.get_class_path()
             if not self.path:
-                raise LoggedError(self.log,
-                                  "No path given for %s. Set the likelihood property 'path' "
-                                  "or the common property '%s'.", self.dataset_file,
-                                  _path_install)
+                raise LoggedError(self.log, "No path given for %s. Set the likelihood "
+                                            "property 'path' or the common property '%s'."
+                                  , self.dataset_file, _path_install)
 
             data_file = os.path.normpath(os.path.join(self.path, self.dataset_file))
         if not os.path.exists(data_file):
@@ -61,12 +63,12 @@ class _DataSetLikelihood(_InstallableLikelihood):
                 self.dataset_file, self.path)
         self.load_dataset_file(data_file, getattr(self, 'dataset_params', {}))
 
-    def load_dataset_file(self, filename, dataset_params={}):
+    def load_dataset_file(self, filename, dataset_params=None):
         if '.dataset' not in filename:
             filename += '.dataset'
         ini = IniFile(filename)
         self.dataset_filename = filename
-        ini.params.update(self.default_dataset_params)
+        ini.params.update(self._default_dataset_params)
         ini.params.update(dataset_params or {})
         self.init_params(ini)
 

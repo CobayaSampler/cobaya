@@ -70,17 +70,12 @@ it will finally pick the best among the results.
    below).
 
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import, division
-import six
-if six.PY2:
-    from io import open
 
 # Global
 import os
 import numpy as np
 from scipy.optimize import minimize as scpminimize
-from collections import OrderedDict as odict
+from typing import Mapping, Optional
 
 import pybobyqa  # in the py-bobyqa pip package
 
@@ -104,6 +99,12 @@ getdist_ext_ignore_prior = {True: ".bestfit", False: ".minimum"}
 
 
 class minimize(Minimizer, CovmatSampler):
+    ignore_prior: bool
+    confidence_for_unbounded: float
+    method: str
+    override_bobyqa: Optional[Mapping]
+    override_scipy: Optional[Mapping]
+
     def initialize(self):
         self.mpi_info("Initializing")
         self.max_evals = read_dnumber(self.max_evals, self.model.prior.d())
@@ -372,10 +373,9 @@ class minimize(Minimizer, CovmatSampler):
             [[p, params[p]] for p in self.model.parameterization.derived_params()])
         if hasattr(params, 'chi2_names'):
             from cobaya.conventions import _chi2, _separator
-            labels.update(
-                odict([(p, r'\chi^2_{\rm %s}' % (
-                    p.replace(_chi2 + _separator, '').replace("_", r"\ ")))
-                       for p in params.chi2_names]))
+            labels.update({p: r'\chi^2_{\rm %s}' % (
+                p.replace(_chi2 + _separator, '').replace("_", r"\ "))
+                           for p in params.chi2_names})
             add_section([[chi2, params[chi2]] for chi2 in params.chi2_names])
         return "\n".join(lines)
 

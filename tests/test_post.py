@@ -1,8 +1,5 @@
-from __future__ import division, print_function, absolute_import
-
 import os
 import numpy as np
-from collections import OrderedDict as odict
 from scipy.stats import multivariate_normal
 from flaky import flaky
 
@@ -25,7 +22,7 @@ sampled_pdf = lambda a, b: multivariate_normal.logpdf(
     [a, b], mean=sampled["mean"], cov=sampled["cov"])
 
 
-def target_pdf(a, b, c=0, _derived=["cprime"]):
+def target_pdf(a, b, c=0, _derived=("cprime",)):
     if _derived == {}:
         _derived["cprime"] = c
     return multivariate_normal.logpdf([a, b], mean=target["mean"], cov=target["cov"])
@@ -33,7 +30,7 @@ def target_pdf(a, b, c=0, _derived=["cprime"]):
 
 _range = {"min": -2, "max": 2}
 ref_pdf = {partag.dist: "norm", "loc": 0, "scale": 0.1}
-info_params = odict([
+info_params = dict([
     ("a", {"prior": _range, "ref": ref_pdf, partag.proposal: sigma}),
     ("b", {"prior": _range, "ref": ref_pdf, partag.proposal: sigma}),
     ("a_plus_b", {partag.derived: lambda a, b: a + b})])

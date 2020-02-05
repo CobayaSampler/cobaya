@@ -5,13 +5,6 @@
 :Author: Jesus Torrado
 
 """
-
-# Python 2/3 compatibility
-from __future__ import absolute_import, division
-import six
-if six.PY2:
-    from io import open
-
 # Global
 import os
 import sys
@@ -255,7 +248,7 @@ class OutputDummy(Output):
         self.log.debug("No output requested. Doing nothing.")
         # override all methods that actually produce output
         exclude = ["nullfunc"]
-        _func_name = "__name__" if six.PY3 else "func_name"
+        _func_name = "__name__"
         for attrname, attr in list(Output.__dict__.items()):
             func_name = getattr(attr, _func_name, None)
             if func_name and func_name not in exclude and '__' not in func_name:

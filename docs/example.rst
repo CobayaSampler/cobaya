@@ -85,12 +85,6 @@ The actual input information of **cobaya** are Python *dictionaries* (a ``yaml``
 
 The code above may look more complicated than the corresponding ``yaml`` one, but in exchange it is much more flexible, allowing you to quick modify and swap different parts of it.
 
-.. note::
-
-   Most often the ``params`` block is defined using an `OrderedDict <https://docs.python.org/2/library/collections.html#ordereddict-examples-and-recipes>`_, instead of a normal Python dictionary. Using an ``OrderedDict`` instead of a normal dictionary is optional but highly recommended: it keeps the order of the parameters consistent between input and output.
-
-   Same goes for the likelihoods, when one can use an ``OrderedDict`` to preserve the order of the likelihoods.
-
 Notice that here we suppress the creation of the chain files by not including the field ``output``, since this is a very basic example. The chains will thus only be loaded in memory.
 
 Alternatively, we can load the input from a ``yaml`` file like the one above:

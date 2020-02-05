@@ -5,9 +5,6 @@
 :Author: Jesus Torrado
 
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import, division, print_function
-
 # Local
 from cobaya.tools import warn_deprecation, create_banner
 from cobaya.bib import bib_script

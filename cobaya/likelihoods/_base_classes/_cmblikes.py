@@ -8,17 +8,12 @@
 # AL July 2014 - Dec 2017
 
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import, division
-import six
-if six.PY2:
-    from io import open
-
 # Global
 import os
 import numpy as np
 from getdist import ParamNames
 from scipy.linalg import sqrtm
+from typing import Sequence
 
 # Local
 from cobaya.log import LoggedError
@@ -26,9 +21,14 @@ from cobaya.likelihoods._base_classes import _DataSetLikelihood
 
 
 class _CMBlikes(_DataSetLikelihood):
+    map_separator: str
+    lmin: Sequence[int]
+    lmax: Sequence[int]
+    lav: Sequence[int]
+    Ahat: np.ndarray  # not used by likelihood
 
     def initialize(self):
-        super(_CMBlikes, self).initialize()
+        super().initialize()
         # Set data type for aggregated chi2 (case sensitive)
         self.type = "CMB"
 
@@ -127,7 +127,8 @@ class _CMBlikes(_DataSetLikelihood):
                     name = self.Cl_used_i_j_name([j, i])
                 if name in names:
                     if cols[ix] != -1:
-                        raise LoggedError(self.log, 'get_cols_from_order: duplicate CL type')
+                        raise LoggedError(self.log,
+                                          'get_cols_from_order: duplicate CL type')
                     cols[ix] = names.index(name)
                 ix += 1
         return cols
@@ -168,7 +169,7 @@ class _CMBlikes(_DataSetLikelihood):
                 for ix in range(self.ncl):
                     if cols[ix] != -1:
                         cl[ix, L - self.bin_min] = data[i, cols[ix]]
-        if L < self.bin_max:
+        if Ls[-1] < self.bin_max:
             raise LoggedError(
                 self.log, 'CMBLikes_ReadClArr: C_l file does not go up to maximum used: '
                           '%s', self.bin_max)
@@ -209,7 +210,7 @@ class _CMBlikes(_DataSetLikelihood):
         if nmaps != len(order):
             raise LoggedError(self.log, 'init_map_cls: size mismatch')
 
-        class CrossPowerSpectrum(object):
+        class CrossPowerSpectrum:
             pass
 
         cls = np.empty((nmaps, nmaps), dtype=object)
@@ -231,7 +232,8 @@ class _CMBlikes(_DataSetLikelihood):
             # e.g. have multiple frequencies for given field measurement
             map_fields = ini.split('map_fields')
             if len(map_fields) != len(self.map_names):
-                raise LoggedError(self.log, 'number of map_fields does not match map_names')
+                raise LoggedError(self.log,
+                                  'number of map_fields does not match map_names')
             self.map_fields = [self.typeIndex(f) for f in map_fields]
         else:
             self.map_names = self.field_names
@@ -336,8 +338,11 @@ class _CMBlikes(_DataSetLikelihood):
                 self.cl_lmax[i, i] = self.pcl_lmax
         if self.required_theory_field[0] and self.required_theory_field[1]:
             self.cl_lmax[1, 0] = self.pcl_lmax
+
         if self.like_approx != 'gaussian':
             cl_fiducial_includes_noise = ini.bool('cl_fiducial_includes_noise', False)
+        else:
+            cl_fiducial_includes_noise = False
         self.bandpower_matrix = np.zeros((self.nbins_used, self.nmaps, self.nmaps))
         self.noise_matrix = self.bandpower_matrix.copy()
         self.fiducial_sqrt_matrix = self.bandpower_matrix.copy()
@@ -480,7 +485,7 @@ class _CMBlikes(_DataSetLikelihood):
             band += self.linear_correction.bin(Cls) - self.fid_correction.T
         return band
 
-    def get_theory_map_cls(self, Cls, data_params={}):
+    def get_theory_map_cls(self, Cls, data_params=None):
         for i in range(self.nmaps_required):
             for j in range(i + 1):
                 CL = self.map_cls[i, j]
@@ -490,7 +495,7 @@ class _CMBlikes(_DataSetLikelihood):
                     CL.CL[:] = cls[self.pcl_lmin:self.pcl_lmax + 1]
                 else:
                     CL.CL[:] = 0
-        self.adapt_theory_for_maps(self.map_cls, data_params)
+        self.adapt_theory_for_maps(self.map_cls, data_params or {})
 
     def adapt_theory_for_maps(self, cls, data_params):
         if self.aberration_coeff:
@@ -530,9 +535,9 @@ class _CMBlikes(_DataSetLikelihood):
                         cl_deriv *= ells
                         CL.CL += self.aberration_coeff * cl_deriv
 
-    def write_likelihood_data(self, filename, data_params={}):
+    def write_likelihood_data(self, filename, data_params=None):
         cls = self.init_map_cls(self.nmaps_required, self.required_order)
-        self.add_foregrounds(cls, data_params)
+        self.add_foregrounds(cls, data_params or {})
         with open(filename, 'w', encoding="utf-8") as f:
             cols = []
             for i in range(self.nmaps_required):
@@ -627,13 +632,18 @@ class _CMBlikes(_DataSetLikelihood):
             elif self.like_approx == 'gaussian':
                 C -= self.bandpower_matrix[bin]
             self.matrix_to_elements(C, vecp)
-            big_x[bin * self.ncl_used:(bin + 1) * self.ncl_used] = vecp[self.cl_used_index]
+            big_x[bin * self.ncl_used:(bin + 1) * self.ncl_used] = vecp[
+                self.cl_used_index]
         if self.like_approx == 'exact':
             return -0.5 * chisq
-        return -0.5 * self.fast_chi_squared(self.covinv, big_x)
+        return -0.5 * self._fast_chi_squared(self.covinv, big_x)
 
 
-class BinWindows(object):
+class BinWindows:
+    cols_in: np.ndarray
+    cols_out: np.ndarray
+    binning_matrix: np.ndarray
+
     def __init__(self, lmin, lmax, nbins):
         self.lmin = lmin
         self.lmax = lmax

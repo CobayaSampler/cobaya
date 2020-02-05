@@ -1,16 +1,14 @@
 """General test for samplers. Checks convergence, cluster detection, evidence."""
 
-from __future__ import division, print_function, absolute_import
 import numpy as np
 from mpi4py import MPI
 from random import shuffle, choice
 from scipy.stats import multivariate_normal
-from collections import OrderedDict as odict
 from getdist.mcsamples import MCSamplesFromCobaya
 from time import sleep
 from itertools import chain
 
-from cobaya.conventions import kinds, _params, _output_prefix
+from cobaya.conventions import kinds, _params, _output_prefix, empty_dict
 from cobaya.conventions import _debug, _debug_file, _path_install
 from cobaya.likelihoods.gaussian_mixture import info_random_gaussian_mixture
 from cobaya.tools import KL_norm
@@ -24,7 +22,8 @@ O_std_max = 0.05
 distance_factor = 4
 
 
-def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=None):
+def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
+                 modules=None):
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     # Info of likelihood and prior
@@ -125,7 +124,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler={}, tmpdir="", modules=Non
                     products["logZ"] + logZ_nsigmas * products["logZstd"])
 
 
-def body_of_test_speeds(info_sampler={}, manual_blocking=False, modules=None):
+def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False, modules=None):
     # Generate 2 3-dimensional gaussians
     dim = 3
     speed1, speed2 = 5, 20
@@ -146,7 +145,7 @@ def body_of_test_speeds(info_sampler={}, manual_blocking=False, modules=None):
     sleep_unit = 1 / 50
     sampler = list(info_sampler.keys())[0]
 
-    def like1(a_0, a_1, a_2, _derived=["sum_like1"]):
+    def like1(a_0, a_1, a_2, _derived=("sum_like1",)):
         if sampler == "polychord":
             sleep(1 / speed1 * sleep_unit)
         n[0] += 1
@@ -154,7 +153,7 @@ def body_of_test_speeds(info_sampler={}, manual_blocking=False, modules=None):
             _derived["sum_like1"] = a_0 + a_1 + a_2
         return multivariate_normal.logpdf([a_0, a_1, a_2], mean=mean1, cov=cov1)
 
-    def like2(a_3, a_4, a_5, _derived=["sum_like2"]):
+    def like2(a_3, a_4, a_5, _derived=("sum_like2",)):
         if sampler == "polychord":
             sleep(1 / speed2 * sleep_unit)
         n[1] += 1
@@ -166,7 +165,7 @@ def body_of_test_speeds(info_sampler={}, manual_blocking=False, modules=None):
     perm = list(range(2 * dim))
     shuffle(perm)
     # Create info
-    info = {"params": odict(
+    info = {"params": dict(
         [(prefix + "%d" % i, {"prior": dict(zip(["min", "max"], ranges[i]))})
          for i in perm] + [("sum_like1", None), ("sum_like2", None)]),
         "likelihood": {"like1": {"external": like1, "speed": speed1},
