@@ -139,7 +139,7 @@ import numpy as np
 from copy import deepcopy
 import logging
 from collections import namedtuple
-from numbers import Number
+import numbers
 
 # Local
 from cobaya.theories._cosmo import BoltzmannBase
@@ -379,7 +379,7 @@ class classy(BoltzmannBase):
             if arg_array is None:
                 state[product] = method(
                     *self.collectors[product].args, **self.collectors[product].kwargs)
-            elif isinstance(arg_array, Number):
+            elif isinstance(arg_array, numbers.Integral):
                 state[product] = np.zeros(
                     len(self.collectors[product].args[arg_array]))
                 for i, v in enumerate(self.collectors[product].args[arg_array]):

@@ -283,8 +283,10 @@ class _planck_2018_CamSpec_python(_DataSetLikelihood):
         if foregrounds is not None and cals is not None and data_params is not None:
             raise ValueError('data_params not used')
         if foregrounds is None:
+            assert data_params is not None
             foregrounds = self.get_foregrounds(data_params)
         if cals is None:
+            assert data_params is not None
             cals = self.get_cals(data_params)
         if data_vector is None:
             data_vector = self.data_vector
@@ -306,9 +308,9 @@ class _planck_2018_CamSpec_python(_DataSetLikelihood):
         dL = np.zeros(n_p)
         ix1 = 0
         ell_offsets = [LS - lmin for LS in self.ell_ranges[:4]]
-        contiguous = not np.any(
-            [np.count_nonzero(LS - np.arange(LS[0], LS[-1] + 1, dtype=np.int)) for LS in
-             self.ell_ranges[:4]])
+        contiguous = not np.any(np.count_nonzero(LS - np.arange(LS[0],
+                                                                LS[-1] + 1, dtype=np.int))
+                                for LS in self.ell_ranges[:4])
         for i, (cal, LS, n) in enumerate(zip(cals[:4], ell_offsets, self.used_sizes[:4])):
             dL[LS] += d[ix1:ix1 + n] / cal
             ix = 0

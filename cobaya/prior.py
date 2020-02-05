@@ -384,7 +384,7 @@ class Prior(HasLogger):
             # Get the reference (1d) pdf
             ref = sampled_params_info[p].get(partag.ref)
             # Cases: number, pdf (something, but not a number), nothing
-            if isinstance(ref, numbers.Number):
+            if isinstance(ref, numbers.Real):
                 self.ref_pdf += [float(ref)]
             elif ref is not None:
                 self.ref_pdf += [get_scipy_1d_pdf({p: ref})]
@@ -526,6 +526,7 @@ class Prior(HasLogger):
            in the same order.
         """
         self.log.debug("Evaluating prior at %r", x)
+        # noinspection PyTypeChecker
         if all(x <= self._upper_limits) and all(x >= self._lower_limits):
             logps = [self._uniform_logp + (sum([logpdf(xi) for logpdf, xi in
                                                 zip(self._non_uniform_logpdf,
