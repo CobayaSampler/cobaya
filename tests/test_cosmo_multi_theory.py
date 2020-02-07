@@ -164,3 +164,61 @@ def test_bbn_likelihood(modules):
     model = get_model(info_error2)
     assert np.allclose(model.loglikes({'BBN_delta': 1.0})[0], [0.24594834, -0.5],
                        rtol=1e-4)
+
+
+class ExamplePrimordialPk(Theory):
+
+    def initialize(self):
+        self.ks = np.logspace(-5.5, 2, 1000)
+
+    def calculate(self, state, want_derived=True, **params_values_dict):
+        pivot_scalar = 0.05
+        pk = (self.ks / pivot_scalar) ** (
+                params_values_dict['testns'] - 1) * params_values_dict['testAs']
+        state['primordial_scalar_pk'] = {'kmin': self.ks[0], 'kmax': self.ks[-1],
+                                         'Pk': pk}
+
+    def get_primordial_scalar_pk(self):
+        return self._current_state['primordial_scalar_pk']
+
+    def get_can_support_params(self):
+        return ['testAs', 'testns']
+
+
+testAs = 1.8e-9
+testns = 0.8
+
+
+# noinspection PyDefaultArgument
+def pk_likelihood(_theory={'Cl': {'tt': 1000}, 'CAMBdata': None}):
+    results = _theory.get_CAMBdata()
+    np.allclose(results.Params.scalar_power(1.1),
+                testAs * (1.1 / 0.05) ** (testns - 1))
+
+    return 0
+
+
+info_pk = {'likelihood': {'cmb': {'external': pk_likelihood}},
+           'theory': {'camb': {"external_primordial_pk": True},
+                      'my_pk': ExamplePrimordialPk},
+           'params': {
+               "ombh2": 0.022274,
+               "omch2": 0.11913,
+               "cosmomc_theta": 0.01040867,
+               "tau": 0.0639,
+               "nnu": 3.046,
+               'testAs': {'prior': {'min': 1e-9, 'max': 1e-8}},
+               'testns': {'prior': {'min': 0.8, 'max': 1.2}}
+           },
+           'stop_at_error': True,
+           'debug': debug}
+
+
+def test_primordial_pk(modules):
+    modules = process_modules_path(modules)
+    info_pk['modules'] = modules
+
+    load_module("camb", path=os.path.join(modules, "code", "CAMB"))
+
+    model = get_model(info_pk)
+    model.loglikes({'testAs': testAs, 'testns': testns})
