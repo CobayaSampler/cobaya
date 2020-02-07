@@ -737,8 +737,7 @@ class camb(BoltzmannBase):
                         platform.system() == "Windows") else "camblib.so")))
 
     @classmethod
-    def install(cls, path=None, force=False, code=True, data=False,
-                no_progress_bars=False, **kwargs):
+    def install(cls, path=None, code=True, no_progress_bars=False, **kwargs):
         log = logging.getLogger(cls.__name__)
         if not code:
             log.info("Code not requested. Nothing to do.")

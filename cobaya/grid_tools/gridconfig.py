@@ -47,7 +47,7 @@ def pathIsGrid(batchPath):
         os.path.join(batchPath, 'config', 'config.ini'))
 
 
-def MakeGridScript():
+def make_grid_script():
     warn_deprecation()
     args = getArgs()
     args.interactive = True
@@ -66,7 +66,6 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         #                                'does not exist')
         #            read_only = True
         #            sys.path.insert(0, batchPath + 'config')
-        #            sys.modules['batchJob'] = batchjob  # old name
         #            settings = __import__(IniFile(batchPath + 'config/config.ini').params['setting_file'].replace('.py', ''))
         elif os.path.splitext(settingName)[-1].lower() in _yaml_extensions:
             settings = yaml_load_file(settingName)
@@ -74,7 +73,7 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
             raise NotImplementedError("Using a python script is work in progress...")
             # In this case, info-as-dict would be passed
             # settings = __import__(settingName, fromlist=['dummy'])
-    batch = batchjob.batchJob(batchPath)
+    batch = batchjob.BatchJob(batchPath)
     # batch.skip = settings.get("skip", False)
     batch.makeItems(settings, messages=not read_only)
     if read_only:

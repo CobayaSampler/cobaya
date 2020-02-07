@@ -64,7 +64,7 @@ setup(
             'cobaya-doc=cobaya.doc:doc_script',
             'cobaya-citation=cobaya.citation:citation_script',  # to be deprecated!
             'cobaya-bib=cobaya.bib:bib_script',
-            'cobaya-grid-create=cobaya.grid_tools:MakeGridScript',
+            'cobaya-grid-create=cobaya.grid_tools:make_grid_script',
             'cobaya-grid-run=cobaya.grid_tools.runbatch:run',
             'cobaya-run-job=cobaya.grid_tools.runMPI:run_single',
             'cobaya-cosmo-generator=cobaya.cosmo_input:gui_script',

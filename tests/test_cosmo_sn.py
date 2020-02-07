@@ -20,21 +20,21 @@ def test_sn_pantheon_classy(modules):
 
 # JLA
 def test_sn_jla_camb(modules):
-    best_fit = deepcopy(params_lowTEB_highTTTEEE)
-    best_fit.update(best_fit_sn)
+    best_fit_test = deepcopy(params_lowTEB_highTTTEEE)
+    best_fit_test.update(best_fit_sn)
     lik = "sn.jla"
     info_likelihood = {lik: {}}
     info_theory = {"camb": None}
-    body_of_test(modules, best_fit, info_likelihood, info_theory, chi2_sn_jla)
+    body_of_test(modules, best_fit_test, info_likelihood, info_theory, chi2_sn_jla)
 
 
 def test_sn_jla_classy(modules):
-    best_fit = deepcopy(params_lowTEB_highTTTEEE)
-    best_fit.update(best_fit_sn)
+    best_fit_test = deepcopy(params_lowTEB_highTTTEEE)
+    best_fit_test.update(best_fit_sn)
     lik = "sn.jla"
     info_likelihood = {lik: {}}
     info_theory = {"classy": None}
-    body_of_test(modules, best_fit, info_likelihood, info_theory, chi2_sn_jla)
+    body_of_test(modules, best_fit_test, info_likelihood, info_theory, chi2_sn_jla)
 
 
 # JLA marginalized over alpha, beta

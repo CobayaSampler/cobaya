@@ -271,7 +271,7 @@ class classy(BoltzmannBase):
                     self.collectors[product] = Collector(
                         method="get_pk_and_k_and_z",
                         kwargs=v,
-                        post=(lambda P, k, z: (k, z, np.array(P).T)))
+                        post=(lambda P, kk, z: (kk, z, np.array(P).T)))
             elif v is None:
                 k_translated = self.translate_param(k)
                 if k_translated not in self.derived_extra:

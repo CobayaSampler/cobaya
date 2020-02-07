@@ -136,19 +136,19 @@ def install(*infos, **kwargs):
 
 
 def download_file(filename, path, no_progress_bars=False, decompress=False, logger=None):
-    log = logger or logging.getLogger(__name__)
+    logger = logger or logging.getLogger(__name__)
     try:
         from wget import download, bar_thermometer
         wget_kwargs = {"out": path, "bar":
             (bar_thermometer if not no_progress_bars else None)}
         filename = os.path.normpath(download(filename, **wget_kwargs))
         print("")
-        log.info('Downloaded filename %s' % filename)
+        logger.info('Downloaded filename %s' % filename)
     except Exception as excpt:
-        log.error(
+        logger.error(
             "Error downloading file '%s' to folder '%s': %s", filename, path, str(excpt))
         return False
-    log.debug('Got: %s' % filename)
+    logger.debug('Got: %s' % filename)
     if not decompress:
         return True
     extension = os.path.splitext(filename)[-1][1:]
@@ -163,17 +163,17 @@ def download_file(filename, path, no_progress_bars=False, decompress=False, logg
                 extension = "gz"
             with tarfile.open(filename, "r:" + extension) as tar:
                 tar.extractall(path)
-        log.debug('Decompressed: %s' % filename)
+        logger.debug('Decompressed: %s' % filename)
         os.remove(filename)
         return True
     except Exception as e:
-        log.error("Error decompressing downloaded file! Corrupt file? [%s]" % e)
+        logger.error("Error decompressing downloaded file! Corrupt file? [%s]" % e)
         return False
 
 
 def download_github_release(directory, repo_name, release_name, repo_rename=None,
                             no_progress_bars=False, logger=None):
-    log = logger or logging.getLogger(__name__)
+    logger = logger or logging.getLogger(__name__)
     if "/" in repo_name:
         github_user = repo_name[:repo_name.find("/")]
         repo_name = repo_name[repo_name.find("/") + 1:]
@@ -184,7 +184,7 @@ def download_github_release(directory, repo_name, release_name, repo_rename=None
     filename = (r"https://github.com/" + github_user + "/" + repo_name +
                 "/archive/" + release_name + ".tar.gz")
     if not download_file(filename, directory, decompress=True,
-                         no_progress_bars=no_progress_bars, logger=log):
+                         no_progress_bars=no_progress_bars, logger=logger):
         return False
     # Remove version number from directory name
     w_version = next(d for d in os.listdir(directory)
@@ -194,7 +194,7 @@ def download_github_release(directory, repo_name, release_name, repo_rename=None
     if os.path.exists(repo_path):
         shutil.rmtree(repo_path)
     os.rename(os.path.join(directory, w_version), repo_path)
-    log.info("%s %s downloaded and decompressed correctly.", repo_name, release_name)
+    logger.info("%s %s downloaded and decompressed correctly.", repo_name, release_name)
     return True
 
 
@@ -268,15 +268,15 @@ def install_script():
 
     # Configure the logger ASAP
     logger_setup()
-    log = logging.getLogger(__name__.split(".")[-1])
+    logger = logging.getLogger(__name__.split(".")[-1])
 
     if arguments.files == ["cosmo"]:
-        log.info("Installing cosmological modules (input files will be ignored)")
+        logger.info("Installing cosmological modules (input files will be ignored)")
         from cobaya.cosmo_input import install_basic
         infos = [install_basic]
     elif arguments.files == ["cosmo-tests"]:
-        log.info("Installing *tested* cosmological modules "
-                 "(input files will be ignored)")
+        logger.info("Installing *tested* cosmological modules "
+                    "(input files will be ignored)")
         from cobaya.cosmo_input import install_tests
         infos = [install_tests]
     elif arguments.files == ["polychord"]:

@@ -611,28 +611,28 @@ class _CMBlikes(_DataSetLikelihood):
                                             self.bin_max - self.pcl_lmin + 1]
                         Cs[:, j, i] = CL.CL[self.bin_min - self.pcl_lmin:
                                             self.bin_max - self.pcl_lmin + 1]
-        for bin in range(self.nbins_used):
+        for b in range(self.nbins_used):
             if self.binned:
-                self.elements_to_matrix(binned_theory[bin, :], C)
+                self.elements_to_matrix(binned_theory[b, :], C)
             else:
-                C[:, :] = Cs[bin, :, :]
+                C[:, :] = Cs[b, :, :]
             if self.cl_noise is not None:
-                C += self.noise_matrix[bin]
+                C += self.noise_matrix[b]
             if self.like_approx == 'exact':
                 chisq += self.exact_chi_sq(
-                    C, self.bandpower_matrix[bin], self.bin_min + bin)
+                    C, self.bandpower_matrix[b], self.bin_min + b)
                 continue
             elif self.like_approx == 'HL':
                 try:
                     self.transform(
-                        C, self.bandpower_matrix[bin], self.fiducial_sqrt_matrix[bin])
+                        C, self.bandpower_matrix[b], self.fiducial_sqrt_matrix[b])
                 except np.linalg.LinAlgError:
                     self.log.debug("Likelihood computation failed.")
                     return -np.inf
             elif self.like_approx == 'gaussian':
-                C -= self.bandpower_matrix[bin]
+                C -= self.bandpower_matrix[b]
             self.matrix_to_elements(C, vecp)
-            big_x[bin * self.ncl_used:(bin + 1) * self.ncl_used] = vecp[
+            big_x[b * self.ncl_used:(b + 1) * self.ncl_used] = vecp[
                 self.cl_used_index]
         if self.like_approx == 'exact':
             return -0.5 * chisq

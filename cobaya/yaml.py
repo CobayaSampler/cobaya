@@ -132,7 +132,7 @@ def yaml_load_file(file_name, yaml_text=None):
 
 # Custom dumper ##########################################################################
 
-def yaml_dump(data, stream=None, Dumper=yaml.Dumper, **kwds):
+def yaml_dump(info, stream=None, Dumper=yaml.Dumper, **kwds):
     from collections import OrderedDict
     class OrderedDumper(Dumper):
         pass
@@ -177,7 +177,7 @@ def yaml_dump(data, stream=None, Dumper=yaml.Dumper, **kwds):
     OrderedDumper.add_multi_representer(object, _null_representer)
 
     # Dump!
-    return yaml.dump(data, stream, OrderedDumper, allow_unicode=True, **kwds)
+    return yaml.dump(info, stream, OrderedDumper, allow_unicode=True, **kwds)
 
 
 def yaml_dump_file(file_name, data, comment=None, error_if_exists=True):

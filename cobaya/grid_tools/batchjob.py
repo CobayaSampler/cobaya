@@ -76,7 +76,7 @@ def getCodeRootPath():
     return os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..')) + os.sep
 
 
-class propertiesItem:
+class PropertiesItem:
     propertiesIniFile: callable
 
     def propertiesIni(self):
@@ -88,7 +88,7 @@ class propertiesItem:
             return ini
 
 
-class dataSet:
+class DataSet:
     def __init__(self, names, params=None, covmat=None, dist_settings=None):
         if not dist_settings:
             dist_settings = {}
@@ -186,7 +186,7 @@ class dataSet:
         return "_".join(sorted(self.namesReplacing(dic)))
 
 
-class jobGroup:
+class JobGroup:
     def __init__(self, name, params=None, importanceRuns=None, datasets=None):
         if importanceRuns is None:
             importanceRuns = []
@@ -200,7 +200,7 @@ class jobGroup:
             self.datasets = datasets
 
 
-class importanceSetting:
+class ImportanceSetting:
     def __init__(self, names, inis=None, dist_settings=None, minimize=True):
         if not inis:
             inis = []
@@ -213,7 +213,7 @@ class importanceSetting:
         return True
 
 
-class importanceFilter(importanceSetting):
+class ImportanceFilter(ImportanceSetting):
     # class for trivial importance sampling filters that can be done in python,
     # e.g. restricting a parameter to a new range
 
@@ -222,11 +222,11 @@ class importanceFilter(importanceSetting):
                          minimize=minimize)
 
 
-class jobItem(propertiesItem):
+class JobItem(PropertiesItem):
     def __init__(self, path, param_set, data_set, base='base', minimize=True):
         self.param_set = param_set
-        if not isinstance(data_set, dataSet):
-            data_set = dataSet(data_set)
+        if not isinstance(data_set, DataSet):
+            data_set = DataSet(data_set)
         self.data_set = data_set
         self.base = base
         self.paramtag = base + "_" + param_set
@@ -265,17 +265,17 @@ class jobItem(propertiesItem):
 
     def makeImportance(self, importanceRuns):
         for impRun in importanceRuns:
-            if isinstance(impRun, importanceSetting):
+            if isinstance(impRun, ImportanceSetting):
                 if not impRun.wantImportance(self): continue
             else:
                 if len(impRun) > 2 and not impRun[2].wantImportance(self): continue
-                impRun = importanceSetting(impRun[0], impRun[1])
+                impRun = ImportanceSetting(impRun[0], impRun[1])
             if len(set(impRun.names).intersection(self.data_set.names)) > 0:
                 print('importance job duplicating parent data set: %s with %s' % (
                     self.name, impRun.names))
                 continue
             data = self.data_set.extendForImportance(impRun.names, impRun.inis)
-            job = jobItem(self.batchPath, self.param_set, data,
+            job = JobItem(self.batchPath, self.param_set, data,
                           minimize=impRun.want_minimize)
             job.importanceTag = "_".join(impRun.names)
             job.importanceSettings = impRun.inis
@@ -294,7 +294,7 @@ class jobItem(propertiesItem):
             job.parent = self
             job.group = self.group
             job.dist_settings.update(impRun.dist_settings)
-            if isinstance(impRun, importanceFilter):
+            if isinstance(impRun, ImportanceFilter):
                 job.importanceFilter = impRun
             job.makeIDs()
             self.importanceItems.append(job)
@@ -472,7 +472,7 @@ class jobItem(propertiesItem):
         return loadMCSamples(self.chainRoot, jobItem=self, ini=ini, settings=settings)
 
 
-class batchJob(propertiesItem):
+class BatchJob(PropertiesItem):
     def __init__(self, path):
         self.batchPath = path
         self.skip = []
@@ -496,7 +496,7 @@ class batchJob(propertiesItem):
                     if any(data_set in (x.get("skip", {}) or {}).get(param_set, {})
                            for x in (settings["grid"], group)):
                         continue
-                    item = jobItem(self.batchPath, param_set, data_set, base=group_name)
+                    item = JobItem(self.batchPath, param_set, data_set, base=group_name)
                     if hasattr(group, 'groupName'):
                         item.group = group.groupName
                     if item.name not in self.skip:

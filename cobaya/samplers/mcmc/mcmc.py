@@ -856,8 +856,8 @@ class mcmc(CovmatSampler):
         # Save checkpoint info
         self.write_checkpoint()
 
-    def log_diagnosis(self, datetime):
-        msg = "Progress at [%s] : " % datetime.strftime("%Y-%m-%d %H:%M:%S")
+    def log_diagnosis(self, date_time):
+        msg = "Progress at [%s] : " % date_time.strftime("%Y-%m-%d %H:%M:%S")
         msg += "%d steps taken" % self.n_steps_raw
         if self.burn_in_left and self.burn_in:  # NB: burn_in_left = 1 even if no burn_in
             msg += " -- still burning in, %d accepted steps left." % self.burn_in_left

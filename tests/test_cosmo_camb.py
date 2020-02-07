@@ -76,7 +76,7 @@ def test_CAMB_transfer(modules):
     # noinspection PyDefaultArgument
     def test_likelihood(
             _theory={'Pk_grid': dict(k_max=2, z=[0, 2])}):
-        k, z, PK = _theory.get_Pk_grid()
+        _, _, PK = _theory.get_Pk_grid()
         assert np.isclose(PK[1, 30], 10294.3285)
         np.testing.assert_allclose(PK, PK1, rtol=1e-4)
         return 1
