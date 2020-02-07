@@ -601,4 +601,4 @@ def make_auto_params(auto_params, params_info):
         if isinstance(replacements, str):
             replacements = eval(replacements)
         for value in replacements:
-            params_info[k % value] = replace(v, value)
+            params_info[k % value] = replace(deepcopy_where_possible(v), value)
