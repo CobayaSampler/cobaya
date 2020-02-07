@@ -14,11 +14,12 @@ import inspect
 from itertools import chain
 import pkg_resources
 from functools import reduce
+from typing import Mapping
 
 # Local
 from cobaya.conventions import _products_path, _path_install, _resume, _force
 from cobaya.conventions import _output_prefix, _debug, _debug_file, _external
-from cobaya.conventions import _params, _prior, kinds, _provides, _requires
+from cobaya.conventions import _params, _auto_params, _prior, kinds, _provides, _requires
 from cobaya.conventions import partag, _input_params, _output_params, _module_path
 from cobaya.conventions import _yaml_extensions, _aliases, reserved_attributes
 from cobaya.tools import recursive_update, str_to_list
@@ -211,6 +212,8 @@ def update_info(info):
     updated_info[_params] = merge_params_info([defaults_merged,
                                                input_info.get(_params, {})],
                                               default_derived=False)
+    if _auto_params in updated_info:
+        make_auto_params(updated_info.pop(_auto_params), updated_info[_params])
     # Add aliases for theory params (after merging!)
     for kind in [k for k in [kinds.theory, kinds.likelihood] if k in updated_info]:
         for item in updated_info[kind].values():
@@ -580,3 +583,22 @@ class HasDefaults:
             return yaml_dump(defaults)
         else:
             return defaults
+
+
+def make_auto_params(auto_params, params_info):
+    def replace(item, tag):
+        if isinstance(item, Mapping):
+            for key, val in list(item.items()):
+                item[key] = replace(val, tag)
+        elif isinstance(item, str) and '%s' in item:
+            item = item % tag
+        return item
+
+    for k, v in auto_params.items():
+        if '%s' not in k:
+            raise LoggedError(log, 'auto_param parameter names must have %s placeholder')
+        replacements = v.pop('auto_range')
+        if isinstance(replacements, str):
+            replacements = eval(replacements)
+        for value in replacements:
+            params_info[k % value] = replace(v, value)

@@ -17,6 +17,8 @@
 
 # cosmetic/consistency/speed
 
+## use MPI for post
+## hasattr(keys) to instance(dict) or instance(Mapping)
 ## In the docs "Bases" (and UML diagram) not hyperlinked correctly (not sure how to fix)
 ## Make numba a requirement?
 ## Move sampler/plik install into class methods
