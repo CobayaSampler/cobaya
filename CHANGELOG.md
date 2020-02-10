@@ -70,6 +70,7 @@
 - Optimizations for which quantities computed
 - Option to request "CAMBdata" object from CAMB to access computed results directly 
 - Fix for getting source windows power spectra 
+- external_primordial_pk flag to optionally use a separate Cobata Theory to return to the (binned) primordial power spectrum to CAMB
 
 ## 2.0.3 – 2019-09-09
 

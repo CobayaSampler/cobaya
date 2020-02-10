@@ -3,7 +3,7 @@ import numpy as np
 from cobaya.model import get_model
 from cobaya.theory import Theory
 from cobaya.tools import load_module
-from cobaya.likelihood import LikelihoodInterface
+from cobaya.likelihood import LikelihoodInterface, Likelihood
 from .common import process_modules_path
 
 
@@ -190,16 +190,17 @@ testAs = 1.8e-9
 testns = 0.8
 
 
-# noinspection PyDefaultArgument
-def pk_likelihood(_theory={'Cl': {'tt': 1000}, 'CAMBdata': None}):
-    results = _theory.get_CAMBdata()
-    np.allclose(results.Params.scalar_power(1.1),
-                testAs * (1.1 / 0.05) ** (testns - 1))
+class Pklike(Likelihood):
+    def logp(self, **params_values):
+        results = self.provider.get_CAMBdata()
+        np.allclose(results.Params.scalar_power(1.1),
+                    testAs * (1.1 / 0.05) ** (testns - 1))
 
-    return 0
+    def get_requirements(self):
+        return {'Cl': {'tt': 1000}, 'CAMBdata': None}
 
 
-info_pk = {'likelihood': {'cmb': {'external': pk_likelihood}},
+info_pk = {'likelihood': {'cmb': Pklike},
            'theory': {'camb': {"external_primordial_pk": True},
                       'my_pk': ExamplePrimordialPk},
            'params': {
