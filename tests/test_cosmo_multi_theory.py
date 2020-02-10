@@ -169,6 +169,7 @@ def test_bbn_likelihood(modules):
 class ExamplePrimordialPk(Theory):
 
     def initialize(self):
+        # need to provide valid results at wide k range, any that might be used
         self.ks = np.logspace(-5.5, 2, 1000)
 
     def calculate(self, state, want_derived=True, **params_values_dict):
@@ -176,7 +177,7 @@ class ExamplePrimordialPk(Theory):
         pk = (self.ks / pivot_scalar) ** (
                 params_values_dict['testns'] - 1) * params_values_dict['testAs']
         state['primordial_scalar_pk'] = {'kmin': self.ks[0], 'kmax': self.ks[-1],
-                                         'Pk': pk}
+                                         'Pk': pk, 'log_regular': True}
 
     def get_primordial_scalar_pk(self):
         return self._current_state['primordial_scalar_pk']

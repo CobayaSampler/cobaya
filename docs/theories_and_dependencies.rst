@@ -70,7 +70,7 @@ another theory code, and provide the method to return ``A`` with a custom normal
             return ['Aderived']
 
         def calculate(self, state, want_derived=True, **params_values_dict):
-            state['A'] = self.provider.get_B() * self.provider.get_param('b_derived')
+            state['A'] = self.provider.get_result('B') * self.provider.get_param('b_derived')
             state['derived'] = {'Aderived': 10}
 
         def get_A(self, normalization=1):
@@ -103,7 +103,8 @@ to get ``b_derived`` and ``B``:
 
         def calculate(self, state, want_derived=True, **params_values_dict):
             if self.kmax:
-                state['B'] = ..do calculation using self.kmax...
+                state['B'] = ... do calculation using self.kmax
+
             if want_derived:
                 state['derived'] = {'b_derived': ...xxx...}
 
@@ -122,6 +123,15 @@ likelihoods, or as a class ``params`` dictionary. For example to specify input p
     class X(Theory):
         params = {'Xin': None, 'Xderived': {'derived': True}}
 
+
+Here the user has to specify the input for Xin. Of course you can also provide default
+sampling settings for 'Xin' so that configuring it is transparent to the user, e.g.
+
+.. code:: python
+
+    class X(Theory):
+    params = {'Xin': {'prior': {'min': 0, 'max': 1}, 'propose': 0.01, 'ref': 0.9},
+              'Xderived': {'derived': True}}
 
 If multiple theory codes can provide the same quantity, it may be ambiguous which to use to compute which.
 When this happens use the ``provides`` input .yaml keyword to specify that a specific theory computes a
