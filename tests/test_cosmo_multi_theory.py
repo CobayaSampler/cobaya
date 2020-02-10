@@ -195,8 +195,10 @@ testns = 0.8
 class Pklike(Likelihood):
     def logp(self, **params_values):
         results = self.provider.get_CAMBdata()
-        np.allclose(results.Params.scalar_power(1.1),
-                    testAs * (1.1 / 0.05) ** (testns - 1))
+        print(results.Params.scalar_power(1.1),
+              testAs * (1.1 / 0.05) ** (testns - 1))
+        assert np.allclose(results.Params.scalar_power(1.1),
+                           testAs * (1.1 / 0.05) ** (testns - 1), rtol=1e-3, atol=1e-20)
 
     def get_requirements(self):
         return {'Cl': {'tt': 1000}, 'CAMBdata': None}
@@ -226,7 +228,7 @@ def test_primordial_pk(modules):
 
 
 class BinnedPk(Theory):
-    # example splined power spectrum based on bins
+    # example splined power spectrum exp(-2 tau)P(k) based on bin values.
     # Can pass dense sampling to CAMB to reproduce any function, here bins are directly
     # cubic spline values use by CAMB.
     # Note need to  have wide k bounds or latest CAMB (which takes value beyond start
@@ -248,7 +250,8 @@ class BinnedPk(Theory):
         for b in range(self.nbins):
             self._pk[b] = params_values_dict['b%s' % (b + 1)]
         self._pk *= self.scale * np.exp(2 * self.provider.get_param('tau'))
-        print(self._pk)
+        # should use log_regular: True for speed if the binning is log regular
+        # here test the non-regular option for coverage
         state['primordial_scalar_pk'] = {'k': self.ks,
                                          'Pk': self._pk, 'log_regular': False}
 
@@ -271,14 +274,19 @@ class BinnedPk(Theory):
 
 
 def test_pk_binning(modules):
-    nbins = 10
+    # reproduce power law by sending in spline point values
+    # has to be fine sampling to get to 1e-3 precision in test.
+    nbins = 40
     tau = 0.05
+    k_min_bin = -5.5
+    k_max_bin = 2
 
     info = {'modules': process_modules_path(modules),
             'likelihood': {'cmb': Pklike},
             'theory': {'camb': {"external_primordial_pk": True},
                        'my_pk': {"external": BinnedPk,
-                                 'nbins': nbins
+                                 'nbins': nbins, 'k_min_bin': k_min_bin,
+                                 'k_max_bin': k_max_bin
                                  }},
             'params': {
                 "ombh2": 0.022274,
@@ -289,8 +297,6 @@ def test_pk_binning(modules):
             },
             'stop_at_error': True,
             'debug': debug}
-    k_min_bin = np.log10(0.001)
-    k_max_bin = np.log10(2.)
     scale = 1e-9
     ks = np.logspace(k_min_bin, k_max_bin, nbins)
 
