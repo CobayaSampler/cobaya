@@ -61,7 +61,7 @@ class CobayaComponent(HasLogger, HasDefaults):
                  initialize=True, standalone=True):
         if standalone:
             # TODO: would probably be more natural if defaults were always read here
-            default_info = self.get_defaults()
+            default_info = self.get_defaults(input_options=info)
             default_info.update(info)
             info = default_info
 

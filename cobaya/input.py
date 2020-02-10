@@ -21,7 +21,7 @@ from cobaya.conventions import _products_path, _path_install, _resume, _force
 from cobaya.conventions import _output_prefix, _debug, _debug_file, _external
 from cobaya.conventions import _params, _auto_params, _prior, kinds, _provides, _requires
 from cobaya.conventions import partag, _input_params, _output_params, _module_path
-from cobaya.conventions import _yaml_extensions, _aliases, reserved_attributes
+from cobaya.conventions import _yaml_extensions, _aliases, reserved_attributes, empty_dict
 from cobaya.tools import recursive_update, str_to_list
 from cobaya.tools import fuzzy_match, deepcopy_where_possible, get_class, get_kind
 from cobaya.yaml import yaml_load_file, yaml_dump
@@ -82,7 +82,8 @@ def get_used_modules(*infos):
 
 
 def get_default_info(module_or_class, kind=None, fail_if_not_found=False,
-                     return_yaml=False, yaml_expand_defaults=True, module_path=None):
+                     return_yaml=False, yaml_expand_defaults=True, module_path=None,
+                     input_options=empty_dict):
     """
     Get default info for a module_or_class.
     """
@@ -99,7 +100,8 @@ def get_default_info(module_or_class, kind=None, fail_if_not_found=False,
                             module_path=module_path)
         default_module_info = \
             cls.get_defaults(return_yaml=return_yaml,
-                             yaml_expand_defaults=yaml_expand_defaults)
+                             yaml_expand_defaults=yaml_expand_defaults,
+                             input_options=input_options)
 
     except Exception as e:
         raise LoggedError(log, "Failed to get defaults for module or class '%s' [%s]",
@@ -119,7 +121,7 @@ def update_info(info):
     component_base_classes = {kinds.sampler: Sampler, kinds.likelihood: Likelihood,
                               kinds.theory: Theory}
 
-    # Don't modify the original input!
+    # Don't modify the original input, and convert all Mapping to consistent dict
     input_info = deepcopy_where_possible(info)
     # Creates an equivalent info using only the defaults
     updated_info = {}
@@ -154,13 +156,15 @@ def update_info(info):
                 # continue
 
             if inspect.isclass(input_block[module]) or \
-                    not hasattr(input_block[module], "get"):
+                    not isinstance(input_block[module], dict):
                 input_block[module] = {_external: input_block[module]}
 
             ext = input_block[module].get(_external)
             if ext:
                 if inspect.isclass(ext):
-                    default_class_info = get_default_info(ext, block)
+                    default_class_info = get_default_info(ext, block,
+                                                          input_options=input_block[
+                                                              module])
                 else:
                     default_class_info = deepcopy_where_possible(
                         component_base_classes[block].get_defaults())
@@ -168,7 +172,8 @@ def update_info(info):
                 module_path = input_block[module].get(_module_path, None)
                 default_class_info = get_default_info(module, block,
                                                       fail_if_not_found=True,
-                                                      module_path=module_path)
+                                                      module_path=module_path,
+                                                      input_options=input_block[module])
 
             updated[module] = default_class_info or {}
             # Update default options with input info
@@ -219,7 +224,7 @@ def update_info(info):
         for item in updated_info[kind].values():
             renames = item.get(partag.renames)
             if renames:
-                if isinstance(renames, (list, tuple)):
+                if not isinstance(renames, Mapping):
                     raise LoggedError(log,
                                       "'renames' should be a dictionary of name mappings "
                                       "(or you meant to use 'aliases')")
@@ -508,13 +513,17 @@ class HasDefaults:
             return None
 
     @classmethod
-    def get_class_options(cls):
+    def get_class_options(cls, input_options=empty_dict):
         """
         Returns dictionary of names and values for class variables that can also be
         input and output in yaml files, by default it takes all the
         (non-inherited and non-private)  attributes of the class excluding known
         specials.
 
+        Could be overridden using input_options to dynamically generate defaults,
+        e.g. a set of input parameters generated depending on the input_options.
+
+        :param input_options: optional dictionary of input parameters
         :return:  dict of names and values
         """
         return {k: v for k, v in cls.__dict__.items() if not k.startswith('_') and
@@ -522,7 +531,8 @@ class HasDefaults:
                 and not isinstance(v, property)}
 
     @classmethod
-    def get_defaults(cls, return_yaml=False, yaml_expand_defaults=True):
+    def get_defaults(cls, return_yaml=False, yaml_expand_defaults=True,
+                     input_options=empty_dict):
         """
         Return defaults for this module_or_class, with syntax:
 
@@ -548,6 +558,9 @@ class HasDefaults:
         if you want to keep it).
 
         if yaml_expand_defaults then !default: file includes will be expanded
+
+        input_options may be a dictionary of input options, e.g. in case default params
+        are dynamically dependent on an input variable
         """
 
         if 'class_options' in cls.__dict__:
@@ -555,7 +568,7 @@ class HasDefaults:
                                    "public attributes defined directly in the class" %
                               cls.get_qualified_class_name())
         yaml_text = cls.get_associated_file_content('.yaml')
-        options = cls.get_class_options()
+        options = cls.get_class_options(input_options=input_options)
 
         if options and yaml_text:
             raise LoggedError(log,
@@ -575,7 +588,7 @@ class HasDefaults:
         if not return_yaml:
             for base in cls.__bases__:
                 if issubclass(base, HasDefaults) and base is not HasDefaults:
-                    defaults.update(base.get_defaults())
+                    defaults.update(base.get_defaults(input_options=input_options))
 
         defaults.update(this_defaults)
 
