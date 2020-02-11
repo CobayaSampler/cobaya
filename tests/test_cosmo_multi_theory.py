@@ -253,7 +253,7 @@ class BinnedPk(Theory):
         # should use log_regular: True for speed if the binning is log regular
         # here test the non-regular option for coverage
         state['primordial_scalar_pk'] = {'k': self.ks,
-                                         'Pk': self._pk, 'log_regular': False}
+                                         'Pk': self._pk.copy(), 'log_regular': False}
 
     def get_primordial_scalar_pk(self):
         return self._current_state['primordial_scalar_pk']
