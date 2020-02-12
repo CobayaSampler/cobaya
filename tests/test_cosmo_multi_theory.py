@@ -1,9 +1,11 @@
 import os
 import numpy as np
+from copy import deepcopy
 from cobaya.model import get_model
 from cobaya.theory import Theory
 from cobaya.tools import load_module
-from cobaya.likelihood import LikelihoodInterface
+from cobaya.likelihood import LikelihoodInterface, Likelihood
+from cobaya.conventions import empty_dict
 from .common import process_modules_path
 
 
@@ -164,3 +166,143 @@ def test_bbn_likelihood(modules):
     model = get_model(info_error2)
     assert np.allclose(model.loglikes({'BBN_delta': 1.0})[0], [0.24594834, -0.5],
                        rtol=1e-4)
+
+
+class ExamplePrimordialPk(Theory):
+
+    def initialize(self):
+        # need to provide valid results at wide k range, any that might be used
+        self.ks = np.logspace(-5.5, 2, 1000)
+
+    def calculate(self, state, want_derived=True, **params_values_dict):
+        pivot_scalar = 0.05
+        pk = (self.ks / pivot_scalar) ** (
+                params_values_dict['testns'] - 1) * params_values_dict['testAs']
+        state['primordial_scalar_pk'] = {'kmin': self.ks[0], 'kmax': self.ks[-1],
+                                         'Pk': pk, 'log_regular': True}
+
+    def get_primordial_scalar_pk(self):
+        return self._current_state['primordial_scalar_pk']
+
+    def get_can_support_params(self):
+        return ['testAs', 'testns']
+
+
+testAs = 1.8e-9
+testns = 0.8
+
+
+class Pklike(Likelihood):
+    def logp(self, **params_values):
+        results = self.provider.get_CAMBdata()
+        print(results.Params.scalar_power(1.1),
+              testAs * (1.1 / 0.05) ** (testns - 1))
+        assert np.allclose(results.Params.scalar_power(1.1),
+                           testAs * (1.1 / 0.05) ** (testns - 1), rtol=1e-3, atol=1e-20)
+
+    def get_requirements(self):
+        return {'Cl': {'tt': 1000}, 'CAMBdata': None}
+
+
+info_pk = {'likelihood': {'cmb': Pklike},
+           'theory': {'camb': {"external_primordial_pk": True},
+                      'my_pk': ExamplePrimordialPk},
+           'params': {
+               "ombh2": 0.022274,
+               "omch2": 0.11913,
+               "cosmomc_theta": 0.01040867,
+               "tau": 0.0639,
+               "nnu": 3.046,
+               'testAs': {'prior': {'min': 1e-9, 'max': 1e-8}},
+               'testns': {'prior': {'min': 0.8, 'max': 1.2}}
+           },
+           'stop_at_error': True,
+           'debug': debug}
+
+
+def test_primordial_pk(modules):
+    modules = process_modules_path(modules)
+    info_pk['modules'] = modules
+    model = get_model(info_pk)
+    model.loglikes({'testAs': testAs, 'testns': testns})
+
+
+class BinnedPk(Theory):
+    # example splined power spectrum exp(-2 tau)P(k) based on bin values.
+    # Can pass dense sampling to CAMB to reproduce any function, here bins are directly
+    # cubic spline values use by CAMB.
+    # Note need to  have wide k bounds or latest CAMB (which takes value beyond start
+    # and end bins to be equal to the end bins).
+    nbins: int = 20
+    k_min_bin: float = np.log10(0.001)
+    k_max_bin: float = np.log10(0.35)
+    scale: float = 1e-9
+    bin_par = {'prior': {'min': 0, 'max': 100}}
+
+    def initialize(self):
+        self.ks = np.logspace(self.k_min_bin, self.k_max_bin, self.nbins)
+        self._pk = np.zeros_like(self.ks)
+
+    def get_requirements(self):
+        return {'tau'}
+
+    def calculate(self, state, want_derived=True, **params_values_dict):
+        for b in range(self.nbins):
+            self._pk[b] = params_values_dict['b%s' % (b + 1)]
+        self._pk *= self.scale * np.exp(2 * self.provider.get_param('tau'))
+        # should use log_regular: True for speed if the binning is log regular
+        # here test the non-regular option for coverage
+        state['primordial_scalar_pk'] = {'k': self.ks,
+                                         'Pk': self._pk.copy(), 'log_regular': False}
+
+    def get_primordial_scalar_pk(self):
+        return self._current_state['primordial_scalar_pk']
+
+    @classmethod
+    def get_class_options(cls, input_options=empty_dict):
+        # dynamically generate defaults for params based on nbins
+        options = super().get_class_options().copy()
+        nbins = input_options['nbins']
+        bin_par = input_options.get('bin_par', cls.bin_par)
+        params = {}
+        for b in range(nbins):
+            par = deepcopy(bin_par.copy())
+            par['label'] = 'b_%s' % (b + 1)
+            params['b%s' % (b + 1)] = par
+        options['params'] = params
+        return options
+
+
+def test_pk_binning(modules):
+    # reproduce power law by sending in spline point values
+    # has to be fine sampling to get to 1e-3 precision in test.
+    nbins = 40
+    tau = 0.05
+    k_min_bin = -5.5
+    k_max_bin = 2
+
+    info = {'modules': process_modules_path(modules),
+            'likelihood': {'cmb': Pklike},
+            'theory': {'camb': {"external_primordial_pk": True},
+                       'my_pk': {"external": BinnedPk,
+                                 'nbins': nbins, 'k_min_bin': k_min_bin,
+                                 'k_max_bin': k_max_bin
+                                 }},
+            'params': {
+                "ombh2": 0.022274,
+                "omch2": 0.11913,
+                "cosmomc_theta": 0.01040867,
+                "tau": tau,
+                "nnu": 3.046
+            },
+            'stop_at_error': True,
+            'debug': debug}
+    scale = 1e-9
+    ks = np.logspace(k_min_bin, k_max_bin, nbins)
+
+    def pk_test(k):
+        return testAs * (k / 0.05) ** (testns - 1) / scale * np.exp(-2 * tau)
+
+    pars = {'b%s' % (b + 1): pk_test(ks[b]) for b in range(nbins)}
+    model = get_model(info)
+    model.loglikes(pars)

@@ -12,6 +12,8 @@ from types import MappingProxyType
 # Package name (for importlib)
 # (apparently __package__ is only defined if you import something locally.
 _package = __name__.rpartition('.')[0]
+
+# an immutable empty dict (e.g. for argument defaults)
 empty_dict = MappingProxyType({})
 
 # Names for block and fields in the input
@@ -21,6 +23,7 @@ _post_add = "add"
 _post_remove = "remove"
 _post_suffix = "suffix"
 _params = "params"
+_auto_params = "auto_params"
 _input_params = "input_params"
 _output_params = "output_params"
 _input_params_prefix = "input_params_prefix"

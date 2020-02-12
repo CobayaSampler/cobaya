@@ -199,6 +199,8 @@ class camb(BoltzmannBase):
     _camb_min_gcc_version = "6.4"
     _min_camb_version = '1.1'
 
+    external_primordial_pk: bool
+
     def initialize(self):
         """Importing CAMB from the correct path, if given."""
         if not self.path and self.path_install:
@@ -250,10 +252,15 @@ class camb(BoltzmannBase):
         self._base_params = None
         self._needs_lensing_cross = False
 
-        power_spectrum = self.camb.CAMBparams.make_class_named(
-            self.extra_args.get('initial_power_model',
-                                self.camb.initialpower.InitialPowerLaw),
-            self.camb.initialpower.InitialPower)
+        if self.external_primordial_pk:
+            self.extra_args['initial_power_model'] \
+                = self.camb.initialpower.SplinedInitialPower
+            power_spectrum = None
+        else:
+            power_spectrum = self.camb.CAMBparams.make_class_named(
+                self.extra_args.get('initial_power_model',
+                                    self.camb.initialpower.InitialPowerLaw),
+                self.camb.initialpower.InitialPower)
         self.initial_power_args = {}
         self.power_params = []
 
@@ -265,7 +272,8 @@ class camb(BoltzmannBase):
         self.nonlin_params = []
         for model, args, params in [(nonlin, self.nonlin_args, self.nonlin_params),
                                     (power_spectrum, self.initial_power_args,
-                                     self.power_params)]:
+                                     self.power_params)][
+                                   :1 if self.external_primordial_pk else 2]:
             pars = getfullargspec(model.set_params)
             for arg, v in zip(pars.args[1:], pars.defaults[1:]):
                 if arg in self.extra_args:
@@ -278,7 +286,9 @@ class camb(BoltzmannBase):
         self.requires = [p for p in self.requires if p not in self._transfer_requires]
 
     def initialize_with_params(self):
-        if set(self.input_params).intersection({'r', 'At'}):
+        # must set WantTensors manually if using external_primordial_pk
+        if not self.external_primordial_pk \
+                and set(self.input_params).intersection({'r', 'At'}):
             self.extra_attrs["WantTensors"] = True
 
     def get_can_support_params(self):
@@ -414,9 +424,17 @@ class camb(BoltzmannBase):
         # set-set base CAMB params if anything might have changed
         self._base_params = None
 
-        return {'CAMB_transfers':
-                    {'non_linear': self.non_linear_sources,
-                     'needs_perts': self.needs_perts}}
+        needs = {'CAMB_transfers':
+                     {'non_linear': self.non_linear_sources,
+                      'needs_perts': self.needs_perts}}
+        if self.external_primordial_pk and self.needs_perts:
+            needs['primordial_scalar_pk'] = {'lmax': self.extra_args.get("lmax"),
+                                             'kmax': self.extra_args.get('kmax')}
+            if self.extra_attrs.get('WantTensors'):
+                needs['primordial_tensor_pk'] = {'lmax':
+                    self.extra_attrs.get(
+                        "max_l_tensor", self.extra_args.get("lmax"))}
+        return needs
 
     def add_to_redshifts(self, z):
         self.extra_args["redshifts"] = np.sort(np.unique(np.concatenate(
@@ -434,10 +452,33 @@ class camb(BoltzmannBase):
         try:
             params, results = self.provider.get_CAMB_transfers()
             if self.collectors:
-                args = {self.translate_param(p): v for p, v in
-                        params_values_dict.items() if p in self.power_params}
-                args.update(self.initial_power_args)
-                results.Params.InitPower.set_params(**args)
+                if self.external_primordial_pk and self.needs_perts:
+                    primordial_pk = self.provider.get_primordial_scalar_pk()
+                    if primordial_pk.get('log_regular', True):
+                        results.Params.InitPower.set_scalar_log_regular(
+                            primordial_pk['kmin'], primordial_pk['kmax'],
+                            primordial_pk['Pk'])
+                    else:
+                        results.Params.InitPower.set_scalar_table(
+                            primordial_pk['k'], primordial_pk['Pk']
+                        )
+                    results.Params.InitPower.effective_ns_for_nonlinear = \
+                        primordial_pk.get('effective_ns_for_nonlinear', 0.97)
+                    if self.extra_attrs.get("WantTensors"):
+                        primordial_pk = self.provider.get_primordial_tensor_pk()
+                        if primordial_pk.get('log_regular', True):
+                            results.Params.InitPower.set_tensor_log_regular(
+                                primordial_pk['kmin'], primordial_pk['kmax'],
+                                primordial_pk['Pk'])
+                        else:
+                            results.Params.InitPower.set_tensor_table(
+                                primordial_pk['k'], primordial_pk['Pk']
+                            )
+                else:
+                    args = {self.translate_param(p): v for p, v in
+                            params_values_dict.items() if p in self.power_params}
+                    args.update(self.initial_power_args)
+                    results.Params.InitPower.set_params(**args)
                 if self.non_linear_sources or self.non_linear_pk:
                     args = {self.translate_param(p): v for p, v in
                             params_values_dict.items() if p in self.nonlin_params}
