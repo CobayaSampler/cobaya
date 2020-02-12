@@ -241,19 +241,19 @@ class BinnedPk(Theory):
 
     def initialize(self):
         self.ks = np.logspace(self.k_min_bin, self.k_max_bin, self.nbins)
-        self._pk = np.zeros_like(self.ks)
 
     def get_requirements(self):
         return {'tau'}
 
     def calculate(self, state, want_derived=True, **params_values_dict):
+        pk = np.zeros_like(self.ks)
         for b in range(self.nbins):
-            self._pk[b] = params_values_dict['b%s' % (b + 1)]
-        self._pk *= self.scale * np.exp(2 * self.provider.get_param('tau'))
+            pk[b] = params_values_dict['b%s' % (b + 1)]
+        pk *= self.scale * np.exp(2 * self.provider.get_param('tau'))
         # should use log_regular: True for speed if the binning is log regular
         # here test the non-regular option for coverage
         state['primordial_scalar_pk'] = {'k': self.ks,
-                                         'Pk': self._pk.copy(), 'log_regular': False}
+                                         'Pk': pk, 'log_regular': False}
 
     def get_primordial_scalar_pk(self):
         return self._current_state['primordial_scalar_pk']

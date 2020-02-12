@@ -46,7 +46,7 @@ def expand_info_param(info_param, default_derived=True):
     to a more unambiguous one.
     """
     info_param = deepcopy_where_possible(info_param)
-    if not hasattr(info_param, "keys"):
+    if not isinstance(info_param, dict):
         if info_param is None:
             info_param = {}
         else:
@@ -66,7 +66,7 @@ def reduce_info_param(info_param):
     This is the opposite of :func:`~input.expand_info_param`.
     """
     info_param = deepcopy_where_possible(info_param)
-    if not hasattr(info_param, "keys"):
+    if not isinstance(info_param, dict):
         return
     # All parameters without a prior are derived parameters unless otherwise specified
     if info_param.get(partag.derived) is True:
@@ -107,15 +107,15 @@ class Parameterization(HasLogger):
         #   directly by the sampler.
         self._infos = {}
         self._input = {}
-        self._input_funcs = dict()
-        self._input_args = dict()
+        self._input_funcs = {}
+        self._input_args = {}
         self._output = {}
         self._constant = {}
         self._sampled = {}
         self._sampled_renames = {}
         self._derived = {}
-        self._derived_funcs = dict()
-        self._derived_args = dict()
+        self._derived_funcs = {}
+        self._derived_args = {}
         # Notice here that expand_info_param *always* adds a partag.derived:True tag
         # to infos without _prior or partag.value, and a partag.value field
         # to fixed params
@@ -231,11 +231,8 @@ class Parameterization(HasLogger):
 
     def to_input(self, sampled_params_values, copied=True):
         # Store sampled params, so that derived can depend on them
-        if not hasattr(sampled_params_values, "keys"):
-            sampled_params_values = dict(
-                zip(self._sampled, sampled_params_values))
-        elif not isinstance(sampled_params_values, dict):
-            sampled_params_values = {p: sampled_params_values[p] for p in self._sampled}
+        if not isinstance(sampled_params_values, dict):
+            sampled_params_values = dict(zip(self._sampled, sampled_params_values))
         else:
             sampled_params_values = sampled_params_values.copy()
 
@@ -269,9 +266,8 @@ class Parameterization(HasLogger):
         return self.input_params() if copied else self._input
 
     def to_derived(self, output_params_values):
-        if not hasattr(output_params_values, "keys"):
-            output_params_values = dict(
-                zip(self._output, output_params_values))
+        if not isinstance(output_params_values, dict):
+            output_params_values = dict(zip(self._output, output_params_values))
         # Fill first derived parameters which are direct output parameters
         self._derived.update(
             {p: output_params_values[p] for p in self._directly_output})

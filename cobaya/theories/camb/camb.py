@@ -172,9 +172,9 @@ import os
 import logging
 from copy import deepcopy
 import numpy as np
-from collections import namedtuple
 import numbers
 import ctypes
+from typing import NamedTuple, Any
 
 # Local
 from cobaya.theories._cosmo import BoltzmannBase
@@ -185,11 +185,18 @@ from cobaya.tools import load_module, VersionCheckError, str_to_list
 from cobaya.theory import HelperTheory
 from cobaya.conventions import _requires
 
-# Result collector
-Collector = namedtuple("collector", ["method", "args", "kwargs"])
-Collector.__new__.__defaults__ = (None, [], {})
 
-CAMBOutputs = namedtuple("CAMBOutputs", ["camb_params", "results", "derived"])
+# Result collector
+class Collector(NamedTuple):
+    method: callable = None
+    args: list = []
+    kwargs: dict = {}
+
+
+class CAMBOutputs(NamedTuple):
+    camb_params: Any
+    results: Any
+    derived: dict
 
 
 class camb(BoltzmannBase):

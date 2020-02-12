@@ -39,6 +39,7 @@
 - renamed "renames" of likelihood to "aliases" (to avoid clash with "renames" for parameters)
 - More documentation for how to make internal and external likelihood classes
 - Support for HelperTheory classes to do sub-calculations for any Theory class with separate nuisance parameters and speeds
+= classmethod class_options() can be used to generate class defaults dynamically based on input parameters
 - Added tests: test_dependencies.py, test_cosmo_multi_theory.py
 
 #### Sampler
@@ -70,7 +71,7 @@
 - Optimizations for which quantities computed
 - Option to request "CAMBdata" object from CAMB to access computed results directly 
 - Fix for getting source windows power spectra 
-- external_primordial_pk flag to optionally use a separate Cobata Theory to return to the (binned) primordial power spectrum to CAMB
+- external_primordial_pk flag to optionally use a separate Cobaya Theory to return to the (binned) primordial power spectrum to CAMB
 
 ## 2.0.3 – 2019-09-09
 

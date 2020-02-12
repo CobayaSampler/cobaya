@@ -1,5 +1,6 @@
 # Global
 from copy import deepcopy
+from typing import MutableMapping, Mapping
 
 # Local
 from cobaya.input import get_default_info, merge_info
@@ -11,7 +12,7 @@ from . import input_database
 def translate(p, info=None, dictionary=None):
     dictionary = dictionary or {}
     # Ignore if dropped
-    if not (info if hasattr(info, "keys") else {}).get(partag.drop, False):
+    if not (info if isinstance(info, Mapping) else {}).get(partag.drop, False):
         p = dictionary.get(p, p)
     # Try to modify lambda parameters too!
     if isinstance(info, str):
@@ -23,11 +24,11 @@ def translate(p, info=None, dictionary=None):
             arguments_t = [translate(pi, dictionary=dictionary)[0] for pi in arguments]
             for pi, pit in zip(arguments, arguments_t):
                 info = info.replace(pi, pit)
-    if ((hasattr(info, "keys") and partag.derived in info and
+    if ((isinstance(info, MutableMapping) and partag.derived in info and
          isinstance(info[partag.derived], str))):
         info[partag.derived] = translate(p, info[partag.derived],
                                          dictionary=dictionary)[1]
-    elif (hasattr(info, "keys") and partag.value in info and
+    elif (isinstance(info, MutableMapping) and partag.value in info and
           isinstance(info[partag.value], str)):
         info[partag.value] = translate(p, info[partag.value], dictionary=dictionary)[1]
     return p, info

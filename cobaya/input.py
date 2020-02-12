@@ -352,7 +352,7 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
         block1 = deepcopy_where_possible(info1[block_name])
         block2 = deepcopy_where_possible(info2[block_name])
         # First, deal with root-level options (force, output, ...)
-        if not hasattr(block1, "keys"):
+        if not isinstance(block1, dict):
             if block1 != block2:
                 myprint(myname + ": different option '%s'" % block_name)
                 return False
@@ -396,7 +396,7 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
                     if _external not in block1[k]:
                         try:
                             module_path = block1[k].pop(_module_path, None) \
-                                if hasattr(block1[k], "keys") else None
+                                if isinstance(block1[k], dict) else None
                             cls = get_class(k, block_name, module_path=module_path)
                             ignore_k_this = ignore_k_this.union(
                                 set(getattr(cls, "_ignore_at_resume", {})))
@@ -600,7 +600,7 @@ class HasDefaults:
 
 def make_auto_params(auto_params, params_info):
     def replace(item, tag):
-        if isinstance(item, Mapping):
+        if isinstance(item, dict):
             for key, val in list(item.items()):
                 item[key] = replace(val, tag)
         elif isinstance(item, str) and '%s' in item:

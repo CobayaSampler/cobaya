@@ -18,6 +18,7 @@ import warnings
 import inspect
 from packaging import version
 from itertools import permutations
+from typing import Mapping
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore")
@@ -25,7 +26,6 @@ with warnings.catch_warnings():
     from fuzzywuzzy import process as fuzzy_process
 from inspect import cleandoc, getfullargspec
 from math import gcd
-from collections.abc import Mapping
 
 # Local
 from cobaya import __obsolete__
@@ -136,7 +136,7 @@ def load_module(name, package=None, path=None, min_version=None, check_path=Fals
 
 
 def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
-              module_path=None, return_module=False):
+              module_path=None):
     """
     Retrieves the requested class from its reference name. The name can be a
     fully-qualified package.module.classname string, or an internal name of the particular
@@ -162,12 +162,6 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
         module_name = name
         class_name = name
 
-    def get_return(_cls, _mod):
-        if return_module:
-            return _cls, _mod
-        else:
-            return _cls
-
     def return_class(_module_name, package=None):
         _module = load_module(_module_name, package=package, path=module_path)
         if hasattr(_module, class_name):
@@ -177,9 +171,9 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
                                   package=package, path=module_path)
             cls = getattr(_module, class_name)
         if not inspect.isclass(cls):
-            return get_return(getattr(cls, class_name), cls)
+            return getattr(cls, class_name)
         else:
-            return get_return(cls, _module)
+            return cls
 
     try:
         if module_path:
@@ -203,7 +197,7 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
         if ((exc_info[0] is ModuleNotFoundError and
              str(exc_info[1]).rstrip("'").endswith(name))):
             if None_if_not_found:
-                return get_return(None, None)
+                return None
             raise LoggedError(
                 log, "%s '%s' not found. Maybe you meant one of the following "
                      "(capitalization is important!): %s",
@@ -270,7 +264,7 @@ def get_external_function(string_or_function, name=None):
 
     Returns the function.
     """
-    if hasattr(string_or_function, "keys"):
+    if isinstance(string_or_function, Mapping):
         string_or_function = string_or_function.get(partag.value, None)
     if isinstance(string_or_function, str):
         try:
