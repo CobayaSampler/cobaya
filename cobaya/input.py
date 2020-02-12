@@ -600,7 +600,7 @@ class HasDefaults:
 
 def make_auto_params(auto_params, params_info):
     def replace(item, tag):
-        if isinstance(item, Mapping):
+        if isinstance(item, dict):
             for key, val in list(item.items()):
                 item[key] = replace(val, tag)
         elif isinstance(item, str) and '%s' in item:

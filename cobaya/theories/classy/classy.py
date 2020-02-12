@@ -138,8 +138,7 @@ import os
 import numpy as np
 from copy import deepcopy
 import logging
-from collections import namedtuple
-import numbers
+from typing import NamedTuple, Sequence, Union, Optional
 
 # Local
 from cobaya.theories._cosmo import BoltzmannBase
@@ -147,10 +146,16 @@ from cobaya.log import LoggedError
 from cobaya.install import download_github_release, pip_install
 from cobaya.tools import load_module, VersionCheckError
 
+
 # Result collector
-Collector = namedtuple("collector",
-                       ["method", "args", "args_names", "kwargs", "arg_array", "post"])
-Collector.__new__.__defaults__ = (None, [], [], {}, None, None)
+class Collector(NamedTuple):
+    method: str
+    args: Sequence = []
+    args_names: Sequence = []
+    kwargs: dict = {}
+    arg_array: Union[int, Sequence] = None
+    post: Optional[callable] = None
+
 
 # default non linear code -- same as CAMB
 non_linear_default_code = "hmcode"
@@ -379,7 +384,7 @@ class classy(BoltzmannBase):
             if arg_array is None:
                 state[product] = method(
                     *self.collectors[product].args, **self.collectors[product].kwargs)
-            elif isinstance(arg_array, numbers.Integral):
+            elif isinstance(arg_array, int):
                 state[product] = np.zeros(
                     len(self.collectors[product].args[arg_array]))
                 for i, v in enumerate(self.collectors[product].args[arg_array]):

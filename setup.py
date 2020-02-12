@@ -22,7 +22,7 @@ def get_long_description():
 setup(
     name='cobaya',
     version=__version__,
-    description='Bayesian Analysis in Cosmology',
+    description='Code for Bayesian Analysis',
     long_description=get_long_description(),
     url=__url__,
     project_urls={
@@ -44,7 +44,7 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8'
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.6.1',
     keywords='montecarlo sampling MCMC cosmology',
     packages=find_packages(exclude=['docs', 'tests']),
     install_requires=['numpy>=1.12.0', 'scipy >= 1.0', 'pandas>=0.20',
@@ -62,7 +62,6 @@ setup(
             'cobaya-prepare-data=cobaya.containers:prepare_data_script',
             'cobaya-run=cobaya.run:run_script',
             'cobaya-doc=cobaya.doc:doc_script',
-            'cobaya-citation=cobaya.citation:citation_script',  # to be deprecated!
             'cobaya-bib=cobaya.bib:bib_script',
             'cobaya-grid-create=cobaya.grid_tools:make_grid_script',
             'cobaya-grid-run=cobaya.grid_tools.runbatch:run',

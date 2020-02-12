@@ -7,9 +7,9 @@
 """
 # Global
 import numpy as np
-from collections import namedtuple
 from collections.abc import Mapping
 from itertools import chain
+from typing import NamedTuple, Sequence
 import logging
 
 # Local
@@ -31,17 +31,23 @@ from cobaya.tools import deepcopy_where_possible, are_different_params_lists, \
 from cobaya.component import Provider
 from cobaya.mpi import more_than_one_process, get_mpi_comm
 
+
 # Configure the logger ASAP
 # TODO: Just a dummy import before configuring the logger, until fix root/individual level
 # TODO: AL commented this, not clear why needed - check?
 # import getdist
 
 # Log-posterior namedtuple
-LogPosterior = namedtuple("LogPosterior", ["logpost", "logpriors", "loglikes", "derived"])
-LogPosterior.__new__.__defaults__ = (None, None, [], [])
+class LogPosterior(NamedTuple):
+    logpost: float = None
+    logpriors: Sequence[float] = None
+    loglikes: Sequence[float] = []
+    derived: Sequence[float] = []
 
 
-class Requirement(namedtuple("Requirement", ["name", "options"])):
+class Requirement(NamedTuple):
+    name: str
+    options: dict
 
     def __eq__(self, other):
         return self.name == other.name and _dict_equal(self.options, other.options)

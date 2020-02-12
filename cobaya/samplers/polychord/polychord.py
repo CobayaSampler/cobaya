@@ -16,7 +16,7 @@ from random import random
 from typing import Any
 
 # Local
-from cobaya.tools import read_dnumber, get_external_function, relative_to_int
+from cobaya.tools import read_dnumber, get_external_function, relative_to_int, PythonPath
 from cobaya.sampler import Sampler
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
 from cobaya.collection import Collection
@@ -28,6 +28,10 @@ clusters = "clusters"
 
 
 class polychord(Sampler):
+    # Name of the PolyChord repo and version to download
+    _pc_repo_name = "PolyChord/PolyChordLite"
+    _pc_repo_version = "1.16"
+
     # variables from yaml
     do_clustering: bool
     num_repeats: int
@@ -41,7 +45,7 @@ class polychord(Sampler):
             self.log.info("Initializing")
         # If path not given, try using general path to modules
         if not self.path and self.path_install:
-            self.path = get_path(self.path_install)
+            self.path = self.get_path(self.path_install)
         if self.path:
             if is_main_process():
                 self.log.info("Importing *local* PolyChord from " + self.path)
@@ -50,7 +54,7 @@ class polychord(Sampler):
                                       "The given path does not exist. "
                                       "Try installing PolyChord with "
                                       "'cobaya-install polychord -m [modules_path]")
-            pc_build_path = get_build_path(self.path)
+            pc_build_path = self.get_build_path(self.path)
             if not pc_build_path:
                 raise LoggedError(self.log, "Either PolyChord is not in the given folder,"
                                             " '%s', or you have not compiled it.",
@@ -338,79 +342,77 @@ class polychord(Sampler):
         else:
             return {}
 
+    @classmethod
+    def get_path(cls, path):
+        return os.path.realpath(
+            os.path.join(path, "code",
+                         cls._pc_repo_name[cls._pc_repo_name.find("/") + 1:]))
 
-# Installation routines ##################################################################
+    @classmethod
+    def get_build_path(cls, polychord_path):
+        try:
+            build_path = os.path.join(polychord_path, "build")
+            post = next(d for d in os.listdir(build_path) if d.startswith("lib."))
+            build_path = os.path.join(build_path, post)
+            return build_path
+        except (OSError, StopIteration):
+            return False
 
-# Name of the PolyChord repo and version to download
-pc_repo_name = "PolyChord/PolyChordLite"
-pc_repo_version = "1.16"
+    @classmethod
+    def is_installed(cls, **kwargs):
+        if not kwargs["code"]:
+            return True
+        poly_path = cls.get_path(kwargs["path"])
+        if not os.path.isfile(
+                os.path.realpath(os.path.join(poly_path, "lib/libchord.so"))):
+            return False
+        poly_build_path = cls.get_build_path(poly_path)
+        if not poly_build_path:
+            return False
+        with PythonPath(poly_build_path):
+            try:
+                import pypolychord
+                return True
+            except ImportError:
+                return False
 
-
-def get_path(path):
-    return os.path.realpath(
-        os.path.join(path, "code", pc_repo_name[pc_repo_name.find("/") + 1:]))
-
-
-def get_build_path(polychord_path):
-    try:
-        build_path = os.path.join(polychord_path, "build")
-        post = next(d for d in os.listdir(build_path) if d.startswith("lib."))
-        build_path = os.path.join(build_path, post)
-        return build_path
-    except (OSError, StopIteration):
-        return False
-
-
-def is_installed(**kwargs):
-    if not kwargs["code"]:
+    @classmethod
+    def install(cls, path=None, force=False, code=False, data=False,
+                no_progress_bars=False):
+        if not code:
+            return True
+        log = logging.getLogger(__name__.split(".")[-1])
+        log.info("Downloading PolyChord...")
+        success = download_github_release(os.path.join(path, "code"), cls._pc_repo_name,
+                                          cls._pc_repo_version,
+                                          no_progress_bars=no_progress_bars,
+                                          logger=log)
+        if not success:
+            log.error("Could not download PolyChord.")
+            return False
+        log.info("Compiling (Py)PolyChord...")
+        from subprocess import Popen, PIPE
+        # Needs to re-define os' PWD,
+        # because MakeFile calls it and is not affected by the cwd of Popen
+        cwd = os.path.join(path, "code",
+                           cls._pc_repo_name[cls._pc_repo_name.find("/") + 1:])
+        my_env = os.environ.copy()
+        my_env.update({"PWD": cwd})
+        process_make = Popen(["make", "pypolychord", "MPI=1"], cwd=cwd, env=my_env,
+                             stdout=PIPE, stderr=PIPE)
+        out, err = process_make.communicate()
+        if process_make.returncode:
+            log.info(out)
+            log.info(err)
+            log.error("Compilation failed!")
+            return False
+        my_env.update({"CC": "mpicc", "CXX": "mpicxx"})
+        process_make = Popen([sys.executable, "setup.py", "build"],
+                             cwd=cwd, env=my_env, stdout=PIPE, stderr=PIPE)
+        out, err = process_make.communicate()
+        if process_make.returncode:
+            log.info(out)
+            log.info(err)
+            log.error("Python build failed!")
+            return False
         return True
-    poly_path = get_path(kwargs["path"])
-    if not os.path.isfile(os.path.realpath(os.path.join(poly_path, "lib/libchord.so"))):
-        return False
-    poly_build_path = get_build_path(poly_path)
-    if not poly_build_path:
-        return False
-    sys.path.insert(0, poly_build_path)
-    try:
-        import pypolychord
-        return True
-    except ImportError:
-        return False
-
-
-def install(path=None, force=False, code=False, data=False, no_progress_bars=False):
-    if not code:
-        return True
-    log = logging.getLogger(__name__.split(".")[-1])
-    log.info("Downloading PolyChord...")
-    success = download_github_release(os.path.join(path, "code"), pc_repo_name,
-                                      pc_repo_version, no_progress_bars=no_progress_bars,
-                                      logger=log)
-    if not success:
-        log.error("Could not download PolyChord.")
-        return False
-    log.info("Compiling (Py)PolyChord...")
-    from subprocess import Popen, PIPE
-    # Needs to re-define os' PWD,
-    # because MakeFile calls it and is not affected by the cwd of Popen
-    cwd = os.path.join(path, "code", pc_repo_name[pc_repo_name.find("/") + 1:])
-    my_env = os.environ.copy()
-    my_env.update({"PWD": cwd})
-    process_make = Popen(["make", "pypolychord", "MPI=1"], cwd=cwd, env=my_env,
-                         stdout=PIPE, stderr=PIPE)
-    out, err = process_make.communicate()
-    if process_make.returncode:
-        log.info(out)
-        log.info(err)
-        log.error("Compilation failed!")
-        return False
-    my_env.update({"CC": "mpicc", "CXX": "mpicxx"})
-    process_make = Popen([sys.executable, "setup.py", "build"],
-                         cwd=cwd, env=my_env, stdout=PIPE, stderr=PIPE)
-    out, err = process_make.communicate()
-    if process_make.returncode:
-        log.info(out)
-        log.info(err)
-        log.error("Python build failed!")
-        return False
-    return True

@@ -13,7 +13,6 @@
 ## Grids/rest of cosmomc scripts
 ## Lots of batchjob stuff (hasConvergeBetterThan,wantCheckpointContinue etc) now broken
 ## containers
-## Fisher
 
 # cosmetic/consistency/speed
 
@@ -22,7 +21,6 @@
 ## hasattr(keys) to instance(dict) or instance(Mapping)
 ## In the docs "Bases" (and UML diagram) not hyperlinked correctly (not sure how to fix)
 ## Make numba a requirement?
-## Move sampler/plik install into class methods
 ## dump log info along with each chain file if saving to file (currently in stdout)
 ## Faster Collections for MCMC: numpy cache for merging OnePoint into Collection, `_out_update` method would take care of flushing into the Pandas table.
 

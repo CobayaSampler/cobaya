@@ -69,9 +69,8 @@ def install(*infos, **kwargs):
                 continue
 
             try:
-                imported_class, imported_module = \
-                    get_class(module, kind, module_path=info.pop(_module_path, None),
-                              return_module=True)
+                imported_class = \
+                    get_class(module, kind, module_path=info.pop(_module_path, None))
             except ImportError as e:
                 log.error("Module '%s' not recognized. [%s]\n" % (module, e))
                 failed_modules += ["%s:%s" % (kind, module)]
@@ -83,8 +82,7 @@ def install(*infos, **kwargs):
                                                                skip_list))
                     continue
 
-            is_installed = getattr(imported_class, "is_installed",
-                                   getattr(imported_module, "is_installed", None))
+            is_installed = getattr(imported_class, "is_installed", None)
             if is_installed is None:
                 log.info("Built-in module %s: nothing to do.\n" % imported_class.__name__)
                 continue
@@ -102,8 +100,7 @@ def install(*infos, **kwargs):
                     log.info("NOT INSTALLED!\n")
                     continue
             try:
-                install_this = getattr(imported_class, "install",
-                                       getattr(imported_module, "install", None))
+                install_this = getattr(imported_class, "install", None)
                 success = install_this(path=abspath, **kwargs_install)
             except:
                 traceback.print_exception(*sys.exc_info(), file=sys.stdout)

@@ -1,4 +1,3 @@
-import pytest
 from flaky import flaky
 
 from .common_sampler import body_of_test, body_of_test_speeds
