@@ -361,8 +361,8 @@ class mcmc(CovmatSampler):
         # for purposes of checkpoints, callbacks and thinning
         self.log.debug("Slow parameters: %r", self.slow_params)
         for p in ["check_every", "callback_every"]:
-            setattr(self, p,
-                    int(getattr(self, p) * self.n_slow / self.model.prior.d()))
+            setattr(self, p, max(1, int(getattr(self, p) *
+                                        self.n_slow / self.model.prior.d())))
 
     def set_proposer_covmat(self, load=False):
         if load:

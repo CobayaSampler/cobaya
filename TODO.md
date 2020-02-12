@@ -8,6 +8,7 @@
 ## turn dragging off if only one block or no speeds differ by more than factor 2
 ## minimize run with -f does not work. Check resuming.
 ## minimize updated yaml will overwrite chain updated yaml?
+## "Not enough points in chain to check convergence" should be warning and just continue until enough
 
 # Incomplete implementations/bigger jobs
 ## Grids/rest of cosmomc scripts
