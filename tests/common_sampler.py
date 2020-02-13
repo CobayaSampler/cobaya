@@ -171,7 +171,6 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False, modules=
         "likelihood": {"like1": {"external": like1, "speed": speed1},
                        "like2": {"external": like2, "speed": speed2}},
         "sampler": info_sampler}
-    info["sampler"][sampler]["measure_speeds"] = False
     if manual_blocking:
         over1, over2 = speed1, speed2
         info["sampler"][sampler]["blocking"] = [
@@ -183,6 +182,7 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False, modules=
     # Adjust number of samples
     n_cycles_all_params = 10
     if sampler == "mcmc":
+        info["sampler"][sampler]["measure_speeds"] = False
         info["sampler"][sampler]["burn_in"] = 0
         info["sampler"][sampler]["max_samples"] = n_cycles_all_params * 10 * dim
         # Force mixing of blocks:

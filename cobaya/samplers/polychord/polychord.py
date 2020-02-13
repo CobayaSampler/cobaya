@@ -30,7 +30,7 @@ clusters = "clusters"
 class polychord(Sampler):
     # Name of the PolyChord repo and version to download
     _pc_repo_name = "PolyChord/PolyChordLite"
-    _pc_repo_version = "1.16"
+    _pc_repo_version = "master"
 
     # variables from yaml
     do_clustering: bool

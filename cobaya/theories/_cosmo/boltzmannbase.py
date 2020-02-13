@@ -69,6 +69,9 @@ class BoltzmannBase(Theory):
           ``"vars_pairs": [["delta_tot", "delta_tot"], ["Weyl", "Weyl"], [...]]}``.
           Non-linear contributions are included by default.
           All ``k`` values should be in units of ``1/Mpc``.
+        - ``Pk_grid={...}``: similar to Pk_interpolator except that rather than returning
+          a bicuplic spline object it returns the raw power spectrum grid as a (k, z, PK)
+          set of arrays.
         - ``Hubble={'z': [z_1, ...], 'units': '1/Mpc' or 'km/s/Mpc'}``: Hubble
           rate at the redshifts requested, in the given units. Get it with
           :func:`~BoltzmannBase.get_Hubble`.
@@ -118,8 +121,8 @@ class BoltzmannBase(Theory):
                         self.log,
                         "Cannot understands vars_pairs '%r' for P(k) interpolator",
                         vars_pairs)
-                vars_pairs = set([tuple(pair) for pair in chain(
-                    self._needs.get(k, {}).get("vars_pairs", []), vars_pairs)])
+                vars_pairs = set(tuple(pair) for pair in chain(
+                    self._needs.get(k, {}).get("vars_pairs", []), vars_pairs))
                 v["nonlinear"] = bool(v.get("nonlinear", True))
                 self._needs[k] = {
                     "z": np.unique(np.concatenate(
