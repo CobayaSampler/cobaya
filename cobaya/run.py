@@ -8,7 +8,7 @@
 
 # Local
 from cobaya import __version__
-from cobaya.conventions import kinds, _prior, _params
+from cobaya.conventions import kinds, _prior, _params, _version
 from cobaya.conventions import _path_install, _debug, _debug_file, _output_prefix
 from cobaya.conventions import _resume, _timing, _debug_default, _force, _post
 from cobaya.conventions import _yaml_extensions, _separator_files, _updated_suffix
@@ -75,6 +75,11 @@ def run(info, stop_at_error=None):
                 updated_info[kinds.sampler], model, output,
                 resume=updated_info.get(_resume),
                 modules=info.get(_path_install)) as sampler:
+            # add sampler version
+            updated_info[kinds.sampler][sampler.get_name()][_version] = \
+                sampler.get_version()
+            output.dump_info(None, updated_info, check_compatible=False)
+            # Run the sampler
             sampler.run()
     # For scripted calls:
     # Restore the original output_prefix: the script has not changed folder!

@@ -14,6 +14,7 @@ import inspect
 from itertools import chain
 from random import random
 from typing import Any
+import pkg_resources
 
 # Local
 from cobaya.tools import read_dnumber, get_external_function, relative_to_int, PythonPath
@@ -360,6 +361,10 @@ class polychord(Sampler):
             return products
         else:
             return {}
+
+    @classmethod
+    def get_version(cls):
+        return pkg_resources.get_distribution("pypolychord").version
 
     @classmethod
     def get_path(cls, path):
