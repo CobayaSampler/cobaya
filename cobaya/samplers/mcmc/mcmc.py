@@ -415,15 +415,8 @@ class mcmc(CovmatSampler):
             derived = (self.collection[self.collection.derived_params]
                        .iloc[len(self.collection) - 1].values.copy())
         else:
-            for i in range(max(1, self.max_tries // self.model.prior.d())):
-                initial_point = self.model.prior.reference(max_tries=self.max_tries)
-                logpost, logpriors, loglikes, derived = self.model.logposterior(
-                    initial_point)
-                if -np.inf not in loglikes:
-                    break
-            else:
-                raise LoggedError(self.log, "Could not find random point giving finite "
-                                            "likelihood after %g tries", self.max_tries)
+            initial_point, logpost, logpriors, loglikes, derived = \
+                self.model.get_initial_point(max_tries=self.max_tries)
             if self.measure_speeds and self.blocking:
                 self.log.warning(
                     "Parameter blocking manually fixed: speeds will not be measured.")

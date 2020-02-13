@@ -433,6 +433,21 @@ class Model(HasLogger):
         return self.logposterior(params_values, make_finite=make_finite,
                                  return_derived=False, cached=cached)[0]
 
+    def get_initial_point(self, max_tries):
+        """
+        Finds a point from the reference pdf that has finite posterior.
+        Returns (point, logpost, logpriors, loglikes, derived)
+        """
+        for i in range(max(1, max_tries // self.prior.d())):
+            initial_point = self.prior.reference(max_tries=max_tries)
+            logpost, logpriors, loglikes, derived = self.logposterior(initial_point)
+            if -np.inf not in loglikes:
+                break
+        else:
+            raise LoggedError(self.log, "Could not find random point giving finite "
+                              "likelihood after %g tries", max_tries)
+        return initial_point, logpost, logpriors, loglikes, derived
+
     def dump_timing(self):
         """
         Prints the average computation time of the theory code and likelihoods.
@@ -987,7 +1002,14 @@ class Model(HasLogger):
         for component in self.components:
             component.set_timing_on(on)
 
-    def measure_and_set_speeds(self, test_point):
+    def measure_and_set_speeds(self, test_point=None, max_tries=np.inf):
+        """
+        Measures the speeds of the different components (theories and likelihoods) at a
+        given point `test_point`. If `test_point` not given, tries to find a suitable one
+        (in that case, can take `max_tries` for finding a test point).
+        """
+        if test_point is None:
+            test_point, _, _, _, _ = self.get_initial_point(max_tries=max_tries)
         timing_on = self.timing
         if not timing_on:
             self.set_timing_on(True)

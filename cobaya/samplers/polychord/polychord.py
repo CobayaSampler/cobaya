@@ -119,10 +119,11 @@ class polychord(Sampler):
             self.log.info("Storing raw PolyChord output in '%s'.",
                           self.base_dir)
         # Exploiting the speed hierarchy
-        # TODO broken
         if self.blocking:
             blocks, oversampling_factors = self.model._check_blocking(self.blocking)
         else:
+            if not self.resuming and self.measure_speeds:
+                self.model.measure_and_set_speeds()
             blocks, oversampling_factors = self.model.get_param_blocking_for_sampler(
                 oversample_power=self.oversample_power)
         blocks_flat = list(chain(*blocks))
