@@ -23,6 +23,7 @@ from cobaya.collection import Collection
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release
 from cobaya.yaml import yaml_dump_file
+from cobaya.conventions import _separator
 
 clusters = "clusters"
 
@@ -228,13 +229,33 @@ class polychord(Sampler):
                 loglikes = np.full(self.n_likes, np.nan)
             derived = list(derived) + list(logpriors) + list(loglikes)
             return (
-                max(logposterior + self.logvolume, 0.99 * self.pc_settings.logzero),
+                max(logposterior + self.logvolume, self.pc_settings.logzero),
                 derived)
 
         sync_processes()
         self.mpi_info("Sampling!")
         self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
                               self.pc_prior, self.dumper)
+
+    def dump_paramnames(self, prefix):
+        paramnames = (list() +
+                      [p+"*" for p in (
+                          list(self.model.parameterization.derived_params()) +
+                          list(self.model.prior) + list(self.model.likelihood))])
+        labels = self.model.parameterization.labels()
+        with open(prefix + ".paramnames", "w") as f_paramnames:
+            for p in self.model.parameterization.sampled_params():
+                f_paramnames.write("%s\t%s\n" % (p, labels.get(p, "")))
+            for p in self.model.parameterization.derived_params():
+                f_paramnames.write("%s*\t%s\n" % (p, labels.get(p, "")))
+            for p in self.model.prior:
+                f_paramnames.write("%s*\t%s\n" % (
+                    "logprior" + _separator + p,
+                    "\pi_\mathrm{" + p.replace("_", r"\ ") + r"}"))
+            for p in self.model.likelihood:
+                f_paramnames.write("%s*\t%s\n" % (
+                    "loglike" + _separator + p,
+                    "\log\mathcal{L}_\mathrm{" + p.replace("_", r"\ ") + r"}"))
 
     def save_sample(self, fname, name):
         sample = np.atleast_2d(np.loadtxt(fname))
@@ -262,6 +283,7 @@ class polychord(Sampler):
         if is_main_process():
             self.log.info("Loading PolyChord's results: samples and evidences.")
             prefix = os.path.join(self.pc_settings.base_dir, self.pc_settings.file_root)
+            self.dump_paramnames(prefix)
             self.collection = self.save_sample(prefix + ".txt", "1")
             if self.pc_settings.do_clustering is not False:  # NB: "None" == "default"
                 self.clusters = {}
