@@ -26,11 +26,11 @@ def test_polychord_multimodal(modules, tmpdir):
 
 @flaky(max_runs=3, min_passes=1)
 def test_polychord_speeds(modules):
-    info_polychord = {"polychord": {}}
+    info_polychord = {"polychord": {"oversample_power": 1}}
     body_of_test_speeds(info_polychord, modules=modules)
 
 
 @flaky(max_runs=3, min_passes=1)
 def test_polychord_speeds_manual(modules):
-    info_polychord = {"polychord": {}}
+    info_polychord = {"polychord": {"oversample_power": 1}}
     body_of_test_speeds(info_polychord, manual_blocking=True, modules=modules)

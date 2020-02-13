@@ -201,9 +201,8 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False, modules=
     # Done! --> Tests
     if sampler == "polychord":
         tolerance = 0.2
-        assert abs((n[1] - n[0]) / n[0] / (speed2 / speed1) - 1) < tolerance, (
-                "#evaluations off: %g > %g" % (
-            abs((n[1] - n[0]) / n[0] / (speed2 / speed1) - 1), tolerance))
+        test = abs((n[1] - n[0]) * dim / (n[0] * dim) / (speed2 / speed1) - 1)
+        assert test < tolerance, str(test)
     # For MCMC tests, notice that there is a certain tolerance to be allowed for,
     # since for every proposed step the BlockedProposer cycles once, but the likelihood
     # may is not evaluated if the proposed point falls outside the prior bounds
