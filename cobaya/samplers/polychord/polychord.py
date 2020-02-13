@@ -212,7 +212,7 @@ class polychord(Sampler):
         # Callback function
         if self.callback_function is not None:
             self.callback_function_callable(self)
-            self.last_point_callback = self.dead.n()
+            self.last_point_callback = len(self.dead)
 
     def run(self):
         """

@@ -221,7 +221,7 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False, modules=
     # Finally, test some points of the chain to reproduce the correct likes and derived
     # These are not AssertionError's to override the flakyness of the test
     for _ in range(10):
-        i = choice(list(range(products["sample"].n())))
+        i = choice(list(range(len(products["sample"]))))
         chi2_1_chain = -0.5 * products["sample"]["chi2__like1"][i]
         chi2_1_good = like1(
             _derived=None, **{p: products["sample"][p][i] for p in ["a_0", "a_1", "a_2"]})

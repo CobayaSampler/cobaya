@@ -73,8 +73,8 @@ def post(info, sample=None):
     else:
         raise LoggedError(log,
                           "Not output from where to load from or input collections given.")
-    log.info("Will process %d samples.", collection_in.n())
-    if collection_in.n() <= 1:
+    log.info("Will process %d samples.", len(collection_in))
+    if len(collection_in) <= 1:
         raise LoggedError(
             log, "Not enough samples for post-processing. Try using a larger sample, "
                  "or skipping or thinning less.")
@@ -330,10 +330,10 @@ def post(info, sample=None):
             sampled, derived=derived.values(), weight=point.get(_weight),
             logpriors=logpriors_new, loglikes=loglikes_new)
         # Display progress
-        percent = np.round(i / collection_in.n() * 100)
+        percent = np.round(i / len(collection_in) * 100)
         if percent != last_percent and not percent % 5:
             last_percent = percent
-            progress_bar(log, percent, " (%d/%d)" % (i, collection_in.n()))
+            progress_bar(log, percent, " (%d/%d)" % (i, len(collection_in)))
     if not collection_out.data.last_valid_index():
         raise LoggedError(
             log, "No elements in the final sample. Possible causes: "
@@ -350,5 +350,5 @@ def post(info, sample=None):
     collection_out._n = collection_out.data.last_valid_index() + 1
     # Write!
     collection_out._out_update()
-    log.info("Finished! Final number of samples: %d", collection_out.n())
+    log.info("Finished! Final number of samples: %d", len(collection_out))
     return info_out, {"sample": collection_out}

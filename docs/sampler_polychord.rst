@@ -125,7 +125,7 @@ A callback function can be specified through the ``callback_function`` option. I
 
     def callback(sampler):
         print("There are %d dead points. The last %d were added since the last callback."%(
-            sampler.dead.n(), sampler.dead.n() - sampler.last_point_callback))
+            len(sampler.dead), len(sampler.dead) - sampler.last_point_callback))
         print("Current logZ = %g +/- %g"%(sampler.logZ, sampler.logZstd))
         # Maximum likelihood: since we sample over the posterior, it may be "dead"!
         min_chi2_dead = sampler.dead[sampler.dead["chi2"].values.argmin()]

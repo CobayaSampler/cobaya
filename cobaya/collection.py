@@ -179,19 +179,24 @@ class Collection(BaseCollection):
                 enlarge_by = enlargement_size
             self.data = pd.concat([
                 self.data, pd.DataFrame(np.nan, columns=self.data.columns,
-                                        index=np.arange(self.n(),
-                                                        self.n() + enlarge_by))])
+                                        index=np.arange(len(self),
+                                                        len(self) + enlarge_by))])
 
     def _append(self, collection):
         """
         Append another collection.
         Internal method: does not check for consistency!
         """
-        self.data = pd.concat([self.data[:self.n()], collection.data], ignore_index=True)
-        self._n = self.n() + collection.n()
+        self.data = pd.concat([self.data[:len(self)], collection.data], ignore_index=True)
+        self._n = len(self) + len(collection)
 
     # Retrieve-like methods
     def n(self):
+        self.log.warning("*DEPRECATION*: `Collection.n()` will be deprecated soon "
+                         "in favor of `len(Collection)`")
+        return len(self)
+
+    def __len__(self):
         return self._n
 
     def n_last_out(self):
@@ -199,11 +204,11 @@ class Collection(BaseCollection):
 
     # Make the dataframe printable (but only the filled ones!)
     def __repr__(self):
-        return self.data[:self.n()].__repr__()
+        return self.data[:len(self)].__repr__()
 
     # Make the dataframe iterable over rows
     def __iter__(self):
-        return self.data[:self.n()].iterrows()
+        return self.data[:len(self)].iterrows()
 
     # Accessing the dataframe
     def __getitem__(self, *args):
@@ -280,9 +285,9 @@ class Collection(BaseCollection):
         # No logging of warnings temporarily, so getdist won't complain unnecessarily
         logging.disable(logging.WARNING)
         mcsamples = MCSamples(
-            samples=self.data[:self.n()][names].values[first:last],
-            weights=self.data[:self.n()][_weight].values[first:last],
-            loglikes=self.data[:self.n()][_minuslogpost].values[first:last], names=names)
+            samples=self.data[:len(self)][names].values[first:last],
+            weights=self.data[:len(self)][_weight].values[first:last],
+            loglikes=self.data[:len(self)][_minuslogpost].values[first:last], names=names)
         logging.disable(logging.NOTSET)
         return mcsamples
 
@@ -311,10 +316,10 @@ class Collection(BaseCollection):
         self.log.info("Loaded sample from '%s'", self.file_name)
 
     def _dump__txt(self):
-        self._dump_slice__txt(0, self.n())
+        self._dump_slice__txt(0, len(self))
 
     def _update__txt(self):
-        self._dump_slice__txt(self.n_last_out(), self.n())
+        self._dump_slice__txt(self.n_last_out(), len(self))
 
     def _dump_slice__txt(self, n_min=None, n_max=None):
         if n_min is None or n_max is None:

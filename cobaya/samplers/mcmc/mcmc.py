@@ -403,17 +403,17 @@ class mcmc(CovmatSampler):
         # Still, we need to compute derived parameters, since, as the proposal "blocked",
         # we may be saving the initial state of some block.
         # NB: if resuming but nothing was written (burn-in not finished): re-start
-        if self.resuming and self.collection.n():
+        if self.resuming and len(self.collection):
             initial_point = (self.collection[self.collection.sampled_params]
-                .iloc[self.collection.n() - 1]).values.copy()
+                .iloc[len(self.collection) - 1]).values.copy()
             logpost = -(self.collection[_minuslogpost]
-                        .iloc[self.collection.n() - 1].copy())
+                        .iloc[len(self.collection) - 1].copy())
             logpriors = -(self.collection[self.collection.minuslogprior_names]
-                          .iloc[self.collection.n() - 1].copy())
+                          .iloc[len(self.collection) - 1].copy())
             loglikes = -0.5 * (self.collection[self.collection.chi2_names]
-                               .iloc[self.collection.n() - 1].copy())
+                               .iloc[len(self.collection) - 1].copy())
             derived = (self.collection[self.collection.derived_params]
-                       .iloc[self.collection.n() - 1].values.copy())
+                       .iloc[len(self.collection) - 1].values.copy())
         else:
             for i in range(max(1, self.max_tries // self.model.prior.d())):
                 initial_point = self.model.prior.reference(max_tries=self.max_tries)
@@ -479,7 +479,7 @@ class mcmc(CovmatSampler):
         Returns the total number of steps taken, including or not burn-in steps depending
         on the value of the `burn_in` keyword.
         """
-        return self.collection.n() + (
+        return len(self.collection) + (
             0 if not burn_in else self.burn_in - self.burn_in_left + 1)
 
     def get_new_sample_metropolis(self):
@@ -650,7 +650,7 @@ class mcmc(CovmatSampler):
                      (" and learn a new proposal covmat"
                       if self.learn_proposal else ""))
 
-        n = self.collection.n()
+        n = len(self.collection)
         # If *just* (weight==1) got ready to check+learn
         if not (n % self.check_every) and n > 0 and self.current_point.weight == 1:
             self.log.info("Checkpoint: %d samples accepted.", n)
