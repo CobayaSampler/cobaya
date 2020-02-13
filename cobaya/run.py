@@ -69,7 +69,7 @@ def run(info, stop_at_error=None):
                 if kinds.theory in updated_info else [kinds.likelihood])
         updated_info.update({k: model.info()[k] for k in keys})
         updated_info = recursive_update(
-            updated_info, model.get_version(add_version_field=True))
+            updated_info, model.get_versions(add_version_field=True))
         output.dump_info(None, updated_info, check_compatible=False)
         with get_sampler(
                 updated_info[kinds.sampler], model, output,

@@ -468,10 +468,14 @@ class Model(HasLogger):
     def close(self):
         self.__exit__()
 
-    def get_version(self, add_version_field=False):
-        return dict(theory=self.theory.get_version(add_version_field=add_version_field),
-                    likelihood=self.likelihood.get_version(
+    def get_versions(self, add_version_field=False):
+        return dict(theory=self.theory.get_versions(add_version_field=add_version_field),
+                    likelihood=self.likelihood.get_versions(
                         add_version_field=add_version_field))
+
+    def get_speeds(self):
+        return dict(theory=self.theory.get_speeds(),
+                    likelihood=self.likelihood.get_speeds())
 
     def _set_component_order(self, components, dependencies):
         dependence_order = []

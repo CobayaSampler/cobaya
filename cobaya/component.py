@@ -173,7 +173,7 @@ class ComponentCollection(dict, HasLogger):
                         component.timer.n_avg(), component.timer.time_sum)
                      for component in timers]))
 
-    def get_version(self, add_version_field=False):
+    def get_versions(self, add_version_field=False):
         """
         Get version dictionary
         :return: dictionary of versions for all components
@@ -181,6 +181,14 @@ class ComponentCollection(dict, HasLogger):
         format_version = lambda x: {_version: x} if add_version_field else x
         return {component.get_name(): format_version(component.get_version())
                 for component in self.values() if component.has_version()}
+
+    def get_speeds(self):
+        """
+        Get speeds dictionary
+        :return: dictionary of versions for all components
+        """
+        return {component.get_name(): {"speed": component.speed}
+                for component in self.values()}
 
     # Python magic for the "with" statement
     def __enter__(self):
