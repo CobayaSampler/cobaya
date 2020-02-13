@@ -121,7 +121,7 @@ class polychord(Sampler):
         # Exploiting the speed hierarchy
         # TODO broken
         if self.blocking:
-            speeds, blocks = self.model._check_speeds_of_params(self.blocking)
+            blocks, oversampling_factors = self.model._check_blocking(self.blocking)
         else:
             blocks, oversampling_factors = self.model.get_param_blocking_for_sampler(
                 oversample_power=self.oversample_power)
