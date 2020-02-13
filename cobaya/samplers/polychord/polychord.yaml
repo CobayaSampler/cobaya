@@ -33,6 +33,13 @@ logzero: -1e30
 boost_posterior: 0  # increase up to `num_repeats`
 # Verbosity during the sampling process. Set to one of [0,1,2,3]
 feedback:  # default: Same as global `verbosity`
+# Exploiting speed hierarchy
+# --------------------------
+# whether to measure actual speeds for your machine/threading at starting rather
+# than using stored values
+measure_speeds: True
+# Oversampling power: amount of oversampling or dragging. Value in [0, 1]
+oversample_power: 0.7
 # Manual speed blocking
 # ---------------------
 # To take full advantage of speed-blocking, sort the blocks by ascending speeds

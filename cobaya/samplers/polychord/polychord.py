@@ -123,23 +123,19 @@ class polychord(Sampler):
         if self.blocking:
             speeds, blocks = self.model._check_speeds_of_params(self.blocking)
         else:
-            speeds, blocks = self.model._speeds_of_params(int_speeds=True)
+            blocks, oversampling_factors = self.model.get_param_blocking_for_sampler(
+                oversample_power=self.oversample_power)
         blocks_flat = list(chain(*blocks))
         self.ordering = [
             blocks_flat.index(p) for p in self.model.parameterization.sampled_params()]
-        self.grade_dims = np.array([len(block) for block in blocks])
-        # bugfix: pypolychord's C interface for Fortran does not like int numpy types
-        self.grade_dims = [int(x) for x in self.grade_dims]
+        self.grade_dims = [len(block) for block in blocks]
         # Steps per block
         # NB: num_repeats is ignored by PolyChord when int "grade_frac" given,
         # so needs to be applied by hand.
-        # Make sure that speeds are integer, and that the slowest is 1,
-        # for a straightforward application of num_repeats
-        speeds = relative_to_int(speeds, 1)
         # In num_repeats, `d` is interpreted as dimension of each block
         self.grade_frac = [
-            int(speed * read_dnumber(self.num_repeats, dim_block))
-            for speed, dim_block in zip(speeds, self.grade_dims)]
+            int(o * read_dnumber(self.num_repeats, dim_block))
+            for o, dim_block in zip(oversampling_factors, self.grade_dims)]
         # Assign settings
         pc_args = ["nlive", "num_repeats", "nprior", "do_clustering",
                    "precision_criterion", "max_ndead", "boost_posterior", "feedback",
@@ -218,7 +214,6 @@ class polychord(Sampler):
         """
         Prepares the posterior function and calls ``PolyChord``'s ``run`` function.
         """
-
         # Prepare the posterior
         # Don't forget to multiply by the volume of the physical hypercube,
         # since PolyChord divides by it
