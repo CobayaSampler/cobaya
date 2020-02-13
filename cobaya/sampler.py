@@ -224,7 +224,7 @@ def get_sampler(info_sampler, model, output_file,
         raise LoggedError(
             log, "The sampler block must be a dictionary 'sampler: {options}'.")
     if len(info_sampler) > 1:
-        raise LoggedError(log, "nly one sampler currently supported at a time.")
+        raise LoggedError(log, "Only one sampler currently supported at a time.")
 
     sampler_class = get_class(name, kind=kinds.sampler)
     assert issubclass(sampler_class, Sampler)
