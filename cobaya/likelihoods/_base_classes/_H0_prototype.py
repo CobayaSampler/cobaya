@@ -61,5 +61,5 @@ class _H0_prototype(Likelihood):
         return {'H0': None}
 
     def logp(self, **params_values):
-        H0_theory = self.theory.get_param("H0")
+        H0_theory = self.provider.get_param("H0")
         return self.norm.logpdf(H0_theory)
