@@ -473,9 +473,9 @@ class Model(HasLogger):
                     likelihood=self.likelihood.get_versions(
                         add_version_field=add_version_field))
 
-    def get_speeds(self):
-        return dict(theory=self.theory.get_speeds(),
-                    likelihood=self.likelihood.get_speeds())
+    def get_speeds(self, ignore_sub=False):
+        return dict(theory=self.theory.get_speeds(ignore_sub=ignore_sub),
+                    likelihood=self.likelihood.get_speeds(ignore_sub=ignore_sub))
 
     def _set_component_order(self, components, dependencies):
         dependence_order = []

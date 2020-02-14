@@ -182,13 +182,14 @@ class ComponentCollection(dict, HasLogger):
         return {component.get_name(): format_version(component.get_version())
                 for component in self.values() if component.has_version()}
 
-    def get_speeds(self):
+    def get_speeds(self, ignore_sub=False):
         """
         Get speeds dictionary
         :return: dictionary of versions for all components
         """
         return {component.get_name(): {"speed": component.speed}
-                for component in self.values()}
+                for component in self.values() if not (
+                        "." in component.get_name() and ignore_sub)}
 
     # Python magic for the "with" statement
     def __enter__(self):

@@ -78,6 +78,9 @@ def run(info, stop_at_error=None):
             # add sampler version
             updated_info[kinds.sampler][sampler.get_name()][_version] = \
                 sampler.get_version()
+            # and measured speeds
+            # TODO: disabled for now: no way so save+load speeds of helper modules
+            # updated_info = recursive_update(updated_info, model.get_speeds(ignore_sub=True))
             output.dump_info(None, updated_info, check_compatible=False)
             # Run the sampler
             sampler.run()
