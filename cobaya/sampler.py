@@ -50,9 +50,9 @@ import numpy as np
 from typing import Optional
 
 # Local
-from cobaya.conventions import kinds, _resume_default, _checkpoint_extension
+from cobaya.conventions import kinds, _resume_default, _checkpoint_extension, _version
 from cobaya.conventions import _progress_extension, _module_path
-from cobaya.tools import get_class
+from cobaya.tools import get_class, deepcopy_where_possible
 from cobaya.log import LoggedError
 from cobaya.yaml import yaml_load_file
 from cobaya.mpi import is_main_process
@@ -109,13 +109,11 @@ class Sampler(CobayaComponent):
 
         [Do not modify this one.]
         """
-
         self.model = model
         self.output = output
-
+        self._updated_info = deepcopy_where_possible(info_sampler)
         super().__init__(info_sampler, path_install=path_install,
                          name=name, initialize=False, standalone=False)
-
         # Seed, if requested
         if getattr(self, "seed", None) is not None:
             self.log.warning("This run has been SEEDED with seed %d", self.seed)
@@ -152,6 +150,16 @@ class Sampler(CobayaComponent):
                 pass
         self.initialize()
         self.model.set_cache_size(self._get_requested_cache_size())
+        # Add to the updated info some values which are only available after initialisation
+        self._updated_info[_version] = self.get_version()
+
+    def info(self):
+        """
+        Returns a copy of the information used to initialise the sampler,
+        including defaults and some new values that are only available after
+        initialisation.
+        """
+        return deepcopy_where_possible(self._updated_info)
 
     def checkpoint_filename(self):
         if self.output:

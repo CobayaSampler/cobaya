@@ -27,7 +27,7 @@ from cobaya.theory import TheoryCollection
 from cobaya.log import LoggedError, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
 from cobaya.tools import deepcopy_where_possible, are_different_params_lists, \
-    str_to_list, sort_parameter_blocks
+    str_to_list, sort_parameter_blocks, recursive_update
 from cobaya.component import Provider
 from cobaya.mpi import more_than_one_process, get_mpi_comm
 
@@ -143,32 +143,31 @@ class Model(HasLogger):
                                                  ignore_unused_sampled=post)
         self.prior = Prior(prior_parameterization or self.parameterization,
                            self._updated_info.get(_prior, None))
-
         self.timing = timing
-
         info_theory = self._updated_info.get(kinds.theory)
         self.theory = TheoryCollection(info_theory, path_install=path_install,
                                        timing=timing)
-
         info_likelihood = self._updated_info[kinds.likelihood]
         self.likelihood = LikelihoodCollection(info_likelihood, theory=self.theory,
                                                path_install=path_install, timing=timing)
-
         if stop_at_error:
             for component in self.components:
                 component.stop_at_error = stop_at_error
-
         # Assign input/output parameters
         self._assign_params(info_likelihood, info_theory)
-
         self._set_dependencies_and_providers()
+        # Add to the updated info some values which are only available after initialisation
+        keys = [kinds.likelihood] + ([kinds.theory] if self.theory else [])
+        self._updated_info = recursive_update(
+            self._updated_info, self.get_versions(add_version_field=True))
         # Overhead per likelihood evaluation, approximately ind from # input params
         # Evaluation of non-uniform priors will add some overhead per parameter.
         self.overhead = _overhead_time
 
     def info(self):
         """
-        Returns a copy of the information used to create the model, including defaults.
+        Returns a copy of the information used to create the model, including defaults
+        and some new values that are only available after initialisation.
         """
         return deepcopy_where_possible(self._updated_info)
 

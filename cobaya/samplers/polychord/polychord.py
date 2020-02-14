@@ -129,6 +129,8 @@ class polychord(Sampler):
                 self.model.measure_and_set_speeds()
             blocks, oversampling_factors = self.model.get_param_blocking_for_sampler(
                 oversample_power=self.oversample_power)
+        # Save blocking in updated info, in case we want to resume
+        self._updated_info["blocking"] = list(zip(oversampling_factors, blocks))
         blocks_flat = list(chain(*blocks))
         self.ordering = [
             blocks_flat.index(p) for p in self.model.parameterization.sampled_params()]

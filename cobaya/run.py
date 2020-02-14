@@ -64,23 +64,19 @@ def run(info, stop_at_error=None):
                allow_renames=False,
                stop_at_error=info_stop if stop_at_error is None else stop_at_error) \
             as model:
-        # Update the updated info with the parameter routes and version info
-        keys = ([kinds.likelihood, kinds.theory]
-                if kinds.theory in updated_info else [kinds.likelihood])
-        updated_info.update({k: model.info()[k] for k in keys})
-        updated_info = recursive_update(
-            updated_info, model.get_versions(add_version_field=True))
+        # Re-dump the updated info, now containing parameter routes and version info
+        updated_info = recursive_update(updated_info, model.info())
         output.dump_info(None, updated_info, check_compatible=False)
         with get_sampler(
                 updated_info[kinds.sampler], model, output,
                 resume=updated_info.get(_resume),
                 modules=info.get(_path_install)) as sampler:
-            # add sampler version
-            updated_info[kinds.sampler][sampler.get_name()][_version] = \
-                sampler.get_version()
-            # and measured speeds
-            # TODO: disabled for now: no way so save+load speeds of helper modules
-            # updated_info = recursive_update(updated_info, model.get_speeds(ignore_sub=True))
+            # Re-dump updated info, now also containing updates from the sampler
+            updated_info[kinds.sampler][sampler.get_name()] = \
+                recursive_update(
+                    updated_info[kinds.sampler][sampler.get_name()], sampler.info())
+            # TODO -- also re-dump model info, now with speeds (polychord at least)
+            # (waiting until the camb.transfers issue is solved)
             output.dump_info(None, updated_info, check_compatible=False)
             # Run the sampler
             sampler.run()
