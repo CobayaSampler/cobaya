@@ -36,6 +36,8 @@ class Output(HasLogger):
         self.set_logger(self.name)
         self.folder = os.sep.join(output_prefix.split(os.sep)[:-1]) or "."
         self.prefix = (lambda x: x if x != "." else "")(output_prefix.split(os.sep)[-1])
+        self.prefix_regexp_str = \
+            os.path.join(self.folder, self.prefix) + (r"\." if self.prefix else "")
         self.force_output = force_output
         if resume and force_output and output_prefix:
             # No resume and force at the same time (if output)
@@ -73,7 +75,7 @@ class Output(HasLogger):
                 self.log.info("Previous output empty, starting anew.")
                 self.delete_infos()
             elif self.force_output:
-                self.log.info("Deleting previous chain ('force' was requested).")
+                self.log.info("Will delete previous chain ('force' was requested).")
                 self.delete_infos()
             elif resume:
                 # Only in this case we can be sure that we are actually resuming
@@ -186,6 +188,20 @@ class Output(HasLogger):
                     except OutputError as e:
                         raise LoggedError(self.log, str(e))
 
+    def delete_with_regexp(self, regexp):
+        """
+        Deletes all files compatible with the given regexp.
+        """
+        file_names = [
+            f2 for f2 in [os.path.join(self.folder, f) for f in os.listdir(self.folder)]
+            if f2 == getattr(regexp.match(f2), "group", lambda: None)()]
+        if file_names:
+            self.log.debug("From regexp %r, deleting files %r", regexp.pattern, file_names)
+        try:
+            [os.remove(f) for f in file_names]
+        except OSError:
+            pass
+
     def prepare_collection(self, name=None, extension=None):
         """
         Generates a file name for the collection, as
@@ -219,7 +235,7 @@ class Output(HasLogger):
         else:
             name = name + r"\."
         extension = extension or self.ext
-        return re.compile(pre + name + extension.lower() + "$")
+        return re.compile(self.prefix_regexp_str + name + extension.lower() + "$")
 
     def is_collection_file_name(self, file_name, name=None, extension=None):
         """
@@ -228,7 +244,6 @@ class Output(HasLogger):
         Use `name` for particular types of collections (default: any number).
         Pass `False` to mean there is nothing between the output prefix and the extension.
         """
-        extension = extension or self.ext
         return (file_name ==
                 getattr(self.collection_regexp(name=name, extension=extension)
                         .match(file_name), "group", lambda: None)())
@@ -241,7 +256,6 @@ class Output(HasLogger):
         Use `name` for particular types of collections (default: any number).
         Pass `False` to mean there is nothing between the output prefix and the extension.
         """
-        extension = extension or self.ext
         return [
             f2 for f2 in [os.path.join(self.folder, f) for f in os.listdir(self.folder)]
             if self.is_collection_file_name(f2, name=name, extension=extension)]

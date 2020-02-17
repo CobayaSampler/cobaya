@@ -69,7 +69,7 @@ def run(info, stop_at_error=None):
         output.dump_info(None, updated_info, check_compatible=False)
         with get_sampler(
                 updated_info[kinds.sampler], model, output,
-                resume=updated_info.get(_resume),
+                resume=updated_info.get(_resume), force=updated_info.get(_force),
                 modules=info.get(_path_install)) as sampler:
             # Re-dump updated info, now also containing updates from the sampler
             updated_info[kinds.sampler][sampler.get_name()] = \

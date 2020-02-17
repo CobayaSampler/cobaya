@@ -89,7 +89,7 @@ from cobaya.mpi import get_mpi_size, get_mpi_comm, is_main_process, get_mpi_rank
 from cobaya.collection import OnePoint, Collection
 from cobaya.log import LoggedError
 from cobaya.tools import read_dnumber, recursive_update
-from cobaya.samplers.mcmc.mcmc import CovmatSampler
+from cobaya.samplers import CovmatSampler
 
 # Handling scpiy vs BOBYQA
 evals_attr = {"scipy": "fun", "bobyqa": "f"}
