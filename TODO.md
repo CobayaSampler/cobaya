@@ -6,9 +6,12 @@
 ## Finish implementation of aggregated-by-data-type chi2
 ## No output to files while burn in makes it hard to see if working OK (default no burn?)
 ## turn dragging off if only one block or no speeds differ by more than factor 2
-## minimize run with -f does not work. Check resuming.
-## minimize updated yaml will overwrite chain updated yaml?
 ## "Not enough points in chain to check convergence" should be warning and just continue until enough
+## Reworking resume/force:
+### mcmc: add blocking to updated yaml instead of checkpoint
+### polychord: update force/resume
+### minimize: update force/resume ; updated yaml will overwrite chain updated yaml?
+### post: update force/resume
 
 # Incomplete implementations/bigger jobs
 ## Grids/rest of cosmomc scripts
