@@ -24,8 +24,9 @@ from cobaya.mpi import is_main_process, more_than_one_process, share_mpi
 from cobaya.collection import Collection
 from cobaya.tools import deepcopy_where_possible
 
-# Regular expressions for plain unsigned integers
-re_uint = re.compile("[0-9]+")
+# Default output type and extension
+_kind = "txt"
+_ext = "txt"
 
 
 class Output(HasLogger):
@@ -62,8 +63,8 @@ class Output(HasLogger):
         self.file_updated = info_file_prefix + _updated_suffix + _yaml_extensions[0]
         self.resuming = False
         # Output kind and collection extension
-        self.kind = "txt"
-        self.ext = "txt"
+        self.kind = _kind
+        self.ext = _ext
         if os.path.isfile(self.file_updated):
             self.log.info(
                 "Found existing products with the requested output prefix: '%s'",
@@ -203,29 +204,58 @@ class Output(HasLogger):
             (extension or self.ext))
         return file_name, self.kind
 
-    def is_collection_file_name(self, file_name, extension=None):
-        extension = extension or self.ext
-        # 1 field only: a number between prefix and extension, ignoring "_" and "."
-        fields = list(chain(
-            *[_.split("_") for _ in
-              file_name[len(self.prefix):-len(extension)].split(".")]))
-        fields = [f for f in fields if f]
-        return (len(fields) == 1 and
-                fields[0] == getattr(re_uint.match(fields[0]), "group", lambda: None)())
+    def collection_regexp(self, name=None, extension=None):
+        """
+        Returns a regexp for collections compatible with this output settings.
 
-    def find_collections(self, extension=None):
-        """Returns collection files, including their path."""
-        # Anything that looks like a collection
+        Use `name` for particular types of collections (default: any number).
+        Pass `False` to mean there is nothing between the output prefix and the extension.
+        """
+        pre = os.path.join(self.folder, self.prefix) + (r"\." if self.prefix else "")
+        if name is None:
+            name = r"\d+\."
+        elif name is False:
+            name = ""
+        else:
+            name = name + r"\."
         extension = extension or self.ext
-        file_names = [
-            os.path.join(self.folder, f) for f in os.listdir(self.folder) if (
-                    f.startswith(self.prefix) and
-                    f.lower().endswith(extension.lower()) and
-                    self.is_collection_file_name(f, extension=extension))]
-        return file_names
+        return re.compile(pre + name + extension.lower() + "$")
 
-    def load_collections(self, model, skip=0, thin=1, concatenate=False):
-        filenames = self.find_collections()
+    def is_collection_file_name(self, file_name, name=None, extension=None):
+        """
+        Check if a `file_name` is a collection compatible with this `Output` instance.
+
+        Use `name` for particular types of collections (default: any number).
+        Pass `False` to mean there is nothing between the output prefix and the extension.
+        """
+        extension = extension or self.ext
+        return (file_name ==
+                getattr(self.collection_regexp(name=name, extension=extension)
+                        .match(file_name), "group", lambda: None)())
+
+    def find_collections(self, name=None, extension=None):
+        """
+        Returns all collection files found which are compatible with this `Output`
+        instance, including their path in their name.
+
+        Use `name` for particular types of collections (default: any number).
+        Pass `False` to mean there is nothing between the output prefix and the extension.
+        """
+        extension = extension or self.ext
+        return [
+            f2 for f2 in [os.path.join(self.folder, f) for f in os.listdir(self.folder)]
+            if self.is_collection_file_name(f2, name=name, extension=extension)]
+
+    def load_collections(self, model, skip=0, thin=1, concatenate=False,
+                         name=None, extension=None):
+        """
+        Loads all collection files found which are compatible with this `Output`
+        instance, including their path in their name.
+
+        Use `name` for particular types of collections (default: any number).
+        Pass `False` to mean there is nothing between the output prefix and the extension.
+        """
+        filenames = self.find_collections(name=name, extension=extension)
         collections = [
             Collection(model, self, name="%d" % (1 + i), file_name=filename,
                        load=True, onload_skip=skip, onload_thin=thin)
