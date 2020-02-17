@@ -187,9 +187,10 @@ class ComponentCollection(dict, HasLogger):
         Get speeds dictionary
         :return: dictionary of versions for all components
         """
+        from cobaya.theory import HelperTheory
         return {component.get_name(): {"speed": component.speed}
-                for component in self.values() if not (
-                        "." in component.get_name() and ignore_sub)}
+                for component in self.values() if
+                not (ignore_sub and isinstance(component, HelperTheory))}
 
     # Python magic for the "with" statement
     def __enter__(self):
