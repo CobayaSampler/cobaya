@@ -132,7 +132,6 @@ class Sampler(CobayaComponent):
                 try:
                     for k, v in checkpoint_info[kinds.sampler][self.get_name()].items():
                         setattr(self, k, v)
-                    self.output.resuming = True
                     self.mpi_info("Resuming from previous sample!")
                 except KeyError:
                     if is_main_process():
