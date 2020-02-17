@@ -204,7 +204,7 @@ class camb(BoltzmannBase):
     _camb_repo_name = "cmbant/CAMB"
     _camb_repo_version = os.environ.get("CAMB_REPO_VERSION", "master")
     _camb_min_gcc_version = "6.4"
-    _min_camb_version = '1.1'
+    _min_camb_version = '1.1.1'
 
     external_primordial_pk: bool
 
@@ -661,8 +661,8 @@ class camb(BoltzmannBase):
             if mapped in names:
                 names.append(name)
         # remove any parameters explicitly tagged as input requirements
-        return list(
-            set(names).difference(set(self._transfer_requires).union(set(self.requires))))
+        return set(names).difference(
+            set(self._transfer_requires).union(set(self.requires)))
 
     def get_version(self):
         return self.camb.__version__
@@ -894,4 +894,8 @@ class CambTransfers(HelperTheory):
                 {"H0", "cosmomc_theta", "thetastar"})) > 1:
             raise LoggedError(self.log, "Can't pass more than one of H0, "
                                         "theta, cosmomc_theta to CAMB.")
+        if len(set(self.input_params).intersection({"tau", "zrei"})) > 1:
+            raise LoggedError(self.log, "Can't pass more than one of tau and zrei "
+                                        "to CAMB.")
+
         super().initialize_with_params()

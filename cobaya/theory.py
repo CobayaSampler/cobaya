@@ -71,8 +71,8 @@ class Theory(CobayaComponent):
         Get a dictionary of requirements that are always needed (e.g. must be calculated
         by a another component or provided as input parameters).
 
-        :return: dictionary of requirements (or list of requirement names if no optional
-                 parameters are needed)
+        :return: dictionary of requirements (or iterable of requirement names if no
+                 optional parameters are needed)
         """
 
         return {p: None for p in str_to_list(getattr(self, _requires, []))}
@@ -150,7 +150,7 @@ class Theory(CobayaComponent):
         Get a list of names of quantities that can be retrieved using the general
         get_result(X) method.
 
-        :return: list of quantities
+        :return: iterable of quantity names
         """
         return []
 
@@ -160,7 +160,7 @@ class Theory(CobayaComponent):
         The default implementation returns the result based on the params attribute set
         via the .yaml file or class params (with derived:True for derived parameters).
 
-        :return: list of parameter names
+        :return: iterable of parameter names
         """
         params = getattr(self, _params, None)
         if params:
@@ -175,7 +175,7 @@ class Theory(CobayaComponent):
         parameters that don't explicitly appear in the .yaml or class params attribute
         or are otherwise explicitly supported (e.g. via requirements)
 
-        :return: list of names of parameters
+        :return: iterable of names of parameters
         """
         return []
 
