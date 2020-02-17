@@ -74,7 +74,7 @@ class mcmc(CovmatSampler):
             raise LoggedError(self.log, "No parameters being varied for sampler")
         self.log.debug("Initializing")
         for p in ["max_tries", "output_every", "check_every",
-                  "callback_every"] + (["burn_in"] if not self.resuming else []):
+                  "callback_every"] + (["burn_in"] if not self.output.is_resuming() else []):
             setattr(self, p, read_dnumber(getattr(self, p), self.model.prior.d(),
                                           dtype=int))
         if self.callback_every is None:
@@ -85,7 +85,7 @@ class mcmc(CovmatSampler):
         self.been_waiting = 0
         self.max_waiting = max(50, self.max_tries / self.model.prior.d())
         if is_main_process():
-            if self.resuming and (max(self.mpi_size or 0, 1) != max(get_mpi_size(), 1)):
+            if self.output.is_resuming() and (max(self.mpi_size or 0, 1) != max(get_mpi_size(), 1)):
                 raise LoggedError(
                     self.log,
                     "Cannot resume a sample with a different number of chains: "
@@ -99,7 +99,7 @@ class mcmc(CovmatSampler):
         # One collection per MPI process: `name` is the MPI rank + 1
         name = str(1 + (lambda r: r if r is not None else 0)(get_mpi_rank()))
         self.collection = Collection(
-            self.model, self.output, name=name, resuming=self.resuming)
+            self.model, self.output, name=name, resuming=self.output.is_resuming())
         self.current_point = OneSamplePoint(self.model)
         # Use standard MH steps by default
         self.get_new_sample = self.get_new_sample_metropolis
@@ -119,7 +119,7 @@ class mcmc(CovmatSampler):
             cols = ["N", "acceptance_rate", "Rminus1", "Rminus1_cl"]
             self.progress = DataFrame(columns=cols)
             self.i_checkpoint = 1
-            if self.output and not self.resuming:
+            if self.output and not self.output.is_resuming():
                 with open(self.progress_filename(), "w",
                           encoding="utf-8") as progress_file:
                     progress_file.write("# " + " ".join(self.progress.columns) + "\n")
@@ -159,7 +159,7 @@ class mcmc(CovmatSampler):
         return len(self.fast_params)
 
     def set_proposer_blocking(self):
-        if not self.resuming:
+        if not self.output.is_resuming():
             if self.blocking:
                 self.blocks, self.oversampling_factors = \
                     self.model._check_blocking(self.blocking, check_draggable=self.drag)
@@ -204,7 +204,7 @@ class mcmc(CovmatSampler):
     def set_proposer_covmat(self, load=False):
         if load:
             # Build the initial covariance matrix of the proposal, or load from checkpoint
-            self._covmat, where_nan = self._load_covmat(self.resuming, self.slow_params)
+            self._covmat, where_nan = self._load_covmat(self.output.is_resuming(), self.slow_params)
             if np.any(where_nan) and self.learn_proposal:
                 # we want to start learning the covmat earlier
                 self.mpi_info("Covariance matrix " +
@@ -240,7 +240,7 @@ class mcmc(CovmatSampler):
         # Still, we need to compute derived parameters, since, as the proposal "blocked",
         # we may be saving the initial state of some block.
         # NB: if resuming but nothing was written (burn-in not finished): re-start
-        if self.resuming and len(self.collection):
+        if self.output.is_resuming() and len(self.collection):
             initial_point = (self.collection[self.collection.sampled_params]
                 .iloc[len(self.collection) - 1]).values.copy()
             logpost = -(self.collection[_minuslogpost]
@@ -735,8 +735,11 @@ class mcmc(CovmatSampler):
 
     # Class methods
     @classmethod
-    def output_files_regexps(cls, output):
-        return ([output.collection_regexp(name=None)] +
+    def output_files_regexps(cls, output, minimal=False):
+        regexps = [output.collection_regexp(name=None)]
+        if minimal:
+            return regexps
+        return (regexps +
                 [re.compile(output.prefix_regexp_str + ext.lstrip(".") + "$") for ext in
                  [_checkpoint_extension, _progress_extension, _covmat_extension]])
 

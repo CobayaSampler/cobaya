@@ -30,16 +30,15 @@ _ext = "txt"
 
 
 class Output(HasLogger):
-    def __init__(self, output_prefix=None, resume=_resume_default,
-                 force_output=False, must_exist=False):
+    def __init__(self, output_prefix=None, resume=_resume_default, force=False):
         self.name = "output"  # so that the MPI-wrapped class conserves the name
         self.set_logger(self.name)
         self.folder = os.sep.join(output_prefix.split(os.sep)[:-1]) or "."
         self.prefix = (lambda x: x if x != "." else "")(output_prefix.split(os.sep)[-1])
         self.prefix_regexp_str = \
             os.path.join(self.folder, self.prefix) + (r"\." if self.prefix else "")
-        self.force_output = force_output
-        if resume and force_output and output_prefix:
+        self.force = force
+        if resume and force and output_prefix:
             # No resume and force at the same time (if output)
             raise LoggedError(
                 self.log,
@@ -69,34 +68,16 @@ class Output(HasLogger):
         self.ext = _ext
         if os.path.isfile(self.file_updated):
             self.log.info(
-                "Found existing products with the requested output prefix: '%s'",
+                "Found existing info files with the requested output prefix: '%s'",
                 output_prefix)
-            if not must_exist and not self.find_collections():
-                self.log.info("Previous output empty, starting anew.")
+            if self.force:
+                self.log.info("Will delete previous products ('force' was requested).")
                 self.delete_infos()
-            elif self.force_output:
-                self.log.info("Will delete previous chain ('force' was requested).")
-                self.delete_infos()
+                # Sampler products will be deleted at sampler initialisation
             elif resume:
                 # Only in this case we can be sure that we are actually resuming
                 self.resuming = True
                 self.log.info("Let's try to resume/load.")
-            else:
-                # If only input and updated info dumped, overwrite; else fail
-                info_files = [
-                    os.path.basename(f) for f in [self.file_input, self.file_updated]]
-                same_prefix_noinfo = [f for f in os.listdir(self.folder) if
-                                      f.startswith(self.prefix) and f not in info_files]
-                if not same_prefix_noinfo:
-                    self.delete_infos()
-                    self.log.info("Overwritten old failed chain files.")
-                else:
-                    raise LoggedError(
-                        self.log, "Delete the previous output manually, automatically "
-                                  "('-%s', '--%s', '%s: True')" % (
-                                      _force[0], _force, _force) +
-                                  " or request resuming ('-%s', '--%s', '%s: True')" % (
-                                      _resume[0], _resume, _resume))
 
     def delete_infos(self):
         for f in [self.file_input, self.file_updated]:
@@ -108,6 +89,9 @@ class Output(HasLogger):
         Updated path: drops folder: now it's relative to the chain's location.
         """
         return self.prefix or "."
+
+    def is_forcing(self):
+        return self.force
 
     def is_resuming(self):
         return self.resuming
@@ -139,13 +123,13 @@ class Output(HasLogger):
                                       self.file_updated)
                 new_info = yaml_load(yaml_dump(updated_info_trimmed))
                 ignore_blocks = []
-                from cobaya.sampler import get_sampler_class, Minimizer
-                if issubclass(get_sampler_class(new_info) or type, Minimizer):
+                from cobaya.sampler import get_sampler_class_OLD, Minimizer
+                if issubclass(get_sampler_class_OLD(new_info) or type, Minimizer):
                     ignore_blocks = [kinds.sampler]
                 if not is_equal_info(old_info, new_info, strict=False,
                                      ignore_blocks=ignore_blocks):
                     # HACK!!! NEEDS TO BE FIXED
-                    if issubclass(get_sampler_class(updated_info) or type, Minimizer):
+                    if issubclass(get_sampler_class_OLD(updated_info) or type, Minimizer):
                         # TODO: says work in progress!
                         raise LoggedError(
                             self.log, "Old and new sample information not compatible! "
@@ -188,13 +172,20 @@ class Output(HasLogger):
                     except OutputError as e:
                         raise LoggedError(self.log, str(e))
 
+    def find_with_regexp(self, regexp):
+        """
+        Returns all files found which are compatible with this `Output` instance,
+        including their path in their name.
+        """
+        return [
+            f2 for f2 in [os.path.join(self.folder, f) for f in os.listdir(self.folder)]
+            if f2 == getattr(regexp.match(f2), "group", lambda: None)()]
+
     def delete_with_regexp(self, regexp):
         """
         Deletes all files compatible with the given regexp.
         """
-        file_names = [
-            f2 for f2 in [os.path.join(self.folder, f) for f in os.listdir(self.folder)]
-            if f2 == getattr(regexp.match(f2), "group", lambda: None)()]
+        file_names = self.find_with_regexp(regexp)
         if file_names:
             self.log.debug("From regexp %r, deleting files %r", regexp.pattern, file_names)
         try:

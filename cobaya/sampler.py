@@ -57,7 +57,7 @@ from cobaya.conventions import partag, _path_install
 from cobaya.tools import get_class, deepcopy_where_possible
 from cobaya.log import LoggedError
 from cobaya.yaml import yaml_load_file
-from cobaya.mpi import is_main_process, share_mpi
+from cobaya.mpi import is_main_process, share_mpi, sync_processes
 from cobaya.component import CobayaComponent
 
 
@@ -103,8 +103,7 @@ class Sampler(CobayaComponent):
         return None
 
     # Private methods: just ignore them:
-    def __init__(self, info_sampler, model, output, resume=_resume_default,
-                 path_install=None, name=None):
+    def __init__(self, info_sampler, model, output, path_install=None, name=None):
         """
         Actual initialization of the class. Loads the default and input information and
         call the custom ``initialize`` method.
@@ -127,14 +126,13 @@ class Sampler(CobayaComponent):
                     self.log, "Seeds must be *integer*, but got %r with type %r",
                     self.seed, type(self.seed))
         # Load checkpoint info, if resuming
-        self.resuming = resume
-        if self.resuming and not isinstance(self, Minimizer):
+        if self.output.is_resuming() and not isinstance(self, Minimizer):
             try:
                 checkpoint_info = yaml_load_file(self.checkpoint_filename())
                 try:
                     for k, v in checkpoint_info[kinds.sampler][self.get_name()].items():
                         setattr(self, k, v)
-                    self.resuming = True
+                    self.output.resuming = True
                     self.mpi_info("Resuming from previous sample!")
                 except KeyError:
                     if is_main_process():
@@ -192,11 +190,62 @@ class Sampler(CobayaComponent):
         return 3
 
     @classmethod
-    def output_files_regexps(cls, output):
+    def output_files_regexps(cls, output, minimal=False):
         """
         Returns a list of regexp's of output files potentially produced.
+
+        If `minimal=True`, returns regexp's for the files that should really not be there
+        when we are not resuming.
         """
         return []
+
+    @classmethod
+    def delete_output_files(cls, output, info=None):
+        if output and is_main_process():
+            for regexp in cls.output_files_regexps(output):
+                # Special case: CovmatSampler's may have been given a covmat with the same
+                # name that the output one. In that case, don't delete it!
+                if issubclass(cls, CovmatSampler) and info:
+                    if regexp.pattern.rstrip("$").endswith(_covmat_extension):
+                        covmat_file = info.get("covmat", "")
+                        if (isinstance(covmat_file, str) and covmat_file ==
+                            getattr(regexp.match(covmat_file), "group", lambda: None)()):
+                            continue
+                output.delete_with_regexp(regexp)
+        sync_processes()
+
+    @classmethod
+    def check_force_resume(cls, output, info=None):
+        """
+        Performs the necessary checks on existing files if resuming or forcing
+        (including deleting some output files when forcing).
+        """
+        # TODO: the `info` here is passed so that we can ultimately ignore covmats in
+        # some cases -- see sampler.delete_output_files. Maybe there is a simpler way?
+        if not output:
+            return
+        if is_main_process():
+            if output.is_forcing():
+                output.log.info("Will delete previous chain ('force' was requested).")
+                cls.delete_output_files(output, info=info)
+            elif any(output.find_with_regexp(regexp)
+                     for regexp in cls.output_files_regexps(output=output, minimal=True)):
+                if output.is_resuming():
+                    output.log.info("Found and old sample. Resuming.")
+                else:
+                    raise LoggedError(
+                        output.log, "Delete the previous output manually, automatically "
+                                    "('-%s', '--%s', '%s: True')" % (
+                                    _force[0], _force, _force) +
+                                    " or request resuming ('-%s', '--%s', '%s: True')" % (
+                                   _resume[0], _resume, _resume))
+            else:
+                if output.is_resuming():
+                    output.log.info("Did not find an old sample. Cleaning up and starting anew.")
+                # Clean up old files, and set resuming=False, regardless of requested value
+                cls.delete_output_files(output, info=info)
+                output.resuming = False
+        sync_processes()
 
     # Python magic for the "with" statement
 
@@ -217,7 +266,7 @@ class Minimizer(Sampler):
     pass
 
 
-def get_sampler_class(info):
+def get_sampler_class_OLD(info):
     info_sampler = info.get(kinds.sampler)
     if info_sampler:
         name = list(info_sampler)[0]
@@ -227,10 +276,9 @@ def get_sampler_class(info):
                              module_path=module_path)
 
 
-def get_sampler(info_sampler, model, output,
-                resume=_resume_default, force=False, modules=None):
+def get_sampler_class(info_sampler):
     """
-    Auxiliary function to retrieve and initialize the requested sampler.
+    Auxiliary function to retrieve the class of the required sampler.
     """
     log = logging.getLogger(__name__.split(".")[-1])
     if not info_sampler:
@@ -242,21 +290,7 @@ def get_sampler(info_sampler, model, output,
             log, "The sampler block must be a dictionary 'sampler: {options}'.")
     if len(info_sampler) > 1:
         raise LoggedError(log, "Only one sampler currently supported at a time.")
-    sampler_class = get_class(name, kind=kinds.sampler)
-    # Delete old products if force, before initialising
-    if force and output and is_main_process():
-        for regexp in sampler_class.output_files_regexps(output):
-            # Special case: CovmatSampler's may have been given a covmat with the same
-            # name that the output one. In that case, don't delete it!
-            if issubclass(sampler_class, CovmatSampler):
-                if regexp.pattern.rstrip("$").endswith(_covmat_extension):
-                    covmat_file = info_sampler[name].get("covmat", "")
-                    if (covmat_file ==
-                        getattr(regexp.match(covmat_file), "group", lambda: None)()):
-                        continue
-            output.delete_with_regexp(regexp)
-    return sampler_class(info_sampler[name], model, output, resume=resume,
-                         path_install=modules, name=name)
+    return get_class(name, kind=kinds.sampler)
 
 
 class CovmatSampler(Sampler):

@@ -220,7 +220,7 @@ def post(info, sample=None):
     if out_prefix not in [None, False]:
         out_prefix += _separator_files + _post + _separator_files + info_post[
             _post_suffix]
-    output_out = get_output(output_prefix=out_prefix, force_output=info.get(_force))
+    output_out = get_output(output_prefix=out_prefix, force=info.get(_force))
     info_out = deepcopy(info)
     info_out[_post] = info_post
     # Updated with input info and extended (updated) add info

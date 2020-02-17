@@ -15,7 +15,7 @@ from cobaya.conventions import _yaml_extensions, _separator_files, _updated_suff
 from cobaya.conventions import _modules_path_arg, _modules_path_env, _resume_default
 from cobaya.output import get_output
 from cobaya.model import Model
-from cobaya.sampler import get_sampler, get_sampler_class, Minimizer
+from cobaya.sampler import get_sampler_class, get_sampler_class_OLD, Minimizer
 from cobaya.log import logger_setup
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info
@@ -39,11 +39,10 @@ def run(info, stop_at_error=None):
     # Create the updated input information, including defaults for each module.
     updated_info = update_info(info)
     # If minimizer, always try to re-use sample to get bestfit/covmat
-    if issubclass(get_sampler_class(updated_info) or type, Minimizer):
+    if issubclass(get_sampler_class_OLD(updated_info) or type, Minimizer):
         resume = True
         force = False
-    output = get_output(output_prefix=info.get(_output_prefix),
-                        resume=resume, force_output=force)
+    output = get_output(output_prefix=info.get(_output_prefix), resume=resume, force=force)
     if output:
         updated_info[_output_prefix] = output.updated_output_prefix()
         updated_info[_resume] = output.is_resuming()
@@ -57,6 +56,9 @@ def run(info, stop_at_error=None):
     # We dump the info now, before modules initialization, to better track errors and
     # to check if resuming is possible asap (old and new infos are consistent)
     output.dump_info(info, updated_info)
+    sampler_class = get_sampler_class(updated_info[kinds.sampler])
+    sampler_class.check_force_resume(
+        output, info=updated_info[kinds.sampler][sampler_class.__name__])
     # Initialize the posterior and the sampler
     with Model(updated_info[_params], updated_info[kinds.likelihood],
                updated_info.get(_prior), updated_info.get(kinds.theory),
@@ -67,10 +69,8 @@ def run(info, stop_at_error=None):
         # Re-dump the updated info, now containing parameter routes and version info
         updated_info = recursive_update(updated_info, model.info())
         output.dump_info(None, updated_info, check_compatible=False)
-        with get_sampler(
-                updated_info[kinds.sampler], model, output,
-                resume=updated_info.get(_resume), force=updated_info.get(_force),
-                modules=info.get(_path_install)) as sampler:
+        with sampler_class(updated_info[kinds.sampler][sampler_class.__name__], model,
+                output, path_install=info.get(_path_install)) as sampler:
             # Re-dump updated info, now also containing updates from the sampler
             updated_info[kinds.sampler][sampler.get_name()] = \
                 recursive_update(
