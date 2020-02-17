@@ -509,10 +509,10 @@ class Model(HasLogger):
             # requirement names and requirement options
             if not _require:
                 return []
-            if isinstance(_require, (set, tuple, list)):
-                _require = {p: None for p in _require}
+            if isinstance(_require, Mapping):
+                _require = dict(_require)
             else:
-                _require = _require.copy()
+                _require = {p: None for p in _require}
             for par in self.input_params:
                 if par in _require:
                     direct_param_dependence[_component].add(par)
