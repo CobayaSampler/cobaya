@@ -15,24 +15,27 @@ from itertools import chain
 from random import random
 from typing import Any
 import pkg_resources
+from tempfile import gettempdir
+import re
 
 # Local
 from cobaya.tools import read_dnumber, get_external_function, relative_to_int, PythonPath
+from cobaya.tools import find_with_regexp
 from cobaya.sampler import Sampler
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
 from cobaya.collection import Collection
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release
 from cobaya.yaml import yaml_dump_file
-from cobaya.conventions import _separator
-
-clusters = "clusters"
+from cobaya.conventions import _separator, _evidence_extension
 
 
 class polychord(Sampler):
     # Name of the PolyChord repo and version to download
     _pc_repo_name = "PolyChord/PolyChordLite"
-    _pc_repo_version = "master"
+    _pc_repo_version = "1.16"
+    _base_dir_suffix = "polychord_raw"
+    _clusters_dir = "clusters"
 
     # variables from yaml
     do_clustering: bool
@@ -94,37 +97,29 @@ class polychord(Sampler):
             values = {logging.CRITICAL: 0, logging.ERROR: 0, logging.WARNING: 0,
                       logging.INFO: 1, logging.DEBUG: 2}
             self.feedback = values[self.log.getEffectiveLevel()]
-        try:
-            output_folder = getattr(self.output, "folder")
-            output_prefix = getattr(self.output, "prefix") or ""
-            self.read_resume = self.resuming
-        except AttributeError:
-            # dummy output -- no resume!
-            self.read_resume = False
-            from tempfile import gettempdir
-            output_folder = gettempdir()
+        # Prepare output folders and prefixes
+        if self.output:
+            self.file_root = self.output.prefix
+            self.read_resume = self.output.is_resuming()
+        else:
             output_prefix = share_mpi(hex(int(random() * 16 ** 6))[2:]
                                       if is_main_process() else None)
-        self.base_dir = os.path.join(output_folder, self.base_dir)
-        self.file_root = output_prefix
+            self.file_root = output_prefix
+            # dummy output -- no resume!
+            self.read_resume = False
+        self.base_dir = self.get_base_dir(self.output)
+        self.raw_clusters_dir = os.path.join(self.base_dir, self._clusters_dir)
+        self.output.create_folder(self.base_dir)
+        if self.do_clustering:
+            self.clusters_folder = self.get_clusters_dir(self.output)
+            self.output.create_folder(self.clusters_folder)
         if is_main_process():
-            # Creating output folder, if it does not exist (just one process)
-            if not os.path.exists(self.base_dir):
-                os.makedirs(self.base_dir)
-            # Idem, a clusters folder if needed -- notice that PolyChord's default
-            # is "True", here "None", hence the funny condition below
-            if self.do_clustering is not False:  # None here means "default"
-                try:
-                    os.makedirs(os.path.join(self.base_dir, clusters))
-                except OSError:  # exists!
-                    pass
-            self.log.info("Storing raw PolyChord output in '%s'.",
-                          self.base_dir)
+            self.log.info("Storing raw PolyChord output in '%s'.", self.base_dir)
         # Exploiting the speed hierarchy
         if self.blocking:
             blocks, oversampling_factors = self.model._check_blocking(self.blocking)
         else:
-            if not self.resuming and self.measure_speeds:
+            if not self.output.is_resuming() and self.measure_speeds:
                 self.log.info("Measuring speeds...")
                 self.model.measure_and_set_speeds()
             blocks, oversampling_factors = self.model.get_param_blocking_for_sampler(
@@ -288,31 +283,22 @@ class polychord(Sampler):
             prefix = os.path.join(self.pc_settings.base_dir, self.pc_settings.file_root)
             self.dump_paramnames(prefix)
             self.collection = self.save_sample(prefix + ".txt", "1")
-            if self.pc_settings.do_clustering is not False:  # NB: "None" == "default"
+            # Load clusters, and save if output
+            if self.pc_settings.do_clustering:
                 self.clusters = {}
-                do_output = hasattr(self.output, "folder")
-                for f in os.listdir(os.path.join(self.pc_settings.base_dir, clusters)):
-                    if not f.startswith(self.pc_settings.file_root):
-                        continue
-                    if do_output:
-                        cluster_folder = os.path.join(self.output.folder,
-                                                      self.output.prefix +
-                                                      ("_" if self.output.prefix else "")
-                                                      + clusters)
-                        if not os.path.exists(cluster_folder):
-                            os.mkdir(cluster_folder)
-                    try:
-                        i = int(f[len(self.pc_settings.file_root) + 1:-len(".txt")])
-                    except ValueError:
-                        continue
-                    if do_output:
+                clusters_raw_regexp = re.compile(os.path.join(
+                    self.pc_settings.base_dir, self._clusters_dir,
+                    self.pc_settings.file_root + r"_\d+\.txt"))
+                cluster_raw_files = find_with_regexp(clusters_raw_regexp, walk_tree=True)
+                for f in cluster_raw_files:
+                    i = int(f[f.rfind("_") + 1:-len(".txt")])
+                    if self.output:
                         old_folder = self.output.folder
-                        self.output.folder = cluster_folder
-                    fname = os.path.join(self.pc_settings.base_dir, clusters, f)
-                    sample = self.save_sample(fname, str(i))
-                    self.clusters[i] = {"sample": sample}
-                    if do_output:
+                        self.output.folder = self.clusters_folder
+                    sample = self.save_sample(f, str(i))
+                    if self.output:
                         self.output.folder = old_folder
+                    self.clusters[i] = {"sample": sample}
             # Prepare the evidence(s) and write to file
             pre = "log(Z"
             active = "(Still active)"
@@ -327,7 +313,7 @@ class polychord(Sampler):
                 elif self.pc_settings.do_clustering:
                     i = int(component)
                     self.clusters[i]["logZ"], self.clusters[i]["logZstd"] = logZ, logZstd
-            if do_output:
+            if self.output:
                 out_evidences = dict(logZ=self.logZ, logZstd=self.logZstd)
                 if self.clusters:
                     out_evidences["clusters"] = {}
@@ -335,7 +321,8 @@ class polychord(Sampler):
                         out_evidences["clusters"][i] = dict(
                             logZ=self.clusters[i]["logZ"],
                             logZstd=self.clusters[i]["logZstd"])
-                fname = os.path.join(self.output.folder, self.output.prefix + ".logZ")
+                fname = os.path.join(self.output.folder,
+                                     self.output.prefix + _evidence_extension)
                 yaml_dump_file(fname, out_evidences, comment="log-evidence",
                                error_if_exists=False)
         # TODO: try to broadcast the collections
@@ -363,6 +350,35 @@ class polychord(Sampler):
             return products
         else:
             return {}
+
+    @classmethod
+    def get_base_dir(cls, output):
+        if output:
+            return output.add_suffix(cls._base_dir_suffix, separator="_")
+        return os.path.join(gettempdir(), cls._base_dir_suffix)
+
+    @classmethod
+    def get_clusters_dir(cls, output):
+        if output:
+            return output.add_suffix(cls._clusters_dir, separator="_")
+
+    @classmethod
+    def output_files_regexps(cls, output, minimal=False):
+        # Resume file
+        regexps = [re.compile(
+            os.path.join(cls.get_base_dir(output), output.prefix + ".resume"))]
+        if minimal:
+            return regexps
+        return regexps + [
+            # Raw products base dir
+            re.compile(cls.get_base_dir(output)),
+            # Main sample
+            output.collection_regexp(name=None),
+            # Evidence
+            re.compile(os.path.join(output.folder, output.prefix + _evidence_extension)),
+            # Clusters
+            re.compile(cls.get_clusters_dir(output))
+            ]
 
     @classmethod
     def get_version(cls):

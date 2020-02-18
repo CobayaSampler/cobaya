@@ -74,6 +74,7 @@ _yaml_extensions = ".yaml", ".yml"
 _checkpoint_extension = ".checkpoint"
 _progress_extension = ".progress"
 _covmat_extension = ".covmat"
+_evidence_extension = ".logZ"
 
 # Installation and container definitions
 _modules_path_arg = _path_install

@@ -12,6 +12,7 @@ import traceback
 import datetime
 from itertools import chain
 import re
+import shutil
 
 # Local
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
@@ -22,7 +23,7 @@ from cobaya.log import LoggedError, HasLogger
 from cobaya.input import is_equal_info, get_class
 from cobaya.mpi import is_main_process, more_than_one_process, share_mpi
 from cobaya.collection import Collection
-from cobaya.tools import deepcopy_where_possible
+from cobaya.tools import deepcopy_where_possible, find_with_regexp
 
 # Default output type and extension
 _kind = "txt"
@@ -78,6 +79,42 @@ class Output(HasLogger):
                 # Only in this case we can be sure that we are actually resuming
                 self.resuming = True
                 self.log.info("Let's try to resume/load.")
+
+    def is_prefix_folder(self):
+        """
+        Returns `True` if the ouput prefix is a bare folder, e.g. `chains/`.
+        """
+        return bool(self.prefix)
+
+    def separator_if_needed(self, separator):
+        """
+        Returns the given separator if there is an actual file name prefix (i.e. the
+        output prefix is not a bare folder), or an empty string otherwise.
+
+        Useful to add custom suffixes to output prefixes (may want to use
+        `Output.add_suffix` for that).
+        """
+        return separator if self.is_prefix_folder() else ""
+
+    def add_suffix(self, suffix, separator="_"):
+        """
+        Returns the full output prefix (folder and file name prefix) combined with a
+        given suffix, inserting a given separator in between (default: `_`) if needed.
+        """
+        return os.path.join(self.folder,
+                            self.prefix + self.separator_if_needed(separator) + suffix)
+
+    def create_folder(self, folder):
+        """
+        Creates the given folder (MPI-aware).
+        """
+        if is_main_process():
+            try:
+                if not os.path.exists(folder):
+                    os.makedirs(folder)
+            except Exception as e:
+                raise LoggedError(
+                    self.log, "Could not create folder %r. Reason: %r", folder, str(e))
 
     def delete_infos(self):
         for f in [self.file_input, self.file_updated]:
@@ -172,26 +209,23 @@ class Output(HasLogger):
                     except OutputError as e:
                         raise LoggedError(self.log, str(e))
 
-    def find_with_regexp(self, regexp):
-        """
-        Returns all files found which are compatible with this `Output` instance,
-        including their path in their name.
-        """
-        return [
-            f2 for f2 in [os.path.join(self.folder, f) for f in os.listdir(self.folder)]
-            if f2 == getattr(regexp.match(f2), "group", lambda: None)()]
-
     def delete_with_regexp(self, regexp):
         """
         Deletes all files compatible with the given regexp.
         """
-        file_names = self.find_with_regexp(regexp)
+        file_names = find_with_regexp(regexp)
         if file_names:
             self.log.debug("From regexp %r, deleting files %r", regexp.pattern, file_names)
-        try:
-            [os.remove(f) for f in file_names]
-        except OSError:
-            pass
+        for f in file_names:
+            try:
+                os.remove(f)
+            except IsADirectoryError:
+                try:
+                    shutil.rmtree(f)
+                except:
+                    raise
+            except OSError:
+                pass
 
     def prepare_collection(self, name=None, extension=None):
         """

@@ -674,3 +674,29 @@ def sort_parameter_blocks(blocks, speeds, footprints, oversample_power=0):
     costs = permuted_costs_per_param_per_block[i_optimal]
     oversample_factors = np.floor(permuted_oversample_factors[i_optimal]).astype(int)
     return optimal_ordering, costs, oversample_factors
+
+
+def find_with_regexp(regexp, walk_tree=False):
+    """
+    Returns all files found which are compatible with the given regexp, including their
+    path in their name.
+
+    The first part of the folder structure in the regexp needs to be explicitly specified
+    (i.e. no wildcards).
+
+    Set `walk_tree=True` if there is more that one directory level (default: `False`).
+    """
+    root = os.path.dirname(regexp.pattern)
+    try:
+        if walk_tree:
+            files = []
+            for root_folder, sub_folders, file_names in os.walk(root, topdown=True):
+                files += [os.path.join(root_folder, fname) for fname in file_names]
+                files += [os.path.join(root_folder, dname) for dname in sub_folders]
+        else:
+            files = [os.path.join(root, f) for f in os.listdir(root)]
+    except FileNotFoundError:
+        files = []
+    return [f2 for f2 in files
+            if f2 == getattr(regexp.match(f2), "group", lambda: None)()]
+

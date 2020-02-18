@@ -411,7 +411,8 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
                 to_pop = [j for j in block1[k] if (block1[k].get(j) == block2[k].get(j))]
                 [(block1[k].pop(j, None), block2[k].pop(j, None)) for j in to_pop]
                 myprint(
-                    myname + ": different content of [%s:%s]" % (block_name, k))
+                    myname + ": different content of [%s:%s]" % (block_name, k) +
+                    " -- (re-run with `debug: True` for more info)")
                 myprint_debug("%r (old) vs %r (new)" % (block1[k], block2[k]))
                 return False
     return True

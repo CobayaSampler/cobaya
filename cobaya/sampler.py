@@ -225,7 +225,6 @@ class Sampler(CobayaComponent):
             return
         if is_main_process():
             if output.is_forcing():
-                output.log.info("Will delete previous chain ('force' was requested).")
                 cls.delete_output_files(output, info=info)
             elif any(output.find_with_regexp(regexp)
                      for regexp in cls.output_files_regexps(output=output, minimal=True)):
