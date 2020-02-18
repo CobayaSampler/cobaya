@@ -5,8 +5,6 @@ to make sure it remains up to date.
 
 import os
 import numpy as np
-from imageio import imread
-import pytest
 from io import StringIO
 
 from cobaya.conventions import _path_install
