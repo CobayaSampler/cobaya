@@ -54,7 +54,7 @@ from itertools import chain
 from cobaya.conventions import kinds, _resume_default, _checkpoint_extension, _version
 from cobaya.conventions import _progress_extension, _module_path, _covmat_extension
 from cobaya.conventions import partag, _path_install
-from cobaya.tools import get_class, deepcopy_where_possible
+from cobaya.tools import get_class, deepcopy_where_possible, find_with_regexp
 from cobaya.log import LoggedError
 from cobaya.yaml import yaml_load_file
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
@@ -226,7 +226,7 @@ class Sampler(CobayaComponent):
         if is_main_process():
             if output.is_forcing():
                 cls.delete_output_files(output, info=info)
-            elif any(output.find_with_regexp(regexp)
+            elif any(find_with_regexp(regexp)
                      for regexp in cls.output_files_regexps(output=output, minimal=True)):
                 if output.is_resuming():
                     output.log.info("Found and old sample. Resuming.")
