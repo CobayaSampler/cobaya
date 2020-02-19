@@ -36,6 +36,7 @@ class polychord(Sampler):
     _pc_repo_version = "1.16"
     _base_dir_suffix = "polychord_raw"
     _clusters_dir = "clusters"
+    _at_resume_prefer_old = Sampler._at_resume_prefer_old + ["blocking"]
 
     # variables from yaml
     do_clustering: bool
@@ -119,7 +120,7 @@ class polychord(Sampler):
         if self.blocking:
             blocks, oversampling_factors = self.model._check_blocking(self.blocking)
         else:
-            if not self.output.is_resuming() and self.measure_speeds:
+            if self.measure_speeds:
                 self.log.info("Measuring speeds...")
                 self.model.measure_and_set_speeds()
             blocks, oversampling_factors = self.model.get_param_blocking_for_sampler(

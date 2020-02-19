@@ -6,6 +6,9 @@
 
 """
 
+# Global
+from collections.abc import Mapping
+
 # Local
 from cobaya import __version__
 from cobaya.conventions import kinds, _prior, _params, _version
@@ -22,10 +25,12 @@ from cobaya.input import update_info
 from cobaya.mpi import import_MPI, is_main_process, set_mpi_disabled
 from cobaya.tools import warn_deprecation, recursive_update
 from cobaya.post import post
-from collections.abc import Mapping
 
 
-def run(info, stop_at_error=None):
+def run(info):
+    # This function reproduces the model-->output-->sampler pipeline one would follow
+    # when instantiating by hand, but alters the order to performs checks and dump info
+    # as early as possible, e.g. to check if resuming possible or `force` needed.
     assert isinstance(info, Mapping), (
         "The first argument must be a dictionary with the info needed for the run. "
         "If you were trying to pass the name of an input file instead, "
@@ -33,29 +38,19 @@ def run(info, stop_at_error=None):
         "or, if you were passing a yaml string, load it with 'cobaya.yaml.yaml_load'.")
     logger_setup(info.get(_debug), info.get(_debug_file))
     import logging
-    info_stop = info.get("stop_at_error", False)
-    # Initialize output, if required
-    resume, force = info.get(_resume), info.get(_force)
-    # Create the updated input information, including defaults for each module.
+    # 1. Prepare output driver, if requested by defining an output_prefix
+    output = get_output(output_prefix=info.get(_output_prefix),
+                        resume=info.get(_resume), force=info.get(_force))
+    # 2. Update the input info with the defaults for each component
     updated_info = update_info(info)
-    # If minimizer, always try to re-use sample to get bestfit/covmat
-    if issubclass(get_sampler_class_OLD(updated_info) or type, Minimizer):
-        resume = True
-        force = False
-    output = get_output(output_prefix=info.get(_output_prefix), resume=resume, force=force)
-    if output:
-        updated_info[_output_prefix] = output.updated_output_prefix()
-        updated_info[_resume] = output.is_resuming()
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
-        # Don't dump unless we are doing output, just in case something not serializable
-        # May be fixed in the future if we find a way to serialize external functions
-        if info.get(_output_prefix) and is_main_process():
+        # Dump only if not doing output (otherwise, the user can check the .udpated file)
+        if not output and is_main_process():
             logging.getLogger(__name__.split(".")[-1]).info(
                 "Input info updated with defaults (dumped to YAML):\n%s",
                 yaml_dump(updated_info))
-    # We dump the info now, before modules initialization, to better track errors and
-    # to check if resuming is possible asap (old and new infos are consistent)
-    output.dump_info(info, updated_info)
+    # 3. If output requested, check compatibility if existing one, and dump.
+    output.check_and_dump_info(info, updated_info)
     sampler_class = get_sampler_class(updated_info[kinds.sampler])
     sampler_class.check_force_resume(
         output, info=updated_info[kinds.sampler][sampler_class.__name__])
@@ -63,21 +58,20 @@ def run(info, stop_at_error=None):
     with Model(updated_info[_params], updated_info[kinds.likelihood],
                updated_info.get(_prior), updated_info.get(kinds.theory),
                path_install=info.get(_path_install), timing=updated_info.get(_timing),
-               allow_renames=False,
-               stop_at_error=info_stop if stop_at_error is None else stop_at_error) \
-            as model:
+               allow_renames=False, stop_at_error=info.get("stop_at_error", False)) \
+               as model:
         # Re-dump the updated info, now containing parameter routes and version info
         updated_info = recursive_update(updated_info, model.info())
-        output.dump_info(None, updated_info, check_compatible=False)
+        output.check_and_dump_info(None, updated_info, check_compatible=False)
         with sampler_class(updated_info[kinds.sampler][sampler_class.__name__], model,
                 output, path_install=info.get(_path_install)) as sampler:
             # Re-dump updated info, now also containing updates from the sampler
             updated_info[kinds.sampler][sampler.get_name()] = \
                 recursive_update(
                     updated_info[kinds.sampler][sampler.get_name()], sampler.info())
-            # TODO -- also re-dump model info, now with speeds (polychord at least)
+            # TODO -- maybe also re-dump model info, now with speeds (polychord at least)
             # (waiting until the camb.transfers issue is solved)
-            output.dump_info(None, updated_info, check_compatible=False)
+            output.check_and_dump_info(None, updated_info, check_compatible=False)
             # Run the sampler
             sampler.run()
     # For scripted calls:

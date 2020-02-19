@@ -322,15 +322,13 @@ def merge_info(*infos):
     return current_info
 
 
-def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=()):
+def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_blocks=()):
     """
-    Compares two information dictionaries.
+    Compares two information dictionaries, and old one versus a new one, and updates the
+    new one for selected values of the old one.
 
     Set ``strict=False`` (default: ``True``) to ignore options that would not affect
     the statistics of a posterior sample, including order of params/priors/likelihoods.
-
-    Assumes info1 and info2 only contains dict mappings, use recursive_mappings_to_dict
-    if on the inputs if they might be mixing dict, OrderedDicts or other Mappings.
     """
     if print_not_log:
         myprint = print
@@ -341,16 +339,16 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
     myname = inspect.stack()[0][3]
     ignore = set() if strict else {_debug, _debug_file, _resume, _force, _path_install}
     ignore = ignore.union(set(ignore_blocks or []))
-    if set(info for info in info1 if info1[info] is not None).difference(ignore) \
-            != set(info for info in info2 if info2[info] is not None).difference(ignore):
+    if set(info for info in info_old if info_old[info] is not None).difference(ignore) \
+            != set(info for info in info_new if info_new[info] is not None).difference(ignore):
         myprint(myname + ": different blocks or options: %r (old) vs %r (new)" % (
-            set(info1).difference(ignore), set(info2).difference(ignore)))
+            set(info_old).difference(ignore), set(info_new).difference(ignore)))
         return False
-    for block_name in info1:
-        if block_name in ignore or block_name not in info2:
+    for block_name in info_old:
+        if block_name in ignore or block_name not in info_new:
             continue
-        block1 = deepcopy_where_possible(info1[block_name])
-        block2 = deepcopy_where_possible(info2[block_name])
+        block1 = deepcopy_where_possible(info_old[block_name])
+        block2 = deepcopy_where_possible(info_new[block_name])
         # First, deal with root-level options (force, output, ...)
         if not isinstance(block1, dict):
             if block1 != block2:
@@ -399,11 +397,11 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
                                 if isinstance(block1[k], dict) else None
                             cls = get_class(k, block_name, module_path=module_path)
                             ignore_k_this = ignore_k_this.union(
-                                set(getattr(cls, "_ignore_at_resume", {})))
+                                set(getattr(cls, "_at_resume_prefer_new", {})))
                         except ImportError:
                             pass
-                    # Pop ignored options
-                    for j in ignore_k_this:
+                    # Pop ignored and kept options
+                    for j in list(ignore_k_this):
                         block1[k].pop(j, None)
                         block2[k].pop(j, None)
             if block1[k] != block2[k]:
@@ -416,6 +414,30 @@ def is_equal_info(info1, info2, strict=True, print_not_log=False, ignore_blocks=
                 myprint_debug("%r (old) vs %r (new)" % (block1[k], block2[k]))
                 return False
     return True
+
+
+def get_preferred_old_values(info_old):
+    """
+    Returns selected values in `info_old`, which are preferred at resuming.
+    """
+    keep_old = {}
+    for block_name, block in info_old.items():
+        if block_name not in kinds or not block:
+            continue
+        for k in block:
+            try:
+                module_path = block[k].pop(_module_path, None) \
+                    if isinstance(block[k], dict) else None
+                cls = get_class(k, block_name, module_path=module_path)
+                prefer_old_k_this = getattr(cls, "_at_resume_prefer_old", {})
+                if prefer_old_k_this:
+                    if not block_name in keep_old:
+                        keep_old[block_name] = {}
+                    keep_old[block_name].update(
+                        {k: {o: block[k][o] for o in prefer_old_k_this}})
+            except ImportError:
+                pass
+    return keep_old
 
 
 class HasDefaults:

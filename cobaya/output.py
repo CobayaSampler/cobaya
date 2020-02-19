@@ -18,12 +18,13 @@ import shutil
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
 from cobaya.conventions import _input_suffix, _updated_suffix, _separator_files, _version
 from cobaya.conventions import _resume, _resume_default, _force, _yaml_extensions
+from cobaya.conventions import _output_prefix
 from cobaya.conventions import kinds, _params
 from cobaya.log import LoggedError, HasLogger
-from cobaya.input import is_equal_info, get_class
+from cobaya.input import is_equal_info, get_class, get_preferred_old_values
 from cobaya.mpi import is_main_process, more_than_one_process, share_mpi
 from cobaya.collection import Collection
-from cobaya.tools import deepcopy_where_possible, find_with_regexp
+from cobaya.tools import deepcopy_where_possible, find_with_regexp, recursive_update
 
 # Default output type and extension
 _kind = "txt"
@@ -136,7 +137,7 @@ class Output(HasLogger):
     def reload_updated_info(self):
         return yaml_load_file(self.file_updated)
 
-    def dump_info(self, input_info, updated_info, check_compatible=True):
+    def check_and_dump_info(self, input_info, updated_info, check_compatible=True):
         """
         Saves the info in the chain folder twice:
            - the input info.
@@ -145,6 +146,13 @@ class Output(HasLogger):
         If resuming a sample, checks first that old and new infos and versions are
         consistent.
         """
+        if input_info is None:
+            input_info = {}
+        # make sure the dumped output_prefix does only contain the file prefix,
+        # not the folder, since it's already been placed inside it
+        old_output_prefix = updated_info[_output_prefix]
+        input_info[_output_prefix] = self.updated_output_prefix()
+        updated_info[_output_prefix] = self.updated_output_prefix()
         # trim known params of each likelihood: for internal use only
         updated_info_trimmed = deepcopy_where_possible(updated_info)
         for lik_info in updated_info_trimmed.get(kinds.likelihood, {}).values():
@@ -158,6 +166,10 @@ class Output(HasLogger):
                 if not old_info:
                     raise LoggedError(self.log, "No old sample information: %s",
                                       self.file_updated)
+                # First, let's restore some selected old values for some classes
+                keep_old = get_preferred_old_values(old_info)
+                updated_info = recursive_update(updated_info, keep_old)
+                updated_info_trimmed = recursive_update(updated_info_trimmed, keep_old)
                 new_info = yaml_load(yaml_dump(updated_info_trimmed))
                 ignore_blocks = []
                 from cobaya.sampler import get_sampler_class_OLD, Minimizer
@@ -208,6 +220,9 @@ class Output(HasLogger):
                         f_out.write(yaml_dump(info))
                     except OutputError as e:
                         raise LoggedError(self.log, str(e))
+        # Restore original output prefix
+        input_info[_output_prefix] = old_output_prefix
+        updated_info[_output_prefix] = old_output_prefix
 
     def delete_with_regexp(self, regexp):
         """
@@ -348,9 +363,9 @@ class Output_MPI(Output):
             for name, var in zip(to_broadcast, values):
                 setattr(self, name, var)
 
-    def dump_info(self, *args, **kwargs):
+    def check_and_dump_info(self, *args, **kwargs):
         if is_main_process():
-            Output.dump_info(self, *args, **kwargs)
+            Output.check_and_dump_info(self, *args, **kwargs)
 
 
 def get_output(*args, **kwargs):

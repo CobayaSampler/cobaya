@@ -85,16 +85,15 @@ def _dict_equal(d1, d2):
     return d1 == d2
 
 
-def get_model(info, stop_at_error=None):
+def get_model(info):
     assert isinstance(info, Mapping), (
         "The first argument must be a dictionary with the info needed for the model. "
         "If you were trying to pass the name of an input file instead, "
         "load it first with 'cobaya.input.load_input', "
         "or, if you were passing a yaml string, load it with 'cobaya.yaml.yaml_load'.")
     info = deepcopy_where_possible(info)
-    # Create the updated input information, including defaults for each module.
     logger_setup(info.pop(_debug, _debug_default), info.pop(_debug_file, None))
-    info_stop = info.pop("stop_at_error", False)
+    # Inform about ignored info keys
     ignored_info = {}
     for k in list(info):
         if k not in [_params, kinds.likelihood, _prior, kinds.theory, _path_install,
@@ -103,6 +102,7 @@ def get_model(info, stop_at_error=None):
     if ignored_info:
         logging.getLogger(__name__.split(".")[-1]).warning(
             "Ignored blocks/options: %r", list(ignored_info))
+    # Create the updated input information, including defaults for each module.
     updated_info = update_info(info)
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
         logging.getLogger(__name__.split(".")[-1]).debug(
@@ -112,7 +112,7 @@ def get_model(info, stop_at_error=None):
     return Model(updated_info[_params], updated_info[kinds.likelihood],
                  updated_info.get(_prior), updated_info.get(kinds.theory),
                  path_install=info.get(_path_install), timing=updated_info.get(_timing),
-                 stop_at_error=info_stop if stop_at_error is None else stop_at_error)
+                 stop_at_error=info.get("stop_at_error", False))
 
 
 class Model(HasLogger):

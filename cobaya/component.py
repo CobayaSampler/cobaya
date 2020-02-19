@@ -52,10 +52,10 @@ class CobayaComponent(HasLogger, HasDefaults):
     Base class for a theory, likelihood or sampler with associated .yaml parameter file
     that can set attributes.
     """
-    # The next list of options is ignored when comparing info
-    # at resuming or reusing an updated info.
+    # The next lists of options apply when comparing existing versus new info at resuming.
     # When defining it for subclasses, redefine append adding this list to new entries.
-    _ignore_at_resume = [_version]
+    _at_resume_prefer_new = [_version]
+    _at_resume_prefer_old = []
 
     def __init__(self, info=empty_dict, name=None, timing=None, path_install=None,
                  initialize=True, standalone=True):

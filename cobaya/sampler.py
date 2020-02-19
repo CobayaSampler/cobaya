@@ -103,7 +103,7 @@ class Sampler(CobayaComponent):
         return None
 
     # Private methods: just ignore them:
-    def __init__(self, info_sampler, model, output, path_install=None, name=None):
+    def __init__(self, info_sampler, model, output=None, path_install=None, name=None):
         """
         Actual initialization of the class. Loads the default and input information and
         call the custom ``initialize`` method.
@@ -278,17 +278,22 @@ def get_sampler_class(info_sampler):
     """
     Auxiliary function to retrieve the class of the required sampler.
     """
+    check_info_sampler(info_sampler)
+    name = list(info_sampler)[0]
+    return get_class(name, kind=kinds.sampler)
+
+
+def check_info_sampler(info_sampler):
     log = logging.getLogger(__name__.split(".")[-1])
     if not info_sampler:
         raise LoggedError(log, "No sampler given!")
     try:
-        name = list(info_sampler)[0]
+        list(info_sampler)[0]
     except AttributeError:
         raise LoggedError(
             log, "The sampler block must be a dictionary 'sampler: {options}'.")
     if len(info_sampler) > 1:
         raise LoggedError(log, "Only one sampler currently supported at a time.")
-    return get_class(name, kind=kinds.sampler)
 
 
 class CovmatSampler(Sampler):
