@@ -31,12 +31,14 @@ from cobaya.yaml import yaml_dump_file
 
 
 class mcmc(CovmatSampler):
-    _ignore_at_resume = CovmatSampler._ignore_at_resume + [
+    _at_resume_prefer_new = CovmatSampler._at_resume_prefer_new + [
         "burn_in", "callback_function", "callback_every", "max_tries",
         "check_every", "output_every", "learn_proposal_Rminus1_max",
         "learn_proposal_Rminus1_max_early", "learn_proposal_Rminus1_min",
         "max_samples", "Rminus1_stop", "Rminus1_cl_stop",
-        "Rminus1_cl_level", "covmat", "covmat_params", "proposal_scale"]
+        "Rminus1_cl_level", "covmat", "covmat_params"]
+    _at_resume_prefer_old = CovmatSampler._at_resume_prefer_new + [
+        "proposal_scale", "blocking"]
 
     # instance variables from yaml
     check_every: int
@@ -62,8 +64,6 @@ class mcmc(CovmatSampler):
         super().set_instance_defaults()
         # checkpoint variables
         self.converged = None
-        self.blocks = None
-        self.oversampling_factors = None
         self.mpi_size = None
         self.Rminus1_last = np.inf
 
@@ -123,6 +123,36 @@ class mcmc(CovmatSampler):
                 with open(self.progress_filename(), "w",
                           encoding="utf-8") as progress_file:
                     progress_file.write("# " + " ".join(self.progress.columns) + "\n")
+        # Get first point, to be discarded -- not possible to determine its weight
+        # Still, we need to compute derived parameters, since, as the proposal "blocked",
+        # we may be saving the initial state of some block.
+        # NB: if resuming but nothing was written (burn-in not finished): re-start
+        if self.output.is_resuming() and len(self.collection):
+            initial_point = (self.collection[self.collection.sampled_params]
+                .iloc[len(self.collection) - 1]).values.copy()
+            logpost = -(self.collection[_minuslogpost]
+                        .iloc[len(self.collection) - 1].copy())
+            logpriors = -(self.collection[self.collection.minuslogprior_names]
+                          .iloc[len(self.collection) - 1].copy())
+            loglikes = -0.5 * (self.collection[self.collection.chi2_names]
+                               .iloc[len(self.collection) - 1].copy())
+            derived = (self.collection[self.collection.derived_params]
+                       .iloc[len(self.collection) - 1].values.copy())
+        else:
+            initial_point, logpost, logpriors, loglikes, derived = \
+                self.model.get_initial_point(max_tries=self.max_tries)
+            if self.measure_speeds and self.blocking:
+                self.log.warning(
+                    "Parameter blocking manually fixed: speeds will not be measured.")
+            elif self.measure_speeds:
+                self.model.measure_and_set_speeds(initial_point)
+        self.set_proposer_blocking()
+        self.set_proposer_covmat(load=True)
+        self.current_point.add(initial_point, derived=derived, logpost=logpost,
+                               logpriors=logpriors, loglikes=loglikes)
+        self.log.info("Initial point: %s", self.current_point)
+        # Initial dummy checkpoint (needed when 1st checkpoint not reached in prev. run)
+        self.write_checkpoint()
 
     @property
     def i_last_slow_block(self):
@@ -159,16 +189,16 @@ class mcmc(CovmatSampler):
         return len(self.fast_params)
 
     def set_proposer_blocking(self):
-        if not self.output.is_resuming():
-            if self.blocking:
-                self.blocks, self.oversampling_factors = \
-                    self.model._check_blocking(self.blocking, check_draggable=self.drag)
-            else:
-                if not self.oversample and not self.drag:
-                    self.oversample_power = 0
-                self.blocks, self.oversampling_factors = \
-                    self.model.get_param_blocking_for_sampler(
-                        oversample_power=self.oversample_power, split_fast_slow=self.drag)
+        if self.blocking:
+            # Includes the case in which we are resuming
+            self.blocks, self.oversampling_factors = \
+                self.model._check_blocking(self.blocking, check_draggable=self.drag)
+        else:
+            if not self.oversample and not self.drag:
+                self.oversample_power = 0
+            self.blocks, self.oversampling_factors = \
+                self.model.get_param_blocking_for_sampler(
+                    oversample_power=self.oversample_power, split_fast_slow=self.drag)
         # Turn oversampling on if manual oversampling factors given, also if resuming
         if self.blocking and not self.drag and np.any(self.oversampling_factors != 1):
             self.oversample = True
@@ -189,6 +219,8 @@ class mcmc(CovmatSampler):
             self.log.info("Dragging with number of interpolating steps:")
             self.log.info("* %d : %r", 1, self.slow_blocks)
             self.log.info("* %d : %r", self.drag_interp_steps, self.fast_blocks)
+        # Save blocking in updated info, in case we want to resume
+        self._updated_info["blocking"] = list(zip(self.oversampling_factors, self.blocks))
         sampled_params_list = list(self.model.parameterization.sampled_params())
         blocks_indices = [[sampled_params_list.index(p) for p in b] for b in self.blocks]
         self.proposer = BlockedProposer(
@@ -236,37 +268,6 @@ class mcmc(CovmatSampler):
         """
         Runs the sampler.
         """
-        # Get first point, to be discarded -- not possible to determine its weight
-        # Still, we need to compute derived parameters, since, as the proposal "blocked",
-        # we may be saving the initial state of some block.
-        # NB: if resuming but nothing was written (burn-in not finished): re-start
-        if self.output.is_resuming() and len(self.collection):
-            initial_point = (self.collection[self.collection.sampled_params]
-                .iloc[len(self.collection) - 1]).values.copy()
-            logpost = -(self.collection[_minuslogpost]
-                        .iloc[len(self.collection) - 1].copy())
-            logpriors = -(self.collection[self.collection.minuslogprior_names]
-                          .iloc[len(self.collection) - 1].copy())
-            loglikes = -0.5 * (self.collection[self.collection.chi2_names]
-                               .iloc[len(self.collection) - 1].copy())
-            derived = (self.collection[self.collection.derived_params]
-                       .iloc[len(self.collection) - 1].values.copy())
-        else:
-            initial_point, logpost, logpriors, loglikes, derived = \
-                self.model.get_initial_point(max_tries=self.max_tries)
-            if self.measure_speeds and self.blocking:
-                self.log.warning(
-                    "Parameter blocking manually fixed: speeds will not be measured.")
-            elif self.measure_speeds:
-                self.model.measure_and_set_speeds(initial_point)
-        self.set_proposer_blocking()
-        self.set_proposer_covmat(load=True)
-        self.current_point.add(initial_point, derived=derived, logpost=logpost,
-                               logpriors=logpriors, loglikes=loglikes)
-        self.log.info("Initial point: %s", self.current_point)
-        # Initial dummy checkpoint (needed when 1st checkpoint not reached in prev. run)
-        self.write_checkpoint()
-        # Main loop!
         self.log.info(
             "Sampling!" + (
                 " (NB: no accepted step will be saved until %d burn-in samples " % (
@@ -287,7 +288,7 @@ class mcmc(CovmatSampler):
                     not (max(self.n(), 1) % self.callback_every) and
                     self.current_point.weight == 1):
                 self.callback_function_callable(self)
-                self.last_point_callback = self.collection.n()
+                self.last_point_callback = len(self.collection)
             # Checking convergence and (optionally) learning the covmat of the proposal
             if self.check_all_ready():
                 self.check_convergence_and_learn_proposal()
@@ -544,7 +545,7 @@ class mcmc(CovmatSampler):
         else:
             # Compute and gather means, covs and CL intervals of last m-1 chain fractions
             m = 1 + self.Rminus1_single_split
-            cut = int(self.collection.n() / m)
+            cut = int(len(self.collection) / m)
             if cut <= 1:
                 raise LoggedError(
                     self.log, "Not enough points in chain to check convergence. "
@@ -704,9 +705,6 @@ class mcmc(CovmatSampler):
             checkpoint_info = {kinds.sampler: {self.get_name(): dict([
                 ("converged", bool(self.converged)),
                 ("Rminus1_last", self.Rminus1_last),
-                ("proposal_scale", self.proposer.get_scale()),
-                ("blocks", self.blocks),
-                ("oversampling_factors", self.oversampling_factors),
                 ("burn_in", (self.burn_in  # initial: repeat burn-in if not finished
                              if not self.n() and self.burn_in_left else
                              0)),  # to avoid overweighting last point of prev. run
