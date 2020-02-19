@@ -122,7 +122,7 @@ script:
   - python $MODULES/code/CAMB/setup.py install
   - git clone --depth=1 https://github.com/CobayaSampler/planck_lensing_external
   - pip install ./planck_lensing_external --quiet
-  - python -m unittest plancklens.tests.test_likes
+  - python -m unittest plancklensing.tests.test_likes
   - git clone --depth=1 https://github.com/CobayaSampler/example_external_likelihood
   - pip install ./example_external_likelihood --quiet
   - python -m unittest test_package.tests.test
