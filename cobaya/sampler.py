@@ -211,8 +211,6 @@ class Sampler(CobayaComponent):
                             getattr(regexp.match(covmat_file), "group", lambda: None)()):
                             continue
                 output.delete_with_regexp(regexp)
-        # We have done son I/O operations, so let's sync just in case
-        sync_processes()
 
     @classmethod
     def check_force_resume(cls, output, info=None):
@@ -243,8 +241,6 @@ class Sampler(CobayaComponent):
                 # Clean up old files, and set resuming=False, regardless of requested value
                 cls.delete_output_files(output, info=info)
                 output.set_resuming(False)
-        # We have done son I/O operations, so let's sync just in case
-        sync_processes()
 
     # Python magic for the "with" statement
 
