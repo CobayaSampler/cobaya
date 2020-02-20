@@ -189,7 +189,7 @@ class Sampler(CobayaComponent):
         return 3
 
     @classmethod
-    def output_files_regexps(cls, output, minimal=False):
+    def output_files_regexps(cls, output, info=None, minimal=False):
         """
         Returns a list of regexp's of output files potentially produced.
 
@@ -201,7 +201,7 @@ class Sampler(CobayaComponent):
     @classmethod
     def delete_output_files(cls, output, info=None):
         if output and is_main_process():
-            for regexp in cls.output_files_regexps(output):
+            for regexp in cls.output_files_regexps(output, info=info):
                 # Special case: CovmatSampler's may have been given a covmat with the same
                 # name that the output one. In that case, don't delete it!
                 if issubclass(cls, CovmatSampler) and info:
@@ -219,15 +219,14 @@ class Sampler(CobayaComponent):
         Performs the necessary checks on existing files if resuming or forcing
         (including deleting some output files when forcing).
         """
-        # TODO: the `info` here is passed so that we can ultimately ignore covmats in
-        # some cases -- see sampler.delete_output_files. Maybe there is a simpler way?
         if not output:
             return
         if is_main_process():
             if output.is_forcing():
                 cls.delete_output_files(output, info=info)
             elif any(find_with_regexp(regexp)
-                     for regexp in cls.output_files_regexps(output=output, minimal=True)):
+                     for regexp in cls.output_files_regexps(
+                             output=output, info=info, minimal=True)):
                 if output.is_resuming():
                     output.log.info("Found and old sample. Resuming.")
                 else:
@@ -278,12 +277,12 @@ def get_sampler_class(info_sampler):
     """
     Auxiliary function to retrieve the class of the required sampler.
     """
-    check_info_sampler(info_sampler)
+    check_sane_info_sampler(info_sampler)
     name = list(info_sampler)[0]
     return get_class(name, kind=kinds.sampler)
 
 
-def check_info_sampler(info_sampler):
+def check_sane_info_sampler(info_sampler):
     log = logging.getLogger(__name__.split(".")[-1])
     if not info_sampler:
         raise LoggedError(log, "No sampler given!")

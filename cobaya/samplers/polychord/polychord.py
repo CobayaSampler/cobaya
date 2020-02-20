@@ -364,7 +364,7 @@ class polychord(Sampler):
             return output.add_suffix(cls._clusters_dir, separator="_")
 
     @classmethod
-    def output_files_regexps(cls, output, minimal=False):
+    def output_files_regexps(cls, output, info=None, minimal=False):
         # Resume file
         regexps = [re.compile(
             os.path.join(cls.get_base_dir(output), output.prefix + ".resume"))]

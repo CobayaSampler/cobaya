@@ -76,9 +76,8 @@ import os
 import numpy as np
 from scipy.optimize import minimize as scpminimize
 from typing import Mapping, Optional
-
-import pybobyqa  # in the py-bobyqa pip package
-
+import re
+import pybobyqa
 import logging
 from copy import deepcopy
 
@@ -94,8 +93,11 @@ from cobaya.sampler import CovmatSampler
 # Handling scpiy vs BOBYQA
 evals_attr = {"scipy": "fun", "bobyqa": "f"}
 
-# GetDist conventions
+# Conventions conventions
 getdist_ext_ignore_prior = {True: ".bestfit", False: ".minimum"}
+get_collection_extension = (
+    lambda ignore_prior: getdist_ext_ignore_prior[ignore_prior] + ".txt")
+
 
 
 class minimize(Minimizer, CovmatSampler):
@@ -299,7 +301,7 @@ class minimize(Minimizer, CovmatSampler):
                     recomputed_logp_min, logp_min, x_min)
             self.minimum = OnePoint(
                 self.model, self.output, name="",
-                extension=("bestfit.txt" if self.ignore_prior else "minimum.txt"))
+                extension=get_collection_extension(self.ignore_prior))
             self.minimum.add(x_min, derived=recomputed_post_min.derived,
                              logpost=recomputed_post_min.logpost,
                              logpriors=recomputed_post_min.logpriors,
@@ -389,3 +391,22 @@ class minimize(Minimizer, CovmatSampler):
             self.output.prefix + getdist_ext_ignore_prior[self.ignore_prior])
         with open(out_filename, 'w', encoding="utf-8") as f:
             f.write(getdist_bf)
+
+    @classmethod
+    def output_files_regexps(cls, output, info=None, minimal=False):
+        ignore_prior = bool(info.get("ignore_prior", False))
+        ext_collection = get_collection_extension(ignore_prior)
+        ext_getdist = getdist_ext_ignore_prior[ignore_prior]
+        return [re.compile(output.prefix_regexp_str + ext.lstrip(".") + "$") for ext in
+                 [ext_collection, ext_getdist]]
+
+    @classmethod
+    def check_force_resume(cls, output, info=None):
+        """
+        Performs the necessary checks on existing files if resuming or forcing
+        (including deleting some output files when forcing).
+        """
+        if output.is_resuming():
+            output.log.warning("Minimizer does not support resuming. Ignoring.")
+            output.resuming = False
+        super().check_force_resume(output, info=info)

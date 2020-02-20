@@ -733,7 +733,7 @@ class mcmc(CovmatSampler):
 
     # Class methods
     @classmethod
-    def output_files_regexps(cls, output, minimal=False):
+    def output_files_regexps(cls, output, info=None, minimal=False):
         regexps = [output.collection_regexp(name=None)]
         if minimal:
             return regexps

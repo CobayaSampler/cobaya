@@ -97,6 +97,15 @@ class Output(HasLogger):
         """
         return separator if self.is_prefix_folder() else ""
 
+    def sanitize_collection_extension(self, extension):
+        """
+        Returns the `extension` without the leading dot, if given, or the default one
+        `Output.ext` otherwise.
+        """
+        if extension:
+            return extension.lstrip(".")
+        return self.ext
+
     def add_suffix(self, suffix, separator="_"):
         """
         Returns the full output prefix (folder and file name prefix) combined with a
@@ -257,7 +266,7 @@ class Output(HasLogger):
         file_name = os.path.join(
             self.folder,
             self.prefix + ("." if self.prefix else "") + (name + "." if name else "") +
-            (extension or self.ext))
+            self.sanitize_collection_extension(extension))
         return file_name, self.kind
 
     def collection_regexp(self, name=None, extension=None):
@@ -274,7 +283,7 @@ class Output(HasLogger):
             name = ""
         else:
             name = name + r"\."
-        extension = extension or self.ext
+        extension = self.sanitize_collection_extension(extension)
         return re.compile(self.prefix_regexp_str + name + extension.lower() + "$")
 
     def is_collection_file_name(self, file_name, name=None, extension=None):
