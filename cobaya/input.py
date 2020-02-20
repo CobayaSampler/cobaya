@@ -434,7 +434,7 @@ def get_preferred_old_values(info_old):
                     if not block_name in keep_old:
                         keep_old[block_name] = {}
                     keep_old[block_name].update(
-                        {k: {o: block[k][o] for o in prefer_old_k_this}})
+                        {k: {o: block[k][o] for o in prefer_old_k_this if o in block[k]}})
             except ImportError:
                 pass
     return keep_old
