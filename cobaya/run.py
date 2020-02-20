@@ -129,8 +129,8 @@ def run_script():
         try:
             info = load_input(updated_file)
         except IOError:
-            raise ValueError("Not a valid input file, or non-existent sample to resume")
-        # We need to update the output_prefix to resume the sample *where it is*
+            raise ValueError("Not a valid input file, or non-existent run to resume")
+        # We need to update the output_prefix to resume the run *where it is*
         info[_output_prefix] = given_input
         # If input given this way, we obviously want to resume!
         info[_resume] = True

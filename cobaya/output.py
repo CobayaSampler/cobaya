@@ -173,7 +173,7 @@ class Output(HasLogger):
                 # This is because we can't actually check if python objects do change
                 old_info = self.reload_updated_info()
                 if not old_info:
-                    raise LoggedError(self.log, "No old sample information: %s",
+                    raise LoggedError(self.log, "No old run information: %s",
                                       self.file_updated)
                 # First, let's restore some selected old values for some classes
                 keep_old = get_preferred_old_values(old_info)
@@ -196,7 +196,7 @@ class Output(HasLogger):
                                       "it by hand. "
                                       "We are working on fixing this very soon!")
                     raise LoggedError(
-                        self.log, "Old and new sample information not compatible! "
+                        self.log, "Old and new run information not compatible! "
                                   "Resuming not possible!")
                 # Deal with version comparison separately:
                 # - If not specified now, take the one used in resumed info
@@ -215,7 +215,7 @@ class Output(HasLogger):
                                 raise LoggedError(
                                     self.log, "You have requested version %r for "
                                               "%s:%s, but you are trying to resume a "
-                                              "sample that used a newer version: %r.",
+                                              "run that used a newer version: %r.",
                                     new_version, k, c, old_version)
             except IOError:
                 # There was no previous chain

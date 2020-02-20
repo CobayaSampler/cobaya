@@ -88,7 +88,7 @@ class mcmc(CovmatSampler):
             if self.output.is_resuming() and (max(self.mpi_size or 0, 1) != max(get_mpi_size(), 1)):
                 raise LoggedError(
                     self.log,
-                    "Cannot resume a sample with a different number of chains: "
+                    "Cannot resume a run with a different number of chains: "
                     "was %d and now is %d.", max(self.mpi_size, 1),
                     max(get_mpi_size(), 1))
             if more_than_one_process():
