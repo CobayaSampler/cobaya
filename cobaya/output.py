@@ -218,7 +218,7 @@ class Output(HasLogger):
                                               "run that used a newer version: %r.",
                                     new_version, k, c, old_version)
             except IOError:
-                # There was no previous chain
+                # There was no previous run
                 pass
         # We write the new one anyway (maybe updated debug, resuming...)
         for f, info in [(self.file_input, input_info),

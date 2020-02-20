@@ -69,7 +69,7 @@ def run(info):
             updated_info[kinds.sampler][sampler.get_name()] = \
                 recursive_update(
                     updated_info[kinds.sampler][sampler.get_name()], sampler.info())
-            # TODO -- maybe also re-dump model info, now with speeds (polychord at least)
+            # TODO -- maybe also re-dump model info, now possibly with measured speeds
             # (waiting until the camb.transfers issue is solved)
             output.check_and_dump_info(None, updated_info, check_compatible=False)
             # Run the sampler

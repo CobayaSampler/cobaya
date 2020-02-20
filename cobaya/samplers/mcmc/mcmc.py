@@ -32,7 +32,7 @@ from cobaya.yaml import yaml_dump_file
 
 class mcmc(CovmatSampler):
     _at_resume_prefer_new = CovmatSampler._at_resume_prefer_new + [
-        "burn_in", "callback_function", "callback_every", "max_tries",
+        "burn_in", "callback_function", "callback_every", "max_tries", "diag_every",
         "check_every", "output_every", "learn_proposal_Rminus1_max",
         "learn_proposal_Rminus1_max_early", "learn_proposal_Rminus1_min",
         "max_samples", "Rminus1_stop", "Rminus1_cl_stop",
