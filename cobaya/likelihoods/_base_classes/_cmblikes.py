@@ -179,7 +179,7 @@ class _CMBlikes(_DataSetLikelihood):
             return cl
 
     def read_bin_windows(self, ini, file_stem):
-        bins = BinWindows(self.pcl_lmin, self.pcl_lmax, self.nbins_used)
+        bins = BinWindows(self.pcl_lmin, self.pcl_lmax, self.nbins_used, self.ncl)
         in_cl = ini.split(file_stem + '_in_order')
         out_cl = ini.split(file_stem + '_out_order', in_cl)
         bins.cols_in = self.UseString_to_Cl_i_j(in_cl, self.map_required_index)
@@ -227,7 +227,7 @@ class _CMBlikes(_DataSetLikelihood):
         self.field_names = getattr(self, 'field_names', ['T', 'E', 'B', 'P'])
         self.tot_theory_fields = len(self.field_names)
         self.map_names = ini.split('map_names', default=[])
-        self.has_map_names = len(self.map_names)
+        self.has_map_names = bool(self.map_names)
         if self.has_map_names:
             # e.g. have multiple frequencies for given field measurement
             map_fields = ini.split('map_fields')
@@ -364,8 +364,8 @@ class _CMBlikes(_DataSetLikelihood):
             self.covinv = np.linalg.inv(self.cov)
         if 'linear_correction_fiducial_file' in ini.params:
             self.fid_correction = self.read_cl_array(ini, 'linear_correction_fiducial')
-            self.linear_correction = (
-                self.read_bin_windows(ini, 'linear_correction_bin_window'))
+            self.linear_correction = self.read_bin_windows(ini,
+                                                           'linear_correction_bin_window')
         else:
             self.linear_correction = None
         if ini.hasKey('nuisance_params'):
@@ -591,7 +591,7 @@ class _CMBlikes(_DataSetLikelihood):
         Get log likelihood from the dls (CMB C_l scaled by L(L+1)/2\pi)
 
         :param dls: dictionary of d_l ('tt', etc)
-        :param data_params: likelihood nuistance parameters
+        :param data_params: likelihood nuisance parameters
         :return: log likelihood
         """
         self.get_theory_map_cls(dls, data_params)
@@ -644,14 +644,15 @@ class BinWindows:
     cols_out: np.ndarray
     binning_matrix: np.ndarray
 
-    def __init__(self, lmin, lmax, nbins):
+    def __init__(self, lmin, lmax, nbins, ncl):
         self.lmin = lmin
         self.lmax = lmax
         self.nbins = nbins
+        self.ncl = ncl
 
     def bin(self, theory_cl, cls=None):
         if cls is None:
-            cls = np.zeros((self.nbins, max([x for x in self.cols_out if x >= 0]) + 1))
+            cls = np.zeros((self.nbins, self.ncl))
         for i, ((x, y), ix_out) in enumerate(zip(self.cols_in.T, self.cols_out)):
             cl = theory_cl[x, y]
             if cl is not None and ix_out >= 0:
