@@ -7,9 +7,8 @@
 ## No output to files while burn in makes it hard to see if working OK (default no burn?)
 ## turn dragging off if only one block or no speeds differ by more than factor 2
 ## "Not enough points in chain to check convergence" should be warning and just continue until enough
+## Remove last references to odict/OrderedDict in code and *documentation*
 ## Reworking resume/force:
-### mcmc: add blocking to updated yaml instead of checkpoint
-### polychord: update force/resume
 ### minimize: update force/resume ; updated yaml will overwrite chain updated yaml?
 ### post: update force/resume
 
@@ -27,6 +26,7 @@
 ## dump log info along with each chain file if saving to file (currently in stdout)
 ## Faster Collections for MCMC: numpy cache for merging OnePoint into Collection, `_out_update` method would take care of flushing into the Pandas table.
 ## PolyChord: check overhead
+## PolyChord: lower dimension tests?
 
 # Enhancements/Refactorings
 
@@ -35,4 +35,4 @@
 ## check_conflicts theory method or similar (so likelihoods can raise error when used in combination with other variant likelihoods using non-independent data)
 ## If non-linear lensing on, model the non-linear correction via limber for faster semi-slow parameters
 ## unbounded parameters with flat prior (this would make it safe to rotate the unbounded ones in minimize)
-
+## mcmc: finish removing .checkpoint in favour of updated.yaml and .progress

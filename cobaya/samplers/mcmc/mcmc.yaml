@@ -31,7 +31,7 @@ learn_proposal_Rminus1_max_early: 30.
 learn_proposal_Rminus1_min: 0.
 # Convergence and stopping
 # ------------------------
-# Maximum number of posterior evaluations
+# Maximum number of accepted steps
 max_samples: .inf
 # Gelman-Rubin R-1 on means
 Rminus1_stop: 0.01

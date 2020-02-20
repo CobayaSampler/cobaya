@@ -114,7 +114,7 @@ class mcmc(CovmatSampler):
                 get_external_function(self.callback_function))
         # Useful for getting last points added inside callback function
         self.last_point_callback = 0
-        # Monitoring progress
+        # Monitoring/restore progress
         if is_main_process():
             cols = ["N", "acceptance_rate", "Rminus1", "Rminus1_cl"]
             self.progress = DataFrame(columns=cols)

@@ -87,6 +87,18 @@ The code above may look more complicated than the corresponding ``yaml`` one, bu
 
 Notice that here we suppress the creation of the chain files by not including the field ``output``, since this is a very basic example. The chains will thus only be loaded in memory.
 
+.. note::
+
+   Add this snippet after defining your ``info`` to be able to use the ``cobaya-run`` arguments ``-d`` (debug), ``-f`` (force) and ``-r`` (resume) when launching your Python script from the shell:
+
+   .. code-block:: python
+
+      import sys
+      for k, v in {"-f": "force", "-r": "resume", "-d": "debug"}.items():
+          if k in sys.argv:
+              info[v] = True
+
+
 Alternatively, we can load the input from a ``yaml`` file like the one above:
 
 .. literalinclude:: ./src_examples/quickstart/load_info.py
