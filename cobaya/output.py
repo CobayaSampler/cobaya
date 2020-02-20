@@ -64,7 +64,7 @@ class Output(HasLogger):
             self.folder, self.prefix + (_separator_files if self.prefix else ""))
         self.file_input = info_file_prefix + _input_suffix + _yaml_extensions[0]
         self.file_updated = info_file_prefix + _updated_suffix + _yaml_extensions[0]
-        self.resuming = False
+        self._resuming = False
         # Output kind and collection extension
         self.kind = _kind
         self.ext = _ext
@@ -78,7 +78,7 @@ class Output(HasLogger):
                 # Sampler products will be deleted at sampler initialisation
             elif resume:
                 # Only in this case we can be sure that we are actually resuming
-                self.resuming = True
+                self._resuming = True
                 self.log.info("Let's try to resume/load.")
 
     def is_prefix_folder(self):
@@ -118,13 +118,12 @@ class Output(HasLogger):
         """
         Creates the given folder (MPI-aware).
         """
-        if is_main_process():
-            try:
-                if not os.path.exists(folder):
-                    os.makedirs(folder)
-            except Exception as e:
-                raise LoggedError(
-                    self.log, "Could not create folder %r. Reason: %r", folder, str(e))
+        try:
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+        except Exception as e:
+            raise LoggedError(
+                self.log, "Could not create folder %r. Reason: %r", folder, str(e))
 
     def delete_infos(self):
         for f in [self.file_input, self.file_updated]:
@@ -141,10 +140,10 @@ class Output(HasLogger):
         return self.force
 
     def is_resuming(self):
-        return self.resuming
+        return self._resuming
 
-    def reload_updated_info(self):
-        return yaml_load_file(self.file_updated)
+    def set_resuming(self, value):
+        self._resuming = value
 
     def check_and_dump_info(self, input_info, updated_info, check_compatible=True):
         """
@@ -366,7 +365,7 @@ class Output_MPI(Output):
         if is_main_process():
             Output.__init__(self, *args, **kwargs)
         if more_than_one_process():
-            to_broadcast = ("folder", "prefix", "kind", "ext", "resuming")
+            to_broadcast = ("folder", "prefix", "kind", "ext", "_resuming")
             values = share_mpi([getattr(self, var) for var in to_broadcast]
                                if is_main_process() else None)
             for name, var in zip(to_broadcast, values):
@@ -375,6 +374,16 @@ class Output_MPI(Output):
     def check_and_dump_info(self, *args, **kwargs):
         if is_main_process():
             Output.check_and_dump_info(self, *args, **kwargs)
+
+    def create_folder(self, *args, **kwargs):
+        if is_main_process():
+            Output.create_folder(self, *args, **kwargs)
+
+    def set_resuming(self, *args, **kwargs):
+        if is_main_process():
+            Output.set_resuming(self, *args, **kwargs)
+        if more_than_one_process():
+            self._resuming = share_mpi(self._resuming if is_main_process() else None)
 
 
 def get_output(*args, **kwargs):

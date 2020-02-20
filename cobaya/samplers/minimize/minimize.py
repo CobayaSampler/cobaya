@@ -408,5 +408,5 @@ class minimize(Minimizer, CovmatSampler):
         """
         if output.is_resuming():
             output.log.warning("Minimizer does not support resuming. Ignoring.")
-            output.resuming = False
+            output.set_resuming(False)
         super().check_force_resume(output, info=info)
