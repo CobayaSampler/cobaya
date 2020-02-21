@@ -360,7 +360,8 @@ class Output_MPI(Output):
         if is_main_process():
             Output.__init__(self, *args, **kwargs)
         if more_than_one_process():
-            to_broadcast = ("folder", "prefix", "kind", "ext", "_resuming")
+            to_broadcast = (
+                "folder", "prefix", "kind", "ext", "_resuming", "prefix_regexp_str")
             values = share_mpi([getattr(self, var) for var in to_broadcast]
                                if is_main_process() else None)
             for name, var in zip(to_broadcast, values):

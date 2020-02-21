@@ -138,7 +138,6 @@ class minimize(Minimizer, CovmatSampler):
                     list(self.model.parameterization.sampled_params())].values
                 self.log.info("Starting from %s of previous chain:",
                               "best fit" if self.ignore_prior else "MAP")
-
         if initial_point is None:
             this_logp = -np.inf
             while not np.isfinite(this_logp):

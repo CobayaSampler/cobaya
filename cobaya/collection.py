@@ -79,7 +79,6 @@ class Collection(BaseCollection):
     def __init__(self, model, output=None,
                  initial_size=enlargement_size, name=None, extension=None, file_name=None,
                  resuming=False, load=False, onload_skip=0, onload_thin=1):
-
         super().__init__(model, name)
         self._value_dict = {p: np.nan for p in self.columns}
         # Create/load the main data frame and the tracking indices
@@ -313,7 +312,7 @@ class Collection(BaseCollection):
     def _load__txt(self, skip=0, thin=1):
         self.log.debug("Skipping %d rows and thinning with factor %d.", skip, thin)
         self.data = load_DataFrame(self.file_name, skip=skip, thin=thin)
-        self.log.info("Loaded sample from '%s'", self.file_name)
+        self.log.info("Loaded %d samples from '%s'", len(self.data), self.file_name)
 
     def _dump__txt(self):
         self._dump_slice__txt(0, len(self))
