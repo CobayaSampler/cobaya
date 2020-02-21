@@ -8,9 +8,7 @@
 ## turn dragging off if only one block or no speeds differ by more than factor 2
 ## "Not enough points in chain to check convergence" should be warning and just continue until enough
 ## Remove last references to odict/OrderedDict in code and *documentation*
-## Reworking resume/force:
-### minimize: update force/resume ; updated yaml will overwrite chain updated yaml?
-### post: update force/resume
+## post: update force/resume
 
 # Incomplete implementations/bigger jobs
 ## Grids/rest of cosmomc scripts
@@ -34,5 +32,7 @@
 ## Let classes do all defaults combining; allow separate like instantiation + use equivalent to loading in cobaya
 ## check_conflicts theory method or similar (so likelihoods can raise error when used in combination with other variant likelihoods using non-independent data)
 ## If non-linear lensing on, model the non-linear correction via limber for faster semi-slow parameters
-## unbounded parameters with flat prior (this would make it safe to rotate the unbounded ones in minimize)
+## unbounded parameters with flat prior (this would make it safe to rotate the unbounded ones in minimize) [JT: not very much in favour, since that would break a bunch of other stuff. Maybe let's explore an alternative solution?]
 ## mcmc: finish removing .checkpoint in favour of updated.yaml and .progress
+## minimize: MINUIT
+## minimize: maybe should not overwrite `sampler` block of original sample (either append or leave as it was)

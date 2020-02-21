@@ -49,11 +49,12 @@ import logging
 import numpy as np
 from typing import Optional, Sequence
 from itertools import chain
+from collections.abc import Mapping
 
 # Local
 from cobaya.conventions import kinds, _resume_default, _checkpoint_extension, _version
 from cobaya.conventions import _progress_extension, _module_path, _covmat_extension
-from cobaya.conventions import partag, _path_install, _force, _resume
+from cobaya.conventions import partag, _path_install, _force, _resume, _output_prefix
 from cobaya.tools import get_class, deepcopy_where_possible, find_with_regexp
 from cobaya.tools import recursive_update
 from cobaya.log import LoggedError
@@ -62,6 +63,100 @@ from cobaya.mpi import is_main_process, share_mpi, sync_processes
 from cobaya.component import CobayaComponent
 from cobaya.input import update_info, is_equal_info, get_preferred_old_values
 from cobaya.output import OutputDummy
+
+
+def get_sampler_class(info_sampler):
+    """
+    Auxiliary function to retrieve the class of the required sampler.
+    """
+    check_sane_info_sampler(info_sampler)
+    name = list(info_sampler)[0]
+    return get_class(name, kind=kinds.sampler)
+
+
+def check_sane_info_sampler(info_sampler):
+    log = logging.getLogger(__name__.split(".")[-1])
+    if not info_sampler:
+        raise LoggedError(log, "No sampler given!")
+    try:
+        list(info_sampler)[0]
+    except AttributeError:
+        raise LoggedError(
+            log, "The sampler block must be a dictionary 'sampler: {options}'.")
+    if len(info_sampler) > 1:
+        raise LoggedError(log, "Only one sampler currently supported at a time.")
+
+
+def check_sampler_info(info_old=None, info_new=None):
+    """
+    Checks compatibility between the new sampler info and that of a pre-existing run.
+
+    Done separately from `Output.check_compatible_and_dump` because there may be
+    multiple samplers mentioned in an `updated.yaml` file, e.g. `MCMC` + `Minimize`.
+    """
+    logger_sampler = logging.getLogger(__name__.split(".")[-1])
+    if not info_old:
+        return
+    # TODO: restore this at some point: just append minimize info to the old one
+    # There is old info, but the new one is Minimizer and the old one is not
+    # if (len(info_old) == 1 and list(info_old.keys()) != ["minimize"] and
+    #      list(info_new.keys()) == ["minimize"]):
+    #     # In-place append of old+new --> new
+    #     aux = info_new.pop("minimize")
+    #     info_new.update(info_old)
+    #     info_new.update({"minimize": aux})
+    #     info_old = {}
+    #     keep_old = {}
+    if (list(info_old.keys()) != list(info_new.keys()) and
+          list(info_new.keys()) == ["minimize"]):
+        return
+    if list(info_old.keys()) == list(info_new.keys()):
+        # Restore some selected old values for some classes
+        keep_old = get_preferred_old_values({kinds.sampler: info_old})
+        info_new = recursive_update(info_new, keep_old.get(kinds.sampler, {}))
+    if not is_equal_info(
+            {kinds.sampler: info_old}, {kinds.sampler: info_new}, strict=False):
+        raise LoggedError(
+            logger_sampler, "Old and new Sampler information not compatible! "
+                            "Resuming not possible!")
+
+
+def get_sampler(info_sampler, model, output=None, modules=None):
+    assert isinstance(info_sampler, Mapping), (
+        "The first argument must be a dictionary with the info needed for the sampler. "
+        "If you were trying to pass the name of an input file instead, "
+        "load it first with 'cobaya.input.load_input', "
+        "or, if you were passing a yaml string, load it with 'cobaya.yaml.yaml_load'.")
+    logger_sampler = logging.getLogger(__name__.split(".")[-1])
+    info_sampler = deepcopy_where_possible(info_sampler)
+    if output is None:
+        output = OutputDummy()
+    # Check and update info
+    check_sane_info_sampler(info_sampler)
+    updated_info_sampler = update_info({kinds.sampler: info_sampler})[kinds.sampler]
+    if logging.root.getEffectiveLevel() <= logging.DEBUG:
+        logger_sampler.debug(
+            "Input info updated with defaults (dumped to YAML):\n%s",
+            yaml_dump(updated_info_sampler))
+    # Get sampler class & check resume/force compatibility
+    sampler_class = get_sampler_class(updated_info_sampler)
+    check_sampler_info(
+        (output.reload_updated_info(use_cache=True) or {}).get(kinds.sampler),
+        updated_info_sampler)
+    # Check if resumible run
+    sampler_name = sampler_class.__name__
+    sampler_class.check_force_resume(
+        output, info=updated_info_sampler[sampler_name])
+    # Instantiate the sampler
+    sampler_instance = sampler_class(updated_info_sampler[sampler_name], model,
+                output, path_install=modules)
+    # If output, dump updated
+    if output:
+        to_dump = model.info()
+        to_dump[kinds.sampler] = {sampler_name: sampler_instance.info()}
+        to_dump[_output_prefix] = os.path.join(output.folder, output.prefix)
+        output.check_and_dump_info(None, to_dump, check_compatible=False)
+    return sampler_instance
 
 
 class Sampler(CobayaComponent):
@@ -263,61 +358,6 @@ class Minimizer(Sampler):
     """
     pass
 
-
-def get_sampler_class(info_sampler):
-    """
-    Auxiliary function to retrieve the class of the required sampler.
-    """
-    check_sane_info_sampler(info_sampler)
-    name = list(info_sampler)[0]
-    return get_class(name, kind=kinds.sampler)
-
-
-def check_sane_info_sampler(info_sampler):
-    log = logging.getLogger(__name__.split(".")[-1])
-    if not info_sampler:
-        raise LoggedError(log, "No sampler given!")
-    try:
-        list(info_sampler)[0]
-    except AttributeError:
-        raise LoggedError(
-            log, "The sampler block must be a dictionary 'sampler: {options}'.")
-    if len(info_sampler) > 1:
-        raise LoggedError(log, "Only one sampler currently supported at a time.")
-
-
-def check_sampler_info(info_old=None, info_new=None):
-    """
-    Checks compatibility between the new sampler info and that of a pre-existing run.
-
-    Done separately from `Output.check_compatible_and_dump` because there may be
-    multiple samplers mentioned in an `updated.yaml` file, e.g. `MCMC` + `Minimize`.
-    """
-    logger_sampler = logging.getLogger(__name__.split(".")[-1])
-    if not info_old:
-        return
-    # TODO: restore this at some point: just append minimize info to the old one
-    # There is old info, but the new one is Minimizer and the old one is not
-    # if (len(info_old) == 1 and list(info_old.keys()) != ["minimize"] and
-    #      list(info_new.keys()) == ["minimize"]):
-    #     # In-place append of old+new --> new
-    #     aux = info_new.pop("minimize")
-    #     info_new.update(info_old)
-    #     info_new.update({"minimize": aux})
-    #     info_old = {}
-    #     keep_old = {}
-    if (list(info_old.keys()) != list(info_new.keys()) and
-          list(info_new.keys()) == ["minimize"]):
-        return
-    if list(info_old.keys()) == list(info_new.keys()):
-        # Restore some selected old values for some classes
-        keep_old = get_preferred_old_values({kinds.sampler: info_old})
-        info_new = recursive_update(info_new, keep_old.get(kinds.sampler, {}))
-    if not is_equal_info(
-            {kinds.sampler: info_old}, {kinds.sampler: info_new}, strict=False):
-        raise LoggedError(
-            logger_sampler, "Old and new Sampler information not compatible! "
-                            "Resuming not possible!")
 
 class CovmatSampler(Sampler):
     """

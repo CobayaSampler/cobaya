@@ -27,7 +27,7 @@ from cobaya.tools import warn_deprecation, recursive_update
 from cobaya.post import post
 
 
-def run(info):
+def run(info, _from_script=False, _no_warn=False):
     # This function reproduces the model-->output-->sampler pipeline one would follow
     # when instantiating by hand, but alters the order to performs checks and dump info
     # as early as possible, e.g. to check if resuming possible or `force` needed.
@@ -70,7 +70,7 @@ def run(info):
     # Check if resumible run
     sampler_class.check_force_resume(
         output, info=updated_info[kinds.sampler][sampler_class.__name__])
-    # Initialize the posterior and the sampler
+    # 4. Initialize the posterior and the sampler
     with Model(updated_info[_params], updated_info[kinds.likelihood],
                updated_info.get(_prior), updated_info.get(kinds.theory),
                path_install=info.get(_path_install), timing=updated_info.get(_timing),
@@ -90,11 +90,15 @@ def run(info):
             output.check_and_dump_info(None, updated_info, check_compatible=False)
             # Run the sampler
             sampler.run()
-    # For scripted calls:
-    # Restore the original output_prefix: the script has not changed folder!
-    if _output_prefix in info:
-        updated_info[_output_prefix] = info.get(_output_prefix)
-    return updated_info, sampler.products()
+    # To be deprecated in the future
+    # (but leave `_no_warn` for one more release with no effect and a deprecation warning)
+    if not _from_script and not _no_warn and is_main_process():
+        logger_run.warning(
+            "The variables returned by this function have changed since the last version:"
+            " they were `(updated_info, sampler.products())` and they are now "
+            "`(updated_info, model, sampler)`. "
+            "(To turn off this warning, pass `_no_warn=True`.)")
+    return updated_info, model, sampler
 
 
 # Command-line script
@@ -161,4 +165,4 @@ def run_script():
     if _post in info:
         post(info)
     else:
-        run(info)
+        run(info, _from_script=True)
