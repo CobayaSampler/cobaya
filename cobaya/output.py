@@ -21,7 +21,7 @@ from cobaya.conventions import _resume, _resume_default, _force, _yaml_extension
 from cobaya.conventions import _output_prefix
 from cobaya.conventions import kinds, _params
 from cobaya.log import LoggedError, HasLogger
-from cobaya.input import is_equal_info, get_class, get_preferred_old_values
+from cobaya.input import is_equal_info, get_class
 from cobaya.mpi import is_main_process, more_than_one_process, share_mpi
 from cobaya.collection import Collection
 from cobaya.tools import deepcopy_where_possible, find_with_regexp, recursive_update
@@ -145,7 +145,21 @@ class Output(HasLogger):
     def set_resuming(self, value):
         self._resuming = value
 
-    def check_and_dump_info(self, input_info, updated_info, check_compatible=True):
+    def reload_updated_info(self, cache=False, use_cache=False):
+        if use_cache and getattr(self, "_old_updated_info", None):
+            return self._old_updated_info
+        try:
+            loaded = yaml_load_file(self.file_updated)
+            if cache:
+                self._old_updated_info = loaded
+            return deepcopy_where_possible(loaded)
+        except IOError:
+            if cache:
+                self._old_updated_info = None
+            return None
+
+    def check_and_dump_info(self, input_info, updated_info, check_compatible=True,
+                            cache_old=False, use_cache_old=False, ignore_blocks=[]):
         """
         Saves the info in the chain folder twice:
            - the input info.
@@ -156,51 +170,31 @@ class Output(HasLogger):
         """
         if input_info is None:
             input_info = {}
-        # make sure the dumped output_prefix does only contain the file prefix,
-        # not the folder, since it's already been placed inside it
-        old_output_prefix = updated_info[_output_prefix]
-        input_info[_output_prefix] = self.updated_output_prefix()
-        updated_info[_output_prefix] = self.updated_output_prefix()
+        else:
+            input_info = deepcopy_where_possible(input_info)
         # trim known params of each likelihood: for internal use only
         updated_info_trimmed = deepcopy_where_possible(updated_info)
-        for lik_info in updated_info_trimmed.get(kinds.likelihood, {}).values():
-            if hasattr(lik_info, "pop"):
-                lik_info.pop(_params, None)
+        # make sure the dumped output_prefix does only contain the file prefix,
+        # not the folder, since it's already been placed inside it
+        input_info[_output_prefix] = self.updated_output_prefix()
+        updated_info_trimmed[_output_prefix] = self.updated_output_prefix()
         if check_compatible:
-            try:
-                # We will test the old info against the dumped+loaded new info.
-                # This is because we can't actually check if python objects do change
-                old_info = self.reload_updated_info()
-                if not old_info:
-                    raise LoggedError(self.log, "No old run information: %s",
-                                      self.file_updated)
-                # First, let's restore some selected old values for some classes
-                keep_old = get_preferred_old_values(old_info)
-                updated_info = recursive_update(updated_info, keep_old)
-                updated_info_trimmed = recursive_update(updated_info_trimmed, keep_old)
+            # We will test the old info against the dumped+loaded new info.
+            # This is because we can't actually check if python objects do change
+            old_info = self.reload_updated_info(cache=cache_old, use_cache=use_cache_old)
+            if old_info:
                 new_info = yaml_load(yaml_dump(updated_info_trimmed))
-                ignore_blocks = []
-                from cobaya.sampler import get_sampler_class_OLD, Minimizer
-                if issubclass(get_sampler_class_OLD(new_info) or type, Minimizer):
-                    ignore_blocks = [kinds.sampler]
                 if not is_equal_info(old_info, new_info, strict=False,
                                      ignore_blocks=ignore_blocks):
-                    # HACK!!! NEEDS TO BE FIXED
-                    if issubclass(get_sampler_class_OLD(updated_info) or type, Minimizer):
-                        # TODO: says work in progress!
-                        raise LoggedError(
-                            self.log, "Old and new sample information not compatible! "
-                                      "At this moment it is not possible to 'force' "
-                                      "deletion of and old 'minimize' run. Please delete "
-                                      "it by hand. "
-                                      "We are working on fixing this very soon!")
                     raise LoggedError(
                         self.log, "Old and new run information not compatible! "
                                   "Resuming not possible!")
                 # Deal with version comparison separately:
-                # - If not specified now, take the one used in resumed info
+                # - If not specified now, take the one used in resume info
                 # - If specified both now and before, check new older than old one
                 for k in (kind for kind in kinds if kind in updated_info):
+                    if k in ignore_blocks:
+                        continue
                     for c in updated_info[k]:
                         new_version = updated_info[k][c].get(_version)
                         old_version = old_info[k][c].get(_version)
@@ -216,21 +210,22 @@ class Output(HasLogger):
                                               "%s:%s, but you are trying to resume a "
                                               "run that used a newer version: %r.",
                                     new_version, k, c, old_version)
-            except IOError:
-                # There was no previous run
-                pass
         # We write the new one anyway (maybe updated debug, resuming...)
         for f, info in [(self.file_input, input_info),
                         (self.file_updated, updated_info_trimmed)]:
+            # When resuming, we don't want to to *partial* dumps
+            if ignore_blocks and self.is_resuming():
+                    break
             if info:
+                for k in ignore_blocks:
+                    info.pop(k, None)
+                info.pop(_force, None)
+                info.pop(_resume, None)
                 with open(f, "w", encoding="utf-8") as f_out:
                     try:
                         f_out.write(yaml_dump(info))
                     except OutputError as e:
                         raise LoggedError(self.log, str(e))
-        # Restore original output prefix
-        input_info[_output_prefix] = old_output_prefix
-        updated_info[_output_prefix] = old_output_prefix
 
     def delete_with_regexp(self, regexp):
         """
@@ -374,6 +369,19 @@ class Output_MPI(Output):
     def check_and_dump_info(self, *args, **kwargs):
         if is_main_process():
             Output.check_and_dump_info(self, *args, **kwargs)
+        # Share cached loaded info
+        self._old_updated_info = share_mpi(getattr(self, "_old_updated_info", None))
+
+    def reload_updated_info(self, *args, **kwargs):
+        if is_main_process():
+            return Output.reload_updated_info(self, *args, **kwargs)
+        else:
+            # Only cached possible when non main process
+            if not kwargs.get("use_cache"):
+                raise ValueError(
+                    "Cannot call `reaload_updated_info` from non-main process "
+                    "unless cached version (`use_cache=True`) requested.")
+            return self._old_updated_info
 
     def create_folder(self, *args, **kwargs):
         if is_main_process():

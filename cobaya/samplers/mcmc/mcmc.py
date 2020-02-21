@@ -301,6 +301,8 @@ class mcmc(CovmatSampler):
         self.collection._out_update()
         if more_than_one_process():
             Ns = (lambda x: np.array(get_mpi_comm().gather(x)))(self.n())
+            if not is_main_process():
+                Ns = []
         else:
             Ns = [self.n()]
         self.mpi_info("Sampling complete after %d accepted steps.", sum(Ns))

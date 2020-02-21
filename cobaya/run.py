@@ -18,11 +18,11 @@ from cobaya.conventions import _yaml_extensions, _separator_files, _updated_suff
 from cobaya.conventions import _modules_path_arg, _modules_path_env, _resume_default
 from cobaya.output import get_output
 from cobaya.model import Model
-from cobaya.sampler import get_sampler_class, get_sampler_class_OLD, Minimizer
-from cobaya.log import logger_setup
+from cobaya.sampler import get_sampler_class, check_sampler_info
+from cobaya.log import logger_setup, LoggedError
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info
-from cobaya.mpi import import_MPI, is_main_process, set_mpi_disabled
+from cobaya.mpi import import_MPI, is_main_process, set_mpi_disabled, sync_processes
 from cobaya.tools import warn_deprecation, recursive_update
 from cobaya.post import post
 
@@ -38,6 +38,7 @@ def run(info):
         "or, if you were passing a yaml string, load it with 'cobaya.yaml.yaml_load'.")
     logger_setup(info.get(_debug), info.get(_debug_file))
     import logging
+    logger_run = logging.getLogger(__name__.split(".")[-1])
     # 1. Prepare output driver, if requested by defining an output_prefix
     output = get_output(output_prefix=info.get(_output_prefix),
                         resume=info.get(_resume), force=info.get(_force))
@@ -46,12 +47,27 @@ def run(info):
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
         # Dump only if not doing output (otherwise, the user can check the .udpated file)
         if not output and is_main_process():
-            logging.getLogger(__name__.split(".")[-1]).info(
+            logger_run.info(
                 "Input info updated with defaults (dumped to YAML):\n%s",
                 yaml_dump(updated_info))
     # 3. If output requested, check compatibility if existing one, and dump.
-    output.check_and_dump_info(info, updated_info)
-    sampler_class = get_sampler_class(updated_info[kinds.sampler])
+    # 3.1 First: model only
+    output.check_and_dump_info(info, updated_info, cache_old=True, ignore_blocks=[kinds.sampler])
+    # 3.2 Then sampler -- 1st get the last sampler mentioned in the updated.yaml
+    # TODO: ideally, using Minimizer would *append* to the sampler block.
+    #       Some code already in place, but not possible at the moment.
+    try:
+        last_sampler = list(updated_info[kinds.sampler])[-1]
+        last_sampler_info = {last_sampler: updated_info[kinds.sampler][last_sampler]}
+    except (KeyError, TypeError):
+        raise LoggedError(logger_run, "No sampler requested.")
+    sampler_class = get_sampler_class(last_sampler_info)
+    check_sampler_info(
+        (output.reload_updated_info(use_cache=True) or {}).get(kinds.sampler),
+        updated_info[kinds.sampler])
+    # Dump again, now including sampler info
+    output.check_and_dump_info(info, updated_info, check_compatible=False)
+    # Check if resumible run
     sampler_class.check_force_resume(
         output, info=updated_info[kinds.sampler][sampler_class.__name__])
     # Initialize the posterior and the sampler

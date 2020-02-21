@@ -53,12 +53,15 @@ from itertools import chain
 # Local
 from cobaya.conventions import kinds, _resume_default, _checkpoint_extension, _version
 from cobaya.conventions import _progress_extension, _module_path, _covmat_extension
-from cobaya.conventions import partag, _path_install
+from cobaya.conventions import partag, _path_install, _force, _resume
 from cobaya.tools import get_class, deepcopy_where_possible, find_with_regexp
+from cobaya.tools import recursive_update
 from cobaya.log import LoggedError
 from cobaya.yaml import yaml_load_file
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
 from cobaya.component import CobayaComponent
+from cobaya.input import update_info, is_equal_info, get_preferred_old_values
+from cobaya.output import OutputDummy
 
 
 class Sampler(CobayaComponent):
@@ -261,16 +264,6 @@ class Minimizer(Sampler):
     pass
 
 
-def get_sampler_class_OLD(info):
-    info_sampler = info.get(kinds.sampler)
-    if info_sampler:
-        name = list(info_sampler)[0]
-        if name:
-            module_path = (info_sampler[name] or {}).get(_module_path)
-            return get_class(name, kinds.sampler, None_if_not_found=True,
-                             module_path=module_path)
-
-
 def get_sampler_class(info_sampler):
     """
     Auxiliary function to retrieve the class of the required sampler.
@@ -293,6 +286,39 @@ def check_sane_info_sampler(info_sampler):
         raise LoggedError(log, "Only one sampler currently supported at a time.")
 
 
+def check_sampler_info(info_old=None, info_new=None):
+    """
+    Checks compatibility between the new sampler info and that of a pre-existing run.
+
+    Done separately from `Output.check_compatible_and_dump` because there may be
+    multiple samplers mentioned in an `updated.yaml` file, e.g. `MCMC` + `Minimize`.
+    """
+    logger_sampler = logging.getLogger(__name__.split(".")[-1])
+    if not info_old:
+        return
+    # TODO: restore this at some point: just append minimize info to the old one
+    # There is old info, but the new one is Minimizer and the old one is not
+    # if (len(info_old) == 1 and list(info_old.keys()) != ["minimize"] and
+    #      list(info_new.keys()) == ["minimize"]):
+    #     # In-place append of old+new --> new
+    #     aux = info_new.pop("minimize")
+    #     info_new.update(info_old)
+    #     info_new.update({"minimize": aux})
+    #     info_old = {}
+    #     keep_old = {}
+    if (list(info_old.keys()) != list(info_new.keys()) and
+          list(info_new.keys()) == ["minimize"]):
+        return
+    if list(info_old.keys()) == list(info_new.keys()):
+        # Restore some selected old values for some classes
+        keep_old = get_preferred_old_values({kinds.sampler: info_old})
+        info_new = recursive_update(info_new, keep_old.get(kinds.sampler, {}))
+    if not is_equal_info(
+            {kinds.sampler: info_old}, {kinds.sampler: info_new}, strict=False):
+        raise LoggedError(
+            logger_sampler, "Old and new Sampler information not compatible! "
+                            "Resuming not possible!")
+
 class CovmatSampler(Sampler):
     """
     Parent class for samplers that are initialised with a covariance matrix.
@@ -301,8 +327,11 @@ class CovmatSampler(Sampler):
 
     def _load_covmat(self, from_old_chain, slow_params=None):
         if from_old_chain and os.path.exists(self.covmat_filename()):
-            covmat = np.atleast_2d(share_mpi(np.loadtxt(
-                self.covmat_filename()) if is_main_process() else None))
+            if is_main_process():
+                covmat = np.atleast_2d(np.loadtxt(self.covmat_filename()))
+            else:
+                covmat = None
+            covmat = share_mpi(covmat)
             self.mpi_info("Covariance matrix from checkpoint.")
             return covmat, []
         else:

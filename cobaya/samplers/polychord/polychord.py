@@ -230,7 +230,6 @@ class polychord(Sampler):
             return (
                 max(logposterior + self.logvolume, self.pc_settings.logzero),
                 derived)
-
         sync_processes()
         self.mpi_info("Sampling!")
         self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
