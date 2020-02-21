@@ -45,7 +45,7 @@ def run(info, _from_script=False, _no_warn=False):
     # 2. Update the input info with the defaults for each component
     updated_info = update_info(info)
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
-        # Dump only if not doing output (otherwise, the user can check the .udpated file)
+        # Dump only if not doing output (otherwise, the user can check the .updated file)
         if not output and is_main_process():
             logger_run.info(
                 "Input info updated with defaults (dumped to YAML):\n%s",
