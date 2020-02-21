@@ -96,9 +96,10 @@ def run(info, _from_script=False, _no_warn=False):
         logger_run.warning(
             "The variables returned by this function have changed since the last version:"
             " they were `(updated_info, sampler.products())` and they are now "
-            "`(updated_info, model, sampler)`. "
+            "`(updated_info, sampler)`. "
+            "Now you can get the `Model` used as `sampler.model`. "
             "(To turn off this warning, pass `_no_warn=True`.)")
-    return updated_info, model, sampler
+    return updated_info, sampler
 
 
 # Command-line script
