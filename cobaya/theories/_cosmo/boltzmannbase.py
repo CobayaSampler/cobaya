@@ -8,8 +8,7 @@
 """
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
-from itertools import chain
-from typing import Mapping
+from typing import Mapping, Sequence, Iterable
 
 # Local
 from cobaya.theory import Theory
@@ -46,6 +45,24 @@ class BoltzmannBase(Theory):
                 return value
 
         raise LoggedError(self.log, "Parameter not known: '%s'", p)
+
+    def _norm_vars_pairs(self, vars_pairs, name):
+        # Empty list: default to *total matter*: CMB + Baryon + MassiveNu
+        vars_pairs = vars_pairs or [2 * ["delta_tot"]]
+        if not isinstance(vars_pairs, Sequence):
+            raise LoggedError(self.log, "vars_pairs must be a list of pairs "
+                                        "of variable names: got '%r' for %s",
+                              vars_pairs, name)
+        if isinstance(vars_pairs[0], str):
+            vars_pairs = [vars_pairs]
+        pairs = set()
+        for pair in vars_pairs:
+            if len(pair) != 2 or not all(isinstance(x, str) for x in pair):
+                raise LoggedError(self.log,
+                                  "Cannot understand vars_pairs '%r' for %s",
+                                  vars_pairs, name)
+            pairs.add(tuple(sorted(pair)))
+        return pairs
 
     def needs(self, **requirements):
         r"""
@@ -97,53 +114,42 @@ class BoltzmannBase(Theory):
         super().needs(**requirements)
 
         self._needs = self._needs or {p: None for p in self.output_params}
-        # TO BE DEPRECATED IN >=1.3
-        for product, capitalization in {
-            "cl": "Cl", "pk_interpolator": "Pk_interpolator"}.items():
-            if product in requirements:
-                raise LoggedError(
-                    self.log, "You requested product '%s', which from now on should be "
-                              "capitalized as '%s'.", product, capitalization)
+
         # Accumulate the requirements across several calls in a safe way;
         # e.g. take maximum of all values of a requested precision parameter
         for k, v in requirements.items():
             # Products and other computations
             if k == "Cl":
-                self._needs["Cl"] = {
-                    cl: max(self._needs.get("Cl", {}).get(cl, 0), v.get(cl, 0))
-                    for cl in set(self._needs.get("Cl", {})).union(v)}
-            elif k in ["Pk_interpolator", "Pk_grid", "sigma_R"]:
-                # TODO: could make Pk_interpolator to Pk_grid here, then only PK_grid in
-                # camb/classy?
-                # Make sure vars_pairs is a list of [iterable of 2 vars pairs]
-                vars_pairs = v.pop("vars_pairs", [])
-                try:
-                    if isinstance(vars_pairs[0], str):
-                        vars_pairs = [vars_pairs]
-                except IndexError:
-                    # Empty list: default to *total matter*: CMB + Baryon + MassiveNu
-                    vars_pairs = [2 * ["delta_tot"]]
-                except:
-                    raise LoggedError(self.log,
-                                      "Cannot understand vars_pairs '%r' for %s",
-                                      vars_pairs, k)
-                vars_pairs = set(tuple(sorted(pair)) for pair in chain(
-                    self._needs.get(k, {}).get("vars_pairs", []), vars_pairs))
-                kmax = self._needs.get(k, {}).get("k_max", 0)
-                if k == "sigma_R":
-                    v["R"] = np.sort(np.unique(np.concatenate(
-                        (self._needs.get(k, {}).get("R", []), np.atleast_1d(v["R"])))))
-                    kmax = max(kmax, v.get("k_max", 2 / np.min(v["R"])))
-                else:
-                    v["nonlinear"] = bool(v.get("nonlinear", True))
-                    kmax = max(kmax, v["k_max"])
-                self._needs[k] = {
-                    "z": np.unique(np.concatenate(
-                        (self._needs.get(k, {}).get("z", []),
-                         np.atleast_1d(v["z"])))),
-                    "k_max": kmax,
-                    "vars_pairs": vars_pairs}
-                self._needs[k].update(v)
+                current = self._needs.get(k, {})
+                self._needs[k] = {cl: max(current.get(cl, 0), v.get(cl, 0))
+                                  for cl in set(current).union(v)}
+            elif k == 'sigma_R':
+                for pair in self._norm_vars_pairs(v.pop("vars_pairs", []), k):
+                    k = ("sigma_R",) + pair
+                    current = self._needs.get(k, {})
+                    self._needs[k] = {
+                        "R": np.sort(np.unique(np.concatenate(
+                            (current.get("R", []), np.atleast_1d(v["R"]))))),
+                        "z": np.unique(np.concatenate(
+                            (current.get("z", []), np.atleast_1d(v["z"])))),
+                        "k_max": max(current.get("k_max", 0),
+                                     v.get("k_max", 2 / np.min(v["R"])))}
+            elif k in ("Pk_interpolator", "Pk_grid"):
+                # arguments are all identical, collect all in Pk_grid
+                current = self._needs.get("Pk_grid", {})
+                nonlin = v.pop("nonlinear", True)
+                if not isinstance(nonlin, Iterable):
+                    nonlin = [nonlin]
+
+                self._needs["Pk_grid"] = dict(
+                    nonlinear=current.get("nonlinear", set()).union(
+                        set(bool(x) for x in nonlin)),
+                    z=np.unique(np.concatenate((current.get("z", []),
+                                                np.atleast_1d(v.pop("z"))))),
+                    k_max=max(current.get("k_max", 0), v.pop("k_max")),
+                    vars_pairs=self._norm_vars_pairs(
+                        v.pop("vars_pairs", []), k).union(
+                        current.get("vars_pairs", set())), **v)
             elif k == "source_Cl":
                 if k not in self._needs:
                     self._needs[k] = {}

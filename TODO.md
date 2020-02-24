@@ -9,6 +9,7 @@
 ## "Not enough points in chain to check convergence" should be warning and just continue until enough
 ## Remove last references to odict/OrderedDict in code and *documentation*
 ## post: update force/resume
+## check PK_grid/interpolator changes for classy
 
 # Incomplete implementations/bigger jobs
 ## Grids/rest of cosmomc scripts

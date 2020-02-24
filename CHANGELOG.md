@@ -60,6 +60,7 @@
 - Added matter_power_spectrum theory output for z,k,P(k) unsplined arrays
 - Fixed several bugs with Pk_interpolator (e.g. conflicts between likelihoods)
 - Pk_interpolator calling arguments now different
+- Added sigma_R for linear rms fluctuation in sphere of radius R
 - Fixed problems with getting same background array theory results from different likelihoods
 - renamed H (array of H(z)) to Hubble
 - Boltzmann codes now consistent with varying TCMB.

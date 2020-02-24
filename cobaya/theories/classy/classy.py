@@ -254,7 +254,7 @@ class classy(BoltzmannBase):
                     method="z_of_r",
                     args_names=["z"],
                     args=[np.atleast_1d(v["z"])])
-            elif k in ["Pk_interpolator", "Pk_grid"]:
+            elif k == "Pk_grid":
                 self.extra_args["output"] += " mPk"
                 v = deepcopy(v)
                 self.add_P_k_max(v.pop("k_max"), units="1/Mpc")
@@ -263,20 +263,24 @@ class classy(BoltzmannBase):
                 # (default: 0.1). But let's leave it like this in case this changes
                 # in the future.
                 self.add_z_for_matter_power(v.pop("z"))
-                if v["nonlinear"] and "non linear" not in self.extra_args:
+
+                if True in v["nonlinear"] and "non linear" not in self.extra_args:
                     self.extra_args["non linear"] = non_linear_default_code
-                for pair in v.pop("vars_pairs", [("delta_tot", "delta_tot")]):
+                for pair in v.pop("vars_pairs"):
                     if pair == ("delta_tot", "delta_tot"):
                         v["only_clustering_species"] = False
                     elif pair == ("delta_nonu", "delta_nonu"):
                         v["only_clustering_species"] = True
                     else:
                         raise LoggedError(self.log, "NotImplemented in CLASS: %r", pair)
-                    product = ("Pk_grid", v["nonlinear"]) + tuple(pair)
-                    self.collectors[product] = Collector(
-                        method="get_pk_and_k_and_z",
-                        kwargs=v,
-                        post=(lambda P, kk, z: (kk, z, np.array(P).T)))
+                    for non_linear in v["nonlinear"]:
+                        kwargs = v.copy()
+                        product = ("Pk_grid", non_linear) + tuple(pair)
+                        kwargs["nonlinear"] = non_linear
+                        self.collectors[product] = Collector(
+                            method="get_pk_and_k_and_z",
+                            kwargs=kwargs,
+                            post=(lambda P, kk, z: (kk, z, np.array(P).T)))
             elif k == 'sigma_R':
                 raise LoggedError(
                     self.log, "Classy sigma_R not implemented as yet - use CAMB only")

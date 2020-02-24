@@ -358,37 +358,40 @@ class camb(BoltzmannBase):
                     method=CAMBdata.get_fsigma8,
                     kwargs={})
                 self.needs_perts = True
-            elif k in ["Pk_interpolator", "Pk_grid", "sigma_R"]:
-                self.extra_args["kmax"] = max(v["k_max"], self.extra_args.get("kmax", 0))
-                self.add_to_redshifts(v["z"])
-                v["vars_pairs"] = v["vars_pairs"] or [("delta_tot", "delta_tot")]
-                kwargs = deepcopy(v)
+            elif isinstance(k, tuple) and k[0] == "sigma_R":
+                kwargs = v.copy()
+                self.extra_args["kmax"] = max(kwargs.pop("k_max"),
+                                              self.extra_args.get("kmax", 0))
+                self.add_to_redshifts(kwargs.pop("z"))
+                kwargs["hubble_units"] = False
+                kwargs["return_R_z"] = True
+                kwargs.update(dict(zip(["var1", "var2"], k[1:])))
+                self.collectors[k] = Collector(method=CAMBdata.get_sigmaR, kwargs=kwargs)
+                self.needs_perts = True
+            elif k in ["Pk_grid"]:
+                kwargs = v.copy()
+                self.extra_args["kmax"] = max(kwargs.pop("k_max"),
+                                              self.extra_args.get("kmax", 0))
+                self.add_to_redshifts(kwargs.pop("z"))
                 # need to ensure can't have conflicts between requests from
                 # different likelihoods. Store results without Hubble units.
                 if kwargs.get("hubble_units", False) or kwargs.get("k_hunit", False):
                     raise LoggedError(self.log, "hubble_units and k_hunit must be False"
                                                 "for consistency")
-
-                for p in "k_max", "z", "vars_pairs":
-                    kwargs.pop(p)
-
                 kwargs["hubble_units"] = False
-                if k != "sigma_R":
-                    if kwargs["nonlinear"]:
-                        self.non_linear_pk = True
-                    kwargs["k_hunit"] = False
-                for pair in (tuple(sorted(p)) for p in v["vars_pairs"]):
-                    kwargs.update(dict(zip(["var1", "var2"], pair)))
-                    if k == "sigma_R":
-                        product = (k,) + pair
-                        kwargs["return_R_z"] = True
-                        self.collectors[product] = Collector(
-                            method=CAMBdata.get_sigmaR, kwargs=kwargs)
-                    else:
-                        product = ("Pk_grid", kwargs["nonlinear"]) + pair
+                kwargs["k_hunit"] = False
+
+                non_linears = kwargs.pop("nonlinear")
+                if True in non_linears:
+                    self.non_linear_pk = True
+                for pair in kwargs.pop("vars_pairs"):
+                    for nonlin in non_linears:
+                        kwargs.update(dict(zip(["var1", "var2"], pair)))
+                        kwargs["nonlinear"] = nonlin
+                        product = ("Pk_grid", nonlin) + pair
                         self.collectors[product] = Collector(
                             method=CAMBdata.get_linear_matter_power_spectrum,
-                            kwargs=kwargs)
+                            kwargs=kwargs.copy())
                 self.needs_perts = True
             elif k == "source_Cl":
                 if not getattr(self, "sources", None):
