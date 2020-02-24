@@ -204,7 +204,7 @@ class camb(BoltzmannBase):
     _camb_repo_name = "cmbant/CAMB"
     _camb_repo_version = os.environ.get("CAMB_REPO_VERSION", "master")
     _camb_min_gcc_version = "6.4"
-    _min_camb_version = '1.1.1'
+    _min_camb_version = '1.1.2'
 
     external_primordial_pk: bool
 
@@ -307,7 +307,7 @@ class camb(BoltzmannBase):
     def needs(self, **requirements):
         # Computed quantities required by the likelihoods
         # Note that redshifts below are treated differently for background quantities,
-        #   were no additional transfer computation is needed (e.g. H(z)),
+        #   where no additional transfer computation is needed (e.g. H(z)),
         #   and matter-power-related quantities, that require additional computation
         #   and need the redshifts to be passed at CAMBParams instantiation.
         #   Also, we always make sure that those redshifts are sorted in descending order,
@@ -358,7 +358,7 @@ class camb(BoltzmannBase):
                     method=CAMBdata.get_fsigma8,
                     kwargs={})
                 self.needs_perts = True
-            elif k in ["Pk_interpolator", "Pk_grid"]:
+            elif k in ["Pk_interpolator", "Pk_grid", "sigma_R"]:
                 self.extra_args["kmax"] = max(v["k_max"], self.extra_args.get("kmax", 0))
                 self.add_to_redshifts(v["z"])
                 v["vars_pairs"] = v["vars_pairs"] or [("delta_tot", "delta_tot")]
@@ -368,18 +368,27 @@ class camb(BoltzmannBase):
                 if kwargs.get("hubble_units", False) or kwargs.get("k_hunit", False):
                     raise LoggedError(self.log, "hubble_units and k_hunit must be False"
                                                 "for consistency")
-                kwargs["hubble_units"] = False
-                kwargs["k_hunit"] = False
 
                 for p in "k_max", "z", "vars_pairs":
                     kwargs.pop(p)
-                if kwargs["nonlinear"]:
-                    self.non_linear_pk = True
-                for pair in v["vars_pairs"]:
-                    product = ("Pk_grid", kwargs["nonlinear"]) + tuple(sorted(pair))
+
+                kwargs["hubble_units"] = False
+                if k != "sigma_R":
+                    if kwargs["nonlinear"]:
+                        self.non_linear_pk = True
+                    kwargs["k_hunit"] = False
+                for pair in (tuple(sorted(p)) for p in v["vars_pairs"]):
                     kwargs.update(dict(zip(["var1", "var2"], pair)))
-                    self.collectors[product] = Collector(
-                        method=CAMBdata.get_linear_matter_power_spectrum, kwargs=kwargs)
+                    if k == "sigma_R":
+                        product = (k,) + pair
+                        kwargs["return_R_z"] = True
+                        self.collectors[product] = Collector(
+                            method=CAMBdata.get_sigmaR, kwargs=kwargs)
+                    else:
+                        product = ("Pk_grid", kwargs["nonlinear"]) + pair
+                        self.collectors[product] = Collector(
+                            method=CAMBdata.get_linear_matter_power_spectrum,
+                            kwargs=kwargs)
                 self.needs_perts = True
             elif k == "source_Cl":
                 if not getattr(self, "sources", None):
@@ -431,9 +440,8 @@ class camb(BoltzmannBase):
         # set-set base CAMB params if anything might have changed
         self._base_params = None
 
-        needs = {'CAMB_transfers':
-                     {'non_linear': self.non_linear_sources,
-                      'needs_perts': self.needs_perts}}
+        needs = {'CAMB_transfers': {'non_linear': self.non_linear_sources,
+                                    'needs_perts': self.needs_perts}}
         if self.external_primordial_pk and self.needs_perts:
             needs['primordial_scalar_pk'] = {'lmax': self.extra_args.get("lmax"),
                                              'kmax': self.extra_args.get('kmax')}

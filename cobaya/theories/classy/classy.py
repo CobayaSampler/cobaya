@@ -277,6 +277,9 @@ class classy(BoltzmannBase):
                         method="get_pk_and_k_and_z",
                         kwargs=v,
                         post=(lambda P, kk, z: (kk, z, np.array(P).T)))
+            elif k == 'sigma_R':
+                raise LoggedError(
+                    self.log, "Classy sigma_R not implemented as yet - use CAMB only")
             elif v is None:
                 k_translated = self.translate_param(k)
                 if k_translated not in self.derived_extra:

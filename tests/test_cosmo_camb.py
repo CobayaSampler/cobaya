@@ -14,6 +14,15 @@ def get_camb(modules):
                        path=os.path.join(process_modules_path(modules), "code", "CAMB"))
 
 
+def _get_model(modules, likelihood):
+    info = {
+        'params': params,
+        'likelihood': {'test_likelihood': likelihood},
+        'theory': {'camb': {'stop_at_error': True}},
+        'modules': process_modules_path(modules)}
+    return get_model(info)
+
+
 def test_sources(modules):
     camb = get_camb(modules)
     from camb.sources import GaussianSourceWindow
@@ -37,13 +46,7 @@ def test_sources(modules):
             "CAMB gaussian source window results do not match"
         return 0
 
-    info = {
-        'params': params,
-        'likelihood': {'test_likelihood': test_likelihood},
-        'theory': {'camb': {'stop_at_error': True}}
-    }
-
-    model = get_model(info)
+    model = _get_model(modules, test_likelihood)
     model.loglike({})
 
 
@@ -53,13 +56,7 @@ def test_CAMBdata(modules):
             _theory={'CAMBdata': None, 'Pk_grid': dict(k_max=2, z=[0, 2])}):
         return _theory.get_CAMBdata().tau0
 
-    info = {
-        'params': params,
-        'likelihood': {'test_likelihood': test_likelihood},
-        'theory': {'camb': {'stop_at_error': True}},
-        'modules': process_modules_path(modules)}
-
-    model = get_model(info)
+    model = _get_model(modules, test_likelihood)
     assert np.isclose(model.loglike({})[0], 14165.63, rtol=1e-4), \
         "CAMBdata object result failed"
 
@@ -81,10 +78,28 @@ def test_CAMB_transfer(modules):
         np.testing.assert_allclose(PK, PK1, rtol=1e-4)
         return 1
 
-    info = {'params': params,
-            'likelihood': {'test_likelihood': test_likelihood},
-            'theory': {'camb': {'stop_at_error': True}},
-            'modules': process_modules_path(modules)}
+    model = _get_model(modules, test_likelihood)
+    model.loglike()
 
-    model = get_model(info)
+
+def test_CAMB_sigma_R(modules):
+    camb = get_camb(modules)
+
+    pars = camb.set_params(**params)
+    redshifts = [0, 2, 5]
+    pars.set_matter_power(redshifts=redshifts, kmax=2)
+    pars.WantCls = False
+    results = camb.get_results(pars)
+    R = np.arange(1, 20, 1)
+    sigma_R = results.get_sigmaR(R=R, hubble_units=False)
+
+    # noinspection PyDefaultArgument
+    def test_likelihood(
+            _theory={'sigma_R': dict(z=[0, 2, 5], R=R)}):
+        r_out, z_out, sigma_R_out = _theory.get_sigma_R()
+        assert np.allclose(z_out, list(reversed(redshifts)))
+        np.testing.assert_allclose(sigma_R, sigma_R_out, rtol=1e-3)
+        return 1
+
+    model = _get_model(modules, test_likelihood)
     model.loglike()

@@ -72,6 +72,11 @@ class BoltzmannBase(Theory):
         - ``Pk_grid={...}``: similar to Pk_interpolator except that rather than returning
           a bicuplic spline object it returns the raw power spectrum grid as a (k, z, PK)
           set of arrays.
+        - ``sigma_R{...}``: RMS linear fluctuation in spheres of radius R at redshifts z.
+          Takes ``"z": [list_of_evaluated_redshifts]``, ``"k_max": [k_max]``,
+          ``"vars_pairs": [["delta_tot", "delta_tot"],  [...]]}``,
+          ``"R": [list_of_evaluated_R]``.
+          Note that R is in Mpc, not h^{-1} Mpc.
         - ``Hubble={'z': [z_1, ...], 'units': '1/Mpc' or 'km/s/Mpc'}``: Hubble
           rate at the redshifts requested, in the given units. Get it with
           :func:`~BoltzmannBase.get_Hubble`.
@@ -107,8 +112,10 @@ class BoltzmannBase(Theory):
                 self._needs["Cl"] = {
                     cl: max(self._needs.get("Cl", {}).get(cl, 0), v.get(cl, 0))
                     for cl in set(self._needs.get("Cl", {})).union(v)}
-            elif k in ["Pk_interpolator", "Pk_grid"]:
-                # Make sure vars_pairs is a list of [list of 2 vars pairs]
+            elif k in ["Pk_interpolator", "Pk_grid", "sigma_R"]:
+                # TODO: could make Pk_interpolator to Pk_grid here, then only PK_grid in
+                # camb/classy?
+                # Make sure vars_pairs is a list of [iterable of 2 vars pairs]
                 vars_pairs = v.pop("vars_pairs", [])
                 try:
                     if isinstance(vars_pairs[0], str):
@@ -117,19 +124,24 @@ class BoltzmannBase(Theory):
                     # Empty list: default to *total matter*: CMB + Baryon + MassiveNu
                     vars_pairs = [2 * ["delta_tot"]]
                 except:
-                    raise LoggedError(
-                        self.log,
-                        "Cannot understands vars_pairs '%r' for P(k) interpolator",
-                        vars_pairs)
-                vars_pairs = set(tuple(pair) for pair in chain(
+                    raise LoggedError(self.log,
+                                      "Cannot understand vars_pairs '%r' for %s",
+                                      vars_pairs, k)
+                vars_pairs = set(tuple(sorted(pair)) for pair in chain(
                     self._needs.get(k, {}).get("vars_pairs", []), vars_pairs))
-                v["nonlinear"] = bool(v.get("nonlinear", True))
+                kmax = self._needs.get(k, {}).get("k_max", 0)
+                if k == "sigma_R":
+                    v["R"] = np.sort(np.unique(np.concatenate(
+                        (self._needs.get(k, {}).get("R", []), np.atleast_1d(v["R"])))))
+                    kmax = max(kmax, v.get("k_max", 2 / np.min(v["R"])))
+                else:
+                    v["nonlinear"] = bool(v.get("nonlinear", True))
+                    kmax = max(kmax, v["k_max"])
                 self._needs[k] = {
                     "z": np.unique(np.concatenate(
                         (self._needs.get(k, {}).get("z", []),
                          np.atleast_1d(v["z"])))),
-                    "k_max": max(
-                        self._needs.get(k, {}).get("k_max", 0), v["k_max"]),
+                    "k_max": kmax,
                     "vars_pairs": vars_pairs}
                 self._needs[k].update(v)
             elif k == "source_Cl":
@@ -273,6 +285,24 @@ class BoltzmannBase(Theory):
                                            extrap_kmax=extrap_kmax)
         self._current_state[key] = result
         return result
+
+    def get_sigma_R(self, var_pair=("delta_tot", "delta_tot")):
+        """
+        Get sigma(R), the RMS power in an sphere of radius R
+        Note R is in Mpc not h^{-1}Mpc units and z and R are returned in descending and
+        ascending order respectively.
+
+        You may get back more values than originally requested, but requested R and z
+        should in the returned arrays.
+
+        :param var_pair: which two fields to use for the RMS power
+        :return: R, z, sigma_R, where R and z are arrays of computed values,
+                 and sigma_R[i,j] is the value for z[i], R[j]
+        """
+        try:
+            return self._current_state[("sigma_R",) + tuple(sorted(var_pair))]
+        except KeyError:
+            raise LoggedError(self.log, "sigmaR %s not computed" % var_pair)
 
     def get_source_Cl(self):
         r"""
