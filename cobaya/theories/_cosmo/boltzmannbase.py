@@ -98,8 +98,7 @@ class BoltzmannBase(Theory):
         - ``sigma_R{...}``: RMS linear fluctuation in spheres of radius R at redshifts z.
           Takes ``"z": [list_of_evaluated_redshifts]``, ``"k_max": [k_max]``,
           ``"vars_pairs": [["delta_tot", "delta_tot"],  [...]]}``,
-          ``"R": [list_of_evaluated_R]``.
-          Note that R is in Mpc, not h^{-1} Mpc.
+          ``"R": [list_of_evaluated_R]``. Note that R is in Mpc, not h^{-1} Mpc.
         - ``Hubble={'z': [z_1, ...], 'units': '1/Mpc' or 'km/s/Mpc'}``: Hubble
           rate at the redshifts requested, in the given units. Get it with
           :func:`~BoltzmannBase.get_Hubble`.
@@ -144,20 +143,20 @@ class BoltzmannBase(Theory):
             elif k in ("Pk_interpolator", "Pk_grid"):
                 # arguments are all identical, collect all in Pk_grid
                 self._check_args(k, v, ('z', 'k_max'))
-                current = self._needs.get("Pk_grid", {})
+                redshifts = v.pop("z")
+                k_max = v.pop("k_max")
                 nonlin = v.pop("nonlinear", True)
                 if not isinstance(nonlin, Iterable):
                     nonlin = [nonlin]
-
-                self._needs["Pk_grid"] = dict(
-                    nonlinear=current.get("nonlinear", set()).union(
-                        set(bool(x) for x in nonlin)),
-                    z=np.unique(np.concatenate((current.get("z", []),
-                                                np.atleast_1d(v.pop("z"))))),
-                    k_max=max(current.get("k_max", 0), v.pop("k_max")),
-                    vars_pairs=self._norm_vars_pairs(
-                        v.pop("vars_pairs", []), k).union(
-                        current.get("vars_pairs", set())), **v)
+                for var_pair in self._norm_vars_pairs(v.pop("vars_pairs", []), k):
+                    for nonlinear in nonlin:
+                        k = ("Pk_grid", bool(nonlinear)) + var_pair
+                        current = self._needs.get(k, {})
+                        self._needs[k] = dict(
+                            nonlinear=nonlinear,
+                            z=np.unique(np.concatenate((current.get("z", []),
+                                                        np.atleast_1d(redshifts)))),
+                            k_max=max(current.get("k_max", 0), k_max), **v)
             elif k == "source_Cl":
                 if k not in self._needs:
                     self._needs[k] = {}

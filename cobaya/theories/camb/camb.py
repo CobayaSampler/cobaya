@@ -388,9 +388,8 @@ class camb(BoltzmannBase):
 
                 kwargs.update(dict(zip(["var1", "var2"], var_pair)))
                 self.collectors[k] = Collector(method=get_sigmaR, kwargs=kwargs)
-
                 self.needs_perts = True
-            elif k == "Pk_grid":
+            elif isinstance(k, tuple) and k[0] == "Pk_grid":
                 kwargs = v.copy()
                 self.extra_args["kmax"] = max(kwargs.pop("k_max"),
                                               self.extra_args.get("kmax", 0))
@@ -402,18 +401,13 @@ class camb(BoltzmannBase):
                                                 "for consistency")
                 kwargs["hubble_units"] = False
                 kwargs["k_hunit"] = False
-
-                non_linears = kwargs.pop("nonlinear")
-                if True in non_linears:
+                if kwargs["nonlinear"]:
                     self.non_linear_pk = True
-                for pair in kwargs.pop("vars_pairs"):
-                    for nonlin in non_linears:
-                        kwargs.update(dict(zip(["var1", "var2"], pair)))
-                        kwargs["nonlinear"] = nonlin
-                        product = ("Pk_grid", nonlin) + pair
-                        self.collectors[product] = Collector(
-                            method=CAMBdata.get_linear_matter_power_spectrum,
-                            kwargs=kwargs.copy())
+                var_pair = k[2:]
+                kwargs.update(dict(zip(["var1", "var2"], var_pair)))
+                self.collectors[k] = Collector(
+                    method=CAMBdata.get_linear_matter_power_spectrum,
+                    kwargs=kwargs.copy())
                 self.needs_perts = True
             elif k == "source_Cl":
                 if not getattr(self, "sources", None):
