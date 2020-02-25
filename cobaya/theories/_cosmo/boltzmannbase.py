@@ -64,6 +64,12 @@ class BoltzmannBase(Theory):
             pairs.add(tuple(sorted(pair)))
         return pairs
 
+    def _check_args(self, req, value, vals):
+        for par in vals:
+            if par not in value:
+                raise LoggedError(self.log, "%s must specify %s in requirements",
+                                  req, par)
+
     def needs(self, **requirements):
         r"""
         Specifies the quantities that each likelihood needs from the Cosmology code.
@@ -124,6 +130,7 @@ class BoltzmannBase(Theory):
                 self._needs[k] = {cl: max(current.get(cl, 0), v.get(cl, 0))
                                   for cl in set(current).union(v)}
             elif k == 'sigma_R':
+                self._check_args(k, v, ('z', 'R'))
                 for pair in self._norm_vars_pairs(v.pop("vars_pairs", []), k):
                     k = ("sigma_R",) + pair
                     current = self._needs.get(k, {})
@@ -136,6 +143,7 @@ class BoltzmannBase(Theory):
                                      v.get("k_max", 2 / np.min(v["R"])))}
             elif k in ("Pk_interpolator", "Pk_grid"):
                 # arguments are all identical, collect all in Pk_grid
+                self._check_args(k, v, ('z', 'k_max'))
                 current = self._needs.get("Pk_grid", {})
                 nonlin = v.pop("nonlinear", True)
                 if not isinstance(nonlin, Iterable):
@@ -295,8 +303,7 @@ class BoltzmannBase(Theory):
     def get_sigma_R(self, var_pair=("delta_tot", "delta_tot")):
         """
         Get sigma(R), the RMS power in an sphere of radius R
-        Note R is in Mpc not h^{-1}Mpc units and z and R are returned in descending and
-        ascending order respectively.
+        Note R is in Mpc not h^{-1}Mpc units and z and R are returned in ascending order.
 
         You may get back more values than originally requested, but requested R and z
         should in the returned arrays.

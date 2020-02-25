@@ -188,7 +188,7 @@ from cobaya.conventions import _requires
 
 # Result collector
 class Collector(NamedTuple):
-    method: callable = None
+    method: callable
     args: list = []
     kwargs: dict = {}
 
@@ -258,6 +258,7 @@ class camb(BoltzmannBase):
         self.non_linear_pk = False
         self._base_params = None
         self._needs_lensing_cross = False
+        self._sigmaR_z_indices = {}
 
         if self.external_primordial_pk:
             self.extra_args['initial_power_model'] \
@@ -362,13 +363,34 @@ class camb(BoltzmannBase):
                 kwargs = v.copy()
                 self.extra_args["kmax"] = max(kwargs.pop("k_max"),
                                               self.extra_args.get("kmax", 0))
-                self.add_to_redshifts(kwargs.pop("z"))
-                kwargs["hubble_units"] = False
-                kwargs["return_R_z"] = True
-                kwargs.update(dict(zip(["var1", "var2"], k[1:])))
-                self.collectors[k] = Collector(method=CAMBdata.get_sigmaR, kwargs=kwargs)
+                redshifts = kwargs.pop("z")
+                self.add_to_redshifts(redshifts)
+                var_pair = k[1:]
+
+                def get_sigmaR(results, **tmp):
+                    _indices = self._sigmaR_z_indices.get(var_pair)
+                    if not _indices:
+                        z_indices = []
+                        calc = np.array(results.Params.Transfer.PK_redshifts[
+                                        :results.Params.Transfer.PK_num_redshifts])
+                        for z in redshifts:
+                            for i, zcalc in enumerate(calc):
+                                if np.isclose(zcalc, z, rtol=1e-4):
+                                    z_indices += [i]
+                                    break
+                            else:
+                                raise LoggedError(self.log, "sigma_R redshift not found"
+                                                            "in computed P_K array %s", z)
+                        _indices = np.array(z_indices, dtype=np.int32)
+                        self._sigmaR_z_indices[var_pair] = _indices
+                    return results.get_sigmaR(hubble_units=False, return_R_z=True,
+                                              z_indices=_indices, **tmp)
+
+                kwargs.update(dict(zip(["var1", "var2"], var_pair)))
+                self.collectors[k] = Collector(method=get_sigmaR, kwargs=kwargs)
+
                 self.needs_perts = True
-            elif k in ["Pk_grid"]:
+            elif k == "Pk_grid":
                 kwargs = v.copy()
                 self.extra_args["kmax"] = max(kwargs.pop("k_max"),
                                               self.extra_args.get("kmax", 0))

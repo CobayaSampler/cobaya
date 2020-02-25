@@ -91,13 +91,14 @@ def test_CAMB_sigma_R(modules):
     pars.WantCls = False
     results = camb.get_results(pars)
     R = np.arange(1, 20, 1)
-    sigma_R = results.get_sigmaR(R=R, hubble_units=False)
+    sigma_R = results.get_sigmaR(R=R, hubble_units=False)[::-1, :]
 
     # noinspection PyDefaultArgument
     def test_likelihood(
-            _theory={'sigma_R': dict(z=[0, 2, 5], R=R)}):
+            _theory={'sigma_R': dict(z=[0, 2, 5], R=R),
+                     'Pk_grid': {'k_max': 1, 'z': np.arange(0.2, 6, 1)}}):
         r_out, z_out, sigma_R_out = _theory.get_sigma_R()
-        assert np.allclose(z_out, list(reversed(redshifts)))
+        assert np.allclose(z_out, redshifts)
         np.testing.assert_allclose(sigma_R, sigma_R_out, rtol=1e-3)
         return 1
 
