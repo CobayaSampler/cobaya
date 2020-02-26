@@ -282,8 +282,11 @@ def install_script():
             try:
                 kind = get_kind(f)
                 infos += [{kind: {f: None}}]
-            except:
-                infos += [f]
+            except Exception as e:
+                logger.warning("Could not identify module %r. Skipping.", f)
+    if not infos:
+        logger.info("Nothing to install.")
+        return
     # Launch installer
     install(*infos, path=getattr(arguments, _modules_path_arg)[0],
             **{arg: getattr(arguments, arg)
