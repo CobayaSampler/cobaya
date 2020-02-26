@@ -81,32 +81,26 @@ def get_used_modules(*infos):
     return modules
 
 
-def get_default_info(module_or_class, kind=None, fail_if_not_found=False,
-                     return_yaml=False, yaml_expand_defaults=True, module_path=None,
+def get_default_info(module_or_class, kind=None, return_yaml=False,
+                     yaml_expand_defaults=True, module_path=None,
                      input_options=empty_dict):
     """
     Get default info for a module_or_class.
     """
-
-    # TODO: do we need fail_if_not_found=False, can always fail?
     _kind = kind
     try:
         if inspect.isclass(module_or_class):
             cls = module_or_class
         else:
             _kind = _kind or get_kind(module_or_class)
-            cls = get_class(module_or_class, _kind,
-                            None_if_not_found=not fail_if_not_found,
-                            module_path=module_path)
+            cls = get_class(module_or_class, _kind, module_path=module_path)
         default_module_info = \
             cls.get_defaults(return_yaml=return_yaml,
                              yaml_expand_defaults=yaml_expand_defaults,
                              input_options=input_options)
-
     except Exception as e:
         raise LoggedError(log, "Failed to get defaults for module or class '%s' [%s]",
                           module_or_class, e)
-
     return default_module_info
 
 
@@ -171,7 +165,6 @@ def update_info(info):
             else:
                 module_path = input_block[module].get(_module_path, None)
                 default_class_info = get_default_info(module, block,
-                                                      fail_if_not_found=True,
                                                       module_path=module_path,
                                                       input_options=input_block[module])
 
@@ -518,12 +511,18 @@ class HasDefaults:
         """
         bib = cls.get_associated_file_content('.bibtex')
         if bib:
-            return bib.decode('utf-8')
+            try:
+                return bib.decode("utf-8")
+            except:
+                return bib
         for base in cls.__bases__:
             if issubclass(base, HasDefaults) and base is not HasDefaults:
                 bib = base.get_bibtex()
                 if bib:
-                    return bib
+                    try:
+                        return bib.decode("utf-8")
+                    except:
+                        return bib
         return None
 
     @classmethod
@@ -531,7 +530,11 @@ class HasDefaults:
         # handle extracting package files when may be inside a zipped package so files
         # not accessible directly
         try:
-            return pkg_resources.resource_string(cls.__module__, cls.__name__ + ext)
+            string = pkg_resources.resource_string(cls.__module__, cls.__name__ + ext)
+            try:
+                return string.decode("utf-8")
+            except:
+                return string
         except Exception:
             return None
 
@@ -585,14 +588,12 @@ class HasDefaults:
         input_options may be a dictionary of input options, e.g. in case default params
         are dynamically dependent on an input variable
         """
-
         if 'class_options' in cls.__dict__:
             raise LoggedError(log, "class_options (in %s) should now be replaced by "
                                    "public attributes defined directly in the class" %
                               cls.get_qualified_class_name())
         yaml_text = cls.get_associated_file_content('.yaml')
         options = cls.get_class_options(input_options=input_options)
-
         if options and yaml_text:
             raise LoggedError(log,
                               "%s: any class can either have .yaml or class variables "
@@ -601,10 +602,8 @@ class HasDefaults:
                               cls.get_qualified_class_name(), list(options))
         if return_yaml and not yaml_expand_defaults:
             return yaml_text or ""
-
         this_defaults = yaml_load_file(cls.get_yaml_file(), yaml_text) \
             if yaml_text else deepcopy_where_possible(options)
-
         # start with this one to keep the order such that most recent class options
         # near the top. Update below to actually override parameters with these.
         defaults = this_defaults.copy()
@@ -612,9 +611,7 @@ class HasDefaults:
             for base in cls.__bases__:
                 if issubclass(base, HasDefaults) and base is not HasDefaults:
                     defaults.update(base.get_defaults(input_options=input_options))
-
         defaults.update(this_defaults)
-
         if return_yaml:
             return yaml_dump(defaults)
         else:

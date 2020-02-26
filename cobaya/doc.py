@@ -12,7 +12,8 @@ from pprint import pformat
 # Local
 from cobaya.tools import warn_deprecation, get_available_internal_class_names
 from cobaya.conventions import subfolders, kinds
-from cobaya.input import get_default_info
+from cobaya.input import get_default_info, get_kind
+from cobaya.log import LoggedError
 
 _indent = 2 * " "
 
@@ -66,19 +67,28 @@ def doc_script():
     try:
         if arguments.kind:
             arguments.kind = arguments.kind[0].lower()
+            if arguments.kind not in kinds:
+                print("Kind %r not recognized. Try one of %r" % (arguments.kind, tuple(kinds)))
+                raise ValueError
+        else:
+            arguments.kind = get_kind(arguments.module)
         to_print = get_default_info(
             arguments.module, arguments.kind, return_yaml=not arguments.python,
-            yaml_expand_defaults=arguments.expand, fail_if_not_found=True)
+            yaml_expand_defaults=arguments.expand)
         if arguments.python:
-            print("info = " + pformat(to_print))
+            print(pformat({arguments.kind: {arguments.module: to_print}}))
         else:
-            print(to_print)
+            print(arguments.kind + ":\n" + _indent + arguments.module + ":\n" +
+                  2 * _indent + ("\n" + 2* _indent).join(to_print.split("\n")))
             if "!defaults" in to_print:
                 print("# This file contains defaults. "
                       "To populate them, use the flag --%s (or -%s)." % (
                           expand_flag, expand_flag[expand_flag_ishort]))
-    except:
-        if not arguments.kind:
-            print("Specify its kind with '--%s [module_kind]'." % kind_opt)
+    except Exception as e:
+        if isinstance(Exception, LoggedError.__class__):
+            pass
+        else:
+            if not arguments.kind:
+                print("Specify its kind with '--%s [module_kind]'." % kind_opt)
         return 1
     return
