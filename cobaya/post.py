@@ -7,6 +7,7 @@
 """
 
 # Global
+import os
 import numpy as np
 import logging
 from copy import deepcopy
@@ -25,7 +26,7 @@ from cobaya.log import logger_setup, LoggedError
 from cobaya.input import update_info
 from cobaya.output import get_output
 from cobaya.mpi import get_mpi_rank
-from cobaya.tools import progress_bar, recursive_update
+from cobaya.tools import progress_bar, recursive_update, deepcopy_where_possible
 from cobaya.model import Model
 
 
@@ -51,13 +52,22 @@ def post(info, sample=None):
             "Post-processing is not yet MPI-able. Doing nothing for rank > 1 processes.")
         return
     # 1. Load existing sample
-    output_in = get_output(output_prefix=info.get(_output_prefix),
-                           resume=True, must_exist=True)
-    info_in = load_input(output_in.file_updated) if output_in else deepcopy(info)
+    output_in = get_output(output_prefix=info.get(_output_prefix), resume=True)
+    if output_in:
+        try:
+            info_in = load_input(output_in.file_updated)
+        except FileNotFoundError:
+            raise LoggedError(log, "Error loading input model: "
+                              "could not find input info at %s",
+                              output_in.file_updated)
+    else:
+        info_in = deepcopy_where_possible(info)
     dummy_model_in = DummyModel(info_in[_params], info_in[kinds.likelihood],
                                 info_in.get(_prior, None))
     if output_in:
-        # TODO: could be using MPI here
+        if not output_in.find_collections():
+            raise LoggedError(log, "No samples found for the input model with prefix %s",
+                              os.path.join(output_in.folder, output_in.prefix))
         collection_in = output_in.load_collections(
             dummy_model_in, skip=info_post.get("skip", 0), thin=info_post.get("thin", 1),
             concatenate=True)
@@ -88,7 +98,7 @@ def post(info, sample=None):
     # Expand the "add" info
     add = update_info(add)
     # 2.1 Adding/removing derived parameters and changes in priors of sampled parameters
-    out = {_params: deepcopy(info_in[_params])}
+    out = {_params: deepcopy_where_possible(info_in[_params])}
     for p in remove.get(_params, {}):
         pinfo = info_in[_params].get(p)
         if pinfo is None or not is_derived_param(pinfo):
@@ -141,7 +151,7 @@ def post(info, sample=None):
     # so that the likelihoods do not try to compute them)
     # But be careful to exclude *input* params that have a "derived: True" value
     # (which in "updated info" turns into "derived: 'lambda [x]: [x]'")
-    out_params_like = deepcopy(out[_params])
+    out_params_like = deepcopy_where_possible(out[_params])
     for p, pinfo in out_params_like.items():
         if ((is_derived_param(pinfo) and not (partag.value in pinfo)
              and p not in add.get(_params, {}))):
@@ -185,7 +195,7 @@ def post(info, sample=None):
                             'not really tested')
             add_theory = add_theory.copy()
             for theory, theory_info in info_in[kinds.theory].items():
-                theory_copy = deepcopy(theory_info)
+                theory_copy = deepcopy_where_possible(theory_info)
                 if theory in add_theory:
                     info_theory_out[theory] = \
                         recursive_update(theory_copy, add_theory.pop(theory))
@@ -193,7 +203,7 @@ def post(info, sample=None):
                     info_theory_out[theory] = theory_copy
             info_theory_out.update(add_theory)
         else:
-            info_theory_out = deepcopy(info_in[kinds.theory])
+            info_theory_out = deepcopy_where_possible(info_in[kinds.theory])
     else:
         info_theory_out = None
     chi2_names_add = [_chi2 + _separator + name for name in add[kinds.likelihood]
@@ -221,7 +231,7 @@ def post(info, sample=None):
         out_prefix += _separator_files + _post + _separator_files + info_post[
             _post_suffix]
     output_out = get_output(output_prefix=out_prefix, force=info.get(_force))
-    info_out = deepcopy(info)
+    info_out = deepcopy_where_possible(info)
     info_out[_post] = info_post
     # Updated with input info and extended (updated) add info
     info_out.update(info_in)
@@ -257,7 +267,7 @@ def post(info, sample=None):
     add[kinds.likelihood].pop("one")
 
     collection_out = Collection(dummy_model_out, output_out, name="1")
-    output_out.dump_info({}, info_out)
+    output_out.check_and_dump_info({}, info_out)
     # 4. Main loop!
     log.info("Running post-processing...")
     last_percent = 0

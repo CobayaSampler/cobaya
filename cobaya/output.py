@@ -296,7 +296,7 @@ class Output(HasLogger):
         Returns all collection files found which are compatible with this `Output`
         instance, including their path in their name.
 
-        Use `name` for particular types of collections (default: any number).
+        Use `name` for particular types of collections (default: matches any number).
         Pass `False` to mean there is nothing between the output prefix and the extension.
         """
         return [
