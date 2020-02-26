@@ -80,7 +80,8 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
     if stringy != info_logpdf:
         info.pop(_output_prefix)
     # Run
-    updated_info, products = run(info)
+    updated_info, sampler = run(info)
+    products = sampler.products()
     # Test values
     logprior_base = - np.log(
         (info[_params]["x"][_prior]["max"] -

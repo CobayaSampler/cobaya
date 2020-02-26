@@ -92,7 +92,8 @@ def test_post_params():
     info = {
         _params: info_params, kinds.sampler: info_sampler_dummy,
         kinds.likelihood: {"gaussian": sampled_pdf}}
-    updated_info_gaussian, products_gaussian = run(info)
+    updated_info_gaussian, sampler_gaussian = run(info)
+    products_gaussian = sampler_gaussian.products()
     info_post = {
         _post: {_post_suffix: "foo",
                 _post_remove: {_params: {"a_plus_b": None}},

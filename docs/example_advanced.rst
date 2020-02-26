@@ -56,7 +56,7 @@ Now, we add the sampler information and run. Notice the high number of samples r
         "mcmc": {"burn_in": 500, "max_samples": 10000}}
 
     from cobaya.run import run
-    updated_info, products = run(info)
+    updated_info, sampler = run(info)
 
 
 And now we plot the posterior for ``x``, ``y``, the radius and the angle:
@@ -67,7 +67,7 @@ And now we plot the posterior for ``x``, ``y``, the radius and the angle:
     from getdist.mcsamples import MCSamplesFromCobaya
     import getdist.plots as gdplt
 
-    gdsamples = MCSamplesFromCobaya(updated_info, products["sample"])
+    gdsamples = MCSamplesFromCobaya(updated_info, sampler.products()["sample"])
     gdplot = gdplt.get_subplot_plotter(width_inch=5)
     gdplot.triangle_plot(gdsamples, ["x", "y"], filled=True)
     gdplot = gdplt.get_subplot_plotter(width_inch=5)
@@ -90,10 +90,10 @@ Let's run with the same configuration and analyse the output:
 
 .. code:: python
 
-    updated_info_xGTy, products_xGTy = run(info)
+    updated_info_xGTy, sampler_xGTy = run(info)
 
     gdsamples_xGTy = MCSamplesFromCobaya(
-        updated_info_xGTy, products_xGTy["sample"])
+        updated_info_xGTy, sampler_xGTy.products()["sample"])
     gdplot = gdplt.get_subplot_plotter(width_inch=5)
     gdplot.triangle_plot(gdsamples_xGTy, ["x", "y"], filled=True)
 
