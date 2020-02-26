@@ -11,13 +11,14 @@ import os
 import numpy as np
 import logging
 from copy import deepcopy
+import re
 
 # Local
 from cobaya.input import load_input
 from cobaya.parameterization import Parameterization
 from cobaya.parameterization import is_fixed_param, is_sampled_param, is_derived_param
 from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_prefix, _post
-from cobaya.conventions import _params, _prior, kinds, _weight
+from cobaya.conventions import _params, _prior, kinds, _weight, _resume, _force
 from cobaya.conventions import _chi2, _separator, _minuslogpost, _force, partag
 from cobaya.conventions import _minuslogprior, _path_install, _input_params
 from cobaya.conventions import _separator_files, _post_add, _post_remove, _post_suffix
@@ -49,10 +50,12 @@ def post(info, sample=None):
         raise LoggedError(log, "No 'post' block given. Nothing to do!")
     if get_mpi_rank():
         log.warning(
-            "Post-processing is not yet MPI-able. Doing nothing for rank > 1 processes.")
+            "Post-processing is not yet MPI-aware. Doing nothing for rank > 1 processes.")
         return
+    if info.get(_resume):
+        log.warning("Resuming not implemented for post-processing. Re-starting.")
     # 1. Load existing sample
-    output_in = get_output(output_prefix=info.get(_output_prefix), resume=True)
+    output_in = get_output(output_prefix=info.get(_output_prefix))
     if output_in:
         try:
             info_in = load_input(output_in.file_updated)
@@ -231,6 +234,14 @@ def post(info, sample=None):
         out_prefix += _separator_files + _post + _separator_files + info_post[
             _post_suffix]
     output_out = get_output(output_prefix=out_prefix, force=info.get(_force))
+    if output_out and not output_out.force and output_out.find_collections():
+        raise LoggedError(log, "Found existing post-processing output with prefix %r. "
+                               "Delete it manually or re-run with `force: True` "
+                               "(or `-f`, `--force` from the shell).", out_prefix)
+    elif output_out and output_out.force:
+        output_out.delete_infos()
+        for regexp in output_out.find_collections():
+            output_out.delete_with_regexp(re.compile(regexp))
     info_out = deepcopy_where_possible(info)
     info_out[_post] = info_post
     # Updated with input info and extended (updated) add info
@@ -238,7 +249,6 @@ def post(info, sample=None):
     info_out[_post][_post_add] = add
     dummy_model_out = DummyModel(out[_params], out[kinds.likelihood],
                                  info_prior=out[_prior])
-
     if recompute_theory:
         # TODO: May need updating for more than one, or maybe can be removed
         theory = list(info_theory_out.keys())[0]
@@ -254,7 +264,6 @@ def post(info, sample=None):
                 "specify the correct set of theory parameters.\n"
                 "The full set of input parameters are %s.",
                 theory, list(dummy_model_out.parameterization.input_params()))
-
     # TODO: check allow_renames=False?
     # TODO: May well be simplifications here, this is v close to pre-refactor logic
     # Have not gone through or understood all the parameterization  stuff
@@ -262,12 +271,10 @@ def post(info, sample=None):
                       info_theory=info_theory_out, path_install=info.get(_path_install),
                       allow_renames=False, post=True,
                       prior_parameterization=dummy_model_out.parameterization)
-
     # Remove auxiliary "one" before dumping -- 'add' *is* info_out[_post][_post_add]
     add[kinds.likelihood].pop("one")
-
     collection_out = Collection(dummy_model_out, output_out, name="1")
-    output_out.check_and_dump_info({}, info_out)
+    output_out.check_and_dump_info({}, info_out, check_compatible=False)
     # 4. Main loop!
     log.info("Running post-processing...")
     last_percent = 0
