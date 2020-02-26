@@ -72,9 +72,8 @@ class BoltzmannBase(Theory):
         - ``Pk_grid={...}``: similar to Pk_interpolator except that rather than returning
           a bicuplic spline object it returns the raw power spectrum grid as a (k, z, PK)
           set of arrays.
-        - ``Hubble={'z': [z_1, ...], 'units': '1/Mpc' or 'km/s/Mpc'}``: Hubble
-          rate at the redshifts requested, in the given units. Get it with
-          :func:`~BoltzmannBase.get_Hubble`.
+        - ``Hubble={'z': [z_1, ...]}``: Hubble rate at the requested redshifts.
+           Get it with :func:`~BoltzmannBase.get_Hubble`.
         - ``angular_diameter_distance={'z': [z_1, ...]}``: Physical angular
           diameter distance to the redshifts requested. Get it with
           :func:`~BoltzmannBase.get_angular_diameter_distance`.
