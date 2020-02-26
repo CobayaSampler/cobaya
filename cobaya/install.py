@@ -17,9 +17,10 @@ from pkg_resources import parse_version
 # Local
 from cobaya.log import logger_setup, LoggedError
 from cobaya.tools import create_banner, warn_deprecation, get_class
-from cobaya.input import get_used_modules
+from cobaya.input import get_used_modules, get_kind
 from cobaya.conventions import _module_path, _code, _data, _external, _force
 from cobaya.conventions import _modules_path_arg, _modules_path_env, _path_install
+from cobaya.conventions import _yaml_extensions
 from cobaya.mpi import set_mpi_disabled
 
 log = logging.getLogger(__name__.split(".")[-1])
@@ -67,7 +68,6 @@ def install(*infos, **kwargs):
                 log.warning("Module '%s' is a custom function. "
                             "Nothing to do.\n", module)
                 continue
-
             try:
                 imported_class = \
                     get_class(module, kind, module_path=info.pop(_module_path, None))
@@ -81,7 +81,6 @@ def install(*infos, **kwargs):
                         "Skipping %s for test skip list %s" % (imported_class.__name__,
                                                                skip_list))
                     continue
-
             is_installed = getattr(imported_class, "is_installed", None)
             if is_installed is None:
                 log.info("Built-in module %s: nothing to do.\n" % imported_class.__name__)
@@ -234,15 +233,15 @@ def check_gcc_version(min_version="6.4", error_returns=None):
 def install_script():
     set_mpi_disabled(True)
     warn_deprecation()
-
     # Parse arguments
     import argparse
     parser = argparse.ArgumentParser(
         description="Cobaya's installation tool for external modules.")
-    parser.add_argument("files", action="store", nargs="+", metavar="input_file.yaml",
-                        help="One or more input files "
-                             "(or simply 'polychord', or 'cosmo' "
-                             "for a basic collection of cosmological modules)")
+    parser.add_argument("files_or_modules", action="store", nargs="+",
+                        metavar="input_file.yaml|module_name",
+                        help="One or more input files or module names "
+                             "(or simply 'cosmo' for a basic collection of "
+                             "cosmological modules)")
     default_modules_path = os.environ.get(_modules_path_env)
     parser.add_argument("-" + _modules_path_arg[0], "--" + _modules_path_arg,
                         action="store", nargs=1,
@@ -262,25 +261,29 @@ def install_script():
     group_just.add_argument("-D", "--just-data", action="store_false", default=True,
                             help="Install data of the modules.", dest=_code)
     arguments = parser.parse_args()
-
     # Configure the logger ASAP
     logger_setup()
     logger = logging.getLogger(__name__.split(".")[-1])
-
-    if arguments.files == ["cosmo"]:
-        logger.info("Installing cosmological modules (input files will be ignored)")
-        from cobaya.cosmo_input import install_basic
-        infos = [install_basic]
-    elif arguments.files == ["cosmo-tests"]:
-        logger.info("Installing *tested* cosmological modules "
-                    "(input files will be ignored)")
-        from cobaya.cosmo_input import install_tests
-        infos = [install_tests]
-    elif arguments.files == ["polychord"]:
-        infos = [{"sampler": {"polychord": None}}]
-    else:
-        from cobaya.input import load_input
-        infos = [load_input(f) for f in arguments.files]
+    # Gather requests
+    infos = []
+    for f in arguments.files_or_modules:
+        if f.lower() == ["cosmo"]:
+            logger.info("Installing basic cosmological modules.")
+            from cobaya.cosmo_input import install_basic
+            infos += [install_basic]
+        elif f == ["cosmo-tests"]:
+            logger.info("Installing *tested* cosmological modules.")
+            from cobaya.cosmo_input import install_tests
+            infos += [install_tests]
+        elif os.path.splitext(f)[1].lower() in _yaml_extensions:
+            from cobaya.input import load_input
+            infos += [load_input(f)]
+        else:
+            try:
+                kind = get_kind(f)
+                infos += [{kind: {f: None}}]
+            except:
+                infos += [f]
     # Launch installer
     install(*infos, path=getattr(arguments, _modules_path_arg)[0],
             **{arg: getattr(arguments, arg)

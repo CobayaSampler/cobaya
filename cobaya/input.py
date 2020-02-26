@@ -41,7 +41,7 @@ def load_input(input_file):
     """
     file_name, extension = os.path.splitext(input_file)
     file_name = os.path.basename(file_name)
-    if extension not in _yaml_extensions:
+    if extension.lower() not in _yaml_extensions:
         raise LoggedError(log, "Extension of input file '%s' not recognized.", input_file)
     info = yaml_load_file(input_file) or {}
     # if output_prefix not defined, default to input_file name (sans ext.) as prefix;
