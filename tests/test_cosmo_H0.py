@@ -39,7 +39,8 @@ def body_of_test(modules, lik_name):
     else:
         info[kinds.likelihood] = {lik_name: None}
     info[_params] = {"H0": fiducial_H0}
-    updated_info, products = run(info)
+    updated_info, sampler = run(info)
+    products = sampler.products()
     # The default values for .get are for the _docs_ test
     mean = updated_info[kinds.likelihood][lik_name].get("H0", fiducial_H0)
     std = updated_info[kinds.likelihood][lik_name].get("H0_std", 1)
