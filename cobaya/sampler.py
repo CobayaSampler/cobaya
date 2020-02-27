@@ -40,7 +40,7 @@ becomes an attribute of the sampler's instance.
 To implement your own sampler, or an interface to an external one, simply create a folder
 under the ``cobaya/cobaya/samplers/`` folder and include the two files described above.
 Your class needs to inherit from the :class:`cobaya.Sampler` class below, and needs to
-implement only the methods ``initialize``, ``run``, ``close``, and ``products``.
+implement only the methods ``initialize``, ``_run``, and ``products``.
 
 """
 # Global

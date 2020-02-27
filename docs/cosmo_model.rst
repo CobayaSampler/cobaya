@@ -124,6 +124,17 @@ Low-level access to the theory code
 You can access the imported CAMB module or CLASS 'Class' instance as, respectively, ``Model.theory["camb"].camb`` and ``Model.theory["classy"].classy``. But be careful about manually changing their settings: it may unexpectedly influence subsequent cosmological observable computations for the present model instance. If you want to directly access CAMB's results object, the likelihood can request 'CAMBdata' as a requirement and retrieve it from a likelihood using ``self.provider.get_CAMBdata()``.
 
 
+Manually passing this model to a sampler
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Once you have created a model, you can pass it to a sampler without needing to go through ``cobaya.run``, which would create yet another instance of the same model.
+
+You can define a sampler and an optional output driver in the following way:
+
+.. literalinclude:: ./src_examples/cosmo_model/6.py
+   :language: python
+
+
 Model wrapper class
 -------------------
 

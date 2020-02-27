@@ -63,6 +63,8 @@ def test_cosmo_docs_model_classy(modules):
     #                npixels = (lambda x: x.shape[0] + x.shape[1])(old_img)
     #                assert np.count_nonzero(old_img == new_img) / (4 * npixels) >= pixel_tolerance, (
     #                        "Images '%s' are too different!" % imgname)
-    #        # Back to the working directory of the tests, just in case, and restart the rng
+        # Passing the model to a sampler
+        exec(open(os.path.join(docs_src_folder, "6.py")).read(), globals_example)
     finally:
+        # Back to the working directory of the tests, just in case
         os.chdir(cwd)
