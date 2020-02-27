@@ -36,5 +36,4 @@
 ## mcmc: finish removing .checkpoint in favour of updated.yaml and .progress
 ## minimize: MINUIT
 ## minimize: maybe should not overwrite `sampler` block of original sample (either append or leave as it was)
-## `cobaya-doc`, `cobaya-bib`, `cobaya-install`: should probably allow any `module.ClassName`, including external likelihoods
-Might take a bit of refactoring though to avoid get_kind (or maybe we should change get_kind anyway - might make more sense to duck-test existence rather than trying to load all modules and searching in the loaded list).
+

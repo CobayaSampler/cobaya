@@ -70,7 +70,14 @@ def get_internal_class_module(name, kind):
     return '.' + subfolders[kind] + '.' + name
 
 
-def get_kind(name):
+def get_base_classes():
+    from cobaya.likelihood import Likelihood
+    from cobaya.theory import Theory
+    from cobaya.sampler import Sampler
+    return {kinds.sampler: Sampler, kinds.likelihood: Likelihood, kinds.theory: Theory}
+
+
+def get_kind(name, allow_external=True):
     """
     Given a helpfully unique module name, tries to determine it's kind:
     ``sampler``, ``theory`` or ``likelihood``.
@@ -80,7 +87,14 @@ def get_kind(name):
             k for k in kinds
             if name in get_available_internal_class_names(k))
     except StopIteration:
-        raise LoggedError(log, "Could not determine kind of module %r", name)
+        if allow_external:
+            cls = get_class(name, None_if_not_found=True, allow_internal=False)
+            if cls:
+                for kind, tp in get_base_classes().items():
+                    if issubclass(cls, tp):
+                        return kind
+
+        raise LoggedError(log, "Could not find component with name %r", name)
 
 
 class PythonPath:
@@ -133,7 +147,7 @@ def load_module(name, package=None, path=None, min_version=None, check_path=Fals
 
 
 def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
-              module_path=None):
+              allow_internal=True, module_path=None):
     """
     Retrieves the requested class from its reference name. The name can be a
     fully-qualified package.module.classname string, or an internal name of the particular
@@ -149,8 +163,9 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
     If 'kind=None' is not given, tries to guess it if the name is unique (slow!).
 
     If allow_external=True, allows loading explicit name from anywhere on path.
+    If allow_internal=True, will first try to load internal modules
     """
-    if kind is None:
+    if allow_internal and kind is None:
         kind = get_kind(name)
     if '.' in name:
         module_name, class_name = name.rsplit('.', 1)
@@ -158,6 +173,7 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
         allow_external = False
         module_name = name
         class_name = name
+    assert allow_internal or allow_external
 
     def return_class(_module_name, package=None):
         _module = load_module(_module_name, package=package, path=module_path)
@@ -175,9 +191,11 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
     try:
         if module_path:
             return return_class(module_name)
-        else:
+        elif allow_internal:
             internal_module = get_internal_class_module(module_name, kind)
             return return_class(internal_module, package=_package)
+        else:
+            raise Exception()
     except:
         exc_info = sys.exc_info()
         if allow_external and not module_path:
@@ -195,13 +213,18 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
              str(exc_info[1]).rstrip("'").endswith(name))):
             if None_if_not_found:
                 return None
-            raise LoggedError(
-                log, "%s '%s' not found. Maybe you meant one of the following "
-                     "(capitalization is important!): %s",
-                kind.capitalize(), name,
-                fuzzy_match(name, get_available_internal_class_names(kind), n=3))
+            if allow_internal:
+                raise LoggedError(
+                    log, "%s '%s' not found. Maybe you meant one of the following "
+                         "(capitalization is important!): %s",
+                    kind.capitalize(), name,
+                    fuzzy_match(name, get_available_internal_class_names(kind), n=3))
+            else:
+                raise LoggedError(log, "'%s' not found", name)
+
         else:
-            log.error("There was a problem when importing %s '%s':", kind, name)
+            log.error("There was a problem when importing %s '%s':", kind or "external",
+                      name)
             raise exc_info[1]
 
 

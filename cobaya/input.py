@@ -22,7 +22,7 @@ from cobaya.conventions import _output_prefix, _debug, _debug_file, _external
 from cobaya.conventions import _params, _auto_params, _prior, kinds, _provides, _requires
 from cobaya.conventions import partag, _input_params, _output_params, _module_path
 from cobaya.conventions import _yaml_extensions, _aliases, reserved_attributes, empty_dict
-from cobaya.tools import recursive_update, str_to_list
+from cobaya.tools import recursive_update, str_to_list, get_base_classes
 from cobaya.tools import fuzzy_match, deepcopy_where_possible, get_class, get_kind
 from cobaya.yaml import yaml_load_file, yaml_dump
 from cobaya.log import LoggedError
@@ -109,11 +109,7 @@ def update_info(info):
     Creates an updated info starting from the defaults for each module and updating it
     with the input info.
     """
-    from cobaya.likelihood import Likelihood
-    from cobaya.theory import Theory
-    from cobaya.sampler import Sampler
-    component_base_classes = {kinds.sampler: Sampler, kinds.likelihood: Likelihood,
-                              kinds.theory: Theory}
+    component_base_classes = get_base_classes()
 
     # Don't modify the original input, and convert all Mapping to consistent dict
     input_info = deepcopy_where_possible(info)
