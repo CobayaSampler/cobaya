@@ -267,11 +267,11 @@ def install_script():
     # Gather requests
     infos = []
     for f in arguments.files_or_modules:
-        if f.lower() == ["cosmo"]:
+        if f.lower() == "cosmo":
             logger.info("Installing basic cosmological modules.")
             from cobaya.cosmo_input import install_basic
             infos += [install_basic]
-        elif f == ["cosmo-tests"]:
+        elif f.lower() == "cosmo-tests":
             logger.info("Installing *tested* cosmological modules.")
             from cobaya.cosmo_input import install_tests
             infos += [install_tests]
