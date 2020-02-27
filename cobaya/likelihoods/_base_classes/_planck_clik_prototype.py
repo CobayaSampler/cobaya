@@ -90,23 +90,7 @@ class _planck_clik_prototype(Likelihood):
         self.l_maxs = self.clik.get_lmax()
         # Set data type for aggregated chi2 (case sensitive)
         self.type = "CMB"
-
-    def initialize_with_params(self):
-        # Check that the parameters are the right ones
-        self.expected_params = list(self.clik.extra_parameter_names)
-        differences = are_different_params_lists(
-            self.input_params, self.expected_params, name_A="given", name_B="expected")
-        if differences:
-            raise LoggedError(
-                self.log, "Configuration error in parameters: %r. "
-                          "If this has happened without you fiddling with the defaults, "
-                          "please open an issue in GitHub.", differences)
-        # Placeholder for vector passed to clik
-        length = (len(self.l_maxs) if self.lensing else len(self.clik.get_has_cl()))
-        self.vector = np.zeros(np.sum(self.l_maxs) + length + len(self.expected_params))
-
-    def get_requirements(self):
-        # State requisites to the theory code
+        # calculate requirements here so class can also be separately instantiated
         requested_cls = ["tt", "ee", "bb", "te", "tb", "eb"]
         if self.lensing:
             has_cl = [lmax != -1 for lmax in self.l_maxs]
@@ -115,6 +99,23 @@ class _planck_clik_prototype(Likelihood):
             has_cl = self.clik.get_has_cl()
         self.requested_cls = [cl for cl, i in zip(requested_cls, has_cl) if int(i)]
         self.l_maxs_cls = [lmax for lmax, i in zip(self.l_maxs, has_cl) if int(i)]
+        self.expected_params = list(self.clik.extra_parameter_names)
+        # Placeholder for vector passed to clik
+        length = (len(self.l_maxs) if self.lensing else len(self.clik.get_has_cl()))
+        self.vector = np.zeros(np.sum(self.l_maxs) + length + len(self.expected_params))
+
+    def initialize_with_params(self):
+        # Check that the parameters are the right ones
+        differences = are_different_params_lists(
+            self.input_params, self.expected_params, name_A="given", name_B="expected")
+        if differences:
+            raise LoggedError(
+                self.log, "Configuration error in parameters: %r. "
+                          "If this has happened without you fiddling with the defaults, "
+                          "please open an issue in GitHub.", differences)
+
+    def get_requirements(self):
+        # State requisites to the theory code
         return {'Cl': dict(zip(self.requested_cls, self.l_maxs_cls))}
 
     def logp(self, **params_values):
