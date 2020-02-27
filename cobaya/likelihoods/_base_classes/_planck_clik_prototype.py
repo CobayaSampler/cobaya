@@ -120,6 +120,9 @@ class _planck_clik_prototype(Likelihood):
     def logp(self, **params_values):
         # get Cl's from the theory code
         cl = self.theory.get_Cl(units="muK2")
+        return self.log_likelihood(cl, **params_values)
+
+    def log_likelihood(self, cl, **params_values):
         # fill with Cl's
         self.vector[:-len(self.expected_params)] = np.concatenate(
             [(cl[spectrum][:1 + lmax] if spectrum not in ["tb", "eb"]

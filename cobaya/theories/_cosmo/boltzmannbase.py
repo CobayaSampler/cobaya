@@ -99,9 +99,8 @@ class BoltzmannBase(Theory):
           Takes ``"z": [list_of_evaluated_redshifts]``, ``"k_max": [k_max]``,
           ``"vars_pairs": [["delta_tot", "delta_tot"],  [...]]}``,
           ``"R": [list_of_evaluated_R]``. Note that R is in Mpc, not h^{-1} Mpc.
-        - ``Hubble={'z': [z_1, ...], 'units': '1/Mpc' or 'km/s/Mpc'}``: Hubble
-          rate at the redshifts requested, in the given units. Get it with
-          :func:`~BoltzmannBase.get_Hubble`.
+        - ``Hubble={'z': [z_1, ...]}``: Hubble rate at the requested redshifts.
+           Get it with :func:`~BoltzmannBase.get_Hubble`.
         - ``angular_diameter_distance={'z': [z_1, ...]}``: Physical angular
           diameter distance to the redshifts requested. Get it with
           :func:`~BoltzmannBase.get_angular_diameter_distance`.

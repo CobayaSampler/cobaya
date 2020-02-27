@@ -70,7 +70,7 @@ def get_internal_class_module(name, kind):
     return '.' + subfolders[kind] + '.' + name
 
 
-def get_kind(name, fail_if_not_found=True):
+def get_kind(name):
     """
     Given a helpfully unique module name, tries to determine it's kind:
     ``sampler``, ``theory`` or ``likelihood``.
@@ -80,10 +80,7 @@ def get_kind(name, fail_if_not_found=True):
             k for k in kinds
             if name in get_available_internal_class_names(k))
     except StopIteration:
-        if fail_if_not_found:
-            raise LoggedError(log, "Could not determine kind of module %s", name)
-        else:
-            return None
+        raise LoggedError(log, "Could not determine kind of module %r", name)
 
 
 class PythonPath:

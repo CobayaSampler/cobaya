@@ -58,7 +58,8 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
     # Delay to one chain to check that MPI communication of the sampler is non-blocking
     #    if rank == 1:
     #        info["likelihood"]["gaussian_mixture"]["delay"] = 0.1
-    updated_info, products = run(info)
+    updated_info, sampler = run(info)
+    products = sampler.products()
     # Done! --> Tests
     if rank == 0:
         if list(info_sampler.keys())[0] == "mcmc":
@@ -197,7 +198,8 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False, modules=
         info["sampler"][sampler]["max_ndead"] = n_cycles_all_params * dim
     else:
         assert 0, "Unknown sampler for this test."
-    updated_info, products = run(info)
+    updated_info, sampler = run(info)
+    products = sampler.products()
     # Done! --> Tests
     if sampler == "polychord":
         tolerance = 0.2

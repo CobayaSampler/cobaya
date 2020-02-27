@@ -82,7 +82,8 @@ info = {
 
 
 def test_parameterization():
-    updated_info, products = run(info)
+    updated_info, sampler = run(info)
+    products = sampler.products()
     sample = products["sample"]
     from getdist.mcsamples import MCSamplesFromCobaya
     gdsample = MCSamplesFromCobaya(updated_info, products["sample"])

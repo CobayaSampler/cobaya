@@ -286,10 +286,12 @@ class DefaultsDialog(QWidget):
             self.display_tabs.addTab(self.display[k], k)
         self.layout.addWidget(self.display_tabs)
         # Fill text
-        defaults_txt = get_default_info(module, kind, return_yaml=True,
-                                        fail_if_not_found=True)
+        defaults_txt = get_default_info(module, kind, return_yaml=True)
+        _indent = "  "
+        defaults_txt = (kind + ":\n" + _indent + module + ":\n" +
+                        2 * _indent + ("\n" + 2* _indent).join(defaults_txt.split("\n")))
         from cobaya.yaml import yaml_load
-        self.display["python"].setText("info = " + pformat(yaml_load(defaults_txt)))
+        self.display["python"].setText(pformat(yaml_load(defaults_txt)))
         self.display["yaml"].setText(defaults_txt)
         self.display["bibliography"].setText(get_bib_module(module, kind))
         # Buttons

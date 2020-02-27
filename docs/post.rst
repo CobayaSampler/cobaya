@@ -68,7 +68,8 @@ Let us generate the initial sample:
 .. code:: python
 
    from cobaya.run import run
-   updinfo, results = run(gaussian_info)
+   updinfo, sampler = run(gaussian_info)
+   results = sampler.products()
 
 And let us define the additions and run post-processing:
 

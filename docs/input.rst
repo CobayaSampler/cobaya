@@ -70,7 +70,7 @@ To run **cobaya** from a Python interpreter, simply do
 .. code:: python
 
     from cobaya.run import run
-    updated_info, products = run(your_input)
+    updated_info, sampler = run(your_input)
 
 where ``your_input`` is a Python dictionary (for how to create one, see :ref:`example_quickstart_interactive`).
 

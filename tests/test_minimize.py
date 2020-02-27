@@ -33,7 +33,8 @@ def test_minimize_gaussian():
     info["debug_file"] = None
     #    info["output_prefix"] = "./minigauss/"
     from cobaya.run import run
-    updated_info, products = run(info)
+    updated_info, sampler = run(info)
+    products = sampler.products()
     # Done! --> Tests
     if rank == 0:
         rel_error = abs(maxloglik - -products["minimum"]["minuslogpost"]) / abs(maxloglik)

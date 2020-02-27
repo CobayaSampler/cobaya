@@ -18,8 +18,7 @@ import shutil
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
 from cobaya.conventions import _input_suffix, _updated_suffix, _separator_files, _version
 from cobaya.conventions import _resume, _resume_default, _force, _yaml_extensions
-from cobaya.conventions import _output_prefix
-from cobaya.conventions import kinds, _params
+from cobaya.conventions import _output_prefix, _debug, kinds, _params
 from cobaya.log import LoggedError, HasLogger
 from cobaya.input import is_equal_info, get_class
 from cobaya.mpi import is_main_process, more_than_one_process, share_mpi
@@ -168,16 +167,10 @@ class Output(HasLogger):
         If resuming a sample, checks first that old and new infos and versions are
         consistent.
         """
-        if input_info is None:
-            input_info = {}
-        else:
-            input_info = deepcopy_where_possible(input_info)
         # trim known params of each likelihood: for internal use only
         updated_info_trimmed = deepcopy_where_possible(updated_info)
-        # make sure the dumped output_prefix does only contain the file prefix,
-        # not the folder, since it's already been placed inside it
-        input_info[_output_prefix] = self.updated_output_prefix()
-        updated_info_trimmed[_output_prefix] = self.updated_output_prefix()
+        for like_info in updated_info_trimmed.get(kinds.likelihood, {}).values():
+            (like_info or {}).pop(_params, None)
         if check_compatible:
             # We will test the old info against the dumped+loaded new info.
             # This is because we can't actually check if python objects do change
@@ -215,12 +208,16 @@ class Output(HasLogger):
                         (self.file_updated, updated_info_trimmed)]:
             # When resuming, we don't want to to *partial* dumps
             if ignore_blocks and self.is_resuming():
-                    break
-            if info:
+                break
+            if info is not None:
                 for k in ignore_blocks:
                     info.pop(k, None)
+                info.pop(_debug, None)
                 info.pop(_force, None)
                 info.pop(_resume, None)
+                # make sure the dumped output_prefix does only contain the file prefix,
+                # not the folder, since it's already been placed inside it
+                info[_output_prefix] = self.updated_output_prefix()
                 with open(f, "w", encoding="utf-8") as f_out:
                     try:
                         f_out.write(yaml_dump(info))
@@ -296,7 +293,7 @@ class Output(HasLogger):
         Returns all collection files found which are compatible with this `Output`
         instance, including their path in their name.
 
-        Use `name` for particular types of collections (default: any number).
+        Use `name` for particular types of collections (default: matches any number).
         Pass `False` to mean there is nothing between the output prefix and the extension.
         """
         return [
