@@ -203,13 +203,17 @@ class Output(HasLogger):
                                               "%s:%s, but you are trying to resume a "
                                               "run that used a newer version: %r.",
                                     new_version, k, c, old_version)
-        # We write the new one anyway (maybe updated debug, resuming...)
+        # If resuming, we don't want to to *partial* dumps
+        if ignore_blocks and self.is_resuming():
+            return
+        # Work on a copy of the input info, since we are updating the output_prefix
+        # (the updated one is already a copy)
+        if input_info is not None:
+            input_info = deepcopy_where_possible(input_info)
+        # Write the new one
         for f, info in [(self.file_input, input_info),
                         (self.file_updated, updated_info_trimmed)]:
-            # When resuming, we don't want to to *partial* dumps
-            if ignore_blocks and self.is_resuming():
-                break
-            if info is not None:
+            if info:
                 for k in ignore_blocks:
                     info.pop(k, None)
                 info.pop(_debug, None)
@@ -377,7 +381,7 @@ class Output_MPI(Output):
             # Only cached possible when non main process
             if not kwargs.get("use_cache"):
                 raise ValueError(
-                    "Cannot call `reaload_updated_info` from non-main process "
+                    "Cannot call `reload_updated_info` from non-main process "
                     "unless cached version (`use_cache=True`) requested.")
             return self._old_updated_info
 
