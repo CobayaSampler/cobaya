@@ -17,7 +17,7 @@
 # cosmetic/consistency/speed
 
 ## restrict external likelihood functions to those with no requirements/theory? (new class is almost as short, and avoids syntactic inconsistencies in _theory); or use _requirements, _provider?
-## use MPI for post
+## post: use MPI, and TODO's in code
 ## In the docs "Bases" (and UML diagram) not hyperlinked correctly (not sure how to fix)
 ## Make numba a requirement?
 ## dump log info along with each chain file if saving to file (currently in stdout)

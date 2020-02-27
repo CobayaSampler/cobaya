@@ -73,7 +73,7 @@ class BoltzmannBase(Theory):
           a bicuplic spline object it returns the raw power spectrum grid as a (k, z, PK)
           set of arrays.
         - ``Hubble={'z': [z_1, ...]}``: Hubble rate at the requested redshifts.
-           Get it with :func:`~BoltzmannBase.get_Hubble`.
+          Get it with :func:`~BoltzmannBase.get_Hubble`.
         - ``angular_diameter_distance={'z': [z_1, ...]}``: Physical angular
           diameter distance to the redshifts requested. Get it with
           :func:`~BoltzmannBase.get_angular_diameter_distance`.

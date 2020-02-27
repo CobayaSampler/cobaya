@@ -49,7 +49,7 @@ def load_input(input_file):
         info[_output_prefix] = file_name
     # warn if no output, since we are in shell-invocation mode.
     elif info[_output_prefix] is None:
-        log.warning("WARNING: Output explicitly suppressed with 'output_prefix: null'")
+        log.warning("WARNING: Output explicitly suppressed with '%s: null'", _output_prefix)
     # contained? Ensure that output is sent where it should
     if "CONTAINED" in os.environ:
         for out in [_output_prefix, _debug_file]:
