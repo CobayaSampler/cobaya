@@ -322,6 +322,16 @@ class Sampler(CobayaComponent):
         # Restore external state
         np.random.set_state(self._old_ext_rng_state)
 
+    # TO BE DEPRECATED IN NEXT SUBVERSION
+    def __getitem__(self, k):
+        self.log.warning(
+            "NB: the variables returned by `cobaya.run` have changed since the last "
+            "version: they were `(updated_info, sampler_products)` and they are now "
+            "`(updated_info, sampler)`. You can access the sampler products (the old "
+            "return value) as `sampler.products()` and the `Model` used as "
+            "`sampler.model`.")
+        return self.products()[k]
+
     @classmethod
     def output_files_regexps(cls, output, info=None, minimal=False):
         """

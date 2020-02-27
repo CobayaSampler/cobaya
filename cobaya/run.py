@@ -27,7 +27,7 @@ from cobaya.tools import warn_deprecation, recursive_update
 from cobaya.post import post
 
 
-def run(info, _from_script=False, _no_warn=False):
+def run(info):
     # This function reproduces the model-->output-->sampler pipeline one would follow
     # when instantiating by hand, but alters the order to performs checks and dump info
     # as early as possible, e.g. to check if resuming possible or `force` needed.
@@ -90,15 +90,6 @@ def run(info, _from_script=False, _no_warn=False):
         output.check_and_dump_info(None, updated_info, check_compatible=False)
         # Run the sampler
         sampler.run()
-    # To be deprecated in the future
-    # (but leave `_no_warn` for one more release with no effect and a deprecation warning)
-    if not _from_script and not _no_warn and is_main_process():
-        logger_run.warning(
-            "The variables returned by this function have changed since the last version:"
-            " they were `(updated_info, sampler.products())` and they are now "
-            "`(updated_info, sampler)`. "
-            "Now you can get the `Model` used as `sampler.model`. "
-            "(To turn off this warning, pass `_no_warn=True`.)")
     return updated_info, sampler
 
 
@@ -166,4 +157,4 @@ def run_script():
     if _post in info:
         post(info)
     else:
-        run(info, _from_script=True)
+        run(info)
