@@ -264,7 +264,7 @@ class mcmc(CovmatSampler):
         i_max = np.argmin(log_differences)
         return i_max
 
-    def run(self):
+    def _run(self):
         """
         Runs the sampler.
         """

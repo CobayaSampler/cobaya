@@ -18,7 +18,7 @@
 # cosmetic/consistency/speed
 
 ## restrict external likelihood functions to those with no requirements/theory? (new class is almost as short, and avoids syntactic inconsistencies in _theory); or use _requirements, _provider?
-## use MPI for post
+## post: use MPI, and TODO's in code
 ## In the docs "Bases" (and UML diagram) not hyperlinked correctly (not sure how to fix)
 ## Make numba a requirement?
 ## dump log info along with each chain file if saving to file (currently in stdout)
@@ -30,9 +30,11 @@
 
 ## Support "parameterization" option of theory .yaml to specify parameter yaml variants?/generalize !defaults
 ## Let classes do all defaults combining; allow separate like instantiation + use equivalent to loading in cobaya
-## check_conflicts theory method or similar (so likelihoods can raise error when used in combination with other variant likelihoods using non-independent data)
+## `check_conflicts` theory method or similar (so likelihoods can raise error when used in combination with other variant likelihoods using non-independent data)
 ## If non-linear lensing on, model the non-linear correction via limber for faster semi-slow parameters
 ## unbounded parameters with flat prior (this would make it safe to rotate the unbounded ones in minimize) [JT: not very much in favour, since that would break a bunch of other stuff. Maybe let's explore an alternative solution?]
 ## mcmc: finish removing .checkpoint in favour of updated.yaml and .progress
 ## minimize: MINUIT
 ## minimize: maybe should not overwrite `sampler` block of original sample (either append or leave as it was)
+## `cobaya-doc`, `cobaya-bib`, `cobaya-install`: should probably allow any `module.ClassName`, including external likelihoods
+Might take a bit of refactoring though to avoid get_kind (or maybe we should change get_kind anyway - might make more sense to duck-test existence rather than trying to load all modules and searching in the loaded list).

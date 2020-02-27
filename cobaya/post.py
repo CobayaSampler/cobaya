@@ -14,7 +14,6 @@ from copy import deepcopy
 import re
 
 # Local
-from cobaya.input import load_input
 from cobaya.parameterization import Parameterization
 from cobaya.parameterization import is_fixed_param, is_sampled_param, is_derived_param
 from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_prefix, _post
@@ -58,7 +57,7 @@ def post(info, sample=None):
     output_in = get_output(output_prefix=info.get(_output_prefix))
     if output_in:
         try:
-            info_in = load_input(output_in.file_updated)
+            info_in = output_in.reload_updated_info()
         except FileNotFoundError:
             raise LoggedError(log, "Error loading input model: "
                               "could not find input info at %s",
@@ -274,7 +273,7 @@ def post(info, sample=None):
     # Remove auxiliary "one" before dumping -- 'add' *is* info_out[_post][_post_add]
     add[kinds.likelihood].pop("one")
     collection_out = Collection(dummy_model_out, output_out, name="1")
-    output_out.check_and_dump_info({}, info_out, check_compatible=False)
+    output_out.check_and_dump_info(None, info_out, check_compatible=False)
     # 4. Main loop!
     log.info("Running post-processing...")
     last_percent = 0

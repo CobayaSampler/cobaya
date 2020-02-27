@@ -212,7 +212,7 @@ class polychord(Sampler):
             self.callback_function_callable(self)
             self.last_point_callback = len(self.dead)
 
-    def run(self):
+    def _run(self):
         """
         Prepares the posterior function and calls ``PolyChord``'s ``run`` function.
         """
@@ -234,6 +234,7 @@ class polychord(Sampler):
         self.mpi_info("Sampling!")
         self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
                               self.pc_prior, self.dumper)
+        self.close()
 
     def dump_paramnames(self, prefix):
         paramnames = (list() +
@@ -249,11 +250,11 @@ class polychord(Sampler):
             for p in self.model.prior:
                 f_paramnames.write("%s*\t%s\n" % (
                     "logprior" + _separator + p,
-                    "\pi_\mathrm{" + p.replace("_", r"\ ") + r"}"))
+                    r"\pi_\mathrm{" + p.replace("_", r"\ ") + r"}"))
             for p in self.model.likelihood:
                 f_paramnames.write("%s*\t%s\n" % (
                     "loglike" + _separator + p,
-                    "\log\mathcal{L}_\mathrm{" + p.replace("_", r"\ ") + r"}"))
+                    r"\log\mathcal{L}_\mathrm{" + p.replace("_", r"\ ") + r"}"))
 
     def save_sample(self, fname, name):
         sample = np.atleast_2d(np.loadtxt(fname))
@@ -271,13 +272,11 @@ class polychord(Sampler):
         collection._out_update()
         return collection
 
-    def close(self, exception_type=None, exception_value=None, traceback=None):
+    def close(self):
         """
         Loads the sample of live points from ``PolyChord``'s raw output and writes it
         (if ``txt`` output requested).
         """
-        if exception_type:
-            raise
         if is_main_process():
             self.log.info("Loading PolyChord's results: samples and evidences.")
             prefix = os.path.join(self.pc_settings.base_dir, self.pc_settings.file_root)
