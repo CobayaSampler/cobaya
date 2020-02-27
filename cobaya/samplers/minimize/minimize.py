@@ -106,6 +106,7 @@ class minimize(Minimizer, CovmatSampler):
     method: str
     override_bobyqa: Optional[Mapping]
     override_scipy: Optional[Mapping]
+    seed: Optional[int]
 
     def initialize(self):
         self.mpi_info("Initializing")
@@ -212,7 +213,7 @@ class minimize(Minimizer, CovmatSampler):
     def logp_transf(self, x):
         return self.logp(self.inv_affine_transform(x))
 
-    def run(self):
+    def _run(self):
         """
         Runs `scipy.minimize`
         """
@@ -249,8 +250,9 @@ class minimize(Minimizer, CovmatSampler):
                 reason = ""
             self.log.error("Finished unsuccessfully." +
                            (" Reason: " + reason if reason else ""))
+        self.close()
 
-    def close(self, *args):
+    def close(self):
         """
         Determines success (or not), chooses best (if MPI)
         and produces output (if requested).

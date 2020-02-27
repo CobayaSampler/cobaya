@@ -59,7 +59,7 @@ from cobaya.tools import get_class, deepcopy_where_possible, find_with_regexp
 from cobaya.tools import recursive_update
 from cobaya.log import LoggedError
 from cobaya.yaml import yaml_load_file
-from cobaya.mpi import is_main_process, share_mpi, sync_processes
+from cobaya.mpi import is_main_process, share_mpi, sync_processes, get_mpi_rank
 from cobaya.component import CobayaComponent
 from cobaya.input import update_info, is_equal_info, get_preferred_old_values
 from cobaya.output import OutputDummy
@@ -180,7 +180,7 @@ class Sampler(CobayaComponent):
         """
         pass
 
-    def run(self):
+    def _run(self):
         """
         Runs the main part of the algorithm of the sampler.
         Normally, it looks somewhat like
@@ -215,14 +215,15 @@ class Sampler(CobayaComponent):
                          name=name, initialize=False, standalone=False)
         # Seed, if requested
         if getattr(self, "seed", None) is not None:
-            self.log.warning("This run has been SEEDED with seed %d", self.seed)
-            try:
-                # TODO, says this is deprecated
-                np.random.seed(self.seed)
-            except TypeError:
+            if not isinstance(self.seed, int) or not (0 <= self.seed <= 2**32 - 1):
                 raise LoggedError(
-                    self.log, "Seeds must be *integer*, but got %r with type %r",
+                    self.log, "Seeds must be a *positive integer* < 2**32 - 1, "
+                              "but got %r with type %r",
                     self.seed, type(self.seed))
+            # MPI-awareness: sum the rank to the seed
+            if more_than_one_process():
+                self.seed += get_mpi_rank()
+            self.log.warning("This run has been SEEDED with seed %d", self.seed)
         # Load checkpoint info, if resuming
         if self.output.is_resuming() and not isinstance(self, Minimizer):
             try:
@@ -245,10 +246,20 @@ class Sampler(CobayaComponent):
                 os.remove(self.progress_filename())
             except (OSError, TypeError):
                 pass
+        self._set_rng()
         self.initialize()
+        self._release_rng()
         self.model.set_cache_size(self._get_requested_cache_size())
         # Add to the updated info some values which are only available after initialisation
         self._updated_info[_version] = self.get_version()
+
+    def run(self):
+        """
+        Wrapper for `Sampler._run`, that takes care of seeding the RNG.
+        """
+        self._set_rng()
+        self._run()
+        self._release_rng()
 
     def info(self):
         """
@@ -285,6 +296,31 @@ class Sampler(CobayaComponent):
         :return: number of points to cache
         """
         return 3
+
+    def _set_rng(self):
+        """
+        For seeded runs, sets the internal state of the RNG.#
+        """
+        if getattr(self, "seed", None) is None:
+            return
+        # Store external state
+        self._old_ext_rng_state = np.random.get_state()
+        # Set our seed/state
+        if not hasattr(self, "_old_rng_state"):
+            np.random.seed(self.seed)
+        else:
+            np.random.set_state(self._old_rng_state)
+
+    def _release_rng(self):
+        """
+        For seeded runs, releases the state of the RNG, restoring the old one.
+        """
+        if getattr(self, "seed", None) is None:
+            return
+        # Store our state
+        self._old_rng_state = np.random.get_state()
+        # Restore external state
+        np.random.set_state(self._old_ext_rng_state)
 
     @classmethod
     def output_files_regexps(cls, output, info=None, minimal=False):
@@ -339,17 +375,6 @@ class Sampler(CobayaComponent):
                 # Clean up old files, and set resuming=False, regardless of requested value
                 cls.delete_output_files(output, info=info)
                 output.set_resuming(False)
-
-    # Python magic for the "with" statement
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exception_type, exception_value, traceback):
-        # Reset seed
-        if getattr(self, "seed", None) is not None:
-            np.random.seed(self.seed)
-        self.close(exception_type, exception_value, traceback)
 
 
 class Minimizer(Sampler):

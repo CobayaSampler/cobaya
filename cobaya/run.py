@@ -79,17 +79,17 @@ def run(info, _from_script=False, _no_warn=False):
         # Re-dump the updated info, now containing parameter routes and version info
         updated_info = recursive_update(updated_info, model.info())
         output.check_and_dump_info(None, updated_info, check_compatible=False)
-        with sampler_class(updated_info[kinds.sampler][sampler_class.__name__], model,
-                output, path_install=info.get(_path_install)) as sampler:
-            # Re-dump updated info, now also containing updates from the sampler
-            updated_info[kinds.sampler][sampler.get_name()] = \
-                recursive_update(
-                    updated_info[kinds.sampler][sampler.get_name()], sampler.info())
-            # TODO -- maybe also re-dump model info, now possibly with measured speeds
-            # (waiting until the camb.transfers issue is solved)
-            output.check_and_dump_info(None, updated_info, check_compatible=False)
-            # Run the sampler
-            sampler.run()
+        sampler = sampler_class(updated_info[kinds.sampler][sampler_class.__name__],
+                                model, output, path_install=info.get(_path_install))
+        # Re-dump updated info, now also containing updates from the sampler
+        updated_info[kinds.sampler][sampler.get_name()] = \
+            recursive_update(
+                updated_info[kinds.sampler][sampler.get_name()], sampler.info())
+        # TODO -- maybe also re-dump model info, now possibly with measured speeds
+        # (waiting until the camb.transfers issue is solved)
+        output.check_and_dump_info(None, updated_info, check_compatible=False)
+        # Run the sampler
+        sampler.run()
     # To be deprecated in the future
     # (but leave `_no_warn` for one more release with no effect and a deprecation warning)
     if not _from_script and not _no_warn and is_main_process():

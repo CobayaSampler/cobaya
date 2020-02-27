@@ -34,7 +34,7 @@ class evaluate(Sampler):
             self.model, self.output, initial_size=self.N, name="1")
         self.log.info("Initialized!")
 
-    def run(self):
+    def _run(self):
         """
         First gets a reference point. If a single reference point is not given,
         the point is sampled from the reference pdf. If that one is not defined either,
@@ -83,11 +83,7 @@ class evaluate(Sampler):
             else:
                 self.log.info("Likelihoods and derived parameters not computed, "
                               "since the prior is null.")
-
-    def close(self, exception_type, exception_value, traceback):
-        """
-        Writes the output: the point and its prior, posterior and likelihood.
-        """
+        # Write the output: the point and its prior, posterior and likelihood.
         self.one_point._out_update()
 
     def products(self):

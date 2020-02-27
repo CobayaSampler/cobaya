@@ -696,4 +696,3 @@ def find_with_regexp(regexp, walk_tree=False):
         files = []
     return [f2 for f2 in files
             if f2 == getattr(regexp.match(f2), "group", lambda: None)()]
-
