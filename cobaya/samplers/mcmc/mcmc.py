@@ -14,6 +14,7 @@ from pandas import DataFrame
 import datetime
 from typing import Sequence, Optional
 import re
+from copy import deepcopy
 
 # Local
 from cobaya.sampler import Sampler, CovmatSampler
@@ -613,6 +614,9 @@ class mcmc(CovmatSampler):
                     "Skipping this checkpoint")
             else:
                 Linv = np.linalg.inv(L)
+                # Suppress numpy warnings (restored later in this function)
+                error_handling = deepcopy(np.geterr())
+                np.seterr(all="ignore")
                 try:
                     eigvals = np.linalg.eigvalsh(Linv.dot(corr_of_means).dot(Linv.T))
                     success = True
@@ -656,6 +660,7 @@ class mcmc(CovmatSampler):
                         else:
                             self.log.info("Computation of the bounds was not possible. "
                                           "Waiting until the next checkpoint")
+                np.seterr(**error_handling)
         else:
             mean_of_covs = np.empty((self.model.prior.d(), self.model.prior.d()))
             success = None
