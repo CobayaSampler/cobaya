@@ -155,7 +155,7 @@ class BlockedProposer(HasLogger):
         self.set_logger(lowercase=True)
         self.proposal_scale = proposal_scale
         if oversampling_factors is None:
-            self.oversampling_factors = np.array([1 for _ in parameter_blocks], dtype=int)
+            self.oversampling_factors = np.ones(len(parameter_blocks), dtype=int)
         else:
             if len(oversampling_factors) != len(parameter_blocks):
                 raise LoggedError(
@@ -185,11 +185,11 @@ class BlockedProposer(HasLogger):
         if set(chain(*parameter_blocks)) != set(range(n_all)):
             raise LoggedError(self.log,
                               "The blocks do not contain all the parameter indices.")
-        # Prepare indiced for the cycler, repeated if there is oversampling
+        # Prepare indices for the cycler, repeated if there is oversampling
         self.n_block = np.array([len(b) for b in parameter_blocks])
         indices_repeated = list(chain(
-            *[list(chain(*[[p]*o for p in block]))
-              for block ,o in zip(parameter_blocks, oversampling_factors)]))
+            *[list(chain(*[[p] * o for p in block]))
+              for block, o in zip(parameter_blocks, oversampling_factors)]))
         # Mapping between internal indices, sampler parameter indices and blocks:
         # let i=0,1,... be the indices of the parameters for the sampler,
         # and j=0,1,... be the indices of the parameters as the proposer manages them
