@@ -211,7 +211,7 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False, modules=
         assert test_func(n_evals, dim0, speed0, dim1, speed1) <= tolerance, (
             ("%g > %g" % (test_func(n_evals, dim0, speed0, dim1, speed1), tolerance)))
     elif sampler_name == "mcmc" and info["sampler"][sampler_name].get("drag"):
-        assert test_func(n_evals, dim0, speed0, dim1, speed1) <= tolerance, (
+        assert test_func(n_evals, dim0, speed0, dim1, 2*speed1) <= tolerance, (
             ("%g > %g" % (test_func(n_evals, dim0, speed0, dim1, speed1), tolerance)))
     elif sampler_name == "mcmc" and info["sampler"][sampler_name].get("oversample"):
         assert test_func(n_evals, dim0, speed0, dim1, speed1) <= tolerance, (
