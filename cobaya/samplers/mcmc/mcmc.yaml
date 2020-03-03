@@ -1,5 +1,6 @@
 # Default arguments for the Markov Chain Monte Carlo sampler
-# ('Xd' means 'X steps per dimension')
+# ('Xd' means 'X steps per dimension', or full parameter cycle
+#  when adjusting for oversampling / dragging)
 
 # Number of discarded burn-in samples per dimension
 burn_in: 20d
@@ -14,12 +15,11 @@ covmat:
 covmat_params:
 # Overall scale of the proposal pdf (increase for longer steps)
 proposal_scale: 2.4
-# Number of distinct accepted points between convergence checks & proposal learn
-check_every: 40d
-# Update output file(s) every X accepted samples
-output_every: 20
-# Print diagnose input every (in seconds)
-diag_every: 60
+# Update output file(s) and print some info
+# every X seconds (if ends in 's') or X accepted samples (if just a number)
+output_every: 60s
+# Number of distinct accepted points between proposal learn & convergence checks
+learn_every: 40d
 # Proposal covariance matrix learning
 # -----------------------------------
 learn_proposal: True
@@ -69,3 +69,5 @@ callback_every:  # default: every checkpoint
 # Seeding runs
 # ------------
 seed:  # integer between 0 and 2**32 - 1
+# To be deprecated
+check_every:

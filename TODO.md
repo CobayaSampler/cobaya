@@ -34,7 +34,9 @@
 ## `check_conflicts` theory method or similar (so likelihoods can raise error when used in combination with other variant likelihoods using non-independent data)
 ## If non-linear lensing on, model the non-linear correction via limber for faster semi-slow parameters
 ## unbounded parameters with flat prior (this would make it safe to rotate the unbounded ones in minimize) [JT: not very much in favour, since that would break a bunch of other stuff. Maybe let's explore an alternative solution?]
-## mcmc: finish removing .checkpoint in favour of updated.yaml and .progress
 ## minimize: MINUIT
 ## minimize: maybe should not overwrite `sampler` block of original sample (either append or leave as it was)
-
+## mcmc:
+* finish removing .checkpoint in favour of updated.yaml and .progress
+* For learning checks, X should perhaps ideally also depend slightly on the speed of the cycles, e.g. if either check becomes slow compared to a fast cycle.
+* Update output thin factor once chains get over a given size, so that asymptotically the memory size of the chains doesn't grow indefinitely (and convergence checking time also doesn't grow correspondingly), just the thinning factor increases.

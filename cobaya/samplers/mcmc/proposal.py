@@ -2,7 +2,7 @@
 .. module:: samplers.mcmc.proposal
 
 :Synopsis: proposal distributions
-:Author: Antony Lewis (from CosmoMC)
+:Author: Antony Lewis and Jesus Torrado
 
 Using the covariance matrix to give the proposal directions typically
 significantly increases the acceptance rate and gives faster movement
@@ -44,7 +44,7 @@ class CyclicIndexRandomizer(IndexCycler):
 
     def next(self):
         """
-        Get the next random index, or alternate for only two.
+        Get the next random index, or alternate for two or less.
 
         :return: index
         """
@@ -138,8 +138,8 @@ class RandDirectionProposer(IndexCycler):
 
 class RandProposer1D(RandDirectionProposer):
     def propose_vec(self, scale: float = 1):
-        return self.propose_r() * scale if np.random.randint(2) \
-            else -self.propose_r() * scale
+        return np.array([self.propose_r() * scale if np.random.randint(2)
+                         else -self.propose_r() * scale])
 
 
 class BlockedProposer(HasLogger):

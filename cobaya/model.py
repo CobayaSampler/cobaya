@@ -238,10 +238,8 @@ class Model(HasLogger):
         self.log.debug("Got input parameters: %r", input_params)
         n_theory = len(self.theory)
         loglikes = np.empty(len(self.likelihood))
-
         for (component, index), dependence in zip(self._component_order.items(),
                                                   self._ordered_param_dependence):
-
             depend_list = [input_params[p] for p in dependence]
             params = {p: input_params[p] for p in component.input_params}
             compute_success = component.check_cache_and_compute(
@@ -257,7 +255,13 @@ class Model(HasLogger):
                 derived_dict.update(component.get_current_derived())
             # Add chi2's to derived parameters
             if hasattr(component, "get_current_logp"):
-                loglikes[index - n_theory] = component.get_current_logp()
+                try:
+                    loglikes[index - n_theory] = float(component.get_current_logp())
+                except TypeError:
+                    raise LoggedError(
+                        self.log,
+                        "Likelihood %s has not returned a valid log-likelihood, "
+                        "but %r instead.", str(component), component.get_current_logp())
                 if return_derived:
                     derived_dict[_chi2 + _separator +
                                  component.get_name().replace(".", "_")] \
