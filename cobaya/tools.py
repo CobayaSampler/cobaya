@@ -51,7 +51,7 @@ def change_key(info, old, new, value):
     :param value: value for key
     :return: info (same instance)
     """
-    k = list(info.keys())
+    k = list(info)
     v = list(info.values())
     info.clear()
     for key, oldv in zip(k, v):
@@ -359,16 +359,21 @@ def read_number_with_units(n, unit, dtype=float):
     Reads number possibly with some `unit` (case insensitive).
     Returns a tuple `(value, mult)`, where `mult=0` is a bare number was given.
     """
+    # in case ints are given in exponential notation, make int(float())
+    if dtype == int:
+        cast = lambda x: int(float(x))
+    else:
+        cast = float
     try:
         if isinstance(n, str):
             if n[-len(unit)].lower() == unit:
                 if n.lower() == unit.lower():
                     return (dtype(1), 1)
-                return (dtype(n[:-len(unit)]), 1)
+                return (cast(n[:-len(unit)]), 1)
             raise ValueError
     except ValueError:
         raise LoggedError(log, "Could not convert '%r' to a number.", n)
-    return (dtype(n), 0)
+    return (cast(n), 0)
 
 
 def read_dnumber(n, dim):
@@ -421,7 +426,7 @@ def is_valid_variable_name(name):
 
 def get_scipy_1d_pdf(info):
     """Generates 1d priors from scipy's pdf's from input info."""
-    param = list(info.keys())[0]
+    param = list(info)[0]
     info2 = deepcopy(info[param])
     if not info2:
         raise LoggedError(log, "No specific prior info given for "

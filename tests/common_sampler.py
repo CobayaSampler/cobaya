@@ -9,11 +9,11 @@ from time import sleep
 from itertools import chain
 
 from cobaya.conventions import kinds, _params, _output_prefix, empty_dict
-from cobaya.conventions import _debug, _debug_file, _path_install
+from cobaya.conventions import _debug, _debug_file, _path_install, partag
 from cobaya.likelihoods.gaussian_mixture import info_random_gaussian_mixture
 from cobaya.tools import KL_norm
 from cobaya.run import run
-from .common import process_modules_path
+from .common import process_modules_path, is_travis
 
 KL_tolerance = 0.05
 logZ_nsigmas = 2
@@ -45,10 +45,11 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
         print("Original covmat of the gaussian mode:")
         print(info["likelihood"]["gaussian_mixture"]["covs"])
     info[kinds.sampler] = info_sampler
-    if list(info_sampler.keys())[0] == "mcmc":
+    sampler_name = list(info_sampler)[0]
+    if sampler_name == "mcmc":
         if "covmat" in info_sampler["mcmc"]:
             info[kinds.sampler]["mcmc"]["covmat_params"] = (
-                list(info["params"].keys())[:dimension])
+                list(info["params"])[:dimension])
     info[_debug] = False
     info[_debug_file] = None
     # TODO: this looks weird/bug:?
@@ -62,7 +63,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
     products = sampler.products()
     # Done! --> Tests
     if rank == 0:
-        if list(info_sampler.keys())[0] == "mcmc":
+        if sampler_name == "mcmc":
             ignore_rows = 0.5
         else:
             ignore_rows = 0
@@ -76,17 +77,21 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
                 for i in products["clusters"]]
         # Plots!
         try:
+            if is_travis():
+                raise ValueError
             import getdist.plots as gdplots
             from getdist.gaussian_mixtures import MixtureND
+            sampled_params = [
+                p for p, v in info["params"].items() if partag.prior not in v]
             mixture = MixtureND(
                 info[kinds.likelihood]["gaussian_mixture"]["means"],
                 info[kinds.likelihood]["gaussian_mixture"]["covs"],
-                names=[p for p in info[_params] if "deriv" not in p], label="truth")
+                names=sampled_params, label="truth")
             g = gdplots.getSubplotPlotter()
             to_plot = [mixture, results]
             if clusters:
                 to_plot = to_plot + clusters
-            g.triangle_plot(to_plot, )
+            g.triangle_plot(to_plot, params=sampled_params)
             g.export("test.png")
         except:
             print("Plotting failed!")
@@ -102,7 +107,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
         # 2nd test: clusters
         else:
             if "clusters" in products:
-                assert len(products["clusters"].keys()) >= n_modes, (
+                assert len(products["clusters"]) >= n_modes, (
                     "Not all clusters detected!")
                 for i, c2 in enumerate(clusters):
                     cov_c2, mean_c2 = c2.getCov(), c2.getMeans()
@@ -171,7 +176,7 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False, modules=
         "likelihood": {"like0": {"external": like0, "speed": speed0},
                        "like1": {"external": like1, "speed": speed1}},
         "sampler": info_sampler}
-    sampler_name = list(info_sampler.keys())[0]
+    sampler_name = list(info_sampler)[0]
     if manual_blocking:
         over0, over1 = speed0, speed1
         info["sampler"][sampler_name]["blocking"] = [
