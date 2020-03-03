@@ -75,7 +75,8 @@ class mcmc(CovmatSampler):
             raise LoggedError(self.log, "No parameters being varied for sampler")
         self.log.debug("Initializing")
         for p in ["max_tries", "output_every", "check_every",
-                  "callback_every"] + (["burn_in"] if not self.output.is_resuming() else []):
+                  "callback_every"] + (
+                 ["burn_in"] if not self.output.is_resuming() else []):
             setattr(self, p, read_dnumber(getattr(self, p), self.model.prior.d(),
                                           dtype=int))
         if self.callback_every is None:
@@ -86,7 +87,8 @@ class mcmc(CovmatSampler):
         self.been_waiting = 0
         self.max_waiting = max(50, self.max_tries / self.model.prior.d())
         if is_main_process():
-            if self.output.is_resuming() and (max(self.mpi_size or 0, 1) != max(get_mpi_size(), 1)):
+            if self.output.is_resuming() and (
+                    max(self.mpi_size or 0, 1) != max(get_mpi_size(), 1)):
                 raise LoggedError(
                     self.log,
                     "Cannot resume a run with a different number of chains: "
@@ -237,7 +239,8 @@ class mcmc(CovmatSampler):
     def set_proposer_covmat(self, load=False):
         if load:
             # Build the initial covariance matrix of the proposal, or load from checkpoint
-            self._covmat, where_nan = self._load_covmat(self.output.is_resuming(), self.slow_params)
+            self._covmat, where_nan = self._load_covmat(self.output.is_resuming(),
+                                                        self.slow_params)
             if np.any(where_nan) and self.learn_proposal:
                 # we want to start learning the covmat earlier
                 self.mpi_info("Covariance matrix " +

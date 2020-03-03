@@ -37,7 +37,7 @@ class Output(HasLogger):
         self.folder = os.sep.join(output_prefix.split(os.sep)[:-1]) or "."
         self.prefix = (lambda x: x if x != "." else "")(output_prefix.split(os.sep)[-1])
         self.prefix_regexp_str = \
-            os.path.join(self.folder, self.prefix) + (r"\." if self.prefix else "")
+            os.path.join(self.prefix) + (r"\." if self.prefix else "")
         self.force = force
         if resume and force and output_prefix:
             # No resume and force at the same time (if output)
@@ -232,9 +232,10 @@ class Output(HasLogger):
         """
         Deletes all files compatible with the given regexp.
         """
-        file_names = find_with_regexp(regexp)
+        file_names = find_with_regexp(regexp, self.folder)
         if file_names:
-            self.log.debug("From regexp %r, deleting files %r", regexp.pattern, file_names)
+            self.log.debug("From regexp %r, deleting files %r", regexp.pattern,
+                           file_names)
         for f in file_names:
             try:
                 os.remove(f)
@@ -271,7 +272,6 @@ class Output(HasLogger):
         Use `name` for particular types of collections (default: any number).
         Pass `False` to mean there is nothing between the output prefix and the extension.
         """
-        pre = os.path.join(self.folder, self.prefix) + (r"\." if self.prefix else "")
         if name is None:
             name = r"\d+\."
         elif name is False:

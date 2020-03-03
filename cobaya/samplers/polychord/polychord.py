@@ -216,6 +216,7 @@ class polychord(Sampler):
         """
         Prepares the posterior function and calls ``PolyChord``'s ``run`` function.
         """
+
         # Prepare the posterior
         # Don't forget to multiply by the volume of the physical hypercube,
         # since PolyChord divides by it
@@ -230,6 +231,7 @@ class polychord(Sampler):
             return (
                 max(logposterior + self.logvolume, self.pc_settings.logzero),
                 derived)
+
         sync_processes()
         self.mpi_info("Sampling!")
         self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
@@ -238,9 +240,9 @@ class polychord(Sampler):
 
     def dump_paramnames(self, prefix):
         paramnames = (list() +
-                      [p+"*" for p in (
-                          list(self.model.parameterization.derived_params()) +
-                          list(self.model.prior) + list(self.model.likelihood))])
+                      [p + "*" for p in (
+                              list(self.model.parameterization.derived_params()) +
+                              list(self.model.prior) + list(self.model.likelihood))])
         labels = self.model.parameterization.labels()
         with open(prefix + ".paramnames", "w") as f_paramnames:
             for p in self.model.parameterization.sampled_params():
@@ -285,10 +287,11 @@ class polychord(Sampler):
             # Load clusters, and save if output
             if self.pc_settings.do_clustering:
                 self.clusters = {}
-                clusters_raw_regexp = re.compile(os.path.join(
-                    self.pc_settings.base_dir, self._clusters_dir,
-                    self.pc_settings.file_root + r"_\d+\.txt"))
-                cluster_raw_files = find_with_regexp(clusters_raw_regexp, walk_tree=True)
+                clusters_raw_regexp = re.compile(
+                    self.pc_settings.file_root + r"_\d+\.txt")
+                cluster_raw_files = find_with_regexp(
+                    clusters_raw_regexp, os.path.join(self.pc_settings.base_dir,
+                                                      self._clusters_dir), walk_tree=True)
                 for f in cluster_raw_files:
                     i = int(f[f.rfind("_") + 1:-len(".txt")])
                     if self.output:
@@ -377,7 +380,7 @@ class polychord(Sampler):
             re.compile(os.path.join(output.folder, output.prefix + _evidence_extension)),
             # Clusters
             re.compile(cls.get_clusters_dir(output))
-            ]
+        ]
 
     @classmethod
     def get_version(cls):
