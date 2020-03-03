@@ -240,7 +240,7 @@ def post(info, sample=None):
     elif output_out and output_out.force:
         output_out.delete_infos()
         for regexp in output_out.find_collections():
-            output_out.delete_with_regexp(re.compile(re.escape(regexp)))
+            output_out.delete_with_regexp(re.compile(regexp))
     info_out = deepcopy_where_possible(info)
     info_out[_post] = info_post
     # Updated with input info and extended (updated) add info

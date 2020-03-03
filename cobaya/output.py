@@ -279,7 +279,7 @@ class Output(HasLogger):
         else:
             name = re.escape(name) + r"\."
         extension = self.sanitize_collection_extension(extension)
-        return re.compile(re.escape(self.prefix_regexp_str) + name +
+        return re.compile(self.prefix_regexp_str + name +
                           re.escape(extension.lower()) + "$")
 
     def is_collection_file_name(self, file_name, name=None, extension=None):
