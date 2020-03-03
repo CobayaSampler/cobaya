@@ -3,6 +3,10 @@ import os
 from contextlib import contextmanager
 
 
+def is_travis():
+    return os.environ.get('TRAVIS') == 'true'
+
+
 def process_modules_path(modules):
     modules = os.getenv('COBAYA_FORCE_MODULES_PATH', modules)
     if not modules:

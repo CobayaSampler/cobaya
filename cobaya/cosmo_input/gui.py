@@ -191,7 +191,7 @@ class MainWindow(QWidget):
         return create_input(
             get_comments=True,
             #           planck_names=self.planck_names.isChecked(),
-            **{field: list(getattr(input_database, field).keys())[combo.currentIndex()]
+            **{field: list(getattr(input_database, field))[combo.currentIndex()]
                for field, combo in self.combos.items() if field != "preset"})
 
     @Slot()
@@ -207,7 +207,7 @@ class MainWindow(QWidget):
 
     @Slot()
     def refresh_preset(self):
-        preset = list(getattr(input_database, "preset").keys())[
+        preset = list(getattr(input_database, "preset"))[
             self.combos["preset"].currentIndex()]
         if preset is input_database._none:
             return

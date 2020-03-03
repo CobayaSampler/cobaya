@@ -315,7 +315,7 @@ class polychord(Sampler):
                     self.clusters[i]["logZ"], self.clusters[i]["logZstd"] = logZ, logZstd
             if self.output:
                 out_evidences = dict(logZ=self.logZ, logZstd=self.logZstd)
-                if self.clusters:
+                if getattr(self, "clusters", None):
                     out_evidences["clusters"] = {}
                     for i in sorted(list(self.clusters)):
                         out_evidences["clusters"][i] = dict(
