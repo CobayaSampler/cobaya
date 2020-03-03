@@ -48,7 +48,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
     if list(info_sampler.keys())[0] == "mcmc":
         if "covmat" in info_sampler["mcmc"]:
             info[kinds.sampler]["mcmc"]["covmat_params"] = (
-                list(info["params"].keys())[:dimension])
+                list(info["params"])[:dimension])
     info[_debug] = False
     info[_debug_file] = None
     # TODO: this looks weird/bug:?

@@ -350,7 +350,7 @@ class minimize(Minimizer, CovmatSampler):
             lines.append('  chi-sq    = %s' % (2 * minuslogpost))
         lines.append('')
         labels = self.model.parameterization.labels()
-        label_list = list(labels.keys())
+        label_list = list(labels)
         if hasattr(params, 'chi2_names'):
             label_list += params.chi2_names
         width = max([len(lab) for lab in label_list]) + 2

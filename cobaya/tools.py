@@ -51,7 +51,7 @@ def change_key(info, old, new, value):
     :param value: value for key
     :return: info (same instance)
     """
-    k = list(info.keys())
+    k = list(info)
     v = list(info.values())
     info.clear()
     for key, oldv in zip(k, v):
@@ -421,7 +421,7 @@ def is_valid_variable_name(name):
 
 def get_scipy_1d_pdf(info):
     """Generates 1d priors from scipy's pdf's from input info."""
-    param = list(info.keys())[0]
+    param = list(info)[0]
     info2 = deepcopy(info[param])
     if not info2:
         raise LoggedError(log, "No specific prior info given for "

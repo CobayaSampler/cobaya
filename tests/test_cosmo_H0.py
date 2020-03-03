@@ -46,5 +46,5 @@ def body_of_test(modules, lik_name):
     std = updated_info[kinds.likelihood][lik_name].get("H0_std", 1)
     reference_value = -2 * norm.logpdf(fiducial_H0, loc=mean, scale=std)
     computed_value = (
-        products["sample"]["chi2__" + list(info[kinds.likelihood].keys())[0]].values[0])
+        products["sample"]["chi2__" + list(info[kinds.likelihood])[0]].values[0])
     assert np.allclose(computed_value, reference_value)

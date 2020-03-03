@@ -99,18 +99,18 @@ def check_sampler_info(info_old=None, info_new=None):
         return
     # TODO: restore this at some point: just append minimize info to the old one
     # There is old info, but the new one is Minimizer and the old one is not
-    # if (len(info_old) == 1 and list(info_old.keys()) != ["minimize"] and
-    #      list(info_new.keys()) == ["minimize"]):
+    # if (len(info_old) == 1 and list(info_old) != ["minimize"] and
+    #      list(info_new) == ["minimize"]):
     #     # In-place append of old+new --> new
     #     aux = info_new.pop("minimize")
     #     info_new.update(info_old)
     #     info_new.update({"minimize": aux})
     #     info_old = {}
     #     keep_old = {}
-    if (list(info_old.keys()) != list(info_new.keys()) and
-          list(info_new.keys()) == ["minimize"]):
+    if (list(info_old) != list(info_new) and
+          list(info_new) == ["minimize"]):
         return
-    if list(info_old.keys()) == list(info_new.keys()):
+    if list(info_old) == list(info_new):
         # Restore some selected old values for some classes
         keep_old = get_preferred_old_values({kinds.sampler: info_old})
         info_new = recursive_update(info_new, keep_old.get(kinds.sampler, {}))

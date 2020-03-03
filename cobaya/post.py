@@ -250,7 +250,7 @@ def post(info, sample=None):
                                  info_prior=out[_prior])
     if recompute_theory:
         # TODO: May need updating for more than one, or maybe can be removed
-        theory = list(info_theory_out.keys())[0]
+        theory = list(info_theory_out)[0]
         if _input_params not in info_theory_out[theory]:
             raise LoggedError(
                 log,

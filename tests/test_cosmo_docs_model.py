@@ -41,7 +41,7 @@ def test_cosmo_docs_model_classy(modules):
         derived_params_old, derived_params_new = map(
             lambda x: eval(x[x.find("{"):]), [derived_line_old, derived_line_new])
         oldvals = list(derived_params_old.values())
-        newvals = [derived_params_new[v] for v in derived_params_old.keys()]
+        newvals = [derived_params_new[v] for v in derived_params_old]
         assert np.allclose(oldvals, newvals), (
                 "Wrong derived parameters line:\nBEFORE: %s\nNOW:    %s" %
                 (derived_line_old, derived_line_new))
