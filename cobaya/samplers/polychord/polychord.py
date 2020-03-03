@@ -19,7 +19,7 @@ from tempfile import gettempdir
 import re
 
 # Local
-from cobaya.tools import read_dnumber, get_external_function, relative_to_int, PythonPath
+from cobaya.tools import read_dnumber, get_external_function, PythonPath
 from cobaya.tools import find_with_regexp
 from cobaya.sampler import Sampler
 from cobaya.mpi import is_main_process, share_mpi, sync_processes

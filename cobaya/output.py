@@ -10,7 +10,6 @@ import os
 import sys
 import traceback
 import datetime
-from itertools import chain
 import re
 import shutil
 
@@ -23,7 +22,7 @@ from cobaya.log import LoggedError, HasLogger
 from cobaya.input import is_equal_info, get_class
 from cobaya.mpi import is_main_process, more_than_one_process, share_mpi
 from cobaya.collection import Collection
-from cobaya.tools import deepcopy_where_possible, find_with_regexp, recursive_update
+from cobaya.tools import deepcopy_where_possible, find_with_regexp
 
 # Default output type and extension
 _kind = "txt"
@@ -36,8 +35,7 @@ class Output(HasLogger):
         self.set_logger(self.name)
         self.folder = os.sep.join(output_prefix.split(os.sep)[:-1]) or "."
         self.prefix = (lambda x: x if x != "." else "")(output_prefix.split(os.sep)[-1])
-        self.prefix_regexp_str = \
-            os.path.join(self.prefix) + (r"\." if self.prefix else "")
+        self.prefix_regexp_str = self.prefix + (r"\." if self.prefix else "")
         self.force = force
         if resume and force and output_prefix:
             # No resume and force at the same time (if output)
@@ -178,7 +176,8 @@ class Output(HasLogger):
             if old_info:
                 new_info = yaml_load(yaml_dump(updated_info_trimmed))
                 if not is_equal_info(old_info, new_info, strict=False,
-                                     ignore_blocks=list(ignore_blocks) + [_output_prefix]):
+                                     ignore_blocks=list(ignore_blocks) + [
+                                         _output_prefix]):
                     raise LoggedError(
                         self.log, "Old and new run information not compatible! "
                                   "Resuming not possible!")
