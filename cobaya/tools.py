@@ -359,16 +359,21 @@ def read_number_with_units(n, unit, dtype=float):
     Reads number possibly with some `unit` (case insensitive).
     Returns a tuple `(value, mult)`, where `mult=0` is a bare number was given.
     """
+    # in case ints are given in exponential notation, make int(float())
+    if dtype == int:
+        cast = lambda x: int(float(x))
+    else:
+        cast = float
     try:
         if isinstance(n, str):
             if n[-len(unit)].lower() == unit:
                 if n.lower() == unit.lower():
                     return (dtype(1), 1)
-                return (dtype(n[:-len(unit)]), 1)
+                return (cast(n[:-len(unit)]), 1)
             raise ValueError
     except ValueError:
         raise LoggedError(log, "Could not convert '%r' to a number.", n)
-    return (dtype(n), 0)
+    return (cast(n), 0)
 
 
 def read_dnumber(n, dim):
