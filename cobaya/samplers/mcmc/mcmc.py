@@ -760,7 +760,7 @@ class mcmc(CovmatSampler):
         if minimal:
             return regexps
         return (regexps +
-                [re.compile(output.prefix_regexp_str + ext.lstrip(".") + "$") for ext in
+                [re.compile(output.prefix_regexp_str + re.escape(ext.lstrip(".")) + "$") for ext in
                  [_checkpoint_extension, _progress_extension, _covmat_extension]])
 
     @classmethod

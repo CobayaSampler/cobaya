@@ -286,9 +286,9 @@ class polychord(Sampler):
             # Load clusters, and save if output
             if self.pc_settings.do_clustering:
                 self.clusters = {}
-                clusters_raw_regexp = re.compile(os.path.join(
+                clusters_raw_regexp = re.compile(re.escape(os.path.join(
                     self.pc_settings.base_dir, self._clusters_dir,
-                    self.pc_settings.file_root + r"_\d+\.txt"))
+                    self.pc_settings.file_root) + r"_\d+\.txt"))
                 cluster_raw_files = find_with_regexp(clusters_raw_regexp, walk_tree=True)
                 for f in cluster_raw_files:
                     i = int(f[f.rfind("_") + 1:-len(".txt")])
@@ -365,19 +365,19 @@ class polychord(Sampler):
     @classmethod
     def output_files_regexps(cls, output, info=None, minimal=False):
         # Resume file
-        regexps = [re.compile(
-            os.path.join(cls.get_base_dir(output), output.prefix + ".resume"))]
+        regexps = [re.compile(re.escape(
+            os.path.join(cls.get_base_dir(output), output.prefix + ".resume")))]
         if minimal:
             return regexps
         return regexps + [
             # Raw products base dir
-            re.compile(cls.get_base_dir(output)),
+            re.compile(re.escape(cls.get_base_dir(output))),
             # Main sample
             output.collection_regexp(name=None),
             # Evidence
-            re.compile(os.path.join(output.folder, output.prefix + _evidence_extension)),
+            re.compile(re.escape(os.path.join(output.folder, output.prefix + _evidence_extension))),
             # Clusters
-            re.compile(cls.get_clusters_dir(output))
+            re.compile(re.escape(cls.get_clusters_dir(output)))
             ]
 
     @classmethod

@@ -37,7 +37,7 @@ class Output(HasLogger):
         self.folder = os.sep.join(output_prefix.split(os.sep)[:-1]) or "."
         self.prefix = (lambda x: x if x != "." else "")(output_prefix.split(os.sep)[-1])
         self.prefix_regexp_str = \
-            os.path.join(self.folder, self.prefix) + (r"\." if self.prefix else "")
+            re.escape(os.path.join(self.folder, self.prefix)) + (r"\." if self.prefix else "")
         self.force = force
         if resume and force and output_prefix:
             # No resume and force at the same time (if output)
@@ -277,9 +277,10 @@ class Output(HasLogger):
         elif name is False:
             name = ""
         else:
-            name = name + r"\."
+            name = re.escape(name) + r"\."
         extension = self.sanitize_collection_extension(extension)
-        return re.compile(self.prefix_regexp_str + name + extension.lower() + "$")
+        return re.compile(re.escape(self.prefix_regexp_str) + name +
+                          re.escape(extension.lower()) + "$")
 
     def is_collection_file_name(self, file_name, name=None, extension=None):
         """

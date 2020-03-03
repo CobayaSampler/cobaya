@@ -398,7 +398,7 @@ class minimize(Minimizer, CovmatSampler):
         ignore_prior = bool(info.get("ignore_prior", False))
         ext_collection = get_collection_extension(ignore_prior)
         ext_getdist = getdist_ext_ignore_prior[ignore_prior]
-        return [re.compile(output.prefix_regexp_str + ext.lstrip(".") + "$") for ext in
+        return [re.compile(output.prefix_regexp_str + re.escape(ext.lstrip(".")) + "$") for ext in
                  [ext_collection, ext_getdist]]
 
     @classmethod
