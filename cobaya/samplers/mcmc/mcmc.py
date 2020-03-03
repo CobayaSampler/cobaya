@@ -17,6 +17,7 @@ import re
 from copy import deepcopy
 
 # Local
+from cobaya import __version__
 from cobaya.sampler import Sampler, CovmatSampler
 from cobaya.mpi import get_mpi_size, get_mpi_rank, get_mpi_comm, get_mpi, share_mpi
 from cobaya.mpi import more_than_one_process, is_main_process, sync_processes
@@ -762,6 +763,9 @@ class mcmc(CovmatSampler):
                 [re.compile(output.prefix_regexp_str + ext.lstrip(".") + "$") for ext in
                  [_checkpoint_extension, _progress_extension, _covmat_extension]])
 
+    @classmethod
+    def get_version(cls):
+        return __version__
 
 # Plotting tool for chain progress #######################################################
 

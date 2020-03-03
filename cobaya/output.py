@@ -178,7 +178,7 @@ class Output(HasLogger):
             if old_info:
                 new_info = yaml_load(yaml_dump(updated_info_trimmed))
                 if not is_equal_info(old_info, new_info, strict=False,
-                                     ignore_blocks=ignore_blocks):
+                                     ignore_blocks=list(ignore_blocks) + [_output_prefix]):
                     raise LoggedError(
                         self.log, "Old and new run information not compatible! "
                                   "Resuming not possible!")

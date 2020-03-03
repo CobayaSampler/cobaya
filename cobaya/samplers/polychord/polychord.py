@@ -92,7 +92,8 @@ class polychord(Sampler):
         if self.max_ndead == np.inf:
             self.max_ndead = -1
         for p in ["nlive", "nprior", "max_ndead"]:
-            setattr(self, p, read_dnumber(getattr(self, p), self.nDims, dtype=int))
+            if getattr(self, p) is not None:
+                setattr(self, p, read_dnumber(getattr(self, p), self.nDims))
         # Fill the automatic ones
         if getattr(self, "feedback", None) is None:
             values = {logging.CRITICAL: 0, logging.ERROR: 0, logging.WARNING: 0,
