@@ -354,18 +354,29 @@ def ensure_nolatex(string):
     return string.strip().lstrip("$").rstrip("$")
 
 
-def read_dnumber(n, d, dtype=float):
-    """Reads number as multiples of a given dimension."""
+def read_number_with_units(n, unit, dtype=float):
+    """
+    Reads number possibly with some `unit` (case insensitive).
+    Returns a tuple `(value, mult)`, where `mult=0` is a bare number was given.
+    """
     try:
         if isinstance(n, str):
-            if n[-1].lower() == "d":
-                if n.lower() == "d":
-                    return d
-                return dtype(n[:-1]) * d
+            if n[-len(unit)].lower() == unit:
+                if n.lower() == unit.lower():
+                    return (dtype(1), 1)
+                return (dtype(n[:-len(unit)]), 1)
             raise ValueError
     except ValueError:
         raise LoggedError(log, "Could not convert '%r' to a number.", n)
-    return n
+    return (dtype(n), 0)
+
+
+def read_dnumber(n, dim):
+    """
+    Reads number possibly as a multiple of dimension `dim`.
+    """
+    val, mult = read_number_with_units(n, "d", dtype=int)
+    return val * (mult * dim if mult else 1)
 
 
 def load_DataFrame(file_name, skip=0, thin=1):

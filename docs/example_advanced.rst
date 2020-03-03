@@ -32,8 +32,8 @@ Our likelihood will be a gaussian ring centred at 0 with radius 1. We define it 
 .. code:: python
 
     info["params"] = {
-        {"x": {"prior": {"min": -2, "max": 2}, "ref": 1, "proposal": 0.2},
-        {"y": {"prior": {"min": -2, "max": 2}, "ref": 0, "proposal": 0.2}}
+        "x": {"prior": {"min": -2, "max": 2}, "ref": 1, "proposal": 0.2},
+        "y": {"prior": {"min": -2, "max": 2}, "ref": 0, "proposal": 0.2}}
 
 
 Now, let's assume that we want to track the radius of the ring, whose posterior will be approximately gaussian, and the angle, whose posterior will be uniform. We can define them as function of known input parameters:

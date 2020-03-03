@@ -26,23 +26,22 @@ from cobaya.conventions import _line_width, _progress_extension, empty_dict
 from cobaya.conventions import _checkpoint_extension
 from cobaya.samplers.mcmc.proposal import BlockedProposer
 from cobaya.log import LoggedError
-from cobaya.tools import get_external_function, read_dnumber
+from cobaya.tools import get_external_function, read_number_with_units
 from cobaya.tools import load_DataFrame
 from cobaya.yaml import yaml_dump_file
 
 
 class mcmc(CovmatSampler):
     _at_resume_prefer_new = CovmatSampler._at_resume_prefer_new + [
-        "burn_in", "callback_function", "callback_every", "max_tries", "diag_every",
-        "check_every", "output_every", "learn_proposal_Rminus1_max",
-        "learn_proposal_Rminus1_max_early", "learn_proposal_Rminus1_min",
-        "max_samples", "Rminus1_stop", "Rminus1_cl_stop",
+        "burn_in", "callback_function", "callback_every", "max_tries", "output_every",
+        "learn_every", "learn_proposal_Rminus1_max", "learn_proposal_Rminus1_max_early",
+        "learn_proposal_Rminus1_min", "max_samples", "Rminus1_stop", "Rminus1_cl_stop",
         "Rminus1_cl_level", "covmat", "covmat_params"]
     _at_resume_prefer_old = CovmatSampler._at_resume_prefer_new + [
         "proposal_scale", "blocking"]
 
     # instance variables from yaml
-    check_every: int
+    learn_every: int
     burn_in: int
     max_tries: int
     max_samples: int
@@ -58,7 +57,7 @@ class mcmc(CovmatSampler):
     Rminus1_single_split: float
     learn_proposal_Rminus1_min: float
     measure_speeds: bool
-    diag_every: int
+    checkpoint_every: int
     output_every: int
 
     def set_instance_defaults(self):
@@ -74,17 +73,19 @@ class mcmc(CovmatSampler):
         if not self.model.prior.d():
             raise LoggedError(self.log, "No parameters being varied for sampler")
         self.log.debug("Initializing")
-        for p in ["max_tries", "output_every", "check_every",
-                  "callback_every"] + (["burn_in"] if not self.output.is_resuming() else []):
-            setattr(self, p, read_dnumber(getattr(self, p), self.model.prior.d(),
-                                          dtype=int))
+        if getattr(self, "check_every", None) is not None:
+            self.log.warning("`check_every` will be deprecated in the next version. "
+                             "Please use `learn_every` instead.")
+            self.learn_every = self.check_every
         if self.callback_every is None:
-            self.callback_every = self.check_every
-        # Burning-in countdown -- the +1 accounts for the initial point (always accepted)
-        self.burn_in_left = self.burn_in + 1
-        # Max # checkpoints to wait, in case one process dies without sending MPI_ABORT
-        self.been_waiting = 0
-        self.max_waiting = max(50, self.max_tries / self.model.prior.d())
+            self.callback_every = self.learn_every
+        self.quants_d_units = (["max_tries", "learn_every", "callback_every"] +
+                          (["burn_in"] if not self.output.is_resuming() else []))
+        for q in self.quants_d_units:
+            setattr(self, q, read_number_with_units(getattr(self, q), "d", dtype=int))
+        quants_s_units = ["output_every"]
+        for q in quants_s_units:
+            setattr(self, q, read_number_with_units(getattr(self, q), "s", dtype=int))
         if is_main_process():
             if self.output.is_resuming() and (max(self.mpi_size or 0, 1) != max(get_mpi_size(), 1)):
                 raise LoggedError(
@@ -105,7 +106,6 @@ class mcmc(CovmatSampler):
         # Use standard MH steps by default
         self.get_new_sample = self.get_new_sample_metropolis
         # Prepare oversampling / dragging if applicable
-        self.effective_max_samples = self.max_samples
         if self.oversample and self.drag:
             raise LoggedError(self.log,
                               "Choose either oversampling or dragging, not both.")
@@ -119,7 +119,7 @@ class mcmc(CovmatSampler):
         if is_main_process():
             cols = ["N", "acceptance_rate", "Rminus1", "Rminus1_cl"]
             self.progress = DataFrame(columns=cols)
-            self.i_checkpoint = 1
+            self.i_learn = 1
             if self.output and not self.output.is_resuming():
                 with open(self.progress_filename(), "w",
                           encoding="utf-8") as progress_file:
@@ -140,8 +140,10 @@ class mcmc(CovmatSampler):
             derived = (self.collection[self.collection.derived_params]
                        .iloc[len(self.collection) - 1].values.copy())
         else:
+            # NB: max_tries adjusted to dim instead of #cycles (blocking not computed yet)
+            max_tries = self.max_tries[0] * self.model.prior.d()
             initial_point, logpost, logpriors, loglikes, derived = \
-                self.model.get_initial_point(max_tries=self.max_tries)
+                self.model.get_initial_point(max_tries=max_tries)
             if self.measure_speeds and self.blocking:
                 self.log.warning(
                     "Parameter blocking manually fixed: speeds will not be measured.")
@@ -152,7 +154,13 @@ class mcmc(CovmatSampler):
         self.current_point.add(initial_point, derived=derived, logpost=logpost,
                                logpriors=logpriors, loglikes=loglikes)
         self.log.info("Initial point: %s", self.current_point)
-        # Initial dummy checkpoint (needed when 1st checkpoint not reached in prev. run)
+        # Max #(learn+convergence checks) to wait,
+        # in case one process dies without sending MPI_ABORT
+        self.been_waiting = 0
+        self.max_waiting = max(50, self.max_tries / self.cycle_length)
+        # Burning-in countdown -- the +1 accounts for the initial point (always accepted)
+        self.burn_in_left = self.burn_in + 1
+        # Initial dummy checkpoint (needed when 1st "learn point" not reached in prev. run)
         self.write_checkpoint()
 
     @property
@@ -227,12 +235,15 @@ class mcmc(CovmatSampler):
         self.proposer = BlockedProposer(
             blocks_indices, oversampling_factors=self.oversampling_factors,
             i_last_slow_block=self.i_last_slow_block, proposal_scale=self.proposal_scale)
-        # We will take the slowest block as slow parameters,
-        # for purposes of checkpoints, callbacks and thinning
-        self.log.debug("Slow parameters: %r", self.slow_params)
-        for p in ["check_every", "callback_every"]:
-            setattr(self, p, max(1, int(getattr(self, p) *
-                                        self.n_slow / self.model.prior.d())))
+        # Cycle length, taking into account oversampling/dragging
+        self.cycle_length = sum(
+            [len(b) * o for b, o in zip(blocks_indices, self.oversampling_factors)])
+        self.log.debug(
+            "Cycle length in steps: %r", self.cycle_length)
+        for q in self.quants_d_units:
+            setattr(
+                self, q,
+                (lambda q: q[0] * (q[1] * self.cycle_length if q[1] else 1))(getattr(self, q)))
 
     def set_proposer_covmat(self, load=False):
         if load:
@@ -275,15 +286,16 @@ class mcmc(CovmatSampler):
                     self.burn_in) +
                 "have been obtained)" if self.burn_in else ""))
         self.n_steps_raw = 0
-        last_diag = 0
-        while self.n() < self.effective_max_samples and not self.converged:
+        last_output = 0
+        while self.n() < self.max_samples and not self.converged:
             self.get_new_sample()
             self.n_steps_raw += 1
             now = datetime.datetime.now()
             now_sec = now.timestamp()
-            if self.diag_every and now_sec >= last_diag + self.diag_every:
-                self.log_diagnosis(now)
-                last_diag = now_sec
+            # if output_every in sec, print some info and dump at fixed time intervals
+            if self.output_every[1] and now_sec >= last_output + self.output_every[0]:
+                self.do_output(now)
+                last_output = now_sec
             # Callback function
             if (hasattr(self, "callback_function_callable") and
                     not (max(self.n(), 1) % self.callback_every) and
@@ -294,8 +306,8 @@ class mcmc(CovmatSampler):
             if self.check_all_ready():
                 self.check_convergence_and_learn_proposal()
                 if is_main_process():
-                    self.i_checkpoint += 1
-            if self.n() == self.effective_max_samples:
+                    self.i_learn += 1
+            if self.n() == self.max_samples:
                 self.log.info("Reached maximum number of accepted steps allowed. "
                               "Stopping.")
         # Make sure the last batch of samples ( < output_every ) are written
@@ -448,8 +460,10 @@ class mcmc(CovmatSampler):
             if self.burn_in_left <= 0:
                 self.current_point.add_to_collection(self.collection)
                 self.log.debug("New sample, #%d: \n   %s", self.n(), self.current_point)
-                if self.n() % self.output_every == 0:
-                    self.collection._out_update()
+                # Update chain files, if output_every *not* in sec
+                if not self.output_every[1]:
+                    if self.n() % self.output_every == 0:
+                        self.collection._out_update()
             else:
                 self.burn_in_left -= 1
                 self.log.debug("Burn-in sample:\n   %s", self.current_point)
@@ -483,11 +497,10 @@ class mcmc(CovmatSampler):
         msg_ready = ("Ready to check convergence" +
                      (" and learn a new proposal covmat"
                       if self.learn_proposal else ""))
-
         n = len(self.collection)
         # If *just* (weight==1) got ready to check+learn
-        if not (n % self.check_every) and n > 0 and self.current_point.weight == 1:
-            self.log.info("Checkpoint: %d samples accepted.", n)
+        if not (n % self.learn_every) and n > 0 and self.current_point.weight == 1:
+            self.log.info("Learn + convergence test @ %d samples accepted.", n)
             if more_than_one_process():
                 self.been_waiting += 1
                 if self.been_waiting > self.max_waiting:
@@ -497,7 +510,7 @@ class mcmc(CovmatSampler):
             self.model.dump_timing()
             # If not MPI size > 1, we are ready
             if not more_than_one_process():
-                self.log.info(msg_ready)
+                self.log.debug(msg_ready)
                 return True
             # If MPI, tell the rest that we are ready -- we use a "gather"
             # ("reduce" was problematic), but we are in practice just pinging
@@ -552,7 +565,7 @@ class mcmc(CovmatSampler):
             if cut <= 1:
                 raise LoggedError(
                     self.log, "Not enough points in chain to check convergence. "
-                              "Increase `check_every` or reduce `Rminus1_single_split`.")
+                              "Increase `learn_every` or reduce `Rminus1_single_split`.")
             Ns = (m - 1) * [cut]
             means = np.array(
                 [self.collection.mean(first=i * cut, last=(i + 1) * cut - 1) for i in
@@ -579,16 +592,16 @@ class mcmc(CovmatSampler):
                 success_bounds = False
         # Compute convergence diagnostics
         if is_main_process():
-            self.progress.at[self.i_checkpoint, "N"] = (
+            self.progress.at[self.i_learn, "N"] = (
                 sum(Ns) if more_than_one_process() else self.n())
             acceptance_rate = (
                 np.average(acceptance_rates, weights=Ns)
                 if more_than_one_process() else acceptance_rates)
-            self.log.info("Acceptance rate: %.3f" +
+            self.log.info(" - Acceptance rate: %.3f" +
                           (" = avg(%r)" % list(acceptance_rates)
                            if more_than_one_process() else ""),
                           acceptance_rate)
-            self.progress.at[self.i_checkpoint, "acceptance_rate"] = acceptance_rate
+            self.progress.at[self.i_learn, "acceptance_rate"] = acceptance_rate
             # "Within" or "W" term -- our "units" for assessing convergence
             # and our prospective new covariance matrix
             mean_of_covs = np.average(covs, weights=Ns, axis=0)
@@ -611,7 +624,7 @@ class mcmc(CovmatSampler):
                     "Negative covariance eigenvectors. "
                     "This may mean that the covariance of the samples does not "
                     "contain enough information at this point. "
-                    "Skipping this checkpoint")
+                    "Skipping learning a new covmat for now.")
             else:
                 Linv = np.linalg.inv(L)
                 # Suppress numpy warnings (restored later in this function)
@@ -622,16 +635,16 @@ class mcmc(CovmatSampler):
                     success = True
                 except np.linalg.LinAlgError:
                     self.log.warning("Could not compute eigenvalues. "
-                                     "Skipping this checkpoint.")
+                                     "Skipping learning a new covmat for now.")
                 else:
                     Rminus1 = max(np.abs(eigvals))
-                    self.progress.at[self.i_checkpoint, "Rminus1"] = Rminus1
+                    self.progress.at[self.i_learn, "Rminus1"] = Rminus1
                     # For real square matrices, a possible def of the cond number is:
                     condition_number = Rminus1 / min(np.abs(eigvals))
-                    self.log.debug("Condition number = %g", condition_number)
-                    self.log.debug("Eigenvalues = %r", eigvals)
+                    self.log.debug(" - Condition number = %g", condition_number)
+                    self.log.debug(" - Eigenvalues = %r", eigvals)
                     self.log.info(
-                        "Convergence of means: R-1 = %f after %d accepted steps" % (
+                        " - Convergence of means: R-1 = %f after %d accepted steps" % (
                             Rminus1, (sum(Ns) if more_than_one_process() else self.n())) +
                         (" = sum(%r)" % list(Ns) if more_than_one_process() else ""))
                     # Have we converged in means?
@@ -643,11 +656,11 @@ class mcmc(CovmatSampler):
                         if success_bounds:
                             Rminus1_cl = (np.std(bounds, axis=0).T /
                                           np.sqrt(np.diag(mean_of_covs)))
-                            self.log.debug("normalized std's of bounds = %r", Rminus1_cl)
+                            self.log.debug(" - normalized std's of bounds = %r", Rminus1_cl)
                             Rminus1_cl = np.max(Rminus1_cl)
-                            self.progress.at[self.i_checkpoint, "Rminus1_cl"] = Rminus1_cl
+                            self.progress.at[self.i_learn, "Rminus1_cl"] = Rminus1_cl
                             self.log.info(
-                                "Convergence of bounds: R-1 = %f after %d " % (
+                                " - Convergence of bounds: R-1 = %f after %d " % (
                                     Rminus1_cl,
                                     (sum(Ns) if more_than_one_process() else self.n())) +
                                 "accepted steps" +
@@ -659,7 +672,7 @@ class mcmc(CovmatSampler):
                             self._Ns = Ns
                         else:
                             self.log.info("Computation of the bounds was not possible. "
-                                          "Waiting until the next checkpoint")
+                                          "Waiting until the next converge check.")
                 np.seterr(**error_handling)
         else:
             mean_of_covs = np.empty((self.model.prior.d(), self.model.prior.d()))
@@ -676,7 +689,7 @@ class mcmc(CovmatSampler):
                                 self.Rminus1_last > self.learn_proposal_Rminus1_min)
                 if not good_Rminus1:
                     self.mpi_info("Convergence less than requested for updates: "
-                                  "waiting until the next checkpoint.")
+                                  "waiting until the next convergence check.")
                     return
                 if more_than_one_process():
                     get_mpi_comm().Bcast(mean_of_covs, root=0)
@@ -685,17 +698,18 @@ class mcmc(CovmatSampler):
                 try:
                     self.proposer.set_covariance(mean_of_covs)
                     if is_main_process():
-                        self.log.info("Updated covariance matrix of proposal pdf.")
+                        self.log.info(" - Updated covariance matrix of proposal pdf.")
                         self.log.debug("%r", mean_of_covs)
                 except:
                     if is_main_process():
                         self.log.debug("Updating covariance matrix failed unexpectedly. "
-                                       "waiting until next checkpoint.")
+                                       "waiting until next covmat learning attempt.")
         # Save checkpoint info
         self.write_checkpoint()
 
-    def log_diagnosis(self, date_time):
-        msg = "Progress at [%s] : " % date_time.strftime("%Y-%m-%d %H:%M:%S")
+    def do_output(self, date_time):
+        self.collection._out_update()
+        msg = "Progress @ %s : " % date_time.strftime("%Y-%m-%d %H:%M:%S")
         msg += "%d steps taken" % self.n_steps_raw
         if self.burn_in_left and self.burn_in:  # NB: burn_in_left = 1 even if no burn_in
             msg += " -- still burning in, %d accepted steps left." % self.burn_in_left
