@@ -170,6 +170,7 @@ class mcmc(CovmatSampler):
     def i_last_slow_block(self):
         if self.oversample:
             # TODO: may want to re-define this -- for now, only 1st block is slow
+            # (not really used when oversampling except, for now, for covmat selection)
             return 0
         elif self.drag:
             return next(i for i, o in enumerate(self.oversampling_factors) if o != 1) - 1
@@ -204,7 +205,7 @@ class mcmc(CovmatSampler):
         if self.blocking:
             # Includes the case in which we are resuming
             self.blocks, self.oversampling_factors = \
-                self.model._check_blocking(self.blocking, check_draggable=self.drag)
+                self.model._check_blocking(self.blocking)
         else:
             if not self.oversample and not self.drag:
                 self.oversample_power = 0
@@ -214,6 +215,16 @@ class mcmc(CovmatSampler):
         # Turn oversampling on if manual oversampling factors given, also if resuming
         if self.blocking and not self.drag and np.any(self.oversampling_factors != 1):
             self.oversample = True
+        # Turn of dragging if one block, or if speed differences < 2x, or no differences
+        if self.drag:
+            if len(self.blocks) == 1:
+                self.drag = False
+                self.log.warning(
+                    "Dragging disabled: not possible if there is only one block.")
+            if max(self.oversampling_factors) / min(self.oversampling_factors) < 2:
+                self.drag = False
+                self.log.warning(
+                    "Dragging disabled: speed ratios < 2.")
         # Define proposer and other blocking-related quantities
         if self.oversample:
             self.log.info("Oversampling with factors:\n" + "\n".join([

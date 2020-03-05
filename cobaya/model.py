@@ -935,7 +935,7 @@ class Model(HasLogger):
             self.log.debug("* %g : %r : %r", c, o, b)
         return blocks_sorted, oversample_factors
 
-    def _check_blocking(self, blocking, check_draggable=False):
+    def _check_blocking(self, blocking):
         """
         Checks the correct formatting of the given parameter blocking and oversampling:
         that it consists of tuples `(oversampling_factor, (param1, param2, etc))`, with
@@ -971,12 +971,6 @@ class Model(HasLogger):
             self.log.warning(
                 "Manual blocking: speed-blocking *apparently* non-optimal: "
                 "oversampling factors must go from small (slow) to large (fast).")
-        # Draggable: only 2 different oversampling factors (already sorted)
-        if check_draggable:
-            if len(blocks) < 2 or len(np.unique(oversampling_factors)) != 2:
-                raise LoggedError(
-                    self.log, "Blocking given not compatible with dragging: there must be"
-                              " at least 2 blocks and 2 different oversampling factors.")
         return blocks, oversampling_factors
 
     def set_cache_size(self, n_states):

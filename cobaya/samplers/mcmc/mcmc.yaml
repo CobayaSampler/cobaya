@@ -53,8 +53,6 @@ drag: False
 oversample_power: 0.7
 # Thin chain when oversampling by total oversampling factor
 oversample_thin: True
-# TO BE DEPRECATED -- do not set
-drag_limits:
 # Manual blocking
 # ---------------
 # Specify parameter blocks and their correspondent oversampling factors
@@ -72,4 +70,6 @@ callback_every:  # default: every checkpoint
 # ------------
 seed:  # integer between 0 and 2**32 - 1
 # To be deprecated
-check_every:
+# ----------------
+check_every:  # now it is learn_every
+drag_limits:  # use oversample_power instead
