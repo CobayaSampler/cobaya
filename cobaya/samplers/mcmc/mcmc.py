@@ -260,10 +260,9 @@ class mcmc(CovmatSampler):
         self.log.debug(
             "Cycle length in steps: %r", self.cycle_length)
         for q in self.quants_d_units:
-            setattr(
-                self, q,
-                (lambda q: q[0] * (q[1] * self.cycle_length if q[1] else 1))(
-                    getattr(self, q)))
+            setattr(self, q,
+                    (lambda q: q[0] * (q[1] * self.cycle_length if q[1] else 1))(
+                        getattr(self, q)))
 
     def set_proposer_covmat(self, load=False):
         if load:
@@ -304,8 +303,7 @@ class mcmc(CovmatSampler):
         self.log.info(
             "Sampling!" + (
                 " (NB: no accepted step will be saved until %d burn-in samples " % (
-                    self.burn_in) +
-                "have been obtained)" if self.burn_in else ""))
+                    self.burn_in) + "have been obtained)" if self.burn_in else ""))
         self.n_steps_raw = 0
         last_output = 0
         while self.n() < self.max_samples and not self.converged:
