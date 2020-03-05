@@ -10,7 +10,6 @@ import os
 import sys
 import traceback
 import datetime
-from itertools import chain
 import re
 import shutil
 
@@ -23,7 +22,7 @@ from cobaya.log import LoggedError, HasLogger
 from cobaya.input import is_equal_info, get_class
 from cobaya.mpi import is_main_process, more_than_one_process, share_mpi
 from cobaya.collection import Collection
-from cobaya.tools import deepcopy_where_possible, find_with_regexp, recursive_update
+from cobaya.tools import deepcopy_where_possible, find_with_regexp
 
 # Default output type and extension
 _kind = "txt"
@@ -36,8 +35,7 @@ class Output(HasLogger):
         self.set_logger(self.name)
         self.folder = os.sep.join(output_prefix.split(os.sep)[:-1]) or "."
         self.prefix = (lambda x: x if x != "." else "")(output_prefix.split(os.sep)[-1])
-        self.prefix_regexp_str = \
-            re.escape(os.path.join(self.folder, self.prefix)) + (r"\." if self.prefix else "")
+        self.prefix_regexp_str = re.escape(self.prefix) + (r"\." if self.prefix else "")
         self.force = force
         if resume and force and output_prefix:
             # No resume and force at the same time (if output)
@@ -178,7 +176,8 @@ class Output(HasLogger):
             if old_info:
                 new_info = yaml_load(yaml_dump(updated_info_trimmed))
                 if not is_equal_info(old_info, new_info, strict=False,
-                                     ignore_blocks=list(ignore_blocks) + [_output_prefix]):
+                                     ignore_blocks=list(ignore_blocks) + [
+                                         _output_prefix]):
                     raise LoggedError(
                         self.log, "Old and new run information not compatible! "
                                   "Resuming not possible!")
@@ -228,13 +227,23 @@ class Output(HasLogger):
                     except OutputError as e:
                         raise LoggedError(self.log, str(e))
 
-    def delete_with_regexp(self, regexp):
+    def delete_with_regexp(self, regexp, root=None):
         """
-        Deletes all files compatible with the given regexp.
+        Deletes all files compatible with the given `regexp`.
+
+        If `regexp` is `None` and `root` is defined, deletes the `root` folder.
         """
-        file_names = find_with_regexp(regexp)
-        if file_names:
-            self.log.debug("From regexp %r, deleting files %r", regexp.pattern, file_names)
+        if root is None:
+            root = self.folder
+        if regexp is not None:
+            file_names = find_with_regexp(regexp, root)
+            if file_names:
+                self.log.debug(
+                    "From regexp %r in folder %r, deleting files %r", regexp.pattern,
+                    root, file_names)
+        else:
+            file_names = [root]
+            self.log.debug("Deleting folder %r", root)
         for f in file_names:
             try:
                 os.remove(f)
@@ -271,7 +280,6 @@ class Output(HasLogger):
         Use `name` for particular types of collections (default: any number).
         Pass `False` to mean there is nothing between the output prefix and the extension.
         """
-        pre = os.path.join(self.folder, self.prefix) + (r"\." if self.prefix else "")
         if name is None:
             name = r"\d+\."
         elif name is False:
@@ -303,7 +311,8 @@ class Output(HasLogger):
         """
         return [
             f2 for f2 in [os.path.join(self.folder, f) for f in os.listdir(self.folder)]
-            if self.is_collection_file_name(f2, name=name, extension=extension)]
+            if self.is_collection_file_name(
+                    os.path.split(f2)[1], name=name, extension=extension)]
 
     def load_collections(self, model, skip=0, thin=1, concatenate=False,
                          name=None, extension=None):

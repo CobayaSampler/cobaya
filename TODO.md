@@ -7,7 +7,7 @@
 ## No output to files while burn in makes it hard to see if working OK (default no burn?)
 ## turn dragging off if only one block or no speeds differ by more than factor 2
 ## "Not enough points in chain to check convergence" should be warning and just continue until enough
-## Remove last references to odict/OrderedDict in code and *documentation*
+## Remove last references to odict in code and *documentation*
 ## check PK_grid/interpolator changes for classy
 
 # Incomplete implementations/bigger jobs

@@ -712,26 +712,22 @@ def sort_parameter_blocks(blocks, speeds, footprints, oversample_power=0):
     return optimal_ordering, costs, oversample_factors
 
 
-def find_with_regexp(regexp, walk_tree=False):
+def find_with_regexp(regexp, root, walk_tree=False):
     """
-    Returns all files found which are compatible with the given regexp, including their
-    path in their name.
-
-    The first part of the folder structure in the regexp needs to be explicitly specified
-    (i.e. no wildcards).
+    Returns all files found which are compatible with the given regexp in directory root,
+    including their path in their name.
 
     Set `walk_tree=True` if there is more that one directory level (default: `False`).
     """
-    root = os.path.dirname(regexp.pattern)
     try:
         if walk_tree:
             files = []
             for root_folder, sub_folders, file_names in os.walk(root, topdown=True):
-                files += [os.path.join(root_folder, fname) for fname in file_names]
-                files += [os.path.join(root_folder, dname) for dname in sub_folders]
+                files += [(root_folder, fname) for fname in file_names]
+                files += [(root_folder, dname) for dname in sub_folders]
         else:
-            files = [os.path.join(root, f) for f in os.listdir(root)]
+            files = [(root, f) for f in os.listdir(root)]
     except FileNotFoundError:
         files = []
-    return [f2 for f2 in files
+    return [os.path.join(path, f2) for path, f2 in files
             if f2 == getattr(regexp.match(f2), "group", lambda: None)()]

@@ -143,7 +143,7 @@ def random_mean(ranges, n_modes=1, mpi_warn=True):
 
     If ``n_modes>1``, returns an array of such points.
     """
-    if get_mpi_size() and mpi_warn:
+    if not is_main_process() and mpi_warn:
         print("WARNING! "
               "Using with MPI: different process will produce different random results.")
     mean = np.array([uniform.rvs(loc=r[0], scale=r[1] - r[0], size=n_modes)
@@ -165,7 +165,7 @@ def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1, mpi_warn=True):
 
     If ``n_modes>1``, returns a list of such matrices.
     """
-    if get_mpi_size() and mpi_warn:
+    if not is_main_process() and mpi_warn:
         print("WARNING! "
               "Using with MPI: different process will produce different random results.")
     dim = len(ranges)

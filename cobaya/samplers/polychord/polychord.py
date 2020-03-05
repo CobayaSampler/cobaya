@@ -19,7 +19,7 @@ from tempfile import gettempdir
 import re
 
 # Local
-from cobaya.tools import read_dnumber, get_external_function, relative_to_int, PythonPath
+from cobaya.tools import read_dnumber, get_external_function, PythonPath
 from cobaya.tools import find_with_regexp
 from cobaya.sampler import Sampler
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
@@ -217,6 +217,7 @@ class polychord(Sampler):
         """
         Prepares the posterior function and calls ``PolyChord``'s ``run`` function.
         """
+
         # Prepare the posterior
         # Don't forget to multiply by the volume of the physical hypercube,
         # since PolyChord divides by it
@@ -231,6 +232,7 @@ class polychord(Sampler):
             return (
                 max(logposterior + self.logvolume, self.pc_settings.logzero),
                 derived)
+
         sync_processes()
         self.mpi_info("Sampling!")
         self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
@@ -239,9 +241,9 @@ class polychord(Sampler):
 
     def dump_paramnames(self, prefix):
         paramnames = (list() +
-                      [p+"*" for p in (
-                          list(self.model.parameterization.derived_params()) +
-                          list(self.model.prior) + list(self.model.likelihood))])
+                      [p + "*" for p in (
+                              list(self.model.parameterization.derived_params()) +
+                              list(self.model.prior) + list(self.model.likelihood))])
         labels = self.model.parameterization.labels()
         with open(prefix + ".paramnames", "w") as f_paramnames:
             for p in self.model.parameterization.sampled_params():
@@ -286,10 +288,11 @@ class polychord(Sampler):
             # Load clusters, and save if output
             if self.pc_settings.do_clustering:
                 self.clusters = {}
-                clusters_raw_regexp = re.compile(re.escape(os.path.join(
-                    self.pc_settings.base_dir, self._clusters_dir,
-                    self.pc_settings.file_root)) + r"_\d+\.txt")
-                cluster_raw_files = find_with_regexp(clusters_raw_regexp, walk_tree=True)
+                clusters_raw_regexp = re.compile(
+                    re.escape(self.pc_settings.file_root + "_") + r"\d+\.txt")
+                cluster_raw_files = find_with_regexp(
+                    clusters_raw_regexp, os.path.join(self.pc_settings.base_dir,
+                                                      self._clusters_dir), walk_tree=True)
                 for f in cluster_raw_files:
                     i = int(f[f.rfind("_") + 1:-len(".txt")])
                     if self.output:
@@ -365,20 +368,20 @@ class polychord(Sampler):
     @classmethod
     def output_files_regexps(cls, output, info=None, minimal=False):
         # Resume file
-        regexps = [re.compile(re.escape(
-            os.path.join(cls.get_base_dir(output), output.prefix + ".resume")))]
+        regexps_tuples = [
+            (re.compile(re.escape(output.prefix + ".resume")), cls.get_base_dir(output))]
         if minimal:
-            return regexps
-        return regexps + [
+            return regexps_tuples
+        return regexps_tuples + [
             # Raw products base dir
-            re.compile(re.escape(cls.get_base_dir(output))),
+            (None, cls.get_base_dir(output)),
             # Main sample
-            output.collection_regexp(name=None),
+            (output.collection_regexp(name=None), None),
             # Evidence
-            re.compile(re.escape(os.path.join(output.folder, output.prefix + _evidence_extension))),
+            (re.compile(re.escape(output.prefix + _evidence_extension)), None),
             # Clusters
-            re.compile(re.escape(cls.get_clusters_dir(output)))
-            ]
+            (None, cls.get_clusters_dir(output))
+        ]
 
     @classmethod
     def get_version(cls):

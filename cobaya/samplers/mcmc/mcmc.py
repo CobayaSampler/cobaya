@@ -81,14 +81,15 @@ class mcmc(CovmatSampler):
         if self.callback_every is None:
             self.callback_every = self.learn_every
         self.quants_d_units = (["max_tries", "learn_every", "callback_every"] +
-                          (["burn_in"] if not self.output.is_resuming() else []))
+                               (["burn_in"] if not self.output.is_resuming() else []))
         for q in self.quants_d_units:
             setattr(self, q, read_number_with_units(getattr(self, q), "d", dtype=int))
         quants_s_units = ["output_every"]
         for q in quants_s_units:
             setattr(self, q, read_number_with_units(getattr(self, q), "s", dtype=int))
         if is_main_process():
-            if self.output.is_resuming() and (max(self.mpi_size or 0, 1) != max(get_mpi_size(), 1)):
+            if self.output.is_resuming() and (
+                    max(self.mpi_size or 0, 1) != max(get_mpi_size(), 1)):
                 raise LoggedError(
                     self.log,
                     "Cannot resume a run with a different number of chains: "
@@ -244,12 +245,14 @@ class mcmc(CovmatSampler):
         for q in self.quants_d_units:
             setattr(
                 self, q,
-                (lambda q: q[0] * (q[1] * self.cycle_length if q[1] else 1))(getattr(self, q)))
+                (lambda q: q[0] * (q[1] * self.cycle_length if q[1] else 1))(
+                    getattr(self, q)))
 
     def set_proposer_covmat(self, load=False):
         if load:
             # Build the initial covariance matrix of the proposal, or load from checkpoint
-            self._covmat, where_nan = self._load_covmat(self.output.is_resuming(), self.slow_params)
+            self._covmat, where_nan = self._load_covmat(self.output.is_resuming(),
+                                                        self.slow_params)
             if np.any(where_nan) and self.learn_proposal:
                 # we want to start learning the covmat earlier
                 self.mpi_info("Covariance matrix " +
@@ -657,7 +660,8 @@ class mcmc(CovmatSampler):
                         if success_bounds:
                             Rminus1_cl = (np.std(bounds, axis=0).T /
                                           np.sqrt(np.diag(mean_of_covs)))
-                            self.log.debug(" - normalized std's of bounds = %r", Rminus1_cl)
+                            self.log.debug(" - normalized std's of bounds = %r",
+                                           Rminus1_cl)
                             Rminus1_cl = np.max(Rminus1_cl)
                             self.progress.at[self.i_learn, "Rminus1_cl"] = Rminus1_cl
                             self.log.info(
@@ -758,14 +762,16 @@ class mcmc(CovmatSampler):
     def output_files_regexps(cls, output, info=None, minimal=False):
         regexps = [output.collection_regexp(name=None)]
         if minimal:
-            return regexps
-        return (regexps +
-                [re.compile(output.prefix_regexp_str + re.escape(ext.lstrip(".")) + "$") for ext in
-                 [_checkpoint_extension, _progress_extension, _covmat_extension]])
+            return [(r, None) for r in regexps]
+        regexps += [
+            re.compile(output.prefix_regexp_str + re.escape(ext.lstrip(".")) + "$")
+            for ext in [_checkpoint_extension, _progress_extension, _covmat_extension]]
+        return [(r, None) for r in regexps]
 
     @classmethod
     def get_version(cls):
         return __version__
+
 
 # Plotting tool for chain progress #######################################################
 

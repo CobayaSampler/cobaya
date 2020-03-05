@@ -2,7 +2,7 @@
 .. module:: samplers.mcmc.proposal
 
 :Synopsis: proposal distributions
-:Author: Antony Lewis (from CosmoMC)
+:Author: Antony Lewis and Jesus Torrado
 
 Using the covariance matrix to give the proposal directions typically
 significantly increases the acceptance rate and gives faster movement
@@ -27,24 +27,29 @@ from cobaya.log import LoggedError, HasLogger
 
 class IndexCycler:
     def __init__(self, n):
-        if isinstance(n, int):
-            self.n = n
-            self.sorted_indices = list(range(n))
-        else:
-            self.n = len(n)
-            self.sorted_indices = n
+        self.n = n
         self.loop_index = -1
 
 
 class CyclicIndexRandomizer(IndexCycler):
+    def __init__(self, n):
+        if isinstance(n, int):
+            self.sorted_indices = list(range(n))
+        else:
+            self.sorted_indices = n
+            n = len(n)
+        super().__init__(n)
+        if n <= 2:
+            self.indices = list(range(n))
+
     def next(self):
         """
-        Get the next random index
+        Get the next random index, or alternate for two or less.
 
         :return: index
         """
         self.loop_index = (self.loop_index + 1) % self.n
-        if self.loop_index == 0:
+        if self.loop_index == 0 and self.n > 2:
             self.indices = np.random.permutation(self.sorted_indices)
         return self.indices[self.loop_index]
 
@@ -105,19 +110,16 @@ else:
 
 
 class RandDirectionProposer(IndexCycler):
-    def propose_vec(self, scale=1):
+    def propose_vec(self, scale: float = 1):
         """
-        propose a random n-dimension vector
+        propose a random n-dimension vector for n>1
 
         :param scale: units for the distance
         :return: array with vector
         """
         self.loop_index = (self.loop_index + 1) % self.n
         if self.loop_index == 0:
-            if self.n > 1:
-                self.R = random_SO_N(self.n)
-            else:
-                self.R = np.eye(1) * np.random.choice((-1, 1))
+            self.R = random_SO_N(self.n)
         return self.R[:, self.loop_index] * self.propose_r() * scale
 
     def propose_r(self):
@@ -132,6 +134,12 @@ class RandDirectionProposer(IndexCycler):
             return np.random.exponential()
         else:
             return np.linalg.norm(np.random.normal(size=min(self.n, 2)))
+
+
+class RandProposer1D(RandDirectionProposer):
+    def propose_vec(self, scale: float = 1):
+        return np.array([self.propose_r() * scale if np.random.randint(2)
+                         else -self.propose_r() * scale])
 
 
 class BlockedProposer(HasLogger):
@@ -201,7 +209,8 @@ class BlockedProposer(HasLogger):
         self.iblock_of_j = list(
             chain(*[[iblock] * len(b) for iblock, b in enumerate(parameter_blocks)]))
         # Creating the blocked proposers
-        self.proposer = [RandDirectionProposer(len(b)) for b in parameter_blocks]
+        self.proposer = [(RandDirectionProposer(len(b)) if len(b) > 1
+                          else RandProposer1D(1)) for b in parameter_blocks]
         # Starting j index of each block
         self.j_start = [len(list(chain(*parameter_blocks[:iblock])))
                         for iblock, b in enumerate(parameter_blocks)]

@@ -335,7 +335,8 @@ class Sampler(CobayaComponent):
     @classmethod
     def output_files_regexps(cls, output, info=None, minimal=False):
         """
-        Returns a list of regexp's of output files potentially produced.
+        Returns a list of tuples `(regexp, root)` of output files potentially produced.
+        If `root` in the tuple is `None`, `output.folder` is used.
 
         If `minimal=True`, returns regexp's for the files that should really not be there
         when we are not resuming.
@@ -345,7 +346,7 @@ class Sampler(CobayaComponent):
     @classmethod
     def delete_output_files(cls, output, info=None):
         if output and is_main_process():
-            for regexp in cls.output_files_regexps(output, info=info):
+            for (regexp, root) in cls.output_files_regexps(output, info=info):
                 # Special case: CovmatSampler's may have been given a covmat with the same
                 # name that the output one. In that case, don't delete it!
                 if issubclass(cls, CovmatSampler) and info:
@@ -354,7 +355,7 @@ class Sampler(CobayaComponent):
                         if (isinstance(covmat_file, str) and covmat_file ==
                             getattr(regexp.match(covmat_file), "group", lambda: None)()):
                             continue
-                output.delete_with_regexp(regexp)
+                output.delete_with_regexp(regexp, root)
 
     @classmethod
     def check_force_resume(cls, output, info=None):
@@ -367,8 +368,8 @@ class Sampler(CobayaComponent):
         if is_main_process():
             if output.is_forcing():
                 cls.delete_output_files(output, info=info)
-            elif any(find_with_regexp(regexp)
-                     for regexp in cls.output_files_regexps(
+            elif any(find_with_regexp(regexp, root)
+                     for (regexp, root) in cls.output_files_regexps(
                              output=output, info=info, minimal=True)):
                 if output.is_resuming():
                     output.log.info("Found and old sample. Resuming.")
