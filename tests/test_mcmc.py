@@ -102,6 +102,7 @@ def _test_overhead_timing():
     import pstats
     from cProfile import Profile
     from io import StringIO
+    # noinspection PyUnresolvedReferences
     from cobaya.samplers.mcmc import proposal  # one-time numba compile out of profiling
 
     LikeTest = _make_gaussian_like(15)

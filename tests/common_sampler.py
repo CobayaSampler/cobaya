@@ -5,10 +5,9 @@ from mpi4py import MPI
 from random import shuffle, choice
 from scipy.stats import multivariate_normal
 from getdist.mcsamples import MCSamplesFromCobaya
-from time import sleep
 from itertools import chain
 
-from cobaya.conventions import kinds, _params, _output_prefix, empty_dict
+from cobaya.conventions import kinds, _output_prefix, empty_dict
 from cobaya.conventions import _debug, _debug_file, _path_install, partag
 from cobaya.likelihoods.gaussian_mixture import info_random_gaussian_mixture
 from cobaya.tools import KL_norm
@@ -169,8 +168,8 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False, modules=
     shuffle(perm)
     # Create info
     info = {"params": dict(
-        [(prefix + "%d" % i, {"prior": dict(zip(["min", "max"], ranges[i]))})
-         for i in perm] + [("sum_like0", None), ("sum_like1", None)]),
+        {prefix + "%d" % i: {"prior": dict(zip(["min", "max"], ranges[i]))}
+         for i in perm}, sum_like0=None, sum_like1=None),
         "likelihood": {"like0": {"external": like0, "speed": speed0},
                        "like1": {"external": like1, "speed": speed1}},
         "sampler": info_sampler}
@@ -188,12 +187,14 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False, modules=
     if sampler_name == "mcmc":
         info["sampler"][sampler_name]["measure_speeds"] = False
         info["sampler"][sampler_name]["burn_in"] = 0
-        info["sampler"][sampler_name]["max_samples"] = n_cycles_all_params * 10 * (dim0 + dim1)
+        info["sampler"][sampler_name]["max_samples"] = n_cycles_all_params * 10 * (
+                dim0 + dim1)
         # Force mixing of blocks:
         info["sampler"][sampler_name]["covmat_params"] = list(info["params"])
         info["sampler"][sampler_name]["covmat"] = 1 / 10000 * np.eye(len(info["params"]))
-        i_0th, i_1st = map(lambda x: info["sampler"][sampler_name]["covmat_params"].index(x),
-                           [prefix + "0", prefix + "%d" % dim0])
+        i_0th, i_1st = map(
+            lambda x: info["sampler"][sampler_name]["covmat_params"].index(x),
+            [prefix + "0", prefix + "%d" % dim0])
         info["sampler"][sampler_name]["covmat"][i_0th, i_1st] = 1 / 100000
         info["sampler"][sampler_name]["covmat"][i_1st, i_0th] = 1 / 100000
         info["sampler"][sampler_name]["learn_proposal"] = False
@@ -206,7 +207,8 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False, modules=
     products = sampler.products()
     # TEST: same (steps block i / speed i / dim i) (steps block 1 = evals[1] - evals[0])
     test_func = lambda n_evals, dim0, speed0, dim1, speed1: (
-        abs((n_evals[1] - n_evals[0]) / speed1 / dim1 / (n_evals[0] / speed0 / dim0)) - 1)
+            abs((n_evals[1] - n_evals[0]) / speed1 / dim1 / (
+                    n_evals[0] / speed0 / dim0)) - 1)
     # Tolerance accounting for random starts of the proposers (PolyChord and MCMC) and for
     # steps outside prior bounds, where likelihoods are not evaluated (MCMC only)
     tolerance = 0.1
@@ -214,7 +216,7 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False, modules=
         assert test_func(n_evals, dim0, speed0, dim1, speed1) <= tolerance, (
             ("%g > %g" % (test_func(n_evals, dim0, speed0, dim1, speed1), tolerance)))
     elif sampler_name == "mcmc" and info["sampler"][sampler_name].get("drag"):
-        assert test_func(n_evals, dim0, speed0, dim1, 2*speed1) <= tolerance, (
+        assert test_func(n_evals, dim0, speed0, dim1, 2 * speed1) <= tolerance, (
             ("%g > %g" % (test_func(n_evals, dim0, speed0, dim1, speed1), tolerance)))
     elif sampler_name == "mcmc" and info["sampler"][sampler_name].get("oversample"):
         assert test_func(n_evals, dim0, speed0, dim1, speed1) <= tolerance, (

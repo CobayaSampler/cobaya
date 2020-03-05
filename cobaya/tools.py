@@ -354,34 +354,63 @@ def ensure_nolatex(string):
     return string.strip().lstrip("$").rstrip("$")
 
 
-def read_number_with_units(n, unit, dtype=float):
-    """
-    Reads number possibly with some `unit` (case insensitive).
-    Returns a tuple `(value, mult)`, where `mult=0` is a bare number was given.
-    """
-    # in case ints are given in exponential notation, make int(float())
-    if dtype == int:
-        cast = lambda x: int(float(x))
-    else:
-        cast = float
-    try:
-        if isinstance(n, str):
-            if n[-len(unit)].lower() == unit:
-                if n.lower() == unit.lower():
-                    return (dtype(1), 1)
-                return (cast(n[:-len(unit)]), 1)
-            raise ValueError
-    except ValueError:
-        raise LoggedError(log, "Could not convert '%r' to a number.", n)
-    return (cast(n), 0)
+class NumberWithUnits:
+
+    def __init__(self, n_with_unit, unit: str, dtype=float, scale=None):
+        """
+        Reads number possibly with some `unit`, e.g. 10s, 4d.
+        Loaded from a a case-insensitive string of a number followed by a unit,
+        or just a number in which case the unit is set to None.
+
+        :param n_with_unit: number string or number
+        :param unit: unit string
+        :param dtype: type for number
+        :param scale: multiple to apply for the unit
+        """
+        self.value = None
+
+        def cast(x):
+            try:
+                if dtype == int:
+                    # in case ints are given in exponential notation, make int(float())
+                    return int(float(x))
+                else:
+                    return float(x)
+            except ValueError:
+                raise LoggedError(log, "Could not convert '%r' to a number.", x)
+
+        if isinstance(n_with_unit, str):
+            n_with_unit = n_with_unit.lower()
+            unit = unit.lower()
+            if n_with_unit.endswith(unit):
+                self.unit = unit
+                if n_with_unit == unit:
+                    self.unit_value = dtype(1)
+                else:
+                    self.unit_value = cast(n_with_unit[:-len(unit)])
+            else:
+                raise LoggedError(log, "string '%r' does not have expected unit %s.",
+                                  n_with_unit, unit)
+        else:
+            self.unit = None
+            self.unit_value = cast(n_with_unit)
+            self.value = self.unit_value
+        self.set_scale(scale if scale is not None else 1)
+
+    def set_scale(self, scale):
+        if self.unit:
+            self.scale = scale
+            self.value = self.unit_value * scale
+
+    def __bool__(self):
+        return bool(self.unit_value)
 
 
 def read_dnumber(n, dim):
     """
     Reads number possibly as a multiple of dimension `dim`.
     """
-    val, mult = read_number_with_units(n, "d", dtype=int)
-    return val * (mult * dim if mult else 1)
+    return NumberWithUnits(n, "d", dtype=int, scale=dim).value
 
 
 def load_DataFrame(file_name, skip=0, thin=1):

@@ -379,10 +379,11 @@ class OneSamplePoint:
                 weight = self._added_weight // self.output_thin
                 self._added_weight %= self.output_thin
             else:
-                return
+                return False
         else:
             weight = self.weight
         collection.add(self.values, weight=weight, **self.kwargs)
+        return True
 
     def __str__(self):
         return ", ".join(

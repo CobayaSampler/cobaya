@@ -44,6 +44,8 @@ class polychord(Sampler):
     confidence_for_unbounded: float
     callback_function: callable
     blocking: Any
+    measure_speeds: bool
+    oversample_power: float
 
     def initialize(self):
         """Imports the PolyChord sampler and prepares its arguments."""

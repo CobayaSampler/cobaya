@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from typing import Any
 from copy import deepcopy
 from cobaya.model import get_model
 from cobaya.theory import Theory
@@ -14,7 +15,7 @@ from .common import process_modules_path
 # agnostic theory
 
 class BBN(Theory):
-    bbn: object
+    bbn: Any
 
     def get_requirements(self):
         return {'ombh2', 'nnu'}
@@ -30,7 +31,7 @@ class BBN(Theory):
 
 class BBN2(Theory):
     params = {'ombh2': None, 'nnu': None, 'YHe': {'derived': True}}
-    bbn: object
+    bbn: Any
 
     def calculate(self, state, want_derived=True, **params_values_dict):
         if want_derived:
