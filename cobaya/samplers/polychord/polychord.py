@@ -288,7 +288,7 @@ class polychord(Sampler):
                 self.clusters = {}
                 clusters_raw_regexp = re.compile(re.escape(os.path.join(
                     self.pc_settings.base_dir, self._clusters_dir,
-                    self.pc_settings.file_root) + r"_\d+\.txt"))
+                    self.pc_settings.file_root)) + r"_\d+\.txt")
                 cluster_raw_files = find_with_regexp(clusters_raw_regexp, walk_tree=True)
                 for f in cluster_raw_files:
                     i = int(f[f.rfind("_") + 1:-len(".txt")])
