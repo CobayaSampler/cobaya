@@ -14,7 +14,7 @@ from typing import Sequence, Optional
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
-from cobaya.mpi import get_mpi_size, share_mpi, is_main_process
+from cobaya.mpi import share_mpi, is_main_process
 from cobaya.conventions import kinds, _params
 from cobaya.conventions import _input_params_prefix, _output_params_prefix
 

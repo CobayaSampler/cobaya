@@ -6,7 +6,6 @@
 """
 
 # Global
-import os
 from itertools import chain
 import numpy as np
 import logging
@@ -18,11 +17,11 @@ from copy import deepcopy
 
 # Local
 from cobaya import __version__
-from cobaya.sampler import Sampler, CovmatSampler
+from cobaya.sampler import CovmatSampler
 from cobaya.mpi import get_mpi_size, get_mpi_rank, get_mpi_comm, get_mpi, share_mpi
 from cobaya.mpi import more_than_one_process, is_main_process, sync_processes
 from cobaya.collection import Collection, OneSamplePoint
-from cobaya.conventions import kinds, partag, _weight, _minuslogpost, _covmat_extension
+from cobaya.conventions import kinds, _weight, _minuslogpost, _covmat_extension
 from cobaya.conventions import _line_width, _progress_extension, empty_dict
 from cobaya.conventions import _checkpoint_extension
 from cobaya.samplers.mcmc.proposal import BlockedProposer
@@ -77,7 +76,7 @@ class mcmc(CovmatSampler):
         if getattr(self, "check_every", None) is not None:
             self.log.warning("`check_every` will be deprecated in the next version. "
                              "Please use `learn_every` instead.")
-            self.learn_every = self.check_every
+            self.learn_every = getattr(self, "check_every")
         if self.callback_every is None:
             self.callback_every = self.learn_every
         self.quants_d_units = (["max_tries", "learn_every", "callback_every"] +

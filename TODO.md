@@ -9,6 +9,7 @@
 ## "Not enough points in chain to check convergence" should be warning and just continue until enough
 ## Remove last references to odict in code and *documentation*
 ## check PK_grid/interpolator changes for classy
+## update docs/img/diagram.svg (and for paper)
 
 # Incomplete implementations/bigger jobs
 ## Grids/rest of cosmomc scripts

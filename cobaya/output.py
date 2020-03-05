@@ -156,7 +156,7 @@ class Output(HasLogger):
             return None
 
     def check_and_dump_info(self, input_info, updated_info, check_compatible=True,
-                            cache_old=False, use_cache_old=False, ignore_blocks=[]):
+                            cache_old=False, use_cache_old=False, ignore_blocks=()):
         """
         Saves the info in the chain folder twice:
            - the input info.
@@ -312,7 +312,7 @@ class Output(HasLogger):
         return [
             f2 for f2 in [os.path.join(self.folder, f) for f in os.listdir(self.folder)]
             if self.is_collection_file_name(
-                    os.path.split(f2)[1], name=name, extension=extension)]
+                os.path.split(f2)[1], name=name, extension=extension)]
 
     def load_collections(self, model, skip=0, thin=1, concatenate=False,
                          name=None, extension=None):

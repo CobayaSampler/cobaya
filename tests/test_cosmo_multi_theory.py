@@ -199,6 +199,7 @@ class Pklike(Likelihood):
               testAs * (1.1 / 0.05) ** (testns - 1))
         assert np.allclose(results.Params.scalar_power(1.1),
                            testAs * (1.1 / 0.05) ** (testns - 1), rtol=1e-3, atol=1e-20)
+        return 0
 
     def get_requirements(self):
         return {'Cl': {'tt': 1000}, 'CAMBdata': None}

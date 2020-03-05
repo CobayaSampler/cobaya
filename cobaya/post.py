@@ -17,7 +17,7 @@ import re
 from cobaya.parameterization import Parameterization
 from cobaya.parameterization import is_fixed_param, is_sampled_param, is_derived_param
 from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_prefix, _post
-from cobaya.conventions import _params, _prior, kinds, _weight, _resume, _force
+from cobaya.conventions import _params, _prior, kinds, _weight, _resume
 from cobaya.conventions import _chi2, _separator, _minuslogpost, _force, partag
 from cobaya.conventions import _minuslogprior, _path_install, _input_params
 from cobaya.conventions import _separator_files, _post_add, _post_remove, _post_suffix

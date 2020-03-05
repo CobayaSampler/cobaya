@@ -11,7 +11,7 @@ from collections.abc import Mapping
 
 # Local
 from cobaya import __version__
-from cobaya.conventions import kinds, _prior, _params, _version
+from cobaya.conventions import kinds, _prior, _params
 from cobaya.conventions import _path_install, _debug, _debug_file, _output_prefix
 from cobaya.conventions import _resume, _timing, _debug_default, _force, _post
 from cobaya.conventions import _yaml_extensions, _separator_files, _updated_suffix
@@ -22,7 +22,7 @@ from cobaya.sampler import get_sampler_class, check_sampler_info
 from cobaya.log import logger_setup, LoggedError
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info
-from cobaya.mpi import import_MPI, is_main_process, set_mpi_disabled, sync_processes
+from cobaya.mpi import import_MPI, is_main_process, set_mpi_disabled
 from cobaya.tools import warn_deprecation, recursive_update
 from cobaya.post import post
 
@@ -52,7 +52,8 @@ def run(info):
                 yaml_dump(updated_info))
     # 3. If output requested, check compatibility if existing one, and dump.
     # 3.1 First: model only
-    output.check_and_dump_info(info, updated_info, cache_old=True, ignore_blocks=[kinds.sampler])
+    output.check_and_dump_info(info, updated_info, cache_old=True,
+                               ignore_blocks=[kinds.sampler])
     # 3.2 Then sampler -- 1st get the last sampler mentioned in the updated.yaml
     # TODO: ideally, using Minimizer would *append* to the sampler block.
     #       Some code already in place, but not possible at the moment.
@@ -75,7 +76,7 @@ def run(info):
                updated_info.get(_prior), updated_info.get(kinds.theory),
                path_install=info.get(_path_install), timing=updated_info.get(_timing),
                allow_renames=False, stop_at_error=info.get("stop_at_error", False)) \
-               as model:
+            as model:
         # Re-dump the updated info, now containing parameter routes and version info
         updated_info = recursive_update(updated_info, model.info())
         output.check_and_dump_info(None, updated_info, check_compatible=False)

@@ -52,14 +52,14 @@ from itertools import chain
 from collections.abc import Mapping
 
 # Local
-from cobaya.conventions import kinds, _resume_default, _checkpoint_extension, _version
-from cobaya.conventions import _progress_extension, _module_path, _covmat_extension
+from cobaya.conventions import kinds, _checkpoint_extension, _version
+from cobaya.conventions import _progress_extension, _covmat_extension
 from cobaya.conventions import partag, _path_install, _force, _resume, _output_prefix
 from cobaya.tools import get_class, deepcopy_where_possible, find_with_regexp
 from cobaya.tools import recursive_update
 from cobaya.log import LoggedError
-from cobaya.yaml import yaml_load_file
-from cobaya.mpi import is_main_process, share_mpi, sync_processes, get_mpi_rank
+from cobaya.yaml import yaml_load_file, yaml_dump
+from cobaya.mpi import is_main_process, share_mpi, get_mpi_rank, more_than_one_process
 from cobaya.component import CobayaComponent
 from cobaya.input import update_info, is_equal_info, get_preferred_old_values
 from cobaya.output import OutputDummy
@@ -108,7 +108,7 @@ def check_sampler_info(info_old=None, info_new=None):
     #     info_old = {}
     #     keep_old = {}
     if (list(info_old) != list(info_new) and
-          list(info_new) == ["minimize"]):
+            list(info_new) == ["minimize"]):
         return
     if list(info_old) == list(info_new):
         # Restore some selected old values for some classes
@@ -149,7 +149,7 @@ def get_sampler(info_sampler, model, output=None, modules=None):
         output, info=updated_info_sampler[sampler_name])
     # Instantiate the sampler
     sampler_instance = sampler_class(updated_info_sampler[sampler_name], model,
-                output, path_install=modules)
+                                     output, path_install=modules)
     # If output, dump updated
     if output:
         to_dump = model.info()
@@ -215,7 +215,7 @@ class Sampler(CobayaComponent):
                          name=name, initialize=False, standalone=False)
         # Seed, if requested
         if getattr(self, "seed", None) is not None:
-            if not isinstance(self.seed, int) or not (0 <= self.seed <= 2**32 - 1):
+            if not isinstance(self.seed, int) or not (0 <= self.seed <= 2 ** 32 - 1):
                 raise LoggedError(
                     self.log, "Seeds must be a *positive integer* < 2**32 - 1, "
                               "but got %r with type %r",
@@ -353,7 +353,8 @@ class Sampler(CobayaComponent):
                     if regexp.pattern.rstrip("$").endswith(_covmat_extension):
                         covmat_file = info.get("covmat", "")
                         if (isinstance(covmat_file, str) and covmat_file ==
-                            getattr(regexp.match(covmat_file), "group", lambda: None)()):
+                                getattr(regexp.match(covmat_file), "group",
+                                        lambda: None)()):
                             continue
                 output.delete_with_regexp(regexp, root)
 
@@ -370,19 +371,20 @@ class Sampler(CobayaComponent):
                 cls.delete_output_files(output, info=info)
             elif any(find_with_regexp(regexp, root)
                      for (regexp, root) in cls.output_files_regexps(
-                             output=output, info=info, minimal=True)):
+                output=output, info=info, minimal=True)):
                 if output.is_resuming():
                     output.log.info("Found and old sample. Resuming.")
                 else:
                     raise LoggedError(
                         output.log, "Delete the previous output manually, automatically "
                                     "('-%s', '--%s', '%s: True')" % (
-                                    _force[0], _force, _force) +
+                                        _force[0], _force, _force) +
                                     " or request resuming ('-%s', '--%s', '%s: True')" % (
-                                   _resume[0], _resume, _resume))
+                                        _resume[0], _resume, _resume))
             else:
                 if output.is_resuming():
-                    output.log.info("Did not find an old sample. Cleaning up and starting anew.")
+                    output.log.info(
+                        "Did not find an old sample. Cleaning up and starting anew.")
                 # Clean up old files, and set resuming=False, regardless of requested value
                 cls.delete_output_files(output, info=info)
                 output.set_resuming(False)
