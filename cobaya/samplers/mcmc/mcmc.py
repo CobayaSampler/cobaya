@@ -86,6 +86,8 @@ class mcmc(CovmatSampler):
         quants_s_units = ["output_every"]
         for q in quants_s_units:
             setattr(self, q, read_number_with_units(getattr(self, q), "s", dtype=int))
+        self.output_every_in_sec = bool(self.output_every[1])
+        self.output_every = self.output_every[0]
         if is_main_process():
             if self.output.is_resuming() and (
                     max(self.mpi_size or 0, 1) != max(get_mpi_size(), 1)):
@@ -296,7 +298,7 @@ class mcmc(CovmatSampler):
             now = datetime.datetime.now()
             now_sec = now.timestamp()
             # if output_every in sec, print some info and dump at fixed time intervals
-            if self.output_every[1] and now_sec >= last_output + self.output_every[0]:
+            if self.output_every_in_sec and now_sec >= last_output + self.output_every:
                 self.do_output(now)
                 last_output = now_sec
             # Callback function
@@ -313,7 +315,7 @@ class mcmc(CovmatSampler):
             if self.n() == self.max_samples:
                 self.log.info("Reached maximum number of accepted steps allowed. "
                               "Stopping.")
-        # Make sure the last batch of samples ( < output_every ) are written
+        # Make sure the last batch of samples ( < output_every (not in sec)) are written
         self.collection._out_update()
         if more_than_one_process():
             Ns = (lambda x: np.array(get_mpi_comm().gather(x)))(self.n())
@@ -464,7 +466,7 @@ class mcmc(CovmatSampler):
                 self.current_point.add_to_collection(self.collection)
                 self.log.debug("New sample, #%d: \n   %s", self.n(), self.current_point)
                 # Update chain files, if output_every *not* in sec
-                if not self.output_every[1]:
+                if not self.output_every_in_sec:
                     if self.n() % self.output_every == 0:
                         self.collection._out_update()
             else:
