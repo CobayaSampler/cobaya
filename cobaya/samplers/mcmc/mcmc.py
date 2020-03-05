@@ -214,8 +214,6 @@ class mcmc(CovmatSampler):
         # Turn oversampling on if manual oversampling factors given, also if resuming
         if self.blocking and not self.drag and np.any(self.oversampling_factors != 1):
             self.oversample = True
-        self.thin_factor = 1
-        self._n_pre_thin = 0
         # Define proposer and other blocking-related quantities
         if self.oversample:
             self.log.info("Oversampling with factors:\n" + "\n".join([
@@ -225,6 +223,7 @@ class mcmc(CovmatSampler):
                 self.thin_factor = int(np.round(sum(
                     len(b) * o for b, o in zip(self.blocks, self.oversampling_factors)) /
                     self.model.prior.d()))
+                self.current_point.output_thin = self.thin_factor
         elif self.drag:
             # TO BE DEPRECATED
             if getattr(self, "drag_limits", None) is not None:
@@ -469,14 +468,9 @@ class mcmc(CovmatSampler):
         if accept_state:
             # add the old point to the collection (if not burning or initial point)
             if self.burn_in_left <= 0:
-                self._n_pre_thin += 1
-                if self._n_pre_thin % self.thin_factor == 0:
-                    self.current_point.add_to_collection(self.collection)
-                    self.log.debug("New sample, #%d: \n   %s",
-                                   self.n(), self.current_point)
-                else:
-                    self.log.debug("New sample (ignored due to thinning):\n   %s",
-                                   self.current_point)
+                self.current_point.add_to_collection(self.collection)
+                self.log.debug("New sample, #%d: \n   %s",
+                               self.n(), self.current_point)
                 # Update chain files, if output_every *not* in sec
                 if not self.output_every_in_sec:
                     if self.n() % self.output_every == 0:
