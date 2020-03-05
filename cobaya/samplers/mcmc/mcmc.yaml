@@ -51,6 +51,8 @@ oversample: False  # produces potentially MANY samples
 drag: False
 # Oversampling power: amount of oversampling or dragging. Value in [0, 1]
 oversample_power: 0.7
+# Thin chain when oversampling by total oversampling factor
+oversample_thin: True
 # TO BE DEPRECATED -- do not set
 drag_limits:
 # Manual blocking
