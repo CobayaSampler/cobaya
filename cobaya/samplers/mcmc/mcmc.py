@@ -303,7 +303,8 @@ class mcmc(CovmatSampler):
                        if self.burn_in.value else ""))
         self.n_steps_raw = 0
         last_output = 0
-        while self.n() < self.max_samples and not self.converged:
+        last_n = self.n()
+        while last_n < self.max_samples and not self.converged:
             self.get_new_sample()
             self.n_steps_raw += 1
             if self.output_every.unit:
@@ -316,19 +317,24 @@ class mcmc(CovmatSampler):
             if self.current_point.weight == 1:
                 # have added new point
                 # Callback function
-                if (hasattr(self, "callback_function_callable") and
-                        not (max(self.n(), 1) % self.callback_every.value) and
-                        self.current_point.weight == 1):
-                    self.callback_function_callable(self)
-                    self.last_point_callback = len(self.collection)
-                # Checking convergence and (optionally) learning the covmat of the proposal
-                if self.check_all_ready():
-                    self.check_convergence_and_learn_proposal()
-                    if is_main_process():
-                        self.i_learn += 1
-                if self.n() == self.max_samples:
-                    self.log.info("Reached maximum number of accepted steps allowed. "
-                                  "Stopping.")
+                n = self.n()
+                if n != last_n:
+                    # and actually added
+                    last_n = n
+                    if (hasattr(self, "callback_function_callable") and
+                            not (max(n, 1) % self.callback_every.value) and
+                            self.current_point.weight == 1):
+                        self.callback_function_callable(self)
+                        self.last_point_callback = len(self.collection)
+                    # Checking convergence and (optionally) learning
+                    # the covmat of the proposal
+                    if self.check_all_ready():
+                        self.check_convergence_and_learn_proposal()
+                        if is_main_process():
+                            self.i_learn += 1
+        if last_n == self.max_samples:
+            self.log.info("Reached maximum number of accepted steps allowed. "
+                          "Stopping.")
         # Make sure the last batch of samples ( < output_every (not in sec)) are written
         self.collection._out_update()
         if more_than_one_process():
