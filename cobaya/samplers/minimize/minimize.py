@@ -99,7 +99,6 @@ get_collection_extension = (
     lambda ignore_prior: getdist_ext_ignore_prior[ignore_prior] + ".txt")
 
 
-
 class minimize(Minimizer, CovmatSampler):
     ignore_prior: bool
     confidence_for_unbounded: float
@@ -115,7 +114,7 @@ class minimize(Minimizer, CovmatSampler):
         method = self.model.loglike if self.ignore_prior else self.model.logpost
         kwargs = {"make_finite": True}
         if self.ignore_prior:
-            kwargs.update({"return_derived": False})
+            kwargs["return_derived"] = False
         self.logp = lambda x: method(x, **kwargs)
         # Try to load info from previous samples.
         # If none, sample from reference (make sure that it has finite like/post)
@@ -353,7 +352,7 @@ class minimize(Minimizer, CovmatSampler):
         label_list = list(labels)
         if hasattr(params, 'chi2_names'):
             label_list += params.chi2_names
-        width = max([len(lab) for lab in label_list]) + 2
+        width = max(len(lab) for lab in label_list) + 2
 
         def add_section(pars):
             for p, val in pars:

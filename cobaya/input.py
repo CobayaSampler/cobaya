@@ -15,6 +15,7 @@ from itertools import chain
 import pkg_resources
 from functools import reduce
 from typing import Mapping
+from collections import defaultdict
 
 # Local
 from cobaya.conventions import _products_path, _path_install, _resume, _force
@@ -49,7 +50,8 @@ def load_input(input_file):
         info[_output_prefix] = file_name
     # warn if no output, since we are in shell-invocation mode.
     elif info[_output_prefix] is None:
-        log.warning("WARNING: Output explicitly suppressed with '%s: null'", _output_prefix)
+        log.warning("WARNING: Output explicitly suppressed with '%s: null'",
+                    _output_prefix)
     # contained? Ensure that output is sent where it should
     if "CONTAINED" in os.environ:
         for out in [_output_prefix, _debug_file]:
@@ -67,18 +69,14 @@ def load_input_MPI(input_file):
 def get_used_modules(*infos):
     """Returns all requested modules as an dict ``{kind: set([modules])}``.
     Priors are not included."""
-    modules = {}
+
+    modules = defaultdict(list)
     for info in infos:
         for field in kinds:
-            if field not in modules:
-                modules[field] = []
             modules[field] += [a for a in (info.get(field) or [])
                                if a not in modules[field]]
-    # pop empty blocks
-    for k, v in list(modules.items()):
-        if not v:
-            modules.pop(k)
-    return modules
+    # return dictionary of non-empty blocks
+    return {k: v for k, v in modules.items() if v}
 
 
 def get_default_info(module_or_class, kind=None, return_yaml=False,
@@ -329,7 +327,8 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
     ignore = set() if strict else {_debug, _debug_file, _resume, _force, _path_install}
     ignore = ignore.union(set(ignore_blocks or []))
     if set(info for info in info_old if info_old[info] is not None).difference(ignore) \
-            != set(info for info in info_new if info_new[info] is not None).difference(ignore):
+            != set(info for info in info_new if info_new[info] is not None).difference(
+        ignore):
         myprint(myname + ": different blocks or options: %r (old) vs %r (new)" % (
             set(info_old).difference(ignore), set(info_new).difference(ignore)))
         return False

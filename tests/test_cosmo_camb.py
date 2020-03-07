@@ -70,7 +70,7 @@ def test_CAMB_transfer(modules):
     results = camb.get_results(pars)
     k, z, PK1 = results.get_nonlinear_matter_power_spectrum(hubble_units=False)
 
-    # noinspection PyDefaultArgument
+    # noinspection PyDefaultArgument,PyUnresolvedReferences
     def test_likelihood(
             _theory={'Pk_grid': dict(k_max=2, z=[0, 2])}):
         _, _, PK = _theory.get_Pk_grid()
@@ -93,7 +93,7 @@ def test_CAMB_sigma_R(modules):
     R = np.arange(1, 20, 1)
     sigma_R = results.get_sigmaR(R=R, hubble_units=False)[::-1, :]
 
-    # noinspection PyDefaultArgument
+    # noinspection PyDefaultArgument,PyUnresolvedReferences
     def test_likelihood(
             _theory={'sigma_R': dict(z=[0, 2, 5], R=R),
                      'Pk_grid': {'k_max': 1, 'z': np.arange(0.2, 6, 1)}}):

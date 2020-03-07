@@ -60,7 +60,7 @@ def post(info, sample=None):
             info_in = output_in.reload_updated_info()
         except FileNotFoundError:
             raise LoggedError(log, "Error loading input model: "
-                              "could not find input info at %s",
+                                   "could not find input info at %s",
                               output_in.file_updated)
     else:
         info_in = deepcopy_where_possible(info)
@@ -96,7 +96,7 @@ def post(info, sample=None):
     # Add a dummy 'one' likelihood, to absorb unused parameters
     if not add.get(kinds.likelihood):
         add[kinds.likelihood] = {}
-    add[kinds.likelihood].update({"one": None})
+    add[kinds.likelihood]["one"] = None
     # Expand the "add" info
     add = update_info(add)
     # 2.1 Adding/removing derived parameters and changes in priors of sampled parameters

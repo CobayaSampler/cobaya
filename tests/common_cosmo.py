@@ -31,7 +31,7 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
     info = recursive_update(info, {kinds.theory: info_theory})
     info[kinds.theory][theo]["use_renames"] = True
     info = recursive_update(info, {kinds.likelihood: info_likelihood})
-    info[_params].update({p: None for p in best_fit_derived or {}})
+    info[_params].update(dict.fromkeys(best_fit_derived or []))
     # We need UPDATED info, to get the likelihoods nuisance parameters
     info = update_info(info)
     # Notice that update_info adds an aux internal-only _params property to the likes

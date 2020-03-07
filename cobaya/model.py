@@ -98,7 +98,7 @@ def get_model(info):
     for k in list(info):
         if k not in [_params, kinds.likelihood, _prior, kinds.theory, _path_install,
                      _timing]:
-            ignored_info.update({k: info.pop(k)})
+            ignored_info[k] = info.pop(k)
     if ignored_info:
         logging.getLogger(__name__.split(".")[-1]).warning(
             "Ignored blocks/options: %r", list(ignored_info))
@@ -306,7 +306,7 @@ class Model(HasLogger):
         """
         if params_values is None:
             params_values = []
-        if hasattr(params_values, "keys") and not _no_check:
+        elif hasattr(params_values, "keys") and not _no_check:
             params_values = self.parameterization.check_sampled(**params_values)
 
         input_params = self.parameterization.to_input(params_values, copied=False)
@@ -441,14 +441,14 @@ class Model(HasLogger):
         Finds a point from the reference pdf that has finite posterior.
         Returns (point, logpost, logpriors, loglikes, derived)
         """
-        for i in range(max(1, max_tries // self.prior.d())):
+        for _ in range(max(1, max_tries // self.prior.d())):
             initial_point = self.prior.reference(max_tries=max_tries)
             logpost, logpriors, loglikes, derived = self.logposterior(initial_point)
             if -np.inf not in loglikes:
                 break
         else:
             raise LoggedError(self.log, "Could not find random point giving finite "
-                              "likelihood after %g tries", max_tries)
+                                        "likelihood after %g tries", max_tries)
         return initial_point, logpost, logpriors, loglikes, derived
 
     def dump_timing(self):
@@ -497,8 +497,7 @@ class Model(HasLogger):
                                             "%r" % comps)
             _last = len(dependence_order)
 
-        self._component_order = dict(zip(dependence_order, (components.index(c) for c in
-                                                            dependence_order)))
+        self._component_order = {c: components.index(c) for c in dependence_order}
 
     def _set_dependencies_and_providers(self):
         requirements = []
@@ -516,7 +515,7 @@ class Model(HasLogger):
             if isinstance(_require, Mapping):
                 _require = dict(_require)
             else:
-                _require = {p: None for p in _require}
+                _require = dict.fromkeys(_require)
             for par in self.input_params:
                 if par in _require:
                     direct_param_dependence[_component].add(par)

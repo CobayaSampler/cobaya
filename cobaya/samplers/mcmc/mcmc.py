@@ -163,7 +163,8 @@ class mcmc(CovmatSampler):
         self.max_waiting = max(50, self.max_tries.unit_value)
         # Burning-in countdown -- the +1 accounts for the initial point (always accepted)
         self.burn_in_left = self.burn_in.value * self.current_point.output_thin + 1
-        # Initial dummy checkpoint (needed when 1st "learn point" not reached in prev. run)
+        # Initial dummy checkpoint
+        # (needed when 1st "learn point" not reached in prev. run)
         self.write_checkpoint()
 
     @property
@@ -778,7 +779,7 @@ class mcmc(CovmatSampler):
         """
         products = {"sample": self.collection}
         if is_main_process():
-            products.update({"progress": self.progress})
+            products["progress"] = self.progress
         return products
 
     # Class methods

@@ -77,20 +77,6 @@ def reduce_info_param(info_param):
     return info_param
 
 
-def call_param_func(p, func, kwargs, logger):
-    try:
-        return func(**kwargs)
-    except NameError as exception:
-        unknown = str(exception).split("'")[1]
-        raise LoggedError(
-            logger, "Unknown variable '%s' was referenced in the definition of "
-                    "the parameter '%s', with arguments %r.", unknown, p, list(kwargs))
-    except:
-        logger.error("Function for parameter '%s' failed at evaluation "
-                     "and threw the following exception:", p)
-        raise
-
-
 class Parameterization(HasLogger):
     """
     Class managing parameterization.
@@ -148,7 +134,7 @@ class Parameterization(HasLogger):
                     self._derived_funcs[p] = get_external_function(info[partag.derived])
                     self._derived_args[p] = getfullargspec(self._derived_funcs[p]).args
         # Check that the sampled and derived params are all valid python variable names
-        for p in chain(self._sampled, self.derived_params()):
+        for p in chain(self._sampled, self._derived):
             if not is_valid_variable_name(p):
                 is_in = p in self._sampled
                 eg_in = "  p_prime:\n    prior: ...\n  %s: 'lambda p_prime: p_prime'\n" % p
@@ -165,13 +151,12 @@ class Parameterization(HasLogger):
                     eg_in if is_in else eg_out)
         # Assume that the *un*known function arguments are likelihood/theory
         # output parameters
-        args = (set(chain(*self._input_args.values()))
-                .union(chain(*self._derived_args.values())))
-        for p in (list(self._constant) + list(self._input) +
-                  list(self._sampled) + list(self._derived)):
-            if p in args:
-                args.remove(p)
-        self._output.update({p: None for p in args})
+        for arg in (set(chain(*self._input_args.values()))
+                            .union(chain(*self._derived_args.values()))
+                    - set(self._constant) - set(self._input)
+                    - set(self._sampled) - set(self._derived)):
+            self._output[arg] = None
+
         # Useful sets: directly-sampled input parameters and directly "output-ed" derived
         self._directly_sampled = [p for p in self._input if p in self._sampled]
         self._directly_output = [p for p in self._derived if p in self._output]
@@ -203,18 +188,19 @@ class Parameterization(HasLogger):
                 "In particular, an input parameter cannot depend on %r."
                 "Use an explicit Theory calculator for more complex dependencies.",
                 list(bad_input_dependencies))
+        self._wrapped_input_funcs = self._get_input_function_evaluation_order()
 
     def input_params(self):
-        return deepcopy(self._input)
+        return self._input.copy()
 
     def output_params(self):
-        return deepcopy(self._output)
+        return self._output.copy()
 
     def constant_params(self):
-        return deepcopy(self._constant)
+        return self._constant.copy()
 
     def sampled_params(self):
-        return deepcopy(self._sampled)
+        return self._sampled.copy()
 
     def sampled_params_info(self):
         return {p: deepcopy_where_possible(info) for p, info
@@ -224,7 +210,7 @@ class Parameterization(HasLogger):
         return deepcopy(self._sampled_renames)
 
     def derived_params(self):
-        return deepcopy(self._derived)
+        return self._derived.copy()
 
     def sampled_input_dependence(self):
         return deepcopy(self._sampled_input_dependence)
@@ -238,39 +224,23 @@ class Parameterization(HasLogger):
 
         self._sampled = sampled_params_values
         # Fill first directly sampled input parameters
-        self._input.update(
-            {p: sampled_params_values[p] for p in self._directly_sampled})
-        if self._input_funcs:
+        for p in self._directly_sampled:
+            self._input[p] = sampled_params_values[p]
+        if self._wrapped_input_funcs:
             # Then evaluate the functions
-            n_resolved = -1
-            resolved = []
-            while len(resolved) != n_resolved:
-                n_resolved = len(resolved)
-                for p in self._input_funcs:
-                    if p in resolved:
-                        continue
-                    args = {p: self._constant.get(
-                        p, self._input.get(p, sampled_params_values.get(p, None)))
-                        for p in self._input_args[p]}
-                    if not all(isinstance(v, Number) for v in args.values()):
-                        continue
-                    self._input[p] = call_param_func(p, self._input_funcs[p], args,
-                                                     self.log)
-                    resolved.append(p)
-            if set(resolved) != set(self._input_funcs):
-                raise LoggedError(
-                    self.log,
-                    "Could not resolve arguments for input parameters %s. Maybe there "
-                    "is a circular dependency between derived parameters?",
-                    list(set(self._input_funcs).difference(set(resolved))))
+            for p, (func, args, to_set) in self._wrapped_input_funcs.items():
+                for arg in to_set:
+                    args[arg] = self._input.get(arg,
+                                                sampled_params_values.get(arg, None))
+                self._input[p] = self.call_param_func(p, func, args)
         return self.input_params() if copied else self._input
 
     def to_derived(self, output_params_values):
         if not isinstance(output_params_values, dict):
             output_params_values = dict(zip(self._output, output_params_values))
         # Fill first derived parameters which are direct output parameters
-        self._derived.update(
-            {p: output_params_values[p] for p in self._directly_output})
+        for p in self._directly_output:
+            self._derived = output_params_values[p]
         # Then evaluate the functions
         n_resolved = -1
         resolved = []
@@ -284,8 +254,7 @@ class Parameterization(HasLogger):
                         p, self._derived.get(p, None))))) for p in self._derived_args[p]}
                 if not all(isinstance(v, Number) for v in args.values()):
                     continue
-                self._derived[p] = call_param_func(p, self._derived_funcs[p], args,
-                                                   self.log)
+                self._derived[p] = self.call_param_func(p, self._derived_funcs[p], args)
                 resolved.append(p)
         if set(resolved) != set(self._derived_funcs):
             raise LoggedError(
@@ -303,7 +272,7 @@ class Parameterization(HasLogger):
         Returns dict of parameters (model's naming) and their values.
         """
         sampled_output = {}
-        sampled_input = deepcopy(sampled_params)
+        sampled_input = sampled_params.copy()
         for p, renames in self._sampled_renames.items():
             for pprime in sampled_input:
                 if pprime == p or (pprime in renames if self.allow_renames else False):
@@ -372,6 +341,60 @@ class Parameterization(HasLogger):
                                   (partag.latex, p.replace("_", r"\ ")))
 
         return {p: get_label(p, info) for p, info in self._infos.items()}
+
+    def call_param_func(self, p, func, kwargs):
+        try:
+            return func(**kwargs)
+        except NameError as exception:
+            unknown = str(exception).split("'")[1]
+            raise LoggedError(
+                self.log, "Unknown variable '%s' was referenced in the definition of "
+                          "the parameter '%s', with arguments %r.", unknown, p,
+                list(kwargs))
+        except:
+            self.log.error("Function for parameter '%s' failed at evaluation "
+                           "and threw the following exception:", p)
+            raise
+
+    def _get_input_function_evaluation_order(self):
+        # get evaluation order for input derived parameters and pre-prepare argument dict
+        if not self._input_funcs:
+            return {}
+
+        wrapped_input_funcs = {}
+        known = set(self._constant).union(self._sampled)
+        changed = True
+
+        while changed:
+            changed = False
+            for p in self._input_funcs:
+                args = self._input_args[p]
+                if p in known or set(args).difference(known):
+                    continue
+                known.add(p)
+                changed = True
+
+                if not set(args).difference(self._constant):
+                    # all inputs are constant, so output is constant and precomputed
+                    self._constant[p] = \
+                        self.call_param_func(p, self._input_funcs[p],
+                                             {arg: self._constant[arg] for arg in args})
+                    self._input[p] = self._constant[p]
+                else:
+                    # Store function, argument dict with constants pre-filled,
+                    # and unset args as tuple
+                    wrapped_input_funcs[p] = \
+                        (self._input_funcs[p],
+                         {arg: self._constant.get(arg) for arg in args},
+                         [arg for arg in args if arg not in self._constant])
+
+        if set(self._input_funcs).difference(known):
+            raise LoggedError(
+                self.log,
+                "Could not resolve arguments for input parameters %s. Maybe there "
+                "is a circular dependency between derived parameters?",
+                list(set(self._input_funcs).difference(known)))
+        return wrapped_input_funcs
 
     # Python magic for the "with" statement
     def __enter__(self):

@@ -617,7 +617,8 @@ class camb(BoltzmannBase):
 
         mapping = {"tt": 0, "ee": 1, "bb": 2, "te": 3, "et": 3}
         cls = {"ell": ls}
-        cls.update({sp: cl_camb[:, i] for sp, i in mapping.items()})
+        for sp, i in mapping.items():
+            cls[sp] = cl_camb[:, i]
 
         cl_lens = current_state["Cl"].get("lens_potential")
         if cl_lens is not None:

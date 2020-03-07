@@ -270,8 +270,7 @@ class BlockedProposer(HasLogger):
         sigmas_diag, L = choleskyL(propose_matrix_j_sorted, return_scale_free=True)
         # Store the basis as transformation matrices
         self.transform = []
-        for iblock, bp in enumerate(self.proposer):
-            j_start = self.j_start[iblock]
+        for j_start, bp in zip(self.j_start, self.proposer):
             j_end = j_start + bp.n
             self.transform += [sigmas_diag[j_start:, j_start:].dot(L[j_start:,
                                                                    j_start:j_end])]

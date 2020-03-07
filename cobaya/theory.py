@@ -75,7 +75,7 @@ class Theory(CobayaComponent):
                  optional parameters are needed)
         """
 
-        return {p: None for p in str_to_list(getattr(self, _requires, []))}
+        return dict.fromkeys(str_to_list(getattr(self, _requires, [])))
 
     def needs(self, **requirements):
         """

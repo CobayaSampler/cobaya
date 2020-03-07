@@ -39,7 +39,7 @@ class BBN2(Theory):
                                                      params_values_dict['nnu'] - 3.046)}
 
 
-# noinspection PyDefaultArgument
+# noinspection PyDefaultArgument,PyUnresolvedReferences
 def cmb_likelihood(_derived={'check'},
                    _theory={'Hubble': {'z': [0.5]}, 'CAMBdata': None}):
     results = _theory.get_CAMBdata()
