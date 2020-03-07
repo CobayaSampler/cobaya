@@ -240,7 +240,7 @@ class Parameterization(HasLogger):
             output_params_values = dict(zip(self._output, output_params_values))
         # Fill first derived parameters which are direct output parameters
         for p in self._directly_output:
-            self._derived = output_params_values[p]
+            self._derived[p] = output_params_values[p]
         # Then evaluate the functions
         n_resolved = -1
         resolved = []
