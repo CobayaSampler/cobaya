@@ -17,6 +17,7 @@ from cobaya.log import LoggedError
 
 _indent = 2 * " "
 
+
 # Command-line script ####################################################################
 
 def doc_script():
@@ -68,7 +69,8 @@ def doc_script():
         if arguments.kind:
             arguments.kind = arguments.kind[0].lower()
             if arguments.kind not in kinds:
-                print("Kind %r not recognized. Try one of %r" % (arguments.kind, tuple(kinds)))
+                print("Kind %r not recognized. Try one of %r" % (
+                arguments.kind, tuple(kinds)))
                 raise ValueError
         else:
             arguments.kind = get_kind(arguments.module)
@@ -79,7 +81,7 @@ def doc_script():
             print(pformat({arguments.kind: {arguments.module: to_print}}))
         else:
             print(arguments.kind + ":\n" + _indent + arguments.module + ":\n" +
-                  2 * _indent + ("\n" + 2* _indent).join(to_print.split("\n")))
+                  2 * _indent + ("\n" + 2 * _indent).join(to_print.split("\n")))
             if "!defaults" in to_print:
                 print("# This file contains defaults. "
                       "To populate them, use the flag --%s (or -%s)." % (

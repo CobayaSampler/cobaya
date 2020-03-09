@@ -188,7 +188,8 @@ class Parameterization(HasLogger):
                 "In particular, an input parameter cannot depend on %r."
                 "Use an explicit Theory calculator for more complex dependencies.",
                 list(bad_input_dependencies))
-        self._wrapped_input_funcs = self._get_input_function_evaluation_order()
+        self._wrapped_input_funcs, self._wrapped_derived_funcs = \
+            self._get_wrapped_functions_evaluation_order()
 
     def input_params(self):
         return self._input.copy()
@@ -232,7 +233,7 @@ class Parameterization(HasLogger):
                 for arg in to_set:
                     args[arg] = self._input.get(arg,
                                                 sampled_params_values.get(arg, None))
-                self._input[p] = self.call_param_func(p, func, args)
+                self._input[p] = self._call_param_func(p, func, args)
         return self.input_params() if copied else self._input
 
     def to_derived(self, output_params_values):
@@ -242,26 +243,20 @@ class Parameterization(HasLogger):
         for p in self._directly_output:
             self._derived[p] = output_params_values[p]
         # Then evaluate the functions
-        n_resolved = -1
-        resolved = []
-        while len(resolved) != n_resolved:
-            n_resolved = len(resolved)
-            for p in self._derived_funcs:
-                if p in resolved:
-                    continue
-                args = {p: (self._input.get(
-                    p, self._sampled.get(p, output_params_values.get(
-                        p, self._derived.get(p, None))))) for p in self._derived_args[p]}
-                if not all(isinstance(v, Number) for v in args.values()):
-                    continue
-                self._derived[p] = self.call_param_func(p, self._derived_funcs[p], args)
-                resolved.append(p)
-        if set(resolved) != set(self._derived_funcs):
-            raise LoggedError(
-                self.log,
-                "Could not resolve arguments for derived parameters %s. Maybe there"
-                " is a circular dependency between derived parameters?",
-                list(set(self._derived_funcs).difference(set(resolved))))
+        if self._wrapped_derived_funcs:
+            # Then evaluate the functions
+            for p, (func, args, to_set) in self._wrapped_derived_funcs.items():
+                for arg in to_set:
+                    val = self._input.get(arg)
+                    if val is None:
+                        val = output_params_values.get(arg)
+                        if val is None:
+                            val = self._derived.get(arg)
+                            if val is None:
+                                val = self._sampled.get(arg)
+                    args[arg] = val
+                self._derived[p] = self._call_param_func(p, func, args)
+
         return list(self._derived.values())
 
     def check_sampled(self, **sampled_params):
@@ -342,7 +337,7 @@ class Parameterization(HasLogger):
 
         return {p: get_label(p, info) for p, info in self._infos.items()}
 
-    def call_param_func(self, p, func, kwargs):
+    def _call_param_func(self, p, func, kwargs):
         try:
             return func(**kwargs)
         except NameError as exception:
@@ -356,45 +351,53 @@ class Parameterization(HasLogger):
                            "and threw the following exception:", p)
             raise
 
-    def _get_input_function_evaluation_order(self):
-        # get evaluation order for input derived parameters and pre-prepare argument dict
-        if not self._input_funcs:
-            return {}
+    def _get_wrapped_functions_evaluation_order(self):
+        # get evaluation order for input and derived parameter function
+        # and pre-prepare argument dicts
 
-        wrapped_input_funcs = {}
+        wrapped_funcs = ({}, {})
         known = set(self._constant).union(self._sampled)
-        changed = True
 
-        while changed:
-            changed = False
-            for p in self._input_funcs:
-                args = self._input_args[p]
-                if p in known or set(args).difference(known):
-                    continue
-                known.add(p)
-                changed = True
+        for derived, wrapped_func in zip((False, True), wrapped_funcs):
+            if derived:
+                inputs = self._derived_funcs.copy()
+                input_args = self._derived_args
+                known.update(self._output)
+                output = self._derived
+            else:
+                inputs = self._input_funcs.copy()
+                input_args = self._input_args
+                output = self._input
 
-                if not set(args).difference(self._constant):
-                    # all inputs are constant, so output is constant and precomputed
-                    self._constant[p] = \
-                        self.call_param_func(p, self._input_funcs[p],
-                                             {arg: self._constant[arg] for arg in args})
-                    self._input[p] = self._constant[p]
+            while inputs:
+                for p, func in inputs.items():
+                    args = input_args[p]
+                    if set(args).difference(known):
+                        continue
+                    known.add(p)
+
+                    if not set(args).difference(self._constant):
+                        # all inputs are constant, so output is constant and precomputed
+                        self._constant[p] = \
+                            self._call_param_func(p, func,
+                                                  {arg: self._constant[arg] for arg in
+                                                   args})
+                        output[p] = self._constant[p]
+                    else:
+                        # Store function, argument dict with constants pre-filled,
+                        # and unset args as tuple
+                        wrapped_func[p] = \
+                            (func, {arg: self._constant.get(arg) for arg in args},
+                             [arg for arg in args if arg not in self._constant])
+
+                    del inputs[p]
+                    break
                 else:
-                    # Store function, argument dict with constants pre-filled,
-                    # and unset args as tuple
-                    wrapped_input_funcs[p] = \
-                        (self._input_funcs[p],
-                         {arg: self._constant.get(arg) for arg in args},
-                         [arg for arg in args if arg not in self._constant])
-
-        if set(self._input_funcs).difference(known):
-            raise LoggedError(
-                self.log,
-                "Could not resolve arguments for input parameters %s. Maybe there "
-                "is a circular dependency between derived parameters?",
-                list(set(self._input_funcs).difference(known)))
-        return wrapped_input_funcs
+                    raise LoggedError(
+                        self.log, "Could not resolve arguments for parameters %s. "
+                                  "Maybe there is a circular dependency between derived "
+                                  "parameters?", list(inputs))
+        return wrapped_funcs
 
     # Python magic for the "with" statement
     def __enter__(self):

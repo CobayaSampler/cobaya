@@ -154,8 +154,6 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
 # Plots! for the documentation -- pass `manual=True` to `body_of_test`
 
 def plot_sample(sample, params):
-    import matplotlib.pyplot as plt
-    import getdist as gd
     import getdist.plots as gdplt
     gdsamples = sample.as_getdist_mcsamples()
     gdplot = gdplt.getSubplotPlotter()

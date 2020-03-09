@@ -151,12 +151,14 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False, modules=
 
     # TODO: define these functions programmatically using exec
 
+    # noinspection PyUnresolvedReferences
     def like0(a_0, a_1, a_2, _derived=("sum_like0",)):
         n_evals[0] += 1
         if _derived is not None:
             _derived["sum_like0"] = a_0 + a_1 + a_2
         return multivariate_normal.logpdf([a_0, a_1, a_2], mean=mean0, cov=cov0)
 
+    # noinspection PyUnresolvedReferences
     def like1(a_3, a_4, _derived=("sum_like1",)):
         n_evals[1] += 1
         if _derived is not None:
