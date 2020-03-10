@@ -202,6 +202,10 @@ class mcmc(CovmatSampler):
     def n_fast(self):
         return len(self.fast_params)
 
+    @property
+    def acceptance_rate(self):
+        return self.n() / self.collection[_weight].sum()
+
     def set_proposer_blocking(self):
         if self.blocking:
             # Includes the case in which we are resuming
@@ -574,7 +578,6 @@ class mcmc(CovmatSampler):
             mean = self.collection.mean(first=use_first)
             cov = self.collection.cov(first=use_first)
             mcsamples = self.collection._sampled_to_getdist_mcsamples(first=use_first)
-            acceptance_rate = self.n() / self.collection[_weight].sum()
             try:
                 bound = np.array([[
                     mcsamples.confidence(i, limfrac=self.Rminus1_cl_level / 2.,
@@ -586,7 +589,7 @@ class mcmc(CovmatSampler):
                 success_bounds = False
             Ns, means, covs, bounds, acceptance_rates = map(
                 lambda x: np.array(get_mpi_comm().gather(x)),
-                [self.n(), mean, cov, bound, acceptance_rate])
+                [self.n(), mean, cov, bound, self.acceptance_rate])
         else:
             # Compute and gather means, covs and CL intervals of last m-1 chain fractions
             m = 1 + self.Rminus1_single_split
@@ -609,7 +612,7 @@ class mcmc(CovmatSampler):
                     first=i * cut, last=(i + 1) * cut - 1)
                 for i in range(1, m)]
             logging.disable(logging.NOTSET)
-            acceptance_rates = self.n() / self.collection[_weight].sum()
+            acceptance_rates = self.acceptance_rate
             try:
                 bounds = [np.array(
                     [[mcs.confidence(i, limfrac=self.Rminus1_cl_level / 2., upper=which)
