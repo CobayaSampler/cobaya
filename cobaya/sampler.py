@@ -47,9 +47,8 @@ implement only the methods ``initialize``, ``_run``, and ``products``.
 import os
 import logging
 import numpy as np
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Mapping
 from itertools import chain
-from collections.abc import Mapping
 
 # Local
 from cobaya.conventions import kinds, _checkpoint_extension, _version
@@ -107,8 +106,7 @@ def check_sampler_info(info_old=None, info_new=None):
     #     info_new.update({"minimize": aux})
     #     info_old = {}
     #     keep_old = {}
-    if (list(info_old) != list(info_new) and
-            list(info_new) == ["minimize"]):
+    if list(info_old) != list(info_new) and list(info_new) == ["minimize"]:
         return
     if list(info_old) == list(info_new):
         # Restore some selected old values for some classes
@@ -143,10 +141,9 @@ def get_sampler(info_sampler, model, output=None, modules=None):
     check_sampler_info(
         (output.reload_updated_info(use_cache=True) or {}).get(kinds.sampler),
         updated_info_sampler)
-    # Check if resumible run
+    # Check if resumable run
     sampler_name = sampler_class.__name__
-    sampler_class.check_force_resume(
-        output, info=updated_info_sampler[sampler_name])
+    sampler_class.check_force_resume(output, info=updated_info_sampler[sampler_name])
     # Instantiate the sampler
     sampler_instance = sampler_class(updated_info_sampler[sampler_name], model,
                                      output, path_install=modules)
@@ -250,7 +247,8 @@ class Sampler(CobayaComponent):
         self.initialize()
         self._release_rng()
         self.model.set_cache_size(self._get_requested_cache_size())
-        # Add to the updated info some values which are only available after initialisation
+        # Add to the updated info some values which are
+        # only available after initialisation
         self._updated_info[_version] = self.get_version()
 
     def run(self):
@@ -369,9 +367,8 @@ class Sampler(CobayaComponent):
         if is_main_process():
             if output.is_forcing():
                 cls.delete_output_files(output, info=info)
-            elif any(find_with_regexp(regexp, root)
-                     for (regexp, root) in cls.output_files_regexps(
-                output=output, info=info, minimal=True)):
+            elif any(find_with_regexp(regexp, root) for (regexp, root)
+                     in cls.output_files_regexps(output=output, info=info, minimal=True)):
                 if output.is_resuming():
                     output.log.info("Found and old sample. Resuming.")
                 else:
@@ -385,7 +382,8 @@ class Sampler(CobayaComponent):
                 if output.is_resuming():
                     output.log.info(
                         "Did not find an old sample. Cleaning up and starting anew.")
-                # Clean up old files, and set resuming=False, regardless of requested value
+                # Clean up old files, and set resuming=False,
+                # regardless of requested value
                 cls.delete_output_files(output, info=info)
                 output.set_resuming(False)
 
@@ -394,7 +392,6 @@ class Minimizer(Sampler):
     """
     base class for minimizers
     """
-    pass
 
 
 class CovmatSampler(Sampler):

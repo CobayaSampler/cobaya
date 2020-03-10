@@ -7,9 +7,8 @@
 """
 # Global
 import numpy as np
-from collections.abc import Mapping
 from itertools import chain
-from typing import NamedTuple, Sequence
+from typing import NamedTuple, Sequence, Mapping
 import logging
 
 # Local

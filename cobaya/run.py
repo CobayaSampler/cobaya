@@ -7,7 +7,7 @@
 """
 
 # Global
-from collections.abc import Mapping
+from typing import Mapping
 
 # Local
 from cobaya import __version__

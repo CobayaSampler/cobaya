@@ -1,6 +1,5 @@
 # For release
 
-## Thinning of output when oversampling
 ## version attribute should be in all components not just theory (samplers can have versions) [done for samplers; missing: likelihoods]
 ## Update example notebook to match example in paper
 ## Finish implementation of aggregated-by-data-type chi2

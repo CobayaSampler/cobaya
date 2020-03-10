@@ -266,15 +266,6 @@ class _bao_prototype(_InstallableLikelihood):
                 requisites.update(theory_reqs[obs])
         return requisites
 
-    def initialize_with_provider(self, provider):
-        # TODO: is this needed any more?
-
-        # if "classy" in provider.model.theory:
-        #     raise LoggedError(
-        #         self.log,
-        #         "BAO likelihood not yet compatible with CLASS (help appreciated!)")
-        super().initialize_with_provider(provider)
-
     def theory_fun(self, z, observable):
         # Functions to get the corresponding theoretical prediction:
         # Spherically-averaged distance, over sound horizon radius

@@ -838,7 +838,7 @@ class camb(BoltzmannBase):
             if not gcc_check:
                 cause = (" Possible cause: it looks like `gcc` does not have the correct "
                          "version number (CAMB requires %s); and `ifort` is also "
-                         "probably not available.", cls._camb_min_gcc_version)
+                         "probably not available." % cls._camb_min_gcc_version)
             else:
                 cause = ""
             log.error("Compilation failed!" + cause)
