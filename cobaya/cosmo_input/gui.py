@@ -227,6 +227,7 @@ class MainWindow(QWidget):
             self.combos[k].blockSignals(False)
 
     def refresh_display(self, info):
+        QApplication.setOverrideCursor(Qt.WaitCursor)
         try:
             comments = info.pop(input_database._comment, None)
             comments_text = "\n# " + "\n# ".join(comments)
@@ -236,6 +237,7 @@ class MainWindow(QWidget):
         self.display["python"].setText("info = " + pformat(info) + comments_text)
         self.display["yaml"].setText(yaml_dump(info) + comments_text)
         self.display["bibliography"].setText(prettyprint_bib(get_bib_info(info)))
+        QApplication.restoreOverrideCursor()
 
     @Slot()
     def save_file(self):
