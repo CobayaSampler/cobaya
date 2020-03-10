@@ -84,7 +84,7 @@ before_install:
   - if [[ "$GCC_VERSION" != "bionic" ]]; then
       if [[ "$GCC_VERSION" == "9" ]]; then
         wget http://security.ubuntu.com/ubuntu/pool/main/g/gcc-9/libgomp1_9.1.0-2ubuntu2~19.04_amd64.deb;
-        dpkg -i "libgomp1_9.1.0-2ubuntu2~19.04_amd64.deb";
+        sudo dpkg -i "libgomp1_9.1.0-2ubuntu2~19.04_amd64.deb";
       fi;
       mkdir -p gcc-symlinks;
       ln -s /usr/bin/gfortran-$GCC_VERSION gcc-symlinks/gfortran;
