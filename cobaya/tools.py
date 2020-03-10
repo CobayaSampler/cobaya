@@ -39,6 +39,9 @@ log = logging.getLogger(__name__.split(".")[-1])
 
 
 def str_to_list(x):
+    """
+    Makes sure that the input is a list (could be string).
+    """
     return [x] if isinstance(x, str) else x
 
 

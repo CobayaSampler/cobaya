@@ -3,11 +3,15 @@ import os
 from random import choice
 from itertools import chain
 import numpy as np
+from copy import deepcopy
 
 # Local
 from cobaya.yaml import yaml_load_file, yaml_dump_file
-from cobaya.conventions import _covmats_file, _aliases, _path_install, partag
+from cobaya.conventions import _covmats_file, _aliases, _path_install, partag, _params
+from cobaya.conventions import kinds
 from cobaya.tools import str_to_list
+from cobaya.parameterization import is_sampled_param
+from cobaya.input import get_default_info
 
 # Logger
 import logging
@@ -16,6 +20,9 @@ log = logging.getLogger(__name__.split(".")[-1])
 
 covmat_folders = ["{%s}/data/planck_supp_data_and_covmats/covmats/" % _path_install,
                   "{%s}/data/bicep_keck_2015/BK15_cosmomc/planck_covmats/" % _path_install]
+
+# Global instance of loaded database, for fast calls to get_best_covmat in GUI
+_loaded_covmats_database = None
 
 
 def get_covmat_database(modules, cached=True):
@@ -52,8 +59,40 @@ def get_covmat_database(modules, cached=True):
     return covmat_database
 
 
+def prepare_info_best_covmat(info):
+    """
+    Helper function to prepare input for `get_best_covmat`. Updated bare input info with
+    defaults, including default parameter renames of the given theory code.
+
+    Returns `(info_params, info_likelihood)` ready to use as arguments of
+    `get_best_covmat`.
+    """
+    sampled_params_info = {
+        p: deepcopy(v) for p, v in info[_params].items() if is_sampled_param(v)}
+    theory_renames = get_default_info(list(info[kinds.theory])[0])[partag.renames]
+    theory_renames_sets = [
+        set([k] + str_to_list(v)) for k, v in theory_renames.items()]
+    for p, pinfo in sampled_params_info.items():
+        try:
+            this_set = next(s for s in theory_renames_sets if p in s)
+        except StopIteration:
+            this_set = set()
+        this_set = this_set.union(pinfo.get(partag.renames, set()))
+        try:
+            this_set.remove(p)
+        except:
+            pass
+        pinfo[partag.renames] = list(this_set)
+    info_likelihood = {l: get_default_info(l) for l in info[kinds.likelihood]}
+    return sampled_params_info, info_likelihood
+
+
 def get_best_covmat(modules, slow_params_info, likelihoods_info, cached=True):
-    covmats_database = get_covmat_database(modules, cached=cached)
+    if cached:
+        global _loaded_covmats_database
+        covmats_database = (
+            _loaded_covmats_database or get_covmat_database(modules, cached=cached))
+        _loaded_covmats_database = covmats_database
     # Select first based on number of slow parameters
     params_renames = set(chain(*[
         [p] + str_to_list(info.get(partag.renames, [])) for p, info in
@@ -76,7 +115,7 @@ def get_best_covmat(modules, slow_params_info, likelihoods_info, cached=True):
             "No covariance matrix found including at least one of the given parameters")
         return None
     # Sub-select by number of likelihoods
-    likes_renames = set(chain(*[[like] + str_to_list(info.get(_aliases, []))
+    likes_renames = set(chain(*[[like] + str_to_list((info or {}).get(_aliases, []))
                                 for like, info in likelihoods_info.items()]))
     get_score_likes = (
         lambda covmat_name: len([0 for like in likes_renames if like in covmat_name]))
