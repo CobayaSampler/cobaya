@@ -246,7 +246,8 @@ class mcmc(CovmatSampler):
                     self.log, "'drag_limits' has been deprecated. Use 'oversample_power' "
                               "to control the amount of dragging steps.")
             self.drag_interp_steps = int(
-                np.round(self.oversampling_factors[self.i_last_slow_block + 1] / 2))
+                np.round(self.oversampling_factors[self.i_last_slow_block + 1] / 2 *
+                         self.n_fast / self.n_slow))
             self.get_new_sample = self.get_new_sample_dragging
             self.log.info("Dragging with number of interpolating steps:")
             self.log.info("* %d : %r", 1, self.slow_blocks)
@@ -259,8 +260,11 @@ class mcmc(CovmatSampler):
             blocks_indices, oversampling_factors=self.oversampling_factors,
             i_last_slow_block=self.i_last_slow_block, proposal_scale=self.proposal_scale)
         # Cycle length, taking into account oversampling/dragging
-        self.cycle_length = sum(len(b) * o for b, o in
-                                zip(blocks_indices, self.oversampling_factors))
+        if self.drag:
+            self.cycle_length = self.n_slow
+        else:
+            self.cycle_length = sum(len(b) * o for b, o in
+                                    zip(blocks_indices, self.oversampling_factors))
         self.log.debug(
             "Cycle length in steps: %r", self.cycle_length)
         for number in self._quants_d_units:
