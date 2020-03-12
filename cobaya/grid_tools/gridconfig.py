@@ -19,7 +19,7 @@ from cobaya.conventions import kinds, _params
 from cobaya.input import get_used_modules, merge_info, update_info
 from cobaya.install import install as install_reqs
 from cobaya.grid_tools import batchjob
-from cobaya.cosmo_input import create_input, get_best_covmat
+from cobaya.cosmo_input import create_input, _get_best_covmat
 from cobaya.parameterization import is_sampled_param
 from cobaya.tools import warn_deprecation
 
@@ -152,7 +152,7 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
                 for like in updated_info[kinds.likelihood].values()]))
             params_info = {p: v for p, v in updated_info[_params].items()
                            if is_sampled_param(v) and p not in like_params}
-            best_covmat = get_best_covmat(
+            best_covmat = _get_best_covmat(
                 os.path.abspath(modules_path),
                 params_info, updated_info[kinds.likelihood])
             info[kinds.sampler][sampler]["covmat"] = os.path.join(

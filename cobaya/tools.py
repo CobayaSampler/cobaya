@@ -763,3 +763,22 @@ def find_with_regexp(regexp, root, walk_tree=False):
         files = []
     return [os.path.join(path, f2) for path, f2 in files
             if f2 == getattr(regexp.match(f2), "group", lambda: None)()]
+
+
+def get_translated_params(params_info, params_list):
+    """
+    Return a dict `{p: p_prime}`, being `p` parameters from `params_info` and `p_prime`
+    their equivalent one in `params_list`, taking into account possible renames found
+    inside `params_info`.
+
+    The returned dict keeps the order of `params_info`.
+    """
+    translations = {}
+    for p, pinfo in params_info.items():
+        renames = set([p]).union(set(str_to_list(pinfo.get(partag.renames, []))))
+        try:
+            trans = next(r for r in renames if r in params_list)
+            translations[p] = trans
+        except StopIteration:
+            continue
+    return translations

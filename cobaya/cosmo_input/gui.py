@@ -4,15 +4,20 @@ import sys
 import platform
 import signal
 from pprint import pformat
+import numpy as np
+import matplotlib.pyplot as plt
+import io
 
 # Local
 from cobaya.yaml import yaml_dump
 from cobaya.cosmo_input import input_database
+from cobaya.cosmo_input.autoselect_covmat import get_best_covmat, covmat_folders
 from cobaya.cosmo_input.create_input import create_input
 from cobaya.bib import prettyprint_bib, get_bib_info, get_bib_module
-from cobaya.tools import warn_deprecation, get_available_internal_class_names
+from cobaya.tools import warn_deprecation, get_available_internal_class_names, \
+    cov_to_std_and_corr
 from cobaya.input import get_default_info
-from cobaya.conventions import subfolders, kinds
+from cobaya.conventions import subfolders, kinds, partag, _modules_path_env, _path_install
 
 # per-platform settings for correct high-DPI scaling
 if platform.system() == "Linux":
@@ -26,7 +31,9 @@ try:
     # noinspection PyUnresolvedReferences
     from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, \
         QGroupBox, QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit, \
-        QFileDialog, QCheckBox, QLabel, QMenuBar, QAction, QDialog
+        QFileDialog, QCheckBox, QLabel, QMenuBar, QAction, QDialog, QTableWidget, \
+        QTableWidgetItem, QAbstractItemView
+    from PySide2.QtGui import QColor
     # noinspection PyUnresolvedReferences
     from PySide2.QtCore import Slot, Qt, QCoreApplication, QSize, QSettings
 
@@ -37,6 +44,9 @@ except ImportError:
 
 # Quit with C-c
 signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+# Color map for correlatins
+cmap_corr = plt.get_cmap("coolwarm_r")
 
 
 def text(key, contents):
@@ -143,6 +153,15 @@ class MainWindow(QWidget):
             self.display[k].setCursorWidth(0)
             self.display[k].setReadOnly(True)
             self.display_tabs.addTab(self.display[k], k)
+        self.display["covmat"] = QWidget()
+        covmat_tab_layout = QVBoxLayout(group_box)
+        self.display["covmat"].setLayout(covmat_tab_layout)
+        self.covmat_text = QLabel()
+        self.covmat_table = QTableWidget(0, 0)
+        self.covmat_table.setEditTriggers(QAbstractItemView.NoEditTriggers)  # ReadOnly!
+        covmat_tab_layout.addWidget(self.covmat_text)
+        covmat_tab_layout.addWidget(self.covmat_table)
+        self.display_tabs.addTab(self.display["covmat"], "covariance matrix")
         self.layout_output.addWidget(self.display_tabs)
         # Buttons
         self.buttons = QHBoxLayout()
@@ -237,25 +256,82 @@ class MainWindow(QWidget):
         self.display["python"].setText("info = " + pformat(info) + comments_text)
         self.display["yaml"].setText(yaml_dump(info) + comments_text)
         self.display["bibliography"].setText(prettyprint_bib(get_bib_info(info)))
+        # Display covmat
+        path_install = os.environ.get(_modules_path_env)
+        if not path_install:
+            self.covmat_text.setText(
+                "\nIn order to find a covariance matrix, you need to define the env "
+                "variable %r\nas the absolute path to your installed modules, e.g. "
+                "'/home/me/modules'.\n" % _modules_path_env)
+        elif any(not os.path.isdir(d.format(**{_path_install: path_install})) for d in covmat_folders):
+            self.covmat_text.setText(
+                "\nThe cosmological modules appear not to be installed in the folder\n"
+                "defined in the env variable %r: %r\n" % (
+                    _modules_path_env, path_install))
+        else:
+            covmat_data = get_best_covmat(info, path_install=path_install)
+            self.current_params_in_covmat = covmat_data["params"]
+            self.current_covmat = covmat_data["covmat"]
+            _, corrmat = cov_to_std_and_corr(self.current_covmat)
+            self.covmat_text.setText(
+                "\nCovariance file: %r\n\n"
+                "NB: you do *not* need to save or copy this covariance matrix: "
+                "it will be selected automatically.\n" % covmat_data["name"])
+            self.covmat_table.setRowCount(len(self.current_params_in_covmat))
+            self.covmat_table.setColumnCount(len(self.current_params_in_covmat))
+            self.covmat_table.setHorizontalHeaderLabels(
+                list(self.current_params_in_covmat))
+            self.covmat_table.setVerticalHeaderLabels(
+                list(self.current_params_in_covmat))
+            for i, pi in enumerate(self.current_params_in_covmat):
+                for j, pj in enumerate(self.current_params_in_covmat):
+                    self.covmat_table.setItem(
+                        i, j, QTableWidgetItem("%g" % self.current_covmat[i,j]))
+                    if i != j:
+                        color = [256 * c for c in cmap_corr(corrmat[i,j]/2 + 0.5)[:3]]
+                    else:
+                        color = [255.99] * 3
+                    self.covmat_table.item(i, j).setBackground(QColor(*color))
+                    self.covmat_table.item(i, j).setForeground(QColor(0,0,0))
         QApplication.restoreOverrideCursor()
+
+    def save_covmat_txt(self, file_handle=None):
+        """
+        Saved covmat to given file_handle. If none given, returns the text to be saved.
+        """
+        return_txt = False
+        if not file_handle:
+            file_handle = io.BytesIO()
+            return_txt = True
+        np.savetxt(file_handle, self.current_covmat,
+                   header = " ".join(self.current_params_in_covmat))
+        if return_txt:
+            return file_handle.getvalue().decode()
 
     @Slot()
     def save_file(self):
         ftype = next(k for k, w in self.display.items()
                      if w is self.display_tabs.currentWidget())
         ffilter = {"yaml": "Yaml files (*.yaml *.yml)", "python": "(*.py)",
-                   "bibliography": "(*.txt)"}[ftype]
-        fsuffix = {"yaml": ".yaml", "python": ".py", "bibliography": ".txt"}[ftype]
+                   "bibliography": "(*.txt)", "covmat": "(*.covmat)"}[ftype]
+        fsuffix = {"yaml": ".yaml", "python": ".py",
+                   "bibliography": ".txt", "covmat": ".covmat"}[ftype]
         fname, path = self.save_dialog.getSaveFileName(
             self.save_dialog, "Save input file", fsuffix, ffilter, os.getcwd())
         if not fname.endswith(fsuffix):
             fname += fsuffix
         with open(fname, "w+", encoding="utf-8") as f:
-            f.write(self.display_tabs.currentWidget().toPlainText())
+            if self.display_tabs.currentWidget() == self.display["covmat"]:
+                self.save_covmat_txt(f)
+            else:
+                f.write(self.display_tabs.currentWidget().toPlainText())
 
     @Slot()
     def copy_clipb(self):
-        self.clipboard.setText(self.display_tabs.currentWidget().toPlainText())
+        if self.display_tabs.currentWidget() == self.display["covmat"]:
+            self.clipboard.setText(self.save_covmat_txt())
+        else:
+            self.clipboard.setText(self.display_tabs.currentWidget().toPlainText())
 
     def show_defaults(self):
         kind, module = self.sender().data()
