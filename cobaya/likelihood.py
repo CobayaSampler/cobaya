@@ -31,8 +31,9 @@ import inspect
 from typing import Mapping
 
 # Local
-from cobaya.conventions import kinds, _external, _module_path, empty_dict
-from cobaya.tools import get_class, get_external_function, getfullargspec
+from cobaya.conventions import kinds, _external, _module_path, empty_dict, \
+    _input_params, _output_params
+from cobaya.tools import get_class, get_external_function, getfullargspec, str_to_list
 from cobaya.log import LoggedError
 from cobaya.component import ComponentCollection
 from cobaya.theory import Theory
@@ -127,22 +128,28 @@ class AbsorbUnusedParamsLikelihood(Likelihood):
 class LikelihoodExternalFunction(Likelihood):
     def __init__(self, info, name, timing=None):
         Theory.__init__(self, info, name=name, timing=timing, standalone=False)
-
-        # Store the external function and its arguments
+        # Store the external function and assign its arguments
         self.external_function = get_external_function(info[_external], name=name)
+        # Manually specified input_params and output_params take precedence,
+        # otherwise, guess from argspec
         argspec = getfullargspec(self.external_function)
-        self.input_params = [p for p in argspec.args if p not in ["_derived", "_theory"]]
-        self.has_derived = "_derived" in argspec.args
-        if self.has_derived:
-            derived_kw_index = argspec.args[-len(argspec.defaults):].index("_derived")
-            self.output_params = argspec.defaults[derived_kw_index]
+        if info.get(_input_params, []):
+            setattr(self, _input_params, str_to_list(info.get(_input_params)))
         else:
-            self.output_params = []
+            setattr(self, _input_params,
+                    [p for p in argspec.args if p not in ["_derived", "_theory"]])
+        if info.get(_output_params, []):
+            setattr(self, _output_params, str_to_list(info.get(_output_params)))
+        elif "_derived" in argspec.args:
+            derived_kw_index = argspec.args[-len(argspec.defaults):].index("_derived")
+            setattr(self, _output_params, argspec.defaults[derived_kw_index])
+        else:
+            setattr(self, _output_params, [])
+        # TODO: provide manual requirements specification, same as I/O params
         self.has_theory = "_theory" in argspec.args
         if self.has_theory:
             theory_kw_index = argspec.args[-len(argspec.defaults):].index("_theory")
             self._needs = argspec.defaults[theory_kw_index]
-
         self.log.info("Initialized external likelihood.")
 
     def get_requirements(self):
@@ -150,7 +157,7 @@ class LikelihoodExternalFunction(Likelihood):
 
     def logp(self, **params_values):
         # if no derived params defined in external func, delete the "_derived" argument
-        if not self.has_derived:
+        if not self.output_params:
             params_values.pop("_derived")
         if self.has_theory:
             params_values["_theory"] = self.provider

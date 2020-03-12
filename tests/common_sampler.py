@@ -6,6 +6,7 @@ from random import shuffle, choice
 from scipy.stats import multivariate_normal
 from getdist.mcsamples import MCSamplesFromCobaya
 from itertools import chain
+from typing import Mapping
 
 from cobaya.conventions import kinds, _output_prefix, empty_dict
 from cobaya.conventions import _debug, _debug_file, _path_install, partag
@@ -131,12 +132,13 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
 
 def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False, modules=None):
     # #dimensions and speed ratio mutually prime (e.g. 2,3,5)
-    dim0, dim1 = 3, 2
-    speed0, speed1 = 1, 5
+    dim0, dim1 = 5, 2
+    speed0, speed1 = 1, 10
     ranges = [[i, i + 1] for i in range(dim0 + dim1)]
     prefix = "a_"
     params0, params1 = (lambda x: (x[:dim0], x[dim0:]))(
         [prefix + str(d) for d in range(dim0 + dim1)])
+    derived0, derived1 = "sum_like0", "sum_like1"
     mean0, cov0 = [info_random_gaussian_mixture(
         ranges=[ranges[i] for i in range(dim0)], n_modes=1, input_params_prefix=prefix,
         O_std_min=0.01, O_std_max=0.2, derived=True)
@@ -149,21 +151,21 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False, modules=
                    ["means", "covs"]]
     n_evals = [0, 0]
 
-    # TODO: define these functions programmatically using exec
-
     # noinspection PyUnresolvedReferences
-    def like0(a_0, a_1, a_2, _derived=("sum_like0",)):
+    def like0(**kwargs):
         n_evals[0] += 1
-        if _derived is not None:
-            _derived["sum_like0"] = a_0 + a_1 + a_2
-        return multivariate_normal.logpdf([a_0, a_1, a_2], mean=mean0, cov=cov0)
+        input_params = [kwargs[p] for p in params0]
+        if isinstance(kwargs.get("_derived"), Mapping):
+            kwargs["_derived"][derived0] = sum(input_params)
+        return multivariate_normal.logpdf(input_params, mean=mean0, cov=cov0)
 
     # noinspection PyUnresolvedReferences
-    def like1(a_3, a_4, _derived=("sum_like1",)):
+    def like1(**kwargs):
         n_evals[1] += 1
-        if _derived is not None:
-            _derived["sum_like1"] = a_3 + a_4
-        return multivariate_normal.logpdf([a_3, a_4], mean=mean1, cov=cov1)
+        input_params = [kwargs[p] for p in params1]
+        if isinstance(kwargs.get("_derived"), Mapping):
+            kwargs["_derived"][derived1] = sum(input_params)
+        return multivariate_normal.logpdf(input_params, mean=mean1, cov=cov1)
 
     # Rearrange parameter in arbitrary order
     perm = list(range(dim0 + dim1))
@@ -172,8 +174,10 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False, modules=
     info = {"params": dict(
         {prefix + "%d" % i: {"prior": dict(zip(["min", "max"], ranges[i]))}
          for i in perm}, sum_like0=None, sum_like1=None),
-        "likelihood": {"like0": {"external": like0, "speed": speed0},
-                       "like1": {"external": like1, "speed": speed1}},
+        "likelihood": {"like0": {"external": like0, "speed": speed0,
+                                 "input_params": params0, "output_params": derived0},
+                       "like1": {"external": like1, "speed": speed1,
+                                 "input_params": params1, "output_params": derived1}},
         "sampler": info_sampler}
     sampler_name = list(info_sampler)[0]
     if manual_blocking:

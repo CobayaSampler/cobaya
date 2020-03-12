@@ -707,7 +707,6 @@ class Model(HasLogger):
                 else:
                     supports_params = set(component.get_requirements()).union(
                         set(component.get_can_support_params()))
-
                 # Identify parameters understood by this likelihood/theory
                 # 1a. Does it have input/output params list?
                 #     (takes into account that for callables, we can ignore elements)
@@ -751,7 +750,6 @@ class Model(HasLogger):
                 # 5. No parameter knowledge: store as parameter agnostic
                 elif supports_params is None:
                     agnostic_likes[kind] += [component]
-
             # Check that there is only one non-knowledgeable element, and assign
             # unused params
             if len(agnostic_likes[kind]) > 1 and not all(params_assign[kind].values()):
@@ -765,7 +763,6 @@ class Model(HasLogger):
                     if not assigned or not derived_param and \
                             p in getattr(component, _requires, []):
                         params_assign[kind][p] += [component]
-
         # If unit likelihood is present, assign all unassigned inputs to it
         for like in self.likelihood.values():
             if isinstance(like, AbsorbUnusedParamsLikelihood):
