@@ -57,7 +57,48 @@ If your external likelihood needs the products of a **theory code**:
 
 For an application, check out :doc:`cosmo_external_likelihood`.
 
-.. note:: Obviously, ``_derived`` and ``_theory`` are reserved parameter names that you cannot use as arguments in your likelihood definition, except for the purposes explained above.
+.. note::
+
+   Obviously, ``_derived`` and ``_theory`` are reserved parameter names that you cannot use as arguments in your likelihood definition, except for the purposes explained above.
+
+.. note::
+
+   Input and output (derived) parameters of an external function are guessed from its definition. But in some cases you may prefer not to define your likelihood function with explicit arguments (e.g. if the number of them may vary). In that case, you can manually specify the input and output parameters via the ``input_params`` and ``output_params`` options of the likelihood definition in your input dictionary.
+
+   E.g. the following two snippets are equivalent, but in the second one, one can alter the i/o parameters programmatically:
+
+   .. code:: Python
+
+      # Default: guessed from function signature
+
+      from typing import Mapping
+
+      def my_like1(a0, a1, _derived=["sum_a"]):
+          if isinstance(_derived, Mapping):
+              _derived["sum_a"] = a0 + a1
+          return # some function of `(a0, a1)`
+
+      info_like = {"likelihood": my_like}
+
+   .. code:: Python
+
+      # Manual: no explicit function signature required
+
+      from typing import Mapping
+
+      # Define the lists of i/o params
+      my_input_params = ["a0", "a1"]
+      my_output_params = ["sum_a"]
+
+      def my_like1(**kwargs):
+          current_input_values = [kwargs[p] for p in my_input_params]
+          if isinstance(kwargs.get("_derived"), Mapping):
+              kwargs["_derived"][my_output_params[0]] = sum(current_input_values)
+          return # some function of the input params
+
+      info_like = {"likelihood": {
+          "external": my_like,
+          "input_params": my_input_params, "output_params": my_output_params}}
 
 
 *Internal* likelihoods: code conventions and defaults
