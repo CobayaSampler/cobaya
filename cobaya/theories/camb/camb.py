@@ -204,7 +204,7 @@ class camb(BoltzmannBase):
     _camb_repo_name = "cmbant/CAMB"
     _camb_repo_version = os.environ.get("CAMB_REPO_VERSION", "master")
     _camb_min_gcc_version = "6.4"
-    _min_camb_version = '1.1.2'
+    _min_camb_version = '1.1.2.1'
 
     external_primordial_pk: bool
 
@@ -263,35 +263,37 @@ class camb(BoltzmannBase):
         if self.external_primordial_pk:
             self.extra_args['initial_power_model'] \
                 = self.camb.initialpower.SplinedInitialPower
-            power_spectrum = None
+            self.initial_power_args, self.power_params = {}, []
         else:
             power_spectrum = self.camb.CAMBparams.make_class_named(
                 self.extra_args.get('initial_power_model',
                                     self.camb.initialpower.InitialPowerLaw),
                 self.camb.initialpower.InitialPower)
-        self.initial_power_args = {}
-        self.power_params = []
+            self.initial_power_args, self.power_params = \
+                self._extract_params(power_spectrum.set_params)
 
         nonlin = self.camb.CAMBparams.make_class_named(
             self.extra_args.get('non_linear_model',
                                 self.camb.nonlinear.Halofit),
             self.camb.nonlinear.NonLinearModel)
-        self.nonlin_args = {}
-        self.nonlin_params = []
-        for model, args, params in [(nonlin, self.nonlin_args, self.nonlin_params),
-                                    (power_spectrum, self.initial_power_args,
-                                     self.power_params)][
-                                   :1 if self.external_primordial_pk else 2]:
-            pars = getfullargspec(model.set_params)
-            for arg, v in zip(pars.args[1:], pars.defaults[1:]):
-                if arg in self.extra_args:
-                    args[arg] = self.extra_args.pop(arg)
-                elif isinstance(v, numbers.Number) or v is None:
-                    params.append(arg)
+
+        self.nonlin_args, self.nonlin_params = self._extract_params(nonlin.set_params)
+
         self.requires = str_to_list(getattr(self, _requires, []))
         self._transfer_requires = [p for p in self.requires if
                                    p not in self.get_can_support_params()]
         self.requires = [p for p in self.requires if p not in self._transfer_requires]
+
+    def _extract_params(self, set_func):
+        args = {}
+        params = []
+        pars = getfullargspec(set_func)
+        for arg, v in zip(pars.args[1:], pars.defaults[1:]):
+            if arg in self.extra_args:
+                args[arg] = self.extra_args.pop(arg)
+            elif isinstance(v, numbers.Number) or v is None:
+                params.append(arg)
+        return args, params
 
     def initialize_with_params(self):
         # must set WantTensors manually if using external_primordial_pk
@@ -832,8 +834,8 @@ class camb(BoltzmannBase):
                              cwd=camb_path, stdout=PIPE, stderr=PIPE)
         out, err = process_make.communicate()
         if process_make.returncode:
-            log.info(out)
-            log.info(err)
+            log.info(out.decode())
+            log.info(err.decode())
             gcc_check = check_gcc_version(cls._camb_min_gcc_version, error_returns=False)
             if not gcc_check:
                 cause = (" Possible cause: it looks like `gcc` does not have the correct "
@@ -859,6 +861,22 @@ class CambTransfers(HelperTheory):
         self.cobaya_camb = cobaya_camb
         self.camb = cobaya_camb.camb
         self.speed = self.cobaya_camb.speed * 1.5
+
+    def get_can_support_params(self):
+        supported_params = self.camb.get_valid_numerical_params(
+            transfer_only=True,
+            dark_energy_model=self.cobaya_camb.extra_args.get('dark_energy_model'),
+            recombination_model=self.cobaya_camb.extra_args.get('recombination_model')) \
+                            - set(self.cobaya_camb.extra_args) \
+                            - set(self.cobaya_camb.extra_attrs)
+
+        for name, mapped in self.cobaya_camb.renames.items():
+            if mapped in supported_params:
+                supported_params.add(name)
+        return supported_params
+
+    def get_allow_agnostic(self):
+        return False
 
     def needs(self, **requirements):
         super().needs(**requirements)
@@ -912,12 +930,7 @@ class CambTransfers(HelperTheory):
                                "The output of the CAMB error was %s" % e)
                 return False
 
-    def get_allow_agnostic(self):
-        return True
-
     def initialize_with_params(self):
-        # TODO: supports params function could specify list of parameters accepted
-        #  (allowing set entries)
         if len(set(self.input_params).intersection(
                 {"H0", "cosmomc_theta", "thetastar"})) > 1:
             raise LoggedError(self.log, "Can't pass more than one of H0, "

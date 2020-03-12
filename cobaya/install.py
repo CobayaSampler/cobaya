@@ -101,6 +101,8 @@ def install(*infos, **kwargs):
             try:
                 install_this = getattr(imported_class, "install", None)
                 success = install_this(path=abspath, **kwargs_install)
+            except KeyboardInterrupt:
+                raise
             except:
                 traceback.print_exception(*sys.exc_info(), file=sys.stdout)
                 log.error("An unknown error occurred. Delete the modules folder and try "

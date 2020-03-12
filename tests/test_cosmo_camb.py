@@ -5,7 +5,7 @@ from cobaya.model import get_model
 from cobaya.tools import load_module
 
 params = {'ombh2': 0.02242, 'omch2': 0.11933, 'H0': 67.66, 'tau': 0.0561,
-          'mnu': 0.06, 'nnu': 3.046, 'num_massive_neutrinos': 1, 'ns': 0.9665,
+          'mnu': 0.06, 'nnu': 3.046, 'ns': 0.9665,
           'YHe': 0.2454, 'As': 2e-9}
 
 
@@ -18,7 +18,8 @@ def _get_model(modules, likelihood):
     info = {
         'params': params,
         'likelihood': {'test_likelihood': likelihood},
-        'theory': {'camb': {'stop_at_error': True}},
+        'theory': {'camb': {'stop_at_error': True,
+                            'extra_args': {'num_massive_neutrinos': 1}}},
         'modules': process_modules_path(modules)}
     return get_model(info)
 
