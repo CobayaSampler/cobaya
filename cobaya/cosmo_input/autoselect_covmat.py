@@ -4,6 +4,7 @@ from random import choice
 from itertools import chain
 import numpy as np
 from copy import deepcopy
+import re
 
 # Local
 from cobaya.yaml import yaml_load_file, yaml_dump_file
@@ -98,65 +99,55 @@ def _get_best_covmat(modules, params_info, likelihoods_info, cached=True):
         covmats_database = (
             _loaded_covmats_database or get_covmat_database(modules, cached=cached))
         _loaded_covmats_database = covmats_database
-    # Select first based on number of parameters
+    # Add folder to each covmat data
+    # TODO: faster if folders already in (cached) database
+    covmats = []
+    for folder, covmats_this_folder in covmats_database.items():
+        for covmat in covmats_this_folder:
+            covmats.append(
+                {"folder": folder, "name": covmat["name"], "params": covmat["params"]})
+    # Prepare params and likes aliases
     params_renames = set(chain(*[
         [p] + str_to_list(info.get(partag.renames, [])) for p, info in
         params_info.items()]))
-    get_score_params = (
-        lambda covmat_params: len(set(covmat_params).intersection(params_renames)))
-    highest_score = 0
-    best = []
-    for folder, covmats in covmats_database.items():
-        for covmat in covmats:
-            score = get_score_params(covmat["params"])
-            if score > highest_score:
-                highest_score = score
-                best = []
-            if score == highest_score:
-                best.append({
-                    "folder": folder, "name": covmat["name"], "params": covmat["params"]})
-    if highest_score == 0:
+    likes_renames = set(chain(*[[like] + str_to_list((info or {}).get(_aliases, []))
+                                for like, info in likelihoods_info.items()]))
+    delimiters = r"[_\.]"
+    likes_regexps = [re.compile(delimiters + re.escape(l) + delimiters)
+                             for l in likes_renames]
+    # Match number of params
+    score_params = (
+        lambda covmat: len(set(covmat["params"]).intersection(params_renames)))
+    best_p = get_best_score(covmats, score_params)
+    if not best_p:
         log.warning(
             "No covariance matrix found including at least one of the given parameters")
         return None
-    # Sub-select by number of likelihoods
-    likes_renames = set(chain(*[[like] + str_to_list((info or {}).get(_aliases, []))
-                                for like, info in likelihoods_info.items()]))
-    get_score_likes = (
-        lambda covmat_name: len([0 for like in likes_renames if like in covmat_name]))
-    highest_score = 0
-    best_2 = []
-    for covmat in best:
-        score = get_score_likes(covmat["name"])
-        if score > highest_score:
-            highest_score = score
-            best_2 = []
-        if score == highest_score:
-            best_2.append(covmat)
+    # print("Based on params:\n -", "\n - ".join([b["name"] for b in best_p]))
+    # Match likelihood names / keywords
+    score_likes = (
+        lambda covmat: len([0 for r in likes_regexps if r.search(covmat["name"])]))
+    best_p_l = get_best_score(best_p, score_likes)
+    # print("Based on params + likes:\n -", "\n - ".join([b["name"] for b in best_p_l]))
     # Finally, in case there is more than one, select shortest #params and name (simpler!)
     # #params first, to avoid extended models with shorter covmat name
-    get_score_simpler_params = lambda covmat_params: -len(covmat_params)
-    highest_score = -np.inf
-    best_3 = []
-    for covmat in best_2:
-        score = get_score_simpler_params(covmat["params"])
-        if score > highest_score:
-            highest_score = score
-            best_3 = []
-        if score == highest_score:
-            best_3.append(covmat)
-    get_score_simpler_name = (
-        lambda covmat_name: -len(covmat_name.replace("_", " ").replace("-", " ").split()))
-    highest_score = -np.inf
-    best_4 = []
-    for covmat in best_3:
-        score = get_score_simpler_name(covmat["name"])
-        if score > highest_score:
-            highest_score = score
-            best_4 = []
-        if score == highest_score:
-            best_4.append(covmat)
+    score_simpler_params = lambda covmat: -len(covmat["params"])
+    best_p_l_sp = get_best_score(best_p_l, score_simpler_params)
+    # print("Based on params + likes + fewest params:\n -",
+          "\n - ".join([b["name"] for b in best_p_l_sp]))
+    score_simpler_name = (
+        lambda covmat: -len(covmat["name"].replace("_", " ").replace("-", " ").split()))
+    best_p_l_sp_sn = get_best_score(best_p_l_sp, score_simpler_name)
+    # print("Based on params + likes + fewest params + shortest name:\n -",
+          "\n - ".join([b["name"] for b in best_p_l_sp_sn]))
     # if there is more than one (unlikely), just pick one at random
-    if len(best_4) > 1:
-        log.warning("WARNING: >1 possible best covmats: %r" % [b["name"] for b in best_4])
-    return best_4[choice(range(len(best_4)))]
+    if len(best_p_l_sp_sn) > 1:
+        log.warning("WARNING: >1 possible best covmats: %r" %
+                    [b["name"] for b in best_p_l_sp_sn])
+    return best_p_l_sp_sn[choice(range(len(best_p_l_sp_sn)))]
+
+
+def get_best_score(covmats, score_func):
+    scores = np.array([score_func(covmat) for covmat in covmats])
+    i_max = np.argwhere(scores == np.max(scores)).T[0]
+    return [covmats[i] for i in i_max]

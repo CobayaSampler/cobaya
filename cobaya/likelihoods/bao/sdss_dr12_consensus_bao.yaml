@@ -7,6 +7,6 @@ cov_file: bao_data/BAO_consensus_covtot_dM_Hz.txt
 # Fiducial sound horizon with which data have been stored
 rs_fid: 147.78  # Mpc
 # Aliases for automatic covariance matrix
-alises: [BAO]
+aliases: [BAO]
 # Speed in evaluations/second
 speed: 2000

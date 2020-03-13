@@ -4,6 +4,6 @@
 H0: 73.52
 H0_std: 1.62
 # Aliases for automatic covariance matrix
-alises: [Riess18]
+aliases: [Riess18]
 # Speed in evaluations/second
 speed: 4500

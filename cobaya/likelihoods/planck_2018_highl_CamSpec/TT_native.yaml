@@ -8,7 +8,7 @@ dataset_file: CamSpec2018/CamSpecHM_10_7.dataset
 dataset_params:
   use_cl: 100x100 143x143 217x217 143x217
 # Aliases for automatic covariance matrix
-alises: [CamSpecHM_TT]
+aliases: [CamSpecHM_TT]
 # Speed in evaluations/second
 speed: 90
 

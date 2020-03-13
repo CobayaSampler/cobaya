@@ -10,6 +10,6 @@ rs_rescale: 4.29720761315  # = 638.9518 (DV_fid) / 148.69 (rs_fid)
 # Measurement (only z is actually used in the likelihood)
 data: [0.15, 4.465666824, 0.1681350461, "DV_over_rs"]
 # Aliases for automatic covariance matrix
-alises: [BAO]
+aliases: [BAO]
 # Speed in evaluations/second
 speed: 5000

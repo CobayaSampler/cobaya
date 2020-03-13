@@ -19,7 +19,7 @@ use_Weyl: False
 # against integrals of bessel in each bin.
 binned_bessels: True
 # Aliases for automatic covariance matrix
-alises: [DESlens]
+aliases: [DESlens]
 # Speed in evaluations/second
 speed: 20
 

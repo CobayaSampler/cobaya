@@ -7,6 +7,6 @@ rs_rescale: 1.027369826  # = 153.9/149.8
 # Measurement
 data: [0.106, 0.336, 0.015, "rs_over_DV"]
 # Aliases for automatic covariance matrix
-alises: [BAO]
+aliases: [BAO]
 # Speed in evaluations/second
 speed: 5000

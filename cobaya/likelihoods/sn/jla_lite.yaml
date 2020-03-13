@@ -23,6 +23,6 @@ marginalize_params:
   step_width_alpha: 0.003
   step_width_beta: 0.04
 # Aliases for automatic covariance matrix
-alises: [JLA]
+aliases: [JLA]
 # Speed in evaluations/second
 speed: 10

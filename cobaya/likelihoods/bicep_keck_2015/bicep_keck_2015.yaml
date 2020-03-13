@@ -34,7 +34,7 @@ map_separator: x
 # Actually computed l_max (takes into account the lensing window function)
 l_max: 2700
 # Aliases for automatic covariance matrix
-alises: [BK15]
+aliases: [BK15]
 # Speed in evaluations/second
 speed: 90
 

@@ -5,7 +5,7 @@ path:
 clik_file: plc_2.0/low_l/bflike/lowl_SMW_70_dx11d_2014_10_03_v5c_Ap.clik
 product_id: "1900"
 # Aliases for automatic covariance matrix
-alises: [lowTEB]
+aliases: [lowTEB]
 # Speed in evaluations/second
 speed: 4
 

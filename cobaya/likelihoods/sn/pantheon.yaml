@@ -8,6 +8,6 @@ dataset_file: Pantheon/full_long.dataset
 dataset_params:
   # field: value
 # Aliases for automatic covariance matrix
-alises: [Pantheon, Pantheon18]
+aliases: [Pantheon, Pantheon18]
 # Speed in evaluations/second
 speed: 100
