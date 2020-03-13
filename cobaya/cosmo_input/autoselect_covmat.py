@@ -82,6 +82,7 @@ def get_best_covmat(info, path_install=None, cached=True):
     params_in_covmat = get_translated_params(info_sampled_params, covmat_data["params"])
     indices = [covmat_data["params"].index(p) for p in params_in_covmat.values()]
     covmat_data["covmat"] = covmat[indices][:, indices]
+    covmat_data["params"] = params_in_covmat
     return covmat_data
 
 
