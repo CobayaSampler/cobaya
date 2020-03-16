@@ -1009,7 +1009,7 @@ class Model(HasLogger):
         timing_on = self.timing
         if not timing_on:
             self.set_timing_on(True)
-        self.log.debug("Measuring speeds")
+        self.mpi_info("Measuring speeds... (this may take a few seconds)")
         # call all components (at least) a second time
         test_point *= 1.00001
         self.loglikes(test_point, cached=False)

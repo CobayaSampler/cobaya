@@ -145,6 +145,7 @@ class mcmc(CovmatSampler):
         else:
             # NB: max_tries adjusted to dim instead of #cycles (blocking not computed yet)
             self.max_tries.set_scale(self.model.prior.d())
+            self.log.info("Getting initial point... (this may take a few seconds)")
             initial_point, logpost, logpriors, loglikes, derived = \
                 self.model.get_initial_point(max_tries=self.max_tries.value)
             if self.measure_speeds and self.blocking:
