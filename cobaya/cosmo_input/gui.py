@@ -15,7 +15,7 @@ from cobaya.cosmo_input.autoselect_covmat import get_best_covmat, covmat_folders
 from cobaya.cosmo_input.create_input import create_input
 from cobaya.bib import prettyprint_bib, get_bib_info, get_bib_module
 from cobaya.tools import warn_deprecation, get_available_internal_class_names, \
-    cov_to_std_and_corr
+    cov_to_std_and_corr, resolve_modules_path
 from cobaya.input import get_default_info
 from cobaya.conventions import subfolders, kinds, partag, _modules_path_env, _path_install
 
@@ -157,6 +157,7 @@ class MainWindow(QWidget):
         covmat_tab_layout = QVBoxLayout(group_box)
         self.display["covmat"].setLayout(covmat_tab_layout)
         self.covmat_text = QLabel()
+        self.covmat_text.setWordWrap(True)
         self.covmat_table = QTableWidget(0, 0)
         self.covmat_table.setEditTriggers(QAbstractItemView.NoEditTriggers)  # ReadOnly!
         covmat_tab_layout.addWidget(self.covmat_text)
@@ -257,17 +258,16 @@ class MainWindow(QWidget):
         self.display["yaml"].setText(yaml_dump(info) + comments_text)
         self.display["bibliography"].setText(prettyprint_bib(get_bib_info(info)))
         # Display covmat
-        path_install = os.environ.get(_modules_path_env)
+        path_install = resolve_modules_path()
         if not path_install:
             self.covmat_text.setText(
-                "\nIn order to find a covariance matrix, you need to define the env "
-                "variable %r\nas the absolute path to your installed modules, e.g. "
-                "'/home/me/modules'.\n" % _modules_path_env)
-        elif any(not os.path.isdir(d.format(**{_path_install: path_install})) for d in covmat_folders):
+                "\nIn order to find a covariance matrix, you need to define a modules "
+                "install path, e.g. via the env variable %r.\n" % _modules_path_env)
+        elif any(not os.path.isdir(d.format(**{_path_install: path_install}))
+                 for d in covmat_folders):
             self.covmat_text.setText(
-                "\nThe cosmological modules appear not to be installed in the folder\n"
-                "defined in the env variable %r: %r\n" % (
-                    _modules_path_env, path_install))
+                "\nThe cosmological modules appear not to be installed where expected: "
+                "%r\n" % path_install)
         else:
             covmat_data = get_best_covmat(info, path_install=path_install)
             self.current_params_in_covmat = covmat_data["params"]

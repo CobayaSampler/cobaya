@@ -16,12 +16,14 @@ from pkg_resources import parse_version
 
 # Local
 from cobaya.log import logger_setup, LoggedError
-from cobaya.tools import create_banner, warn_deprecation, get_class
+from cobaya.tools import create_banner, warn_deprecation, get_class, load_config_file, \
+    write_config_file
 from cobaya.input import get_used_modules, get_kind
 from cobaya.conventions import _module_path, _code, _data, _external, _force
-from cobaya.conventions import _modules_path_arg, _modules_path_env, _path_install
+from cobaya.conventions import _modules_path_arg, _path_install, _modules_path_env
 from cobaya.conventions import _yaml_extensions
 from cobaya.mpi import set_mpi_disabled
+from cobaya.tools import resolve_modules_path
 
 log = logging.getLogger(__name__.split(".")[-1])
 
@@ -30,17 +32,15 @@ log = logging.getLogger(__name__.split(".")[-1])
 def install(*infos, **kwargs):
     if not log.root.handlers:
         logger_setup()
-    path = kwargs.get("path", ".")
+    path = kwargs.get("path")
     if not path:
-        # See if we can get one (and only one) from infos
-        paths = set(p for p in [info.get(_path_install) for info in infos] if p)
-        if len(paths) == 1:
-            path = list(paths)[0]
-        else:
-            print("logging?")
-            raise LoggedError(
-                log, "No 'path' argument given and could not extract one (and only one) "
-                     "from the infos.")
+        path = resolve_modules_path(infos)
+    if not path:
+        raise LoggedError(
+            log, "No 'path' argument given, and none could be found in input infos, the "
+                 "%r env variable or the config file. "
+                 "Maybe specify one via a command line argument '-%s [...]'?",
+            _modules_path_env, _modules_path_arg[0])
     abspath = os.path.abspath(path)
     log.info("Installing modules at '%s'\n", abspath)
     kwargs_install = {"force": kwargs.get("force", False),
@@ -244,11 +244,9 @@ def install_script():
                         help="One or more input files or module names "
                              "(or simply 'cosmo' for a basic collection of "
                              "cosmological modules)")
-    default_modules_path = os.environ.get(_modules_path_env)
     parser.add_argument("-" + _modules_path_arg[0], "--" + _modules_path_arg,
-                        action="store", nargs=1,
-                        required=not bool(default_modules_path),
-                        metavar="/modules/path", default=[default_modules_path],
+                        action="store", nargs=1, required=False,
+                        metavar="/modules/path", default=[None],
                         help="Desired path where to install external modules.")
     parser.add_argument("-" + _force[0], "--" + _force, action="store_true",
                         default=False,

@@ -31,7 +31,7 @@ from math import gcd
 # Local
 from cobaya import __obsolete__
 from cobaya.conventions import _package, subfolders, partag, kinds, _path_install, \
-    _modules_path_config_file
+    _modules_path_config_file, _modules_path_env, _modules_path_arg
 from cobaya.log import LoggedError
 
 # Logger
@@ -882,5 +882,36 @@ def load_modules_path_from_config_file():
 def write_modules_path_in_config_file(path_install):
     """
     Writes the modules path into the config file.
+
+    Relative paths are converted into absolute ones.
     """
-    write_config_file({_path_install: path_install})
+    write_config_file({_path_install: os.path.abspath(path_install)})
+
+
+def resolve_modules_path(infos=None):
+    """
+    Gets the module path given some infos. If more than one occurrence of the modules path
+    in the infos, raises an error.
+
+    If no modules path in the given infos, defaults to the env variable `%s`, and in its
+    absence to that stored in the config file.
+
+    If no path at all could be found, returns `None`.
+    """ % _modules_path_env
+    if not infos:
+        infos = []
+    elif isinstance(infos, Mapping):
+        infos = [infos]
+    paths = set(p for p in [info.get(_path_install) for info in infos] if p)
+    if len(paths) == 1:
+        return list(paths)[0]
+    elif len(paths) > 1:
+        raise LoggedError(
+            log, "More than one modules install path defined in the given infos. Cannot "
+                 "resolve a unique one to use. "
+                 "Maybe specify one via a command line argument '-%s [...]'?",
+            _modules_path_arg[0])
+    path_env = os.environ.get(_modules_path_env)
+    if path_env:
+        return path_env
+    return load_modules_path_from_config_file()
