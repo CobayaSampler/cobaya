@@ -30,7 +30,8 @@ from math import gcd
 
 # Local
 from cobaya import __obsolete__
-from cobaya.conventions import _package, subfolders, partag, kinds
+from cobaya.conventions import _package, subfolders, partag, kinds, _path_install, \
+    _modules_path_config_file
 from cobaya.log import LoggedError
 
 # Logger
@@ -811,3 +812,75 @@ def get_cache_path():
         raise LoggedError(
             self.log, "Could not create cache folder %r. Reason: %r", cache_path, str(e))
     return cache_path
+
+
+def get_config_path():
+    """
+    Gets path for config files, and creates it if it does not exist.
+    """
+    try:
+        if platform.system() == "Windows":
+            base = os.environ.get("CSIDL_LOCAL_APPDATA")
+            if not base:
+                raise ValueError("Application folder not defined.")
+            config_path = os.path.join(base, "cobaya")
+        elif platform.system() == "Linux":
+            base = os.environ.get("XDG_CONFIG_HOME",
+                                  os.path.join(os.environ["HOME"], ".config"))
+            config_path = os.path.join(base, "cobaya")
+        elif platform.system() == "Darwin":
+            base = os.path.join(os.environ["HOME"], "Library/Application Support")
+            config_path = os.path.join(base, "cobaya")
+        else:
+            raise ValueError("Could not find system type.")
+        if not os.path.exists(config_path):
+            os.makedirs(config_path)
+    except Exception as e:
+        raise LoggedError(
+            self.log, "Could not get config folder %r. Reason: %r", config_path, str(e))
+    return config_path
+
+
+def load_config_file():
+    """
+    Returns the config info, stored in the config file, or an empty dict if not present.
+    """
+    # Just-in-time import to avoid recursion
+    from cobaya.yaml import yaml_load_file
+    try:
+        return yaml_load_file(
+            os.path.join(get_config_path(), _modules_path_config_file))
+    except:
+        return {}
+
+
+def write_config_file(config_info, append=True):
+    """
+    Writes the given info into the config file.
+    """
+    # Just-in-time import to avoid recursion
+    from cobaya.yaml import yaml_dump_file
+    try:
+        info = {}
+        if append:
+            info.update(load_config_file())
+        info.update(config_info)
+        yaml_dump_file(os.path.join(get_config_path(), _modules_path_config_file),
+                       info, error_if_exists=False)
+    except Exception as e:
+        log.error("Could not write the modules install path into the config file. "
+                  "Reason: %r", str(e))
+
+
+def load_modules_path_from_config_file():
+    """
+    Returns the modules path stored in the config file, or `None` if it can't be found.
+    """
+    return load_config_file().get(_path_install)
+
+
+def write_modules_path_in_config_file(path_install):
+    """
+    Writes the modules path into the config file.
+    """
+    write_config_file({_path_install: path_install})

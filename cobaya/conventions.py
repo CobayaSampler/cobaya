@@ -79,6 +79,7 @@ _evidence_extension = ".logZ"
 # Installation and container definitions
 _modules_path_arg = _path_install
 _modules_path_env = "COBAYA_MODULES"
+_modules_path_config_file = "config.yaml"
 _modules_path = "/modules"
 _code = "code"
 _data = "data"
