@@ -134,12 +134,12 @@ def _get_best_covmat(modules, params_info, likelihoods_info, cached=True):
     score_simpler_params = lambda covmat: -len(covmat["params"])
     best_p_l_sp = get_best_score(best_p_l, score_simpler_params)
     # print("Based on params + likes + fewest params:\n -",
-          "\n - ".join([b["name"] for b in best_p_l_sp]))
+    #       "\n - ".join([b["name"] for b in best_p_l_sp]))
     score_simpler_name = (
         lambda covmat: -len(covmat["name"].replace("_", " ").replace("-", " ").split()))
     best_p_l_sp_sn = get_best_score(best_p_l_sp, score_simpler_name)
     # print("Based on params + likes + fewest params + shortest name:\n -",
-          "\n - ".join([b["name"] for b in best_p_l_sp_sn]))
+    #       "\n - ".join([b["name"] for b in best_p_l_sp_sn]))
     # if there is more than one (unlikely), just pick one at random
     if len(best_p_l_sp_sn) > 1:
         log.warning("WARNING: >1 possible best covmats: %r" %
