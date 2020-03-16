@@ -400,7 +400,7 @@ class CovmatSampler(Sampler):
     """
     covmat_params: Sequence[str]
 
-    def _load_covmat(self, from_old_chain, slow_params=None):
+    def _load_covmat(self, from_old_chain, auto_params=None):
         if from_old_chain and os.path.exists(self.covmat_filename()):
             if is_main_process():
                 covmat = np.atleast_2d(np.loadtxt(self.covmat_filename()))
@@ -410,31 +410,34 @@ class CovmatSampler(Sampler):
             self.mpi_info("Covariance matrix from checkpoint.")
             return covmat, []
         else:
-            if slow_params is None:
-                slow_params = list(self.model.parameterization.sampled_params())
-            return share_mpi(self.initial_proposal_covmat(slow_params=slow_params) if
+            return share_mpi(self.initial_proposal_covmat(auto_params=auto_params) if
                              is_main_process() else None)
 
-    def initial_proposal_covmat(self, slow_params=None):
+    def initial_proposal_covmat(self, auto_params=None):
         """
         Build the initial covariance matrix, using the data provided, in descending order
         of priority:
-        1. "covmat" field in the "mcmc" sampler block.
+        1. "covmat" field in the sampler block (including `auto` search).
         2. "proposal" field for each parameter.
         3. variance of the reference pdf.
         4. variance of the prior pdf.
 
         The covariances between parameters when both are present in a covariance matrix
         provided through option 1 are preserved. All other covariances are assumed 0.
+
+        If `covmat: auto`, use the keyword `auto_params` to restrict the parameters for
+        which a covariance matrix is searched (default: None, meaning all sampled params).
         """
         params_infos = self.model.parameterization.sampled_params_info()
         covmat = np.diag([np.nan] * len(params_infos))
         # Try to generate it automatically
         self.covmat = getattr(self, 'covmat', None)
         if isinstance(self.covmat, str) and self.covmat.lower() == "auto":
-            slow_params_info = {
-                p: info for p, info in params_infos.items() if p in slow_params}
-            auto_covmat = self.model.get_auto_covmat(slow_params_info)
+            params_infos_covmat = deepcopy_where_possible(params_infos)
+            for p in list(params_infos_covmat):
+                if p not in (auto_params or []):
+                    params_infos_covmat.pop(p, None)
+            auto_covmat = self.model.get_auto_covmat(params_infos_covmat)
             if auto_covmat:
                 self.covmat = os.path.join(auto_covmat["folder"], auto_covmat["name"])
                 self.log.info("Covariance matrix selected automatically: %s", self.covmat)

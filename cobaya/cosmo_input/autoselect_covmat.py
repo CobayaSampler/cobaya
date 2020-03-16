@@ -123,23 +123,27 @@ def _get_best_covmat(modules, params_info, likelihoods_info, cached=True):
         log.warning(
             "No covariance matrix found including at least one of the given parameters")
         return None
-    # print("Based on params:\n -", "\n - ".join([b["name"] for b in best_p]))
     # Match likelihood names / keywords
+    # No debug print here: way too many!
     score_likes = (
         lambda covmat: len([0 for r in likes_regexps if r.search(covmat["name"])]))
     best_p_l = get_best_score(best_p, score_likes)
-    # print("Based on params + likes:\n -", "\n - ".join([b["name"] for b in best_p_l]))
+    if log.getEffectiveLevel() <= logging.DEBUG:
+        log.debug("Subset based on params + likes:\n - " +
+                  "\n - ".join([b["name"] for b in best_p_l]))
     # Finally, in case there is more than one, select shortest #params and name (simpler!)
     # #params first, to avoid extended models with shorter covmat name
     score_simpler_params = lambda covmat: -len(covmat["params"])
     best_p_l_sp = get_best_score(best_p_l, score_simpler_params)
-    # print("Based on params + likes + fewest params:\n -",
-    #       "\n - ".join([b["name"] for b in best_p_l_sp]))
+    if log.getEffectiveLevel() <= logging.DEBUG:
+        log.debug("Subset based on params + likes + fewest params:\n - " +
+                  "\n - ".join([b["name"] for b in best_p_l_sp]))
     score_simpler_name = (
         lambda covmat: -len(covmat["name"].replace("_", " ").replace("-", " ").split()))
     best_p_l_sp_sn = get_best_score(best_p_l_sp, score_simpler_name)
-    # print("Based on params + likes + fewest params + shortest name:\n -",
-    #       "\n - ".join([b["name"] for b in best_p_l_sp_sn]))
+    if log.getEffectiveLevel() <= logging.DEBUG:
+        log.debug("Subset based on params + likes + fewest params + shortest name:\n - " +
+                  "\n - ".join([b["name"] for b in best_p_l_sp_sn]))
     # if there is more than one (unlikely), just pick one at random
     if len(best_p_l_sp_sn) > 1:
         log.warning("WARNING: >1 possible best covmats: %r" %
