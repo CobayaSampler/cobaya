@@ -19,6 +19,7 @@ import inspect
 from packaging import version
 from itertools import permutations
 from typing import Mapping
+import platform
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore")
@@ -782,3 +783,31 @@ def get_translated_params(params_info, params_list):
         except StopIteration:
             continue
     return translations
+
+
+def get_cache_path():
+    """
+    Gets path for cached data, and creates it if it does not exist.
+
+    Defaults to the system's temp folder.
+    """
+    if platform.system() == "Windows":
+        base = os.environ.get("CSIDL_LOCAL_APPDATA", os.environ.get("TMP"))
+        cache_path = os.path.join(base, "cobaya/Cache")
+    elif platform.system() == "Linux":
+        base = os.environ.get("XDG_CACHE_HOME",
+                              os.path.join(os.environ["HOME"], ".cache"))
+        cache_path = os.path.join(base, "cobaya")
+    elif platform.system() == "Darwin":
+        base = os.path.join(os.environ["HOME"], "Library/Caches")
+        cache_path = os.path.join(base, "cobaya")
+    else:
+        base = os.environ.get("TMP")
+        cache_path = os.path.join(base, "cobaya")
+    try:
+        if not os.path.exists(cache_path):
+            os.makedirs(cache_path)
+    except Exception as e:
+        raise LoggedError(
+            self.log, "Could not create cache folder %r. Reason: %r", cache_path, str(e))
+    return cache_path

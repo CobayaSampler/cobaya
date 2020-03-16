@@ -1,5 +1,6 @@
 # Global
 import os
+import pickle
 from random import choice
 from itertools import chain
 import numpy as np
@@ -9,8 +10,8 @@ import re
 # Local
 from cobaya.yaml import yaml_load_file, yaml_dump_file
 from cobaya.conventions import _covmats_file, _aliases, _path_install, partag, _params
-from cobaya.conventions import kinds
-from cobaya.tools import str_to_list, get_translated_params
+from cobaya.conventions import kinds, _covmat_extension
+from cobaya.tools import str_to_list, get_translated_params, get_cache_path
 from cobaya.parameterization import is_sampled_param
 from cobaya.input import update_info
 from cobaya.log import LoggedError
@@ -31,21 +32,28 @@ def get_covmat_database(modules, cached=True):
     # Get folders with corresponding modules installed
     installed_folders = [folder for folder in covmat_folders
                          if os.path.exists(folder.format(**{_path_install: modules}))]
-    covmats_database_fullpath = os.path.join(modules, _covmats_file)
+    covmats_database_fullpath = os.path.join(get_cache_path(), _covmats_file)
     # Check if there is a usable cached one
     if cached:
         try:
-            covmat_database = yaml_load_file(covmats_database_fullpath)
-            assert set(covmat_database) == set(installed_folders)
+            with open(covmats_database_fullpath, "rb") as f:
+                covmat_database = pickle.load(f)
+            # quick and dirty hash for regeneration: check number of .covmat files
+            num_files = len(list(chain(
+                *[[filename for filename in os.listdir(
+                    folder.format(**{_path_install: modules}))
+                   if filename.endswith(_covmat_extension)]
+                  for folder in installed_folders])))
+            assert num_files == covmat_database
+            log.info("Loaded cached covmats database")
             return covmat_database
         except:
             log.info("No cached covmat database present, not usable or not up-to-date. "
                      "Will be re-created and cached.")
             pass
     # Create it (again)
-    covmat_database = {}
+    covmat_database = []
     for folder in installed_folders:
-        covmat_database[folder] = []
         folder_full = folder.format(**{_path_install: modules}).replace("/", os.sep)
         for filename in os.listdir(folder_full):
             try:
@@ -55,9 +63,10 @@ def get_covmat_database(modules, cached=True):
                 params = header.strip().lstrip("#").split()
             except:
                 continue
-            covmat_database[folder].append({"name": filename, "params": params})
+            covmat_database.append({"folder": folder, "name": filename, "params": params})
     if cached:
-        yaml_dump_file(covmats_database_fullpath, covmat_database, error_if_exists=False)
+        with open(covmats_database_fullpath, "wb") as f:
+            pickle.dump(covmat_database, f)
     return covmat_database
 
 
@@ -99,13 +108,6 @@ def _get_best_covmat(modules, params_info, likelihoods_info, cached=True):
         covmats_database = (
             _loaded_covmats_database or get_covmat_database(modules, cached=cached))
         _loaded_covmats_database = covmats_database
-    # Add folder to each covmat data
-    # TODO: faster if folders already in (cached) database
-    covmats = []
-    for folder, covmats_this_folder in covmats_database.items():
-        for covmat in covmats_this_folder:
-            covmats.append(
-                {"folder": folder, "name": covmat["name"], "params": covmat["params"]})
     # Prepare params and likes aliases
     params_renames = set(chain(*[
         [p] + str_to_list(info.get(partag.renames, [])) for p, info in
@@ -118,7 +120,7 @@ def _get_best_covmat(modules, params_info, likelihoods_info, cached=True):
     # Match number of params
     score_params = (
         lambda covmat: len(set(covmat["params"]).intersection(params_renames)))
-    best_p = get_best_score(covmats, score_params)
+    best_p = get_best_score(covmats_database, score_params)
     if not best_p:
         log.warning(
             "No covariance matrix found including at least one of the given parameters")
