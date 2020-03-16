@@ -150,7 +150,7 @@ def _get_best_covmat(modules, params_info, likelihoods_info, cached=True):
     if len(best_p_l_sp_sn) > 1:
         log.warning("WARNING: >1 possible best covmats: %r" %
                     [b["name"] for b in best_p_l_sp_sn])
-    return best_p_l_sp_sn[choice(range(len(best_p_l_sp_sn)))]
+    return best_p_l_sp_sn[choice(range(len(best_p_l_sp_sn)))].copy()
 
 
 def get_best_score(covmats, score_func):
