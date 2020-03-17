@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from typing import Any
+from typing import Any, Mapping
 from copy import deepcopy
 from cobaya.model import get_model
 from cobaya.theory import Theory
@@ -43,7 +43,8 @@ class BBN2(Theory):
 def cmb_likelihood(_derived={'check'},
                    _theory={'Hubble': {'z': [0.5]}, 'CAMBdata': None}):
     results = _theory.get_CAMBdata()
-    _derived['check'] = results.Params.YHe
+    if isinstance(_derived, Mapping):
+        _derived['check'] = results.Params.YHe
     return results.Params.YHe
 
 

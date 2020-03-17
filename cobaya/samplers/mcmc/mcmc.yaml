@@ -46,12 +46,13 @@ Rminus1_single_split: 4
 # than using stored values
 measure_speeds: True
 # Method I: Oversampling of each parameters block relative to it speed
-oversample: False  # produces potentially MANY samples
+oversample: False
 # Method II: Dragging: simulates jumps on slow params when varying fast ones
 drag: False
 # Oversampling power: amount of oversampling or dragging. Value in [0, 1]
 oversample_power: 0.7
 # Thin chain when oversampling by total oversampling factor
+# NB: disabling it while `oversample: True` may produce a VERY LARGE chain
 oversample_thin: True
 # Manual blocking
 # ---------------
