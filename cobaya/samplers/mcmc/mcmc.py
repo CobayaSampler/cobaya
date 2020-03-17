@@ -120,7 +120,7 @@ class mcmc(CovmatSampler):
         self.last_point_callback = 0
         # Monitoring/restore progress
         if is_main_process():
-            cols = ["N", "acceptance_rate", "Rminus1", "Rminus1_cl"]
+            cols = ["N", "timestamp", "acceptance_rate", "Rminus1", "Rminus1_cl"]
             self.progress = DataFrame(columns=cols)
             self.i_learn = 1
             if self.output and not self.output.is_resuming():
@@ -636,6 +636,8 @@ class mcmc(CovmatSampler):
         if is_main_process():
             self.progress.at[self.i_learn, "N"] = (
                 sum(Ns) if more_than_one_process() else self.n())
+            self.progress.at[self.i_learn, "timestamp"] = \
+                datetime.datetime.now().isoformat()
             acceptance_rate = (
                 np.average(acceptance_rates, weights=Ns)
                 if more_than_one_process() else acceptance_rates)
