@@ -1,11 +1,12 @@
 import pytest
 import os
 
+from cobaya.tools import resolve_modules_path
 
 # Paths ##################################################################################
 
 def pytest_addoption(parser):
-    parser.addoption("--modules", action="store", default=None,
+    parser.addoption("--modules", action="store", default=resolve_modules_path(),
                      help="Path to folder of automatic installation of modules")
 
 

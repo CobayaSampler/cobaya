@@ -107,19 +107,19 @@ before_install:
     fi
   - python --version
 script:
-  - export MODULES="../modules"
+  - export COBAYA_MODULES="../modules"
   # General tests:
-  - cobaya-install polychord --modules=$MODULES
-  - pytest tests/ -k "not cosmo" --modules=$MODULES
+  - cobaya-install polychord
+  - pytest tests/ -k "not cosmo"
   # Cosmology tests:
-  - cobaya-install cosmo-tests --modules=$MODULES --no-progress-bars
+  - cobaya-install cosmo-tests --no-progress-bars
   - if [ -n "${CAMB_BRANCH}" ]; then
-      rm -rf $MODULES/code/CAMB ;
-      git clone --recursive --depth 1 -b $CAMB_BRANCH https://github.com/cmbant/CAMB $MODULES/code/CAMB ;
-      python $MODULES/code/CAMB/setup.py build ;
+      rm -rf $COBAYA_MODULES/code/CAMB ;
+      git clone --recursive --depth 1 -b $CAMB_BRANCH https://github.com/cmbant/CAMB $COBAYA_MODULES/code/CAMB ;
+      python $COBAYA_MODULES/code/CAMB/setup.py build ;
     fi
-  - pytest tests/ -v -s -k "cosmo" --modules=$MODULES --boxed
-  - python $MODULES/code/CAMB/setup.py install
+  - pytest tests/ -v -s -k "cosmo" --boxed
+  - python $COBAYA_MODULES/code/CAMB/setup.py install
   - git clone --depth=1 https://github.com/CobayaSampler/planck_lensing_external
   - pip install ./planck_lensing_external --quiet
   - python -m unittest plancklensing.tests.test_likes
