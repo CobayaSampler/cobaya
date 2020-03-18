@@ -328,7 +328,9 @@ def install_clik(path, no_progress_bars=False):
     try:
         os.chdir(source_dir)
         log.info("Configuring... (and maybe installing dependencies...)")
-        if not execute([sys.executable, "waf", "configure", "--install_all_deps"]):
+        flags = ["--install_all_deps",
+                 "--extra_lib=m"]  # missing for some reason in some systems, but harmless
+        if not execute([sys.executable, "waf", "configure"] + flags):
             log.error("Configuration failed!")
             return False
         log.info("Compiling...")
