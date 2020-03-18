@@ -385,7 +385,10 @@ class Sampler(CobayaComponent):
                 # Clean up old files, and set resuming=False,
                 # regardless of requested value
                 cls.delete_output_files(output, info=info)
-                output.set_resuming(False)
+                resuming = False
+        else:
+            resuming = None
+        output.set_resuming(False)
 
 
 class Minimizer(Sampler):
