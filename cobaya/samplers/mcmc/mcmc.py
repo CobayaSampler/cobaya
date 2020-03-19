@@ -231,6 +231,7 @@ class mcmc(CovmatSampler):
                 self.drag = False
                 self.log.warning(
                     "Dragging disabled: speed ratios < 2.")
+        if self.drag:
             self.drag_interp_steps = int(
                 np.round(self.oversampling_factors[self.i_last_slow_block + 1] / 2 *
                          self.n_fast / self.n_slow))
