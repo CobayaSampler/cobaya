@@ -99,11 +99,11 @@ before_install:
       hash -r;
       conda config --set always_yes yes --set changeps1 no;
       conda info -a;
-      conda create -q -n test-environment -c $ANACONDA_CHANNEL python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML pytest pytest-xdist flaky;
+      conda create -q -n test-environment -c $ANACONDA_CHANNEL python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML pytest pytest-forked flaky;
       source activate test-environment;
       pip install mpi4py;
     else
-      pip install mpi4py pytest-xdist flaky matplotlib;
+      pip install mpi4py pytest-forked flaky matplotlib;
     fi
   - python --version
 script:
@@ -118,7 +118,7 @@ script:
       git clone --recursive --depth 1 -b $CAMB_BRANCH https://github.com/cmbant/CAMB $COBAYA_MODULES/code/CAMB ;
       python $COBAYA_MODULES/code/CAMB/setup.py build ;
     fi
-  - pytest tests/ -v -s -k "cosmo" --boxed
+  - pytest tests/ -v -s -k "cosmo" --forked
   - python $COBAYA_MODULES/code/CAMB/setup.py install
   - git clone --depth=1 https://github.com/CobayaSampler/planck_lensing_external
   - pip install ./planck_lensing_external --quiet
