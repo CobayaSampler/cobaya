@@ -108,7 +108,7 @@ before_install:
   - python --version
 script:
   - export COBAYA_MODULES="../modules"
-  - COBAYA_TEST_SKIP=$COBAYA_INSTALL_SKIP
+  - export COBAYA_TEST_SKIP=$COBAYA_INSTALL_SKIP
   # General tests:
   - cobaya-install polychord
   - pytest tests/ -k "not cosmo"
