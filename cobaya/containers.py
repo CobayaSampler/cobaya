@@ -45,8 +45,8 @@ RUN sed -i 's/# \(.*multiverse$\)/\1/g' /etc/apt/sources.list && \
       python python-pip git wget
 # Python requisites -- LC_ALL=C: Necessary just for pip <= 8.1.2 (Xenial version)
 ENV LC_ALL C
-RUN pip install --upgrade pip
-RUN pip install pytest-xdist matplotlib cython astropy --upgrade
+RUN python -m pip install --upgrade pip
+RUN python -m pip install pytest-xdist matplotlib cython astropy --upgrade
 # Prepare environment and tree for modules -----------------------------------
 ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/lib
 ENV CONTAINED TRUE
@@ -57,7 +57,7 @@ RUN mkdir $%s && \
 # COBAYA  --------------------------------------------------------------------
 # getdist fork (it will be an automatic requisite in the future)
 RUN cd $%s && git clone https://github.com/JesusTorrado/cobaya.git && \
-    cd $%s/cobaya && pip install -e .
+    cd $%s/cobaya && python -m pip install -e .
 """ % (_modules_path_env, _modules_path, _products_path,
        _modules_path_env, _modules_path_env, _modules_path_env)
 
@@ -83,7 +83,7 @@ MPI_recipe = {
       make install && make clean && cd .. && rm -rf /tmp/openmpi-_VER__DOT_SUB_ """}
 
 MPI_epilogue = """&& export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/ && \
-                  ldconfig && pip install mpi4py --no-binary :all:"""
+                  ldconfig && python -m pip install mpi4py --no-binary :all:"""
 
 
 def image_help(engine):
@@ -133,7 +133,7 @@ def get_docker_client():
         import docker
     except ImportError:
         raise LoggedError(log,
-                          "The Python Docker interface not installed: do 'pip install docker'.")
+                          "The Python Docker interface not installed: do 'python -m pip install docker'.")
     return docker.from_env(version="auto")
 
 

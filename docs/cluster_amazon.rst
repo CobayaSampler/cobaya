@@ -19,15 +19,15 @@ Now install the requisites with
 
    $ sudo apt update && sudo apt install gcc-5 gfortran-5 g++-5 openmpi-bin openmpi-common libopenmpi-dev libopenblas-base liblapack3 liblapack-dev python python-pip
 
-   $ pip install "matplotlib<3" --user  ## this requisite will eventually be removed
+   $ python -m pip install "matplotlib<3" --user  ## this requisite will eventually be removed
 
-   $ pip install mpi4py --user --no-binary :all:
+   $ python -m pip install mpi4py --user --no-binary :all:
 
 And install **cobaya** (and optionally PolyChord and some cosmology modules) with
 
 .. code:: bash
 
-   $ pip install cobaya --user
+   $ python -m pip install cobaya --user
 
    $ cobaya-install cosmo --modules modules
 

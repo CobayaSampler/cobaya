@@ -135,7 +135,7 @@ best adapts to your needs:
 
 .. code:: bash
 
-     $ pip install -e /path/to/CAMB
+     $ python -m pip install -e /path/to/CAMB
 
 * [**Recommended for modifying CAMB**]
   First, `fork the CAMB repository in Github <https://github.com/cmbant/CAMB>`_
@@ -243,7 +243,7 @@ class camb(BoltzmannBase):
                           "Make sure that you have compiled it, and that you either\n"
                           " (a) specify a path (you didn't) or\n"
                           " (b) install the Python interface globally with\n"
-                          "     'pip install -e /path/to/camb [--user]'")
+                          "     'python -m pip install -e /path/to/camb [--user]'")
         except VersionCheckError as e:
             raise LoggedError(self.log, str(e))
         super().initialize()

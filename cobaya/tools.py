@@ -643,7 +643,7 @@ def warn_deprecation_version(logger=None):
     msg = """
     You are using an archived version of Cobaya, which is no longer maintained.
     Unless intentionally doing so, please, update asap to the latest version
-    (e.g. with ``pip install cobaya --upgrade``).
+    (e.g. with ``python -m pip install cobaya --upgrade``).
     """
     if __obsolete__:
         for line in create_banner(msg).split("\n"):

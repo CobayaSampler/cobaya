@@ -51,7 +51,8 @@ setup(
                       'PyYAML>=5.1', 'wget>=3.2', 'py-bobyqa>=1.1',
                       'GetDist>=1.1.0', 'fuzzywuzzy>=0.17', 'packaging'],
     extras_require={
-        'test': ['pytest', 'pytest-xdist', 'flaky', 'mpi4py']},
+        'test': ['pytest', 'pytest-xdist', 'flaky', 'mpi4py'],
+        'gui': ['pyqt5', 'pyside2']},
     package_data={
         'cobaya': list(chain(*[['%s/*/*.yaml' % folder, '%s/*/*.bibtex' % folder]
                                for folder in subfolders.values()]))},

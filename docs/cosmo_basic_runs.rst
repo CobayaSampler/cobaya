@@ -20,7 +20,7 @@ Creating *from scratch* the input for a realistic cosmological case is quite a b
 
    .. code:: bash
 
-      $ pip3 install pyside2
+      $ python -m pip install pyqt5 pyside2
 
 
    **Anaconda** users should instead do:

@@ -387,7 +387,8 @@ class polychord(Sampler):
 
     @classmethod
     def get_version(cls):
-        return pkg_resources.get_distribution("pypolychord").version
+        return None
+#        return pkg_resources.get_distribution("pypolychord").version
 
     @classmethod
     def get_path(cls, path):
