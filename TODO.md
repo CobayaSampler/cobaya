@@ -37,3 +37,6 @@
 * finish removing .checkpoint in favour of updated.yaml and .progress
 * For learning checks, X should perhaps ideally also depend slightly on the speed of the cycles, e.g. if either check becomes slow compared to a fast cycle.
 * Update output thin factor once chains get over a given size, so that asymptotically the memory size of the chains doesn't grow indefinitely (and convergence checking time also doesn't grow correspondingly), just the thinning factor increases.
+## CLASS: make it non-agnostic
+## Regexp-ize checks for `COBAYA_INSTALL_SKIP` (in `install.py::_skip_helper`) and `COBAYA_TEST_SKIP` (in `conftests.py`), to be able to use underscores
+## Test installed only (would need more clever pytest marking?)
