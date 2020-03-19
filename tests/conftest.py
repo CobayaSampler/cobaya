@@ -1,21 +1,24 @@
 import pytest
 import os
 
-from cobaya.tools import resolve_modules_path
-
 # Paths ##################################################################################
 
+from cobaya.conventions import _modules_path_arg, _modules_path_env
+from cobaya.tools import resolve_modules_path
+
+
 def pytest_addoption(parser):
-    parser.addoption("--modules", action="store", default=resolve_modules_path(),
+    parser.addoption("--" + _modules_path_arg, action="store", default=resolve_modules_path(),
                      help="Path to folder of automatic installation of modules")
 
 
 @pytest.fixture
 def modules(request):
-    cmd_modules = request.config.getoption("--modules", None)
-    # By default, check in cobaya/modules/tests
-    cmd_modules = (cmd_modules or
-                   os.path.join(os.path.dirname(os.path.abspath(__file__)), "modules"))
+    cmd_modules = request.config.getoption("--" + _modules_path_arg, None)
+    if not cmd_modules:
+        raise ValueError("Could not determine modules installation path. "
+                         "Either define it in the env variable %r, or pass it as an "
+                         "argument with `--%s`" % (_modules_path_env, _modules_path_arg))
     return cmd_modules
 
 
