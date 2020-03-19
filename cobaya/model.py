@@ -882,7 +882,7 @@ class Model(HasLogger):
                 blocks, np.array(list(speeds.values()), dtype=np.float),
                 different_footprints, oversample_power=oversample_power)
             blocks_sorted = [blocks[i] for i in i_optimal_ordering]
-            # b) 2-block slow-fast separation
+        # b) 2-block slow-fast separation
         else:
             if len(blocks) == 1:
                 raise LoggedError(self.log, "Requested fast/slow separation, "
@@ -919,9 +919,11 @@ class Model(HasLogger):
             # Finally, unfold `oversampling_factors` to have the right number of elements,
             # taking into account that that of the fast blocks should be interpreted as a
             # global one for all of them.
+            # NB: the int() below forces the copy of the factors.
+            #     Otherwise the yaml_representer prints references to a single object.
             oversample_factors = (
-                    [oversample_factors[0]] * (1 + i_last_slow) +
-                    [oversample_factors[1]] * (len(blocks) - (1 + i_last_slow)))
+                    [int(oversample_factors[0])] * (1 + i_last_slow) +
+                    [int(oversample_factors[1])] * (len(blocks) - (1 + i_last_slow)))
             self.log.debug("Doing slow/fast split. The oversampling factors for the fast "
                            "blocks should be interpreted as a global one for all of them")
         self.log.debug(
