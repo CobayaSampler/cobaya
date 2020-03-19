@@ -155,7 +155,7 @@ class CobayaComponent(HasLogger, HasDefaults):
 
 class ComponentCollection(dict, HasLogger):
     """
-    Base class for an ordered dictionary of components (e.g. likelihoods or theories)
+    Base class for a dictionary of components (e.g. likelihoods or theories)
     """
 
     def add_instance(self, name, component):

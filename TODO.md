@@ -5,7 +5,6 @@
 ## Finish implementation of aggregated-by-data-type chi2
 ## No output to files while burn in makes it hard to see if working OK (default no burn?)
 ## "Not enough points in chain to check convergence" should be warning and just continue until enough
-## Remove last references to odict in code and *documentation*
 ## check PK_grid/interpolator changes for classy
 ## update docs/img/diagram.svg (and for paper)
 

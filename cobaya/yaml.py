@@ -133,51 +133,44 @@ def yaml_load_file(file_name, yaml_text=None):
 # Custom dumper ##########################################################################
 
 def yaml_dump(info, stream=None, Dumper=yaml.Dumper, **kwds):
-    from collections import OrderedDict
-    class OrderedDumper(Dumper):
+
+    class CustomDumper(Dumper):
         pass
-
-    # Dump OrderedDict's as plain dictionaries, but keeping the order
-    def _dict_representer(dumper, data):
-        return dumper.represent_mapping(
-            BaseResolver.DEFAULT_MAPPING_TAG, data.items())
-
-    OrderedDumper.add_representer(OrderedDict, _dict_representer)
 
     # Dump tuples as yaml "sequences"
     def _tuple_representer(dumper, data):
         return dumper.represent_sequence(
             BaseResolver.DEFAULT_SEQUENCE_TAG, list(data))
 
-    OrderedDumper.add_representer(tuple, _tuple_representer)
+    CustomDumper.add_representer(tuple, _tuple_representer)
 
     # Numpy arrays and numbers
     def _numpy_array_representer(dumper, data):
         return dumper.represent_sequence(
             BaseResolver.DEFAULT_SEQUENCE_TAG, data.tolist())
 
-    OrderedDumper.add_representer(np.ndarray, _numpy_array_representer)
+    CustomDumper.add_representer(np.ndarray, _numpy_array_representer)
 
     def _numpy_int_representer(dumper, data):
         return dumper.represent_int(data)
 
-    OrderedDumper.add_representer(np.int64, _numpy_int_representer)
+    CustomDumper.add_representer(np.int64, _numpy_int_representer)
 
     def _numpy_float_representer(dumper, data):
         return dumper.represent_float(data)
 
-    OrderedDumper.add_representer(np.float64, _numpy_float_representer)
+    CustomDumper.add_representer(np.float64, _numpy_float_representer)
 
     # Dummy representer that prints True for non-representable python objects
     # (prints True instead of nothing because some functions try cast values to bool)
     def _null_representer(dumper, data):
         return dumper.represent_scalar('tag:yaml.org,2002:bool', 'true')
 
-    OrderedDumper.add_representer(type(lambda: None), _null_representer)
-    OrderedDumper.add_multi_representer(object, _null_representer)
+    CustomDumper.add_representer(type(lambda: None), _null_representer)
+    CustomDumper.add_multi_representer(object, _null_representer)
 
     # Dump!
-    return yaml.dump(info, stream, OrderedDumper, allow_unicode=True, **kwds)
+    return yaml.dump(info, stream, CustomDumper, allow_unicode=True, **kwds)
 
 
 def yaml_dump_file(file_name, data, comment=None, error_if_exists=True):
