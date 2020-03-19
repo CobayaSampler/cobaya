@@ -137,6 +137,13 @@ def yaml_dump(info, stream=None, Dumper=yaml.Dumper, **kwds):
     class CustomDumper(Dumper):
         pass
 
+    # Make sure dicts preserve order when dumped
+    def _dict_representer(dumper, data):
+        return dumper.represent_mapping(
+            yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, data.items())
+
+    CustomDumper.add_representer(dict, _dict_representer)
+
     # Dump tuples as yaml "sequences"
     def _tuple_representer(dumper, data):
         return dumper.represent_sequence(
