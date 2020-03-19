@@ -23,7 +23,7 @@ from cobaya.log import logger_setup, LoggedError
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info
 from cobaya.mpi import import_MPI, is_main_process, set_mpi_disabled
-from cobaya.tools import warn_deprecation, recursive_update
+from cobaya.tools import warn_deprecation, recursive_update, resolve_modules_path
 from cobaya.post import post
 
 
@@ -148,10 +148,10 @@ def run_script():
         # If input given this way, we obviously want to resume!
         info[_resume] = True
     # solve modules installation path cmd > env > input
-    path_cmd = getattr(args, _modules_path_arg)[0]
-    path_env = os.environ.get(_modules_path_env, None)
-    path_input = info.get(_path_install)
-    info[_path_install] = path_cmd or (path_env or path_input)
+    path = getattr(args, _modules_path_arg)[0]
+    if not path:
+        path = resolve_modules_path(info)
+    info[_path_install] = path
     info[_debug] = getattr(args, _debug) or info.get(_debug, _debug_default)
     info[_resume] = getattr(args, _resume, _resume_default)
     info[_force] = getattr(args, _force, False)
