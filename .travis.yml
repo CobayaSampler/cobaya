@@ -7,7 +7,7 @@ git:
 #testing
 env:
   global:
-    - COBAYA_TEST_SKIP=polychord,planck_2015,CamSpec,unbinned
+    - COBAYA_INSTALL_SKIP=polychord,planck_2015,CamSpec,unbinned
 
 #Large CamSpec folders tend to hang, so exclude non-base likelihoods from cache
 cache:
@@ -108,6 +108,7 @@ before_install:
   - python --version
 script:
   - export COBAYA_MODULES="../modules"
+  - COBAYA_TEST_SKIP=$COBAYA_INSTALL_SKIP
   # General tests:
   - cobaya-install polychord
   - pytest tests/ -k "not cosmo"

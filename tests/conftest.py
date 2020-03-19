@@ -3,7 +3,7 @@ import os
 
 # Paths ##################################################################################
 
-from cobaya.conventions import _modules_path_arg, _modules_path_env
+from cobaya.conventions import _modules_path_arg, _modules_path_env, _test_skip_env
 from cobaya.tools import resolve_modules_path
 
 
@@ -25,10 +25,10 @@ def modules(request):
 # Skip certain keywords ##################################################################
 
 def pytest_collection_modifyitems(config, items):
-    _env_var = "COBAYA_TEST_SKIP"
-    skip_keywords = os.environ.get(_env_var, "").replace(",", " ").split()
+    skip_keywords = os.environ.get(_test_skip_env, "").replace(",", " ").split()
     for k in skip_keywords:
-        skip_mark = pytest.mark.skip(reason="'%s' skipped by envvar '%s'" % (k, _env_var))
+        skip_mark = pytest.mark.skip(
+            reason="'%s' skipped by envvar '%s'" % (k, _test_skip_env))
         for item in items:
             if any([(k.lower() in x) for x in [item.name.lower(), item.keywords]]):
                 item.add_marker(skip_mark)

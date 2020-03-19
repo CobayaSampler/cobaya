@@ -21,7 +21,7 @@ from cobaya.tools import create_banner, warn_deprecation, get_class, load_config
 from cobaya.input import get_used_modules, get_kind
 from cobaya.conventions import _module_path, _code, _data, _external, _force
 from cobaya.conventions import _modules_path_arg, _path_install, _modules_path_env
-from cobaya.conventions import _yaml_extensions
+from cobaya.conventions import _yaml_extensions, _install_skip_env
 from cobaya.mpi import set_mpi_disabled
 from cobaya.tools import resolve_modules_path
 
@@ -42,7 +42,7 @@ def install(*infos, **kwargs):
                  "Maybe specify one via a command line argument '-%s [...]'?",
             _modules_path_env, _modules_path_arg[0])
     abspath = os.path.abspath(path)
-    log.info("Installing modules at '%s'\n", abspath)
+    log.info("Installing modules at '%s'", abspath)
     kwargs_install = {"force": kwargs.get("force", False),
                       "no_progress_bars": kwargs.get("no_progress_bars")}
     for what in (_code, _data):
@@ -55,12 +55,14 @@ def install(*infos, **kwargs):
                 raise LoggedError(
                     log, "Could not create the desired installation folder '%s'", spath)
     failed_modules = []
-    skip_list = os.environ.get("COBAYA_TEST_SKIP", "").replace(",", " ").lower().split()
+    skip_keywords = set(kwargs["skip"] or [])
+    skip_keywords_env = set(
+        os.environ.get(_install_skip_env, "").replace(",", " ").lower().split())
+    skip_keywords = skip_keywords.union(skip_keywords_env)
     for kind, modules in get_used_modules(*infos).items():
         for module in modules:
             print(create_banner(kind + ":" + module, symbol="=", length=80))
-            if any(s in module.lower() for s in skip_list):
-                log.info("Skipping %s for test skip list %s" % (module, skip_list))
+            if _skip_helper(module.lower(), skip_keywords, skip_keywords_env, log):
                 continue
             info = (next(info for info in infos if module in
                          info.get(kind, {}))[kind][module]) or {}
@@ -76,10 +78,8 @@ def install(*infos, **kwargs):
                 failed_modules += ["%s:%s" % (kind, module)]
                 continue
             else:
-                if any(s in imported_class.__name__.lower() for s in skip_list):
-                    log.info(
-                        "Skipping %s for test skip list %s" % (imported_class.__name__,
-                                                               skip_list))
+                if _skip_helper(imported_class.__name__.lower(), skip_keywords,
+                                skip_keywords_env, log):
                     continue
             is_installed = getattr(imported_class, "is_installed", None)
             if is_installed is None:
@@ -135,6 +135,19 @@ def install(*infos, **kwargs):
     if not kwargs.get("no_set_global", False) and not kwargs.get("just_check", False):
         write_modules_path_in_config_file(abspath)
         log.info("The installation path has been written in the global config file.")
+
+
+def _skip_helper(name, skip_keywords, skip_keywords_env, logger):
+    try:
+        this_skip_keyword = next(s for s in skip_keywords
+                                 if s.lower() in name.lower())
+        env_msg = (" in env var %r" % _install_skip_env
+                   if this_skip_keyword in skip_keywords_env else "")
+        logger.info("Skipping %r as per skip keyword %r" + env_msg,
+                    name, this_skip_keyword)
+        return True
+    except StopIteration:
+        return False
 
 
 def download_file(filename, path, no_progress_bars=False, decompress=False, logger=None):
@@ -267,6 +280,10 @@ def install_script():
     parser.add_argument("-" + _force[0], "--" + _force, action="store_true",
                         default=False,
                         help="Force re-installation of apparently installed modules.")
+    parser.add_argument("--skip", action="store", nargs="*",
+                        metavar="keyword",
+                        help="Keywords of modules that will be skipped during "
+                             "installation.")
     parser.add_argument("--no-progress-bars", action="store_true", default=False,
                         help="No progress bars shown. Shorter logs (used in Travis).")
     parser.add_argument("--just-check", action="store_true", default=False,
@@ -309,7 +326,7 @@ def install_script():
     install(*infos, path=getattr(arguments, _modules_path_arg)[0],
             **{arg: getattr(arguments, arg)
                for arg in ["force", _code, _data, "no_progress_bars", "just_check",
-                           "no_set_global"]})
+                           "no_set_global", "skip"]})
 
 
 if __name__ == '__main__':

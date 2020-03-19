@@ -703,8 +703,3 @@ install_tests[kinds.likelihood].update({"planck_2015_lowl": None,
                                         "planck_2018_highl_CamSpec.TT": None,
                                         "planck_2018_highl_CamSpec.TT_native": None,
                                         })
-
-skip_list = os.environ.get("COBAYA_TEST_SKIP", "").replace(",", " ").lower().split()
-for key in list(install_tests):
-    if any(skip for skip in skip_list if skip in key.lower()):
-        skip_list.pop(key)
