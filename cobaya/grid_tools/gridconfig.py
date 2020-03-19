@@ -18,10 +18,9 @@ from cobaya.conventions import _output_prefix, _path_install, _yaml_extensions
 from cobaya.conventions import kinds, _params
 from cobaya.input import get_used_modules, merge_info, update_info
 from cobaya.install import install as install_reqs
-from cobaya.grid_tools import batchjob
+from cobaya.grid_tools import batchjob, sort_cosmetic, warn_deprecation
 from cobaya.cosmo_input import create_input, _get_best_covmat
 from cobaya.parameterization import is_sampled_param
-from cobaya.tools import warn_deprecation
 
 
 def getArgs(vals=None):
@@ -159,7 +158,7 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
                 best_covmat["folder"], best_covmat["name"])
         # Write the info for this job
         # Allow overwrite since often will want to regenerate grid with tweaks
-        yaml_dump_file(jobItem.iniFile(), info, error_if_exists=False)
+        yaml_dump_file(jobItem.iniFile(), sort_cosmetic(info), error_if_exists=False)
 
         # Non-translated old code
         # if not start_at_bestfit:

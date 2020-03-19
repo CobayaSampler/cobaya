@@ -54,6 +54,10 @@ kinds = ComponentKinds(*ComponentKinds._fields)
 
 reserved_attributes = {_input_params, _output_params, "install_options"}
 
+# Conventional order for yaml dumping (purely cosmetic)
+_dump_sort_cosmetic = [
+    kinds.theory, kinds.likelihood, _prior, _params, kinds.sampler, "post"]
+
 # Separator for
 # fields in parameter names and files
 # Its manual inclusion in a string anywhere else (e.g. a parameter name) should be avoided

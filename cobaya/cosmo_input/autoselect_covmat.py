@@ -8,7 +8,6 @@ from copy import deepcopy
 import re
 
 # Local
-from cobaya.yaml import yaml_load_file, yaml_dump_file
 from cobaya.conventions import _covmats_file, _aliases, _path_install, partag, _params
 from cobaya.conventions import kinds, _covmat_extension
 from cobaya.tools import str_to_list, get_translated_params, get_cache_path

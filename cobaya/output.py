@@ -22,7 +22,7 @@ from cobaya.log import LoggedError, HasLogger
 from cobaya.input import is_equal_info, get_class
 from cobaya.mpi import is_main_process, more_than_one_process, share_mpi
 from cobaya.collection import Collection
-from cobaya.tools import deepcopy_where_possible, find_with_regexp
+from cobaya.tools import deepcopy_where_possible, find_with_regexp, sort_cosmetic
 
 # Default output type and extension
 _kind = "txt"
@@ -223,7 +223,7 @@ class Output(HasLogger):
                 info[_output_prefix] = self.updated_output_prefix()
                 with open(f, "w", encoding="utf-8") as f_out:
                     try:
-                        f_out.write(yaml_dump(info))
+                        f_out.write(yaml_dump(sort_cosmetic(info)))
                     except OutputError as e:
                         raise LoggedError(self.log, str(e))
 

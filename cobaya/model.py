@@ -26,7 +26,7 @@ from cobaya.theory import TheoryCollection
 from cobaya.log import LoggedError, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
 from cobaya.tools import deepcopy_where_possible, are_different_params_lists, \
-    str_to_list, sort_parameter_blocks, recursive_update
+    str_to_list, sort_parameter_blocks, recursive_update, sort_cosmetic
 from cobaya.component import Provider
 from cobaya.mpi import more_than_one_process, get_mpi_comm
 
@@ -106,7 +106,7 @@ def get_model(info):
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
         logging.getLogger(__name__.split(".")[-1]).debug(
             "Input info updated with defaults (dumped to YAML):\n%s",
-            yaml_dump(updated_info))
+            yaml_dump(sort_cosmetic(updated_info)))
     # Initialize the parameters and posterior
     return Model(updated_info[_params], updated_info[kinds.likelihood],
                  updated_info.get(_prior), updated_info.get(kinds.theory),

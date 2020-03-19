@@ -31,7 +31,7 @@ from math import gcd
 # Local
 from cobaya import __obsolete__
 from cobaya.conventions import _package, subfolders, partag, kinds, _path_install, \
-    _modules_path_config_file, _modules_path_env, _modules_path_arg
+    _modules_path_config_file, _modules_path_env, _modules_path_arg, _dump_sort_cosmetic
 from cobaya.log import LoggedError
 
 # Logger
@@ -915,3 +915,16 @@ def resolve_modules_path(infos=None):
     if path_env:
         return path_env
     return load_modules_path_from_config_file()
+
+
+def sort_cosmetic(info):
+    """
+    Returns a sorted version of the given info dict, re-ordered as %r, and finally the
+    rest of the blocks/options.
+    """ % _dump_sort_cosmetic
+    sorted_info = dict()
+    for k in _dump_sort_cosmetic:
+        if k in info:
+            sorted_info[k] = info[k]
+    sorted_info.update({k:v for k,v in info.items() if k not in sorted_info})
+    return sorted_info

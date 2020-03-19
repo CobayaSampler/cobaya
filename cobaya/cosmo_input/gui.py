@@ -15,7 +15,7 @@ from cobaya.cosmo_input.autoselect_covmat import get_best_covmat, covmat_folders
 from cobaya.cosmo_input.create_input import create_input
 from cobaya.bib import prettyprint_bib, get_bib_info, get_bib_module
 from cobaya.tools import warn_deprecation, get_available_internal_class_names, \
-    cov_to_std_and_corr, resolve_modules_path
+    cov_to_std_and_corr, resolve_modules_path, sort_cosmetic
 from cobaya.input import get_default_info
 from cobaya.conventions import subfolders, kinds, partag, _modules_path_env, _path_install
 
@@ -255,7 +255,7 @@ class MainWindow(QWidget):
                 AttributeError):  # Failed to generate info (returned str instead)
             comments_text = ""
         self.display["python"].setText("info = " + pformat(info) + comments_text)
-        self.display["yaml"].setText(yaml_dump(info) + comments_text)
+        self.display["yaml"].setText(yaml_dump(sort_cosmetic(info)) + comments_text)
         self.display["bibliography"].setText(prettyprint_bib(get_bib_info(info)))
         # Display covmat
         path_install = resolve_modules_path()

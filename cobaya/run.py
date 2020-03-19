@@ -23,7 +23,7 @@ from cobaya.log import logger_setup, LoggedError
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info
 from cobaya.mpi import import_MPI, is_main_process, set_mpi_disabled
-from cobaya.tools import warn_deprecation, recursive_update
+from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic
 from cobaya.post import post
 
 
@@ -49,7 +49,7 @@ def run(info):
         if not output and is_main_process():
             logger_run.info(
                 "Input info updated with defaults (dumped to YAML):\n%s",
-                yaml_dump(updated_info))
+                yaml_dump(sort_cosmetic(updated_info)))
     # 3. If output requested, check compatibility if existing one, and dump.
     # 3.1 First: model only
     output.check_and_dump_info(info, updated_info, cache_old=True,
