@@ -46,28 +46,17 @@ When you have prepared the relevant input files, call the automatic installation
 
    $ cobaya-install input_1.yaml input_2.yaml [etc] --modules /path/to/modules
 
-Alternatively, you can specify the modules path using the ``COBAYA_MODULES`` environment variable: the example above is equivalent to
+You can skip the ``--modules`` option if a ``modules`` field is already defined in **one** of the input files.
 
-.. code:: bash
+``cobaya-install`` will save the modules installation path used into a global configuration file, so that you do not need to specify it in future calls to ``cobaya-install``, ``cobaya-run``, etc. To show the current default install path, run ``cobaya-install --show-modules``.
 
-   $ export COBAYA_MODULES=/path/to/modules
-   $ cobaya-install input_1.yaml input_2.yaml [etc]
+To override the default path in a subsequent call to ``cobaya-install`` or ``cobaya-run``, the alternatives are, in descending order of precedence:
 
-.. note::
+#. add an ``--modules /override/path/to/modules`` command line argument.
+#. include ``modules: /override/path/to/modules`` somewhere in your :doc:`input file <input>`.
+#. define an environment variable ``COBAYA_MODULES=/override/path/to/modules`` (declare it with ``export COBAYA_MODULES=[...]``).
 
-   From a Python script or notebook, this is equivalent to
-
-   .. code:: python
-
-      from cobaya.install import install
-      install(info1, info2, [etc], path='/path/to/modules')
-
-   where ``info[X]`` are input **dictionaries**.
-
-   If a ``path`` is not passed, it will be extracted from the given infos (it will fail if more then one have been defined).
-
-
-You can run the scripts as many times as you want and it won't download or re-install already installed modules, unless the option ``--force`` (or ``-f``) is used.
+You can run the ``cobaya-install`` script as many times as you want and it won't download or re-install already installed modules, unless the option ``--force`` (or ``-f``) is used.
 
 Within ``/path/to/modules``, the following file structure will be created, containing only the modules that you requested:
 
@@ -87,16 +76,16 @@ Within ``/path/to/modules``, the following file structure will be created, conta
 
 .. note::
 
-   Not all automatically installed modules will be placed there; e.g. those that can be installed as a Python package (CAMB, for instance) won't leave any trace in that folder. For this reason, if you plan to modify one of the modules, it is recommended that you :ref:`install it manually <install_manual>`.
+   To run the installer from a Python script or notebook:
 
+   .. code:: python
 
-Take note of that folder in your case, here ``/path/to/modules``, and include it under the field ``modules`` somewhere in your input file (see :doc:`input` for a detailed description of input files):
+      from cobaya.install import install
+      install(info1, info2, [etc], path='/path/to/modules')
 
-.. code:: yaml
+   where ``info[X]`` are input **dictionaries**.
 
-   modules: /path/to/modules
-
-Alternatively, you can specify the modules path using the argument ``--modules /path/to/modules`` (or ``-m``) when invoking from the shell, or defining a ``COBAYA_MODULES`` environment variable; the order of preference goes from most to least explicit: shell argument :math:`>` input file :math:`>` environment variable.
+   If a ``path`` is not passed, it will be extracted from the given infos (it will fail if more than one have been defined).
 
 
 .. _install_manual:

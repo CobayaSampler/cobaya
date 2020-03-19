@@ -23,7 +23,7 @@ exploiting speed hierarchies in the parameter space. Also, ``PolyChord`` can exp
 multi-modal distributions efficiently.
 
 ``PolyChord`` is an *external* sampler, not installed by default (just a wrapper for it).
-You need to install it yourself following the :doc:`general instructions for installing external modules <installation_cosmo>`, or the manual installation instructions :ref:`below <pc_installation>`.
+You need to install it yourself following the installation instructions :ref:`below <pc_installation>`.
 
 Usage
 -----
@@ -159,7 +159,7 @@ Installation
 
 Simply run ``cobaya-install polychord --modules [/path/to/modules]`` (or, instead of ``polychord`` after ``cobaya-install``, mention an input file that uses ``polychord``).
 
-If it has been installed this way, it is not necessary to specify a ``path`` for it, as long as the modules folder has been indicated.
+If PolyChord has been installed this way, it is not necessary to specify a ``path`` option for it.
 
 .. note::
 

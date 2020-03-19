@@ -251,7 +251,19 @@ def install_script():
     parser.add_argument("-" + _modules_path_arg[0], "--" + _modules_path_arg,
                         action="store", nargs=1, required=False,
                         metavar="/modules/path", default=[None],
-                        help="Desired path where to install external modules.")
+                        help="Desired path where to install external modules. "
+                             "Optional if one has been set globally or as an env variable"
+                             " (run with '--show_%s' to check)." % _modules_path_arg)
+    output_show_modules_path = resolve_modules_path()
+    if output_show_modules_path and os.environ.get(_modules_path_env):
+        output_show_modules_path += " (from env variable %r)" % _modules_path_env
+    elif output_show_modules_path:
+        output_show_modules_path += " (from config file)"
+    else:
+        output_show_modules_path = "(Not currently set.)"
+    parser.add_argument("--show-" + _modules_path_arg, action="version",
+                        version=output_show_modules_path,
+                        help="Prints default modules installation folder and exits.")
     parser.add_argument("-" + _force[0], "--" + _force, action="store_true",
                         default=False,
                         help="Force re-installation of apparently installed modules.")
