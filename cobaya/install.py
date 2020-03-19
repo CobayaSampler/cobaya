@@ -17,7 +17,7 @@ from pkg_resources import parse_version
 # Local
 from cobaya.log import logger_setup, LoggedError
 from cobaya.tools import create_banner, warn_deprecation, get_class, load_config_file, \
-    write_config_file
+    write_modules_path_in_config_file
 from cobaya.input import get_used_modules, get_kind
 from cobaya.conventions import _module_path, _code, _data, _external, _force
 from cobaya.conventions import _modules_path_arg, _path_install, _modules_path_env
@@ -131,6 +131,10 @@ def install(*infos, **kwargs):
                  "%s\nCheck output of the installer of each module above "
                  "for precise error info.\n",
             bullet + bullet.join(failed_modules))
+    # Set the installation path in the global config file
+    if not kwargs.get("no_set_global", False) and not kwargs.get("just_check", False):
+        write_modules_path_in_config_file(abspath)
+        log.info("The installation path has been written in the global config file.")
 
 
 def download_file(filename, path, no_progress_bars=False, decompress=False, logger=None):
@@ -255,6 +259,8 @@ def install_script():
                         help="No progress bars shown. Shorter logs (used in Travis).")
     parser.add_argument("--just-check", action="store_true", default=False,
                         help="Just check whether modules are installed.")
+    parser.add_argument("--no-set-global", action="store_true", default=False,
+                        help="Do not store the installation path for later runs.")
     group_just = parser.add_mutually_exclusive_group(required=False)
     group_just.add_argument("-C", "--just-code", action="store_false", default=True,
                             help="Install code of the modules.", dest=_data)
@@ -290,7 +296,8 @@ def install_script():
     # Launch installer
     install(*infos, path=getattr(arguments, _modules_path_arg)[0],
             **{arg: getattr(arguments, arg)
-               for arg in ["force", _code, _data, "no_progress_bars", "just_check"]})
+               for arg in ["force", _code, _data, "no_progress_bars", "just_check",
+                           "no_set_global"]})
 
 
 if __name__ == '__main__':
