@@ -44,8 +44,8 @@ def get_covmat_database(modules, cached=True):
                     folder.format(**{_path_install: modules}))
                    if filename.endswith(_covmat_extension)]
                   for folder in installed_folders])))
-            assert num_files == covmat_database
-            log.info("Loaded cached covmats database")
+            assert num_files == len(covmat_database)
+            log.debug("Loaded cached covmats database")
             return covmat_database
         except:
             log.info("No cached covmat database present, not usable or not up-to-date. "
