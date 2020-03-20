@@ -367,7 +367,7 @@ class Sampler(CobayaComponent):
         if is_main_process():
             if output.is_forcing():
                 cls.delete_output_files(output, info=info)
-            elif any(find_with_regexp(regexp, root) for (regexp, root)
+            elif any(find_with_regexp(regexp, root or output.folder) for (regexp, root)
                      in cls.output_files_regexps(output=output, info=info, minimal=True)):
                 if output.is_resuming():
                     output.log.info("Found and old sample. Resuming.")
