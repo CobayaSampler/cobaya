@@ -123,7 +123,6 @@ class polychord(Sampler):
             blocks, oversampling_factors = self.model._check_blocking(self.blocking)
         else:
             if self.measure_speeds:
-                self.log.info("Measuring speeds...")
                 self.model.measure_and_set_speeds()
             blocks, oversampling_factors = self.model.get_param_blocking_for_sampler(
                 oversample_power=self.oversample_power)
