@@ -12,11 +12,10 @@ from typing import NamedTuple, Sequence, Mapping
 import logging
 
 # Local
-from cobaya.conventions import kinds, _prior, _timing
-from cobaya.conventions import _params, _overhead_time, _provides
-from cobaya.conventions import _path_install, _debug, _debug_default, _debug_file
-from cobaya.conventions import _input_params, _output_params, _chi2, _separator
-from cobaya.conventions import _input_params_prefix, _output_params_prefix, _requires
+from cobaya.conventions import kinds, _prior, _timing, _aliases, _params, _provides, \
+    _overhead_time, _path_install, _debug, _debug_default, _debug_file, _input_params, \
+    _output_params, _chi2, _separator, _get_chi2_name, _input_params_prefix, \
+    _output_params_prefix, _requires
 from cobaya.input import update_info
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
@@ -262,11 +261,10 @@ class Model(HasLogger):
                         "Likelihood %s has not returned a valid log-likelihood, "
                         "but %r instead.", str(component), component.get_current_logp())
                 if return_derived:
-                    derived_dict[_chi2 + _separator +
-                                 component.get_name().replace(".", "_")] \
+                    derived_dict[_get_chi2_name(component.get_name().replace(".", "_"))] \
                         = -2 * loglikes[index - n_theory]
                     for this_type in getattr(component, "type", []):
-                        aggr_chi2_name = _chi2 + _separator + this_type
+                        aggr_chi2_name = _get_chi2_name(this_type)
                         if aggr_chi2_name not in derived_dict:
                             derived_dict[aggr_chi2_name] = 0
                         derived_dict[aggr_chi2_name] += -2 * loglikes[index - n_theory]

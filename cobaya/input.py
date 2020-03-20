@@ -18,13 +18,13 @@ from typing import Mapping
 from collections import defaultdict
 
 # Local
-from cobaya.conventions import _products_path, _path_install, _resume, _force
-from cobaya.conventions import _output_prefix, _debug, _debug_file, _external
-from cobaya.conventions import _params, _auto_params, _prior, kinds, _provides, _requires
-from cobaya.conventions import partag, _input_params, _output_params, _module_path
-from cobaya.conventions import _yaml_extensions, _aliases, reserved_attributes, empty_dict
-from cobaya.tools import recursive_update, str_to_list, get_base_classes
-from cobaya.tools import fuzzy_match, deepcopy_where_possible, get_class, get_kind
+from cobaya.conventions import _products_path, _path_install, _resume, _force, _params, \
+    partag, _external, _output_prefix, _debug, _debug_file, _auto_params, _prior, \
+    kinds, _provides, _requires, _input_params, _output_params, _module_path, _aliases,\
+    _yaml_extensions, reserved_attributes, empty_dict, _get_chi2_name, _get_chi2_label, \
+    _test_run
+from cobaya.tools import recursive_update, str_to_list, get_base_classes, \
+    fuzzy_match, deepcopy_where_possible, get_class, get_kind
 from cobaya.yaml import yaml_load_file, yaml_dump
 from cobaya.log import LoggedError
 from cobaya.parameterization import expand_info_param
@@ -108,7 +108,6 @@ def update_info(info):
     with the input info.
     """
     component_base_classes = get_base_classes()
-
     # Don't modify the original input, and convert all Mapping to consistent dict
     input_info = deepcopy_where_possible(info)
     # Creates an equivalent info using only the defaults
@@ -142,11 +141,9 @@ def update_info(info):
                 #           {_external: module})
                 # updated[module.get_name()] = input_block[module.get_name()].copy()
                 # continue
-
             if inspect.isclass(input_block[module]) or \
                     not isinstance(input_block[module], dict):
                 input_block[module] = {_external: input_block[module]}
-
             ext = input_block[module].get(_external)
             if ext:
                 if inspect.isclass(ext):
@@ -161,7 +158,6 @@ def update_info(info):
                 default_class_info = get_default_info(module, block,
                                                       module_path=module_path,
                                                       input_options=input_block[module])
-
             updated[module] = default_class_info or {}
             # Update default options with input info
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
@@ -189,7 +185,6 @@ def update_info(info):
             # save params and priors of class to combine later
             default_params_info[module] = default_class_info.get(_params, {})
             default_prior_info[module] = default_class_info.get(_prior, {})
-
     # Add priors info, after the necessary checks
     if _prior in input_info or any(default_prior_info.values()):
         updated_info[_prior] = input_info.get(_prior, {})
@@ -324,7 +319,8 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
         myprint = log.info
         myprint_debug = log.debug
     myname = inspect.stack()[0][3]
-    ignore = set() if strict else {_debug, _debug_file, _resume, _force, _path_install}
+    ignore = set() if strict else \
+        {_debug, _debug_file, _resume, _force, _path_install, _test_run}
     ignore = ignore.union(set(ignore_blocks or []))
     if set(info for info in info_old if info_old[info] is not None).difference(ignore) \
             != set(info for info in info_new if info_new[info] is not None).difference(

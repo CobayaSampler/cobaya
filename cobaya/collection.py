@@ -18,8 +18,8 @@ import pandas as pd
 from getdist import MCSamples
 
 # Local
-from cobaya.conventions import _weight, _chi2, _minuslogpost, _minuslogprior
-from cobaya.conventions import _separator
+from cobaya.conventions import _weight, _chi2, _minuslogpost, _minuslogprior, \
+    _get_chi2_name, _separator
 from cobaya.tools import load_DataFrame
 from cobaya.log import LoggedError, HasLogger
 
@@ -64,7 +64,7 @@ class BaseCollection(HasLogger):
         self.derived_params = list(model.parameterization.derived_params())
         self.minuslogprior_names = [
             _minuslogprior + _separator + piname for piname in list(model.prior)]
-        self.chi2_names = [_chi2 + _separator + likname for likname in model.likelihood]
+        self.chi2_names = [_get_chi2_name(likname) for likname in model.likelihood]
         columns = [_weight, _minuslogpost]
         columns += list(self.sampled_params)
         # Just in case: ignore derived names as likelihoods: would be duplicate cols

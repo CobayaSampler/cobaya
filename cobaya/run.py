@@ -11,11 +11,10 @@ from typing import Mapping
 
 # Local
 from cobaya import __version__
-from cobaya.conventions import kinds, _prior, _params
-from cobaya.conventions import _path_install, _debug, _debug_file, _output_prefix
-from cobaya.conventions import _resume, _timing, _debug_default, _force, _post
-from cobaya.conventions import _yaml_extensions, _separator_files, _updated_suffix
-from cobaya.conventions import _modules_path_arg, _resume_default
+from cobaya.conventions import kinds, _prior, _params, _path_install, _output_prefix, \
+    _debug, _debug_file, _resume, _timing, _debug_default, _force, _post, _test_run, \
+    _yaml_extensions, _separator_files, _updated_suffix, _modules_path_arg, \
+    _modules_path_env, _resume_default
 from cobaya.output import get_output
 from cobaya.model import Model
 from cobaya.sampler import get_sampler_class, check_sampler_info
@@ -89,9 +88,9 @@ def run(info):
         # TODO -- maybe also re-dump model info, now possibly with measured speeds
         # (waiting until the camb.transfers issue is solved)
         output.check_and_dump_info(None, updated_info, check_compatible=False)
-        if info.get("test", False):
+        if info.get(_test_run, False):
             logger_run.info("Test initialization successful! "
-                            "You can probably run now without `--test`.")
+                            "You can probably run now without `--%s`.", _test_run)
             return updated_info, sampler
         # Run the sampler
         sampler.run()
@@ -121,7 +120,7 @@ def run_script():
     continuation.add_argument("-" + _force[0], "--" + _force, action="store_true",
                               help="Overwrites previous output, if it exists "
                                    "(use with care!)")
-    parser.add_argument("--test", action="store_true",
+    parser.add_argument("--%s" % _test_run, action="store_true",
                         help="Initialize model and sampler, and exit.")
     parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument("--no-mpi", action='store_true',
@@ -158,7 +157,7 @@ def run_script():
     info[_debug] = getattr(args, _debug) or info.get(_debug, _debug_default)
     info[_resume] = getattr(args, _resume, _resume_default)
     info[_force] = getattr(args, _force, False)
-    info["test"] = getattr(args, "test", False)
+    info[_test_run] = getattr(args, _test_run, False)
     if _post in info:
         post(info)
     else:

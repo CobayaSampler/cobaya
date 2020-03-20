@@ -40,6 +40,7 @@ _resume = "resume"
 _resume_default = False
 _timing = "timing"
 _force = "force"
+_test_run = "test"
 _module_path = "python_path"
 _module_class_name = "class_name"
 _aliases = "aliases"
@@ -69,6 +70,8 @@ _weight = "weight"  # sample weight
 _minuslogpost = "minuslogpost"  # log-posterior, or in general the total log-probability
 _minuslogprior = "minuslogprior"  # log-prior
 _chi2 = "chi2"  # chi^2 = -2 * loglik
+_get_chi2_name = lambda p: _chi2 + _separator + str(p)
+_get_chi2_label = lambda p: r"\chi^2_\mathrm{" + str(p).replace("_", r"\ ") + r"}"
 _prior_1d_name = "0"
 
 # Output files
