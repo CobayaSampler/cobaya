@@ -199,6 +199,13 @@ def update_info(info):
     updated_info[_params] = merge_params_info([defaults_merged,
                                                input_info.get(_params, {})],
                                               default_derived=False)
+    # Add aggregated chi2 params
+    all_types = set(chain(*[str_to_list(like_info.get("type", []))
+                            for like_info in updated_info[kinds.likelihood].values()]))
+    for t in all_types:
+        updated_info[_params][_get_chi2_name(t)] = {
+            partag.latex: _get_chi2_label(t), partag.derived: True}
+    # Add automatically-defined parameters
     if _auto_params in updated_info:
         make_auto_params(updated_info.pop(_auto_params), updated_info[_params])
     # Add aliases for theory params (after merging!)

@@ -772,11 +772,12 @@ class Model(HasLogger):
         # requirements of a component (and if not raise error)
         self._unassigned_input = set(p for p, assigned in params_assign["input"].items()
                                      if not assigned)
-
         # Assign the "chi2__" output parameters
         for p in params_assign["output"]:
             if p.startswith(_chi2 + _separator):
                 like = p[len(_chi2 + _separator):]
+                if like in self.likelihood.all_types:
+                    continue  # it's an aggregated likelihood
                 if like not in [l.replace(".", "_") for l in self.likelihood]:
                     raise LoggedError(
                         self.log, "Your derived parameters depend on an unknown "
@@ -784,16 +785,19 @@ class Model(HasLogger):
                 # They may have been already assigned to an agnostic likelihood,
                 # so purge first: no "=+"
                 params_assign["output"][p] = [self.likelihood[like]]
-        # Check that output parameters are assigned exactly once
+        # Check that there are no unassigned parameters (with the exception of aggr chi2)
+        aggr_chi2_names = [_get_chi2_name(t) for t in self.likelihood.all_types]
         unassigned_output = [
-            p for p, assigned in params_assign["output"].items() if not assigned]
-        multiassigned_output = {
-            p: assigned for p, assigned in params_assign["output"].items()
-            if len(assigned) > 1}
+            p for p, assigned in params_assign["output"].items()
+            if not assigned and p not in aggr_chi2_names]
         if unassigned_output:
             raise LoggedError(
                 self.log, "Could not find whom to assign output parameters %r.",
                 unassigned_output)
+        # Check that output parameters are assigned exactly once
+        multiassigned_output = {
+            p: assigned for p, assigned in params_assign["output"].items()
+            if len(assigned) > 1}
         if multiassigned_output:
             raise LoggedError(
                 self.log,

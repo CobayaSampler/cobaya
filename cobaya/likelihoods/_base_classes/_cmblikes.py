@@ -21,16 +21,14 @@ from cobaya.likelihoods._base_classes import _DataSetLikelihood
 
 
 class _CMBlikes(_DataSetLikelihood):
+    # Data type for aggregated chi2 (case sensitive)
+    type = "CMB"
+
     map_separator: str
     lmin: Sequence[int]
     lmax: Sequence[int]
     lav: Sequence[int]
     Ahat: np.ndarray  # not used by likelihood
-
-    def initialize(self):
-        super().initialize()
-        # Set data type for aggregated chi2 (case sensitive)
-        self.type = "CMB"
 
     def get_requirements(self):
         # State requisites to the theory code

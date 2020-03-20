@@ -29,6 +29,7 @@ from time import sleep
 import numpy as np
 import inspect
 from typing import Mapping
+from itertools import chain
 
 # Local
 from cobaya.conventions import kinds, _external, _module_path, empty_dict, \
@@ -73,8 +74,7 @@ class Likelihood(Theory, LikelihoodInterface):
                          path_install=path_install, initialize=initialize,
                          standalone=standalone)
         # Make sure `types` is a list of data types, for aggregated chi2
-        self.type = (lambda x: [x] if isinstance(x, str) else x)(
-            getattr(self, "type", []))
+        self.type = str_to_list(getattr(self, "type", []))
 
     @property
     def theory(self):
@@ -223,3 +223,10 @@ class LikelihoodCollection(ComponentCollection):
                 raise LoggedError(self.log, "'Likelihood' %s is not actually a "
                                             "likelihood (no get_current_logp function)",
                                   name)
+
+    @property
+    def all_types(self):
+        if not hasattr(self, "_all_types"):
+            self._all_types = set(chain(
+                *[str_to_list(getattr(self[like], "type", [])) for like in self]))
+        return self._all_types

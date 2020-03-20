@@ -31,6 +31,9 @@ last_version_supp_data_and_covmats = "v2.01"
 
 
 class _planck_clik_prototype(Likelihood):
+    # Data type for aggregated chi2 (case sensitive)
+    type = "CMB"
+
     path: str
 
     def initialize(self):
@@ -88,8 +91,6 @@ class _planck_clik_prototype(Likelihood):
                            "vs non-polarised 'lite' likelihoods. See error info below:")
             raise
         self.l_maxs = self.clik.get_lmax()
-        # Set data type for aggregated chi2 (case sensitive)
-        self.type = "CMB"
         # calculate requirements here so class can also be separately instantiated
         requested_cls = ["tt", "ee", "bb", "te", "tb", "eb"]
         if self.lensing:
