@@ -4,7 +4,6 @@ import pickle
 from random import choice
 from itertools import chain
 import numpy as np
-from copy import deepcopy
 import re
 
 # Local

@@ -17,7 +17,7 @@ from cobaya.bib import prettyprint_bib, get_bib_info, get_bib_module
 from cobaya.tools import warn_deprecation, get_available_internal_class_names, \
     cov_to_std_and_corr, resolve_modules_path, sort_cosmetic
 from cobaya.input import get_default_info
-from cobaya.conventions import subfolders, kinds, partag, _modules_path_env, _path_install
+from cobaya.conventions import subfolders, kinds, _modules_path_env, _path_install
 
 # per-platform settings for correct high-DPI scaling
 if platform.system() == "Linux":
@@ -33,6 +33,7 @@ try:
         QGroupBox, QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit, \
         QFileDialog, QCheckBox, QLabel, QMenuBar, QAction, QDialog, QTableWidget, \
         QTableWidgetItem, QAbstractItemView
+    # noinspection PyUnresolvedReferences
     from PySide2.QtGui import QColor
     # noinspection PyUnresolvedReferences
     from PySide2.QtCore import Slot, Qt, QCoreApplication, QSize, QSettings
@@ -286,13 +287,13 @@ class MainWindow(QWidget):
             for i, pi in enumerate(self.current_params_in_covmat):
                 for j, pj in enumerate(self.current_params_in_covmat):
                     self.covmat_table.setItem(
-                        i, j, QTableWidgetItem("%g" % self.current_covmat[i,j]))
+                        i, j, QTableWidgetItem("%g" % self.current_covmat[i, j]))
                     if i != j:
-                        color = [256 * c for c in cmap_corr(corrmat[i,j]/2 + 0.5)[:3]]
+                        color = [256 * c for c in cmap_corr(corrmat[i, j] / 2 + 0.5)[:3]]
                     else:
                         color = [255.99] * 3
                     self.covmat_table.item(i, j).setBackground(QColor(*color))
-                    self.covmat_table.item(i, j).setForeground(QColor(0,0,0))
+                    self.covmat_table.item(i, j).setForeground(QColor(0, 0, 0))
         QApplication.restoreOverrideCursor()
 
     def save_covmat_txt(self, file_handle=None):
@@ -304,7 +305,7 @@ class MainWindow(QWidget):
             file_handle = io.BytesIO()
             return_txt = True
         np.savetxt(file_handle, self.current_covmat,
-                   header = " ".join(self.current_params_in_covmat))
+                   header=" ".join(self.current_params_in_covmat))
         if return_txt:
             return file_handle.getvalue().decode()
 
@@ -367,7 +368,7 @@ class DefaultsDialog(QWidget):
         defaults_txt = get_default_info(module, kind, return_yaml=True)
         _indent = "  "
         defaults_txt = (kind + ":\n" + _indent + module + ":\n" +
-                        2 * _indent + ("\n" + 2* _indent).join(defaults_txt.split("\n")))
+                        2 * _indent + ("\n" + 2 * _indent).join(defaults_txt.split("\n")))
         from cobaya.yaml import yaml_load
         self.display["python"].setText(pformat(yaml_load(defaults_txt)))
         self.display["yaml"].setText(defaults_txt)

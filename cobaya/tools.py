@@ -777,7 +777,7 @@ def get_translated_params(params_info, params_list):
     """
     translations = {}
     for p, pinfo in params_info.items():
-        renames = set([p]).union(set(str_to_list(pinfo.get(partag.renames, []))))
+        renames = {p}.union(set(str_to_list(pinfo.get(partag.renames, []))))
         try:
             trans = next(r for r in renames if r in params_list)
             translations[p] = trans
@@ -810,7 +810,7 @@ def get_cache_path():
             os.makedirs(cache_path)
     except Exception as e:
         raise LoggedError(
-            self.log, "Could not create cache folder %r. Reason: %r", cache_path, str(e))
+            log, "Could not create cache folder %r. Reason: %r", cache_path, str(e))
     return cache_path
 
 
@@ -837,7 +837,7 @@ def get_config_path():
             os.makedirs(config_path)
     except Exception as e:
         raise LoggedError(
-            self.log, "Could not get config folder %r. Reason: %r", config_path, str(e))
+            log, "Could not get config folder %r. Reason: %r", config_path, str(e))
     return config_path
 
 
@@ -926,5 +926,5 @@ def sort_cosmetic(info):
     for k in _dump_sort_cosmetic:
         if k in info:
             sorted_info[k] = info[k]
-    sorted_info.update({k:v for k,v in info.items() if k not in sorted_info})
+    sorted_info.update({k: v for k, v in info.items() if k not in sorted_info})
     return sorted_info

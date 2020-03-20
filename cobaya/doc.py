@@ -70,7 +70,7 @@ def doc_script():
             arguments.kind = arguments.kind[0].lower()
             if arguments.kind not in kinds:
                 print("Kind %r not recognized. Try one of %r" % (
-                arguments.kind, tuple(kinds)))
+                    arguments.kind, tuple(kinds)))
                 raise ValueError
         else:
             arguments.kind = get_kind(arguments.module)

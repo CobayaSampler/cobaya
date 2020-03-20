@@ -18,7 +18,8 @@ from cobaya.conventions import _output_prefix, _path_install, _yaml_extensions
 from cobaya.conventions import kinds, _params
 from cobaya.input import get_used_modules, merge_info, update_info
 from cobaya.install import install as install_reqs
-from cobaya.grid_tools import batchjob, sort_cosmetic, warn_deprecation
+from cobaya.tools import sort_cosmetic
+from cobaya.grid_tools import batchjob, warn_deprecation
 from cobaya.cosmo_input import create_input, _get_best_covmat
 from cobaya.parameterization import is_sampled_param
 

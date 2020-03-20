@@ -12,7 +12,7 @@ from typing import NamedTuple, Sequence, Mapping
 import logging
 
 # Local
-from cobaya.conventions import kinds, _prior, _timing, _aliases
+from cobaya.conventions import kinds, _prior, _timing
 from cobaya.conventions import _params, _overhead_time, _provides
 from cobaya.conventions import _path_install, _debug, _debug_default, _debug_file
 from cobaya.conventions import _input_params, _output_params, _chi2, _separator

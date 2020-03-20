@@ -133,7 +133,6 @@ def yaml_load_file(file_name, yaml_text=None):
 # Custom dumper ##########################################################################
 
 def yaml_dump(info, stream=None, Dumper=yaml.Dumper, **kwds):
-
     class CustomDumper(Dumper):
         pass
 

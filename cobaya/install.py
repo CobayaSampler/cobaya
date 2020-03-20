@@ -16,11 +16,11 @@ from pkg_resources import parse_version
 
 # Local
 from cobaya.log import logger_setup, LoggedError
-from cobaya.tools import create_banner, warn_deprecation, get_class, load_config_file, \
+from cobaya.tools import create_banner, warn_deprecation, get_class, \
     write_modules_path_in_config_file
 from cobaya.input import get_used_modules, get_kind
 from cobaya.conventions import _module_path, _code, _data, _external, _force
-from cobaya.conventions import _modules_path_arg, _path_install, _modules_path_env
+from cobaya.conventions import _modules_path_arg, _modules_path_env
 from cobaya.conventions import _yaml_extensions, _install_skip_env
 from cobaya.mpi import set_mpi_disabled
 from cobaya.tools import resolve_modules_path

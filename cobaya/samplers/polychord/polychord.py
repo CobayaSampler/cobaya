@@ -14,7 +14,6 @@ import inspect
 from itertools import chain
 from random import random
 from typing import Any
-import pkg_resources
 from tempfile import gettempdir
 import re
 
@@ -388,7 +387,8 @@ class polychord(Sampler):
     @classmethod
     def get_version(cls):
         return None
-#        return pkg_resources.get_distribution("pypolychord").version
+
+    #        return pkg_resources.get_distribution("pypolychord").version
 
     @classmethod
     def get_path(cls, path):

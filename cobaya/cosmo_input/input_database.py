@@ -9,7 +9,6 @@
 
 # Global
 from copy import deepcopy
-import os
 
 # Local
 from cobaya.conventions import kinds, partag as p, _params
