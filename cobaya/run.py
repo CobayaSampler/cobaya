@@ -89,6 +89,10 @@ def run(info):
         # TODO -- maybe also re-dump model info, now possibly with measured speeds
         # (waiting until the camb.transfers issue is solved)
         output.check_and_dump_info(None, updated_info, check_compatible=False)
+        if info.get("test", False):
+            logger_run.info("Test initialization successful! "
+                            "You can probably run now without `--test`.")
+            return updated_info, sampler
         # Run the sampler
         sampler.run()
     return updated_info, sampler
@@ -117,6 +121,8 @@ def run_script():
     continuation.add_argument("-" + _force[0], "--" + _force, action="store_true",
                               help="Overwrites previous output, if it exists "
                                    "(use with care!)")
+    parser.add_argument("--test", action="store_true",
+                        help="Initialize model and sampler, and exit.")
     parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument("--no-mpi", action='store_true',
                         help="disable MPI when mpi4py installed but MPI does "
@@ -152,6 +158,7 @@ def run_script():
     info[_debug] = getattr(args, _debug) or info.get(_debug, _debug_default)
     info[_resume] = getattr(args, _resume, _resume_default)
     info[_force] = getattr(args, _force, False)
+    info["test"] = getattr(args, "test", False)
     if _post in info:
         post(info)
     else:
