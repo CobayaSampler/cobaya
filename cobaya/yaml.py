@@ -12,11 +12,13 @@ Customization of YAML's loaded and dumper:
 """
 # Global
 import os
+import re
 import yaml
+import numpy as np
 from yaml.resolver import BaseResolver
 from yaml.constructor import ConstructorError
-import re
-import numpy as np
+from collections import OrderedDict
+from typing import Mapping
 
 # Local
 from cobaya.tools import prepare_comment, recursive_update
@@ -142,6 +144,8 @@ def yaml_dump(info, stream=None, Dumper=yaml.Dumper, **kwds):
             yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, data.items())
 
     CustomDumper.add_representer(dict, _dict_representer)
+    CustomDumper.add_representer(Mapping, _dict_representer)
+    CustomDumper.add_representer(OrderedDict, _dict_representer)
 
     # Dump tuples as yaml "sequences"
     def _tuple_representer(dumper, data):
