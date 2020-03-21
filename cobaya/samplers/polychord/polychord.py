@@ -197,7 +197,8 @@ class polychord(Sampler):
                 logpriors=point[self.n_sampled + self.n_derived:
                                 self.n_sampled + self.n_derived + self.n_priors],
                 loglikes=point[self.n_sampled + self.n_derived + self.n_priors:
-                               self.n_sampled + self.n_derived + self.n_priors + self.n_likes])
+                               self.n_sampled + self.n_derived + self.n_priors +
+                               self.n_likes])
         for logweight, point in zip(logweights[self.last_point_callback:],
                                     dead_points[self.last_point_callback:]):
             self.dead.add(
@@ -207,7 +208,8 @@ class polychord(Sampler):
                 logpriors=point[self.n_sampled + self.n_derived:
                                 self.n_sampled + self.n_derived + self.n_priors],
                 loglikes=point[self.n_sampled + self.n_derived + self.n_priors:
-                               self.n_sampled + self.n_derived + self.n_priors + self.n_likes])
+                               self.n_sampled + self.n_derived + self.n_priors +
+                               self.n_likes])
         self.logZ, self.logZstd = logZ, logZstd
         # Callback function
         if self.callback_function is not None:

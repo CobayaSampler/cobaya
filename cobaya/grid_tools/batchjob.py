@@ -44,7 +44,8 @@ def readobject(directory=None):
     try:
         config_dir = os.path.abspath(directory) + os.sep + 'config'
         if os.path.exists(config_dir):
-            # set path in case using functions defined and hence imported from in settings file
+            # set path in case using functions defined
+            # and hence imported from in settings file
             sys.path.insert(0, config_dir)
         with open(fname, 'rb') as inp:
             grid = pickle.load(inp)
@@ -253,9 +254,11 @@ class JobItem(PropertiesItem):
 
     def iniFile(self, variant=''):
         if not self.isImportanceJob:
-            return self.batchPath + self.iniFile_path + os.sep + self.name + variant + self.iniFile_ext
+            return (self.batchPath + self.iniFile_path + os.sep +
+                    self.name + variant + self.iniFile_ext)
         else:
-            return self.batchPath + 'postIniFiles' + os.sep + self.name + variant + self.iniFile_ext
+            return (self.batchPath + 'postIniFiles' + os.sep +
+                    self.name + variant + self.iniFile_ext)
 
     def propertiesIniFile(self):
         return self.chainRoot + '.properties.ini'
@@ -431,7 +434,8 @@ class JobItem(PropertiesItem):
             self.distRoot + '.margestats'))
 
     def parentChanged(self):
-        return not self.chainExists() or self.chainFileDate() < self.parent.chainFileDate()
+        return (not self.chainExists() or
+                self.chainFileDate() < self.parent.chainFileDate())
 
     def R(self):
         if self.result_converge is None:

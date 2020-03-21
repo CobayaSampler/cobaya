@@ -74,8 +74,8 @@ def install(*infos, **kwargs):
                             "Nothing to do.", component)
                 continue
             try:
-                imported_class = \
-                    get_class(component, kind, component_path=info.pop(_component_path, None))
+                imported_class = get_class(component, kind,
+                                           component_path=info.pop(_component_path, None))
             except ImportError as e:
                 log.error("Component '%s' not recognized. [%s]." % (component, e))
                 failed_components += ["%s:%s" % (kind, component)]
@@ -133,8 +133,8 @@ def install(*infos, **kwargs):
     if failed_components:
         bullet = "\n - "
         raise LoggedError(
-            log, "The installation (or installation test) of some component(s) has failed: "
-                 "%s\nCheck output of the installer of each component above "
+            log, "The installation (or installation test) of some component(s) has "
+                 "failed: %s\nCheck output of the installer of each component above "
                  "for precise error info.\n",
             bullet + bullet.join(failed_components))
     # Set the installation path in the global config file
@@ -272,7 +272,8 @@ def install_script():
                         metavar="/packages/path", default=[None],
                         help="Desired path where to install external packagess. "
                              "Optional if one has been set globally or as an env variable"
-                             " (run with '--show_%s' to check)." % _packages_path_arg_posix)
+                             " (run with '--show_%s' to check)." %
+                             _packages_path_arg_posix)
     # MARKED FOR DEPRECATION IN v3.0
     modules = "modules"
     parser.add_argument("-" + modules[0], "--" + modules,

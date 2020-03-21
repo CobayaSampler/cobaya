@@ -53,8 +53,8 @@ class B2(Theory):
         return {'Aderived', 'Aresult', 'Bpar'}
 
     def calculate(self, state, want_derived=True, **params_values_dict):
-        state['Bout'] = (self.provider.get_param('Aderived') * params_values_dict['Bpar']
-                         , self.provider.get_Aresult())
+        state['Bout'] = (self.provider.get_param('Aderived') * params_values_dict['Bpar'],
+                         self.provider.get_Aresult())
 
         if want_derived:
             state['derived'] = {'Bderived': 10}

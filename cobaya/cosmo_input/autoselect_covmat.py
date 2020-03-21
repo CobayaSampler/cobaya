@@ -19,8 +19,9 @@ import logging
 
 log = logging.getLogger(__name__.split(".")[-1])
 
-covmat_folders = ["{%s}/data/planck_supp_data_and_covmats/covmats/" % _packages_path,
-                  "{%s}/data/bicep_keck_2015/BK15_cosmomc/planck_covmats/" % _packages_path]
+covmat_folders = [
+    "{%s}/data/planck_supp_data_and_covmats/covmats/" % _packages_path,
+    "{%s}/data/bicep_keck_2015/BK15_cosmomc/planck_covmats/" % _packages_path]
 
 # Global instance of loaded database, for fast calls to get_best_covmat in GUI
 _loaded_covmats_database = None
@@ -29,7 +30,8 @@ _loaded_covmats_database = None
 def get_covmat_database(packages_path, cached=True):
     # Get folders with corresponding components installed
     installed_folders = [folder for folder in covmat_folders
-                         if os.path.exists(folder.format(**{_packages_path: packages_path}))]
+                         if os.path.exists(
+                             folder.format(**{_packages_path: packages_path}))]
     covmats_database_fullpath = os.path.join(get_cache_path(), _covmats_file)
     # Check if there is a usable cached one
     if cached:
@@ -52,7 +54,8 @@ def get_covmat_database(packages_path, cached=True):
     # Create it (again)
     covmat_database = []
     for folder in installed_folders:
-        folder_full = folder.format(**{_packages_path: packages_path}).replace("/", os.sep)
+        folder_full = folder.format(
+            **{_packages_path: packages_path}).replace("/", os.sep)
         for filename in os.listdir(folder_full):
             try:
                 with open(os.path.join(folder_full, filename), encoding="utf-8") as covmat:
@@ -146,7 +149,7 @@ def _get_best_covmat(packages_path, params_info, likelihoods_info, cached=True):
                   "\n - ".join([b["name"] for b in best_p_l_sp_sn]))
     # if there is more than one (unlikely), just pick one at random
     if len(best_p_l_sp_sn) > 1:
-        log.warning("WARNING: >1 possible best covmats: %r" %
+        log.warning("WARNING: >1 possible best covmats: %r",
                     [b["name"] for b in best_p_l_sp_sn])
     return best_p_l_sp_sn[choice(range(len(best_p_l_sp_sn)))].copy()
 

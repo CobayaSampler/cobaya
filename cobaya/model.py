@@ -154,8 +154,7 @@ class Model(HasLogger):
         # Assign input/output parameters
         self._assign_params(info_likelihood, info_theory)
         self._set_dependencies_and_providers()
-        # Add to the updated info some values which are only available after initialisation
-        keys = [kinds.likelihood] + ([kinds.theory] if self.theory else [])
+        # Add to the updated info some values that are only available after initialisation
         self._updated_info = recursive_update(
             self._updated_info, self.get_versions(add_version_field=True))
         # Overhead per likelihood evaluation, approximately ind from # input params

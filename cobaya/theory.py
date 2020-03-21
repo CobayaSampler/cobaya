@@ -300,8 +300,9 @@ class TheoryCollection(ComponentCollection):
                                               "Theory %s is not a Theory subclass", name)
                     else:
                         theory_class = get_class(name, kind=kinds.theory)
-                    self.add_instance(name, theory_class(info, packages_path=packages_path,
-                                                         timing=timing, name=name))
+                    self.add_instance(
+                        name, theory_class(
+                            info, packages_path=packages_path, timing=timing, name=name))
 
     def __getattribute__(self, name):
         if not name.startswith('_'):

@@ -23,7 +23,7 @@ from cobaya.input import get_used_components, load_input
 from cobaya.yaml import yaml_dump
 from cobaya.install import install
 from cobaya.conventions import _packages_path_container, _products_path, _code, _data
-from cobaya.conventions import _packages_path_env
+from cobaya.conventions import _packages_path_env, _packages_path
 from cobaya.conventions import _requirements_file, _help_file, _packages_path_arg
 from cobaya.tools import warn_deprecation
 

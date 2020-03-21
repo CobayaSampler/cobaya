@@ -8,21 +8,22 @@
 
 # Global
 import os
+import inspect
+import logging
 from copy import deepcopy
 from importlib import import_module
-import inspect
 from itertools import chain
-import pkg_resources
 from functools import reduce
 from typing import Mapping
 from collections import defaultdict
+import pkg_resources
 
 # Local
 from cobaya.conventions import _products_path, _packages_path, _resume, _force, _params, \
     partag, _external, _output_prefix, _debug, _debug_file, _auto_params, _prior, \
-    kinds, _provides, _requires, _input_params, _output_params, _component_path, _aliases,\
-    _yaml_extensions, reserved_attributes, empty_dict, _get_chi2_name, _get_chi2_label, \
-    _test_run
+    kinds, _provides, _requires, _input_params, _output_params, _component_path, \
+    _aliases, _yaml_extensions, reserved_attributes, empty_dict, _get_chi2_name, \
+    _get_chi2_label, _test_run
 from cobaya.tools import recursive_update, str_to_list, get_base_classes, \
     fuzzy_match, deepcopy_where_possible, get_class, get_kind
 from cobaya.yaml import yaml_load_file, yaml_dump
@@ -31,8 +32,6 @@ from cobaya.parameterization import expand_info_param
 from cobaya.mpi import share_mpi, is_main_process
 
 # Logger
-import logging
-
 log = logging.getLogger(__name__.split(".")[-1])
 
 
@@ -154,9 +153,9 @@ def update_info(info):
                         component_base_classes[block].get_defaults())
             else:
                 component_path = input_block[component].get(_component_path, None)
-                default_class_info = get_default_info(component, block,
-                                                      component_path=component_path,
-                                                      input_options=input_block[component])
+                default_class_info = get_default_info(
+                    component, block,
+                    component_path=component_path, input_options=input_block[component])
             updated[component] = default_class_info or {}
             # Update default options with input info
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
@@ -573,8 +572,8 @@ class HasDefaults:
         If keyword `return_yaml` is set to True, it returns literally that,
         whereas if False (default), it returns the corresponding Python dict.
 
-        Note that in external components installed as zip_safe=True packages files cannot be
-        accessed directly.
+        Note that in external components installed as zip_safe=True packages files cannot
+        be accessed directly.
         In this case using !default .yaml includes currently does not work.
 
         Also note that if you return a dictionary it may be modified (return a deep copy

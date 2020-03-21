@@ -13,7 +13,8 @@ def process_packages_path(packages_path):
         if os.path.exists(os.path.join(os.getcwd(), '..', 'packages_path')):
             packages_path = os.path.join('..', 'packages_path')
     assert packages_path, "I need a packages folder!"
-    return packages_path if os.path.isabs(packages_path) else os.path.join(os.getcwd(), packages_path)
+    return (packages_path if os.path.isabs(packages_path)
+            else os.path.join(os.getcwd(), packages_path))
 
 
 @contextmanager

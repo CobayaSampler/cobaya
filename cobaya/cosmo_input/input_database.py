@@ -44,7 +44,8 @@ primordial = dict([
                 (p.proposal, 0.002), (p.latex, r"n_\mathrm{s}")]))])})])
 primordial.update(dict([
     ["SFSR_DESpriors", {
-        _desc: "Adiabatic scalar perturbations, power law + running spectrum -- DESpriors",
+        _desc: "Adiabatic scalar perturbations, power law + running spectrum "
+               "-- DESpriors",
         kinds.theory: {_camb: None, _classy: None},
         _params: dict([
             ["As_1e9", dict([
@@ -684,7 +685,7 @@ for name, pre in preset.items():
              field not in pre})
         pre.update(default_sampler)
 
-# BASIC INSTALLATION ######################################################################
+# BASIC INSTALLATION #####################################################################
 install_basic = {
     kinds.theory: {_camb: None, _classy: None},
     kinds.likelihood: {

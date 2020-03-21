@@ -8,7 +8,8 @@ from cobaya.tools import resolve_packages_path
 
 
 def pytest_addoption(parser):
-    parser.addoption("--" + _packages_path_arg, action="store", default=resolve_packages_path(),
+    parser.addoption("--" + _packages_path_arg, action="store",
+                     default=resolve_packages_path(),
                      help="Path to folder of automatic installation of packages")
 
 
@@ -18,7 +19,8 @@ def packages_path(request):
     if not cmd_packages_path:
         raise ValueError("Could not determine packages installation path. "
                          "Either define it in the env variable %r, or pass it as an "
-                         "argument with `--%s`" % (_packages_path_env, _packages_path_arg))
+                         "argument with `--%s`" %
+                         (_packages_path_env, _packages_path_arg))
     return cmd_packages_path
 
 

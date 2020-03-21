@@ -143,7 +143,8 @@ def run_script():
     arguments = parser.parse_args()
     if arguments.no_mpi:
         set_mpi_disabled()
-    if any((os.path.splitext(f)[0] in ("input", "updated")) for f in arguments.input_file):
+    if any((os.path.splitext(f)[0] in ("input", "updated"))
+           for f in arguments.input_file):
         raise ValueError("'input' and 'updated' are reserved file names. "
                          "Please, use a different one.")
     load_input = import_MPI(".input", "load_input")

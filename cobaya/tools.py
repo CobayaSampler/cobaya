@@ -9,34 +9,34 @@
 # Global
 import os
 import sys
-from copy import deepcopy
-from importlib import import_module
-import numpy as np  # don't delete: necessary for get_external_function
-import pandas as pd
-from ast import parse
+import logging
+import platform
 import warnings
 import inspect
+import pandas as pd
+import numpy as np  # don't delete: necessary for get_external_function
+from importlib import import_module
+from copy import deepcopy
 from packaging import version
 from itertools import permutations
 from typing import Mapping
-import platform
+from inspect import cleandoc, getfullargspec
+from math import gcd
+from ast import parse
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore")
     # Suppress message about optional dependency
     from fuzzywuzzy import process as fuzzy_process
-from inspect import cleandoc, getfullargspec
-from math import gcd
 
 # Local
 from cobaya import __obsolete__
 from cobaya.conventions import _package, subfolders, partag, kinds, _packages_path, \
-    _packages_path_config_file, _packages_path_env, _packages_path_arg, _dump_sort_cosmetic
+    _packages_path_config_file, _packages_path_env, _packages_path_arg, \
+    _dump_sort_cosmetic
 from cobaya.log import LoggedError
 
-# Logger
-import logging
-
+# Set up logger
 log = logging.getLogger(__name__.split(".")[-1])
 
 
@@ -866,13 +866,14 @@ def write_config_file(config_info, append=True):
         yaml_dump_file(os.path.join(get_config_path(), _packages_path_config_file),
                        info, error_if_exists=False)
     except Exception as e:
-        log.error("Could not write the external packages installation path into the config file. "
-                  "Reason: %r", str(e))
+        log.error("Could not write the external packages installation path into the "
+                  "config file. Reason: %r", str(e))
 
 
 def load_packages_path_from_config_file():
     """
-    Returns the external packages path stored in the config file, or `None` if it can't be found.
+    Returns the external packages path stored in the config file,
+    or `None` if it can't be found.
     """
     return load_config_file().get(_packages_path)
 
@@ -948,8 +949,8 @@ def sort_cosmetic(info):
 def check_deprecated_modules_path(info):
     if info.get("modules"):
         log.warning("*DEPRECATION*: The input field 'modules' will be deprecated in "
-                       "favor of %r in the next version. Please, use that one instead.",
-                       _packages_path)
+                    "favor of %r in the next version. Please, use that one instead.",
+                    _packages_path)
         # BEHAVIOUR TO BE REPLACED BY ERROR:
         if not info.get(_packages_path):
             info[_packages_path] = info["modules"]
