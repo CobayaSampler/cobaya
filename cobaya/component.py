@@ -4,7 +4,7 @@ from packaging import version
 from cobaya.log import HasLogger, LoggedError
 from cobaya.input import HasDefaults
 from cobaya.conventions import _version, empty_dict
-from cobaya.tools import resolve_modules_path
+from cobaya.tools import resolve_packages_path
 
 
 class Timer:
@@ -58,7 +58,7 @@ class CobayaComponent(HasLogger, HasDefaults):
     _at_resume_prefer_new = [_version]
     _at_resume_prefer_old = []
 
-    def __init__(self, info=empty_dict, name=None, timing=None, path_install=None,
+    def __init__(self, info=empty_dict, name=None, timing=None, packages_path=None,
                  initialize=True, standalone=True):
         if standalone:
             # TODO: would probably be more natural if defaults were always read here
@@ -68,7 +68,7 @@ class CobayaComponent(HasLogger, HasDefaults):
 
         self.set_instance_defaults()
         self._name = name or self.get_qualified_class_name()
-        self.path_install = path_install or resolve_modules_path()
+        self.packages_path = packages_path or resolve_packages_path()
         # set attributes from the info (from yaml file or directly input dictionary)
         for k, value in info.items():
             try:

@@ -32,7 +32,7 @@ from typing import Mapping
 from itertools import chain
 
 # Local
-from cobaya.conventions import kinds, _external, _module_path, empty_dict, \
+from cobaya.conventions import kinds, _external, _component_path, empty_dict, \
     _input_params, _output_params
 from cobaya.tools import get_class, get_external_function, getfullargspec, str_to_list
 from cobaya.log import LoggedError
@@ -67,11 +67,11 @@ class Likelihood(Theory, LikelihoodInterface):
     :class:`theory.Theory` class by adding functions to return likelihoods functions
     (logp function for a given point)."""
 
-    def __init__(self, info=empty_dict, name=None, timing=None, path_install=None,
+    def __init__(self, info=empty_dict, name=None, timing=None, packages_path=None,
                  initialize=True, standalone=True):
         self.delay = 0
         super().__init__(info, name=name, timing=timing,
-                         path_install=path_install, initialize=initialize,
+                         packages_path=packages_path, initialize=initialize,
                          standalone=standalone)
         # Make sure `types` is a list of data types, for aggregated chi2
         self.type = str_to_list(getattr(self, "type", []))
@@ -184,7 +184,7 @@ class LikelihoodCollection(ComponentCollection):
     by their names.
     """
 
-    def __init__(self, info_likelihood, path_install=None, timing=None, theory=None):
+    def __init__(self, info_likelihood, packages_path=None, timing=None, theory=None):
         super().__init__()
         self.set_logger("likelihood")
         self.theory = theory
@@ -204,7 +204,7 @@ class LikelihoodCollection(ComponentCollection):
                                                     "a subclass of Theory and have"
                                                     "logp, get_current_logp functions")
                     self.add_instance(name,
-                                      info[_external](info, path_install=path_install,
+                                      info[_external](info, packages_path=packages_path,
                                                       timing=timing,
                                                       standalone=False,
                                                       name=name))
@@ -214,8 +214,8 @@ class LikelihoodCollection(ComponentCollection):
                                                                        timing=timing))
             else:
                 like_class = get_class(name, kind=kinds.likelihood,
-                                       module_path=info.pop(_module_path, None))
-                self.add_instance(name, like_class(info, path_install=path_install,
+                                       component_path=info.pop(_component_path, None))
+                self.add_instance(name, like_class(info, packages_path=packages_path,
                                                    timing=timing, standalone=False,
                                                    name=name))
 

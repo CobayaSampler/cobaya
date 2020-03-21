@@ -17,7 +17,7 @@ max_runs = 3
 
 
 @flaky(max_runs=max_runs, min_passes=1)
-def test_mcmc(tmpdir, modules=None):
+def test_mcmc(tmpdir, packages_path=None):
     dimension = 3
     # Random initial proposal
     comm = MPI.COMM_WORLD

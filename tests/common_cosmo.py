@@ -3,18 +3,18 @@ Body of the best-fit test for cosmological likelihoods
 """
 from copy import deepcopy
 
-from cobaya.conventions import kinds, _params, _debug, _path_install, empty_dict
+from cobaya.conventions import kinds, _params, _debug, _packages_path, empty_dict
 from cobaya.model import get_model
 from cobaya.input import update_info
 from cobaya.cosmo_input import create_input, planck_base_model
 from cobaya.tools import recursive_update
-from .common import process_modules_path
+from .common import process_packages_path
 
 # Tolerance for the tests of the derived parameters, in units of the sigma of Planck 2015
 tolerance_derived = 0.055
 
 
-def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
+def body_of_test(packages_path, best_fit, info_likelihood, info_theory, ref_chi2,
                  best_fit_derived=None, extra_model=empty_dict):
     # Create base info
     theo = list(info_theory)[0]
@@ -37,7 +37,7 @@ def body_of_test(modules, best_fit, info_likelihood, info_theory, ref_chi2,
     # Notice that update_info adds an aux internal-only _params property to the likes
     for lik in info[kinds.likelihood]:
         info[kinds.likelihood][lik].pop(_params, None)
-    info[_path_install] = process_modules_path(modules)
+    info[_packages_path] = process_packages_path(packages_path)
     # Ask for debug output and force stopping at any error
     info[_debug] = True
     for k in [kinds.theory, kinds.likelihood]:

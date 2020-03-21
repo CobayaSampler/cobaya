@@ -44,7 +44,7 @@ You can specify any parameter that CLASS understands in the ``params`` block:
 
 If you want to use your own version of CLASS, you need to specify its location with a
 ``path`` option inside the ``classy`` block. If you do not specify a ``path``,
-CLASS will be loaded from the automatic-install ``modules`` folder, if specified, or
+CLASS will be loaded from the automatic-install ``packages_path`` folder, if specified, or
 otherwise imported as a globally-installed Python package. Cobaya will print at
 initialisation where it is getting CLASS from.
 
@@ -80,7 +80,7 @@ Installation
 
    If the installation folder of CLASS is moved, due to CLASS hard-coding some folders,
    CLASS needs to be recompiled, either manually or by deleting the CLASS installation and
-   repeating the ``cobaya-install`` command in the renamed *modules* folder.
+   repeating the ``cobaya-install`` command in the renamed *packages* folder.
 
    If you do not recompile CLASS, it causes a memory leak (`thanks to Stefan Heimersheim
    <https://github.com/CobayaSampler/cobaya/issues/10>`_).
@@ -169,9 +169,9 @@ class classy(BoltzmannBase):
 
     def initialize(self):
         """Importing CLASS from the correct path, if given, and if not, globally."""
-        # If path not given, try using general path to modules
-        if not self.path and self.path_install:
-            self.path = self.get_path(self.path_install)
+        # If path not given, try using general path to external packages
+        if not self.path and self.packages_path:
+            self.path = self.get_path(self.packages_path)
         if self.path:
             self.log.info("Importing *local* classy from " + self.path)
             classy_build_path = os.path.join(self.path, "python", "build")
@@ -182,7 +182,7 @@ class classy(BoltzmannBase):
                 classy_build_path = os.path.join(classy_build_path, post)
                 if not os.path.exists(classy_build_path):
                     # If path was given as an install path, try to load global one anyway
-                    if self.path_install:
+                    if self.packages_path:
                         self.log.info("Importing *global* CLASS (because not compiled?).")
                     else:
                         raise StopIteration

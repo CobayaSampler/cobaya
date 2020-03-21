@@ -15,7 +15,7 @@ import logging
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
-from cobaya.conventions import _path_install, kinds
+from cobaya.conventions import _packages_path, kinds
 from cobaya.input import get_default_info
 from cobaya.install import pip_install, download_file
 from cobaya.tools import are_different_params_lists, create_banner
@@ -53,13 +53,13 @@ class _planck_clik_prototype(Likelihood):
                 has_clik = False
         if not has_clik:
             if not self.path:
-                if self.path_install:
-                    self.path_clik = os.path.join(self.path_install, "code", code_path)
+                if self.packages_path:
+                    self.path_clik = os.path.join(self.packages_path, "code", code_path)
                 else:
                     raise LoggedError(
                         self.log, "No path given to the Planck likelihood. Set the "
                                   "likelihood property 'path' or the common property "
-                                  "'%s'.", _path_install)
+                                  "'%s'.", _packages_path)
             else:
                 self.path_clik = self.path
             self.log.info("Importing clik from %s", self.path_clik)
@@ -69,7 +69,7 @@ class _planck_clik_prototype(Likelihood):
         # Loading the likelihood data
         if not os.path.isabs(self.clik_file):
             self.path_data = getattr(self, "path_data", os.path.join(
-                self.path or self.path_install, "data", data_path))
+                self.path or self.packages_path, "data", data_path))
             self.clik_file = os.path.join(self.path_data, self.clik_file)
         # Differences in the wrapper for lensing and non-lensing likes
         self.lensing = clik.try_lensing(self.clik_file)
@@ -237,7 +237,7 @@ def get_release(name):
 
 
 def get_clik_source_folder(starting_path):
-    """Safe source install folder: crawl modules/code/planck until >1 subfolders."""
+    """Safe source install folder: crawl packages/code/planck until >1 subfolders."""
     source_dir = starting_path
     while True:
         folders = [f for f in os.listdir(source_dir)

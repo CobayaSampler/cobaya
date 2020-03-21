@@ -9,11 +9,11 @@ from itertools import chain
 from typing import Mapping
 
 from cobaya.conventions import kinds, _output_prefix, empty_dict
-from cobaya.conventions import _debug, _debug_file, _path_install, partag
+from cobaya.conventions import _debug, _debug_file, _packages_path, partag
 from cobaya.likelihoods.gaussian_mixture import info_random_gaussian_mixture
 from cobaya.tools import KL_norm
 from cobaya.run import run
-from .common import process_modules_path, is_travis
+from .common import process_packages_path, is_travis
 
 KL_tolerance = 0.05
 logZ_nsigmas = 2
@@ -23,7 +23,7 @@ distance_factor = 4
 
 
 def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
-                 modules=None):
+                 packages_path=None):
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     # Info of likelihood and prior
@@ -54,8 +54,8 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
     info[_debug_file] = None
     # TODO: this looks weird/bug:?
     info[_output_prefix] = getattr(tmpdir, "realpath()", lambda: tmpdir)()
-    if modules:
-        info[_path_install] = process_modules_path(modules)
+    if packages_path:
+        info[_packages_path] = process_packages_path(packages_path)
     # Delay to one chain to check that MPI communication of the sampler is non-blocking
     #    if rank == 1:
     #        info["likelihood"]["gaussian_mixture"]["delay"] = 0.1
@@ -130,7 +130,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
                     products["logZ"] + logZ_nsigmas * products["logZstd"])
 
 
-def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False, modules=None):
+def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False, packages_path=None):
     # #dimensions and speed ratio mutually prime (e.g. 2,3,5)
     dim0, dim1 = 5, 2
     speed0, speed1 = 1, 10
@@ -187,7 +187,7 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False, modules=
             [over1, params1]]
     print("Parameter order:", list(info["params"]))
     # info["debug"] = True
-    info["modules"] = modules
+    info["packages_path"] = packages_path
     # Adjust number of samples
     n_cycles_all_params = 10
     if sampler_name == "mcmc":

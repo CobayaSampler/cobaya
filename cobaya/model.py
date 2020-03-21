@@ -13,7 +13,7 @@ import logging
 
 # Local
 from cobaya.conventions import kinds, _prior, _timing, _aliases, _params, _provides, \
-    _overhead_time, _path_install, _debug, _debug_default, _debug_file, _input_params, \
+    _overhead_time, _packages_path, _debug, _debug_default, _debug_file, _input_params, \
     _output_params, _chi2, _separator, _get_chi2_name, _input_params_prefix, \
     _output_params_prefix, _requires
 from cobaya.input import update_info
@@ -94,13 +94,13 @@ def get_model(info):
     # Inform about ignored info keys
     ignored_info = {}
     for k in list(info):
-        if k not in [_params, kinds.likelihood, _prior, kinds.theory, _path_install,
+        if k not in [_params, kinds.likelihood, _prior, kinds.theory, _packages_path,
                      _timing]:
             ignored_info[k] = info.pop(k)
     if ignored_info:
         logging.getLogger(__name__.split(".")[-1]).warning(
             "Ignored blocks/options: %r", list(ignored_info))
-    # Create the updated input information, including defaults for each module.
+    # Create the updated input information, including defaults for each component.
     updated_info = update_info(info)
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
         logging.getLogger(__name__.split(".")[-1]).debug(
@@ -109,7 +109,7 @@ def get_model(info):
     # Initialize the parameters and posterior
     return Model(updated_info[_params], updated_info[kinds.likelihood],
                  updated_info.get(_prior), updated_info.get(kinds.theory),
-                 path_install=info.get(_path_install), timing=updated_info.get(_timing),
+                 packages_path=info.get(_packages_path), timing=updated_info.get(_timing),
                  stop_at_error=info.get("stop_at_error", False))
 
 
@@ -124,7 +124,7 @@ class Model(HasLogger):
     """
 
     def __init__(self, info_params, info_likelihood, info_prior=None, info_theory=None,
-                 path_install=None, timing=None, allow_renames=True, stop_at_error=False,
+                 packages_path=None, timing=None, allow_renames=True, stop_at_error=False,
                  post=False, prior_parameterization=None):
         self.set_logger(lowercase=True)
         self._updated_info = {
@@ -133,7 +133,7 @@ class Model(HasLogger):
         if not self._updated_info[kinds.likelihood]:
             raise LoggedError(self.log, "No likelihood requested!")
         for k, v in ((_prior, info_prior), (kinds.theory, info_theory),
-                     (_path_install, path_install), (_timing, timing)):
+                     (_packages_path, packages_path), (_timing, timing)):
             if v not in (None, {}):
                 self._updated_info[k] = deepcopy_where_possible(v)
         self.parameterization = Parameterization(self._updated_info[_params],
@@ -143,11 +143,11 @@ class Model(HasLogger):
                            self._updated_info.get(_prior, None))
         self.timing = timing
         info_theory = self._updated_info.get(kinds.theory)
-        self.theory = TheoryCollection(info_theory, path_install=path_install,
+        self.theory = TheoryCollection(info_theory, packages_path=packages_path,
                                        timing=timing)
         info_likelihood = self._updated_info[kinds.likelihood]
         self.likelihood = LikelihoodCollection(info_likelihood, theory=self.theory,
-                                               path_install=path_install, timing=timing)
+                                               packages_path=packages_path, timing=timing)
         if stop_at_error:
             for component in self.components:
                 component.stop_at_error = stop_at_error
@@ -1019,6 +1019,7 @@ class Model(HasLogger):
         self.mpi_info("Measuring speeds... (this may take a few seconds)")
         # call all components (at least) a second time
         test_point *= 1.00001
+# deberia medir mas veces.
         self.loglikes(test_point, cached=False)
         times = [component.timer.get_time_avg() for component in self.components]
         if more_than_one_process():

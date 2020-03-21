@@ -18,9 +18,9 @@ from typing import Mapping
 from collections import defaultdict
 
 # Local
-from cobaya.conventions import _products_path, _path_install, _resume, _force, _params, \
+from cobaya.conventions import _products_path, _packages_path, _resume, _force, _params, \
     partag, _external, _output_prefix, _debug, _debug_file, _auto_params, _prior, \
-    kinds, _provides, _requires, _input_params, _output_params, _module_path, _aliases,\
+    kinds, _provides, _requires, _input_params, _output_params, _component_path, _aliases,\
     _yaml_extensions, reserved_attributes, empty_dict, _get_chi2_name, _get_chi2_label, \
     _test_run
 from cobaya.tools import recursive_update, str_to_list, get_base_classes, \
@@ -66,45 +66,44 @@ def load_input_MPI(input_file):
     return share_mpi(load_input(input_file) if is_main_process() else None)
 
 
-def get_used_modules(*infos):
-    """Returns all requested modules as an dict ``{kind: set([modules])}``.
+def get_used_components(*infos):
+    """Returns all requested components as an dict ``{kind: set([components])}``.
     Priors are not included."""
-
-    modules = defaultdict(list)
+    components = defaultdict(list)
     for info in infos:
         for field in kinds:
-            modules[field] += [a for a in (info.get(field) or [])
-                               if a not in modules[field]]
+            components[field] += [a for a in (info.get(field) or [])
+                               if a not in components[field]]
     # return dictionary of non-empty blocks
-    return {k: v for k, v in modules.items() if v}
+    return {k: v for k, v in components.items() if v}
 
 
-def get_default_info(module_or_class, kind=None, return_yaml=False,
-                     yaml_expand_defaults=True, module_path=None,
+def get_default_info(component_or_class, kind=None, return_yaml=False,
+                     yaml_expand_defaults=True, component_path=None,
                      input_options=empty_dict):
     """
-    Get default info for a module_or_class.
+    Get default info for a component_or_class.
     """
     _kind = kind
     try:
-        if inspect.isclass(module_or_class):
-            cls = module_or_class
+        if inspect.isclass(component_or_class):
+            cls = component_or_class
         else:
-            _kind = _kind or get_kind(module_or_class)
-            cls = get_class(module_or_class, _kind, module_path=module_path)
-        default_module_info = \
+            _kind = _kind or get_kind(component_or_class)
+            cls = get_class(component_or_class, _kind, component_path=component_path)
+        default_component_info = \
             cls.get_defaults(return_yaml=return_yaml,
                              yaml_expand_defaults=yaml_expand_defaults,
                              input_options=input_options)
     except Exception as e:
-        raise LoggedError(log, "Failed to get defaults for module or class '%s' [%s]",
-                          module_or_class, e)
-    return default_module_info
+        raise LoggedError(log, "Failed to get defaults for component or class '%s' [%s]",
+                          component_or_class, e)
+    return default_component_info
 
 
 def update_info(info):
     """
-    Creates an updated info starting from the defaults for each module and updating it
+    Creates an updated info starting from the defaults for each component and updating it
     with the input info.
     """
     component_base_classes = get_base_classes()
@@ -114,62 +113,62 @@ def update_info(info):
     updated_info = {}
     default_params_info = {}
     default_prior_info = {}
-    modules = get_used_modules(input_info)
+    components = get_used_components(input_info)
     from cobaya.component import CobayaComponent
-    for block in modules:
+    for block in components:
         updated = {}
         updated_info[block] = updated
         input_block = input_info[block]
-        for module in modules[block]:
+        for component in components[block]:
             # Preprocess "no options" and "external function" in input
             try:
-                input_block[module] = input_block[module] or {}
+                input_block[component] = input_block[component] or {}
             except TypeError:
                 raise LoggedError(
                     log, "Your input info is not well formatted at the '%s' block. "
                          "It must be a dictionary {'%s':{options}, ...}. ", block, block)
-            if isinstance(module, CobayaComponent) or \
-                    isinstance(input_block[module], CobayaComponent):
+            if isinstance(component, CobayaComponent) or \
+                    isinstance(input_block[component], CobayaComponent):
                 raise LoggedError(log, "Input for %s:%s should specify a class not "
-                                       "an instance", block, module)
+                                       "an instance", block, component)
                 # TODO: allow instance passing?
                 #       could allow this, but would have to sort out deepcopy
-                # if input_block[module]:
+                # if input_block[component]:
                 #   raise LoggedError(log, "Instances should be passed a dictionary "
                 #                           "entry of the form 'instance: None'")
-                # change_key(input_block, module, module.get_name(),
-                #           {_external: module})
-                # updated[module.get_name()] = input_block[module.get_name()].copy()
+                # change_key(input_block, component, component.get_name(),
+                #           {_external: component})
+                # updated[component.get_name()] = input_block[component.get_name()].copy()
                 # continue
-            if inspect.isclass(input_block[module]) or \
-                    not isinstance(input_block[module], dict):
-                input_block[module] = {_external: input_block[module]}
-            ext = input_block[module].get(_external)
+            if inspect.isclass(input_block[component]) or \
+                    not isinstance(input_block[component], dict):
+                input_block[component] = {_external: input_block[component]}
+            ext = input_block[component].get(_external)
             if ext:
                 if inspect.isclass(ext):
                     default_class_info = get_default_info(ext, block,
                                                           input_options=input_block[
-                                                              module])
+                                                              component])
                 else:
                     default_class_info = deepcopy_where_possible(
                         component_base_classes[block].get_defaults())
             else:
-                module_path = input_block[module].get(_module_path, None)
-                default_class_info = get_default_info(module, block,
-                                                      module_path=module_path,
-                                                      input_options=input_block[module])
-            updated[module] = default_class_info or {}
+                component_path = input_block[component].get(_component_path, None)
+                default_class_info = get_default_info(component, block,
+                                                      component_path=component_path,
+                                                      input_options=input_block[component])
+            updated[component] = default_class_info or {}
             # Update default options with input info
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
             ignore = {_external, _provides, _requires, partag.renames, _input_params,
-                      _output_params, _module_path, _aliases}
-            options_not_recognized = (set(input_block[module])
+                      _output_params, _component_path, _aliases}
+            options_not_recognized = (set(input_block[component])
                                       .difference(ignore)
-                                      .difference(set(updated[module])))
+                                      .difference(set(updated[component])))
             if options_not_recognized:
                 alternatives = {}
                 available = (
-                    {_external, partag.renames}.union(updated_info[block][module]))
+                    {_external, partag.renames}.union(updated_info[block][component]))
                 while options_not_recognized:
                     option = options_not_recognized.pop()
                     alternatives[option] = fuzzy_match(option, available, n=3)
@@ -180,11 +179,11 @@ def update_info(info):
                 raise LoggedError(
                     log, "%s '%s' does not recognize some options: %s. "
                          "Check the documentation for '%s'.",
-                    block, module, did_you_mean, block)
-            updated[module].update(input_block[module])
+                    block, component, did_you_mean, block)
+            updated[component].update(input_block[component])
             # save params and priors of class to combine later
-            default_params_info[module] = default_class_info.get(_params, {})
-            default_prior_info[module] = default_class_info.get(_prior, {})
+            default_params_info[component] = default_class_info.get(_params, {})
+            default_prior_info[component] = default_class_info.get(_prior, {})
     # Add priors info, after the necessary checks
     if _prior in input_info or any(default_prior_info.values()):
         updated_info[_prior] = input_info.get(_prior, {})
@@ -327,7 +326,7 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
         myprint_debug = log.debug
     myname = inspect.stack()[0][3]
     ignore = set() if strict else \
-        {_debug, _debug_file, _resume, _force, _path_install, _test_run}
+        {_debug, _debug_file, _resume, _force, _packages_path, _test_run}
     ignore = ignore.union(set(ignore_blocks or []))
     if set(info for info in info_old if info_old[info] is not None).difference(ignore) \
             != set(info for info in info_new if info_new[info] is not None).difference(
@@ -384,9 +383,9 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
                     ignore_k_this = ignore_k.copy()
                     if _external not in block1[k]:
                         try:
-                            module_path = block1[k].pop(_module_path, None) \
+                            component_path = block1[k].pop(_component_path, None) \
                                 if isinstance(block1[k], dict) else None
-                            cls = get_class(k, block_name, module_path=module_path)
+                            cls = get_class(k, block_name, component_path=component_path)
                             ignore_k_this = ignore_k_this.union(
                                 set(getattr(cls, "_at_resume_prefer_new", {})))
                         except ImportError:
@@ -417,9 +416,9 @@ def get_preferred_old_values(info_old):
             continue
         for k in block:
             try:
-                module_path = block[k].pop(_module_path, None) \
+                component_path = block[k].pop(_component_path, None) \
                     if isinstance(block[k], dict) else None
-                cls = get_class(k, block_name, module_path=module_path)
+                cls = get_class(k, block_name, component_path=component_path)
                 prefer_old_k_this = getattr(cls, "_at_resume_prefer_old", {})
                 if prefer_old_k_this:
                     if not block_name in keep_old:
@@ -464,7 +463,7 @@ class HasDefaults:
         """
         Get the distinct shortest reference name for the class of the form
         module.ClassName or module.submodule.ClassName etc.
-        For Cobaya modules the name is relative to subpackage for the relevant kind of
+        For Cobaya components the name is relative to subpackage for the relevant kind of
         class (e.g. Likelihood names are relative to cobaya.likelihoods).
 
         For external classes it loads the shortest fully qualified name of the form
@@ -558,7 +557,7 @@ class HasDefaults:
     def get_defaults(cls, return_yaml=False, yaml_expand_defaults=True,
                      input_options=empty_dict):
         """
-        Return defaults for this module_or_class, with syntax:
+        Return defaults for this component_or_class, with syntax:
 
         .. code::
 
@@ -574,7 +573,7 @@ class HasDefaults:
         If keyword `return_yaml` is set to True, it returns literally that,
         whereas if False (default), it returns the corresponding Python dict.
 
-        Note that in external modules installed as zip_safe=True packages files cannot be
+        Note that in external components installed as zip_safe=True packages files cannot be
         accessed directly.
         In this case using !default .yaml includes currently does not work.
 

@@ -53,12 +53,12 @@ class Theory(CobayaComponent):
     input_params: Sequence[str] = None
     output_params: Sequence[str] = None
 
-    def __init__(self, info=empty_dict, name=None, timing=None, path_install=None,
+    def __init__(self, info=empty_dict, name=None, timing=None, packages_path=None,
                  initialize=True, standalone=True):
 
         self._measured_speed = None
         super().__init__(info, name=name, timing=timing,
-                         path_install=path_install, initialize=initialize,
+                         packages_path=packages_path, initialize=initialize,
                          standalone=standalone)
 
         self.provider = None  # set to Provider instance before calculations
@@ -282,7 +282,7 @@ class TheoryCollection(ComponentCollection):
     Initializes the list of theory codes.
     """
 
-    def __init__(self, info_theory, path_install=None, timing=None):
+    def __init__(self, info_theory, packages_path=None, timing=None):
         super().__init__()
         self.set_logger("theory")
 
@@ -300,7 +300,7 @@ class TheoryCollection(ComponentCollection):
                                               "Theory %s is not a Theory subclass", name)
                     else:
                         theory_class = get_class(name, kind=kinds.theory)
-                    self.add_instance(name, theory_class(info, path_install=path_install,
+                    self.add_instance(name, theory_class(info, packages_path=packages_path,
                                                          timing=timing, name=name))
 
     def __getattribute__(self, name):

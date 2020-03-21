@@ -30,8 +30,8 @@ from math import gcd
 
 # Local
 from cobaya import __obsolete__
-from cobaya.conventions import _package, subfolders, partag, kinds, _path_install, \
-    _modules_path_config_file, _modules_path_env, _modules_path_arg, _dump_sort_cosmetic
+from cobaya.conventions import _package, subfolders, partag, kinds, _packages_path, \
+    _packages_path_config_file, _packages_path_env, _packages_path_arg, _dump_sort_cosmetic
 from cobaya.log import LoggedError
 
 # Logger
@@ -67,9 +67,9 @@ def change_key(info, old, new, value):
     return info
 
 
-def get_internal_class_module(name, kind):
+def get_internal_class_component_name(name, kind):
     """
-    Gets qualified name of internal module, relative to the package source,
+    Gets qualified name of internal component, relative to the package source,
     of a likelihood, theory or sampler.
     """
     return '.' + subfolders[kind] + '.' + name
@@ -84,7 +84,7 @@ def get_base_classes():
 
 def get_kind(name, allow_external=True):
     """
-    Given a helpfully unique module name, tries to determine it's kind:
+    Given a helpfully unique component name, tries to determine it's kind:
     ``sampler``, ``theory`` or ``likelihood``.
     """
     try:
@@ -124,43 +124,43 @@ class VersionCheckError(ValueError):
     pass
 
 
-def check_module_path(module, path):
-    if not os.path.realpath(os.path.abspath(module.__file__)).startswith(
+def check_component_path(component, path):
+    if not os.path.realpath(os.path.abspath(component.__file__)).startswith(
             os.path.realpath(os.path.abspath(path))):
         raise LoggedError(
-            log, "Module %s successfully loaded, but not from requested path: %s.",
-            module.__name__, path)
+            log, "Component %s successfully loaded, but not from requested path: %s.",
+            component.__name__, path)
 
 
-def check_module_version(module, min_version):
-    if not hasattr(module, "__version__") or \
-            version.parse(module.__version__) < version.parse(min_version):
+def check_component_version(component, min_version):
+    if not hasattr(component, "__version__") or \
+            version.parse(component.__version__) < version.parse(min_version):
         raise VersionCheckError(
-            "module %s at %s is version %s but required %s or higher" %
-            (module.__name__, os.path.dirname(module.__file__),
-             getattr(module, "__version__", "(non-given)"), min_version))
+            "component %s at %s is version %s but required %s or higher" %
+            (component.__name__, os.path.dirname(component.__file__),
+             getattr(component, "__version__", "(non-given)"), min_version))
 
 
 def load_module(name, package=None, path=None, min_version=None, check_path=False):
     with PythonPath(path):
-        module = import_module(name, package=package)
+        component = import_module(name, package=package)
     if path and check_path:
-        check_module_path(module, path)
+        check_component_path(component, path)
     if min_version:
-        check_module_version(module, min_version)
-    return module
+        check_component_version(component, min_version)
+    return component
 
 
 def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
-              allow_internal=True, module_path=None):
+              allow_internal=True, component_path=None):
     """
     Retrieves the requested class from its reference name. The name can be a
     fully-qualified package.module.classname string, or an internal name of the particular
     kind. If the last element of name is not a class, assume class has the same name and
     is in that module.
 
-    By default tries to load internal modules first, then if that fails internal ones.
-    module_path can be used to specify a specific external location.
+    By default tries to load internal components first, then if that fails internal ones.
+    component_path can be used to specify a specific external location.
 
     Raises ``ImportError`` if class not found in the appropriate place in the source tree
     and is not a fully qualified external name.
@@ -168,7 +168,7 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
     If 'kind=None' is not given, tries to guess it if the name is unique (slow!).
 
     If allow_external=True, allows loading explicit name from anywhere on path.
-    If allow_internal=True, will first try to load internal modules
+    If allow_internal=True, will first try to load internal components
     """
     if allow_internal and kind is None:
         kind = get_kind(name)
@@ -181,12 +181,12 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
     assert allow_internal or allow_external
 
     def return_class(_module_name, package=None):
-        _module = load_module(_module_name, package=package, path=module_path)
+        _module = load_module(_module_name, package=package, path=component_path)
         if hasattr(_module, class_name):
             cls = getattr(_module, class_name)
         else:
             _module = load_module(_module_name + '.' + class_name,
-                                  package=package, path=module_path)
+                                  package=package, path=component_path)
             cls = getattr(_module, class_name)
         if not inspect.isclass(cls):
             return getattr(cls, class_name)
@@ -194,16 +194,16 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
             return cls
 
     try:
-        if module_path:
+        if component_path:
             return return_class(module_name)
         elif allow_internal:
-            internal_module = get_internal_class_module(module_name, kind)
-            return return_class(internal_module, package=_package)
+            internal_module_name = get_internal_class_component_name(module_name, kind)
+            return return_class(internal_module_name, package=_package)
         else:
             raise Exception()
     except:
         exc_info = sys.exc_info()
-        if allow_external and not module_path:
+        if allow_external and not component_path:
             try:
                 import_module(module_name)
             except Exception:
@@ -213,7 +213,6 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
                     return return_class(module_name)
                 except:
                     exc_info = sys.exc_info()
-
         if ((exc_info[0] is ModuleNotFoundError and
              str(exc_info[1]).rstrip("'").endswith(name))):
             if None_if_not_found:
@@ -226,7 +225,6 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
                     fuzzy_match(name, get_available_internal_class_names(kind), n=3))
             else:
                 raise LoggedError(log, "'%s' not found", name)
-
         else:
             log.error("There was a problem when importing %s '%s':", kind or "external",
                       name)
@@ -849,7 +847,7 @@ def load_config_file():
     from cobaya.yaml import yaml_load_file
     try:
         return yaml_load_file(
-            os.path.join(get_config_path(), _modules_path_config_file))
+            os.path.join(get_config_path(), _packages_path_config_file))
     except:
         return {}
 
@@ -865,56 +863,72 @@ def write_config_file(config_info, append=True):
         if append:
             info.update(load_config_file())
         info.update(config_info)
-        yaml_dump_file(os.path.join(get_config_path(), _modules_path_config_file),
+        yaml_dump_file(os.path.join(get_config_path(), _packages_path_config_file),
                        info, error_if_exists=False)
     except Exception as e:
-        log.error("Could not write the modules install path into the config file. "
+        log.error("Could not write the external packages installation path into the config file. "
                   "Reason: %r", str(e))
 
 
-def load_modules_path_from_config_file():
+def load_packages_path_from_config_file():
     """
-    Returns the modules path stored in the config file, or `None` if it can't be found.
+    Returns the external packages path stored in the config file, or `None` if it can't be found.
     """
-    return load_config_file().get(_path_install)
+    return load_config_file().get(_packages_path)
 
 
-def write_modules_path_in_config_file(path_install):
+def write_packages_path_in_config_file(packages_path):
     """
-    Writes the modules path into the config file.
+    Writes the external packages installation path into the config file.
 
     Relative paths are converted into absolute ones.
     """
-    write_config_file({_path_install: os.path.abspath(path_install)})
+    write_config_file({_packages_path: os.path.abspath(packages_path)})
 
 
-def resolve_modules_path(infos=None):
+def resolve_packages_path(infos=None):
     """
-    Gets the module path given some infos. If more than one occurrence of the modules path
-    in the infos, raises an error.
+    Gets the external packages installation path given some infos.
+    If more than one occurrence of the external packages path in the infos,
+    raises an error.
 
-    If no modules path in the given infos, defaults to the env variable `%s`, and in its
-    absence to that stored in the config file.
+    If there is no external packages path defined in the given infos,
+    defaults to the env variable `%s`, and in its absence to that stored
+    in the config file.
 
     If no path at all could be found, returns `None`.
-    """ % _modules_path_env
+    """ % _packages_path_env
     if not infos:
         infos = []
     elif isinstance(infos, Mapping):
         infos = [infos]
-    paths = set(p for p in [info.get(_path_install) for info in infos] if p)
+    # MARKED FOR DEPRECATION IN v3.0
+    # BEHAVIOUR TO BE REPLACED BY ERROR:
+    [check_deprecated_modules_path(info) for info in infos]
+    # END OF DEPRECATION BLOCK
+    paths = set(p for p in [info.get(_packages_path) for info in infos] if p)
     if len(paths) == 1:
         return list(paths)[0]
     elif len(paths) > 1:
         raise LoggedError(
-            log, "More than one modules install path defined in the given infos. Cannot "
-                 "resolve a unique one to use. "
+            log, "More than one packages installation path defined in the given infos. "
+                 "Cannot resolve a unique one to use. "
                  "Maybe specify one via a command line argument '-%s [...]'?",
-            _modules_path_arg[0])
-    path_env = os.environ.get(_modules_path_env)
+            _packages_path_arg[0])
+    path_env = os.environ.get(_packages_path_env)
+    # MARKED FOR DEPRECATION IN v3.0
+    old_env = "COBAYA_MODULES"
+    path_old_env = os.environ.get(old_env)
+    if path_old_env and not path_env:
+        log.warning("*DEPRECATION*: The env var %r will be deprecated in favor of %r in "
+                    "the next version. Please, use that one instead.",
+                    old_env, _packages_path_env)
+        # BEHAVIOUR TO BE REPLACED BY ERROR:
+        path_env = path_old_env
+    # END OF DEPRECATION BLOCK -- CONTINUES BELOW!
     if path_env:
         return path_env
-    return load_modules_path_from_config_file()
+    return load_packages_path_from_config_file()
 
 
 def sort_cosmetic(info):
@@ -928,3 +942,15 @@ def sort_cosmetic(info):
             sorted_info[k] = info[k]
     sorted_info.update({k: v for k, v in info.items() if k not in sorted_info})
     return sorted_info
+
+
+# MARKED FOR DEPRECATION IN v3.0
+def check_deprecated_modules_path(info):
+    if info.get("modules"):
+        log.warning("*DEPRECATION*: The input field 'modules' will be deprecated in "
+                       "favor of %r in the next version. Please, use that one instead.",
+                       _packages_path)
+        # BEHAVIOUR TO BE REPLACED BY ERROR:
+        if not info.get(_packages_path):
+            info[_packages_path] = info["modules"]
+# END OF DEPRECATION BLOCK

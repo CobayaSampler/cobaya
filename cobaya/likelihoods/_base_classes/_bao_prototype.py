@@ -125,7 +125,7 @@ from typing import Optional, Sequence
 
 # Local
 from cobaya.log import LoggedError
-from cobaya.conventions import _path_install, _c_km_s
+from cobaya.conventions import _packages_path, _c_km_s
 from cobaya.likelihoods._base_classes import _InstallableLikelihood
 
 
@@ -145,13 +145,13 @@ class _bao_prototype(_InstallableLikelihood):
 
     def initialize(self):
         self.log.info("Initialising.")
-        if not getattr(self, "path", None) and not getattr(self, "path_install", None):
+        if not getattr(self, "path", None) and not getattr(self, "packages_path", None):
             raise LoggedError(
                 self.log, "No path given to BAO data. Set the likelihood property "
-                          "'path' or the common property '%s'.", _path_install)
-        # If no path specified, use the modules path
+                          "'path' or the common property '%s'.", _packages_path)
+        # If no path specified, use the external packages path
         data_file_path = os.path.normpath(getattr(self, "path", None) or
-                                          os.path.join(self.path_install, "data"))
+                                          os.path.join(self.packages_path, "data"))
         # Rescaling by a fiducial value of the sound horizon
         if getattr(self, "rs_rescale", None) is None:
             if getattr(self, "rs_fid", None) is not None:

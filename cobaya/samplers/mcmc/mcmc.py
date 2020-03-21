@@ -75,10 +75,13 @@ class mcmc(CovmatSampler):
         if not self.model.prior.d():
             raise LoggedError(self.log, "No parameters being varied for sampler")
         self.log.debug("Initializing")
+        # MARKED FOR DEPRECATION IN v3.0
         if getattr(self, "check_every", None) is not None:
-            self.log.warning("`check_every` will be deprecated in the next version. "
-                             "Please use `learn_every` instead.")
+            self.log.warning("*DEPRECATION*: `check_every` will be deprecated in the "
+                             "next version. Please use `learn_every` instead.")
+            # BEHAVIOUR TO BE REPLACED BY ERROR:
             self.learn_every = getattr(self, "check_every")
+        # END OF DEPRECATION BLOCK
         if self.callback_every is None:
             self.callback_every = self.learn_every
         self._quants_d_units = []
@@ -250,11 +253,12 @@ class mcmc(CovmatSampler):
                     len(b) * o for b, o in zip(self.blocks, self.oversampling_factors)) /
                                                               self.model.prior.d()))
         elif self.drag:
-            # TO BE DEPRECATED
+            # MARKED FOR DEPRECATION IN v3.0
             if getattr(self, "drag_limits", None) is not None:
-                raise LoggedError(
-                    self.log, "'drag_limits' has been deprecated. Use 'oversample_power' "
-                              "to control the amount of dragging steps.")
+                self.log.warning("*DEPRECATION*: 'drag_limits' has been deprecated. "
+                                 "Use 'oversample_power' to control the amount of "
+                                 "dragging steps.")
+            # END OF DEPRECATION BLOCK
             self.get_new_sample = self.get_new_sample_dragging
             self.log.info("Dragging with number of interpolating steps:")
             self.log.info("* %d : %r", 1, self.slow_blocks)

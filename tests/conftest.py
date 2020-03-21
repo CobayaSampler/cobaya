@@ -3,23 +3,23 @@ import os
 
 # Paths ##################################################################################
 
-from cobaya.conventions import _modules_path_arg, _modules_path_env, _test_skip_env
-from cobaya.tools import resolve_modules_path
+from cobaya.conventions import _packages_path_arg, _packages_path_env, _test_skip_env
+from cobaya.tools import resolve_packages_path
 
 
 def pytest_addoption(parser):
-    parser.addoption("--" + _modules_path_arg, action="store", default=resolve_modules_path(),
-                     help="Path to folder of automatic installation of modules")
+    parser.addoption("--" + _packages_path_arg, action="store", default=resolve_packages_path(),
+                     help="Path to folder of automatic installation of packages")
 
 
 @pytest.fixture
-def modules(request):
-    cmd_modules = request.config.getoption("--" + _modules_path_arg, None)
-    if not cmd_modules:
-        raise ValueError("Could not determine modules installation path. "
+def packages_path(request):
+    cmd_packages_path = request.config.getoption("--" + _packages_path_arg, None)
+    if not cmd_packages_path:
+        raise ValueError("Could not determine packages installation path. "
                          "Either define it in the env variable %r, or pass it as an "
-                         "argument with `--%s`" % (_modules_path_env, _modules_path_arg))
-    return cmd_modules
+                         "argument with `--%s`" % (_packages_path_env, _packages_path_arg))
+    return cmd_packages_path
 
 
 # Skip certain keywords ##################################################################

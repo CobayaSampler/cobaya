@@ -1,4 +1,4 @@
-from .common import process_modules_path
+from .common import process_packages_path
 import os
 import numpy as np
 from cobaya.model import get_model
@@ -9,23 +9,23 @@ params = {'ombh2': 0.02242, 'omch2': 0.11933, 'H0': 67.66, 'tau': 0.0561,
           'YHe': 0.2454, 'As': 2e-9}
 
 
-def get_camb(modules):
+def get_camb(packages_path):
     return load_module("camb",
-                       path=os.path.join(process_modules_path(modules), "code", "CAMB"))
+                       path=os.path.join(process_packages_path(packages_path), "code", "CAMB"))
 
 
-def _get_model(modules, likelihood):
+def _get_model(packages_path, likelihood):
     info = {
         'params': params,
         'likelihood': {'test_likelihood': likelihood},
         'theory': {'camb': {'stop_at_error': True,
                             'extra_args': {'num_massive_neutrinos': 1}}},
-        'modules': process_modules_path(modules)}
+        'packages_path': process_packages_path(packages_path)}
     return get_model(info)
 
 
-def test_sources(modules):
-    camb = get_camb(modules)
+def test_sources(packages_path):
+    camb = get_camb(packages_path)
     from camb.sources import GaussianSourceWindow
 
     pars = camb.set_params(**params)
@@ -47,23 +47,23 @@ def test_sources(modules):
             "CAMB gaussian source window results do not match"
         return 0
 
-    model = _get_model(modules, test_likelihood)
+    model = _get_model(packages_path, test_likelihood)
     model.loglike({})
 
 
-def test_CAMBdata(modules):
+def test_CAMBdata(packages_path):
     # noinspection PyDefaultArgument
     def test_likelihood(
             _theory={'CAMBdata': None, 'Pk_grid': dict(k_max=2, z=[0, 2])}):
         return _theory.get_CAMBdata().tau0
 
-    model = _get_model(modules, test_likelihood)
+    model = _get_model(packages_path, test_likelihood)
     assert np.isclose(model.loglike({})[0], 14165.63, rtol=1e-4), \
         "CAMBdata object result failed"
 
 
-def test_CAMB_transfer(modules):
-    camb = get_camb(modules)
+def test_CAMB_transfer(packages_path):
+    camb = get_camb(packages_path)
 
     pars = camb.set_params(**params)
     pars.set_matter_power(redshifts=[0, 2], kmax=2)
@@ -79,12 +79,12 @@ def test_CAMB_transfer(modules):
         np.testing.assert_allclose(PK, PK1, rtol=1e-4)
         return 1
 
-    model = _get_model(modules, test_likelihood)
+    model = _get_model(packages_path, test_likelihood)
     model.loglike()
 
 
-def test_CAMB_sigma_R(modules):
-    camb = get_camb(modules)
+def test_CAMB_sigma_R(packages_path):
+    camb = get_camb(packages_path)
 
     pars = camb.set_params(**params)
     redshifts = [0, 2, 5]
@@ -103,5 +103,5 @@ def test_CAMB_sigma_R(modules):
         np.testing.assert_allclose(sigma_R, sigma_R_out, rtol=1e-3)
         return 1
 
-    model = _get_model(modules, test_likelihood)
+    model = _get_model(packages_path, test_likelihood)
     model.loglike()

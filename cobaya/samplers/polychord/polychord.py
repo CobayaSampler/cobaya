@@ -26,7 +26,7 @@ from cobaya.collection import Collection
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release
 from cobaya.yaml import yaml_dump_file
-from cobaya.conventions import _separator, _evidence_extension
+from cobaya.conventions import _separator, _evidence_extension, _packages_path_arg
 
 
 class polychord(Sampler):
@@ -50,9 +50,9 @@ class polychord(Sampler):
         """Imports the PolyChord sampler and prepares its arguments."""
         if is_main_process():  # rank = 0 (MPI master) or None (no MPI)
             self.log.info("Initializing")
-        # If path not given, try using general path to modules
-        if not self.path and self.path_install:
-            self.path = self.get_path(self.path_install)
+        # If path not given, try using general path to external packages
+        if not self.path and self.packages_path:
+            self.path = self.get_path(self.packages_path)
         if self.path:
             if is_main_process():
                 self.log.info("Importing *local* PolyChord from " + self.path)
@@ -60,7 +60,8 @@ class polychord(Sampler):
                     raise LoggedError(self.log,
                                       "The given path does not exist. "
                                       "Try installing PolyChord with "
-                                      "'cobaya-install polychord -m [modules_path]")
+                                      "'cobaya-install polychord --%d [packages_path]",
+                                      _packages_path_arg)
             pc_build_path = self.get_build_path(self.path)
             if not pc_build_path:
                 raise LoggedError(self.log, "Either PolyChord is not in the given folder,"

@@ -13,11 +13,11 @@ from cobaya.yaml import yaml_dump
 from cobaya.cosmo_input import input_database
 from cobaya.cosmo_input.autoselect_covmat import get_best_covmat, covmat_folders
 from cobaya.cosmo_input.create_input import create_input
-from cobaya.bib import prettyprint_bib, get_bib_info, get_bib_module
+from cobaya.bib import prettyprint_bib, get_bib_info, get_bib_component
 from cobaya.tools import warn_deprecation, get_available_internal_class_names, \
-    cov_to_std_and_corr, resolve_modules_path, sort_cosmetic
+    cov_to_std_and_corr, resolve_packages_path, sort_cosmetic
 from cobaya.input import get_default_info
-from cobaya.conventions import subfolders, kinds, _modules_path_env, _path_install
+from cobaya.conventions import subfolders, kinds, _packages_path_env, _packages_path
 
 # per-platform settings for correct high-DPI scaling
 if platform.system() == "Linux":
@@ -69,17 +69,17 @@ class MainWindow(QWidget):
         # Menu bar for defaults
         self.menubar = QMenuBar()
         defaults_menu = self.menubar.addMenu(
-            '&Show defaults and bibliography for a module...')
+            '&Show defaults and bibliography for a component...')
         menu_actions = {}
         for kind in kinds:
             submenu = defaults_menu.addMenu(subfolders[kind])
-            modules = get_available_internal_class_names(kind)
+            components = get_available_internal_class_names(kind)
             menu_actions[kind] = {}
-            for module in modules:
-                menu_actions[kind][module] = QAction(module, self)
-                menu_actions[kind][module].setData((kind, module))
-                menu_actions[kind][module].triggered.connect(self.show_defaults)
-                submenu.addAction(menu_actions[kind][module])
+            for component in components:
+                menu_actions[kind][component] = QAction(component, self)
+                menu_actions[kind][component].setData((kind, component))
+                menu_actions[kind][component].triggered.connect(self.show_defaults)
+                submenu.addAction(menu_actions[kind][component])
         # Main layout
         self.menu_layout = QVBoxLayout()
         self.menu_layout.addWidget(self.menubar)
@@ -259,18 +259,19 @@ class MainWindow(QWidget):
         self.display["yaml"].setText(yaml_dump(sort_cosmetic(info)) + comments_text)
         self.display["bibliography"].setText(prettyprint_bib(get_bib_info(info)))
         # Display covmat
-        path_install = resolve_modules_path()
-        if not path_install:
+        packages_path = resolve_packages_path()
+        if not packages_path:
             self.covmat_text.setText(
-                "\nIn order to find a covariance matrix, you need to define a modules "
-                "install path, e.g. via the env variable %r.\n" % _modules_path_env)
-        elif any(not os.path.isdir(d.format(**{_path_install: path_install}))
+                "\nIn order to find a covariance matrix, you need to define an external "
+                "packages installation path, e.g. via the env variable %r.\n" %
+                _packages_path_env)
+        elif any(not os.path.isdir(d.format(**{_packages_path: packages_path}))
                  for d in covmat_folders):
             self.covmat_text.setText(
-                "\nThe cosmological modules appear not to be installed where expected: "
-                "%r\n" % path_install)
+                "\nThe external cosmological packages appear not to be installed where "
+                "expected: %r\n" % packages_path)
         else:
-            covmat_data = get_best_covmat(info, path_install=path_install)
+            covmat_data = get_best_covmat(info, packages_path=packages_path)
             self.current_params_in_covmat = covmat_data["params"]
             self.current_covmat = covmat_data["covmat"]
             _, corrmat = cov_to_std_and_corr(self.current_covmat)
@@ -335,17 +336,17 @@ class MainWindow(QWidget):
             self.clipboard.setText(self.display_tabs.currentWidget().toPlainText())
 
     def show_defaults(self):
-        kind, module = self.sender().data()
-        self.current_defaults_diag = DefaultsDialog(kind, module, parent=self)
+        kind, component = self.sender().data()
+        self.current_defaults_diag = DefaultsDialog(kind, component, parent=self)
 
 
 # noinspection PyUnresolvedReferences
 class DefaultsDialog(QWidget):
 
-    def __init__(self, kind, module, parent=None):
+    def __init__(self, kind, component, parent=None):
         super().__init__()
         self.clipboard = parent.clipboard
-        self.setWindowTitle("%s : %s" % (kind, module))
+        self.setWindowTitle("%s : %s" % (kind, component))
         self.setGeometry(0, 0, 500, 500)
         # noinspection PyArgumentList
         self.move(
@@ -365,14 +366,14 @@ class DefaultsDialog(QWidget):
             self.display_tabs.addTab(self.display[k], k)
         self.layout.addWidget(self.display_tabs)
         # Fill text
-        defaults_txt = get_default_info(module, kind, return_yaml=True)
+        defaults_txt = get_default_info(component, kind, return_yaml=True)
         _indent = "  "
-        defaults_txt = (kind + ":\n" + _indent + module + ":\n" +
+        defaults_txt = (kind + ":\n" + _indent + component + ":\n" +
                         2 * _indent + ("\n" + 2 * _indent).join(defaults_txt.split("\n")))
         from cobaya.yaml import yaml_load
         self.display["python"].setText(pformat(yaml_load(defaults_txt)))
         self.display["yaml"].setText(defaults_txt)
-        self.display["bibliography"].setText(get_bib_module(module, kind))
+        self.display["bibliography"].setText(get_bib_component(component, kind))
         # Buttons
         self.buttons = QHBoxLayout()
         self.close_button = QPushButton('Close', self)

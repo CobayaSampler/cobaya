@@ -4,7 +4,7 @@ from cobaya.model import get_model
 from cobaya.theory import Theory
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
-from .common import process_modules_path
+from .common import process_packages_path
 
 
 # Aderived = 1
@@ -106,8 +106,8 @@ def _test_loglike(theories):
         assert model.loglikes({})[0] == 8, "test loglike failed for %s" % th
 
 
-def test_dependencies(modules):
-    info['modules'] = process_modules_path(modules)
+def test_dependencies(packages_path):
+    info['packages_path'] = process_packages_path(packages_path)
     theories = [('A', A), ('B', B)]
     _test_loglike(theories)
     _test_loglike([('A', A), ('B', B2)])
@@ -219,7 +219,7 @@ def _test_loglike2(theories):
         assert model.loglike()[0] == 20., "fail conditional dependency for %s" % th
 
 
-def test_conditional_dependencies(modules):
+def test_conditional_dependencies(packages_path):
     theories = [('A', A), ('D', D)]
     _test_loglike2(theories)
 

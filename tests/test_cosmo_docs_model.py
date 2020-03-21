@@ -7,8 +7,8 @@ import os
 import numpy as np
 from io import StringIO
 
-from cobaya.conventions import _path_install
-from .common import process_modules_path, stdout_redirector
+from cobaya.conventions import _packages_path
+from .common import process_packages_path, stdout_redirector
 
 tests_folder = os.path.dirname(os.path.realpath(__file__))
 docs_folder = os.path.join(tests_folder, "..", "docs")
@@ -19,15 +19,15 @@ docs_img_folder = os.path.join(docs_folder, "img")
 pixel_tolerance = 0.995
 
 
-def test_cosmo_docs_model_classy(modules):
-    modules = process_modules_path(modules)
+def test_cosmo_docs_model_classy(packages_path):
+    packages_path = process_packages_path(packages_path)
     # Go to the folder containing the python code
     cwd = os.getcwd()
     try:
         os.chdir(docs_src_folder)
         globals_example = {}
         exec(open(os.path.join(docs_src_folder, "1.py")).read(), globals_example)
-        globals_example["info"][_path_install] = modules
+        globals_example["info"][_packages_path] = packages_path
         exec(open(os.path.join(docs_src_folder, "2.py")).read(), globals_example)
         stream = StringIO()
         with stdout_redirector(stream):

@@ -160,7 +160,7 @@ class Output(HasLogger):
         """
         Saves the info in the chain folder twice:
            - the input info.
-           - idem, populated with the modules' defaults.
+           - idem, populated with the components' defaults.
 
         If resuming a sample, checks first that old and new infos and versions are
         consistent.

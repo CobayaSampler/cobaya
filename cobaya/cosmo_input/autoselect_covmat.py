@@ -7,7 +7,7 @@ import numpy as np
 import re
 
 # Local
-from cobaya.conventions import _covmats_file, _aliases, _path_install, partag, _params
+from cobaya.conventions import _covmats_file, _aliases, _packages_path, partag, _params
 from cobaya.conventions import kinds, _covmat_extension
 from cobaya.tools import str_to_list, get_translated_params, get_cache_path
 from cobaya.parameterization import is_sampled_param
@@ -19,17 +19,17 @@ import logging
 
 log = logging.getLogger(__name__.split(".")[-1])
 
-covmat_folders = ["{%s}/data/planck_supp_data_and_covmats/covmats/" % _path_install,
-                  "{%s}/data/bicep_keck_2015/BK15_cosmomc/planck_covmats/" % _path_install]
+covmat_folders = ["{%s}/data/planck_supp_data_and_covmats/covmats/" % _packages_path,
+                  "{%s}/data/bicep_keck_2015/BK15_cosmomc/planck_covmats/" % _packages_path]
 
 # Global instance of loaded database, for fast calls to get_best_covmat in GUI
 _loaded_covmats_database = None
 
 
-def get_covmat_database(modules, cached=True):
-    # Get folders with corresponding modules installed
+def get_covmat_database(packages_path, cached=True):
+    # Get folders with corresponding components installed
     installed_folders = [folder for folder in covmat_folders
-                         if os.path.exists(folder.format(**{_path_install: modules}))]
+                         if os.path.exists(folder.format(**{_packages_path: packages_path}))]
     covmats_database_fullpath = os.path.join(get_cache_path(), _covmats_file)
     # Check if there is a usable cached one
     if cached:
@@ -39,7 +39,7 @@ def get_covmat_database(modules, cached=True):
             # quick and dirty hash for regeneration: check number of .covmat files
             num_files = len(list(chain(
                 *[[filename for filename in os.listdir(
-                    folder.format(**{_path_install: modules}))
+                    folder.format(**{_packages_path: packages_path}))
                    if filename.endswith(_covmat_extension)]
                   for folder in installed_folders])))
             assert num_files == len(covmat_database)
@@ -52,7 +52,7 @@ def get_covmat_database(modules, cached=True):
     # Create it (again)
     covmat_database = []
     for folder in installed_folders:
-        folder_full = folder.format(**{_path_install: modules}).replace("/", os.sep)
+        folder_full = folder.format(**{_packages_path: packages_path}).replace("/", os.sep)
         for filename in os.listdir(folder_full):
             try:
                 with open(os.path.join(folder_full, filename), encoding="utf-8") as covmat:
@@ -68,25 +68,25 @@ def get_covmat_database(modules, cached=True):
     return covmat_database
 
 
-def get_best_covmat(info, path_install=None, cached=True):
+def get_best_covmat(info, packages_path=None, cached=True):
     """
     Chooses optimal covmat from a database, based on common parameters and likelihoods.
 
     Returns a dict `{folder: [folder_of_covmat], name: [file_name_of_covmat],
     params: [parameters_in_covmat], covmat: [covariance_matrix]}`.
     """
-    path_install = path_install or info.get(_path_install)
-    if not path_install:
-        raise LoggedError(log, "Needs a path to the modules install.")
+    packages_path = packages_path or info.get(_packages_path)
+    if not packages_path:
+        raise LoggedError(log, "Needs a path to the external packages installation.")
     updated_info = update_info(info)
     for p, pinfo in list(updated_info[_params].items()):
         if not is_sampled_param(pinfo):
             updated_info[_params].pop(p)
     info_sampled_params = updated_info[_params]
-    covmat_data = _get_best_covmat(path_install, updated_info[_params],
+    covmat_data = _get_best_covmat(packages_path, updated_info[_params],
                                    updated_info[kinds.likelihood], cached=cached)
     covmat = np.atleast_2d(np.loadtxt(os.path.join(
-        covmat_data["folder"].format(modules=path_install), covmat_data["name"])))
+        covmat_data["folder"].format(packages_path=packages_path), covmat_data["name"])))
     params_in_covmat = get_translated_params(info_sampled_params, covmat_data["params"])
     indices = [covmat_data["params"].index(p) for p in params_in_covmat.values()]
     covmat_data["covmat"] = covmat[indices][:, indices]
@@ -94,7 +94,7 @@ def get_best_covmat(info, path_install=None, cached=True):
     return covmat_data
 
 
-def _get_best_covmat(modules, params_info, likelihoods_info, cached=True):
+def _get_best_covmat(packages_path, params_info, likelihoods_info, cached=True):
     """
     Actual covmat finder used by `get_best_covmat`. Call directly for more control on
     the parameters used.
@@ -104,7 +104,7 @@ def _get_best_covmat(modules, params_info, likelihoods_info, cached=True):
     if cached:
         global _loaded_covmats_database
         covmats_database = (
-            _loaded_covmats_database or get_covmat_database(modules, cached=cached))
+            _loaded_covmats_database or get_covmat_database(packages_path, cached=cached))
         _loaded_covmats_database = covmats_database
     # Prepare params and likes aliases
     params_renames = set(chain(*[

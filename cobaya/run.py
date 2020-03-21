@@ -8,13 +8,14 @@
 
 # Global
 from typing import Mapping
+import logging
 
 # Local
 from cobaya import __version__
-from cobaya.conventions import kinds, _prior, _params, _path_install, _output_prefix, \
+from cobaya.conventions import kinds, _prior, _params, _packages_path, _output_prefix, \
     _debug, _debug_file, _resume, _timing, _debug_default, _force, _post, _test_run, \
-    _yaml_extensions, _separator_files, _updated_suffix, _modules_path_arg, \
-    _modules_path_env, _resume_default
+    _yaml_extensions, _separator_files, _updated_suffix, _packages_path_arg, \
+    _packages_path_env, _resume_default
 from cobaya.output import get_output
 from cobaya.model import Model
 from cobaya.sampler import get_sampler_class, check_sampler_info
@@ -22,7 +23,8 @@ from cobaya.log import logger_setup, LoggedError
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info
 from cobaya.mpi import import_MPI, is_main_process, set_mpi_disabled
-from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic
+from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic, \
+    check_deprecated_modules_path
 from cobaya.post import post
 
 
@@ -36,8 +38,11 @@ def run(info):
         "load it first with 'cobaya.input.load_input', "
         "or, if you were passing a yaml string, load it with 'cobaya.yaml.yaml_load'.")
     logger_setup(info.get(_debug), info.get(_debug_file))
-    import logging
     logger_run = logging.getLogger(__name__.split(".")[-1])
+    # MARKED FOR DEPRECATION IN v3.0
+    # BEHAVIOUR TO BE REPLACED BY ERROR:
+    check_deprecated_modules_path(info)
+    # END OF DEPRECATION BLOCK
     # 1. Prepare output driver, if requested by defining an output_prefix
     output = get_output(output_prefix=info.get(_output_prefix),
                         resume=info.get(_resume), force=info.get(_force))
@@ -73,14 +78,14 @@ def run(info):
     # 4. Initialize the posterior and the sampler
     with Model(updated_info[_params], updated_info[kinds.likelihood],
                updated_info.get(_prior), updated_info.get(kinds.theory),
-               path_install=info.get(_path_install), timing=updated_info.get(_timing),
+               packages_path=info.get(_packages_path), timing=updated_info.get(_timing),
                allow_renames=False, stop_at_error=info.get("stop_at_error", False)) \
             as model:
         # Re-dump the updated info, now containing parameter routes and version info
         updated_info = recursive_update(updated_info, model.info())
         output.check_and_dump_info(None, updated_info, check_compatible=False)
         sampler = sampler_class(updated_info[kinds.sampler][sampler_class.__name__],
-                                model, output, path_install=info.get(_path_install))
+                                model, output, packages_path=info.get(_packages_path))
         # Re-dump updated info, now also containing updates from the sampler
         updated_info[kinds.sampler][sampler.get_name()] = \
             recursive_update(
@@ -105,9 +110,18 @@ def run_script():
     parser = argparse.ArgumentParser(description="Cobaya's run script.")
     parser.add_argument("input_file", nargs=1, action="store", metavar="input_file.yaml",
                         help="An input file to run.")
-    parser.add_argument("-" + _modules_path_arg[0], "--" + _modules_path_arg,
-                        action="store", nargs=1, metavar="/some/path", default=[None],
-                        help="Path where modules were automatically installed.")
+    parser.add_argument("-" + _packages_path_arg[0], "--" + _packages_path_arg,
+                        action="store", nargs=1, metavar="/packages/path", default=[None],
+                        help="Path where external packages were installed.")
+    # MARKED FOR DEPRECATION IN v3.0
+    modules = "modules"
+    parser.add_argument("-" + modules[0], "--" + modules,
+                        action="store", nargs=1, required=False,
+                        metavar="/packages/path", default=[None],
+                        help="To be deprecated! "
+                             "Alias for %s, which should be used instead." %
+                             _packages_path_arg)
+    # END OF DEPRECATION BLOCK -- CONTINUES BELOW!
     parser.add_argument("-" + _output_prefix[0], "--" + _output_prefix,
                         action="store", nargs=1, metavar="/some/path", default=[None],
                         help="Path and prefix for the text output.")
@@ -126,17 +140,17 @@ def run_script():
     parser.add_argument("--no-mpi", action='store_true',
                         help="disable MPI when mpi4py installed but MPI does "
                              "not actually work")
-    args = parser.parse_args()
-    if args.no_mpi:
+    arguments = parser.parse_args()
+    if arguments.no_mpi:
         set_mpi_disabled()
-    if any((os.path.splitext(f)[0] in ("input", "updated")) for f in args.input_file):
+    if any((os.path.splitext(f)[0] in ("input", "updated")) for f in arguments.input_file):
         raise ValueError("'input' and 'updated' are reserved file names. "
                          "Please, use a different one.")
     load_input = import_MPI(".input", "load_input")
-    given_input = args.input_file[0]
+    given_input = arguments.input_file[0]
     if any(given_input.lower().endswith(ext) for ext in _yaml_extensions):
         info = load_input(given_input)
-        output_prefix_cmd = getattr(args, _output_prefix)[0]
+        output_prefix_cmd = getattr(arguments, _output_prefix)[0]
         output_prefix_input = info.get(_output_prefix)
         info[_output_prefix] = output_prefix_cmd or output_prefix_input
     else:
@@ -152,12 +166,25 @@ def run_script():
         info[_output_prefix] = given_input
         # If input given this way, we obviously want to resume!
         info[_resume] = True
-    # solve modules installation path cmd > env > input
-    info[_path_install] = getattr(args, _modules_path_arg)[0]
-    info[_debug] = getattr(args, _debug) or info.get(_debug, _debug_default)
-    info[_resume] = getattr(args, _resume, _resume_default)
-    info[_force] = getattr(args, _force, False)
-    info[_test_run] = getattr(args, _test_run, False)
+    # solve packages installation path cmd > env > input
+    # MARKED FOR DEPRECATION IN v3.0
+    if getattr(arguments, modules) != [None]:
+        logger_setup()
+        logger = logging.getLogger(__name__.split(".")[-1])
+        logger.warning("*DEPRECATION*: -m/--modules will be deprecated in favor of "
+                       "-%s/--%s in the next version. Please, use that one instead.",
+                       _packages_path_arg[0], _packages_path_arg)
+        # BEHAVIOUR TO BE REPLACED BY ERROR:
+        if getattr(arguments, _packages_path_arg) == [None]:
+            setattr(arguments, _packages_path_arg, getattr(arguments, modules))
+    # BEHAVIOUR TO BE REPLACED BY ERROR:
+    check_deprecated_modules_path(info)
+    # END OF DEPRECATION BLOCK
+    info[_packages_path] = getattr(arguments, _packages_path_arg)[0]
+    info[_debug] = getattr(arguments, _debug) or info.get(_debug, _debug_default)
+    info[_resume] = getattr(arguments, _resume, _resume_default)
+    info[_force] = getattr(arguments, _force, False)
+    info[_test_run] = getattr(arguments, _test_run, False)
     if _post in info:
         post(info)
     else:

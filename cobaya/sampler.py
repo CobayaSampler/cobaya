@@ -53,7 +53,7 @@ from itertools import chain
 # Local
 from cobaya.conventions import kinds, _checkpoint_extension, _version
 from cobaya.conventions import _progress_extension, _covmat_extension
-from cobaya.conventions import partag, _path_install, _force, _resume, _output_prefix
+from cobaya.conventions import partag, _packages_path, _force, _resume, _output_prefix
 from cobaya.tools import get_class, deepcopy_where_possible, find_with_regexp
 from cobaya.tools import recursive_update
 from cobaya.log import LoggedError
@@ -119,7 +119,7 @@ def check_sampler_info(info_old=None, info_new=None):
                             "Resuming not possible!")
 
 
-def get_sampler(info_sampler, model, output=None, modules=None):
+def get_sampler(info_sampler, model, output=None, packages_path=None):
     assert isinstance(info_sampler, Mapping), (
         "The first argument must be a dictionary with the info needed for the sampler. "
         "If you were trying to pass the name of an input file instead, "
@@ -146,7 +146,7 @@ def get_sampler(info_sampler, model, output=None, modules=None):
     sampler_class.check_force_resume(output, info=updated_info_sampler[sampler_name])
     # Instantiate the sampler
     sampler_instance = sampler_class(updated_info_sampler[sampler_name], model,
-                                     output, path_install=modules)
+                                     output, packages_path=packages_path)
     # If output, dump updated
     if output:
         to_dump = model.info()
@@ -198,7 +198,7 @@ class Sampler(CobayaComponent):
         return None
 
     # Private methods: just ignore them:
-    def __init__(self, info_sampler, model, output=None, path_install=None, name=None):
+    def __init__(self, info_sampler, model, output=None, packages_path=None, name=None):
         """
         Actual initialization of the class. Loads the default and input information and
         call the custom ``initialize`` method.
@@ -208,7 +208,7 @@ class Sampler(CobayaComponent):
         self.model = model
         self.output = output
         self._updated_info = deepcopy_where_possible(info_sampler)
-        super().__init__(info_sampler, path_install=path_install,
+        super().__init__(info_sampler, packages_path=packages_path,
                          name=name, initialize=False, standalone=False)
         # Seed, if requested
         if getattr(self, "seed", None) is not None:
@@ -450,10 +450,10 @@ class CovmatSampler(Sampler):
                               "Will generate from parameter info (proposal and prior).")
         # If given, load and test the covariance matrix
         if isinstance(self.covmat, str):
-            covmat_pre = "{%s}" % _path_install
+            covmat_pre = "{%s}" % _packages_path
             if self.covmat.startswith(covmat_pre):
                 self.covmat = self.covmat.format(
-                    **{_path_install: self.path_install}).replace("/", os.sep)
+                    **{_packages_path: self.packages_path}).replace("/", os.sep)
             try:
                 with open(self.covmat, "r", encoding="utf-8-sig") as file_covmat:
                     header = file_covmat.readline()

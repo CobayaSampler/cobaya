@@ -32,7 +32,7 @@ _debug = "debug"
 _debug_default = False
 _debug_file = "debug_file"
 _output_prefix = "output"
-_path_install = "modules"
+_packages_path = "packages_path"
 _external = "external"
 _provides = "provides"
 _requires = "requires"
@@ -41,8 +41,8 @@ _resume_default = False
 _timing = "timing"
 _force = "force"
 _test_run = "test"
-_module_path = "python_path"
-_module_class_name = "class_name"
+_component_path = "python_path"
+_component_class_name = "class_name"
 _aliases = "aliases"
 _version = "version"
 
@@ -84,10 +84,10 @@ _covmat_extension = ".covmat"
 _evidence_extension = ".logZ"
 
 # Installation and container definitions
-_modules_path_arg = _path_install
-_modules_path_env = "COBAYA_MODULES"
-_modules_path_config_file = "config.yaml"
-_modules_path = "/modules"
+_packages_path_arg = _packages_path
+_packages_path_env = "COBAYA_PACKAGES_PATH"
+_packages_path_config_file = "config.yaml"
+_packages_path_containers = "/cobaya_packages"
 _code = "code"
 _data = "data"
 _install_skip_env = "COBAYA_INSTALL_SKIP"

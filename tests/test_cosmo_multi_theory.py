@@ -7,7 +7,7 @@ from cobaya.theory import Theory
 from cobaya.tools import load_module
 from cobaya.likelihood import LikelihoodInterface, Likelihood
 from cobaya.conventions import empty_dict
-from .common import process_modules_path
+from .common import process_packages_path
 
 
 # Test separating out the BBN consistency constraint into separate theory code,
@@ -72,9 +72,9 @@ info2 = {'likelihood': {'cmb': {'external': cmb_likelihood}},
          'params': camb_params, 'debug': debug}
 
 
-def test_bbn_yhe(modules):
-    modules = process_modules_path(modules)
-    load_module("camb", path=os.path.join(modules, "code", "CAMB"))
+def test_bbn_yhe(packages_path):
+    packages_path = process_packages_path(packages_path)
+    load_module("camb", path=os.path.join(packages_path, "code", "CAMB"))
     from camb.bbn import BBN_table_interpolator
     BBN.bbn = BBN_table_interpolator(bbn_table)
     BBN2.bbn = BBN.bbn
@@ -82,7 +82,7 @@ def test_bbn_yhe(modules):
     info['params']['check'] = {'derived': True}
 
     for inf in (info, info2):
-        inf['modules'] = modules
+        inf['packages_path'] = packages_path
         for order in [1, -1]:
             for explicit_derived in [None, None, {'derived': True}]:
                 print(inf, order, explicit_derived)
@@ -152,19 +152,19 @@ info_error2 = {'likelihood': {'cmb': {'external': cmb_likelihood},
                'debug': debug}
 
 
-def test_bbn_likelihood(modules):
-    modules = process_modules_path(modules)
-    load_module("camb", path=os.path.join(modules, "code", "CAMB"))
+def test_bbn_likelihood(packages_path):
+    packages_path = process_packages_path(packages_path)
+    load_module("camb", path=os.path.join(packages_path, "code", "CAMB"))
     from camb.bbn import BBN_table_interpolator
     BBN_likelihood.bbn = BBN_table_interpolator(bbn_table)
-    info_error['modules'] = modules
+    info_error['packages_path'] = packages_path
     model = get_model(info_error)
     assert np.allclose(model.loglikes({'YHe': 0.246})[0], [0.246, -0.84340], rtol=1e-4), \
         "Failed BBN likelihood with %s" % info_error
 
     # second case, BBN likelihood has to be calculated before CAMB
     BBN_with_theory_errors.bbn = BBN_likelihood.bbn
-    info_error2['modules'] = modules
+    info_error2['packages_path'] = packages_path
     model = get_model(info_error2)
     assert np.allclose(model.loglikes({'BBN_delta': 1.0})[0], [0.24594834, -0.5],
                        rtol=1e-4)
@@ -223,9 +223,9 @@ info_pk = {'likelihood': {'cmb': Pklike},
            'debug': debug}
 
 
-def test_primordial_pk(modules):
-    modules = process_modules_path(modules)
-    info_pk['modules'] = modules
+def test_primordial_pk(packages_path):
+    packages_path = process_packages_path(packages_path)
+    info_pk['packages_path'] = packages_path
     model = get_model(info_pk)
     model.loglikes({'testAs': testAs, 'testns': testns})
 
@@ -276,7 +276,7 @@ class BinnedPk(Theory):
         return options
 
 
-def test_pk_binning(modules):
+def test_pk_binning(packages_path):
     # reproduce power law by sending in spline point values
     # has to be fine sampling to get to 1e-3 precision in test.
     nbins = 40
@@ -284,7 +284,7 @@ def test_pk_binning(modules):
     k_min_bin = -5.5
     k_max_bin = 2
 
-    info = {'modules': process_modules_path(modules),
+    info = {'packages_path': process_packages_path(packages_path),
             'likelihood': {'cmb': Pklike},
             'theory': {'camb': {"external_primordial_pk": True},
                        'my_pk': {"external": BinnedPk,

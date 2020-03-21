@@ -45,7 +45,7 @@ You can specify any parameter that CAMB understands in the ``params`` block:
 
 If you want to use your own version of CAMB, you need to specify its location with a
 ``path`` option inside the ``camb`` block. If you do not specify a ``path``,
-CAMB will be loaded from the automatic-install ``modules`` folder, if specified, or
+CAMB will be loaded from the automatic-install ``packages_path`` folder, if specified, or
 otherwise imported as a globally-installed Python package. Cobaya will print at
 initialisation where it is getting CAMB from.
 
@@ -210,13 +210,13 @@ class camb(BoltzmannBase):
 
     def initialize(self):
         """Importing CAMB from the correct path, if given."""
-        if not self.path and self.path_install:
-            self.path = self.get_path(self.path_install)
+        if not self.path and self.packages_path:
+            self.path = self.get_path(self.packages_path)
         camb_path = None
         if self.path and not os.path.exists(self.path):
             # Fail if this was a directly specified path,
-            # or ignore and try to global-import if it came from a path_install
-            if self.path_install:
+            # or ignore and try to global-import if it came from a packages_path
+            if self.packages_path:
                 self.log.info("*local* CAMB not found at " + self.path)
                 self.log.info("Importing *global* CAMB.")
             else:

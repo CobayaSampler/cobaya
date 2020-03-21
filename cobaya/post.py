@@ -19,7 +19,7 @@ from cobaya.parameterization import is_fixed_param, is_sampled_param, is_derived
 from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_prefix, _post
 from cobaya.conventions import _params, _prior, kinds, _weight, _resume, _separator
 from cobaya.conventions import _get_chi2_name, _minuslogpost, _force, partag
-from cobaya.conventions import _minuslogprior, _path_install, _input_params
+from cobaya.conventions import _minuslogprior, _packages_path, _input_params
 from cobaya.conventions import _separator_files, _post_add, _post_remove, _post_suffix
 from cobaya.collection import Collection
 from cobaya.log import logger_setup, LoggedError
@@ -267,7 +267,7 @@ def post(info, sample=None):
     # TODO: May well be simplifications here, this is v close to pre-refactor logic
     # Have not gone through or understood all the parameterization  stuff
     model_add = Model(out_params_like, add[kinds.likelihood], info_prior=add.get(_prior),
-                      info_theory=info_theory_out, path_install=info.get(_path_install),
+                      info_theory=info_theory_out, packages_path=info.get(_packages_path),
                       allow_renames=False, post=True,
                       prior_parameterization=dummy_model_out.parameterization)
     # Remove auxiliary "one" before dumping -- 'add' *is* info_out[_post][_post_add]
