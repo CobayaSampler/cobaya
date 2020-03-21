@@ -22,7 +22,7 @@ from cobaya.tools import create_banner, warn_deprecation, get_class, \
 from cobaya.input import get_used_components, get_kind
 from cobaya.conventions import _component_path, _code, _data, _external, _force, \
     _packages_path, _packages_path_arg, _packages_path_env, _yaml_extensions, \
-    _install_skip_env
+    _install_skip_env, _packages_path_arg_posix
 from cobaya.mpi import set_mpi_disabled
 from cobaya.tools import resolve_packages_path
 
@@ -267,12 +267,12 @@ def install_script():
                         help="One or more input files or component names "
                              "(or simply 'cosmo' to install all the requisites for basic"
                              " cosmological runs)")
-    parser.add_argument("-" + _packages_path_arg[0], "--" + _packages_path_arg,
+    parser.add_argument("-" + _packages_path_arg[0], "--" + _packages_path_arg_posix,
                         action="store", nargs=1, required=False,
                         metavar="/packages/path", default=[None],
                         help="Desired path where to install external packagess. "
                              "Optional if one has been set globally or as an env variable"
-                             " (run with '--show_%s' to check)." % _packages_path_arg)
+                             " (run with '--show_%s' to check)." % _packages_path_arg_posix)
     # MARKED FOR DEPRECATION IN v3.0
     modules = "modules"
     parser.add_argument("-" + modules[0], "--" + modules,
@@ -280,7 +280,7 @@ def install_script():
                         metavar="/packages/path", default=[None],
                         help="To be deprecated! "
                              "Alias for %s, which should be used instead." %
-                             _packages_path_arg)
+                             _packages_path_arg_posix)
     # END OF DEPRECATION BLOCK -- CONTINUES BELOW!
     output_show_packages_path = resolve_packages_path()
     if output_show_packages_path and os.environ.get(_packages_path_env):
@@ -289,7 +289,7 @@ def install_script():
         output_show_packages_path += " (from config file)"
     else:
         output_show_packages_path = "(Not currently set.)"
-    parser.add_argument("--show-" + _packages_path_arg, action="version",
+    parser.add_argument("--show-" + _packages_path_arg_posix, action="version",
                         version=output_show_packages_path,
                         help="Prints default external packages installation folder "
                              "and exits.")
@@ -342,7 +342,7 @@ def install_script():
     if getattr(arguments, modules) != [None]:
         logger.warning("*DEPRECATION*: -m/--modules will be deprecated in favor of "
                        "-%s/--%s in the next version. Please, use that one instead.",
-                       _packages_path_arg[0], _packages_path_arg)
+                       _packages_path_arg[0], _packages_path_arg_posix)
         # BEHAVIOUR TO BE REPLACED BY ERROR:
         if getattr(arguments, _packages_path_arg) == [None]:
             setattr(arguments, _packages_path_arg, getattr(arguments, modules))

@@ -85,6 +85,7 @@ _evidence_extension = ".logZ"
 
 # Installation and container definitions
 _packages_path_arg = _packages_path
+_packages_path_arg_posix = _packages_path_arg.replace("_", "-")
 _packages_path_env = "COBAYA_PACKAGES_PATH"
 _packages_path_config_file = "config.yaml"
 _packages_path_containers = "/cobaya_packages"

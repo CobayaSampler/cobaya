@@ -15,7 +15,7 @@ from cobaya import __version__
 from cobaya.conventions import kinds, _prior, _params, _packages_path, _output_prefix, \
     _debug, _debug_file, _resume, _timing, _debug_default, _force, _post, _test_run, \
     _yaml_extensions, _separator_files, _updated_suffix, _packages_path_arg, \
-    _packages_path_env, _resume_default
+    _packages_path_env, _resume_default, _packages_path_arg_posix
 from cobaya.output import get_output
 from cobaya.model import Model
 from cobaya.sampler import get_sampler_class, check_sampler_info
@@ -110,7 +110,7 @@ def run_script():
     parser = argparse.ArgumentParser(description="Cobaya's run script.")
     parser.add_argument("input_file", nargs=1, action="store", metavar="input_file.yaml",
                         help="An input file to run.")
-    parser.add_argument("-" + _packages_path_arg[0], "--" + _packages_path_arg,
+    parser.add_argument("-" + _packages_path_arg[0], "--" + _packages_path_arg_posix,
                         action="store", nargs=1, metavar="/packages/path", default=[None],
                         help="Path where external packages were installed.")
     # MARKED FOR DEPRECATION IN v3.0
@@ -120,7 +120,7 @@ def run_script():
                         metavar="/packages/path", default=[None],
                         help="To be deprecated! "
                              "Alias for %s, which should be used instead." %
-                             _packages_path_arg)
+                             _packages_path_arg_posix)
     # END OF DEPRECATION BLOCK -- CONTINUES BELOW!
     parser.add_argument("-" + _output_prefix[0], "--" + _output_prefix,
                         action="store", nargs=1, metavar="/some/path", default=[None],
@@ -173,7 +173,7 @@ def run_script():
         logger = logging.getLogger(__name__.split(".")[-1])
         logger.warning("*DEPRECATION*: -m/--modules will be deprecated in favor of "
                        "-%s/--%s in the next version. Please, use that one instead.",
-                       _packages_path_arg[0], _packages_path_arg)
+                       _packages_path_arg[0], _packages_path_arg_posix)
         # BEHAVIOUR TO BE REPLACED BY ERROR:
         if getattr(arguments, _packages_path_arg) == [None]:
             setattr(arguments, _packages_path_arg, getattr(arguments, modules))
