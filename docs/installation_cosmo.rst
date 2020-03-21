@@ -1,18 +1,18 @@
 Installing cosmological codes and data
 ======================================
 
-To keep it light, maintainable and easily extensible, **cobaya** does not include code or data of any of the cosmological modules used. Instead, it provides interfaces and *automatic installers* for them.
+To keep it light, maintainable and easily extensible, **cobaya** does not include code or data of many of the cosmological components used; instead, it provides interfaces and *automatic installers* for the *external packages* they require: the original code itself, a cosmological dataset, etc.
 
 .. _basic_requisites:
 
 Installing a basic set of codes and likelihoods
 -----------------------------------------------
 
-To install a comprehensive set of cosmology modules (CAMB, CLASS, Planck, BICEP-Keck, BAO, SN), in a ``/path/to/modules`` folders of your choice:
+To install a comprehensive set of cosmology requisites (CAMB, CLASS, Planck, BICEP-Keck, BAO, SN), in a ``/path/to/packages`` folders of your choice:
 
 .. code:: bash
 
-   $ cobaya-install cosmo -m /path/to/modules
+   $ cobaya-install cosmo -m /path/to/packages
 
 If this fails (see last printed message), keep on reading this section. Otherwise, you can go straight to :doc:`cosmo_basic_runs`.
    
@@ -22,7 +22,7 @@ If this fails (see last printed message), keep on reading this section. Otherwis
 Pre-requisites
 --------------
 
-On top of the pre-requisites of **cobaya**, you will need some others, which are indicated in the documentation of each of the modules. You may already fulfil them, so you may try to go ahead with the installation process and just take a look at the pre-requisites of the modules whose installation fails.
+On top of the pre-requisites of **cobaya**, you will need some others, which are indicated in the documentation of each of the components. You may already fulfil them, so you may try to go ahead with the installation process and just take a look at the pre-requisites of the components whose installation fails.
 
 You will need an internet connection with a decent bandwidth (don't use your phone's): you may need to download several gigabytes!
 
@@ -32,9 +32,9 @@ You will need an internet connection with a decent bandwidth (don't use your pho
 Using the automatic installer
 -----------------------------
 
-The automatic installation script takes one or more input files that you intend to run, makes a list of the external modules that you will need, and downloads and installs them one by one.
+The automatic installation script takes one or more input files that you intend to run, makes a list of the external packages that you will need, and downloads and installs them one by one.
 
-You need to specify a folder where the resulting files will be placed, which for the purposes of this instructions will be called ``/path/to/modules``. This does not need to be the folder in which you will run your samples.
+You need to specify a folder where the resulting files will be placed, which for the purposes of this instructions will be called ``/path/to/packages``. This does not need to be the folder in which you will run your samples.
 
 .. warning::
 
@@ -44,25 +44,25 @@ When you have prepared the relevant input files, call the automatic installation
 
 .. code:: bash
 
-   $ cobaya-install input_1.yaml input_2.yaml [etc] --modules /path/to/modules
+   $ cobaya-install input_1.yaml input_2.yaml [etc] --packages-path /path/to/packages
 
-You can skip the ``--modules`` option if a ``modules`` field is already defined in **one** of the input files.
+You can skip the ``--packages-path`` option if a ``packages_path`` field is already defined in **one** of the input files.
 
-``cobaya-install`` will save the modules installation path used into a global configuration file, so that you do not need to specify it in future calls to ``cobaya-install``, ``cobaya-run``, etc. To show the current default install path, run ``cobaya-install --show-modules``.
+``cobaya-install`` will save the packages installation path used into a global configuration file, so that you do not need to specify it in future calls to ``cobaya-install``, ``cobaya-run``, etc. To show the current default install path, run ``cobaya-install --show-packages-path``.
 
 To override the default path in a subsequent call to ``cobaya-install`` or ``cobaya-run``, the alternatives are, in descending order of precedence:
 
-#. add an ``--modules /override/path/to/modules`` command line argument.
-#. include ``modules: /override/path/to/modules`` somewhere in your :doc:`input file <input>`.
-#. define an environment variable ``COBAYA_MODULES=/override/path/to/modules`` (declare it with ``export COBAYA_MODULES=[...]``).
+#. add an ``--packages-path /override/path/to/packages`` command line argument.
+#. include ``packages_path: /override/path/to/packages`` somewhere in your :doc:`input file <input>`.
+#. define an environment variable ``COBAYA_PACKAGES_PATH=/override/path/to/packages`` (declare it with ``export COBAYA_PACKAGES_PATH=[...]``).
 
-You can run the ``cobaya-install`` script as many times as you want and it won't download or re-install already installed modules, unless the option ``--force`` (or ``-f``) is used.
+You can run the ``cobaya-install`` script as many times as you want and it won't download or re-install already installed packages, unless the option ``--force`` (or ``-f``) is used.
 
-Within ``/path/to/modules``, the following file structure will be created, containing only the modules that you requested:
+Within ``/path/to/packages``, the following file structure will be created, containing only the packages that you requested:
 
 .. code-block:: bash
 
-   /path/to/modules
+   /path/to/packages
             ├── code
             │   ├── planck
             │   ├── CAMB
@@ -81,7 +81,7 @@ Within ``/path/to/modules``, the following file structure will be created, conta
    .. code:: python
 
       from cobaya.install import install
-      install(info1, info2, [etc], path='/path/to/modules')
+      install(info1, info2, [etc], path='/path/to/packages')
 
    where ``info[X]`` are input **dictionaries**.
 
@@ -90,11 +90,11 @@ Within ``/path/to/modules``, the following file structure will be created, conta
 
 .. _install_manual:
 
-Installing modules manually
----------------------------
+Installing requisires manually
+------------------------------
 
-The automatic installation process above installs each module in the simplest way possible and places as much code as possible in system folders (e.g. modules that can be installed as Python packages).
+The automatic installation process above installs all the requisites for the components used in the simplest way possible, preferring the system folders when possible (e.g. code that can be installed as a Python package).
 
-If you want to modify one of the modules (e.g. one of the theory codes) you will probably prefer to install them manually. Each module's documentation has a section on manual installation, and on how to specify your installation folder at run time. Check the relevant section of the documentation of each module.
+If you want to modify one of the external packages (e.g. one of the theory codes) you will probably prefer to install them manually. Each compoenent's documentation has a section on manual installation of its requisites, and on how to specify your installation folder at run time. Check the relevant section of the documentation of each component.
 
-When an installation path for a particular module is given in its corresponding input block, it takes precedence over automatic installation folder described above, so that if you already installed a version automatically, it will be ignored in favour of the manually specified one.
+When an installation path for a particular component is given in its corresponding input block, it takes precedence over automatic installation folder described above, so that if you already installed a version automatically, it will be ignored in favour of the manually specified one.

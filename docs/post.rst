@@ -5,7 +5,7 @@ Importance reweighting and general ``post``-processing
 
    *new in 1.2*
 
-The `post` module provides a way to post-process an existing sample in different ways:
+The `post` component provides a way to post-process an existing sample in different ways:
 
 - Add/remove/recompute a prior, e.g. to impose a parameter cut.
 - Add/remove/recompute a likelihood.

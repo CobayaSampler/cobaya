@@ -74,7 +74,7 @@ To install **cobaya** or upgrade it to the latest release, simply type in a term
 
 For a **cluster** install, you may want to remove the ``[gui]`` to avoid errors due to non-essential dependencies.
 
-To go on installing **cosmological modules**, see :doc:`installation_cosmo`.
+To go on installing **cosmological requisites**, see :doc:`installation_cosmo`.
 
 .. warning::
 
@@ -180,7 +180,7 @@ Use this method if you want to make modifications to the code, either for yourse
 
 .. note::
 
-   Notice that you don't need to modify **cobaya**'s source to use your own priors, likelihoods, etc. Take a look at the documentation of the modules that you would like to modify to check if can do that in an easier way.
+   Notice that you don't need to modify **cobaya**'s source to use your own priors, likelihoods, etc. Take a look at the documentation of the components that you would like to modify to check if can do that in an easier way.
 
 
 .. _install_devel:

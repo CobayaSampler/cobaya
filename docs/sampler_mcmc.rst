@@ -50,7 +50,7 @@ Progress monitoring – *new in 2.1*
 
 When writing to the hard drive, the MCMC sampler produces an additional ``[output_prefix].progress`` file containing the acceptance rate and the Gelman :math:`R-1` diagnostics (for means and confidence level contours) per checkpoint, so that the user can monitor the convergence of the chain. In interactive mode (when running inside a Python script of in the Jupyter notebook), an equivalent ``progress`` table in a ``pandas.DataFrame`` is returned among the ``products``.
 
-The ``mcmc`` modules provides a plotting tool to produce a graphical representation of convergence, see :func:`~samplers.mcmc.plot_progress`. An example plot can be seen below:
+The ``mcmc`` module provides a plotting tool to produce a graphical representation of convergence, see :func:`~samplers.mcmc.plot_progress`. An example plot can be seen below:
 
 .. code:: Python
 

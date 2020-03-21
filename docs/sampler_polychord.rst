@@ -157,7 +157,7 @@ If everything seems to be working fine, but PolyChord is taking too long to conv
 Installation
 ------------
 
-Simply run ``cobaya-install polychord --modules [/path/to/modules]`` (or, instead of ``polychord`` after ``cobaya-install``, mention an input file that uses ``polychord``).
+Simply run ``cobaya-install polychord --packages-path [/path/to/packages]`` (or, instead of ``polychord`` after ``cobaya-install``, mention an input file that uses ``polychord``).
 
 If PolyChord has been installed this way, it is not necessary to specify a ``path`` option for it.
 

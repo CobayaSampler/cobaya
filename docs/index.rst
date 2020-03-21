@@ -12,7 +12,7 @@ Table of contents
    example_advanced
 
 .. toctree::
-   :caption: General topics and modules
+   :caption: General topics and components
    :maxdepth: 1
 
    input

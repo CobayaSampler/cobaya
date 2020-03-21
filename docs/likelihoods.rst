@@ -136,8 +136,7 @@ The subpackage contains at least two files:
    Actually, there are some user-defined options that are common to all likelihoods and do not need to be specified in the defaults ``[ClassName].yaml`` file, such as the computational ``speed`` of the likelihood (see :ref:`mcmc_speed_hierarchy`).
 
 
-It is up to you where to define your likelihood class(es): the ``__init__`` file can define a class [ClassName] directly, or you can define
-a class in a module.py file inside the likelihood directory (subpackage).
+It is up to you where to define your likelihood class(es): the ``__init__`` file can define a class [ClassName] directly, or you can define a class in a ``module.py`` file inside the likelihood directory (subpackage).
 
 Assuming your ``__init__`` file defines the class, or imports it (``from .module_name import ClassName``),
 when running Cobaya you can reference the internal likelihood using:
@@ -185,7 +184,7 @@ For an application, check out :doc:`cosmo_external_likelihood_class`.
 Implementing your own *external* likelihood class
 --------------------------------------------------
 
-Instead of including the likelihood within the standard Cobaya likelihood modules, you may wish to make an external
+Instead of including the likelihood within the standard Cobaya likelihoods, you may wish to make an external
 package that can be redistributed easily. To do this you make a package containing a class defined exactly the same way
 as for internal likelihoods above (inheriting from :class:`Likelihood` as documented below). For example if you have a
 package called *mycodes*, containing a likelihood class called MyLike in *mycodes.mylikes*, when running Cobaya you can

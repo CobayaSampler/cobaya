@@ -23,12 +23,12 @@ There are 5 different input blocks (two of them optional), which can be specifie
 
 - ``theory`` (optional): has only one entry, which specifies the theory code with which to compute the observables used by the likelihoods, and options for it.
 
-The modules specified above (i.e. likelihoods, samplers, theories...) can have any number of options, but you don't need to specify all of them every time you use them: if an option is not specified, its **default** value is used. The default values for each module are described in their respective section of the documentation, and in a ``[likelihood_name].yaml`` file in the folder of **cobaya** where that module is defined, e.g. ``cobaya/cobaya/likelihoods/gaussian/gaussian.yaml`` for the defaults of the ``gaussian`` likelihood.
+The *components* specified above (i.e. likelihoods, samplers, theories...) can have any number of options, but you don't need to specify all of them every time you use them: if an option is not specified, its **default** value is used. The default values for each component are described in their respective section of the documentation, and in a ``[likelihood_name].yaml`` file in the folder of **cobaya** where that component is defined, e.g. ``cobaya/cobaya/likelihoods/gaussian/gaussian.yaml`` for the defaults of the ``gaussian`` likelihood.
 
 In addition, there are some *top level* options (i.e. defined outside any block):
 
 + ``output``: determines where the output files are written and/or a prefix for their names — see :ref:`output_shell`.
-+ ``modules``: path where the external modules have been automatically installed — see :doc:`installation_cosmo`.
++ ``packages_path``: path where the external packages have been automatically installed — see :doc:`installation_cosmo`.
 + ``debug``: sets the verbosity level of the output. By default (undefined or ``False``), it produces a rather informative output, reporting on initialization, overall progress and results. If ``True``, it produces a very verbose output (a few lines per sample) that can be used for debugging. You can also set it directly to a particular `integer level of the Python logger <https://docs.python.org/2/library/logging.html#logging-levels>`_, e.g. 40 to produce error output only (alternatively, ``cobaya-run`` can take the flag ``--debug`` to produce debug output, that you can pipe to a file with ``>file``).
 + ``debug_file``: a file name, with a relative or absolute path if desired, to which to send all logged output. When used, only basic progress info is printed on-screen, and the full debug output (if ``debug: True``) will be sent to this file instead
 
@@ -144,7 +144,7 @@ Some common YAML *gotchas*
          burn_in = 10   # ERROR: should be 'burn_in: 10'
          max_tries:100  # ERROR: should have a space: 'max_tries: 100'
 
-+ **missing colons!** Each module or parameter definition, even if it is a bare *mention* and does not have options, must end in a colon (which is actually equivalent to writing a null value ``null`` after the colon); e.g. the following input would produce an error:
++ **missing colons!** Each component or parameter definition, even if it is a bare *mention* and does not have options, must end in a colon (which is actually equivalent to writing a null value ``null`` after the colon); e.g. the following input would produce an error:
 
   .. code:: yaml
 

@@ -23,19 +23,19 @@ Now install the requisites with
 
    $ python -m pip install mpi4py --user --no-binary :all:
 
-And install **cobaya** (and optionally PolyChord and some cosmology modules) with
+And install **cobaya** (and optionally PolyChord and some cosmology requisites) with
 
 .. code:: bash
 
    $ python -m pip install cobaya --user
 
-   $ cobaya-install cosmo --modules modules
+   $ cobaya-install cosmo --packages-path cobaya_packages
 
 .. note::
 
    If ``cobaya-install cosmo`` fails with a segmentation fault, simply run it again.
 
-Now you are ready to run some samples. Don't forget to mention the modules folder with ``-m modules`` in the command line, or ``modules: modules`` in the input file.
+Now you are ready to run some samples. Don't forget to mention the external packages folder with ``-p cobaya_packages`` in the command line, or ``packages_path: packages`` in the input file.
 
 As an example, you can just copy the input at :doc:`cosmo_basic_runs`, paste it in a file with ``nano`` and save it to ``planck.yaml``.
 
@@ -43,4 +43,4 @@ To run with ``X`` MPI processes, each creating at most ``Y`` threads (in our rec
 
 .. code:: bash
 
-   $ mpirun -n X --map-by socket:PE=Y  cobaya-run planck.yaml -m modules -o chains/planck
+   $ mpirun -n X --map-by socket:PE=Y  cobaya-run planck.yaml -p cobaya_packages -o chains/planck
