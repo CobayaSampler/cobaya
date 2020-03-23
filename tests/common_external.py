@@ -29,7 +29,8 @@ derived_funcs = {"r": lambda x, y: np.sqrt(x ** 2 + y ** 2),
 
 
 def half_ring_func_derived(x, y=0.5, _derived=("r", "theta")):
-    _derived.update({p: derived_funcs[p](x, y) for p in ["r", "theta"]})
+    if _derived is not None:
+        _derived.update({p: derived_funcs[p](x, y) for p in ["r", "theta"]})
     return eval(half_ring_str)(x, y)
 
 

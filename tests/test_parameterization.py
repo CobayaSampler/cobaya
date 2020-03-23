@@ -25,7 +25,8 @@ k_func = "lambda f: f**3"
 
 
 def loglik(a, b, c, d, h, i, j, _derived=("x", "e")):
-    _derived.update({"x": x_func(c), "e": e_func(b)})
+    if _derived is not None:
+        _derived.update({"x": x_func(c), "e": e_func(b)})
     return multivariate_normal.logpdf((a, b, c, d, h, i, j), cov=0.1 * np.eye(7))
 
 
