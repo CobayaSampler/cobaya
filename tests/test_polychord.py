@@ -16,8 +16,8 @@ def test_polychord(packages_path, tmpdir):
 
 
 @flaky(max_runs=5, min_passes=1)
-    dimension = 2
 def test_polychord_multimodal(packages_path, tmpdir):
+    dimension = 2
     n_modes = 2
     info_sampler = {"polychord": {"nlive": 40 * dimension * n_modes}}
     body_of_test(dimension=dimension, n_modes=n_modes,
