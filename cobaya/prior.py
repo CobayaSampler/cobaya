@@ -565,11 +565,16 @@ class Prior(HasLogger):
                 "It is not possible to get the covariance matrix from an external prior.")
         return np.diag([pdf.var() for pdf in self.pdf]).T
 
-    def reference(self, max_tries=np.inf, max_tries_warning="10d"):
+    def reference(self, max_tries=np.inf, warn_if_tries="10d", ignore_fixed=False,
+                  warn_if_no_ref=True):
         """
         Returns:
           One sample from the ref pdf. For those parameters that do not have a ref pdf
           defined, their value is sampled from the prior.
+
+        If `ignored_fixed=True` (default: `False`), fixed reference values will be ignored
+        in favor of the full prior, ensuring some randomness for all parameters (useful
+        e.g. to prevent caching when measuring speeds).
 
         NB: The way this function works may be a little dangerous:
         if two parameters have an (external)
@@ -579,23 +584,26 @@ class Prior(HasLogger):
         prior pdf. In any case, it should work for getting initial reference points,
         e.g. for an MCMC chain.
         """
-        if np.nan in self.ref_pdf:
+        if np.nan in self.ref_pdf and warn_if_no_ref:
             self.log.info(
                 "Reference values or pdf's for some parameters were not provided. "
                 "Sampling from the prior instead for those parameters.")
+        ignore_cond = (
+            lambda x: (x is np.nan or
+                       (isinstance(x, numbers.Real) if ignore_fixed else False)))
+        where_ignore_ref = [ignore_cond(r) for r in self.ref_pdf]
         tries = 0
-        max_tries_warning = read_dnumber(max_tries_warning, self.d())
+        warn_if_tries = read_dnumber(warn_if_tries, self.d())
         while tries < max_tries:
             tries += 1
             ref_sample = np.array([getattr(ref_pdf, "rvs", lambda: ref_pdf.real)()
                                    for i, ref_pdf in enumerate(self.ref_pdf)])
-            where_no_ref = np.isnan(ref_sample)
-            if np.any(where_no_ref):
+            if np.any(where_ignore_ref):
                 prior_sample = self.sample(ignore_external=True)[0]
-                ref_sample[where_no_ref] = prior_sample[where_no_ref]
+                ref_sample[where_ignore_ref] = prior_sample[where_ignore_ref]
             if self.logp(ref_sample) > -np.inf:
                 return ref_sample
-            if tries == max_tries_warning:
+            if tries == warn_if_tries:
                 self.log.warning("If stuck here, maybe it is not possible to sample from "
                                  "the reference pdf a point with non-null prior. Check "
                                  "that they are consistent.")

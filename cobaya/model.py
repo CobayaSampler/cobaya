@@ -432,13 +432,21 @@ class Model(HasLogger):
         return self.logposterior(params_values, make_finite=make_finite,
                                  return_derived=False, cached=cached)[0]
 
-    def get_initial_point(self, max_tries):
+    def get_valid_point(self, max_tries, ignore_fixed_ref=False):
         """
-        Finds a point from the reference pdf that has finite posterior.
+        Finds a point with finite posterior, sampled from from the reference pdf.
+
+        It will fail if no valid point is found after `max_tries`.
+
+        If `ignored_fixed_ref=True` (default: `False`), fixed reference values will be
+        ignored in favor of the full prior, ensuring some randomness for all parameters
+        (useful e.g. to prevent caching when measuring speeds).
+
         Returns (point, logpost, logpriors, loglikes, derived)
         """
         for _ in range(max(1, max_tries // self.prior.d())):
-            initial_point = self.prior.reference(max_tries=max_tries)
+            initial_point = self.prior.reference(max_tries=max_tries,
+                                                 ignore_fixed=ignore_fixed_ref)
             logpost, logpriors, loglikes, derived = self.logposterior(initial_point)
             if -np.inf not in loglikes:
                 break
@@ -1004,22 +1012,26 @@ class Model(HasLogger):
         for component in self.components:
             component.set_timing_on(on)
 
-    def measure_and_set_speeds(self, test_point=None, max_tries=np.inf):
+    def measure_and_set_speeds(self, n=1, discard=1, max_tries=np.inf):
         """
-        Measures the speeds of the different components (theories and likelihoods) at a
-        given point `test_point`. If `test_point` not given, tries to find a suitable one
-        (in that case, can take `max_tries` for finding a test point).
+        Measures the speeds of the different components (theories and likelihoods). To do
+        that evaluates the posterior at `n` points (default: 1), discarding `discard`
+        points (default: 1) to mitigate possible internal caching.
+
+        Stops after encountering `max_tries` points (default: inf) with non-finite
+        posterior.
         """
-        if test_point is None:
-            test_point, _, _, _, _ = self.get_initial_point(max_tries=max_tries)
         timing_on = self.timing
         if not timing_on:
             self.set_timing_on(True)
         self.mpi_info("Measuring speeds... (this may take a few seconds)")
-        # call all components (at least) a second time
-        test_point *= 1.00001
-# deberia medir mas veces.
-        self.loglikes(test_point, cached=False)
+        n_done = 0
+        while n_done < int(n) + int(discard):
+            point = self.prior.reference(
+                max_tries=max_tries, ignore_fixed=True, warn_if_no_ref=False)
+            if self.loglikes(point, cached=False, return_derived=False) != -np.inf:
+                n_done += 1
+        self.log.debug("Computed %d points to measure speeds.", n_done)
         times = [component.timer.get_time_avg() for component in self.components]
         if more_than_one_process():
             # average for different points

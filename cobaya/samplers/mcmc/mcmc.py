@@ -150,12 +150,12 @@ class mcmc(CovmatSampler):
             self.max_tries.set_scale(self.model.prior.d())
             self.log.info("Getting initial point... (this may take a few seconds)")
             initial_point, logpost, logpriors, loglikes, derived = \
-                self.model.get_initial_point(max_tries=self.max_tries.value)
+                self.model.get_valid_point(max_tries=self.max_tries.value)
             if self.measure_speeds and self.blocking:
                 self.log.warning(
                     "Parameter blocking manually fixed: speeds will not be measured.")
             elif self.measure_speeds:
-                self.model.measure_and_set_speeds(initial_point)
+                self.model.measure_and_set_speeds(n=self.measure_speeds, discard=0)
         self.set_proposer_blocking()
         self.set_proposer_covmat(load=True)
         self.current_point.add(initial_point, derived=derived, logpost=logpost,
