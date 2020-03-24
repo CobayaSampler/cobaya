@@ -12,14 +12,14 @@ env:
 #Large CamSpec folders tend to hang, so exclude non-base likelihoods from cache
 cache:
   directories:
-  - /home/travis/build/CosmoPars/modules/code
-  - /home/travis/build/CosmoPars/modules/data/planck_supp_data_and_covmats
-  - /home/travis/build/CosmoPars/modules/data/planck_2018/baseline
-  - /home/travis/build/CosmoPars/modules/data/bicep_keck_2015
-  - /home/travis/build/CosmoPars/modules/data/bao_data
-  - /home/travis/build/CosmoPars/modules/data/sn_data
-  - /home/travis/build/CosmoPars/modules/data/des_data
-  - /home/travis/build/CosmoPars/modules/data/plik_lite
+  - /home/travis/build/CosmoPars/packages/code
+  - /home/travis/build/CosmoPars/packages/data/planck_supp_data_and_covmats
+  - /home/travis/build/CosmoPars/packages/data/planck_2018/baseline
+  - /home/travis/build/CosmoPars/packages/data/bicep_keck_2015
+  - /home/travis/build/CosmoPars/packages/data/bao_data
+  - /home/travis/build/CosmoPars/packages/data/sn_data
+  - /home/travis/build/CosmoPars/packages/data/des_data
+  - /home/travis/build/CosmoPars/packages/data/plik_lite
 
 
 # (Pre)Installation
@@ -107,7 +107,7 @@ before_install:
     fi
   - python --version
 script:
-  - export COBAYA_MODULES="../modules"
+  - export COBAYA_PACKAGES_PATH="../packages"
   - export COBAYA_TEST_SKIP=$COBAYA_INSTALL_SKIP
   # General tests:
   - cobaya-install polychord
@@ -115,12 +115,12 @@ script:
   # Cosmology tests:
   - cobaya-install cosmo-tests --no-progress-bars
   - if [ -n "${CAMB_BRANCH}" ]; then
-      rm -rf $COBAYA_MODULES/code/CAMB ;
-      git clone --recursive --depth 1 -b $CAMB_BRANCH https://github.com/cmbant/CAMB $COBAYA_MODULES/code/CAMB ;
-      python $COBAYA_MODULES/code/CAMB/setup.py build ;
+      rm -rf $COBAYA_PACKAGES_PATH/code/CAMB ;
+      git clone --recursive --depth 1 -b $CAMB_BRANCH https://github.com/cmbant/CAMB $COBAYA_PACKAGES_PATH/code/CAMB ;
+      python $COBAYA_PACKAGES_PATH/code/CAMB/setup.py build ;
     fi
   - pytest tests/ -v -s -k "cosmo" --forked
-  - python $COBAYA_MODULES/code/CAMB/setup.py install
+  - python $COBAYA_PACKAGES_PATH/code/CAMB/setup.py install
   - git clone --depth=1 https://github.com/CobayaSampler/planck_lensing_external
   - pip install ./planck_lensing_external --quiet
   - python -m unittest plancklensing.tests.test_likes
