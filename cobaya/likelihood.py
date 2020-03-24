@@ -25,11 +25,11 @@ class can be used as and when needed.
 # Global
 import sys
 import traceback
-from time import sleep
-import numpy as np
 import inspect
-from typing import Mapping
+from time import sleep
+from typing import Mapping, Optional, Union
 from itertools import chain
+import numpy as np
 
 # Local
 from cobaya.conventions import kinds, _external, _component_path, empty_dict, \
@@ -67,6 +67,8 @@ class Likelihood(Theory, LikelihoodInterface):
     :class:`theory.Theory` class by adding functions to return likelihoods functions
     (logp function for a given point)."""
 
+    type: Optional[Union[list, str]] = []
+
     def __init__(self, info=empty_dict, name=None, timing=None, packages_path=None,
                  initialize=True, standalone=True):
         self.delay = 0
@@ -74,7 +76,7 @@ class Likelihood(Theory, LikelihoodInterface):
                          packages_path=packages_path, initialize=initialize,
                          standalone=standalone)
         # Make sure `types` is a list of data types, for aggregated chi2
-        self.type = str_to_list(getattr(self, "type", []))
+        self.type = str_to_list(getattr(self, "type", []) or [])
 
     @property
     def theory(self):
