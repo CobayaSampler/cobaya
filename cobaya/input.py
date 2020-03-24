@@ -200,7 +200,7 @@ def update_info(info):
     # Add aggregated chi2 params
     if kinds.likelihood in info:
         all_types = set(chain(
-            *[str_to_list(like_info.get("type", []))
+            *[str_to_list(like_info.get("type", []) or [])
               for like_info in updated_info[kinds.likelihood].values()]))
         for t in all_types:
             updated_info[_params][_get_chi2_name(t)] = {

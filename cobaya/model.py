@@ -262,7 +262,7 @@ class Model(HasLogger):
                 if return_derived:
                     derived_dict[_get_chi2_name(component.get_name().replace(".", "_"))] \
                         = -2 * loglikes[index - n_theory]
-                    for this_type in getattr(component, "type", []):
+                    for this_type in getattr(component, "type", []) or []:
                         aggr_chi2_name = _get_chi2_name(this_type)
                         if aggr_chi2_name not in derived_dict:
                             derived_dict[aggr_chi2_name] = 0
