@@ -4,7 +4,7 @@ Installing cobaya
 Pre-requisites
 --------------
 
-The only pre-requisites are **Python** (version ≥ 3.6) and the Python package manager **pip** (version ≥ 20.0). External modules may have additional dependencies (see :doc:`installation_cosmo`).
+The only pre-requisites are **Python** (version ≥ 3.6) and the Python package manager **pip** (version ≥ 20.0).
 
 .. warning::
 
@@ -21,6 +21,10 @@ To check if you have Python installed, type ``python --version`` in the shell, a
 .. note::
 
    In the following, commands to be run in the shell are displayed here with a leading ``$``. You do not have to type it.
+
+.. note::
+
+   Some of cobaya components (likelihood, Boltzmann codes, samplers) consist only of an interface to some external code or data that will need to be installed separately (see :doc:`installation_cosmo`).
 
 
 .. _install_mpi:

@@ -49,5 +49,5 @@ from cobaya.yaml import yaml_load
 
 info = yaml_load(info_txt)
 
-# Add your modules installation folder
-info['modules'] = '/path/to/modules'
+# Add your external packages installation folder
+info['packages_path'] = '/path/to/packages'
