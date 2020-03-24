@@ -5,6 +5,7 @@
 ## check PK_grid/interpolator changes for classy, and general classy review
 ## update docs/img/diagram.svg (and for paper)
 ## Update example notebook to match example in paper
+## make arguments of sampler close() consistent
 
 # Incomplete implementations/bigger jobs
 ## Grids/rest of cosmomc scripts

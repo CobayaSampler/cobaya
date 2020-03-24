@@ -12,9 +12,9 @@ from typing import NamedTuple, Sequence, Mapping
 import logging
 
 # Local
-from cobaya.conventions import kinds, _prior, _timing, _aliases, _params, _provides, \
+from cobaya.conventions import kinds, _prior, _timing, _params, _provides, \
     _overhead_time, _packages_path, _debug, _debug_default, _debug_file, _input_params, \
-    _output_params, _chi2, _separator, _get_chi2_name, _input_params_prefix, \
+    _output_params, _get_chi2_name, _input_params_prefix, \
     _output_params_prefix, _requires
 from cobaya.input import update_info
 from cobaya.parameterization import Parameterization
@@ -986,7 +986,7 @@ class Model(HasLogger):
     def set_cache_size(self, n_states):
         """
         Sets the number of different parameter points to cache for all theories
-        and likelihood.
+        and likelihoods.
 
         :param n_states: number of cached points
         """
