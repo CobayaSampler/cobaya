@@ -83,6 +83,7 @@ from copy import deepcopy
 
 # Local
 from cobaya.sampler import Minimizer
+from cobaya.conventions import _undo_chi2_name
 from cobaya.mpi import get_mpi_size, get_mpi_comm, is_main_process, get_mpi_rank, \
     more_than_one_process
 from cobaya.collection import OnePoint, Collection
@@ -374,9 +375,8 @@ class minimize(Minimizer, CovmatSampler):
         add_section(
             [[p, params[p]] for p in self.model.parameterization.derived_params()])
         if hasattr(params, 'chi2_names'):
-            from cobaya.conventions import _chi2, _separator
             labels.update({p: r'\chi^2_{\rm %s}' % (
-                p.replace(_chi2 + _separator, '').replace("_", r"\ "))
+                _undo_chi2_name(p).replace("_", r"\ "))
                            for p in params.chi2_names})
             add_section([[chi2, params[chi2]] for chi2 in params.chi2_names])
         return "\n".join(lines)

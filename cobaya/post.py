@@ -11,23 +11,23 @@ import os
 import logging
 import re
 from copy import deepcopy
+from itertools import chain
 import numpy as np
 
 # Local
 from cobaya.parameterization import Parameterization
 from cobaya.parameterization import is_fixed_param, is_sampled_param, is_derived_param
-from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_prefix, _post
-from cobaya.conventions import _params, _prior, kinds, _weight, _resume, _separator
-from cobaya.conventions import _get_chi2_name, _minuslogpost, _force, partag
-from cobaya.conventions import _minuslogprior, _packages_path, _input_params
-from cobaya.conventions import _separator_files, _post_add, _post_remove, _post_suffix
+from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_prefix, \
+    _post, _params, _prior, kinds, _weight, _resume, _separator, _get_chi2_name, \
+    _minuslogpost, _force, partag, _minuslogprior, _packages_path, _input_params, \
+    _separator_files, _post_add, _post_remove, _post_suffix, _undo_chi2_name
 from cobaya.collection import Collection
 from cobaya.log import logger_setup, LoggedError
 from cobaya.input import update_info
 from cobaya.output import get_output
 from cobaya.mpi import get_mpi_rank
 from cobaya.tools import progress_bar, recursive_update, deepcopy_where_possible, \
-    check_deprecated_modules_path
+    check_deprecated_modules_path, str_to_list
 from cobaya.model import Model
 
 
@@ -114,6 +114,10 @@ def post(info, sample=None):
                 "You tried to remove parameter '%s', which is not a derived parameter. "
                 "Only derived parameters can be removed during post-processing.", p)
         out[_params].pop(p)
+    # Force recomputation of aggregated chi2
+    for p in list(out[_params]):
+        if p.startswith(_get_chi2_name("")):
+            out[_params].pop(p)
     mlprior_names_add = []
     for p, pinfo in add.get(_params, {}).items():
         pinfo_in = info_in[_params].get(p)
@@ -213,8 +217,8 @@ def post(info, sample=None):
             info_theory_out = deepcopy_where_possible(info_in[kinds.theory])
     else:
         info_theory_out = None
-    chi2_names_add = [_get_chi2_name(name) for name in add[kinds.likelihood]
-                      if name != "one"]
+    chi2_names_add = [
+        _get_chi2_name(name) for name in add[kinds.likelihood] if name != "one"]
     out[kinds.likelihood] += [l for l in add[kinds.likelihood] if l != "one"]
     if recompute_theory:
         log.warning("You are recomputing the theory, but in the current version this does"
@@ -279,6 +283,16 @@ def post(info, sample=None):
     add[kinds.likelihood].pop("one")
     collection_out = Collection(dummy_model_out, output_out, name="1")
     output_out.check_and_dump_info(None, info_out, check_compatible=False)
+    # Prepare recomputation of aggregated chi2
+    # (they need to be recomputed by hand, because its autocomputation won't pick up
+    #  old likelihoods for a given type)
+    all_types = {
+        like: str_to_list(add[kinds.likelihood].get(
+            like, info_in[kinds.likelihood].get(like)).get("type", []) or [])
+        for like in out[kinds.likelihood]}
+    types = set(chain(*list(all_types.values())))
+    inv_types = {t: [like for like, like_types in all_types.items() if t in like_types]
+                 for t in types}
     # 4. Main loop!
     log.info("Running post-processing...")
     last_percent = 0
@@ -341,6 +355,12 @@ def post(info, sample=None):
                 args = dummy_model_out.parameterization._derived_args[p]
                 derived[p] = func(
                     *[point.get(arg, output_like.get(arg, None)) for arg in args])
+        # We need to recompute the aggregated chi2 by hand
+        for type_, likes in inv_types.items():
+            derived[_get_chi2_name(type_)] = sum(
+                [-2 * lvalue for lname, lvalue
+                 in zip(collection_out.chi2_names, loglikes_new)
+                 if _undo_chi2_name(lname) in likes])
         if log.getEffectiveLevel() <= logging.DEBUG:
             log.debug("New derived parameters: %r",
                       dict([(p, derived[p])

@@ -1,6 +1,6 @@
 # For release
 
-## Finish implementation of aggregated-by-data-type chi2 -- interaction with POST
+## "Not enough points in chain to check convergence" should be warning and just continue until enough
 ## check PolyChord-related issues (non-physical regions, etc)
 ## check PK_grid/interpolator changes for classy, and general classy review
 ## update docs/img/diagram.svg (and for paper)
@@ -14,7 +14,6 @@
 # cosmetic/consistency/speed
 
 ## No output to files while burn in makes it hard to see if working OK (default no burn?) -- JT: should be ok now that it print sth every 60s?
-## "Not enough points in chain to check convergence" should be warning and just continue until enough
 ## version attribute should be in all components not just theory (samplers can have versions) [done for samplers; missing: likelihoods]
 ## restrict external likelihood functions to those with no requirements/theory? (new class is almost as short, and avoids syntactic inconsistencies in _theory); or use _requirements, _provider?
 ## post: use MPI, and TODO's in code

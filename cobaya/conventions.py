@@ -71,6 +71,7 @@ _minuslogpost = "minuslogpost"  # log-posterior, or in general the total log-pro
 _minuslogprior = "minuslogprior"  # log-prior
 _chi2 = "chi2"  # chi^2 = -2 * loglik
 _get_chi2_name = lambda p: _chi2 + _separator + str(p)
+_undo_chi2_name = lambda p: p[len(_chi2 + _separator):]
 _get_chi2_label = lambda p: r"\chi^2_\mathrm{" + str(p).replace("_", r"\ ") + r"}"
 _prior_1d_name = "0"
 

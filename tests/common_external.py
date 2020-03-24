@@ -11,9 +11,8 @@ import scipy.stats as stats
 from copy import deepcopy
 
 # Local
-from cobaya.conventions import _output_prefix, _params, _prior
-from cobaya.conventions import kinds, _updated_suffix
-from cobaya.conventions import _chi2, _separator, _external, _input_params, _output_params
+from cobaya.conventions import _output_prefix, _params, _prior, kinds, _updated_suffix, \
+    _get_chi2_name, _input_params, _output_params, _external
 from cobaya.run import run
 from cobaya.yaml import yaml_load
 from cobaya.tools import getfullargspec
@@ -106,7 +105,7 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
     elif kind == kinds.likelihood:
         for lik in info[kinds.likelihood]:
             assert np.allclose(-2 * logps[lik],
-                               products["sample"][_chi2 + _separator + lik].values), (
+                               products["sample"][_get_chi2_name(lik)].values), (
                     "The value of the likelihood '%s' is not reproduced correctly." % lik)
     assert np.allclose(logprior_base + sum(logps[p] for p in info_logpdf),
                        -products["sample"]["minuslogpost"].values), (
