@@ -45,8 +45,9 @@ class _DataSetLikelihood(_InstallableLikelihood):
             data_file = self.dataset_file
             self.path = os.path.dirname(data_file)
         else:
-            # If no path specified, use the external packages path
-            if not self.path and self.packages_path:
+            # If no path specified and has install options (so it installed its data as an
+            # external package), use the external packages path
+            if not self.path and self.get_install_options() and self.packages_path:
                 self.path = self.get_path(self.packages_path)
             self.path = self.path or self.get_class_path()
             if not self.path:

@@ -27,7 +27,7 @@ from cobaya.input import update_info
 from cobaya.output import get_output
 from cobaya.mpi import get_mpi_rank
 from cobaya.tools import progress_bar, recursive_update, deepcopy_where_possible, \
-    resolve_packages_path, check_deprecated_modules_path
+    check_deprecated_modules_path
 from cobaya.model import Model
 
 
@@ -48,7 +48,6 @@ def post(info, sample=None):
     # BEHAVIOUR TO BE REPLACED BY ERROR:
     check_deprecated_modules_path(info)
     # END OF DEPRECATION BLOCK
-    packages_path = info.get(_packages_path, resolve_packages_path())
     try:
         info_post = info[_post]
     except KeyError:
@@ -273,7 +272,7 @@ def post(info, sample=None):
     # TODO: May well be simplifications here, this is v close to pre-refactor logic
     # Have not gone through or understood all the parameterization  stuff
     model_add = Model(out_params_like, add[kinds.likelihood], info_prior=add.get(_prior),
-                      info_theory=info_theory_out, packages_path=packages_path,
+                      info_theory=info_theory_out, packages_path=info.get(_packages_path),
                       allow_renames=False, post=True,
                       prior_parameterization=dummy_model_out.parameterization)
     # Remove auxiliary "one" before dumping -- 'add' *is* info_out[_post][_post_add]
