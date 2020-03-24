@@ -4,7 +4,6 @@ from packaging import version
 from cobaya.log import HasLogger, LoggedError
 from cobaya.input import HasDefaults
 from cobaya.conventions import _version, empty_dict
-from cobaya.tools import resolve_packages_path
 
 
 class Timer:
@@ -68,7 +67,7 @@ class CobayaComponent(HasLogger, HasDefaults):
 
         self.set_instance_defaults()
         self._name = name or self.get_qualified_class_name()
-        self.packages_path = packages_path or resolve_packages_path()
+        self.packages_path = packages_path
         # set attributes from the info (from yaml file or directly input dictionary)
         for k, value in info.items():
             try:

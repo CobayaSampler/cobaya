@@ -8,10 +8,10 @@
 
 # Global
 import os
-import numpy as np
 import logging
-from copy import deepcopy
 import re
+from copy import deepcopy
+import numpy as np
 
 # Local
 from cobaya.parameterization import Parameterization
@@ -26,7 +26,8 @@ from cobaya.log import logger_setup, LoggedError
 from cobaya.input import update_info
 from cobaya.output import get_output
 from cobaya.mpi import get_mpi_rank
-from cobaya.tools import progress_bar, recursive_update, deepcopy_where_possible
+from cobaya.tools import progress_bar, recursive_update, deepcopy_where_possible, \
+    resolve_packages_path, check_deprecated_modules_path
 from cobaya.model import Model
 
 
@@ -43,6 +44,11 @@ class DummyModel:
 def post(info, sample=None):
     logger_setup(info.get(_debug), info.get(_debug_file))
     log = logging.getLogger(__name__.split(".")[-1])
+    # MARKED FOR DEPRECATION IN v3.0
+    # BEHAVIOUR TO BE REPLACED BY ERROR:
+    check_deprecated_modules_path(info)
+    # END OF DEPRECATION BLOCK
+    packages_path = info.get(_packages_path, resolve_packages_path())
     try:
         info_post = info[_post]
     except KeyError:
@@ -267,7 +273,7 @@ def post(info, sample=None):
     # TODO: May well be simplifications here, this is v close to pre-refactor logic
     # Have not gone through or understood all the parameterization  stuff
     model_add = Model(out_params_like, add[kinds.likelihood], info_prior=add.get(_prior),
-                      info_theory=info_theory_out, packages_path=info.get(_packages_path),
+                      info_theory=info_theory_out, packages_path=packages_path,
                       allow_renames=False, post=True,
                       prior_parameterization=dummy_model_out.parameterization)
     # Remove auxiliary "one" before dumping -- 'add' *is* info_out[_post][_post_add]

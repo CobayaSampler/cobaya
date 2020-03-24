@@ -15,7 +15,7 @@ from cobaya import __version__
 from cobaya.conventions import kinds, _prior, _params, _packages_path, _output_prefix, \
     _debug, _debug_file, _resume, _timing, _debug_default, _force, _post, _test_run, \
     _yaml_extensions, _separator_files, _updated_suffix, _packages_path_arg, \
-    _packages_path_env, _resume_default, _packages_path_arg_posix
+    _resume_default, _packages_path_arg_posix
 from cobaya.output import get_output
 from cobaya.model import Model
 from cobaya.sampler import get_sampler_class, check_sampler_info
@@ -24,7 +24,7 @@ from cobaya.yaml import yaml_dump
 from cobaya.input import update_info
 from cobaya.mpi import import_MPI, is_main_process, set_mpi_disabled
 from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic, \
-    check_deprecated_modules_path
+    check_deprecated_modules_path, resolve_packages_path
 from cobaya.post import post
 
 
@@ -43,6 +43,7 @@ def run(info):
     # BEHAVIOUR TO BE REPLACED BY ERROR:
     check_deprecated_modules_path(info)
     # END OF DEPRECATION BLOCK
+    packages_path = info.get(_packages_path, resolve_packages_path())
     # 1. Prepare output driver, if requested by defining an output_prefix
     output = get_output(output_prefix=info.get(_output_prefix),
                         resume=info.get(_resume), force=info.get(_force))
@@ -78,14 +79,14 @@ def run(info):
     # 4. Initialize the posterior and the sampler
     with Model(updated_info[_params], updated_info[kinds.likelihood],
                updated_info.get(_prior), updated_info.get(kinds.theory),
-               packages_path=info.get(_packages_path), timing=updated_info.get(_timing),
+               packages_path=packages_path, timing=updated_info.get(_timing),
                allow_renames=False, stop_at_error=info.get("stop_at_error", False)) \
             as model:
         # Re-dump the updated info, now containing parameter routes and version info
         updated_info = recursive_update(updated_info, model.info())
         output.check_and_dump_info(None, updated_info, check_compatible=False)
         sampler = sampler_class(updated_info[kinds.sampler][sampler_class.__name__],
-                                model, output, packages_path=info.get(_packages_path))
+                                model, output, packages_path=packages_path)
         # Re-dump updated info, now also containing updates from the sampler
         updated_info[kinds.sampler][sampler.get_name()] = \
             recursive_update(
@@ -186,6 +187,8 @@ def run_script():
     info[_resume] = getattr(arguments, _resume, _resume_default)
     info[_force] = getattr(arguments, _force, False)
     info[_test_run] = getattr(arguments, _test_run, False)
+    if info[_test_run]:
+        set_mpi_disabled()
     if _post in info:
         post(info)
     else:
