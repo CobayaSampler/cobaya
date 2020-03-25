@@ -260,9 +260,9 @@ class mcmc(CovmatSampler):
                                  "dragging steps.")
             # END OF DEPRECATION BLOCK
             self.get_new_sample = self.get_new_sample_dragging
-            self.log.info("Dragging with number of interpolating steps:")
-            self.log.info("* %d : %r", 1, self.slow_blocks)
-            self.log.info("* %d : %r", self.drag_interp_steps, self.fast_blocks)
+            self.mpi_info("Dragging with number of interpolating steps:")
+            self.mpi_info("* %d : %r", 1, self.slow_blocks)
+            self.mpi_info("* %d : %r", self.drag_interp_steps, self.fast_blocks)
         # Save blocking in updated info, in case we want to resume
         self._updated_info["blocking"] = list(zip(self.oversampling_factors, self.blocks))
         sampled_params_list = list(self.model.parameterization.sampled_params())
