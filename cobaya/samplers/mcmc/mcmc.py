@@ -245,7 +245,7 @@ class mcmc(CovmatSampler):
                     "speed ratio and fast-to-slow ratio not large enough.")
         # Define proposer and other blocking-related quantities
         if self.oversample:
-            self.log.info("Oversampling with factors:\n" + "\n".join([
+            self.mpi_info("Oversampling with factors:\n" + "\n".join([
                 "* %d : %r" % (f, b) for f, b in
                 zip(self.oversampling_factors, self.blocks)]))
             if self.oversample_thin:
