@@ -818,7 +818,7 @@ def get_config_path():
     """
     try:
         if platform.system() == "Windows":
-            base = os.environ.get("CSIDL_LOCAL_APPDATA")
+            base = os.environ.get("LOCALAPPDATA")
             if not base:
                 raise ValueError("Application folder not defined.")
             config_path = os.path.join(base, "cobaya")
