@@ -326,15 +326,29 @@ class Collection(BaseCollection):
         if self._n_last_out == n_max:
             return
         self._n_last_out = n_max
-        n_float = 8
+        if not getattr(self, "_txt_formatters", False):
+            n_float = 8
+            # Add to this 7 places: sign, leading 0's, exp of 3 figures.
+            width_col = lambda col: max(7 + n_float, len(col))
+            fmts = ["{:" + "{}.{}".format(width_col(col), n_float) + "g}"
+                    for col in self.data.columns]
+            # `fmt` as a kwarg with default value is needed to force substitution of var
+            self._txt_formatters = {
+                col: (lambda x, fmt=fmt: fmt.format(x))
+                for col, fmt in zip(self.data.columns, fmts)}
+            self._header_formatter = [
+                (lambda s, w=width_col(col): ("{:>" + "{}".format(w) + "s}").format(s))
+                for col in self.data.columns]
         do_header = not n_min
+        if do_header:
+            with open(self.file_name, "a", encoding="utf-8") as out:
+                out.write("#" + " ".join(
+                    f(col) for f, col
+                    in zip(self._header_formatter, self.data.columns))[1:] + "\n")
         with open(self.file_name, "a", encoding="utf-8") as out:
             lines = self.data[n_min:n_max].to_string(
-                header=do_header, index=False, na_rep="nan", justify="right",
-                float_format=(lambda x: ("%%.%dg" % n_float) % x))
-            # if header, add comment marker by hand (messes with align if auto)
-            if do_header:
-                lines = "#" + (lines[1:] if lines[0] == " " else lines)
+                header=False, index=False, na_rep="nan", justify="right",
+                formatters=self._txt_formatters)
             out.write(lines + "\n")
 
     def _delete__txt(self):
