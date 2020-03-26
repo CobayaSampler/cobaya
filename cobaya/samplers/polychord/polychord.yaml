@@ -13,6 +13,7 @@ nlive: 25d
 # You may want to use `d` for exploratory runs.
 num_repeats: 5d
 # Number of prior samples drawn before starting compression
+# Make it larger than nlive if your prior/likelihood has unphysical regions
 nprior:  # default: nlive
 # Whether to check for and explore multi-modality on the posterior
 do_clustering: True
@@ -38,7 +39,7 @@ feedback:  # default: Same as global `verbosity`
 # whether to measure actual speeds for your machine/threading at starting rather
 # than using stored values
 # EXPERIMENTAL: will fail when resuming in some cases
-measure_speeds: True
+measure_speeds: False
 # Oversampling power: amount of oversampling or dragging. Value in [0, 1]
 oversample_power: 0.7
 # Manual speed blocking

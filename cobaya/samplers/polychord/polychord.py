@@ -285,17 +285,18 @@ class polychord(Sampler):
         """
         if is_main_process():
             self.log.info("Loading PolyChord's results: samples and evidences.")
-            prefix = os.path.join(self.pc_settings.base_dir, self.pc_settings.file_root)
-            self.dump_paramnames(prefix)
-            self.collection = self.save_sample(prefix + ".txt", "1")
+            raw_prefix = os.path.join(
+                self.pc_settings.base_dir, self.pc_settings.file_root)
+            self.dump_paramnames(raw_prefix)
+            self.collection = self.save_sample(raw_prefix + ".txt", "1")
             # Load clusters, and save if output
             if self.pc_settings.do_clustering:
                 self.clusters = {}
                 clusters_raw_regexp = re.compile(
                     re.escape(self.pc_settings.file_root + "_") + r"\d+\.txt")
-                cluster_raw_files = find_with_regexp(
-                    clusters_raw_regexp, os.path.join(self.pc_settings.base_dir,
-                                                      self._clusters_dir), walk_tree=True)
+                cluster_raw_files = sorted(find_with_regexp(
+                    clusters_raw_regexp, os.path.join(
+                        self.pc_settings.base_dir, self._clusters_dir), walk_tree=True))
                 for f in cluster_raw_files:
                     i = int(f[f.rfind("_") + 1:-len(".txt")])
                     if self.output:
@@ -308,7 +309,7 @@ class polychord(Sampler):
             # Prepare the evidence(s) and write to file
             pre = "log(Z"
             active = "(Still active)"
-            with open(prefix + ".stats", "r", encoding="utf-8-sig") as statsfile:
+            with open(raw_prefix + ".stats", "r", encoding="utf-8-sig") as statsfile:
                 lines = [l for l in statsfile.readlines() if l.startswith(pre)]
             for l in lines:
                 logZ, logZstd = [float(n.replace(active, "")) for n in
@@ -319,6 +320,25 @@ class polychord(Sampler):
                 elif self.pc_settings.do_clustering:
                     i = int(component)
                     self.clusters[i]["logZ"], self.clusters[i]["logZstd"] = logZ, logZstd
+            self.log.debug(
+                "RAW log(Z) = %g +/- %g ; RAW Z in [%.8g, %.8g] (68%% C.L. log-gaussian)",
+                self.logZ, self.logZstd,
+                *[np.exp(self.logZ + n * self.logZstd) for n in [-1, 1]])
+            # Correct for unphysical region fraction -- see issue #77
+            with open(raw_prefix + ".prior_info", "r", encoding="utf-8-sig") as priorfile:
+                lines = list(priorfile.readlines())
+            get_value_str = lambda line: line[line.find("=") + 1:]
+            get_value_str_var = lambda var: get_value_str(
+                next(l for l in lines if l.lstrip().startswith(var)))
+            nprior = int(get_value_str_var("nprior"))
+            ndiscarded = int(get_value_str_var("ndiscarded"))
+            if nprior != ndiscarded:
+                frac_unphysical = nprior / ndiscarded
+                self.log.debug(
+                    "Correcting for unphysical region fraction: %g", frac_unphysical)
+                self.logZ += np.log(frac_unphysical)
+                for cluster in self.clusters.values():
+                    cluster["logZ"] += np.log(frac_unphysical)
             if self.output:
                 out_evidences = dict(logZ=self.logZ, logZstd=self.logZstd)
                 if getattr(self, "clusters", None):
@@ -340,6 +360,11 @@ class polychord(Sampler):
             self.log.info("Finished! Raw PolyChord output stored in '%s', "
                           "with prefix '%s'",
                           self.pc_settings.base_dir, self.pc_settings.file_root)
+            self.log.info(
+                "log(Z) = %g +/- %g ; Z in [%.8g, %.8g] (68%% C.L. log-gaussian)",
+                self.logZ, self.logZstd,
+                *[np.exp(self.logZ + n * self.logZstd) for n in [-1, 1]])
+
 
     def products(self):
         """

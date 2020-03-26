@@ -77,10 +77,17 @@ If you are using external priors (as described :ref:`here <prior_external>`), th
    \log\mathcal{Z} &= \log\mathcal{Z}_\mathrm{u} - \log\mathcal{Z}_\pi\\
    \sigma(\log\mathcal{Z}) &= \sigma(\log\mathcal{Z}_\mathrm{u}) + \sigma(\log\mathcal{Z}_\pi)
 
+.. warning::
+
+   If any of the priors specified in the ``prior`` block or any of the likelihoods has *unphysical* regions, i.e. regions of null prior or likelihood, increase the ``nprior`` parameter of PolyChord up to ``50d``, ``100d``, or higher, depending on the complexity of the unphysical region.
+
+   **Why?** The unphysical fraction of the parameter space, which is automatically subtracted to the raw PolyChord result, is guessed from a prior sample of size ``nprior``, so the higher that sample is, the smaller the bias introduced by its missestimation.
+
+   Increasing ``nprior`` will make your run slower to initialize, but will not significantly affect the total duration.
 
 .. note::
 
-   **Only for Cobaya versions <1.X (using PolyChord 1.15)**
+   **Only for Cobaya versions <2.X (using PolyChord 1.15)**
 
    If your prior is **constant** in the region of interest, in order for PolyChord not to get stuck, you have to add a small noise term to the likelihood ``one`` (see :doc:`its documentation <likelihood_one>`). The noise amplitude must be smaller by a couple of orders of magnitude than the inverse of a rough estimation of the expected prior volume, e.g. if your prior volume is expected to be :math:`\mathcal{O}(10^3)`, make the noise :math:`\mathcal{O}(10^{-5})`. PolyChord will take a while to converge (even if the prior evaluation is fast), and you may get some ``Non deterministic loglikelihood`` warnings coming from PolyChord, but don't worry about them.
 

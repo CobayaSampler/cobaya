@@ -328,7 +328,7 @@ class Collection(BaseCollection):
         self._n_last_out = n_max
         if not getattr(self, "_txt_formatters", False):
             n_float = 8
-            # Add to this 7 places: sign, leading 0's, exp of 3 figures.
+            # Add to this 7 places: sign, leading 0's, exp with sign and 3 figures.
             width_col = lambda col: max(7 + n_float, len(col))
             fmts = ["{:" + "{}.{}".format(width_col(col), n_float) + "g}"
                     for col in self.data.columns]
