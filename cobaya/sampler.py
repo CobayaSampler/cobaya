@@ -377,7 +377,8 @@ class Sampler(CobayaComponent):
             elif any(find_with_regexp(regexp, root or output.folder) for (regexp, root)
                      in cls.output_files_regexps(output=output, info=info, minimal=True)):
                 if output.is_resuming():
-                    output.log.info("Found and old sample. Resuming.")
+                    output.log.info("Found an old sample. Resuming.")
+                    return
                 else:
                     raise LoggedError(
                         output.log, "Delete the previous output manually, automatically "
