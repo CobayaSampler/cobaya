@@ -90,7 +90,11 @@ class BoltzmannBase(Theory):
           Takes ``"z": [list_of_evaluated_redshifts]``, ``"k_max": [k_max]``,
           ``"extrap_kmax": [max_k_max_extrapolated]``, ``"nonlinear": [True|False]``,
           ``"vars_pairs": [["delta_tot", "delta_tot"], ["Weyl", "Weyl"], [...]]}``.
-          Non-linear contributions are included by default.
+          Non-linear contributions are included by default. Note that the nonlinear setting
+          determines whether nonlinear corrections are calculated; the get_Pk_interpolator
+           function also has a nonlinear argument to specify if you want the linear or
+           nonlinear spectrum returned (you can also get the linear spectrum even if
+           the nonlinear calculation is requested).
           All ``k`` values should be in units of ``1/Mpc``.
         - ``Pk_grid={...}``: similar to Pk_interpolator except that rather than returning
           a bicuplic spline object it returns the raw power spectrum grid as a (k, z, PK)

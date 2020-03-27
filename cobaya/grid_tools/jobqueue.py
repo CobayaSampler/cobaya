@@ -331,7 +331,7 @@ def submitJob(jobName, inputFiles, sequential=False, msg=False, **kwargs):
         template = "\n".join(
             [line for line in template.split("\n") if not line.startswith("##")])
         script = replacePlaceholders(template, vals)
-        scriptRoot = os.path.join(base_path, _script_folder, os.path.splitext(jobName)[0])
+        scriptRoot = os.path.join(base_path, _script_folder, jobName)
         scriptName = scriptRoot + _script_ext
         open(scriptName, 'w', encoding="utf-8").write(script)
         if len(inputFiles) > 1:
