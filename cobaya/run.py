@@ -69,7 +69,7 @@ def run(info):
     sampler_class = get_sampler_class(last_sampler_info)
     check_sampler_info(
         (output.reload_updated_info(use_cache=True) or {}).get(kinds.sampler),
-        updated_info[kinds.sampler])
+        updated_info[kinds.sampler], is_resuming=output.is_resuming())
     # Dump again, now including sampler info
     output.check_and_dump_info(info, updated_info, check_compatible=False)
     # Check if resumible run

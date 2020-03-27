@@ -86,7 +86,7 @@ def check_sane_info_sampler(info_sampler):
         raise LoggedError(log, "Only one sampler currently supported at a time.")
 
 
-def check_sampler_info(info_old=None, info_new=None):
+def check_sampler_info(info_old=None, info_new=None, is_resuming=False):
     """
     Checks compatibility between the new sampler info and that of a pre-existing run.
 
@@ -114,9 +114,16 @@ def check_sampler_info(info_old=None, info_new=None):
         info_new = recursive_update(info_new, keep_old.get(kinds.sampler, {}))
     if not is_equal_info(
             {kinds.sampler: info_old}, {kinds.sampler: info_new}, strict=False):
-        raise LoggedError(
-            logger_sampler, "Old and new Sampler information not compatible! "
-                            "Resuming not possible!")
+        if is_resuming:
+            raise LoggedError(
+                logger_sampler, "Old and new Sampler information not compatible! "
+                                "Resuming not possible!")
+        else:
+            raise LoggedError(
+                logger_sampler, "Found old Sampler information which is not compatible "
+                "with the new one. Delete the previous output manually, "
+                "or automatically with either "
+                "'-%s', '--%s', '%s: True'" % (_force[0], _force, _force))
 
 
 def get_sampler(info_sampler, model, output=None, packages_path=None):
@@ -140,7 +147,7 @@ def get_sampler(info_sampler, model, output=None, packages_path=None):
     sampler_class = get_sampler_class(updated_info_sampler)
     check_sampler_info(
         (output.reload_updated_info(use_cache=True) or {}).get(kinds.sampler),
-        updated_info_sampler)
+        updated_info_sampler, is_resuming=output.is_resuming())
     # Check if resumable run
     sampler_name = sampler_class.__name__
     sampler_class.check_force_resume(output, info=updated_info_sampler[sampler_name])
