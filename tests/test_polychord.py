@@ -3,6 +3,7 @@ import numpy as np
 
 from cobaya.run import run
 from .common_sampler import body_of_test, body_of_test_speeds
+from cobaya.conventions import kinds, _params, partag, _output_prefix
 
 
 ### @pytest.mark.mpi
@@ -17,6 +18,31 @@ def test_polychord(packages_path, tmpdir):
                  info_sampler=info_sampler, tmpdir=str(tmpdir), packages_path=packages_path)
 
 
+def test_polychord_resume(packages_path, tmpdir):
+    nlive = 10
+    max_ndead = 2 * nlive
+    def callback(sampler):
+        global dead_points
+        dead_points = sampler.dead[["a", "b"]].values.copy()
+    info = {
+        kinds.likelihood: {
+            "A": {"external": "lambda a: stats.norm.logpdf(a)", "speed": 1},
+            "B": {"external": "lambda b: stats.norm.logpdf(b)", "speed": 0.01}},
+        _params: {
+            "a": {partag.prior: {"min": 0, "max": 1}},
+            "b": {partag.prior: {"min": 0, "max": 1}}},
+        kinds.sampler: {
+            "polychord": {
+                "nlive": nlive,
+                "max_ndead": max_ndead,
+                "callback_function": callback,
+            }},
+        _output_prefix: str(tmpdir)}
+    upd_info, sampler = run(info)
+    old_dead_points = dead_points.copy()
+    info["resume"] = True
+    upd_info, sampler = run(info)
+    assert np.allclose(old_dead_points, dead_points)
 @flaky(max_runs=5, min_passes=1)
 def test_polychord_multimodal(packages_path, tmpdir):
     dimension = 2
