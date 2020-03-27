@@ -211,9 +211,13 @@ class polychord(Sampler):
                                self.n_sampled + self.n_derived + self.n_priors +
                                self.n_likes])
         self.logZ, self.logZstd = logZ, logZstd
+        self._correct_unphysical_fraction()
         # Callback function
         if self.callback_function is not None:
-            self.callback_function_callable(self)
+            try:
+                self.callback_function_callable(self)
+            except Exception as e:
+                self.log.error("The callback function produced an error: %r", str(e))
             self.last_point_callback = len(self.dead)
 
     def _run(self):
@@ -241,6 +245,11 @@ class polychord(Sampler):
         self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
                               self.pc_prior, self.dumper)
         self.close()
+
+    @property
+    def raw_prefix(self):
+        return os.path.join(
+            self.pc_settings.base_dir, self.pc_settings.file_root)
 
     def dump_paramnames(self, prefix):
         paramnames = (list() +
@@ -278,6 +287,27 @@ class polychord(Sampler):
         collection._out_update()
         return collection
 
+    def _correct_unphysical_fraction(self):
+        """
+        Correction for the fraction of the prior that is unphysical -- see issue #77
+        """
+        if not hasattr(self, "_frac_unphysical"):
+            with open(self.raw_prefix + ".prior_info", "r", encoding="utf-8-sig") as pf:
+                lines = list(pf.readlines())
+            get_value_str = lambda line: line[line.find("=") + 1:]
+            get_value_str_var = lambda var: get_value_str(
+                next(l for l in lines if l.lstrip().startswith(var)))
+            nprior = int(get_value_str_var("nprior"))
+            ndiscarded = int(get_value_str_var("ndiscarded"))
+            self._frac_unphysical = nprior / ndiscarded
+        if self._frac_unphysical != 1:
+            self.log.debug(
+                "Correcting for unphysical region fraction: %g", self._frac_unphysical)
+            self.logZ += np.log(self._frac_unphysical)
+            if hasattr(self, "clusters"):
+                for cluster in self.clusters.values():
+                    cluster["logZ"] += np.log(self._frac_unphysical)
+
     def close(self):
         """
         Loads the sample of live points from ``PolyChord``'s raw output and writes it
@@ -285,10 +315,8 @@ class polychord(Sampler):
         """
         if is_main_process():
             self.log.info("Loading PolyChord's results: samples and evidences.")
-            raw_prefix = os.path.join(
-                self.pc_settings.base_dir, self.pc_settings.file_root)
-            self.dump_paramnames(raw_prefix)
-            self.collection = self.save_sample(raw_prefix + ".txt", "1")
+            self.dump_paramnames(self.raw_prefix)
+            self.collection = self.save_sample(self.raw_prefix + ".txt", "1")
             # Load clusters, and save if output
             if self.pc_settings.do_clustering:
                 self.clusters = {}
@@ -309,7 +337,7 @@ class polychord(Sampler):
             # Prepare the evidence(s) and write to file
             pre = "log(Z"
             active = "(Still active)"
-            with open(raw_prefix + ".stats", "r", encoding="utf-8-sig") as statsfile:
+            with open(self.raw_prefix + ".stats", "r", encoding="utf-8-sig") as statsfile:
                 lines = [l for l in statsfile.readlines() if l.startswith(pre)]
             for l in lines:
                 logZ, logZstd = [float(n.replace(active, "")) for n in
@@ -324,21 +352,7 @@ class polychord(Sampler):
                 "RAW log(Z) = %g +/- %g ; RAW Z in [%.8g, %.8g] (68%% C.L. log-gaussian)",
                 self.logZ, self.logZstd,
                 *[np.exp(self.logZ + n * self.logZstd) for n in [-1, 1]])
-            # Correct for unphysical region fraction -- see issue #77
-            with open(raw_prefix + ".prior_info", "r", encoding="utf-8-sig") as priorfile:
-                lines = list(priorfile.readlines())
-            get_value_str = lambda line: line[line.find("=") + 1:]
-            get_value_str_var = lambda var: get_value_str(
-                next(l for l in lines if l.lstrip().startswith(var)))
-            nprior = int(get_value_str_var("nprior"))
-            ndiscarded = int(get_value_str_var("ndiscarded"))
-            if nprior != ndiscarded:
-                frac_unphysical = nprior / ndiscarded
-                self.log.debug(
-                    "Correcting for unphysical region fraction: %g", frac_unphysical)
-                self.logZ += np.log(frac_unphysical)
-                for cluster in self.clusters.values():
-                    cluster["logZ"] += np.log(frac_unphysical)
+            self._correct_unphysical_fraction()
             if self.output:
                 out_evidences = dict(logZ=self.logZ, logZstd=self.logZstd)
                 if getattr(self, "clusters", None):

@@ -147,6 +147,11 @@ A callback function can be specified through the ``callback_function`` option. I
 
 The frequency of calls of the callback function is given by the ``compression_factor`` (see contents of ``polychord.yaml`` above).
 
+.. note::
+
+   Errors produced inside the callback function will be reported, but they will not stop PolyChord.
+
+
 Troubleshooting
 ---------------
 
