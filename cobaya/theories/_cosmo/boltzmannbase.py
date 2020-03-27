@@ -370,8 +370,10 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
         self.islog = logP
         #  Check order
         z, k = (np.atleast_1d(x) for x in [z, k])
-        if len(z) < 3:
-            raise ValueError('Require at least three redshifts for interpolation')
+        if len(z) < 4:
+            raise ValueError('Require at least three redshifts for Pk interpolation.'
+                             'Consider using Pk_grid if you just need a a small number'
+                             'of specific redshifts (doing 1D splines in k yourself).')
         i_z = np.argsort(z)
         i_k = np.argsort(k)
         self.logsign = logsign
