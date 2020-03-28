@@ -1016,11 +1016,12 @@ class Model(HasLogger):
         for component in self.components:
             component.set_timing_on(on)
 
-    def measure_and_set_speeds(self, n=1, discard=1, max_tries=np.inf):
+    def measure_and_set_speeds(self, n=None, discard=1, max_tries=np.inf):
         """
         Measures the speeds of the different components (theories and likelihoods). To do
-        that evaluates the posterior at `n` points (default: 1), discarding `discard`
-        points (default: 1) to mitigate possible internal caching.
+        that it evaluates the posterior at `n` points (default: 1 per MPI process, or 3 if
+        single process), discarding `discard` points (default: 1) to mitigate possible
+        internal caching.
 
         Stops after encountering `max_tries` points (default: inf) with non-finite
         posterior.
@@ -1029,6 +1030,8 @@ class Model(HasLogger):
         if not timing_on:
             self.set_timing_on(True)
         self.mpi_info("Measuring speeds... (this may take a few seconds)")
+        if n is None:
+            n = 1 if more_than_one_process() else 3
         n_done = 0
         while n_done < int(n) + int(discard):
             point = self.prior.reference(
