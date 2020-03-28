@@ -245,9 +245,10 @@ class mcmc(CovmatSampler):
                     "speed ratio and fast-to-slow ratio not large enough.")
         # Define proposer and other blocking-related quantities
         if self.oversample:
-            self.mpi_info("Oversampling with factors:\n" + "\n".join([
-                "* %d : %r" % (f, b) for f, b in
-                zip(self.oversampling_factors, self.blocks)]))
+            self.mpi_info("Oversampling with factors:")
+            max_width = len(str(max(self.oversampling_factors)))
+            for f, b in zip(self.oversampling_factors, self.blocks):
+                self.mpi_info("* %" + "%d" % max_width + "d : %r", f, b)
             if self.oversample_thin:
                 self.current_point.output_thin = int(np.round(sum(
                     len(b) * o for b, o in zip(self.blocks, self.oversampling_factors)) /
@@ -261,8 +262,10 @@ class mcmc(CovmatSampler):
             # END OF DEPRECATION BLOCK
             self.get_new_sample = self.get_new_sample_dragging
             self.mpi_info("Dragging with number of interpolating steps:")
-            self.mpi_info("* %d : %r", 1, self.slow_blocks)
-            self.mpi_info("* %d : %r", self.drag_interp_steps, self.fast_blocks)
+            max_width = len(str(self.drag_interp_steps))
+            self.mpi_info("* %" + "%d" % max_width + "d : %r", 1, self.slow_blocks)
+            self.mpi_info("* %" + "%d" % max_width + "d : %r",
+                          self.drag_interp_steps, self.fast_blocks)
         # Save blocking in updated info, in case we want to resume
         self._updated_info["blocking"] = list(zip(self.oversampling_factors, self.blocks))
         sampled_params_list = list(self.model.parameterization.sampled_params())

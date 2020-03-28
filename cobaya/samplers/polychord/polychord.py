@@ -127,6 +127,10 @@ class polychord(Sampler):
                 self.model.measure_and_set_speeds(n=self.measure_speeds)
             blocks, oversampling_factors = self.model.get_param_blocking_for_sampler(
                 oversample_power=self.oversample_power)
+        self.mpi_info("Parameter blocks and their oversampling factors:")
+        max_width = len(str(max(oversampling_factors)))
+        for f, b in zip(oversampling_factors, blocks):
+            self.mpi_info("* %" + "%d" % max_width + "d : %r", f, b)
         # Save blocking in updated info, in case we want to resume
         self._updated_info["blocking"] = list(zip(oversampling_factors, blocks))
         blocks_flat = list(chain(*blocks))
