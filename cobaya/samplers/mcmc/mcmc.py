@@ -309,6 +309,8 @@ class mcmc(CovmatSampler):
                               "earlier: R-1 = %g (was %g if all params loaded).",
                               self.learn_proposal_Rminus1_max_adjusted,
                               self.learn_proposal_Rminus1_max)
+            else:
+                self.learn_proposal_Rminus1_max_adjusted = self.learn_proposal_Rminus1_max
             self.log.debug(
                 "Sampling with covmat:\n%s",
                 DataFrame(self._covmat,
