@@ -185,10 +185,10 @@ class polychord(Sampler):
         self.dead = Collection(self.model, self.output, name="dead")
         # Done!
         if is_main_process():
-            self.log.info("Calling PolyChord with arguments:")
+            self.log.debug("Calling PolyChord with arguments:")
             for p, v in inspect.getmembers(self.pc_settings, lambda a: not (callable(a))):
                 if not p.startswith("_"):
-                    self.log.info("  %s: %s", p, v)
+                    self.log.debug("  %s: %s", p, v)
 
     def dumper(self, live_points, dead_points, logweights, logZ, logZstd):
         # Store live and dead points and evidence computed so far
@@ -245,7 +245,7 @@ class polychord(Sampler):
                 derived)
 
         sync_processes()
-        self.mpi_info("Sampling!")
+        self.mpi_info("Calling PolyChord...")
         self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
                               self.pc_prior, self.dumper)
         self.close()
