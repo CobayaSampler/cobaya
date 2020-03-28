@@ -38,8 +38,7 @@ feedback:  # default: Same as global `verbosity`
 # --------------------------
 # whether to measure actual speeds for your machine/threading at starting rather
 # than using stored values
-# EXPERIMENTAL: will fail when resuming in some cases
-measure_speeds: False
+measure_speeds: True
 # Oversampling power: amount of oversampling or dragging. Value in [0, 1]
 oversample_power: 0.7
 # Manual speed blocking

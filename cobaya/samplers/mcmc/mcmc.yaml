@@ -25,7 +25,8 @@ learn_every: 40d
 learn_proposal: True
 # Don't learn if convergence is worse than...
 learn_proposal_Rminus1_max: 2.
-# (even earlier if a param is not in the given covariance matrix)
+# (even earlier if a param is not in the given covariance matrix;
+#  adjusted for the number of unknown parameters)
 learn_proposal_Rminus1_max_early: 30.
 # ... or if it is better than... (no need to learn, already good!)
 learn_proposal_Rminus1_min: 0.
