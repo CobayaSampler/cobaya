@@ -61,6 +61,7 @@ The third file, ending in ``.txt``, contains the MCMC sample, and its first line
 You can use `GetDist <https://getdist.readthedocs.io/en/latest/index.html>`_ to analyse the results of this sample: get marginalized statistics, convergence diagnostics and some plots. We recommend using the `graphical user interface <https://getdist.readthedocs.io/en/latest/gui.html>`_. Simply run ``GetDistGUI.py`` from anywhere, press the green ``+`` button, navigate in the pop-up window into the folder containing the chains (here ``chains``) and click ``choose``. Now you can get some result statistics from the ``Data`` menu, or generate some plots like this one (just mark the the options in the red boxes and hit ``Make plot``):
 
 .. image:: img/example_quickstart_getdistgui.png
+   :align: center
 
 .. note::
 
@@ -126,6 +127,7 @@ Output:
 .. literalinclude:: ./src_examples/quickstart/analyze_out.txt
 
 .. image:: img/example_quickstart_plot.png
+   :align: center
 
 Alternatively, if we had chosen to write the output as in the shell case by adding an ``output`` prefix, we could have loaded the chain in GetDist from the hard drive:
 

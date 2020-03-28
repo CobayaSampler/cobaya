@@ -2,7 +2,6 @@
 
 ## "Not enough points in chain to check convergence" should be warning and just continue until enough
 ## check PK_grid/interpolator changes for classy, and general classy review
-## Update example notebook to match example in paper
 
 # Incomplete implementations/bigger jobs
 ## Grids/rest of cosmomc scripts
@@ -28,9 +27,10 @@
 ## Let classes do all defaults combining; allow separate like instantiation + use equivalent to loading in cobaya
 ## `check_conflicts` theory method or similar (so likelihoods can raise error when used in combination with other variant likelihoods using non-independent data)
 ## If non-linear lensing on, model the non-linear correction via limber for faster semi-slow parameters
-## unbounded parameters with flat prior (this would make it safe to rotate the unbounded ones in minimize) [JT: not very much in favour, since that would break a bunch of other stuff. Maybe let's explore an alternative solution?]
-## minimize: MINUIT
-## minimize: maybe should not overwrite `sampler` block of original sample (either append or leave as it was)
+## minimize:
+### unbounded parameters with flat prior (this would make it safe to rotate the unbounded ones in minimize) [JT: not very much in favour, since that would break a bunch of other stuff. Maybe let's explore an alternative solution?]
+### add MINUIT
+### maybe should not overwrite `sampler` block of original sample (either append or leave as it was)
 ## mcmc:
 * finish removing .checkpoint in favour of updated.yaml and .progress
 * For learning checks, X should perhaps ideally also depend slightly on the speed of the cycles, e.g. if either check becomes slow compared to a fast cycle.
