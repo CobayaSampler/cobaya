@@ -380,8 +380,8 @@ class mcmc(CovmatSampler):
 
     def n(self, burn_in=False):
         """
-        Returns the total number of steps taken, including or not burn-in steps depending
-        on the value of the `burn_in` keyword.
+        Returns the total number of accepted steps taken, including or not burn-in steps
+        depending on the value of the `burn_in` keyword.
         """
         return len(self.collection) + (0 if not burn_in
                                        else self.burn_in.value - self.burn_in_left //

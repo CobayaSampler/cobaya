@@ -250,9 +250,9 @@ class minimize(Minimizer, CovmatSampler):
                 reason = ""
             self.log.error("Finished unsuccessfully." +
                            (" Reason: " + reason if reason else ""))
-        self.close()
+        self.process_results()
 
-    def close(self):
+    def process_results(self):
         """
         Determines success (or not), chooses best (if MPI)
         and produces output (if requested).

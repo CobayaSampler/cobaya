@@ -1,11 +1,9 @@
 # For release
 
 ## "Not enough points in chain to check convergence" should be warning and just continue until enough
-## check PolyChord-related issues (non-physical regions, etc)
 ## check PK_grid/interpolator changes for classy, and general classy review
 ## update docs/img/diagram.svg (and for paper)
 ## Update example notebook to match example in paper
-## make arguments of sampler close() consistent
 
 # Incomplete implementations/bigger jobs
 ## Grids/rest of cosmomc scripts
@@ -41,3 +39,4 @@
 ## CLASS: make it non-agnostic
 ## Regexp-ize checks for `COBAYA_INSTALL_SKIP` (in `install.py::_skip_helper`) and `COBAYA_TEST_SKIP` (in `conftests.py`), to be able to use underscores
 ## Test installed only (would need more clever pytest marking?)
+## auto-covmats: separate parameter matching into slow ones and fast ones, and prefer missing some fast parameters than missing slow ones.

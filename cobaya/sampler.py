@@ -287,13 +287,6 @@ class Sampler(CobayaComponent):
                 self.output.folder, self.output.prefix + _progress_extension)
         return None
 
-    def close(self, exception_type, exception_value, traceback):
-        """
-        Finalizes the sampler, if something needs to be done
-        (e.g. generating additional output).
-        """
-        pass
-
     def _get_requested_cache_size(self):
         """
         Override this for samplers than need more than 3 states cached

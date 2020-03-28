@@ -21,7 +21,6 @@ cache:
   - /home/travis/build/CosmoPars/packages/data/des_data
   - /home/travis/build/CosmoPars/packages/data/plik_lite
 
-
 # (Pre)Installation
 matrix:
   include:
@@ -79,6 +78,10 @@ matrix:
         - ANACONDA_CHANNEL="conda-forge"
       python: "3.8"
 
+jobs:
+  allow_failures:
+    - env: GCC_VERSION="9"
+
 before_install:
   # Configure right compilers version
   - if [[ "$GCC_VERSION" != "bionic" ]]; then
@@ -106,6 +109,7 @@ before_install:
       pip install mpi4py pytest-forked flaky matplotlib;
     fi
   - python --version
+
 script:
   - export COBAYA_PACKAGES_PATH="../packages"
   - export COBAYA_TEST_SKIP=$COBAYA_INSTALL_SKIP
@@ -120,6 +124,7 @@ script:
       python $COBAYA_PACKAGES_PATH/code/CAMB/setup.py build ;
     fi
   - pytest tests/ -v -s -k "cosmo" --forked
+  # Test external cosmological likelihoods
   - python $COBAYA_PACKAGES_PATH/code/CAMB/setup.py install
   - git clone --depth=1 https://github.com/CobayaSampler/planck_lensing_external
   - pip install ./planck_lensing_external --quiet
@@ -143,4 +148,4 @@ deploy: # only if it builds and if the commit has been tagged
 notifications:
   email:
     recipients:
-      - secure: "C3c7iGtX8VQKNdLCPd1Qo/TFXTFm6n+jWJ9XAvsg3aZiaWJXtEH8sBtwTJ4yXeG/K9Jyslg6Uqrlhn+QQT3HounTSS+zqwYh7KZSdIaRbMZWUL6ohrgFMdHAlM6ZmlYQ2PTzqFiOcwrp/lsOsnjgV4czhNIeowDjdrHOXhQFdnbMhoBh9xy9J9k7+LFEWkEt5a0CZPRT33l9siIxXyXw6eURCEihFx3rwWIs0JIBBSqcfmqPzGV/klHZ6b6S4QXHoe6ad1W7sK3cICvDnBOqz0We2Rn9/juMcbTQtJKC+LuR7LmdzRf6CBcDas/YDMYgK0XQsee+yBBstrKVySRrM1D+2hWdsyC5m7FU6q6Wu8XkPGRh2GexVc20c/+l5dnsEpfvMycihunktjc3hb5Q96tM31TKvV4vABXWoJIzsnnnlsMuI3NVGfYpoOH6ZC+Jb4JvVPsuQAQc1vgMny0vjHg/R/QPvF3n2eH9rWC8hotwT1/j5NzlmwJt8TXYd+CxoGAXSeZq5SzEmnGRRXafl5zEnw6EzuejW9S3LcKWMfOcnwevExFGTWLaoiaahg383dQWURFUaFqHtCbj+UlMtjhvgairH8JO3VWMJIkoq9oe0FpJS7idZ3mWL24NSbUuVQOo2dWnmHeHrByotVJU9CO8qjllIjon7/GuhBz2p2c="
+    - secure: wWS2J0Q413dLa415/iDn/rzwjFjnhCsGogxJeLW64/59NwaXV+spQZvgwfM+dKFt6kEvKZ4yPE+zXOgcpjp5lLSSWoJCaZy3q6rm7qEAEXxJCtH/4yMuLI0nWNxQRqVaOEq7q8e8jppQ/PBIUiqiT3EQlcNqagMReQEhr+M7hKtVnmA4XiFxmrp1H8aWhVvZWPWLPNtafPLX5CA2Ch3CJ09t591N3baZR0yOWwtEDeBZAHjbswTkNCVR6daUmOdbpFFti/Pdj7YmH1WkFTuEqfwuZiRJBrmyOGlARJZ4PybDK6npBXP393W2663TTIx0M4hT98YupWDXhC87WYAICBasySShxt/2lN2wqseHQlnfzPzmurZpim9choX5iDd/TTPyvhBk/xxT5G6RCeq2/vWwwWa4Owe20T2ep+8pYl0x9sNZyS+C67MOWsIs66dWEPxS4fOgsb6lBST9A8pv2Mfr5DHW8OLGAiIXI9mkeOqZkxlTxywQ5kKAO8hPkmzI7TrGH5drMkJDMqdGZSVC0f7y82RfQFLiv5aQp/xFkZKW7FzMi8DYBHJLfelpszfzyCeibQxQR7aPk6r6UbZhMw9Bd9KVpOV9Ag3EZ44MuVIDxA688cmdka4Swjw2VMWhTYQNGF1mB5WfsgtXfzpA8st7YZZJaysy+iXeoPML+is=
