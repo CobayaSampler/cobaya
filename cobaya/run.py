@@ -181,11 +181,14 @@ def run_script():
     # BEHAVIOUR TO BE REPLACED BY ERROR:
     check_deprecated_modules_path(info)
     # END OF DEPRECATION BLOCK
-    info[_packages_path] = getattr(arguments, _packages_path_arg)[0]
+    info[_packages_path] = \
+        getattr(arguments, _packages_path_arg)[0] or info.get(_packages_path)
     info[_debug] = getattr(arguments, _debug) or info.get(_debug, _debug_default)
-    info[_resume] = getattr(arguments, _resume, _resume_default)
-    info[_force] = getattr(arguments, _force, False)
     info[_test_run] = getattr(arguments, _test_run, False)
+    # If any of resume|force given as cmd args, ignore those in the input file
+    resume_arg, force_arg = [getattr(arguments, arg) for arg in [_resume, _force]]
+    if any([resume_arg, force_arg]):
+        info[_resume], info[_force] = resume_arg, force_arg
     if _post in info:
         post(info)
     else:
