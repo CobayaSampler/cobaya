@@ -36,6 +36,7 @@ class polychord(Sampler):
     _base_dir_suffix = "polychord_raw"
     _clusters_dir = "clusters"
     _at_resume_prefer_old = Sampler._at_resume_prefer_old + ["blocking"]
+    _at_resume_prefer_new = Sampler._at_resume_prefer_new + ["callback_function"]
 
     # variables from yaml
     do_clustering: bool
@@ -248,7 +249,7 @@ class polychord(Sampler):
         self.mpi_info("Calling PolyChord...")
         self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
                               self.pc_prior, self.dumper)
-        self.close()
+        self.process_raw_output()
 
     @property
     def raw_prefix(self):
@@ -312,7 +313,7 @@ class polychord(Sampler):
                 for cluster in self.clusters.values():
                     cluster["logZ"] += np.log(self._frac_unphysical)
 
-    def close(self):
+    def process_raw_output(self):
         """
         Loads the sample of live points from ``PolyChord``'s raw output and writes it
         (if ``txt`` output requested).

@@ -19,6 +19,13 @@ def test_polychord(packages_path, tmpdir):
 
 
 def test_polychord_resume(packages_path, tmpdir):
+    """
+    Tests correct resuming of a run, especially conserving the original blocking.
+
+    To test preservation of the oversampling+blocking, we try to confuse the sampler by
+    requesting speed measuring at resuming, and providing speeds very different from the
+    real ones.
+    """
     nlive = 10
     max_ndead = 2 * nlive
     def callback(sampler):
@@ -33,6 +40,7 @@ def test_polychord_resume(packages_path, tmpdir):
             "b": {partag.prior: {"min": 0, "max": 1}}},
         kinds.sampler: {
             "polychord": {
+                "measure_speeds": True,
                 "nlive": nlive,
                 "max_ndead": max_ndead,
                 "callback_function": callback,
@@ -43,6 +51,8 @@ def test_polychord_resume(packages_path, tmpdir):
     info["resume"] = True
     upd_info, sampler = run(info)
     assert np.allclose(old_dead_points, dead_points)
+
+
 @flaky(max_runs=5, min_passes=1)
 def test_polychord_multimodal(packages_path, tmpdir):
     dimension = 2
