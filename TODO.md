@@ -2,7 +2,6 @@
 
 ## "Not enough points in chain to check convergence" should be warning and just continue until enough
 ## check PK_grid/interpolator changes for classy, and general classy review
-## update docs/img/diagram.svg (and for paper)
 ## Update example notebook to match example in paper
 
 # Incomplete implementations/bigger jobs
