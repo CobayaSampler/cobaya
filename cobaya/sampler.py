@@ -47,7 +47,7 @@ implement only the methods ``initialize``, ``_run``, and ``products``.
 import os
 import logging
 import numpy as np
-from typing import Optional, Sequence, Mapping
+from typing import Optional, Sequence, Mapping, Union
 from itertools import chain
 
 # Local
@@ -169,6 +169,7 @@ class Sampler(CobayaComponent):
     # What you *must* implement to create your own sampler:
 
     seed: Optional[int]
+    version: Optional[Union[dict, str]] = None
 
     def initialize(self):
         """

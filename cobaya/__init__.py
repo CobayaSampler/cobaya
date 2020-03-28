@@ -2,7 +2,7 @@ import sys
 import platform
 
 if sys.version_info[0] == 2:
-    print('Cobaya no longer support Python 2, please upgrade to Python 3')
+    print('Cobaya no longer supports Python 2, please upgrade to Python 3')
     sys.exit(1)
 
 if sys.version_info < (3, 7):
