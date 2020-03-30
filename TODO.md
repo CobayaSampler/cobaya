@@ -1,6 +1,5 @@
 # For release
 
-## "Not enough points in chain to check convergence" should be warning and just continue until enough
 ## check PK_grid/interpolator changes for classy, and general classy review
 
 # Incomplete implementations/bigger jobs
