@@ -239,8 +239,12 @@ class mcmc(CovmatSampler):
                 self.log.warning(
                     "Dragging disabled: speed ratios < 2.")
         if self.drag:
+            # The definition of oversample_power=1 as speding the same amount of time in
+            # the slow and fast block would suggest a 1/2 factor here, but this additional
+            # factor of 2 w.r.t. ovesampling should produce an equivalent exploration
+            # efficiency.
             self.drag_interp_steps = int(
-                np.round(self.oversampling_factors[self.i_last_slow_block + 1] / 2 *
+                np.round(self.oversampling_factors[self.i_last_slow_block + 1] *
                          self.n_fast / self.n_slow))
             if self.drag_interp_steps < 2:
                 self.drag = False
