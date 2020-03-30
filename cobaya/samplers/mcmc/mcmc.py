@@ -298,23 +298,13 @@ class mcmc(CovmatSampler):
             self._covmat, where_nan = self._load_covmat(self.output.is_resuming())
             if np.any(where_nan) and self.learn_proposal:
                 # We want to start learning the covmat earlier.
-                # Adjust early learn according to the number of unknown parameters:
-                # linear growth between learn_proposal_Rminus1_max and [idem]_early
-                x0 = 0
-                x1 = len(self.model.parameterization.sampled_params())
-                y0 = self.learn_proposal_Rminus1_max
-                y1 = self.learn_proposal_Rminus1_max_early
-                x = len([i for i in where_nan if i])
-                self.learn_proposal_Rminus1_max_adjusted = (y1 - y0) / (x1 - x0) * x + y0
                 self.mpi_info("Covariance matrix " +
                               ("not present" if np.all(where_nan) else "not complete") +
-                              ". "
-                              "We will start learning the covariance of the proposal "
-                              "earlier: R-1 = %g (was %g if all params loaded).",
-                              self.learn_proposal_Rminus1_max_adjusted,
+                              ". We will start learning the covariance of the proposal "
+                              "earlier: R-1 = %g (would be %g if all params loaded).",
+                              self.learn_proposal_Rminus1_max_early,
                               self.learn_proposal_Rminus1_max)
-            else:
-                self.learn_proposal_Rminus1_max_adjusted = self.learn_proposal_Rminus1_max
+                self.learn_proposal_Rminus1_max = self.learn_proposal_Rminus1_max_early
             self.log.debug(
                 "Sampling with covmat:\n%s",
                 DataFrame(self._covmat,
@@ -754,7 +744,7 @@ class mcmc(CovmatSampler):
                 (Rminus1, self.converged) if is_main_process() else None)
             # Do we want to learn a better proposal pdf?
             if self.learn_proposal and not self.converged:
-                good_Rminus1 = (self.learn_proposal_Rminus1_max_adjusted >
+                good_Rminus1 = (self.learn_proposal_Rminus1_max >
                                 self.Rminus1_last > self.learn_proposal_Rminus1_min)
                 if not good_Rminus1:
                     self.mpi_info("Convergence less than requested for updates: "
