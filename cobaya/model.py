@@ -444,7 +444,6 @@ class Model(HasLogger):
 
         Returns (point, logpost, logpriors, loglikes, derived)
         """
-        # TODO: JT: why the division by dim? that's a very low number of tries!
         for _ in range(max(1, max_tries // self.prior.d())):
             initial_point = self.prior.reference(max_tries=max_tries,
                                                  ignore_fixed=ignore_fixed_ref)
