@@ -618,24 +618,22 @@ class mcmc(CovmatSampler):
             # Compute and gather means, covs and CL intervals of last m-1 chain fractions
             m = 1 + self.Rminus1_single_split
             cut = int(len(self.collection) / m)
-            if cut <= 1:
-                raise LoggedError(
-                    self.log, "Not enough points in chain to check convergence. "
-                              "Increase `learn_every` or reduce `Rminus1_single_split`.")
-            Ns = (m - 1) * [cut]
-            means = np.array(
-                [self.collection.mean(first=i * cut, last=(i + 1) * cut - 1) for i in
-                 range(1, m)])
-            covs = np.array(
-                [self.collection.cov(first=i * cut, last=(i + 1) * cut - 1) for i in
-                 range(1, m)])
-            # No logging of warnings temporarily, so getdist won't complain unnecessarily
-            logging.disable(logging.WARNING)
-            mcsamples_list = [
-                self.collection._sampled_to_getdist_mcsamples(
-                    first=i * cut, last=(i + 1) * cut - 1)
-                for i in range(1, m)]
-            logging.disable(logging.NOTSET)
+            try:
+                Ns = (m - 1) * [cut]
+                means = np.array(
+                    [self.collection.mean(first=i * cut, last=(i + 1) * cut - 1) for i in
+                     range(1, m)])
+                covs = np.array(
+                    [self.collection.cov(first=i * cut, last=(i + 1) * cut - 1) for i in
+                     range(1, m)])
+                mcsamples_list = [
+                    self.collection._sampled_to_getdist_mcsamples(
+                        first=i * cut, last=(i + 1) * cut - 1)
+                    for i in range(1, m)]
+            except:
+                self.log.info("Not enough points in chain to check convergence. "
+                              "Waiting for next checkpoint.")
+                return
             acceptance_rates = self.acceptance_rate
             try:
                 bounds = [np.array(
