@@ -2,6 +2,7 @@
 
 ## check PK_grid/interpolator changes for classy, and general classy review
 # Global defaults for `oversample_power`, `burn_in`, etc
+# mcmc: document convergence criterion
 
 # Incomplete implementations/bigger jobs
 ## Grids/rest of cosmomc scripts
