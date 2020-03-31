@@ -42,18 +42,18 @@ Rminus1_cl_level: 0.95
 Rminus1_single_split: 4
 # Exploiting speed hierarchy
 # --------------------------
-# whether to measure actual speeds for your machine/threading at starting rather
+# Whether to measure actual speeds for your machine/threading at starting rather
 # than using stored values
 measure_speeds: True
-# Method I: Oversampling of each parameters block relative to it speed
-oversample: False
-# Method II: Dragging: simulates jumps on slow params when varying fast ones
-drag: False
-# Oversampling power: amount of oversampling or dragging. Value in [0, 1]
+# Amount of oversampling of each parameter block, relative to their speeds
+# Value from 0 (no oversampling) to 1 (spend the same amount of time in all blocks)
+# Can be larger than 1 if extra oversampling of fast blocks required.
 oversample_power: 0.7
-# Thin chain when oversampling by total oversampling factor
-# NB: disabling it while `oversample: True` may produce a VERY LARGE chain
+# Thin chain by total oversampling factor (ignored if drag: True)
+# NB: disabling it with a non-zero `oversample_power` may produce a VERY LARGE chains
 oversample_thin: True
+# Dragging: simulates jumps on slow params when varying fast ones
+drag: False
 # Manual blocking
 # ---------------
 # Specify parameter blocks and their correspondent oversampling factors
@@ -73,4 +73,5 @@ seed:  # integer between 0 and 2**32 - 1
 # To be deprecated
 # ----------------
 check_every:  # now it is learn_every
+oversample: # now controled by oversample_power > 0
 drag_limits:  # use oversample_power instead

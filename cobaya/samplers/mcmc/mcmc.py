@@ -76,6 +76,12 @@ class mcmc(CovmatSampler):
             raise LoggedError(self.log, "No parameters being varied for sampler")
         self.log.debug("Initializing")
         # MARKED FOR DEPRECATION IN v3.0
+        if getattr(self, "oversample", None) is not None:
+            self.log.warning("*DEPRECATION*: `oversample` will be deprecated in the "
+                             "next version. Oversampling is now requested by setting "
+                             "`oversample_power` > 0.")
+        # END OF DEPRECATION BLOCK
+        # MARKED FOR DEPRECATION IN v3.0
         if getattr(self, "check_every", None) is not None:
             self.log.warning("*DEPRECATION*: `check_every` will be deprecated in the "
                              "next version. Please use `learn_every` instead.")
@@ -111,10 +117,6 @@ class mcmc(CovmatSampler):
         self.current_point = OneSamplePoint(self.model)
         # Use standard MH steps by default
         self.get_new_sample = self.get_new_sample_metropolis
-        # Prepare oversampling / dragging if applicable
-        if self.oversample and self.drag:
-            raise LoggedError(self.log,
-                              "Choose either oversampling or dragging, not both.")
         # Prepare callback function
         if self.callback_function is not None:
             self.callback_function_callable = (
@@ -177,14 +179,10 @@ class mcmc(CovmatSampler):
 
     @property
     def i_last_slow_block(self):
-        if self.oversample:
-            # TODO: may want to re-define this -- for now, only 1st block is slow
-            # (not really used when oversampling except, for now, for covmat selection)
-            return 0
-        elif self.drag:
+        if self.drag:
             return next(i for i, o in enumerate(self.oversampling_factors) if o != 1) - 1
-        else:
-            return len(self.blocks) - 1
+        self.log.warning("`i_last_slow_block` is only well defined when dragging.")
+        return 0
 
     @property
     def slow_blocks(self):
@@ -220,14 +218,9 @@ class mcmc(CovmatSampler):
             self.blocks, self.oversampling_factors = \
                 self.model._check_blocking(self.blocking)
         else:
-            if not self.oversample and not self.drag:
-                self.oversample_power = 0
             self.blocks, self.oversampling_factors = \
                 self.model.get_param_blocking_for_sampler(
                     oversample_power=self.oversample_power, split_fast_slow=self.drag)
-        # Turn oversampling on if manual oversampling factors given, also if resuming
-        if self.blocking and not self.drag and np.any(self.oversampling_factors != 1):
-            self.oversample = True
         # Turn off dragging if one block, or if speed differences < 2x, or no differences
         if self.drag:
             if len(self.blocks) == 1:
@@ -252,7 +245,7 @@ class mcmc(CovmatSampler):
                     "Dragging disabled: "
                     "speed ratio and fast-to-slow ratio not large enough.")
         # Define proposer and other blocking-related quantities
-        if self.oversample:
+        if np.any(np.array(self.oversampling_factors) > 1):
             self.mpi_info("Oversampling with factors:")
             max_width = len(str(max(self.oversampling_factors)))
             for f, b in zip(self.oversampling_factors, self.blocks):
