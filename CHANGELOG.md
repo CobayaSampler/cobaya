@@ -7,9 +7,8 @@
 - New base classes CobayaComponent and ComponentCollection, with support for standalone instantiation of all CobayaComponent
 - .yaml can now reference class names rather than modules, allowing multiple classes in one module
 - .yaml default files are now entirely at the class level, with no kind:module: embedding
-- inheritance of yaml and class_options (with normal dict update, so e.g. all inherited nuisance parameters can be removed using "params:").
-  Each class can either define a .yaml or class_options, or neither, but not both. 
-   Optionally also class 'params' option (equivalent to class_options:{'params':..}) 
+- inheritance of yaml and class attributes (with normal dict update, so e.g. all inherited nuisance parameters can be removed using "params:").
+  Each class can either define a .yaml or class attributes, or neither, but not both. 
 - The .theory member of likelihoods is now Provider class instance
 - Global stop_at_error option to stop at error in any component
 - Fix for more accurate timing with Python 3
@@ -18,6 +17,7 @@
 - cobaya-run --no-mpi option to enable testing without mpi even on nodes with mpi4py installed
 - cobaya-run-job command to make a single job script and submit 
 - docs include inheritance diagrams for key classes
+= Python 2 support removed, now requires Python 3.6+
 
 ### Likelihoods and Theories
 
@@ -39,6 +39,7 @@
 - renamed "renames" of likelihood to "aliases" (to avoid clash with "renames" for parameters)
 - More documentation for how to make internal and external likelihood classes
 - Support for HelperTheory classes to do sub-calculations for any Theory class with separate nuisance parameters and speeds
+= classmethod class_options() can be used to generate class defaults dynamically based on input parameters
 - Added tests: test_dependencies.py, test_cosmo_multi_theory.py
 
 #### Sampler
@@ -59,6 +60,7 @@
 - Added matter_power_spectrum theory output for z,k,P(k) unsplined arrays
 - Fixed several bugs with Pk_interpolator (e.g. conflicts between likelihoods)
 - Pk_interpolator calling arguments now different
+- Added sigma_R for linear rms fluctuation in sphere of radius R
 - Fixed problems with getting same background array theory results from different likelihoods
 - renamed H (array of H(z)) to Hubble
 - Boltzmann codes now consistent with varying TCMB.
@@ -70,6 +72,7 @@
 - Optimizations for which quantities computed
 - Option to request "CAMBdata" object from CAMB to access computed results directly 
 - Fix for getting source windows power spectra 
+- external_primordial_pk flag to optionally use a separate Cobaya Theory to return to the (binned) primordial power spectrum to CAMB
 
 ## 2.0.3 – 2019-09-09
 
@@ -94,7 +97,7 @@
 
 ### Cosmology
 
-- Fixed `cobaya-cosmo-generator` in for Python 2 (#37, thanks Lukas Hergt, @lukashergt) and high-DPI screens (#41).
+- Fixed high-DPI screens (#41).
 
 
 ## 2.0 – 2019-08-20

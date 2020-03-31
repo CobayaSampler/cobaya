@@ -8,17 +8,12 @@
 # AL July 2014 - Dec 2017
 
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import, division
-import six
-if six.PY2:
-    from io import open
-
 # Global
 import os
 import numpy as np
 from getdist import ParamNames
 from scipy.linalg import sqrtm
+from typing import Sequence
 
 # Local
 from cobaya.log import LoggedError
@@ -26,11 +21,14 @@ from cobaya.likelihoods._base_classes import _DataSetLikelihood
 
 
 class _CMBlikes(_DataSetLikelihood):
+    # Data type for aggregated chi2 (case sensitive)
+    type = "CMB"
 
-    def initialize(self):
-        super(_CMBlikes, self).initialize()
-        # Set data type for aggregated chi2 (case sensitive)
-        self.type = "CMB"
+    map_separator: str
+    lmin: Sequence[int]
+    lmax: Sequence[int]
+    lav: Sequence[int]
+    Ahat: np.ndarray  # not used by likelihood
 
     def get_requirements(self):
         # State requisites to the theory code
@@ -127,7 +125,8 @@ class _CMBlikes(_DataSetLikelihood):
                     name = self.Cl_used_i_j_name([j, i])
                 if name in names:
                     if cols[ix] != -1:
-                        raise LoggedError(self.log, 'get_cols_from_order: duplicate CL type')
+                        raise LoggedError(self.log,
+                                          'get_cols_from_order: duplicate CL type')
                     cols[ix] = names.index(name)
                 ix += 1
         return cols
@@ -168,7 +167,7 @@ class _CMBlikes(_DataSetLikelihood):
                 for ix in range(self.ncl):
                     if cols[ix] != -1:
                         cl[ix, L - self.bin_min] = data[i, cols[ix]]
-        if L < self.bin_max:
+        if Ls[-1] < self.bin_max:
             raise LoggedError(
                 self.log, 'CMBLikes_ReadClArr: C_l file does not go up to maximum used: '
                           '%s', self.bin_max)
@@ -178,7 +177,7 @@ class _CMBlikes(_DataSetLikelihood):
             return cl
 
     def read_bin_windows(self, ini, file_stem):
-        bins = BinWindows(self.pcl_lmin, self.pcl_lmax, self.nbins_used)
+        bins = BinWindows(self.pcl_lmin, self.pcl_lmax, self.nbins_used, self.ncl)
         in_cl = ini.split(file_stem + '_in_order')
         out_cl = ini.split(file_stem + '_out_order', in_cl)
         bins.cols_in = self.UseString_to_Cl_i_j(in_cl, self.map_required_index)
@@ -209,7 +208,7 @@ class _CMBlikes(_DataSetLikelihood):
         if nmaps != len(order):
             raise LoggedError(self.log, 'init_map_cls: size mismatch')
 
-        class CrossPowerSpectrum(object):
+        class CrossPowerSpectrum:
             pass
 
         cls = np.empty((nmaps, nmaps), dtype=object)
@@ -226,12 +225,13 @@ class _CMBlikes(_DataSetLikelihood):
         self.field_names = getattr(self, 'field_names', ['T', 'E', 'B', 'P'])
         self.tot_theory_fields = len(self.field_names)
         self.map_names = ini.split('map_names', default=[])
-        self.has_map_names = len(self.map_names)
+        self.has_map_names = bool(self.map_names)
         if self.has_map_names:
             # e.g. have multiple frequencies for given field measurement
             map_fields = ini.split('map_fields')
             if len(map_fields) != len(self.map_names):
-                raise LoggedError(self.log, 'number of map_fields does not match map_names')
+                raise LoggedError(self.log,
+                                  'number of map_fields does not match map_names')
             self.map_fields = [self.typeIndex(f) for f in map_fields]
         else:
             self.map_names = self.field_names
@@ -336,8 +336,11 @@ class _CMBlikes(_DataSetLikelihood):
                 self.cl_lmax[i, i] = self.pcl_lmax
         if self.required_theory_field[0] and self.required_theory_field[1]:
             self.cl_lmax[1, 0] = self.pcl_lmax
+
         if self.like_approx != 'gaussian':
             cl_fiducial_includes_noise = ini.bool('cl_fiducial_includes_noise', False)
+        else:
+            cl_fiducial_includes_noise = False
         self.bandpower_matrix = np.zeros((self.nbins_used, self.nmaps, self.nmaps))
         self.noise_matrix = self.bandpower_matrix.copy()
         self.fiducial_sqrt_matrix = self.bandpower_matrix.copy()
@@ -359,8 +362,8 @@ class _CMBlikes(_DataSetLikelihood):
             self.covinv = np.linalg.inv(self.cov)
         if 'linear_correction_fiducial_file' in ini.params:
             self.fid_correction = self.read_cl_array(ini, 'linear_correction_fiducial')
-            self.linear_correction = (
-                self.read_bin_windows(ini, 'linear_correction_bin_window'))
+            self.linear_correction = self.read_bin_windows(ini,
+                                                           'linear_correction_bin_window')
         else:
             self.linear_correction = None
         if ini.hasKey('nuisance_params'):
@@ -480,7 +483,7 @@ class _CMBlikes(_DataSetLikelihood):
             band += self.linear_correction.bin(Cls) - self.fid_correction.T
         return band
 
-    def get_theory_map_cls(self, Cls, data_params={}):
+    def get_theory_map_cls(self, Cls, data_params=None):
         for i in range(self.nmaps_required):
             for j in range(i + 1):
                 CL = self.map_cls[i, j]
@@ -490,7 +493,7 @@ class _CMBlikes(_DataSetLikelihood):
                     CL.CL[:] = cls[self.pcl_lmin:self.pcl_lmax + 1]
                 else:
                     CL.CL[:] = 0
-        self.adapt_theory_for_maps(self.map_cls, data_params)
+        self.adapt_theory_for_maps(self.map_cls, data_params or {})
 
     def adapt_theory_for_maps(self, cls, data_params):
         if self.aberration_coeff:
@@ -530,9 +533,9 @@ class _CMBlikes(_DataSetLikelihood):
                         cl_deriv *= ells
                         CL.CL += self.aberration_coeff * cl_deriv
 
-    def write_likelihood_data(self, filename, data_params={}):
+    def write_likelihood_data(self, filename, data_params=None):
         cls = self.init_map_cls(self.nmaps_required, self.required_order)
-        self.add_foregrounds(cls, data_params)
+        self.add_foregrounds(cls, data_params or {})
         with open(filename, 'w', encoding="utf-8") as f:
             cols = []
             for i in range(self.nmaps_required):
@@ -586,7 +589,7 @@ class _CMBlikes(_DataSetLikelihood):
         Get log likelihood from the dls (CMB C_l scaled by L(L+1)/2\pi)
 
         :param dls: dictionary of d_l ('tt', etc)
-        :param data_params: likelihood nuistance parameters
+        :param data_params: likelihood nuisance parameters
         :return: log likelihood
         """
         self.get_theory_map_cls(dls, data_params)
@@ -606,42 +609,48 @@ class _CMBlikes(_DataSetLikelihood):
                                             self.bin_max - self.pcl_lmin + 1]
                         Cs[:, j, i] = CL.CL[self.bin_min - self.pcl_lmin:
                                             self.bin_max - self.pcl_lmin + 1]
-        for bin in range(self.nbins_used):
+        for b in range(self.nbins_used):
             if self.binned:
-                self.elements_to_matrix(binned_theory[bin, :], C)
+                self.elements_to_matrix(binned_theory[b, :], C)
             else:
-                C[:, :] = Cs[bin, :, :]
+                C[:, :] = Cs[b, :, :]
             if self.cl_noise is not None:
-                C += self.noise_matrix[bin]
+                C += self.noise_matrix[b]
             if self.like_approx == 'exact':
                 chisq += self.exact_chi_sq(
-                    C, self.bandpower_matrix[bin], self.bin_min + bin)
+                    C, self.bandpower_matrix[b], self.bin_min + b)
                 continue
             elif self.like_approx == 'HL':
                 try:
                     self.transform(
-                        C, self.bandpower_matrix[bin], self.fiducial_sqrt_matrix[bin])
+                        C, self.bandpower_matrix[b], self.fiducial_sqrt_matrix[b])
                 except np.linalg.LinAlgError:
                     self.log.debug("Likelihood computation failed.")
                     return -np.inf
             elif self.like_approx == 'gaussian':
-                C -= self.bandpower_matrix[bin]
+                C -= self.bandpower_matrix[b]
             self.matrix_to_elements(C, vecp)
-            big_x[bin * self.ncl_used:(bin + 1) * self.ncl_used] = vecp[self.cl_used_index]
+            big_x[b * self.ncl_used:(b + 1) * self.ncl_used] = vecp[
+                self.cl_used_index]
         if self.like_approx == 'exact':
             return -0.5 * chisq
-        return -0.5 * self.fast_chi_squared(self.covinv, big_x)
+        return -0.5 * self._fast_chi_squared(self.covinv, big_x)
 
 
-class BinWindows(object):
-    def __init__(self, lmin, lmax, nbins):
+class BinWindows:
+    cols_in: np.ndarray
+    cols_out: np.ndarray
+    binning_matrix: np.ndarray
+
+    def __init__(self, lmin, lmax, nbins, ncl):
         self.lmin = lmin
         self.lmax = lmax
         self.nbins = nbins
+        self.ncl = ncl
 
     def bin(self, theory_cl, cls=None):
         if cls is None:
-            cls = np.zeros((self.nbins, max([x for x in self.cols_out if x >= 0]) + 1))
+            cls = np.zeros((self.nbins, self.ncl))
         for i, ((x, y), ix_out) in enumerate(zip(self.cols_in.T, self.cols_out)):
             cl = theory_cl[x, y]
             if cl is not None and ix_out >= 0:

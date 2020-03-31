@@ -45,17 +45,10 @@ Installation
 This likelihood can be installed automatically as explained in :doc:`installation_cosmo`.
 
 """
-
-# Python 2/3 compatibility
-from __future__ import absolute_import, division, print_function
-import six
-if six.PY2:
-    from io import open
-
 # Global
 import numpy as np
-import scipy
 from scipy.interpolate import InterpolatedUnivariateSpline
+from scipy import special
 import copy
 
 # Local
@@ -135,12 +128,10 @@ def get_def_cuts():
     return ranges
 
 
-optimized = True
-
 try:
     import numba
 except ImportError:
-    optimized = False
+    numba = None
 else:
 
     @numba.njit("void(float64[::1],float64[::1],float64[::1],float64[::1])")
@@ -163,7 +154,13 @@ class _des_prototype(_DataSetLikelihood):
     install_options = {"github_repository": "CobayaSampler/des_data",
                        "github_release": "v1.0"}
 
-    def load_dataset_file(self, filename, dataset_params={}):
+    # variables defined in yaml
+    acc: float
+    binned_bessels: bool
+    use_hankel: bool
+    use_Weyl: bool
+
+    def load_dataset_file(self, filename, dataset_params=None):
         self.l_max = self.l_max or int(50000 * self.acc)
         # lmax here is an internal parameter for transforms
         if filename.endswith(".fits"):
@@ -181,7 +178,7 @@ class _des_prototype(_DataSetLikelihood):
                               "Check your paths!", filename)
 
         else:
-            super(_des_prototype, self).load_dataset_file(filename, dataset_params)
+            super().load_dataset_file(filename, dataset_params)
         self.initialize_postload()
 
     def init_params(self, ini):
@@ -251,6 +248,7 @@ class _des_prototype(_DataSetLikelihood):
         self.k_max = ini.float('kmax', 15)
 
     def load_fits_data(self, filename, ranges=None):
+        # noinspection PyUnresolvedReferences
         import astropy.io.fits as fits
         if ranges is None:
             ranges = get_def_cuts()
@@ -340,6 +338,7 @@ class _des_prototype(_DataSetLikelihood):
         # (though could change spline to zero at zero).
         # At percent level it matters what is assumed
         if self.use_hankel:
+            # noinspection PyUnresolvedReferences
             import hankel
             maxx = self.theta_bins_radians[-1] * self.l_max
             h = 3.2 * np.pi / maxx
@@ -365,7 +364,7 @@ class _des_prototype(_DataSetLikelihood):
             for i, theta in enumerate(self.theta_bins_radians):
                 bigx = bigell * theta
                 for ix, nu in enumerate([0, 2, 4]):
-                    bigj = scipy.special.jn(nu, bigx) * bigell / (2 * np.pi)
+                    bigj = special.jn(nu, bigx) * bigell / (2 * np.pi)
                     for j, g in enumerate(groups):
                         js[ix, j, i] = np.sum(bigj[g])
             self.bessel_cache = js[0, :, :], js[1, :, :], js[2, :, :]
@@ -381,9 +380,9 @@ class _des_prototype(_DataSetLikelihood):
             j4s = np.empty((len(self.ls_bessel), len(self.theta_bins_radians)))
             for i, theta in enumerate(self.theta_bins_radians):
                 x = self.ls_bessel * theta
-                j0s[:, i] = self.ls_bessel * scipy.special.jn(0, x)
-                j2s[:, i] = self.ls_bessel * scipy.special.jn(2, x)
-                j4s[:, i] = self.ls_bessel * scipy.special.jn(4, x)
+                j0s[:, i] = self.ls_bessel * special.jn(0, x)
+                j2s[:, i] = self.ls_bessel * special.jn(2, x)
+                j4s[:, i] = self.ls_bessel * special.jn(4, x)
             j0s *= dl / (2 * np.pi)
             j2s *= dl / (2 * np.pi)
             j4s *= dl / (2 * np.pi)
@@ -443,7 +442,7 @@ class _des_prototype(_DataSetLikelihood):
                 zshift = self.zs - wl_photoz_errors[b]
                 n_chi = Hs * self.zbin_sp[b](zshift)
                 n_chi[zshift < 0] = 0
-                if optimized:
+                if numba:
                     _get_lensing_dots(wq_b, chis, n_chi, dchis)
                 else:
                     for i, chi in enumerate(chis):
@@ -462,7 +461,7 @@ class _des_prototype(_DataSetLikelihood):
                                               int(50 * self.acc)))))
         # Get the angular power spectra and transform back
         dchifac = dchis / chis ** 2
-        if optimized:
+        if numba:
             ks = np.outer(ls_cl + 0.5, 1 / chis)
             tmp = PKdelta.P(self.zs, ks, grid=False)
             _limber_PK_terms(tmp, ks, dchifac, PKdelta.kmax)
@@ -477,7 +476,7 @@ class _des_prototype(_DataSetLikelihood):
                 tmp[ix, :] = weight * PKdelta.P(self.zs, k, grid=False)
 
         if PKWeyl is not None:
-            if optimized:
+            if numba:
                 tmplens = PKWeyl.P(self.zs, ks, grid=False)
                 _limber_PK_terms(tmplens, ks, dchifac, PKWeyl.kmax)
             else:
@@ -719,6 +718,7 @@ class _des_prototype(_DataSetLikelihood):
 # Conversion .fits --> .dataset  #########################################################
 
 def convert_txt(filename, root, outdir, ranges=None):
+    # noinspection PyUnresolvedReferences
     import astropy.io.fits as fits
     if ranges is None:
         ranges = get_def_cuts()

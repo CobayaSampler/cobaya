@@ -1,13 +1,10 @@
-from __future__ import absolute_import
-from __future__ import print_function
 import fnmatch
-import six
 import argparse
 
 from cobaya.grid_tools import batchjob
 
 
-class batchArgs(object):
+class batchArgs:
     def __init__(self, desc='', importance=True, noBatchPath=False, notExist=False,
                  notall=False, converge=False,
                  plots=False, batchPathOptional=False):
@@ -158,7 +155,7 @@ class batchArgs(object):
             if not chainExist or jobItem.chainExists():
                 if not jobItem.paramtag in items: items[jobItem.paramtag] = []
                 items[jobItem.paramtag].append(jobItem)
-        return sorted(six.iteritems(items))
+        return sorted(items.items())
 
     def filterForDataCompare(self, batch, datatags, getDistExists=False):
         items = []

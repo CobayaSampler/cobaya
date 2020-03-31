@@ -1,6 +1,5 @@
 # Tries to evaluate the BK15 likelihood at a reference point
 
-from __future__ import absolute_import
 from copy import deepcopy
 from .common_cosmo import body_of_test
 from cobaya.cosmo_input import cmb_precision
@@ -12,18 +11,18 @@ classy_extra.update({"non linear": "halofit"})
 classy_extra.update({"halofit_min_k_max": 20})
 
 
-def test_bicep_keck_2015_camb(modules):
+def test_bicep_keck_2015_camb(packages_path):
     info_theory = {"camb": {"extra_args": camb_extra}}
-    body_of_test(modules, test_point, lik_info, info_theory, chi2,
+    body_of_test(packages_path, test_point, lik_info, info_theory, chi2,
                  extra_model={"primordial": "SFSR_t"})
 
 
-def test_bicep_keck_2015_classy(modules):
+def test_bicep_keck_2015_classy(packages_path):
     info_theory = {"classy": {"extra_args": classy_extra}}
     # extra tolerance for CLASS
     chi2_classy = deepcopy(chi2)
     chi2_classy["tolerance"] *= 2
-    body_of_test(modules, test_point, lik_info, info_theory, chi2_classy,
+    body_of_test(packages_path, test_point, lik_info, info_theory, chi2_classy,
                  extra_model={"primordial": "SFSR_t"})
 
 

@@ -1,8 +1,5 @@
-from __future__ import division, print_function, absolute_import
-
 from mpi4py import MPI
 from flaky import flaky
-from collections import OrderedDict
 import numpy as np
 
 from cobaya.likelihoods.gaussian_mixture import random_cov
@@ -12,13 +9,15 @@ from cobaya.run import run
 
 from .common_sampler import body_of_test, body_of_test_speeds
 
-
 ### import pytest
 ### @pytest.mark.mpi
 
+# Max number of tries per test
+max_runs = 3
 
-@flaky(max_runs=3, min_passes=1)
-def test_mcmc(tmpdir, modules=None):
+
+@flaky(max_runs=max_runs, min_passes=1)
+def test_mcmc(tmpdir, packages_path=None):
     dimension = 3
     # Random initial proposal
     comm = MPI.COMM_WORLD
@@ -58,19 +57,20 @@ def test_mcmc(tmpdir, modules=None):
         dimension=dimension, n_modes=1, info_sampler=info_sampler, tmpdir=str(tmpdir))
 
 
-@flaky(max_runs=3, min_passes=1)
+@flaky(max_runs=max_runs, min_passes=1)
 def test_mcmc_blocking():
     info_mcmc = {"mcmc": {"burn_in": 0, "learn_proposal": False}}
     body_of_test_speeds(info_mcmc)
 
 
-@flaky(max_runs=3, min_passes=1)
+@flaky(max_runs=max_runs, min_passes=1)
 def test_mcmc_oversampling():
-    info_mcmc = {"mcmc": {"burn_in": 0, "learn_proposal": False, "oversample": True}}
+    info_mcmc = {"mcmc": {"burn_in": 0, "learn_proposal": False,
+                          "oversample": True, "oversample_power": 1}}
     body_of_test_speeds(info_mcmc)
 
 
-@flaky(max_runs=3, min_passes=1)
+@flaky(max_runs=max_runs, min_passes=1)
 def test_mcmc_oversampling_manual():
     info_mcmc = {"mcmc": {"burn_in": 0, "learn_proposal": False, "oversample": True}}
     body_of_test_speeds(info_mcmc, manual_blocking=True)
@@ -78,20 +78,18 @@ def test_mcmc_oversampling_manual():
 
 # The flaky test fails if likes or derived at chain points are not reproduced directly
 # (dragging is somewhat delicate)
-@flaky(max_runs=3, min_passes=1,
+@flaky(max_runs=max_runs, min_passes=1,
        rerun_filter=(lambda err, *args: issubclass(err[0], AssertionError)))
 def test_mcmc_dragging():
-    info_mcmc = {"mcmc": {"burn_in": 0, "learn_proposal": False, "drag": True,
-                          # For tests
-                          "drag_limits": [None, None]}}
+    info_mcmc = {"mcmc": {"burn_in": 0, "learn_proposal": False,
+                          "drag": True, "oversample_power": 1}}
     body_of_test_speeds(info_mcmc)
 
 
 def _make_gaussian_like(nparam):
     class LikeTest(Likelihood):
-        params = OrderedDict(
-            [('x' + str(name), {'prior': {'min': -5, 'max': 5}, 'proposal': 1})
-             for name in range(nparam)])
+        params = {'x' + str(name): {'prior': {'min': -5, 'max': 5}, 'proposal': 1}
+                  for name in range(nparam)}
 
         def calculate(self, state, want_derived=True, **params_values_dict):
             state["logp"] = -np.sum(np.array(list(params_values_dict.values())) ** 2 / 2)
@@ -103,7 +101,8 @@ def _test_overhead_timing():
     # prints timing for simple Gaussian vanilla mcmc
     import pstats
     from cProfile import Profile
-    import six
+    from io import StringIO
+    # noinspection PyUnresolvedReferences
     from cobaya.samplers.mcmc import proposal  # one-time numba compile out of profiling
 
     LikeTest = _make_gaussian_like(15)
@@ -114,7 +113,7 @@ def _test_overhead_timing():
     prof.enable()
     run(info)
     prof.disable()
-    s = six.StringIO()
+    s = StringIO()
     ps = pstats.Stats(prof, stream=s)
     ps.strip_dirs()
     ps.sort_stats('time')

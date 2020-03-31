@@ -4,7 +4,6 @@ parameter names) gaussian likelihood.
 """
 
 # Global
-from __future__ import division
 from scipy.stats import multivariate_normal
 import numpy as np
 
@@ -25,8 +24,9 @@ j_func = "lambda b: b**2"
 k_func = "lambda f: f**3"
 
 
-def loglik(a, b, c, d, h, i, j, _derived=["x", "e"]):
-    _derived.update({"x": x_func(c), "e": e_func(b)})
+def loglik(a, b, c, d, h, i, j, _derived=("x", "e")):
+    if _derived is not None:
+        _derived.update({"x": x_func(c), "e": e_func(b)})
     return multivariate_normal.logpdf((a, b, c, d, h, i, j), cov=0.1 * np.eye(7))
 
 
@@ -83,7 +83,8 @@ info = {
 
 
 def test_parameterization():
-    updated_info, products = run(info)
+    updated_info, sampler = run(info)
+    products = sampler.products()
     sample = products["sample"]
     from getdist.mcsamples import MCSamplesFromCobaya
     gdsample = MCSamplesFromCobaya(updated_info, products["sample"])

@@ -5,45 +5,39 @@
 :Author: Jesus Torrado
 
 """
-
-# Python 2/3 compatibility
-from __future__ import absolute_import, division
-import six
-if six.PY2:
-    from io import open
-
 # Global
 import os
 import sys
 import traceback
 import datetime
-from itertools import chain
 import re
+import shutil
 
 # Local
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
 from cobaya.conventions import _input_suffix, _updated_suffix, _separator_files, _version
 from cobaya.conventions import _resume, _resume_default, _force, _yaml_extensions
-from cobaya.conventions import kinds, _params
+from cobaya.conventions import _output_prefix, _debug, kinds, _params
 from cobaya.log import LoggedError, HasLogger
 from cobaya.input import is_equal_info, get_class
 from cobaya.mpi import is_main_process, more_than_one_process, share_mpi
 from cobaya.collection import Collection
-from cobaya.tools import deepcopy_where_possible
+from cobaya.tools import deepcopy_where_possible, find_with_regexp, sort_cosmetic
 
-# Regular expressions for plain unsigned integers
-re_uint = re.compile("[0-9]+")
+# Default output type and extension
+_kind = "txt"
+_ext = "txt"
 
 
 class Output(HasLogger):
-    def __init__(self, output_prefix=None, resume=_resume_default,
-                 force_output=False, must_exist=False):
+    def __init__(self, output_prefix=None, resume=_resume_default, force=False):
         self.name = "output"  # so that the MPI-wrapped class conserves the name
         self.set_logger(self.name)
         self.folder = os.sep.join(output_prefix.split(os.sep)[:-1]) or "."
         self.prefix = (lambda x: x if x != "." else "")(output_prefix.split(os.sep)[-1])
-        self.force_output = force_output
-        if resume and force_output and output_prefix:
+        self.prefix_regexp_str = re.escape(self.prefix) + (r"\." if self.prefix else "")
+        self.force = force
+        if resume and force and output_prefix:
             # No resume and force at the same time (if output)
             raise LoggedError(
                 self.log,
@@ -67,40 +61,66 @@ class Output(HasLogger):
             self.folder, self.prefix + (_separator_files if self.prefix else ""))
         self.file_input = info_file_prefix + _input_suffix + _yaml_extensions[0]
         self.file_updated = info_file_prefix + _updated_suffix + _yaml_extensions[0]
-        self.resuming = False
+        self._resuming = False
         # Output kind and collection extension
-        self.kind = "txt"
-        self.ext = "txt"
+        self.kind = _kind
+        self.ext = _ext
         if os.path.isfile(self.file_updated):
             self.log.info(
-                "Found existing products with the requested output prefix: '%s'",
+                "Found existing info files with the requested output prefix: '%s'",
                 output_prefix)
-            if not must_exist and not self.find_collections():
-                self.log.info("Previous output empty, starting anew.")
+            if self.force:
+                self.log.info("Will delete previous products ('force' was requested).")
                 self.delete_infos()
-            elif self.force_output:
-                self.log.info("Deleting previous chain ('force' was requested).")
-                self.delete_infos()
+                # Sampler products will be deleted at sampler initialisation
             elif resume:
                 # Only in this case we can be sure that we are actually resuming
-                self.resuming = True
+                self._resuming = True
                 self.log.info("Let's try to resume/load.")
-            else:
-                # If only input and updated info dumped, overwrite; else fail
-                info_files = [
-                    os.path.basename(f) for f in [self.file_input, self.file_updated]]
-                same_prefix_noinfo = [f for f in os.listdir(self.folder) if
-                                      f.startswith(self.prefix) and f not in info_files]
-                if not same_prefix_noinfo:
-                    self.delete_infos()
-                    self.log.info("Overwritten old failed chain files.")
-                else:
-                    raise LoggedError(
-                        self.log, "Delete the previous output manually, automatically "
-                                  "('-%s', '--%s', '%s: True')" % (
-                                      _force[0], _force, _force) +
-                                  " or request resuming ('-%s', '--%s', '%s: True')" % (
-                                      _resume[0], _resume, _resume))
+
+    def is_prefix_folder(self):
+        """
+        Returns `True` if the ouput prefix is a bare folder, e.g. `chains/`.
+        """
+        return bool(self.prefix)
+
+    def separator_if_needed(self, separator):
+        """
+        Returns the given separator if there is an actual file name prefix (i.e. the
+        output prefix is not a bare folder), or an empty string otherwise.
+
+        Useful to add custom suffixes to output prefixes (may want to use
+        `Output.add_suffix` for that).
+        """
+        return separator if self.is_prefix_folder() else ""
+
+    def sanitize_collection_extension(self, extension):
+        """
+        Returns the `extension` without the leading dot, if given, or the default one
+        `Output.ext` otherwise.
+        """
+        if extension:
+            return extension.lstrip(".")
+        return self.ext
+
+    def add_suffix(self, suffix, separator="_"):
+        """
+        Returns the full output prefix (folder and file name prefix) combined with a
+        given suffix, inserting a given separator in between (default: `_`) if needed.
+        """
+        return os.path.join(self.folder,
+                            self.prefix + self.separator_if_needed(separator) + suffix)
+
+    def create_folder(self, folder):
+        """
+        Creates the given folder (MPI-aware).
+        """
+        try:
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+        except Exception as e:
+            raise LoggedError(
+                self.log, "Could not create folder %r. Reason: %r", folder, str(e))
 
     def delete_infos(self):
         for f in [self.file_input, self.file_updated]:
@@ -113,57 +133,60 @@ class Output(HasLogger):
         """
         return self.prefix or "."
 
+    def is_forcing(self):
+        return self.force
+
     def is_resuming(self):
-        return self.resuming
+        return self._resuming
 
-    def reload_updated_info(self):
-        return yaml_load_file(self.file_updated)
+    def set_resuming(self, value):
+        self._resuming = value
 
-    def dump_info(self, input_info, updated_info, check_compatible=True):
+    def reload_updated_info(self, cache=False, use_cache=False):
+        if use_cache and getattr(self, "_old_updated_info", None):
+            return self._old_updated_info
+        try:
+            loaded = yaml_load_file(self.file_updated)
+            if cache:
+                self._old_updated_info = loaded
+            return deepcopy_where_possible(loaded)
+        except IOError:
+            if cache:
+                self._old_updated_info = None
+            return None
+
+    def check_and_dump_info(self, input_info, updated_info, check_compatible=True,
+                            cache_old=False, use_cache_old=False, ignore_blocks=()):
         """
         Saves the info in the chain folder twice:
            - the input info.
-           - idem, populated with the modules' defaults.
+           - idem, populated with the components' defaults.
 
         If resuming a sample, checks first that old and new infos and versions are
         consistent.
         """
         # trim known params of each likelihood: for internal use only
         updated_info_trimmed = deepcopy_where_possible(updated_info)
-        for lik_info in updated_info_trimmed.get(kinds.likelihood, {}).values():
-            if hasattr(lik_info, "pop"):
-                lik_info.pop(_params, None)
+        for like_info in updated_info_trimmed.get(kinds.likelihood, {}).values():
+            (like_info or {}).pop(_params, None)
         if check_compatible:
-            try:
-                # We will test the old info against the dumped+loaded new info.
-                # This is because we can't actually check if python objects do change
-                old_info = self.reload_updated_info()
-                if not old_info:
-                    raise LoggedError(self.log, "No old sample information: %s",
-                                      self.file_updated)
+            # We will test the old info against the dumped+loaded new info.
+            # This is because we can't actually check if python objects do change
+            old_info = self.reload_updated_info(cache=cache_old, use_cache=use_cache_old)
+            if old_info:
                 new_info = yaml_load(yaml_dump(updated_info_trimmed))
-                ignore_blocks = []
-                from cobaya.sampler import get_sampler_class, Minimizer
-                if issubclass(get_sampler_class(new_info) or type, Minimizer):
-                    ignore_blocks = [kinds.sampler]
                 if not is_equal_info(old_info, new_info, strict=False,
-                                     ignore_blocks=ignore_blocks):
-                    # HACK!!! NEEDS TO BE FIXED
-                    if issubclass(get_sampler_class(updated_info) or type, Minimizer):
-                        # TODO: says work in progress!
-                        raise LoggedError(
-                            self.log, "Old and new sample information not compatible! "
-                                      "At this moment it is not possible to 'force' "
-                                      "deletion of and old 'minimize' run. Please delete "
-                                      "it by hand. "
-                                      "We are working on fixing this very soon!")
+                                     ignore_blocks=list(ignore_blocks) + [
+                                         _output_prefix]):
                     raise LoggedError(
-                        self.log, "Old and new sample information not compatible! "
+                        self.log, "Old and new run information not compatible! "
                                   "Resuming not possible!")
                 # Deal with version comparison separately:
-                # - If not specified now, take the one used in resumed info
+                # - If not specified now, take the one used in resume info
                 # - If specified both now and before, check new older than old one
                 for k in (kind for kind in kinds if kind in updated_info):
+                    if k in ignore_blocks:
+                        continue
                     for c in updated_info[k]:
                         new_version = updated_info[k][c].get(_version)
                         old_version = old_info[k][c].get(_version)
@@ -177,20 +200,60 @@ class Output(HasLogger):
                                 raise LoggedError(
                                     self.log, "You have requested version %r for "
                                               "%s:%s, but you are trying to resume a "
-                                              "sample that used a newer version: %r.",
+                                              "run that used a newer version: %r.",
                                     new_version, k, c, old_version)
-            except IOError:
-                # There was no previous chain
-                pass
-        # We write the new one anyway (maybe updated debug, resuming...)
+        # If resuming, we don't want to to *partial* dumps
+        if ignore_blocks and self.is_resuming():
+            return
+        # Work on a copy of the input info, since we are updating the output_prefix
+        # (the updated one is already a copy)
+        if input_info is not None:
+            input_info = deepcopy_where_possible(input_info)
+        # Write the new one
         for f, info in [(self.file_input, input_info),
                         (self.file_updated, updated_info_trimmed)]:
             if info:
+                for k in ignore_blocks:
+                    info.pop(k, None)
+                info.pop(_debug, None)
+                info.pop(_force, None)
+                info.pop(_resume, None)
+                # make sure the dumped output_prefix does only contain the file prefix,
+                # not the folder, since it's already been placed inside it
+                info[_output_prefix] = self.updated_output_prefix()
                 with open(f, "w", encoding="utf-8") as f_out:
                     try:
-                        f_out.write(yaml_dump(info))
+                        f_out.write(yaml_dump(sort_cosmetic(info)))
                     except OutputError as e:
                         raise LoggedError(self.log, str(e))
+
+    def delete_with_regexp(self, regexp, root=None):
+        """
+        Deletes all files compatible with the given `regexp`.
+
+        If `regexp` is `None` and `root` is defined, deletes the `root` folder.
+        """
+        if root is None:
+            root = self.folder
+        if regexp is not None:
+            file_names = find_with_regexp(regexp, root)
+            if file_names:
+                self.log.debug(
+                    "From regexp %r in folder %r, deleting files %r", regexp.pattern,
+                    root, file_names)
+        else:
+            file_names = [root]
+            self.log.debug("Deleting folder %r", root)
+        for f in file_names:
+            try:
+                os.remove(f)
+            except IsADirectoryError:
+                try:
+                    shutil.rmtree(f)
+                except:
+                    raise
+            except OSError:
+                pass
 
     def prepare_collection(self, name=None, extension=None):
         """
@@ -207,32 +270,60 @@ class Output(HasLogger):
         file_name = os.path.join(
             self.folder,
             self.prefix + ("." if self.prefix else "") + (name + "." if name else "") +
-            (extension or self.ext))
+            self.sanitize_collection_extension(extension))
         return file_name, self.kind
 
-    def is_collection_file_name(self, file_name, extension=None):
-        extension = extension or self.ext
-        # 1 field only: a number between prefix and extension, ignoring "_" and "."
-        fields = list(chain(
-            *[_.split("_") for _ in
-              file_name[len(self.prefix):-len(extension)].split(".")]))
-        fields = [f for f in fields if f]
-        return (len(fields) == 1 and
-                fields[0] == getattr(re_uint.match(fields[0]), "group", lambda: None)())
+    def collection_regexp(self, name=None, extension=None):
+        """
+        Returns a regexp for collections compatible with this output settings.
 
-    def find_collections(self, extension=None):
-        """Returns collection files, including their path."""
-        # Anything that looks like a collection
-        extension = extension or self.ext
-        file_names = [
-            os.path.join(self.folder, f) for f in os.listdir(self.folder) if (
-                    f.startswith(self.prefix) and
-                    f.lower().endswith(extension.lower()) and
-                    self.is_collection_file_name(f, extension=extension))]
-        return file_names
+        Use `name` for particular types of collections (default: any number).
+        Pass `False` to mean there is nothing between the output prefix and the extension.
+        """
+        if name is None:
+            name = r"\d+\."
+        elif name is False:
+            name = ""
+        else:
+            name = re.escape(name) + r"\."
+        extension = self.sanitize_collection_extension(extension)
+        return re.compile(self.prefix_regexp_str + name +
+                          re.escape(extension.lower()) + "$")
 
-    def load_collections(self, model, skip=0, thin=1, concatenate=False):
-        filenames = self.find_collections()
+    def is_collection_file_name(self, file_name, name=None, extension=None):
+        """
+        Check if a `file_name` is a collection compatible with this `Output` instance.
+
+        Use `name` for particular types of collections (default: any number).
+        Pass `False` to mean there is nothing between the output prefix and the extension.
+        """
+        return (file_name ==
+                getattr(self.collection_regexp(name=name, extension=extension)
+                        .match(file_name), "group", lambda: None)())
+
+    def find_collections(self, name=None, extension=None):
+        """
+        Returns all collection files found which are compatible with this `Output`
+        instance, including their path in their name.
+
+        Use `name` for particular types of collections (default: matches any number).
+        Pass `False` to mean there is nothing between the output prefix and the extension.
+        """
+        return [
+            f2 for f2 in [os.path.join(self.folder, f) for f in os.listdir(self.folder)]
+            if self.is_collection_file_name(
+                os.path.split(f2)[1], name=name, extension=extension)]
+
+    def load_collections(self, model, skip=0, thin=1, concatenate=False,
+                         name=None, extension=None):
+        """
+        Loads all collection files found which are compatible with this `Output`
+        instance, including their path in their name.
+
+        Use `name` for particular types of collections (default: any number).
+        Pass `False` to mean there is nothing between the output prefix and the extension.
+        """
+        filenames = self.find_collections(name=name, extension=extension)
         collections = [
             Collection(model, self, name="%d" % (1 + i), file_name=filename,
                        load=True, onload_skip=skip, onload_thin=thin)
@@ -255,7 +346,7 @@ class OutputDummy(Output):
         self.log.debug("No output requested. Doing nothing.")
         # override all methods that actually produce output
         exclude = ["nullfunc"]
-        _func_name = "__name__" if six.PY3 else "func_name"
+        _func_name = "__name__"
         for attrname, attr in list(Output.__dict__.items()):
             func_name = getattr(attr, _func_name, None)
             if func_name and func_name not in exclude and '__' not in func_name:
@@ -280,15 +371,39 @@ class Output_MPI(Output):
         if is_main_process():
             Output.__init__(self, *args, **kwargs)
         if more_than_one_process():
-            to_broadcast = ("folder", "prefix", "kind", "ext", "resuming")
+            to_broadcast = (
+                "folder", "prefix", "kind", "ext", "_resuming", "prefix_regexp_str")
             values = share_mpi([getattr(self, var) for var in to_broadcast]
                                if is_main_process() else None)
             for name, var in zip(to_broadcast, values):
                 setattr(self, name, var)
 
-    def dump_info(self, *args, **kwargs):
+    def check_and_dump_info(self, *args, **kwargs):
         if is_main_process():
-            Output.dump_info(self, *args, **kwargs)
+            Output.check_and_dump_info(self, *args, **kwargs)
+        # Share cached loaded info
+        self._old_updated_info = share_mpi(getattr(self, "_old_updated_info", None))
+
+    def reload_updated_info(self, *args, **kwargs):
+        if is_main_process():
+            return Output.reload_updated_info(self, *args, **kwargs)
+        else:
+            # Only cached possible when non main process
+            if not kwargs.get("use_cache"):
+                raise ValueError(
+                    "Cannot call `reload_updated_info` from non-main process "
+                    "unless cached version (`use_cache=True`) requested.")
+            return self._old_updated_info
+
+    def create_folder(self, *args, **kwargs):
+        if is_main_process():
+            Output.create_folder(self, *args, **kwargs)
+
+    def set_resuming(self, *args, **kwargs):
+        if is_main_process():
+            Output.set_resuming(self, *args, **kwargs)
+        if more_than_one_process():
+            self._resuming = share_mpi(self._resuming if is_main_process() else None)
 
 
 def get_output(*args, **kwargs):

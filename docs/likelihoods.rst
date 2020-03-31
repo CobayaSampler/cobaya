@@ -57,7 +57,48 @@ If your external likelihood needs the products of a **theory code**:
 
 For an application, check out :doc:`cosmo_external_likelihood`.
 
-.. note:: Obviously, ``_derived`` and ``_theory`` are reserved parameter names that you cannot use as arguments in your likelihood definition, except for the purposes explained above.
+.. note::
+
+   Obviously, ``_derived`` and ``_theory`` are reserved parameter names that you cannot use as arguments in your likelihood definition, except for the purposes explained above.
+
+.. note::
+
+   Input and output (derived) parameters of an external function are guessed from its definition. But in some cases you may prefer not to define your likelihood function with explicit arguments (e.g. if the number of them may vary). In that case, you can manually specify the input and output parameters via the ``input_params`` and ``output_params`` options of the likelihood definition in your input dictionary.
+
+   E.g. the following two snippets are equivalent, but in the second one, one can alter the i/o parameters programmatically:
+
+   .. code:: Python
+
+      # Default: guessed from function signature
+
+      from typing import Mapping
+
+      def my_like1(a0, a1, _derived=["sum_a"]):
+          if isinstance(_derived, Mapping):
+              _derived["sum_a"] = a0 + a1
+          return # some function of `(a0, a1)`
+
+      info_like = {"likelihood": my_like}
+
+   .. code:: Python
+
+      # Manual: no explicit function signature required
+
+      from typing import Mapping
+
+      # Define the lists of i/o params
+      my_input_params = ["a0", "a1"]
+      my_output_params = ["sum_a"]
+
+      def my_like1(**kwargs):
+          current_input_values = [kwargs[p] for p in my_input_params]
+          if isinstance(kwargs.get("_derived"), Mapping):
+              kwargs["_derived"][my_output_params[0]] = sum(current_input_values)
+          return # some function of the input params
+
+      info_like = {"likelihood": {
+          "external": my_like,
+          "input_params": my_input_params, "output_params": my_output_params}}
 
 
 *Internal* likelihoods: code conventions and defaults
@@ -95,8 +136,7 @@ The subpackage contains at least two files:
    Actually, there are some user-defined options that are common to all likelihoods and do not need to be specified in the defaults ``[ClassName].yaml`` file, such as the computational ``speed`` of the likelihood (see :ref:`mcmc_speed_hierarchy`).
 
 
-It is up to you where to define your likelihood class(es): the ``__init__`` file can define a class [ClassName] directly, or you can define
-a class in a module.py file inside the likelihood directory (subpackage).
+It is up to you where to define your likelihood class(es): the ``__init__`` file can define a class [ClassName] directly, or you can define a class in a ``module.py`` file inside the likelihood directory (subpackage).
 
 Assuming your ``__init__`` file defines the class, or imports it (``from .module_name import ClassName``),
 when running Cobaya you can reference the internal likelihood using:
@@ -144,7 +184,7 @@ For an application, check out :doc:`cosmo_external_likelihood_class`.
 Implementing your own *external* likelihood class
 --------------------------------------------------
 
-Instead of including the likelihood within the standard Cobaya likelihood modules, you may wish to make an external
+Instead of including the likelihood within the standard Cobaya likelihoods, you may wish to make an external
 package that can be redistributed easily. To do this you make a package containing a class defined exactly the same way
 as for internal likelihoods above (inheriting from :class:`Likelihood` as documented below). For example if you have a
 package called *mycodes*, containing a likelihood class called MyLike in *mycodes.mylikes*, when running Cobaya you can

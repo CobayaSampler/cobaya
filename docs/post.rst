@@ -5,7 +5,7 @@ Importance reweighting and general ``post``-processing
 
    *new in 1.2*
 
-The `post` module provides a way to post-process an existing sample in different ways:
+The `post` component provides a way to post-process an existing sample in different ways:
 
 - Add/remove/recompute a prior, e.g. to impose a parameter cut.
 - Add/remove/recompute a likelihood.
@@ -68,7 +68,8 @@ Let us generate the initial sample:
 .. code:: python
 
    from cobaya.run import run
-   updinfo, results = run(gaussian_info)
+   updinfo, sampler = run(gaussian_info)
+   results = sampler.products()
 
 And let us define the additions and run post-processing:
 

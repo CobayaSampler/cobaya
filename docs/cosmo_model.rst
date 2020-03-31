@@ -12,7 +12,7 @@ So let us create a simple one using the :doc:`input generator <cosmo_basic_runs>
 .. literalinclude:: ./src_examples/cosmo_model/1.py
    :language: python
 
-Now let's build a model (we will need the path to your modules' installation):
+Now let's build a model (we will need the path to your external packages' installation):
 
 .. literalinclude:: ./src_examples/cosmo_model/2.py
    :language: python
@@ -121,7 +121,18 @@ If you had set ``timing=True`` in the input info, :func:`~model.Model.dump_timin
 Low-level access to the theory code
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-You can access the imported CAMB module or CLASS 'Class' instance as, respectively, ``Model.theory["camb"].camb`` and ``Model.theory["classy"].classy``. But be careful about manually changing their settings: it may unexpectedly influence subsequent cosmological observable computations for the present model instance. If you want to directly access CAMB's results object, the likelihood can request 'CAMBdata' as a requirement and retrieve it from a likelihood using ``self.provider.get_CAMBdata()``.
+You can access the imported CAMB module or CLASS 'classy' instance as, respectively, ``Model.theory["camb"].camb`` and ``Model.theory["classy"].classy``. But be careful about manually changing their settings: it may unexpectedly influence subsequent cosmological observable computations for the present model instance. If you want to directly access CAMB's results object, the likelihood can request 'CAMBdata' as a requirement and retrieve it from a likelihood using ``self.provider.get_CAMBdata()``.
+
+
+Manually passing this model to a sampler
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Once you have created a model, you can pass it to a sampler without needing to go through ``cobaya.run``, which would create yet another instance of the same model.
+
+You can define a sampler and an optional output driver in the following way:
+
+.. literalinclude:: ./src_examples/cosmo_model/6.py
+   :language: python
 
 
 Model wrapper class

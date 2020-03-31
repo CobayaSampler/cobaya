@@ -6,13 +6,6 @@ r"""
          (initially based on MontePython's version by Julien Lesgourgues and Benjamin Audren)
 
 """
-
-# Python 2/3 compatibility
-from __future__ import absolute_import, division, print_function
-import six
-if six.PY2:
-    from io import open
-
 # Global
 import os
 import sys
@@ -22,13 +15,13 @@ import logging
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
-from cobaya.conventions import _path_install, kinds
+from cobaya.conventions import _packages_path, kinds
 from cobaya.input import get_default_info
 from cobaya.install import pip_install, download_file
 from cobaya.tools import are_different_params_lists, create_banner
 
 _deprecation_msg_2015 = create_banner("""
-The likelihoods from the Planck 2015 data release have been superseeded
+The likelihoods from the Planck 2015 data release have been superseded
 by the 2018 ones, and will eventually be deprecated.
 """)
 
@@ -36,14 +29,12 @@ pla_url_prefix = r"https://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLO
 
 last_version_supp_data_and_covmats = "v2.01"
 
-# py2 compatibility:
-try:
-    FileNotFoundError
-except NameError:
-    FileNotFoundError = OSError
-
 
 class _planck_clik_prototype(Likelihood):
+    # Data type for aggregated chi2 (case sensitive)
+    type = "CMB"
+
+    path: str
 
     def initialize(self):
         if "2015" in self.get_name():
@@ -58,16 +49,17 @@ class _planck_clik_prototype(Likelihood):
                 import clik
                 has_clik = True
             except ImportError:
+                clik = None
                 has_clik = False
         if not has_clik:
             if not self.path:
-                if self.path_install:
-                    self.path_clik = os.path.join(self.path_install, "code", code_path)
+                if self.packages_path:
+                    self.path_clik = os.path.join(self.packages_path, "code", code_path)
                 else:
                     raise LoggedError(
                         self.log, "No path given to the Planck likelihood. Set the "
                                   "likelihood property 'path' or the common property "
-                                  "'%s'.", _path_install)
+                                  "'%s'.", _packages_path)
             else:
                 self.path_clik = self.path
             self.log.info("Importing clik from %s", self.path_clik)
@@ -77,7 +69,7 @@ class _planck_clik_prototype(Likelihood):
         # Loading the likelihood data
         if not os.path.isabs(self.clik_file):
             self.path_data = getattr(self, "path_data", os.path.join(
-                self.path or self.path_install, "data", data_path))
+                self.path or self.packages_path, "data", data_path))
             self.clik_file = os.path.join(self.path_data, self.clik_file)
         # Differences in the wrapper for lensing and non-lensing likes
         self.lensing = clik.try_lensing(self.clik_file)
@@ -89,9 +81,9 @@ class _planck_clik_prototype(Likelihood):
             if not os.path.exists(self.clik_file):
                 raise LoggedError(
                     self.log, "The .clik file was not found where specified in the "
-                              "'clik_file' field of the settings of this likelihood. Maybe the "
-                              "'path' given is not correct? The full path where the .clik file was "
-                              "searched for is '%s'", self.clik_file)
+                              "'clik_file' field of the settings of this likelihood. "
+                              "Maybe the 'path' given is not correct? The full path where"
+                              " the .clik file was searched for is '%s'", self.clik_file)
             # Else: unknown clik error
             self.log.error("An unexpected error occurred in clik (possibly related to "
                            "multiple simultaneous initialization, or simultaneous "
@@ -99,25 +91,7 @@ class _planck_clik_prototype(Likelihood):
                            "vs non-polarised 'lite' likelihoods. See error info below:")
             raise
         self.l_maxs = self.clik.get_lmax()
-        # Set data type for aggregated chi2 (case sensitive)
-        self.type = "CMB"
-
-    def initialize_with_params(self):
-        # Check that the parameters are the right ones
-        self.expected_params = list(self.clik.extra_parameter_names)
-        differences = are_different_params_lists(
-            self.input_params, self.expected_params, name_A="given", name_B="expected")
-        if differences:
-            raise LoggedError(
-                self.log, "Configuration error in parameters: %r. "
-                          "If this has happened without you fiddling with the defaults, "
-                          "please open an issue in GitHub.", differences)
-        # Placeholder for vector passed to clik
-        length = (len(self.l_maxs) if self.lensing else len(self.clik.get_has_cl()))
-        self.vector = np.zeros(np.sum(self.l_maxs) + length + len(self.expected_params))
-
-    def get_requirements(self):
-        # State requisites to the theory code
+        # calculate requirements here so class can also be separately instantiated
         requested_cls = ["tt", "ee", "bb", "te", "tb", "eb"]
         if self.lensing:
             has_cl = [lmax != -1 for lmax in self.l_maxs]
@@ -126,11 +100,31 @@ class _planck_clik_prototype(Likelihood):
             has_cl = self.clik.get_has_cl()
         self.requested_cls = [cl for cl, i in zip(requested_cls, has_cl) if int(i)]
         self.l_maxs_cls = [lmax for lmax, i in zip(self.l_maxs, has_cl) if int(i)]
+        self.expected_params = list(self.clik.extra_parameter_names)
+        # Placeholder for vector passed to clik
+        length = (len(self.l_maxs) if self.lensing else len(self.clik.get_has_cl()))
+        self.vector = np.zeros(np.sum(self.l_maxs) + length + len(self.expected_params))
+
+    def initialize_with_params(self):
+        # Check that the parameters are the right ones
+        differences = are_different_params_lists(
+            self.input_params, self.expected_params, name_A="given", name_B="expected")
+        if differences:
+            raise LoggedError(
+                self.log, "Configuration error in parameters: %r. "
+                          "If this has happened without you fiddling with the defaults, "
+                          "please open an issue in GitHub.", differences)
+
+    def get_requirements(self):
+        # State requisites to the theory code
         return {'Cl': dict(zip(self.requested_cls, self.l_maxs_cls))}
 
     def logp(self, **params_values):
         # get Cl's from the theory code
         cl = self.theory.get_Cl(units="muK2")
+        return self.log_likelihood(cl, **params_values)
+
+    def log_likelihood(self, cl, **params_values):
         # fill with Cl's
         self.vector[:-len(self.expected_params)] = np.concatenate(
             [(cl[spectrum][:1 + lmax] if spectrum not in ["tb", "eb"]
@@ -180,7 +174,8 @@ class _planck_clik_prototype(Likelihood):
         if _clik_install_failed:
             log.info("Previous clik install failed, skipping")
             return False
-        # Create common folders: all planck likelihoods share install folder for code and data
+        # Create common folders: all planck likelihoods share install
+        # folder for code and data
         paths = {}
         for s in ("code", "data"):
             if eval(s):
@@ -242,7 +237,7 @@ def get_release(name):
 
 
 def get_clik_source_folder(starting_path):
-    """Safe source install folder: crawl modules/code/planck until >1 subfolders."""
+    """Safe source install folder: crawl packages/code/planck until >1 subfolders."""
     source_dir = starting_path
     while True:
         folders = [f for f in os.listdir(source_dir)
@@ -286,10 +281,7 @@ def execute(command):
             nextline = process.stdout.readline()
             if nextline == b"" and process.poll() is not None:
                 break
-            if six.PY3:
-                sys.stdout.buffer.write(nextline)
-            else:
-                sys.stdout.write(nextline)
+            sys.stdout.buffer.write(nextline)
             out.append(nextline)
             sys.stdout.flush()
         _, err = process.communicate()
@@ -337,7 +329,9 @@ def install_clik(path, no_progress_bars=False):
     try:
         os.chdir(source_dir)
         log.info("Configuring... (and maybe installing dependencies...)")
-        if not execute([sys.executable, "waf", "configure", "--install_all_deps"]):
+        flags = ["--install_all_deps",
+                 "--extra_lib=m"]  # missing for some reason in some systems, but harmless
+        if not execute([sys.executable, "waf", "configure"] + flags):
             log.error("Configuration failed!")
             return False
         log.info("Compiling...")

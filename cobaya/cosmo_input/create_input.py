@@ -1,10 +1,6 @@
-# Python 2/3 compatibility
-from __future__ import absolute_import, division
-
 # Global
 from copy import deepcopy
-from collections import OrderedDict as odict
-from six import string_types
+from typing import MutableMapping, Mapping
 
 # Local
 from cobaya.input import get_default_info, merge_info
@@ -16,23 +12,24 @@ from . import input_database
 def translate(p, info=None, dictionary=None):
     dictionary = dictionary or {}
     # Ignore if dropped
-    if not (info if hasattr(info, "keys") else {}).get(partag.drop, False):
+    if not (info if isinstance(info, Mapping) else {}).get(partag.drop, False):
         p = dictionary.get(p, p)
     # Try to modify lambda parameters too!
-    if isinstance(info, string_types):
+    if isinstance(info, str):
         if info.startswith("lambda"):
             arguments = info.split(":")[0].split()[1:]
-            if not isinstance(arguments, string_types):
+            if not isinstance(arguments, str):
                 arguments = "".join(arguments)
             arguments = arguments.split(",")
             arguments_t = [translate(pi, dictionary=dictionary)[0] for pi in arguments]
             for pi, pit in zip(arguments, arguments_t):
                 info = info.replace(pi, pit)
-    if ((hasattr(info, "keys") and partag.derived in info and
-         isinstance(info[partag.derived], string_types))):
-        info[partag.derived] = translate(p, info[partag.derived], dictionary=dictionary)[1]
-    elif (hasattr(info, "keys") and partag.value in info and
-          isinstance(info[partag.value], string_types)):
+    if ((isinstance(info, MutableMapping) and partag.derived in info and
+         isinstance(info[partag.derived], str))):
+        info[partag.derived] = translate(p, info[partag.derived],
+                                         dictionary=dictionary)[1]
+    elif (isinstance(info, MutableMapping) and partag.value in info and
+          isinstance(info[partag.value], str)):
         info[partag.value] = translate(p, info[partag.value], dictionary=dictionary)[1]
     return p, info
 
@@ -47,13 +44,13 @@ def create_input(**kwargs):
     # Need to copy to select theory.
     # Likelihoods always AT THE END!
     # (to check that sampled parameters are not redefined as derived)
-    infos = odict()
+    infos = {}
     kwargs_params = ["primordial", "geometry", "hubble", "matter", "neutrinos",
                      "dark_energy", "bbn", "reionization"]
     kwargs_likes = ["like_cmb", "like_bao", "like_des", "like_sn", "like_H0"]
     for k in kwargs_params + kwargs_likes:
         if k not in kwargs:
-            infos[k] = odict()
+            infos[k] = {}
         try:
             infos[k] = deepcopy(
                 getattr(input_database, k)[kwargs.get(k, input_database._none)])
@@ -76,16 +73,16 @@ def create_input(**kwargs):
                      "theory code; just that we have not implemented this yet."))
         # Add non-translatable parameters (in info["theory"][classy|camb][params])
         if _params not in info:
-            info[_params] = odict()
+            info[_params] = {}
         info[_params].update(
-            (info[kinds.theory][theory_requested] or odict()).pop(_params, odict()))
+            (info[kinds.theory][theory_requested] or {}).pop(_params, {}))
         # Remove the *derived* parameters mentioned by the likelihoods that
         # are already *sampled* by some part of the model
         if field.startswith("like_") and _params in info:
             remove_derived = []
             for p in info[_params]:
-                if any([(p in info_part[_params])
-                        for info_part in list(infos.values())[:i]]):
+                if any((p in info_part[_params])
+                        for info_part in list(infos.values())[:i]):
                     remove_derived += [p]
             for p in remove_derived:
                 info[_params].pop(p)
@@ -119,7 +116,7 @@ def create_input(**kwargs):
                                                      theory_requested] or {}
         merged[kinds.theory][theory_requested]["use_renames"] = True
     else:
-        merged_params_translated = odict([
+        merged_params_translated = dict([
             translate(p, info, planck_to_theo)
             for p, info in merged[_params].items()])
         merged[_params] = merged_params_translated

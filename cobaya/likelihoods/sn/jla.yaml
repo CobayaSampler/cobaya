@@ -11,7 +11,7 @@ dataset_params:
 # Names of alpha and beta parameters if used and varied
 alpha_beta_names: ['alpha_jla', 'beta_jla']
 # Aliases for automatic covariance matrix
-alises: [JLA]
+aliases: [JLA]
 # Speed in evaluations/second
 speed: 20
 

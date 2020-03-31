@@ -87,10 +87,10 @@ of this section.
    ``sudo apt install liblapack3 liblapack-dev``).
 
    If that did not solve the issue, check out specific instructions for some systems in the
-   ``readme.md`` file in the folder ``[modules]/code/planck/code/plc_3.0/plc-3.01``.
+   ``readme.md`` file in the folder ``[packages_path]/code/planck/code/plc_3.0/plc-3.01``.
    
    If you want to re-compile the Planck likelihood to your liking (e.g. with MKL), simply
-   go into the chosen modules installation folder and re-run the ``python waf configure``
+   go into the chosen external packages installation folder and re-run the ``python waf configure``
    and ``python waf install`` with the desired options,
    substituting ``python`` by the Python of choice in your system.
 

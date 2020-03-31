@@ -1,7 +1,6 @@
 # Tests to check correct input parsing and inheritance of defaults
 
 # Global
-from __future__ import division
 from copy import deepcopy
 import pytest
 
@@ -20,7 +19,7 @@ test_info_common = {
 
 def test_prior_inherit_nonegiven():
     updated_info, products = run(test_info_common)
-    likname = list(test_info_common[kinds.likelihood].keys())[0]
+    likname = list(test_info_common[kinds.likelihood])[0]
     default_info = get_default_info(likname, kinds.likelihood)
     assert updated_info[_prior] == default_info[_prior]
 
@@ -29,7 +28,7 @@ def test_prior_inherit_differentgiven():
     test_info = deepcopy(test_info_common)
     test_info[_prior] = {"third": "lambda a1: 1"}
     updated_info, products = run(test_info)
-    likname = list(test_info_common[kinds.likelihood].keys())[0]
+    likname = list(test_info_common[kinds.likelihood])[0]
     default_info = get_default_info(likname, kinds.likelihood)
     default_info[_prior].update(test_info[_prior])
     assert updated_info[_prior] == default_info[_prior]
@@ -37,7 +36,7 @@ def test_prior_inherit_differentgiven():
 
 def test_prior_inherit_samegiven():
     test_info = deepcopy(test_info_common)
-    likname = list(test_info_common[kinds.likelihood].keys())[0]
+    likname = list(test_info_common[kinds.likelihood])[0]
     default_info = get_default_info(likname, kinds.likelihood)
     name, prior = deepcopy(default_info[_prior]).popitem()
     test_info[_prior] = {name: prior}
@@ -47,7 +46,7 @@ def test_prior_inherit_samegiven():
 
 def test_prior_inherit_samegiven_differentdefinition():
     test_info = deepcopy(test_info_common)
-    likname = list(test_info_common[kinds.likelihood].keys())[0]
+    likname = list(test_info_common[kinds.likelihood])[0]
     default_info = get_default_info(likname, kinds.likelihood)
     name, prior = deepcopy(default_info[_prior]).popitem()
     test_info[_prior] = {name: "this is not a prior"}
@@ -57,7 +56,7 @@ def test_prior_inherit_samegiven_differentdefinition():
 
 def test_inherit_label_and_bounds():
     test_info = deepcopy(test_info_common)
-    likname = list(test_info_common[kinds.likelihood].keys())[0]
+    likname = list(test_info_common[kinds.likelihood])[0]
     default_info_params = get_default_info(likname, kinds.likelihood)[_params]
     test_info[_params] = deepcopy(default_info_params)
     test_info[_params]["a1"].pop(partag.latex, None)

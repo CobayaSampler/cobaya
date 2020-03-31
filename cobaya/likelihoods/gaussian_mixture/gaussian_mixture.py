@@ -5,20 +5,16 @@
 :Author: Jesus Torrado
 
 """
-
-# Python 2/3 compatibility
-from __future__ import division
-
 # Global
 import numpy as np
 from scipy.stats import multivariate_normal, uniform, random_correlation
 from scipy.special import logsumexp
-from collections import OrderedDict as odict
+from typing import Sequence, Optional
 
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
-from cobaya.mpi import get_mpi_size, share_mpi, is_main_process
+from cobaya.mpi import share_mpi, is_main_process
 from cobaya.conventions import kinds, _params
 from cobaya.conventions import _input_params_prefix, _output_params_prefix
 
@@ -29,6 +25,14 @@ class gaussian_mixture(Likelihood):
     """
     Gaussian likelihood.
     """
+
+    # yaml variables
+    means: Optional[Sequence]
+    covs: Optional[Sequence]
+    weights: Optional[Sequence[float]]
+    derived: bool
+    input_params_prefix: str
+    output_params_prefix: str
 
     def d(self):
         """
@@ -139,7 +143,7 @@ def random_mean(ranges, n_modes=1, mpi_warn=True):
 
     If ``n_modes>1``, returns an array of such points.
     """
-    if get_mpi_size() and mpi_warn:
+    if not is_main_process() and mpi_warn:
         print("WARNING! "
               "Using with MPI: different process will produce different random results.")
     mean = np.array([uniform.rvs(loc=r[0], scale=r[1] - r[0], size=n_modes)
@@ -161,7 +165,7 @@ def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1, mpi_warn=True):
 
     If ``n_modes>1``, returns a list of such matrices.
     """
-    if get_mpi_size() and mpi_warn:
+    if not is_main_process() and mpi_warn:
         print("WARNING! "
               "Using with MPI: different process will produce different random results.")
     dim = len(ranges)
@@ -212,7 +216,7 @@ def info_random_gaussian_mixture(
     info = {kinds.likelihood: {"gaussian_mixture": {
         "means": mean, "covs": cov, _input_params_prefix: input_params_prefix,
         _output_params_prefix: output_params_prefix, "derived": derived}}}
-    info[_params] = odict(
+    info[_params] = dict(
         # sampled
         [(input_params_prefix + "_%d" % i,
           {"prior": {"min": ranges[i][0], "max": ranges[i][1]},

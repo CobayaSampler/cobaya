@@ -10,10 +10,6 @@ The test prior is a gaussian half-ring, combined with a gaussian in one of the t
 
 For manual testing, and observing/plotting the density, pass `manual=True` to `body of test`.
 """
-
-# Global
-from __future__ import division, absolute_import
-
 # Local
 from cobaya.conventions import _prior
 from .common_external import info_string, info_callable, info_mixed, info_import

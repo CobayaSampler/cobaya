@@ -5,91 +5,101 @@
 :Author: Jesus Torrado
 
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
 
 # Global
-from collections import OrderedDict as odict
+from typing import Mapping
+import logging
 
 # Local
 from cobaya import __version__
-from cobaya.conventions import kinds, _prior, _params
-from cobaya.conventions import _path_install, _debug, _debug_file, _output_prefix
-from cobaya.conventions import _resume, _timing, _debug_default, _force, _post, _version
-from cobaya.conventions import _yaml_extensions, _separator_files, _updated_suffix
-from cobaya.conventions import _modules_path_arg, _modules_path_env, _resume_default
+from cobaya.conventions import kinds, _prior, _params, _packages_path, _output_prefix, \
+    _debug, _debug_file, _resume, _timing, _debug_default, _force, _post, _test_run, \
+    _yaml_extensions, _separator_files, _updated_suffix, _packages_path_arg, \
+    _resume_default, _packages_path_arg_posix
 from cobaya.output import get_output
 from cobaya.model import Model
-from cobaya.sampler import get_sampler, get_sampler_class, Minimizer
-from cobaya.log import logger_setup
+from cobaya.sampler import get_sampler_class, check_sampler_info
+from cobaya.log import logger_setup, LoggedError
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info
 from cobaya.mpi import import_MPI, is_main_process, set_mpi_disabled
-from cobaya.tools import warn_deprecation, recursive_update
+from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic, \
+    check_deprecated_modules_path
 from cobaya.post import post
 
 
-def run(info, stop_at_error=None):
-    assert hasattr(info, "keys"), (
+def run(info):
+    # This function reproduces the model-->output-->sampler pipeline one would follow
+    # when instantiating by hand, but alters the order to performs checks and dump info
+    # as early as possible, e.g. to check if resuming possible or `force` needed.
+    assert isinstance(info, Mapping), (
         "The first argument must be a dictionary with the info needed for the run. "
         "If you were trying to pass the name of an input file instead, "
         "load it first with 'cobaya.input.load_input', "
         "or, if you were passing a yaml string, load it with 'cobaya.yaml.yaml_load'.")
-    # Configure the logger ASAP
-    # Just a dummy import before configuring the logger, until I fix root/individual level
-    # TODO: check getdist import
-    import getdist
     logger_setup(info.get(_debug), info.get(_debug_file))
-    import logging
-    info_stop = info.get("stop_at_error", False)
-    # Initialize output, if required
-    resume, force = info.get(_resume), info.get(_force)
-    # Create the updated input information, including defaults for each module.
-    updated_info = update_info(info)
-    # If minimizer, always try to re-use sample to get bestfit/covmat
-    if issubclass(get_sampler_class(updated_info) or type, Minimizer):
-        resume = True
-        force = False
+    logger_run = logging.getLogger(__name__.split(".")[-1])
+    # MARKED FOR DEPRECATION IN v3.0
+    # BEHAVIOUR TO BE REPLACED BY ERROR:
+    check_deprecated_modules_path(info)
+    # END OF DEPRECATION BLOCK
+    # 1. Prepare output driver, if requested by defining an output_prefix
     output = get_output(output_prefix=info.get(_output_prefix),
-                        resume=resume, force_output=force)
-    if output:
-        updated_info[_output_prefix] = output.updated_output_prefix()
-        updated_info[_resume] = output.is_resuming()
+                        resume=info.get(_resume), force=info.get(_force))
+    # 2. Update the input info with the defaults for each component
+    updated_info = update_info(info)
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
-        # Don't dump unless we are doing output, just in case something not serializable
-        # May be fixed in the future if we find a way to serialize external functions
-        if info.get(_output_prefix) and is_main_process():
-            logging.getLogger(__name__.split(".")[-1]).info(
+        # Dump only if not doing output (otherwise, the user can check the .updated file)
+        if not output and is_main_process():
+            logger_run.info(
                 "Input info updated with defaults (dumped to YAML):\n%s",
-                yaml_dump(updated_info))
-    # We dump the info now, before modules initialization, to better track errors and
-    # to check if resuming is possible asap (old and new infos are consistent)
-    output.dump_info(info, updated_info)
-    # Initialize the posterior and the sampler
+                yaml_dump(sort_cosmetic(updated_info)))
+    # 3. If output requested, check compatibility if existing one, and dump.
+    # 3.1 First: model only
+    output.check_and_dump_info(info, updated_info, cache_old=True,
+                               ignore_blocks=[kinds.sampler])
+    # 3.2 Then sampler -- 1st get the last sampler mentioned in the updated.yaml
+    # TODO: ideally, using Minimizer would *append* to the sampler block.
+    #       Some code already in place, but not possible at the moment.
+    try:
+        last_sampler = list(updated_info[kinds.sampler])[-1]
+        last_sampler_info = {last_sampler: updated_info[kinds.sampler][last_sampler]}
+    except (KeyError, TypeError):
+        raise LoggedError(logger_run, "No sampler requested.")
+    sampler_class = get_sampler_class(last_sampler_info)
+    check_sampler_info(
+        (output.reload_updated_info(use_cache=True) or {}).get(kinds.sampler),
+        updated_info[kinds.sampler], is_resuming=output.is_resuming())
+    # Dump again, now including sampler info
+    output.check_and_dump_info(info, updated_info, check_compatible=False)
+    # Check if resumible run
+    sampler_class.check_force_resume(
+        output, info=updated_info[kinds.sampler][sampler_class.__name__])
+    # 4. Initialize the posterior and the sampler
     with Model(updated_info[_params], updated_info[kinds.likelihood],
                updated_info.get(_prior), updated_info.get(kinds.theory),
-               path_install=info.get(_path_install), timing=updated_info.get(_timing),
-               allow_renames=False,
-               stop_at_error=info_stop if stop_at_error is None else stop_at_error) \
+               packages_path=info.get(_packages_path), timing=updated_info.get(_timing),
+               allow_renames=False, stop_at_error=info.get("stop_at_error", False)) \
             as model:
-        # Update the updated info with the parameter routes and version info
-        keys = ([kinds.likelihood, kinds.theory]
-                if kinds.theory in updated_info else [kinds.likelihood])
-        updated_info.update(odict([(k, model.info()[k]) for k in keys]))
-        updated_info = recursive_update(
-            updated_info, model.get_version(add_version_field=True))
-        output.dump_info(None, updated_info, check_compatible=False)
-        with get_sampler(
-                updated_info[kinds.sampler], model, output,
-                resume=updated_info.get(_resume),
-                modules=info.get(_path_install)) as sampler:
-            sampler.run()
-    # For scripted calls:
-    # Restore the original output_prefix: the script has not changed folder!
-    if _output_prefix in info:
-        updated_info[_output_prefix] = info.get(_output_prefix)
-    return updated_info, sampler.products()
+        # Re-dump the updated info, now containing parameter routes and version info
+        updated_info = recursive_update(updated_info, model.info())
+        output.check_and_dump_info(None, updated_info, check_compatible=False)
+        sampler = sampler_class(updated_info[kinds.sampler][sampler_class.__name__],
+                                model, output, packages_path=info.get(_packages_path))
+        # Re-dump updated info, now also containing updates from the sampler
+        updated_info[kinds.sampler][sampler.get_name()] = \
+            recursive_update(
+                updated_info[kinds.sampler][sampler.get_name()], sampler.info())
+        # TODO -- maybe also re-dump model info, now possibly with measured speeds
+        # (waiting until the camb.transfers issue is solved)
+        output.check_and_dump_info(None, updated_info, check_compatible=False)
+        if info.get(_test_run, False):
+            logger_run.info("Test initialization successful! "
+                            "You can probably run now without `--%s`.", _test_run)
+            return updated_info, sampler
+        # Run the sampler
+        sampler.run()
+    return updated_info, sampler
 
 
 # Command-line script
@@ -100,9 +110,18 @@ def run_script():
     parser = argparse.ArgumentParser(description="Cobaya's run script.")
     parser.add_argument("input_file", nargs=1, action="store", metavar="input_file.yaml",
                         help="An input file to run.")
-    parser.add_argument("-" + _modules_path_arg[0], "--" + _modules_path_arg,
-                        action="store", nargs=1, metavar="/some/path", default=[None],
-                        help="Path where modules were automatically installed.")
+    parser.add_argument("-" + _packages_path_arg[0], "--" + _packages_path_arg_posix,
+                        action="store", nargs=1, metavar="/packages/path", default=[None],
+                        help="Path where external packages were installed.")
+    # MARKED FOR DEPRECATION IN v3.0
+    modules = "modules"
+    parser.add_argument("-" + modules[0], "--" + modules,
+                        action="store", nargs=1, required=False,
+                        metavar="/packages/path", default=[None],
+                        help="To be deprecated! "
+                             "Alias for %s, which should be used instead." %
+                             _packages_path_arg_posix)
+    # END OF DEPRECATION BLOCK -- CONTINUES BELOW!
     parser.add_argument("-" + _output_prefix[0], "--" + _output_prefix,
                         action="store", nargs=1, metavar="/some/path", default=[None],
                         help="Path and prefix for the text output.")
@@ -115,21 +134,24 @@ def run_script():
     continuation.add_argument("-" + _force[0], "--" + _force, action="store_true",
                               help="Overwrites previous output, if it exists "
                                    "(use with care!)")
+    parser.add_argument("--%s" % _test_run, action="store_true",
+                        help="Initialize model and sampler, and exit.")
     parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument("--no-mpi", action='store_true',
                         help="disable MPI when mpi4py installed but MPI does "
                              "not actually work")
-    args = parser.parse_args()
-    if args.no_mpi:
+    arguments = parser.parse_args()
+    if arguments.no_mpi or getattr(arguments, _test_run, False):
         set_mpi_disabled()
-    if any((os.path.splitext(f)[0] in ("input", "updated")) for f in args.input_file):
+    if any((os.path.splitext(f)[0] in ("input", "updated"))
+           for f in arguments.input_file):
         raise ValueError("'input' and 'updated' are reserved file names. "
                          "Please, use a different one.")
     load_input = import_MPI(".input", "load_input")
-    given_input = args.input_file[0]
+    given_input = arguments.input_file[0]
     if any(given_input.lower().endswith(ext) for ext in _yaml_extensions):
         info = load_input(given_input)
-        output_prefix_cmd = getattr(args, _output_prefix)[0]
+        output_prefix_cmd = getattr(arguments, _output_prefix)[0]
         output_prefix_input = info.get(_output_prefix)
         info[_output_prefix] = output_prefix_cmd or output_prefix_input
     else:
@@ -140,19 +162,33 @@ def run_script():
         try:
             info = load_input(updated_file)
         except IOError:
-            raise ValueError("Not a valid input file, or non-existent sample to resume")
-        # We need to update the output_prefix to resume the sample *where it is*
+            raise ValueError("Not a valid input file, or non-existent run to resume")
+        # We need to update the output_prefix to resume the run *where it is*
         info[_output_prefix] = given_input
         # If input given this way, we obviously want to resume!
         info[_resume] = True
-    # solve modules installation path cmd > env > input
-    path_cmd = getattr(args, _modules_path_arg)[0]
-    path_env = os.environ.get(_modules_path_env, None)
-    path_input = info.get(_path_install)
-    info[_path_install] = path_cmd or (path_env or path_input)
-    info[_debug] = getattr(args, _debug) or info.get(_debug, _debug_default)
-    info[_resume] = getattr(args, _resume, _resume_default)
-    info[_force] = getattr(args, _force, False)
+    # solve packages installation path cmd > env > input
+    # MARKED FOR DEPRECATION IN v3.0
+    if getattr(arguments, modules) != [None]:
+        logger_setup()
+        logger = logging.getLogger(__name__.split(".")[-1])
+        logger.warning("*DEPRECATION*: -m/--modules will be deprecated in favor of "
+                       "-%s/--%s in the next version. Please, use that one instead.",
+                       _packages_path_arg[0], _packages_path_arg_posix)
+        # BEHAVIOUR TO BE REPLACED BY ERROR:
+        if getattr(arguments, _packages_path_arg) == [None]:
+            setattr(arguments, _packages_path_arg, getattr(arguments, modules))
+    # BEHAVIOUR TO BE REPLACED BY ERROR:
+    check_deprecated_modules_path(info)
+    # END OF DEPRECATION BLOCK
+    info[_packages_path] = \
+        getattr(arguments, _packages_path_arg)[0] or info.get(_packages_path)
+    info[_debug] = getattr(arguments, _debug) or info.get(_debug, _debug_default)
+    info[_test_run] = getattr(arguments, _test_run, False)
+    # If any of resume|force given as cmd args, ignore those in the input file
+    resume_arg, force_arg = [getattr(arguments, arg) for arg in [_resume, _force]]
+    if any([resume_arg, force_arg]):
+        info[_resume], info[_force] = resume_arg, force_arg
     if _post in info:
         post(info)
     else:

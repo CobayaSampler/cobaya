@@ -1,64 +1,63 @@
-from __future__ import absolute_import
 from copy import deepcopy
-
+from types import MappingProxyType
 from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE
 from .common_cosmo import body_of_test
 from cobaya.cosmo_input import base_precision
 
 best_fit = deepcopy(params_lowTEB_highTTTEEE)
 
-info_camb = {"camb": {"extra_args": base_precision["camb"]}}
-info_classy = {"classy": {"extra_args": base_precision["classy"]}}
+info_camb = MappingProxyType({"camb": {"extra_args": base_precision["camb"]}})
+info_classy = MappingProxyType({"classy": {"extra_args": base_precision["classy"]}})
 
 
-def test_cosmo_des_y1_shear_camb(modules, info_theory=info_camb):
+def test_cosmo_des_y1_shear_camb(packages_path, info_theory=info_camb):
     like = "des_y1.shear"
     info_likelihood = {like: {}}
     best_fit_shear = deepcopy(best_fit)
     best_fit_shear.update(test_params_shear)
-    body_of_test(modules, best_fit_shear, info_likelihood, info_theory,
+    body_of_test(packages_path, best_fit_shear, info_likelihood, info_theory,
                  {like: ref_chi2["shear"], "tolerance": tolerance})
 
 
-def test_cosmo_des_y1_clustering_camb(modules, info_theory=info_camb):
+def test_cosmo_des_y1_clustering_camb(packages_path, info_theory=info_camb):
     like = "des_y1.clustering"
     info_likelihood = {like: {}}
     best_fit_clustering = deepcopy(best_fit)
     best_fit_clustering.update(test_params_clustering)
-    body_of_test(modules, best_fit_clustering, info_likelihood, info_theory,
+    body_of_test(packages_path, best_fit_clustering, info_likelihood, info_theory,
                  {like: ref_chi2["clustering"], "tolerance": tolerance})
 
 
-def test_cosmo_des_y1_galaxy_galaxy_camb(modules, info_theory=info_camb):
+def test_cosmo_des_y1_galaxy_galaxy_camb(packages_path, info_theory=info_camb):
     like = "des_y1.galaxy_galaxy"
     info_likelihood = {like: {}}
     best_fit_galaxy_galaxy = deepcopy(best_fit)
     best_fit_galaxy_galaxy.update(test_params_shear)
     best_fit_galaxy_galaxy.update(test_params_clustering)
-    body_of_test(modules, best_fit_galaxy_galaxy, info_likelihood, info_theory,
+    body_of_test(packages_path, best_fit_galaxy_galaxy, info_likelihood, info_theory,
                  {like: ref_chi2["galaxy_galaxy"], "tolerance": tolerance})
 
 
-def test_cosmo_des_y1_joint_camb(modules, info_theory=info_camb):
+def test_cosmo_des_y1_joint_camb(packages_path, info_theory=info_camb):
     like = "des_y1.joint"
     info_likelihood = {like: {}}
     best_fit_joint = deepcopy(best_fit)
     best_fit_joint.update(test_params_shear)
     best_fit_joint.update(test_params_clustering)
-    body_of_test(modules, best_fit_joint, info_likelihood, info_theory,
+    body_of_test(packages_path, best_fit_joint, info_likelihood, info_theory,
                  {like: ref_chi2["joint"], "tolerance": tolerance})
 
 
-def test_cosmo_des_y1_shear_classy(modules, info_theory=info_classy):
-    test_cosmo_des_y1_shear_camb(modules, info_theory=info_theory)
+def test_cosmo_des_y1_shear_classy(packages_path, info_theory=info_classy):
+    test_cosmo_des_y1_shear_camb(packages_path, info_theory=info_theory)
 
 
-def test_cosmo_des_y1_clustering_classy(modules, info_theory=info_classy):
-    test_cosmo_des_y1_clustering_camb(modules, info_theory=info_theory)
+def test_cosmo_des_y1_clustering_classy(packages_path, info_theory=info_classy):
+    test_cosmo_des_y1_clustering_camb(packages_path, info_theory=info_theory)
 
 
-def test_cosmo_des_y1_galaxy_galaxy_classy(modules, info_theory=info_classy):
-    test_cosmo_des_y1_galaxy_galaxy_camb(modules, info_theory=info_theory)
+def test_cosmo_des_y1_galaxy_galaxy_classy(packages_path, info_theory=info_classy):
+    test_cosmo_des_y1_galaxy_galaxy_camb(packages_path, info_theory=info_theory)
 
 
 ref_chi2 = {"shear": 242.825, "clustering": 100.997,

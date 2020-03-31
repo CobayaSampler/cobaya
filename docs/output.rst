@@ -12,9 +12,9 @@ The *updated information* and *products* mentioned above are returned by the ``r
 .. code:: python
 
     from cobaya.run import run
-    updated_info, products = run(your_input)
+    updated_info, sampler = run(your_input)
 
-``products`` here is a dictionary whose contents depend on the sampler used, e.g. one chain for the ``mcmc`` sampler.
+``sampler`` here is the sampler instance that just ran, e.g. the ``mcmc`` sampler. The results of the sampler can be obtained as ``sampler.products()``, which returns a dictionary whose contents depend on the sampler used, e.g. one chain for the ``mcmc`` sampler.
 
 If the input information contains a non-null ``output``, products are written to the hard drive too, as described below.
 
@@ -27,7 +27,7 @@ Shell call
 When called from the shell, **cobaya** generates most commonly the following output files:
 
 - ``[prefix].input.yaml``: a file with the same content as the input file.
-- ``[prefix].updated.yaml``: a file containing the input information plus the default values used by each module.
+- ``[prefix].updated.yaml``: a file containing the input information plus the default values used by each component.
 - ``[prefix].[number].txt``: one or more sample files, containing one sample per line, with values separated by spaces. The first line specifies the columns.
 
 .. note::

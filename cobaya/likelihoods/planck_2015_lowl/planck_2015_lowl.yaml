@@ -5,7 +5,7 @@ path:
 clik_file: plc_2.0/low_l/commander/commander_rc2_v1.1_l2_29_B.clik
 product_id: "1900"
 # Aliases for automatic covariance matrix
-alises: [lowl]
+aliases: [lowl]
 # Speed in evaluations/second
 speed: 3500
 

@@ -13,6 +13,7 @@ nlive: 25d
 # You may want to use `d` for exploratory runs.
 num_repeats: 5d
 # Number of prior samples drawn before starting compression
+# Make it larger than nlive if your prior/likelihood has unphysical regions
 nprior:  # default: nlive
 # Whether to check for and explore multi-modality on the posterior
 do_clustering: True
@@ -33,6 +34,13 @@ logzero: -1e30
 boost_posterior: 0  # increase up to `num_repeats`
 # Verbosity during the sampling process. Set to one of [0,1,2,3]
 feedback:  # default: Same as global `verbosity`
+# Exploiting speed hierarchy
+# --------------------------
+# whether to measure actual speeds for your machine/threading at starting rather
+# than using stored values
+measure_speeds: True
+# Oversampling power: amount of oversampling or dragging. Value in [0, 1]
+oversample_power: 0.8
 # Manual speed blocking
 # ---------------------
 # To take full advantage of speed-blocking, sort the blocks by ascending speeds
@@ -49,7 +57,6 @@ confidence_for_unbounded: 0.9999995  # 5 sigmas of the prior
 seed:  # postitive integer
 # Raw output of PolyChord (no need to change them, normally)
 # ----------------------------------------------------------
-base_dir: raw_polychord_output
 file_root:
 posteriors: True
 equals: True
@@ -59,4 +66,3 @@ read_resume: True
 write_stats: True
 write_live: True
 write_dead: True
-

@@ -61,6 +61,7 @@ The third file, ending in ``.txt``, contains the MCMC sample, and its first line
 You can use `GetDist <https://getdist.readthedocs.io/en/latest/index.html>`_ to analyse the results of this sample: get marginalized statistics, convergence diagnostics and some plots. We recommend using the `graphical user interface <https://getdist.readthedocs.io/en/latest/gui.html>`_. Simply run ``GetDistGUI.py`` from anywhere, press the green ``+`` button, navigate in the pop-up window into the folder containing the chains (here ``chains``) and click ``choose``. Now you can get some result statistics from the ``Data`` menu, or generate some plots like this one (just mark the the options in the red boxes and hit ``Make plot``):
 
 .. image:: img/example_quickstart_getdistgui.png
+   :align: center
 
 .. note::
 
@@ -85,13 +86,19 @@ The actual input information of **cobaya** are Python *dictionaries* (a ``yaml``
 
 The code above may look more complicated than the corresponding ``yaml`` one, but in exchange it is much more flexible, allowing you to quick modify and swap different parts of it.
 
+Notice that here we suppress the creation of the chain files by not including the field ``output``, since this is a very basic example. The chains will thus only be loaded in memory.
+
 .. note::
 
-   Most often the ``params`` block is defined using an `OrderedDict <https://docs.python.org/2/library/collections.html#ordereddict-examples-and-recipes>`_, instead of a normal Python dictionary. Using an ``OrderedDict`` instead of a normal dictionary is optional but highly recommended: it keeps the order of the parameters consistent between input and output.
+   Add this snippet after defining your ``info`` to be able to use the ``cobaya-run`` arguments ``-d`` (debug), ``-f`` (force) and ``-r`` (resume) when launching your Python script from the shell:
 
-   Same goes for the likelihoods, when one can use an ``OrderedDict`` to preserve the order of the likelihoods.
+   .. code-block:: python
 
-Notice that here we suppress the creation of the chain files by not including the field ``output``, since this is a very basic example. The chains will thus only be loaded in memory.
+      import sys
+      for k, v in {"-f": "force", "-r": "resume", "-d": "debug"}.items():
+          if k in sys.argv:
+              info[v] = True
+
 
 Alternatively, we can load the input from a ``yaml`` file like the one above:
 
@@ -120,6 +127,7 @@ Output:
 .. literalinclude:: ./src_examples/quickstart/analyze_out.txt
 
 .. image:: img/example_quickstart_plot.png
+   :align: center
 
 Alternatively, if we had chosen to write the output as in the shell case by adding an ``output`` prefix, we could have loaded the chain in GetDist from the hard drive:
 

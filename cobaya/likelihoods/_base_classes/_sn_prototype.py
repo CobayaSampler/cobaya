@@ -101,9 +101,7 @@ After this, mention the path to this likelihood when you include it in an input 
 #   AL, March 2018: this python version
 
 # Global
-from __future__ import division, print_function
 import numpy as np
-import io
 import os
 
 # Local
@@ -113,7 +111,11 @@ from cobaya.likelihoods._base_classes import _DataSetLikelihood
 _twopi = 2 * np.pi
 
 
+# noinspection PyUnresolvedReferences
 class _sn_prototype(_DataSetLikelihood):
+    # Data type for aggregated chi2 (case sensitive)
+    type = "SN"
+
     install_options = {"github_repository": "CobayaSampler/sn_data", "github_release": "v1.3"}
 
     def init_params(self, ini):
@@ -122,7 +124,7 @@ class _sn_prototype(_DataSetLikelihood):
         if self.twoscriptmfit:
             scriptmcut = ini.float('scriptmcut', 10.)
         assert not ini.float('intrinsicdisp', 0) and not ini.float('intrinsicdisp0', 0)
-        if hasattr(self, "alpha_beta_names"):
+        if getattr(self, "alpha_beta_names", None) is not None:
             self.alpha_name = self.alpha_beta_names[0]
             self.beta_name = self.alpha_beta_names[1]
         self.pecz = ini.float('pecz', 0.001)
@@ -133,7 +135,7 @@ class _sn_prototype(_DataSetLikelihood):
         supernovae = {}
         self.names = []
         ix = 0
-        with io.open(data_file, 'r') as f:
+        with open(data_file, 'r') as f:
             lines = f.readlines()
             for line in lines:
                 if '#' in line:
@@ -238,8 +240,6 @@ class _sn_prototype(_DataSetLikelihood):
                     self.invcovs[i] = self.inverse_covariance_matrix(alpha, beta)
         elif not self.alphabeta_covmat:
             self.inverse_covariance_matrix()
-        # Set data type for aggregated chi2 (case sensitive)
-        self.type = "SN"
 
     def get_requirements(self):
         # State requisites to the theory code

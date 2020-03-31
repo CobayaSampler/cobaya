@@ -7,7 +7,6 @@ import os
 import numpy as np
 from itertools import chain
 from random import shuffle
-from collections import OrderedDict as odict
 
 from cobaya.likelihoods.gaussian_mixture import random_cov
 from cobaya.conventions import kinds, partag,_prior, _params
@@ -45,7 +44,7 @@ def body_of_test(dim, tmpdir=None):
     prefix = "a_"
     input_order = list(range(dim))
     shuffle(input_order)
-    info = {kinds.likelihood: {"one": None}, _params: odict()}
+    info = {kinds.likelihood: {"one": None}, _params: {}}
     for i in input_order:
         p = prefix + str(i)
         info[_params][p] = {_prior: {partag.dist: "norm", "loc": 0, "scale": 1000}}

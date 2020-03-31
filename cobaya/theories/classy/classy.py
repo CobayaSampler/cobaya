@@ -44,7 +44,7 @@ You can specify any parameter that CLASS understands in the ``params`` block:
 
 If you want to use your own version of CLASS, you need to specify its location with a
 ``path`` option inside the ``classy`` block. If you do not specify a ``path``,
-CLASS will be loaded from the automatic-install ``modules`` folder, if specified, or
+CLASS will be loaded from the automatic-install ``packages_path`` folder, if specified, or
 otherwise imported as a globally-installed Python package. Cobaya will print at
 initialisation where it is getting CLASS from.
 
@@ -80,7 +80,7 @@ Installation
 
    If the installation folder of CLASS is moved, due to CLASS hard-coding some folders,
    CLASS needs to be recompiled, either manually or by deleting the CLASS installation and
-   repeating the ``cobaya-install`` command in the renamed *modules* folder.
+   repeating the ``cobaya-install`` command in the renamed *packages* folder.
 
    If you do not recompile CLASS, it causes a memory leak (`thanks to Stefan Heimersheim
    <https://github.com/CobayaSampler/cobaya/issues/10>`_).
@@ -100,7 +100,7 @@ If you are planning to modify CLASS or use an already modified version,
 you should not use the automatic installation script. Use the method below instead.
 
 CLASS's python interface utilizes the ``cython`` compiler. If typing ``cython`` in the
-shell produces an error, install it with ``pip install cython --user``.
+shell produces an error, install it with ``python -m pip install cython --user``.
 
 .. note::
    The fast way, assuming you are installing all your cosmological codes under
@@ -131,8 +131,6 @@ If the instructions above failed, follow those in the
 `official CLASS web page <http://class-code.net/>`_ to get CLASS compiled with the Python
 interface ready.
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import, division
 
 # Global
 import sys
@@ -140,20 +138,24 @@ import os
 import numpy as np
 from copy import deepcopy
 import logging
-from collections import namedtuple, OrderedDict as odict
-from numbers import Number
+from typing import NamedTuple, Sequence, Union, Optional
 
 # Local
 from cobaya.theories._cosmo import BoltzmannBase
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, pip_install
 from cobaya.tools import load_module, VersionCheckError
-from cobaya.conventions import _version
+
 
 # Result collector
-Collector = namedtuple("collector",
-                       ["method", "args", "args_names", "kwargs", "arg_array", "post"])
-Collector.__new__.__defaults__ = (None, [], [], {}, None, None)
+class Collector(NamedTuple):
+    method: str
+    args: Sequence = []
+    args_names: Sequence = []
+    kwargs: dict = {}
+    arg_array: Union[int, Sequence] = None
+    post: Optional[callable] = None
+
 
 # default non linear code -- same as CAMB
 non_linear_default_code = "hmcode"
@@ -161,15 +163,15 @@ non_linear_default_code = "hmcode"
 
 class classy(BoltzmannBase):
     # Name of the Class repo/folder and version to download
-    classy_repo_name = "lesgourg/class_public"
-    min_classy_version = "v2.8.2"
-    classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', min_classy_version)
+    _classy_repo_name = "lesgourg/class_public"
+    _min_classy_version = "v2.8.2"
+    _classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', _min_classy_version)
 
     def initialize(self):
         """Importing CLASS from the correct path, if given, and if not, globally."""
-        # If path not given, try using general path to modules
-        if not self.path and self.path_install:
-            self.path = self.get_path(self.path_install)
+        # If path not given, try using general path to external packages
+        if not self.path and self.packages_path:
+            self.path = self.get_path(self.packages_path)
         if self.path:
             self.log.info("Importing *local* classy from " + self.path)
             classy_build_path = os.path.join(self.path, "python", "build")
@@ -180,7 +182,7 @@ class classy(BoltzmannBase):
                 classy_build_path = os.path.join(classy_build_path, post)
                 if not os.path.exists(classy_build_path):
                     # If path was given as an install path, try to load global one anyway
-                    if self.path_install:
+                    if self.packages_path:
                         self.log.info("Importing *global* CLASS (because not compiled?).")
                     else:
                         raise StopIteration
@@ -193,7 +195,7 @@ class classy(BoltzmannBase):
             self.log.info("Importing *global* CLASS.")
         try:
             self.classy_module = load_module('classy', path=classy_build_path,
-                                             min_version=self.classy_repo_version)
+                                             min_version=self._classy_repo_version)
             from classy import Class, CosmoSevereError, CosmoComputationError
         except ImportError:
             raise LoggedError(
@@ -207,7 +209,7 @@ class classy(BoltzmannBase):
         self.classy = Class()
         # Propagate errors up
         global CosmoComputationError, CosmoSevereError
-        super(classy, self).initialize()
+        super().initialize()
         # Add general CLASS stuff
         self.extra_args["output"] = self.extra_args.get("output", "")
         if "sBBN file" in self.extra_args:
@@ -218,7 +220,7 @@ class classy(BoltzmannBase):
 
     def needs(self, **requirements):
         # Computed quantities required by the likelihood
-        super(classy, self).needs(**requirements)
+        super().needs(**requirements)
         for k, v in self._needs.items():
             # Products and other computations
             if k == "Cl":
@@ -252,7 +254,7 @@ class classy(BoltzmannBase):
                     method="z_of_r",
                     args_names=["z"],
                     args=[np.atleast_1d(v["z"])])
-            elif k in ["Pk_interpolator", "Pk_grid"]:
+            elif isinstance(k, tuple) and k[0] == "Pk_grid":
                 self.extra_args["output"] += " mPk"
                 v = deepcopy(v)
                 self.add_P_k_max(v.pop("k_max"), units="1/Mpc")
@@ -261,20 +263,23 @@ class classy(BoltzmannBase):
                 # (default: 0.1). But let's leave it like this in case this changes
                 # in the future.
                 self.add_z_for_matter_power(v.pop("z"))
+
                 if v["nonlinear"] and "non linear" not in self.extra_args:
                     self.extra_args["non linear"] = non_linear_default_code
-                for pair in v.pop("vars_pairs", [("delta_tot", "delta_tot")]):
-                    if pair == ("delta_tot", "delta_tot"):
-                        v["only_clustering_species"] = False
-                    elif pair == ("delta_nonu", "delta_nonu"):
-                        v["only_clustering_species"] = True
-                    else:
-                        raise LoggedError(self.log, "NotImplemented in CLASS: %r", pair)
-                    product = ("Pk_grid", v["nonlinear"]) + tuple(pair)
-                    self.collectors[product] = Collector(
-                        method="get_pk_and_k_and_z",
-                        kwargs=v,
-                        post=(lambda P, k, z: (k, z, np.array(P).T)))
+                pair = k[2:]
+                if pair == ("delta_tot", "delta_tot"):
+                    v["only_clustering_species"] = False
+                elif pair == ("delta_nonu", "delta_nonu"):
+                    v["only_clustering_species"] = True
+                else:
+                    raise LoggedError(self.log, "NotImplemented in CLASS: %r", pair)
+                self.collectors[k] = Collector(
+                    method="get_pk_and_k_and_z",
+                    kwargs=v,
+                    post=(lambda P, kk, z: (kk, z, np.array(P).T)))
+            elif isinstance(k, tuple) and k[0] == "sigma_R":
+                raise LoggedError(
+                    self.log, "Classy sigma_R not implemented as yet - use CAMB only")
             elif v is None:
                 k_translated = self.translate_param(k)
                 if k_translated not in self.derived_extra:
@@ -309,7 +314,7 @@ class classy(BoltzmannBase):
                 list(set(self.input_params).intersection(set(self.extra_args))))
 
     def add_z_for_matter_power(self, z):
-        if not hasattr(self, "z_for_matter_power"):
+        if getattr(self, "z_for_matter_power", None) is None:
             self.z_for_matter_power = np.empty(0)
         self.z_for_matter_power = np.flip(np.sort(np.unique(np.concatenate(
             [self.z_for_matter_power, np.atleast_1d(z)]))), axis=0)
@@ -382,7 +387,7 @@ class classy(BoltzmannBase):
             if arg_array is None:
                 state[product] = method(
                     *self.collectors[product].args, **self.collectors[product].kwargs)
-            elif isinstance(arg_array, Number):
+            elif isinstance(arg_array, int):
                 state[product] = np.zeros(
                     len(self.collectors[product].args[arg_array]))
                 for i, v in enumerate(self.collectors[product].args[arg_array]):
@@ -403,7 +408,7 @@ class classy(BoltzmannBase):
         # Prepare derived parameters
         d, d_extra = self._get_derived_all(derived_requested=want_derived)
         if want_derived:
-            state["derived"] = odict((p, d.get(p)) for p in self.output_params)
+            state["derived"] = {p: d.get(p) for p in self.output_params}
             # Prepare necessary extra derived parameters
         state["derived_extra"] = deepcopy(d_extra)
 
@@ -420,8 +425,7 @@ class classy(BoltzmannBase):
         # Put all parameters in CLASS nomenclature (self.derived_extra already is)
         requested = [self.translate_param(p) for p in (
             self.output_params if derived_requested else [])]
-        requested_and_extra = {
-            p: None for p in set(requested).union(set(self.derived_extra))}
+        requested_and_extra = dict.fromkeys(set(requested).union(set(self.derived_extra)))
         # Parameters with their own getters
         if "rs_drag" in requested_and_extra:
             requested_and_extra["rs_drag"] = self.classy.rs_drag()
@@ -443,7 +447,6 @@ class classy(BoltzmannBase):
             p: requested_and_extra[self.translate_param(p)] for p in self.output_params}
         derived_extra = {p: requested_and_extra[p] for p in self.derived_extra}
         return derived, derived_extra
-
 
     def get_Cl(self, ell_factor=False, units="muK2"):
         try:
@@ -526,7 +529,7 @@ class classy(BoltzmannBase):
             return False
         log.info("Downloading classy...")
         success = download_github_release(
-            os.path.join(path, "code"), cls.classy_repo_name, cls.classy_repo_version,
+            os.path.join(path, "code"), cls._classy_repo_name, cls._classy_repo_version,
             repo_rename=cls.__name__, no_progress_bars=no_progress_bars, logger=log)
         if not success:
             log.error("Could not download classy.")

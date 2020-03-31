@@ -27,13 +27,13 @@ First of all, we will need to simulate the fictitious power spectrum of the fict
 
    l_max = 1000
 
-   modules_path = '/path/to/your/modules'
+   packages_path = '/path/to/your/packages'
 
    info_fiducial = {
        'params': fiducial_params,
        'likelihood': {'one': None},
        'theory': {'camb': None},
-       'modules': modules_path}
+       'packages': packages_path}
 
    from cobaya.model import get_model
    model_fiducial = get_model(info_fiducial)
@@ -130,7 +130,7 @@ To illustrate the use of likelihood parameters, we will try to marginalise over 
        'likelihood': {'my_cl_like': my_like},
        'theory': {'camb': {'stop_at_error': True}},
        'sampler': {'mcmc': None},  # or polychord...
-       'modules': modules_path,
+       'packages_path': packages_path,
        'output': 'chains/my_imaginary_cmb'}
 
 

@@ -1,9 +1,3 @@
-# Python 2/3 compatibility
-from __future__ import absolute_import, division, print_function
-import six
-if six.PY2:
-    from io import open
-
 import subprocess
 import os
 import numpy as np
@@ -12,6 +6,7 @@ import pickle
 import time
 import shutil
 import multiprocessing
+from typing import Any
 
 from distutils import spawn
 
@@ -58,7 +53,7 @@ def checkArguments(**kwargs):
     submitJob(None, None, msg=True, **kwargs)
 
 
-class jobSettings(object):
+class jobSettings:
     def __init__(self, jobName, msg=False, **kwargs):
         self.jobName = jobName
         grid_engine = 'PBS'
@@ -136,7 +131,7 @@ class jobSettings(object):
         self.runCommand = extractValue(template, 'RUN')
 
 
-class jobIndex(object):
+class jobIndex:
     """
     Stores the mappings between job Ids, jobNames
     """
@@ -204,7 +199,7 @@ def deleteJobNames(batchPath, jobNames):
     index = loadJobIndex(batchPath)
     if not index:
         raise Exception('No existing job index found')
-    if isinstance(jobNames, six.string_types):
+    if isinstance(jobNames, str):
         jobNames = [jobNames]
     for name in jobNames:
         jobId = index.jobNames.get(name)
@@ -225,17 +220,17 @@ def deleteJobs(batchPath, jobIds=None, rootNames=None, jobNames=None, jobId_minm
         raise Exception('No existing job index found')
     if jobIds is None:
         jobIds = []
-    if isinstance(jobIds, six.string_types):
+    if isinstance(jobIds, str):
         jobIds = [jobIds]
     if rootNames is not None:
-        if isinstance(rootNames, six.string_types):
+        if isinstance(rootNames, str):
             rootNames = [rootNames]
         for name in rootNames:
             jobId = index.rootNames.get(name)
             if jobId not in jobIds:
                 jobIds.append(jobId)
     if jobNames is not None:
-        if isinstance(jobNames, six.string_types):
+        if isinstance(jobNames, str):
             jobNames = [jobNames]
         for name in jobNames:
             jobId = index.jobNames.get(name)
@@ -286,7 +281,7 @@ def submitJob(jobName, inputFiles, sequential=False, msg=False, **kwargs):
     j = jobSettings(jobName, msg, **kwargs)
     if kwargs.get('dryrun', False) or inputFiles is None:
         return
-    if isinstance(inputFiles, six.string_types):
+    if isinstance(inputFiles, str):
         inputFiles = [inputFiles]
     inputFiles = [
         (os.path.splitext(p)[0] if os.path.splitext(p)[1] in _yaml_extensions else p)
@@ -336,11 +331,12 @@ def submitJob(jobName, inputFiles, sequential=False, msg=False, **kwargs):
         template = "\n".join(
             [line for line in template.split("\n") if not line.startswith("##")])
         script = replacePlaceholders(template, vals)
-        scriptRoot = os.path.join(base_path, _script_folder, os.path.splitext(jobName)[0])
+        scriptRoot = os.path.join(base_path, _script_folder, jobName)
         scriptName = scriptRoot + _script_ext
         open(scriptName, 'w', encoding="utf-8").write(script)
         if len(inputFiles) > 1:
-            open(scriptRoot + '.batch', 'w', encoding="utf-8").write("\n".join(inputFiles))
+            open(scriptRoot + '.batch', 'w', encoding="utf-8").write(
+                "\n".join(inputFiles))
         if not kwargs.get('no_sub', False):
             try:
                 res = str(subprocess.check_output(
@@ -438,7 +434,8 @@ def extractValue(txt, name):
     return None
 
 
-def getDefaulted(key_name, default=None, tp=str, template=None, ext_env=None, **kwargs):
+def getDefaulted(key_name, default=None, tp: Any = str, template=None, ext_env=None,
+                 **kwargs) -> Any:
     val = kwargs.get(key_name)
     if val is None and template is not None:
         val = extractValue(template, 'DEFAULT_' + key_name)

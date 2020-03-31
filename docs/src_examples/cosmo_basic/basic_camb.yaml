@@ -1,3 +1,14 @@
+theory:
+  camb:
+    extra_args:
+      halofit_version: mead
+      bbn_predictor: PArthENoPE_880.2_standard.dat
+      lens_potential_accuracy: 1
+      num_massive_neutrinos: 1
+      nnu: 3.046
+      theta_H0_range:
+      - 20
+      - 100
 likelihood:
   planck_2018_lowl.TT: null
   planck_2018_lowl.EE: null
@@ -119,15 +130,5 @@ sampler:
   mcmc:
     covmat: auto
     drag: true
+    oversample_power: 0.8
     proposal_scale: 1.9
-theory:
-  camb:
-    extra_args:
-      halofit_version: mead
-      bbn_predictor: PArthENoPE_880.2_standard.dat
-      lens_potential_accuracy: 1
-      num_massive_neutrinos: 1
-      nnu: 3.046
-      theta_H0_range:
-      - 20
-      - 100

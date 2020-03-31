@@ -1,6 +1,4 @@
 # Tries to evaluate the likelihood at LCDM's best fit of Planck 2015, with CAMB and CLASS
-from __future__ import absolute_import
-import pytest
 from copy import deepcopy
 
 from .common_cosmo import body_of_test
@@ -32,37 +30,37 @@ classy_unknown = ["zstar", "rstar", "thetastar", "DAstar", "zdrag",
 classy_extra_tolerance = 0.2
 
 
-def test_planck_2015_t_camb(modules):
+def test_planck_2015_t_camb(packages_path):
     best_fit = deepcopy(params_lowl_highTT)
     best_fit.pop("H0")
     info_likelihood = lik_info_lowl_highTT
     info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = derived_lowl_highTT
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_lowl_highTT, best_fit_derived)
 
 
-def test_planck_2015_p_camb(modules):
+def test_planck_2015_p_camb(packages_path):
     best_fit = deepcopy(params_lowTEB_highTTTEEE)
     best_fit.pop("H0")
     info_likelihood = lik_info_lowTEB_highTTTEEE
     info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = derived_lowTEB_highTTTEEE
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_lowTEB_highTTTEEE, best_fit_derived)
 
 
-def test_planck_2015_l_camb(modules):
+def test_planck_2015_l_camb(packages_path):
     best_fit = deepcopy(params_lensing)
     best_fit.pop("H0")
     info_likelihood = lik_info_lensing
     info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = derived_lensing
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_lensing, best_fit_derived)
 
 
-def test_planck_2015_l2_camb(modules):
+def test_planck_2015_l2_camb(packages_path):
     best_fit = deepcopy(params_lensing)
     best_fit.pop("H0")
     lik_name = "planck_2015_lensing_cmblikes"
@@ -73,11 +71,11 @@ def test_planck_2015_l2_camb(modules):
     chi2_lensing_cmblikes[lik_name] = chi2_lensing[clik_name]
     info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = derived_lensing
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_lensing_cmblikes, best_fit_derived)
 
 
-def test_planck_2015_t_classy(modules):
+def test_planck_2015_t_classy(packages_path):
     best_fit = deepcopy(params_lowl_highTT)
     best_fit.pop("theta_MC_100")
     info_likelihood = lik_info_lowl_highTT
@@ -87,11 +85,11 @@ def test_planck_2015_t_classy(modules):
         best_fit_derived.pop(p, None)
     chi2_lowl_highTT_classy = deepcopy(chi2_lowl_highTT)
     chi2_lowl_highTT_classy["tolerance"] += classy_extra_tolerance
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_lowl_highTT_classy, best_fit_derived)
 
 
-def test_planck_2015_p_classy(modules):
+def test_planck_2015_p_classy(packages_path):
     best_fit = deepcopy(params_lowTEB_highTTTEEE)
     best_fit.pop("theta_MC_100")
     info_likelihood = lik_info_lowTEB_highTTTEEE
@@ -101,11 +99,11 @@ def test_planck_2015_p_classy(modules):
         best_fit_derived.pop(p, None)
     chi2_lowTEB_highTTTEEE_classy = deepcopy(chi2_lowTEB_highTTTEEE)
     chi2_lowTEB_highTTTEEE_classy["tolerance"] += classy_extra_tolerance
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_lowTEB_highTTTEEE_classy, best_fit_derived)
 
 
-def test_planck_2015_l_classy(modules):
+def test_planck_2015_l_classy(packages_path):
     best_fit = deepcopy(params_lensing)
     best_fit.pop("theta_MC_100")
     info_likelihood = lik_info_lensing
@@ -113,7 +111,7 @@ def test_planck_2015_l_classy(modules):
     best_fit_derived = deepcopy(derived_lensing)
     for p in classy_unknown:
         best_fit_derived.pop(p, None)
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_lensing, best_fit_derived)
 
 

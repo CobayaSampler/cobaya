@@ -95,9 +95,47 @@ There is no fundamental difference between internal likelihood classes (in the C
 distributed externally. However, if you are distributing externally you may also wish to provide a way to
 calculate the likelihood from pre-computed theory inputs as well as via Cobaya. This is easily done by extracting
 the theory results in ``logp`` and them passing them and the nuisance parameters to a separate function,
-e.g. `log_likelihood` where the calculation is actually done. Your log_likelihood function can then be called outside
-Cobaya to calculate the likelihood for any externally provided theory results (as well as being directly usable in
-Cobaya via ``logp``).
+e.g. `log_likelihood` where the calculation is actually done. For example, adapting the example above to:
+
+.. code:: python
+
+    class MyLikelihood(Likelihood):
+
+        ...
+
+        def logp(self, **params_values):
+            H0_theory = self.provider.get_param("H0")
+            cls = self.provider.get_Cl(ell_factor=True)
+            return self.log_likelihood(cls, H0, **params_values)
+
+        def log_likelihood(self, cls, H0, **data_params)
+            my_foreground_amp = data_params['my_foreground_amp']
+            chi2 = ...
+            return -chi2 / 2
+
+
+You can then create an instance of your class and call log_likelihood, entirely independently of
+Cobaya. However, in this case you have to provide the full theory results to the function, rather than using the self.provider to get them
+for the current parameters (self.provider is only available in Cobaya once a full model has been instantiated).
+
+If you want to call your likelihood for specific parameters (rather than the corresponding computed theory results), you need to
+call get_model() to instantiate a full model specifying which components calculate the required theory inputs. For example,
+
+.. code:: python
+
+
+   packages_path = '/path/to/your/packages'
+
+   info = {
+       'params': fiducial_params,
+       'likelihood': {'my_likelihood': MyLikelihood},
+       'theory': {'camb': None},
+       'packages': packages_path}
+
+   from cobaya.model import get_model
+   model = get_model(info)
+   model.logposterior({'H0':71.1, 'my_param': 1.40, ...})
+
 
 _InstallableLikelihood
 -------------------------

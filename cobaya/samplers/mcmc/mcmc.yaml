@@ -1,5 +1,6 @@
 # Default arguments for the Markov Chain Monte Carlo sampler
-# ('Xd' means 'X steps per dimension')
+# ('Xd' means 'X steps per dimension', or full parameter cycle
+#  when adjusting for oversampling / dragging)
 
 # Number of discarded burn-in samples per dimension
 burn_in: 20d
@@ -14,10 +15,11 @@ covmat:
 covmat_params:
 # Overall scale of the proposal pdf (increase for longer steps)
 proposal_scale: 2.4
-# Number of distinct accepted points between convergence checks & proposal learn
-check_every: 40d
-# Update output file(s) every X accepted samples
-output_every: 20
+# Update output file(s) and print some info
+# every X seconds (if ends in 's') or X accepted samples (if just a number)
+output_every: 60s
+# Number of distinct accepted points between proposal learn & convergence checks
+learn_every: 40d
 # Proposal covariance matrix learning
 # -----------------------------------
 learn_proposal: True
@@ -29,7 +31,7 @@ learn_proposal_Rminus1_max_early: 30.
 learn_proposal_Rminus1_min: 0.
 # Convergence and stopping
 # ------------------------
-# Maximum number of posterior evaluations
+# Maximum number of accepted steps
 max_samples: .inf
 # Gelman-Rubin R-1 on means
 Rminus1_stop: 0.01
@@ -40,22 +42,26 @@ Rminus1_cl_level: 0.95
 Rminus1_single_split: 4
 # Exploiting speed hierarchy
 # --------------------------
-# whether to measure actual speeds for your machine/threading at starting rather
+# Whether to measure actual speeds for your machine/threading at starting rather
 # than using stored values
-measured_speeds: True
-# Method I: Oversampling of each parameters block relative to it speed
-oversample: False  # produces potentially MANY samples
-# Method II: Dragging: simulates jumps on slow params when varying fast ones
-# Set to True, or a factor of the time of a jump on the slow block
+measure_speeds: True
+# Amount of oversampling of each parameter block, relative to their speeds
+# Value from 0 (no oversampling) to 1 (spend the same amount of time in all blocks)
+# Can be larger than 1 if extra oversampling of fast blocks required.
+oversample_power: 0
+# Thin chain by total oversampling factor (ignored if drag: True)
+# NB: disabling it with a non-zero `oversample_power` may produce a VERY LARGE chains
+oversample_thin: True
+# Dragging: simulates jumps on slow params when varying fast ones
 drag: False
-# Min and max number of times the fast block is iterated
-drag_limits: [1, 10]
 # Manual blocking
 # ---------------
-# To take full advantage of speed-blocking, sort the blocks by ascending speeds
-# (unless not possible due to the architecture of your likelihood)
+# Specify parameter blocks and their correspondent oversampling factors
+# (may be useful e.g. if your likelihood has some internal caching).
+# If used in combination with dragging, assign 1 to all slow parameters,
+# and a common oversampling factor to the fast ones.
 blocking:
-#  - [speed_1, [params_1]]
+#  - [oversampling_factor_1, [param_1, param_2, ...]]
 #  - etc.
 # Callback function
 # -----------------
@@ -64,3 +70,8 @@ callback_every:  # default: every checkpoint
 # Seeding runs
 # ------------
 seed:  # integer between 0 and 2**32 - 1
+# To be deprecated
+# ----------------
+check_every:  # now it is learn_every
+oversample: # now controled by oversample_power > 0
+drag_limits:  # use oversample_power instead

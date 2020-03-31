@@ -6,12 +6,6 @@
 
 """
 
-# Python 2/3 compatibility
-from __future__ import absolute_import, division, print_function
-import six
-if six.PY2:
-    from io import open
-
 # TODO many things not yet updated for cobaya formats
 
 import os
@@ -50,7 +44,8 @@ def readobject(directory=None):
     try:
         config_dir = os.path.abspath(directory) + os.sep + 'config'
         if os.path.exists(config_dir):
-            # set path in case using functions defined and hence imported from in settings file
+            # set path in case using functions defined
+            # and hence imported from in settings file
             sys.path.insert(0, config_dir)
         with open(fname, 'rb') as inp:
             grid = pickle.load(inp)
@@ -82,7 +77,9 @@ def getCodeRootPath():
     return os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..')) + os.sep
 
 
-class propertiesItem(object):
+class PropertiesItem:
+    propertiesIniFile: callable
+
     def propertiesIni(self):
         if os.path.exists(self.propertiesIniFile()):
             return IniFile(self.propertiesIniFile())
@@ -92,11 +89,11 @@ class propertiesItem(object):
             return ini
 
 
-class dataSet(object):
+class DataSet:
     def __init__(self, names, params=None, covmat=None, dist_settings=None):
         if not dist_settings:
             dist_settings = {}
-        if isinstance(names, six.string_types): names = [names]
+        if isinstance(names, str): names = [names]
         if params is None:
             params = [(name + '.ini') for name in names]
         else:
@@ -145,21 +142,21 @@ class dataSet(object):
         return data
 
     def standardizeParams(self, params):
-        if isinstance(params, dict) or isinstance(params, six.string_types):
+        if isinstance(params, dict) or isinstance(params, str):
             params = [params]
         for i in range(len(params)):
-            if isinstance(params[i], six.string_types) and not '.ini' in params[i]:
+            if isinstance(params[i], str) and not '.ini' in params[i]:
                 params[i] += '.ini'
         return params
 
     def hasName(self, name):
-        if isinstance(name, six.string_types):
+        if isinstance(name, str):
             return name in self.names
         else:
             return any(True for i in name if i in self.names)
 
     def hasAll(self, name):
-        if isinstance(name, six.string_types):
+        if isinstance(name, str):
             return name in self.names
         else:
             return all((i in self.names) for i in name)
@@ -190,7 +187,7 @@ class dataSet(object):
         return "_".join(sorted(self.namesReplacing(dic)))
 
 
-class jobGroup(object):
+class JobGroup:
     def __init__(self, name, params=None, importanceRuns=None, datasets=None):
         if importanceRuns is None:
             importanceRuns = []
@@ -204,7 +201,7 @@ class jobGroup(object):
             self.datasets = datasets
 
 
-class importanceSetting(object):
+class ImportanceSetting:
     def __init__(self, names, inis=None, dist_settings=None, minimize=True):
         if not inis:
             inis = []
@@ -217,22 +214,20 @@ class importanceSetting(object):
         return True
 
 
-class importanceFilter(importanceSetting):
+class ImportanceFilter(ImportanceSetting):
     # class for trivial importance sampling filters that can be done in python,
     # e.g. restricting a parameter to a new range
 
     def __init__(self, names, dist_settings=None, minimize=False):
-        self.names = names
-        self.inis = [self]
-        self.dist_settings = dist_settings or {}
-        self.want_minimize = minimize
+        super().__init__(names, inis=[self], dist_settings=dist_settings,
+                         minimize=minimize)
 
 
-class jobItem(propertiesItem):
+class JobItem(PropertiesItem):
     def __init__(self, path, param_set, data_set, base='base', minimize=True):
         self.param_set = param_set
-        if not isinstance(data_set, dataSet):
-            data_set = dataSet(data_set)
+        if not isinstance(data_set, DataSet):
+            data_set = DataSet(data_set)
         self.data_set = data_set
         self.base = base
         self.paramtag = base + "_" + param_set
@@ -249,6 +244,7 @@ class jobItem(propertiesItem):
         self.want_minimize = minimize
         self.result_converge = None
         self.group = None
+        self.parent = None
         self.dist_settings = copy.copy(data_set.dist_settings)
         self.makeIDs()
         self.iniFile_path = _input_folder
@@ -258,9 +254,11 @@ class jobItem(propertiesItem):
 
     def iniFile(self, variant=''):
         if not self.isImportanceJob:
-            return self.batchPath + self.iniFile_path + os.sep + self.name + variant + self.iniFile_ext
+            return (self.batchPath + self.iniFile_path + os.sep +
+                    self.name + variant + self.iniFile_ext)
         else:
-            return self.batchPath + 'postIniFiles' + os.sep + self.name + variant + self.iniFile_ext
+            return (self.batchPath + 'postIniFiles' + os.sep +
+                    self.name + variant + self.iniFile_ext)
 
     def propertiesIniFile(self):
         return self.chainRoot + '.properties.ini'
@@ -270,17 +268,17 @@ class jobItem(propertiesItem):
 
     def makeImportance(self, importanceRuns):
         for impRun in importanceRuns:
-            if isinstance(impRun, importanceSetting):
+            if isinstance(impRun, ImportanceSetting):
                 if not impRun.wantImportance(self): continue
             else:
                 if len(impRun) > 2 and not impRun[2].wantImportance(self): continue
-                impRun = importanceSetting(impRun[0], impRun[1])
+                impRun = ImportanceSetting(impRun[0], impRun[1])
             if len(set(impRun.names).intersection(self.data_set.names)) > 0:
                 print('importance job duplicating parent data set: %s with %s' % (
                     self.name, impRun.names))
                 continue
             data = self.data_set.extendForImportance(impRun.names, impRun.inis)
-            job = jobItem(self.batchPath, self.param_set, data,
+            job = JobItem(self.batchPath, self.param_set, data,
                           minimize=impRun.want_minimize)
             job.importanceTag = "_".join(impRun.names)
             job.importanceSettings = impRun.inis
@@ -299,7 +297,7 @@ class jobItem(propertiesItem):
             job.parent = self
             job.group = self.group
             job.dist_settings.update(impRun.dist_settings)
-            if isinstance(impRun, importanceFilter):
+            if isinstance(impRun, ImportanceFilter):
                 job.importanceFilter = impRun
             job.makeIDs()
             self.importanceItems.append(job)
@@ -321,7 +319,7 @@ class jobItem(propertiesItem):
                                                      tagList]
 
     def hasParam(self, name):
-        if isinstance(name, six.string_types):
+        if isinstance(name, str):
             return name in self.param_set
         else:
             return any([True for i in name if i in self.param_set])
@@ -436,7 +434,8 @@ class jobItem(propertiesItem):
             self.distRoot + '.margestats'))
 
     def parentChanged(self):
-        return not self.chainExists() or self.chainFileDate() < self.parent.chainFileDate()
+        return (not self.chainExists() or
+                self.chainFileDate() < self.parent.chainFileDate())
 
     def R(self):
         if self.result_converge is None:
@@ -473,11 +472,11 @@ class jobItem(propertiesItem):
             elif not silent:
                 print('missing: ' + marge_root)
 
-    def getMCSamples(self, ini=None, settings={}):
+    def getMCSamples(self, ini=None, settings=None):
         return loadMCSamples(self.chainRoot, jobItem=self, ini=ini, settings=settings)
 
 
-class batchJob(propertiesItem):
+class BatchJob(PropertiesItem):
     def __init__(self, path):
         self.batchPath = path
         self.skip = []
@@ -499,9 +498,9 @@ class batchJob(propertiesItem):
             for data_set in group["datasets"]:
                 for param_set in group["models"]:
                     if any(data_set in (x.get("skip", {}) or {}).get(param_set, {})
-                            for x in (settings["grid"], group)):
+                           for x in (settings["grid"], group)):
                         continue
-                    item = jobItem(self.batchPath, param_set, data_set, base=group_name)
+                    item = JobItem(self.batchPath, param_set, data_set, base=group_name)
                     if hasattr(group, 'groupName'):
                         item.group = group.groupName
                     if item.name not in self.skip:
@@ -566,7 +565,7 @@ class batchJob(propertiesItem):
                     raiseError=True, base='base',
                     returnJobItem=False):
         if paramtag:
-            if isinstance(paramtag, six.string_types):
+            if isinstance(paramtag, str):
                 paramtag = paramtag.split('_')
             paramtags = [base] + sorted(paramtag)
         else:

@@ -32,8 +32,9 @@ see :doc:`theories_and_dependencies`.
 
 import inspect
 from collections import deque
+from typing import Sequence, Optional, Union
 # Local
-from cobaya.conventions import _external, kinds, _requires, _params, _version
+from cobaya.conventions import _external, kinds, _requires, _params, empty_dict
 from cobaya.component import CobayaComponent, ComponentCollection
 from cobaya.tools import get_class, str_to_list
 from cobaya.log import LoggedError, always_stop_exceptions
@@ -42,18 +43,23 @@ from cobaya.tools import get_class_methods
 
 class Theory(CobayaComponent):
     """Base class theory that can calculate something."""
-    # Default options for all subclasses
-    class_options = {"speed": -1, "stop_at_error": False, _version: None}
 
-    def __init__(self, info={}, name=None, timing=None, path_install=None,
+    speed: float = -1
+    stop_at_error: bool = False
+    version: Optional[Union[dict, str]] = None
+
+    # special components set by the dependency resolver;
+    # included in updated yaml but not in defaults
+    input_params: Sequence[str] = None
+    output_params: Sequence[str] = None
+
+    def __init__(self, info=empty_dict, name=None, timing=None, packages_path=None,
                  initialize=True, standalone=True):
 
-        self.stop_at_error = False
-        self.speed = -1
         self._measured_speed = None
-        super(Theory, self).__init__(info, name=name, timing=timing,
-                                     path_install=path_install, initialize=initialize,
-                                     standalone=standalone)
+        super().__init__(info, name=name, timing=timing,
+                         packages_path=packages_path, initialize=initialize,
+                         standalone=standalone)
 
         self.provider = None  # set to Provider instance before calculations
         # Generate cache states, to avoid recomputing.
@@ -66,11 +72,11 @@ class Theory(CobayaComponent):
         Get a dictionary of requirements that are always needed (e.g. must be calculated
         by a another component or provided as input parameters).
 
-        :return: dictionary of requirements (or list of requirement names if no optional
-                 parameters are needed)
+        :return: dictionary of requirements (or iterable of requirement names if no
+                 optional parameters are needed)
         """
 
-        return {p: None for p in str_to_list(getattr(self, _requires, []))}
+        return dict.fromkeys(str_to_list(getattr(self, _requires, [])))
 
     def needs(self, **requirements):
         """
@@ -145,7 +151,7 @@ class Theory(CobayaComponent):
         Get a list of names of quantities that can be retrieved using the general
         get_result(X) method.
 
-        :return: list of quantities
+        :return: iterable of quantity names
         """
         return []
 
@@ -155,7 +161,7 @@ class Theory(CobayaComponent):
         The default implementation returns the result based on the params attribute set
         via the .yaml file or class params (with derived:True for derived parameters).
 
-        :return: list of parameter names
+        :return: iterable of parameter names
         """
         params = getattr(self, _params, None)
         if params:
@@ -167,10 +173,10 @@ class Theory(CobayaComponent):
     def get_can_support_params(self):
         """
         Get a list of parameters supported by this component, can be used to support
-        parameters that don't explicitly appear in the .yaml or class_options params
+        parameters that don't explicitly appear in the .yaml or class params attribute
         or are otherwise explicitly supported (e.g. via requirements)
 
-        :return: list of names of parameters
+        :return: iterable of names of parameters
         """
         return []
 
@@ -301,7 +307,7 @@ class Theory(CobayaComponent):
         return self._measured_speed or self.speed
 
     def set_measured_speed(self, speed):
-        self._measured_speed = speed
+        self.speed = speed
 
 
 class TheoryCollection(ComponentCollection):
@@ -309,8 +315,8 @@ class TheoryCollection(ComponentCollection):
     Initializes the list of theory codes.
     """
 
-    def __init__(self, info_theory, path_install=None, timing=None):
-        super(TheoryCollection, self).__init__()
+    def __init__(self, info_theory, packages_path=None, timing=None):
+        super().__init__()
         self.set_logger("theory")
 
         if info_theory:
@@ -327,13 +333,14 @@ class TheoryCollection(ComponentCollection):
                                               "Theory %s is not a Theory subclass", name)
                     else:
                         theory_class = get_class(name, kind=kinds.theory)
-                    self.add_instance(name, theory_class(info, path_install=path_install,
-                                                         timing=timing, name=name))
+                    self.add_instance(
+                        name, theory_class(
+                            info, packages_path=packages_path, timing=timing, name=name))
 
     def __getattribute__(self, name):
         if not name.startswith('_'):
             try:
-                return super(TheoryCollection, self).__getattribute__(name)
+                return super().__getattribute__(name)
             except AttributeError:
                 self.log.warn("No attribute %s of TheoryCollection. Use model.provider "
                               "if you want to access computed requests" % name)

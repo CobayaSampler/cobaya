@@ -70,40 +70,44 @@ it will finally pick the best among the results.
    below).
 
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import, division
-import six
-if six.PY2:
-    from io import open
 
 # Global
 import os
 import numpy as np
 from scipy.optimize import minimize as scpminimize
-from collections import OrderedDict as odict
-
-import pybobyqa  # in the py-bobyqa pip package
-
+from typing import Mapping, Optional
+import re
+import pybobyqa
 import logging
 from copy import deepcopy
 
 # Local
 from cobaya.sampler import Minimizer
+from cobaya.conventions import _undo_chi2_name
 from cobaya.mpi import get_mpi_size, get_mpi_comm, is_main_process, get_mpi_rank, \
     more_than_one_process
 from cobaya.collection import OnePoint, Collection
 from cobaya.log import LoggedError
 from cobaya.tools import read_dnumber, recursive_update
-from cobaya.samplers.mcmc.mcmc import CovmatSampler
+from cobaya.sampler import CovmatSampler
 
 # Handling scpiy vs BOBYQA
 evals_attr = {"scipy": "fun", "bobyqa": "f"}
 
-# GetDist conventions
+# Conventions conventions
 getdist_ext_ignore_prior = {True: ".bestfit", False: ".minimum"}
+get_collection_extension = (
+    lambda ignore_prior: getdist_ext_ignore_prior[ignore_prior] + ".txt")
 
 
 class minimize(Minimizer, CovmatSampler):
+    ignore_prior: bool
+    confidence_for_unbounded: float
+    method: str
+    override_bobyqa: Optional[Mapping]
+    override_scipy: Optional[Mapping]
+    seed: Optional[int]
+
     def initialize(self):
         self.mpi_info("Initializing")
         self.max_evals = read_dnumber(self.max_evals, self.model.prior.d())
@@ -111,7 +115,7 @@ class minimize(Minimizer, CovmatSampler):
         method = self.model.loglike if self.ignore_prior else self.model.logpost
         kwargs = {"make_finite": True}
         if self.ignore_prior:
-            kwargs.update({"return_derived": False})
+            kwargs["return_derived"] = False
         self.logp = lambda x: method(x, **kwargs)
         # Try to load info from previous samples.
         # If none, sample from reference (make sure that it has finite like/post)
@@ -135,7 +139,6 @@ class minimize(Minimizer, CovmatSampler):
                     list(self.model.parameterization.sampled_params())].values
                 self.log.info("Starting from %s of previous chain:",
                               "best fit" if self.ignore_prior else "MAP")
-
         if initial_point is None:
             this_logp = -np.inf
             while not np.isfinite(this_logp):
@@ -210,7 +213,7 @@ class minimize(Minimizer, CovmatSampler):
     def logp_transf(self, x):
         return self.logp(self.inv_affine_transform(x))
 
-    def run(self):
+    def _run(self):
         """
         Runs `scipy.minimize`
         """
@@ -247,8 +250,9 @@ class minimize(Minimizer, CovmatSampler):
                 reason = ""
             self.log.error("Finished unsuccessfully." +
                            (" Reason: " + reason if reason else ""))
+        self.process_results()
 
-    def close(self, *args):
+    def process_results(self):
         """
         Determines success (or not), chooses best (if MPI)
         and produces output (if requested).
@@ -298,7 +302,7 @@ class minimize(Minimizer, CovmatSampler):
                     recomputed_logp_min, logp_min, x_min)
             self.minimum = OnePoint(
                 self.model, self.output, name="",
-                extension=("bestfit.txt" if self.ignore_prior else "minimum.txt"))
+                extension=get_collection_extension(self.ignore_prior))
             self.minimum.add(x_min, derived=recomputed_post_min.derived,
                              logpost=recomputed_post_min.logpost,
                              logpriors=recomputed_post_min.logpriors,
@@ -346,10 +350,10 @@ class minimize(Minimizer, CovmatSampler):
             lines.append('  chi-sq    = %s' % (2 * minuslogpost))
         lines.append('')
         labels = self.model.parameterization.labels()
-        label_list = list(labels.keys())
+        label_list = list(labels)
         if hasattr(params, 'chi2_names'):
             label_list += params.chi2_names
-        width = max([len(lab) for lab in label_list]) + 2
+        width = max(len(lab) for lab in label_list) + 2
 
         def add_section(pars):
             for p, val in pars:
@@ -371,11 +375,9 @@ class minimize(Minimizer, CovmatSampler):
         add_section(
             [[p, params[p]] for p in self.model.parameterization.derived_params()])
         if hasattr(params, 'chi2_names'):
-            from cobaya.conventions import _chi2, _separator
-            labels.update(
-                odict([(p, r'\chi^2_{\rm %s}' % (
-                    p.replace(_chi2 + _separator, '').replace("_", r"\ ")))
-                       for p in params.chi2_names]))
+            labels.update({p: r'\chi^2_{\rm %s}' % (
+                _undo_chi2_name(p).replace("_", r"\ "))
+                           for p in params.chi2_names})
             add_section([[chi2, params[chi2]] for chi2 in params.chi2_names])
         return "\n".join(lines)
 
@@ -389,3 +391,24 @@ class minimize(Minimizer, CovmatSampler):
             self.output.prefix + getdist_ext_ignore_prior[self.ignore_prior])
         with open(out_filename, 'w', encoding="utf-8") as f:
             f.write(getdist_bf)
+
+    @classmethod
+    def output_files_regexps(cls, output, info=None, minimal=False):
+        ignore_prior = bool(info.get("ignore_prior", False))
+        ext_collection = get_collection_extension(ignore_prior)
+        ext_getdist = getdist_ext_ignore_prior[ignore_prior]
+        regexps = [
+            re.compile(output.prefix_regexp_str + re.escape(ext.lstrip(".")) + "$")
+            for ext in [ext_collection, ext_getdist]]
+        return [(r, None) for r in regexps]
+
+    @classmethod
+    def check_force_resume(cls, output, info=None):
+        """
+        Performs the necessary checks on existing files if resuming or forcing
+        (including deleting some output files when forcing).
+        """
+        if output.is_resuming():
+            output.log.warning("Minimizer does not support resuming. Ignoring.")
+            output.set_resuming(False)
+        super().check_force_resume(output, info=info)

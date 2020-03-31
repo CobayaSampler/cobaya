@@ -5,7 +5,7 @@ path:
 clik_file: plik_unbinned/plik_dx11dr2_HM_v18_TT_bin1.clik
 product_id: "1903"
 # Aliases for automatic covariance matrix
-alises: [plikHM_TT]
+aliases: [plikHM_TT]
 # Speed in evaluations/second
 speed: 8
 

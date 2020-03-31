@@ -1,13 +1,13 @@
 import time
-from collections import OrderedDict
 from packaging import version
 
 from cobaya.log import HasLogger, LoggedError
 from cobaya.input import HasDefaults
-from cobaya.conventions import _version
+from cobaya.conventions import _version, empty_dict
+from cobaya.tools import resolve_packages_path
 
 
-class Timer(object):
+class Timer:
     def __init__(self):
         self.n = 0
         self.time_sum = 0.
@@ -53,24 +53,23 @@ class CobayaComponent(HasLogger, HasDefaults):
     Base class for a theory, likelihood or sampler with associated .yaml parameter file
     that can set attributes.
     """
-    # The next list of options is ignored when comparing info
-    # at resuming or reusing an updated info.
-    # When defining it for subclasses, *append* to this list.
-    ignore_at_resume = [_version]
+    # The next lists of options apply when comparing existing versus new info at resuming.
+    # When defining it for subclasses, redefine append adding this list to new entries.
+    _at_resume_prefer_new = [_version]
+    _at_resume_prefer_old = []
 
-    def __init__(self, info={}, name=None, timing=None, path_install=None,
+    def __init__(self, info=empty_dict, name=None, timing=None, packages_path=None,
                  initialize=True, standalone=True):
         if standalone:
             # TODO: would probably be more natural if defaults were always read here
-            default_info = self.get_defaults()
+            default_info = self.get_defaults(input_options=info)
             default_info.update(info)
             info = default_info
 
+        self.set_instance_defaults()
         self._name = name or self.get_qualified_class_name()
-        self.path_install = path_install
-        for k, value in self.class_options.items():
-            setattr(self, k, value)
-        # set attributes from the info (usually from yaml file)
+        self.packages_path = packages_path or resolve_packages_path()
+        # set attributes from the info (from yaml file or directly input dictionary)
         for k, value in info.items():
             try:
                 setattr(self, k, value)
@@ -105,6 +104,13 @@ class CobayaComponent(HasLogger, HasDefaults):
 
     def close(self, *args):
         """Finalizes the class, if something needs to be cleaned up."""
+        pass
+
+    def set_instance_defaults(self):
+        """
+        Can use this to define any default instance attributes before setting to the
+        input dictionary (from inputs or defaults)
+        """
         pass
 
     def initialize(self):
@@ -148,13 +154,10 @@ class CobayaComponent(HasLogger, HasDefaults):
         self.close()
 
 
-class ComponentCollection(OrderedDict, HasLogger):
+class ComponentCollection(dict, HasLogger):
     """
-    Base class for an ordered dictionary of components (e.g. likelihoods or theories)
+    Base class for a dictionary of components (e.g. likelihoods or theories)
     """
-
-    def __init__(self):
-        super(ComponentCollection, self).__init__()
 
     def add_instance(self, name, component):
         helpers = component.get_helper_theories()
@@ -173,7 +176,7 @@ class ComponentCollection(OrderedDict, HasLogger):
                         component.timer.n_avg(), component.timer.time_sum)
                      for component in timers]))
 
-    def get_version(self, add_version_field=False):
+    def get_versions(self, add_version_field=False):
         """
         Get version dictionary
         :return: dictionary of versions for all components
@@ -181,6 +184,16 @@ class ComponentCollection(OrderedDict, HasLogger):
         format_version = lambda x: {_version: x} if add_version_field else x
         return {component.get_name(): format_version(component.get_version())
                 for component in self.values() if component.has_version()}
+
+    def get_speeds(self, ignore_sub=False):
+        """
+        Get speeds dictionary
+        :return: dictionary of versions for all components
+        """
+        from cobaya.theory import HelperTheory
+        return {component.get_name(): {"speed": component.speed}
+                for component in self.values() if
+                not (ignore_sub and isinstance(component, HelperTheory))}
 
     # Python magic for the "with" statement
     def __enter__(self):
@@ -191,7 +204,7 @@ class ComponentCollection(OrderedDict, HasLogger):
             component.__exit__(exception_type, exception_value, traceback)
 
 
-class Provider(object):
+class Provider:
     """
     Class used to retrieve computed requirements.
     Just passes on get_X and get_param methods to the component assigned to compute them.
