@@ -820,11 +820,9 @@ class Model(HasLogger):
                 ["input", _input_params, "input_params"],
                 ["output", _output_params, "output_params"]):
             for component in self.components:
-                # set component's input_params and output_params
                 setattr(component, attr,
                         [p for p, assign in params_assign[io_kind].items() if
                          component in assign])
-            for component in components:
                 # Update infos! (helper theory parameters stored in yaml with host)
                 inf = (info_theory, info_likelihood)[
                     component in self.likelihood.values()]
@@ -832,7 +830,6 @@ class Model(HasLogger):
                 if inf:
                     inf.pop(_params, None)
                     inf[option] = component.get_attr_list_with_helpers(attr)
-
         if self.log.getEffectiveLevel() <= logging.DEBUG:
             self.log.debug("Parameters were assigned as follows:")
             for component in self.components:
