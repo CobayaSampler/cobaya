@@ -859,11 +859,6 @@ class Model(HasLogger):
         having an oversampling factor >1. In that case, the oversampling factor should be
         understood as the total one for all the fast blocks.
         """
-        # NB: optimal order may be flipped if oversample_power >= 1
-        eps = 1e-6
-        if oversample_power >= 1:
-            oversample_power = 1 - eps
-            self.log.warning("Oversampling factor capped to 1 - %g.", eps)
         # Get a list of components and their speeds
         speeds = {c.get_name(): getattr(c, "speed", -1) for c in self.components}
         # Add overhead to defined ones (positives)

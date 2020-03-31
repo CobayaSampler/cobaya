@@ -727,7 +727,12 @@ def sort_parameter_blocks(blocks, speeds, footprints, oversample_power=0):
     tri_lower = np.tri(len(n_params_per_block))
     get_cost_per_param_per_block = lambda ordering: (
         np.minimum(1, tri_lower.T.dot(all_footprints[ordering])).dot(all_costs))
-    orderings = list(permutations(np.arange(len(n_params_per_block))))
+    if oversample_power >= 1:
+        optimal_ordering, _, _ = sort_parameter_blocks(
+            blocks, speeds, footprints, oversample_power=1 - 1e-3)
+        orderings = [optimal_ordering]
+    else:
+        orderings = list(permutations(np.arange(len(n_params_per_block))))
     permuted_costs_per_param_per_block = np.array(
         [get_cost_per_param_per_block(list(o)) for o in orderings])
     permuted_oversample_factors = np.array(
