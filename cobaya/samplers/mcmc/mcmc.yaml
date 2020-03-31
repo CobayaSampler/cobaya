@@ -48,7 +48,7 @@ measure_speeds: True
 # Amount of oversampling of each parameter block, relative to their speeds
 # Value from 0 (no oversampling) to 1 (spend the same amount of time in all blocks)
 # Can be larger than 1 if extra oversampling of fast blocks required.
-oversample_power: 0.7
+oversample_power: 0
 # Thin chain by total oversampling factor (ignored if drag: True)
 # NB: disabling it with a non-zero `oversample_power` may produce a VERY LARGE chains
 oversample_thin: True
