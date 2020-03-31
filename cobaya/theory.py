@@ -65,6 +65,7 @@ class Theory(CobayaComponent):
         # Generate cache states, to avoid recomputing.
         # Default 3, but can be changed by sampler
         self.set_cache_size(3)
+        self._helpers = {}
 
     def get_requirements(self):
         """
@@ -264,11 +265,43 @@ class Theory(CobayaComponent):
     def get_helper_theories(self):
         """
         Return dictionary of optional names and helper Theory instances that should be
-        used in conjunction with this component.
+        used in conjunction with this component. The helpers can be created here
+        as only called once, and before any other use of helpers.
 
         :return: dictionary of names and Theory instances
         """
         return {}
+
+    def update_for_helper_theories(self, helpers):
+        self._helpers = helpers
+        if helpers:
+            components = list(helpers.values()) + [self]
+            for output, attr in enumerate(["input_params", "output_params"]):
+                pars = getattr(self, attr, None)
+                if pars is not None:
+                    for component in components:
+                        if not component.get_allow_agnostic():
+                            if output:
+                                supported = component.get_can_provide_params()
+                            else:
+                                supported = component.get_can_support_params()
+                            setattr(component, attr, [p for p in pars if p in supported])
+                            pars = [p for p in pars if p not in supported]
+                    for component in components:
+                        if component.get_allow_agnostic():
+                            setattr(component, attr, pars)
+
+    def get_attr_list_with_helpers(self, attr):
+        """
+        Get combined list of self.attr and helper.attr for all helper theories
+
+        :param attr: attr name
+        :return: combined list
+        """
+        values = list(getattr(self, attr))
+        for helper in self._helpers.values():
+            values.extend(getattr(helper, attr))
+        return values
 
     def get_speed(self):
         return self._measured_speed or self.speed

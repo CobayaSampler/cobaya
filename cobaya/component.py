@@ -35,7 +35,7 @@ class Timer:
         if self._first_time is None:
             if not delta_time:
                 logger.warning("Timing returning zero, may be inaccurate")
-            # first may differ due to cacheing, discard
+            # first may differ due to caching, discard
             self._first_time = delta_time
             self.n = 1
             if logger:
@@ -160,7 +160,9 @@ class ComponentCollection(dict, HasLogger):
     """
 
     def add_instance(self, name, component):
-        self.update(component.get_helper_theories())
+        helpers = component.get_helper_theories()
+        component.update_for_helper_theories(helpers)
+        self.update(helpers)
         self[name] = component
 
     def dump_timing(self):
