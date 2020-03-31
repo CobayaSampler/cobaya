@@ -161,7 +161,8 @@ class mcmc(CovmatSampler):
                 self.log.warning(
                     "Parameter blocking manually fixed: speeds will not be measured.")
             elif self.measure_speeds:
-                self.model.measure_and_set_speeds(discard=0)
+                n = None if self.measure_speeds is True else int(self.measure_speeds)
+                self.model.measure_and_set_speeds(n=n, discard=0)
         self.set_proposer_blocking()
         self.set_proposer_covmat(load=True)
         self.current_point.add(initial_point, derived=derived, logpost=logpost,
