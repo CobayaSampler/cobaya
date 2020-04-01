@@ -72,6 +72,16 @@ class CobayaComponent(HasLogger, HasDefaults):
         # set attributes from the info (from yaml file or directly input dictionary)
         for k, value in info.items():
             try:
+                # MARKED FOR DEPRECATION IN v3.0
+                if k == "path_install":
+                    self.log.warning(
+                        "*DEPRECATION*: `path_install` will be deprecated "
+                        "in the next version. Please use `packages_path` instead.")
+                    # BEHAVIOUR TO BE REPLACED BY ERROR:
+                    # set BOTH old and new names, just in case old one is used internally
+                    from cobaya.conventions import _packages_path
+                    setattr(self, _packages_path, value)
+                # END OF DEPRECATION BLOCK
                 setattr(self, k, value)
             except AttributeError:
                 raise AttributeError("Cannot set {} attribute for {}!".format(k, self))
