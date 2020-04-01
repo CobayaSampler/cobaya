@@ -904,9 +904,9 @@ class Model(HasLogger):
             # Then, find the split that maxes cost LOG-differences.
             # Since costs are already "accumulated down",
             # we need to subtract those below each one
-            costs_perblock = costs - np.concatenate([costs[1:], [0]])
+            costs_per_block = costs - np.concatenate([costs[1:], [0]])
             # Split them so that "adding the next block to the slow ones" has max cost
-            log_differences = np.log(costs_perblock[:-1]) - np.log(costs_perblock[1:])
+            log_differences = np.log(costs_per_block[:-1]) - np.log(costs_per_block[1:])
             i_last_slow = np.argmax(log_differences)
             blocks_split = (lambda l: [list(chain(*l[:i_last_slow + 1])),
                                        list(chain(*l[i_last_slow + 1:]))])(blocks_sorted)

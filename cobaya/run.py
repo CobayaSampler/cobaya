@@ -72,7 +72,7 @@ def run(info):
         updated_info[kinds.sampler], is_resuming=output.is_resuming())
     # Dump again, now including sampler info
     output.check_and_dump_info(info, updated_info, check_compatible=False)
-    # Check if resumible run
+    # Check if resumable run
     sampler_class.check_force_resume(
         output, info=updated_info[kinds.sampler][sampler_class.__name__])
     # 4. Initialize the posterior and the sampler

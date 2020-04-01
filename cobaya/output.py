@@ -80,7 +80,7 @@ class Output(HasLogger):
 
     def is_prefix_folder(self):
         """
-        Returns `True` if the ouput prefix is a bare folder, e.g. `chains/`.
+        Returns `True` if the output prefix is a bare folder, e.g. `chains/`.
         """
         return bool(self.prefix)
 

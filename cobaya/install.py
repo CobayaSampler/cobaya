@@ -165,9 +165,9 @@ def download_file(filename, path, no_progress_bars=False, decompress=False, logg
         filename = os.path.normpath(download(filename, **wget_kwargs))
         print("")
         logger.info('Downloaded filename %s' % filename)
-    except Exception as excpt:
+    except Exception as e:
         logger.error(
-            "Error downloading file '%s' to folder '%s': %s", filename, path, str(excpt))
+            "Error downloading file '%s' to folder '%s': %s", filename, path, e)
         return False
     logger.debug('Got: %s' % filename)
     if not decompress:
@@ -270,7 +270,7 @@ def install_script():
     parser.add_argument("-" + _packages_path_arg[0], "--" + _packages_path_arg_posix,
                         action="store", nargs=1, required=False,
                         metavar="/packages/path", default=[None],
-                        help="Desired path where to install external packagess. "
+                        help="Desired path where to install external packages. "
                              "Optional if one has been set globally or as an env variable"
                              " (run with '--show_%s' to check)." %
                              _packages_path_arg_posix)
