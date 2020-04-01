@@ -233,7 +233,7 @@ class mcmc(CovmatSampler):
                 self.log.warning(
                     "Dragging disabled: speed ratios < 2.")
         if self.drag:
-            # The definition of oversample_power=1 as speding the same amount of time in
+            # The definition of oversample_power=1 as spending the same amount of time in
             # the slow and fast block would suggest a 1/2 factor here, but this additional
             # factor of 2 w.r.t. ovesampling should produce an equivalent exploration
             # efficiency.

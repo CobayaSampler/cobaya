@@ -204,7 +204,7 @@ class camb(BoltzmannBase):
     _camb_repo_name = "cmbant/CAMB"
     _camb_repo_version = os.environ.get("CAMB_REPO_VERSION", "master")
     _camb_min_gcc_version = "6.4"
-    _min_camb_version = '1.1.2.1'
+    _min_camb_version = '1.1.2'
 
     external_primordial_pk: bool
 
@@ -867,8 +867,8 @@ class CambTransfers(HelperTheory):
             transfer_only=True,
             dark_energy_model=self.cobaya_camb.extra_args.get('dark_energy_model'),
             recombination_model=self.cobaya_camb.extra_args.get('recombination_model')) \
-                            - set(self.cobaya_camb.extra_args) \
-                            - set(self.cobaya_camb.extra_attrs)
+                           - set(self.cobaya_camb.extra_args) \
+                           - set(self.cobaya_camb.extra_attrs)
 
         for name, mapped in self.cobaya_camb.renames.items():
             if mapped in supported_params:
