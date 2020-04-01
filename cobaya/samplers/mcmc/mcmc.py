@@ -154,7 +154,7 @@ class mcmc(CovmatSampler):
             initial_point, logpost, logpriors, loglikes, derived = \
                 self.model.get_valid_point(max_tries=self.max_tries.value)
             # If resuming but no existing chain, assume failed run and ignore blocking
-            # if speeds measuremnt requested
+            # if speeds measurement requested
             if not len(self.collection) and self.measure_speeds:
                 self.blocking = None
             if self.measure_speeds and self.blocking:
@@ -235,7 +235,7 @@ class mcmc(CovmatSampler):
         if self.drag:
             # The definition of oversample_power=1 as spending the same amount of time in
             # the slow and fast block would suggest a 1/2 factor here, but this additional
-            # factor of 2 w.r.t. ovesampling should produce an equivalent exploration
+            # factor of 2 w.r.t. oversampling should produce an equivalent exploration
             # efficiency.
             self.drag_interp_steps = int(
                 np.round(self.oversampling_factors[self.i_last_slow_block + 1] *

@@ -56,7 +56,7 @@ def install(*infos, **kwargs):
                 raise LoggedError(
                     log, "Could not create the desired installation folder '%s'", spath)
     failed_components = []
-    skip_keywords = set(kwargs["skip"] or [])
+    skip_keywords = set(kwargs.get("skip", []) or [])
     skip_keywords_env = set(
         os.environ.get(_install_skip_env, "").replace(",", " ").lower().split())
     skip_keywords = skip_keywords.union(skip_keywords_env)
