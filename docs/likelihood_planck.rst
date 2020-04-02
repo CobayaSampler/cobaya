@@ -48,7 +48,7 @@ The Planck 2015 likelihoods defined here are:
 
 .. warning::
 
-   The Planck 2015 likelihoods have been superseeded by the 2018 release, and will
+   The Planck 2015 likelihoods have been superseded by the 2018 release, and will
    eventually be deprecated.
 
 .. warning::

@@ -90,11 +90,11 @@ Within ``/path/to/packages``, the following file structure will be created, cont
 
 .. _install_manual:
 
-Installing requisires manually
+Installing requisites manually
 ------------------------------
 
 The automatic installation process above installs all the requisites for the components used in the simplest way possible, preferring the system folders when possible (e.g. code that can be installed as a Python package).
 
-If you want to modify one of the external packages (e.g. one of the theory codes) you will probably prefer to install them manually. Each compoenent's documentation has a section on manual installation of its requisites, and on how to specify your installation folder at run time. Check the relevant section of the documentation of each component.
+If you want to modify one of the external packages (e.g. one of the theory codes) you will probably prefer to install them manually. Each component's documentation has a section on manual installation of its requisites, and on how to specify your installation folder at run time. Check the relevant section of the documentation of each component.
 
 When an installation path for a particular component is given in its corresponding input block, it takes precedence over automatic installation folder described above, so that if you already installed a version automatically, it will be ignored in favour of the manually specified one.

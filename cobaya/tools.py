@@ -706,7 +706,7 @@ def get_properties(cls):
     return [k for k, v in inspect.getmembers(cls) if isinstance(v, property)]
 
 
-def sort_parameter_blocks(blocks, speeds, footprints, oversample_power=0):
+def sort_parameter_blocks(blocks, speeds, footprints, oversample_power=0.):
     """
     Find optimal ordering, such that one minimises the time it takes to vary every
     parameter, one by one, in a basis in which they are mixed-down (i.e after a

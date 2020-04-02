@@ -15,6 +15,7 @@ import os
 import logging
 import numpy as np
 import pandas as pd
+from typing import Optional
 from getdist import MCSamples
 
 # Local
@@ -31,8 +32,8 @@ chains.print_load_details = False
 # Default chunk size for enlarging collections more efficiently
 # If a factor is defined (as a fraction !=0), it is used instead
 # (e.g. 0.10 to grow the number of rows by 10%)
-enlargement_size = 100
-enlargement_factor = None
+enlargement_size: int = 100
+enlargement_factor: Optional[int] = None
 
 
 # Make sure that we don't reach the empty part of the dataframe

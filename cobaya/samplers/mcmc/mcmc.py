@@ -8,7 +8,6 @@
 # Global
 from itertools import chain
 import numpy as np
-import logging
 from pandas import DataFrame
 import datetime
 from typing import Sequence, Optional
@@ -56,7 +55,7 @@ class mcmc(CovmatSampler):
     Rminus1_cl_level: float
     Rminus1_stop: float
     Rminus1_cl_stop: float
-    Rminus1_single_split: float
+    Rminus1_single_split: int
     learn_proposal_Rminus1_min: float
     measure_speeds: bool
     oversample_thin: int
