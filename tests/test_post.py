@@ -11,6 +11,7 @@ from cobaya.tools import KL_norm
 from cobaya.conventions import _output_prefix, _params, _force, kinds
 from cobaya.conventions import _prior, partag, _separator_files
 from cobaya.conventions import _post, _post_add, _post_remove, _post_suffix
+from cobaya.likelihood import DerivedArg
 
 _post_ = _separator_files + _post + _separator_files
 
@@ -23,8 +24,8 @@ sampled_pdf = lambda a, b: multivariate_normal.logpdf(
     [a, b], mean=sampled["mean"], cov=sampled["cov"])
 
 
-def target_pdf(a, b, c=0, _derived=("cprime",)):
-    if _derived == {}:
+def target_pdf(a, b, c=0, _derived: DerivedArg = ("cprime",)):
+    if isinstance(_derived, dict):
         _derived["cprime"] = c
     return multivariate_normal.logpdf([a, b], mean=target["mean"], cov=target["cov"])
 

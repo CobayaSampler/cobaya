@@ -6,12 +6,12 @@ parameter names) gaussian likelihood.
 # Global
 from scipy.stats import multivariate_normal
 import numpy as np
-
 # Local
 from cobaya.conventions import kinds, _params
 from cobaya.yaml import yaml_load
 from cobaya.run import run
 from cobaya.tools import get_external_function
+from cobaya.likelihood import DerivedArg
 
 x_func = lambda _: _ / 3
 e_func = lambda _: _ + 1
@@ -24,8 +24,8 @@ j_func = "lambda b: b**2"
 k_func = "lambda f: f**3"
 
 
-def loglik(a, b, c, d, h, i, j, _derived=("x", "e")):
-    if _derived is not None:
+def loglik(a, b, c, d, h, i, j, _derived: DerivedArg = ("x", "e")):
+    if isinstance(_derived, dict):
         _derived.update({"x": x_func(c), "e": e_func(b)})
     return multivariate_normal.logpdf((a, b, c, d, h, i, j), cov=0.1 * np.eye(7))
 

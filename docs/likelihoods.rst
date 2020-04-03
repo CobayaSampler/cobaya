@@ -54,7 +54,7 @@ For an application, check out the :ref:`advanced example <example_advanced_likde
 If your external likelihood needs the products of a **theory code**:
 
 1. In your function definition, define a *keyword* argument ``_theory`` with a default value stating the *needs* of your theory code, i.e. the argument that will be passed to the ``needs`` method of the theory code, to let it know what needs to be computed at every iteration.
-2. At runtime, the current theory code instance will be passed through that keyword, so you can use it to invoke the methods that return the necessary products.
+2. At runtime, the current provider for theory code functions will be passed through that keyword, so you can use it to invoke the methods that return the necessary products.
 
 For an application, check out :doc:`cosmo_external_likelihood`.
 
@@ -72,10 +72,8 @@ For an application, check out :doc:`cosmo_external_likelihood`.
 
       # Default: guessed from function signature
 
-      from typing import Mapping
-
-      def my_like1(a0, a1, _derived=["sum_a"]):
-          if isinstance(_derived, Mapping):
+      def my_like1(a0, a1, _derived= ("sum_a",)):
+          if isinstance(_derived, dict):
               _derived["sum_a"] = a0 + a1
           return # some function of `(a0, a1)`
 
@@ -85,15 +83,13 @@ For an application, check out :doc:`cosmo_external_likelihood`.
 
       # Manual: no explicit function signature required
 
-      from typing import Mapping
-
       # Define the lists of i/o params
       my_input_params = ["a0", "a1"]
       my_output_params = ["sum_a"]
 
       def my_like1(**kwargs):
           current_input_values = [kwargs[p] for p in my_input_params]
-          if isinstance(kwargs.get("_derived"), Mapping):
+          if kwargs.get("_derived") is not None:
               kwargs["_derived"][my_output_params[0]] = sum(current_input_values)
           return # some function of the input params
 

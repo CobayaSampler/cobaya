@@ -16,7 +16,7 @@ from cobaya.conventions import _output_prefix, _params, _prior, kinds, _updated_
 from cobaya.run import run
 from cobaya.yaml import yaml_load
 from cobaya.tools import getfullargspec
-from cobaya.likelihood import Likelihood
+from cobaya.likelihood import Likelihood, DerivedArg
 
 # Definition of external (log)pdf's
 
@@ -27,8 +27,8 @@ derived_funcs = {"r": lambda x, y: np.sqrt(x ** 2 + y ** 2),
                  "theta": lambda x, y: np.arctan2(x, y) / np.pi}
 
 
-def half_ring_func_derived(x, y=0.5, _derived=("r", "theta")):
-    if _derived is not None:
+def half_ring_func_derived(x, y=0.5, _derived: DerivedArg = ("r", "theta")):
+    if isinstance(_derived, dict):
         _derived.update({p: derived_funcs[p](x, y) for p in ["r", "theta"]})
     return eval(half_ring_str)(x, y)
 

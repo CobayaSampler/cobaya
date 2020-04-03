@@ -76,7 +76,7 @@ Now, let us define the likelihood. The arguments of the likelihood function will
            # Declaration of our theory requirements
            _theory={'cl': {'tt': l_max}},
            # Declaration of available derived parameters
-           _derived={'Map_Cl_at_500': None}):
+           _derived=('Map_Cl_at_500',)):
        # Noise spectrum, beam-corrected
        healpix_Nside=512
        pixel_area_rad = np.pi/(3*healpix_Nside**2)
@@ -90,7 +90,8 @@ Now, let us define the likelihood. The arguments of the likelihood function will
        Cl_theo = _theory.get_Cl(ell_factor=False)['tt'][:l_max+1]  # muK-2
        Cl_map_theo = Cl_theo + Nl
        # Set our derived parameter, assuming '_derived' is a dictionary
-       _derived['Map_Cl_at_500'] = Cl_map[500]
+       if isinstance(_derived, dict):
+           _derived['Map_Cl_at_500'] = Cl_map[500]
        # Auxiliary plot
        #ell_factor = ells*(ells+1)/(2*np.pi)
        #plt.figure()

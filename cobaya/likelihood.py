@@ -27,7 +27,7 @@ import sys
 import traceback
 import inspect
 from time import sleep
-from typing import Mapping, Optional, Union
+from typing import Mapping, Optional, Union, Sequence
 from itertools import chain
 import numpy as np
 
@@ -36,8 +36,12 @@ from cobaya.conventions import kinds, _external, _component_path, empty_dict, \
     _input_params, _output_params
 from cobaya.tools import get_class, get_external_function, getfullargspec, str_to_list
 from cobaya.log import LoggedError
-from cobaya.component import ComponentCollection
+from cobaya.component import ComponentCollection, Provider
 from cobaya.theory import Theory
+
+# type for special _derived and _theory introspected arguments
+DerivedArg = Union[dict, Sequence, None]
+TheoryArg = Union[dict, Provider]
 
 
 class LikelihoodInterface:

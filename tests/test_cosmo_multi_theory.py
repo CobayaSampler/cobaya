@@ -5,7 +5,7 @@ from copy import deepcopy
 from cobaya.model import get_model
 from cobaya.theory import Theory
 from cobaya.tools import load_module
-from cobaya.likelihood import LikelihoodInterface, Likelihood
+from cobaya.likelihood import LikelihoodInterface, Likelihood, TheoryArg, DerivedArg
 from cobaya.conventions import empty_dict
 from .common import process_packages_path
 
@@ -39,11 +39,11 @@ class BBN2(Theory):
                                                      params_values_dict['nnu'] - 3.046)}
 
 
-# noinspection PyDefaultArgument,PyUnresolvedReferences
-def cmb_likelihood(_derived={'check'},
-                   _theory={'Hubble': {'z': [0.5]}, 'CAMBdata': None}):
+# noinspection PyDefaultArgument
+def cmb_likelihood(_derived: DerivedArg = ('check',),
+                   _theory: TheoryArg = {'Hubble': {'z': [0.5]}, 'CAMBdata': None}):
     results = _theory.get_CAMBdata()
-    if isinstance(_derived, Mapping):
+    if isinstance(_derived, dict):
         _derived['check'] = results.Params.YHe
     return results.Params.YHe
 

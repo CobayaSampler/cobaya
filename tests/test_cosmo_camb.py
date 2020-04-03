@@ -3,6 +3,7 @@ import os
 import numpy as np
 from cobaya.model import get_model
 from cobaya.tools import load_module
+from cobaya.likelihood import TheoryArg
 
 params = {'ombh2': 0.02242, 'omch2': 0.11933, 'H0': 67.66, 'tau': 0.0561,
           'mnu': 0.06, 'nnu': 3.046, 'ns': 0.9665,
@@ -10,8 +11,8 @@ params = {'ombh2': 0.02242, 'omch2': 0.11933, 'H0': 67.66, 'tau': 0.0561,
 
 
 def get_camb(packages_path):
-    return load_module("camb",
-                       path=os.path.join(process_packages_path(packages_path), "code", "CAMB"))
+    return load_module("camb", path=os.path.join(process_packages_path(packages_path),
+                                                 "code", "CAMB"))
 
 
 def _get_model(packages_path, likelihood):
@@ -37,11 +38,13 @@ def test_sources(packages_path):
 
     # noinspection PyDefaultArgument
     def test_likelihood(
-            _theory={'source_Cl': {'sources': {'source1':
-                                                   {'function': 'gaussian',
-                                                    'source_type': 'counts', 'bias': 1.2,
-                                                    'redshift': 0.17, 'sigma': 0.04}},
-                                   'limber': True, 'lmax': 500}}):
+            _theory: TheoryArg = {'source_Cl': {'sources': {'source1':
+                                                                {'function': 'gaussian',
+                                                                 'source_type': 'counts',
+                                                                 'bias': 1.2,
+                                                                 'redshift': 0.17,
+                                                                 'sigma': 0.04}},
+                                                'limber': True, 'lmax': 500}}):
         assert abs(_theory.get_source_Cl()[('source1', 'source1')][100] / dic['W1xW1'][
             100] - 1) < 0.001, \
             "CAMB gaussian source window results do not match"
@@ -54,7 +57,7 @@ def test_sources(packages_path):
 def test_CAMBdata(packages_path):
     # noinspection PyDefaultArgument
     def test_likelihood(
-            _theory={'CAMBdata': None, 'Pk_grid': dict(k_max=2, z=[0, 2])}):
+            _theory: TheoryArg = {'CAMBdata': None, 'Pk_grid': dict(k_max=2, z=[0, 2])}):
         return _theory.get_CAMBdata().tau0
 
     model = _get_model(packages_path, test_likelihood)
@@ -73,7 +76,7 @@ def test_CAMB_transfer(packages_path):
 
     # noinspection PyDefaultArgument,PyUnresolvedReferences
     def test_likelihood(
-            _theory={'Pk_grid': dict(k_max=2, z=[0, 2])}):
+            _theory: TheoryArg = {'Pk_grid': dict(k_max=2, z=[0, 2])}):
         _, _, PK = _theory.get_Pk_grid()
         assert np.isclose(PK[1, 30], 10294.3285)
         np.testing.assert_allclose(PK, PK1, rtol=1e-4)
@@ -96,8 +99,8 @@ def test_CAMB_sigma_R(packages_path):
 
     # noinspection PyDefaultArgument,PyUnresolvedReferences
     def test_likelihood(
-            _theory={'sigma_R': dict(z=[0, 2, 5], R=R),
-                     'Pk_grid': {'k_max': 1, 'z': np.arange(0.2, 6, 1)}}):
+            _theory: TheoryArg = {'sigma_R': dict(z=[0, 2, 5], R=R),
+                                  'Pk_grid': {'k_max': 1, 'z': np.arange(0.2, 6, 1)}}):
         r_out, z_out, sigma_R_out = _theory.get_sigma_R()
         assert np.allclose(z_out, redshifts)
         np.testing.assert_allclose(sigma_R, sigma_R_out, rtol=1e-3)

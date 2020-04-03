@@ -130,7 +130,8 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
                     products["logZ"] + logZ_nsigmas * products["logZstd"])
 
 
-def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False, packages_path=None):
+def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False,
+                        packages_path=None):
     # #dimensions and speed ratio mutually prime (e.g. 2,3,5)
     dim0, dim1 = 5, 2
     speed0, speed1 = 1, 10
@@ -151,19 +152,17 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False, packages
                    ["means", "covs"]]
     n_evals = [0, 0]
 
-    # noinspection PyUnresolvedReferences
     def like0(**kwargs):
         n_evals[0] += 1
         input_params = [kwargs[p] for p in params0]
-        if isinstance(kwargs.get("_derived"), Mapping):
+        if kwargs.get("_derived") is not None:
             kwargs["_derived"][derived0] = sum(input_params)
         return multivariate_normal.logpdf(input_params, mean=mean0, cov=cov0)
 
-    # noinspection PyUnresolvedReferences
     def like1(**kwargs):
         n_evals[1] += 1
         input_params = [kwargs[p] for p in params1]
-        if isinstance(kwargs.get("_derived"), Mapping):
+        if kwargs.get("_derived") is not None:
             kwargs["_derived"][derived1] = sum(input_params)
         return multivariate_normal.logpdf(input_params, mean=mean1, cov=cov1)
 
