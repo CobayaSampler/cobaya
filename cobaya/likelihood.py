@@ -8,7 +8,7 @@ This module defines the main :class:`Likelihood` class, from which every likelih
 usually inherits, and the :class:`LikelihoodCollection` class, which groups and manages
 all the individual likelihoods.
 
-Likelihoods inherit from :class:`.theory.Theory`, adding an additional method
+Likelihoods inherit from :class:`~theory.Theory`, adding an additional method
 to return the likelihood. As with all theories, likelihoods cache results, and the
 function :meth:`LikelihoodInterface.get_current_logp` is used by :class:`model.Model` to
 calculate the total likelihood. The default Likelihood implementation does the actual
@@ -16,8 +16,8 @@ calculation of the log likelihood in the `logp` function, which is then called
 by :meth:`Likelihood.calculate` to save the result into the current state.
 
 Subclasses typically just provide the `logp` function to define their likelihood result,
-and use :meth:`theory.Theory.get_requirements` to specify which inputs are needed from
-other theory codes (or likelihoods). Other methods of the :class:`.theory.Theory` base
+and use :meth:`~theory.Theory.get_requirements` to specify which inputs are needed from
+other theory codes (or likelihoods). Other methods of the :class:`~theory.Theory` base
 class can be used as and when needed.
 
 """
@@ -42,7 +42,7 @@ from cobaya.theory import Theory
 
 class LikelihoodInterface:
     """
-    Interface function for likelihoods. Can descend from a :class:`theory.Theory` class
+    Interface function for likelihoods. Can descend from a :class:`~theory.Theory` class
     and this to make a likelihood (where the calculate() method stores state['logp'] for
     the current parameters), or likelihoods can directly inherit from :class:`Likelihood`
     instead.
@@ -63,9 +63,9 @@ class LikelihoodInterface:
 
 
 class Likelihood(Theory, LikelihoodInterface):
-    """Likelihood base class. Extends from :class:`LikelihoodInterface` and the general
-    :class:`theory.Theory` class by adding functions to return likelihoods functions
-    (logp function for a given point)."""
+    """Base class for likelihoods. Extends from :class:`LikelihoodInterface` and the
+    general :class:`~theory.Theory` class by adding functions to return likelihoods
+    functions (logp function for a given point)."""
 
     type: Optional[Union[list, str]] = []
 

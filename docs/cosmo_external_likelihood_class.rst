@@ -161,6 +161,9 @@ be equivalent to the .yaml-based example above
 If your likelihood has class attributes that are not possible input parameters, they should be
 made private by starting the name with an underscore.
 
+Any class can have class attributes or a .yaml file, but not both. Class
+attributes or .yaml files are inherited, with re-definitions override the inherited value.
+
 _InstallableLikelihood
 -------------------------
 
