@@ -6,20 +6,20 @@ perform any sub-calculation needed by any other likelihood or theory class. By b
 up in to separate classes the calculation can be modularized, and each class can have its own nuisance parameters
 and speed, and hence be sampled efficiently using the built-in fast-slow parameter blocking.
 
-Theories should inherit from the base :class:`.theory.Theory` class, either directly or indirectly.
+Theories should inherit from the base :class:`~.theory.Theory` class, either directly or indirectly.
 Each theory may have its own parameters, and depend on derived parameters or general quantities calculated by other
 theory classes (or likelihoods as long as this does not lead to a circular dependence).
 The names of derived parameters or other quantities are for each class to define and document as needed.
 
-To specify requirements you can use
+To specify requirements you can use the :class:`~.theory.Theory`  methods
 
-* :meth:`.theory.Theory.get_requirements`, for things that are always needed.
-* return a dictionary from the :meth:`.theory.Theory.needs` method to specify the
+* :meth:`~.theory.Theory.get_requirements`, for things that are always needed.
+* return a dictionary from the :meth:`~.theory.Theory.needs` method to specify the
   requirements conditional on the quantities that the code is actually being asked to compute
 
 
-The actual calculation of the quantities requested by the :meth:`.theory.Theory.needs` method should be done by
-:meth:`.theory.Theory.calculate`, which stores computed quantities into a state dictionary. Derived parameters should be
+The actual calculation of the quantities requested by the :meth:`~.theory.Theory.needs` method should be done by
+:meth:`~.theory.Theory.calculate`, which stores computed quantities into a state dictionary. Derived parameters should be
 saved into the special ``state['derived']`` dictionary entry.
 The theory code also needs to tell other theory codes and likelihoods the things that it can calculate using
 
@@ -29,8 +29,8 @@ The theory code also needs to tell other theory codes and likelihoods the things
 * specify derived parameters in an associated .yaml file or class params dictionary
 
 
-Use a ``get_X`` method when you need to add optional arguments to provide different quantities from the computed quantity.
-Quantities returned by  :meth:`.theory.Theory.get_can_provide` should be stored in the state dictionary by the calculate function
+Use a ``get_X`` method when you need to add optional arguments to provide different outputs from the computed quantity.
+Quantities returned by  :meth:`~.theory.Theory.get_can_provide` should be stored in the state dictionary by the calculate function
 or returned by the ``get_results(X)`` for each quantity ``X`` (which by default just returns the value stored in the current state dictionary).
 The results stored by calculate for a given set of input parameters are cached, and ``self._current_state`` is set to the current state
 whenever ``get_X``, ``get_param`` etc are called.
@@ -130,9 +130,10 @@ sampling settings for 'Xin' so that configuring it is transparent to the user, e
 .. code:: python
 
     class X(Theory):
-    params = {'Xin': {'prior': {'min': 0, 'max': 1}, 'propose': 0.01, 'ref': 0.9},
+        params = {'Xin': {'prior': {'min': 0, 'max': 1}, 'propose': 0.01, 'ref': 0.9},
               'Xderived': {'derived': True}}
 
 If multiple theory codes can provide the same quantity, it may be ambiguous which to use to compute which.
 When this happens use the ``provides`` input .yaml keyword to specify that a specific theory computes a
 specific quantity.
+

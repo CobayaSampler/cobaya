@@ -5,6 +5,9 @@ Creating new internal likelihoods or external likelihood classes should be strai
 For simple cases you can also just define a likelihood function (see :doc:`cosmo_external_likelihood`).
 
 Likelihoods should inherit from the base :class:`.likelihood.Likelihood` class, or one of the existing extensions.
+Note that :class:`.likelihood.Likelihood` inherits directly from :class:`.theory.Theory`, so likelihood and
+theory components have a common structure, with likelihoods adding specific functions to return the likelihood.
+
 A minimal framework would look like this
 
 .. code:: python
@@ -136,6 +139,27 @@ call get_model() to instantiate a full model specifying which components calcula
    model = get_model(info)
    model.logposterior({'H0':71.1, 'my_param': 1.40, ...})
 
+
+Input parameters can be specified in the likelihood's .yaml file as shown above.
+Alternatively, they can be specified as class attributes. For example, this would
+be equivalent to the .yaml-based example above
+
+.. code:: python
+
+    class MyLikelihood(Likelihood):
+        cl_file = "/path/do/data_file"
+        # Aliases for automatic covariance matrix
+        aliases = ["myOld"]
+        # Speed in evaluations/second (after theory inputs calculated).
+        speed = 500
+        params = {"my_foreground_amp":
+                      {"prior": {"dist": "uniform", "min": 0, "max": 0},
+                       "ref" {"dist": "norm", "loc": 153, "scale": 27},
+                       "proposal": 27,
+                       "latex": r"A^{f}_{\rm{mine}"}}
+
+If your likelihood has class attributes that are not possible input parameters, they should be
+made private by starting the name with an underscore.
 
 _InstallableLikelihood
 -------------------------

@@ -17,7 +17,8 @@
 - cobaya-run --no-mpi option to enable testing without mpi even on nodes with mpi4py installed
 - cobaya-run-job command to make a single job script and submit 
 - docs include inheritance diagrams for key classes
-= Python 2 support removed, now requires Python 3.6+
+= Python 2 support removed, now requires Python 3.6+. Uses dict rather than OrderedDict.
+- renames "path_install" to "packages_path", -m command line options to -p
 
 ### Likelihoods and Theories
 
@@ -39,7 +40,7 @@
 - renamed "renames" of likelihood to "aliases" (to avoid clash with "renames" for parameters)
 - More documentation for how to make internal and external likelihood classes
 - Support for HelperTheory classes to do sub-calculations for any Theory class with separate nuisance parameters and speeds
-= classmethod class_options() can be used to generate class defaults dynamically based on input parameters
+= classmethod get_class_options() can be used to generate class defaults dynamically based on input parameters
 - Added tests: test_dependencies.py, test_cosmo_multi_theory.py
 
 #### Sampler
@@ -73,6 +74,7 @@
 - Option to request "CAMBdata" object from CAMB to access computed results directly 
 - Fix for getting source windows power spectra 
 - external_primordial_pk flag to optionally use a separate Cobaya Theory to return to the (binned) primordial power spectrum to CAMB
+- exposes all possible input/output parameters by introspection, making it easier to combine with other Theory classes using same parameter names
 
 ## 2.0.3 – 2019-09-09
 

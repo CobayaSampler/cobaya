@@ -92,9 +92,9 @@ class BoltzmannBase(Theory):
           ``"vars_pairs": [["delta_tot", "delta_tot"], ["Weyl", "Weyl"], [...]]}``.
           Non-linear contributions are included by default. Note that the nonlinear setting
           determines whether nonlinear corrections are calculated; the get_Pk_interpolator
-           function also has a nonlinear argument to specify if you want the linear or
-           nonlinear spectrum returned (you can also get the linear spectrum even if
-           the nonlinear calculation is requested).
+          function also has a nonlinear argument to specify if you want the linear or
+          nonlinear spectrum returned (you can also get the linear spectrum even if
+          the nonlinear calculation is requested).
           All ``k`` values should be in units of ``1/Mpc``.
         - ``Pk_grid={...}``: similar to Pk_interpolator except that rather than returning
           a bicuplic spline object it returns the raw power spectrum grid as a (k, z, PK)
@@ -116,7 +116,7 @@ class BoltzmannBase(Theory):
           :func:`~BoltzmannBase.get_fsigma8`.
         - ``k_max=[...]``: Fixes the maximum comoving wavenumber considered.
         - **Other derived parameters** that are not included in the input but whose
-          value the likelihood may need.
+           value the likelihood may need.
         """
 
         super().needs(**requirements)
