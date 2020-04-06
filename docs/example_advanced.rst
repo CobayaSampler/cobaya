@@ -40,8 +40,12 @@ Now, let's assume that we want to track the radius of the ring, whose posterior 
 
 .. code:: python
 
-    get_r = lambda x,y: np.sqrt(x**2+y**2)
-    get_theta = lambda x,y: np.arctan(y/x)
+    def get_r(x, y):
+        return np.sqrt(x ** 2 + y ** 2)
+
+
+    def get_theta(x, y):
+        return np.arctan(y / x)
 
     info["params"]["r"] = {"derived": get_r}
     info["params"]["theta"] = {"derived": get_theta,
@@ -50,17 +54,19 @@ Now, let's assume that we want to track the radius of the ring, whose posterior 
 .. note::
 
    The options ``min`` and ``max`` for ``theta`` do not define a prior (``theta`` is not a sampled parameter!),
-   but the ranges used by GetDist to derived and plot marginal distributions for theta.
+   but the range used by GetDist for the derived ``theta`` when calculating kernel density estimates and plotting the marginal distributions.
 
 Now, we add the sampler information and run. Notice the high number of samples requested for just two dimensions, in order to map the curving posterior accurately, and the large limit on tries before chain gets stuck:
 
 .. code:: python
 
-    info["sampler"] = {
-        "mcmc": {"mcmc": {"Rminus1_stop": 0.001, "max_tries": 1000}}
+    info["sampler"] = {"mcmc": {"Rminus1_stop": 0.001, "max_tries": 1000}}
 
     from cobaya.run import run
     updated_info, sampler = run(info)
+
+Here ``Rminus1_stop`` is the tolerance for deciding when the chains are converged, with a smaller number
+meaning better convergence (defined as `R-1`, diagonalized Gelman-Rubin parameter value at which chains should stop).
 
 Let us plot the posterior for ``x``, ``y``, the radius and the angle:
 
@@ -78,8 +84,10 @@ Let us plot the posterior for ``x``, ``y``, the radius and the angle:
 
 .. image:: img/example_adv_ring.png
    :align: center
+   :width: 400px
 .. image:: img/example_adv_r_theta.png
    :align: center
+   :width: 400px
 
 Now let's assume that we are only interested in some region along ``x=y``, defined by a gaussian perpendicular to that direction. We can add this constraint as an *external prior*, in a similar way the external likelihood was added. The logprior for this can be added simply as:
 
@@ -101,13 +109,14 @@ Let's run with the same configuration and analyse the output:
 
 .. image:: img/example_adv_band.png
    :align: center
+   :width: 400px
 
 .. _example_advanced_likderived:
 
 Alternative: ``r`` and ``theta`` defined inside the likelihood function
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Custom likelihoods also allow for the definition of derived parameters. In this example, it would make sense for ``r`` and ``theta`` to be computed inside the likelihood. To do that, we would redefine the likelihood as follows(see details at :ref:`likelihood_external`):
+Custom likelihoods also allow for the definition of derived parameters. In this example, it would make sense for ``r`` and ``theta`` to be computed inside the likelihood. To do that, we would redefine the likelihood as follows (see details at :ref:`likelihood_external`):
 
 .. code:: python
 
@@ -127,8 +136,8 @@ And remove the definition (but not the mention!) of ``r`` and ``theta`` in the `
 .. code:: python
 
    info_alt["params"] = {
-       "x": {"prior": {"min": -2, "max": 2}, "ref": 1, "proposal": 0.2},
-       "y": {"prior": {"min": -2, "max": 2}, "ref": 0, "proposal": 0.2},
+       "x": {"prior": {"min": 0, "max": 2}, "ref": 0.5, "proposal": 0.01},
+       "y": {"prior": {"min": 0, "max": 2}, "ref": 0.5, "proposal": 0.01},
        "r": None,
        "theta": {"latex": r"\theta", "min": 0, "max": np.pi/2}}
 
@@ -161,10 +170,19 @@ Starting from the ``info`` of the original example (not the one with ``theta`` a
               "proposal": 0.01, "drop": True},
         "theta": {"prior": {"min": 0, "max": np.pi/2}, "ref": 0,
                    "proposal": 0.5, "latex": r"\theta", "drop": True},
-        "x": lambda r,theta: r*np.cos(theta),
-        "y": lambda r,theta: r*np.sin(theta)}
+        "x": {"value" : lambda r,theta: r*np.cos(theta), "min": 0, "max": 2},
+        "y": {"value" : lambda r,theta: r*np.sin(theta), "min": 0, "max": 2}}
 
-    # We need to reformulate the prior in terms of the new sampled parameters: r, theta
+    # The priors above are just linear with specific ranges. There is also a Jacobian
+    # from the change of variables, which we can include as an additional prior.
+    # Here the Jacobian is just proportional to r
+    info_rtheta["prior"] = {"Jacobian" : lambda r: r}
+
+
+To also sample with the band prior, we'd reformulate it in terms of the new parameters
+
+.. code:: python
+
     info_rtheta["prior"]["x_eq_y_band"] = lambda r, theta: stats.norm.logpdf(
         r * (np.cos(theta) - np.sin(theta)), loc=0, scale=0.3)
 
@@ -246,8 +264,14 @@ If we would like to sample on ``theta`` and ``r`` instead, our input file would 
         proposal: 0.5
         latex: \theta
         drop: True
-      x: 'lambda r,theta: r*np.cos(theta)'
-      y: 'lambda r,theta: r*np.sin(theta)'
+      x:
+        value: 'lambda r,theta: r*np.cos(theta)'
+        min: 0
+        max: 2
+      y:
+        value: 'lambda r,theta: r*np.sin(theta)'
+        min: 0
+        max: 2
 
     sampler:
       mcmc:
@@ -255,3 +279,7 @@ If we would like to sample on ``theta`` and ``r`` instead, our input file would 
 
     output: chains/ring
 
+.. note::
+
+    It may be easier and cleaner, especially for real-world likelihoods, to simply define your own new likelihood class (see :doc:`likelihoods`).
+    Then you would simply reference your qualified class name in the input yaml.
