@@ -106,7 +106,7 @@ If you get an error message, something went wrong. Check twice the instructions 
 
    If you do get a ``command not found`` error, this means that the folder where your local scripts are installed has not been added to your path.
 
-   To solve this, look for the ``cobaya-run`` script from your ``home`` and ``scratch`` folders with
+   To solve this on unix-based machines, look for the ``cobaya-run`` script from your ``home`` and ``scratch`` folders with
 
    .. code-block:: bash
 
@@ -150,7 +150,7 @@ Low performance: install OpenBLAS (or MKL)
 
 BLAS is a collection of algorithms for linear algebra computations. There will most likely be a BLAS library installed already in your system. It is recommended to make sure that it is an efficient one, preferably the highly-optimized OpenBLAS or MKL.
 
-To check whether ``numpy`` is actually using OpenBLAS or MKL, do
+Conda installations should include BLAS by default. On other installations check whether ``numpy`` is actually using OpenBLAS or MKL, do
 
 .. code:: bash
 

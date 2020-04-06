@@ -34,8 +34,6 @@ Though **cobaya** is a general purpose statistical framework, it includes interf
 
 The interfaces to most cosmological likelihoods are agnostic as to which theory code is used to compute the observables, which facilitates comparison between those codes. Those interfaces are also parameter-agnostic, so using your own modified versions of theory codes and likelihoods requires no additional editing of **cobaya**'s source.
 
-The overhead per posterior evaluation is ``< 0.1 ms / dimension`` per posterior evaluation (mostly due to evaluating ``scipy.stats`` logpdf's in the prior), which makes it suitable for most cosmological applications (CAMB_ and CLASS_ take seconds to run), but not necessarily for more general statistical applications, if the evaluation time per pdf involved is of that order or smaller.
-
 
 How to cite us
 --------------
