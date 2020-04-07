@@ -12,6 +12,7 @@ import traceback
 import datetime
 import re
 import shutil
+import platform
 
 # Local
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
@@ -29,15 +30,39 @@ _kind = "txt"
 _ext = "txt"
 
 
+def split_prefix(prefix):
+    """
+    Splits an output prefix into folder and file name prefix.
+
+    If on Windows, allows for unix-like input.
+    """
+    if platform.system() == "Windows":
+        prefix = prefix.replace("/", os.sep)
+    folder = os.path.dirname(prefix) or "."
+    file_prefix = os.path.basename(prefix)
+    if file_prefix == ".":
+        file_prefix = ""
+    return folder, file_prefix
+
+
+def get_info_path(folder, prefix, kind="updated"):
+    """
+    Gets path to info files saved by Output.
+    """
+    info_file_prefix = os.path.join(
+        folder, prefix + (_separator_files if prefix else ""))
+    try:
+        suffix = {"input": _input_suffix, "updated": _updated_suffix}[kind.lower()]
+    except KeyError:
+        raise ValueError("`kind` must be `input|updated`")
+    return info_file_prefix + suffix + _yaml_extensions[0]
+
+
 class Output(HasLogger):
-    def __init__(self, output_prefix=None, resume=_resume_default, force=False):
+    def __init__(self, output_prefix, resume=_resume_default, force=False):
         self.name = "output"  # so that the MPI-wrapped class conserves the name
         self.set_logger(self.name)
-        # TODO: output_prefix default None, but used here as string
-        self.folder = os.path.dirname(output_prefix) or "."
-        self.prefix = os.path.basename(output_prefix)
-        if self.prefix == ".":
-            self.prefix = ""
+        self.folder, self.prefix = split_prefix(output_prefix)
         self.prefix_regexp_str = re.escape(self.prefix) + (r"\." if self.prefix else "")
         self.force = force
         if resume and force and output_prefix:
@@ -60,10 +85,8 @@ class Output(HasLogger):
         self.log.info("Output to be read-from/written-into folder '%s', with prefix '%s'",
                       self.folder, self.prefix)
         # Prepare file names, and check if chain exists
-        info_file_prefix = os.path.join(
-            self.folder, self.prefix + (_separator_files if self.prefix else ""))
-        self.file_input = info_file_prefix + _input_suffix + _yaml_extensions[0]
-        self.file_updated = info_file_prefix + _updated_suffix + _yaml_extensions[0]
+        self.file_input = get_info_path(self.folder, self.prefix, kind="input")
+        self.file_updated = get_info_path(self.folder, self.prefix, kind="updated")
         self._resuming = False
         # Output kind and collection extension
         self.kind = _kind

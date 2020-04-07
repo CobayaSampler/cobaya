@@ -16,7 +16,7 @@ from cobaya.conventions import kinds, _prior, _params, _packages_path, _output_p
     _debug, _debug_file, _resume, _timing, _debug_default, _force, _post, _test_run, \
     _yaml_extensions, _separator_files, _updated_suffix, _packages_path_arg, \
     _packages_path_arg_posix
-from cobaya.output import get_output
+from cobaya.output import get_output, split_prefix, get_info_path
 from cobaya.model import Model
 from cobaya.sampler import get_sampler_class, check_sampler_info
 from cobaya.log import logger_setup, LoggedError
@@ -156,9 +156,7 @@ def run_script():
         info[_output_prefix] = output_prefix_cmd or output_prefix_input
     else:
         # Passed an existing output_prefix? Try to find the corresponding *.updated.yaml
-        updated_file = (given_input +
-                        (_separator_files if not given_input.endswith(('/', os.sep))
-                         else "") + _updated_suffix + _yaml_extensions[0])
+        updated_file = get_info_path(*split_prefix(given_input), kind="updated")
         try:
             info = load_input(updated_file)
         except IOError:
