@@ -26,7 +26,8 @@ The proposal pdf is a gaussian mixed with an exponential pdf in random direction
 
 .. note::
 
-   The ``proposal`` size for a certain parameter should be close to its **conditional** posterior, not it marginalized one, since for strong degeneracies, the latter being wider than the former, it could cause the chain to get stuck.
+   The ``proposal`` width for a parameter should be close to its **conditional** posterior, not its marginalized width. For strong degeneracies the latter can be much wider than the former, and hence it could cause the chain to get stuck.
+   Underestimating a good proposal width is usually better than overestimating it: an underestimate can be rapidly corrected by the adaptive covariance learning, but if the proposal width is too large the chain may never move at all.
 
 If the distribution being sampled is known have tight strongly non-linear parameter degeneracies, re-define the sampled parameters to remove the degeneracy before sampling (linear degeneracies are not a problem, esp. if you provide an approximate initial covariance matrix).
 
@@ -122,11 +123,11 @@ In Cobaya, the proposal pdf is *blocked* by speeds, i.e. it allows for efficient
 
 Two different sampling schemes are available in the ``mcmc`` sampler to take additional advantage of a speed hierarchy:
 
-- **Oversampling the fast parameters:** consists simply of taking a larger proportion of steps in the faster directions, useful when exploring their conditional distributions is cheap. Enable it by setting ``oversample_power`` to any value larger than 0 (1 means spending the same amount of time in all parameter blocks; you will rarely want to go over that value).
+- **Oversampling the fast parameters:** consists simply of taking more steps in the faster directions, useful when exploring their conditional distributions is cheap. Enable it by setting ``oversample_power`` to any value larger than 0 (1 means spending the same amount of time in all parameter blocks; you will rarely want to go over that value).
 
-- **Dragging the fast parameters:** implies a number of intermediate steps when jumping between fast+slow combinations, such that the jump in the fast parameters is optimized with respect to the jump in the slow parameters to explore any possible degeneracy between them. Enable it by setting ``drag: True``, and you can control the relative amount of fast vs slow samples with the same ``oversample_power`` parameter.
+- **Dragging the fast parameters:** consists of taking number of intermediate fast steps when jumping between positions in the slow parameter space, such that (for large numbers of dragging steps) the fast parameters are dragged along the direction of any degeneracy with the slow parameters. Enable it by setting ``drag: True``. You can control the relative amount of fast vs slow samples with the same ``oversample_power`` parameter.
 
-In general, the *dragging* method is the recommended one if there are non-trivial degeneracies between fast and slow parameters and you have a fairly large speed hierarchy. Oversampling can potentially produce very large output files (less so if the ``oversample_thin`` option is left to its default ``True`` value); dragging outputs smaller chain files since fast parameters are effectively partially marginalized over internally. For a thorough description of both methods and references, see `A. Lewis, "Efficient sampling of fast and slow cosmological parameters" (arXiv:1304.4473) <https://arxiv.org/abs/1304.4473>`_.
+In general, the *dragging* method is the recommended one if there are non-trivial degeneracies between fast and slow parameters that are not well captured by a covariance matrix,  and you have a fairly large speed hierarchy. Oversampling can potentially produce very large output files (less so if the ``oversample_thin`` option is left to its default ``True`` value); dragging outputs smaller chain files since fast parameters are effectively partially marginalized over internally. For a thorough description of both methods and references, see `A. Lewis, "Efficient sampling of fast and slow cosmological parameters" (arXiv:1304.4473) <https://arxiv.org/abs/1304.4473>`_.
 
 The relative speeds can be specified per likelihood/theory, with the option ``speed``, preferably in evaluations per second (approximately). The speeds can also be measured automatically when you run a chain (with mcmc, ``measured_speeds: True``), allowing for variations with the number of threads used and machine differences. This option only tests the speed on one point (per MPI instance) by default, so if your speed varies significantly with where you are in parameter space it may be better to either turn the automatic selection off and keep to manually specified average speeds, or to pass a large number instead of ``True`` as the value of ``measure_speeds`` (it will evaluate the posterior that many times, so the chains will take longer to initialise).
 
@@ -152,10 +153,10 @@ Here, evaluating the theory code is the slowest step, while the ``like_b`` is fa
 
 .. _mcmc_speed_hierarchy_manual:
 
-Manual specification of speed-blocking
+Manual specification of speed blocking
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-*Automatic* speed-blocking takes advantage of differences in speed *per likelihood* (or theory). If the parameters of your likelihood or theory have some internal speed hierarchy that you would like to exploit (e.g. if your likelihood internally caches the result of a computation depending only on a subset of the likelihood parameters), you can specify a fine-grained list of parameter blocks and their oversampling factors, using the ``mcmc`` option ``blocking``.
+*Automatic* speed blocking takes advantage of differences in speed *per likelihood* (or theory). If the parameters of your likelihood or theory have some internal speed hierarchy that you would like to exploit (e.g. if your likelihood internally caches the result of a computation depending only on a subset of the likelihood parameters), you can specify a fine-grained list of parameter blocks and their oversampling factors, using the ``mcmc`` option ``blocking``.
 
 E.g. if a likelihood depends of parameters ``a``, ``b`` and ``c`` and the cost of varying ``a`` is *twice* as big as the other two, your ``mcmc`` block should look like
 
@@ -244,8 +245,8 @@ Module documentation
 .. automodule:: samplers.mcmc.mcmc
    :noindex:
 
-Sampler class
-^^^^^^^^^^^^^
+MCMC sampler class
+^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: samplers.mcmc.mcmc
    :members:

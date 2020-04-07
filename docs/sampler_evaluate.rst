@@ -62,8 +62,8 @@ In this case, the posterior will be evaluated for each parameter at:
    If using this sampler **cobaya** appears to be stuck, this normally means that it cannot sample a point with finite posterior value. Check that your prior/likelihood definitions leave room for some finite posterior density, e.g. don't define an external prior that imposes that :math:`x>2` if the range allowed for :math:`x` is just :math:`[0,1]`.
 
 
-Sampler class
--------------
+Evaluate sampler class
+-----------------------
 
 .. automodule:: samplers.evaluate.evaluate
    :noindex:

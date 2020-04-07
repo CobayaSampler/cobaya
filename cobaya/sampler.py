@@ -1,7 +1,7 @@
 """
 .. module:: sampler
 
-:Synopsis: Prototype sampler class and sampler loader
+:Synopsis: Base class for samplers and other parameter-space explorers
 :Author: Jesus Torrado
 
 cobaya includes by default a
@@ -164,7 +164,7 @@ def get_sampler(info_sampler, model, output=None, packages_path=None):
 
 
 class Sampler(CobayaComponent):
-    """Prototype of the sampler class."""
+    """Base class for samplers."""
 
     # What you *must* implement to create your own sampler:
 
@@ -261,7 +261,8 @@ class Sampler(CobayaComponent):
 
     def run(self):
         """
-        Wrapper for `Sampler._run`, that takes care of seeding the RNG.
+        Wrapper for `Sampler._run`, that takes care of seeding the
+        random number generator.
         """
         self._set_rng()
         self._run()

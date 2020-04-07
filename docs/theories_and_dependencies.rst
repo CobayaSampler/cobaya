@@ -24,8 +24,8 @@ saved into the special ``state['derived']`` dictionary entry.
 The theory code also needs to tell other theory codes and likelihoods the things that it can calculate using
 
 *  ``get_X`` methods; any method starting with ``get_`` will automatically indicate that the theory can compute X
-* return list of things that can be calculated from  :meth:`.theory.Theory.get_can_provide`.
-* return list of derived parameter names from :meth:`.theory.Theory.get_can_provide_params`
+* return list of things that can be calculated from  :meth:`~.theory.Theory.get_can_provide`.
+* return list of derived parameter names from :meth:`~.theory.Theory.get_can_provide_params`
 * specify derived parameters in an associated .yaml file or class params dictionary
 
 
