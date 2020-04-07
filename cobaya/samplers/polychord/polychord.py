@@ -32,7 +32,7 @@ from cobaya.conventions import _separator, _evidence_extension, _packages_path_a
 class polychord(Sampler):
     # Name of the PolyChord repo and version to download
     _pc_repo_name = "PolyChord/PolyChordLite"
-    _pc_repo_version = "1.16"
+    _pc_repo_version = "1.17.1"
     _base_dir_suffix = "polychord_raw"
     _clusters_dir = "clusters"
     _at_resume_prefer_old = Sampler._at_resume_prefer_old + ["blocking"]
@@ -433,8 +433,6 @@ class polychord(Sampler):
     @classmethod
     def get_version(cls):
         return None
-
-    #        return pkg_resources.get_distribution("pypolychord").version
 
     @classmethod
     def get_path(cls, path):
