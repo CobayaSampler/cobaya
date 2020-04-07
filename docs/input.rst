@@ -1,9 +1,9 @@
 Input and invocation
 ====================
 
-The input of **cobaya** consists of a collection of Python dictionaries specifying the different parts of the code to use (likelihoods, theory codes and samplers) and which parameters to sample and how. The contents of that dictionary are describe below.
+The input to **cobaya** consists of a Python dictionary specifying the different parts of the code to use (likelihoods, theory codes and samplers), which parameters to sample and how, and various options. The contents of that dictionary are described below.
 
-This information if often provided as a text file in the `YAML <https://en.wikipedia.org/wiki/YAML>`_ format. The basics of YAML are better learnt with an example, so go back to :doc:`example` if you have not read it yet. If you are having trouble making your input in YAML work, take a look at the :ref:`common_yaml_errors` at the bottom of this page.
+The input dictionary information if often provided as a text file in the `YAML <https://en.wikipedia.org/wiki/YAML>`_ format. The basics of YAML are better learnt with an example, so go back to :doc:`example` if you have not read it yet. If you are having trouble making your input in YAML work, take a look at the :ref:`common_yaml_errors` at the bottom of this page.
 
 
 .. _input_blocks:
@@ -21,7 +21,7 @@ There are 5 different input blocks (two of them optional), which can be specifie
 
 - ``sampler``: contains the sampler as a single entry, and its options — see :doc:`sampler`.
 
-- ``theory`` (optional): has only one entry, which specifies the theory code with which to compute the observables used by the likelihoods, and options for it.
+- ``theory`` (optional): specifies the theory code(s) with which to compute the observables used by the likelihoods, and their options.
 
 The *components* specified above (i.e. likelihoods, samplers, theories...) can have any number of options, but you don't need to specify all of them every time you use them: if an option is not specified, its **default** value is used. The default values for each component are described in their respective section of the documentation, and in a ``[likelihood_name].yaml`` file in the folder of **cobaya** where that component is defined, e.g. ``cobaya/cobaya/likelihoods/gaussian/gaussian.yaml`` for the defaults of the ``gaussian`` likelihood.
 
@@ -79,10 +79,10 @@ To run **cobaya** with MPI in this case, save your script to some file and run `
 
 .. _input_resume:
 
-Resuming or overwriting an existing sample
+Resuming or overwriting an existing run
 ------------------------------------------
 
-If the input refers to an existing sample, **cobaya** will, by default, let you know and produce an error.
+If the input refers to output that already exists, **cobaya** will, by default, let you know and produce an error.
 
 To overwrite previous results (**use with care!**), either:
 

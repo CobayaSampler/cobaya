@@ -53,7 +53,7 @@ If calling ``cobaya-run`` from the command line, you can also specify the output
 .. note::
 
    **When calling from the command line**, if ``output`` has not been specified, it
-   defaults to the first case, using as a prefix the name of the input file sans the ``yaml`` extension.
+   defaults to the first case, using as a prefix the name of the input file without the ``yaml`` extension.
 
    Instead, **when calling from a Python interpreter**, if ``output`` has not been specified, it is understood as ``output: null``.
 
