@@ -59,6 +59,12 @@ def get_info_path(folder, prefix, kind="updated"):
 
 
 class Output(HasLogger):
+    """
+    Basic output driver. It takes care of creating the output files, checking
+    compatibility with old runs when resuming, cleaning up when forcing, preparing
+    :class:`~collection.Collection` files, etc.
+    """
+
     def __init__(self, output_prefix, resume=_resume_default, force=False):
         self.name = "output"  # so that the MPI-wrapped class conserves the name
         self.set_logger(self.name)
@@ -390,7 +396,8 @@ class OutputDummy(Output):
 
 class Output_MPI(Output):
     """
-    MPI wrapper around the Output class.
+    MPI wrapper around the Output class. Makes sure actual I/O operations are only done
+    once (except the opposite is explicitly requested).
     """
 
     def __init__(self, *args, **kwargs):
@@ -434,7 +441,8 @@ class Output_MPI(Output):
 
 def get_output(*args, **kwargs):
     """
-    Auxiliary function to retrieve the output driver.
+    Auxiliary function to retrieve the output driver
+    (e.g. whether to get the MPI-wrapped one, or a dummy output driver).
     """
     if kwargs.get("output_prefix"):
         from cobaya.mpi import import_MPI

@@ -94,3 +94,35 @@ Both sample files and collections contain the following columns, in this order:
 * ``chi2``: total effective :math:`\chi^2`, equals twice minus the total log-likelihood.
 
 * ``chi2__[...]``: individual effective :math:`\chi^2`'s, adding up to the total one.
+
+
+``output`` module documentation
+-------------------------------
+
+.. automodule:: output
+   :noindex:
+
+.. autofunction:: output.split_prefix
+.. autofunction:: output.get_info_path
+.. autofunction:: output.get_output
+
+.. autoclass:: output.Output
+   :members:
+.. autoclass:: output.Output_MPI
+   :noindex:
+.. autoclass:: output.OutputDummy
+   :noindex:
+
+
+``collection`` module documentation
+-----------------------------------
+
+.. automodule:: collection
+   :noindex:
+
+.. autoclass:: collection.Collection
+   :members:
+.. autoclass:: collection.OnePoint
+   :noindex:
+.. autoclass:: collection.OneSamplePoint
+   :noindex:

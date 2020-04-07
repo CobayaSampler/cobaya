@@ -1,12 +1,8 @@
 """
 .. module:: collection
 
-:Synopsis: Class to store the Montecarlo sample
-:Author: Jesus Torrado
-
-Class keeping track of the samples.
-
-Basically, a wrapper around a `pandas.DataFrame`.
+:Synopsis: Classes to store the Montecarlo samples and single points.
+:Author: Jesus Torrado and Antony Lewis
 
 """
 
@@ -76,6 +72,12 @@ class BaseCollection(HasLogger):
 
 
 class Collection(BaseCollection):
+    """
+    Holds a collection of samples, stored internally into a ``pandas.DataFrame``.
+
+    The dataframe itself is accessible as the ``Collection.data`` attribute, but slicing
+    can be done on the ``Collection`` itself.
+    """
 
     def __init__(self, model, output=None,
                  initial_size=enlargement_size, name=None, extension=None, file_name=None,
@@ -191,10 +193,13 @@ class Collection(BaseCollection):
         self._n = len(self) + len(collection)
 
     # Retrieve-like methods
+    # MARKED FOR DEPRECATION IN v3.0
     def n(self):
         self.log.warning("*DEPRECATION*: `Collection.n()` will be deprecated soon "
                          "in favor of `len(Collection)`")
+        # BEHAVIOUR TO BE REPLACED BY ERROR:
         return len(self)
+    # END OF DEPRECATION BLOCK
 
     def __len__(self):
         return self._n
@@ -370,7 +375,8 @@ class Collection(BaseCollection):
 
 
 class OneSamplePoint:
-    """Wrapper to hold a single point, e.g. the current point of an MCMC."""
+    """Wrapper to hold a single point, e.g. the current point of an MCMC.
+    Alternative to :class:`~collection.OnePoint`, faster but with less functionality."""
 
     def __init__(self, model, output_thin=1):
         self.sampled_params = list(model.parameterization.sampled_params())
@@ -406,7 +412,8 @@ class OneSamplePoint:
 
 
 class OnePoint(Collection):
-    """Wrapper of Collection to hold a single point, e.g. the current point of an MCMC."""
+    """Wrapper of :class:`~collection.Collection` to hold a single point,
+    e.g. the current point of an MCMC."""
 
     def __init__(self, *args, **kwargs):
         kwargs["initial_size"] = 1
