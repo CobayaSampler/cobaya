@@ -89,7 +89,7 @@ If you are using external priors (as described :ref:`here <prior_external>`), th
 Taking advantage of a speed hierarchy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-PolyChord *automatically* sorts parameters optimally, and chooses the number of repeats per likelihood according to the value of the ``oversampling_power`` property. You can also specify the blocking and oversampling bu hand using the ``blocking`` option. For more thorough documentation of these options, check :ref:`the corresponding section in the MCMC sampler page<mcmc_speed_hierarchy>` (just ignore the references to ``drag``, which do not apply here).
+PolyChord *automatically* sorts parameters optimally, and chooses the number of repeats per likelihood according to the value of the ``oversampling_power`` property. You can also specify the blocking and oversampling by hand using the ``blocking`` option. For more thorough documentation of these options, check :ref:`the corresponding section in the MCMC sampler page<mcmc_speed_hierarchy>` (just ignore the references to ``drag``, which do not apply here).
 
 
 .. _polychord_callback:
@@ -165,6 +165,10 @@ If PolyChord has been installed this way, it is not necessary to specify a ``pat
    If you want to use PolyChord with MPI on a Mac, you need to have compiled OpenMPI with the same ``gcc`` version with which you are compiling PolyChord. To do that, prepend OpenMPI's ``make`` command with ``CC=gcc-[X]``, where ``[X]`` is your gcc version. Then follow the instructions above to compile PolyChord, but with ``MPI=1`` instead when you do ``make pypolychord``.
 
    *Thanks to Guadalupe Cañas Herrera for these instructions!*
+
+   **Polychord for Windows users:**
+
+   Polychord currently does not support Windows. You'd have to run it in linux virtual machine or using a Docker container.
 
 
 Manual installation of PolyChord

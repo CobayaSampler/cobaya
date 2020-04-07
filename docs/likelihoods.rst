@@ -98,6 +98,8 @@ For an application, check out :doc:`cosmo_external_likelihood`.
           "input_params": my_input_params, "output_params": my_output_params}}
 
 
+.. _likelihood_classes:
+
 Likelihood classes: code conventions and defaults
 -----------------------------------------------------
 

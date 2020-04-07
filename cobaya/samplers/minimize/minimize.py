@@ -38,7 +38,7 @@ and `Py-BOBYQA <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/i
 
 It works more effectively when run on top of a Monte Carlo sample: just change the sampler
 for ``minimize`` with the desired options, and it will use as a starting point the
-*maximum a posteriori* (MAP) or best fit (maximum likelihood, o minimal :math:`\chi^2`)
+*maximum a posteriori* (MAP) or best fit (maximum likelihood, or minimal :math:`\chi^2`)
 found so far, as well as the covariance matrix of the sample for rescaling of the
 parameter jumps.
 

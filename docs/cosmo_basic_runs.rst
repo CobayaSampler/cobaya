@@ -1,7 +1,7 @@
 Basic cosmology runs
 ====================
 
-Sampling from a cosmological posterior works exactly as the examples at the beginning of the documentation, except one usually needs to add a theory code, and possibly some of the cosmological likelihoods presented later.
+Sampling from a cosmological posterior works the same way as the examples at the beginning of the documentation, except that one usually needs to add a theory code, and possibly some of the cosmological likelihoods presented later.
 
 You can sample or track any parameter that is understood by the theory code in use (or any dynamical redefinition of those). You **do not need to modify Cobaya's source** to use new parameters that you have created by :ref:`modifying CLASS <classy_modify>` or :ref:`modifying CAMB <camb_modify>`, or to :doc:`create a new cosmological likelihood <cosmo_external_likelihood>` and track its parameters.
 

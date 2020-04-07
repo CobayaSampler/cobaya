@@ -1,7 +1,7 @@
 Troubleshooting in cosmological runs
 ====================================
 
-This section will be progressively filled with the most common problems that our users encounter, so don't hesitate to open an issue/PR in GitHub if you think there is something worth including here.
+This section will be progressively filled with the most common problems that our users encounter, so don't hesitate to open an issue/PR in `GitHub <https://github.com/CobayaSampler/cobaya/issues>`_ if you think there is something worth including here.
 
 
 General troubleshooting advice
@@ -35,7 +35,7 @@ If your job runs out of memory at **at initialisation** of the theory or likelih
 
 If, instead, your jobs runs out of memory **after a number of iterations**, there is probably a memory leak somewhere. Python rarely leaks memory, thanks to its *garbage collector*, so the culprit is probably some external C or Fortran code.
 
-If you have modified CLASS or CAMB, make sure that every ``alloc`` is followed by the corresponding ``free`` in C, and every ``allocate`` is followed by a ``deallocate`` in Fortran. Otherwise, a new array will be created at each iteration while the old one will not be deleted.
+If you have modified C code, e.g. CLASS, make sure that every ``alloc`` is followed by the corresponding ``free``. Otherwise, a new array will be created at each iteration while the old one will not be deleted.
 
 You can use e.g. `Valgrind <http://www.valgrind.org/>`_ to monitor memory usage.
 

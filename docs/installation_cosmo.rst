@@ -98,3 +98,21 @@ The automatic installation process above installs all the requisites for the com
 If you want to modify one of the external packages (e.g. one of the theory codes) you will probably prefer to install them manually. Each component's documentation has a section on manual installation of its requisites, and on how to specify your installation folder at run time. Check the relevant section of the documentation of each component.
 
 When an installation path for a particular component is given in its corresponding input block, it takes precedence over automatic installation folder described above, so that if you already installed a version automatically, it will be ignored in favour of the manually specified one.
+
+Updating and installing specific components
+--------------------------------------------
+
+Individual likelihood or theory components can be installed using
+
+.. code:: bash
+
+   $ cobaya-install component_name --packages-path /path/to/packages
+
+This will also work with your own or third-party :ref:`likelihood classes <likelihood_classes>`.
+To force reinstallation of a package that is already installed, you can use the ``-f`` option, e.g. to
+update an auto-installed *camb* use
+
+.. code:: bash
+
+   $ cobaya-install -f --packages-path /path/to/packages camb
+

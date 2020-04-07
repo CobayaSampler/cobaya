@@ -116,7 +116,8 @@ class BoltzmannBase(Theory):
           :func:`~BoltzmannBase.get_fsigma8`.
         - ``k_max=[...]``: Fixes the maximum comoving wavenumber considered.
         - **Other derived parameters** that are not included in the input but whose
-           value the likelihood may need.
+          value the likelihood may need.
+
         """
 
         super().needs(**requirements)

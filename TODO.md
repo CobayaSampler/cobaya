@@ -44,3 +44,5 @@
 ## Regexp-ize checks for `COBAYA_INSTALL_SKIP` (in `install.py::_skip_helper`) and `COBAYA_TEST_SKIP` (in `conftests.py`), to be able to use underscores
 ## Test installed only (would need more clever pytest marking?)
 ## auto-covmats: separate parameter matching into slow ones and fast ones, and prefer missing some fast parameters than missing slow ones.
+## auto-covmats: refactor to more be general and don't hard code Planck etc in main source (e.g. so external likelihood distributions can provide own covmat databases)
+## doc, install, model may be better documented generally rather than only in cosmo sections.
