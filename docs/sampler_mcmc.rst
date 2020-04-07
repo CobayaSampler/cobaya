@@ -187,9 +187,17 @@ E.g. if a likelihood depends of parameters ``a``, ``b`` and ``c`` and the cost o
 Convergence checks
 ------------------
 
+Convergence of an MCMC run is assessed in terms a generalized version of the :math:`R-1` `Gelman-Rubin statistic <https://projecteuclid.org/euclid.ss/1177011136>`_, implemented as described in `arXiv:1304.4473 <https://arxiv.org/abs/1304.4473>`_.
+
+In particular, given a small number of chains from the same, the :math:`R-1` statistic measures the variance between the means of the different chains in units of the covariance of the chains (in other words, that all chains are centered around the same point, not deviating from it a significant fraction of the standard deviation of the posterior). When that number becomes smaller than ``Rminus1_stop`` twice in a row, a second :math:`R-1` check is performed on the bounds of the 95% c.l. interval, which, if smaller than ``Rminus1_cl_stop``, stops the run.
+
+.. note::
+
+   For single-chain runs, the chain is split into a number ``Rminus1_single_split`` of segments, the first segment is discarded, and the :math:`R-1` checks are performed on the rest as if they were independent chains.
+
 .. warning::
 
-   WIP!
+   The :math:`R-1` diagnostics is a necessary but not sufficient condition for convergence. Most realistic cases should have converged when :math:`R-1` is small enough, but harder ones, such as multimodal posteriors with modes farther apart than their individual sizes, may mistakenly report convergence if all chains are stuck in the same mode (or never report it if stuck in different ones).
 
 .. _mcmc_progress:
 
