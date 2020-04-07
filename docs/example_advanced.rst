@@ -231,8 +231,8 @@ Bu we could also have incorporated those text definitions into a ``yaml`` file, 
         max: 1.571  # =~ pi/2
 
     prior:
-      x_eq_y_band: "lambda x,y: stats.norm.logpdf(
-                       x - y, loc=0, scale=0.3)"
+      x_eq_y_band: 'lambda x,y: stats.norm.logpdf(
+                       x - y, loc=0, scale=0.3)'
 
     sampler:
       mcmc:
@@ -272,6 +272,11 @@ If we would like to sample on ``theta`` and ``r`` instead, our input file would 
         value: 'lambda r,theta: r*np.sin(theta)'
         min: 0
         max: 2
+
+    prior:
+      Jacobian: 'lambda r: np.log(r)'
+      x_eq_y_band: 'lambda r, theta: stats.norm.logpdf(
+          r * (np.cos(theta) - np.sin(theta)), loc=0, scale=0.3)'
 
     sampler:
       mcmc:
