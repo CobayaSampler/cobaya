@@ -118,6 +118,7 @@ class Likelihood(Theory, LikelihoodInterface):
         derived = {} if want_derived else None
         state["logp"] = -np.inf  # in case of exception
         state["logp"] = self.logp(_derived=derived, **params_values_dict)
+        self.log.debug("Computed log-likelihood = %g", state["logp"])
         if want_derived:
             state["derived"] = derived.copy()
 
