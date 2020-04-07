@@ -6,7 +6,6 @@ from random import shuffle, choice
 from scipy.stats import multivariate_normal
 from getdist.mcsamples import MCSamplesFromCobaya
 from itertools import chain
-from typing import Mapping
 
 from cobaya.conventions import kinds, _output_prefix, empty_dict
 from cobaya.conventions import _debug, _debug_file, _packages_path, partag

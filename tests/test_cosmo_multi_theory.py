@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from typing import Any, Mapping
+from typing import Any
 from copy import deepcopy
 from cobaya.model import get_model
 from cobaya.theory import Theory

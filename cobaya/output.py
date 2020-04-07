@@ -33,8 +33,11 @@ class Output(HasLogger):
     def __init__(self, output_prefix=None, resume=_resume_default, force=False):
         self.name = "output"  # so that the MPI-wrapped class conserves the name
         self.set_logger(self.name)
-        self.folder = os.sep.join(output_prefix.split(os.sep)[:-1]) or "."
-        self.prefix = (lambda x: x if x != "." else "")(output_prefix.split(os.sep)[-1])
+        # TODO: output_prefix default None, but used here as string
+        self.folder = os.path.dirname(output_prefix) or "."
+        self.prefix = os.path.basename(output_prefix)
+        if self.prefix == ".":
+            self.prefix = ""
         self.prefix_regexp_str = re.escape(self.prefix) + (r"\." if self.prefix else "")
         self.force = force
         if resume and force and output_prefix:

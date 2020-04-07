@@ -157,8 +157,8 @@ def run_script():
     else:
         # Passed an existing output_prefix? Try to find the corresponding *.updated.yaml
         updated_file = (given_input +
-                        (_separator_files if not given_input.endswith(os.sep) else "") +
-                        _updated_suffix + _yaml_extensions[0])
+                        (_separator_files if not given_input.endswith(('/', os.sep))
+                         else "") + _updated_suffix + _yaml_extensions[0])
         try:
             info = load_input(updated_file)
         except IOError:

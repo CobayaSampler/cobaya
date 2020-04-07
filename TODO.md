@@ -25,6 +25,7 @@
 
 # Enhancements/Refactorings
 
+## some way to change default options, e.g. always use cobaya-run -f by default. Also argument to run() function.
 ## Support "parameterization" option of theory .yaml to specify parameter yaml variants?/generalize !defaults
 ## Let classes do all defaults combining; allow separate like instantiation + use equivalent to loading in cobaya
 ## `check_conflicts` theory method or similar (so likelihoods can raise error when used in combination with other variant likelihoods using non-independent data)

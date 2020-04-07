@@ -65,7 +65,7 @@ As an example, here is the input for Planck 2015 base :math:`\Lambda\mathrm{CDM}
    You can still add them to the input, if you want to redefine any of their properties (its prior, label, etc.). See :ref:`prior_inheritance`.
 
 
-Save the input generated to a file and run it with ``cobaya-run [your_input_file_name.yaml]``. This will create output files as explained :ref:`here <output_shell>`, and, after some time, you should be able to run ``GetDistGUI`` to generate some plots.
+Save the input generated to a file and run it with ``cobaya-run [your_input_file_name.yaml]``. This will create output files as explained :ref:`here <output_shell>`, and, after some time, you should be able to run ``getdist-gui`` to generate some plots.
 
 .. note::
 
