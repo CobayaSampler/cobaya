@@ -175,8 +175,8 @@ Starting from the ``info`` of the original example (not the one with ``theta`` a
 
     # The priors above are just linear with specific ranges. There is also a Jacobian
     # from the change of variables, which we can include as an additional prior.
-    # Here the Jacobian is just proportional to r
-    info_rtheta["prior"] = {"Jacobian" : lambda r: r}
+    # Here the Jacobian is just proportional to r (log-prior is proportional to log(r))
+    info_rtheta["prior"] = {"Jacobian" : lambda r: np.log(r)}
 
 
 To also sample with the band prior, we'd reformulate it in terms of the new parameters
