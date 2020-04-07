@@ -46,3 +46,4 @@
 ## auto-covmats: separate parameter matching into slow ones and fast ones, and prefer missing some fast parameters than missing slow ones.
 ## auto-covmats: refactor to more be general and don't hard code Planck etc in main source (e.g. so external likelihood distributions can provide own covmat databases)
 ## doc, install, model may be better documented generally rather than only in cosmo sections.
+## parameterization: there should be no need for "drop" if there are no agnostic components.
