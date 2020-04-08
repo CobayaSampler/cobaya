@@ -362,7 +362,7 @@ class classy(BoltzmannBase):
                 self.log.error(
                     "Computation error (see traceback below)! "
                     "Parameters sent to CLASS: %r and %r.\n"
-                    "To ignore this kind of errors, make 'stop_at_error: False'.",
+                    "To ignore this kind of error, make 'stop_at_error: False'.",
                     state["params"], dict(self.extra_args))
                 raise
             else:

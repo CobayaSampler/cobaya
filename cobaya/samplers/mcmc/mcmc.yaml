@@ -2,10 +2,10 @@
 # ('Xd' means 'X steps per dimension', or full parameter cycle
 #  when adjusting for oversampling / dragging)
 
-# Number of discarded burn-in samples per dimension
+# Number of discarded burn-in samples per dimension (d notation means times dimension)
 burn_in: 20d
 # Error criterion: max attempts (= weight-1) before deciding that the chain
-# is stuck and failing. Set to `.inf` to ignore this kind of errors.
+# is stuck and failing. Set to `.inf` to ignore these kind of errors.
 max_tries: 40d
 # File (including path) or matrix defining a covariance matrix for the proposal:
 # - null (default): will be generated from params info (prior and proposal)

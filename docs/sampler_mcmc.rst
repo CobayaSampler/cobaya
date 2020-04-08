@@ -189,7 +189,9 @@ Convergence checks
 
 Convergence of an MCMC run is assessed in terms a generalized version of the :math:`R-1` `Gelman-Rubin statistic <https://projecteuclid.org/euclid.ss/1177011136>`_, implemented as described in `arXiv:1304.4473 <https://arxiv.org/abs/1304.4473>`_.
 
-In particular, given a small number of chains from the same, the :math:`R-1` statistic measures the variance between the means of the different chains in units of the covariance of the chains (in other words, that all chains are centered around the same point, not deviating from it a significant fraction of the standard deviation of the posterior). When that number becomes smaller than ``Rminus1_stop`` twice in a row, a second :math:`R-1` check is performed on the bounds of the 95% c.l. interval, which, if smaller than ``Rminus1_cl_stop``, stops the run.
+In particular, given a small number of chains from the same run, the :math:`R-1` statistic measures (from the last half of each chain) the variance between the means of the different chains in units of the covariance of the chains (in other words, that all chains are centered around the same point, not deviating from it a significant fraction of the standard deviation of the posterior). When that number becomes smaller than ``Rminus1_stop`` twice in a row, a second :math:`R-1` check is also performed on the bounds of the ``Rminus1_cl_level`` % confidence level interval, which, if smaller than ``Rminus1_cl_stop``, stops the run.
+
+The default settings have *Rminus1_stop = 0.01*, *Rminus1_cl_level = 0.95* and *Rminus1_cl_level = 0.2*; the stop values can be decreased for better convergence.
 
 .. note::
 
@@ -197,7 +199,8 @@ In particular, given a small number of chains from the same, the :math:`R-1` sta
 
 .. warning::
 
-   The :math:`R-1` diagnostics is a necessary but not sufficient condition for convergence. Most realistic cases should have converged when :math:`R-1` is small enough, but harder ones, such as multimodal posteriors with modes farther apart than their individual sizes, may mistakenly report convergence if all chains are stuck in the same mode (or never report it if stuck in different ones).
+   The :math:`R-1` diagnostics is a necessary but not sufficient condition for convergence. Most realistic cases should have converged when :math:`R-1` is small enough, but harder ones, such as multimodal posteriors with modes farther apart than their individual sizes, may mistakenly report convergence if all chains are stuck in the same mode (or never report it if stuck in different ones). Using a smaller value of ``Rminus1_cl_stop`` can ensure better exploration of the tails of the distribution, which may be important if you want to place robust limits on parameters or make 2D constraint plots.
+
 
 .. _mcmc_progress:
 

@@ -534,7 +534,7 @@ class camb(BoltzmannBase):
                 self.log.error(
                     "Computation error (see traceback below)! "
                     "Parameters sent to CAMB: %r and %r.\n"
-                    "To ignore this kind of errors, make 'stop_at_error: False'.",
+                    "To ignore this kind of error, make 'stop_at_error: False'.",
                     dict(state["params"]), dict(self.extra_args))
                 raise
             else:
@@ -769,7 +769,7 @@ class camb(BoltzmannBase):
                 self.log.error(
                     "Error setting parameters (see traceback below)! "
                     "Parameters sent to CAMB: %r and %r.\n"
-                    "To ignore this kind of errors, make 'stop_at_error: False'.",
+                    "To ignore this kind of error, make 'stop_at_error: False'.",
                     dict(state["params"]), dict(self.extra_args))
                 raise
         except self.camb.baseconfig.CAMBUnknownArgumentError as e:
@@ -920,7 +920,7 @@ class CambTransfers(HelperTheory):
                 self.log.error(
                     "Computation error (see traceback below)! "
                     "Parameters sent to CAMB: %r and %r.\n"
-                    "To ignore this kind of errors, make 'stop_at_error: False'.",
+                    "To ignore this kind of error, make 'stop_at_error: False'.",
                     dict(state["params"]), dict(self.cobaya_camb.extra_args))
                 raise
             else:
