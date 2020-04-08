@@ -72,10 +72,10 @@ Parameter roles
 
 Parameters have different roles with respect to different parts of the code:
 
-- The :class:`sampler.Sampler` cares about whether parameters are **fixed** (thus irrelevant), **sampled** over, or **derived** from sampled and fixed parameters. The :class:`prior.Prior` cares about **sampled** parameters only.
-- The :class:`likelihood.Likelihood` and the :class:`theory.Theory` care about whether parameters are to be taken as **input**, or are expected to be part of their **output**.
+- The :class:`~.sampler.Sampler` cares about whether parameters are **fixed** (thus irrelevant), **sampled** over, or **derived** from sampled and fixed parameters. The :class:`.~prior.Prior` cares about **sampled** parameters only.
+- The :class:`~.likelihood.Likelihood` and the :class:`~.theory.Theory` care about whether parameters are to be taken as **input**, or are expected to be part of their **output**.
 
-The :class:`parameterization.Parameterization` class (see diagram) takes care of interfacing between these two sets of roles, which, as it can be seen below, is sometimes not as simple as ``sampled + fixed = input``, and ``derived = output``.
+The :class:`~.parameterization.Parameterization` class (see diagram) takes care of interfacing between these two sets of roles, which, as it can be seen below, is sometimes not as simple as ``sampled + fixed = input``, and ``derived = output``.
 
 .. warning::
 
@@ -85,7 +85,7 @@ The :class:`parameterization.Parameterization` class (see diagram) takes care of
 How likelihoods and theory decide which input/output parameters go where
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-Once the :class:`parameterization.Parameterization` has decided which are the **input** and **output** parameters, the :class:`model.Model` needs to decide how to distribute them between the likelihood and theory components.
+Once the :class:`.~parameterization.Parameterization` has decided which are the **input** and **output** parameters, the :class:`.~model.Model` needs to decide how to distribute them between the likelihood and theory components.
 
 The simplest way to do that would be tagging each parameter with its corresponding likelihood(s) or theory, but this would make the input much more verbose and does not add much. Alternatively we could hard-code parameter routes for known parameters (e.g. for cosmological models), but hard-coding parameter names impose having to edit Cobaya's source if we want to modify a theory code or likelihood to add a new parameter, and we definitely want to avoid people having to edit Cobaya's source (maintainability, easier support, etc).
 
@@ -114,16 +114,17 @@ To implement these behaviours, we have taken the following design choices:
 
 - Two parameters with the same name are considered by default to be the same parameter. Thus, when defining custom likelihoods or creating new interfaces for external likelihoods, use preferably non-trivial names, e.g. instead of ``A``, use ``amplitude``, or even better, ``amplitude_of_something``. (The case of two likelihoods naming two *different* parameter the same is still an open problem: we could defined two parameters prefixed with the name of the likelihood, and have the :class:`model.Model` deal with those cases; or we could define some dynamical renaming.)
 - If a likelihood or theory (with method ``get_allow_agnostic()`` returning True) does not specify a parameter set/criterion and it is not the only element in the collection, we pass it only the parameters which have *not been claimed* by any other element.
-- Cosmology theory codes may understand a very large number of input/output parameters, so they will often be the "no knowledge" kind. On the other hand, they should **not** share parameters with the likelihoods: if the likelihoods do depend on any theoretical model parameter, they should request it via the same interface the theory-computed observables are, so that the parameterization of the theoretical model can be changed without changing the parameterization of the likelihoods (e.g. a SN likelihood may require the Hubble constant today, but if it where an input parameter of the likelihood, it would be more complicated to choose an alternative parameterization for the theoretical model e.g. some standard ruler plus some matter content).
-- Since theories and likelihoods do not share parameters, we choose that when theories mark parameters for themselves, they **absorb** them, so that they are ignored by all other parts of the code.
-- Given the ambiguity between input and output roles for particular parameters, likelihood classes would keep a list known parameters can do so in two ways:
+- Cosmology theory codes may understand a very large number of input/output parameters. These can be
+  obtained by from the code by internal introspection or they will often be the "no knowledge" (agnostic) kind. On the other hand, they should **not** usually share parameters with the likelihoods: if the likelihoods do depend on any theoretical model parameter, they should request it via the same interface the theory-computed observables are, so that the parameterization of the theoretical model can be changed without changing the parameterization of the likelihoods (e.g. an H_0 likelihood may require the Hubble constant today, but if it where an input parameter of the likelihood, it would be more complicated to choose an alternative parameterization for the theoretical model e.g. some standard ruler plus some matter content).
+- Given the ambiguity between input and output roles for particular parameters, likelihood and theory classes that keep a list known parameters can do so in two ways:
 
   + The preferred one: a common list of all possible parameters in a ``params`` block in the defaults file. There, parameters would appear with their **default** role. This has the advantage that priors, labels, etc can be inherited at initialisation from these definitions (though the definitions in the user-provided input file would take precedence). If there is a conflict between the priors (or fixed value, or derived state) for *the same parameter* defined in different defaults files of likelihoods that share it, an error will be produced (unless the user settles the conflict by specifying the desired behaviour for said parameter in the input file).
   + Alternatively (and preferred when there is a conflict), they could keep two lists: one of input and one of output parameters.
+  + If the parameters used depend on input options, or have to be obtained from internal introspection, the supported parameters must be returned programmatically from the ``get_can_support_params`` class method.
 
 - It may be that the likelihood does not depend on (i.e. has constraining power over) a particular parameter(s). In that case, we still throw an error if some input parameter has not been recognised by any likelihood, since parameter names may have been misspelled somewhere, and it is easier to define a mock likelihood to absorb the unused ones than maybe finding a warning about unused parameters (or use the unit likelihood described below).
 - Some times we are not interested in the likelihood, because we want to explore just the prior, or the distribution the prior induces on a derived parameter. In those cases, we would need a mock unit likelihood. This unit likelihood would automatically recognise all input parameters (except those absorbed by the theory, if a theory is needed to compute derived parameters).
-- For external likelihoods, where we can get input and output parameters via introspection, we may not want to use all of the input ones, as stated above, since they may have a fixed default value as keyword arguments. This would be treated as a special case of having a list of input parameters.
+- For external likelihood functions, where we can get input and output parameters via introspection, we may not want to use all of the input ones, as stated above, since they may have a fixed default value as keyword arguments. This would be treated as a special case of having a list of input parameters.
 
 Given these principles, we implement the following algorithm to resolve input/output parameter dependencies: (in the following, components include theory and likelihood codes)
 
