@@ -25,7 +25,7 @@ If you notice that Cobaya is performing unusually slow on your cluster *compared
 
 - If CAMB or CLASS is the slowest part, they are probably not using OpenMP parallelisation. To check that this is the case, try running ``top`` on the node when Cobaya is running, and check that CPU usage goes above 100% regularly. If it does not, you need to allocate more cores per process, or, if it doesn't fix it, make sure that OpenMP is working correctly (ask your local IT support for help with this).
 
-- If it is some other part of the code written in pure Python, ``numpy`` may not be taking advantage of parallelisation. To fix that, follow :ref:`this instructions <install_openblas>`.
+- If it is some other part of the code written in pure Python, ``numpy`` may not be taking advantage of parallelisation. To fix that, follow :ref:`these instructions <install_openblas>`.
 
 
 Running out of memory

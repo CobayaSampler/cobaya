@@ -34,7 +34,7 @@ Using the automatic installer
 
 The automatic installation script takes one or more input files that you intend to run, makes a list of the external packages that you will need, and downloads and installs them one by one.
 
-You need to specify a folder where the resulting files will be placed, which for the purposes of this instructions will be called ``/path/to/packages``. This does not need to be the folder in which you will run your samples.
+You need to specify a folder where the resulting files will be placed, which for the purposes of these instructions will be called ``/path/to/packages``. This does not need to be the folder in which you will run your samples.
 
 .. warning::
 

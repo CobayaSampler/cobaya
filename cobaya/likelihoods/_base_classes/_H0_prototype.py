@@ -11,19 +11,11 @@ It defines the following likelihoods
 
 - ``H0.riess2018a``: A legacy local measurement of :math:`H_0`, used in the analysis of
   Planck data for the Planck 2018 release.
-- ``H0.riess2018b``: The latest local measurement of :math:`H_0`.
-
-.. note::
-
-   If you use this likelihood, please cite it as:
-
-   - ``H0.riess2018a``: A. Riess et al, *"New Parallaxes of Galactic Cepheids from
-     Spatially Scanning the Hubble Space Telescope: Implications for the Hubble Constant"*
-     `(arXiv:1801.01120) <https://arxiv.org/abs/1801.01120>`_
-
-   - ``H0.riess2018b``: A. Riess et al, *"Milky Way Cepheid Standards for Measuring Cosmic
-     Distances and Application to Gaia DR2: Implications for the Hubble Constant"*
-     `(arXiv:1804.10655) <https://arxiv.org/abs/1804.10655>`_
+  `(arXiv:1801.01120) <https://arxiv.org/abs/1801.01120>`_
+- ``H0.riess2018b``: Updated local measurement of :math:`H_0`.
+  `(arXiv:1804.10655) <https://arxiv.org/abs/1804.10655>`_
+- ``H0.riess201903``:  Riess et al. 2019 constraint
+  `(arXiv:1903.07603) <https://arxiv.org/abs/1903.07603>`_
 
 
 Using a different measurement

@@ -9,18 +9,6 @@ native ones. You can find a description of the different likelihoods in the
 
    <br />
 
-.. note::
-
-   **If you use any of these likelihoods, please cite them as:**
-   |br|
-   **2018**:  N. Aghanim et al,
-   `Planck 2018 results. V. CMB power spectra and likelihoods`
-   `(arXiv:1907.12875) <https://arxiv.org/abs/1907.12875>`_
-   |br|
-   **2015**:  N. Aghanim et al,
-   `Planck 2015 results. XI. CMB power spectra, likelihoods, and robustness of parameters`
-   `(arXiv:1507.02704) <https://arxiv.org/abs/1507.02704>`_
-
 The Planck 2018 likelihoods defined here are: (*new in 2.0*)
 
 - ``planck_2018_lowl.TT``: low-:math:`\ell` temperature
@@ -34,6 +22,17 @@ The Planck 2018 likelihoods defined here are: (*new in 2.0*)
 - ``planck_2018_lensing.native``: lensing temperature+polarisation-based; native Python version (more customizable)
 - ``planck_2018_lensing.CMBMarged``: CMB-marginalized, temperature+polarisation-based lensing likelihood; native Python version (more customizable). Do not combine with any of the ones above!
 
+.. note::
+
+   **If you use any of these likelihoods, please cite them as:**
+   |br|
+   Planck Collaboration, `Planck 2018 results. V. CMB power spectra and likelihoods`
+   `(arXiv:1907.12875) <https://arxiv.org/abs/1907.12875>`_
+   |br|
+   Planck Collaboration, `Planck 2018 results. VIII. Gravitational lensing`
+   `(arXiv:1807.06210) <https://arxiv.org/abs/1807.06210>`_
+
+
 The Planck 2015 likelihoods defined here are:
 
 - ``planck_2015_lowl``
@@ -45,6 +44,15 @@ The Planck 2015 likelihoods defined here are:
 - ``planck_2015_lensing``
 - ``planck_2015_lensing_cmblikes``
   (a native non-clik, more customizable version of the previous clik-wrapped one)
+
+.. note::
+
+   **If you use any of these likelihoods, please cite them as:**
+   |br|
+   **2015**:  N. Aghanim et al,
+   `Planck 2015 results. XI. CMB power spectra, likelihoods, and robustness of parameters`
+   `(arXiv:1507.02704) <https://arxiv.org/abs/1507.02704>`_
+
 
 .. warning::
 

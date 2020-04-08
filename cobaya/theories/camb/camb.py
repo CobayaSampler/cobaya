@@ -9,7 +9,7 @@
    <br />
 
 This module imports and manages the CAMB cosmological code.
-It requires CAMB 1.1 or higher.
+It requires CAMB 1.1.2 or higher.
 
 .. note::
 
@@ -139,7 +139,7 @@ best adapts to your needs:
 
 * [**Recommended for modifying CAMB**]
   First, `fork the CAMB repository in Github <https://github.com/cmbant/CAMB>`_
-  (follow `this instructions <https://help.github.com/articles/fork-a-repo/>`_) and then
+  (follow `these instructions <https://help.github.com/articles/fork-a-repo/>`_) and then
   follow the same steps as above, substituting the second one with:
 
   .. code:: bash

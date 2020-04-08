@@ -1,7 +1,7 @@
 """
 .. module:: _des_prototype
 
-:Synopsis: DES likelihood.
+:Synopsis: DES likelihood, independent Python implementation.
            Well tested and agrees with likelihoods in DES chains for fixed nu mass.
 :Author: Antony Lewis (little changes for Cobaya by Jesus Torrado)
 
