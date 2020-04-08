@@ -530,11 +530,13 @@ class Model(HasLogger):
 
         # Get the requirements and providers
         for component in components:
+            # MARKED FOR DEPRECATION IN v3.0
             if hasattr(component, "add_theory"):
                 raise LoggedError(self.log,
                                   "Please remove add_theory from %r and return "
                                   "requirement dictionary from get_requirements() "
                                   "instead" % component)
+            # END OF DEPRECATION BLOCK
             self._needs[component] = []
             component.initialize_with_params()
             requirements.append(
