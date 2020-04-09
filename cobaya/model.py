@@ -15,7 +15,7 @@ import logging
 from cobaya.conventions import kinds, _prior, _timing, _params, _provides, \
     _overhead_time, _packages_path, _debug, _debug_default, _debug_file, _input_params, \
     _output_params, _get_chi2_name, _input_params_prefix, \
-    _output_params_prefix, _requires
+    _output_params_prefix, _requires, empty_dict
 from cobaya.input import update_info
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
@@ -503,7 +503,7 @@ class Model(HasLogger):
 
         self._component_order = {c: components.index(c) for c in dependence_order}
 
-    def _set_dependencies_and_providers(self, manual_requirements={}):
+    def _set_dependencies_and_providers(self, manual_requirements=empty_dict):
         requirements = []
         dependencies = {}
         self._needs = {}
@@ -521,7 +521,7 @@ class Model(HasLogger):
             else:
                 _require = dict.fromkeys(_require)
             for par in self.input_params:
-                if par in _require and component is not None:
+                if par in _require and _component is not None:
                     direct_param_dependence[_component].add(par)
                     # requirements that are sampled parameters automatically satisfied
                     _require.pop(par, None)
@@ -552,9 +552,8 @@ class Model(HasLogger):
             for k in can_provide + component.output_params + provide_params:
                 providers[k] = providers.get(k, []) + [component]
         # Add requirements requested by hand
-        _manual = '_manual'
         if manual_requirements:
-            components.append(_manual)
+            components.append(None)
             requirements.append(
                 _tidy_requirements(manual_requirements))
 
@@ -615,11 +614,11 @@ class Model(HasLogger):
                         if conditional_requirements:
                             has_more_requirements = True
                             requires += conditional_requirements
-            if component == _manual:
+            if component is None:
                 continue
             # set component compute order and raise error if circular dependence
             self._set_component_order(components, dependencies)
-        if components[-1] == _manual:
+        if components[-1] is None:
             components = components[:-1]
 
         # always call needs at least once (#TODO is this needed? e.g. for post)
