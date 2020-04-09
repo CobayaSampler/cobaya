@@ -5,7 +5,7 @@ from copy import deepcopy
 from cobaya.model import get_model
 from cobaya.theory import Theory
 from cobaya.tools import load_module
-from cobaya.likelihood import LikelihoodInterface, Likelihood, TheoryArg, DerivedArg
+from cobaya.likelihood import LikelihoodInterface, Likelihood, TheoryArg
 from cobaya.conventions import empty_dict
 from .common import process_packages_path
 
@@ -40,13 +40,12 @@ class BBN2(Theory):
 
 
 # noinspection PyDefaultArgument
-def cmb_likelihood(_derived: DerivedArg = ('check',),
-                   _theory: TheoryArg = {'Hubble': {'z': [0.5]}, 'CAMBdata': None}):
+def cmb_likelihood(_theory: TheoryArg = {'Hubble': {'z': [0.5]}, 'CAMBdata': None}):
     results = _theory.get_CAMBdata()
-    if isinstance(_derived, dict):
-        _derived['check'] = results.Params.YHe
-    return results.Params.YHe
+    derived = {'check': results.Params.YHe}
+    return results.Params.YHe, derived
 
+cmb_likelihood_info = {'external': cmb_likelihood, 'output_params': 'check'}
 
 camb_params = {
     "ombh2": 0.022274,
@@ -59,7 +58,7 @@ camb_params = {
 
 bbn_table = "PRIMAT_Yp_DH_Error.dat"
 debug = True
-info = {'likelihood': {'cmb': cmb_likelihood},
+info = {'likelihood': {'cmb': cmb_likelihood_info},
         'theory': {
             'camb': {"extra_args": {"lens_potential_accuracy": 1},
                      "requires": ['YHe', 'ombh2']},
@@ -67,7 +66,7 @@ info = {'likelihood': {'cmb': cmb_likelihood},
         'params': camb_params,
         'debug': debug, 'stop_at_error': True}
 
-info2 = {'likelihood': {'cmb': {'external': cmb_likelihood}},
+info2 = {'likelihood': {'cmb': cmb_likelihood_info},
          'theory': {'camb': {"requires": ['YHe', 'ombh2']}, 'bbn': BBN2},
          'params': camb_params, 'debug': debug}
 
@@ -137,13 +136,13 @@ class BBN_with_theory_errors(BBN, LikelihoodInterface):
         state['logp'] = -params_values_dict['BBN_delta'] ** 2 / 2
 
 
-info_error = {'likelihood': dict([('cmb', {'external': cmb_likelihood}),
+info_error = {'likelihood': dict([('cmb', cmb_likelihood_info),
                                   ('BBN', BBN_likelihood)]),
               'theory': {'camb': {"requires": ['YHe', 'ombh2']}},
               'params': dict(YHe={'prior': {'min': 0, 'max': 1}}, **camb_params),
               'debug': debug}
 
-info_error2 = {'likelihood': {'cmb': {'external': cmb_likelihood},
+info_error2 = {'likelihood': {'cmb': cmb_likelihood_info,
                               'BBN': {'external': BBN_with_theory_errors,
                                       'provides': 'YHe'}},
                'theory': {'camb': {"requires": ['YHe', 'ombh2']}},

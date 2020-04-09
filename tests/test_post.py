@@ -11,7 +11,6 @@ from cobaya.tools import KL_norm
 from cobaya.conventions import _output_prefix, _params, _force, kinds
 from cobaya.conventions import _prior, partag, _separator_files
 from cobaya.conventions import _post, _post_add, _post_remove, _post_suffix
-from cobaya.likelihood import DerivedArg
 
 _post_ = _separator_files + _post + _separator_files
 
@@ -24,10 +23,13 @@ sampled_pdf = lambda a, b: multivariate_normal.logpdf(
     [a, b], mean=sampled["mean"], cov=sampled["cov"])
 
 
-def target_pdf(a, b, c=0, _derived: DerivedArg = ("cprime",)):
-    if isinstance(_derived, dict):
-        _derived["cprime"] = c
-    return multivariate_normal.logpdf([a, b], mean=target["mean"], cov=target["cov"])
+def target_pdf(a, b, c=0):
+    logp = multivariate_normal.logpdf([a, b], mean=target["mean"], cov=target["cov"])
+    derived = {"cprime": c}
+    return logp, derived
+
+
+target_pdf_prior = lambda a, b, c=0: target_pdf(a, b, c=0)[0]
 
 
 _range = {"min": -2, "max": 2}
@@ -53,7 +55,7 @@ def test_post_prior(tmpdir):
         _output_prefix: info[_output_prefix], _force: True,
         _post: {_post_suffix: "foo",
                 _post_remove: {_prior: {"gaussian": None}},
-                _post_add: {_prior: {"target": target_pdf}}}}
+                _post_add: {_prior: {"target": target_pdf_prior}}}}
     post(info_post)
     # Load with GetDist and compare
     mcsamples = loadMCSamples(
@@ -90,7 +92,8 @@ def test_post_likelihood(tmpdir):
                 _post_remove: {kinds.likelihood: {
                     "gaussian": None, "dummy_remove": None}},
                 _post_add: {kinds.likelihood: {
-                    "target": {"external": target_pdf, "type": "A"},
+                    "target": {
+                        "external": target_pdf, "type": "A", "output_params": ["cprime"]},
                     "dummy_add": {
                         "external": lambda dummy: dummy_loglike_remove, "type": "B"}}}}}
     info_post_out, products_post = post(info_post)
@@ -122,7 +125,8 @@ def test_post_params():
         _post: {_post_suffix: "foo",
                 _post_remove: {_params: {"a_plus_b": None}},
                 _post_add: {
-                    kinds.likelihood: {"target": target_pdf},
+                    kinds.likelihood: {
+                        "target": {"external": target_pdf, "output_params": ["cprime"]}},
                     _params: {
                         "c": 1.234,
                         "a_minus_b": {partag.derived: "lambda a,b: a-b"},

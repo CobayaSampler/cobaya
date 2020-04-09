@@ -16,7 +16,7 @@ from cobaya.conventions import _output_prefix, _params, _prior, kinds, _updated_
 from cobaya.run import run
 from cobaya.yaml import yaml_load
 from cobaya.tools import getfullargspec
-from cobaya.likelihood import Likelihood, DerivedArg
+from cobaya.likelihood import Likelihood
 
 # Definition of external (log)pdf's
 
@@ -27,10 +27,9 @@ derived_funcs = {"r": lambda x, y: np.sqrt(x ** 2 + y ** 2),
                  "theta": lambda x, y: np.arctan2(x, y) / np.pi}
 
 
-def half_ring_func_derived(x, y=0.5, _derived: DerivedArg = ("r", "theta")):
-    if isinstance(_derived, dict):
-        _derived.update({p: derived_funcs[p](x, y) for p in ["r", "theta"]})
-    return eval(half_ring_str)(x, y)
+def half_ring_func_derived(x, y=0.5):
+    derived = {p: derived_funcs[p](x, y) for p in ["r", "theta"]}
+    return eval(half_ring_str)(x, y), derived
 
 
 gaussian_str = "lambda y: stats.norm.logpdf(y, loc=0, scale=0.2)"
@@ -42,7 +41,8 @@ info_string = {"half_ring": half_ring_str}
 info_callable = {"half_ring": half_ring_func}
 info_mixed = {"half_ring": half_ring_func, "gaussian_y": gaussian_str}
 info_import = {"half_ring": "import_module('.common_external','tests').half_ring_func"}
-info_derived = {"half_ring": half_ring_func_derived}
+info_derived = {"half_ring": {
+    "external": half_ring_func_derived, "output_params": ["r", "theta"]}}
 
 
 # Common part of all tests
@@ -132,6 +132,7 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
                                          Likelihood.get_defaults().items()
                                          if k not in info_likelihood[lik]})
             for k in [_input_params, _output_params]:
+                info_likelihood[lik].pop(k, None)
                 updated_info[kinds.likelihood][lik].pop(k)
         assert info_likelihood == updated_info[kinds.likelihood], (
                 "The likelihood information has not been updated correctly\n %r vs %r"
