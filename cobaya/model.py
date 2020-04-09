@@ -15,7 +15,7 @@ import logging
 from cobaya.conventions import kinds, _prior, _timing, _params, _provides, \
     _overhead_time, _packages_path, _debug, _debug_default, _debug_file, _input_params, \
     _output_params, _get_chi2_name, _input_params_prefix, \
-    _output_params_prefix, _requires
+    _output_params_prefix, _requires, empty_dict
 from cobaya.input import update_info
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
@@ -503,7 +503,7 @@ class Model(HasLogger):
 
         self._component_order = {c: components.index(c) for c in dependence_order}
 
-    def _set_dependencies_and_providers(self):
+    def _set_dependencies_and_providers(self, manual_requirements=empty_dict):
         requirements = []
         dependencies = {}
         self._needs = {}
@@ -511,7 +511,7 @@ class Model(HasLogger):
         components = list(self.theory.values()) + list(self.likelihood.values())
         direct_param_dependence = {c: set() for c in components}
 
-        def _tidy_requirements(_component, _require):
+        def _tidy_requirements(_require, _component=None):
             # take input requirement dictionary and split into list of tuples of
             # requirement names and requirement options
             if not _require:
@@ -521,7 +521,7 @@ class Model(HasLogger):
             else:
                 _require = dict.fromkeys(_require)
             for par in self.input_params:
-                if par in _require:
+                if par in _require and _component is not None:
                     direct_param_dependence[_component].add(par)
                     # requirements that are sampled parameters automatically satisfied
                     _require.pop(par, None)
@@ -540,7 +540,7 @@ class Model(HasLogger):
             self._needs[component] = []
             component.initialize_with_params()
             requirements.append(
-                _tidy_requirements(component, component.get_requirements()))
+                _tidy_requirements(component.get_requirements(), component))
 
             methods = component.get_can_provide_methods()
             can_provide = list(component.get_can_provide()) + list(methods)
@@ -551,6 +551,11 @@ class Model(HasLogger):
 
             for k in can_provide + component.output_params + provide_params:
                 providers[k] = providers.get(k, []) + [component]
+        # Add requirements requested by hand
+        if manual_requirements:
+            components.append(None)
+            requirements.append(
+                _tidy_requirements(manual_requirements))
 
         requirement_providers = {}
         has_more_requirements = True
@@ -603,17 +608,21 @@ class Model(HasLogger):
                 if needs[component]:
                     for need in needs[component]:
                         conditional_requirements = \
-                            _tidy_requirements(component,
-                                               component.needs(
-                                                   **{need.name: need.options}))
+                            _tidy_requirements(
+                                component.needs(**{need.name: need.options}), component)
                         self._needs[component].append(need)
                         if conditional_requirements:
                             has_more_requirements = True
                             requires += conditional_requirements
+            if component is None:
+                continue
             # set component compute order and raise error if circular dependence
             self._set_component_order(components, dependencies)
+        if components[-1] is None:
+            components = components[:-1]
 
         # always call needs at least once (#TODO is this needed? e.g. for post)
+        # (JT: need to check carefully)
         for component in components:
             if not self._needs[component]:
                 component.needs()
@@ -675,6 +684,12 @@ class Model(HasLogger):
 
         for component in components:
             component.initialize_with_provider(self.provider)
+
+    def add_requirements(self, requirements):
+        """
+        Adds quantities to be computed by the pipeline, for testing purposes.
+        """
+        self._set_dependencies_and_providers(manual_requirements=requirements)
 
     def requested(self):
         """
