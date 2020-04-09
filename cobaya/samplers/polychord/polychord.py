@@ -494,8 +494,8 @@ class polychord(Sampler):
                              stdout=PIPE, stderr=PIPE)
         out, err = process_make.communicate()
         if process_make.returncode:
-            log.info(out)
-            log.info(err)
+            log.info(out.decode("utf-8"))
+            log.info(err.decode("utf-8"))
             log.error("Compilation failed!")
             return False
         my_env.update({"CC": "mpicc", "CXX": "mpicxx"})
@@ -503,8 +503,8 @@ class polychord(Sampler):
                              cwd=cwd, env=my_env, stdout=PIPE, stderr=PIPE)
         out, err = process_make.communicate()
         if process_make.returncode:
-            log.info(out)
-            log.info(err)
+            log.info(out.decode("utf-8"))
+            log.info(err.decode("utf-8"))
             log.error("Python build failed!")
             return False
         return True
