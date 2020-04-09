@@ -7,11 +7,10 @@ This document gathers some notes about the development flow, release checklist, 
 ``git`` development model
 -------------------------
 
-We (*tend to*) use the model described `here <https://barro.github.io/2016/02/a-succesful-git-branching-model-considered-harmful/>`_:
-
-* Development happens in the master branch (only exceptionally are features developed in their own branches).
+* Non-breaking travis-passing latest changes and fixes are in master
+* Development that may break tests is done in temp branches or forks and merged to master once OK
+* Breaking changes developed in separate branches, and merged when releases updated
 * Releases are branched out, and only critical bug fixes are pushed onto them.
-
 
 Development flow for contributors
 ---------------------------------
@@ -23,7 +22,7 @@ Development flow for contributors
 1. Fork and clone the repo from github.
 2. From its folder, install in editable mode: ``pip install -e . --user``
 3. Modify stuff.
-4. Test with pytest.
+4. Test with pytest
 5. Pull requests, etc.
 
 Contributors must agree to the license (see ``LICENCE.txt`` in the root folder).
