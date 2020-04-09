@@ -11,7 +11,6 @@ from cobaya.conventions import kinds, _params
 from cobaya.yaml import yaml_load
 from cobaya.run import run
 from cobaya.tools import get_external_function
-from cobaya.likelihood import DerivedArg
 
 x_func = lambda _: _ / 3
 e_func = lambda _: _ + 1
@@ -24,16 +23,16 @@ j_func = "lambda b: b**2"
 k_func = "lambda f: f**3"
 
 
-def loglik(a, b, c, d, h, i, j, _derived: DerivedArg = ("x", "e")):
-    if isinstance(_derived, dict):
-        _derived.update({"x": x_func(c), "e": e_func(b)})
-    return multivariate_normal.logpdf((a, b, c, d, h, i, j), cov=0.1 * np.eye(7))
+def loglike(a, b, c, d, h, i, j):
+    logp = multivariate_normal.logpdf((a, b, c, d, h, i, j), cov=0.1 * np.eye(7))
+    derived = {"x": x_func(c), "e": e_func(b)}
+    return logp, derived
 
 
 # Info
 info = {
     kinds.likelihood:
-        {"test_lik": loglik},
+        {"test_lik": {"external": loglike, "output_params": ["x", "e"]}},
     kinds.sampler: {"mcmc": {"burn_in": 0, "max_samples": 10}},
     _params: yaml_load("""
        # Fixed to number
@@ -84,6 +83,43 @@ info = {
 
 def test_parameterization():
     updated_info, sampler = run(info)
+    products = sampler.products()
+    sample = products["sample"]
+    from getdist.mcsamples import MCSamplesFromCobaya
+    gdsample = MCSamplesFromCobaya(updated_info, products["sample"])
+    for i, point in sample:
+        a = info[_params]["a"]
+        b = get_external_function(info[_params]["b"])(a, point["bprime"])
+        c = get_external_function(info[_params]["c"])(a, point["cprime"])
+        e = get_external_function(e_func)(b)
+        f = get_external_function(f_func)(b)
+        g = get_external_function(info[_params]["g"]["derived"])(x_func(point["c"]))
+        h = get_external_function(info[_params]["h"])(info[_params]["i"])
+        j = get_external_function(info[_params]["j"])(b)
+        k = get_external_function(info[_params]["k"]["derived"])(f)
+        assert np.allclose(
+            point[["b", "c", "e", "f", "g", "h", "j", "k"]], [b, c, e, f, g, h, j, k])
+        # Test for GetDist too (except fixed ones, ignored by GetDist)
+        bcefffg_getdist = [gdsample.samples[i][gdsample.paramNames.list().index(p)]
+                           for p in ["b", "c", "e", "f", "g", "j", "k"]]
+        assert np.allclose(bcefffg_getdist, [b, c, e, f, g, j, k])
+
+
+# MARKED FOR DEPRECATION IN v3.0
+from cobaya.likelihood import DerivedArg
+def loglik_OLD(a, b, c, d, h, i, j, _derived: DerivedArg = ("x", "e")):
+    if isinstance(_derived, dict):
+        _derived.update({"x": x_func(c), "e": e_func(b)})
+    return multivariate_normal.logpdf((a, b, c, d, h, i, j), cov=0.1 * np.eye(7))
+
+# MARKED FOR DEPRECATION IN v3.0
+info_OLD = info.copy()
+info_OLD[kinds.likelihood] = {"test_lik": loglik_OLD}
+
+
+# MARKED FOR DEPRECATION IN v3.0
+def test_parameterization_old_derived_specification():
+    updated_info, sampler = run(info_OLD)
     products = sampler.products()
     sample = products["sample"]
     from getdist.mcsamples import MCSamplesFromCobaya

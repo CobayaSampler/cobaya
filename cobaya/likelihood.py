@@ -147,29 +147,58 @@ class LikelihoodExternalFunction(Likelihood):
                     [p for p in argspec.args if p not in ["_derived", "_theory"]])
         if info.get(_output_params, []):
             setattr(self, _output_params, str_to_list(info.get(_output_params)))
+        # MARKED FOR DEPRECATION IN v3.0
         elif "_derived" in argspec.args:
+            self.log.warning(
+                "The use of a `_derived` argument to deal with derived parameters will be"
+                " deprecated in a future version. From now on please list your derived "
+                "parameters in a list as the value of %r in the likelihood info (see "
+                "documentation) and have your function return a tuple "
+                "`(logp, {derived_param_1: value_1, ...})`.", _output_params)
+            # BEHAVIOUR TO BE REPLACED BY ERROR:
+            self._derived_through_arg = True
             derived_kw_index = argspec.args[-len(argspec.defaults):].index("_derived")
             setattr(self, _output_params, argspec.defaults[derived_kw_index])
+        # END OF DEPRECATION BLOCK
         else:
             setattr(self, _output_params, [])
         # TODO: provide manual requirements specification, same as I/O params
-        self.has_theory = "_theory" in argspec.args
-        if self.has_theory:
+        self.has_requirements = "_theory" in argspec.args
+        if self.has_requirements:
             theory_kw_index = argspec.args[-len(argspec.defaults):].index("_theory")
             self._needs = argspec.defaults[theory_kw_index]
         self.log.info("Initialized external likelihood.")
 
     def get_requirements(self):
-        return self._needs if self.has_theory else {}
+        return self._needs if self.has_requirements else {}
 
     def logp(self, **params_values):
-        # if no derived params defined in external func, delete the "_derived" argument
-        if not self.output_params:
-            params_values.pop("_derived")
-        if self.has_theory:
+        _derived = params_values.pop("_derived", None)
+        # MARKED FOR DEPRECATION IN v3.0
+        # BEHAVIOUR TO BE REPLACED BY ERROR:
+        if getattr(self, "_derived_through_arg", False):
+            params_values["_derived"] = _derived
+        # END OF DEPRECATION BLOCK
+        if self.has_requirements:
             params_values["_theory"] = self.provider
         try:
-            return self.external_function(**params_values)
+            return_value = self.external_function(**params_values)
+            bad_return_msg = "Expected return value `(logp, {derived_params_dict})`."
+            if hasattr(return_value, "__len__"):
+                logp = return_value[0]
+                if self.output_params:
+                    try:
+                        if _derived is not None:
+                            _derived.update(return_value[1])
+                            params_values["_derived"] = _derived
+                    except:
+                        raise LoggedError(self.log, bad_return_msg)
+            # MARKED FOR DEPRECATION IN v3.0 --> just the `getattr` below
+            elif self.output_params and not getattr(self, "_derived_through_arg", False):
+                raise LoggedError(self.log, bad_return_msg)
+            else:  # no return.__len__ and output_params expected
+                logp = return_value
+            return logp
         except Exception as ex:
             if isinstance(ex, LoggedError):
                 # Assume proper error info was written before raising LoggedError

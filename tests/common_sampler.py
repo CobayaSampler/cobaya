@@ -154,16 +154,14 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False,
     def like0(**kwargs):
         n_evals[0] += 1
         input_params = [kwargs[p] for p in params0]
-        if kwargs.get("_derived") is not None:
-            kwargs["_derived"][derived0] = sum(input_params)
-        return multivariate_normal.logpdf(input_params, mean=mean0, cov=cov0)
+        derived = {derived0: sum(input_params)}
+        return multivariate_normal.logpdf(input_params, mean=mean0, cov=cov0), derived
 
     def like1(**kwargs):
         n_evals[1] += 1
         input_params = [kwargs[p] for p in params1]
-        if kwargs.get("_derived") is not None:
-            kwargs["_derived"][derived1] = sum(input_params)
-        return multivariate_normal.logpdf(input_params, mean=mean1, cov=cov1)
+        derived = {derived1: sum(input_params)}
+        return multivariate_normal.logpdf(input_params, mean=mean1, cov=cov1), derived
 
     # Rearrange parameter in arbitrary order
     perm = list(range(dim0 + dim1))
@@ -236,10 +234,10 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False,
         i = choice(list(range(len(products["sample"]))))
         chi2_0_chain = -0.5 * products["sample"]["chi2__like0"][i]
         chi2_0_good = like0(
-            _derived=None, **{p: products["sample"][p][i] for p in params0})
+            **{p: products["sample"][p][i] for p in params0})[0]
         chi2_1_chain = -0.5 * products["sample"]["chi2__like1"][i]
         chi2_1_good = like1(
-            _derived=None, **{p: products["sample"][p][i] for p in params1})
+            **{p: products["sample"][p][i] for p in params1})[0]
         if not np.allclose([chi2_0_chain, chi2_1_chain], [chi2_0_good, chi2_1_good]):
             raise ValueError(
                 "Likelihoods not reproduced correctly. "
