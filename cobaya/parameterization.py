@@ -285,7 +285,7 @@ class Parameterization(HasLogger):
                 msg = ("The following expected sampled parameters "
                        "where not found : %r",
                        {p: self._sampled_renames[p] for p in not_found})
-            raise LoggedError(self.log, msg)
+            raise LoggedError(self.log, *msg)
         # Ignore fixed input parameters if they have the correct value
         to_pop = []
         for p, value in sampled_input.items():
