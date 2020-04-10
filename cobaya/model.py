@@ -547,7 +547,7 @@ class Model(HasLogger):
             # parameters that can be provided but not already explicitly assigned
             provide_params = [p for p in component.get_can_provide_params() if
                               p not in self.output_params and p not in
-                              str_to_list(getattr(component, _requires, []))]
+                              component.get_required_params()]
 
             for k in can_provide + component.output_params + provide_params:
                 providers[k] = providers.get(k, []) + [component]
@@ -727,7 +727,7 @@ class Model(HasLogger):
                     provide = str_to_list(getattr(component, _provides, []))
                     supports_params |= set(provide)
                 else:
-                    supports_params = set(component.get_requirements()).union(
+                    supports_params = set(component.get_required_params()).union(
                         set(component.get_can_support_params()))
                 # Identify parameters understood by this likelihood/theory
                 # 1a. Does it have input/output params list?
@@ -784,7 +784,7 @@ class Model(HasLogger):
                 component = agnostic_likes[io_kind][0]
                 for p, assigned in params_assign[io_kind].items():
                     if not assigned or not derived_param and \
-                            p in getattr(component, _requires, []):
+                       p in component.get_required_params():
                         params_assign[io_kind][p] += [component]
         # If unit likelihood is present, assign all unassigned inputs to it
         for like in self.likelihood.values():
