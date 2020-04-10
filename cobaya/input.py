@@ -167,7 +167,8 @@ def update_info(info):
             if options_not_recognized:
                 alternatives = {}
                 available = (
-                    {_external, partag.renames}.union(updated_info[block][component]))
+                    {_external, _requires, partag.renames}.union(
+                        updated_info[block][component]))
                 while options_not_recognized:
                     option = options_not_recognized.pop()
                     alternatives[option] = fuzzy_match(option, available, n=3)
