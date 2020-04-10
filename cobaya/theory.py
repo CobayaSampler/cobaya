@@ -32,7 +32,7 @@ see :doc:`theories_and_dependencies`.
 
 import inspect
 from collections import deque
-from typing import Sequence, Optional, Union
+from typing import Sequence, Optional, Union, Mapping
 # Local
 from cobaya.conventions import _external, kinds, _requires, _params, empty_dict
 from cobaya.component import CobayaComponent, ComponentCollection
@@ -75,6 +75,20 @@ class Theory(CobayaComponent):
         :return: dictionary of requirements (or iterable of requirement names if no
                  optional parameters are needed)
         """
+        return dict.fromkeys(str_to_list(getattr(self, _requires, [])))
+
+    def get_required_params(self):
+        """
+        Returns just the required parameters indicated by
+        :func:`~theory.Theory.get_requirements`.
+
+        :return: iterable of required parameters
+        """
+        requirements = self.get_requirements()
+        if isinstance(requirements, Mapping):
+            return [p for p, v in requirements.items() if v is None]
+        else:
+            return requirements
 
         return dict.fromkeys(str_to_list(getattr(self, _requires, [])))
 
