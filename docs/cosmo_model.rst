@@ -124,6 +124,8 @@ Low-level access to the theory code
 You can access the imported CAMB module or CLASS 'classy' instance as, respectively, ``Model.theory["camb"].camb`` and ``Model.theory["classy"].classy``. But be careful about manually changing their settings: it may unexpectedly influence subsequent cosmological observable computations for the present model instance. If you want to directly access CAMB's results object, the likelihood can request 'CAMBdata' as a requirement and retrieve it from a likelihood using ``self.provider.get_CAMBdata()``.
 
 
+.. _cosmo_model_sampler:
+
 Manually passing this model to a sampler
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
