@@ -219,7 +219,7 @@ class Theory(CobayaComponent):
         """
         self.log.debug("Got parameters %r", params_values_dict)
 
-        for set_param in getattr(self, _requires, []):
+        for set_param in self.get_required_params():
             # mess handling optional parameters that may be computed elsewhere, eg. YHe
             params_values_dict = params_values_dict.copy()
             params_values_dict[set_param] = self.provider.get_param(set_param)
