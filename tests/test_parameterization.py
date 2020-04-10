@@ -105,8 +105,12 @@ def test_parameterization():
         assert np.allclose(bcefffg_getdist, [b, c, e, f, g, j, k])
 
 
-# MARKED FOR DEPRECATION IN v3.0
-from cobaya.likelihood import DerivedArg
+# MARKED FOR DEPRECATION IN v3.0 -- Everything below this line
+
+from typing import Sequence, Union
+
+DerivedArg = Union[dict, Sequence, None]
+
 def loglik_OLD(a, b, c, d, h, i, j, _derived: DerivedArg = ("x", "e")):
     if isinstance(_derived, dict):
         _derived.update({"x": x_func(c), "e": e_func(b)})

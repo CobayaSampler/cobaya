@@ -120,16 +120,16 @@ Custom likelihoods also allow for the definition of derived parameters. In this 
 
 .. code:: python
 
-   # List available derived parameters in the default value of the `_derived` keyword
-   def gauss_ring_logp_with_derived(x, y, _derived=("r", "theta")):
+   # List available derived parameters in the 'output_params' option of the likelihood.
+   # To make room for that, you need assign the function to the option 'external'.
+   # Return both the log-likelihood and a dictionary of derived parameters.
+   def gauss_ring_logp_with_derived(x, y):
        r = np.sqrt(x**2+y**2)
-       # Assuming `_derived` is passed at runtime and a dict, fill it as a dictionary
-       if isinstance(_derived, dict):
-           _derived["r"] = r
-           _derived["theta"] = np.arctan(y/x)
-       return stats.norm.logpdf(r, loc=1, scale=0.02)
+       derived = {"r": r, "theta": np.arctan(y/x)}
+       return stats.norm.logpdf(r, loc=1, scale=0.02), derived
 
-   info_alt = {"likelihood": {"ring": gauss_ring_logp_with_derived}}
+   info_alt = {"likelihood": {"ring":
+       {"external": gauss_ring_logp_with_derived, "output_params": ["r", "theta"]}}}
 
 And remove the definition (but not the mention!) of ``r`` and ``theta`` in the ``params`` block:
 

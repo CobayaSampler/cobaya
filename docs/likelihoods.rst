@@ -44,10 +44,10 @@ External likelihood functions can be used by using input of the form:
 
 The ``[definition]`` follows the exact same rules as :ref:`external priors <prior_external>`, so check out that section for the details.
 
-The only difference with external priors is that external likelihoods can provide **derived** parameters. This can only be achieved using a ``def``'ed function (as opposed to a ``lambda`` one. To do that:
+The only difference with external priors is that external likelihoods can provide **derived** parameters. To do that:
 
-1. In your function definition, define a *keyword* argument ``_derived`` with a list of derived parameter names as the default value.
-2. Inside the function, assume that you have been passed a dictionary through the keyword ``_derived`` and **update** it with the derived parameter values corresponding to the input files.
+1. In your function, return a tuple of the log-likelihood and a dictionary of derived parameter values ``{derived_1: value_1, [...]}``.
+2. When preparing Cobaya's input, add to your external likelihood info an option ``output_params`` listing the names of the available derived parameters.
 
 For an application, check out the :ref:`advanced example <example_advanced_likderived>`.
 
@@ -60,42 +60,42 @@ For an application, check out :doc:`cosmo_external_likelihood`.
 
 .. note::
 
-   Obviously, ``_derived`` and ``_theory`` are reserved parameter names that you cannot use as arguments in your likelihood definition, except for the purposes explained above.
+   Obviously, ``_theory`` is a reserved parameter name that you cannot use as an argument in your likelihood definition, except for the purposes explained above.
 
 .. note::
 
-   Input and output (derived) parameters of an external function are guessed from its definition. But in some cases you may prefer not to define your likelihood function with explicit arguments (e.g. if the number of them may vary). In that case, you can manually specify the input and output parameters via the ``input_params`` and ``output_params`` options of the likelihood definition in your input dictionary.
+   The input parameters of an external function are guessed from its definition. But in some cases you may prefer not to define your likelihood function with explicit arguments (e.g. if the number of them may vary). In that case, you can manually specify the input parameters via the ``input_params`` option of the likelihood definition in your input dictionary.
 
-   E.g. the following two snippets are equivalent, but in the second one, one can alter the i/o parameters programmatically:
+   E.g. the following two snippets are equivalent, but in the second one, one can alter the input parameters programmatically:
 
    .. code:: Python
 
       # Default: guessed from function signature
 
-      def my_like1(a0, a1, _derived= ("sum_a",)):
-          if isinstance(_derived, dict):
-              _derived["sum_a"] = a0 + a1
-          return # some function of `(a0, a1)`
+      def my_like(a0, a1):
+          logp =  # some function of `(a0, a1)`
+          devived = {"sum_a": a0 + a1}
+          return logp, derived
 
-      info_like = {"likelihood": my_like}
+      info_like = {"my_likelihood": {
+          "external": my_like, "output_params": ["sum_a"]}}
 
    .. code:: Python
 
       # Manual: no explicit function signature required
 
-      # Define the lists of i/o params
+      # Define the lists of input params
       my_input_params = ["a0", "a1"]
-      my_output_params = ["sum_a"]
 
-      def my_like1(**kwargs):
+      def my_like(**kwargs):
           current_input_values = [kwargs[p] for p in my_input_params]
-          if kwargs.get("_derived") is not None:
-              kwargs["_derived"][my_output_params[0]] = sum(current_input_values)
-          return # some function of the input params
+          logp =  # some function of the input params
+          derived = {"sum_a": sum(current_input_values)}
+          return logp, derived
 
-      info_like = {"likelihood": {
+      info_like = {"my_likelihood": {
           "external": my_like,
-          "input_params": my_input_params, "output_params": my_output_params}}
+          "input_params": my_input_params, "output_params": ["sum_a"]}}
 
 
 .. _likelihood_classes:

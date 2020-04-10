@@ -27,7 +27,7 @@ import sys
 import traceback
 import inspect
 from time import sleep
-from typing import Mapping, Optional, Union, Sequence
+from typing import Mapping, Optional, Union
 from itertools import chain
 import numpy as np
 
@@ -40,7 +40,6 @@ from cobaya.component import ComponentCollection, Provider
 from cobaya.theory import Theory
 
 # type for special _derived and _theory introspected arguments
-DerivedArg = Union[dict, Sequence, None]
 TheoryArg = Union[dict, Provider]
 
 
