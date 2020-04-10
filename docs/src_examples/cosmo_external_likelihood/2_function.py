@@ -31,7 +31,7 @@ def my_like(
         plt.plot(ells[2:], (Nl*ell_factor)[2:], label='Noise')
         plt.legend()
         plt.ylim([0, 6000])
-        plt.show()
+        plt.savefig(_plot_name)
         plt.close()
     # ----------------
     # Compute the log-likelihood

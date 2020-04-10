@@ -25,6 +25,7 @@ model = get_model(info)
 
 # Eval likelihood once with fid values and plot
 _do_plot = True
+_plot_name = "fiducial.png"
 fiducial_params_w_noise = fiducial_params.copy()
 fiducial_params_w_noise['noise_std_pixel'] = 20
 model.logposterior(fiducial_params_w_noise)
@@ -38,4 +39,5 @@ plt.plot(As, loglikes)
 plt.gca().get_yaxis().set_visible(False)
 plt.title(r"$\log P(A_s|\mathcal{D},\mathcal{M}) (+ \mathrm{const})$")
 plt.xlabel(r"$A_s$")
-plt.show()
+plt.savefig("log_like.png")
+plt.close()
