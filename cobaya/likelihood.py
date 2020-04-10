@@ -179,7 +179,6 @@ class LikelihoodExternalFunction(Likelihood):
         self.log.info("Initialized external likelihood.")
 
     def get_requirements(self):
-        print("------", self._requirements)
         return self._requirements
 
     def logp(self, **params_values):
