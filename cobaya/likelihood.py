@@ -33,7 +33,7 @@ import numpy as np
 
 # Local
 from cobaya.conventions import kinds, _external, _component_path, empty_dict, \
-    _input_params, _output_params
+    _input_params, _output_params, _requires
 from cobaya.tools import get_class, get_external_function, getfullargspec, str_to_list
 from cobaya.log import LoggedError
 from cobaya.component import ComponentCollection, Provider
@@ -136,14 +136,14 @@ class LikelihoodExternalFunction(Likelihood):
         Theory.__init__(self, info, name=name, timing=timing, standalone=False)
         # Store the external function and assign its arguments
         self.external_function = get_external_function(info[_external], name=name)
-        # Manually specified input_params and output_params take precedence,
-        # otherwise, guess from argspec
         argspec = getfullargspec(self.external_function)
         if info.get(_input_params, []):
             setattr(self, _input_params, str_to_list(info.get(_input_params)))
         else:
+            # MARKED FOR DEPRECATION IN v3.0 --> just the `_derived` and `_theory` below
             setattr(self, _input_params,
-                    [p for p in argspec.args if p not in ["_derived", "_theory"]])
+                    [p for p in argspec.args if p not in
+                     ["_derived", "_theory", "_provider"]])
         if info.get(_output_params, []):
             setattr(self, _output_params, str_to_list(info.get(_output_params)))
         # MARKED FOR DEPRECATION IN v3.0
@@ -161,15 +161,26 @@ class LikelihoodExternalFunction(Likelihood):
         # END OF DEPRECATION BLOCK
         else:
             setattr(self, _output_params, [])
-        # TODO: provide manual requirements specification, same as I/O params
-        self.has_requirements = "_theory" in argspec.args
-        if self.has_requirements:
-            theory_kw_index = argspec.args[-len(argspec.defaults):].index("_theory")
-            self._needs = argspec.defaults[theory_kw_index]
+        # Required quantities from other components
+        # MARKED FOR DEPRECATION IN v3.0
+        if "_theory" in argspec.args:
+            self.log.warning(
+                "The use of a `_theory` argument to deal with requirements will be"
+                " deprecated in a future version. From now on please indicate your "
+                "requirements as the value of field %r in the likelihood info (see "
+                "documentation) and have your function take a parameter `_provider`.",
+                _requires)
+            # BEHAVIOUR TO BE REPLACED BY ERROR:
+            info[_requires] = argspec.defaults[
+                argspec.args[-len(argspec.defaults):].index("_theory")]
+            self._uses_old_theory = True
+        # END OF DEPRECATION BLOCK
+        self._requirements = info.get(_requires, {}) or {}
         self.log.info("Initialized external likelihood.")
 
     def get_requirements(self):
-        return self._needs if self.has_requirements else {}
+        print("------", self._requirements)
+        return self._requirements
 
     def logp(self, **params_values):
         _derived = params_values.pop("_derived", None)
@@ -178,8 +189,12 @@ class LikelihoodExternalFunction(Likelihood):
         if getattr(self, "_derived_through_arg", False):
             params_values["_derived"] = _derived
         # END OF DEPRECATION BLOCK
-        if self.has_requirements:
-            params_values["_theory"] = self.provider
+        if self._requirements:
+            # MARKED FOR DEPRECATION IN v3.0 --> simplify lines below
+            provider_arg = "_provider"
+            if getattr(self, "_uses_old_theory", False):
+                provider_arg = "_theory"
+            params_values[provider_arg] = self.provider
         try:
             return_value = self.external_function(**params_values)
             bad_return_msg = "Expected return value `(logp, {derived_params_dict})`."
