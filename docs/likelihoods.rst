@@ -101,7 +101,7 @@ For an application, check out :doc:`cosmo_external_likelihood`.
 .. _likelihood_classes:
 
 Likelihood classes: code conventions and defaults
------------------------------------------------------
+-------------------------------------------------
 
 Each likelihood inherits from the :class:`.likelihood.Likelihood` class (see below).
 
@@ -141,7 +141,7 @@ In addition to the likelihood class itself, each likelihood can have additional 
 It is up to you where to define your likelihood class(es): the ``__init__`` file can define a class [ClassName] directly, or you can define a class in a ``module.py`` file inside the likelihood directory (subpackage).
 
 Using an *internal* likelihood class
--------------------------------------
+------------------------------------
 
 Assuming your ``__init__`` file defines the class, or imports it (``from .module_name import ClassName``),
 when running Cobaya you can reference the internal likelihood using:
@@ -165,7 +165,7 @@ If you defined the class in *module_name.py* then you would reference it as
 If the class name is the same as the module name it can be omitted.
 
 Using an *external* likelihood class
--------------------------------------
+------------------------------------
 
 If you have a package called *mycodes*, containing a likelihood class called MyLike in *mycodes.mylikes*, when running Cobaya you can
 use the input
@@ -191,7 +191,7 @@ You can also specify an explicit path for the module, e.g.
 If MyLike is imported by your package ``__init__`` you can also simply reference it as ``mycodes.MyLike``.
 
 Implementing your own likelihood class
------------------------------------------
+--------------------------------------
 
 For your likelihood class you just need to define a few standard class methods:
 
