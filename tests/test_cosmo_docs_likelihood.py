@@ -24,7 +24,7 @@ def test_cosmo_docs_likelihood_camb(packages_path):
         lines = open(os.path.join(docs_src_folder, "1_fiducial_Cl.py")).readlines()
         for i, line in enumerate(lines):
             if line.startswith(_packages_path):
-                lines[i] = "packages_path = '%s'" % packages_path
+                lines[i] = "packages_path = '%s'" % packages_path.strip("\'\"")
         globals_example = {}
         exec("\n".join(lines), globals_example)
         exec(open(os.path.join(docs_src_folder, "2_function.py")).read(), globals_example)
