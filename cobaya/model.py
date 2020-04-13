@@ -15,7 +15,7 @@ import logging
 from cobaya.conventions import kinds, _prior, _timing, _params, _provides, \
     _overhead_time, _packages_path, _debug, _debug_default, _debug_file, _input_params, \
     _output_params, _get_chi2_name, _input_params_prefix, \
-    _output_params_prefix, _requires, empty_dict
+    _output_params_prefix, empty_dict
 from cobaya.input import update_info
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
@@ -504,10 +504,6 @@ class Model(HasLogger):
         self._component_order = {c: components.index(c) for c in dependence_order}
 
     def _set_dependencies_and_providers(self, manual_requirements=empty_dict):
-        requirements = []
-        dependencies = {}
-        self._needs = {}
-        providers = {}
         components = list(self.theory.values()) + list(self.likelihood.values())
         direct_param_dependence = {c: set() for c in components}
 
@@ -525,10 +521,12 @@ class Model(HasLogger):
                     direct_param_dependence[_component].add(par)
                     # requirements that are sampled parameters automatically satisfied
                     _require.pop(par, None)
-
             return [Requirement(p, v) for p, v in _require.items()]
 
         # Get the requirements and providers
+        requirements = []
+        providers = {}
+        self._needs = {}
         for component in components:
             # MARKED FOR DEPRECATION IN v3.0
             if hasattr(component, "add_theory"):
@@ -541,7 +539,6 @@ class Model(HasLogger):
             component.initialize_with_params()
             requirements.append(
                 _tidy_requirements(component.get_requirements(), component))
-
             methods = component.get_can_provide_methods()
             can_provide = list(component.get_can_provide()) + list(methods)
             # parameters that can be provided but not already explicitly assigned
@@ -558,6 +555,7 @@ class Model(HasLogger):
                 _tidy_requirements(manual_requirements))
 
         requirement_providers = {}
+        dependencies = {}
         has_more_requirements = True
         while has_more_requirements:
             # list of dictionary of needs for each component
@@ -672,16 +670,14 @@ class Model(HasLogger):
                         if comp is not component and \
                                 component in self._dependencies.get(comp, []):
                             sampled_dependence[p].append(comp)
-
         self.sampled_dependence = sampled_dependence
 
         if self.log.getEffectiveLevel() <= logging.DEBUG:
             self.log.debug("Requirements will be calculated by these components:")
             for requirement, provider in requirement_providers.items():
-                self.log.debug("- %s: %s" % (requirement, provider))
-
+                self.log.debug("- %s: %s", requirement, provider)
+        # Initialize the provider and pass it to each component
         self.provider = Provider(self, requirement_providers)
-
         for component in components:
             component.initialize_with_provider(self.provider)
 
