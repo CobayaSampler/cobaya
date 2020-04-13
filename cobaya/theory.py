@@ -77,6 +77,29 @@ class Theory(CobayaComponent):
         """
         return dict.fromkeys(str_to_list(getattr(self, _requires, [])))
 
+    def _update_required_params(self):
+        """
+        Selects from the list of requirements those that appear to be parameters (i.e.
+        they are indicated in the requirements with no options *and* are handed by the
+        provider through the set_params method.
+
+        Before the call to `initialize_with_provider`, only the first condition is
+        checked.
+        """
+        self._required_params = set()
+        reqs = self.get_requirements()
+        if not isinstance(reqs, Mapping):
+            reqs = dict.fromkeys(reqs)
+        for req, opt in reqs.items():
+            if opt is None:
+                if getattr(self, "provider", None) is not None:
+                    if req in self.provider.requirement_providers:
+                        this_provider = self.provider.requirement_providers[req]
+                        return req in this_provider.get_can_provide_params()
+                else:
+                    # Assume it is a parameter for now
+                    self._required_params.add(req)
+
     def get_required_params(self):
         """
         Returns just the required parameters indicated by
@@ -84,13 +107,9 @@ class Theory(CobayaComponent):
 
         :return: iterable of required parameters
         """
-        requirements = self.get_requirements()
-        if isinstance(requirements, Mapping):
-            return [p for p, v in requirements.items() if v is None]
-        else:
-            return requirements
-
-        return dict.fromkeys(str_to_list(getattr(self, _requires, [])))
+        if not hasattr(self, "_required_params"):
+            self._update_required_params()
+        return self._required_params
 
     def needs(self, **requirements):
         """
@@ -131,6 +150,7 @@ class Theory(CobayaComponent):
                          this component to get computed requirements
         """
         self.provider = provider
+        self._update_required_params()
 
     def get_param(self, p):
         """
