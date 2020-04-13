@@ -9,6 +9,11 @@ Creating your own cosmological likelihood with **cobaya** is super simple. You c
 #. Add to your likelihood function definition a keyword ``_provider=None``. At run-time, you can call ``get_[...]`` methods of ``_provider`` to get the quantities that you requested evaluated at the current parameters values, e.g ``_theory.get_Cl()`` in the example below.
 #. If you wish to define derived paramters, do it as for :ref:`general external likelihoods <likelihood_external>` (example :doc:`here <example_advanced>`): add an ``output_params`` field to the likelihood info listing your derived parameters, and have your function return a tuple ``(log-likelihood, {derived parameters dictionary})``.
 
+.. note::
+
+    It may be easier and cleaner, especially for real-world likelihoods, to simply define your own new likelihood class (see :doc:`likelihoods`).
+    Then you would simply reference your qualified class name in the input yaml.
+
 Example: your own CMB experiment!
 ---------------------------------
 
