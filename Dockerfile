@@ -1,5 +1,5 @@
 #Dockerfile for running cobaya notebooks with binder
-#https://mybinder.org/v2/gh/JesusTorrado/cobaya/py3?filepath=docs%2Fcobaya-example.ipynb
+#https://mybinder.org/v2/gh/CobayaSampler/cobaya/master?filepath=docs%2Fcobaya-example.ipynb
 
 FROM cmbant/cosmobox
 
