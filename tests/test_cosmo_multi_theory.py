@@ -5,7 +5,7 @@ from copy import deepcopy
 from cobaya.model import get_model
 from cobaya.theory import Theory
 from cobaya.tools import load_module
-from cobaya.likelihood import LikelihoodInterface, Likelihood, TheoryArg
+from cobaya.likelihood import LikelihoodInterface, Likelihood
 from cobaya.conventions import empty_dict
 from .common import process_packages_path
 
@@ -40,12 +40,13 @@ class BBN2(Theory):
 
 
 # noinspection PyDefaultArgument
-def cmb_likelihood(_theory: TheoryArg = {'Hubble': {'z': [0.5]}, 'CAMBdata': None}):
-    results = _theory.get_CAMBdata()
+def cmb_likelihood(_provider):
+    results = _provider.get_CAMBdata()
     derived = {'check': results.Params.YHe}
     return results.Params.YHe, derived
 
-cmb_likelihood_info = {'external': cmb_likelihood, 'output_params': 'check'}
+cmb_likelihood_info = {'external': cmb_likelihood, 'output_params': 'check',
+                       'requires': {'Hubble': {'z': [0.5]}, 'CAMBdata': None}}
 
 camb_params = {
     "ombh2": 0.022274,
