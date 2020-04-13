@@ -17,6 +17,8 @@ docs_img_folder = os.path.join(docs_folder, "img")
 
 def test_cosmo_docs_likelihood_camb(packages_path):
     packages_path = process_packages_path(packages_path)
+    # Since we are going to change dirs, make it absolute
+    packages_path = os.path.abspath(packages_path)
     # Go to the folder containing the python code
     cwd = os.getcwd()
     try:
