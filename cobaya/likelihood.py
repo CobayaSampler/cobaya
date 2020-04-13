@@ -39,9 +39,6 @@ from cobaya.log import LoggedError
 from cobaya.component import ComponentCollection, Provider
 from cobaya.theory import Theory
 
-# type for special _derived and _theory introspected arguments
-TheoryArg = Union[dict, Provider]
-
 
 class LikelihoodInterface:
     """
