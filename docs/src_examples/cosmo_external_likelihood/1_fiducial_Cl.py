@@ -11,7 +11,7 @@ info_fiducial = {
     'params': fiducial_params,
     'likelihood': {'one': None},
     'theory': {'camb': {"extra_args": {"num_massive_neutrinos": 1}}},
-    'packages': packages_path}
+    'packages_path': packages_path}
 
 from cobaya.model import get_model
 model_fiducial = get_model(info_fiducial)
