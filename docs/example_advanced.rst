@@ -286,8 +286,3 @@ If we would like to sample on ``theta`` and ``r`` instead, our input file would 
         Rminus1_stop: 0.001
 
     output: chains/ring
-
-.. note::
-
-    It may be easier and cleaner, especially for real-world likelihoods, to simply define your own new likelihood class (see :doc:`likelihoods`).
-    Then you would simply reference your qualified class name in the input yaml.
