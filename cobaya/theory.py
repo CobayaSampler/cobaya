@@ -95,7 +95,8 @@ class Theory(CobayaComponent):
                 if getattr(self, "provider", None) is not None:
                     if req in self.provider.requirement_providers:
                         this_provider = self.provider.requirement_providers[req]
-                        return req in this_provider.get_can_provide_params()
+                        if req in this_provider.get_can_provide_params():
+                            self._required_params.add(req)
                 else:
                     # Assume it is a parameter for now
                     self._required_params.add(req)
@@ -238,7 +239,6 @@ class Theory(CobayaComponent):
         (retrieved using get_current_derived()).
         """
         self.log.debug("Got parameters %r", params_values_dict)
-
         for set_param in self.get_required_params():
             # mess handling optional parameters that may be computed elsewhere, eg. YHe
             params_values_dict = params_values_dict.copy()
