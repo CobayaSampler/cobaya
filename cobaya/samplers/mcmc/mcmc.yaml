@@ -73,5 +73,5 @@ seed:  # integer between 0 and 2**32 - 1
 # To be deprecated
 # ----------------
 check_every:  # now it is learn_every
-oversample: # now controled by oversample_power > 0
+oversample: # now controlled by oversample_power > 0
 drag_limits:  # use oversample_power instead

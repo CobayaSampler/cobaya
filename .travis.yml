@@ -77,8 +77,6 @@ matrix:
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="conda-forge"
       python: "3.8"
-  allow_failures:
-    - name: "Bleeding Edge: gcc-9, Python 3.8 Anaconda (conda-forge)"
 
 before_install:
   # Configure right compilers version
