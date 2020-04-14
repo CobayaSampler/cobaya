@@ -93,11 +93,11 @@ class BoltzmannBase(Theory):
           Non-linear contributions are included by default. Note that the nonlinear setting
           determines whether nonlinear corrections are calculated; the get_Pk_interpolator
           function also has a nonlinear argument to specify if you want the linear or
-          nonlinear spectrum returned (you can also get the linear spectrum even if
-          the nonlinear calculation is requested).
+          nonlinear spectrum returned (to have both linear and non-linear spectra
+          available request a tuple (False,True) for the nonlinear argument).
           All ``k`` values should be in units of ``1/Mpc``.
         - ``Pk_grid={...}``: similar to Pk_interpolator except that rather than returning
-          a bicuplic spline object it returns the raw power spectrum grid as a (k, z, PK)
+          a bicubic spline object it returns the raw power spectrum grid as a (k, z, PK)
           set of arrays.
         - ``sigma_R{...}``: RMS linear fluctuation in spheres of radius R at redshifts z.
           Takes ``"z": [list_of_evaluated_redshifts]``, ``"k_max": [k_max]``,
