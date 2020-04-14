@@ -245,16 +245,7 @@ class mcmc(CovmatSampler):
                     "Dragging disabled: "
                     "speed ratio and fast-to-slow ratio not large enough.")
         # Define proposer and other blocking-related quantities
-        if np.any(np.array(self.oversampling_factors) > 1):
-            self.mpi_info("Oversampling with factors:")
-            max_width = len(str(max(self.oversampling_factors)))
-            for f, b in zip(self.oversampling_factors, self.blocks):
-                self.mpi_info("* %" + "%d" % max_width + "d : %r", f, b)
-            if self.oversample_thin and not self.drag:
-                self.current_point.output_thin = int(np.round(sum(
-                    len(b) * o for b, o in zip(self.blocks, self.oversampling_factors)) /
-                                                              self.model.prior.d()))
-        elif self.drag:
+        if self.drag:
             # MARKED FOR DEPRECATION IN v3.0
             if getattr(self, "drag_limits", None) is not None:
                 self.log.warning("*DEPRECATION*: 'drag_limits' has been deprecated. "
@@ -267,6 +258,16 @@ class mcmc(CovmatSampler):
             self.mpi_info("* %" + "%d" % max_width + "d : %r", 1, self.slow_blocks)
             self.mpi_info("* %" + "%d" % max_width + "d : %r",
                           self.drag_interp_steps, self.fast_blocks)
+        elif np.any(np.array(self.oversampling_factors) > 1):
+            self.mpi_info("Oversampling with factors:")
+            max_width = len(str(max(self.oversampling_factors)))
+            for f, b in zip(self.oversampling_factors, self.blocks):
+                self.mpi_info("* %" + "%d" % max_width + "d : %r", f, b)
+            if self.oversample_thin:
+                self.current_point.output_thin = int(np.round(sum(
+                    len(b) * o for b, o in zip(self.blocks, self.oversampling_factors)) /
+                                                              self.model.prior.d()))
+
         # Save blocking in updated info, in case we want to resume
         self._updated_info["blocking"] = list(zip(self.oversampling_factors, self.blocks))
         sampled_params_list = list(self.model.parameterization.sampled_params())
