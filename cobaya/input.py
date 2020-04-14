@@ -72,7 +72,7 @@ def get_used_components(*infos):
     for info in infos:
         for field in kinds:
             components[field] += [a for a in (info.get(field) or [])
-                               if a not in components[field]]
+                                  if a not in components[field]]
     # return dictionary of non-empty blocks
     return {k: v for k, v in components.items() if v}
 
@@ -422,7 +422,7 @@ def get_preferred_old_values(info_old):
                 cls = get_class(k, block_name, component_path=component_path)
                 prefer_old_k_this = getattr(cls, "_at_resume_prefer_old", {})
                 if prefer_old_k_this:
-                    if not block_name in keep_old:
+                    if block_name not in keep_old:
                         keep_old[block_name] = {}
                     keep_old[block_name].update(
                         {k: {o: block[k][o] for o in prefer_old_k_this if o in block[k]}})

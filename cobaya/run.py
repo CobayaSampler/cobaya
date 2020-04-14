@@ -14,7 +14,7 @@ import logging
 from cobaya import __version__
 from cobaya.conventions import kinds, _prior, _params, _packages_path, _output_prefix, \
     _debug, _debug_file, _resume, _timing, _debug_default, _force, _post, _test_run, \
-    _yaml_extensions, _separator_files, _updated_suffix, _packages_path_arg, \
+    _yaml_extensions, _packages_path_arg, \
     _packages_path_arg_posix
 from cobaya.output import get_output, split_prefix, get_info_path
 from cobaya.model import Model
