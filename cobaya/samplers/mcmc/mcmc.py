@@ -250,7 +250,7 @@ class mcmc(CovmatSampler):
             max_width = len(str(max(self.oversampling_factors)))
             for f, b in zip(self.oversampling_factors, self.blocks):
                 self.mpi_info("* %" + "%d" % max_width + "d : %r", f, b)
-            if self.oversample_thin:
+            if self.oversample_thin and not self.drag:
                 self.current_point.output_thin = int(np.round(sum(
                     len(b) * o for b, o in zip(self.blocks, self.oversampling_factors)) /
                                                               self.model.prior.d()))
