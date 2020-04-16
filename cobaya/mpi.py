@@ -8,7 +8,7 @@
 
 import os
 # Local
-from cobaya.conventions import _package
+from cobaya.conventions import _cobaya_package
 
 # Vars to keep track of MPI parameters
 _mpi = None if os.environ.get('COBAYA_NOMPI', False) else -1
@@ -112,7 +112,7 @@ def import_MPI(module, target):
     target_name = target
     if get_mpi_rank() is not None:
         target_name = target + "_MPI"
-    return getattr(import_module(module, package=_package), target_name)
+    return getattr(import_module(module, package=_cobaya_package), target_name)
 
 
 def share_mpi(data=None):
