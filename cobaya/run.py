@@ -18,7 +18,7 @@ from cobaya.conventions import kinds, _prior, _params, _packages_path, _output_p
     _packages_path_arg_posix
 from cobaya.output import get_output, split_prefix, get_info_path
 from cobaya.model import Model
-from cobaya.sampler import get_sampler_class, check_sampler_info
+from cobaya.sampler import get_sampler_name_and_class, check_sampler_info
 from cobaya.log import logger_setup, LoggedError
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info
@@ -66,7 +66,7 @@ def run(info):
         last_sampler_info = {last_sampler: updated_info[kinds.sampler][last_sampler]}
     except (KeyError, TypeError):
         raise LoggedError(logger_run, "No sampler requested.")
-    sampler_class = get_sampler_class(last_sampler_info)
+    sampler_name, sampler_class = get_sampler_name_and_class(last_sampler_info)
     check_sampler_info(
         (output.reload_updated_info(use_cache=True) or {}).get(kinds.sampler),
         updated_info[kinds.sampler], is_resuming=output.is_resuming())
@@ -74,7 +74,7 @@ def run(info):
     output.check_and_dump_info(info, updated_info, check_compatible=False)
     # Check if resumable run
     sampler_class.check_force_resume(
-        output, info=updated_info[kinds.sampler][sampler_class.__name__])
+        output, info=updated_info[kinds.sampler][sampler_name])
     # 4. Initialize the posterior and the sampler
     with Model(updated_info[_params], updated_info[kinds.likelihood],
                updated_info.get(_prior), updated_info.get(kinds.theory),
@@ -84,7 +84,7 @@ def run(info):
         # Re-dump the updated info, now containing parameter routes and version info
         updated_info = recursive_update(updated_info, model.info())
         output.check_and_dump_info(None, updated_info, check_compatible=False)
-        sampler = sampler_class(updated_info[kinds.sampler][sampler_class.__name__],
+        sampler = sampler_class(updated_info[kinds.sampler][sampler_name],
                                 model, output, packages_path=info.get(_packages_path))
         # Re-dump updated info, now also containing updates from the sampler
         updated_info[kinds.sampler][sampler.get_name()] = \

@@ -31,7 +31,7 @@ with warnings.catch_warnings():
 
 # Local
 from cobaya import __obsolete__
-from cobaya.conventions import _package, subfolders, partag, kinds, _packages_path, \
+from cobaya.conventions import _cobaya_package, subfolders, partag, kinds, _packages_path, \
     _packages_path_config_file, _packages_path_env, _packages_path_arg, \
     _dump_sort_cosmetic
 from cobaya.log import LoggedError
@@ -159,7 +159,7 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
     kind. If the last element of name is not a class, assume class has the same name and
     is in that module.
 
-    By default tries to load internal components first, then if that fails internal ones.
+    By default tries to load internal components first, then if that fails external ones.
     component_path can be used to specify a specific external location.
 
     Raises ``ImportError`` if class not found in the appropriate place in the source tree
@@ -175,21 +175,23 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
     if '.' in name:
         module_name, class_name = name.rsplit('.', 1)
     else:
-        allow_external = False
         module_name = name
-        class_name = name
+        class_name = None
     assert allow_internal or allow_external
 
     def return_class(_module_name, package=None):
         _module = load_module(_module_name, package=package, path=component_path)
-        if hasattr(_module, class_name):
-            cls = getattr(_module, class_name)
+        if not class_name and hasattr(_module, "get_cobaya_class"):
+            return _module.get_cobaya_class()
+        _class_name = class_name or module_name
+        if hasattr(_module, _class_name):
+            cls = getattr(_module, _class_name)
         else:
-            _module = load_module(_module_name + '.' + class_name,
+            _module = load_module(_module_name + '.' + _class_name,
                                   package=package, path=component_path)
-            cls = getattr(_module, class_name)
+            cls = getattr(_module, _class_name)
         if not inspect.isclass(cls):
-            return getattr(cls, class_name)
+            return getattr(cls, _class_name)
         else:
             return cls
 
@@ -198,7 +200,7 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
             return return_class(module_name)
         elif allow_internal:
             internal_module_name = get_internal_class_component_name(module_name, kind)
-            return return_class(internal_module_name, package=_package)
+            return return_class(internal_module_name, package=_cobaya_package)
         else:
             raise Exception()
     except:

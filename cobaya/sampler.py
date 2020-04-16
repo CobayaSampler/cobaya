@@ -64,13 +64,13 @@ from cobaya.input import update_info, is_equal_info, get_preferred_old_values
 from cobaya.output import OutputDummy
 
 
-def get_sampler_class(info_sampler):
+def get_sampler_name_and_class(info_sampler):
     """
     Auxiliary function to retrieve the class of the required sampler.
     """
     check_sane_info_sampler(info_sampler)
     name = list(info_sampler)[0]
-    return get_class(name, kind=kinds.sampler)
+    return name, get_class(name, kind=kinds.sampler)
 
 
 def check_sane_info_sampler(info_sampler):
@@ -144,12 +144,11 @@ def get_sampler(info_sampler, model, output=None, packages_path=None):
             "Input info updated with defaults (dumped to YAML):\n%s",
             yaml_dump(updated_info_sampler))
     # Get sampler class & check resume/force compatibility
-    sampler_class = get_sampler_class(updated_info_sampler)
+    sampler_name, sampler_class = get_sampler_name_and_class(updated_info_sampler)
     check_sampler_info(
         (output.reload_updated_info(use_cache=True) or {}).get(kinds.sampler),
         updated_info_sampler, is_resuming=output.is_resuming())
     # Check if resumable run
-    sampler_name = sampler_class.__name__
     sampler_class.check_force_resume(output, info=updated_info_sampler[sampler_name])
     # Instantiate the sampler
     sampler_instance = sampler_class(updated_info_sampler[sampler_name], model,
