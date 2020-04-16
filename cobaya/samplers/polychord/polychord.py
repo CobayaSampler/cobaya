@@ -461,8 +461,9 @@ class polychord(Sampler):
             log.error("Could not find compiled libchord.so at %r", path_libchord_so)
             return False
         poly_build_path = cls.get_build_path(poly_path)
-        if not os.path.isdir(poly_build_path):
-            log.error("Could not find build folder at %r", poly_build_path)
+        if not poly_build_path:
+            log.error("Could not find a 'build' folder for the Python Wrapper. "
+                      "Apparently compilation failed.")
             return False
         with PythonPath(poly_build_path):
             try:
