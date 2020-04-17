@@ -36,8 +36,8 @@ def test_sources(packages_path):
     dic = results.get_source_cls_dict()
 
     # noinspection PyDefaultArgument
-    def test_likelihood(_provider):
-        assert abs(_provider.get_source_Cl()[('source1', 'source1')][100] / dic['W1xW1'][
+    def test_likelihood(_self):
+        assert abs(_self.provider.get_source_Cl()[('source1', 'source1')][100] / dic['W1xW1'][
             100] - 1) < 0.001, \
             "CAMB gaussian source window results do not match"
         return 0
@@ -58,8 +58,8 @@ def test_sources(packages_path):
 
 def test_CAMBdata(packages_path):
     # noinspection PyDefaultArgument
-    def test_likelihood(_provider):
-        return _provider.get_CAMBdata().tau0
+    def test_likelihood(_self):
+        return _self.provider.get_CAMBdata().tau0
     test_likelihood_requires = {'CAMBdata': None, 'Pk_grid': dict(k_max=2, z=[0, 2])}
 
     model = _get_model(
@@ -79,8 +79,8 @@ def test_CAMB_transfer(packages_path):
     k, z, PK1 = results.get_nonlinear_matter_power_spectrum(hubble_units=False)
 
     # noinspection PyDefaultArgument,PyUnresolvedReferences
-    def test_likelihood(_provider):
-        _, _, PK = _provider.get_Pk_grid()
+    def test_likelihood(_self):
+        _, _, PK = _self.provider.get_Pk_grid()
         assert np.isclose(PK[1, 30], 10294.3285)
         np.testing.assert_allclose(PK, PK1, rtol=1e-4)
         return 1
@@ -104,8 +104,8 @@ def test_CAMB_sigma_R(packages_path):
     sigma_R = results.get_sigmaR(R=R, hubble_units=False)[::-1, :]
 
     # noinspection PyDefaultArgument,PyUnresolvedReferences
-    def test_likelihood(_provider):
-        r_out, z_out, sigma_R_out = _provider.get_sigma_R()
+    def test_likelihood(_self):
+        r_out, z_out, sigma_R_out = _self.get_sigma_R()
         assert np.allclose(z_out, redshifts)
         np.testing.assert_allclose(sigma_R, sigma_R_out, rtol=1e-3)
         return 1
