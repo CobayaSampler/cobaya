@@ -105,7 +105,7 @@ def test_CAMB_sigma_R(packages_path):
 
     # noinspection PyDefaultArgument,PyUnresolvedReferences
     def test_likelihood(_self):
-        r_out, z_out, sigma_R_out = _self.get_sigma_R()
+        r_out, z_out, sigma_R_out = _self.provider.get_sigma_R()
         assert np.allclose(z_out, redshifts)
         np.testing.assert_allclose(sigma_R, sigma_R_out, rtol=1e-3)
         return 1
