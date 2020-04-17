@@ -612,8 +612,8 @@ class Model(HasLogger):
                         if conditional_requirements:
                             has_more_requirements = True
                             requires += conditional_requirements
-            if component is None:
-                continue
+                if component is None:
+                    continue
             # set component compute order and raise error if circular dependence
             self._set_component_order(components, dependencies)
         if components[-1] is None:
