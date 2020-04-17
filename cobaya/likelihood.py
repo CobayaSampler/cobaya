@@ -159,6 +159,11 @@ class LikelihoodExternalFunction(Likelihood):
         else:
             setattr(self, _output_params, [])
         # Required quantities from other components
+        self._self_arg = "_self"
+        if info.get(_requires) and not self._self_arg in argspec.args:
+            raise LoggedError(
+                self.log, "If a likelihood has external requirements, declared under %r, "
+                "it needs to accept a keyword argument %r.", _requires, self._self_arg)
         # MARKED FOR DEPRECATION IN v3.0
         if "_theory" in argspec.args:
             self.log.warning(
@@ -187,10 +192,10 @@ class LikelihoodExternalFunction(Likelihood):
         # END OF DEPRECATION BLOCK
         if self._requirements:
             # MARKED FOR DEPRECATION IN v3.0 --> simplify lines below
-            provider_arg = "_provider"
             if getattr(self, "_uses_old_theory", False):
-                provider_arg = "_theory"
-            params_values[provider_arg] = self.provider
+                params_values["_theory"] = self.provider
+            else:
+                params_values[self._self_arg] = self
         try:
             return_value = self.external_function(**params_values)
             bad_return_msg = "Expected return value `(logp, {derived_params_dict})`."

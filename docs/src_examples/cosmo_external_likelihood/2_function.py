@@ -7,8 +7,8 @@ def my_like(
         # Parameters that we may sample over (or not)
         noise_std_pixel=20,  # muK
         beam_FWHM=0.25,  # deg
-        # Keyword through which the provider for required quantities will be passed.
-        _provider=None):
+        # Keyword through which the cobaya likelihood instance will be passed.
+        _self=None):
     # Noise spectrum, beam-corrected
     healpix_Nside=512
     pixel_area_rad = np.pi/(3*healpix_Nside**2)
@@ -19,7 +19,7 @@ def my_like(
     # Cl of the map: data + noise
     Cl_map = Cl_est + Nl
     # Request the Cl from the provider
-    Cl_theo = _provider.get_Cl(ell_factor=False, units="muK2")['tt'][:l_max+1]
+    Cl_theo = _self.provider.get_Cl(ell_factor=False, units="muK2")['tt'][:l_max+1]
     Cl_map_theo = Cl_theo + Nl
     # Auxiliary plot
     if _do_plot:
