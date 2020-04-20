@@ -25,10 +25,8 @@ If you would like to use different values for the :math:`H_0` constraint, as a m
 standard deviation, simply add the following likelihood, substituting ``mu_H0`` and
 ``sigma_H0`` for the respective values:
 
-.. code:: yaml
-
-   likelihood:
-     my_H0: 'lambda _theory={"H0": None}: stats.norm.logpdf(_theory.get_param("H0"), loc=mu_H0, scale=sigma_H0)'
+.. literalinclude:: ./src_examples/H0/custom_likelihood.yaml
+   :language: yaml
 
 """
 
@@ -44,11 +42,11 @@ class _H0_prototype(Likelihood):
     type = "H0"
 
     # variables from yaml
-    H0: float
+    H0_mean: float
     H0_std: float
 
     def initialize(self):
-        self.norm = norm(loc=self.H0, scale=self.H0_std)
+        self.norm = norm(loc=self.H0_mean, scale=self.H0_std)
 
     def get_requirements(self):
         return {'H0': None}
