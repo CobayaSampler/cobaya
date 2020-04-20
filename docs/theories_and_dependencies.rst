@@ -14,11 +14,11 @@ The names of derived parameters or other quantities are for each class to define
 To specify requirements you can use the :class:`~.theory.Theory`  methods
 
 * :meth:`~.theory.Theory.get_requirements`, for things that are always needed.
-* return a dictionary from the :meth:`~.theory.Theory.needs` method to specify the
+* return a dictionary from the :meth:`~.theory.Theory.must_provide` method to specify the
   requirements conditional on the quantities that the code is actually being asked to compute
 
 
-The actual calculation of the quantities requested by the :meth:`~.theory.Theory.needs` method should be done by
+The actual calculation of the quantities requested by the :meth:`~.theory.Theory.must_provide` method should be done by
 :meth:`~.theory.Theory.calculate`, which stores computed quantities into a state dictionary. Derived parameters should be
 saved into the special ``state['derived']`` dictionary entry.
 The theory code also needs to tell other theory codes and likelihoods the things that it can calculate using
@@ -61,7 +61,7 @@ another theory code, and provide the method to return ``A`` with a custom normal
             """
             return {'b_derived': None}
 
-        def needs(self, **requirements):
+        def must_provide(self, **requirements):
             if 'A' in requirements:
                 # e.g. calculating A requires B computed using same kmax (default 10)
                 return {'B': {'kmax': requirements['A'].get('kmax', 10)}}
@@ -97,7 +97,7 @@ to get ``b_derived`` and ``B``:
         def get_can_provide(self):
             return ['B']
 
-        def needs(self, **requirements):
+        def must_provide(self, **requirements):
             if 'B' in requirements:
                 self.kmax = max(self.kmax, requirements['B'].get('kmax',10))
 

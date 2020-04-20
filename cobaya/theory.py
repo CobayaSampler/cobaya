@@ -14,10 +14,10 @@ caching of results, so that calculations do not need to be redone when the param
 which a component directly (or indirectly) depends have not changed.
 
 Subclasses generally provide the :meth:`Theory.get_requirements`,
-:meth:`Theory.calculate` and initialization methods as required. The :meth:`Theory.needs`
-method is used to tell a code which requirements are
+:meth:`Theory.calculate` and initialization methods as required. The
+:meth:`Theory.must_provide` method is used to tell a code which requirements are
 actually needed by other components, and may return a dictionary of additional conditional
-requirements based on those needs.
+requirements based on those passed.
 
 The :meth:`Theory.calculate` method saves all needed results in the state dictionary
 (which is cached and reused as needed). Subclasses define ``get_X`` or ``get_result(X)``
@@ -112,18 +112,28 @@ class Theory(CobayaComponent):
             self._update_required_params()
         return self._required_params
 
-    def needs(self, **requirements):
+    def must_provide(self, **requirements):
         """
         Function to be called specifying any output products that are needed and hence
         should be calculated by this component.
+
         Requirements is a dictionary of requirement names with optional parameters for
         each. This function may be called more than once with different requirements,
         and will always be called at least once (possibly with empty requirements).
 
-        :return: optional dictionary of conditional requirements for these needs
+        :return: optional dictionary of conditional requirements for the ones requested.
         """
-        # reset states whenever needs change
+        # reset states whenever requirements change
         self._states.clear()
+        # MARKED FOR DEPRECATION IN v3.0
+        # This code will only run if needs() is defined but not must_provide()
+        if hasattr(self, "needs"):
+            self.log.warning(
+                "The .needs() method has been deprecated in favour of must_provide(). "
+                "Please rename your method.")
+            # BEHAVIOUR TO BE REPLACED BY AN ERROR
+            self.needs(**requirements)
+        # END OF DEPRECATION BLOCK
 
     def calculate(self, state, want_derived=True, **params_values_dict):
         """
@@ -138,12 +148,13 @@ class Theory(CobayaComponent):
     def initialize_with_params(self):
         """
         Additional initialization after requirements called and input_params and
-        output_params have been assigned (but provider and needs unassigned).
+        output_params have been assigned (but provider and assigned requirements not yet
+        set).
         """
 
     def initialize_with_provider(self, provider):
         """
-        Final initialization after parameters, provider and needs assigned.
+        Final initialization after parameters, provider and assigned requirements set.
         The provider is used to get the requirements of this theory using provider.get_X()
         and provider.get_param('Y').
 

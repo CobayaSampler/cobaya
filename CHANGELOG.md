@@ -29,7 +29,7 @@
 - Inherited likelihoods inherit .yaml file from parent if no new one is defined
 - Theories and likelihoods specify requirements and define derived products 
   with general dependencies. get_requirements() function replaces add_theory()
-- needs() function can now return a dictionary of requirements conditional on those needs
+- needs() method renamed to must_provide(), and can now return a dictionary of requirements conditional on those passed
 - 'requires' and 'provides' yaml keywords to specify which of ambiguous components handles
    specific requirements
 - three initialization methods: initialize (from __init__), initialize_with_params 

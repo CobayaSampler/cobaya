@@ -218,10 +218,10 @@ class classy(BoltzmannBase):
         # Derived parameters that may not have been requested, but will be necessary later
         self.derived_extra = []
 
-    def needs(self, **requirements):
+    def must_provide(self, **requirements):
         # Computed quantities required by the likelihood
-        super().needs(**requirements)
-        for k, v in self._needs.items():
+        super().must_provide(**requirements)
+        for k, v in self._must_provide.items():
             # Products and other computations
             if k == "Cl":
                 if any(("t" in cl.lower()) for cl in v):
@@ -294,7 +294,7 @@ class classy(BoltzmannBase):
         if self.extra_args.get("r") or "r" in self.input_params:
             self.extra_args["modes"] = "s,t"
         # If B spectrum with l>50, or lensing, recommend using Halofit
-        cls = self._needs.get("Cl", {})
+        cls = self._must_provide.get("Cl", {})
         if (((any(("b" in cl.lower()) for cl in cls) and
               max(cls[cl] for cl in cls if "b" in cl.lower()) > 50) or
              any(("p" in cl.lower()) for cl in cls) and

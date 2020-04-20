@@ -151,8 +151,8 @@ class D(Theory):
     def get_can_provide(self):
         return ['Dresult']
 
-    def needs(self, **needs):
-        if 'Dresult' in needs:
+    def must_provide(self, **must_provide):
+        if 'Dresult' in must_provide:
             return {'Aresult'}
 
 
@@ -164,8 +164,8 @@ class E(Theory):
     def get_Eresult(self):
         return self._current_state['E']
 
-    def needs(self, **needs):
-        if 'Eresult' in needs:
+    def must_provide(self, **must_provide):
+        if 'Eresult' in must_provide:
             return {'Dresult'}
 
 
@@ -193,8 +193,8 @@ class F(Theory):
     def get_Fresult(self):
         pass
 
-    def needs(self, **needs):
-        if 'Fresult' in needs:
+    def must_provide(self, **must_provide):
+        if 'Fresult' in must_provide:
             return {'LikeDerived'}
 
 
