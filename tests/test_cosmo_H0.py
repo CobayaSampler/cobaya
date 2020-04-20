@@ -1,49 +1,50 @@
-import sys
+import os
 import numpy as np
 from scipy.stats import norm
-from copy import copy
 
 from cobaya.conventions import kinds, _params, _packages_path
 from cobaya.run import run
+from cobaya.yaml import yaml_load_file
 from .common import process_packages_path
 
 fiducial_H0 = 70
-
+fiducial_H0_std = 1
 
 def test_H0_riess2018a(packages_path):
-    body_of_test(packages_path, "H0.riess2018a")
+    body_of_test(packages_path, like_name="H0.riess2018a")
 
 
 def test_H0_riess201903(packages_path):
-    body_of_test(packages_path, "H0.riess201903")
+    body_of_test(packages_path, like_name="H0.riess201903")
 
 
 def test_H0_docs(packages_path):
-    from cobaya.likelihoods._base_classes._H0_prototype import _H0_prototype
-    doc = sys.modules[_H0_prototype.__module__].__doc__
-    pre = "my_H0"
-    line = next(l for l in doc.split("\n") if l.strip().startswith(pre))
-    line = line[line.find("lambda"):].strip("'\"")
-    line = line.replace("mu_H0", "%g" % fiducial_H0)
-    line = line.replace("sigma_H0", "1")
-    body_of_test(packages_path, line)
+    like_info = yaml_load_file(os.path.join(
+        os.path.dirname(__file__), "../docs/src_examples/H0/custom_likelihood.yaml"))
+    like_name = list(like_info[kinds.likelihood])[0]
+    like_info[kinds.likelihood][like_name]["external"] = \
+        like_info[kinds.likelihood][like_name]["external"].replace(
+            "mu_H0", str(fiducial_H0))
+    like_info[kinds.likelihood][like_name]["external"] = \
+        like_info[kinds.likelihood][like_name]["external"].replace(
+            "sigma_H0", str(fiducial_H0_std))
+    body_of_test(packages_path, like_info=like_info[kinds.likelihood])
 
 
-def body_of_test(packages_path, lik_name):
+def body_of_test(packages_path, like_name=None, like_info=None):
     info = {_packages_path: process_packages_path(packages_path),
             kinds.sampler: {"evaluate": None}}
-    if lik_name.startswith("lambda"):
-        line = copy(lik_name)
-        lik_name = "whatever"
-        info[kinds.likelihood] = {lik_name: line}
-    else:
-        info[kinds.likelihood] = {lik_name: None}
+    if like_name:
+        info[kinds.likelihood] = {like_name: None}
+    elif like_info:
+        info[kinds.likelihood] = like_info
+        like_name = list(like_info)[0]
     info[_params] = {"H0": fiducial_H0}
     updated_info, sampler = run(info)
     products = sampler.products()
     # The default values for .get are for the _docs_ test
-    mean = updated_info[kinds.likelihood][lik_name].get("H0", fiducial_H0)
-    std = updated_info[kinds.likelihood][lik_name].get("H0_std", 1)
+    mean = updated_info[kinds.likelihood][like_name].get("H0_mean", fiducial_H0)
+    std = updated_info[kinds.likelihood][like_name].get("H0_std", fiducial_H0_std)
     reference_value = -2 * norm.logpdf(fiducial_H0, loc=mean, scale=std)
     computed_value = (
         products["sample"]["chi2__" + list(info[kinds.likelihood])[0]].values[0])
