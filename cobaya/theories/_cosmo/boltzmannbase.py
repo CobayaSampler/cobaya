@@ -29,7 +29,7 @@ class BoltzmannBase(Theory):
         self.collectors = {}
         # Additional input parameters to pass to CAMB, and attributes to set_ manually
         self.extra_args = deepcopy_where_possible(self.extra_args) or {}
-        self._needs = None
+        self._must_provide = None
 
     def get_allow_agnostic(self):
         return True
@@ -70,9 +70,9 @@ class BoltzmannBase(Theory):
                 raise LoggedError(self.log, "%s must specify %s in requirements",
                                   req, par)
 
-    def needs(self, **requirements):
+    def must_provide(self, **requirements):
         r"""
-        Specifies the quantities that each likelihood needs from the Cosmology code.
+        Specifies the quantities that this Boltzmann code is requested to compute.
 
         Typical requisites in Cosmology (as keywords, case insensitive):
 
@@ -119,25 +119,22 @@ class BoltzmannBase(Theory):
           value the likelihood may need.
 
         """
-
-        super().needs(**requirements)
-
-        self._needs = self._needs or dict.fromkeys(self.output_params)
-
+        super().must_provide(**requirements)
+        self._must_provide = self._must_provide or dict.fromkeys(self.output_params)
         # Accumulate the requirements across several calls in a safe way;
         # e.g. take maximum of all values of a requested precision parameter
         for k, v in requirements.items():
             # Products and other computations
             if k == "Cl":
-                current = self._needs.get(k, {})
-                self._needs[k] = {cl: max(current.get(cl, 0), v.get(cl, 0))
+                current = self._must_provide.get(k, {})
+                self._must_provide[k] = {cl: max(current.get(cl, 0), v.get(cl, 0))
                                   for cl in set(current).union(v)}
             elif k == 'sigma_R':
                 self._check_args(k, v, ('z', 'R'))
                 for pair in self._norm_vars_pairs(v.pop("vars_pairs", []), k):
                     k = ("sigma_R",) + pair
-                    current = self._needs.get(k, {})
-                    self._needs[k] = {
+                    current = self._must_provide.get(k, {})
+                    self._must_provide[k] = {
                         "R": np.sort(np.unique(np.concatenate(
                             (current.get("R", []), np.atleast_1d(v["R"]))))),
                         "z": np.unique(np.concatenate(
@@ -155,15 +152,15 @@ class BoltzmannBase(Theory):
                 for var_pair in self._norm_vars_pairs(v.pop("vars_pairs", []), k):
                     for nonlinear in nonlin:
                         k = ("Pk_grid", bool(nonlinear)) + var_pair
-                        current = self._needs.get(k, {})
-                        self._needs[k] = dict(
+                        current = self._must_provide.get(k, {})
+                        self._must_provide[k] = dict(
                             nonlinear=nonlinear,
                             z=np.unique(np.concatenate((current.get("z", []),
                                                         np.atleast_1d(redshifts)))),
                             k_max=max(current.get("k_max", 0), k_max), **v)
             elif k == "source_Cl":
-                if k not in self._needs:
-                    self._needs[k] = {}
+                if k not in self._must_provide:
+                    self._must_provide[k] = {}
                 if "sources" not in v:
                     raise LoggedError(
                         self.log, "Needs a 'sources' key, containing a dict with every "
@@ -179,16 +176,16 @@ class BoltzmannBase(Theory):
                 #                 self.log,
                 #                 "Source %r requested twice with different specification: "
                 #                 "%r vs %r.", window, self.sources[source])
-                self._needs[k].update(v)
+                self._must_provide[k].update(v)
             elif k in ["Hubble", "angular_diameter_distance",
                        "comoving_radial_distance", "fsigma8"]:
-                if k not in self._needs:
-                    self._needs[k] = {}
-                self._needs[k]["z"] = np.unique(np.concatenate(
-                    (self._needs[k].get("z", []), v["z"])))
+                if k not in self._must_provide:
+                    self._must_provide[k] = {}
+                self._must_provide[k]["z"] = np.unique(np.concatenate(
+                    (self._must_provide[k].get("z", []), v["z"])))
             # Extra derived parameters and other unknown stuff (keep capitalization)
             elif v is None:
-                self._needs[k] = None
+                self._must_provide[k] = None
             else:
                 raise LoggedError(self.log, "Unknown required product: '%s'.", k)
 
@@ -196,7 +193,7 @@ class BoltzmannBase(Theory):
         """
         Returns the full set of requested cosmological products and parameters.
         """
-        return self._needs
+        return self._must_provide
 
     def get_Cl(self, ell_factor=False, units="muK2"):
         r"""
@@ -216,8 +213,8 @@ class BoltzmannBase(Theory):
         r"""
         Returns the Hubble rate at the given redshifts.
 
-        The redshifts must be a subset of those requested when :func:`~BoltzmannBase.needs`
-        was called.
+        The redshifts must be a subset of those requested when
+        :func:`~BoltzmannBase.must_provide` was called.
 
         The available units are ``km/s/Mpc`` (i.e. ``c*H(Mpc^-1)``) and ``1/Mpc``.
         """
@@ -232,8 +229,8 @@ class BoltzmannBase(Theory):
         r"""
         Returns the physical angular diameter distance to the given redshifts in Mpc.
 
-        The redshifts must be a subset of those requested when :func:`~BoltzmannBase.needs`
-        was called.
+        The redshifts must be a subset of those requested when
+        :func:`~BoltzmannBase.must_provide` was called.
         """
         return self._get_z_dependent("angular_diameter_distance", z)
 
@@ -241,8 +238,8 @@ class BoltzmannBase(Theory):
         r"""
         Returns the comoving radial distance to the given redshifts in Mpc.
 
-        The redshifts must be a subset of those requested when :func:`~BoltzmannBase.needs`
-        was called.
+        The redshifts must be a subset of those requested when
+        :func:`~BoltzmannBase.must_provide` was called.
         """
         return self._get_z_dependent("comoving_radial_distance", z)
 
@@ -333,8 +330,8 @@ class BoltzmannBase(Theory):
         `Planck 2015 results. XIII. Cosmological parameters <https://arxiv.org/pdf/1502.01589.pdf>`_,
         at the given redshifts.
 
-        The redshifts must be a subset of those requested when :func:`~BoltzmannBase.needs`
-        was called.
+        The redshifts must be a subset of those requested when
+        :func:`~BoltzmannBase.must_proide` was called.
         """
         pass
 

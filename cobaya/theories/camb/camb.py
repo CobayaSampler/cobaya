@@ -307,7 +307,7 @@ class camb(BoltzmannBase):
     def get_allow_agnostic(self):
         return False
 
-    def needs(self, **requirements):
+    def must_provide(self, **requirements):
         # Computed quantities required by the likelihoods
         # Note that redshifts below are treated differently for background quantities,
         #   where no additional transfer computation is needed (e.g. H(z)),
@@ -317,10 +317,10 @@ class camb(BoltzmannBase):
         #   since all CAMB related functions return quantities in that implicit order
         # The following super call makes sure that the requirements are properly
         # accumulated, i.e. taking the max of precision requests, etc.
-        super().needs(**requirements)
+        super().must_provide(**requirements)
         CAMBdata = self.camb.CAMBdata
 
-        for k, v in self._needs.items():
+        for k, v in self._must_provide.items():
             # Products and other computations
             if k == "Cl":
                 self.extra_args["lmax"] = max(
@@ -415,7 +415,7 @@ class camb(BoltzmannBase):
                 if not getattr(self, "sources", None):
                     self.sources = {}
                 for source, window in v["sources"].items():
-                    # If it was already there, BoltzmannBase.needs() has already
+                    # If it was already there, BoltzmannBase.must_provide() has already
                     # checked that old info == new info
                     if source not in self.sources:
                         self.sources[source] = window
@@ -461,16 +461,16 @@ class camb(BoltzmannBase):
         # set-set base CAMB params if anything might have changed
         self._base_params = None
 
-        needs = {'CAMB_transfers': {'non_linear': self.non_linear_sources,
-                                    'needs_perts': self.needs_perts}}
+        must_provide = {'CAMB_transfers': {'non_linear': self.non_linear_sources,
+                                           'needs_perts': self.needs_perts}}
         if self.external_primordial_pk and self.needs_perts:
-            needs['primordial_scalar_pk'] = {'lmax': self.extra_args.get("lmax"),
-                                             'kmax': self.extra_args.get('kmax')}
+            must_provide['primordial_scalar_pk'] = {'lmax': self.extra_args.get("lmax"),
+                                                    'kmax': self.extra_args.get('kmax')}
             if self.extra_attrs.get('WantTensors'):
-                needs['primordial_tensor_pk'] = {'lmax':
+                must_provide['primordial_tensor_pk'] = {'lmax':
                     self.extra_attrs.get(
                         "max_l_tensor", self.extra_args.get("lmax"))}
-        return needs
+        return must_provide
 
     def add_to_redshifts(self, z):
         self.extra_args["redshifts"] = np.sort(np.unique(np.concatenate(
@@ -878,8 +878,8 @@ class CambTransfers(HelperTheory):
     def get_allow_agnostic(self):
         return False
 
-    def needs(self, **requirements):
-        super().needs(**requirements)
+    def must_provide(self, **requirements):
+        super().must_provide(**requirements)
         opts = requirements.get('CAMB_transfers')
         if opts:
             self.non_linear_sources = opts['non_linear']

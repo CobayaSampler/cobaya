@@ -5,7 +5,7 @@
 # - don't use extra_args for precision parameters! because if the same precision param
 #   is mentioned twice at the same time in different fields with different values, there
 #   is no facility to take the max (or min). Instead, codify precision needs in terms of
-#   requirements in the .needs method of the cosmo code.
+#   requirements in the .must_provide method of the cosmo code.
 
 # Global
 from copy import deepcopy

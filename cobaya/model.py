@@ -6,10 +6,10 @@
 
 """
 # Global
-import numpy as np
+import logging
 from itertools import chain
 from typing import NamedTuple, Sequence, Mapping
-import logging
+import numpy as np
 
 # Local
 from cobaya.conventions import kinds, _prior, _timing, _params, _provides, \
@@ -516,6 +516,7 @@ class Model(HasLogger):
                 _require = dict(_require)
             else:
                 _require = dict.fromkeys(_require)
+            # Save parameters dependence
             for par in self.input_params:
                 if par in _require and _component is not None:
                     direct_param_dependence[_component].add(par)
@@ -523,10 +524,9 @@ class Model(HasLogger):
                     _require.pop(par, None)
             return [Requirement(p, v) for p, v in _require.items()]
 
-        # Get the requirements and providers
-        requirements = []
-        providers = {}
-        self._needs = {}
+        ### 1. Get the requirements and providers ###
+        requirements = {}  # requirements of each component
+        providers = {}  # providers of each *available* requirement (requested or not)
         for component in components:
             # MARKED FOR DEPRECATION IN v3.0
             if hasattr(component, "add_theory"):
@@ -535,95 +535,104 @@ class Model(HasLogger):
                                   "requirement dictionary from get_requirements() "
                                   "instead" % component)
             # END OF DEPRECATION BLOCK
-            self._needs[component] = []
             component.initialize_with_params()
-            requirements.append(
-                _tidy_requirements(component.get_requirements(), component))
-            methods = component.get_can_provide_methods()
-            can_provide = list(component.get_can_provide()) + list(methods)
-            # parameters that can be provided but not already explicitly assigned
+            requirements[component] = _tidy_requirements(
+                component.get_requirements(), component)
+            # Gather what this component can provide
+            can_provide = (
+                list(component.get_can_provide()) +
+                list(component.get_can_provide_methods()))
+            # Parameters that can be provided but not already explicitly assigned
+            # (i.e. it is not a declared output param of that component)
             provide_params = [p for p in component.get_can_provide_params() if
-                              p not in self.output_params and p not in
-                              component.get_required_params()]
-
+                              p not in self.output_params]
+            # Corner case: some components can either take some parameters as input OR
+            # provide their own calculation of them. Pop those if required as input.
+            for p in provide_params.copy():  # iterating over copy
+                if p in component.get_required_params():
+                    provide_params.remove(p)
+            # Invert to get the provider(s) of each available product/parameter
             for k in can_provide + component.output_params + provide_params:
                 providers[k] = providers.get(k, []) + [component]
         # Add requirements requested by hand
         if manual_requirements:
-            components.append(None)
-            requirements.append(
-                _tidy_requirements(manual_requirements))
+            requirements[None] = _tidy_requirements(manual_requirements)
 
+        ### 2. Assign each requirement to a provider ###
+        # store requirements assigned to each provider:
+        self._must_provide = {component: [] for component in components}
+        # inverse of the one above, *minus conditional requirements* --
+        # this is the one we need to initialise the provider
         requirement_providers = {}
-        dependencies = {}
-        has_more_requirements = True
-        while has_more_requirements:
-            # list of dictionary of needs for each component
-            needs = {c: [] for c in components}
-            # Check supplier for each requirement, get dependency and needs
-            for component, requires in zip(components, requirements):
+        dependencies = {}  # set of components of which each component depends
+        there_are_more_requirements = True
+        while there_are_more_requirements:
+            # temp list of dictionary of requirements for each component
+            must_provide = {c: [] for c in components}
+            # Check supplier for each requirement, get dependency and must_provide
+            for component, requires in requirements.items():
                 for requirement in requires:
                     suppliers = providers.get(requirement.name)
-                    if suppliers:
-                        supplier = None
-                        if len(suppliers) > 1:
-                            for sup in suppliers:
-                                provide = str_to_list(getattr(sup, 'provides', []))
-                                if requirement.name in provide:
-                                    if supplier:
-                                        raise LoggedError(self.log, "more than one "
-                                                                    "component provides"
-                                                                    " %s" %
-                                                          requirement.name)
-                                    supplier = sup
-                            if not supplier:
-                                raise LoggedError(self.log,
-                                                  "requirement %s is provided by more "
-                                                  "than one component: %s. Use 'provides'"
-                                                  " keyword to specify which provides it "
-                                                  % (requirement.name, suppliers))
-                        else:
-                            supplier = suppliers[0]
-                        if supplier is component:
-                            raise LoggedError(self.log,
-                                              "Component %r cannot provide %s to "
-                                              "itself!" % (component, requirement.name))
-                        requirement_providers[requirement.name] = supplier.get_provider()
-                        if requirement not in self._needs[supplier] + needs[supplier]:
-                            needs[supplier] += [requirement]
-                        dependencies[component] = \
-                            dependencies.get(component, set()) | {supplier}
+                    if not suppliers:
+                        raise LoggedError(
+                            self.log, "Requirement %s of %r is not provided by any "
+                                      "component", requirement.name, component)
+                    if len(suppliers) == 1:
+                        supplier = suppliers[0]
                     else:
-                        raise LoggedError(self.log,
-                                          "Requirement %s of %r is not provided by any "
-                                          "component" % (requirement.name, component))
-
-            # tell each component what it needs to calculate, and collect the
-            # conditional requirements for those needs
-            has_more_requirements = False
-            for component, requires in zip(components, requirements):
+                        supplier = None
+                        for sup in suppliers:
+                            provide = str_to_list(getattr(sup, 'provides', []))
+                            if requirement.name in provide:
+                                if supplier:
+                                    raise LoggedError(
+                                        self.log, "more than one component provides %s",
+                                        requirement.name)
+                                supplier = sup
+                        if not supplier:
+                            raise LoggedError(
+                                self.log, "requirement %s is provided by more than one "
+                                          "component: %s. Use 'provides' keyword to "
+                                          "specify which provides it",
+                                requirement.name, suppliers)
+                    if supplier is component:
+                        raise LoggedError(
+                            self.log, "Component %r cannot provide %s to itself!",
+                            component, requirement.name)
+                    requirement_providers[requirement.name] = supplier.get_provider()
+                    declared_requirements_for_this_supplier = \
+                        self._must_provide[supplier] + must_provide[supplier]
+                    if requirement not in declared_requirements_for_this_supplier:
+                        must_provide[supplier] += [requirement]
+                    dependencies[component] = \
+                        dependencies.get(component, set()) | {supplier}
+            # tell each component what it must provide, and collect the
+            # conditional requirements for those requests
+            there_are_more_requirements = False
+            for component, requires in requirements.items():
+                # empty the list of requirements, since they have already been assignes,
+                # and store here new (conditional) ones
                 requires[:] = []
-                if needs[component]:
-                    for need in needs[component]:
+                # .get here accounts for the null component of manual reqs
+                if must_provide.get(component, False):
+                    for request in must_provide[component]:
                         conditional_requirements = \
                             _tidy_requirements(
-                                component.needs(**{need.name: need.options}), component)
-                        self._needs[component].append(need)
+                                component.must_provide(
+                                    **{request.name: request.options}), component)
+                        self._must_provide[component].append(request)
                         if conditional_requirements:
-                            has_more_requirements = True
+                            there_are_more_requirements = True
                             requires += conditional_requirements
-                if component is None:
-                    continue
             # set component compute order and raise error if circular dependence
             self._set_component_order(components, dependencies)
-        if components[-1] is None:
-            components = components[:-1]
-
         # always call needs at least once (#TODO is this needed? e.g. for post)
+        # Expunge manual requirements
+        requirements.pop(None, None)
         # (JT: need to check carefully)
         for component in components:
-            if not self._needs[component]:
-                component.needs()
+            if not self._must_provide[component]:
+                component.must_provide()
 
         if self._unassigned_input:
             self._unassigned_input.difference_update(*direct_param_dependence.values())
@@ -673,11 +682,11 @@ class Model(HasLogger):
                             sampled_dependence[p].append(comp)
         self.sampled_dependence = sampled_dependence
 
+        # Initialize the provider and pass it to each component
         if self.log.getEffectiveLevel() <= logging.DEBUG:
             self.log.debug("Requirements will be calculated by these components:")
             for requirement, provider in requirement_providers.items():
                 self.log.debug("- %s: %s", requirement, provider)
-        # Initialize the provider and pass it to each component
         self.provider = Provider(self, requirement_providers)
         for component in components:
             component.initialize_with_provider(self.provider)
@@ -695,7 +704,7 @@ class Model(HasLogger):
         :return: dictionary giving list of requirements calculated by
                 each component name
         """
-        return dict(("%r" % c, v) for c, v in self._needs.items() if v)
+        return dict(("%r" % c, v) for c, v in self._must_provide.items() if v)
 
     def _assign_params(self, info_likelihood, info_theory=None):
         """
