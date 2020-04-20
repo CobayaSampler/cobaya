@@ -118,8 +118,7 @@ class Theory(CobayaComponent):
         should be calculated by this component.
 
         Requirements is a dictionary of requirement names with optional parameters for
-        each. This function may be called more than once with different requirements,
-        and will always be called at least once (possibly with empty requirements).
+        each. This function may be called more than once with different requirements.
 
         :return: optional dictionary of conditional requirements for the ones requested.
         """

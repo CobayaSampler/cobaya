@@ -626,14 +626,8 @@ class Model(HasLogger):
                             requires += conditional_requirements
             # set component compute order and raise error if circular dependence
             self._set_component_order(components, dependencies)
-        # always call needs at least once (#TODO is this needed? e.g. for post)
         # Expunge manual requirements
         requirements.pop(None, None)
-        # (JT: need to check carefully)
-        for component in components:
-            if not self._must_provide[component]:
-                component.must_provide()
-
         if self._unassigned_input:
             self._unassigned_input.difference_update(*direct_param_dependence.values())
             if self._unassigned_input:

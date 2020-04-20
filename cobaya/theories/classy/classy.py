@@ -305,13 +305,7 @@ class classy(BoltzmannBase):
                              "'non_linear: halofit|hmcode|...' in classy's 'extra_args'.")
         # Cleanup of products string
         self.extra_args["output"] = " ".join(set(self.extra_args["output"].split()))
-        # Finally, check that there are no repeated parameters between input and extra
-        if set(self.input_params).intersection(set(self.extra_args)):
-            raise LoggedError(
-                self.log,
-                "The following parameters appear both as input parameters and as CLASS "
-                "extra arguments: %s. Please, remove one of the definitions of each.",
-                list(set(self.input_params).intersection(set(self.extra_args))))
+        self.check_no_repeated_input_extra()
 
     def add_z_for_matter_power(self, z):
         if getattr(self, "z_for_matter_power", None) is None:
@@ -495,7 +489,6 @@ class classy(BoltzmannBase):
     def get_can_provide_params(self):
         names = ['Omega_Lambda', 'Omega_cdm', 'Omega_b', 'Omega_m', 'rs_drag', 'z_reio',
                  'YHe', 'Omega_k', 'age', 'sigma8']
-
         for name, mapped in self.renames.items():
             if mapped in names:
                 names.append(name)
