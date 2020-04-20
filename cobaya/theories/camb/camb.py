@@ -443,13 +443,7 @@ class camb(BoltzmannBase):
             else:
                 raise LoggedError(self.log, "This should not be happening. Contact the "
                                             "developers.")
-        # Check that there are no repeated parameters between input and extra
-        if set(self.input_params).intersection(set(self.extra_args)):
-            raise LoggedError(
-                self.log,
-                "The following parameters appear both as input parameters and as CAMB "
-                "extra arguments: %s. Please, remove one of the definitions of each.",
-                list(set(self.input_params).intersection(set(self.extra_args))))
+        self.check_no_repeated_input_extra()
 
         # Computing non-linear corrections
         model = self.camb.model
@@ -884,15 +878,7 @@ class CambTransfers(HelperTheory):
         if opts:
             self.non_linear_sources = opts['non_linear']
             self.needs_perts = opts['needs_perts']
-
-            # Check that there are no repeated parameters between input and extra
-            if set(self.input_params).intersection(set(self.cobaya_camb.extra_args)):
-                raise LoggedError(self.log,
-                                  "The following parameters appear both as input "
-                                  "parameters and as CAMB extra arguments: %s. Please, "
-                                  "remove one of the definitions of each.",
-                                  list(set(self.input_params).intersection(
-                                      set(self.cobaya_camb.extra_args))))
+        self.cobaya_camb.check_no_repeated_input_extra()
 
     def get_CAMB_transfers(self):
         return self._current_state['results']

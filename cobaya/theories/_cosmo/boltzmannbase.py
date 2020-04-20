@@ -31,6 +31,9 @@ class BoltzmannBase(Theory):
         self.extra_args = deepcopy_where_possible(self.extra_args) or {}
         self._must_provide = None
 
+    def initialize_with_params(self):
+        self.check_no_repeated_input_extra()
+
     def get_allow_agnostic(self):
         return True
 
@@ -194,6 +197,19 @@ class BoltzmannBase(Theory):
         Returns the full set of requested cosmological products and parameters.
         """
         return self._must_provide
+
+    def check_no_repeated_input_extra(self):
+        """
+        Checks that there are no repeated parameters between input and extra.
+
+        Should be called at initialisation, and at the end of every call to must_provide()
+        """
+        common = set(self.input_params).intersection(set(self.extra_args))
+        if common:
+            raise LoggedError(
+                self.log, "The following parameters appear both as input parameters and "
+                          "as extra arguments: %s. Please, remove one of the definitions "
+                          "of each.", common)
 
     def get_Cl(self, ell_factor=False, units="muK2"):
         r"""
