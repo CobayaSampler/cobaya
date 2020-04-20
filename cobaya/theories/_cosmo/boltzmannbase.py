@@ -331,7 +331,7 @@ class BoltzmannBase(Theory):
         at the given redshifts.
 
         The redshifts must be a subset of those requested when
-        :func:`~BoltzmannBase.must_proide` was called.
+        :func:`~BoltzmannBase.must_provide` was called.
         """
         pass
 
