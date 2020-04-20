@@ -235,9 +235,9 @@ class Model(HasLogger):
         self.log.debug("Got input parameters: %r", input_params)
         n_theory = len(self.theory)
         loglikes = np.empty(len(self.likelihood))
-        for (component, index), dependence in zip(self._component_order.items(),
-                                                  self._ordered_param_dependence):
-            depend_list = [input_params[p] for p in dependence]
+        for component, index in self._component_order.items():
+            depend_list = \
+                [input_params[p] for p in self._params_of_dependencies[component]]
             params = {p: input_params[p] for p in component.input_params}
             compute_success = component.check_cache_and_compute(
                 want_derived=return_derived,
@@ -652,11 +652,10 @@ class Model(HasLogger):
                 deps.update(dependencies_of(c))
             return deps
 
+        ### 3. Save dependencies on components and their parameters ###
         self._dependencies = {c: dependencies_of(c) for c in components}
-
-        self._ordered_param_dependence = [set() for _ in components]
-        for component, param_dep in zip(self._component_order,
-                                        self._ordered_param_dependence):
+        self._params_of_dependencies = {c: set() for c in self._component_order}
+        for component, param_dep in self._params_of_dependencies.items():
             param_dep.update(direct_param_dependence.get(component))
             for dep in self._dependencies.get(component, []):
                 param_dep.update(
@@ -664,10 +663,9 @@ class Model(HasLogger):
             param_dep -= set(component.input_params)
             if not len(component.input_params) and not param_dep \
                     and component.get_name() != 'one':
-                raise LoggedError(self.log, "Component '%r' seems not to depend on any "
-                                            "parameters (neither directly nor "
-                                            "indirectly)", component)
-
+                raise LoggedError(
+                    self.log, "Component '%r' seems not to depend on any parameters "
+                              "(neither directly nor indirectly)", component)
         # Store the input params and components on which each sampled params depends.
         sampled_input_dependence = self.parameterization.sampled_input_dependence()
         sampled_dependence = {p: [] for p in sampled_input_dependence}
@@ -682,7 +680,7 @@ class Model(HasLogger):
                             sampled_dependence[p].append(comp)
         self.sampled_dependence = sampled_dependence
 
-        # Initialize the provider and pass it to each component
+        ### 4. Initialize the provider and pass it to each component ###
         if self.log.getEffectiveLevel() <= logging.DEBUG:
             self.log.debug("Requirements will be calculated by these components:")
             for requirement, provider in requirement_providers.items():
