@@ -652,7 +652,8 @@ class Model(HasLogger):
                                         self._ordered_param_dependence):
             param_dep.update(direct_param_dependence.get(component))
             for dep in self._dependencies.get(component, []):
-                param_dep.update(set(dep.input_params))
+                param_dep.update(
+                    set(dep.input_params).union(direct_param_dependence.get(dep)))
             param_dep -= set(component.input_params)
             if not len(component.input_params) and not param_dep \
                     and component.get_name() != 'one':
