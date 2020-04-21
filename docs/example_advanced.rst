@@ -3,6 +3,9 @@ Advanced example
 
 In this example, we will see how to sample from priors and likelihoods given as Python functions, and how to dynamically define new parameters. This time, we will start from the interpreter and then learn how to create a pure ``yaml`` input file with the same information.
 
+.. note::
+
+   You can play with an interactive version of this example `here <https://mybinder.org/v2/gh/CobayaSampler/cobaya/master?filepath=docs%2Fcobaya-example.ipynb>`_.
 
 .. _example_advanced_interactive:
 

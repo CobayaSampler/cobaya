@@ -454,18 +454,24 @@ class polychord(Sampler):
     def is_installed(cls, **kwargs):
         if not kwargs["code"]:
             return True
+        log = logging.getLogger(__name__.split(".")[-1])
         poly_path = cls.get_path(kwargs["path"])
-        if not os.path.isfile(
-                os.path.realpath(os.path.join(poly_path, "lib/libchord.so"))):
+        path_libchord_so = os.path.realpath(os.path.join(poly_path, "lib/libchord.so"))
+        if not os.path.isfile(path_libchord_so):
+            log.error("Could not find compiled libchord.so at %r", path_libchord_so)
             return False
         poly_build_path = cls.get_build_path(poly_path)
         if not poly_build_path:
+            log.error("Could not find a 'build' folder for the Python Wrapper. "
+                      "Apparently compilation failed.")
             return False
         with PythonPath(poly_build_path):
             try:
                 import pypolychord
                 return True
-            except ImportError:
+            except ImportError as excpt:
+                log.error("PolyChord is apparently compiled, but could not be imported. "
+                          "Reason: %r", str(excpt))
                 return False
 
     @classmethod

@@ -334,7 +334,7 @@ def install_script():
             try:
                 kind = get_kind(f)
                 infos += [{kind: {f: None}}]
-            except Exception as e:
+            except Exception:
                 logger.warning("Could not identify component %r. Skipping.", f)
     if not infos:
         logger.info("Nothing to install.")

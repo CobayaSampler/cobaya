@@ -1,7 +1,6 @@
 # For release
 
-## check PK_grid/interpolator changes for classy, and general classy review
-# Global defaults for `oversample_power`, `burn_in`, etc
+# check PK_grid/interpolator changes for classy, and general classy review
 # Polychord: possible new release -- changes fast-slow behaviours, so waiting to do the oversample_power test.
 
 # Incomplete implementations/bigger jobs

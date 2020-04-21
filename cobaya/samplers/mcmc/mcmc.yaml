@@ -3,7 +3,7 @@
 #  when adjusting for oversampling / dragging)
 
 # Number of discarded burn-in samples per dimension (d notation means times dimension)
-burn_in: 20d
+burn_in: 0
 # Error criterion: max attempts (= weight-1) before deciding that the chain
 # is stuck and failing. Set to `.inf` to ignore these kind of errors.
 max_tries: 40d
@@ -48,7 +48,7 @@ measure_speeds: True
 # Amount of oversampling of each parameter block, relative to their speeds
 # Value from 0 (no oversampling) to 1 (spend the same amount of time in all blocks)
 # Can be larger than 1 if extra oversampling of fast blocks required.
-oversample_power: 0
+oversample_power: 0.4
 # Thin chain by total oversampling factor (ignored if drag: True)
 # NB: disabling it with a non-zero `oversample_power` may produce a VERY LARGE chains
 oversample_thin: True
@@ -73,5 +73,5 @@ seed:  # integer between 0 and 2**32 - 1
 # To be deprecated
 # ----------------
 check_every:  # now it is learn_every
-oversample: # now controled by oversample_power > 0
+oversample: # now controlled by oversample_power > 0
 drag_limits:  # use oversample_power instead

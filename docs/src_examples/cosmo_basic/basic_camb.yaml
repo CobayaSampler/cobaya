@@ -130,5 +130,5 @@ sampler:
   mcmc:
     covmat: auto
     drag: true
-    oversample_power: 0.8
+    oversample_power: 0.4
     proposal_scale: 1.9

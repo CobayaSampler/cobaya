@@ -420,7 +420,7 @@ cmb_precision = deepcopy(base_precision)
 cmb_precision[_camb].update({"bbn_predictor": "PArthENoPE_880.2_standard.dat",
                              "lens_potential_accuracy": 1})
 cmb_sampler_recommended = {"mcmc": {
-    "drag": True, "oversample_power": 0.8, "proposal_scale": 1.9}}
+    "drag": True, "oversample_power": 0.4, "proposal_scale": 1.9}}
 
 like_cmb = dict([
     [_none, {}],
