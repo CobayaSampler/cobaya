@@ -235,9 +235,10 @@ class LikelihoodCollection(ComponentCollection):
                 elif inspect.isclass(info[_external]):
                     if not hasattr(info[_external], "get_current_logp") or \
                             not issubclass(info[_external], Theory):
-                        raise LoggedError(self.log, "external class likelihoods must be "
-                                                    "a subclass of Theory and have"
-                                                    "logp, get_current_logp functions")
+                        raise LoggedError(self.log, "%s: external class likelihood must "
+                                                    "be a subclass of Theory and have "
+                                                    "logp, get_current_logp functions",
+                                          info[_external].__name__)
                     self.add_instance(name,
                                       info[_external](info, packages_path=packages_path,
                                                       timing=timing,
