@@ -95,7 +95,7 @@ def get_model(info):
     ignored_info = {}
     for k in list(info):
         if k not in [_params, kinds.likelihood, _prior, kinds.theory, _packages_path,
-                     _timing]:
+                     _timing, "stop_at_error"]:
             ignored_info[k] = info.pop(k)
     if ignored_info:
         logging.getLogger(__name__.split(".")[-1]).warning(

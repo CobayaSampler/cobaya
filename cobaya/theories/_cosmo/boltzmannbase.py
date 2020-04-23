@@ -49,11 +49,11 @@ class BoltzmannBase(Theory):
     def _norm_vars_pairs(self, vars_pairs, name):
         # Empty list: default to *total matter*: CMB + Baryon + MassiveNu
         vars_pairs = vars_pairs or [2 * ["delta_tot"]]
-        if not isinstance(vars_pairs, Sequence):
-            raise LoggedError(self.log, "vars_pairs must be a list of pairs "
+        if not isinstance(vars_pairs, Iterable):
+            raise LoggedError(self.log, "vars_pairs must be an iterable of pairs "
                                         "of variable names: got '%r' for %s",
                               vars_pairs, name)
-        if isinstance(vars_pairs[0], str):
+        if isinstance(list(vars_pairs)[0], str):
             vars_pairs = [vars_pairs]
         pairs = set()
         for pair in vars_pairs:
