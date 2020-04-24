@@ -808,7 +808,7 @@ class Model(HasLogger):
                 if p in aggr_chi2_names:
                     continue  # it's an aggregated likelihood
                 like = p[len(_get_chi2_name("")):]
-                if like not in [l.replace(".", "_") for l in self.likelihood]:
+                if like not in [lik.replace(".", "_") for lik in self.likelihood]:
                     raise LoggedError(
                         self.log, "Your derived parameters depend on an unknown "
                                   "likelihood: '%s'", like)

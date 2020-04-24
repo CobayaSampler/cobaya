@@ -133,7 +133,8 @@ def get_docker_client():
         import docker
     except ImportError:
         raise LoggedError(log,
-                          "The Python Docker interface not installed: do 'python -m pip install docker'.")
+                          "The Python Docker interface not installed: "
+                          "do 'python -m pip install docker'.")
     return docker.from_env(version="auto")
 
 
@@ -182,7 +183,8 @@ def create_docker_image(filenames, MPI_version=None):
         #          "It is strongly encouraged to request the one installed in your cluster,"
         #          " using '--mpi-version X.Y'. Defaulting to MPICH v%s.", MPI_version)
     dc = get_docker_client()
-    components = yaml_dump(get_used_components(*[load_input(f) for f in filenames])).strip()
+    components = yaml_dump(
+        get_used_components(*[load_input(f) for f in filenames])).strip()
     echos_reqs = "RUN " + " && \\ \n    ".join(
         [r'echo "%s" >> %s' % (block, requirements_file_path)
          for block in components.split("\n")])
@@ -212,7 +214,8 @@ def create_singularity_image(filenames, MPI_version=None):
         # log.warning("You have not specified an OpenMPI version. "
         #          "It is strongly encouraged to request the one installed in your cluster,"
         #          " using '--mpi-version X.Y.Z'. Defaulting to OpenMPI v%s.", MPI_version)
-    components = yaml_dump(get_used_components(*[load_input(f) for f in filenames])).strip()
+    components = yaml_dump(
+        get_used_components(*[load_input(f) for f in filenames])).strip()
     echos_reqs = "\n    " + "\n    ".join(
         [""] + ['echo "%s" >> %s' % (block, requirements_file_path)
                 for block in components.split("\n")])
