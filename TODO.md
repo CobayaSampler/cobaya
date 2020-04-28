@@ -44,3 +44,5 @@
 ## auto-covmats: refactor to more be general and don't hard code Planck etc in main source (e.g. so external likelihood distributions can provide own covmat databases)
 ## doc, install, model may be better documented generally rather than only in cosmo sections.
 ## parameterization: there should be no need for "drop" if there are no agnostic components.
+## Dependencies system
++ AL: We should perhaps allow all requirements to also be arrays of Requirement or (key, option) tuples (this is already done internally for combining requirements, but currently no component can individually return two requests with the same key but different options because dicts have unique keys).
