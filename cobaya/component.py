@@ -253,5 +253,8 @@ class Provider:
     def __getattr__(self, name):
         if name.startswith('get_'):
             requirement = name[4:]
-            return getattr(self.requirement_providers[requirement], name)
+            try:
+                return getattr(self.requirement_providers[requirement], name)
+            except KeyError:  # requirement not listed (parameter or result)
+                raise AttributeError
         return object.__getattribute__(self, name)
