@@ -6,6 +6,7 @@ from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
 from .common import process_packages_path
 
+debug = True
 
 # Aderived = 1
 # Aout = [Ain]
@@ -95,7 +96,7 @@ class Like(Likelihood):
 
 info = {'likelihood': {'like': Like},
         'params': {'Bpar': 3, 'Ain': 5},
-        'debug': False}
+        'debug': debug}
 
 
 def _test_loglike(theories):
@@ -209,7 +210,7 @@ class Like4(Likelihood):
 
 info2 = {'likelihood': {'like': Like2},
          'params': {'Ain': 5},
-         'debug': True, 'stop_at_error': True}
+         'debug': debug, 'stop_at_error': True}
 
 
 def _test_loglike2(theories):

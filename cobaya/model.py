@@ -25,7 +25,7 @@ from cobaya.theory import TheoryCollection
 from cobaya.log import LoggedError, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
 from cobaya.tools import deepcopy_where_possible, are_different_params_lists, \
-    str_to_list, sort_parameter_blocks, recursive_update, sort_cosmetic
+    str_to_list, sort_parameter_blocks, recursive_update, sort_cosmetic, ensure_dict
 from cobaya.component import Provider
 from cobaya.mpi import more_than_one_process, get_mpi_comm
 
@@ -549,7 +549,7 @@ class Model(HasLogger):
             # Corner case: some components can either take some parameters as input OR
             # provide their own calculation of them. Pop those if required as input.
             for p in provide_params.copy():  # iterating over copy
-                if p in component.get_required_params():
+                if p in component.get_requirements():  # no need to know which are params
                     provide_params.remove(p)
             # Invert to get the provider(s) of each available product/parameter
             for k in can_provide + component.output_params + provide_params:
@@ -725,7 +725,12 @@ class Model(HasLogger):
                     provide = str_to_list(getattr(component, _provides, []))
                     supports_params |= set(provide)
                 else:
-                    supports_params = set(component.get_required_params()).union(
+                    required_params = ensure_dict(component.get_requirements()).copy()
+                    # pop non-params; it's ok if some non-param goes through
+                    for p,v in required_params.copy().items():
+                        if v:  # not a param
+                            required_params.pop(p)
+                    supports_params = set(required_params).union(
                         set(component.get_can_support_params()))
                 # Identify parameters understood by this likelihood/theory
                 # 1a. Does it have input/output params list?
@@ -782,7 +787,7 @@ class Model(HasLogger):
                 component = agnostic_likes[io_kind][0]
                 for p, assigned in params_assign[io_kind].items():
                     if not assigned or not derived_param and \
-                       p in component.get_required_params():
+                       p in component.get_requirements():
                         params_assign[io_kind][p] += [component]
         # If unit likelihood is present, assign all unassigned inputs to it
         for like in self.likelihood.values():
