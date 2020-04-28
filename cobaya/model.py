@@ -235,9 +235,10 @@ class Model(HasLogger):
         self.log.debug("Got input parameters: %r", input_params)
         n_theory = len(self.theory)
         loglikes = np.empty(len(self.likelihood))
-        for component, index in self._component_order.items():
+        for (component, index), param_dep in zip(self._component_order.items(),
+                                                 self._params_of_dependencies):
             depend_list = \
-                [input_params[p] for p in self._params_of_dependencies[component]]
+                [input_params[p] for p in param_dep]
             params = {p: input_params[p] for p in component.input_params}
             compute_success = component.check_cache_and_compute(
                 want_derived=return_derived,
@@ -504,6 +505,7 @@ class Model(HasLogger):
         self._component_order = {c: components.index(c) for c in dependence_order}
 
     def _set_dependencies_and_providers(self, manual_requirements=empty_dict):
+        # TODO: does it matter that theories come first, or can we use self.components?
         components = list(self.theory.values()) + list(self.likelihood.values())
         direct_param_dependence = {c: set() for c in components}
 
@@ -610,7 +612,7 @@ class Model(HasLogger):
             # conditional requirements for those requests
             there_are_more_requirements = False
             for component, requires in requirements.items():
-                # empty the list of requirements, since they have already been assignes,
+                # empty the list of requirements, since they have already been assigned,
                 # and store here new (conditional) ones
                 requires[:] = []
                 # .get here accounts for the null component of manual reqs
@@ -648,8 +650,10 @@ class Model(HasLogger):
 
         ### 3. Save dependencies on components and their parameters ###
         self._dependencies = {c: dependencies_of(c) for c in components}
-        self._params_of_dependencies = {c: set() for c in self._component_order}
-        for component, param_dep in self._params_of_dependencies.items():
+        # this next one is not a dict to save a lookup per iteration
+        self._params_of_dependencies = [set() for _ in self._component_order]
+        for component, param_dep in zip(self._component_order,
+                                        self._params_of_dependencies):
             param_dep.update(direct_param_dependence.get(component))
             for dep in self._dependencies.get(component, []):
                 param_dep.update(set(dep.input_params))
