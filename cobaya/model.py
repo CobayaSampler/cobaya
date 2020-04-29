@@ -628,6 +628,8 @@ class Model(HasLogger):
                             requires += conditional_requirements
             # set component compute order and raise error if circular dependence
             self._set_component_order(components, dependencies)
+            # TODO: it would be nice that after this loop we, in some way, have
+            # component.get_requirements() return the conditional reqs actually used too.
         # Expunge manual requirements
         requirements.pop(None, None)
         if self._unassigned_input:
@@ -801,7 +803,7 @@ class Model(HasLogger):
                         assigned.append(like)
                 break
         # If there are unassigned input params, check later that they are used by
-        # requirements of a component (and if not raise error)
+        # *conditional* requirements of a component (and if not raise error)
         self._unassigned_input = set(p for p, assigned in params_assign["input"].items()
                                      if not assigned)
         # Remove aggregated chi2 that may have been picked up by an agnostic component

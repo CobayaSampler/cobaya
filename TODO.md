@@ -20,6 +20,7 @@
 ## Faster Collections for MCMC: numpy cache for merging OnePoint into Collection, `_out_update` method would take care of flushing into the Pandas table.
 ## PolyChord: check overhead
 ## PolyChord: lower dimension tests?
+## Provider: it should be possible to save retrieving methods at initialisation so that everything (params, results, methods) can be retrieved with Provider.get(**args). Maybe it is interesting?
 
 # Enhancements/Refactorings
 
