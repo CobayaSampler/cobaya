@@ -36,7 +36,7 @@ from cobaya.conventions import kinds, _external, _component_path, empty_dict, \
     _input_params, _output_params, _requires
 from cobaya.tools import get_class, get_external_function, getfullargspec, str_to_list
 from cobaya.log import LoggedError
-from cobaya.component import ComponentCollection, Provider
+from cobaya.component import ComponentCollection
 from cobaya.theory import Theory
 
 
@@ -168,7 +168,8 @@ class LikelihoodExternalFunction(Likelihood):
         if info.get(_requires) and not self._uses_self_arg:
             raise LoggedError(
                 self.log, "If a likelihood has external requirements, declared under %r, "
-                "it needs to accept a keyword argument %r.", _requires, self._self_arg)
+                          "it needs to accept a keyword argument %r.", _requires,
+                self._self_arg)
         # MARKED FOR DEPRECATION IN v3.0
         self._uses_old_theory = "_theory" in argspec.args
         if self._uses_old_theory:

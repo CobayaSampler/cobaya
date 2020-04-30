@@ -542,8 +542,8 @@ class Model(HasLogger):
                 component.get_requirements(), component)
             # Gather what this component can provide
             can_provide = (
-                list(component.get_can_provide()) +
-                list(component.get_can_provide_methods()))
+                    list(component.get_can_provide()) +
+                    list(component.get_can_provide_methods()))
             # Parameters that can be provided but not already explicitly assigned
             # (i.e. it is not a declared output param of that component)
             provide_params = [p for p in component.get_can_provide_params() if
@@ -567,9 +567,6 @@ class Model(HasLogger):
         # this is the one we need to initialise the provider
         requirement_providers = {}
         dependencies = {}  # set of components of which each component depends
-        # Requirements per component excluding input params
-        # -- saves some overhead in theory.check_cache_and_compute
-        input_params_extra = {c: set() for c in self.components}
         there_are_more_requirements = True
         while there_are_more_requirements:
             # temp list of dictionary of requirements for each component
@@ -611,10 +608,11 @@ class Model(HasLogger):
                         must_provide[supplier] += [requirement]
                     dependencies[component] = \
                         dependencies.get(component, set()) | {supplier}
+                    # Requirements per component excluding input params
+                    # -- saves some overhead in theory.check_cache_and_compute
                     if component and requirement.name not in component.input_params and \
-                       not requirement.options:
-                        input_params_extra[component].update(
-                            [requirement.name])
+                            requirement.options is None:
+                        component._input_params_extra.add(requirement.name)
             # tell each component what it must provide, and collect the
             # conditional requirements for those requests
             there_are_more_requirements = False
@@ -647,8 +645,6 @@ class Model(HasLogger):
                 raise LoggedError(
                     self.log, "Could not find anything to use input parameter(s) %r.",
                     self._unassigned_input)
-        for component in self.components:
-            component._input_params_extra = input_params_extra[component]
         if self.log.getEffectiveLevel() <= logging.DEBUG:
             self.log.debug("Components will be computed in the order:")
             self.log.debug(" - %r" % list(self._component_order))
@@ -745,7 +741,7 @@ class Model(HasLogger):
                         p for p, v in ensure_dict(component.get_requirements()).items()
                         # ignore non-params; it's ok if some non-param goes through
                         if v is None)
-                    supports_params = set(required_params).union(
+                    supports_params = required_params.union(
                         set(component.get_can_support_params()))
                 # Identify parameters understood by this likelihood/theory
                 # 1a. Does it have input/output params list?
@@ -802,7 +798,7 @@ class Model(HasLogger):
                 component = agnostic_likes[io_kind][0]
                 for p, assigned in params_assign[io_kind].items():
                     if not assigned or not derived_param and \
-                       p in component.get_requirements():
+                            p in component.get_requirements():
                         params_assign[io_kind][p] += [component]
         # If unit likelihood is present, assign all unassigned inputs to it
         for like in self.likelihood.values():
