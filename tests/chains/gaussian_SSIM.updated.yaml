@@ -1,0 +1,76 @@
+likelihood:
+  gaussian_mixture:
+    covs:
+    - - 0.1
+      - 0.05
+      - 0
+    - - 0.05
+      - 0.2
+      - 0
+    - - 0
+      - 0.05
+      - 0.1
+    delay: 0
+    derived: false
+    input_params:
+    - a
+    - b
+    - c
+    input_params_prefix: ''
+    means:
+    - 1
+    - 2
+    - 3
+    output_params: []
+    output_params_prefix: ''
+    speed: -1
+    stop_at_error: false
+    weights: null
+sampler:
+  polychord:
+    base_dir: raw_polychord_output
+    blocking: null
+    boost_posterior: 0
+    callback_function: null
+    cluster_posteriors: true
+    compression_factor: 0.36787944117144233
+    confidence_for_unbounded: 0.9999995
+    do_clustering: false
+    equals: true
+    feedback: null
+    file_root: null
+    logzero: -1.0e+300
+    max_ndead: .inf
+    nlive: 25d
+    nprior: null
+    num_repeats: 2d
+    path: null
+    posteriors: true
+    precision_criterion: 0.001
+    read_resume: true
+    seed: null
+    write_dead: true
+    write_live: true
+    write_resume: true
+    write_stats: true
+params:
+  a:
+    prior:
+      min: -0.5
+      max: 3
+    latex: \alpha
+  b:
+    prior:
+      min: -5
+      max: 5
+    latex: \beta
+  c:
+    prior:
+      min: -10
+      max: 10
+    latex: \gamma
+output: gaussian_SSIM
+modules: null
+debug: false
+resume: false
+force: true

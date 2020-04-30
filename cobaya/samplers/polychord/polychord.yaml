@@ -60,4 +60,7 @@ sampler:
     write_stats: True
     write_live: True
     write_dead: True
+    use_SSIM: False
+    SSIM_means: []
+    SSIM_covmat: [[]]
 

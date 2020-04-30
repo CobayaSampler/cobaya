@@ -12,6 +12,8 @@ from __future__ import absolute_import, division, print_function
 import os
 import sys
 import numpy as np
+from scipy.special import erf, erfinv
+from random import random, seed
 import logging
 import inspect
 from itertools import chain
@@ -28,11 +30,27 @@ from cobaya.install import download_github_release
 from cobaya.yaml import yaml_dump_file
 
 clusters = "clusters"
-
+EXTRA_PARAMS = 0 
 
 class polychord(Sampler):
     def initialize(self):
         """Imports the PolyChord sampler and prepares its arguments."""
+        if self.SSIM_covmat == [[]] or self.SSIM_means==[]:
+            self.log.info('SSIM proposals incomplete. Disabling SSIM. ')
+            self.use_SSIM = False
+        if not len(self.SSIM_covmat ) == len(self.SSIM_means):
+            self.log.info('SSIM proposals of incompatible size. Disabling SSIM. ')
+            self.use_SSIM = False
+            # TODO check for their sizes being compatible as well.
+        if not len(self.SSIM_covmat[0]) == len(self.SSIM_means):
+            self.log.info('SSIM covariance matrix not square. Disabling SSIM. ')
+            self.use_SSIM = False
+            # TODO check for non-diagonaliseable matrices. 
+        if self.use_SSIM:
+            self.log.info('SSIM enabled and proposals supplied. ')
+            self.extra_params=2
+        else:
+            self.extra_params=0
         if am_single_or_primary_process():  # rank = 0 (MPI master) or None (no MPI)
             self.log.info("Initializing")
         # If path not given, try using general path to modules
@@ -141,9 +159,13 @@ class polychord(Sampler):
                    "grade_dims"]
         # As stated above, num_repeats is ignored, so let's not pass it
         pc_args.pop(pc_args.index("num_repeats"))
+        self.grade_dims[0] +=self.extra_params
+        # This was modified to pass an extra (dummy) parameter.
         self.pc_settings = PolyChordSettings(
-            self.nDims, self.nDerived, seed=(self.seed if self.seed is not None else -1),
-            **{p: getattr(self, p) for p in pc_args if getattr(self, p) is not None})
+            self.nDims+self.extra_params, self.nDerived,
+            seed=(self.seed if self.seed is not None else -1),
+            **{p: getattr(self, p) for p in pc_args if getattr(self, p) is not None}
+        )
         # prior conversion from the hypercube
         bounds = self.model.prior.bounds(
             confidence_for_unbounded=self.confidence_for_unbounded)
@@ -230,11 +252,69 @@ class polychord(Sampler):
             return (
                 max(logposterior + self.logvolume, 0.99 * self.pc_settings.logzero), derived)
 
+        # Modifications start here.
+        # cov = [[0.1, 0.05], [0.05,0.2]]
+        # mu = [0.2, 0]
+        mu = np.array(self.SSIM_means)
+        cov = np.array(self.SSIM_covmat)
+        invCov = np.linalg.inv(cov)
+        norm = np.linalg.slogdet(2*np.pi*cov)[1]/2
+        bounds = self.model.prior.bounds(
+                confidence_for_unbounded=self.confidence_for_unbounded)
+        a = bounds[:, 0]
+        b = bounds[:, 1]
+        scales = b-a
+        if self.use_SSIM:
+            print(np.linalg.eig(cov))
+        def _erf_term(d, g):
+                return erf(d * np.sqrt(1 / 2) / g)
+
+        def iPPR_correction(theta):
+            ll=0
+            ll -= np.log(scales).sum()
+            ll += norm + (theta - mu) @ invCov @ (theta - mu) / 2
+            # ll -= ln_z(theta).sum()
+            return ll
+
+        def iPPR_quantile(cube):
+            xinv = 2* cube -1
+            L = np.linalg.cholesky(cov)
+            return mu + np.sqrt(2)*L@erfinv(xinv)
+
+        def SSIM_L(args):
+            theta, _, branch = args[:-self.extra_params], args[-self.extra_params:-1].item(), args[-1:].item()
+            physical, derived = logpost(theta)
+            if branch ==1:
+                physical +=iPPR_correction(theta)
+            return physical, derived
+
+        def SSIM_P(args):
+            theta, beta, branch = args[:-self.extra_params], args[-self.extra_params:-1].item(), args[-1:].item()
+            h = hash(tuple(theta))
+            seed(h)
+            r = abs(random())
+            if r > beta:
+                branch=1
+                physical = iPPR_quantile(theta)
+            else:
+                branch=0
+                physical = self.pc_prior(theta)
+            rval = np.concatenate([physical, [beta], [branch]])
+            return rval
+
+
         sync_processes()
         if am_single_or_primary_process():
             self.log.info("Sampling!")
-        self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
-                              self.pc_prior, self.dumper)
+        if self.extra_params ==0:
+            self.pc.run_polychord(logpost, self.nDims,
+                                  self.nDerived, self.pc_settings, self.pc_prior,
+                                  self.dumper)
+        else:
+            self.pc.run_polychord(SSIM_L, self.nDims+self.extra_params,
+                                  self.nDerived, self.pc_settings, SSIM_P,
+                                  self.dumper)
+
 
     def save_sample(self, fname, name):
         sample = np.atleast_2d(np.loadtxt(fname))
@@ -257,6 +337,7 @@ class polychord(Sampler):
         Loads the sample of live points from ``PolyChord``'s raw output and writes it
         (if ``txt`` output requested).
         """
+        do_output=False
         if exception_type:
             raise
         if am_single_or_primary_process():
@@ -265,6 +346,7 @@ class polychord(Sampler):
             self.collection = self.save_sample(prefix + ".txt", "1")
             if self.pc_settings.do_clustering is not False:  # NB: "None" == "default"
                 self.clusters = {}
+                # do_output=True
                 do_output = hasattr(self.output, "folder")
                 for f in os.listdir(os.path.join(self.pc_settings.base_dir, clusters)):
                     if not f.startswith(self.pc_settings.file_root):

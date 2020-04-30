@@ -169,7 +169,7 @@ def update_info(info):
                 if default_module_info[block][module]:
                     # Internal module
                     raise LoggedError(
-                        log, "'%s' does not recognize some options: %s. "
+                        log, "'%s' does not recognize: %s. "
                              "To see the allowed options, check out the documentation of"
                              " this module.", module, did_you_mean)
                 else:
