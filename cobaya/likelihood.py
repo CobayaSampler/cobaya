@@ -189,6 +189,11 @@ class LikelihoodExternalFunction(Likelihood):
         return self._requirements
 
     def logp(self, **params_values):
+        # Remove non-input params (except _derived)
+        # TODO: this lines should be removed whenever input_params/reqs split is fixed
+        for p in list(params_values):
+            if p not in self.input_params and p != "_derived":
+                params_values.pop(p)
         _derived = params_values.pop("_derived", None)
         if self._uses_self_arg:
             params_values[self._self_arg] = self

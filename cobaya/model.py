@@ -25,7 +25,7 @@ from cobaya.theory import TheoryCollection
 from cobaya.log import LoggedError, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
 from cobaya.tools import deepcopy_where_possible, are_different_params_lists, \
-    str_to_list, sort_parameter_blocks, recursive_update, sort_cosmetic
+    str_to_list, sort_parameter_blocks, recursive_update, sort_cosmetic, ensure_dict
 from cobaya.component import Provider
 from cobaya.mpi import more_than_one_process, get_mpi_comm
 
@@ -235,9 +235,10 @@ class Model(HasLogger):
         self.log.debug("Got input parameters: %r", input_params)
         n_theory = len(self.theory)
         loglikes = np.empty(len(self.likelihood))
-        for component, index in self._component_order.items():
+        for (component, index), param_dep in zip(self._component_order.items(),
+                                                 self._params_of_dependencies):
             depend_list = \
-                [input_params[p] for p in self._params_of_dependencies[component]]
+                [input_params[p] for p in param_dep]
             params = {p: input_params[p] for p in component.input_params}
             compute_success = component.check_cache_and_compute(
                 want_derived=return_derived,
@@ -504,6 +505,7 @@ class Model(HasLogger):
         self._component_order = {c: components.index(c) for c in dependence_order}
 
     def _set_dependencies_and_providers(self, manual_requirements=empty_dict):
+        # TODO: does it matter that theories come first, or can we use self.components?
         components = list(self.theory.values()) + list(self.likelihood.values())
         direct_param_dependence = {c: set() for c in components}
 
@@ -549,7 +551,7 @@ class Model(HasLogger):
             # Corner case: some components can either take some parameters as input OR
             # provide their own calculation of them. Pop those if required as input.
             for p in provide_params.copy():  # iterating over copy
-                if p in component.get_required_params():
+                if p in component.get_requirements():  # no need to know which are params
                     provide_params.remove(p)
             # Invert to get the provider(s) of each available product/parameter
             for k in can_provide + component.output_params + provide_params:
@@ -610,7 +612,7 @@ class Model(HasLogger):
             # conditional requirements for those requests
             there_are_more_requirements = False
             for component, requires in requirements.items():
-                # empty the list of requirements, since they have already been assignes,
+                # empty the list of requirements, since they have already been assigned,
                 # and store here new (conditional) ones
                 requires[:] = []
                 # .get here accounts for the null component of manual reqs
@@ -626,6 +628,8 @@ class Model(HasLogger):
                             requires += conditional_requirements
             # set component compute order and raise error if circular dependence
             self._set_component_order(components, dependencies)
+            # TODO: it would be nice that after this loop we, in some way, have
+            # component.get_requirements() return the conditional reqs actually used too.
         # Expunge manual requirements
         requirements.pop(None, None)
         if self._unassigned_input:
@@ -648,8 +652,10 @@ class Model(HasLogger):
 
         ### 3. Save dependencies on components and their parameters ###
         self._dependencies = {c: dependencies_of(c) for c in components}
-        self._params_of_dependencies = {c: set() for c in self._component_order}
-        for component, param_dep in self._params_of_dependencies.items():
+        # this next one is not a dict to save a lookup per iteration
+        self._params_of_dependencies = [set() for _ in self._component_order]
+        for component, param_dep in zip(self._component_order,
+                                        self._params_of_dependencies):
             param_dep.update(direct_param_dependence.get(component))
             for dep in self._dependencies.get(component, []):
                 param_dep.update(
@@ -725,7 +731,12 @@ class Model(HasLogger):
                     provide = str_to_list(getattr(component, _provides, []))
                     supports_params |= set(provide)
                 else:
-                    supports_params = set(component.get_required_params()).union(
+                    required_params = ensure_dict(component.get_requirements()).copy()
+                    # pop non-params; it's ok if some non-param goes through
+                    for p,v in required_params.copy().items():
+                        if v:  # not a param
+                            required_params.pop(p)
+                    supports_params = set(required_params).union(
                         set(component.get_can_support_params()))
                 # Identify parameters understood by this likelihood/theory
                 # 1a. Does it have input/output params list?
@@ -782,7 +793,7 @@ class Model(HasLogger):
                 component = agnostic_likes[io_kind][0]
                 for p, assigned in params_assign[io_kind].items():
                     if not assigned or not derived_param and \
-                       p in component.get_required_params():
+                       p in component.get_requirements():
                         params_assign[io_kind][p] += [component]
         # If unit likelihood is present, assign all unassigned inputs to it
         for like in self.likelihood.values():
@@ -792,7 +803,7 @@ class Model(HasLogger):
                         assigned.append(like)
                 break
         # If there are unassigned input params, check later that they are used by
-        # requirements of a component (and if not raise error)
+        # *conditional* requirements of a component (and if not raise error)
         self._unassigned_input = set(p for p, assigned in params_assign["input"].items()
                                      if not assigned)
         # Remove aggregated chi2 that may have been picked up by an agnostic component

@@ -47,6 +47,15 @@ def str_to_list(x):
     return [x] if isinstance(x, str) else x
 
 
+def ensure_dict(iterable_or_dict):
+    """
+    For iterables, returns dict with elements as keys and null values.
+    """
+    if not isinstance(iterable_or_dict, Mapping):
+        return dict.fromkeys(iterable_or_dict)
+    return iterable_or_dict
+
+
 def change_key(info, old, new, value):
     """
     Change dictionary key without making new dict or changing order

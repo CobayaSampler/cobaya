@@ -77,41 +77,6 @@ class Theory(CobayaComponent):
         """
         return dict.fromkeys(str_to_list(getattr(self, _requires, [])))
 
-    def _update_required_params(self):
-        """
-        Selects from the list of requirements those that appear to be parameters (i.e.
-        they are indicated in the requirements with no options *and* are handed by the
-        provider through the set_params method.
-
-        Before the call to `initialize_with_provider`, only the first condition is
-        checked.
-        """
-        self._required_params = set()
-        reqs = self.get_requirements()
-        if not isinstance(reqs, Mapping):
-            reqs = dict.fromkeys(reqs)
-        for req, opt in reqs.items():
-            if opt is None:
-                if getattr(self, "provider", None) is not None:
-                    if req in self.provider.requirement_providers:
-                        this_provider = self.provider.requirement_providers[req]
-                        if req in this_provider.get_can_provide_params():
-                            self._required_params.add(req)
-                else:
-                    # Assume it is a parameter for now
-                    self._required_params.add(req)
-
-    def get_required_params(self):
-        """
-        Returns just the required parameters indicated by
-        :func:`~theory.Theory.get_requirements`.
-
-        :return: iterable of required parameters
-        """
-        if not hasattr(self, "_required_params"):
-            self._update_required_params()
-        return self._required_params
-
     def must_provide(self, **requirements):
         """
         Function to be called specifying any output products that are needed and hence
@@ -161,7 +126,6 @@ class Theory(CobayaComponent):
                          this component to get computed requirements
         """
         self.provider = provider
-        self._update_required_params()
 
     def get_param(self, p):
         """
@@ -249,10 +213,13 @@ class Theory(CobayaComponent):
         (retrieved using get_current_derived()).
         """
         self.log.debug("Got parameters %r", params_values_dict)
-        for set_param in self.get_required_params():
+        params_values_dict = params_values_dict.copy()
+        for set_param in self.get_requirements():
             # mess handling optional parameters that may be computed elsewhere, eg. YHe
-            params_values_dict = params_values_dict.copy()
-            params_values_dict[set_param] = self.provider.get_param(set_param)
+            try:
+                params_values_dict[set_param] = self.provider.get_param(set_param)
+            except:
+                pass
         state = None
         if cached:
             for _state in self._states:

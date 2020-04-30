@@ -20,6 +20,7 @@
 ## Faster Collections for MCMC: numpy cache for merging OnePoint into Collection, `_out_update` method would take care of flushing into the Pandas table.
 ## PolyChord: check overhead
 ## PolyChord: lower dimension tests?
+## Provider: it should be possible to save retrieving methods at initialisation so that everything (params, results, methods) can be retrieved with Provider.get(**args). Maybe it is interesting?
 
 # Enhancements/Refactorings
 
@@ -44,3 +45,6 @@
 ## auto-covmats: refactor to more be general and don't hard code Planck etc in main source (e.g. so external likelihood distributions can provide own covmat databases)
 ## doc, install, model may be better documented generally rather than only in cosmo sections.
 ## parameterization: there should be no need for "drop" if there are no agnostic components.
+## Dependencies system
+* Maybe remove distinction between input parameters and requirements, so that `calculate`/`logp` takes both of them, which would be prepared by `check_cache_and_compute`. This would simplify the code a bit (in particular the part about input parameters that can be requirements, e.g. YHe) and makes all likelihood automatically callable outside a `Model` feeding requirements by hand. Problem: to prepare requirements we need arguments (e.g. units, `ell_factor` for Cl's) which are not passed to `must_compute`.
+* AL: We should perhaps allow all requirements to also be arrays of Requirement or (key, option) tuples (this is already done internally for combining requirements, but currently no component can individually return two requests with the same key but different options because dicts have unique keys).
