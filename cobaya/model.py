@@ -567,6 +567,9 @@ class Model(HasLogger):
         # this is the one we need to initialise the provider
         requirement_providers = {}
         dependencies = {}  # set of components of which each component depends
+        # Requirements per component excluding input params
+        # -- saves some overhead in theory.check_cache_and_compute
+        input_params_extra = {c: set() for c in self.components}
         there_are_more_requirements = True
         while there_are_more_requirements:
             # temp list of dictionary of requirements for each component
@@ -608,6 +611,10 @@ class Model(HasLogger):
                         must_provide[supplier] += [requirement]
                     dependencies[component] = \
                         dependencies.get(component, set()) | {supplier}
+                    if component and requirement.name not in component.input_params and \
+                       not requirement.options:
+                        input_params_extra[component].update(
+                            [requirement.name])
             # tell each component what it must provide, and collect the
             # conditional requirements for those requests
             there_are_more_requirements = False
@@ -629,16 +636,19 @@ class Model(HasLogger):
             # set component compute order and raise error if circular dependence
             self._set_component_order(components, dependencies)
             # TODO: it would be nice that after this loop we, in some way, have
-            # component.get_requirements() return the conditional reqs actually used too.
+            # component.get_requirements() return the conditional reqs actually used too,
+            # or maybe assign conditional used ones to a property?
         # Expunge manual requirements
         requirements.pop(None, None)
+        # Check that unassigned input parameters are at least required by some component
         if self._unassigned_input:
             self._unassigned_input.difference_update(*direct_param_dependence.values())
             if self._unassigned_input:
                 raise LoggedError(
                     self.log, "Could not find anything to use input parameter(s) %r.",
                     self._unassigned_input)
-
+        for component in self.components:
+            component._input_params_extra = input_params_extra[component]
         if self.log.getEffectiveLevel() <= logging.DEBUG:
             self.log.debug("Components will be computed in the order:")
             self.log.debug(" - %r" % list(self._component_order))
@@ -731,11 +741,10 @@ class Model(HasLogger):
                     provide = str_to_list(getattr(component, _provides, []))
                     supports_params |= set(provide)
                 else:
-                    required_params = ensure_dict(component.get_requirements()).copy()
-                    # pop non-params; it's ok if some non-param goes through
-                    for p,v in required_params.copy().items():
-                        if v:  # not a param
-                            required_params.pop(p)
+                    required_params = set(
+                        p for p, v in ensure_dict(component.get_requirements()).items()
+                        # ignore non-params; it's ok if some non-param goes through
+                        if v is None)
                     supports_params = set(required_params).union(
                         set(component.get_can_support_params()))
                 # Identify parameters understood by this likelihood/theory
