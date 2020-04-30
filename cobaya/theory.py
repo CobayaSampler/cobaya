@@ -198,6 +198,13 @@ class Theory(CobayaComponent):
         """
         return False
 
+    @property
+    def input_params_extra(self):
+        """
+        Parameters required from other components, to be passed as input parameters.
+        """
+        return getattr(self, "_input_params_extra", set())
+
     def set_cache_size(self, n):
         """
         Set how many states to cache
@@ -213,13 +220,12 @@ class Theory(CobayaComponent):
         (retrieved using get_current_derived()).
         """
         self.log.debug("Got parameters %r", params_values_dict)
-        params_values_dict = params_values_dict.copy()
-        for set_param in self.get_requirements():
-            # mess handling optional parameters that may be computed elsewhere, eg. YHe
+        for p in self.input_params_extra.copy():
             try:
-                params_values_dict[set_param] = self.provider.get_param(set_param)
+                params_values_dict[p] = self.provider.get_param(p)
             except:
-                pass
+                # Pop non-parameter (only done during 1st call)
+                self._input_params_extra.remove(p)
         state = None
         if cached:
             for _state in self._states:
