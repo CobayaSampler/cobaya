@@ -47,7 +47,7 @@ implement only the methods ``initialize``, ``_run``, and ``products``.
 import os
 import logging
 import numpy as np
-from typing import Optional, Sequence, Mapping, Union
+from typing import Optional, Sequence, Mapping, Union, Any
 from itertools import chain
 
 # Local
@@ -121,9 +121,9 @@ def check_sampler_info(info_old=None, info_new=None, is_resuming=False):
         else:
             raise LoggedError(
                 logger_sampler, "Found old Sampler information which is not compatible "
-                "with the new one. Delete the previous output manually, "
-                "or automatically with either "
-                "'-%s', '--%s', '%s: True'" % (_force[0], _force, _force))
+                                "with the new one. Delete the previous output manually, "
+                                "or automatically with either "
+                                "'-%s', '--%s', '%s: True'" % (_force[0], _force, _force))
 
 
 def get_sampler(info_sampler, model, output=None, packages_path=None):
@@ -169,6 +169,9 @@ class Sampler(CobayaComponent):
 
     seed: Optional[int]
     version: Optional[Union[dict, str]] = None
+
+    _old_rng_state: Any
+    _old_ext_rng_state: Any
 
     def initialize(self):
         """
@@ -387,6 +390,7 @@ class Sampler(CobayaComponent):
                 # Clean up old files, and set resuming=False,
                 # regardless of requested value
                 cls.delete_output_files(output, info=info)
+                # TODO: these resuming not used, passed as False?
                 resuming = False
         else:
             resuming = None

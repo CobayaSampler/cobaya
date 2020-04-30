@@ -32,7 +32,7 @@ see :doc:`theories_and_dependencies`.
 
 import inspect
 from collections import deque
-from typing import Sequence, Optional, Union, Mapping
+from typing import Sequence, Optional, Union
 # Local
 from cobaya.conventions import _external, kinds, _requires, _params, empty_dict
 from cobaya.component import CobayaComponent, ComponentCollection
@@ -66,6 +66,7 @@ class Theory(CobayaComponent):
         # Default 3, but can be changed by sampler
         self.set_cache_size(3)
         self._helpers = {}
+        self._input_params_extra = set()
 
     def get_requirements(self):
         """
@@ -203,7 +204,7 @@ class Theory(CobayaComponent):
         """
         Parameters required from other components, to be passed as input parameters.
         """
-        return getattr(self, "_input_params_extra", set())
+        return self._input_params_extra
 
     def set_cache_size(self, n):
         """
@@ -220,12 +221,12 @@ class Theory(CobayaComponent):
         (retrieved using get_current_derived()).
         """
         self.log.debug("Got parameters %r", params_values_dict)
-        for p in self.input_params_extra.copy():
+        for p in self._input_params_extra:
             try:
                 params_values_dict[p] = self.provider.get_param(p)
             except:
                 # Pop non-parameter (only done during 1st call)
-                self._input_params_extra.remove(p)
+                self._input_params_extra = self._input_params_extra.difference({p})
         state = None
         if cached:
             for _state in self._states:
