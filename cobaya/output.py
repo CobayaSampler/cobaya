@@ -13,8 +13,10 @@ import datetime
 import re
 import shutil
 import platform
+from packaging import version
 
 # Local
+from cobaya import __version__
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
 from cobaya.conventions import _input_suffix, _updated_suffix, _separator_files, _version
 from cobaya.conventions import _resume, _resume_default, _force, _yaml_extensions
@@ -199,6 +201,7 @@ class Output(HasLogger):
         """
         # trim known params of each likelihood: for internal use only
         updated_info_trimmed = deepcopy_where_possible(updated_info)
+        updated_info_trimmed[_version] = __version__
         for like_info in updated_info_trimmed.get(kinds.likelihood, {}).values():
             (like_info or {}).pop(_params, None)
         if check_compatible:
@@ -216,6 +219,16 @@ class Output(HasLogger):
                 # Deal with version comparison separately:
                 # - If not specified now, take the one used in resume info
                 # - If specified both now and before, check new older than old one
+                # (For Cobaya's own version, prefer new one always)
+                old_version = old_info.get(_version, None)
+                new_version = new_info.get(_version, None)
+                if old_version:
+                    if version.parse(old_version) > version.parse(new_version):
+                        raise LoggedError(
+                            self.log, "You are trying to resume a run performed with a "
+                                      "newer version of Cobaya: %r (you are using %r). "
+                                      "Please, update your Cobaya installation.",
+                            old_version, new_version)
                 for k in (kind for kind in kinds if kind in updated_info):
                     if k in ignore_blocks:
                         continue

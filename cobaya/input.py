@@ -23,7 +23,7 @@ from cobaya.conventions import _products_path, _packages_path, _resume, _force, 
     partag, _external, _output_prefix, _debug, _debug_file, _auto_params, _prior, \
     kinds, _provides, _requires, _input_params, _output_params, _component_path, \
     _aliases, _yaml_extensions, reserved_attributes, empty_dict, _get_chi2_name, \
-    _get_chi2_label, _test_run
+    _get_chi2_label, _test_run, _version
 from cobaya.tools import recursive_update, str_to_list, get_base_classes, \
     fuzzy_match, deepcopy_where_possible, get_class, get_kind
 from cobaya.yaml import yaml_load_file, yaml_dump
@@ -328,7 +328,7 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
         myprint_debug = log.debug
     myname = inspect.stack()[0][3]
     ignore = set() if strict else \
-        {_debug, _debug_file, _resume, _force, _packages_path, _test_run}
+        {_debug, _debug_file, _resume, _force, _packages_path, _test_run, _version}
     ignore = ignore.union(set(ignore_blocks or []))
     if set(info for info in info_old if info_old[info] is not None).difference(ignore) \
             != set(info for info in info_new if info_new[info] is not None).difference(
