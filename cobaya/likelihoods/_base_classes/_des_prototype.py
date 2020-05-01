@@ -410,10 +410,10 @@ class _des_prototype(_DataSetLikelihood):
     def get_theory(self, PKdelta, PKWeyl, bin_bias, shear_calibration_parameters,
                    intrinsic_alignment_A, intrinsic_alignment_alpha,
                    intrinsic_alignment_z0, wl_photoz_errors, lens_photoz_errors):
-        h2 = (self.theory.get_param("H0") / 100) ** 2
-        omegam = self.theory.get_param("omegam")
-        chis = self.theory.get_comoving_radial_distance(self.zs)
-        Hs = self.theory.get_Hubble(self.zs, units="1/Mpc")
+        h2 = (self.provider.get_param("H0") / 100) ** 2
+        omegam = self.provider.get_param("omegam")
+        chis = self.provider.get_comoving_radial_distance(self.zs)
+        Hs = self.provider.get_Hubble(self.zs, units="1/Mpc")
         dchis = np.hstack(
             ((chis[1] + chis[0]) / 2, (chis[2:] - chis[:-2]) / 2, (chis[-1] - chis[-2])))
         D_growth = PKdelta.P(self.zs, 0.001)
@@ -564,11 +564,11 @@ class _des_prototype(_DataSetLikelihood):
             return chi2
 
     def logp(self, **params_values):
-        PKdelta = self.theory.get_Pk_interpolator(("delta_tot", "delta_tot"),
-                                                  extrap_kmax=500 * self.acc)
+        PKdelta = self.provider.get_Pk_interpolator(("delta_tot", "delta_tot"),
+                                                    extrap_kmax=500 * self.acc)
         if self.use_Weyl:
-            PKWeyl = self.theory.get_Pk_interpolator(("Weyl", "Weyl"),
-                                                     extrap_kmax=500 * self.acc)
+            PKWeyl = self.provider.get_Pk_interpolator(("Weyl", "Weyl"),
+                                                       extrap_kmax=500 * self.acc)
         else:
             PKWeyl = None
 

@@ -272,33 +272,33 @@ class _bao_prototype(_InstallableLikelihood):
         # Spherically-averaged distance, over sound horizon radius
         if observable == "DV_over_rs":
             return np.cbrt(
-                ((1 + z) * self.theory.get_angular_diameter_distance(z)) ** 2 *
-                _c_km_s * z / self.theory.get_Hubble(z, units="km/s/Mpc")) / self.rs()
+                ((1 + z) * self.provider.get_angular_diameter_distance(z)) ** 2 *
+                _c_km_s * z / self.provider.get_Hubble(z, units="km/s/Mpc")) / self.rs()
         # Idem, inverse
         elif observable == "rs_over_DV":
             return np.cbrt(
-                ((1 + z) * self.theory.get_angular_diameter_distance(z)) ** 2 *
-                _c_km_s * z / self.theory.get_Hubble(z, units="km/s/Mpc")) ** (
+                ((1 + z) * self.provider.get_angular_diameter_distance(z)) ** 2 *
+                _c_km_s * z / self.provider.get_Hubble(z, units="km/s/Mpc")) ** (
                        -1) * self.rs()
         # Comoving angular diameter distance, over sound horizon radius
         elif observable == "DM_over_rs":
-            return (1 + z) * self.theory.get_angular_diameter_distance(z) / self.rs()
+            return (1 + z) * self.provider.get_angular_diameter_distance(z) / self.rs()
         # Physical angular diameter distance, over sound horizon radius
         elif observable == "DA_over_rs":
-            return self.theory.get_angular_diameter_distance(z) / self.rs()
+            return self.provider.get_angular_diameter_distance(z) / self.rs()
         # Hubble parameter, times sound horizon radius
         elif observable == "Hz_rs":
-            return self.theory.get_Hubble(z, units="km/s/Mpc") * self.rs()
+            return self.provider.get_Hubble(z, units="km/s/Mpc") * self.rs()
         # Diff Linear Growth Rate times present amplitude
         elif observable == "f_sigma8":
-            return self.theory.get_fsigma8(z)
+            return self.provider.get_fsigma8(z)
         # Anisotropy (Alcock-Paczynski) parameter
         elif observable == "F_AP":
-            return ((1 + z) * self.theory.get_angular_diameter_distance(z) *
-                    self.theory.get_Hubble(z, units="km/s/Mpc")) / _c_km_s
+            return ((1 + z) * self.provider.get_angular_diameter_distance(z) *
+                    self.provider.get_Hubble(z, units="km/s/Mpc")) / _c_km_s
 
     def rs(self):
-        return self.theory.get_param("rdrag") * self.rs_rescale
+        return self.provider.get_param("rdrag") * self.rs_rescale
 
     def logp(self, **params_values):
         theory = np.array([self.theory_fun(z, obs) for z, obs

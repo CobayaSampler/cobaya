@@ -453,7 +453,7 @@ class _CMBlikes(_DataSetLikelihood):
                 self.log, "No Cl's have been computed yet. "
                           "Make sure you have evaluated the likelihood.")
         try:
-            Cl_theo = self.theory.get_Cl(ell_factor=True, units=units)
+            Cl_theo = self.provider.get_Cl(ell_factor=True, units=units)
             Cl = Cl_theo.get(column.lower())
         except KeyError:
             raise LoggedError(self.log, "'%s' spectrum has not been computed." % column)
@@ -581,7 +581,7 @@ class _CMBlikes(_DataSetLikelihood):
                     (np.trace(M) - self.nmaps - np.linalg.slogdet(M)[1]))
 
     def logp(self, **data_params):
-        cls = self.theory.get_Cl(ell_factor=True, units="muK2")
+        cls = self.provider.get_Cl(ell_factor=True, units="muK2")
         return self.log_likelihood(cls, **data_params)
 
     def log_likelihood(self, dls, **data_params):

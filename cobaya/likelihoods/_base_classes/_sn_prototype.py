@@ -330,7 +330,7 @@ class _sn_prototype(_DataSetLikelihood):
         return - chi2 / 2
 
     def logp(self, **params_values):
-        angular_diameter_distances = self.theory.get_angular_diameter_distance(self.zcmb)
+        angular_diameter_distances = self.provider.get_angular_diameter_distance(self.zcmb)
         lumdists = (5 * np.log10((1 + self.zhel) * (1 + self.zcmb) *
                                  angular_diameter_distances))
         if self.marginalize:

@@ -80,7 +80,7 @@ class _planck_2018_CamSpec_python(_DataSetLikelihood):
         data_vector = []
         nX = 0
         used_indices = []
-        with open(ini.relativeFileName('data_ranges', "r", encoding="utf-8-sig")) as f:
+        with open(ini.relativeFileName('data_ranges'), "r", encoding="utf-8-sig") as f:
             lines = f.readlines()
             while not lines[-1].strip(): lines = lines[:-1]
             self.Nspec = len(lines)
@@ -263,7 +263,7 @@ class _planck_2018_CamSpec_python(_DataSetLikelihood):
         return self._fast_chi_squared(self.covinv, delta_vector)
 
     def logp(self, **data_params):
-        Cls = self.theory.get_Cl(ell_factor=True)
+        Cls = self.provider.get_Cl(ell_factor=True)
         return -0.5 * self.chi_squared(Cls.get('tt'), Cls.get('te'), Cls.get('ee'),
                                        data_params)
 

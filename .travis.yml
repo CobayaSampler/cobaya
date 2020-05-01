@@ -1,6 +1,6 @@
 language: python
 os: linux
-dist: xenial
+dist: bionic
 git:
   depth: false
 
