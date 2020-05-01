@@ -49,7 +49,7 @@ setup(
     packages=find_packages(exclude=['docs', 'tests']),
     install_requires=['numpy>=1.12.0', 'scipy >= 1.0', 'pandas>=1.0.1',
                       'PyYAML>=5.1', 'wget>=3.2', 'py-bobyqa>=1.1',
-                      'GetDist>=1.1.0', 'fuzzywuzzy>=0.17', 'packaging'],
+                      'GetDist>=1.1.1', 'fuzzywuzzy>=0.17', 'packaging'],
     extras_require={
         'test': ['pytest', 'pytest-forked', 'flaky', 'mpi4py'],
         'gui': ['pyqt5', 'pyside2']},

@@ -97,7 +97,7 @@ class Theory(CobayaComponent):
                 "The .needs() method has been deprecated in favour of must_provide(). "
                 "Please rename your method.")
             # BEHAVIOUR TO BE REPLACED BY AN ERROR
-            self.needs(**requirements)
+            return self.needs(**requirements)
         # END OF DEPRECATION BLOCK
 
     def calculate(self, state, want_derived=True, **params_values_dict):

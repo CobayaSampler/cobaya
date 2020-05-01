@@ -8,7 +8,7 @@
 """
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
-from typing import Mapping, Sequence, Iterable
+from typing import Mapping, Iterable
 
 # Local
 from cobaya.theory import Theory
@@ -131,7 +131,7 @@ class BoltzmannBase(Theory):
             if k == "Cl":
                 current = self._must_provide.get(k, {})
                 self._must_provide[k] = {cl: max(current.get(cl, 0), v.get(cl, 0))
-                                  for cl in set(current).union(v)}
+                                         for cl in set(current).union(v)}
             elif k == 'sigma_R':
                 self._check_args(k, v, ('z', 'R'))
                 for pair in self._norm_vars_pairs(v.pop("vars_pairs", []), k):
