@@ -35,9 +35,14 @@ EXTRA_PARAMS = 0
 class polychord(Sampler):
     def initialize(self):
         """Imports the PolyChord sampler and prepares its arguments."""
+        if isInstance(self.SSIM_covmat, str):
+            self.SSIM_covmat = np.loadtxt(self.SSIM.covmat)
+        if isInstance(self.SSIM_means, str):
+            self.SSIM_means = np.loadtxt(self.SSIM_means)
         if self.SSIM_covmat == [[]] or self.SSIM_means==[]:
             self.log.info('SSIM proposals incomplete. Disabling SSIM. ')
             self.use_SSIM = False
+        
         if not len(self.SSIM_covmat ) == len(self.SSIM_means):
             self.log.info('SSIM proposals of incompatible size. Disabling SSIM. ')
             self.use_SSIM = False
