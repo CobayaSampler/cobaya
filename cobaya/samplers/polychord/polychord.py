@@ -35,9 +35,9 @@ EXTRA_PARAMS = 0
 class polychord(Sampler):
     def initialize(self):
         """Imports the PolyChord sampler and prepares its arguments."""
-        if isInstance(self.SSIM_covmat, str):
-            self.SSIM_covmat = np.loadtxt(self.SSIM.covmat)
-        if isInstance(self.SSIM_means, str):
+        if isinstance(self.SSIM_covmat, str):
+            self.SSIM_covmat = np.loadtxt(self.SSIM_covmat)
+        if isinstance(self.SSIM_means, str):
             self.SSIM_means = np.loadtxt(self.SSIM_means)
         if self.SSIM_covmat == [[]] or self.SSIM_means==[]:
             self.log.info('SSIM proposals incomplete. Disabling SSIM. ')
@@ -260,17 +260,27 @@ class polychord(Sampler):
         # Modifications start here.
         # cov = [[0.1, 0.05], [0.05,0.2]]
         # mu = [0.2, 0]
-        mu = np.array(self.SSIM_means)
-        cov = np.array(self.SSIM_covmat)
-        invCov = np.linalg.inv(cov)
-        norm = np.linalg.slogdet(2*np.pi*cov)[1]/2
-        bounds = self.model.prior.bounds(
-                confidence_for_unbounded=self.confidence_for_unbounded)
-        a = bounds[:, 0]
-        b = bounds[:, 1]
-        scales = b-a
+        print(self.model.prior.bounds(
+                confidence_for_unbounded=self.confidence_for_unbounded))
+        np.savetxt('bounds.csv', self.model.prior.bounds(
+            confidence_for_unbounded=self.confidence_for_unbounded))
+        print(self.model.parameterization.derived_params())
+        print(self.model.parameterization)
+        print(len(self.model.parameterization.derived_params()))
         if self.use_SSIM:
+            mu = np.array(self.SSIM_means)
+            cov = np.array(self.SSIM_covmat)
+            print(cov)
+            invCov = np.linalg.pinv(cov)
+            norm = np.linalg.slogdet(2*np.pi*cov)[1]/2
+            bounds = self.model.prior.bounds(
+                confidence_for_unbounded=self.confidence_for_unbounded)
+        
+            a = bounds[:, 0]
+            b = bounds[:, 1]
+            scales = b-a
             print(np.linalg.eig(cov))
+            
         def _erf_term(d, g):
                 return erf(d * np.sqrt(1 / 2) / g)
 
@@ -430,7 +440,7 @@ class polychord(Sampler):
 
 # Name of the PolyChord repo and version to download
 pc_repo_name = "PolyChord/PolyChordLite"
-pc_repo_version = "1.16"
+pc_repo_version = "1.17"
 
 
 def get_path(path):
