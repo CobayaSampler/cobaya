@@ -258,20 +258,21 @@ class polychord(Sampler):
                 max(logposterior + self.logvolume, 0.99 * self.pc_settings.logzero), derived)
 
         # Modifications start here.
-        # cov = [[0.1, 0.05], [0.05,0.2]]
-        # mu = [0.2, 0]
         print(self.model.prior.bounds(
                 confidence_for_unbounded=self.confidence_for_unbounded))
         np.savetxt('bounds.csv', self.model.prior.bounds(
             confidence_for_unbounded=self.confidence_for_unbounded))
-        print(self.model.parameterization.derived_params())
-        print(self.model.parameterization)
-        print(len(self.model.parameterization.derived_params()))
+        out= open("paramlabels", "w")
+        for p in self.model.parameterization.labels():
+            out.write(p+'\n')
+        out.close()
+            
+            
         if self.use_SSIM:
             mu = np.array(self.SSIM_means)
             cov = np.array(self.SSIM_covmat)
             print(cov)
-            invCov = np.linalg.pinv(cov)
+            invCov = np.linalg.inv(cov)
             norm = np.linalg.slogdet(2*np.pi*cov)[1]/2
             bounds = self.model.prior.bounds(
                 confidence_for_unbounded=self.confidence_for_unbounded)
@@ -279,7 +280,7 @@ class polychord(Sampler):
             a = bounds[:, 0]
             b = bounds[:, 1]
             scales = b-a
-            print(np.linalg.eig(cov))
+
             
         def _erf_term(d, g):
                 return erf(d * np.sqrt(1 / 2) / g)
