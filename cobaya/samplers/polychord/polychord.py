@@ -257,17 +257,7 @@ class polychord(Sampler):
             return (
                 max(logposterior + self.logvolume, 0.99 * self.pc_settings.logzero), derived)
 
-        # Modifications start here.
-        print(self.model.prior.bounds(
-                confidence_for_unbounded=self.confidence_for_unbounded))
-        np.savetxt('bounds.csv', self.model.prior.bounds(
-            confidence_for_unbounded=self.confidence_for_unbounded))
-        out= open("paramlabels", "w")
-        for p in self.model.parameterization.labels():
-            out.write(p+'\n')
-        out.close()
-            
-            
+        # Modifications start here.            
         if self.use_SSIM:
             mu = np.array(self.SSIM_means)
             cov = np.array(self.SSIM_covmat)
