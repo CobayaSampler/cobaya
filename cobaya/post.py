@@ -188,7 +188,7 @@ def post(info, sample=None):
         info_theory_out = None
     chi2_names_add = [_chi2 + _separator + name for name in add[_likelihood]
                       if name is not "one"]
-    out[_likelihood] += [l for l in add[_likelihood] if l is not "one"]
+    out[_likelihood] += [l for l in add[_likelihood] if l != "one"]
     if recompute_theory:
         log.warning("You are recomputing the theory, but in the current version this does"
                     " not force recomputation of any likelihood or derived parameter, "
