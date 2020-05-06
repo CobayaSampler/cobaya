@@ -274,7 +274,8 @@ class mcmc(CovmatSampler):
         blocks_indices = [[sampled_params_list.index(p) for p in b] for b in self.blocks]
         self.proposer = BlockedProposer(
             blocks_indices, oversampling_factors=self.oversampling_factors,
-            i_last_slow_block=self.i_last_slow_block, proposal_scale=self.proposal_scale)
+            i_last_slow_block=(self.i_last_slow_block if self.drag else None),
+            proposal_scale=self.proposal_scale)
         # Cycle length, taking into account oversampling/dragging
         if self.drag:
             self.cycle_length = self.n_slow
