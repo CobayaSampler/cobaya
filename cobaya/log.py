@@ -33,8 +33,9 @@ class LoggedError(Exception):
         super().__init__(msg, **kwargs)
 
 
+# Exceptions that will never be ignored when a component's calculation fails
 always_stop_exceptions = (LoggedError, KeyboardInterrupt, SystemExit, NameError,
-                          SyntaxError, AttributeError)
+                          SyntaxError, AttributeError, KeyError)
 
 
 def safe_exit():
