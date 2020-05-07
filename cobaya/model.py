@@ -445,9 +445,10 @@ class Model(HasLogger):
 
         Returns (point, logpost, logpriors, loglikes, derived)
         """
-        for _ in range(max(1, max_tries // self.prior.d())):
+        for loop in range(max(1, max_tries // self.prior.d())):
             initial_point = self.prior.reference(max_tries=max_tries,
-                                                 ignore_fixed=ignore_fixed_ref)
+                                                 ignore_fixed=ignore_fixed_ref,
+                                                 warn_if_no_ref=not loop)
             logpost, logpriors, loglikes, derived = self.logposterior(initial_point)
             if -np.inf not in loglikes:
                 break
