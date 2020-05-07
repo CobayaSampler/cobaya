@@ -19,6 +19,37 @@
   <defs
      id="defs2">
     <marker
+       inkscape:isstock="true"
+       style="overflow:visible"
+       id="marker2227"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow2Lstart">
+      <path
+         transform="matrix(1.1,0,0,1.1,1.1,0)"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         style="fill:#999999;fill-opacity:1;fill-rule:evenodd;stroke:#999999;stroke-width:0.625;stroke-linejoin:round;stroke-opacity:1"
+         id="path2225"
+         inkscape:connector-curvature="0" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Lstart"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker1141"
+       style="overflow:visible"
+       inkscape:isstock="true"
+       inkscape:collect="always">
+      <path
+         inkscape:connector-curvature="0"
+         id="path1139"
+         style="fill:#999999;fill-opacity:1;fill-rule:evenodd;stroke:#999999;stroke-width:0.625;stroke-linejoin:round;stroke-opacity:1"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(1.1,0,0,1.1,1.1,0)" />
+    </marker>
+    <marker
        inkscape:stockid="Arrow2Lend"
        orient="auto"
        refY="0.0"
@@ -203,14 +234,14 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.52"
-     inkscape:cx="211.54181"
-     inkscape:cy="230.43557"
+     inkscape:zoom="1.8724806"
+     inkscape:cx="137.77906"
+     inkscape:cy="210.8109"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="false"
-     inkscape:window-width="2560"
-     inkscape:window-height="1373"
+     inkscape:window-width="1920"
+     inkscape:window-height="1019"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
@@ -227,7 +258,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -327,7 +358,7 @@
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;font-family:'DejaVu Sans Mono';-inkscape-font-specification:'DejaVu Sans Mono, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;fill:#808080;stroke-width:0.22209972">derived</tspan></text>
     <path
        style="fill:none;stroke:#999999;stroke-width:0.35299999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#marker5827)"
-       d="m 77.408538,150.59348 v -9.37872 h 15.489567 v -13.19062"
+       d="m 73.59945,150.59348 v -9.37872 H 92.8981 v -13.19062"
        id="path2293"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="cccc" />
@@ -526,7 +557,7 @@
          sodipodi:role="line">Likelihood[2]</tspan></text>
     <g
        id="g1155"
-       transform="translate(-88.524861,6.544219)">
+       transform="translate(-99.637363,6.544219)">
       <rect
          transform="scale(1,-1)"
          style="fill:#ffffff;stroke:#000000;stroke-width:0.40000007;stroke-miterlimit:4;stroke-dasharray:0.4, 0.4;stroke-dashoffset:0"
@@ -639,8 +670,22 @@
        inkscape:connector-curvature="0" />
     <path
        style="fill:none;stroke:#999999;stroke-width:0.35299999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-       d="M 104.40604,144.76168 H 88.942103 v 6.43489"
+       d="M 104.46863,144.76168 H 78.038406 v 6.43489"
        id="path1456"
        inkscape:connector-curvature="0" />
+    <g
+       id="g2843"
+       transform="translate(0,0.69229698)">
+      <path
+         inkscape:connector-curvature="0"
+         id="path1137"
+         d="M 83.167672,164.84876 H 97.062294"
+         style="fill:none;stroke:#999999;stroke-width:0.35277778;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#marker1141)" />
+      <path
+         style="fill:none;stroke:#999999;stroke-width:0.35277778;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#marker2227)"
+         d="M 96.472554,170.74042 H 82.577932"
+         id="path2223"
+         inkscape:connector-curvature="0" />
+    </g>
   </g>
 </svg>
