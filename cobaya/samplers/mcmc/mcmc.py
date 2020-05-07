@@ -154,7 +154,8 @@ class mcmc(CovmatSampler):
                 self.model.get_valid_point(max_tries=self.max_tries.value)
             # If resuming but no existing chain, assume failed run and ignore blocking
             # if speeds measurement requested
-            if not len(self.collection) and self.measure_speeds:
+            if self.output.is_resuming() and not len(self.collection) \
+               and self.measure_speeds:
                 self.blocking = None
             if self.measure_speeds and self.blocking:
                 self.log.warning(
