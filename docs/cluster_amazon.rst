@@ -11,7 +11,7 @@ Installing and running single jobs
 
 This is the preferred method for running individual jobs.
 
-First of all, configure and launch a Linux image. For most cosmological applications, we recommend choosing an Ubuntu 18.04 instance with about 16 cores (4 MPI processes threading across 4 cores each) and 32 Gb of RAM (8 Gb per chain). A good choice, following that logic, would be a ``c5d.4xlarge` (compute optimized) instance. Set up for it at least 10Gb of storage.
+First of all, configure and launch a Linux image. For most cosmological applications, we recommend choosing an Ubuntu 18.04 instance with about 16 cores (4 MPI processes threading across 4 cores each) and 32 Gb of RAM (8 Gb per chain). A good choice, following that logic, would be a ``c5d.4xlarge`` (compute optimized) instance. Set up for it at least 10Gb of storage.
 
 Now install the requisites with
 
