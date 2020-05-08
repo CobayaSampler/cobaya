@@ -17,6 +17,7 @@
 
 # Enhancements/Refactorings
 
+## Way to have parameters with different speeds within the same component without splitting into separate theories or sub-HelpTheories, or specify a sub-blocking for a component's parameters
 ## some way to change default options, e.g. always use cobaya-run -f by default. Also argument to run() function.
 ## Support "parameterization" option of theory .yaml to specify parameter yaml variants?/generalize !defaults
 ## Let classes do all defaults combining; allow separate like instantiation + use equivalent to loading in cobaya
