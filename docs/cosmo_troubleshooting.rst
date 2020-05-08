@@ -12,6 +12,20 @@ If you are getting an error whose cause is not immediately obvious, try evaluati
 You can increase the level of verbosity running with ``debug: True`` (or adding the ``--debug`` flag to ``cobaya-run``). Cobaya will print what each part of the code is getting and producing, as well as some other intermediate info. You can pipe the debug output to a file with ``cobaya-run [input.yaml] --debug > file`` or setting ``debug_file: [filename]``.
 
 
+.. _cosmo_polychord:
+
+Using PolyChord in cosmological runs
+------------------------------------
+
+PolyChord explores the full posterior domain much more thoroughly than MCMC does, in order to get an accurate estimation of the model evidence. Due to that a couple of caveats are in order:
+
+* The :doc:`Planck likelihood <likelihood_planck>` does not often deal gracefully with extreme values of the power spectrum: some times, when at the tails of the posterior, it may produce a segfault (the error message will contain something like ``Segmentation Fault`` or ``Signal 11``, and a references to a files such as ``clik/lkl.[some_text].so``). Not much can be done about this, except for reducing the prior boundaries for the cosmological parameters by hand.
+
+* For most cases, CAMB and CLASS should produce very similar evidences for the same models, but only as long as the posterior does not extend towards regions which are unphysical for one of the Boltzmann codes and not the other one. You should not see any effect for most LCDM extensions, but keep an eye open if comparing CAMB and CLASS results for exotic models.
+
+* [WIP: typical running time]
+
+
 Sampling stuck or not saving any point
 --------------------------------------
 
@@ -43,13 +57,9 @@ You can use e.g. `Valgrind <http://www.valgrind.org/>`_ to monitor memory usage.
 
    In particular, for CLASS, check out :ref:`this warning <classy_install_warn>` concerning moving the CLASS folder after compilation.
 
-.. note::
-
-   We have got reports of a memory leak when using CLASS together with PolyChord. We are investigating the issue. Please, let us know if you try this in `the corresponding GitHub issue <https://github.com/CobayaSampler/cobaya/issues/34>`_.
-
 
 Secondary MPI processes not dying
-----------------------------------
+---------------------------------
 
 We have noticed that hitting :kbd:`Control-c` **twice in a row** prevents the termination signal to be propagated among processes, letting some or all secondary ones running after the primary one is killed, so that they need to be killed manually. Please, be patient!
 

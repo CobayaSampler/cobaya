@@ -11,10 +11,10 @@ nlive: 25d
 # Helps with curved degeneracies and thin "corners".
 # Recommended: '5d' if accurate evidences needed or weird posterior shapes.
 # You may want to use `d` for exploratory runs.
-num_repeats: 5d
+num_repeats: 2d
 # Number of prior samples drawn before starting compression
-# Make it larger than nlive if your prior/likelihood has unphysical regions
-nprior:  # default: nlive
+# Can be in units of nlive (but not dimension) as Xnlive
+nprior: 10nlive
 # Whether to check for and explore multi-modality on the posterior
 do_clustering: True
 # Stopping criterion: fraction of the total evidence contained in the live points
@@ -39,8 +39,10 @@ feedback:  # default: Same as global `verbosity`
 # whether to measure actual speeds for your machine/threading at starting rather
 # than using stored values
 measure_speeds: True
-# Oversampling power: amount of oversampling or dragging. Value in [0, 1]
-oversample_power: 0.8
+# Amount of oversampling of each parameter block, relative to their speeds
+# Value from 0 (no oversampling) to 1 (spend the same amount of time in all blocks)
+# Can be larger than 1 if extra oversampling of fast blocks required.
+oversample_power: 0.4
 # Manual speed blocking
 # ---------------------
 # To take full advantage of speed-blocking, sort the blocks by ascending speeds

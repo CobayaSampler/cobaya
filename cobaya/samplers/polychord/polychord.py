@@ -18,8 +18,8 @@ from tempfile import gettempdir
 import re
 
 # Local
-from cobaya.tools import read_dnumber, get_external_function, PythonPath
-from cobaya.tools import find_with_regexp
+from cobaya.tools import read_dnumber, get_external_function, PythonPath, \
+    find_with_regexp, NumberWithUnits
 from cobaya.sampler import Sampler
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
 from cobaya.collection import Collection
@@ -94,9 +94,16 @@ class polychord(Sampler):
             self.logzero = np.nan_to_num(-np.inf)
         if self.max_ndead == np.inf:
             self.max_ndead = -1
-        for p in ["nlive", "nprior", "max_ndead"]:
+        self._quants_d_units = ["nlive", "max_ndead"]
+        for p in self._quants_d_units:
             if getattr(self, p) is not None:
-                setattr(self, p, read_dnumber(getattr(self, p), self.nDims))
+                setattr(self, p, NumberWithUnits(
+                    getattr(self, p), "d", scale=self.nDims, dtype=int).value)
+        self._quants_nlive_units = ["nprior"]
+        for p in self._quants_nlive_units:
+            if getattr(self, p) is not None:
+                setattr(self, p, NumberWithUnits(
+                    getattr(self, p), "nlive", scale=self.nlive, dtype=int).value)
         # Fill the automatic ones
         if getattr(self, "feedback", None) is None:
             values = {logging.CRITICAL: 0, logging.ERROR: 0, logging.WARNING: 0,

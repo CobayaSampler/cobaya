@@ -79,17 +79,19 @@ If you are using external priors (as described :ref:`here <prior_external>`), th
 
 .. warning::
 
-   If any of the priors specified in the ``prior`` block or any of the likelihoods has *unphysical* regions, i.e. regions of null prior or likelihood, increase the ``nprior`` parameter of PolyChord up to ``50d``, ``100d``, or higher, depending on the complexity of the unphysical region.
+   If any of the priors specified in the ``prior`` block or any of the likelihoods has large *unphysical* regions, i.e. regions of null prior or likelihood, you may want to increase the ``nprior`` parameter of PolyChord to a higher multiple of ``nlive`` (default ``10nlive``), depending on the complexity of the unphysical region.
 
    **Why?** The unphysical fraction of the parameter space, which is automatically subtracted to the raw PolyChord result, is guessed from a prior sample of size ``nprior``, so the higher that sample is, the smaller the bias introduced by its misestimation.
 
    Increasing ``nprior`` will make your run slower to initialize, but will not significantly affect the total duration.
 
+   Notice that this behaviour differs from stock versions of popular nested samplers (MultiNest and PolyChord), which simply ignore unphysical points; but we have chosen to take them into account to keep the value of the prior density meaningful: otherwise by simply ignoring unphysical points, doubling the prior size (so halving its density) beyond physical limits would have no effect on the evidence.
+
 
 Taking advantage of a speed hierarchy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-PolyChord *automatically* sorts parameters optimally, and chooses the number of repeats per likelihood according to the value of the ``oversampling_power`` property. You can also specify the blocking and oversampling by hand using the ``blocking`` option. For more thorough documentation of these options, check :ref:`the corresponding section in the MCMC sampler page<mcmc_speed_hierarchy>` (just ignore the references to ``drag``, which do not apply here).
+Cobaya's PolyChord wrapper *automatically* sorts parameters optimally, and chooses the number of repeats per likelihood according to the value of the ``oversampling_power`` property. You can also specify the blocking and oversampling by hand using the ``blocking`` option. For more thorough documentation of these options, check :ref:`the corresponding section in the MCMC sampler page<mcmc_speed_hierarchy>` (just ignore the references to ``drag``, which do not apply here).
 
 
 .. _polychord_callback:
@@ -131,6 +133,8 @@ If you are getting an error whose cause is not immediately obvious, try substitu
 If still in doubt, run with debug output and check what the prior and likelihood are getting and producing: either set ``debug: True`` in the input file and set ``debug_file`` to some file name, or add the ``--debug`` flag to ``cobaya-run`` and pipe the output to a file with ``cobaya-run [input.yaml] --debug > file``.
 
 If everything seems to be working fine, but PolyChord is taking too long to converge, reduce the number of live points ``nlive`` to e.g. 10 per dimension, and the ``precision_criterion`` to 0.1 or so, and check that you get reasonable (but low-precision) sample and evidences.
+
+See also :ref:`cosmo_polychord`.
 
 
 .. _pc_installation:

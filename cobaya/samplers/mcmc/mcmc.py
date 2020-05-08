@@ -25,8 +25,7 @@ from cobaya.conventions import _line_width, _progress_extension, empty_dict
 from cobaya.conventions import _checkpoint_extension
 from cobaya.samplers.mcmc.proposal import BlockedProposer
 from cobaya.log import LoggedError
-from cobaya.tools import get_external_function, NumberWithUnits
-from cobaya.tools import load_DataFrame
+from cobaya.tools import get_external_function, NumberWithUnits, load_DataFrame
 from cobaya.yaml import yaml_dump_file
 
 
