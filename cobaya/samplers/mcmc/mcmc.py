@@ -89,8 +89,7 @@ class mcmc(CovmatSampler):
         if self.callback_every is None:
             self.callback_every = self.learn_every
         self._quants_d_units = []
-        for q in (["max_tries", "learn_every", "callback_every"] +
-                  (["burn_in"] if not self.output.is_resuming() else [])):
+        for q in ["max_tries", "learn_every", "callback_every", "burn_in"]:
             number = NumberWithUnits(getattr(self, q), "d", dtype=int)
             self._quants_d_units.append(number)
             setattr(self, q, number)
