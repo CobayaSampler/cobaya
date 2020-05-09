@@ -688,7 +688,7 @@ class Model(HasLogger):
         self.sampled_dependence = sampled_dependence
 
         ### 4. Initialize the provider and pass it to each component ###
-        if self.log.getEffectiveLevel() <= logging.DEBUG:
+        if self.log.getEffectiveLevel() <= logging.DEBUG and requirement_providers:
             self.log.debug("Requirements will be calculated by these components:")
             for requirement, provider in requirement_providers.items():
                 self.log.debug("- %s: %s", requirement, provider)
