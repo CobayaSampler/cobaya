@@ -45,3 +45,4 @@
 * AL: We should perhaps allow all requirements to also be arrays of Requirement or (key, option) tuples (this is already done internally for combining requirements, but currently no component can individually return two requests with the same key but different options because dicts have unique keys).
 * Provider: it should be possible to save retrieving methods at initialisation so that everything (params, results, methods) can be retrieved with Provider.get(**args). Maybe it is interesting?
 
+## Add MPI tests for convergence and resuming (see pytest-mpi)

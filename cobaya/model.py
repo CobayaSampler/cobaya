@@ -453,6 +453,9 @@ class Model(HasLogger):
             if -np.inf not in loglikes:
                 break
         else:
+            if self.prior.reference_is_pointlike():
+                raise LoggedError(self.log, "The reference point provided has null "
+                                  "likelihood. Set 'ref' to a different point or a pdf.")
             raise LoggedError(self.log, "Could not find random point giving finite "
                                         "likelihood after %g tries", max_tries)
         return initial_point, logpost, logpriors, loglikes, derived

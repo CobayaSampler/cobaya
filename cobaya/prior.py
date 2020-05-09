@@ -373,6 +373,7 @@ class Prior(HasLogger):
         self.params = []
         self.pdf = []
         self.ref_pdf = []
+        self._ref_is_pointlike = True
         self._bounds = np.zeros((len(sampled_params_info), 2))
         for i, p in enumerate(sampled_params_info):
             self.params += [p]
@@ -388,8 +389,10 @@ class Prior(HasLogger):
                 self.ref_pdf += [float(ref)]
             elif ref is not None:
                 self.ref_pdf += [get_scipy_1d_pdf({p: ref})]
+                self._ref_is_pointlike = False
             else:
                 self.ref_pdf += [np.nan]
+                self._ref_is_pointlike = False
             self._bounds[i] = [-np.inf, np.inf]
             try:
                 self._bounds[i] = self.pdf[-1].interval(1)
@@ -565,6 +568,9 @@ class Prior(HasLogger):
                 "It is not possible to get the covariance matrix from an external prior.")
         return np.diag([pdf.var() for pdf in self.pdf]).T
 
+    def reference_is_pointlike(self):
+        return self._ref_is_pointlike
+
     def reference(self, max_tries=np.inf, warn_if_tries="10d", ignore_fixed=False,
                   warn_if_no_ref=True):
         """
@@ -607,9 +613,12 @@ class Prior(HasLogger):
                 self.log.warning("If stuck here, maybe it is not possible to sample from "
                                  "the reference pdf a point with non-null prior. Check "
                                  "that they are consistent.")
+        if self.reference_is_pointlike():
+            raise LoggedError(self.log, "The reference point provided has null prior. "
+                                        "Set 'ref' to a different point or a pdf.")
         raise LoggedError(
-            self.log, "Couldn't sample from the reference pdf a point with non-"
-                      "null prior density after '%d' tries. "
+            self.log, "Could not sample from the reference pdf a point with non-"
+                      "null prior density after %d tries. "
                       "Maybe your prior is improper of your reference pdf is "
                       "null-defined in the domain of the prior.", max_tries)
 
