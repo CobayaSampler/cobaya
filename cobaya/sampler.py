@@ -369,13 +369,14 @@ class Sampler(CobayaComponent):
         if not output:
             return
         if is_main_process():
+            resuming = False
             if output.is_forcing():
                 cls.delete_output_files(output, info=info)
             elif any(find_with_regexp(regexp, root or output.folder) for (regexp, root)
                      in cls.output_files_regexps(output=output, info=info, minimal=True)):
                 if output.is_resuming():
                     output.log.info("Found an old sample. Resuming.")
-                    return
+                    resuming = True
                 else:
                     raise LoggedError(
                         output.log, "Delete the previous output manually, automatically "
@@ -390,11 +391,9 @@ class Sampler(CobayaComponent):
                 # Clean up old files, and set resuming=False,
                 # regardless of requested value
                 cls.delete_output_files(output, info=info)
-                # TODO: these resuming not used, passed as False?
-                resuming = False
         else:
             resuming = None
-        output.set_resuming(False)
+        output.set_resuming(resuming)
 
 
 class Minimizer(Sampler):
