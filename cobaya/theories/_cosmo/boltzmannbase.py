@@ -169,7 +169,6 @@ class BoltzmannBase(Theory):
                         self.log, "Needs a 'sources' key, containing a dict with every "
                                   "source name and definition")
                 # Check that no two sources with equal name but diff specification
-                # TODO: commented, what is self.sources?
                 # for source, window in v["sources"].items():
                 #     if source in (getattr(self, "sources", {}) or {}):
                 #         # TODO: improve this test!!!

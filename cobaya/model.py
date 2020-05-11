@@ -30,11 +30,6 @@ from cobaya.component import Provider
 from cobaya.mpi import more_than_one_process, get_mpi_comm
 
 
-# Configure the logger ASAP
-# TODO: Just a dummy import before configuring the logger, until fix root/individual level
-# TODO: AL commented this, not clear why needed - check?
-# import getdist
-
 # Log-posterior namedtuple
 class LogPosterior(NamedTuple):
     logpost: float = None

@@ -329,7 +329,7 @@ def post(info, sample=None):
             continue
         # Add/remove likelihoods
         output_like = []
-        if model_add:  # TODO: seems always true (could we just use loglikes here?)
+        if add[kinds.likelihood]:
             # Notice "one" (last in likelihood_add) is ignored: not in chi2_names
             loglikes_add, output_like = model_add.logps(inputs, return_derived=True)
             loglikes_add = dict(zip(chi2_names_add, loglikes_add))

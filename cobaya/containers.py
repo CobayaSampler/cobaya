@@ -152,18 +152,18 @@ def create_base_image(mpi=None, version=None, sub=None):
     try:
         tag = "cobaya/base_%s_%s:latest" % (mpi.lower(), version + sub)
     except KeyError():
-        raise LoggedError(log, "MPI library '%s' not recognized.")
+        raise LoggedError(log, "MPI library '%s' not recognized.", mpi)
     URL = MPI_URL[mpi.lower()].replace("_VER_", str(version)).replace("_DOT_SUB_", sub)
     if head(URL).status_code >= 400:
         raise LoggedError(log, "Failed to download %s %s: couldn't reach URL: '%s'",
                           mpi.lower(), version + sub, URL)
-    log.info("Creating base image %s v%s..." % (mpi.lower(), version + sub))
+    log.info("Creating base image %s v%s...", mpi.lower(), version + sub)
     this_MPI_recipe = dedent(MPI_recipe[mpi.lower()].replace("_VER_", version)
                              .replace("_DOT_SUB_", sub).replace("_URL_", URL))
     dc = get_docker_client()
     with StringIO(base_recipe + this_MPI_recipe + MPI_epilogue) as stream:
         dc.images.build(fileobj=stream, tag=tag, nocache=True)
-    log.info("Base image '%s' created!" % tag)
+    log.info("Base image '%s' created!", tag)
 
 
 def create_all_base_images():
@@ -219,7 +219,6 @@ def create_singularity_image(filenames, MPI_version=None):
     echos_reqs = "\n    " + "\n    ".join(
         [""] + ['echo "%s" >> %s' % (block, requirements_file_path)
                 for block in components.split("\n")])
-    # TODO: wrong string format?
     recipe = (
             dedent("""
         Bootstrap: docker
@@ -228,7 +227,7 @@ def create_singularity_image(filenames, MPI_version=None):
             dedent(echos_reqs) + dedent("""
         export CONTAINED=TRUE
         cobaya-install %s --%s %s --just-code --force ### --no-progress-bars
-        mkdir %s
+        mkdir $COBAYA_PRODUCTS
 
         %%help
 

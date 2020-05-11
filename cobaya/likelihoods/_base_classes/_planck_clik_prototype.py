@@ -318,7 +318,6 @@ def install_clik(path, no_progress_bars=False):
         cfitsio_filename = os.path.join(source_dir, "waf_tools", "cfitsio.py")
         with open(cfitsio_filename, "r") as cfitsio_file:
             lines = cfitsio_file.readlines()
-
             i_offending = next(i for i, l in enumerate(lines) if ".tar.gz" in l)
             lines[i_offending] = lines[i_offending].replace(
                 "ftp://heasarc.gsfc.nasa.gov/software/fitsio/c/cfitsio3280.tar.gz",
