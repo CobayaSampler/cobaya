@@ -92,7 +92,7 @@ def test_cosmo_des_y1_galaxy_galaxy_classy(modules):
 
 ref_chi2 = {"shear": 242.825, "clustering": 100.997,
             "galaxy_galaxy": 208.005, "joint": 570.428}
-tolerance = 0.2
+tolerance = 0.6
 
 test_params_shear = {
     # wl_photoz_errors
