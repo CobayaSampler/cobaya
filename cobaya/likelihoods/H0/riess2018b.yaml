@@ -1,11 +1,9 @@
 # Riess et al (2018b) value of H0 = 73.52 +/- 1.62 km/s/Mpc
 # https://arxiv.org/abs/1804.10655
 
-likelihood:
-  H0.riess2018b:
-    H0: 73.52
-    H0_std: 1.62
-    # Aliases for automatic covariance matrix
-    renames: [Riess18]
-    # Speed in evaluations/second
-    speed: 4500
+H0_mean: 73.52
+H0_std: 1.62
+# Aliases for automatic covariance matrix
+aliases: [Riess18]
+# Speed in evaluations/second
+speed: 4500

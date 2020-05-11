@@ -1,4 +1,3 @@
-from collections import OrderedDict as odict
 
 info = {
     "likelihood": {
@@ -7,7 +6,7 @@ info = {
             "covs": [[0.1, 0.05],
                      [0.05, 0.2]],
             "derived": True}},
-    "params": odict([
+    "params": dict([
         ("a", {
             "prior": {"min": -0.5, "max": 3},
             "latex": r"\alpha"}),

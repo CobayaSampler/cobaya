@@ -4,12 +4,10 @@
 :Synopsis: Definition of python-native nuisance-free CMB likelihoods: e.g. plik_lite
 :Author: Erminia Calabrese, Antony Lewis
 
-Nuisance-marginalized likelihood, based on covarianced and binned CL, with settings read from .dataset file.
+Nuisance-marginalized likelihood, based on covarianced and binned CL, with settings read
+from .dataset file.
 
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
 
 # Global
 import os
@@ -18,13 +16,13 @@ import numpy as np
 # Local
 from cobaya.likelihoods._base_classes import _DataSetLikelihood
 
-
 cl_names = ['tt', 'te', 'ee']
 
 
 class _planck_pliklite_prototype(_DataSetLikelihood):
-    install_options = {"download_url": "https://cdn.cosmologist.info/cosmobox/test2019_kaml/plik_lite_AL.zip",
-                       "data_path": "planck_2018_pliklite_native"}
+    install_options = {
+        "download_url": "https://cdn.cosmologist.info/cosmobox/test2019_kaml/plik_lite_AL.zip",
+        "data_path": "planck_2018_pliklite_native"}
 
     def init_params(self, ini):
         self.use_cl = [c.lower() for c in ini.list('use_cl')]
@@ -41,8 +39,10 @@ class _planck_pliklite_prototype(_DataSetLikelihood):
         data = np.loadtxt(ini.relativeFileName('data'))
 
         bin_lmin_offset = ini.int('bin_lmin_offset')
-        self.blmin = np.loadtxt(ini.relativeFileName('blmin')).astype(int) + bin_lmin_offset
-        self.blmax = np.loadtxt(ini.relativeFileName('blmax')).astype(int) + bin_lmin_offset
+        self.blmin = np.loadtxt(ini.relativeFileName('blmin')).astype(
+            int) + bin_lmin_offset
+        self.blmax = np.loadtxt(ini.relativeFileName('blmax')).astype(
+            int) + bin_lmin_offset
         self.lav = (self.blmin + self.blmax) // 2
         weights = np.loadtxt(ini.relativeFileName('weights'))
         ls = np.arange(len(weights)) + bin_lmin_offset
@@ -60,8 +60,8 @@ class _planck_pliklite_prototype(_DataSetLikelihood):
             cov = f.read_reals(dtype=float).reshape((self.nbins, self.nbins))
             cov = np.tril(cov) + np.tril(cov, -1).T  # make symmetric
         else:
-            cov = np.loadtxt(
-                ini.relativeFileName('cov_file'))  # full n row x n col matrix converted from fortran binary
+            cov = np.loadtxt(ini.relativeFileName('cov_file'))
+            # full n row x n col matrix converted from fortran binary
 
         self.lmax = lmax
 
@@ -72,11 +72,15 @@ class _planck_pliklite_prototype(_DataSetLikelihood):
         if len(use_bins) and np.max(use_bins) >= maxbin:
             raise ValueError('use_bins has bin index out of range')
         if len(bins_for_L_range):
-            if len(use_bins): raise ValueError('can only use one bin filter')
+            if len(use_bins):
+                raise ValueError('can only use one bin filter')
             use_bins = [use_bin for use_bin in range(maxbin)
                         if
-                        bins_for_L_range[0] <= (self.blmin[use_bin] + self.blmax[use_bin]) / 2 <= bins_for_L_range[1]]
-            print('Actual L range: %s - %s' % (self.blmin[use_bins[0]], self.blmax[use_bins[-1]]))
+                        bins_for_L_range[0] <= (
+                                self.blmin[use_bin] + self.blmax[use_bin]) / 2 <=
+                        bins_for_L_range[1]]
+            print('Actual L range: %s - %s' % (
+                self.blmin[use_bins[0]], self.blmax[use_bins[-1]]))
 
         self.used = np.zeros(3, dtype=bool)
         self.used_bins = []
@@ -92,7 +96,9 @@ class _planck_pliklite_prototype(_DataSetLikelihood):
             self.errors[cl] = data[offset:offset + nbin, 2] * sc
             if self.used[i]:
                 if len(use_bins):
-                    self.used_bins.append(np.array([use_bin for use_bin in use_bins if use_bin < nbin], dtype=int))
+                    self.used_bins.append(
+                        np.array([use_bin for use_bin in use_bins if use_bin < nbin],
+                                 dtype=int))
                 else:
                     self.used_bins.append(np.arange(nbin, dtype=int))
                 used_indices.append(self.used_bins[-1] + offset)
@@ -105,10 +111,10 @@ class _planck_pliklite_prototype(_DataSetLikelihood):
         self.cov = cov[np.ix_(self.used_indices, self.used_indices)]
         self.invcov = np.linalg.inv(self.cov)
 
-    def add_theory(self):
+    def get_requirements(self):
         # State requisites to the theory code
         self.l_max = self.lmax
-        self.theory.needs(**{"Cl": {cl: self.l_max for cl in self.use_cl}})
+        return {"Cl": {cl: self.l_max for cl in self.use_cl}}
 
     def binning_matrix(self, ix=0):
         # not used by main likelihood code
@@ -116,7 +122,9 @@ class _planck_pliklite_prototype(_DataSetLikelihood):
         lmin = self.blmin[self.used_bins[ix][0]]
         m = np.zeros((len(self.used_bins[ix]), lmax - lmin + 1))
         for i in self.used_bins[ix]:
-            m[i, self.blmin[i] - lmin:self.blmax[i] + 1 - lmin] = self.weights[self.blmin[i]:self.blmax[i] + 1]
+            m[i, self.blmin[i] - lmin:self.blmax[i] + 1 - lmin] = self.weights[
+                                                                  self.blmin[i]:
+                                                                  self.blmax[i] + 1]
         return lmin, lmax, m
 
     def get_chi_squared(self, L0, ctt, cte, cee, calPlanck=1):
@@ -129,32 +137,21 @@ class _planck_pliklite_prototype(_DataSetLikelihood):
                 ix += 1
         cl /= calPlanck ** 2
         diff = self.X_data - cl
-        return self.fast_chi_squared(self.invcov, diff)
+        return self._fast_chi_squared(self.invcov, diff)
 
     def chi_squared(self, c_l_arr, calPlanck=1):
-        """
+        r"""
         Get chi squared from CL array from file
+
         :param c_l_arr: file of L and L(L+1)CL/2\pi values for C_TT, C_TE, C_EE
         :param calPlanck: calibration parameter
         :return: chi-squared
         """
         L0 = int(c_l_arr[0, 0])
-        return self.get_chi_squared(L0, c_l_arr[:, 1], c_l_arr[:, 2], c_l_arr[:, 3], calPlanck)
-
-    def chi_squared_test(self, X_data, invcov, c_l_arr, calPlanck=1):
-        L0 = int(c_l_arr[0, 0])
-        cl = np.empty(self.used_indices.shape)
-        ix = 0
-        for tp, cell in enumerate([c_l_arr[:, 1], c_l_arr[:, 2], c_l_arr[:, 3]]):
-            for i in self.used_bins[tp]:
-                cl[ix] = np.dot(cell[self.blmin[i] - L0:self.blmax[i] - L0 + 1],
-                                self.weights[self.blmin[i]:self.blmax[i] + 1])
-                ix += 1
-        cl /= calPlanck ** 2
-        diff = X_data - cl[:-1]
-        return invcov.dot(diff).dot(diff)
+        return self.get_chi_squared(L0, c_l_arr[:, 1], c_l_arr[:, 2], c_l_arr[:, 3],
+                                    calPlanck)
 
     def logp(self, **data_params):
-        Cls = self.theory.get_Cl(ell_factor=True)
+        Cls = self.provider.get_Cl(ell_factor=True)
         return -0.5 * self.get_chi_squared(0, Cls.get('tt'), Cls.get('te'), Cls.get('ee'),
                                            data_params[self.calibration_param])

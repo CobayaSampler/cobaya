@@ -1,15 +1,13 @@
 # Planck 2018 release: high-ell, TT power spectrum likelihood (plik), *unbinned*
 # See https://wiki.cosmos.esa.int/planck-legacy-archive/index.php/CMB_spectrum_%26_Likelihood_Code
 
-likelihood:
-  planck_2018_highl_plik.TT_unbinned:
-    path:
-    clik_file: extended_plik/plc_3.0/hi_l/plik/plik_rd12_HM_v22_TT_bin1.clik
-    product_id: "151905"
-    # Aliases for automatic covariance matrix
-    renames: [plikHM_TT]
-    # Speed in evaluations/second
-    speed: 7
+path:
+clik_file: extended_plik/plc_3.0/hi_l/plik/plik_rd12_HM_v22_TT_bin1.clik
+product_id: "151905"
+# Aliases for automatic covariance matrix
+aliases: [plikHM_TT]
+# Speed in evaluations/second
+speed: 7
 
 params: !defaults [params_calib, params_calib_temp, params_TT]
 

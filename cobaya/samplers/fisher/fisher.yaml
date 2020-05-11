@@ -1,7 +1,0 @@
-# Default arguments for the Fisher matrix extimator
-
-sampler:
-  fisher:
-    # Anything defined below this line automatically
-    # becomes an attribute of the `fisher` Python Class
-    example_option: default_example_value

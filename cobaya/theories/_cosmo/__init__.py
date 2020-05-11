@@ -1,1 +1,1 @@
-from ._cosmo import _cosmo, PowerSpectrumInterpolator
+from .boltzmannbase import BoltzmannBase, PowerSpectrumInterpolator

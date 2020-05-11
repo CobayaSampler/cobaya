@@ -115,45 +115,51 @@ After this, mention the path to this likelihood when you include it in an input 
 
 """
 
-# Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 # Global
 import os
 import numpy as np
 from scipy.interpolate import UnivariateSpline
 import pandas as pd
 import logging
+from typing import Optional, Sequence
 
 # Local
 from cobaya.log import LoggedError
-from cobaya.conventions import _path_install, _c_km_s
+from cobaya.conventions import _packages_path, _c_km_s
 from cobaya.likelihoods._base_classes import _InstallableLikelihood
-from cobaya.input import HasDefaults
 
 
 class _bao_prototype(_InstallableLikelihood):
-    install_options = {"github_repository": "CobayaSampler/bao_data", "github_release": "v1.1"}
+    # Data type for aggregated chi2 (case sensitive)
+    type = "BAO"
+
+    install_options = {"github_repository": "CobayaSampler/bao_data",
+                       "github_release": "v1.1"}
+
+    prob_dist_bounds: Optional[Sequence[float]]
+    measurements_file: str
+    rs_fid: Optional[float]
+    prob_dist: Optional[str]
+    cov_file: Optional[str]
+    invcov_file: Optional[str]
 
     def initialize(self):
         self.log.info("Initialising.")
-        if not getattr(self, "path", None) and not getattr(self, "path_install", None):
+        if not getattr(self, "path", None) and not getattr(self, "packages_path", None):
             raise LoggedError(
                 self.log, "No path given to BAO data. Set the likelihood property "
-                          "'path' or the common property '%s'.", _path_install)
-        # If no path specified, use the modules path
+                          "'path' or the common property '%s'.", _packages_path)
+        # If no path specified, use the external packages path
         data_file_path = os.path.normpath(getattr(self, "path", None) or
-                                          os.path.join(self.path_install, "data"))
+                                          os.path.join(self.packages_path, "data"))
         # Rescaling by a fiducial value of the sound horizon
-        if not hasattr(self, "rs_rescale"):
-            if hasattr(self, "rs_fid"):
+        if getattr(self, "rs_rescale", None) is None:
+            if getattr(self, "rs_fid", None) is not None:
                 self.rs_rescale = 1 / self.rs_fid
             else:
                 self.rs_rescale = 1
         # Load "measurements file" and covmat of requested
-        if hasattr(self, "measurements_file"):
+        if getattr(self, "measurements_file", None):
             try:
                 self.data = pd.read_csv(
                     os.path.join(data_file_path, self.measurements_file),
@@ -177,7 +183,7 @@ class _bao_prototype(_InstallableLikelihood):
         self.data["observable"] = [(c[len(prefix):] if c.startswith(prefix) else c)
                                    for c in self.data["observable"]]
         # Probability distribution
-        if hasattr(self, "prob_dist"):
+        if getattr(self, "prob_dist", None):
             try:
                 chi2 = np.loadtxt(os.path.join(data_file_path, self.prob_dist))
             except IOError:
@@ -199,9 +205,9 @@ class _bao_prototype(_InstallableLikelihood):
         # Covariance --> read and re-sort as self.data
         else:
             try:
-                if hasattr(self, "cov_file"):
+                if getattr(self, "cov_file", None):
                     self.cov = np.loadtxt(os.path.join(data_file_path, self.cov_file))
-                elif hasattr(self, "invcov_file"):
+                elif getattr(self, "invcov_file", None):
                     invcov = np.loadtxt(os.path.join(data_file_path, self.invcov_file))
                     self.cov = np.linalg.inv(invcov)
                 elif "error" in self.data.columns:
@@ -219,22 +225,18 @@ class _bao_prototype(_InstallableLikelihood):
             self.logpdf = lambda x: (lambda x_: -0.5 * x_.dot(self.invcov).dot(x_))(
                 x - self.data["value"].values)
 
-    def add_theory(self):
-        if self.theory.__class__ == "classy":
-            raise LoggedError(
-                self.log,
-                "BAO likelihood not yet compatible with CLASS (help appreciated!)")
+    def get_requirements(self):
         # Requisites
         zs = {obs: self.data.loc[self.data["observable"] == obs, "z"].values
               for obs in self.data["observable"].unique()}
         theory_reqs = {
             "DV_over_rs": {
                 "angular_diameter_distance": {"z": zs.get("DV_over_rs", None)},
-                "H": {"z": zs.get("DV_over_rs", None)},
+                "Hubble": {"z": zs.get("DV_over_rs", None)},
                 "rdrag": None},
             "rs_over_DV": {
                 "angular_diameter_distance": {"z": zs.get("rs_over_DV", None)},
-                "H": {"z": zs.get("rs_over_DV", None)},
+                "Hubble": {"z": zs.get("rs_over_DV", None)},
                 "rdrag": None},
             "DM_over_rs": {
                 "angular_diameter_distance": {"z": zs.get("DM_over_rs", None)},
@@ -243,14 +245,14 @@ class _bao_prototype(_InstallableLikelihood):
                 "angular_diameter_distance": {"z": zs.get("DA_over_rs", None)},
                 "rdrag": None},
             "Hz_rs": {
-                "H": {"z": zs.get("Hz_rs", None)},
+                "Hubble": {"z": zs.get("Hz_rs", None)},
                 "rdrag": None},
             "f_sigma8": {
                 "fsigma8": {"z": zs.get("f_sigma8", None)},
-                "H": {"z": zs.get("Hz_rs", None)}},
+                "Hubble": {"z": zs.get("Hz_rs", None)}},
             "F_AP": {
                 "angular_diameter_distance": {"z": zs.get("F_AP", None)},
-                "H": {"z": zs.get("F_AP", None)}}}
+                "Hubble": {"z": zs.get("F_AP", None)}}}
         obs_used_not_implemented = np.unique([obs for obs in self.data["observable"]
                                               if obs not in theory_reqs])
         if len(obs_used_not_implemented):
@@ -263,39 +265,40 @@ class _bao_prototype(_InstallableLikelihood):
         if self.has_type:
             for obs in self.data["observable"].unique():
                 requisites.update(theory_reqs[obs])
-        self.theory.needs(**requisites)
+        return requisites
 
     def theory_fun(self, z, observable):
         # Functions to get the corresponding theoretical prediction:
         # Spherically-averaged distance, over sound horizon radius
         if observable == "DV_over_rs":
             return np.cbrt(
-                ((1 + z) * self.theory.get_angular_diameter_distance(z)) ** 2 *
-                _c_km_s * z / self.theory.get_H(z, units="km/s/Mpc")) / self.rs()
+                ((1 + z) * self.provider.get_angular_diameter_distance(z)) ** 2 *
+                _c_km_s * z / self.provider.get_Hubble(z, units="km/s/Mpc")) / self.rs()
         # Idem, inverse
         elif observable == "rs_over_DV":
             return np.cbrt(
-                ((1 + z) * self.theory.get_angular_diameter_distance(z)) ** 2 *
-                _c_km_s * z / self.theory.get_H(z, units="km/s/Mpc")) ** (-1) * self.rs()
+                ((1 + z) * self.provider.get_angular_diameter_distance(z)) ** 2 *
+                _c_km_s * z / self.provider.get_Hubble(z, units="km/s/Mpc")) ** (
+                       -1) * self.rs()
         # Comoving angular diameter distance, over sound horizon radius
         elif observable == "DM_over_rs":
-            return (1 + z) * self.theory.get_angular_diameter_distance(z) / self.rs()
+            return (1 + z) * self.provider.get_angular_diameter_distance(z) / self.rs()
         # Physical angular diameter distance, over sound horizon radius
         elif observable == "DA_over_rs":
-            return self.theory.get_angular_diameter_distance(z) / self.rs()
+            return self.provider.get_angular_diameter_distance(z) / self.rs()
         # Hubble parameter, times sound horizon radius
         elif observable == "Hz_rs":
-            return self.theory.get_H(z, units="km/s/Mpc") * self.rs()
+            return self.provider.get_Hubble(z, units="km/s/Mpc") * self.rs()
         # Diff Linear Growth Rate times present amplitude
         elif observable == "f_sigma8":
-            return self.theory.get_fsigma8(z)
+            return self.provider.get_fsigma8(z)
         # Anisotropy (Alcock-Paczynski) parameter
         elif observable == "F_AP":
-            return ((1 + z) * self.theory.get_angular_diameter_distance(z) *
-                    self.theory.get_H(z, units="km/s/Mpc")) / _c_km_s
+            return ((1 + z) * self.provider.get_angular_diameter_distance(z) *
+                    self.provider.get_Hubble(z, units="km/s/Mpc")) / _c_km_s
 
     def rs(self):
-        return self.theory.get_param("rdrag") * self.rs_rescale
+        return self.provider.get_param("rdrag") * self.rs_rescale
 
     def logp(self, **params_values):
         theory = np.array([self.theory_fun(z, obs) for z, obs

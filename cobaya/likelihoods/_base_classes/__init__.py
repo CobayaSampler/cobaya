@@ -1,7 +1,7 @@
 from ._InstallableLikelihood import _InstallableLikelihood
 from ._bao_prototype import _bao_prototype
 from ._DataSetLikelihood import _DataSetLikelihood, _fast_chi_square
-from ._cmblikes_prototype import _cmblikes_prototype
+from ._cmblikes import _CMBlikes
 from ._des_prototype import _des_prototype
 from ._H0_prototype import _H0_prototype
 from ._planck_2018_CamSpec_python import _planck_2018_CamSpec_python

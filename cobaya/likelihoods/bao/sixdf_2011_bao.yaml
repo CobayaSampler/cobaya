@@ -1,14 +1,12 @@
 # BAO measurement from the 6dF Galaxy Survey, Beutler et al. 2011
 # https://arxiv.org/abs/1106.3366
 
-likelihood:
-  bao.sixdf_2011_bao:
-    path: null
-    # Rescaling of sound horizon
-    rs_rescale: 1.027369826  # = 153.9/149.8
-    # Measurement
-    data: [0.106, 0.336, 0.015, "rs_over_DV"]    
-    # Aliases for automatic covariance matrix
-    renames: [BAO]
-    # Speed in evaluations/second
-    speed: 5000
+path: null
+# Rescaling of sound horizon
+rs_rescale: 1.027369826  # = 153.9/149.8
+# Measurement
+data: [0.106, 0.336, 0.015, "rs_over_DV"]
+# Aliases for automatic covariance matrix
+aliases: [BAO]
+# Speed in evaluations/second
+speed: 5000

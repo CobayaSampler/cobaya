@@ -3,17 +3,15 @@
 
 # *Native python version*, allowing multipole/bin selection
 
-likelihood:
-  planck_2018_highl_plik.TTTEEE_lite_native:
-    # Path to the data: where the planck_supp_data_and_covmats has been cloned
-    path: null
-    dataset_file: plik_lite_v22.dataset
-    # Overriding of .dataset parameters
-    dataset_params:
-      use_cl: tt te ee
-    # Aliases for automatic covariance matrix
-    renames: [plikHM_TTTEEE]
-    # Speed in evaluations/second
-    speed: 200
+# Path to the data: where the planck_supp_data_and_covmats has been cloned
+path: null
+dataset_file: plik_lite_v22.dataset
+# Overriding of .dataset parameters
+dataset_params:
+  use_cl: tt te ee
+# Aliases for automatic covariance matrix
+aliases: [plikHM_TTTEEE]
+# Speed in evaluations/second
+speed: 200
 
 params: !defaults [params_calib]

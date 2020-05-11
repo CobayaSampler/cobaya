@@ -1,14 +1,12 @@
 # Planck 2018 release: lensing T+P-based likelihood (official clik implementation)
 # See https://wiki.cosmos.esa.int/planck-legacy-archive/index.php/CMB_spectrum_%26_Likelihood_Code
 
-likelihood:
-  planck_2018_lensing.clik:
-    path:
-    clik_file: baseline/plc_3.0/lensing/smicadx12_Dec5_ftl_mv2_ndclpp_p_teb_consext8.clik_lensing
-    product_id: "151902"
-    # Aliases for automatic covariance matrix
-    renames: [lensing]
-    # Speed in evaluations/second
-    speed: 600
+path:
+clik_file: baseline/plc_3.0/lensing/smicadx12_Dec5_ftl_mv2_ndclpp_p_teb_consext8.clik_lensing
+product_id: "151902"
+# Aliases for automatic covariance matrix
+aliases: [lensing]
+# Speed in evaluations/second
+speed: 600
 
 params: !defaults [../planck_2018_highl_plik/params_calib]

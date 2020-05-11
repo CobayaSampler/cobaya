@@ -9,18 +9,6 @@ native ones. You can find a description of the different likelihoods in the
 
    <br />
 
-.. note::
-
-   **If you use any of these likelihoods, please cite them as:**
-   |br|
-   **2018**:  N. Aghanim et al,
-   `Planck 2018 results. V. CMB power spectra and likelihoods`
-   `(arXiv:1907.12875) <https://arxiv.org/abs/1907.12875>`_
-   |br|
-   **2015**:  N. Aghanim et al,
-   `Planck 2015 results. XI. CMB power spectra, likelihoods, and robustness of parameters`
-   `(arXiv:1507.02704) <https://arxiv.org/abs/1507.02704>`_
-
 The Planck 2018 likelihoods defined here are: (*new in 2.0*)
 
 - ``planck_2018_lowl.TT``: low-:math:`\ell` temperature
@@ -32,7 +20,18 @@ The Planck 2018 likelihoods defined here are: (*new in 2.0*)
 - ``planck_2018_highl_CamSpec.[TT|TTTEEE][_native]``: ``clik`` and native Python versions of the alternative high-:math:`\ell` ``CamSpec`` likelihoods.
 - ``planck_2018_lensing.clik``: lensing temperature+polarisation-based; official ``clik`` code.
 - ``planck_2018_lensing.native``: lensing temperature+polarisation-based; native Python version (more customizable)
-- ``planck_2018_lensing.cmbmarged``: CMB-marginalized, temperature+polarisation-based lensing likelihood; native Python version (more customizable). Do not combine with any of the ones above!
+- ``planck_2018_lensing.CMBMarged``: CMB-marginalized, temperature+polarisation-based lensing likelihood; native Python version (more customizable). Do not combine with any of the ones above!
+
+.. note::
+
+   **If you use any of these likelihoods, please cite them as:**
+   |br|
+   Planck Collaboration, `Planck 2018 results. V. CMB power spectra and likelihoods`
+   `(arXiv:1907.12875) <https://arxiv.org/abs/1907.12875>`_
+   |br|
+   Planck Collaboration, `Planck 2018 results. VIII. Gravitational lensing`
+   `(arXiv:1807.06210) <https://arxiv.org/abs/1807.06210>`_
+
 
 The Planck 2015 likelihoods defined here are:
 
@@ -46,9 +45,18 @@ The Planck 2015 likelihoods defined here are:
 - ``planck_2015_lensing_cmblikes``
   (a native non-clik, more customizable version of the previous clik-wrapped one)
 
+.. note::
+
+   **If you use any of these likelihoods, please cite them as:**
+   |br|
+   **2015**:  N. Aghanim et al,
+   `Planck 2015 results. XI. CMB power spectra, likelihoods, and robustness of parameters`
+   `(arXiv:1507.02704) <https://arxiv.org/abs/1507.02704>`_
+
+
 .. warning::
 
-   The Planck 2015 likelihoods have been superseeded by the 2018 release, and will
+   The Planck 2015 likelihoods have been superseded by the 2018 release, and will
    eventually be deprecated.
 
 .. warning::
@@ -87,10 +95,10 @@ of this section.
    ``sudo apt install liblapack3 liblapack-dev``).
 
    If that did not solve the issue, check out specific instructions for some systems in the
-   ``readme.md`` file in the folder ``[modules]/code/planck/code/plc_3.0/plc-3.01``.
+   ``readme.md`` file in the folder ``[packages_path]/code/planck/code/plc_3.0/plc-3.01``.
    
    If you want to re-compile the Planck likelihood to your liking (e.g. with MKL), simply
-   go into the chosen modules installation folder and re-run the ``python waf configure``
+   go into the chosen external packages installation folder and re-run the ``python waf configure``
    and ``python waf install`` with the desired options,
    substituting ``python`` by the Python of choice in your system.
 

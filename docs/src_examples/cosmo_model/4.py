@@ -1,4 +1,4 @@
-Cls = model.likelihood.theory.get_Cl(ell_factor=True)
+Cls = model.provider.get_Cl(ell_factor=True)
 import matplotlib.pyplot as plt
 
 plt.figure(figsize=(8, 6))

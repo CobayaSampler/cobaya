@@ -1,72 +1,77 @@
 # Default arguments for the Markov Chain Monte Carlo sampler
-# ('Xd' means 'X steps per dimension')
+# ('Xd' means 'X steps per dimension', or full parameter cycle
+#  when adjusting for oversampling / dragging)
 
-sampler:
-  mcmc:
-    # Number of discarded burn-in samples
-    burn_in: 20d
-    # Error criterion: max attempts (= weight-1) before deciding that the chain
-    # is stuck and failing. Set to `.inf` to ignore this kind of errors.
-    max_tries: 40d
-    # File (including path) or matrix defining a covariance matrix for the proposal:
-    # - null (default): will be generated from params info (prior and proposal)
-    # - matrix: remember to set `covmat_params` to the parameters in the matrix
-    # - "auto" (cosmology runs only): will be looked up in a library
-    covmat:
-    covmat_params:
-    # Overall scale of the proposal pdf (increase for longer steps)
-    proposal_scale: 2.4
-    # Number of steps between convergence checks & proposal learn
-    check_every: 40d
-    # Update output file(s) every X accepted samples
-    output_every: 20
-    # Proposal covariance matrix learning
-    # -----------------------------------
-    learn_proposal: True
-    # Don't learn if convergence is worse than...
-    learn_proposal_Rminus1_max: 2.
-    # (even earlier if a param is not in the given covariance matrix)
-    learn_proposal_Rminus1_max_early: 30.
-    # ... or if it is better than... (no need to learn, already good!)
-    learn_proposal_Rminus1_min: 0.
-    # Convergence and stopping
-    # ------------------------
-    # Maximum number of posterior evaluations
-    max_samples: .inf
-    # Gelman-Rubin R-1 on means
-    Rminus1_stop: 0.01
-    # Gelman-Rubin R-1 on std deviations
-    Rminus1_cl_stop: 0.2
-    Rminus1_cl_level: 0.95
-    # When no MPI used, number of fractions of the chain to compare
-    Rminus1_single_split: 4
-    # Exploiting speed hierarchy
-    # --------------------------
-    # Method I: Oversampling of each parameters block relative to it speed
-    oversample: False  # produces potentially MANY samples
-    # Method II: Dragging: simulates jumps on slow params when varying fast ones
-    # Set to True, or a factor of the time of a jump on the slow block
-    drag: False
-    # Min and max number of times the fast block is iterated
-    drag_limits : [1, 10]
-    # Manual blocking
-    # ---------------
-    # To take full advantage of speed-blocking, sort the blocks by ascending speeds
-    # (unless not possible due to the architecture of your likelihood)
-    blocking:
-    #  - [speed_1, [params_1]]
-    #  - etc.
-    # Callback function
-    # -----------------
-    callback_function:
-    callback_every:  # default: every checkpoint
-    # Seeding runs
-    # ------------
-    seed:  # integer between 0 and 2**32 - 1
-    # Checkpointing -- do not modify!
-    Rminus1_last: .inf
-    converged:
-    blocks:
-    oversampling_factors:
-    i_last_slow_block:
-    mpi_size:
+# Number of discarded burn-in samples per dimension (d notation means times dimension)
+burn_in: 0
+# Error criterion: max attempts (= weight-1) before deciding that the chain
+# is stuck and failing. Set to `.inf` to ignore these kind of errors.
+max_tries: 40d
+# File (including path) or matrix defining a covariance matrix for the proposal:
+# - null (default): will be generated from params info (prior and proposal)
+# - matrix: remember to set `covmat_params` to the parameters in the matrix
+# - "auto" (cosmology runs only): will be looked up in a library
+covmat:
+covmat_params:
+# Overall scale of the proposal pdf (increase for longer steps)
+proposal_scale: 2.4
+# Update output file(s) and print some info
+# every X seconds (if ends in 's') or X accepted samples (if just a number)
+output_every: 60s
+# Number of distinct accepted points between proposal learn & convergence checks
+learn_every: 40d
+# Proposal covariance matrix learning
+# -----------------------------------
+learn_proposal: True
+# Don't learn if convergence is worse than...
+learn_proposal_Rminus1_max: 2.
+# (even earlier if a param is not in the given covariance matrix)
+learn_proposal_Rminus1_max_early: 30.
+# ... or if it is better than... (no need to learn, already good!)
+learn_proposal_Rminus1_min: 0.
+# Convergence and stopping
+# ------------------------
+# Maximum number of accepted steps
+max_samples: .inf
+# Gelman-Rubin R-1 on means
+Rminus1_stop: 0.01
+# Gelman-Rubin R-1 on std deviations
+Rminus1_cl_stop: 0.2
+Rminus1_cl_level: 0.95
+# When no MPI used, number of fractions of the chain to compare
+Rminus1_single_split: 4
+# Exploiting speed hierarchy
+# --------------------------
+# Whether to measure actual speeds for your machine/threading at starting rather
+# than using stored values
+measure_speeds: True
+# Amount of oversampling of each parameter block, relative to their speeds
+# Value from 0 (no oversampling) to 1 (spend the same amount of time in all blocks)
+# Can be larger than 1 if extra oversampling of fast blocks required.
+oversample_power: 0.4
+# Thin chain by total oversampling factor (ignored if drag: True)
+# NB: disabling it with a non-zero `oversample_power` may produce a VERY LARGE chains
+oversample_thin: True
+# Dragging: simulates jumps on slow params when varying fast ones
+drag: False
+# Manual blocking
+# ---------------
+# Specify parameter blocks and their correspondent oversampling factors
+# (may be useful e.g. if your likelihood has some internal caching).
+# If used in combination with dragging, assign 1 to all slow parameters,
+# and a common oversampling factor to the fast ones.
+blocking:
+#  - [oversampling_factor_1, [param_1, param_2, ...]]
+#  - etc.
+# Callback function
+# -----------------
+callback_function:
+callback_every:  # default: every checkpoint
+# Seeding runs
+# ------------
+seed:  # integer between 0 and 2**32 - 1
+# To be deprecated
+# ----------------
+check_every:  # now it is learn_every
+oversample: # now controlled by oversample_power > 0
+drag_limits:  # use oversample_power instead

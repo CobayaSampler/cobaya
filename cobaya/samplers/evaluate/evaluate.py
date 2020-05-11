@@ -6,12 +6,9 @@
 
 """
 
-# Python 2/3 compatibility
-from __future__ import division, print_function, absolute_import
-
 # Global
 import numpy as np
-from collections import OrderedDict as odict
+from typing import Mapping
 
 # Local
 from cobaya.sampler import Sampler
@@ -20,6 +17,7 @@ from cobaya.log import LoggedError
 
 
 class evaluate(Sampler):
+    override: Mapping[str, float]
 
     def initialize(self):
         """
@@ -36,7 +34,7 @@ class evaluate(Sampler):
             self.model, self.output, initial_size=self.N, name="1")
         self.log.info("Initialized!")
 
-    def run(self):
+    def _run(self):
         """
         First gets a reference point. If a single reference point is not given,
         the point is sampled from the reference pdf. If that one is not defined either,
@@ -47,16 +45,17 @@ class evaluate(Sampler):
         """
         for i in range(self.N):
             if self.N > 1:
-                self.log.info("Evaluating sample #%d ------------------------------", i + 1)
+                self.log.info("Evaluating sample #%d ------------------------------",
+                              i + 1)
             self.log.info("Looking for a reference point with non-zero prior.")
             reference_point = self.model.prior.reference()
-            reference_point = odict(
+            reference_point = dict(
                 zip(self.model.parameterization.sampled_params(), reference_point))
             for p, v in (self.override or {}).items():
                 if p not in reference_point:
                     raise LoggedError(
                         self.log, "Parameter '%s' used in override not known. "
-                        "Known parameters names are %r.",
+                                  "Known parameters names are %r.",
                         p, self.model.parameterization.sampled_params())
                 reference_point[p] = v
             self.log.info("Reference point:\n   " + "\n   ".join(
@@ -84,12 +83,8 @@ class evaluate(Sampler):
             else:
                 self.log.info("Likelihoods and derived parameters not computed, "
                               "since the prior is null.")
-
-    def close(self, exception_type, exception_value, traceback):
-        """
-        Writes the output: the point and its prior, posterior and likelihood.
-        """
-        self.one_point._out_update()
+        # Write the output: the point and its prior, posterior and likelihood.
+        self.one_point.out_update()
 
     def products(self):
         """

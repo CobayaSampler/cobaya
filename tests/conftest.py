@@ -1,30 +1,36 @@
 import pytest
 import os
 
-
 # Paths ##################################################################################
 
+from cobaya.conventions import _packages_path_arg, _packages_path_env, _test_skip_env
+from cobaya.tools import resolve_packages_path
+
+
 def pytest_addoption(parser):
-    parser.addoption("--modules", action="store", default=None,
-                     help="Path to folder of automatic installation of modules")
+    parser.addoption("--" + _packages_path_arg, action="store",
+                     default=resolve_packages_path(),
+                     help="Path to folder of automatic installation of packages")
 
 
 @pytest.fixture
-def modules(request):
-    cmd_modules = request.config.getoption("--modules", None)
-    # By default, check in cobaya/modules/tests
-    cmd_modules = (cmd_modules or
-                   os.path.join(os.path.dirname(os.path.abspath(__file__)), "modules"))
-    return cmd_modules
+def packages_path(request):
+    cmd_packages_path = request.config.getoption("--" + _packages_path_arg, None)
+    if not cmd_packages_path:
+        raise ValueError("Could not determine packages installation path. "
+                         "Either define it in the env variable %r, or pass it as an "
+                         "argument with `--%s`" %
+                         (_packages_path_env, _packages_path_arg))
+    return cmd_packages_path
 
 
 # Skip certain keywords ##################################################################
 
 def pytest_collection_modifyitems(config, items):
-    _env_var = "COBAYA_TEST_SKIP"
-    skip_keywords = os.environ.get(_env_var, "").replace(",", " ").split()
+    skip_keywords = os.environ.get(_test_skip_env, "").replace(",", " ").split()
     for k in skip_keywords:
-        skip_mark = pytest.mark.skip(reason="'%s' skipped by envvar '%s'" % (k, _env_var))
+        skip_mark = pytest.mark.skip(
+            reason="'%s' skipped by envvar '%s'" % (k, _test_skip_env))
         for item in items:
             if any([(k.lower() in x) for x in [item.name.lower(), item.keywords]]):
                 item.add_marker(skip_mark)

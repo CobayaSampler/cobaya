@@ -1,63 +1,70 @@
 # Default arguments for the PolyChord sampler
 
-sampler:
-  polychord:
-    # Path to the PolyChord installation folder
-    path:  # use only if installed manually!
-    # Optional parameters for the sampler:
-    # ('Xd' means 'X steps per dimension')
-    # -------------------------------------------------
-    # Number of live points
-    nlive: 25d
-    # Number of slice-sampling steps each new sample.
-    # Helps with curved degeneracies and thin "corners".
-    # Recommended: '5d' if accurate evidences needed or weird posterior shapes.
-    # You may want to use `d` for exploratory runs.
-    num_repeats: 5d
-    # Number of prior samples drawn before starting compression
-    nprior:  # default: nlive
-    # Whether to check for and explore multi-modality on the posterior
-    do_clustering: True
-    # Stopping criterion: fraction of the total evidence contained in the live points
-    precision_criterion: 0.001
-    # Stopping criterion (alt): maximum number of nested sampling iterations
-    max_ndead: .inf
-    # How often to print progress, update output files and do clustering
-    # -- increase for more frequency (1 for update and callback per dead point)
-    compression_factor: 0.36787944117144233  # = exp(-1)
-    # Callback function -- see documentation
-    callback_function:
-    # Numerical value of log(0) sent to PolyChord's Fortran code
-    # If null: `numpy.nan_to_num(-numpy.inf)` (produces an error in `ifort`!)
-    logzero: -1e300  # safer
-    # Increase number of posterior samples
-    boost_posterior: 0  # increase up to `num_repeats`
-    # Verbosity during the sampling process. Set to one of [0,1,2,3]
-    feedback:  # default: Same as global `verbosity`
-    # Manual speed blocking
-    # ---------------------
-    # To take full advantage of speed-blocking, sort the blocks by ascending speeds
-    # (unless not possible due to the architecture of your likelihood)
-    blocking:
-    #  - [speed_1, [params_1]]
-    #  - etc.
-    # Treatment of unbounded parameters: confidence level to use
-    # ----------------------------------------------------------
-    # (Use with care if there are likelihood modes close to the edge of the prior)
-    confidence_for_unbounded: 0.9999995  # 5 sigmas of the prior
-    # Seeding runs
-    # ------------
-    seed:  # postitive integer
-    # Raw output of PolyChord (no need to change them, normally)
-    # ----------------------------------------------------------
-    base_dir: raw_polychord_output
-    file_root:
-    posteriors: True
-    equals: True
-    cluster_posteriors: True
-    write_resume: True
-    read_resume: True
-    write_stats: True
-    write_live: True
-    write_dead: True
-
+# Path to the PolyChord installation folder
+path:  # use only if installed manually!
+# Optional parameters for the sampler:
+# ('Xd' means 'X steps per dimension')
+# -------------------------------------------------
+# Number of live points
+nlive: 25d
+# Number of slice-sampling steps each new sample.
+# Helps with curved degeneracies and thin "corners".
+# Recommended: '5d' if accurate evidences needed or weird posterior shapes.
+# You may want to use `d` for exploratory runs.
+num_repeats: 2d
+# Number of prior samples drawn before starting compression
+# Can be in units of nlive (but not dimension) as Xnlive
+nprior: 10nlive
+# Whether to check for and explore multi-modality on the posterior
+do_clustering: True
+# Stopping criterion: fraction of the total evidence contained in the live points
+precision_criterion: 0.001
+# Stopping criterion (alt): maximum number of nested sampling iterations
+max_ndead: .inf
+# How often to print progress, update output files and do clustering
+# -- increase for more frequency (1 for update and callback per dead point)
+compression_factor: 0.36787944117144233  # = exp(-1)
+# Callback function -- see documentation
+callback_function:
+# Numerical value of log(0) sent to PolyChord's Fortran code
+# If null: `numpy.nan_to_num(-numpy.inf)`
+# NB: smaller values tend to produce errors when using `ifort`
+logzero: -1e30
+# Increase number of posterior samples
+boost_posterior: 0  # increase up to `num_repeats`
+# Verbosity during the sampling process. Set to one of [0,1,2,3]
+feedback:  # default: Same as global `verbosity`
+# Exploiting speed hierarchy
+# --------------------------
+# whether to measure actual speeds for your machine/threading at starting rather
+# than using stored values
+measure_speeds: True
+# Amount of oversampling of each parameter block, relative to their speeds
+# Value from 0 (no oversampling) to 1 (spend the same amount of time in all blocks)
+# Can be larger than 1 if extra oversampling of fast blocks required.
+oversample_power: 0.4
+# Manual speed blocking
+# ---------------------
+# To take full advantage of speed-blocking, sort the blocks by ascending speeds
+# (unless not possible due to the architecture of your likelihood)
+blocking:
+#  - [speed_1, [params_1]]
+#  - etc.
+# Treatment of unbounded parameters: confidence level to use
+# ----------------------------------------------------------
+# (Use with care if there are likelihood modes close to the edge of the prior)
+confidence_for_unbounded: 0.9999995  # 5 sigmas of the prior
+# Seeding runs
+# ------------
+seed:  # postitive integer
+# Raw output of PolyChord (no need to change them, normally)
+# ----------------------------------------------------------
+file_root:
+posteriors: True
+equals: True
+cluster_posteriors: True
+write_resume: True
+read_resume: True
+write_stats: True
+write_live: True
+write_dead: True

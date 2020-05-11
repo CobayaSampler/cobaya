@@ -1,3 +1,10 @@
+theory:
+  classy:
+    extra_args:
+      non linear: hmcode
+      hmcode_min_k_max: 20
+      N_ncdm: 1
+      N_ur: 2.0328
 likelihood:
   planck_2018_lowl.TT: null
   planck_2018_lowl.EE: null
@@ -109,19 +116,9 @@ params:
     latex: '{\rm{Age}}/\mathrm{Gyr}'
   rs_drag:
     latex: r_\mathrm{drag}
-  chi2__CMB:
-    derived: 'lambda chi2__planck_2018_lowl_TT, chi2__planck_2018_lowl_EE, chi2__planck_2018_highl_plik_TTTEEE,
-      chi2__planck_2018_lensing_clik: sum([chi2__planck_2018_lowl_TT, chi2__planck_2018_lowl_EE,
-      chi2__planck_2018_highl_plik_TTTEEE, chi2__planck_2018_lensing_clik])'
-    latex: \chi^2_\mathrm{CMB}
 sampler:
   mcmc:
     covmat: auto
     drag: true
+    oversample_power: 0.4
     proposal_scale: 1.9
-theory:
-  classy:
-    extra_args:
-      non linear: halofit
-      N_ncdm: 1
-      N_ur: 2.0328

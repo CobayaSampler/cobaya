@@ -1,14 +1,12 @@
 # Planck 2018 release: low-ell, EE power spectrum likelihood
 # See https://wiki.cosmos.esa.int/planck-legacy-archive/index.php/CMB_spectrum_%26_Likelihood_Code
 
-likelihood:
-  planck_2018_lowl.EE:
-    path:
-    clik_file: baseline/plc_3.0/low_l/simall/simall_100x143_offlike5_EE_Aplanck_B.clik
-    product_id: "151902"
-    # Aliases for automatic covariance matrix
-    renames: [lowE]
-    # Speed in evaluations/second
-    speed: 4000
+path:
+clik_file: baseline/plc_3.0/low_l/simall/simall_100x143_offlike5_EE_Aplanck_B.clik
+product_id: "151902"
+# Aliases for automatic covariance matrix
+aliases: [lowE]
+# Speed in evaluations/second
+speed: 4000
 
 params: !defaults [../planck_2018_highl_plik/params_calib]

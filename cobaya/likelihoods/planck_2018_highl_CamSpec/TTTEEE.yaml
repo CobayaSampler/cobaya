@@ -1,15 +1,13 @@
 # Planck 2018 release: high-ell, TT+TE+TT power spectrum CamSpec likelihood
 # See https://wiki.cosmos.esa.int/planck-legacy-archive/index.php/CMB_spectrum_%26_Likelihood_Code#
 
-likelihood:
-  planck_2018_highl_CamSpec.TTTEEE:
-    path:
-    clik_file: extended_camspec/plc_3.0/hi_l/camspec/camspec_10.7HM_1400_TTTEEE.clik
-    product_id: "151903"
-    # Aliases for automatic covariance matrix
-    renames: [CamSpecHM_TTTEEE]
-    # Speed in evaluations/second
-    speed: 10
+path:
+clik_file: extended_camspec/plc_3.0/hi_l/camspec/camspec_10.7HM_1400_TTTEEE.clik
+product_id: "151903"
+# Aliases for automatic covariance matrix
+aliases: [CamSpecHM_TTTEEE]
+# Speed in evaluations/second
+speed: 10
 
 params: !defaults [params_calib_CamSpec, params_TT_CamSpec, params_TE_CamSpec, params_EE_CamSpec]
 

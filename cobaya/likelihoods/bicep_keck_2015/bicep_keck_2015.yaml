@@ -23,23 +23,20 @@
 #     with B modes only)
 #   * Band center errors turned off by default.
 
-likelihood:
-  bicep_keck_2015:
-    # Path to the BK15_cosmomc folder under the official data distribution
-    path: null
-    dataset_file: BK15_cosmomc/data/BK15/BK15_dust.dataset
-    dataset_params:
-      maps_use: [BK15_95_B, BK15_150_B, BK15_220_B, W023_B, P030_B, W033_B, P044_B, P070_B, P100_B, P143_B, P217_B, P353_B]
-      use_min: 1
-      use_max: 9
-    field_names: [T, E, B, P]
-    map_separator: x
-    # Actually computed l_max (takes into account the lensing window function)
-    l_max: 2700
-    # Aliases for automatic covariance matrix
-    renames: [BK15]
-    # Speed in evaluations/second
-    speed: 90
+# Path to the BK15_cosmomc folder under the official data distribution
+path: null
+dataset_file: BK15_cosmomc/data/BK15/BK15_dust.dataset
+dataset_params:
+  maps_use: [BK15_95_B, BK15_150_B, BK15_220_B, W023_B, P030_B, W033_B, P044_B, P070_B, P100_B, P143_B, P217_B, P353_B]
+  use_min: 1
+  use_max: 9
+map_separator: x
+# Actually computed l_max (takes into account the lensing window function)
+l_max: 2700
+# Aliases for automatic covariance matrix
+aliases: [BK15]
+# Speed in evaluations/second
+speed: 90
 
 params:
   # dust power at ell=80, nu=353 GHz [uK^2]

@@ -2,17 +2,15 @@
 # See https://wiki.cosmos.esa.int/planck-legacy-archive/index.php/CMB_spectrum_%26_Likelihood_Code#
 # Native python re-implemetation, allowing multipole/bin selection
 
-likelihood:
-  planck_2018_highl_CamSpec.TTTEEE_native:
-    # Path to the data: where the planck_supp_data_and_covmats has been cloned
-    path: null
-    dataset_file: CamSpec2018/CamSpecHM_10_7.dataset  
-    dataset_params:
-      use_cl: 100x100 143x143 217x217 143x217 TE EE
-    # Aliases for automatic covariance matrix
-    renames: [CamSpecHM_TTTEEE]
-    # Speed in evaluations/second
-    speed: 40
+# Path to the data: where the planck_supp_data_and_covmats has been cloned
+path: null
+dataset_file: CamSpec2018/CamSpecHM_10_7.dataset
+dataset_params:
+  use_cl: 100x100 143x143 217x217 143x217 TE EE
+# Aliases for automatic covariance matrix
+aliases: [CamSpecHM_TTTEEE]
+# Speed in evaluations/second
+speed: 40
 
 params: !defaults [params_calib_CamSpec_native, params_TT_CamSpec, params_TE_CamSpec, params_EE_CamSpec]
 

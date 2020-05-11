@@ -1,27 +1,28 @@
 # Default arguments for the -logposterior/chi^2 minimizer
 
-sampler:
-  minimize:
-    # Method: bobyqa|scipy
-    method: bobyqa
-    # Minimizes the full posterior (False) or just the likelihood (True)
-    # Likelihood maximization is subject to prior bounds!
-    ignore_prior: False
-    # Maximum number of iterations (default: practically infinite)
-    max_evals: 1e6d
-    # Treatment of unbounded parameters: confidence level to use
-    # (Use with care if there are likelihood modes close to the edge of the prior)
-    confidence_for_unbounded: 0.9999995  # 5 sigmas of the prior
-    # Override keyword arguments for `scipy.optimize.minimize()` or `pybobyqa.solve()`
-    # scipy:
-    #  - https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
-    #  - options for individual methods
-    override_scipy:
-      # option: value
-    # bobyqa:
-    #  - https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/userguide.html
-    #  - https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/advanced.html
-    override_bobyqa:
-      # option: value
-      # Relaxed convergence criterion for numerically-noisiy likelihoods
-      rhoend: 0.05
+# Method: bobyqa|scipy
+method: bobyqa
+# Minimizes the full posterior (False) or just the likelihood (True)
+# Likelihood maximization is subject to prior bounds!
+ignore_prior: False
+# Maximum number of iterations (default: practically infinite)
+max_evals: 1e6d
+# Treatment of unbounded parameters: confidence level to use
+# (Use with care if there are likelihood modes close to the edge of the prior)
+confidence_for_unbounded: 0.9999995  # 5 sigmas of the prior
+# Seeding runs
+seed:  # integer between 0 and 2**32 - 1
+# Override keyword arguments for `scipy.optimize.minimize()` or `pybobyqa.solve()`
+# scipy:
+#  - https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
+#  - options for individual methods
+override_scipy:
+  # option: value
+# bobyqa:
+#  - https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/userguide.html
+#  - https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/advanced.html
+override_bobyqa:
+  # option: value
+  # Relaxed convergence criterion for numerically-noisy likelihoods
+  rhoend: 0.05
+covmat: auto

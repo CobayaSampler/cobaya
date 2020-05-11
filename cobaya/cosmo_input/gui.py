@@ -1,24 +1,23 @@
-# Python 2/3 compatibility
-from __future__ import absolute_import, division
-
 # Global
 import os
 import sys
 import platform
 import signal
-from collections import OrderedDict as odict
 from pprint import pformat
+import numpy as np
+import matplotlib.pyplot as plt
+import io
 
 # Local
 from cobaya.yaml import yaml_dump
 from cobaya.cosmo_input import input_database
+from cobaya.cosmo_input.autoselect_covmat import get_best_covmat, covmat_folders
 from cobaya.cosmo_input.create_input import create_input
-from cobaya.bib import prettyprint_bib, get_bib_info, get_bib_module
-from cobaya.tools import warn_deprecation, get_available_modules
-from cobaya.doc import _kinds
+from cobaya.bib import prettyprint_bib, get_bib_info, get_bib_component
+from cobaya.tools import warn_deprecation, get_available_internal_class_names, \
+    cov_to_std_and_corr, resolve_packages_path, sort_cosmetic
 from cobaya.input import get_default_info
-from cobaya.conventions import subfolders
-
+from cobaya.conventions import subfolders, kinds, _packages_path_env, _packages_path
 
 # per-platform settings for correct high-DPI scaling
 if platform.system() == "Linux":
@@ -28,26 +27,28 @@ else:  # Windows/Mac
     font_size = "9pt"
     set_attributes = ["AA_EnableHighDpiScaling"]
 
-
 try:
-    from PySide.QtGui import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
-    from PySide.QtGui import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
-    from PySide.QtGui import QFileDialog, QCheckBox, QLabel, QMenuBar, QAction, QDialog
-    from PySide.QtCore import Slot, QSize, QSettings
-except ImportError:
-    try:
-        from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGroupBox
-        from PySide2.QtWidgets import QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit
-        from PySide2.QtWidgets import QFileDialog, QCheckBox, QLabel, QMenuBar, QAction, QDialog
-        from PySide2.QtCore import Slot, Qt, QCoreApplication, QSize, QSettings
-        for attribute in set_attributes:
-            QApplication.setAttribute(getattr(Qt, attribute))
-    except ImportError:
-        QWidget, Slot = object, (lambda: lambda *x: None)
+    # noinspection PyUnresolvedReferences
+    from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, \
+        QGroupBox, QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit, \
+        QFileDialog, QCheckBox, QLabel, QMenuBar, QAction, QDialog, QTableWidget, \
+        QTableWidgetItem, QAbstractItemView
+    # noinspection PyUnresolvedReferences
+    from PySide2.QtGui import QColor
+    # noinspection PyUnresolvedReferences
+    from PySide2.QtCore import Slot, Qt, QCoreApplication, QSize, QSettings
 
+    for attribute in set_attributes:
+        # noinspection PyArgumentList
+        QApplication.setAttribute(getattr(Qt, attribute))
+except ImportError:
+    QWidget, Slot = object, (lambda: lambda *x: None)
 
 # Quit with C-c
 signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+# Color map for correlatins
+cmap_corr = plt.get_cmap("coolwarm_r")
 
 
 def text(key, contents):
@@ -55,29 +56,33 @@ def text(key, contents):
     return desc or key
 
 
+# noinspection PyArgumentList
 def get_settings():
     return QSettings('cobaya', 'gui')
 
 
+# noinspection PyArgumentList
 class MainWindow(QWidget):
 
+    # noinspection PyUnresolvedReferences
     def __init__(self):
-        super(MainWindow, self).__init__()
+        super().__init__()
         self.setWindowTitle("Cobaya input generator for Cosmology")
         self.setStyleSheet("* {font-size:%s;}" % font_size)
         # Menu bar for defaults
         self.menubar = QMenuBar()
-        defaults_menu = self.menubar.addMenu('&Show defaults and bibliography for a module...')
+        defaults_menu = self.menubar.addMenu(
+            '&Show defaults and bibliography for a component...')
         menu_actions = {}
-        for kind in _kinds:
+        for kind in kinds:
             submenu = defaults_menu.addMenu(subfolders[kind])
-            modules = get_available_modules(kind)
+            components = get_available_internal_class_names(kind)
             menu_actions[kind] = {}
-            for module in modules:
-                menu_actions[kind][module] = QAction(module, self)
-                menu_actions[kind][module].setData((kind, module))
-                menu_actions[kind][module].triggered.connect(self.show_defaults)
-                submenu.addAction(menu_actions[kind][module])
+            for component in components:
+                menu_actions[kind][component] = QAction(component, self)
+                menu_actions[kind][component].setData((kind, component))
+                menu_actions[kind][component].triggered.connect(self.show_defaults)
+                submenu.addAction(menu_actions[kind][component])
         # Main layout
         self.menu_layout = QVBoxLayout()
         self.menu_layout.addWidget(self.menubar)
@@ -96,9 +101,9 @@ class MainWindow(QWidget):
         self.options_scroll.setWidget(self.options)
         self.options_scroll.setWidgetResizable(True)
         self.layout_left.addWidget(self.options_scroll)
-        titles = odict([
-            ["Presets", odict([["preset", "Presets"]])],
-            ["Cosmological Model", odict([
+        titles = (
+            ["Presets", (["preset", "Presets"],)],
+            ["Cosmological Model", (
                 ["theory", "Theory code"],
                 ["primordial", "Primordial perturbations"],
                 ["geometry", "Geometry"],
@@ -107,20 +112,20 @@ class MainWindow(QWidget):
                 ["neutrinos", "Neutrinos and other extra matter"],
                 ["dark_energy", "Lambda / Dark energy"],
                 ["bbn", "BBN"],
-                ["reionization", "Reionization history"]])],
-            ["Data sets", odict([
+                ["reionization", "Reionization history"])],
+            ["Data sets", (
                 ["like_cmb", "CMB experiments"],
                 ["like_bao", "BAO experiments"],
                 ["like_des", "DES measurements"],
                 ["like_sn", "SN experiments"],
-                ["like_H0", "Local H0 measurements"]])],
-            ["Sampler", odict([["sampler", "Samplers"]])]])
-        self.combos = odict()
-        for group, fields in titles.items():
+                ["like_H0", "Local H0 measurements"])],
+            ["Sampler", (["sampler", "Samplers"],)])
+        self.combos = dict()
+        for group, fields in titles:
             group_box = QGroupBox(group)
             self.layout_options.addWidget(group_box)
             group_layout = QVBoxLayout(group_box)
-            for a, desc in fields.items():
+            for a, desc in fields:
                 self.combos[a] = QComboBox()
                 if len(fields) > 1:
                     label = QLabel(desc)
@@ -152,10 +157,20 @@ class MainWindow(QWidget):
             self.display[k].setCursorWidth(0)
             self.display[k].setReadOnly(True)
             self.display_tabs.addTab(self.display[k], k)
+        self.display["covmat"] = QWidget()
+        covmat_tab_layout = QVBoxLayout(group_box)
+        self.display["covmat"].setLayout(covmat_tab_layout)
+        self.covmat_text = QLabel()
+        self.covmat_text.setWordWrap(True)
+        self.covmat_table = QTableWidget(0, 0)
+        self.covmat_table.setEditTriggers(QAbstractItemView.NoEditTriggers)  # ReadOnly!
+        covmat_tab_layout.addWidget(self.covmat_text)
+        covmat_tab_layout.addWidget(self.covmat_table)
+        self.display_tabs.addTab(self.display["covmat"], "covariance matrix")
         self.layout_output.addWidget(self.display_tabs)
         # Buttons
         self.buttons = QHBoxLayout()
-        self.save_button = QPushButton('Save', self)
+        self.save_button = QPushButton('Save as...', self)
         self.copy_button = QPushButton('Copy to clipboard', self)
         self.buttons.addWidget(self.save_button)
         self.buttons.addWidget(self.copy_button)
@@ -170,6 +185,7 @@ class MainWindow(QWidget):
 
     def read_settings(self):
         settings = get_settings()
+        # noinspection PyArgumentList
         screen = QApplication.desktop().screenGeometry()
         h = min(screen.height() * 5 / 6., 900)
         size = QSize(min(screen.width() * 5 / 6., 1200), h)
@@ -199,8 +215,8 @@ class MainWindow(QWidget):
         return create_input(
             get_comments=True,
             #           planck_names=self.planck_names.isChecked(),
-            **{field: list(getattr(input_database, field).keys())[combo.currentIndex()]
-               for field, combo in self.combos.items() if field is not "preset"})
+            **{field: list(getattr(input_database, field))[combo.currentIndex()]
+               for field, combo in self.combos.items() if field != "preset"})
 
     @Slot()
     def refresh_keep_preset(self):
@@ -215,7 +231,7 @@ class MainWindow(QWidget):
 
     @Slot()
     def refresh_preset(self):
-        preset = list(getattr(input_database, "preset").keys())[
+        preset = list(getattr(input_database, "preset"))[
             self.combos["preset"].currentIndex()]
         if preset is input_database._none:
             return
@@ -235,48 +251,107 @@ class MainWindow(QWidget):
             self.combos[k].blockSignals(False)
 
     def refresh_display(self, info):
+        QApplication.setOverrideCursor(Qt.WaitCursor)
         try:
             comments = info.pop(input_database._comment, None)
             comments_text = "\n# " + "\n# ".join(comments)
         except (TypeError,  # No comments
                 AttributeError):  # Failed to generate info (returned str instead)
             comments_text = ""
-        self.display["python"].setText(
-            "from collections import OrderedDict\n\ninfo = " +
-            pformat(info) + comments_text)
-        self.display["yaml"].setText(yaml_dump(info) + comments_text)
+        self.display["python"].setText("info = " + pformat(info) + comments_text)
+        self.display["yaml"].setText(yaml_dump(sort_cosmetic(info)) + comments_text)
         self.display["bibliography"].setText(prettyprint_bib(get_bib_info(info)))
+        # Display covmat
+        packages_path = resolve_packages_path()
+        if not packages_path:
+            self.covmat_text.setText(
+                "\nIn order to find a covariance matrix, you need to define an external "
+                "packages installation path, e.g. via the env variable %r.\n" %
+                _packages_path_env)
+        elif any(not os.path.isdir(d.format(**{_packages_path: packages_path}))
+                 for d in covmat_folders):
+            self.covmat_text.setText(
+                "\nThe external cosmological packages appear not to be installed where "
+                "expected: %r\n" % packages_path)
+        else:
+            covmat_data = get_best_covmat(info, packages_path=packages_path)
+            self.current_params_in_covmat = covmat_data["params"]
+            self.current_covmat = covmat_data["covmat"]
+            _, corrmat = cov_to_std_and_corr(self.current_covmat)
+            self.covmat_text.setText(
+                "\nCovariance file: %r\n\n"
+                "NB: you do *not* need to save or copy this covariance matrix: "
+                "it will be selected automatically.\n" % covmat_data["name"])
+            self.covmat_table.setRowCount(len(self.current_params_in_covmat))
+            self.covmat_table.setColumnCount(len(self.current_params_in_covmat))
+            self.covmat_table.setHorizontalHeaderLabels(
+                list(self.current_params_in_covmat))
+            self.covmat_table.setVerticalHeaderLabels(
+                list(self.current_params_in_covmat))
+            for i, pi in enumerate(self.current_params_in_covmat):
+                for j, pj in enumerate(self.current_params_in_covmat):
+                    self.covmat_table.setItem(
+                        i, j, QTableWidgetItem("%g" % self.current_covmat[i, j]))
+                    if i != j:
+                        color = [256 * c for c in cmap_corr(corrmat[i, j] / 2 + 0.5)[:3]]
+                    else:
+                        color = [255.99] * 3
+                    self.covmat_table.item(i, j).setBackground(QColor(*color))
+                    self.covmat_table.item(i, j).setForeground(QColor(0, 0, 0))
+        QApplication.restoreOverrideCursor()
+
+    def save_covmat_txt(self, file_handle=None):
+        """
+        Saved covmat to given file_handle. If none given, returns the text to be saved.
+        """
+        return_txt = False
+        if not file_handle:
+            file_handle = io.BytesIO()
+            return_txt = True
+        np.savetxt(file_handle, self.current_covmat,
+                   header=" ".join(self.current_params_in_covmat))
+        if return_txt:
+            return file_handle.getvalue().decode()
 
     @Slot()
     def save_file(self):
         ftype = next(k for k, w in self.display.items()
                      if w is self.display_tabs.currentWidget())
         ffilter = {"yaml": "Yaml files (*.yaml *.yml)", "python": "(*.py)",
-                   "bibliography": "(*.txt)"}[ftype]
-        fsuffix = {"yaml": ".yaml", "python": ".py", "bibliography": ".txt"}[ftype]
+                   "bibliography": "(*.txt)", "covmat": "(*.covmat)"}[ftype]
+        fsuffix = {"yaml": ".yaml", "python": ".py",
+                   "bibliography": ".txt", "covmat": ".covmat"}[ftype]
         fname, path = self.save_dialog.getSaveFileName(
             self.save_dialog, "Save input file", fsuffix, ffilter, os.getcwd())
         if not fname.endswith(fsuffix):
             fname += fsuffix
-        with open(fname, "w+") as f:
-            f.write(self.display_tabs.currentWidget().toPlainText())
+        with open(fname, "w+", encoding="utf-8") as f:
+            if self.display_tabs.currentWidget() == self.display["covmat"]:
+                self.save_covmat_txt(f)
+            else:
+                f.write(self.display_tabs.currentWidget().toPlainText())
 
     @Slot()
     def copy_clipb(self):
-        self.clipboard.setText(self.display_tabs.currentWidget().toPlainText())
+        if self.display_tabs.currentWidget() == self.display["covmat"]:
+            self.clipboard.setText(self.save_covmat_txt())
+        else:
+            self.clipboard.setText(self.display_tabs.currentWidget().toPlainText())
 
     def show_defaults(self):
-        kind, module = self.sender().data()
-        self.current_defaults_diag = DefaultsDialog(kind, module, parent=self)
+        kind, component = self.sender().data()
+        self.current_defaults_diag = DefaultsDialog(kind, component, parent=self)
 
 
+# noinspection PyUnresolvedReferences,PyArgumentList
 class DefaultsDialog(QWidget):
 
-    def __init__(self, kind, module, parent=None):
-        super(DefaultsDialog, self).__init__()
+    def __init__(self, kind, component, parent=None):
+        super().__init__()
         self.clipboard = parent.clipboard
-        self.setWindowTitle("%s : %s" % (kind, module))
+        self.setWindowTitle("%s : %s" % (kind, component))
         self.setGeometry(0, 0, 500, 500)
+        # noinspection PyArgumentList
         self.move(
             QApplication.desktop().screenGeometry().center() - self.rect().center())
         self.show()
@@ -294,14 +369,14 @@ class DefaultsDialog(QWidget):
             self.display_tabs.addTab(self.display[k], k)
         self.layout.addWidget(self.display_tabs)
         # Fill text
-        defaults_txt = get_default_info(
-            module, kind, return_yaml=True, fail_if_not_found=True)
+        defaults_txt = get_default_info(component, kind, return_yaml=True)
+        _indent = "  "
+        defaults_txt = (kind + ":\n" + _indent + component + ":\n" +
+                        2 * _indent + ("\n" + 2 * _indent).join(defaults_txt.split("\n")))
         from cobaya.yaml import yaml_load
-        self.display["python"].setText(
-            "from collections import OrderedDict\n\ninfo = " +
-            pformat(yaml_load(defaults_txt)))
+        self.display["python"].setText(pformat(yaml_load(defaults_txt)))
         self.display["yaml"].setText(defaults_txt)
-        self.display["bibliography"].setText(get_bib_module(module, kind))
+        self.display["bibliography"].setText(get_bib_component(component, kind))
         # Buttons
         self.buttons = QHBoxLayout()
         self.close_button = QPushButton('Close', self)
@@ -317,6 +392,7 @@ class DefaultsDialog(QWidget):
         self.clipboard.setText(self.display_tabs.currentWidget().toPlainText())
 
 
+# noinspection PyArgumentList
 def gui_script():
     warn_deprecation()
     try:
@@ -328,7 +404,7 @@ def gui_script():
         import logging
         raise LoggedError(
             logging.getLogger("cosmo_generator"),
-            "PySide or PySide2 is not installed! "
+            "PySide2 is not installed! "
             "Check Cobaya's documentation for the cosmo_generator "
             "('Basic cosmology runs').")
     clip = app.clipboard()

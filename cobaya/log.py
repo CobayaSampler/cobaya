@@ -6,20 +6,16 @@
 
 """
 
-# Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
-
 # Global
 import sys
-import six
 import logging
 import traceback
 from copy import deepcopy
 
 # Local
 from cobaya.conventions import _debug, _debug_file
-from cobaya.mpi import get_mpi_rank, get_mpi_size, get_mpi_comm, more_than_one_process
+from cobaya.mpi import get_mpi_rank, get_mpi_size, get_mpi_comm, \
+    more_than_one_process, is_main_process
 
 
 class LoggedError(Exception):
@@ -27,13 +23,19 @@ class LoggedError(Exception):
     Dummy exception, to be raised when the originating exception
     has been cleanly handled and logged.
     """
+
     def __init__(self, logger, *args, **kwargs):
         if args:
             logger.error(*args, **kwargs)
         msg = args[0] if len(args) else ""
         if msg and len(args) > 1:
             msg = msg % args[1:]
-        super(LoggedError, self).__init__(msg, **kwargs)
+        super().__init__(msg)
+
+
+# Exceptions that will never be ignored when a component's calculation fails
+always_stop_exceptions = (LoggedError, KeyboardInterrupt, SystemExit, NameError,
+                          SyntaxError, AttributeError, KeyError)
 
 
 def safe_exit():
@@ -94,11 +96,8 @@ def logger_setup(debug=None, debug_file=None):
                    {logging.ERROR: "*ERROR* ",
                     logging.WARNING: "*WARNING* "}.get(record.levelno, "") +
                    "%(message)s")
-            if six.PY3:
-                self._style._fmt = fmt
-            else:
-                self._fmt = fmt
-            return super(MyFormatter, self).format(record)
+            self._style._fmt = fmt
+            return super().format(record)
 
     # Configure stdout handler
     handle_stdout = logging.StreamHandler(sys.stdout)
@@ -112,28 +111,26 @@ def logger_setup(debug=None, debug_file=None):
         file_stdout.setFormatter(MyFormatter())
         logging.root.addHandler(file_stdout)
     # Add stdout handler only once!
+    # noinspection PyUnresolvedReferences
     if not any(h.stream == sys.stdout for h in logging.root.handlers):
         logging.root.addHandler(handle_stdout)
     # Configure the logger to manage exceptions
     sys.excepthook = exception_handler
 
 
-class HasLogger(object):
+class HasLogger:
     """
     Class having a logger with its name (or an alternative one).
 
     Has magic methods to ignore the logger at (de)serialization.
     """
 
-    def set_logger(self, lowercase=True):
-        module_name = getattr(
-            self.__class__, "get_module_name", lambda : self.__class__.__name__)()
-        self.log = logging.getLogger(
-            (lambda x: x.lower() if lowercase else x)(
-                getattr(self, "name", module_name)))
+    def set_logger(self, lowercase=True, name=None):
+        name = name or self.__class__.__name__
+        self.log = logging.getLogger(name.lower() if lowercase else name)
 
     # Copying and pickling
-    def __deepcopy__(self, memo={}):
+    def __deepcopy__(self, memo=None):
         new = (lambda cls: cls.__new__(cls))(self.__class__)
         new.__dict__ = {k: deepcopy(v) for k, v in self.__dict__.items() if k != "log"}
         return new
@@ -144,3 +141,11 @@ class HasLogger(object):
     def __setstate__(self, d):
         self.__dict__ = d
         self.set_logger()
+
+    def mpi_warning(self, msg, *args, **kwargs):
+        if is_main_process():
+            self.log.warning(msg, *args, **kwargs)
+
+    def mpi_info(self, msg, *args, **kwargs):
+        if is_main_process():
+            self.log.info(msg, *args, **kwargs)

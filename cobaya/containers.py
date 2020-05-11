@@ -6,10 +6,6 @@
 
 """
 
-# Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
-
 # Global
 import os
 import logging
@@ -23,18 +19,18 @@ from requests import head
 
 # Local
 from cobaya.log import logger_setup, LoggedError
-from cobaya.input import get_used_modules, load_input
+from cobaya.input import get_used_components, load_input
 from cobaya.yaml import yaml_dump
 from cobaya.install import install
-from cobaya.conventions import _modules_path, _products_path, _code, _data
-from cobaya.conventions import _modules_path_env
-from cobaya.conventions import _requirements_file, _help_file, _modules_path_arg
+from cobaya.conventions import _products_path, _code, _data
+from cobaya.conventions import _packages_path_env, _packages_path
+from cobaya.conventions import _requirements_file, _help_file, _packages_path_arg
 from cobaya.tools import warn_deprecation
 
 log = logging.getLogger(__name__.split(".")[-1])
 
-requirements_file_path = os.path.join(_modules_path, _requirements_file)
-help_file_path = os.path.join(_modules_path, _help_file)
+requirements_file_path = os.path.join(_packages_path, _requirements_file)
+help_file_path = os.path.join(_packages_path, _help_file)
 
 base_recipe = r"""
 # OS -------------------------------------------------------------------------
@@ -49,9 +45,9 @@ RUN sed -i 's/# \(.*multiverse$\)/\1/g' /etc/apt/sources.list && \
       python python-pip git wget
 # Python requisites -- LC_ALL=C: Necessary just for pip <= 8.1.2 (Xenial version)
 ENV LC_ALL C
-RUN pip install --upgrade pip
-RUN pip install pytest-xdist matplotlib cython astropy --upgrade
-# Prepare environment and tree for modules -----------------------------------
+RUN python -m pip install --upgrade pip
+RUN python -m pip install pytest-forked matplotlib cython astropy --upgrade
+# Prepare environment and tree for external packages -------------------------
 ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/lib
 ENV CONTAINED TRUE
 ENV %s %s
@@ -60,11 +56,10 @@ RUN mkdir $%s && \
     mkdir $COBAYA_PRODUCTS
 # COBAYA  --------------------------------------------------------------------
 # getdist fork (it will be an automatic requisite in the future)
-RUN pip install git+https://github.com/JesusTorrado/getdist/\#egg=getdist --force
 RUN cd $%s && git clone https://github.com/JesusTorrado/cobaya.git && \
-    cd $%s/cobaya && pip install -e .
-""" % (_modules_path_env, _modules_path, _products_path,
-       _modules_path_env, _modules_path_env, _modules_path_env)
+    cd $%s/cobaya && python -m pip install -e .
+""" % (_packages_path_env, _packages_path, _products_path,
+       _packages_path_env, _packages_path_env, _packages_path_env)
 
 MPI_URL = {
     "mpich": "https://www.mpich.org/static/downloads/_VER_/mpich-_VER_.tar.gz",
@@ -88,14 +83,14 @@ MPI_recipe = {
       make install && make clean && cd .. && rm -rf /tmp/openmpi-_VER__DOT_SUB_ """}
 
 MPI_epilogue = """&& export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/ && \
-                  ldconfig && pip install mpi4py --no-binary :all:"""
+                  ldconfig && python -m pip install mpi4py --no-binary :all:"""
 
 
 def image_help(engine):
     e = engine.lower()
     assert e in ("singularity", "docker"), e + " not valid."
-    mount_data = {"docker": "-v [/cluster/path/to/data]:/modules/data:rw",
-                  "singularity": "--bind [/cluster/path/to/data]:/modules/data"}
+    mount_data = {"docker": "-v [/cluster/path/to/data]:/packages/data:rw",
+                  "singularity": "--bind [/cluster/path/to/data]:/packages/data"}
     mount_products = {"docker": "-v [/cluster/path/to/products]:/products:rw",
                       "singularity": "--bind [/cluster/path/to/producs]:/products"}
     mount_tmp = {"docker": "-v /tmp:/products:rw",
@@ -112,7 +107,7 @@ def image_help(engine):
     return dedent("""
         This is a %s image for Cobaya.
 
-        To check the modules installed in the container, take a look at '%s'.
+        To check the packages installed in the container, take a look at '%s'.
 
         Make sure that you have created a 'data' and a 'products' folder in your cluster.
 
@@ -137,7 +132,9 @@ def get_docker_client():
     try:
         import docker
     except ImportError:
-        raise LoggedError(log, "The Python Docker interface not installed: do 'pip install docker'.")
+        raise LoggedError(log,
+                          "The Python Docker interface not installed: "
+                          "do 'python -m pip install docker'.")
     return docker.from_env(version="auto")
 
 
@@ -155,18 +152,18 @@ def create_base_image(mpi=None, version=None, sub=None):
     try:
         tag = "cobaya/base_%s_%s:latest" % (mpi.lower(), version + sub)
     except KeyError():
-        raise LoggedError(log, "MPI library '%s' not recognized.")
+        raise LoggedError(log, "MPI library '%s' not recognized.", mpi)
     URL = MPI_URL[mpi.lower()].replace("_VER_", str(version)).replace("_DOT_SUB_", sub)
     if head(URL).status_code >= 400:
         raise LoggedError(log, "Failed to download %s %s: couldn't reach URL: '%s'",
                           mpi.lower(), version + sub, URL)
-    log.info("Creating base image %s v%s..." % (mpi.lower(), version + sub))
+    log.info("Creating base image %s v%s...", mpi.lower(), version + sub)
     this_MPI_recipe = dedent(MPI_recipe[mpi.lower()].replace("_VER_", version)
                              .replace("_DOT_SUB_", sub).replace("_URL_", URL))
     dc = get_docker_client()
     with StringIO(base_recipe + this_MPI_recipe + MPI_epilogue) as stream:
         dc.images.build(fileobj=stream, tag=tag, nocache=True)
-    log.info("Base image '%s' created!" % tag)
+    log.info("Base image '%s' created!", tag)
 
 
 def create_all_base_images():
@@ -186,10 +183,11 @@ def create_docker_image(filenames, MPI_version=None):
         #          "It is strongly encouraged to request the one installed in your cluster,"
         #          " using '--mpi-version X.Y'. Defaulting to MPICH v%s.", MPI_version)
     dc = get_docker_client()
-    modules = yaml_dump(get_used_modules(*[load_input(f) for f in filenames])).strip()
+    components = yaml_dump(
+        get_used_components(*[load_input(f) for f in filenames])).strip()
     echos_reqs = "RUN " + " && \\ \n    ".join(
         [r'echo "%s" >> %s' % (block, requirements_file_path)
-         for block in modules.split("\n")])
+         for block in components.split("\n")])
     echos_help = "RUN " + " && \\ \n    ".join(
         [r'echo "%s" >> %s' % (line, help_file_path)
          for line in image_help("docker").split("\n")])
@@ -199,8 +197,8 @@ def create_docker_image(filenames, MPI_version=None):
     RUN cobaya-install %s --%s %s --just-code --force ### NEEDS PYTHON UPDATE! --no-progress-bars
     %s
     CMD ["cat", "%s"]
-    """ % (MPI_version, echos_reqs, requirements_file_path, _modules_path_arg,
-           _modules_path, echos_help, help_file_path)
+    """ % (MPI_version, echos_reqs, requirements_file_path, _packages_path_arg,
+           _packages_path, echos_help, help_file_path)
     image_name = "cobaya:" + uuid.uuid4().hex[:6]
     with StringIO(recipe) as stream:
         dc.images.build(fileobj=stream, tag=image_name)
@@ -216,10 +214,11 @@ def create_singularity_image(filenames, MPI_version=None):
         # log.warning("You have not specified an OpenMPI version. "
         #          "It is strongly encouraged to request the one installed in your cluster,"
         #          " using '--mpi-version X.Y.Z'. Defaulting to OpenMPI v%s.", MPI_version)
-    modules = yaml_dump(get_used_modules(*[load_input(f) for f in filenames])).strip()
+    components = yaml_dump(
+        get_used_components(*[load_input(f) for f in filenames])).strip()
     echos_reqs = "\n    " + "\n    ".join(
         [""] + ['echo "%s" >> %s' % (block, requirements_file_path)
-                for block in modules.split("\n")])
+                for block in components.split("\n")])
     recipe = (
             dedent("""
         Bootstrap: docker
@@ -228,13 +227,13 @@ def create_singularity_image(filenames, MPI_version=None):
             dedent(echos_reqs) + dedent("""
         export CONTAINED=TRUE
         cobaya-install %s --%s %s --just-code --force ### --no-progress-bars
-        mkdir %s
+        mkdir $COBAYA_PRODUCTS
 
         %%help
 
         %s
         """ % (requirements_file_path,
-               _modules_path, os.path.join(_modules_path_arg, _modules_path, _data),
+               _packages_path, os.path.join(_packages_path_arg, _packages_path, _data),
                "\n        ".join(image_help("singularity").split("\n")[1:]))))
     with NamedTemporaryFile(delete=False) as recipe_file:
         recipe_file.write(recipe)
@@ -278,15 +277,16 @@ def prepare_data_script():
     logger_setup()
     if "CONTAINED" not in os.environ:
         raise LoggedError(log, "This command should only be run within a container. "
-                          "Run 'cobaya-install' instead.")
+                               "Run 'cobaya-install' instead.")
     parser = argparse.ArgumentParser(
         description="Cobaya's installation tool for the data needed by a container.")
     parser.add_argument("-f", "--force", action="store_true", default=False,
-                        help="Force re-installation of apparently installed modules.")
+                        help="Force re-installation of apparently installed packages.")
     arguments = parser.parse_args()
     try:
         info = load_input(requirements_file_path)
     except IOError:
-        raise LoggedError(log, "Cannot find the requirements file. This should not be happening.")
-    install(info, path=_modules_path, force=arguments.force,
+        raise LoggedError(log,
+                          "Cannot find the requirements file. This should not be happening.")
+    install(info, path=_packages_path, force=arguments.force,
             **{_code: False, _data: True})

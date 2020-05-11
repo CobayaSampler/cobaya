@@ -5,7 +5,7 @@ Importance reweighting and general ``post``-processing
 
    *new in 1.2*
 
-The `post` module provides a way to post-process an existing sample in different ways:
+The `post` component provides a way to post-process an existing sample in different ways:
 
 - Add/remove/recompute a prior, e.g. to impose a parameter cut.
 - Add/remove/recompute a likelihood.
@@ -68,7 +68,8 @@ Let us generate the initial sample:
 .. code:: python
 
    from cobaya.run import run
-   updinfo, results = run(gaussian_info)
+   updinfo, sampler = run(gaussian_info)
+   results = sampler.products()
 
 And let us define the additions and run post-processing:
 
@@ -106,7 +107,7 @@ And let us define the additions and run post-processing:
    gdsamples_gaussian = MCSamplesFromCobaya(updinfo, results["sample"])
    gdsamples_post = MCSamplesFromCobaya(updinfo_post, results_post["sample"])
 
-   p = gdplt.getSubplotPlotter(width_inch=6)
+   p = gdplt.get_single_plotter(width_inch=6)
    p.plot_2d([gdsamples_gaussian, gdsamples_post], ["x", "y"], filled=True)
    p.add_x_bands(x_band_mean, x_band_std)
    p.add_legend(["Gaussian", "Post $y>0$ and $x$-band"], colored_text=True);

@@ -1,13 +1,11 @@
 # Dummy sampler for evaluating the posterior at particular points
 # (To do this interactively, check out the "Model wrapper".
 
-sampler:
-  evaluate:
-    # Number of evaluations
-    N: 1
-    # Optional: override parameter values
-    #   Use it if you don't want to change the reference points in your params block
-    override:
-      # param: value
-    # Seeding runs
-    seed:  # integer between 0 and 2**32 - 1
+# Number of evaluations
+N: 1
+# Optional: override parameter values
+#   Use it if you don't want to change the reference points in your params block
+override:
+  # param: value
+# Seeding runs
+seed:  # integer between 0 and 2**32 - 1

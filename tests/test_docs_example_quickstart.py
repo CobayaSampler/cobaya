@@ -3,10 +3,9 @@ Automatic tests of the quickstart example in the documentation,
 to make sure it remains up to date.
 """
 
-from __future__ import division
-import os
-import six
 from flaky import flaky
+from io import StringIO
+import os
 
 from cobaya.yaml import yaml_load_file
 from cobaya.input import is_equal_info
@@ -39,10 +38,9 @@ def test_example(tmpdir):
         # Run the chain -- constant seed so results are the same!
         globals_example["info"]["sampler"]["mcmc"] = (
                 globals_example["info"]["sampler"]["mcmc"] or {})
-        globals_example["info"]["sampler"]["mcmc"].update({"seed": 0})
         exec(open(os.path.join(docs_src_folder, "run.py")).read(), globals_example)
         # Analyze and plot -- capture print output
-        stream = six.StringIO()
+        stream = StringIO()
         with stdout_redirector(stream):
             exec(open(os.path.join(docs_src_folder, "analyze.py")).read(),
                  globals_example)

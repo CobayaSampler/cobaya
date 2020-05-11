@@ -1,14 +1,12 @@
 # Planck 2018 release: high-ell, TE power spectrum likelihood (plik)
 # See https://wiki.cosmos.esa.int/planck-legacy-archive/index.php/CMB_spectrum_%26_Likelihood_Code
 
-likelihood:
-  planck_2018_highl_plik.TE:
-    path:
-    clik_file: extended_plik/plc_3.0/hi_l/plik/plik_rd12_HM_v22_TE.clik
-    product_id: "151905"
-    # Aliases for automatic covariance matrix
-    renames: [plikHM_TE]
-    # Speed in evaluations/second
-    speed: 7
+path:
+clik_file: extended_plik/plc_3.0/hi_l/plik/plik_rd12_HM_v22_TE.clik
+product_id: "151905"
+# Aliases for automatic covariance matrix
+aliases: [plikHM_TE]
+# Speed in evaluations/second
+speed: 100
 
 params: !defaults [params_calib, params_calib_temp, params_calib_pol, params_TE]

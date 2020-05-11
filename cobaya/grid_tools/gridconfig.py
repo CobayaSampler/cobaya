@@ -6,8 +6,6 @@
          (based on Antony Lewis' CosmoMC version of the same code)
 
 """
-# Python 2/3 compatibility
-from __future__ import absolute_import, print_function, division
 
 # Global
 import os
@@ -16,14 +14,14 @@ import argparse
 
 # Local
 from cobaya.yaml import yaml_load_file, yaml_dump_file
-from cobaya.conventions import _output_prefix, _path_install, _yaml_extensions, _theory
-from cobaya.conventions import _sampler, _params, _likelihood
-from cobaya.input import get_used_modules, merge_info, update_info
+from cobaya.conventions import _output_prefix, _packages_path, _yaml_extensions
+from cobaya.conventions import kinds, _params
+from cobaya.input import get_used_components, merge_info, update_info
 from cobaya.install import install as install_reqs
+from cobaya.tools import sort_cosmetic, warn_deprecation
 from cobaya.grid_tools import batchjob
-from cobaya.cosmo_input import create_input, get_best_covmat
+from cobaya.cosmo_input import create_input, _get_best_covmat
 from cobaya.parameterization import is_sampled_param
-from cobaya.tools import warn_deprecation
 
 
 def getArgs(vals=None):
@@ -40,11 +38,16 @@ def getArgs(vals=None):
     parser.add_argument('--install-reqs-at', help=(
         'install required code and data for the grid in the given folder.'))
     parser.add_argument("--install-reqs-force", action="store_true", default=False,
-                        help="Force re-installation of apparently installed modules.")
+                        help="Force re-installation of apparently installed packages.")
     return parser.parse_args(vals)
 
 
-def MakeGridScript():
+def pathIsGrid(batchPath):
+    return os.path.exists(batchjob.grid_cache_file(batchPath)) or os.path.exists(
+        os.path.join(batchPath, 'config', 'config.ini'))
+
+
+def make_grid_script():
     warn_deprecation()
     args = getArgs()
     args.interactive = True
@@ -63,7 +66,6 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         #                                'does not exist')
         #            read_only = True
         #            sys.path.insert(0, batchPath + 'config')
-        #            sys.modules['batchJob'] = batchjob  # old name
         #            settings = __import__(IniFile(batchPath + 'config/config.ini').params['setting_file'].replace('.py', ''))
         elif os.path.splitext(settingName)[-1].lower() in _yaml_extensions:
             settings = yaml_load_file(settingName)
@@ -71,7 +73,7 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
             raise NotImplementedError("Using a python script is work in progress...")
             # In this case, info-as-dict would be passed
             # settings = __import__(settingName, fromlist=['dummy'])
-    batch = batchjob.batchJob(batchPath, settings.get("yaml_dir", None))
+    batch = batchjob.BatchJob(batchPath)
     # batch.skip = settings.get("skip", False)
     batch.makeItems(settings, messages=not read_only)
     if read_only:
@@ -85,7 +87,7 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         batch.makeDirectories(setting_file=None)
         batch.save()
     infos = {}
-    modules_used = {}
+    components_used = {}
     # Default info
     defaults = copy.deepcopy(settings)
     grid_definition = defaults.pop("grid")
@@ -111,9 +113,9 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
             combined_info = merge_info(create_input(**preset), combined_info)
         combined_info[_output_prefix] = jobItem.chainRoot
         # Requisites
-        modules_used = get_used_modules(modules_used, combined_info)
+        components_used = get_used_components(components_used, combined_info)
         if install_reqs_at:
-            combined_info[_path_install] = os.path.abspath(install_reqs_at)
+            combined_info[_packages_path] = os.path.abspath(install_reqs_at)
         # Save the info (we will write it after installation:
         # we need to install to add auto covmats
         if jobItem.param_set not in infos:
@@ -124,21 +126,21 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         print("Installing required code and data for the grid.")
         from cobaya.log import logger_setup
         logger_setup()
-        install_reqs(modules_used, path=install_reqs_at, force=install_reqs_force)
+        install_reqs(components_used, path=install_reqs_at, force=install_reqs_force)
     print("Adding covmats (if necessary) and writing input files")
     for jobItem in batch.items(wantSubItems=False):
         info = infos[jobItem.param_set][jobItem.data_set.tag]
         # Covariance matrices
         # We try to find them now, instead of at run time, to check if correctly selected
         try:
-            sampler = list(info[_sampler])[0]
+            sampler = list(info[kinds.sampler])[0]
         except KeyError:
             raise ValueError("No sampler has been chosen")
-        if sampler == "mcmc" and info[_sampler][sampler].get("covmat", "auto"):
-            modules_path = install_reqs_at or info.get(_path_install, None)
-            if not modules_path:
+        if sampler == "mcmc" and info[kinds.sampler][sampler].get("covmat", "auto"):
+            packages_path = install_reqs_at or info.get(_packages_path, None)
+            if not packages_path:
                 raise ValueError("Cannot assign automatic covariance matrices because no "
-                                 "modules path has been defined.")
+                                 "external packages path has been defined.")
             # Need updated info for covmats: includes renames
             updated_info = update_info(info)
             # Ideally, we use slow+sampled parameters to look for the covariance matrix
@@ -147,20 +149,17 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
             from itertools import chain
             like_params = set(chain(*[
                 list(like[_params])
-                for like in updated_info[_likelihood].values()]))
+                for like in updated_info[kinds.likelihood].values()]))
             params_info = {p: v for p, v in updated_info[_params].items()
                            if is_sampled_param(v) and p not in like_params}
-            best_covmat = get_best_covmat(
-                os.path.abspath(modules_path),
-                params_info, updated_info[_likelihood])
-            info[_sampler][sampler]["covmat"] = os.path.join(
+            best_covmat = _get_best_covmat(
+                os.path.abspath(packages_path),
+                params_info, updated_info[kinds.likelihood])
+            info[kinds.sampler][sampler]["covmat"] = os.path.join(
                 best_covmat["folder"], best_covmat["name"])
         # Write the info for this job
-        try:
-            yaml_dump_file(jobItem.iniFile(), info, error_if_exists=True)
-        except IOError:
-            raise IOError("Can't write chain input file. Maybe the chain configuration "
-                          "files already exists?")
+        # Allow overwrite since often will want to regenerate grid with tweaks
+        yaml_dump_file(jobItem.iniFile(), sort_cosmetic(info), error_if_exists=False)
 
         # Non-translated old code
         # if not start_at_bestfit:
