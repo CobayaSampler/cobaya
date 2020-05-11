@@ -84,7 +84,7 @@ class evaluate(Sampler):
                 self.log.info("Likelihoods and derived parameters not computed, "
                               "since the prior is null.")
         # Write the output: the point and its prior, posterior and likelihood.
-        self.one_point._out_update()
+        self.one_point.out_update()
 
     def products(self):
         """

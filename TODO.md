@@ -11,7 +11,7 @@
 ## In the docs "Bases" (and UML diagram) not hyperlinked correctly (not sure how to fix)
 ## Make numba a requirement?
 ## dump log info along with each chain file if saving to file (currently in stdout)
-## Faster Collections for MCMC: numpy cache for merging OnePoint into Collection, `_out_update` method would take care of flushing into the Pandas table.
+## Faster Collections for MCMC: numpy cache for merging OnePoint into Collection, `out_update` method would take care of flushing into the Pandas table.
 ## PolyChord: check overhead
 ## PolyChord: lower dimension of tests?
 

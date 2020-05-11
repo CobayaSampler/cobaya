@@ -39,6 +39,7 @@ try:
     from PySide2.QtCore import Slot, Qt, QCoreApplication, QSize, QSettings
 
     for attribute in set_attributes:
+        # noinspection PyArgumentList
         QApplication.setAttribute(getattr(Qt, attribute))
 except ImportError:
     QWidget, Slot = object, (lambda: lambda *x: None)
@@ -55,10 +56,12 @@ def text(key, contents):
     return desc or key
 
 
+# noinspection PyArgumentList
 def get_settings():
     return QSettings('cobaya', 'gui')
 
 
+# noinspection PyArgumentList
 class MainWindow(QWidget):
 
     # noinspection PyUnresolvedReferences
@@ -98,9 +101,9 @@ class MainWindow(QWidget):
         self.options_scroll.setWidget(self.options)
         self.options_scroll.setWidgetResizable(True)
         self.layout_left.addWidget(self.options_scroll)
-        titles = dict([
-            ["Presets", {"preset": "Presets"}],
-            ["Cosmological Model", dict([
+        titles = (
+            ["Presets", (["preset", "Presets"],)],
+            ["Cosmological Model", (
                 ["theory", "Theory code"],
                 ["primordial", "Primordial perturbations"],
                 ["geometry", "Geometry"],
@@ -109,20 +112,20 @@ class MainWindow(QWidget):
                 ["neutrinos", "Neutrinos and other extra matter"],
                 ["dark_energy", "Lambda / Dark energy"],
                 ["bbn", "BBN"],
-                ["reionization", "Reionization history"]])],
-            ["Data sets", dict([
+                ["reionization", "Reionization history"])],
+            ["Data sets", (
                 ["like_cmb", "CMB experiments"],
                 ["like_bao", "BAO experiments"],
                 ["like_des", "DES measurements"],
                 ["like_sn", "SN experiments"],
-                ["like_H0", "Local H0 measurements"]])],
-            ["Sampler", {"sampler": "Samplers"}]])
+                ["like_H0", "Local H0 measurements"])],
+            ["Sampler", (["sampler", "Samplers"],)])
         self.combos = dict()
-        for group, fields in titles.items():
+        for group, fields in titles:
             group_box = QGroupBox(group)
             self.layout_options.addWidget(group_box)
             group_layout = QVBoxLayout(group_box)
-            for a, desc in fields.items():
+            for a, desc in fields:
                 self.combos[a] = QComboBox()
                 if len(fields) > 1:
                     label = QLabel(desc)
@@ -340,7 +343,7 @@ class MainWindow(QWidget):
         self.current_defaults_diag = DefaultsDialog(kind, component, parent=self)
 
 
-# noinspection PyUnresolvedReferences
+# noinspection PyUnresolvedReferences,PyArgumentList
 class DefaultsDialog(QWidget):
 
     def __init__(self, kind, component, parent=None):
@@ -389,6 +392,7 @@ class DefaultsDialog(QWidget):
         self.clipboard.setText(self.display_tabs.currentWidget().toPlainText())
 
 
+# noinspection PyArgumentList
 def gui_script():
     warn_deprecation()
     try:

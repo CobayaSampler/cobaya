@@ -75,7 +75,7 @@ class Collection(BaseCollection):
     """
     Holds a collection of samples, stored internally into a ``pandas.DataFrame``.
 
-    The dataframe itself is accessible as the ``Collection.data`` attribute, but slicing
+    The DataFrame itself is accessible as the ``Collection.data`` attribute, but slicing
     can be done on the ``Collection`` itself.
     """
 
@@ -85,7 +85,7 @@ class Collection(BaseCollection):
         super().__init__(model, name)
         self._value_dict = {p: np.nan for p in self.columns}
         # Create/load the main data frame and the tracking indices
-        # Create the dataframe structure
+        # Create the DataFrame structure
         if output:
             self.file_name, self.driver = output.prepare_collection(
                 name=self.name, extension=extension)
@@ -184,7 +184,7 @@ class Collection(BaseCollection):
                                         index=np.arange(len(self),
                                                         len(self) + enlarge_by))])
 
-    def _append(self, collection):
+    def append(self, collection):
         """
         Append another collection.
         Internal method: does not check for consistency!
@@ -305,10 +305,8 @@ class Collection(BaseCollection):
         self._get_driver("_load")(**kwargs)
 
     # Dump/update/delete collection
-    def _out_dump(self):
-        self._get_driver("_dump")()
 
-    def _out_update(self):
+    def out_update(self):
         self._get_driver("_update")()
 
     def _out_delete(self):

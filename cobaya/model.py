@@ -975,7 +975,7 @@ class Model(HasLogger):
             self.log.debug("* %g : %r : %r", c, o, b)
         return blocks_sorted, oversample_factors
 
-    def _check_blocking(self, blocking):
+    def check_blocking(self, blocking):
         """
         Checks the correct formatting of the given parameter blocking and oversampling:
         that it consists of tuples `(oversampling_factor, (param1, param2, etc))`, with

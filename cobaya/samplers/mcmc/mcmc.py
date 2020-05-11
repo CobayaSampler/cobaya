@@ -215,7 +215,7 @@ class mcmc(CovmatSampler):
         if self.blocking:
             # Includes the case in which we are resuming
             self.blocks, self.oversampling_factors = \
-                self.model._check_blocking(self.blocking)
+                self.model.check_blocking(self.blocking)
         else:
             self.blocks, self.oversampling_factors = \
                 self.model.get_param_blocking_for_sampler(
@@ -359,7 +359,7 @@ class mcmc(CovmatSampler):
             self.log.info("Reached maximum number of accepted steps allowed. "
                           "Stopping.")
         # Make sure the last batch of samples ( < output_every (not in sec)) are written
-        self.collection._out_update()
+        self.collection.out_update()
         if more_than_one_process():
             Ns = (lambda x: np.array(get_mpi_comm().gather(x)))(self.n())
             if not is_main_process():
@@ -513,7 +513,7 @@ class mcmc(CovmatSampler):
                     # Update chain files, if output_every *not* in sec
                     if not self.output_every.unit:
                         if self.n() % self.output_every.value == 0:
-                            self.collection._out_update()
+                            self.collection.out_update()
             else:
                 self.burn_in_left -= 1
                 self.log.debug("Burn-in sample:\n   %s", self.current_point)
@@ -529,7 +529,7 @@ class mcmc(CovmatSampler):
             max_tries_now = self.max_tries.value * \
                             (1 + (10 - 1) * np.sign(self.burn_in_left))
             if self.current_point.weight > max_tries_now:
-                self.collection._out_update()
+                self.collection.out_update()
                 raise LoggedError(
                     self.log,
                     "The chain has been stuck for %d attempts. Stopping sampling. "
@@ -759,7 +759,7 @@ class mcmc(CovmatSampler):
         self.write_checkpoint()
 
     def do_output(self, date_time):
-        self.collection._out_update()
+        self.collection.out_update()
         msg = "Progress @ %s : " % date_time.strftime("%Y-%m-%d %H:%M:%S")
         msg += "%d steps taken" % self.n_steps_raw
         if self.burn_in_left and self.burn_in:  # NB: burn_in_left = 1 even if no burn_in

@@ -84,7 +84,7 @@ def post(info, sample=None):
         collection_in = deepcopy(sample[0])
         for s in sample[1:]:
             try:
-                collection_in._append(s)
+                collection_in.append(s)
             except:
                 raise LoggedError(log, "Failed to load some of the input samples.")
     else:
@@ -390,6 +390,6 @@ def post(info, sample=None):
         collection_out.data[collection_out.data.weight > 0].reset_index(drop=True))
     collection_out._n = collection_out.data.last_valid_index() + 1
     # Write!
-    collection_out._out_update()
+    collection_out.out_update()
     log.info("Finished! Final number of samples: %d", len(collection_out))
     return info_out, {"sample": collection_out}

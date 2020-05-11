@@ -309,7 +309,7 @@ class minimize(Minimizer, CovmatSampler):
                              loglikes=recomputed_post_min.loglikes)
             self.log.info(
                 "Parameter values at minimum:\n%s", self.minimum.data.to_string())
-            self.minimum._out_update()
+            self.minimum.out_update()
             self.dump_getdist()
 
     def products(self):

@@ -46,6 +46,7 @@ class polychord(Sampler):
     blocking: Any
     measure_speeds: bool
     oversample_power: float
+    nlive: NumberWithUnits
 
     def initialize(self):
         """Imports the PolyChord sampler and prepares its arguments."""
@@ -129,7 +130,7 @@ class polychord(Sampler):
             self.log.info("Storing raw PolyChord output in '%s'.", self.base_dir)
         # Exploiting the speed hierarchy
         if self.blocking:
-            blocks, oversampling_factors = self.model._check_blocking(self.blocking)
+            blocks, oversampling_factors = self.model.check_blocking(self.blocking)
         else:
             if self.measure_speeds:
                 self.model.measure_and_set_speeds(n=self.measure_speeds)
@@ -296,7 +297,7 @@ class polychord(Sampler):
                 logpriors=row[-(self.n_priors + self.n_likes):-self.n_likes],
                 loglikes=row[-self.n_likes:])
         # make sure that the points are written
-        collection._out_update()
+        collection.out_update()
         return collection
 
     def _correct_unphysical_fraction(self):
