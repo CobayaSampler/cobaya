@@ -26,7 +26,7 @@
 
 **Cobaya** (**co**\ de for **bay**\ esian **a**\ nalysis, and Spanish for *Guinea Pig*) is a framework for sampling and statistical modelling: it allows you to explore an arbitrary prior or posterior using a range of Monte Carlo samplers (including the advanced MCMC sampler from CosmoMC_, and the advanced nested sampler PolyChord_). The results of the sampling can be analysed with GetDist_. It supports MPI parallelization (and very soon HPC containerization with Docker/Shifter and Singularity).
 
-Its authors are `Jesus Torrado`_ and `Antony Lewis`_. Some ideas and pieces of code have been adapted from other codes (e.g CosmoMC_ by `Antony Lewis`_ and contributors, and `Monte Python`_, by `Julien Lesgourgues`_ and `Benjamin Audren`_).
+Its authors are `Jesus Torrado`_ and `Antony Lewis`_. Some ideas and pieces of code have been adapted from other codes (e.g CosmoMC_ by `Antony Lewis`_ and contributors, and `Monte Python`_, by `J. Lesgourgues`_ and `B. Audren`_).
 
 **Cobaya** has been conceived from the beginning to be highly and effortlessly extensible: without touching **cobaya**'s source code, you can define your own priors and likelihoods, create new parameters as functions of other parameters...
 
@@ -46,9 +46,9 @@ To appropriately cite the modules (samplers, theory codes, likelihoods) that you
 Acknowledgements
 ----------------
 
-Thanks to `Julien Lesgourgues`_ and `Will Handley`_ for support on interfacing CLASS_ and PolyChord_ respectively.
+Thanks to `J. Lesgourgues`_ and `W. Handley`_ for support on interfacing CLASS_ and PolyChord_ respectively.
 
-Thanks too to `Guadalupe Cañas Herrera`_, `Andreas Finke`_, `Lukas Hergt`_, `Vivian Miranda`_, `Timothy Morton`_, `Joe Zunz`_ and many others for extensive and somewhat painful testing.
+Thanks too to `G. Cañas Herrera`_, `A. Finke`_, `X. Garrido`_, `S. Heimersheim`_, `L. Hergt`_, `M.S. Madhavacheril`_, `V. Miranda`_, `T. Morton`_, `J. Zunz`_ and many others for extensive and somewhat painful testing.
 
 .. _`Jesus Torrado`: https://web.physik.rwth-aachen.de/user/torrado
 .. _`Antony Lewis`: https://cosmologist.info
@@ -59,15 +59,18 @@ Thanks too to `Guadalupe Cañas Herrera`_, `Andreas Finke`_, `Lukas Hergt`_, `Vi
 .. _Class: https://class-code.net/
 .. _GetDist: https://github.com/cmbant/getdist
 .. _PolyChord: https://github.com/PolyChord/PolyChordLite
-.. _`Julien Lesgourgues`: https://www.particle-theory.rwth-aachen.de/cms/Particle-Theory/Das-Institut/Mitarbeiter-TTK/Professoren/~gufe/Lesgourgues-Julien/?lidx=1
-.. _`Benjamin Audren`: https://baudren.github.io/
-.. _`Guadalupe Cañas Herrera`: https://gcanasherrera.github.io/pages/about-me.html#about-me
-.. _`Andreas Finke`: https://cosmology.unige.ch/users/andreas-finke
-.. _`Vivian Miranda`: https://github.com/vivianmiranda
-.. _`Lukas Hergt`: https://www.kicc.cam.ac.uk/directory/lh561
-.. _`Joe Zunz`: https://github.com/joezuntz
-.. _`Timothy Morton`: https://github.com/timothydmorton
-.. _`Will Handley`: https://www.kicc.cam.ac.uk/directory/wh260
+.. _`J. Lesgourgues`: https://www.particle-theory.rwth-aachen.de/cms/Particle-Theory/Das-Institut/Mitarbeiter-TTK/Professoren/~gufe/Lesgourgues-Julien/?lidx=1
+.. _`B. Audren`: https://baudren.github.io/
+.. _`W. Handley`: https://www.kicc.cam.ac.uk/directory/wh260
+.. _`G. Cañas Herrera`: https://gcanasherrera.github.io/pages/about-me.html#about-me
+.. _`A. Finke`: https://cosmology.unige.ch/users/andreas-finke
+.. _`X. Garrido`: https://xgarrido.github.io/
+.. _`S. Heimersheim`: https://www.ast.cam.ac.uk/people/Stefan.Heimersheim
+.. _`L. Hergt`: https://www.kicc.cam.ac.uk/directory/lh561
+.. _`M.S. Madhavacheril`: https://msyriac.github.io/
+.. _`V. Miranda`: https://github.com/vivianmiranda
+.. _`T. Morton`: https://github.com/timothydmorton
+.. _`J. Zunz`: https://github.com/joezuntz
 
 
 ===================
