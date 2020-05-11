@@ -62,6 +62,7 @@
 
 - Updated to PolyChord 1.17.1.
 - Changed naming convention for raw output files, and added `getdist`-compatible `.paramnames`.
+- Many defaults changes and useful documentation (Thanks Will Handley @williamjameshandley).
 
 #### Minimize
 
