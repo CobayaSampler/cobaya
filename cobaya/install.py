@@ -15,6 +15,7 @@ import subprocess
 import traceback
 import logging
 import shutil
+import tempfile
 from pkg_resources import parse_version
 
 # Local
@@ -160,43 +161,43 @@ def _skip_helper(name, skip_keywords, skip_keywords_env, logger):
 
 def download_file(url, path, no_progress_bars=False, decompress=False, logger=None):
     logger = logger or logging.getLogger(__name__)
-    try:
-        req = requests.get(url, allow_redirects=True)
-        # get hinted filename if available:
+    with tempfile.TemporaryDirectory() as tmp_path:
         try:
-            filename = re.findall("filename=(.+)", req.headers['content-disposition'])[0]
-            filename = filename.strip('"\'')
-        except KeyError:
-            filename = os.path.basename(url)
-        filename = os.path.normpath(os.path.join(path, filename))
-        open(filename, 'wb').write(req.content)
-        print("")
-        logger.info('Downloaded filename %s' % filename)
-    except Exception as e:
-        logger.error(
-            "Error downloading file '%s' to folder '%s': %s", filename, path, e)
-        return False
-    logger.debug('Got: %s' % filename)
-    if not decompress:
-        return True
-    extension = os.path.splitext(filename)[-1][1:]
-    try:
-        if extension == "zip":
-            from zipfile import ZipFile
-            with ZipFile(filename, 'r') as zipObj:
-                zipObj.extractall(path)
-        else:
-            import tarfile
-            if extension == "tgz":
-                extension = "gz"
-            with tarfile.open(filename, "r:" + extension) as tar:
-                tar.extractall(path)
-        logger.debug('Decompressed: %s' % filename)
-        os.remove(filename)
-        return True
-    except Exception as e:
-        logger.error("Error decompressing downloaded file! Corrupt file? [%s]" % e)
-        return False
+            req = requests.get(url, allow_redirects=True)
+            # get hinted filename if available:
+            try:
+                filename = re.findall("filename=(.+)", req.headers['content-disposition'])[0]
+                filename = filename.strip('"\'')
+            except KeyError:
+                filename = os.path.basename(url)
+            filename_tmp_path = os.path.normpath(os.path.join(tmp_path, filename))
+            open(filename_tmp_path, 'wb').write(req.content)
+            print("")
+            logger.info('Downloaded filename %s' % filename)
+        except Exception as e:
+            logger.error(
+                "Error downloading file '%s' to folder '%s': %s", filename, tmp_path, e)
+            return False
+        logger.debug('Got: %s' % filename)
+        if not decompress:
+            return True
+        extension = os.path.splitext(filename)[-1][1:]
+        try:
+            if extension == "zip":
+                from zipfile import ZipFile
+                with ZipFile(filename_tmp_path, 'r') as zipObj:
+                    zipObj.extractall(path)
+            else:
+                import tarfile
+                if extension == "tgz":
+                    extension = "gz"
+                with tarfile.open(filename_tmp_path, "r:" + extension) as tar:
+                    tar.extractall(path)
+            logger.debug('Decompressed: %s' % filename)
+            return True
+        except Exception as e:
+            logger.error("Error decompressing downloaded file! Corrupt file? [%s]" % e)
+            return False
 
 
 def download_github_release(directory, repo_name, release_name, repo_rename=None,
