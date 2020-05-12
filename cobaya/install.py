@@ -9,6 +9,8 @@
 # Global
 import os
 import sys
+import re
+import requests
 import subprocess
 import traceback
 import logging
@@ -159,10 +161,15 @@ def _skip_helper(name, skip_keywords, skip_keywords_env, logger):
 def download_file(filename, path, no_progress_bars=False, decompress=False, logger=None):
     logger = logger or logging.getLogger(__name__)
     try:
-        from wget import download, bar_thermometer
-        wget_kwargs = {"out": path, "bar":
-            (bar_thermometer if not no_progress_bars else None)}
-        filename = os.path.normpath(download(filename, **wget_kwargs))
+        req = requests.get(filename, allow_redirects=True)
+        # get hinted filename if available:
+        try:
+            filename = re.findall("filename=(.+)", req.headers['content-disposition'])[0]
+            filename = filename.strip('"\'')
+        except KeyError:
+            filename = os.path.basename(filename)
+        filename = os.path.normpath(os.path.join(path, filename))
+        open(filename, 'wb').write(req.content)
         print("")
         logger.info('Downloaded filename %s' % filename)
     except Exception as e:
