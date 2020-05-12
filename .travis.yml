@@ -38,7 +38,6 @@ jobs:
         - PYVER="3"
       python: "3.6"
     - name: "Typical scenario: latest Ubuntu LTS"
-      dist: bionic
       addons:
         apt:
           packages:
@@ -138,6 +137,7 @@ deploy: # only if it builds and if the commit has been tagged
   on:
     tags: true
     python: '3.6'
+    condition: "$GCC_VERSION != 6"
     branch: master
     repo: CobayaSampler/cobaya
 ###############################################################################
