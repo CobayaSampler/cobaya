@@ -1,3 +1,10 @@
+## 3.0.1  – 2020-XX-XX
+
+### General
+
+- File dowloader function now uses `requests` instead of `wget`, and stores intermediate files in a tmp folder.
+
+
 ## 3.0  – 2020-05-12
 
 ### General
