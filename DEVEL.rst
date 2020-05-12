@@ -31,7 +31,7 @@ Contributors must agree to the license (see ``LICENCE.txt`` in the root folder).
 Release checklist
 -----------------
 
-+ Make sure all test pass in Travis (or the package won't be pushed to PyPI).
++ Make sure all tests pass in Travis (or the package won't be pushed to PyPI).
 + Make sure everything relevant has been added to the Changelog.
 + Delete old deprecation notices (>=2 versions before)
 + Bump version number in ``__init__.py`` and ``CHANGELOG.md`` (also date)

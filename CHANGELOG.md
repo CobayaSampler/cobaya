@@ -1,4 +1,4 @@
-## 3.0  – 2020-XX-XX
+## 3.0  – 2020-05-12
 
 ### General
 
@@ -20,6 +20,7 @@
 - renames `path_install` to `packages_path`, `-m` command line options to `-p`.
 - `cobaya-install` saves the installation folder in a local config file. It does not need to be specified later at running, reinstalling, etc. Use `cobaya-install --show-packages-path` to show current one.
 - Added `cobaya-install --skip keyword1 keyword2 ...` to skip components according to a list of keywords.
+- Added citation info of Cobaya paper: [arXiv:2005.05290](https://arxiv.org/abs/2005.05290)
 - Lots of other minor fixes and enhancements.
 
 ### Likelihoods and Theories

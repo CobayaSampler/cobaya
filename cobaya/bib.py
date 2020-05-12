@@ -21,6 +21,22 @@ from cobaya.input import load_input, get_used_components, get_class
 _default_symbol = "="
 _default_length = 80
 
+# Cobaya's own bib info
+cobaya_bib = """
+The posterior has been explored/maximised/reweighted using Cobaya \cite{torrado:2020xyz}.
+
+@article{Torrado:2020xyz,
+    author = "Torrado, Jesus and Lewis, Antony",
+    title = "{Cobaya: Code for Bayesian Analysis of hierarchical physical models}",
+    eprint = "2005.05290",
+    archivePrefix = "arXiv",
+    primaryClass = "astro-ph.IM",
+    reportNumber = "TTK-20-15",
+    month = "5",
+    year = "2020"
+}
+""".lstrip("\n")
+
 
 def get_bib_component(component, kind):
     cls = get_class(component, kind, None_if_not_found=True)
@@ -32,7 +48,7 @@ def get_bib_component(component, kind):
 
 
 def get_bib_info(*infos):
-    blocks_text = {"Cobaya": "[Paper in preparation]"}
+    blocks_text = {"Cobaya": cobaya_bib}
     for kind, components in get_used_components(*infos).items():
         for component in components:
             blocks_text["%s:%s" % (kind, component)] = get_bib_component(component, kind)
