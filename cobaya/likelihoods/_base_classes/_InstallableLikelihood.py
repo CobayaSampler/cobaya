@@ -59,10 +59,10 @@ class _InstallableLikelihood(Likelihood):
                 os.makedirs(full_path)
             if not data:
                 return True
-            filename = opts["download_url"]
-            log.info("Downloading likelihood data file: %s...", filename)
+            url = opts["download_url"]
+            log.info("Downloading likelihood data file: %s...", url)
             from cobaya.install import download_file
-            if not download_file(filename, full_path, decompress=True, logger=log,
+            if not download_file(url, full_path, decompress=True, logger=log,
                                  no_progress_bars=no_progress_bars):
                 return False
             log.info("Likelihood data downloaded and uncompressed correctly.")

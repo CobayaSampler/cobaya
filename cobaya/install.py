@@ -158,16 +158,16 @@ def _skip_helper(name, skip_keywords, skip_keywords_env, logger):
         return False
 
 
-def download_file(filename, path, no_progress_bars=False, decompress=False, logger=None):
+def download_file(url, path, no_progress_bars=False, decompress=False, logger=None):
     logger = logger or logging.getLogger(__name__)
     try:
-        req = requests.get(filename, allow_redirects=True)
+        req = requests.get(url, allow_redirects=True)
         # get hinted filename if available:
         try:
             filename = re.findall("filename=(.+)", req.headers['content-disposition'])[0]
             filename = filename.strip('"\'')
         except KeyError:
-            filename = os.path.basename(filename)
+            filename = os.path.basename(url)
         filename = os.path.normpath(os.path.join(path, filename))
         open(filename, 'wb').write(req.content)
         print("")
@@ -209,9 +209,9 @@ def download_github_release(directory, repo_name, release_name, repo_rename=None
         github_user = "CobayaSampler"
     if not os.path.exists(directory):
         os.makedirs(directory)
-    filename = (r"https://github.com/" + github_user + "/" + repo_name +
-                "/archive/" + release_name + ".tar.gz")
-    if not download_file(filename, directory, decompress=True,
+    url = (r"https://github.com/" + github_user + "/" + repo_name +
+           "/archive/" + release_name + ".tar.gz")
+    if not download_file(url, directory, decompress=True,
                          no_progress_bars=no_progress_bars, logger=logger):
         return False
     # Remove version number from directory name
