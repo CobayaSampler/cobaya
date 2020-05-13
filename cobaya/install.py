@@ -25,7 +25,7 @@ from cobaya.tools import create_banner, warn_deprecation, get_class, \
 from cobaya.input import get_used_components, get_kind
 from cobaya.conventions import _component_path, _code, _data, _external, _force, \
     _packages_path, _packages_path_arg, _packages_path_env, _yaml_extensions, \
-    _install_skip_env, _packages_path_arg_posix
+    _install_skip_env, _packages_path_arg_posix, _test_run
 from cobaya.mpi import set_mpi_disabled
 from cobaya.tools import resolve_packages_path
 
@@ -94,7 +94,7 @@ def install(*infos, **kwargs):
                 continue
             if is_installed(path=abspath, **kwargs_install):
                 log.info("External component already installed.")
-                if kwargs.get("just_check", False):
+                if kwargs.get(_test_run, False):
                     continue
                 if kwargs_install["force"]:
                     log.info("Forcing re-installation, as requested.")
@@ -102,7 +102,7 @@ def install(*infos, **kwargs):
                     log.info("Doing nothing.")
                     continue
             else:
-                if kwargs.get("just_check", False):
+                if kwargs.get(_test_run, False):
                     log.info("NOT INSTALLED!")
                     continue
             try:
@@ -141,7 +141,7 @@ def install(*infos, **kwargs):
                  "for precise error info.\n",
             bullet + bullet.join(failed_components))
     # Set the installation path in the global config file
-    if not kwargs.get("no_set_global", False) and not kwargs.get("just_check", False):
+    if not kwargs.get("no_set_global", False) and not kwargs.get(_test_run, False):
         write_packages_path_in_config_file(abspath)
         log.info("The installation path has been written in the global config file.")
 
@@ -311,8 +311,12 @@ def install_script():
                              "installation.")
     parser.add_argument("--no-progress-bars", action="store_true", default=False,
                         help="No progress bars shown. Shorter logs (used in Travis).")
+    parser.add_argument("--%s" % _test_run, action="store_true", default=False,
+                        help="Just check whether components are installed.")
+    # MARKED FOR DEPRECATION IN v3.0
     parser.add_argument("--just-check", action="store_true", default=False,
                         help="Just check whether components are installed.")
+    # END OF DEPRECATION BLOCK -- CONTINUES BELOW!
     parser.add_argument("--no-set-global", action="store_true", default=False,
                         help="Do not store the installation path for later runs.")
     group_just = parser.add_mutually_exclusive_group(required=False)
@@ -348,19 +352,33 @@ def install_script():
         logger.info("Nothing to install.")
         return
     # MARKED FOR DEPRECATION IN v3.0
+    deprecation_warnings = []
     if getattr(arguments, modules) != [None]:
-        logger.warning("*DEPRECATION*: -m/--modules will be deprecated in favor of "
-                       "-%s/--%s in the next version. Please, use that one instead.",
-                       _packages_path_arg[0], _packages_path_arg_posix)
+        deprecation_warnings.append(
+            "*DEPRECATION*: -m/--modules will be deprecated in favor of "
+            "-%s/--%s in the next version. Please, use that one instead." %
+            (_packages_path_arg[0], _packages_path_arg_posix))
         # BEHAVIOUR TO BE REPLACED BY ERROR:
         if getattr(arguments, _packages_path_arg) == [None]:
             setattr(arguments, _packages_path_arg, getattr(arguments, modules))
     # END OF DEPRECATION BLOCK
+    # MARKED FOR DEPRECATION IN v3.0
+    if arguments.just_check is True:
+        deprecation_warnings.append(
+            "*DEPRECATION*: --just-check will be deprecated in favor of "
+            "--%s in the next version. Please, use that one instead." % _test_run)
+    # BEHAVIOUR TO BE REPLACED BY ERROR:
+    setattr(arguments, _test_run, getattr(arguments, _test_run) or arguments.just_check)
+    # END OF DEPRECATION BLOCK
     # Launch installer
     install(*infos, path=getattr(arguments, _packages_path_arg)[0],
             **{arg: getattr(arguments, arg)
-               for arg in ["force", _code, _data, "no_progress_bars", "just_check",
+               for arg in ["force", _code, _data, "no_progress_bars", _test_run,
                            "no_set_global", "skip"]})
+    # MARKED FOR DEPRECATION IN v3.0
+    for warning_msg in deprecation_warnings:
+        logger.warning(warning_msg)
+    # END OF DEPRECATION BLOCK
 
 
 if __name__ == '__main__':
