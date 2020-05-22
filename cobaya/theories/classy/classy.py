@@ -218,6 +218,10 @@ class classy(BoltzmannBase):
         # Derived parameters that may not have been requested, but will be necessary later
         self.derived_extra = []
 
+    # def add_to_redshifts(self, z):
+    #     self.extra_args["redshifts"] = np.sort(np.unique(np.concatenate(
+    #         (np.atleast_1d(z), self.extra_args.get("redshifts", [])))))[::-1]
+
     def must_provide(self, **requirements):
         # Computed quantities required by the likelihood
         super().must_provide(**requirements)
@@ -278,8 +282,27 @@ class classy(BoltzmannBase):
                     kwargs=v,
                     post=(lambda P, kk, z: (kk, z, np.array(P).T)))
             elif isinstance(k, tuple) and k[0] == "sigma_R":
-                raise LoggedError(
-                    self.log, "Classy sigma_R not implemented as yet - use CAMB only")
+
+                kwargs = v.copy()
+                # self.extra_args["kmax"] = max(kwargs.pop("k_max"),
+                #                               self.extra_args.get("kmax", 0))
+                # redshifts = kwargs.pop("z")
+                # self.add_to_redshifts(redshifts)
+
+                var_pair = k[1:]
+
+                # kwargs.update(dict(zip(["var1", "var2"], var_pair)))
+                kwargs.pop('k_max')
+
+                def sigmaR(R, z, **kws):
+                    import itertools
+                    sigmas = np.array([self.classy.sigma(Ri, zi) 
+                                       for Ri, zi in itertools.product(R, z)]).reshape(len(R), len(z))
+                    print(f'SIGMAS: {sigmas}')
+                    return R, z, sigmas
+
+                self.collectors['sigma_R'] = Collector(method=sigmaR, kwargs=kwargs)
+                self.needs_perts = True
             elif v is None:
                 k_translated = self.translate_param(k)
                 if k_translated not in self.derived_extra:
@@ -376,7 +399,10 @@ class classy(BoltzmannBase):
             # Special case: sigma8 needs H0, which cannot be known beforehand:
             if "sigma8" in self.collectors:
                 self.collectors["sigma8"].args[0] = 8 / self.classy.h()
-            method = getattr(self.classy, collector.method)
+            if hasattr(collector.method, '__call__'):
+                method = collector.method
+            else:
+                method = getattr(self.classy, collector.method)
             arg_array = self.collectors[product].arg_array
             if arg_array is None:
                 state[product] = method(
