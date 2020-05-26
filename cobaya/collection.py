@@ -199,6 +199,7 @@ class Collection(BaseCollection):
                          "in favor of `len(Collection)`")
         # BEHAVIOUR TO BE REPLACED BY ERROR:
         return len(self)
+
     # END OF DEPRECATION BLOCK
 
     def __len__(self):
@@ -345,6 +346,12 @@ class Collection(BaseCollection):
                 for col in self.data.columns]
         do_header = not n_min
         if do_header:
+            if os.path.exists(self.file_name):
+                raise LoggedError(self.log,
+                                  "The output file %s already exists. You may be running "
+                                  "multiple jobs with the same output when you intended"
+                                  "to run with MPI. Check you installed mpi4py and your"
+                                  "mpi/mpirun configuration.", self.file_name)
             with open(self.file_name, "a", encoding="utf-8") as out:
                 out.write("#" + " ".join(
                     f(col) for f, col
