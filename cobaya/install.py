@@ -127,7 +127,7 @@ def install(*infos, **kwargs):
                           abspath)
                 success = False
             if success:
-                log.info("Successfully installed!")
+                log.info("Successfully installed! Let's check it...")
             else:
                 log.error("Installation failed! Look at the error messages above. "
                           "Solve them and try again, or, if you are unable to solve, "
@@ -135,13 +135,15 @@ def install(*infos, **kwargs):
                 failed_components += ["%s:%s" % (kind, component)]
                 continue
             # test installation
-            if not is_installed(path=abspath, **kwargs_install):
+            if not is_installed(path=install_path, **kwargs_install):
                 log.error("Installation apparently worked, "
                           "but the subsequent installation test failed! "
                           "Look at the error messages above. "
                           "Solve them and try again, or, if you are unable to solve, "
                           "install the packages required by this component manually.")
                 failed_components += ["%s:%s" % (kind, component)]
+            else:
+                log.info("Installation check successful.")
     if failed_components:
         bullet = "\n - "
         raise LoggedError(

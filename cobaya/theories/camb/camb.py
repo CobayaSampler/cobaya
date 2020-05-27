@@ -777,8 +777,9 @@ class camb(BoltzmannBase):
         if not kwargs.get("code", True):
             return True
         path = kwargs["path"]
-        if path is not None and path.lower() != "global" and \
-           not kwargs.get("allow_global"):
+        if path is not None and path.lower() == "global":
+            path = None
+        if path and not kwargs.get("allow_global"):
             log.info("Importing *local* CAMB from " + path)
             if not os.path.exists(path):
                 log.error("The given folder does not exist: '%s'", path)
@@ -793,7 +794,7 @@ class camb(BoltzmannBase):
                                  platform.system() == "Windows") else "camblib.so"))):
                 log.error("CAMB installation at '%s' appears not to be compiled.", path)
                 return False
-        elif path.lower() == "global":
+        elif not path:
             log.info("Importing *global* CAMB.")
             path = None
         else:
