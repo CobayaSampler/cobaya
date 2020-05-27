@@ -92,18 +92,27 @@ def install(*infos, **kwargs):
                 log.info("%s.%s is a fully built-in component: nothing to do.",
                          kind, imported_class.__name__)
                 continue
-            if is_installed(path=abspath, **kwargs_install):
+            install_path = abspath
+            get_path = getattr(imported_class, "get_path", None)
+            if get_path:
+                install_path = get_path(install_path)
+            has_been_installed = False
+            if kwargs["skip_global"]:
+                has_been_installed = is_installed(path="global", **kwargs_install)
+            if not has_been_installed:
+                has_been_installed = is_installed(path=install_path, **kwargs_install)
+            if has_been_installed:
                 log.info("External component already installed.")
                 if kwargs.get(_test_run, False):
                     continue
-                if kwargs_install["force"]:
+                if kwargs_install["force"] and not kwargs["skip_global"]:
                     log.info("Forcing re-installation, as requested.")
                 else:
                     log.info("Doing nothing.")
                     continue
             else:
+                log.error("Installation test failed! Installing...")
                 if kwargs.get(_test_run, False):
-                    log.info("NOT INSTALLED!")
                     continue
             try:
                 install_this = getattr(imported_class, "install", None)
@@ -319,6 +328,8 @@ def install_script():
     # END OF DEPRECATION BLOCK -- CONTINUES BELOW!
     parser.add_argument("--no-set-global", action="store_true", default=False,
                         help="Do not store the installation path for later runs.")
+    parser.add_argument("--skip-global", action="store_true", default=False,
+                        help="Skip installation of already-available Python modules.")
     group_just = parser.add_mutually_exclusive_group(required=False)
     group_just.add_argument("-C", "--just-code", action="store_false", default=True,
                             help="Install code of the components.", dest=_data)
@@ -374,7 +385,7 @@ def install_script():
     install(*infos, path=getattr(arguments, _packages_path_arg)[0],
             **{arg: getattr(arguments, arg)
                for arg in ["force", _code, _data, "no_progress_bars", _test_run,
-                           "no_set_global", "skip"]})
+                           "no_set_global", "skip", "skip_global"]})
     # MARKED FOR DEPRECATION IN v3.0
     for warning_msg in deprecation_warnings:
         logger.warning(warning_msg)

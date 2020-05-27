@@ -777,7 +777,8 @@ class camb(BoltzmannBase):
         if not kwargs.get("code", True):
             return True
         path = kwargs["path"]
-        if path is not None and path.lower() != "global" and not kwargs["allow_global"]:
+        if path is not None and path.lower() != "global" and \
+           not kwargs.get("allow_global"):
             log.info("Importing *local* CAMB from " + path)
             if not os.path.exists(path):
                 log.error("The given folder does not exist: '%s'", path)
