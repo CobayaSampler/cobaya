@@ -1,5 +1,5 @@
 from .common import process_packages_path
-from .conftest import check_installed, NotInstalledError
+from .conftest import check_installed
 import os
 import pytest
 import numpy as np
@@ -16,13 +16,14 @@ def get_camb(packages_path):
                                                  "code", "CAMB"))
 
 
-def _get_model(packages_path, likelihood_info):
+def _get_model(packages_path, likelihood_info, skip_not_installed):
     info = {
         'params': params,
         'likelihood': {'test_likelihood': likelihood_info},
         'theory': {'camb': {'stop_at_error': True,
                             'extra_args': {'num_massive_neutrinos': 1}}},
         'packages_path': process_packages_path(packages_path)}
+    check_installed(info, packages_path, skip_not_installed)
     return get_model(info)
 
 
@@ -55,11 +56,12 @@ def test_sources(packages_path, skip_not_installed):
 
     model = _get_model(
         packages_path,
-        {'external': test_likelihood, 'requires': test_likelihood_requires})
+        {'external': test_likelihood, 'requires': test_likelihood_requires},
+        skip_not_installed)
     model.loglike({})
 
 
-def test_CAMBdata(packages_path):
+def test_CAMBdata(packages_path, skip_not_installed):
     # noinspection PyDefaultArgument
     def test_likelihood(_self):
         return _self.provider.get_CAMBdata().tau0
@@ -67,12 +69,14 @@ def test_CAMBdata(packages_path):
 
     model = _get_model(
         packages_path,
-        {'external': test_likelihood, 'requires': test_likelihood_requires})
+        {'external': test_likelihood, 'requires': test_likelihood_requires},
+        skip_not_installed)
     assert np.isclose(model.loglike({})[0], 14165.63, rtol=1e-4), \
         "CAMBdata object result failed"
 
 
-def test_CAMB_transfer(packages_path):
+def test_CAMB_transfer(packages_path, skip_not_installed):
+    check_installed({"theory": {"camb": None}}, packages_path, skip_not_installed)
     camb = get_camb(packages_path)
 
     pars = camb.set_params(**params)
@@ -91,11 +95,13 @@ def test_CAMB_transfer(packages_path):
 
     model = _get_model(
         packages_path,
-        {'external': test_likelihood, 'requires': test_likelihood_requires})
+        {'external': test_likelihood, 'requires': test_likelihood_requires},
+        skip_not_installed)
     model.loglike()
 
 
-def test_CAMB_sigma_R(packages_path):
+def test_CAMB_sigma_R(packages_path, skip_not_installed):
+    check_installed({"theory": {"camb": None}}, packages_path, skip_not_installed)
     camb = get_camb(packages_path)
 
     pars = camb.set_params(**params)
@@ -117,5 +123,6 @@ def test_CAMB_sigma_R(packages_path):
 
     model = _get_model(
         packages_path,
-        {'external': test_likelihood, 'requires': test_likelihood_requires})
+        {'external': test_likelihood, 'requires': test_likelihood_requires},
+        skip_not_installed)
     model.loglike()

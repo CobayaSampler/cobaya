@@ -11,19 +11,21 @@ classy_extra.update({"non linear": "halofit"})
 classy_extra.update({"halofit_min_k_max": 20})
 
 
-def test_bicep_keck_2015_camb(packages_path):
+def test_bicep_keck_2015_camb(packages_path, skip_not_installed):
     info_theory = {"camb": {"extra_args": camb_extra}}
     body_of_test(packages_path, test_point, lik_info, info_theory, chi2,
-                 extra_model={"primordial": "SFSR_t"})
+                 extra_model={"primordial": "SFSR_t"},
+                 skip_not_installed=skip_not_installed)
 
 
-def test_bicep_keck_2015_classy(packages_path):
+def test_bicep_keck_2015_classy(packages_path, skip_not_installed):
     info_theory = {"classy": {"extra_args": classy_extra}}
     # extra tolerance for CLASS
     chi2_classy = deepcopy(chi2)
     chi2_classy["tolerance"] *= 2
     body_of_test(packages_path, test_point, lik_info, info_theory, chi2_classy,
-                 extra_model={"primordial": "SFSR_t"})
+                 extra_model={"primordial": "SFSR_t"},
+                 skip_not_installed=skip_not_installed)
 
 
 lik_info = {"bicep_keck_2015": {}}

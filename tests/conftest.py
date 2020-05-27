@@ -58,7 +58,8 @@ def skip_not_installed(request):
 def check_installed(info, packages_path=None, skip_not_installed=False):
     for kind, components in get_used_components(info).items():
         for component in components:
-            if isinstance(info, str) or _external in info:
+            this_info = info[kind][component] or {}
+            if isinstance(this_info, str) or _external in this_info:
                 # Custom function -- nothing to do
                 continue
             try:
@@ -77,6 +78,6 @@ def check_installed(info, packages_path=None, skip_not_installed=False):
                 install_path = get_path(install_path)
             if not is_installed(path=install_path, allow_global=True):
                 if skip_not_installed:
-                    pytest.xfail("Missing dependencies")
+                    pytest.xfail("Missing dependencies: %s:%s" % (kind, component))
                 else:
                     raise NotInstalledError

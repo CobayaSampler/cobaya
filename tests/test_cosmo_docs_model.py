@@ -9,6 +9,7 @@ from io import StringIO
 
 from cobaya.conventions import _packages_path
 from .common import process_packages_path, stdout_redirector
+from .conftest import check_installed
 
 tests_folder = os.path.dirname(os.path.realpath(__file__))
 docs_folder = os.path.join(tests_folder, "..", "docs")
@@ -19,7 +20,7 @@ docs_img_folder = os.path.join(docs_folder, "img")
 pixel_tolerance = 0.995
 
 
-def test_cosmo_docs_model_classy(packages_path):
+def test_cosmo_docs_model_classy(packages_path, skip_not_installed):
     packages_path = process_packages_path(packages_path)
     # Go to the folder containing the python code
     cwd = os.getcwd()
@@ -28,6 +29,7 @@ def test_cosmo_docs_model_classy(packages_path):
         globals_example = {}
         exec(open(os.path.join(docs_src_folder, "1.py")).read(), globals_example)
         globals_example["info"][_packages_path] = packages_path
+        check_installed(globals_example["info"], packages_path, skip_not_installed)
         exec(open(os.path.join(docs_src_folder, "2.py")).read(), globals_example)
         stream = StringIO()
         with stdout_redirector(stream):

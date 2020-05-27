@@ -9,13 +9,14 @@ from cobaya.input import update_info
 from cobaya.cosmo_input import create_input, planck_base_model
 from cobaya.tools import recursive_update
 from .common import process_packages_path
+from .conftest import check_installed, NotInstalledError
 
 # Tolerance for the tests of the derived parameters, in units of the sigma of Planck 2015
 tolerance_derived = 0.055
 
 
 def body_of_test(packages_path, best_fit, info_likelihood, info_theory, ref_chi2,
-                 best_fit_derived=None, extra_model=empty_dict):
+                 best_fit_derived=None, extra_model=empty_dict, skip_not_installed=False):
     # Create base info
     theo = list(info_theory)[0]
     # In Class, theta_s is exact, but different from the approximate one cosmomc_theta
@@ -44,6 +45,7 @@ def body_of_test(packages_path, best_fit, info_likelihood, info_theory, ref_chi2
         for m in info[k]:
             info[k][m].update({"stop_at_error": True})
     # Create the model and compute likelihood and derived parameters at best fit
+    check_installed(info, packages_path, skip_not_installed)
     model = get_model(info)
     best_fit_values = {p: best_fit[p] for p in model.parameterization.sampled_params()}
     likes, derived = model.loglikes(best_fit_values)

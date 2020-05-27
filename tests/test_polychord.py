@@ -4,21 +4,20 @@ import numpy as np
 from cobaya.run import run
 from .common_sampler import body_of_test, body_of_test_speeds
 from cobaya.conventions import kinds, _params, partag, _output_prefix
-
-
-### @pytest.mark.mpi
+from .conftest import check_installed
 
 
 @flaky(max_runs=3, min_passes=1)
-def test_polychord(packages_path, tmpdir):
+def test_polychord(packages_path, skip_not_installed, tmpdir):
     dimension = 3
     n_modes = 1
     info_sampler = {"polychord": {"nlive": 25 * dimension * n_modes}}
     body_of_test(dimension=dimension, n_modes=n_modes,
-                 info_sampler=info_sampler, tmpdir=str(tmpdir), packages_path=packages_path)
+                 info_sampler=info_sampler, tmpdir=str(tmpdir),
+                 packages_path=packages_path, skip_not_installed=skip_not_installed)
 
 
-def test_polychord_resume(packages_path, tmpdir):
+def test_polychord_resume(packages_path, skip_not_installed, tmpdir):
     """
     Tests correct resuming of a run, especially conserving the original blocking.
 
@@ -26,6 +25,7 @@ def test_polychord_resume(packages_path, tmpdir):
     requesting speed measuring at resuming, and providing speeds very different from the
     real ones.
     """
+    check_installed({"sampler": {"polychord": None}}, packages_path, skip_not_installed)
     nlive = 10
     max_ndead = 2 * nlive
     def callback(sampler):
@@ -54,28 +54,32 @@ def test_polychord_resume(packages_path, tmpdir):
 
 
 @flaky(max_runs=5, min_passes=1)
-def test_polychord_multimodal(packages_path, tmpdir):
+def test_polychord_multimodal(packages_path, skip_not_installed, tmpdir):
     dimension = 2
     n_modes = 2
     info_sampler = {"polychord": {"nlive": 40 * dimension * n_modes}}
     body_of_test(dimension=dimension, n_modes=n_modes,
-                 info_sampler=info_sampler, tmpdir=str(tmpdir), packages_path=packages_path)
+                 info_sampler=info_sampler, tmpdir=str(tmpdir),
+                 packages_path=packages_path, skip_not_installed=skip_not_installed)
 
 
 @flaky(max_runs=3, min_passes=1)
-def test_polychord_speeds(packages_path):
+def test_polychord_speeds(packages_path, skip_not_installed):
     info_polychord = {"polychord": {"oversample_power": 1}}
-    body_of_test_speeds(info_polychord, packages_path=packages_path)
+    body_of_test_speeds(info_polychord, packages_path=packages_path,
+                        skip_not_installed=skip_not_installed)
 
 
 @flaky(max_runs=3, min_passes=1)
-def test_polychord_speeds_manual(packages_path):
+def test_polychord_speeds_manual(packages_path, skip_not_installed):
     info_polychord = {"polychord": {"oversample_power": 1}}
-    body_of_test_speeds(info_polychord, manual_blocking=True, packages_path=packages_path)
+    body_of_test_speeds(info_polychord, manual_blocking=True,
+                        packages_path=packages_path,
+                        skip_not_installed=skip_not_installed)
 
 
 @flaky(max_runs=3, min_passes=1)
-def test_polychord_unphysical(packages_path):
+def test_polychord_unphysical(packages_path, skip_not_installed):
     """
     Tests that the effect of unphysical regions is subtracted correctly.
 
@@ -92,6 +96,7 @@ def test_polychord_unphysical(packages_path):
     We then run with the full likelihood and, as usual, divide (subtract in log) by the
     normalisation factor of the prior: the result of the prior-only run.
     """
+    check_installed({"sampler": {"polychord": None}}, packages_path, skip_not_installed)
     bound = 10
     info = {
         "likelihood": {

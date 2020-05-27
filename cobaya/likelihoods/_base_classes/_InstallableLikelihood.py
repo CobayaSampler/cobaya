@@ -33,10 +33,13 @@ class _InstallableLikelihood(Likelihood):
 
     @classmethod
     def is_installed(cls, **kwargs):
+        log = logging.getLogger(cls.__name__)
         if kwargs.get("data", True):
             path = kwargs["path"]
-            return cls.get_install_options() and \
-                   os.path.exists(path) and len(os.listdir(path)) > 0
+            if not(cls.get_install_options() and \
+                   os.path.exists(path) and len(os.listdir(path)) > 0):
+                log.error("The given installation path does not exist: '%s'", path)
+                return False
         return True
 
     @classmethod
