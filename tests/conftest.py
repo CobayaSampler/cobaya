@@ -1,5 +1,6 @@
 import pytest
 import os
+import inspect
 
 # Paths ##################################################################################
 
@@ -59,7 +60,8 @@ def check_installed(info, packages_path=None, skip_not_installed=False):
     for kind, components in get_used_components(info).items():
         for component in components:
             this_info = info[kind][component] or {}
-            if isinstance(this_info, str) or _external in this_info:
+            if isinstance(this_info, str) or callable(this_info) \
+               or inspect.isclass(this_info) or _external in this_info:
                 # Custom function -- nothing to do
                 continue
             try:
