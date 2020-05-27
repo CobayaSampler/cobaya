@@ -188,6 +188,7 @@ class classy(BoltzmannBase):
                 self.extra_args["sBBN file"].format(classy=self.path))
         # Derived parameters that may not have been requested, but will be necessary later
         self.derived_extra = []
+        self.log.info("Initialized!")
 
     def must_provide(self, **requirements):
         # Computed quantities required by the likelihood

@@ -180,8 +180,8 @@ import numpy as np
 from cobaya.theories._cosmo import BoltzmannBase
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, check_gcc_version
-from cobaya.tools import getfullargspec, get_class_methods, get_properties
-from cobaya.tools import load_module, VersionCheckError, str_to_list
+from cobaya.tools import getfullargspec, get_class_methods, get_properties, load_module, \
+    VersionCheckError, str_to_list
 from cobaya.theory import HelperTheory
 from cobaya.conventions import _requires
 
@@ -254,7 +254,7 @@ class camb(BoltzmannBase):
         self._transfer_requires = [p for p in self.requires if
                                    p not in self.get_can_support_params()]
         self.requires = [p for p in self.requires if p not in self._transfer_requires]
-        self.log.info("CAMB initialized correctly.")
+        self.log.info("Initialized!")
 
     def _extract_params(self, set_func):
         args = {}
