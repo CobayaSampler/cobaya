@@ -3,12 +3,13 @@ import os
 
 # Paths ##################################################################################
 
-from cobaya.conventions import _packages_path_arg, _packages_path_env, _test_skip_env
+from cobaya.conventions import _packages_path_env, _packages_path_arg_posix, \
+    _test_skip_env
 from cobaya.tools import resolve_packages_path
 
 
 def pytest_addoption(parser):
-    parser.addoption("--" + _packages_path_arg, action="store",
+    parser.addoption("--" + _packages_path_arg_posix, action="store",
                      default=resolve_packages_path(),
                      help="Path to folder of automatic installation of packages")
     parser.addoption("--skip-not-installed", action="store_true",
@@ -18,12 +19,12 @@ def pytest_addoption(parser):
 
 @pytest.fixture
 def packages_path(request):
-    cmd_packages_path = request.config.getoption("--" + _packages_path_arg, None)
+    cmd_packages_path = request.config.getoption("--" + _packages_path_arg_posix, None)
     if not cmd_packages_path:
         raise ValueError("Could not determine packages installation path. "
                          "Either define it in the env variable %r, or pass it as an "
                          "argument with `--%s`" %
-                         (_packages_path_env, _packages_path_arg))
+                         (_packages_path_env, _packages_path_arg_posix))
     return cmd_packages_path
 
 
