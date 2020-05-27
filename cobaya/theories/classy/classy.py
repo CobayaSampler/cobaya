@@ -169,46 +169,17 @@ class classy(BoltzmannBase):
 
     def initialize(self):
         """Importing CLASS from the correct path, if given, and if not, globally."""
-        # If path not given, try using general path to external packages
+        # Allow global import if no direct path specification
+        allow_global = not self.path
         if not self.path and self.packages_path:
             self.path = self.get_path(self.packages_path)
-        if self.path:
-            self.log.info("Importing *local* classy from " + self.path)
-            classy_build_path = os.path.join(self.path, "python", "build")
-            py_version = "%d.%d" % (sys.version_info.major, sys.version_info.minor)
-            try:
-                post = next(d for d in os.listdir(classy_build_path)
-                            if (d.startswith("lib.") and py_version in d))
-                classy_build_path = os.path.join(classy_build_path, post)
-                if not os.path.exists(classy_build_path):
-                    # If path was given as an install path, try to load global one anyway
-                    if self.packages_path:
-                        self.log.info("Importing *global* CLASS (because not compiled?).")
-                    else:
-                        raise StopIteration
-            except StopIteration:
-                raise LoggedError(
-                    self.log, "Either CLASS is not in the given folder, "
-                              "'%s', or you have not compiled it.", self.path)
-        else:
-            classy_build_path = None
-            self.log.info("Importing *global* CLASS.")
-        try:
-            self.classy_module = load_module('classy', path=classy_build_path,
-                                             min_version=self._classy_repo_version)
-            from classy import Class, CosmoSevereError, CosmoComputationError
-        except ImportError:
+        self.classy_module = self.is_installed(path=self.path, allow_global=allow_global)
+        if not self.classy_module:
             raise LoggedError(
-                self.log, "Couldn't find the CLASS python interface. "
-                          "Make sure that you have compiled it, and that you either\n"
-                          " (a) specify a path (you didn't) or\n"
-                          " (b) install the Python interface globally with\n"
-                          "     '/path/to/class/python/python setup.py install --user'")
-        except VersionCheckError as e:
-            raise LoggedError(self.log, str(e))
-        self.classy = Class()
-        # Propagate errors up
+                self.log, "Could not find CLASS. Check error message above.")
+        from classy import Class, CosmoSevereError, CosmoComputationError
         global CosmoComputationError, CosmoSevereError
+        self.classy = Class()
         super().initialize()
         # Add general CLASS stuff
         self.extra_args["output"] = self.extra_args.get("output", "")
@@ -504,10 +475,61 @@ class classy(BoltzmannBase):
         return os.path.realpath(os.path.join(path, "code", cls.__name__))
 
     @classmethod
+    def get_import_path(cls, path):
+        log = logging.getLogger(cls.__name__)
+        classy_build_path = os.path.join(path, "python", "build")
+        if not os.path.isdir(classy_build_path):
+            log.error("Either CLASS is not in the given folder, "
+                      "'%s', or you have not compiled it.", path)
+            return None
+        py_version = "%d.%d" % (sys.version_info.major, sys.version_info.minor)
+        try:
+            post = next(d for d in os.listdir(classy_build_path)
+                        if (d.startswith("lib.") and py_version in d))
+        except StopIteration:
+            log.error("The CLASS installation at '%s' has not been compiled for the "
+                      "current Python version.", path)
+            return None
+        return os.path.join(classy_build_path, post)
+
+    @classmethod
     def is_installed(cls, **kwargs):
-        if not kwargs["code"]:
+        log = logging.getLogger(cls.__name__)
+        if not kwargs.get("code", True):
             return True
-        return os.path.isfile(os.path.join(cls.get_path(kwargs["path"]), "libclass.a"))
+        path = kwargs["path"]
+        if path is not None and path.lower() == "global":
+            path = None
+        if path and not kwargs.get("allow_global"):
+            log.info("Importing *local* CLASS from '%s'.", path)
+            if not os.path.exists(path):
+                log.error("The given folder does not exist: '%s'", path)
+                return False
+            classy_build_path = cls.get_import_path(path)
+            if not classy_build_path:
+                return False
+        elif not path:
+            log.info("Importing *global* CLASS.")
+            classy_build_path = None
+        else:
+            log.info("Importing *auto-installed* CLASS (but defaulting to *global*).")
+            classy_build_path = cls.get_import_path(path)
+        try:
+            return load_module(
+                'classy', path=classy_build_path, min_version=cls._classy_repo_version)
+        except ImportError:
+            if path is not None and path.lower() != "global":
+                log.error("Couldn't find the CLASS python interface at '%s'. "
+                          "Are you sure it has been installed there?", path)
+            else:
+                log.error("Could not import global CLASS installation. "
+                          "Specify a Cobaya or CLASS installation path, "
+                          "or install the CLASS Python interface globally with "
+                          "'cd /path/to/class/python/ ; python setup.py install'")
+            return False
+        except VersionCheckError as e:
+            log.error(str(e))
+            return False
 
     @classmethod
     def install(cls, path=None, force=False, code=True, no_progress_bars=False, **kwargs):
