@@ -1,5 +1,7 @@
 from .common import process_packages_path
+from .conftest import check_installed, NotInstalledError
 import os
+import pytest
 import numpy as np
 from cobaya.model import get_model
 from cobaya.tools import load_module
@@ -24,7 +26,8 @@ def _get_model(packages_path, likelihood_info):
     return get_model(info)
 
 
-def test_sources(packages_path):
+def test_sources(packages_path, skip_not_installed):
+    check_installed({"theory": {"camb": None}}, packages_path, skip_not_installed)
     camb = get_camb(packages_path)
     from camb.sources import GaussianSourceWindow
 
