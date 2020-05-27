@@ -66,7 +66,7 @@ def install(*infos, **kwargs):
     for kind, components in get_used_components(*infos).items():
         for component in components:
             print()
-            print(create_banner(kind + ":" + component, symbol="=", length=80))
+            print(create_banner(kind + ":" + component, symbol="=", length=80), end="")
             print()
             if _skip_helper(component.lower(), skip_keywords, skip_keywords_env, log):
                 continue

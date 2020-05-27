@@ -18,7 +18,7 @@ from cobaya.log import LoggedError
 from cobaya.conventions import _packages_path, kinds
 from cobaya.input import get_default_info
 from cobaya.install import pip_install, download_file
-from cobaya.tools import are_different_params_lists, create_banner
+from cobaya.tools import are_different_params_lists, create_banner, load_module
 
 _deprecation_msg_2015 = create_banner("""
 The likelihoods from the Planck 2015 data release have been superseded
@@ -64,8 +64,11 @@ class _planck_clik_prototype(Likelihood):
                 self.path_clik = self.path
             self.log.info("Importing clik from %s", self.path_clik)
             # test and import clik
-            is_installed_clik(self.path_clik, log_and_fail=True, import_it=False)
-            import clik
+            clik = is_installed_clik(self.path_clik)
+            if not clik:
+                raise LoggedError(
+                    self.log, "Could not find the 'clik' Planck likelihood code. "
+                              "Check error message above.")
         # Loading the likelihood data
         if not os.path.isabs(self.clik_file):
             self.path_data = getattr(self, "path_data", os.path.join(
@@ -104,6 +107,7 @@ class _planck_clik_prototype(Likelihood):
         # Placeholder for vector passed to clik
         length = (len(self.l_maxs) if self.lensing else len(self.clik.get_has_cl()))
         self.vector = np.zeros(np.sum(self.l_maxs) + length + len(self.expected_params))
+        self.log.info("Initialized!")
 
     def initialize_with_params(self):
         # Check that the parameters are the right ones
@@ -148,10 +152,10 @@ class _planck_clik_prototype(Likelihood):
         code_path = common_path
         data_path = get_data_path(cls.get_qualified_class_name())
         result = True
-        if kwargs["code"]:
-            result &= is_installed_clik(os.path.realpath(
-                os.path.join(kwargs["path"], "code", code_path)))
-        if kwargs["data"]:
+        if kwargs.get("code", True):
+            result &= bool(is_installed_clik(os.path.realpath(
+                os.path.join(kwargs["path"], "code", code_path))))
+        if kwargs.get("data", True):
             _, filename = get_product_id_and_clik_file(cls.get_qualified_class_name())
             result &= os.path.exists(os.path.realpath(
                 os.path.join(kwargs["path"], "data", data_path, filename)))
@@ -249,25 +253,18 @@ def get_clik_source_folder(starting_path):
     return source_dir
 
 
-def is_installed_clik(path, log_and_fail=False, import_it=True):
+def is_installed_clik(path):
     log = logging.getLogger("clik")
     clik_path = None
     try:
         clik_path = os.path.join(get_clik_source_folder(path), 'lib/python/site-packages')
     except FileNotFoundError:
-        if log_and_fail:
-            raise LoggedError(log, "The given folder does not exist: '%s'",
-                              clik_path or path)
+        log.error("The given folder does not exist: '%s'", clik_path or path)
         return False
-    sys.path.insert(0, clik_path)
     try:
-        if import_it:
-            import clik
-        return True
-    except:
-        print('Failed to import clik')
-        if log_and_fail:
-            raise LoggedError(log, "Error importing click from: '%s'", clik_path)
+        return load_module("clik", path=clik_path)
+    except Exception as excpt:
+        log.error("Error importing click from '%s': [%s]", clik_path, str(excpt))
         return False
 
 
