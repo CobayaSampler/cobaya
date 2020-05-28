@@ -12,6 +12,12 @@ If you are getting an error whose cause is not immediately obvious, try evaluati
 You can increase the level of verbosity running with ``debug: True`` (or adding the ``--debug`` flag to ``cobaya-run``). Cobaya will print what each part of the code is getting and producing, as well as some other intermediate info. You can pipe the debug output to a file with ``cobaya-run [input.yaml] --debug > file`` or setting ``debug_file: [filename]``.
 
 
+MPI runs: getting one MCMC chain only
+-------------------------------------
+
+If your MPI run is only producing one chain (just ``[prefix].1.txt``, no higher numbers), your Python MPI wrapper is not working correctly. Please take a look at :ref:`this section <install_mpi>`.
+
+
 .. _cosmo_polychord:
 
 Using PolyChord in cosmological runs
