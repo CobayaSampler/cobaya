@@ -24,7 +24,7 @@ from cobaya.sampler import Sampler
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
 from cobaya.collection import Collection
 from cobaya.log import LoggedError
-from cobaya.install import download_github_release
+from cobaya.install import download_github_release, NotInstalledError
 from cobaya.yaml import yaml_dump_file
 from cobaya.conventions import _separator, _evidence_extension, _packages_path_arg
 
@@ -56,7 +56,7 @@ class polychord(Sampler):
             self.path = self.get_path(self.packages_path)
         self.pc = self.is_installed(path=self.path, allow_global=allow_global)
         if not self.pc:
-            raise LoggedError(
+            raise NotInstalledError(
                 self.log, "Could not find PolyChord. Check error message above. "
                           "To install it, run 'cobaya-install polychord --%s "
                           "[packages_path]'", _packages_path_arg)

@@ -143,7 +143,7 @@ from typing import NamedTuple, Sequence, Union, Optional
 # Local
 from cobaya.theories._cosmo import BoltzmannBase
 from cobaya.log import LoggedError
-from cobaya.install import download_github_release, pip_install
+from cobaya.install import download_github_release, pip_install, NotInstalledError
 from cobaya.tools import load_module, VersionCheckError
 
 
@@ -175,7 +175,7 @@ class classy(BoltzmannBase):
             self.path = self.get_path(self.packages_path)
         self.classy_module = self.is_installed(path=self.path, allow_global=allow_global)
         if not self.classy_module:
-            raise LoggedError(
+            raise NotInstalledError(
                 self.log, "Could not find CLASS. Check error message above.")
         from classy import Class, CosmoSevereError, CosmoComputationError
         global CosmoComputationError, CosmoSevereError

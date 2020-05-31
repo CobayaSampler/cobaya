@@ -32,6 +32,14 @@ from cobaya.tools import resolve_packages_path
 log = logging.getLogger(__name__.split(".")[-1])
 
 
+class NotInstalledError(LoggedError):
+    """
+    Exception to be raise manually at component initialisation
+    if some external dependency is missing.
+    """
+    pass
+
+
 # noinspection PyUnresolvedReferences
 def install(*infos, **kwargs):
     if not log.root.handlers:

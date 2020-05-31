@@ -179,7 +179,7 @@ import numpy as np
 # Local
 from cobaya.theories._cosmo import BoltzmannBase
 from cobaya.log import LoggedError
-from cobaya.install import download_github_release, check_gcc_version
+from cobaya.install import download_github_release, check_gcc_version, NotInstalledError
 from cobaya.tools import getfullargspec, get_class_methods, get_properties, load_module, \
     VersionCheckError, str_to_list
 from cobaya.theory import HelperTheory
@@ -216,7 +216,8 @@ class camb(BoltzmannBase):
             self.path = self.get_path(self.packages_path)
         self.camb = self.is_installed(path=self.path, allow_global=allow_global)
         if not self.camb:
-            raise LoggedError(self.log, "Could not find CAMB. Check error message above.")
+            raise NotInstalledError(
+                self.log, "Could not find CAMB. Check error message above.")
         super().initialize()
         self.extra_attrs = {"Want_CMB": False, "Want_cl_2D_array": False,
                             'WantCls': False}

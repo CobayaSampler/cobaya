@@ -17,7 +17,7 @@ from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
 from cobaya.conventions import _packages_path, kinds
 from cobaya.input import get_default_info
-from cobaya.install import pip_install, download_file
+from cobaya.install import pip_install, download_file, NotInstalledError
 from cobaya.tools import are_different_params_lists, create_banner, load_module
 
 _deprecation_msg_2015 = create_banner("""
@@ -66,7 +66,7 @@ class _planck_clik_prototype(Likelihood):
             # test and import clik
             clik = is_installed_clik(self.path_clik)
             if not clik:
-                raise LoggedError(
+                raise NotInstalledError(
                     self.log, "Could not find the 'clik' Planck likelihood code. "
                               "Check error message above.")
         # Loading the likelihood data
@@ -82,7 +82,7 @@ class _planck_clik_prototype(Likelihood):
         except clik.lkl.CError:
             # Is it that the file was not found?
             if not os.path.exists(self.clik_file):
-                raise LoggedError(
+                raise NotInstalledError(
                     self.log, "The .clik file was not found where specified in the "
                               "'clik_file' field of the settings of this likelihood. "
                               "Maybe the 'path' given is not correct? The full path where"
