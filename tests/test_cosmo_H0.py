@@ -6,7 +6,7 @@ from cobaya.conventions import kinds, _params, _packages_path
 from cobaya.run import run
 from cobaya.yaml import yaml_load_file
 from .common import process_packages_path
-from .conftest import check_installed
+from .conftest import install_test_wrapper
 
 fiducial_H0 = 70
 fiducial_H0_std = 1
@@ -44,8 +44,7 @@ def body_of_test(packages_path, like_name=None, like_info=None, skip_not_install
         info[kinds.likelihood] = like_info
         like_name = list(like_info)[0]
     info[_params] = {"H0": fiducial_H0}
-    check_installed(info, packages_path, skip_not_installed)
-    updated_info, sampler = run(info)
+    updated_info, sampler = install_test_wrapper(skip_not_installed, run, info)
     products = sampler.products()
     # The default values for .get are for the _docs_ test
     mean = updated_info[kinds.likelihood][like_name].get("H0_mean", fiducial_H0)

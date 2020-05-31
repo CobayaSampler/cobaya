@@ -1,10 +1,11 @@
 from .common import process_packages_path
-from .conftest import check_installed
+from .conftest import install_test_wrapper
 import os
 import pytest
 import numpy as np
 from cobaya.model import get_model
 from cobaya.tools import load_module
+from cobaya.install import NotInstalledError
 
 params = {'ombh2': 0.02242, 'omch2': 0.11933, 'H0': 67.66, 'tau': 0.0561,
           'mnu': 0.06, 'nnu': 3.046, 'ns': 0.9665,
@@ -12,8 +13,11 @@ params = {'ombh2': 0.02242, 'omch2': 0.11933, 'H0': 67.66, 'tau': 0.0561,
 
 
 def get_camb(packages_path):
-    return load_module("camb", path=os.path.join(process_packages_path(packages_path),
-                                                 "code", "CAMB"))
+    try:
+        return load_module("camb", path=os.path.join(process_packages_path(packages_path),
+                                                     "code", "CAMB"))
+    except ModuleNotFoundError:
+        raise NotInstalledError(None)
 
 
 def _get_model(packages_path, likelihood_info, skip_not_installed):
@@ -23,13 +27,11 @@ def _get_model(packages_path, likelihood_info, skip_not_installed):
         'theory': {'camb': {'stop_at_error': True,
                             'extra_args': {'num_massive_neutrinos': 1}}},
         'packages_path': process_packages_path(packages_path)}
-    check_installed(info, packages_path, skip_not_installed)
-    return get_model(info)
+    return install_test_wrapper(skip_not_installed, get_model, info)
 
 
 def test_sources(packages_path, skip_not_installed):
-    check_installed({"theory": {"camb": None}}, packages_path, skip_not_installed)
-    camb = get_camb(packages_path)
+    camb = install_test_wrapper(skip_not_installed, get_camb, packages_path)
     from camb.sources import GaussianSourceWindow
 
     pars = camb.set_params(**params)
@@ -76,9 +78,7 @@ def test_CAMBdata(packages_path, skip_not_installed):
 
 
 def test_CAMB_transfer(packages_path, skip_not_installed):
-    check_installed({"theory": {"camb": None}}, packages_path, skip_not_installed)
-    camb = get_camb(packages_path)
-
+    camb = install_test_wrapper(skip_not_installed, get_camb, packages_path)
     pars = camb.set_params(**params)
     pars.set_matter_power(redshifts=[0, 2], kmax=2)
     pars.WantCls = False
@@ -101,9 +101,7 @@ def test_CAMB_transfer(packages_path, skip_not_installed):
 
 
 def test_CAMB_sigma_R(packages_path, skip_not_installed):
-    check_installed({"theory": {"camb": None}}, packages_path, skip_not_installed)
-    camb = get_camb(packages_path)
-
+    camb = install_test_wrapper(skip_not_installed, get_camb, packages_path)
     pars = camb.set_params(**params)
     redshifts = [0, 2, 5]
     pars.set_matter_power(redshifts=redshifts, kmax=2)

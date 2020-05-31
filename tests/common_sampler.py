@@ -13,7 +13,7 @@ from cobaya.likelihoods.gaussian_mixture import info_random_gaussian_mixture
 from cobaya.tools import KL_norm
 from cobaya.run import run
 from .common import process_packages_path, is_travis
-from .conftest import check_installed
+from .conftest import install_test_wrapper
 
 KL_tolerance = 0.05
 logZ_nsigmas = 2
@@ -59,8 +59,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
     # Delay to one chain to check that MPI communication of the sampler is non-blocking
     #    if rank == 1:
     #        info["likelihood"]["gaussian_mixture"]["delay"] = 0.1
-    check_installed(info, packages_path, skip_not_installed)
-    updated_info, sampler = run(info)
+    updated_info, sampler = install_test_wrapper(skip_not_installed, run, info)
     products = sampler.products()
     # Done! --> Tests
     if rank == 0:
@@ -207,8 +206,7 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False,
         info["sampler"][sampler_name]["max_ndead"] = n_cycles_all_params * (dim0 + dim1)
     else:
         assert False, "Unknown sampler for this test."
-    check_installed(info, packages_path, skip_not_installed)
-    updated_info, sampler = run(info)
+    updated_info, sampler = install_test_wrapper(skip_not_installed, run, info)
     products = sampler.products()
     # TEST: same (steps block i / speed i / dim i) (steps block 1 = evals[1] - evals[0])
     test_func = lambda n_evals, dim0, speed0, dim1, speed1: (

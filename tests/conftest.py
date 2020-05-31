@@ -43,12 +43,7 @@ def pytest_collection_modifyitems(config, items):
 
 # Skip not installed #####################################################################
 
-from cobaya.input import get_used_components, get_class
-from cobaya.conventions import _component_path, _external
-
-
-class NotInstalledError(Exception):
-    pass
+from cobaya.install import NotInstalledError
 
 
 @pytest.fixture
@@ -56,30 +51,10 @@ def skip_not_installed(request):
     return request.config.getoption("--skip-not-installed")
 
 
-def check_installed(info, packages_path=None, skip_not_installed=False):
-    for kind, components in get_used_components(info).items():
-        for component in components:
-            this_info = info[kind][component] or {}
-            if isinstance(this_info, str) or callable(this_info) \
-               or inspect.isclass(this_info) or _external in this_info:
-                # Custom function -- nothing to do
-                continue
-            try:
-                imported_class = get_class(component, kind,
-                                           component_path=info.pop(_component_path, None))
-            except ImportError as e:
-                raise ValueError("Component %s:%s not recognized [%s]." % (
-                    kind, component, str(e)))
-            is_installed = getattr(imported_class, "is_installed", None)
-            if is_installed is None:
-                # Built-in component
-                continue
-            install_path = packages_path
-            get_path = getattr(imported_class, "get_path", None)
-            if get_path and packages_path:
-                install_path = get_path(install_path)
-            if not is_installed(path=install_path, allow_global=True):
-                if skip_not_installed:
-                    pytest.xfail("Missing dependencies: %s:%s" % (kind, component))
-                else:
-                    raise NotInstalledError
+def install_test_wrapper(skip_not_installed, func, *args, **kwargs):
+    try:
+        return func(*args, **kwargs)
+    except NotInstalledError:
+        if skip_not_installed:
+            pytest.xfail("Missing dependencies.")
+        raise

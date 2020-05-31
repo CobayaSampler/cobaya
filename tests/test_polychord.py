@@ -4,7 +4,7 @@ import numpy as np
 from cobaya.run import run
 from .common_sampler import body_of_test, body_of_test_speeds
 from cobaya.conventions import kinds, _params, partag, _output_prefix
-from .conftest import check_installed
+from .conftest import install_test_wrapper
 
 
 @flaky(max_runs=3, min_passes=1)
@@ -25,7 +25,6 @@ def test_polychord_resume(packages_path, skip_not_installed, tmpdir):
     requesting speed measuring at resuming, and providing speeds very different from the
     real ones.
     """
-    check_installed({"sampler": {"polychord": None}}, packages_path, skip_not_installed)
     nlive = 10
     max_ndead = 2 * nlive
     def callback(sampler):
@@ -46,7 +45,7 @@ def test_polychord_resume(packages_path, skip_not_installed, tmpdir):
                 "callback_function": callback,
             }},
         _output_prefix: str(tmpdir)}
-    upd_info, sampler = run(info)
+    upd_info, sampler = install_test_wrapper(skip_not_installed, run, info)
     old_dead_points = dead_points.copy()
     info["resume"] = True
     upd_info, sampler = run(info)
@@ -96,7 +95,6 @@ def test_polychord_unphysical(packages_path, skip_not_installed):
     We then run with the full likelihood and, as usual, divide (subtract in log) by the
     normalisation factor of the prior: the result of the prior-only run.
     """
-    check_installed({"sampler": {"polychord": None}}, packages_path, skip_not_installed)
     bound = 10
     info = {
         "likelihood": {
@@ -112,7 +110,7 @@ def test_polychord_unphysical(packages_path, skip_not_installed):
     #     of the unphysical region.
     info_like = info.pop("likelihood")
     info["likelihood"] = {"one": None}
-    _, sampler_prior_only = run(info)
+    _, sampler_prior_only = install_test_wrapper(skip_not_installed, run, info)
     logZpi = sampler_prior_only.products()["logZ"]
     logZpistd = sampler_prior_only.products()["logZstd"]
     info["likelihood"] = info_like
