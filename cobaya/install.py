@@ -17,6 +17,7 @@ import logging
 import shutil
 import tempfile
 from pkg_resources import parse_version
+from itertools import chain
 
 # Local
 from cobaya.log import logger_setup, LoggedError
@@ -67,10 +68,12 @@ def install(*infos, **kwargs):
                 raise LoggedError(
                     log, "Could not create the desired installation folder '%s'", spath)
     failed_components = []
-    skip_keywords = set(kwargs.get("skip", []) or [])
+    skip_keywords_arg = set(kwargs.get("skip", []) or [])
+    # NB: if passed with quotes as `--skip "a b"`, it's interpreted as a single key
+    skip_keywords_arg = set(chain(*[word.split() for word in skip_keywords_arg]))
     skip_keywords_env = set(
         os.environ.get(_install_skip_env, "").replace(",", " ").lower().split())
-    skip_keywords = skip_keywords.union(skip_keywords_env)
+    skip_keywords = skip_keywords_arg.union(skip_keywords_env)
     for kind, components in get_used_components(*infos).items():
         for component in components:
             print()
