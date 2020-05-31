@@ -141,6 +141,13 @@ class _planck_clik_prototype(Likelihood):
         return os.path.realpath(os.path.join(path, "code", common_path))
 
     @classmethod
+    def is_compatible(cls):
+        import platform
+        if platform.system() == "Windows":
+            return False
+        return True
+
+    @classmethod
     def is_installed(cls, **kwargs):
         code_path = common_path
         data_path = get_data_path(cls.get_qualified_class_name())

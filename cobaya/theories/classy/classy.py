@@ -494,6 +494,13 @@ class classy(BoltzmannBase):
         return os.path.join(classy_build_path, post)
 
     @classmethod
+    def is_compatible(cls):
+        import platform
+        if platform.system() == "Windows":
+            return False
+        return True
+
+    @classmethod
     def is_installed(cls, **kwargs):
         log = logging.getLogger(cls.__name__)
         if not kwargs.get("code", True):

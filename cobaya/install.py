@@ -98,6 +98,11 @@ def install(*infos, **kwargs):
                 if _skip_helper(imported_class.__name__.lower(), skip_keywords,
                                 skip_keywords_env, log):
                     continue
+            is_compatible = getattr(imported_class, "is_compatible", lambda: True)()
+            if not is_compatible:
+                log.info(
+                    "Skipping %r because it is not compatible with your OS.", component)
+                continue
             is_installed = getattr(imported_class, "is_installed", None)
             if is_installed is None:
                 log.info("%s.%s is a fully built-in component: nothing to do.",
