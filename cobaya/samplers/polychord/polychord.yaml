@@ -1,6 +1,7 @@
 # Default arguments for the PolyChord sampler
 
-# Path to the PolyChord installation folder
+# Path to the PolyChord installation folder, if not installed with cobaya-install,
+# or 'global' to force global-scope import
 path:  # use only if installed manually!
 # Optional parameters for the sampler:
 # ('Xd' means 'X steps per dimension')

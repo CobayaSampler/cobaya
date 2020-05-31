@@ -1,6 +1,7 @@
 # Specify a CAMB version, if desired
 version: null
-# Path to local CAMB, if desired
+# Path to local CAMB, if desired,
+# or 'global' to force global-scope import
 path: null
 # Speed in evaluations/second
 speed: 0.3
