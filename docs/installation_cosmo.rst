@@ -15,7 +15,7 @@ To install a comprehensive set of cosmology requisites (CAMB, CLASS, Planck, BIC
    $ cobaya-install cosmo -m /path/to/packages
 
 If this fails (see last printed message), keep on reading this section. Otherwise, you can go straight to :doc:`cosmo_basic_runs`.
-   
+
 
 .. _install_ext_pre:
 
@@ -48,6 +48,12 @@ When you have prepared the relevant input files, call the automatic installation
 
 You can skip the ``--packages-path`` option if a ``packages_path`` field is already defined in **one** of the input files.
 
+.. note::
+
+   If you would like to skip the installation of the dependencies of some components, you can use the ``--skip "word1 word2 [...]"`` argument, where ``word[X]`` are sub-strings of the names of the corresponding components (case-insensitive), e.g. ``camb`` or ``planck``.
+
+   If you would like to automatically skip installing external packages that are avaliable globally (e.g. if you can do ``import classy`` from anywhere) add ``--skip-global`` to the command above.
+
 ``cobaya-install`` will save the packages installation path used into a global configuration file, so that you do not need to specify it in future calls to ``cobaya-install``, ``cobaya-run``, etc. To show the current default install path, run ``cobaya-install --show-packages-path``.
 
 To override the default path in a subsequent call to ``cobaya-install`` or ``cobaya-run``, the alternatives are, in descending order of precedence:
@@ -67,7 +73,7 @@ Within ``/path/to/packages``, the following file structure will be created, cont
             │   ├── planck
             │   ├── CAMB
             │   ├── classy
-            │   ├── PolyChord
+            │   ├── PolyChordLite
             │   └── [...]
             └── data
                 ├── planck_2018
@@ -115,4 +121,3 @@ update an auto-installed *camb* use
 .. code:: bash
 
    $ cobaya-install -f --packages-path /path/to/packages camb
-
