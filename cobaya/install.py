@@ -10,23 +10,24 @@
 import os
 import sys
 import re
-import requests
 import subprocess
 import traceback
 import logging
 import shutil
 import tempfile
-from pkg_resources import parse_version
+import logging
 from itertools import chain
+from pkg_resources import parse_version
+import requests
 
 # Local
 from cobaya.log import logger_setup, LoggedError
 from cobaya.tools import create_banner, warn_deprecation, get_class, \
-    write_packages_path_in_config_file
+    write_packages_path_in_config_file, get_config_path
 from cobaya.input import get_used_components, get_kind
 from cobaya.conventions import _component_path, _code, _data, _external, _force, \
-    _packages_path, _packages_path_arg, _packages_path_env, _yaml_extensions, \
-    _install_skip_env, _packages_path_arg_posix, _test_run
+    _packages_path, _packages_path_arg, _packages_path_env, _yaml_extensions, _debug, \
+    _install_skip_env, _packages_path_arg_posix, _packages_path_config_file, _test_run
 from cobaya.mpi import set_mpi_disabled
 from cobaya.tools import resolve_packages_path
 
@@ -41,11 +42,11 @@ class NotInstalledError(LoggedError):
     Exception to be raise manually at component initialisation
     if some external dependency is missing.
     """
-    pass
 
 
 # noinspection PyUnresolvedReferences
 def install(*infos, **kwargs):
+    debug = kwargs.get(_debug)
     if not log.root.handlers:
         logger_setup()
     path = kwargs.get("path")
@@ -94,8 +95,8 @@ def install(*infos, **kwargs):
             try:
                 imported_class = get_class(component, kind,
                                            component_path=info.pop(_component_path, None))
-            except ImportError as e:
-                log.error("Component '%s' not recognized. [%s]." % (component, e))
+            except ImportError as excpt:
+                log.error("Component '%s' not recognized. [%s].", component, excpt)
                 failed_components += ["%s:%s" % (kind, component)]
                 continue
             else:
@@ -107,6 +108,7 @@ def install(*infos, **kwargs):
                 log.info(
                     "Skipping %r because it is not compatible with your OS.", component)
                 continue
+            log.info("Checking if dependencies have already been installed...")
             is_installed = getattr(imported_class, "is_installed", None)
             if is_installed is None:
                 log.info("%s.%s is a fully built-in component: nothing to do.",
@@ -117,12 +119,16 @@ def install(*infos, **kwargs):
             if get_path:
                 install_path = get_path(install_path)
             has_been_installed = False
+            if not debug:
+                logging.disable(logging.ERROR)
             if kwargs["skip_global"]:
                 has_been_installed = is_installed(path="global", **kwargs_install)
             if not has_been_installed:
                 has_been_installed = is_installed(path=install_path, **kwargs_install)
+            if not debug:
+                logging.disable(logging.NOTSET)
             if has_been_installed:
-                log.info("External component already installed.")
+                log.info("External dependencies for this component already installed.")
                 if kwargs.get(_test_run, False):
                     continue
                 if kwargs_install["force"] and not kwargs["skip_global"]:
@@ -131,9 +137,14 @@ def install(*infos, **kwargs):
                     log.info("Doing nothing.")
                     continue
             else:
-                log.error("Installation test failed! Installing...")
+                log.info("Installation check failed!")
+                if not debug:
+                    log.info(
+                        "(If you expected this to be already installed, re-run "
+                        "`cobaya-install` with --debug to get more verbose output.)")
                 if kwargs.get(_test_run, False):
                     continue
+                log.info("Installing...")
             try:
                 install_this = getattr(imported_class, "install", None)
                 success = install_this(path=abspath, **kwargs_install)
@@ -155,17 +166,25 @@ def install(*infos, **kwargs):
                 failed_components += ["%s:%s" % (kind, component)]
                 continue
             # test installation
-            if not is_installed(path=install_path, **kwargs_install):
+            if not debug:
+                logging.disable(logging.ERROR)
+            successfully_installed = is_installed(path=install_path, **kwargs_install)
+            if not debug:
+                logging.disable(logging.NOTSET)
+            if not successfully_installed:
                 log.error("Installation apparently worked, "
                           "but the subsequent installation test failed! "
-                          "Look at the error messages above. "
-                          "Solve them and try again, or, if you are unable to solve, "
-                          "install the packages required by this component manually.")
+                          "Look at the error messages above, or re-run with --debug "
+                          "for more more verbose output. "
+                          "Try to solve the issues and try again, or, if you are unable "
+                          "to solve them, install the packages required by this "
+                          "component manually.")
                 failed_components += ["%s:%s" % (kind, component)]
             else:
                 log.info("Installation check successful.")
     print()
-    print(create_banner(" * Summary * ", symbol=_banner_symbol, length=_banner_length), end="")
+    print(create_banner(" * Summary * ",
+                        symbol=_banner_symbol, length=_banner_length), end="")
     print()
     if failed_components:
         bullet = "\n - "
@@ -174,12 +193,12 @@ def install(*infos, **kwargs):
                  "failed: %s\nCheck output of the installer of each component above "
                  "for precise error info.\n",
             bullet + bullet.join(failed_components))
-    else:
-        log.info("All requested components' dependencies correctly installed.")
+    log.info("All requested components' dependencies correctly installed.")
     # Set the installation path in the global config file
     if not kwargs.get("no_set_global", False) and not kwargs.get(_test_run, False):
         write_packages_path_in_config_file(abspath)
-        log.info("The installation path has been written into the global config file.")
+        log.info("The installation path has been written into the global config file: %s",
+                 os.path.join(get_config_path(), _packages_path_config_file))
 
 
 def _skip_helper(name, skip_keywords, skip_keywords_env, logger):
@@ -202,19 +221,19 @@ def download_file(url, path, no_progress_bars=False, decompress=False, logger=No
             req = requests.get(url, allow_redirects=True)
             # get hinted filename if available:
             try:
-                filename = re.findall("filename=(.+)", req.headers['content-disposition'])[0]
+                filename = re.findall(
+                    "filename=(.+)", req.headers['content-disposition'])[0]
                 filename = filename.strip('"\'')
             except KeyError:
                 filename = os.path.basename(url)
             filename_tmp_path = os.path.normpath(os.path.join(tmp_path, filename))
             open(filename_tmp_path, 'wb').write(req.content)
-            print("")
-            logger.info('Downloaded filename %s' % filename)
+            logger.info('Downloaded filename %s', filename)
         except Exception as e:
             logger.error(
                 "Error downloading file '%s' to folder '%s': %s", filename, tmp_path, e)
             return False
-        logger.debug('Got: %s' % filename)
+        logger.debug('Got: %s', filename)
         if not decompress:
             return True
         extension = os.path.splitext(filename)[-1][1:]
@@ -229,10 +248,10 @@ def download_file(url, path, no_progress_bars=False, decompress=False, logger=No
                     extension = "gz"
                 with tarfile.open(filename_tmp_path, "r:" + extension) as tar:
                     tar.extractall(path)
-            logger.debug('Decompressed: %s' % filename)
+            logger.debug('Decompressed: %s', filename)
             return True
-        except Exception as e:
-            logger.error("Error decompressing downloaded file! Corrupt file? [%s]" % e)
+        except Exception as excpt:
+            logger.error("Error decompressing downloaded file! Corrupt file? [%s]", excpt)
             return False
 
 
@@ -357,6 +376,8 @@ def install_script():
                         help="Do not store the installation path for later runs.")
     parser.add_argument("--skip-global", action="store_true", default=False,
                         help="Skip installation of already-available Python modules.")
+    parser.add_argument("-" + _debug[0], "--" + _debug, action="store_true",
+                        help="Produce verbose debug output.")
     group_just = parser.add_mutually_exclusive_group(required=False)
     group_just.add_argument("-C", "--just-code", action="store_false", default=True,
                             help="Install code of the components.", dest=_data)
@@ -412,7 +433,7 @@ def install_script():
     install(*infos, path=getattr(arguments, _packages_path_arg)[0],
             **{arg: getattr(arguments, arg)
                for arg in ["force", _code, _data, "no_progress_bars", _test_run,
-                           "no_set_global", "skip", "skip_global"]})
+                           "no_set_global", "skip", "skip_global", _debug]})
     # MARKED FOR DEPRECATION IN v3.0
     for warning_msg in deprecation_warnings:
         logger.warning(warning_msg)
