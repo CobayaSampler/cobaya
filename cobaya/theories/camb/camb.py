@@ -173,9 +173,9 @@ import logging
 import numbers
 import ctypes
 from copy import deepcopy
-from typing import NamedTuple, Any
+from typing import NamedTuple, Any, Union
+from types import ModuleType
 import numpy as np
-
 # Local
 from cobaya.theories._cosmo import BoltzmannBase
 from cobaya.log import LoggedError
@@ -207,6 +207,7 @@ class camb(BoltzmannBase):
     _min_camb_version = '1.1.2'
 
     external_primordial_pk: bool
+    camb: Any
 
     def initialize(self):
         """Importing CAMB from the correct path, if given."""
@@ -790,9 +791,9 @@ class camb(BoltzmannBase):
                           " a very old version without the Python interface.", path)
                 return False
             if not os.path.isfile(os.path.realpath(
-                os.path.join(path,
-                             "camb", "cambdll.dll" if (
-                                 platform.system() == "Windows") else "camblib.so"))):
+                    os.path.join(path,
+                                 "camb", "cambdll.dll" if (
+                                platform.system() == "Windows") else "camblib.so"))):
                 log.error("CAMB installation at '%s' appears not to be compiled.", path)
                 return False
         elif not path:
