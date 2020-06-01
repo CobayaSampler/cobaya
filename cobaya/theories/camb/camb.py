@@ -173,8 +173,7 @@ import logging
 import numbers
 import ctypes
 from copy import deepcopy
-from typing import NamedTuple, Any, Union
-from types import ModuleType
+from typing import NamedTuple, Any
 import numpy as np
 # Local
 from cobaya.theories._cosmo import BoltzmannBase

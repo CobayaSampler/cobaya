@@ -12,7 +12,6 @@ import sys
 import re
 import subprocess
 import traceback
-import logging
 import shutil
 import tempfile
 import logging
