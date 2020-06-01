@@ -32,6 +32,9 @@ from cobaya.tools import resolve_packages_path
 
 log = logging.getLogger(__name__.split(".")[-1])
 
+_banner_symbol = "="
+_banner_length = 80
+
 
 class NotInstalledError(LoggedError):
     """
@@ -77,7 +80,8 @@ def install(*infos, **kwargs):
     for kind, components in get_used_components(*infos).items():
         for component in components:
             print()
-            print(create_banner(kind + ":" + component, symbol="=", length=80), end="")
+            print(create_banner(kind + ":" + component,
+                                symbol=_banner_symbol, length=_banner_length), end="")
             print()
             if _skip_helper(component.lower(), skip_keywords, skip_keywords_env, log):
                 continue
@@ -160,6 +164,9 @@ def install(*infos, **kwargs):
                 failed_components += ["%s:%s" % (kind, component)]
             else:
                 log.info("Installation check successful.")
+    print()
+    print(create_banner(" * Summary * ", symbol=_banner_symbol, length=_banner_length), end="")
+    print()
     if failed_components:
         bullet = "\n - "
         raise LoggedError(
@@ -167,10 +174,12 @@ def install(*infos, **kwargs):
                  "failed: %s\nCheck output of the installer of each component above "
                  "for precise error info.\n",
             bullet + bullet.join(failed_components))
+    else:
+        log.info("All requested components' dependencies correctly installed.")
     # Set the installation path in the global config file
     if not kwargs.get("no_set_global", False) and not kwargs.get(_test_run, False):
         write_packages_path_in_config_file(abspath)
-        log.info("The installation path has been written in the global config file.")
+        log.info("The installation path has been written into the global config file.")
 
 
 def _skip_helper(name, skip_keywords, skip_keywords_env, logger):
