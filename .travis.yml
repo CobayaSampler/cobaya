@@ -108,10 +108,10 @@ before_install:
 script:
   - export COBAYA_PACKAGES_PATH="../packages"
   # General tests:
-  - cobaya-install polychord
+  - cobaya-install polychord --debug
   - pytest tests/ -k "not cosmo" --skip-not-installed
   # Cosmology tests:
-  - cobaya-install cosmo-tests --no-progress-bars
+  - cobaya-install cosmo-tests --no-progress-bars --debug
   - if [ -n "${CAMB_BRANCH}" ]; then
       rm -rf $COBAYA_PACKAGES_PATH/code/CAMB ;
       git clone --recursive --depth 1 -b $CAMB_BRANCH https://github.com/cmbant/CAMB $COBAYA_PACKAGES_PATH/code/CAMB ;
