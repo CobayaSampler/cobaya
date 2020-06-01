@@ -583,7 +583,7 @@ class camb(BoltzmannBase):
                                             " in the CAMB interface", p)
         return derived
 
-    def get_Cl(self, ell_factor=False, units="muK2"):
+    def get_Cl(self, ell_factor=False, units="FIRAS"):
         current_state = self._current_state
         # get C_l^XX from the cosmological code
         try:
@@ -592,15 +592,7 @@ class camb(BoltzmannBase):
             raise LoggedError(self.log, "No Cl's were computed. Are you sure that you "
                                         "have requested them?")
 
-        temp = current_state['derived_extra']['TCMB']
-        units_factors = {"1": 1,
-                         "muK2": temp * 1.e6,
-                         "K2": temp}
-        try:
-            units_factor = units_factors[units]
-        except KeyError:
-            raise LoggedError(self.log, "Units '%s' not recognized. Use one of %s.",
-                              units, list(units_factors))
+        units_factor = self._unit_factor(units, current_state['derived_extra']['TCMB'])
 
         ls = np.arange(cl_camb.shape[0], dtype=np.int64)
         if not ell_factor:
