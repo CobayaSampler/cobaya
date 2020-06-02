@@ -592,7 +592,7 @@ class camb(BoltzmannBase):
             raise LoggedError(self.log, "No Cl's were computed. Are you sure that you "
                                         "have requested them?")
 
-        units_factor = self._unit_factor(units, current_state['derived_extra']['TCMB'])
+        units_factor = self._cmb_unit_factor(units, current_state['derived_extra']['TCMB'])
 
         ls = np.arange(cl_camb.shape[0], dtype=np.int64)
         if not ell_factor:
