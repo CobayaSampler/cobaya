@@ -107,18 +107,17 @@ before_install:
 
 script:
   - export COBAYA_PACKAGES_PATH="../packages"
-  - export COBAYA_TEST_SKIP=$COBAYA_INSTALL_SKIP
   # General tests:
-  - cobaya-install polychord
-  - pytest tests/ -k "not cosmo"
+  - cobaya-install polychord --debug
+  - pytest tests/ -k "not cosmo" --skip-not-installed
   # Cosmology tests:
-  - cobaya-install cosmo-tests --no-progress-bars
+  - cobaya-install cosmo-tests --no-progress-bars --debug
   - if [ -n "${CAMB_BRANCH}" ]; then
       rm -rf $COBAYA_PACKAGES_PATH/code/CAMB ;
       git clone --recursive --depth 1 -b $CAMB_BRANCH https://github.com/cmbant/CAMB $COBAYA_PACKAGES_PATH/code/CAMB ;
       python $COBAYA_PACKAGES_PATH/code/CAMB/setup.py build ;
     fi
-  - pytest tests/ -v -s -k "cosmo" --forked
+  - pytest tests/ -v -s -k "cosmo" --forked --skip-not-installed
   # Test external cosmological likelihoods
   - python $COBAYA_PACKAGES_PATH/code/CAMB/setup.py install
   - git clone --depth=1 https://github.com/CobayaSampler/planck_lensing_external

@@ -1,8 +1,11 @@
 from .common import process_packages_path
+from .conftest import install_test_wrapper
 import os
+import pytest
 import numpy as np
 from cobaya.model import get_model
 from cobaya.tools import load_module
+from cobaya.install import NotInstalledError
 
 params = {'ombh2': 0.02242, 'omch2': 0.11933, 'H0': 67.66, 'tau': 0.0561,
           'mnu': 0.06, 'nnu': 3.046, 'ns': 0.9665,
@@ -10,22 +13,25 @@ params = {'ombh2': 0.02242, 'omch2': 0.11933, 'H0': 67.66, 'tau': 0.0561,
 
 
 def get_camb(packages_path):
-    return load_module("camb", path=os.path.join(process_packages_path(packages_path),
-                                                 "code", "CAMB"))
+    try:
+        return load_module("camb", path=os.path.join(process_packages_path(packages_path),
+                                                     "code", "CAMB"))
+    except ModuleNotFoundError:
+        raise NotInstalledError(None)
 
 
-def _get_model(packages_path, likelihood_info):
+def _get_model(packages_path, likelihood_info, skip_not_installed):
     info = {
         'params': params,
         'likelihood': {'test_likelihood': likelihood_info},
         'theory': {'camb': {'stop_at_error': True,
                             'extra_args': {'num_massive_neutrinos': 1}}},
         'packages_path': process_packages_path(packages_path)}
-    return get_model(info)
+    return install_test_wrapper(skip_not_installed, get_model, info)
 
 
-def test_sources(packages_path):
-    camb = get_camb(packages_path)
+def test_sources(packages_path, skip_not_installed):
+    camb = install_test_wrapper(skip_not_installed, get_camb, packages_path)
     from camb.sources import GaussianSourceWindow
 
     pars = camb.set_params(**params)
@@ -52,11 +58,12 @@ def test_sources(packages_path):
 
     model = _get_model(
         packages_path,
-        {'external': test_likelihood, 'requires': test_likelihood_requires})
+        {'external': test_likelihood, 'requires': test_likelihood_requires},
+        skip_not_installed)
     model.loglike({})
 
 
-def test_CAMBdata(packages_path):
+def test_CAMBdata(packages_path, skip_not_installed):
     # noinspection PyDefaultArgument
     def test_likelihood(_self):
         return _self.provider.get_CAMBdata().tau0
@@ -64,14 +71,14 @@ def test_CAMBdata(packages_path):
 
     model = _get_model(
         packages_path,
-        {'external': test_likelihood, 'requires': test_likelihood_requires})
+        {'external': test_likelihood, 'requires': test_likelihood_requires},
+        skip_not_installed)
     assert np.isclose(model.loglike({})[0], 14165.63, rtol=1e-4), \
         "CAMBdata object result failed"
 
 
-def test_CAMB_transfer(packages_path):
-    camb = get_camb(packages_path)
-
+def test_CAMB_transfer(packages_path, skip_not_installed):
+    camb = install_test_wrapper(skip_not_installed, get_camb, packages_path)
     pars = camb.set_params(**params)
     pars.set_matter_power(redshifts=[0, 2], kmax=2)
     pars.WantCls = False
@@ -88,13 +95,13 @@ def test_CAMB_transfer(packages_path):
 
     model = _get_model(
         packages_path,
-        {'external': test_likelihood, 'requires': test_likelihood_requires})
+        {'external': test_likelihood, 'requires': test_likelihood_requires},
+        skip_not_installed)
     model.loglike()
 
 
-def test_CAMB_sigma_R(packages_path):
-    camb = get_camb(packages_path)
-
+def test_CAMB_sigma_R(packages_path, skip_not_installed):
+    camb = install_test_wrapper(skip_not_installed, get_camb, packages_path)
     pars = camb.set_params(**params)
     redshifts = [0, 2, 5]
     pars.set_matter_power(redshifts=redshifts, kmax=2)
@@ -114,5 +121,6 @@ def test_CAMB_sigma_R(packages_path):
 
     model = _get_model(
         packages_path,
-        {'external': test_likelihood, 'requires': test_likelihood_requires})
+        {'external': test_likelihood, 'requires': test_likelihood_requires},
+        skip_not_installed)
     model.loglike()

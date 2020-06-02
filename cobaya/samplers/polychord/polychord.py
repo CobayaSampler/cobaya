@@ -19,12 +19,12 @@ import re
 
 # Local
 from cobaya.tools import read_dnumber, get_external_function, PythonPath, \
-    find_with_regexp, NumberWithUnits
+    find_with_regexp, NumberWithUnits, load_module, VersionCheckError
 from cobaya.sampler import Sampler
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
 from cobaya.collection import Collection
 from cobaya.log import LoggedError
-from cobaya.install import download_github_release
+from cobaya.install import download_github_release, NotInstalledError
 from cobaya.yaml import yaml_dump_file
 from cobaya.conventions import _separator, _evidence_extension, _packages_path_arg
 
@@ -50,41 +50,18 @@ class polychord(Sampler):
 
     def initialize(self):
         """Imports the PolyChord sampler and prepares its arguments."""
-        if is_main_process():  # rank = 0 (MPI master) or None (no MPI)
-            self.log.info("Initializing")
-        # If path not given, try using general path to external packages
+        # Allow global import if no direct path specification
+        allow_global = not self.path
         if not self.path and self.packages_path:
             self.path = self.get_path(self.packages_path)
-        if self.path:
-            if is_main_process():
-                self.log.info("Importing *local* PolyChord from " + self.path)
-                if not os.path.exists(os.path.realpath(self.path)):
-                    raise LoggedError(self.log,
-                                      "The given path does not exist. "
-                                      "Try installing PolyChord with "
-                                      "'cobaya-install polychord --%d [packages_path]",
-                                      _packages_path_arg)
-            pc_build_path = self.get_build_path(self.path)
-            if not pc_build_path:
-                raise LoggedError(self.log, "Either PolyChord is not in the given folder,"
-                                            " '%s', or you have not compiled it.",
-                                  self.path)
-            # Inserting the previously found path into the list of import folders
-            sys.path.insert(0, pc_build_path)
-        else:
-            self.log.info("Importing *global* PolyChord.")
-        try:
-            import pypolychord
-            from pypolychord.settings import PolyChordSettings
-            self.pc = pypolychord
-        except ImportError:
-            raise LoggedError(
-                self.log, "Couldn't find the PolyChord python interface. "
-                          "Make sure that you have compiled it, and that you either\n"
-                          " (a) specify a path (you didn't) or\n"
-                          " (b) install the Python interface globally with\n"
-                          "     '/path/to/PolyChord/python setup.py install --user'")
+        self.pc = self.is_installed(path=self.path, allow_global=allow_global)
+        if not self.pc:
+            raise NotInstalledError(
+                self.log, "Could not find PolyChord. Check error message above. "
+                          "To install it, run 'cobaya-install polychord --%s "
+                          "[packages_path]'", _packages_path_arg)
         # Prepare arguments and settings
+        from pypolychord.settings import PolyChordSettings
         self.n_sampled = len(self.model.parameterization.sampled_params())
         self.n_derived = len(self.model.parameterization.derived_params())
         self.n_priors = len(self.model.prior)
@@ -198,6 +175,7 @@ class polychord(Sampler):
             for p, v in inspect.getmembers(self.pc_settings, lambda a: not (callable(a))):
                 if not p.startswith("_"):
                     self.log.debug("  %s: %s", p, v)
+        self.log.info("Initialized!")
 
     def dumper(self, live_points, dead_points, logweights, logZ, logZstd):
         # Store live and dead points and evidence computed so far
@@ -449,39 +427,69 @@ class polychord(Sampler):
                          cls._pc_repo_name[cls._pc_repo_name.find("/") + 1:]))
 
     @classmethod
-    def get_build_path(cls, polychord_path):
+    def get_import_path(cls, path):
+        log = logging.getLogger(cls.__name__)
+        poly_build_path = os.path.join(path, "build")
+        if not os.path.isdir(poly_build_path):
+            log.error("Either PolyChord is not in the given folder, "
+                      "'%s', or you have not compiled it.", path)
+            return None
+        py_version = "%d.%d" % (sys.version_info.major, sys.version_info.minor)
         try:
-            build_path = os.path.join(polychord_path, "build")
-            post = next(d for d in os.listdir(build_path) if d.startswith("lib."))
-            build_path = os.path.join(build_path, post)
-            return build_path
-        except (OSError, StopIteration):
+            post = next(d for d in os.listdir(poly_build_path)
+                        if (d.startswith("lib.") and py_version in d))
+        except StopIteration:
+            log.error("The PolyChord installation at '%s' has not been compiled for the "
+                      "current Python version.", path)
+            return None
+        return os.path.join(poly_build_path, post)
+
+    @classmethod
+    def is_compatible(cls):
+        import platform
+        if platform.system() == "Windows":
             return False
+        return True
 
     @classmethod
     def is_installed(cls, **kwargs):
-        if not kwargs["code"]:
+        log = logging.getLogger(cls.__name__)
+        if not kwargs.get("code", True):
             return True
-        log = logging.getLogger(__name__.split(".")[-1])
-        poly_path = cls.get_path(kwargs["path"])
-        path_libchord_so = os.path.realpath(os.path.join(poly_path, "lib/libchord.so"))
-        if not os.path.isfile(path_libchord_so):
-            log.error("Could not find compiled libchord.so at %r", path_libchord_so)
-            return False
-        poly_build_path = cls.get_build_path(poly_path)
-        if not poly_build_path:
-            log.error("Could not find a 'build' folder for the Python Wrapper. "
-                      "Apparently compilation failed.")
-            return False
-        with PythonPath(poly_build_path):
-            try:
-                import pypolychord
-                return True
-            except ImportError as excpt:
-                log.error("PolyChord is apparently compiled, but could not be imported. "
-                          "Reason: %r", str(excpt))
+        path = kwargs["path"]
+        if path is not None and path.lower() == "global":
+            path = None
+        if path and not kwargs.get("allow_global"):
+            log.info("Importing *local* PolyChord from '%s'.", path)
+            if not os.path.exists(path):
+                log.error("The given folder does not exist: '%s'", path)
                 return False
-
+            poly_build_path = cls.get_import_path(path)
+            if not poly_build_path:
+                return False
+        elif not path:
+            log.info("Importing *global* PolyChord.")
+            poly_build_path = None
+        else:
+            log.info("Importing *auto-installed* PolyChord (but defaulting to *global*).")
+            poly_build_path = cls.get_import_path(path)
+        try:
+            # TODO: add min_version when polychord module version available
+            return load_module(
+                'pypolychord', path=poly_build_path, min_version=None)
+        except ImportError:
+            if path is not None and path.lower() != "global":
+                log.error("Couldn't find the PolyChord python interface at '%s'. "
+                          "Are you sure it has been installed there?", path)
+            else:
+                log.error("Could not import global PolyChord installation. "
+                          "Specify a Cobaya or PolyChord installation path, "
+                          "or install the PolyChord Python interface globally with "
+                          "'cd /path/to/polychord/ ; python setup.py install'")
+            return False
+        except VersionCheckError as e:
+            log.error(str(e))
+            return False
     @classmethod
     def install(cls, path=None, force=False, code=False, data=False,
                 no_progress_bars=False):

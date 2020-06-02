@@ -20,6 +20,7 @@ from copy import deepcopy
 from packaging import version
 from itertools import permutations
 from typing import Mapping
+from types import ModuleType
 from inspect import cleandoc, getfullargspec
 from math import gcd
 from ast import parse
@@ -150,7 +151,8 @@ def check_component_version(component, min_version):
              getattr(component, "__version__", "(non-given)"), min_version))
 
 
-def load_module(name, package=None, path=None, min_version=None, check_path=False):
+def load_module(name, package=None, path=None, min_version=None,
+                check_path=False) -> ModuleType:
     with PythonPath(path):
         component = import_module(name, package=package)
     if path and check_path:

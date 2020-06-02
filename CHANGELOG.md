@@ -1,3 +1,14 @@
+## 3.0.1  – 2020-XX-XX
+
+### Installation scripts
+
+- File downloader function now uses `requests` instead of `wget` (less prone to segfaults), and stores intermediate files in a tmp folder.
+- Added `--skip-global` option to `cobaya-install`: skips local installation of codes when the corresponding python package is available globally.
+- `path=global` available for some components: forces global-scope import, even when installed with `cobaya-install`.
+- Added ``--skip-not-installed`` to pytest command, to allow tests of non-installed components to fail.
+- Installable components can define a class method ``is_compatible`` determining OS compatibility (assumed compatible by default). Installation of OS-incompatible components is skipped.
+
+
 ## 3.0  – 2020-05-12
 
 ### General

@@ -33,7 +33,6 @@
 * Update output thin factor once chains get over a given size, so that asymptotically the memory size of the chains doesn't grow indefinitely (and convergence checking time also doesn't grow correspondingly), just the thinning factor increases.
 * more clever learning of covmat when only a few parameters missing: update only the row/columns of missing params, shrinkage estimator etc.
 ## CLASS: make it non-agnostic
-## Regexp-ize checks for `COBAYA_INSTALL_SKIP` (in `install.py::_skip_helper`) and `COBAYA_TEST_SKIP` (in `conftests.py`), to be able to use underscores
 ## Test installed only (would need more clever pytest marking?)
 ## auto-covmats:
 + separate parameter matching into slow ones and fast ones, and prefer missing some fast parameters than missing slow ones.

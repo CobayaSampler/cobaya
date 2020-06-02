@@ -8,7 +8,8 @@ from cobaya.tools import load_module
 from cobaya.likelihood import LikelihoodInterface, Likelihood
 from cobaya.conventions import empty_dict
 from .common import process_packages_path
-
+from .conftest import install_test_wrapper
+from .test_cosmo_camb import get_camb
 
 # Test separating out the BBN consistency constraint into separate theory code,
 # using CAMB's BBN interpolator class. Tests dependencies/multi-theory with one
@@ -72,9 +73,9 @@ info2 = {'likelihood': {'cmb': cmb_likelihood_info},
          'params': camb_params, 'debug': debug}
 
 
-def test_bbn_yhe(packages_path):
+def test_bbn_yhe(packages_path, skip_not_installed):
     packages_path = process_packages_path(packages_path)
-    load_module("camb", path=os.path.join(packages_path, "code", "CAMB"))
+    install_test_wrapper(skip_not_installed, get_camb, packages_path)
     from camb.bbn import BBN_table_interpolator
     BBN.bbn = BBN_table_interpolator(bbn_table)
     BBN2.bbn = BBN.bbn
@@ -152,9 +153,9 @@ info_error2 = {'likelihood': {'cmb': cmb_likelihood_info,
                'debug': debug}
 
 
-def test_bbn_likelihood(packages_path):
+def test_bbn_likelihood(packages_path, skip_not_installed):
     packages_path = process_packages_path(packages_path)
-    load_module("camb", path=os.path.join(packages_path, "code", "CAMB"))
+    install_test_wrapper(skip_not_installed, get_camb, packages_path)
     from camb.bbn import BBN_table_interpolator
     BBN_likelihood.bbn = BBN_table_interpolator(bbn_table)
     info_error['packages_path'] = packages_path
@@ -223,10 +224,10 @@ info_pk = {'likelihood': {'cmb': Pklike},
            'debug': debug}
 
 
-def test_primordial_pk(packages_path):
+def test_primordial_pk(packages_path, skip_not_installed):
     packages_path = process_packages_path(packages_path)
     info_pk['packages_path'] = packages_path
-    model = get_model(info_pk)
+    model = install_test_wrapper(skip_not_installed, get_model, info_pk)
     model.loglikes({'testAs': testAs, 'testns': testns})
 
 
@@ -276,7 +277,7 @@ class BinnedPk(Theory):
         return options
 
 
-def test_pk_binning(packages_path):
+def test_pk_binning(packages_path, skip_not_installed):
     # reproduce power law by sending in spline point values
     # has to be fine sampling to get to 1e-3 precision in test.
     nbins = 40
@@ -307,5 +308,5 @@ def test_pk_binning(packages_path):
         return testAs * (k / 0.05) ** (testns - 1) / scale * np.exp(-2 * tau)
 
     pars = {'b%s' % (b + 1): pk_test(ks[b]) for b in range(nbins)}
-    model = get_model(info)
+    model = install_test_wrapper(skip_not_installed, get_model, info)
     model.loglikes(pars)
