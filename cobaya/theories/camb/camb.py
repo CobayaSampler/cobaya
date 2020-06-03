@@ -583,7 +583,7 @@ class camb(BoltzmannBase):
                                             " in the CAMB interface", p)
         return derived
 
-    def get_Cl(self, ell_factor=False, units="FIRAS"):
+    def get_Cl(self, ell_factor=False, units="FIRASmuK2"):
         current_state = self._current_state
         # get C_l^XX from the cosmological code
         try:

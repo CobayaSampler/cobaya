@@ -442,7 +442,7 @@ class classy(BoltzmannBase):
         derived_extra = {p: requested_and_extra[p] for p in self.derived_extra}
         return derived, derived_extra
 
-    def get_Cl(self, ell_factor=False, units="FIRAS"):
+    def get_Cl(self, ell_factor=False, units="FIRASmuK2"):
         try:
             cls = deepcopy(self._current_state["Cl"])
         except:
@@ -452,8 +452,8 @@ class classy(BoltzmannBase):
         # unit conversion and ell_factor
         ells_factor = ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[
                       2:] if ell_factor else 1
-        units_factor = self._cmb_unit_factor(units,
-                                             self._current_state['derived_extra']['T_cmb'])
+        units_factor = self._cmb_unit_factor(
+            units, self._current_state['derived_extra']['T_cmb'])
 
         for cl in cls:
             if cl not in ['pp', 'ell']:
