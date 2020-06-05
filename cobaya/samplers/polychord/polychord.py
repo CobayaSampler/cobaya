@@ -278,7 +278,7 @@ class polychord(Sampler):
             for p in self.model.prior:
                 f_paramnames.write("%s*\t%s\n" % (
                     "logprior" + _separator + p,
-                    r"\pi_\mathrm{" + p.replace("_", r"\ ") + r"}"))
+                    r"\log\pi_\mathrm{" + p.replace("_", r"\ ") + r"}"))
             for p in self.model.likelihood:
                 f_paramnames.write("%s*\t%s\n" % (
                     "loglike" + _separator + p,
