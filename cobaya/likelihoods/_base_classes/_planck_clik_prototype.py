@@ -114,7 +114,7 @@ class _planck_clik_prototype(Likelihood):
 
     def logp(self, **params_values):
         # get Cl's from the theory code
-        cl = self.provider.get_Cl(units="muK2")
+        cl = self.provider.get_Cl(units="FIRASmuK2")
         return self.log_likelihood(cl, **params_values)
 
     def log_likelihood(self, cl, **params_values):

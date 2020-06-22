@@ -581,7 +581,7 @@ class _CMBlikes(_DataSetLikelihood):
                     (np.trace(M) - self.nmaps - np.linalg.slogdet(M)[1]))
 
     def logp(self, **data_params):
-        cls = self.provider.get_Cl(ell_factor=True, units="muK2")
+        cls = self.provider.get_Cl(ell_factor=True)
         return self.log_likelihood(cls, **data_params)
 
     def log_likelihood(self, dls, **data_params):

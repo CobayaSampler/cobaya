@@ -210,13 +210,30 @@ class BoltzmannBase(Theory):
                           "as extra arguments: %s. Please, remove one of the definitions "
                           "of each.", common)
 
-    def get_Cl(self, ell_factor=False, units="muK2"):
+    def _cmb_unit_factor(self, units, T_cmb):
+        units_factors = {"1": 1,
+                         "muK2": T_cmb * 1.e6,
+                         "K2": T_cmb,
+                         "FIRASmuK2": 2.7255e6,
+                         "FIRASK2": 2.7255
+                         }
+        try:
+            return units_factors[units]
+        except KeyError:
+            raise LoggedError(self.log, "Units '%s' not recognized. Use one of %s.",
+                              units, list(units_factors))
+
+    def get_Cl(self, ell_factor=False, units="FIRASmuK2"):
         r"""
         Returns a dictionary of lensed CMB power spectra and the lensing potential ``pp``
         power spectrum.
 
-        Set the units with the keyword ``units='1'|'muK2'|'K2'`` (default: 'muK2',
-        except for the lensing potential power spectrum, which is always unitless).
+        Set the units with the keyword ``units=number|'muK2'|'K2'|'FIRASmuK2'|'FIRASK2'``
+        (default: 'FIRASmuK2' gives FIRAS-calibrated microKelvin^2, except for the lensing
+        potential power spectrum, which is always unitless).
+        Note the muK2 and K2 options use the model's CMB temperature; experimental data
+        are usually calibrated to the FIRAS measurement which is a fixed temperature.
+        The default FIRASmuK2 takes CMB C_l scaled by 2.7255e6^2 (to get result in muK^2).
 
         If ``ell_factor=True`` (default: False), multiplies the spectra by
         :math:`\ell(\ell+1)/(2\pi)` (or by :math:`\ell^2(\ell+1)^2/(2\pi)` in the case of
