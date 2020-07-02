@@ -1,44 +1,47 @@
-theory:
-  classy:
-    path: null
-    # Speed in evaluations/second
-    speed: 0.2
-    # Other precision parameters to be passed to CLASS
-    # e.g. precision parameters or non-numerical parameters
-    extra_args:
-    # Use Planck parameter names, for fast switching CLASS<-->(Planck+CAMB)
-    use_planck_names: False
-    # Dictionary of (Planck+CAMB)->CLASS names
-    renames:
-      # Inflation
-      As: A_s
-      ns: n_s
-      nrun: alpha_s
-      nrunrun: beta_s
-      nt: n_t
-      ntrun: alpha_t
-      # Background/geometry/Lambda
-      rdrag: rs_drag
-      omegak: Omega_k
-      omegal: Omega_Lambda
-      w: w0_fld
-      wa: wa_fld
-      # Matter content
-      omegabh2: omega_b
-      omegab: Omega_b
-      omegach2: omega_cdm
-      omegac: Omega_cdm
-      omegam: Omega_m
-      # Neutrino and other relativistic matter - very few direct translations here!
-      # -- there are differences in the definition of the rest of the parameters,
-      #    e.g. Neff (CAMB) vs N_ur (CLASS: not N_eff, but only of ultra-rel dof's),
-      #    or mnu (CAMB, always total mass) vs m_ncdm (CLASS, mass of a single nu)
-      omegan: Omega_nu
-      # Thermodynamics
-      tau: tau_reio
-      zrei: z_reio
-      deltazrei: reionization_width
-      helium_redshift: helium_fullreio_redshift
-      helium_delta_redshift: helium_fullreio_width
-      yhe: YHe
-      yheused: YHe  # used by Planck when YHe is derived
+# Path to local CLASS, if desired,
+# or 'global' to force global-scope import
+path: null
+# Speed in evaluations/second
+speed: 0.2
+# False to fail and stop sampling on *any* computation error
+# (it also prints debug info)
+stop_at_error: False
+# Other precision parameters to be passed to CLASS
+# e.g. precision parameters or non-numerical parameters
+extra_args:
+# Use Planck parameter names, for fast switching CLASS<-->(Planck+CAMB)
+use_renames: False
+# Dictionary of (Planck+CAMB)->CLASS names
+renames:
+  # Inflation
+  As: A_s
+  ns: n_s
+  nrun: alpha_s
+  nrunrun: beta_s
+  nt: n_t
+  ntrun: alpha_t
+  # Background/geometry/Lambda
+  rdrag: rs_drag
+  omegak: Omega_k
+  omegal: Omega_Lambda
+  w: w0_fld
+  wa: wa_fld
+  # Matter content
+  omegabh2: omega_b
+  omegab: Omega_b
+  omegach2: omega_cdm
+  omegac: Omega_cdm
+  omegam: Omega_m
+  # Neutrino and other relativistic matter - very few direct translations here!
+  # -- there are differences in the definition of the rest of the parameters,
+  #    e.g. Neff (CAMB) vs N_ur (CLASS: not N_eff, but only of ultra-rel dof's),
+  #    or mnu (CAMB, always total mass) vs m_ncdm (CLASS, mass of a single nu)
+  omegan: Omega_nu
+  # Thermodynamics
+  tau: tau_reio
+  zrei: z_reio
+  deltazrei: reionization_width
+  helium_redshift: helium_fullreio_redshift
+  helium_delta_redshift: helium_fullreio_width
+  yhe: YHe
+  yheused: YHe  # used by Planck when YHe is derived

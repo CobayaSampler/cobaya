@@ -42,7 +42,7 @@ A delay (in seconds) in the likelihood evaluation can be specified with the keyw
 
    This module also provides functions to generate random means and covariances – see automatic documentation below.
 
-The default option values for this module are
+The default option values for this likelihood are
 
 .. literalinclude:: ../cobaya/likelihoods/gaussian_mixture/gaussian_mixture.yaml
    :language: yaml

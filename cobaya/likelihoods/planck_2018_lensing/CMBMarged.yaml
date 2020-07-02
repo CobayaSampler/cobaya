@@ -1,0 +1,17 @@
+# Planck 2018 release: lensing T+P-based likelihood, marginalized over the CMB power spectra
+# -- Native python .dataset-based implementation
+# See https://wiki.cosmos.esa.int/planck-legacy-archive/index.php/CMB_spectrum_%26_Likelihood_Code
+
+# Path to the data: where the planck_supp_data_and_covmats has been cloned
+path: null
+dataset_file: lensing/2018/smicadx12_Dec5_ftl_mv2_ndclpp_p_teb_consext8_CMBmarged.dataset
+# Overriding of .dataset parameters
+dataset_params:
+# Overriding of the maximum ell computed
+l_max:
+# Aliases for automatic covariance matrix
+aliases: [lensing]
+# Speed in evaluations/second
+speed: 90
+# no nuisance parameters, CMB is marginalized
+params:

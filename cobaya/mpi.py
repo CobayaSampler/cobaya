@@ -6,23 +6,36 @@
 
 """
 
-# Python 2/3 compatibility
-from __future__ import absolute_import
-from __future__ import division
-
-# Global
 import os
-
 # Local
-from cobaya.conventions import _package
+from cobaya.conventions import _cobaya_package
 
 # Vars to keep track of MPI parameters
-_mpi = -1
+_mpi = None if os.environ.get('COBAYA_NOMPI', False) else -1
 _mpi_size = -1
 _mpi_comm = -1
 _mpi_rank = -1
 
 
+def set_mpi_disabled(disabled=True):
+    """
+    Disable MPI, e.g. for use on cluster head nodes where mpi4py may be installed
+    but not MPI functions will work.
+    """
+    global _mpi, _mpi_size, _mpi_rank, _mpi_comm
+    if disabled:
+        _mpi = None
+        _mpi_size = 0
+        _mpi_comm = None
+        _mpi_rank = None
+    else:
+        _mpi = -1
+        _mpi_size = -1
+        _mpi_comm = -1
+        _mpi_rank = -1
+
+
+# noinspection PyUnresolvedReferences
 def get_mpi():
     """
     Import and returns the MPI object, or None if not running with MPI.
@@ -77,7 +90,10 @@ def get_mpi_rank():
 
 
 # Aliases for simpler use
-def am_single_or_primary_process():
+def is_main_process():
+    """
+    Returns true if primary process or MPI not available.
+    """
     return not bool(get_mpi_rank())
 
 
@@ -86,7 +102,7 @@ def more_than_one_process():
 
 
 def sync_processes():
-    if get_mpi_size():
+    if get_mpi_size() > 1:
         get_mpi_comm().barrier()
 
 
@@ -96,4 +112,12 @@ def import_MPI(module, target):
     target_name = target
     if get_mpi_rank() is not None:
         target_name = target + "_MPI"
-    return getattr(import_module(module, package=_package), target_name)
+    return getattr(import_module(module, package=_cobaya_package), target_name)
+
+
+def share_mpi(data=None):
+    comm = get_mpi_comm()
+    if comm and more_than_one_process():
+        return comm.bcast(data, root=0)
+    else:
+        return data

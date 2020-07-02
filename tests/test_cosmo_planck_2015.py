@@ -1,6 +1,4 @@
 # Tries to evaluate the likelihood at LCDM's best fit of Planck 2015, with CAMB and CLASS
-from __future__ import absolute_import
-import pytest
 from copy import deepcopy
 
 from .common_cosmo import body_of_test
@@ -18,6 +16,9 @@ cmb_precision["camb"].update({
     "halofit_version": "takahashi",
     "bbn_predictor": "BBN_fitting_parthenope"
 })
+cmb_precision["classy"].update({
+    "non linear": "halofit",
+})
 
 # Derived parameters not understood by CLASS
 # https://wiki.cosmos.esa.int/planckpla2015/images/b/b9/Parameter_tag_definitions_2015.pdf
@@ -29,37 +30,40 @@ classy_unknown = ["zstar", "rstar", "thetastar", "DAstar", "zdrag",
 classy_extra_tolerance = 0.2
 
 
-def test_planck_2015_t_camb(modules):
+def test_planck_2015_t_camb(packages_path, skip_not_installed):
     best_fit = deepcopy(params_lowl_highTT)
     best_fit.pop("H0")
     info_likelihood = lik_info_lowl_highTT
     info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = derived_lowl_highTT
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
-                 chi2_lowl_highTT, best_fit_derived)
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_lowl_highTT, best_fit_derived,
+                 skip_not_installed=skip_not_installed)
 
 
-def test_planck_2015_p_camb(modules):
+def test_planck_2015_p_camb(packages_path, skip_not_installed):
     best_fit = deepcopy(params_lowTEB_highTTTEEE)
     best_fit.pop("H0")
     info_likelihood = lik_info_lowTEB_highTTTEEE
     info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = derived_lowTEB_highTTTEEE
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
-                 chi2_lowTEB_highTTTEEE, best_fit_derived)
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_lowTEB_highTTTEEE, best_fit_derived,
+                 skip_not_installed=skip_not_installed)
 
 
-def test_planck_2015_l_camb(modules):
+def test_planck_2015_l_camb(packages_path, skip_not_installed):
     best_fit = deepcopy(params_lensing)
     best_fit.pop("H0")
     info_likelihood = lik_info_lensing
     info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = derived_lensing
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
-                 chi2_lensing, best_fit_derived)
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_lensing, best_fit_derived,
+                 skip_not_installed=skip_not_installed)
 
 
-def test_planck_2015_l2_camb(modules):
+def test_planck_2015_l2_camb(packages_path, skip_not_installed):
     best_fit = deepcopy(params_lensing)
     best_fit.pop("H0")
     lik_name = "planck_2015_lensing_cmblikes"
@@ -69,11 +73,12 @@ def test_planck_2015_l2_camb(modules):
     chi2_lensing_cmblikes[lik_name] = chi2_lensing[clik_name]
     info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = derived_lensing
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
-                 chi2_lensing_cmblikes, best_fit_derived)
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_lensing_cmblikes, best_fit_derived,
+                 skip_not_installed=skip_not_installed)
 
 
-def test_planck_2015_t_classy(modules):
+def test_planck_2015_t_classy(packages_path, skip_not_installed):
     best_fit = deepcopy(params_lowl_highTT)
     best_fit.pop("theta_MC_100")
     info_likelihood = lik_info_lowl_highTT
@@ -83,11 +88,12 @@ def test_planck_2015_t_classy(modules):
         best_fit_derived.pop(p, None)
     chi2_lowl_highTT_classy = deepcopy(chi2_lowl_highTT)
     chi2_lowl_highTT_classy["tolerance"] += classy_extra_tolerance
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
-                 chi2_lowl_highTT_classy, best_fit_derived)
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_lowl_highTT_classy, best_fit_derived,
+                 skip_not_installed=skip_not_installed)
 
 
-def test_planck_2015_p_classy(modules):
+def test_planck_2015_p_classy(packages_path, skip_not_installed):
     best_fit = deepcopy(params_lowTEB_highTTTEEE)
     best_fit.pop("theta_MC_100")
     info_likelihood = lik_info_lowTEB_highTTTEEE
@@ -97,11 +103,12 @@ def test_planck_2015_p_classy(modules):
         best_fit_derived.pop(p, None)
     chi2_lowTEB_highTTTEEE_classy = deepcopy(chi2_lowTEB_highTTTEEE)
     chi2_lowTEB_highTTTEEE_classy["tolerance"] += classy_extra_tolerance
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
-                 chi2_lowTEB_highTTTEEE_classy, best_fit_derived)
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_lowTEB_highTTTEEE_classy, best_fit_derived,
+                 skip_not_installed=skip_not_installed)
 
 
-def test_planck_2015_l_classy(modules):
+def test_planck_2015_l_classy(packages_path, skip_not_installed):
     best_fit = deepcopy(params_lensing)
     best_fit.pop("theta_MC_100")
     info_likelihood = lik_info_lensing
@@ -109,8 +116,9 @@ def test_planck_2015_l_classy(modules):
     best_fit_derived = deepcopy(derived_lensing)
     for p in classy_unknown:
         best_fit_derived.pop(p, None)
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
-                 chi2_lensing, best_fit_derived)
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_lensing, best_fit_derived,
+                 skip_not_installed=skip_not_installed)
 
 
 # Temperature only #######################################################################
@@ -155,9 +163,9 @@ derived_lowl_highTT = {
     "omegam": [0.3002, 0.016],
     "sigma8": [0.8610, 0.023],
     "zrei": [13.76, 2.5],
-    "YHe": [0.2454462, 0.0001219630],
-    "Y_p": [0.2467729, 0.0001224069],
-    "DH": [2.568606e-5, 0.05098625e-5],
+    # "YHe": [0.2454462, 0.0001219630],
+    # "Y_p": [0.2467729, 0.0001224069],
+    # "DH": [2.568606e-5, 0.05098625e-5],
     "age": [13.7664, 0.048],
     "zstar": [1089.55, 0.52],
     "rstar": [145.00, 0.55],
@@ -227,9 +235,9 @@ derived_lowTEB_highTTTEEE = {
     "omegam": [0.3156, 0.0091],
     "sigma8": [0.8310, 0.013],
     "zrei": [10.07, 1.6],
-    "YHe": [0.2453409, 0.000072],
-    "Y_p": [0.2466672, 0.000072],
-    "DH": [2.6136e-5, 0.030e-5],
+    # "YHe": [0.2453409, 0.000072],
+    # "Y_p": [0.2466672, 0.000072],
+    # "DH": [2.6136e-5, 0.030e-5],
     "age": [13.8133, 0.026],
     "zstar": [1090.057, 0.30],
     "rstar": [144.556, 0.32],
@@ -270,9 +278,9 @@ derived_lensing = {
     "omegam": [0.3112, 0.0087],
     "sigma8": [0.8153, 0.0087],
     "zrei": [8.64, 1.3],
-    "YHe": [0.245350, 0.000071],
-    "Y_p": [0.246677, 0.000072],
-    "DH": [2.6095e-5, 0.030e-5],
+    # "YHe": [0.245350, 0.000071],
+    # "Y_p": [0.246677, 0.000072],
+    # "DH": [2.6095e-5, 0.030e-5],
     "age": [13.8051, 0.026],
     "zstar": [1089.966, 0.29],
     "rstar": [144.730, 0.31],

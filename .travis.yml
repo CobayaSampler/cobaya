@@ -1,31 +1,30 @@
 language: python
-dist: xenial
-sudo: required
+os: linux
+dist: bionic
 git:
   depth: false
 
 #testing
 env:
   global:
-    - COBAYA_TEST_SKIP=polychord,planck_2015,CamSpec,unbinned
+    - COBAYA_INSTALL_SKIP=polychord,planck_2015,CamSpec,unbinned
 
 #Large CamSpec folders tend to hang, so exclude non-base likelihoods from cache
 cache:
   directories:
-  - /home/travis/build/CosmoPars/modules/code
-  - /home/travis/build/CosmoPars/modules/data/planck_supp_data_and_covmats
-  - /home/travis/build/CosmoPars/modules/data/planck_2018/baseline
-  - /home/travis/build/CosmoPars/modules/data/bicep_keck_2015
-  - /home/travis/build/CosmoPars/modules/data/bao_data
-  - /home/travis/build/CosmoPars/modules/data/sn_data
-  - /home/travis/build/CosmoPars/modules/data/des_data
-  - /home/travis/build/CosmoPars/modules/data/plik_lite
-
+  - /home/travis/build/CosmoPars/packages/code
+  - /home/travis/build/CosmoPars/packages/data/planck_supp_data_and_covmats
+  - /home/travis/build/CosmoPars/packages/data/planck_2018/baseline
+  - /home/travis/build/CosmoPars/packages/data/bicep_keck_2015
+  - /home/travis/build/CosmoPars/packages/data/bao_data
+  - /home/travis/build/CosmoPars/packages/data/sn_data
+  - /home/travis/build/CosmoPars/packages/data/des_data
+  - /home/travis/build/CosmoPars/packages/data/plik_lite
 
 # (Pre)Installation
-matrix:
+jobs:
   include:
-    - name: "Minimum requisites for Cosmology: gcc-6, Python 2.7"
+    - name: "Minimum requisites for Cosmology: gcc-6, Python 3.6"
       addons:
         apt:
           sources:
@@ -36,19 +35,15 @@ matrix:
             - g++-6
       env:
         - GCC_VERSION="6"
-        - PYVER="2"
-      python: "2.7"
+        - PYVER="3"
+      python: "3.6"
     - name: "Typical scenario: latest Ubuntu LTS"
       addons:
         apt:
-          sources:
-            - ubuntu-toolchain-r-test
           packages:
-            - gcc-7
-            - gfortran-7
-            - g++-7
+            - gfortran
       env:
-        - GCC_VERSION="7"
+        - GCC_VERSION="bionic"
         - PYVER="3"
       python: "3.6"
     - name: "Edge scenario: gcc-8, Python 3.7 with Anaconda"
@@ -66,29 +61,31 @@ matrix:
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="defaults"
       python: "3.7"
-    - name: "Bleeding Edge: gcc-9, Python 3.7 Anaconda (conda-forge)"
+    - name: "Bleeding Edge: gcc-10, Python 3.8 Anaconda (conda-forge)"
       addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - gcc-9
-            - gfortran-9
-            - g++-9
+            - gcc-10
+            - gfortran-10
+            - g++-10
       env:
-        - GCC_VERSION="9"
+        - GCC_VERSION="10"
         - PYVER="3"
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="conda-forge"
-      python: "3.7"
+      python: "3.8"
 
 before_install:
   # Configure right compilers version
-  - mkdir -p gcc-symlinks ;
-    ln -s /usr/bin/gfortran-$GCC_VERSION gcc-symlinks/gfortran ;
-    ln -s /usr/bin/gcc-$GCC_VERSION gcc-symlinks/gcc ;
-    ln -s /usr/bin/g++-$GCC_VERSION gcc-symlinks/g++ ;
-    export PATH=$PWD/gcc-symlinks:$PATH ;
+  - if [[ "$GCC_VERSION" != "bionic" ]]; then
+      mkdir -p gcc-symlinks;
+      ln -s /usr/bin/gfortran-$GCC_VERSION gcc-symlinks/gfortran;
+      ln -s /usr/bin/gcc-$GCC_VERSION gcc-symlinks/gcc;
+      ln -s /usr/bin/g++-$GCC_VERSION gcc-symlinks/g++;
+      export PATH=$PWD/gcc-symlinks:$PATH;
+    fi
   - gfortran --version
   # Install rest of system requisites
   - sudo apt install openmpi-bin openmpi-common libopenmpi-dev libopenblas-dev liblapack-dev
@@ -100,44 +97,50 @@ before_install:
       hash -r;
       conda config --set always_yes yes --set changeps1 no;
       conda info -a;
-      conda create -q -n test-environment -c $ANACONDA_CHANNEL python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML pytest pytest-xdist flaky;
+      conda create -q -n test-environment -c $ANACONDA_CHANNEL python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML pytest pytest-forked flaky;
       source activate test-environment;
       pip install mpi4py;
     else
-      pip install mpi4py pytest-xdist flaky matplotlib;
+      pip install mpi4py pytest-forked flaky matplotlib;
     fi
   - python --version
+
 script:
-  - export MODULES="../modules"
+  - export COBAYA_PACKAGES_PATH="../packages"
   # General tests:
-  - cobaya-install polychord --modules=$MODULES
-  - pytest tests/ -k "not cosmo" --modules=$MODULES
+  - cobaya-install polychord --debug
+  - pytest tests/ -k "not cosmo" --skip-not-installed
   # Cosmology tests:
-  - cobaya-install cosmo-tests --modules=$MODULES --no-progress-bars
-  # Python 2 problem: astropy downgrades pytest
-  - if [[ "$PYVER" == "2" ]]; then
-      pip install pytest-xdist --upgrade ;
-    fi
+  - cobaya-install cosmo-tests --no-progress-bars --debug
   - if [ -n "${CAMB_BRANCH}" ]; then
-      rm -rf $MODULES/code/CAMB ;
-      git clone --recursive -b $CAMB_BRANCH https://github.com/cmbant/CAMB $MODULES/code/CAMB ;
-      python $MODULES/code/CAMB/setup.py build ;
+      rm -rf $COBAYA_PACKAGES_PATH/code/CAMB ;
+      git clone --recursive --depth 1 -b $CAMB_BRANCH https://github.com/cmbant/CAMB $COBAYA_PACKAGES_PATH/code/CAMB ;
+      python $COBAYA_PACKAGES_PATH/code/CAMB/setup.py build ;
     fi
-  - pytest tests/ -v -s -k "cosmo" --modules=$MODULES --boxed
+  - pytest tests/ -v -s -k "cosmo" --forked --skip-not-installed
+  # Test external cosmological likelihoods
+  - python $COBAYA_PACKAGES_PATH/code/CAMB/setup.py install
+  - git clone --depth=1 https://github.com/CobayaSampler/planck_lensing_external
+  - pip install ./planck_lensing_external --quiet
+  - python -m unittest plancklensing.tests.test_likes
+  - git clone --depth=1 https://github.com/CobayaSampler/example_external_likelihood
+  - pip install ./example_external_likelihood --quiet
+  - python -m unittest test_package.tests.test
+
 ###############################################################################
 deploy: # only if it builds and if the commit has been tagged
   provider: pypi
-  user: JesusTorrado
+  username: JesusTorrado
   password:
     secure: FVCgqGT0sMJyvlY3sJFBwvO4RycAbWbVyHl4p9CG7XRSSgVOLGy9RZjAJkX8dJjH06fPNdQDYfkkj1PV8I42y0n4uqKkQ9RB63Yq6skbuuzjXLGQK9Xop10/1GDBhMHietDibzl8ZIuJyibdFYsc3rM/j8QcKjOYpDe10jO8K+dZaXsgAvqHk4P3d3ScG1u+X+wr8K6qik21YbTpiILS0LdUxmP4DWQw/7NKGWDX1b7sImRmvQfO20KuPTMu8pPz9ThZyPl6zEPgtKi2sQej5sgDlfim/heYk4W8Bf7bggS8GLseffssL5ru96eNUWT1OSbxnsEFqyyYepngNHPpvifflvtCiFU+3f7rzzcgYqmybhdM4ZEOk0pL5y/NS/rHn/1iW7Cqxs+GfUCbr9fWuBgKmVuDqEfvtSu83U1x6zz9C3R259Oe6n0vXfCGSfJqiHhsW8wuXx+bODyDaMAUn+gRSCLuqJVQzdcYwF2pGFf1WUH5iTQItUHZjYbAIXdnSqDKnvGalNDJdNsF3vwNEdbe8hFqfHMMzG73ZkkLOCjDW+mswIKYJUflxIyOdRqtB+XE056dA+c8Zwc4ktg4iss/O3ZBtUVPmba/ivpyYm7Fk8EUN/zY+24NK4iKk6z543rfx2w+wNXAuQiwgN2f+JshqI8kzTuCxPTgf2N49ME=
   on:
     tags: true
     python: '3.6'
-    condition: "$GCC_VERSION = 7"
+    condition: "$GCC_VERSION != 6"
     branch: master
     repo: CobayaSampler/cobaya
 ###############################################################################
 notifications:
   email:
     recipients:
-      - secure: "C3c7iGtX8VQKNdLCPd1Qo/TFXTFm6n+jWJ9XAvsg3aZiaWJXtEH8sBtwTJ4yXeG/K9Jyslg6Uqrlhn+QQT3HounTSS+zqwYh7KZSdIaRbMZWUL6ohrgFMdHAlM6ZmlYQ2PTzqFiOcwrp/lsOsnjgV4czhNIeowDjdrHOXhQFdnbMhoBh9xy9J9k7+LFEWkEt5a0CZPRT33l9siIxXyXw6eURCEihFx3rwWIs0JIBBSqcfmqPzGV/klHZ6b6S4QXHoe6ad1W7sK3cICvDnBOqz0We2Rn9/juMcbTQtJKC+LuR7LmdzRf6CBcDas/YDMYgK0XQsee+yBBstrKVySRrM1D+2hWdsyC5m7FU6q6Wu8XkPGRh2GexVc20c/+l5dnsEpfvMycihunktjc3hb5Q96tM31TKvV4vABXWoJIzsnnnlsMuI3NVGfYpoOH6ZC+Jb4JvVPsuQAQc1vgMny0vjHg/R/QPvF3n2eH9rWC8hotwT1/j5NzlmwJt8TXYd+CxoGAXSeZq5SzEmnGRRXafl5zEnw6EzuejW9S3LcKWMfOcnwevExFGTWLaoiaahg383dQWURFUaFqHtCbj+UlMtjhvgairH8JO3VWMJIkoq9oe0FpJS7idZ3mWL24NSbUuVQOo2dWnmHeHrByotVJU9CO8qjllIjon7/GuhBz2p2c="
+    - secure: wWS2J0Q413dLa415/iDn/rzwjFjnhCsGogxJeLW64/59NwaXV+spQZvgwfM+dKFt6kEvKZ4yPE+zXOgcpjp5lLSSWoJCaZy3q6rm7qEAEXxJCtH/4yMuLI0nWNxQRqVaOEq7q8e8jppQ/PBIUiqiT3EQlcNqagMReQEhr+M7hKtVnmA4XiFxmrp1H8aWhVvZWPWLPNtafPLX5CA2Ch3CJ09t591N3baZR0yOWwtEDeBZAHjbswTkNCVR6daUmOdbpFFti/Pdj7YmH1WkFTuEqfwuZiRJBrmyOGlARJZ4PybDK6npBXP393W2663TTIx0M4hT98YupWDXhC87WYAICBasySShxt/2lN2wqseHQlnfzPzmurZpim9choX5iDd/TTPyvhBk/xxT5G6RCeq2/vWwwWa4Owe20T2ep+8pYl0x9sNZyS+C67MOWsIs66dWEPxS4fOgsb6lBST9A8pv2Mfr5DHW8OLGAiIXI9mkeOqZkxlTxywQ5kKAO8hPkmzI7TrGH5drMkJDMqdGZSVC0f7y82RfQFLiv5aQp/xFkZKW7FzMi8DYBHJLfelpszfzyCeibQxQR7aPk6r6UbZhMw9Bd9KVpOV9Ag3EZ44MuVIDxA688cmdka4Swjw2VMWhTYQNGF1mB5WfsgtXfzpA8st7YZZJaysy+iXeoPML+is=

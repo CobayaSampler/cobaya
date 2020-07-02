@@ -1,9 +1,7 @@
-likelihood:
-  bao.generic:
-    measurements_file: /full/path/to/myBAO.dat
-    cov_file: /full/path/to/myBAO.cov
-    # Fiducial sound horizon with which data have been stored
-    rs_fid:  #  in Mpc
-    # Speed in evaluations/second
-    # -- may have to change depending on data used!!!
-    speed: 2500
+measurements_file: /full/path/to/myBAO.dat
+cov_file: /full/path/to/myBAO.cov
+# Fiducial sound horizon with which data have been stored
+rs_fid:  #  in Mpc
+# Speed in evaluations/second
+# -- may have to change depending on data used!!!
+speed: 2500

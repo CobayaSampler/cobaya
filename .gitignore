@@ -11,6 +11,7 @@
 *.egg-info/
 build/
 dist/
+__pycache__
 
 # Documentation
 docs/_*

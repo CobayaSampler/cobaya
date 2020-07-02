@@ -1,14 +1,12 @@
 # Planck 2015 release: low-ell, CMB temperature+polarization likelihood
 # See https://wiki.cosmos.esa.int/planckpla2015/index.php/CMB_spectrum_%26_Likelihood_Code
 
-likelihood:
-  planck_2015_lowTEB:
-    path:
-    clik_file: plc_2.0/low_l/bflike/lowl_SMW_70_dx11d_2014_10_03_v5c_Ap.clik
-    product_id: "1900"
-    # Aliases for automatic covariance matrix
-    renames: [lowTEB]
-    # Speed in evaluations/second
-    speed: 4
+path:
+clik_file: plc_2.0/low_l/bflike/lowl_SMW_70_dx11d_2014_10_03_v5c_Ap.clik
+product_id: "1900"
+# Aliases for automatic covariance matrix
+aliases: [lowTEB]
+# Speed in evaluations/second
+speed: 4
 
 params: !defaults [../planck_2015_plikHM_TT/params_calib_2015]

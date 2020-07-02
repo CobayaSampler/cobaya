@@ -4,20 +4,27 @@ Installing cobaya
 Pre-requisites
 --------------
 
-The only pre-requisites are **Python** (version ≥ 2.7 or ≥ 3.6) and the Python package manager **pip** (external modules may have additional dependencies).
-
-To check if you have Python installed, type ``python --version`` in the shell, and you should get ``Python 2.7.[whatever]`` or ``Python 3.6.[whatever]``. Then, type ``pip`` in the shell, and if you get usage instructions instead of a ``command not found`` message, you are golden. If you don't have any of those two installed, use your system's package manager or contact your local IT service.
+The only pre-requisites are **Python** (version ≥ 3.6) and the Python package manager **pip** (version ≥ 20.0).
 
 .. warning::
 
-   Python 2 support will eventually be dropped (it is already unsupported by many scientific Python modules). Please use Python 3.
+   Python 2 is no longer supported. Please use Python 3.
 
-   In some systems, the Python 3 command may be ``python3`` instead of ``python``. If that is the case, use ``pip3`` instead of ``pip`` in all the instructions below.
+   In some systems, the Python 3 command may be ``python3`` instead of ``python``. In this documentation, the shell command ``python`` always means Python 3.
 
+To check if you have Python installed, type ``python --version`` in the shell, and you should get ``Python 3.[whatever]``. Then, type ``python -m pip --version`` in the shell, and see if you get a proper version line starting with ``pip 20.0.0 [...]``. If an older version is shown, please update pip with ``python -m pip install pip --upgrade``. If either Python 3 is not installed, or the ``pip`` version check produces a ``no module named pip`` error, use your system's package manager or contact your local IT service.
 
 .. warning::
 
-   If any of the ``pip install`` commands below fails (most likely with an ``[Errno 13] Permission denied``), add a ``--user`` flag at the end of the command.
+   If any of the ``python -m pip install`` commands below fails (most likely with an ``[Errno 13] Permission denied``), add a ``--user`` flag at the end of the command.
+
+.. note::
+
+   In the following, commands to be run in the shell are displayed here with a leading ``$``. You do not have to type it.
+
+.. note::
+
+   Some of cobaya components (likelihood, Boltzmann codes, samplers) consist only of an interface to some external code or data that will need to be installed separately (see :doc:`installation_cosmo`).
 
 
 .. _install_mpi:
@@ -35,7 +42,7 @@ Second, you need to install the Python wrapper for MPI, ``mpi4py``, with version
 
 .. code:: bash
 
-   $ pip install "mpi4py>=3" --upgrade --no-binary :all:
+   $ python -m pip install "mpi4py>=3" --upgrade --no-binary :all:
 
 .. note::
 
@@ -43,7 +50,7 @@ Second, you need to install the Python wrapper for MPI, ``mpi4py``, with version
 
    .. code:: bash
 
-      conda install -c [repo] mpi4py
+      $ conda install -c [repo] mpi4py
 
    where ``[repo]`` must be either ``conda-forge`` (if you are using GNU compilers) or ``intel``.
 
@@ -63,18 +70,19 @@ This should print the version of ``mpi4py``, e.g. ``3.0.0``. If it prints a vers
 Installing and updating cobaya
 ------------------------------
 
-To install **cobaya** or upgrade it to the last release, simply type in a terminal
+To install **cobaya** or upgrade it to the latest release, simply type in a terminal
 
 .. code:: bash
 
-   $ pip install cobaya --upgrade
+   $ python -m pip install cobaya[gui] --upgrade
 
+For a **cluster** install, you may want to remove the ``[gui]`` to avoid errors due to non-essential dependencies.
 
-To go on installing **cosmological modules**, see :doc:`installation_cosmo`.
+To go on installing **cosmological requisites**, see :doc:`installation_cosmo`.
 
 .. warning::
 
-   In general, use ``pip`` (or ``conda``) **instead of cloning directly from the github repo**: there is where development happens, and you may find bugs and features just half-finished.
+   In general, use ``python -m pip`` (or ``conda``) **instead of cloning directly from the github repo**: there is where development happens, and you may find bugs and features just half-finished.
 
    Unless, of course, that you want to help us develop **cobaya**. In that case, take a look at :ref:`install_devel`.
 
@@ -98,17 +106,17 @@ If you get an error message, something went wrong. Check twice the instructions 
 
    If you do get a ``command not found`` error, this means that the folder where your local scripts are installed has not been added to your path.
 
-   To solve this, look for the ``cobaya-run`` script from your ``home`` and ``scratch`` folders with
+   To solve this on unix-based machines, look for the ``cobaya-run`` script from your ``home`` and ``scratch`` folders with
 
    .. code-block:: bash
 
       $ find `pwd` -iname cobaya-run -printf %h\\n
 
-   This should print the location of the script, say ``/home/you/.local/bin``. Add
+   This should print the location of the script, e.g. ``/home/you/.local/bin``. Add
 
    .. code-block:: bash
 
-      $ export PATH=$PATH:"/home/you/.local/bin"
+      $ export PATH="/home/you/.local/bin":$PATH
 
    at the end of your ``~/.bashrc`` file, and restart the terminal or do ``source ~/.bashrc``. Alternatively, simply add that line to your cluster scripts just before calling ``cobaya-run``.
 
@@ -120,15 +128,15 @@ Simply do, from anywhere
 
 .. code-block:: bash
 
-   $ pip uninstall cobaya
+   $ python -m pip uninstall cobaya
 
 .. note::
 
    If you installed **cobaya** in *development mode* (see below), you will also have to delete its folder manually, as well as the scripts installed in the local ``bin`` folder (see note above about how to find it).
 
 
-Troubleshooting
----------------
+Installation troubleshooting
+----------------------------
 
 .. note::
 
@@ -142,7 +150,7 @@ Low performance: install OpenBLAS (or MKL)
 
 BLAS is a collection of algorithms for linear algebra computations. There will most likely be a BLAS library installed already in your system. It is recommended to make sure that it is an efficient one, preferably the highly-optimized OpenBLAS or MKL.
 
-To check whether ``numpy`` is actually using OpenBLAS or MKL, do
+Conda installations should include BLAS by default. On other installations check whether ``numpy`` is actually using OpenBLAS or MKL, do
 
 .. code:: bash
 
@@ -176,7 +184,7 @@ Use this method if you want to make modifications to the code, either for yourse
 
 .. note::
 
-   Notice that you don't need to modify **cobaya**'s source to use your own priors, likelihoods, etc. Take a look at the documentation of the modules that you would like to modify to check if can do that in an easier way.
+   Notice that you don't need to modify **cobaya**'s source to use your own priors, likelihoods, etc. Take a look at the documentation of the components that you would like to modify to check if can do that in an easier way.
 
 
 .. _install_devel:
@@ -191,16 +199,16 @@ The recommended way is to get a `GitHub <https://github.com>`_ user and `fork th
 .. code:: bash
 
    $ git clone https://YOUR_USERNAME@github.com/YOUR_USERNAME/cobaya.git
-   $ pip install --editable cobaya[test] --upgrade
+   $ python -m pip install --editable cobaya[test,gui] --upgrade
 
-(add the --user option if you don't have write access to the default pip installation location). Here ``cobaya[test]`` should include the square brackets.
+(add the --user option if you don't have write access to the default pip installation location). Here ``cobaya[test,gui]`` should include the square brackets. Remove ``,gui`` if desired to avoid unnecessary dependencies.
 
 Alternatively, you can clone from the official **cobaya** repo (but this way you won't be able to upload your changes!).
 
 .. code:: bash
 
    $ git clone https://github.com/CobayaSampler/cobaya.git
-   $ pip install --editable cobaya[test] --upgrade
+   $ python -m pip install --editable cobaya[test,gui] --upgrade
 
 In any of both cases, this puts you in the last commit of **cobaya**, and install the requisites for both running and testing (to ignore the testing requisites, remove ``[test]`` from the commands above). If you want to start from the last release, say version 1.0, do, from the cobaya folder,
 
@@ -223,6 +231,6 @@ Download the latest release (the one on top) from **cobaya**'s `GitHub Releases 
 .. code-block:: bash
 
    $ cd /path/to/cobaya/
-   $ pip install --editable cobaya
+   $ python -m pip install --editable cobaya
 
 Finally, take a look at :ref:`install_check`.

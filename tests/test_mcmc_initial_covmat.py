@@ -7,11 +7,9 @@ import os
 import numpy as np
 from itertools import chain
 from random import shuffle
-from collections import OrderedDict as odict
 
 from cobaya.likelihoods.gaussian_mixture import random_cov
-from cobaya.conventions import _likelihood, _prior, _sampler, _params
-from cobaya.conventions import _p_ref, _p_proposal, _p_dist
+from cobaya.conventions import kinds, partag,_prior, _params
 from cobaya.run import run
 
 
@@ -46,33 +44,33 @@ def body_of_test(dim, tmpdir=None):
     prefix = "a_"
     input_order = list(range(dim))
     shuffle(input_order)
-    info = {_likelihood: {"one": None}, _params: odict()}
+    info = {kinds.likelihood: {"one": None}, _params: {}}
     for i in input_order:
         p = prefix + str(i)
-        info[_params][p] = {_prior: {_p_dist: "norm", "loc": 0, "scale": 1000}}
+        info[_params][p] = {_prior: {partag.dist: "norm", "loc": 0, "scale": 1000}}
         sigma = np.sqrt(initial_random_covmat[i, i])
         if i in i_proposal:
-            info[_params][p][_p_proposal] = sigma
+            info[_params][p][partag.proposal] = sigma
         elif i in i_ref:
-            info[_params][prefix + str(i)][_p_ref] = {_p_dist: "norm", "scale": sigma}
+            info[_params][prefix + str(i)][partag.ref] = {partag.dist: "norm", "scale": sigma}
         elif i in i_prior:
             info[_params][prefix + str(i)][_prior]["scale"] = sigma
     reduced_covmat = initial_random_covmat[np.ix_(i_covmat, i_covmat)]
     reduced_covmat_params = [prefix + str(i) for i in i_covmat]
-    info[_sampler] = {"mcmc": {}}
+    info[kinds.sampler] = {"mcmc": {}}
     if tmpdir:
         filename = os.path.join(str(tmpdir), "mycovmat.dat")
         header = " ".join(reduced_covmat_params)
         np.savetxt(filename, reduced_covmat, header=header)
-        info[_sampler]["mcmc"]["covmat"] = str(filename)
+        info[kinds.sampler]["mcmc"]["covmat"] = str(filename)
     else:
-        info[_sampler]["mcmc"]["covmat_params"] = reduced_covmat_params
-        info[_sampler]["mcmc"]["covmat"] = reduced_covmat
+        info[kinds.sampler]["mcmc"]["covmat_params"] = reduced_covmat_params
+        info[kinds.sampler]["mcmc"]["covmat"] = reduced_covmat
     to_compare = initial_random_covmat[np.ix_(input_order, input_order)]
 
     def callback(sampler):
         assert np.allclose(to_compare, sampler.proposer.get_covariance())
 
-    info[_sampler]["mcmc"].update({
+    info[kinds.sampler]["mcmc"].update({
         "callback_function": callback, "callback_every": 1, "max_samples": 1, "burn_in": 0})
     updated_info, products = run(info)

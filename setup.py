@@ -1,7 +1,6 @@
 # Always prefer setuptools over distutils
 from setuptools import setup, find_packages
 # To use a consistent encoding
-from codecs import open
 from os import path
 from itertools import chain
 # Package data and conventions
@@ -23,9 +22,14 @@ def get_long_description():
 setup(
     name='cobaya',
     version=__version__,
-    description='Bayesian Analysis in Cosmology',
+    description='Code for Bayesian Analysis',
     long_description=get_long_description(),
     url=__url__,
+    project_urls={
+        'Source': 'https://github.com/CobayaSampler/cobaya',
+        'Tracker': 'https://github.com/CobayaSampler/cobaya/issues',
+        'Licensing': 'https://github.com/CobayaSampler/cobaya/blob/master/LICENCE.txt'
+    },
     author=__author__,
     license='LGPL',
     zip_safe=False,
@@ -36,18 +40,19 @@ setup(
         'Intended Audience :: Science/Research',
         'Topic :: Scientific/Engineering :: Astronomy',
         'License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7'
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8'
     ],
-    python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*',
-    keywords='montecarlo sampling cosmology',
+    python_requires='>=3.6.1',
+    keywords='montecarlo sampling MCMC cosmology',
     packages=find_packages(exclude=['docs', 'tests']),
-    install_requires=['numpy>=1.12.0', 'scipy >= 1.0', 'pandas>=0.20',
-                      'PyYAML>=5.1', 'wget>=3.2', 'imageio>=2.2.0', 'py-bobyqa>=1.1',
-                      'GetDist>=0.3.3', 'fuzzywuzzy>=0.17'],
+    install_requires=['numpy>=1.12.0', 'scipy>=1.0', 'pandas>=1.0.1',
+                      'PyYAML>=5.1', 'requests>=2.18', 'py-bobyqa>=1.1',
+                      'GetDist>=1.1.1', 'fuzzywuzzy>=0.17', 'packaging'],
     extras_require={
-        'test': ['pytest', 'pytest-xdist', 'flaky', 'mpi4py']},
+        'test': ['pytest', 'pytest-forked', 'flaky', 'mpi4py'],
+        'gui': ['pyqt5', 'pyside2']},
     package_data={
         'cobaya': list(chain(*[['%s/*/*.yaml' % folder, '%s/*/*.bibtex' % folder]
                                for folder in subfolders.values()]))},
@@ -58,10 +63,10 @@ setup(
             'cobaya-prepare-data=cobaya.containers:prepare_data_script',
             'cobaya-run=cobaya.run:run_script',
             'cobaya-doc=cobaya.doc:doc_script',
-            'cobaya-citation=cobaya.citation:citation_script',  # to be deprecated!
             'cobaya-bib=cobaya.bib:bib_script',
-            'cobaya-grid-create=cobaya.grid_tools:MakeGridScript',
+            'cobaya-grid-create=cobaya.grid_tools:make_grid_script',
             'cobaya-grid-run=cobaya.grid_tools.runbatch:run',
+            'cobaya-run-job=cobaya.grid_tools.runMPI:run_single',
             'cobaya-cosmo-generator=cobaya.cosmo_input:gui_script',
         ],
     },

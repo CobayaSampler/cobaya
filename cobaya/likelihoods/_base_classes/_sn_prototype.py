@@ -101,9 +101,7 @@ After this, mention the path to this likelihood when you include it in an input 
 #   AL, March 2018: this python version
 
 # Global
-from __future__ import division, print_function
 import numpy as np
-import io
 import os
 
 # Local
@@ -113,7 +111,11 @@ from cobaya.likelihoods._base_classes import _DataSetLikelihood
 _twopi = 2 * np.pi
 
 
+# noinspection PyUnresolvedReferences
 class _sn_prototype(_DataSetLikelihood):
+    # Data type for aggregated chi2 (case sensitive)
+    type = "SN"
+
     install_options = {"github_repository": "CobayaSampler/sn_data", "github_release": "v1.3"}
 
     def init_params(self, ini):
@@ -122,18 +124,18 @@ class _sn_prototype(_DataSetLikelihood):
         if self.twoscriptmfit:
             scriptmcut = ini.float('scriptmcut', 10.)
         assert not ini.float('intrinsicdisp', 0) and not ini.float('intrinsicdisp0', 0)
-        if hasattr(self, "alpha_beta_names"):
+        if getattr(self, "alpha_beta_names", None) is not None:
             self.alpha_name = self.alpha_beta_names[0]
             self.beta_name = self.alpha_beta_names[1]
         self.pecz = ini.float('pecz', 0.001)
         cols = None
         self.has_third_var = False
-        data_file = os.path.join(self.path, ini.string("data_file"))
+        data_file = os.path.normpath(os.path.join(self.path, ini.string("data_file")))
         self.log.debug('Reading %s' % data_file)
         supernovae = {}
         self.names = []
         ix = 0
-        with io.open(data_file, 'r') as f:
+        with open(data_file, 'r') as f:
             lines = f.readlines()
             for line in lines:
                 if '#' in line:
@@ -239,9 +241,9 @@ class _sn_prototype(_DataSetLikelihood):
         elif not self.alphabeta_covmat:
             self.inverse_covariance_matrix()
 
-    def add_theory(self):
+    def get_requirements(self):
         # State requisites to the theory code
-        self.theory.needs(**{"angular_diameter_distance": {"z": self.zcmb}})
+        return {"angular_diameter_distance": {"z": self.zcmb}}
 
     def _read_covmat(self, filename):
         cov = np.loadtxt(filename)
@@ -328,7 +330,7 @@ class _sn_prototype(_DataSetLikelihood):
         return - chi2 / 2
 
     def logp(self, **params_values):
-        angular_diameter_distances = self.theory.get_angular_diameter_distance(self.zcmb)
+        angular_diameter_distances = self.provider.get_angular_diameter_distance(self.zcmb)
         lumdists = (5 * np.log10((1 + self.zhel) * (1 + self.zcmb) *
                                  angular_diameter_distances))
         if self.marginalize:

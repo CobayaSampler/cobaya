@@ -1,3 +1,14 @@
+theory:
+  camb:
+    extra_args:
+      halofit_version: mead
+      bbn_predictor: PArthENoPE_880.2_standard.dat
+      lens_potential_accuracy: 1
+      num_massive_neutrinos: 1
+      nnu: 3.046
+      theta_H0_range:
+      - 20
+      - 100
 likelihood:
   planck_2018_lowl.TT: null
   planck_2018_lowl.EE: null
@@ -115,24 +126,9 @@ params:
     latex: '{\rm{Age}}/\mathrm{Gyr}'
   rdrag:
     latex: r_\mathrm{drag}
-  chi2__CMB:
-    derived: 'lambda chi2__planck_2018_lowl_TT, chi2__planck_2018_lowl_EE, chi2__planck_2018_highl_plik_TTTEEE,
-      chi2__planck_2018_lensing_clik: sum([chi2__planck_2018_lowl_TT, chi2__planck_2018_lowl_EE,
-      chi2__planck_2018_highl_plik_TTTEEE, chi2__planck_2018_lensing_clik])'
-    latex: \chi^2_\mathrm{CMB}
 sampler:
   mcmc:
     covmat: auto
     drag: true
+    oversample_power: 0.4
     proposal_scale: 1.9
-theory:
-  camb:
-    extra_args:
-      halofit_version: mead
-      bbn_predictor: PArthENoPE_880.2_standard.dat
-      lens_potential_accuracy: 1
-      num_massive_neutrinos: 1
-      nnu: 3.046
-      theta_H0_range:
-      - 20
-      - 100

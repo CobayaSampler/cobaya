@@ -1,15 +1,20 @@
-from __future__ import division, absolute_import, print_function
 import sys
 import os
 from contextlib import contextmanager
 
 
-def process_modules_path(modules):
-    if not modules:
-        if os.path.exists(os.path.join(os.getcwd(), '..', 'modules')):
-            modules = os.path.join('..', 'modules')
-    assert modules, "I need a modules folder!"
-    return modules if os.path.isabs(modules) else os.path.join(os.getcwd(), modules)
+def is_travis():
+    return os.environ.get('TRAVIS') == 'true'
+
+
+def process_packages_path(packages_path):
+    packages_path = os.getenv('COBAYA_FORCE_PACKAGES_PATH', packages_path)
+    if not packages_path:
+        if os.path.exists(os.path.join(os.getcwd(), '..', 'packages_path')):
+            packages_path = os.path.join('..', 'packages_path')
+    assert packages_path, "I need a packages folder!"
+    return (packages_path if os.path.isabs(packages_path)
+            else os.path.join(os.getcwd(), packages_path))
 
 
 @contextmanager

@@ -12,7 +12,7 @@ Table of contents
    example_advanced
 
 .. toctree::
-   :caption: General topics and modules
+   :caption: General topics and components
    :maxdepth: 1
 
    input
@@ -22,6 +22,7 @@ Table of contents
    likelihood_one
    likelihood_gaussian_mixture
    theory
+   theories_and_dependencies
    sampler
    sampler_evaluate
    sampler_mcmc
@@ -39,6 +40,7 @@ Table of contents
    cosmo_troubleshooting
    cosmo_model
    cosmo_external_likelihood
+   cosmo_external_likelihood_class
 
 .. toctree::
    :caption: Cosmological theory codes
@@ -69,7 +71,8 @@ Table of contents
    :maxdepth: 1
 
    devel
-
+   component
+   inheritance
 
 Indices and tables
 ==================

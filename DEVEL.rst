@@ -7,11 +7,10 @@ This document gathers some notes about the development flow, release checklist, 
 ``git`` development model
 -------------------------
 
-We (*tend to*) use the model described `here <https://barro.github.io/2016/02/a-succesful-git-branching-model-considered-harmful/>`_:
-
-* Development happens in the master branch (only exceptionally are features developed in their own branches).
+* Non-breaking travis-passing latest changes and fixes are in master
+* Development that may break tests is done in temp branches or forks and merged to master once OK
+* Breaking changes developed in separate branches, and merged when releases updated
 * Releases are branched out, and only critical bug fixes are pushed onto them.
-
 
 Development flow for contributors
 ---------------------------------
@@ -23,7 +22,7 @@ Development flow for contributors
 1. Fork and clone the repo from github.
 2. From its folder, install in editable mode: ``pip install -e . --user``
 3. Modify stuff.
-4. Test with pytest.
+4. Test with pytest
 5. Pull requests, etc.
 
 Contributors must agree to the license (see ``LICENCE.txt`` in the root folder).
@@ -32,13 +31,13 @@ Contributors must agree to the license (see ``LICENCE.txt`` in the root folder).
 Release checklist
 -----------------
 
-+ Make sure all test pass in Travis (or the package won't be pushed to PyPI).
++ Make sure all tests pass in Travis (or the package won't be pushed to PyPI).
 + Make sure everything relevant has been added to the Changelog.
 + Delete old deprecation notices (>=2 versions before)
 + Bump version number in ``__init__.py`` and ``CHANGELOG.md`` (also date)
 + If archived version:
   - make ``__obsolete__ = True`` in ``__init__.py``
-  - Fix CAMB's version to latest relase (right now, it installs ``master`` by default)
+  - Fix CAMB's version to latest release (right now, it installs ``master`` by default)
 + Update year of copyright in ``__init__.py``.
 + Update year of copyright in ``LICENCE.txt``.
 + Commit + tag with new version + ``git push`` + ``git push --tags``
@@ -72,10 +71,10 @@ Parameter roles
 
 Parameters have different roles with respect to different parts of the code:
 
-- The :class:`sampler.Sampler` cares about whether parameters are **fixed** (thus irrelevant), **sampled** over, or **derived** from sampled and fixed parameters. The :class:`prior.Prior` cares about **sampled** parameters only.
-- The :class:`likelihood.Likelihood` and the :class:`theory.Theory` care about whether parameters are to be taken as **input**, or are expected to be part of their **output**.
+- The :class:`~.sampler.Sampler` cares about whether parameters are **fixed** (thus irrelevant), **sampled** over, or **derived** from sampled and fixed parameters. The :class:`.~prior.Prior` cares about **sampled** parameters only.
+- The :class:`~.likelihood.Likelihood` and the :class:`~.theory.Theory` care about whether parameters are to be taken as **input**, or are expected to be part of their **output**.
 
-The :class:`parameterization.Parameterization` class (see diagram) takes care of interfacing between these two sets of roles, which, as it can be seen below, is sometimes not as simple as ``sampled + fixed = input``, and ``derived = output``.
+The :class:`~.parameterization.Parameterization` class (see diagram) takes care of interfacing between these two sets of roles, which, as it can be seen below, is sometimes not as simple as ``sampled + fixed = input``, and ``derived = output``.
 
 .. warning::
 
@@ -85,7 +84,7 @@ The :class:`parameterization.Parameterization` class (see diagram) takes care of
 How likelihoods and theory decide which input/output parameters go where
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-Once the :class:`parameterization.Parameterization` has decided which are the **input** and **output** parameters, the :class:`likelihood.LikelihoodCollection` needs to decide how to distribute them between the likelihoods.
+Once the :class:`.~parameterization.Parameterization` has decided which are the **input** and **output** parameters, the :class:`.~model.Model` needs to decide how to distribute them between the likelihood and theory components.
 
 The simplest way to do that would be tagging each parameter with its corresponding likelihood(s) or theory, but this would make the input much more verbose and does not add much. Alternatively we could hard-code parameter routes for known parameters (e.g. for cosmological models), but hard-coding parameter names impose having to edit Cobaya's source if we want to modify a theory code or likelihood to add a new parameter, and we definitely want to avoid people having to edit Cobaya's source (maintainability, easier support, etc).
 
@@ -101,7 +100,7 @@ So, in order not to have tag parameters or hard-code their routes, the only opti
 
 .. note::
 
-   For callable (*external*) likelihoods, output parameters cannot be simple **keyword** arguments, since in Python parameter values (``float``'s) are *immutable*: they are passed by value, not by reference, so their value cannot be *modified back*. Thus, we interface them via a dictionary passed through a ``_output`` keyword argument. Since dictionaries are *mutable* objects, when their contents are modified the modifications are permanent, which makes a natural way of dealing with derived parameters on the same ground as sampled parameters. At function definition, we assign this keyword argument a list of possible keys, which we can get, via *introspection*, as the list of output parameters understood by that likelihood. 
+   For callable (*external*) likelihood functions, output parameters cannot be simple **keyword** arguments, since in Python parameter values (``float``'s) are *immutable*: they are passed by value, not by reference, so their value cannot be *modified back*. Thus, we interface them via a dictionary passed through a ``_derived`` keyword argument. Since dictionaries are *mutable* objects, when their contents are modified the modifications are permanent, which makes a natural way of dealing with derived parameters on the same ground as sampled parameters. At function definition, we assign this keyword argument a list of possible keys, which we can get, via *introspection*, as the list of output parameters understood by that likelihood.
 
 We should also take into account the following:
 
@@ -112,59 +111,31 @@ We should also take into account the following:
 
 To implement these behaviours, we have taken the following design choices:
 
-- Two parameters with the same name are considered by default to be the same parameter. Thus, when defining custom likelihoods or creating new interfaces for external likelihoods, use preferably non-trivial names, e.g. instead of ``A``, use ``amplitude``, or even better, ``amplitude_of_something``. (The case of two likelihoods naming two *different* parameter the same is still an open problem: we could defined two parameters prefixed with the name of the likelihood, and have the :class:`likelihood.LikelihoodCollection` deal with those cases; or we could define some dynamical renaming.)
-- If a likelihood or theory does not specify a parameter set/criterion and it is not the only element in the collection, we pass it only the parameters which have *not been claimed* by any other element.
-- Theory codes are special in the sense that they may understand a very large number of input/output parameters, so they will often be the "no knowledge" kind. On the other hand, they should **not** share parameters with the likelihoods: if the likelihoods do depend on any theoretical model parameter, they should request it via the same interface the theory-computed observables are, so that the parameterization of the theoretical model can be changed without changing the parameterization of the likelihoods (e.g. a SN likelihood may require the Hubble constant today, but if it where an input parameter of the likelihood, it would be more complicated to choose an alternative parameterization for the theoretical model e.g. some standard ruler plus some matter content).
-- Since theories an likelihoods do not share parameters, we choose that when theories mark parameters for themselves, they **absorb** them, so that they are ignored by all other parts of the code.
-- Given the ambiguity between input and output roles for particular parameters, *internal* likelihoods that would keep a list known parameters can do so in two ways:
+- Two parameters with the same name are considered by default to be the same parameter. Thus, when defining custom likelihoods or creating new interfaces for external likelihoods, use preferably non-trivial names, e.g. instead of ``A``, use ``amplitude``, or even better, ``amplitude_of_something``. (The case of two likelihoods naming two *different* parameter the same is still an open problem: we could defined two parameters prefixed with the name of the likelihood, and have the :class:`model.Model` deal with those cases; or we could define some dynamical renaming.)
+- If a likelihood or theory (with method ``get_allow_agnostic()`` returning True) does not specify a parameter set/criterion and it is not the only element in the collection, we pass it only the parameters which have *not been claimed* by any other element.
+- Cosmology theory codes may understand a very large number of input/output parameters. These can be
+  obtained by from the code by internal introspection or they will often be the "no knowledge" (agnostic) kind. On the other hand, they should **not** usually share parameters with the likelihoods: if the likelihoods do depend on any theoretical model parameter, they should request it via the same interface the theory-computed observables are, so that the parameterization of the theoretical model can be changed without changing the parameterization of the likelihoods (e.g. an H_0 likelihood may require the Hubble constant today, but if it where an input parameter of the likelihood, it would be more complicated to choose an alternative parameterization for the theoretical model e.g. some standard ruler plus some matter content).
+- Given the ambiguity between input and output roles for particular parameters, likelihood and theory classes that keep a list known parameters can do so in two ways:
 
-  + The preferred one: a common list of all possible parameters in a ``params`` block in the defaults file; but **outside** the defaults block, so that it can be copied literally into an input file. There, parameters would appear with their **default** role. This has the advantage that priors, labels, etc can be inherited at initialisation from these definitions (though the definitions in the user-provided input file would take precedence). If there is a conflict between the priors (or fixed value, or derived state) for *the same parameter* defined in different defaults files of likelihoods that share it, an error will be produced (unless the user settles the conflict by specifying the desired behaviour for said parameter in the input file).
+  + The preferred one: a common list of all possible parameters in a ``params`` block in the defaults file. There, parameters would appear with their **default** role. This has the advantage that priors, labels, etc can be inherited at initialisation from these definitions (though the definitions in the user-provided input file would take precedence). If there is a conflict between the priors (or fixed value, or derived state) for *the same parameter* defined in different defaults files of likelihoods that share it, an error will be produced (unless the user settles the conflict by specifying the desired behaviour for said parameter in the input file).
   + Alternatively (and preferred when there is a conflict), they could keep two lists: one of input and one of output parameters.
+  + If the parameters used depend on input options, or have to be obtained from internal introspection, the supported parameters must be returned programmatically from the ``get_can_support_params`` class method.
 
 - It may be that the likelihood does not depend on (i.e. has constraining power over) a particular parameter(s). In that case, we still throw an error if some input parameter has not been recognised by any likelihood, since parameter names may have been misspelled somewhere, and it is easier to define a mock likelihood to absorb the unused ones than maybe finding a warning about unused parameters (or use the unit likelihood described below).
 - Some times we are not interested in the likelihood, because we want to explore just the prior, or the distribution the prior induces on a derived parameter. In those cases, we would need a mock unit likelihood. This unit likelihood would automatically recognise all input parameters (except those absorbed by the theory, if a theory is needed to compute derived parameters).
-- For external likelihoods, where we can get input and output parameters via introspection, we may not want to use all of the input ones, as stated above, since they may have a fixed default value as keyword arguments. This would be treated as a special case of having a list of input parameters.
+- For external likelihood functions, where we can get input and output parameters via introspection, we may not want to use all of the input ones, as stated above, since they may have a fixed default value as keyword arguments. This would be treated as a special case of having a list of input parameters.
 
-Given these principles, we implement the following algorithm to resolve input/output parameter dependencies: (in the following, "likelihoods" include the theory code)
+Given these principles, we implement the following algorithm to resolve input/output parameter dependencies: (in the following, components include theory and likelihood codes)
 
-0. Start with a dictionary of input parameters as keys, and another one for output parameters. The values will be a list of the likelihoods that depend on each parameter.
-1. Iterate over likelihoods that have knowledge of their own parameters, either because they are *callable*, or because they have input/output parameters lists, a prefix, or a mixed ``params`` list, *in that order of priority*. Add them to the lists in the initial parameters dictionaries if applicable.
-2. Deal with the case (check that it is only one) of a likelihood with no parameters declared, and assign it all unclaimed parameters.
-3. Check that, if a theory code is present, it does not share parameters with anyone else.
-4. If the unit likelihood is present, assign it all input parameters (except those absorbed by the theory code).
-5. Check that there are no unclaimed input/output parameters, and no output parameters with more than one claim.
+0. Start with a dictionary of input parameters as keys, and another one for output parameters. The values will be a list of the component that depend on each parameter.
+1. Iterate over components that have knowledge of their own parameters, either because they are *callable*, or because they have input/output parameters lists, a prefix, a mixed ``params`` list, or ``get_can_provide_params()`` or ``get_requirements()``, *in that order of priority*. Add them to the lists in the initial parameters dictionaries if applicable.
+2. Deal with the case (check that it is only one) of a component with ``get_allow_agnostic()`` returning true, and assign it all unclaimed parameters.
+3. If the unit likelihood is present, assign it all input parameters (if not already used by component with ``get_allow_agnostic()`` ).
+4. Check that there are no unclaimed input/output parameters, and no output parameters with more than one claim.
 
-Whether this algorithm runs before of after the initialisation of the likelihoods depends on whether likelihoods do have knowledge about their parameters before being initialised or not. They do not in the case of callable (*external*) likelihoods, so we would prefer to initialise the likelihoods before assigning them parameters. But, on the other hand, some likelihood may perform checks on the parameters assigned at initialisation. This leaves us with two options:
-
-a) Initialise callable likelihoods first, then assign parameters, and finally initialise the rest.
-b) Initialise all likelihoods but without performing any test on parameters, then assign parameters, and finally call a "post-initialisation" method that does the parameter checks.
-
-Option (a) is a little more complex from the coding point of view, whereas option (b) makes the interfaces to the likelihoods a little more complicated. Since this implementation does not affect the API much (just when creating new likelihoods), it does not matter too much. We pick option (b) and define an optional post-``__init__`` :meth:`likelihood.Likelihood.initialize` method for *internal* likelihoods, to be called after parameter assignment. If, in the future, there are *internal* likelihoods that need some initialisation to determine its known parameters in some dynamical way (other than having a list of input/output/mixed parameters), we can redefine their ``__init__``, making sure that we call that of the parent class first of all with a ``super``.
+This algorithm runs after ``initialize`` of the components is called, but before ``initialize_with_params``.
 
 After parameters have been assigned, we save the assignments in the updated (*full*) info using the unambiguous "input/output lists" option, for future use by e.g. post-processing: during post-processing, unused likelihoods are not initialised, in case they do not exist any more (e.g. an external function), but we still need to know on which parameters it depended.
-
-
-Special considerations for output parameters
-""""""""""""""""""""""""""""""""""""""""""""
-
-Computing output parameters may be expensive, and we won't need them for samples that are not going to be stored (e.g. they are rejected, only used just to perform *fast-dragging*, or just to train a machine-learning model). Thus, their computation must be **optional**.
-
-But in general, one needs the current *state* (value of the input parameters) to compute the output ones. Thus, if the state is potentially an interesting one for the sampler, we will have to get the output parameters immediately after the likelihood computation (otherwise, if we have jumped somewhere else and then decided to get them, we may have to re-compute the likelihood at the point of interest, which is probably more costly than having computed output parameters that we are likely to throw away). It is up the each sampler to decide whether the output parameters (of, for the sampler, the derived parameters) at one particular sample are worth computing.
-
-.. note::
-
-   Unfortunately, for many samplers, such as basic MH-MCMC, we do not know a priori if we are going to save a particular point, so we are forced to compute derived parameters even when they are not necessary. In those case, if their computation is prohibitively expensive, it may be faster to run the sample without derived parameters, and add them after the sampling process is finished.
-
-We could implement the way likelihoods and theory communicate output parameters to the model in two ways:
-
-a) A keyword option in the log-likelihood (or theory's ``compute``) method to request the computation of output parameters (passed back as a mutable argument of that same function).
-b) An optional method of the :class:`Likelihood` class, say ``get_output_parameters``, that is called only if needed.
-
-Since the method in option (b) would *always* have to be called *immediately* after computing the likelihood (or otherwise risk inadvertently changing the state and getting the wrong set of set of output parameters), we adopt option (a).
-
-So we create, for the ``log-likelihood`` method of a :class:`Likelihood` and the ``compute`` method of a theory, a keyword argument ``_output``. If that keyword is valued ``None``, the output parameters will not be computed, and if valued as an empty dictionary, it will be used to return the output parameters (thanks to Python's passing mutable objects by reference, not value).
-
-From the sampler point of view (now of *derived*, not *output*, parameters), we use a list, not a dictionary, as an argument of the log-likelihood of the :class:`LikelihoodCollection`; we do so (dropping parameter names by using a list) so that the sampler does not need to keep track of the names of the derived parameters.
 
 
 Dynamical reparameterization layer (a bit old!)

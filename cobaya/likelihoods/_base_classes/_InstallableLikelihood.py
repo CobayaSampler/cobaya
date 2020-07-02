@@ -12,12 +12,10 @@ import logging
 
 # Local
 from cobaya.likelihood import Likelihood
-from cobaya.likelihoods._base_classes._planck_clik_prototype import last_version_supp_data_and_covmats
 
 
 class _InstallableLikelihood(Likelihood):
-    install_options = {"github_repository": "CobayaSampler/planck_supp_data_and_covmats",
-                       "github_release": last_version_supp_data_and_covmats}
+    install_options = {}
 
     @classmethod
     def get_install_options(cls):
@@ -35,16 +33,21 @@ class _InstallableLikelihood(Likelihood):
 
     @classmethod
     def is_installed(cls, **kwargs):
-        if kwargs["data"]:
-            path = cls.get_path(kwargs["path"])
-            return cls.get_install_options() and os.path.exists(path) and len(os.listdir(path)) > 0
+        log = logging.getLogger(cls.__name__)
+        if kwargs.get("data", True):
+            path = kwargs["path"]
+            if not (cls.get_install_options() and
+                    os.path.exists(path) and len(os.listdir(path)) > 0):
+                log.error("The given installation path does not exist: '%s'", path)
+                return False
         return True
 
     @classmethod
-    def install(cls, path=None, force=False, code=False, data=True, no_progress_bars=False):
+    def install(cls, path=None, force=False, code=False, data=True,
+                no_progress_bars=False):
         if not data:
             return True
-        log = logging.getLogger(cls.get_module_name())
+        log = logging.getLogger(cls.get_qualified_class_name())
         opts = cls.get_install_options()
         repo = opts.get("github_repository", None)
         if repo:
@@ -59,10 +62,10 @@ class _InstallableLikelihood(Likelihood):
                 os.makedirs(full_path)
             if not data:
                 return True
-            filename = opts["download_url"]
-            log.info("Downloading likelihood data file: %s...", filename)
+            url = opts["download_url"]
+            log.info("Downloading likelihood data file: %s...", url)
             from cobaya.install import download_file
-            if not download_file(filename, full_path, decompress=True, logger=log,
+            if not download_file(url, full_path, decompress=True, logger=log,
                                  no_progress_bars=no_progress_bars):
                 return False
             log.info("Likelihood data downloaded and uncompressed correctly.")

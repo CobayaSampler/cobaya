@@ -1,21 +1,19 @@
 # Settings for JLA supernova sample (joint SNLS/SDSS SN Ia data)
 # (For the marginalized version, use 'sn_jla_lite')
 
-likelihood:
-  sn.jla:
-    # Path to the data: where the sn_data has been cloned
-    path: null
-    # .dataset file with settings
-    dataset_file: JLA/jla.dataset
-    # Overriding of .dataset parameters
-    dataset_params:
-      # field: value
-    # Names of alpha and beta parameters if used and varied
-    alpha_beta_names: ['alpha_jla', 'beta_jla']
-    # Aliases for automatic covariance matrix
-    renames: [JLA]
-    # Speed in evaluations/second
-    speed: 20
+# Path to the data: where the sn_data has been cloned
+path: null
+# .dataset file with settings
+dataset_file: JLA/jla.dataset
+# Overriding of .dataset parameters
+dataset_params:
+  # field: value
+# Names of alpha and beta parameters if used and varied
+alpha_beta_names: ['alpha_jla', 'beta_jla']
+# Aliases for automatic covariance matrix
+aliases: [JLA]
+# Speed in evaluations/second
+speed: 20
 
 params:
   alpha_jla:

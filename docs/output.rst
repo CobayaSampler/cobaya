@@ -12,9 +12,9 @@ The *updated information* and *products* mentioned above are returned by the ``r
 .. code:: python
 
     from cobaya.run import run
-    updated_info, products = run(your_input)
+    updated_info, sampler = run(your_input)
 
-``products`` here is a dictionary whose contents depend on the sampler used, e.g. one chain for the ``mcmc`` sampler.
+``sampler`` here is the sampler instance that just ran, e.g. the ``mcmc`` sampler. The results of the sampler can be obtained as ``sampler.products()``, which returns a dictionary whose contents depend on the sampler used, e.g. one chain for the ``mcmc`` sampler.
 
 If the input information contains a non-null ``output``, products are written to the hard drive too, as described below.
 
@@ -27,7 +27,7 @@ Shell call
 When called from the shell, **cobaya** generates most commonly the following output files:
 
 - ``[prefix].input.yaml``: a file with the same content as the input file.
-- ``[prefix].updated.yaml``: a file containing the input information plus the default values used by each module.
+- ``[prefix].updated.yaml``: a file containing the input information plus the default values used by each component.
 - ``[prefix].[number].txt``: one or more sample files, containing one sample per line, with values separated by spaces. The first line specifies the columns.
 
 .. note::
@@ -44,16 +44,12 @@ To specify the folder where the output files will be written and their name, use
 - ``output: somefolder/``: writes into the folder ``somefolder``, which is created at that point if necessary, with no prefix for the file names.
 - ``output: null``: will produce no output files whatsoever -- the products will be just loaded in memory. Use only when invoking from the Python interpreter.
 
-.. warning::
-
-   Please, do not use a dot, ``.``, in the ``output`` prefix: it may confuse Cobaya or GetDist.
-
 If calling ``cobaya-run`` from the command line, you can also specify the output prefix with an ``--output [something]`` flag (it takes precedence over the ``output`` defined inside the yaml file, if it exists).
 
 .. note::
 
    **When calling from the command line**, if ``output`` has not been specified, it
-   defaults to the first case, using as a prefix the name of the input file sans the ``yaml`` extension.
+   defaults to the first case, using as a prefix the name of the input file without the ``yaml`` extension.
 
    Instead, **when calling from a Python interpreter**, if ``output`` has not been specified, it is understood as ``output: null``.
 
@@ -73,7 +69,7 @@ In all cases, the output folder is based on the invocation folder if **cobaya** 
 Sample files or ``Collection`` instances
 ----------------------------------------
 
-Samples are stored in files (if text output requested) or ``Collection`` instances (in interactive mode). A typical sample file will look like the one presented in the :doc:`quickstart example <example>`:
+Samples are stored in files (if text output requested) or :class:`~collection.Collection` instances (in interactive mode). A typical sample file will look like the one presented in the :doc:`quickstart example <example>`:
 
 .. code::
 
@@ -98,3 +94,35 @@ Both sample files and collections contain the following columns, in this order:
 * ``chi2``: total effective :math:`\chi^2`, equals twice minus the total log-likelihood.
 
 * ``chi2__[...]``: individual effective :math:`\chi^2`'s, adding up to the total one.
+
+
+``output`` module documentation
+-------------------------------
+
+.. automodule:: output
+   :noindex:
+
+.. autofunction:: output.split_prefix
+.. autofunction:: output.get_info_path
+.. autofunction:: output.get_output
+
+.. autoclass:: output.Output
+   :members:
+.. autoclass:: output.Output_MPI
+   :noindex:
+.. autoclass:: output.OutputDummy
+   :noindex:
+
+
+``collection`` module documentation
+-----------------------------------
+
+.. automodule:: collection
+   :noindex:
+
+.. autoclass:: collection.Collection
+   :members:
+.. autoclass:: collection.OnePoint
+   :noindex:
+.. autoclass:: collection.OneSamplePoint
+   :noindex:

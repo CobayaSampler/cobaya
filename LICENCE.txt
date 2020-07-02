@@ -1,4 +1,4 @@
-Copyright 2017-2019 Jesus Torrado and Antony Lewis
+Copyright 2017-2020 Jesus Torrado and Antony Lewis
 
 You are licensed to use this software free of charge within the terms of the LGPL (see below), with two additional conditions (from CAMB.info):
 
@@ -27,7 +27,7 @@ modification) and re-licensed from the more liberally licensed
 CosmoMC (https://github.com/cmbant/CosmoMC):
 
 - mcmc.py and proposal.py
-- _sn_prototype.py, _cmblikes_prototype.py , _bao_prototype
+- _sn_prototype.py, _CMBlikes
 - most of the files under grid_tools/
 
 

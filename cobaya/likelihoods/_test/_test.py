@@ -1,9 +1,3 @@
-# Python 2/3 compatibility
-from __future__ import division
-
-# Global
-import numpy as np
-
 # Local
 from cobaya.likelihood import Likelihood
 

@@ -1,15 +1,13 @@
 # Settings for the Pantheon SN Ia sample, including on Pan-STARRS1 MDS and others.
 
-likelihood:
-  sn.pantheon:
-    # Path to the data: where the sn_data has been cloned
-    path: null
-    # .dataset file with settings
-    dataset_file: Pantheon/full_long.dataset
-    # Overriding of .dataset parameters
-    dataset_params:
-      # field: value
-    # Aliases for automatic covariance matrix
-    renames: [Pantheon, Pantheon18]
-    # Speed in evaluations/second
-    speed: 100
+# Path to the data: where the sn_data has been cloned
+path: null
+# .dataset file with settings
+dataset_file: Pantheon/full_long.dataset
+# Overriding of .dataset parameters
+dataset_params:
+  # field: value
+# Aliases for automatic covariance matrix
+aliases: [Pantheon, Pantheon18]
+# Speed in evaluations/second
+speed: 100

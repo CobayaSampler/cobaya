@@ -23,7 +23,7 @@ exploiting speed hierarchies in the parameter space. Also, ``PolyChord`` can exp
 multi-modal distributions efficiently.
 
 ``PolyChord`` is an *external* sampler, not installed by default (just a wrapper for it).
-You need to install it yourself following the :doc:`general instructions for installing external modules <installation_cosmo>`, or the manual installation instructions :ref:`below <pc_installation>`.
+You need to install it yourself following the installation instructions :ref:`below <pc_installation>`.
 
 Usage
 -----
@@ -58,7 +58,7 @@ The main output is the Monte Carlo sample of sequentially discarded *live points
 in the standard sample format together with the ``input.yaml`` and ``full.yaml``
 files (see :doc:`output`). The raw ``PolyChord`` products are saved in a
 subfolder of the output folder
-(determined by the option ``base_dir`` – default: ``raw_polychord_output``). Since PolyChord is a nester sampler integrator, the log-evidence and its standard deviation are also returned.
+(determined by the option ``base_dir`` – default: ``[your_output_prefix]_polychord_raw``). Since PolyChord is a nested sampler integrator, the log-evidence and its standard deviation are also returned.
 
 If the posterior was found to be **multi-modal**, the output will include separate samples and evidences for each of the modes.
 
@@ -77,41 +77,21 @@ If you are using external priors (as described :ref:`here <prior_external>`), th
    \log\mathcal{Z} &= \log\mathcal{Z}_\mathrm{u} - \log\mathcal{Z}_\pi\\
    \sigma(\log\mathcal{Z}) &= \sigma(\log\mathcal{Z}_\mathrm{u}) + \sigma(\log\mathcal{Z}_\pi)
 
+.. warning::
 
-.. note::
+   If any of the priors specified in the ``prior`` block or any of the likelihoods has large *unphysical* regions, i.e. regions of null prior or likelihood, you may want to increase the ``nprior`` parameter of PolyChord to a higher multiple of ``nlive`` (default ``10nlive``), depending on the complexity of the unphysical region.
 
-   **Only for Cobaya versions <1.X (using PolyChord 1.15)**
+   **Why?** The unphysical fraction of the parameter space, which is automatically subtracted to the raw PolyChord result, is guessed from a prior sample of size ``nprior``, so the higher that sample is, the smaller the bias introduced by its misestimation.
 
-   If your prior is **constant** in the region of interest, in order for PolyChord not to get stuck, you have to add a small noise term to the likelihood ``one`` (see :doc:`its documentation <likelihood_one>`). The noise amplitude must be smaller by a couple of orders of magnitude than the inverse of a rough estimation of the expected prior volume, e.g. if your prior volume is expected to be :math:`\mathcal{O}(10^3)`, make the noise :math:`\mathcal{O}(10^{-5})`. PolyChord will take a while to converge (even if the prior evaluation is fast), and you may get some ``Non deterministic loglikelihood`` warnings coming from PolyChord, but don't worry about them.
+   Increasing ``nprior`` will make your run slower to initialize, but will not significantly affect the total duration.
 
-   As an example, if we want to compute the area of the **constant** triangle :math:`y > x` in a square of side 10 (expected area :math:`\sim 100`), we would use the following input file:
-
-   .. code:: yaml
-
-      params:
-        x:
-          prior:
-            min:  0
-            max: 10
-        y:
-          prior:
-            min:  0
-            max: 10
-      prior:
-        triangle: "lambda x,y: np.log(y>x)"
-      likelihood:
-        one:
-          noise: 1e-4
-      sampler:
-        polychord:
+   Notice that this behaviour differs from stock versions of popular nested samplers (MultiNest and PolyChord), which simply ignore unphysical points; but we have chosen to take them into account to keep the value of the prior density meaningful: otherwise by simply ignoring unphysical points, doubling the prior size (so halving its density) beyond physical limits would have no effect on the evidence.
 
 
-Taking advantage of a speed hierarchy – *new in 1.2*
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Taking advantage of a speed hierarchy
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-PolyChord *automatically* sorts parameters optimally and chooses the number of repeats per likelihood (or parameter block). The user only needs to specify the speed of each likelihood.
-
-*Automatic* speed-blocking takes advantage of differences in speed *per likelihood* (or theory). If the parameters of your likelihood or theory have some internal speed hierarchy that you would like to exploit (e.g. if your likelihood internally caches the result of a computation depending only on a subset of the likelihood parameters), you can specify a fine-grained list of parameter blocks and their speeds under the ``blocking`` option. :ref:`The same syntax and caveats as in the MCMC sampler apply<mcmc_speed_hierarchy_manual>` (excluding the mentions to *oversampling* and *dragging*).
+Cobaya's PolyChord wrapper *automatically* sorts parameters optimally, and chooses the number of repeats per likelihood according to the value of the ``oversampling_power`` property. You can also specify the blocking and oversampling by hand using the ``blocking`` option. For more thorough documentation of these options, check :ref:`the corresponding section in the MCMC sampler page<mcmc_speed_hierarchy>` (just ignore the references to ``drag``, which do not apply here).
 
 
 .. _polychord_callback:
@@ -125,7 +105,7 @@ A callback function can be specified through the ``callback_function`` option. I
 
     def callback(sampler):
         print("There are %d dead points. The last %d were added since the last callback."%(
-            sampler.dead.n(), sampler.dead.n() - sampler.last_point_callback))
+            len(sampler.dead), len(sampler.dead) - sampler.last_point_callback))
         print("Current logZ = %g +/- %g"%(sampler.logZ, sampler.logZstd))
         # Maximum likelihood: since we sample over the posterior, it may be "dead"!
         min_chi2_dead = sampler.dead[sampler.dead["chi2"].values.argmin()]
@@ -140,6 +120,11 @@ A callback function can be specified through the ``callback_function`` option. I
 
 The frequency of calls of the callback function is given by the ``compression_factor`` (see contents of ``polychord.yaml`` above).
 
+.. note::
+
+   Errors produced inside the callback function will be reported, but they will not stop PolyChord.
+
+
 Troubleshooting
 ---------------
 
@@ -147,9 +132,9 @@ If you are getting an error whose cause is not immediately obvious, try substitu
 
 If still in doubt, run with debug output and check what the prior and likelihood are getting and producing: either set ``debug: True`` in the input file and set ``debug_file`` to some file name, or add the ``--debug`` flag to ``cobaya-run`` and pipe the output to a file with ``cobaya-run [input.yaml] --debug > file``.
 
-If PolyChord gets stuck in ``started sampling``, it probably means that your posterior is flat; if that was intentional, check the :ref:`polychord_bayes_ratios` section, where it is discussed how to deal with those cases.
-
 If everything seems to be working fine, but PolyChord is taking too long to converge, reduce the number of live points ``nlive`` to e.g. 10 per dimension, and the ``precision_criterion`` to 0.1 or so, and check that you get reasonable (but low-precision) sample and evidences.
+
+See also :ref:`cosmo_polychord`.
 
 
 .. _pc_installation:
@@ -157,9 +142,9 @@ If everything seems to be working fine, but PolyChord is taking too long to conv
 Installation
 ------------
 
-Simply run ``cobaya-install polychord --modules [/path/to/modules]`` (or, instead of ``polychord`` after ``cobaya-install``, mention an input file that uses ``polychord``).
+Simply run ``cobaya-install polychord --packages-path [/path/to/packages]`` (or, instead of ``polychord`` after ``cobaya-install``, mention an input file that uses ``polychord``).
 
-If it has been installed this way, it is not necessary to specify a ``path`` for it, as long as the modules folder has been indicated.
+If PolyChord has been installed this way, it is not necessary to specify a ``path`` option for it.
 
 .. note::
 
@@ -178,15 +163,16 @@ If it has been installed this way, it is not necessary to specify a ``path`` for
 
    .. code:: bash
 
-      $ make veryclean
-      $ make PyPolyChord MPI= CC=gcc-[X] CXX=g++-[X]
-      $ python[Y] setup.py install
+      $ make pypolychord MPI= CC=gcc-[X] CXX=g++-[X]
+      $ python setup.py build
 
-   where ``[X]`` is your ``gcc`` version and ``[Y]`` is your python version: ``2`` or ``3``. Add a ``--user`` flag to the Python command if you get an error message showing ``[Errno 13] Permission denied`` anywhere.
-
-   If you want to use PolyChord with MPI on a Mac, you need to have compiled OpenMPI with the same ``gcc`` version with which you are compiling PolyChord. To do that, prepend OpenMPI's ``make`` command with ``CC=gcc-[X]``, where ``[X]`` is your gcc version. Then follow the instructions above to compile PolyChord, but with ``MPI=1`` instead when you do ``make PyPolyChord``.
+   If you want to use PolyChord with MPI on a Mac, you need to have compiled OpenMPI with the same ``gcc`` version with which you are compiling PolyChord. To do that, prepend OpenMPI's ``make`` command with ``CC=gcc-[X]``, where ``[X]`` is your gcc version. Then follow the instructions above to compile PolyChord, but with ``MPI=1`` instead when you do ``make pypolychord``.
 
    *Thanks to Guadalupe Cañas Herrera for these instructions!*
+
+   **Polychord for Windows users:**
+
+   Polychord currently does not support Windows. You'd have to run it in linux virtual machine or using a Docker container.
 
 
 Manual installation of PolyChord
@@ -199,7 +185,8 @@ If you prefer to install PolyChord manually, assuming you want to install it at 
    $ cd /path/to/polychord
    $ git clone https://github.com/PolyChord/PolyChordLite.git
    $ cd PolyChordLite
-   $ make PyPolyChord MPI=1
+   $ make pypolychord MPI=1
+   $ python setup.py build
 
 After this, mention the path in your input file as
 

@@ -1,93 +1,77 @@
-from __future__ import absolute_import
 from copy import deepcopy
-import pytest
-
+from types import MappingProxyType
 from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE
 from .common_cosmo import body_of_test
-
+from cobaya.cosmo_input import base_precision
 
 best_fit = deepcopy(params_lowTEB_highTTTEEE)
-camb_extra = {"halofit_version": "mead"}
-classy_extra = {"non linear": "hmcode"}
 
-# HUGE chi2 difference with CLASS (waiting for HMcode!!!)
-classy_extra_tolerance = 22
+info_camb = MappingProxyType({"camb": {"extra_args": base_precision["camb"]}})
+info_classy = MappingProxyType({"classy": {"extra_args": base_precision["classy"]}})
 
 
-def test_cosmo_des_y1_shear_camb(modules):
+def test_cosmo_des_y1_shear_camb(packages_path, skip_not_installed,
+                                 info_theory=info_camb):
     like = "des_y1.shear"
     info_likelihood = {like: {}}
     best_fit_shear = deepcopy(best_fit)
     best_fit_shear.update(test_params_shear)
-    info_theory = {"camb": {"extra_args": camb_extra}}
-    body_of_test(modules, best_fit_shear, info_likelihood, info_theory,
-                 {like: ref_chi2["shear"], "tolerance": tolerance})
+    body_of_test(packages_path, best_fit_shear, info_likelihood, info_theory,
+                 {like: ref_chi2["shear"], "tolerance": tolerance},
+                 skip_not_installed=skip_not_installed)
 
 
-def test_cosmo_des_y1_clustering_camb(modules):
+def test_cosmo_des_y1_clustering_camb(packages_path, skip_not_installed,
+                                      info_theory=info_camb):
     like = "des_y1.clustering"
     info_likelihood = {like: {}}
     best_fit_clustering = deepcopy(best_fit)
     best_fit_clustering.update(test_params_clustering)
-    info_theory = {"camb": {"extra_args": camb_extra}}
-    body_of_test(modules, best_fit_clustering, info_likelihood, info_theory,
-                 {like: ref_chi2["clustering"], "tolerance": tolerance})
+    body_of_test(packages_path, best_fit_clustering, info_likelihood, info_theory,
+                 {like: ref_chi2["clustering"], "tolerance": tolerance},
+                 skip_not_installed=skip_not_installed)
 
 
-def test_cosmo_des_y1_galaxy_galaxy_camb(modules):
+def test_cosmo_des_y1_galaxy_galaxy_camb(packages_path, skip_not_installed,
+                                         info_theory=info_camb):
     like = "des_y1.galaxy_galaxy"
     info_likelihood = {like: {}}
     best_fit_galaxy_galaxy = deepcopy(best_fit)
     best_fit_galaxy_galaxy.update(test_params_shear)
     best_fit_galaxy_galaxy.update(test_params_clustering)
-    info_theory = {"camb": {"extra_args": camb_extra}}
-    body_of_test(modules, best_fit_galaxy_galaxy, info_likelihood, info_theory,
-                 {like: ref_chi2["galaxy_galaxy"], "tolerance": tolerance})
+    body_of_test(packages_path, best_fit_galaxy_galaxy, info_likelihood, info_theory,
+                 {like: ref_chi2["galaxy_galaxy"], "tolerance": tolerance},
+                 skip_not_installed=skip_not_installed)
 
 
-def test_cosmo_des_y1_joint_camb(modules):
+def test_cosmo_des_y1_joint_camb(packages_path, skip_not_installed,
+                                 info_theory=info_camb):
     like = "des_y1.joint"
     info_likelihood = {like: {}}
     best_fit_joint = deepcopy(best_fit)
     best_fit_joint.update(test_params_shear)
     best_fit_joint.update(test_params_clustering)
-    info_theory = {"camb": {"extra_args": camb_extra}}
-    body_of_test(modules, best_fit_joint, info_likelihood, info_theory,
-                 {like: ref_chi2["joint"], "tolerance": tolerance})
+    body_of_test(packages_path, best_fit_joint, info_likelihood, info_theory,
+                 {like: ref_chi2["joint"], "tolerance": tolerance},
+                 skip_not_installed=skip_not_installed)
 
 
-def test_cosmo_des_y1_shear_classy(modules):
-    like = "des_y1.shear"
-    info_likelihood = {like: {}}
-    best_fit_shear = deepcopy(best_fit)
-    best_fit_shear.update(test_params_shear)
-    info_theory = {"classy": {"extra_args": classy_extra}}
-    body_of_test(modules, best_fit_shear, info_likelihood, info_theory,
-                 {like: ref_chi2["shear"],
-                  "tolerance": tolerance + classy_extra_tolerance})
+def test_cosmo_des_y1_shear_classy(packages_path, skip_not_installed,
+                                   info_theory=info_classy):
+    test_cosmo_des_y1_shear_camb(packages_path, info_theory=info_theory,
+                                 skip_not_installed=skip_not_installed)
 
 
-def test_cosmo_des_y1_clustering_classy(modules):
-    like = "des_y1.clustering"
-    info_likelihood = {like: {}}
-    best_fit_clustering = deepcopy(best_fit)
-    best_fit_clustering.update(test_params_clustering)
-    info_theory = {"classy": {"extra_args": classy_extra}}
-    body_of_test(modules, best_fit_clustering, info_likelihood, info_theory,
-                 {like: ref_chi2["clustering"],
-                  "tolerance": tolerance + classy_extra_tolerance})
+def test_cosmo_des_y1_clustering_classy(packages_path, skip_not_installed,
+                                        info_theory=info_classy):
+    test_cosmo_des_y1_clustering_camb(packages_path, info_theory=info_theory,
+                                      skip_not_installed=skip_not_installed)
 
 
-def test_cosmo_des_y1_galaxy_galaxy_classy(modules):
-    like = "des_y1.galaxy_galaxy"
-    info_likelihood = {like: {}}
-    best_fit_galaxy_galaxy = deepcopy(best_fit)
-    best_fit_galaxy_galaxy.update(test_params_shear)
-    best_fit_galaxy_galaxy.update(test_params_clustering)
-    info_theory = {"classy": {"extra_args": classy_extra}}
-    body_of_test(modules, best_fit_galaxy_galaxy, info_likelihood, info_theory,
-                 {like: ref_chi2["galaxy_galaxy"],
-                  "tolerance": tolerance + classy_extra_tolerance})
+def test_cosmo_des_y1_galaxy_galaxy_classy(packages_path, skip_not_installed,
+                                           info_theory=info_classy):
+    test_cosmo_des_y1_galaxy_galaxy_camb(packages_path, info_theory=info_theory,
+                                         skip_not_installed=skip_not_installed)
 
 
 ref_chi2 = {"shear": 242.825, "clustering": 100.997,

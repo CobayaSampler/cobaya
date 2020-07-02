@@ -1,24 +1,28 @@
-theory:
-  camb:
-    path: null
-    # Speed in evaluations/second
-    speed: 0.3
-    # False to fail and stop sampling on *any* computation error
-    # (it also prints debug info)
-    stop_at_error: False
-    # Other precision parameters to be passed to CAMB
-    # e.g. precision parameters or non-numerical parameters
-    extra_args:
-      # e.g AccuracyBoost: [larger than 1]
-    # Use Planck parameter names, for fast switching CLASS<-->(Planck+CAMB)
-    use_planck_names: False
-    # Dictionary of (Planck+CAMB)->CLASS names
-    renames:
-      omegabh2: ombh2
-      omegach2: omch2
-      omegal: omega_de
-      omegak: omk
-      yhe: YHe
-      yheused: YHe  # used by Planck when YHe is derived
-      YpBBN: Y_p
-      zrei: zre
+# Specify a CAMB version, if desired
+version: null
+# Path to local CAMB, if desired,
+# or 'global' to force global-scope import
+path: null
+# Speed in evaluations/second
+speed: 0.3
+# False to fail and stop sampling on *any* computation error
+# (it also prints debug info)
+stop_at_error: False
+# Other precision parameters to be passed to CAMB
+# e.g. precision parameters or non-numerical parameters
+extra_args:
+# e.g AccuracyBoost: [larger than 1]
+# Use Planck parameter names, for fast switching CLASS<-->(Planck+CAMB)
+use_renames: False
+# request primordial P(k) from an external Theory implementation
+external_primordial_pk: False
+# Dictionary of (Planck+CAMB)->CLASS names
+renames:
+  omegabh2: ombh2
+  omegach2: omch2
+  omegal: omega_de
+  omegak: omk
+  yhe: YHe
+  yheused: YHe  # used by Planck when YHe is derived
+  YpBBN: Y_p
+  zrei: zre

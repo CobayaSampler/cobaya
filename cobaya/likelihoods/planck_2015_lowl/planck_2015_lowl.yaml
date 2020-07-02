@@ -1,14 +1,12 @@
 # Planck 2015 release: low-ell, CMB temperature only likelihood
 # See https://wiki.cosmos.esa.int/planckpla2015/index.php/CMB_spectrum_%26_Likelihood_Code
 
-likelihood:
-  planck_2015_lowl:
-    path:
-    clik_file: plc_2.0/low_l/commander/commander_rc2_v1.1_l2_29_B.clik
-    product_id: "1900"
-    # Aliases for automatic covariance matrix
-    renames: [lowl]
-    # Speed in evaluations/second
-    speed: 3500
+path:
+clik_file: plc_2.0/low_l/commander/commander_rc2_v1.1_l2_29_B.clik
+product_id: "1900"
+# Aliases for automatic covariance matrix
+aliases: [lowl]
+# Speed in evaluations/second
+speed: 3500
 
 params: !defaults [../planck_2015_plikHM_TT/params_calib_2015]

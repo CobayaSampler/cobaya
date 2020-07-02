@@ -1,14 +1,12 @@
 # Planck 2018 release: low-ell, CMB temperature likelihood
 # See https://wiki.cosmos.esa.int/planck-legacy-archive/index.php/CMB_spectrum_%26_Likelihood_Code
 
-likelihood:
-  planck_2018_lowl.TT:
-    path:
-    clik_file: baseline/plc_3.0/low_l/commander/commander_dx12_v3_2_29.clik
-    product_id: "151902"
-    # Aliases for automatic covariance matrix
-    renames: [lowl]
-    # Speed in evaluations/second
-    speed: 3000
+path:
+clik_file: baseline/plc_3.0/low_l/commander/commander_dx12_v3_2_29.clik
+product_id: "151902"
+# Aliases for automatic covariance matrix
+aliases: [lowl]
+# Speed in evaluations/second
+speed: 3000
 
 params: !defaults [../planck_2018_highl_plik/params_calib]

@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 from copy import deepcopy
 import pytest
 
@@ -6,88 +5,89 @@ from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE
 from .common_cosmo import body_of_test
 
 
-def test_sdss_dr12_consensus_bao_camb(modules):
+def test_sdss_dr12_consensus_bao_camb(packages_path, skip_not_installed):
     lik = "bao.sdss_dr12_consensus_bao"
     info_likelihood = {lik: {}}
     info_theory = {"camb": None}
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
-                 chi2_sdss_dr12_consensus_bao)
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_sdss_dr12_consensus_bao, skip_not_installed=skip_not_installed)
 
 
-def test_sdss_dr12_consensus_bao_classy(modules):
+def test_sdss_dr12_consensus_bao_classy(packages_path, skip_not_installed):
     lik = "bao.sdss_dr12_consensus_bao"
     info_likelihood = {lik: {}}
     info_theory = {"classy": None}
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
-                 chi2_sdss_dr12_consensus_bao)
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_sdss_dr12_consensus_bao, skip_not_installed=skip_not_installed)
 
 
-def test_sdss_dr12_consensus_full_shape_camb(modules):
+def test_sdss_dr12_consensus_full_shape_camb(packages_path, skip_not_installed):
     lik = "bao.sdss_dr12_consensus_full_shape"
     info_likelihood = {lik: {}}
     info_theory = {"camb": None}
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
-                 chi2_sdss_dr12_consensus_full_shape)
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_sdss_dr12_consensus_full_shape,
+                 skip_not_installed=skip_not_installed)
 
 
 @pytest.mark.skip
-def test_sdss_dr12_consensus_full_shape_classy(modules):
+def test_sdss_dr12_consensus_full_shape_classy(packages_path, skip_not_installed):
     lik = "bao.sdss_dr12_consensus_full_shape"
     info_likelihood = {lik: {}}
     info_theory = {"classy": None}
     chi2_classy = deepcopy(chi2_sdss_dr12_consensus_full_shape)
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
-                 chi2_classy)
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_classy, skip_not_installed=skip_not_installed)
 
 
-def test_sdss_dr12_consensus_final_camb(modules):
+def test_sdss_dr12_consensus_final_camb(packages_path, skip_not_installed):
     lik = "bao.sdss_dr12_consensus_final"
     info_likelihood = {lik: {}}
     info_theory = {"camb": None}
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
-                 chi2_sdss_dr12_consensus_final)
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_sdss_dr12_consensus_final, skip_not_installed=skip_not_installed)
 
 
 @pytest.mark.skip
-def test_sdss_dr12_consensus_final_classy(modules):
+def test_sdss_dr12_consensus_final_classy(packages_path, skip_not_installed):
     lik = "bao.sdss_dr12_consensus_final"
     info_likelihood = {lik: {}}
     info_theory = {"classy": None}
     chi2_classy = deepcopy(chi2_sdss_dr12_consensus_final)
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
-                 chi2_classy)
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_classy, skip_not_installed=skip_not_installed)
 
 
-def test_sixdf_2011_bao_camb(modules):
+def test_sixdf_2011_bao_camb(packages_path, skip_not_installed):
     lik = "bao.sixdf_2011_bao"
     info_likelihood = {lik: {}}
     info_theory = {"camb": None}
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
-                 chi2_sixdf_2011_bao)
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_sixdf_2011_bao, skip_not_installed=skip_not_installed)
 
 
-def test_sixdf_2011_bao_classy(modules):
+def test_sixdf_2011_bao_classy(packages_path, skip_not_installed):
     lik = "bao.sixdf_2011_bao"
     info_likelihood = {lik: {}}
     info_theory = {"classy": None}
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
-                 chi2_sixdf_2011_bao)
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_sixdf_2011_bao, skip_not_installed=skip_not_installed)
 
 
-def test_sdss_dr7_mgs_camb(modules):
+def test_sdss_dr7_mgs_camb(packages_path, skip_not_installed):
     lik = "bao.sdss_dr7_mgs"
     info_likelihood = {lik: {}}
     info_theory = {"camb": None}
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
-                 chi2_sdss_dr7_mgs)
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_sdss_dr7_mgs, skip_not_installed=skip_not_installed)
 
 
-def test_sdss_dr7_mgs_classy(modules):
+def test_sdss_dr7_mgs_classy(packages_path, skip_not_installed):
     lik = "bao.sdss_dr7_mgs"
     info_likelihood = {lik: {}}
     info_theory = {"classy": None}
-    body_of_test(modules, best_fit, info_likelihood, info_theory,
-                 chi2_sdss_dr7_mgs)
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_sdss_dr7_mgs, skip_not_installed=skip_not_installed)
 
 
 # BEST FIT AND REFERENCE VALUES ##########################################################

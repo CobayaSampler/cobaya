@@ -1,29 +1,27 @@
 # DES Y1 -- Clustering+Shear+Galaxy-galaxy data
 
-likelihood:
-  des_y1.joint:
-    # Path to the installation folder
-    path: null
-    # .dataset (or original .fits file) to read
-    dataset_file: DES_1YR_final.dataset
-    # Parameters to override in .dataset file
-    dataset_params:
-      used_data_types: wtheta gammat xip xim
-    # Accuracy parameter
-    acc: 1
-    # Internal l_max used (If null/None, 5e4*acc used)
-    l_max: null
-    # Use hankel module for Bessel transforms. For checking.
-    use_hankel: False
-    # Use Weyl potential
-    use_Weyl: False
-    # Approximate bessel integral as binned smooth C_L
-    # against integrals of bessel in each bin.
-    binned_bessels: True
-    # Aliases for automatic covariance matrix
-    renames: [DES]
-    # Speed in evaluations/second
-    speed: 20
+# Path to the installation folder
+path: null
+# .dataset (or original .fits file) to read
+dataset_file: DES_1YR_final.dataset
+# Parameters to override in .dataset file
+dataset_params:
+  used_data_types: wtheta gammat xip xim
+# Accuracy parameter
+acc: 1
+# Internal l_max used (If null/None, 5e4*acc used)
+l_max: null
+# Use hankel module for Bessel transforms. For checking.
+use_hankel: False
+# Use Weyl potential
+use_Weyl: False
+# Approximate bessel integral as binned smooth C_L
+# against integrals of bessel in each bin.
+binned_bessels: True
+# Aliases for automatic covariance matrix
+aliases: [DES]
+# Speed in evaluations/second
+speed: 20
 
   
 params:

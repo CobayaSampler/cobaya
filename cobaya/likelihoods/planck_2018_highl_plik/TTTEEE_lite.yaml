@@ -1,14 +1,12 @@
 # Planck 2018 release: high-ell, TT+TE+EE power spectrum likelihood, marginalized over the foreground model (pliklite)
 # See https://wiki.cosmos.esa.int/planck-legacy-archive/index.php/CMB_spectrum_%26_Likelihood_Code
 
-likelihood:
-  planck_2018_highl_plik.TTTEEE_lite:
-    path:
-    clik_file: baseline/plc_3.0/hi_l/plik_lite/plik_lite_v22_TTTEEE.clik
-    product_id: "151902"
-    # Aliases for automatic covariance matrix
-    renames: [plikHM_TTTEEE]
-    # Speed in evaluations/second
-    speed: 500
+path:
+clik_file: baseline/plc_3.0/hi_l/plik_lite/plik_lite_v22_TTTEEE.clik
+product_id: "151902"
+# Aliases for automatic covariance matrix
+aliases: [plikHM_TTTEEE]
+# Speed in evaluations/second
+speed: 500
 
 params: !defaults [params_calib]

@@ -1,17 +1,15 @@
 # BAO measurement from SDSS DR7 Main Galaxy Sample
 # https://arxiv.org/abs/1409.3242
 
-likelihood:
-  bao.sdss_dr7_mgs:
-    path: null
-    # File containing chi2 values
-    prob_dist: bao_data/sdss_MGS_prob.txt
-    prob_dist_bounds: [0.8005, 1.1985]
-    # Rescaling of sound horizon (DV_fid/rs_fid)
-    rs_rescale: 4.29720761315  # = 638.9518 (DV_fid) / 148.69 (rs_fid)
-    # Measurement (only z is actually used in the likelihood)
-    data: [0.15, 4.465666824, 0.1681350461, "DV_over_rs"]
-    # Aliases for automatic covariance matrix
-    renames: [BAO]
-    # Speed in evaluations/second
-    speed: 5000
+path: null
+# File containing chi2 values
+prob_dist: bao_data/sdss_MGS_prob.txt
+prob_dist_bounds: [0.8005, 1.1985]
+# Rescaling of sound horizon (DV_fid/rs_fid)
+rs_rescale: 4.29720761315  # = 638.9518 (DV_fid) / 148.69 (rs_fid)
+# Measurement (only z is actually used in the likelihood)
+data: [0.15, 4.465666824, 0.1681350461, "DV_over_rs"]
+# Aliases for automatic covariance matrix
+aliases: [BAO]
+# Speed in evaluations/second
+speed: 5000

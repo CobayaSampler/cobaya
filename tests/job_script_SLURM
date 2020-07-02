@@ -1,0 +1,64 @@
+#!/bin/bash
+
+##SLURM Example for skylake system in Cambridge
+
+#SBATCH -p skylake
+#SBATCH --nodes={NUMNODES}
+#SBATCH --ntasks={NUMTASKS}
+#SBATCH --time={WALLTIME}
+#SBATCH --mail-type=FAIL
+#SBATCH --cpus-per-task={OMP}
+
+cd {ROOTDIR}
+
+. /etc/profile.d/modules.sh                # Leave this line (enables the module command)
+module purge                               # Removes all modules still loaded
+module load rhel7/default-peta4            # REQUIRED - loads the basic environment
+module unload intel/bundles/complib/2017.4
+module load intel/bundles/complib/2019.3    #2017.4 seems to have compiler bugs
+
+
+## assuming using anaconda with env called py37
+module load gcc/7
+eval "$(conda shell.bash hook)"
+conda activate py37
+
+
+export OMP_NUM_THREADS={OMP}
+export I_MPI_PIN=1
+export I_MPI_HYDRA_RMK=slurm
+
+JOBID=$SLURM_JOB_ID
+
+echo -e "JobID: $JOBID\n======"
+echo "Time: `date`"
+echo "Running on master node: `hostname`"
+echo "Current directory: `pwd`"
+
+if [ "$SLURM_JOB_NODELIST" ]; then
+        #! Create a machine file:
+        export NODEFILE=`generate_pbs_nodefile`
+        cat $NODEFILE | uniq > scripts/machine.file.$JOBID
+        echo -e "\nNodes allocated:\n================"
+        echo `cat scripts/machine.file.$JOBID | sed -e 's/\..*$//g'`
+fi
+
+echo `module list`
+echo `which python`
+
+###set things to be used by the python script, which extracts text from here with ##XX: ... ##
+### command to use for each run in the batch
+##RUN: time srun --mpi=pmi2 {PROGRAM} {INI} > ./scripts/{INIBASE}.log 2>&1 ##
+### defaults for this script
+##DEFAULT_qsub: qsub ##
+##DEFAULT_cores_per_node: 16 ##
+##DEFAULT_chains_per_node: 4 ##
+##DEFAULT_program: cobaya-run -r ##
+##DEFAULT_walltime: 8:00:00##
+
+{COMMAND}
+
+wait
+
+
+

@@ -2,29 +2,27 @@
 # Marginalized version (useful e.g. for importance sampling)
 # NB: different chi2 normalization from the non-normalized version
 
-likelihood:
-  sn.jla_lite:
-    # Path to the data: where the sn_data has been cloned
-    path: null
-    # .dataset file with settings
-    dataset_file: JLA/jla.dataset
-    # Overriding of .dataset parameters
-    dataset_params:
-      # field: value
-    # Marginalise over nuisance parameters
-    # (slow, but useful for importance sampling)
-    marginalize: True
-    # If marginalizing, pre-compute covariance inverses.
-    # Faster, at expense of memory (~600MB).
-    precompute_covmats: True
-    # Options for the grid marginalization
-    marginalize_params:
-      marge_steps: 7
-      alpha_centre: 0.14
-      beta_centre: 3.123
-      step_width_alpha: 0.003
-      step_width_beta: 0.04
-    # Aliases for automatic covariance matrix
-    renames: [JLA]
-    # Speed in evaluations/second
-    speed: 10
+# Path to the data: where the sn_data has been cloned
+path: null
+# .dataset file with settings
+dataset_file: JLA/jla.dataset
+# Overriding of .dataset parameters
+dataset_params:
+  # field: value
+# Marginalise over nuisance parameters
+# (slow, but useful for importance sampling)
+marginalize: True
+# If marginalizing, pre-compute covariance inverses.
+# Faster, at expense of memory (~600MB).
+precompute_covmats: True
+# Options for the grid marginalization
+marginalize_params:
+  marge_steps: 7
+  alpha_centre: 0.14
+  beta_centre: 3.123
+  step_width_alpha: 0.003
+  step_width_beta: 0.04
+# Aliases for automatic covariance matrix
+aliases: [JLA]
+# Speed in evaluations/second
+speed: 10
