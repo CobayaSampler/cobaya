@@ -386,7 +386,10 @@ class Collection(BaseCollection):
     def __getstate__(self):
         attributes = super().__getstate__().copy()
         for attr in ['_txt_formatters', '_header_formatter']:
-            del attributes[attr]
+            try:
+                del attributes[attr]
+            except KeyError:
+                pass
         return attributes
 
 
