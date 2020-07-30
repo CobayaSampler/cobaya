@@ -105,7 +105,7 @@ def test_polychord_unphysical(packages_path, skip_not_installed):
             "a_0": {"prior": {"min": -bound, "max": bound}},
             "a_1": {"prior": {"min": -bound, "max": bound}}},
         "sampler": {
-            "polychord": {"nprior": "100d", "measure_speeds": False}}}
+            "polychord": {"nprior": "100nlive", "measure_speeds": False}}}
     # NB: we increase nprior wrt the default (25d=nlive) to get an accurate estimation
     #     of the unphysical region.
     info_like = info.pop("likelihood")
