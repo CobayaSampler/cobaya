@@ -298,8 +298,8 @@ def post(info, sample=None):
     last_percent = 0
     for i, point in collection_in.data.iterrows():
         log.debug("Point: %r", point)
-        sampled = [point[param] for param in
-                   dummy_model_in.parameterization.sampled_params()]
+        sampled = np.array([point[param] for param in
+                            dummy_model_in.parameterization.sampled_params()])
         derived = {param: point.get(param, None)
                    for param in dummy_model_out.parameterization.derived_params()}
         inputs = {param: point.get(
@@ -328,7 +328,7 @@ def post(info, sample=None):
         if -np.inf in logpriors_new:
             continue
         # Add/remove likelihoods
-        output_like = []
+        output_like = {}
         if add[kinds.likelihood]:
             # Notice "one" (last in likelihood_add) is ignored: not in chi2_names
             loglikes_add, output_like = model_add.logps(inputs, return_derived=True)
