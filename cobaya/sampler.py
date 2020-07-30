@@ -408,7 +408,7 @@ class CovmatSampler(Sampler):
     """
     covmat_params: Sequence[str]
 
-    def _load_covmat(self, from_old_chain, auto_params=None):
+    def _load_covmat(self, from_old_chain, default_not_found=None, auto_params=None):
         if from_old_chain and os.path.exists(self.covmat_filename()):
             if is_main_process():
                 covmat = np.atleast_2d(np.loadtxt(self.covmat_filename()))
@@ -417,6 +417,8 @@ class CovmatSampler(Sampler):
             covmat = share_mpi(covmat)
             self.mpi_info("Covariance matrix from checkpoint.")
             return covmat, []
+        elif default_not_found is not None:
+            return default_not_found, []
         else:
             return share_mpi(self.initial_proposal_covmat(auto_params=auto_params) if
                              is_main_process() else None)

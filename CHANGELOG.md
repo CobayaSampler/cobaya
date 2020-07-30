@@ -12,6 +12,7 @@
 
 - Results shared with all MPI processes.
 - `[prefix].updated.yaml` is now `[prefix].minimize.updated.yaml` (GetDist needs to know the original sampler).
+- Loads covmat correcly when starting from PolyChord sample.
 
 
 ## 3.0  – 2020-05-12

@@ -260,7 +260,7 @@ class Collection(BaseCollection):
 
     def cov(self, first=None, last=None, derived=False):
         """
-        Returns the (weighted) mean of the parameters in the chain,
+        Returns the (weighted) covariance matrix of the parameters in the chain,
         between `first` (default 0) and `last` (default last obtained),
         optionally including derived parameters if `derived=True` (default `False`).
         """

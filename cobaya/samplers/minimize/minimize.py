@@ -120,6 +120,7 @@ class minimize(Minimizer, CovmatSampler):
         # Try to load info from previous samples.
         # If none, sample from reference (make sure that it has finite like/post)
         initial_point = None
+        covmat_in = None
         if self.output:
             files = self.output.find_collections()
             collection_in = None
@@ -139,6 +140,8 @@ class minimize(Minimizer, CovmatSampler):
                     list(self.model.parameterization.sampled_params())].values
                 self.log.info("Starting from %s of previous chain:",
                               "best fit" if self.ignore_prior else "MAP")
+            # Compute the covmat in case no .covmat file present (e.g. with PolyChord)
+            covmat_in = collection_in.cov(derived=False)
         if initial_point is None:
             this_logp = -np.inf
             while not np.isfinite(this_logp):
@@ -147,17 +150,13 @@ class minimize(Minimizer, CovmatSampler):
             self.log.info("Starting from random initial point:")
         self.log.info(
             dict(zip(self.model.parameterization.sampled_params(), initial_point)))
-
         self._bounds = self.model.prior.bounds(
             confidence_for_unbounded=self.confidence_for_unbounded)
-
         # TODO: if ignore_prior, one should use *like* covariance (this is *post*)
-        covmat = self._load_covmat(self.output)[0]
-
+        covmat = self._load_covmat(self.output, default_not_found=covmat_in)[0]
         # scale by conditional parameter widths (since not using correlation structure)
         scales = np.minimum(1 / np.sqrt(np.diag(np.linalg.inv(covmat))),
                             (self._bounds[:, 1] - self._bounds[:, 0]) / 3)
-
         # Cov and affine transformation
         # Transform to space where initial point is at centre, and cov is normalised
         # Cannot do rotation, as supported minimization routines assume bounds aligned
