@@ -8,6 +8,11 @@
 - Added ``--skip-not-installed`` to pytest command, to allow tests of non-installed components to fail.
 - Installable components can define a class method ``is_compatible`` determining OS compatibility (assumed compatible by default). Installation of OS-incompatible components is skipped.
 
+### Minimize
+
+- Results shared with all MPI processes.
+- `[prefix].updated.yaml` is now `[prefix].minimize.updated.yaml` (GetDist needs to know the original sampler).
+
 
 ## 3.0  – 2020-05-12
 

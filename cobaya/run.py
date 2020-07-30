@@ -44,8 +44,13 @@ def run(info):
     check_deprecated_modules_path(info)
     # END OF DEPRECATION BLOCK
     # 1. Prepare output driver, if requested by defining an output_prefix
+    # GetDist needs to know the original sampler, so don't overwrite if minimizer
+    updated_prefix = None
+    if list(info["sampler"])[0] == "minimize":
+        updated_prefix = "minimize"
     output = get_output(output_prefix=info.get(_output_prefix),
-                        resume=info.get(_resume), force=info.get(_force))
+                        resume=info.get(_resume), force=info.get(_force),
+                        updated_prefix=updated_prefix)
     # 2. Update the input info with the defaults for each component
     updated_info = update_info(info)
     if logging.root.getEffectiveLevel() <= logging.DEBUG:

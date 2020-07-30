@@ -47,17 +47,21 @@ def split_prefix(prefix):
     return folder, file_prefix
 
 
-def get_info_path(folder, prefix, kind="updated"):
+def get_info_path(folder, prefix, mid=None, kind="updated"):
     """
     Gets path to info files saved by Output.
     """
+    if mid is None:
+        mid = ""
+    elif not mid.endswith("."):
+        mid += "."
     info_file_prefix = os.path.join(
         folder, prefix + (_separator_files if prefix else ""))
     try:
         suffix = {"input": _input_suffix, "updated": _updated_suffix}[kind.lower()]
     except KeyError:
         raise ValueError("`kind` must be `input|updated`")
-    return info_file_prefix + suffix + _yaml_extensions[0]
+    return info_file_prefix + mid + suffix + _yaml_extensions[0]
 
 
 class Output(HasLogger):
@@ -67,7 +71,8 @@ class Output(HasLogger):
     :class:`~collection.Collection` files, etc.
     """
 
-    def __init__(self, output_prefix, resume=_resume_default, force=False):
+    def __init__(self, output_prefix, resume=_resume_default, force=False,
+                 updated_prefix=None):
         self.name = "output"  # so that the MPI-wrapped class conserves the name
         self.set_logger(self.name)
         self.folder, self.prefix = split_prefix(output_prefix)
@@ -94,7 +99,8 @@ class Output(HasLogger):
                       self.folder, self.prefix)
         # Prepare file names, and check if chain exists
         self.file_input = get_info_path(self.folder, self.prefix, kind="input")
-        self.file_updated = get_info_path(self.folder, self.prefix, kind="updated")
+        self.file_updated = get_info_path(self.folder, self.prefix, mid=updated_prefix,
+                                          kind="updated")
         self._resuming = False
         # Output kind and collection extension
         self.kind = _kind
