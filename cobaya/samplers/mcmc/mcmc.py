@@ -586,7 +586,7 @@ class mcmc(CovmatSampler):
 
     def check_convergence_and_learn_proposal(self):
         """
-        Checks the convergence of the sampling process (MPI only), and, if requested,
+        Checks the convergence of the sampling process, and, if requested,
         learns a new covariance matrix for the proposal distribution from the covariance
         of the last samples.
         """
