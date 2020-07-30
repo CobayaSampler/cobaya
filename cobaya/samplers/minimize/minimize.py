@@ -85,7 +85,7 @@ from copy import deepcopy
 from cobaya.sampler import Minimizer
 from cobaya.conventions import _undo_chi2_name
 from cobaya.mpi import get_mpi_size, get_mpi_comm, is_main_process, get_mpi_rank, \
-    more_than_one_process
+    more_than_one_process, share_mpi
 from cobaya.collection import OnePoint, Collection
 from cobaya.log import LoggedError
 from cobaya.tools import read_dnumber, recursive_update
@@ -311,6 +311,14 @@ class minimize(Minimizer, CovmatSampler):
                 "Parameter values at minimum:\n%s", self.minimum.data.to_string())
             self.minimum.out_update()
             self.dump_getdist()
+        # Share results ('result' object may not be picklable)
+        self.minimum = share_mpi(getattr(self, "minimum", None))
+        self._inv_affine_transform_matrix = share_mpi(getattr(self, "_inv_affine_transform_matrix"))
+        self._affine_transform_baseline = share_mpi(getattr(self, "_affine_transform_baseline"))
+        try:
+            self.result = share_mpi(getattr(self, "result"))
+        except:
+            self.result = None
 
     def products(self):
         r"""
@@ -336,10 +344,9 @@ class minimize(Minimizer, CovmatSampler):
         transformation needs to be applied to the coordinates appearing inside the
         ``result_object``.
         """
-        if is_main_process():
-            return {"minimum": self.minimum, "result_object": self.result,
-                    "M": self._inv_affine_transform_matrix,
-                    "X0": self._affine_transform_baseline}
+        return {"minimum": self.minimum, "result_object": self.result,
+                "M": self._inv_affine_transform_matrix,
+                "X0": self._affine_transform_baseline}
 
     def getdist_point_text(self, params, weight=None, minuslogpost=None):
         lines = []
