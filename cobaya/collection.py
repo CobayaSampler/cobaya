@@ -264,9 +264,13 @@ class Collection(BaseCollection):
         between `first` (default 0) and `last` (default last obtained),
         optionally including derived parameters if `derived=True` (default `False`).
         """
-        weights = (lambda w: (
-            {"fweights": w} if np.allclose(np.round(w), w) else {"aweights": w}))(
-            self[_weight][first:last].values)
+        weights = self[_weight][first:last].values
+        kwarg = "fweights" if np.allclose(np.round(weights), weights) else "aweights"
+        weights_kwarg = {kwarg: weights}
+        return np.atleast_2d(np.cov(
+            self[list(self.sampled_params) +
+                 (list(self.derived_params) if derived else [])][first:last].T,
+            **weights_kwarg))
         return np.atleast_2d(np.cov(
             self[list(self.sampled_params) +
                  (list(self.derived_params) if derived else [])][first:last].T,
@@ -333,15 +337,21 @@ class Collection(BaseCollection):
         if not getattr(self, "_txt_formatters", False):
             n_float = 8
             # Add to this 7 places: sign, leading 0's, exp with sign and 3 figures.
-            width_col = lambda col: max(7 + n_float, len(col))
+
+            def width_col(col):
+                return max(7 + n_float, len(col))
+
             fmts = ["{:" + "{}.{}".format(width_col(col), n_float) + "g}"
                     for col in self.data.columns]
-            # `fmt` as a kwarg with default value is needed to force substitution of var
+            # `fmt` as a kwarg with default value is needed to force substitution of var.
+            # lambda is defined as a string to allow picklability (also header formatter)
             self._txt_formatters = {
-                col: (lambda x, fmt=fmt: fmt.format(x))
+                col: eval("lambda x, fmt=fmt: fmt.format(x)")
                 for col, fmt in zip(self.data.columns, fmts)}
             self._header_formatter = [
-                (lambda s, w=width_col(col): ("{:>" + "{}".format(w) + "s}").format(s))
+                eval(
+                    'lambda s, w=width_col(col): ("{:>" + "{}".format(w) + "s}").format(s)',
+                    {'width_col': width_col, 'col': col})
                 for col in self.data.columns]
         do_header = not n_min
         if do_header:
@@ -370,6 +380,14 @@ class Collection(BaseCollection):
 
     def _delete__dummy(self):
         pass
+
+    # Make it picklable -- formatters are deleted
+    # (they will be generated next time txt is dumped)
+    def __getstate__(self):
+        attributes = super().__getstate__().copy()
+        for attr in ['_txt_formatters', '_header_formatter']:
+            del attributes[attr]
+        return attributes
 
 
 class OneSamplePoint:
