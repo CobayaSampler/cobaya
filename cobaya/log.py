@@ -112,7 +112,7 @@ def logger_setup(debug=None, debug_file=None):
         logging.root.addHandler(file_stdout)
     # Add stdout handler only once!
     # noinspection PyUnresolvedReferences
-    if not any(h.stream == sys.stdout for h in logging.root.handlers):
+    if not any(getattr(h, "stream", None) == sys.stdout for h in logging.root.handlers):
         logging.root.addHandler(handle_stdout)
     # Configure the logger to manage exceptions
     sys.excepthook = exception_handler
