@@ -140,8 +140,8 @@ class minimize(Minimizer, CovmatSampler):
                     list(self.model.parameterization.sampled_params())].values
                 self.log.info("Starting from %s of previous chain:",
                               "best fit" if self.ignore_prior else "MAP")
-            # Compute the covmat in case no .covmat file present (e.g. with PolyChord)
-            covmat_in = collection_in.cov(derived=False)
+                # Compute the covmat in case no .covmat file present (e.g. with PolyChord)
+                covmat_in = collection_in.cov(derived=False)
         if initial_point is None:
             this_logp = -np.inf
             while not np.isfinite(this_logp):
