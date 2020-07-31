@@ -486,19 +486,28 @@ class CovmatSampler(Sampler):
         elif self.covmat:
             raise LoggedError(self.log, "Invalid covmat")
         if self.covmat is not None:
+            str_msg = "the `covmat_params` list"
+            if isinstance(self.covmat, str):
+                str_msg = "the header of the covmat file %r" % self.covmat
             if len(loaded_params) != len(set(loaded_params)):
+                duplicated = list(set(
+                    p for p in loaded_params if list(loaded_params).count(p) > 1))
                 raise LoggedError(
-                    self.log, "There are duplicated parameters in the header of the "
-                              "covmat file '%s' ", self.covmat)
+                    self.log,
+                    "Parameter(s) %r appear more than once in %s", duplicated, str_msg)
             if len(loaded_params) != loaded_covmat.shape[0]:
                 raise LoggedError(
-                    self.log, "The number of parameters in the header of '%s' and the "
-                              "dimensions of the matrix do not coincide.", self.covmat)
+                    self.log, "The number of parameters in %s and the "
+                              "dimensions of the matrix do not agree: %d vs %r",
+                    str_msg, len(loaded_params), loaded_covmat.shape)
             if not (np.allclose(loaded_covmat.T, loaded_covmat) and
                     np.all(np.linalg.eigvals(loaded_covmat) > 0)):
+                str_msg = "passed"
+                if isinstance(self.covmat, str):
+                    str_msg = "loaded from %r" % self.covmat
                 raise LoggedError(
-                    self.log, "The covmat loaded from '%s' is not a positive-definite, "
-                              "symmetric square matrix.", self.covmat)
+                    self.log, "The covariance matrix %s is not a positive-definite, "
+                              "symmetric square matrix.", str_msg)
             # Fill with parameters in the loaded covmat
             renames = [[p] + np.atleast_1d(v.get(partag.renames, [])).tolist()
                        for p, v in params_infos.items()]
