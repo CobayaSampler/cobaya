@@ -45,6 +45,10 @@ def check_index(i, imax):
 # Notice that slices are never supposed to raise IndexError, but an empty list at worst!
 def check_slice(ij, imax):
     newlims = {"start": ij.start, "stop": ij.stop}
+    if ij.start is None:
+        newlims["start"] = 0
+    if ij.stop is None:
+        newlims["stop"] = imax
     for limname, lim in newlims.items():
         if lim >= 0:
             newlims[limname] = min(imax, lim)
