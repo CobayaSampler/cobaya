@@ -285,15 +285,11 @@ def pip_install(packages, upgrade=False):
     """
     Takes package name or list of them.
 
-    Uses ``--user`` flag if does not appear to have write permission to python path
-
     Returns exit status.
     """
     if hasattr(packages, "split"):
         packages = [packages]
     cmd = [sys.executable, '-m', 'pip', 'install']
-    if not os.access(os.path.dirname(sys.executable), os.W_OK):
-        cmd += ['--user']
     if upgrade:
         cmd += ['--upgrade']
     res = subprocess.call(cmd + packages)

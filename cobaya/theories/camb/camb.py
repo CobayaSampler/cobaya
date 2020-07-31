@@ -162,8 +162,8 @@ the input block for CAMB (otherwise a system-wide CAMB may be used instead):
 .. note::
 
    In any of these methods, if you intent to switch between different versions or
-   modifications of CAMB you should not  install CAMB as python package using
-   ``python setup.py install --user``, as the official instructions suggest.
+   modifications of CAMB you should not install CAMB as python package using
+   ``python setup.py install``, as the official instructions suggest.
 """
 
 # Global

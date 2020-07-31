@@ -100,7 +100,7 @@ If you are planning to modify CLASS or use an already modified version,
 you should not use the automatic installation script. Use the method below instead.
 
 CLASS's python interface utilizes the ``cython`` compiler. If typing ``cython`` in the
-shell produces an error, install it with ``python -m pip install cython --user``.
+shell produces an error, install it with ``python -m pip install cython``.
 
 .. note::
    The fast way, assuming you are installing all your cosmological codes under

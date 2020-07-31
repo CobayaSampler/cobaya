@@ -12,11 +12,7 @@ The only pre-requisites are **Python** (version ≥ 3.6) and the Python package 
 
    In some systems, the Python 3 command may be ``python3`` instead of ``python``. In this documentation, the shell command ``python`` always means Python 3.
 
-To check if you have Python installed, type ``python --version`` in the shell, and you should get ``Python 3.[whatever]``. Then, type ``python -m pip --version`` in the shell, and see if you get a proper version line starting with ``pip 20.0.0 [...]``. If an older version is shown, please update pip with ``python -m pip install pip --upgrade``. If either Python 3 is not installed, or the ``pip`` version check produces a ``no module named pip`` error, use your system's package manager or contact your local IT service.
-
-.. warning::
-
-   If any of the ``python -m pip install`` commands below fails (most likely with an ``[Errno 13] Permission denied``), add a ``--user`` flag at the end of the command.
+To check if you have Python installed, type ``python --version`` in the shell, and you should get ``Python 3.[whatever]``. Then, type ``python -m pip --version`` in the shell, and see if you get a proper version line starting with ``pip 20.0.0 [...]`` or a higher version. If an older version is shown, please update pip with ``python -m pip install pip --upgrade``. If either Python 3 is not installed, or the ``pip`` version check produces a ``no module named pip`` error, use your system's package manager or contact your local IT service.
 
 .. note::
 
@@ -201,7 +197,7 @@ The recommended way is to get a `GitHub <https://github.com>`_ user and `fork th
    $ git clone https://YOUR_USERNAME@github.com/YOUR_USERNAME/cobaya.git
    $ python -m pip install --editable cobaya[test,gui] --upgrade
 
-(add the --user option if you don't have write access to the default pip installation location). Here ``cobaya[test,gui]`` should include the square brackets. Remove ``,gui`` if desired to avoid unnecessary dependencies.
+Here ``cobaya[test,gui]`` should include the square brackets. Remove ``,gui`` if desired to avoid unnecessary dependencies.
 
 Alternatively, you can clone from the official **cobaya** repo (but this way you won't be able to upload your changes!).
 
