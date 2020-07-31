@@ -140,8 +140,10 @@ class minimize(Minimizer, CovmatSampler):
                     list(self.model.parameterization.sampled_params())].values
                 self.log.info("Starting from %s of previous chain:",
                               "best fit" if self.ignore_prior else "MAP")
-                # Compute the covmat in case no .covmat file present (e.g. with PolyChord)
-                covmat_in = collection_in.cov(derived=False)
+                # Compute covmat if input but no .covmat file (e.g. with PolyChord)
+                # Prefer old over `covmat` definition in yaml (same as MCMC)
+                self.covmat = collection_in.cov(derived=False)
+                self.covmat_params = list(self.model.parameterization.sampled_params())
         if initial_point is None:
             this_logp = -np.inf
             while not np.isfinite(this_logp):
@@ -153,7 +155,7 @@ class minimize(Minimizer, CovmatSampler):
         self._bounds = self.model.prior.bounds(
             confidence_for_unbounded=self.confidence_for_unbounded)
         # TODO: if ignore_prior, one should use *like* covariance (this is *post*)
-        covmat = self._load_covmat(self.output, default_not_found=covmat_in)[0]
+        covmat = self._load_covmat(prefer_load_old=self.output)[0]
         # scale by conditional parameter widths (since not using correlation structure)
         scales = np.minimum(1 / np.sqrt(np.diag(np.linalg.inv(covmat))),
                             (self._bounds[:, 1] - self._bounds[:, 0]) / 3)

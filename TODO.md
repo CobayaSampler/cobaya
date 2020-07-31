@@ -26,7 +26,6 @@
 ## minimize:
 + unbounded parameters with flat prior (this would make it safe to rotate the unbounded ones in minimize) [JT: not very much in favour, since that would break a bunch of other stuff. Maybe let's explore an alternative solution? e.g. auto-extend uniform priors.]
 + add MINUIT
-+ maybe should not overwrite `sampler` block of original sample (either append or leave as it was)
 ## mcmc:
 * finish removing .checkpoint in favour of updated.yaml and .progress
 * For learning checks, X should perhaps ideally also depend slightly on the speed of the cycles, e.g. if either check becomes slow compared to a fast cycle.

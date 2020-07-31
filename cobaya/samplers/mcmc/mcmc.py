@@ -289,7 +289,8 @@ class mcmc(CovmatSampler):
     def set_proposer_covmat(self, load=False):
         if load:
             # Build the initial covariance matrix of the proposal, or load from checkpoint
-            self._covmat, where_nan = self._load_covmat(self.output.is_resuming())
+            self._covmat, where_nan = self._load_covmat(
+                prefer_load_old=self.output.is_resuming())
             if np.any(where_nan) and self.learn_proposal:
                 # We want to start learning the covmat earlier.
                 self.mpi_info("Covariance matrix " +
