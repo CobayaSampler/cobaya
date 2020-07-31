@@ -19,6 +19,6 @@ USER ${NB_USER}
 
 WORKDIR ${HOME}
 
-RUN pip install getdist
+RUN pip install getdist --user
 
-RUN python setup.py install
+RUN python setup.py install --user
