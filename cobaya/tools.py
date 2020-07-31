@@ -356,6 +356,17 @@ def recursive_update(base, update):
     return base
 
 
+def invert_dict(dict_in):
+    """
+    Inverts a dictionary, where values in the returned ones are always lists of the
+    original keys. Order is not preserved.
+    """
+    dict_out = {v: [] for v in dict_in.values()}
+    for k, v in dict_in.items():
+        dict_out[v].append(k)
+    return dict_out
+
+
 def ensure_latex(string):
     """Inserts $'s at the beginning and end of the string, if necessary."""
     if string.strip()[0] != r"$":

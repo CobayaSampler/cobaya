@@ -14,8 +14,8 @@ from copy import deepcopy
 
 # Local
 from cobaya.conventions import partag
-from cobaya.tools import get_external_function, ensure_nolatex, is_valid_variable_name
-from cobaya.tools import getfullargspec, deepcopy_where_possible
+from cobaya.tools import get_external_function, ensure_nolatex, is_valid_variable_name, \
+    getfullargspec, deepcopy_where_possible, invert_dict
 from cobaya.log import LoggedError, HasLogger
 
 
@@ -190,6 +190,13 @@ class Parameterization(HasLogger):
                 list(bad_input_dependencies))
         self._wrapped_input_funcs, self._wrapped_derived_funcs = \
             self._get_wrapped_functions_evaluation_order()
+        # warn if repeated labels
+        labels_inv_repeated = invert_dict(self.labels())
+        for k in list(labels_inv_repeated):
+            if len(labels_inv_repeated[k]) == 1:
+                labels_inv_repeated.pop(k)
+        if labels_inv_repeated:
+            self.log.warn("There are repeated parameter labels: %r", labels_inv_repeated)
 
     def input_params(self):
         return self._input.copy()
@@ -256,7 +263,6 @@ class Parameterization(HasLogger):
                                 val = self._sampled.get(arg)
                     args[arg] = val
                 self._derived[p] = self._call_param_func(p, func, args)
-
         return list(self._derived.values())
 
     def check_sampled(self, **sampled_params):
