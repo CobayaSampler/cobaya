@@ -557,3 +557,9 @@ class CovmatSampler(Sampler):
             return os.path.join(
                 self.output.folder, self.output.prefix + _covmat_extension)
         return None
+
+    def dump_covmat(self, covmat=None):
+        if covmat is None:
+            covmat = self.covmat
+        np.savetxt(self.covmat_filename(), covmat, header=" ".join(
+            list(self.model.parameterization.sampled_params())))

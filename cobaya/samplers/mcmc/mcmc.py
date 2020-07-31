@@ -771,9 +771,7 @@ class mcmc(CovmatSampler):
     def write_checkpoint(self):
         if is_main_process() and self.output:
             checkpoint_filename = self.checkpoint_filename()
-            covmat_filename = self.covmat_filename()
-            np.savetxt(covmat_filename, self.proposer.get_covariance(), header=" ".join(
-                list(self.model.parameterization.sampled_params())))
+            self.dump_covmat(self.proposer.get_covariance())
             checkpoint_info = {kinds.sampler: {self.get_name(): dict([
                 ("converged", bool(self.converged)),
                 ("Rminus1_last", self.Rminus1_last),
