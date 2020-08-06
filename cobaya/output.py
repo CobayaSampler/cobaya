@@ -47,21 +47,21 @@ def split_prefix(prefix):
     return folder, file_prefix
 
 
-def get_info_path(folder, prefix, mid=None, kind="updated"):
+def get_info_path(folder, prefix, infix=None, kind="updated"):
     """
     Gets path to info files saved by Output.
     """
-    if mid is None:
-        mid = ""
-    elif not mid.endswith("."):
-        mid += "."
+    if infix is None:
+        infix = ""
+    elif not infix.endswith("."):
+        infix += "."
     info_file_prefix = os.path.join(
         folder, prefix + (_separator_files if prefix else ""))
     try:
         suffix = {"input": _input_suffix, "updated": _updated_suffix}[kind.lower()]
     except KeyError:
         raise ValueError("`kind` must be `input|updated`")
-    return info_file_prefix + mid + suffix + _yaml_extensions[0]
+    return info_file_prefix + infix + suffix + _yaml_extensions[0]
 
 
 class Output(HasLogger):
@@ -71,14 +71,22 @@ class Output(HasLogger):
     :class:`~collection.Collection` files, etc.
     """
 
-    def __init__(self, output_prefix, resume=_resume_default, force=False,
-                 updated_prefix=None):
+    def __init__(self, prefix, resume=_resume_default, force=False, infix=None,
+                 output_prefix=None):
+        # MARKED FOR DEPRECATION IN v3.0
+        # -- also remove output_prefix kwarg above
+        if output_prefix is not None:
+            self.log.warning("*DEPRECATION*: `output_prefix` will be deprecated in the "
+                             "next version. Please use `prefix` instead.")
+            # BEHAVIOUR TO BE REPLACED BY ERROR:
+            prefix = output_prefix
+        # END OF DEPRECATION BLOCK
         self.name = "output"  # so that the MPI-wrapped class conserves the name
         self.set_logger(self.name)
-        self.folder, self.prefix = split_prefix(output_prefix)
+        self.folder, self.prefix = split_prefix(prefix)
         self.prefix_regexp_str = re.escape(self.prefix) + (r"\." if self.prefix else "")
         self.force = force
-        if resume and force and output_prefix:
+        if resume and force and prefix:
             # No resume and force at the same time (if output)
             raise LoggedError(
                 self.log,
@@ -98,9 +106,10 @@ class Output(HasLogger):
         self.log.info("Output to be read-from/written-into folder '%s', with prefix '%s'",
                       self.folder, self.prefix)
         # Prepare file names, and check if chain exists
-        self.file_input = get_info_path(self.folder, self.prefix, kind="input")
-        self.file_updated = get_info_path(self.folder, self.prefix, mid=updated_prefix,
-                                          kind="updated")
+        self.file_input = get_info_path(
+            self.folder, self.prefix, infix=infix, kind="input")
+        self.file_updated = get_info_path(
+            self.folder, self.prefix, infix=infix, kind="updated")
         self._resuming = False
         # Output kind and collection extension
         self.kind = _kind
@@ -108,7 +117,7 @@ class Output(HasLogger):
         if os.path.isfile(self.file_updated):
             self.log.info(
                 "Found existing info files with the requested output prefix: '%s'",
-                output_prefix)
+                prefix)
             if self.force:
                 self.log.info("Will delete previous products ('force' was requested).")
                 self.delete_infos()
@@ -167,7 +176,7 @@ class Output(HasLogger):
             if os.path.exists(f):
                 os.remove(f)
 
-    def updated_output_prefix(self):
+    def updated_prefix(self):
         """
         Updated path: drops folder: now it's relative to the chain's location.
         """
@@ -256,7 +265,7 @@ class Output(HasLogger):
         # If resuming, we don't want to to *partial* dumps
         if ignore_blocks and self.is_resuming():
             return
-        # Work on a copy of the input info, since we are updating the output_prefix
+        # Work on a copy of the input info, since we are updating the prefix
         # (the updated one is already a copy)
         if input_info is not None:
             input_info = deepcopy_where_possible(input_info)
@@ -271,7 +280,7 @@ class Output(HasLogger):
                 info.pop(_resume, None)
                 # make sure the dumped output_prefix does only contain the file prefix,
                 # not the folder, since it's already been placed inside it
-                info[_output_prefix] = self.updated_output_prefix()
+                info[_output_prefix] = self.updated_prefix()
                 with open(f, "w", encoding="utf-8") as f_out:
                     try:
                         f_out.write(yaml_dump(sort_cosmetic(info)))
@@ -463,7 +472,11 @@ def get_output(*args, **kwargs):
     Auxiliary function to retrieve the output driver
     (e.g. whether to get the MPI-wrapped one, or a dummy output driver).
     """
-    if kwargs.get("output_prefix"):
+    # MARKED FOR DEPRECATION IN v3.0
+    if kwargs.get("output_prefix") is not None:
+        kwargs["prefix"] = kwargs["output_prefix"]
+    # END OF DEPRECATION BLOCK
+    if kwargs.get("prefix"):
         from cobaya.mpi import import_MPI
         return import_MPI(".output", "Output")(*args, **kwargs)
     else:

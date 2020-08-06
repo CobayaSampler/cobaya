@@ -59,7 +59,7 @@ def post(info, sample=None):
     if info.get(_resume):
         log.warning("Resuming not implemented for post-processing. Re-starting.")
     # 1. Load existing sample
-    output_in = get_output(output_prefix=info.get(_output_prefix))
+    output_in = get_output(prefix=info.get(_output_prefix))
     if output_in:
         try:
             info_in = output_in.reload_updated_info()
@@ -241,7 +241,7 @@ def post(info, sample=None):
     if out_prefix not in [None, False]:
         out_prefix += _separator_files + _post + _separator_files + info_post[
             _post_suffix]
-    output_out = get_output(output_prefix=out_prefix, force=info.get(_force))
+    output_out = get_output(prefix=out_prefix, force=info.get(_force))
     if output_out and not output_out.force and output_out.find_collections():
         raise LoggedError(log, "Found existing post-processing output with prefix %r. "
                                "Delete it manually or re-run with `force: True` "
