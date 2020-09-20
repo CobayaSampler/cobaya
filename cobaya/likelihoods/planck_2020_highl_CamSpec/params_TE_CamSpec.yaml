@@ -1,0 +1,11 @@
+  calTE:
+    prior:
+      dist: norm
+      loc: 1
+      scale: 0.02
+    ref:
+      dist: norm
+      loc: 1
+      scale: 0.005
+    proposal: 0.005
+    latex: c_{TE}
