@@ -157,7 +157,7 @@ def load_module(name, package=None, path=None, min_version=None,
         component = import_module(name, package=package)
     if path and check_path:
         check_component_path(component, path)
-    if min_version:
+    if min_version and min_version.lower() != 'none':
         check_component_version(component, min_version)
     return component
 
