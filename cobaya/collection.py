@@ -250,26 +250,38 @@ class Collection(BaseCollection):
             raise ValueError("Index type not recognized: use column names or slices.")
 
     # Statistical computations
-    def mean(self, first=None, last=None, derived=False):
+    def mean(self, first=None, last=None, derived=False, pweight=False):
         """
         Returns the (weighted) mean of the parameters in the chain,
         between `first` (default 0) and `last` (default last obtained),
         optionally including derived parameters if `derived=True` (default `False`).
         """
+        if pweight:
+            logps = -self[_minuslogpost][first:last].values.copy()
+            logps -= max(logps)
+            weights = np.exp(logps)
+        else:
+            weights = self[_weight][first:last].values
         return np.average(
             self[list(self.sampled_params) +
                  (list(self.derived_params) if derived else [])]
             [first:last].T,
-            weights=self[_weight][first:last], axis=-1)
+            weights=weights, axis=-1)
 
-    def cov(self, first=None, last=None, derived=False):
+    def cov(self, first=None, last=None, derived=False, pweight=False):
         """
         Returns the (weighted) covariance matrix of the parameters in the chain,
         between `first` (default 0) and `last` (default last obtained),
         optionally including derived parameters if `derived=True` (default `False`).
         """
-        weights = self[_weight][first:last].values
-        kwarg = "fweights" if np.allclose(np.round(weights), weights) else "aweights"
+        if pweight:
+            logps = -self[_minuslogpost][first:last].values.copy()
+            logps -= max(logps)
+            weights = np.exp(logps)
+            kwarg = "aweights"
+        else:
+            weights = self[_weight][first:last].values
+            kwarg = "fweights" if np.allclose(np.round(weights), weights) else "aweights"
         weights_kwarg = {kwarg: weights}
         return np.atleast_2d(np.cov(
             self[list(self.sampled_params) +
