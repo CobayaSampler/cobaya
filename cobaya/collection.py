@@ -255,6 +255,9 @@ class Collection(BaseCollection):
         Returns the (weighted) mean of the parameters in the chain,
         between `first` (default 0) and `last` (default last obtained),
         optionally including derived parameters if `derived=True` (default `False`).
+
+        If `pweight=True` (default `False`) weights every point with its probability.
+        The estimate of the mean in this case is unstable; use carefully.
         """
         if pweight:
             logps = -self[_minuslogpost][first:last].values.copy()
@@ -273,6 +276,9 @@ class Collection(BaseCollection):
         Returns the (weighted) covariance matrix of the parameters in the chain,
         between `first` (default 0) and `last` (default last obtained),
         optionally including derived parameters if `derived=True` (default `False`).
+
+        If `pweight=True` (default `False`) weights every point with its probability.
+        The estimate of the covariance matrix in this case is unstable; use carefully.
         """
         if pweight:
             logps = -self[_minuslogpost][first:last].values.copy()
