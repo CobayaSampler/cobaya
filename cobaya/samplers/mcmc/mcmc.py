@@ -28,6 +28,8 @@ from cobaya.log import LoggedError
 from cobaya.tools import get_external_function, NumberWithUnits, load_DataFrame
 from cobaya.yaml import yaml_dump_file
 
+_error_tag = 99
+
 
 class mcmc(CovmatSampler):
     _at_resume_prefer_new = CovmatSampler._at_resume_prefer_new + [
@@ -532,6 +534,7 @@ class mcmc(CovmatSampler):
                             (1 + (10 - 1) * np.sign(self.burn_in_left))
             if self.current_point.weight > max_tries_now:
                 self.collection.out_update()
+                self.send_error_signal()
                 raise LoggedError(
                     self.log,
                     "The chain has been stuck for %d attempts. Stopping sampling. "
@@ -557,6 +560,7 @@ class mcmc(CovmatSampler):
             if more_than_one_process():
                 self.been_waiting += 1
                 if self.been_waiting > self.max_waiting:
+                    self.send_error_signal()
                     raise LoggedError(
                         self.log, "Waiting for too long for all chains to be ready. "
                                   "Maybe one of them is stuck or died unexpectedly?")
@@ -565,6 +569,8 @@ class mcmc(CovmatSampler):
             if not more_than_one_process():
                 self.log.debug(msg_ready)
                 return True
+            # Error check in case any process already sent an error signal
+            self.check_error_signal()
             # If MPI, tell the rest that we are ready -- we use a "gather"
             # ("reduce" was problematic), but we are in practice just pinging
             if not hasattr(self, "req"):  # just once!
@@ -581,6 +587,8 @@ class mcmc(CovmatSampler):
                 self.log.info("All chains are r" + msg_ready[1:])
             delattr(self, "req")
             self.been_waiting = 0
+            # Another error check, in case the error occurred after sending "ready" signal
+            self.check_error_signal()
             # Just in case, a barrier here
             sync_processes()
             return True
@@ -763,6 +771,30 @@ class mcmc(CovmatSampler):
                                        "waiting until next covmat learning attempt.")
         # Save checkpoint info
         self.write_checkpoint()
+
+    def send_error_signal(self):
+        """
+        Sends an error signal to the other MPI processes.
+        """
+        for i_rank in range(get_mpi_size()):
+            if i_rank != get_mpi_rank():
+                get_mpi_comm().isend(True, dest=i_rank, tag=_error_tag)
+
+    def check_error_signal(self):
+        """
+        Checks if any of the other process has sent an error signal, and fails.
+
+        NB: This behaviour only shows up when running this sampler inside a Python script,
+            not when running with `cobaya run` (in that case, the process raising an error
+            will call `MPI_ABORT` and kill the rest.
+        """
+        for i in range(get_mpi_size()):
+            if i != get_mpi_rank():
+                from mpi4py import MPI
+                status = MPI.Status()
+                get_mpi_comm().iprobe(i, status=status)
+                if status.tag == _error_tag:
+                    raise LoggedError(self.log, "Another process failed! Exiting.")
 
     def do_output(self, date_time):
         self.collection.out_update()
