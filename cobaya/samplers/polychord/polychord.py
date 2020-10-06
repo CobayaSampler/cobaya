@@ -103,8 +103,7 @@ class polychord(Sampler):
         if self.do_clustering:
             self.clusters_folder = self.get_clusters_dir(self.output)
             self.output.create_folder(self.clusters_folder)
-        if is_main_process():
-            self.log.info("Storing raw PolyChord output in '%s'.", self.base_dir)
+        self.mpi_info("Storing raw PolyChord output in '%s'.", self.base_dir)
         # Exploiting the speed hierarchy
         if self.blocking:
             blocks, oversampling_factors = self.model.check_blocking(self.blocking)
@@ -175,7 +174,7 @@ class polychord(Sampler):
             for p, v in inspect.getmembers(self.pc_settings, lambda a: not (callable(a))):
                 if not p.startswith("_"):
                     self.log.debug("  %s: %s", p, v)
-        self.log.info("Initialized!")
+        self.mpi_info("Initialized!")
 
     def dumper(self, live_points, dead_points, logweights, logZ, logZstd):
         # Store live and dead points and evidence computed so far
@@ -460,18 +459,22 @@ class polychord(Sampler):
         if path is not None and path.lower() == "global":
             path = None
         if path and not kwargs.get("allow_global"):
-            log.info("Importing *local* PolyChord from '%s'.", path)
+            if is_main_process():
+                log.info("Importing *local* PolyChord from '%s'.", path)
             if not os.path.exists(path):
-                log.error("The given folder does not exist: '%s'", path)
+                if is_main_process():
+                    log.error("The given folder does not exist: '%s'", path)
                 return False
             poly_build_path = cls.get_import_path(path)
             if not poly_build_path:
                 return False
         elif not path:
-            log.info("Importing *global* PolyChord.")
+            if is_main_process():
+                log.info("Importing *global* PolyChord.")
             poly_build_path = None
         else:
-            log.info("Importing *auto-installed* PolyChord (but defaulting to *global*).")
+            if is_main_process():
+                log.info("Importing *auto-installed* PolyChord (but defaulting to *global*).")
             poly_build_path = cls.get_import_path(path)
         try:
             # TODO: add min_version when polychord module version available
@@ -490,6 +493,7 @@ class polychord(Sampler):
         except VersionCheckError as e:
             log.error(str(e))
             return False
+
     @classmethod
     def install(cls, path=None, force=False, code=False, data=False,
                 no_progress_bars=False):

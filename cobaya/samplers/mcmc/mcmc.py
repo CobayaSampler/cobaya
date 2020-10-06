@@ -321,10 +321,11 @@ class mcmc(CovmatSampler):
         """
         Runs the sampler.
         """
-        self.log.info("Sampling!" +
-                      (" (NB: no accepted step will be saved until %d burn-in samples " %
-                       self.burn_in.value + "have been obtained)"
-                       if self.burn_in.value else ""))
+        self.mpi_info(
+            "Sampling!" +
+            (" (NB: no accepted step will be saved until %d burn-in samples " %
+             self.burn_in.value + "have been obtained)"
+             if self.burn_in.value else ""))
         self.n_steps_raw = 0
         last_output = 0
         last_n = self.n()
@@ -663,7 +664,11 @@ class mcmc(CovmatSampler):
             # For numerical stability, we turn mean_of_covs into correlation matrix:
             #   rho = (diag(Sigma))^(-1/2) * Sigma * (diag(Sigma))^(-1/2)
             # and apply the same transformation to the mean of covs (same eigenvals!)
+            # NB: disables warnings from numpy
+            prev_err_state = deepcopy(np.geterr())
+            np.seterr(divide="ignore")
             diagSinvsqrt = np.diag(np.power(np.diag(cov_of_means), -0.5))
+            np.seterr(**prev_err_state)
             corr_of_means = diagSinvsqrt.dot(cov_of_means).dot(diagSinvsqrt)
             norm_mean_of_covs = diagSinvsqrt.dot(mean_of_covs).dot(diagSinvsqrt)
             success = False

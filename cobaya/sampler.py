@@ -230,7 +230,7 @@ class Sampler(CobayaComponent):
             # MPI-awareness: sum the rank to the seed
             if more_than_one_process():
                 self.seed += get_mpi_rank()
-            self.log.warning("This run has been SEEDED with seed %d", self.seed)
+            self.mpi_warning("This run has been SEEDED with seed %d", self.seed)
         # Load checkpoint info, if resuming
         if self.output.is_resuming() and not isinstance(self, Minimizer):
             try:
