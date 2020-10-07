@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 from typing import Optional
 from getdist import MCSamples
+from copy import deepcopy
 
 # Local
 from cobaya.conventions import _weight, _chi2, _minuslogpost, _minuslogprior, \
@@ -225,8 +226,11 @@ class Collection(BaseCollection):
         This is a hack of the DataFrame __getitem__ in order to never go
         beyond the number of samples.
 
-        NB: returns *views*, not *copies*, so careful when assigning and modifying
-        the returned values.
+        When slicing (e.g. [ini:end:step]) or single index, returns a copy of the
+        collection.
+
+        When asking for specific columns, returns a *view* of the original DataFrame
+        (so careful when assigning and modifying returned values).
 
         Errors are ValueError because this is not for internal use in this class,
         but an external interface to other classes and the user.
@@ -239,15 +243,46 @@ class Collection(BaseCollection):
         elif hasattr(args[0], "__len__"):
             try:
                 return self.data.iloc[:self._n,
-                       [self.data.columns.get_loc(c) for c in args[0]]]
+                                          [self.data.columns.get_loc(c) for c in args[0]]]
             except KeyError:
                 raise ValueError("Some of the indices are not valid columns.")
         elif isinstance(args[0], int):
-            return self.data.iloc[check_index(args[0], self._n)]
+            new_data = self.data.iloc[check_index(args[0], self._n)]
         elif isinstance(args[0], slice):
-            return self.data.iloc[check_slice(args[0], self._n)]
+            new_data = self.data.iloc[check_slice(args[0], self._n)]
         else:
             raise ValueError("Index type not recognized: use column names or slices.")
+        return self._copy(data=new_data)
+
+    @property
+    def values(self):
+        self.data.values
+
+    def _copy(self, data=None):
+        """
+        Returns a copy of the collection.
+
+        If data specified (default: None), the copy returned contains the given data;
+        no checks are performed on given data, so use with care (e.g. use with a slice of
+        `self.data`).
+        """
+        current_data = self.data
+        if data is None:
+            data = current_data
+        # Avoids creating a copy of the data, to save memory
+        delattr(self, "data")
+        self_copy = deepcopy(self)
+        setattr(self, "data", current_data)
+        setattr(self_copy, "data", data)
+        setattr(self_copy, "_n", len(data))
+        return self_copy
+
+    # Dummy function to avoid exposing `data` kwarg, since no checks are performed on it.
+    def copy(self, data=None):
+        """
+        Returns a copy of the collection.
+        """
+        return self._copy()
 
     # Statistical computations
     def mean(self, first=None, last=None, derived=False, pweight=False):

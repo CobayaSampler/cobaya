@@ -196,7 +196,8 @@ class Parameterization(HasLogger):
             if len(labels_inv_repeated[k]) == 1:
                 labels_inv_repeated.pop(k)
         if labels_inv_repeated:
-            self.log.warn("There are repeated parameter labels: %r", labels_inv_repeated)
+            self.log.warning(
+                "There are repeated parameter labels: %r", labels_inv_repeated)
 
     def input_params(self):
         return self._input.copy()

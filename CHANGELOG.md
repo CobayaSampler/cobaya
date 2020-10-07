@@ -18,6 +18,7 @@
 
 - Collections are picklable again.
 - Slices with ommited limits, e.g. `[::2]`, now work.
+- Slicing now returns a copy of the `Collection`, instead of a raw `pandas.DataFrame`.
 
 ### MCMC
 
