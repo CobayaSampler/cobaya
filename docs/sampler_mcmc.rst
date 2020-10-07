@@ -241,6 +241,54 @@ A callback function can be specified through the ``callback_function`` option. I
 The callback function is called every ``callback_every`` points have been added to the chain, or at every checkpoint if that option has not been defined.
 
 
+.. _mcmc_mpi_in_script:
+
+Interaction with MPI when using MCMC inside your own script
+-----------------------------------------------------------
+
+When integrating Cobaya in your pipeline inside a Python script (as opposed to calling it with `cobaya-run`), you need to be careful when using MPI: exceptions will not me caught properly unless some wrapping is used:
+
+.. code:: python
+
+    from mpi4py import MPI
+
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+
+    from cobaya.run import run
+    from cobaya.log import LoggedError
+
+    success = False
+    try:
+        upd_info, mcmc = run(info)
+        success = True
+    except LoggedError as err:
+        pass
+
+    # Did it work? (e.g. did not get stuck)
+    success = all(comm.allgather(success))
+
+    if not success and rank == 0:
+        print("Sampling failed!")
+
+In this case, if one of the chains fails, the rest will learn about it and raise an exception too *as soon as they arrive at the next checkpoint* (in order for them to be able to learn about the failing process earlier, we would need to have used much more aggressive MPI polling in Cobaya, that would have introduced a lot of communication overhead).
+
+As sampler products, every MPI process receives its own chain via the :meth:`~.samplers.mcmc.products` method. To gather all of them in the root process and combine them, skipping the first third of each, do:
+
+.. code:: python
+
+    all_chains = comm.gather(mcmc.products()["sample"], root=0)
+
+    copy_and_skip_1st_3rd = lambda chain: chain[int(len(chain) / 3):]
+
+    all_chains = comm.gather(mcmc.products()["sample"], root=0)
+    if rank == 0:
+        full_chain = copy_and_skip_1st_3rd(all_chains[0])
+        for chain in all_chains[1:]:
+            full_chain.append(copy_and_skip_1st_3rd(chain))
+        # The combined chain is now `full_chain`
+
+
 Options and defaults
 --------------------
 

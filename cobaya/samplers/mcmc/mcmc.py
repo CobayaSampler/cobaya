@@ -393,8 +393,12 @@ class mcmc(CovmatSampler):
         """
         trial = self.current_point.values.copy()
         self.proposer.get_proposal(trial)
-        logpost_trial, logprior_trial, loglikes_trial, derived = \
-            self.model.logposterior(trial)
+        try:
+            logpost_trial, logprior_trial, loglikes_trial, derived = \
+                self.model.logposterior(trial)
+        except:
+            self.send_error_signal()
+            raise
         accept = self.metropolis_accept(logpost_trial, self.current_point.logpost)
         self.process_accept_or_reject(accept, trial, derived,
                                       logpost_trial, logprior_trial, loglikes_trial)
