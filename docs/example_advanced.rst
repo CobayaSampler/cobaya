@@ -71,6 +71,10 @@ Now, we add the sampler information and run. Notice the high number of samples r
 Here ``Rminus1_stop`` is the tolerance for deciding when the chains are converged, with a smaller number
 meaning better convergence (defined as `R-1`, diagonalized Gelman-Rubin parameter value at which chains should stop).
 
+.. note::
+
+   If using MPI and the :doc:`MCMC <sampler_mcmc>` sampler, take a look at :ref:`this section <mcmc_mpi_in_script>`.
+
 Let us plot the posterior for ``x``, ``y``, the radius and the angle:
 
 .. code:: python

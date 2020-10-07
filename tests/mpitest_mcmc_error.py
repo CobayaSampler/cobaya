@@ -47,19 +47,24 @@ if not success and rank == 0:
 
 # Now gather chains of all MPI processes in rank 0
 
-copy_and_skip_1st_3rd = lambda chain: chain[int(len(chain) / 3):]
 
 all_chains = comm.gather(mcmc.products()["sample"], root=0)
-# Now (optionally) concatenate them in rank = 0
-# Skip 1st 3rd of each chain
+
+# Pass all of them to GetDist in rank = 0
+
 if rank == 0:
-    print([len(c) for c in all_chains])
+    from getdist.mcsamples import MCSamplesFromCobaya
+    gd_sample = MCSamplesFromCobaya(upd_info, all_chains)
+
+# Manually concatenate them in rank = 0 for some custom manipulation,
+# skipping 1st 3rd of each chain
+copy_and_skip_1st_3rd = lambda chain: chain[int(len(chain) / 3):]
+if rank == 0:
     full_chain = copy_and_skip_1st_3rd(all_chains[0])
     for chain in all_chains[1:]:
         full_chain.append(copy_and_skip_1st_3rd(chain))
-    print(len(full_chain))
+    # The combined chain is now `full_chain`
     import matplotlib.pyplot as plt
     plt.figure()
     plt.hist(full_chain["x"], weights=full_chain["weight"])
     plt.show()
-
