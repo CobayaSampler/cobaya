@@ -45,7 +45,12 @@ def run(info):
     # END OF DEPRECATION BLOCK
     # 1. Prepare output driver, if requested by defining an output_prefix
     # GetDist needs to know the original sampler, so don't overwrite if minimizer
-    which_sampler = list(info["sampler"])[0]
+    try:
+        which_sampler = list(info["sampler"])[0]
+    except (KeyError, TypeError):
+        raise LoggedError(
+            logger_run, "You need to specify a sampler using the 'sampler' key as e.g. "
+                        "`sampler: {mcmc: None}.`")
     infix = "minimize" if which_sampler == "minimize" else None
     output = get_output(prefix=info.get(_output_prefix), resume=info.get(_resume),
                         force=info.get(_force), infix=infix)
