@@ -21,7 +21,7 @@ class planck_2020_CamSpec_python(_planck_2018_CamSpec_python):
         tilt[3] = data_params['n_143x217']
 
         powerlaw_pivot=1500
-        C_powerlaw = np.array([amp[ii] / self.llp1 * (1.*self.ls/powerlaw_pivot)**tilt[ii] for ii in range(4)])
+        C_powerlaw = np.array([amp[ii] * (self.ls/powerlaw_pivot)**tilt[ii] for ii in range(4)])
 
         return C_powerlaw
 
