@@ -6,7 +6,7 @@
 path: null
 dataset_file: CamSpecHM_12_5_cl.dataset
 dataset_params:
-  use_cl: 100x100 143x143 217x217 143x217 TE EE
+  use_cl: 143x143 217x217 143x217 TE EE
 # Aliases for automatic covariance matrix
 aliases: [CamSpec2020HM_TTTEEE]
 # Speed in evaluations/second
