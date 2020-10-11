@@ -28,6 +28,8 @@ from cobaya.install import download_github_release, NotInstalledError
 from cobaya.yaml import yaml_dump_file
 from cobaya.conventions import _separator, _evidence_extension, _packages_path_arg
 from pypolychord.settings import PolyChordSettings
+# TODO Jesus fetch supenest if not installed with cobaya-install
+# TODO Jesus: add bibtex to cobaya
 try:
     import supernest
     use_supernest = True
@@ -35,7 +37,8 @@ except ImportError as e:
     use_supernest = False
 
 
-
+# TODO change to inherit from  CovmatSampler
+# TODO Jesus: Modify CovmatSampler to provide defaults to self.mean
 class polychord(Sampler):
     # Name of the PolyChord repo and version to download
     _pc_repo_name = "PolyChord/PolyChordLite"
@@ -259,8 +262,10 @@ class polychord(Sampler):
         self.mpi_info("Calling PolyChord...")
         if use_supernest:
             self.mpi_info('Creating proposal')
+            # TODO Check for empty misshapen lists. 
             cov = self.covmat
             mu  = self.mu
+            # TODO Check compatibility of arguments
             proposal= supernest.gaussian_proposal(self.bounds, mu, cov, loglike=logpost)
             self.mpi_info('Success!')
             nDims, ll, prior = supernest.superimpose((self.pc_prior, logpost), nDims = self.nDims)
