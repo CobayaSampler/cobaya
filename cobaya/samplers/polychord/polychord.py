@@ -27,6 +27,13 @@ from cobaya.log import LoggedError
 from cobaya.install import download_github_release, NotInstalledError
 from cobaya.yaml import yaml_dump_file
 from cobaya.conventions import _separator, _evidence_extension, _packages_path_arg
+from pypolychord.settings import PolyChordSettings
+try:
+    import supernest
+    use_supernest = True
+except ImportError as e:
+    use_supernest = False
+
 
 
 class polychord(Sampler):
@@ -61,7 +68,8 @@ class polychord(Sampler):
                           "To install it, run 'cobaya-install polychord --%s "
                           "[packages_path]'", _packages_path_arg)
         # Prepare arguments and settings
-        from pypolychord.settings import PolyChordSettings
+        if use_supernest:
+            use_supernest = self.use_supernest
         self.n_sampled = len(self.model.parameterization.sampled_params())
         self.n_derived = len(self.model.parameterization.derived_params())
         self.n_priors = len(self.model.prior)
@@ -139,9 +147,26 @@ class polychord(Sampler):
                    "grade_dims"]
         # As stated above, num_repeats is ignored, so let's not pass it
         pc_args.pop(pc_args.index("num_repeats"))
-        self.pc_settings = PolyChordSettings(
-            self.nDims, self.nDerived, seed=(self.seed if self.seed is not None else -1),
-            **{p: getattr(self, p) for p in pc_args if getattr(self, p) is not None})
+
+
+        # TODO check this!
+        if use_supernest:
+            self.pc_settings = PolyChordSettings(
+                self.nDims+1,
+                self.nDerived,
+                seed=(self.seed if self.seed is not None else -1),
+                **{p: getattr(self, p) for p in pc_args
+                   if getattr(self, p) is not None})
+        else:
+            self.pc_settings = PolyChordSettings(
+                self.nDims,
+                self.nDerived,
+                seed=(self.seed if self.seed is not
+                      None else -1),
+                # TODO This is where we want the := operator
+                **{p: getattr(self, p) for p in pc_args
+                   if getattr(self, p) is not None})
+        
         # prior conversion from the hypercube
         bounds = self.model.prior.bounds(
             confidence_for_unbounded=self.confidence_for_unbounded)
@@ -232,8 +257,17 @@ class polychord(Sampler):
 
         sync_processes()
         self.mpi_info("Calling PolyChord...")
-        self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
-                              self.pc_prior, self.dumper)
+        if use_supernest:
+            self.mpi_info('Creating proposal')
+            cov = self.covmat
+            mu  = self.mu
+            proposal= supernest.gaussian_proposal(self.bounds, mu, cov, loglike=logpost)
+            self.mpi_info('Success!')
+            nDims, ll, prior = supernest.superimpose((self.pc_prior, logpost), nDims = self.nDims)
+            self.pc.run_polychord(ll, nDims, self.nDerived, self.pc_settings, prior, self.dumper)
+        else:
+            self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
+                                  self.pc_prior, self.dumper)
         self.process_raw_output()
 
     @property
