@@ -30,16 +30,12 @@ from cobaya.conventions import _separator, _evidence_extension, _packages_path_a
 from pypolychord.settings import PolyChordSettings
 # TODO Jesus fetch supenest if not installed with cobaya-install
 # TODO Jesus: add bibtex to cobaya
-try:
-    import supernest
-    use_supernest = True
-except ImportError as e:
-    use_supernest = False
+
 
 
 # TODO change to inherit from  CovmatSampler
 # TODO Jesus: Modify CovmatSampler to provide defaults to self.mean
-class polychord(Sampler):
+class polychord(CovmatSampler):
     # Name of the PolyChord repo and version to download
     _pc_repo_name = "PolyChord/PolyChordLite"
     _pc_repo_version = "1.17.1"
@@ -61,6 +57,11 @@ class polychord(Sampler):
     def initialize(self):
         """Imports the PolyChord sampler and prepares its arguments."""
         # Allow global import if no direct path specification
+        try:
+            import supernest
+            self.use_supernest = self.use_supernest and True
+        except ImportError as e:
+            self.use_supernest = False
         allow_global = not self.path
         if not self.path and self.packages_path:
             self.path = self.get_path(self.packages_path)
@@ -71,8 +72,6 @@ class polychord(Sampler):
                           "To install it, run 'cobaya-install polychord --%s "
                           "[packages_path]'", _packages_path_arg)
         # Prepare arguments and settings
-        if use_supernest:
-            use_supernest = self.use_supernest
         self.n_sampled = len(self.model.parameterization.sampled_params())
         self.n_derived = len(self.model.parameterization.derived_params())
         self.n_priors = len(self.model.prior)
@@ -153,7 +152,7 @@ class polychord(Sampler):
 
 
         # TODO check this!
-        if use_supernest:
+        if self.use_supernest:
             self.pc_settings = PolyChordSettings(
                 self.nDims+1,
                 self.nDerived,
@@ -260,7 +259,7 @@ class polychord(Sampler):
 
         sync_processes()
         self.mpi_info("Calling PolyChord...")
-        if use_supernest:
+        if self.use_supernest:
             self.mpi_info('Creating proposal')
             # TODO Check for empty misshapen lists. 
             cov = self.covmat
