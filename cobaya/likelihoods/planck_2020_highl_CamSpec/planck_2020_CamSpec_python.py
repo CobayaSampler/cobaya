@@ -26,20 +26,18 @@ class planck_2020_CamSpec_python(_planck_2018_CamSpec_python):
         return C_powerlaw
 
     def chi_squared(self, CT, CTE, CEE, data_params):
-        use_parametric_fg_model = data_params['use_parametric_fg_model']
-        use_residual_model = data_params['use_residual_model']
-
+        use_fg_residual_model = data_params['use_fg_residual_model']
         cals = self.get_cals(data_params)
         
         if np.any(self.cl_used[:4]):
-            if(use_parametric_fg_model and not use_residual_model):
-                foregrounds = self.get_foregrounds(data_params)
-            elif(use_residual_model and not use_parametric_fg_model):
+            if use_fg_residual_model == 0:
                 foregrounds = self.get_powerlaw_residuals(data_params)
-            elif(use_residual_model and use_parametric_fg_model):
+            elif use_fg_residual_model == 1:
+                foregrounds = self.get_foregrounds(data_params)
+            elif use_fg_residual_model == 2:
                 foregrounds = self.get_foregrounds(data_params) + self.get_powerlaw_residuals(data_params)
             else:
-                raise ValueError("use_parametric_fg_model and use_residual_model cannot both be False")
+                raise ValueError("use_fg_residual_model should be 0 (powerlaw), 1 (foregrounds) or 2 (both)")
         delta_vector = self.data_vector.copy()
         ix = 0
         for i, (cal, n) in enumerate(zip(cals, self.used_sizes)):

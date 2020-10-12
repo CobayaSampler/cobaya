@@ -1,0 +1,17 @@
+# Planck 2018 release: high-ell, TT+TE+TT power spectrum CamSpec likelihood
+# See https://wiki.cosmos.esa.int/planck-legacy-archive/index.php/CMB_spectrum_%26_Likelihood_Code#
+# Native python re-implemetation, allowing multipole/bin selection
+
+# Path to the data: where the planck_supp_data_and_covmats has been cloned
+path: null
+dataset_file: CamSpecHM_12_5_cl.dataset
+dataset_params:
+  use_cl: 143x143 217x217 143x217 TE EE
+# Aliases for automatic covariance matrix
+aliases: [CamSpec2020HM_TTTEEE]
+# Speed in evaluations/second
+speed: 40
+
+params: !defaults [params_calib_CamSpec_2020, params_TT_CamSpec, params_TT_CamSpec_fg, params_CamSpec_both, params_TE_CamSpec, params_EE_CamSpec]
+
+#prior: !defaults [prior_SZ_CamSpec]

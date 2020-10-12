@@ -1,6 +1,4 @@
-  use_parametric_fg_model: 0
-  use_residual_model: 1
-
+  use_fg_residual_model: 1
   aps100:
     prior:
       dist: uniform
@@ -153,10 +151,3 @@
   cal0: 1
   cal2: 1
 
-  amp_100: 0
-  amp_143: 0
-  amp_143x217: 0
-  n_100: 0
-  n_143: 0
-  n_217: 0
-  n_143x217: 0

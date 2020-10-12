@@ -1,5 +1,4 @@
-  use_parametric_fg_model: 0
-  use_residual_model: 1
+  use_fg_residual_model: 0
   cal0: 1
   cal2: 1
     
