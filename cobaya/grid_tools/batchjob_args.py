@@ -5,10 +5,10 @@ from cobaya.grid_tools import batchjob
 
 
 class batchArgs:
-    def __init__(self, desc='', importance=True, noBatchPath=False, notExist=False,
-                 notall=False, converge=False,
+    def __init__(self, prog=None, desc='', importance=True, noBatchPath=False,
+                 notExist=False, notall=False, converge=False,
                  plots=False, batchPathOptional=False):
-        self.parser = argparse.ArgumentParser(description=desc)
+        self.parser = argparse.ArgumentParser(prog=prog, description=desc)
         if not noBatchPath:
             if batchPathOptional:
                 self.parser.add_argument('batchPath', nargs='?',

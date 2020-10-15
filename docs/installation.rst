@@ -98,6 +98,10 @@ If you get an error message, something went wrong. Check twice the instructions 
 
 **cobaya** also installs some shell scripts. If everything went well, if you try to run in the shell ``cobaya-run``, you should get a message asking you for an input file, instead of a ``command not found`` error.
 
+.. warning::
+
+   Calling **cobaya**'s scripts directly may be deprecated in the future in favour of (safer) ``python -m cobaya [command]`` (e.g. ``python -m cobaya run`` instead of ``cobaya-run``), so you can ignore that ``command_not_found`` error and use the new behaviour instead.
+
 .. note::
 
    If you do get a ``command not found`` error, this means that the folder where your local scripts are installed has not been added to your path.

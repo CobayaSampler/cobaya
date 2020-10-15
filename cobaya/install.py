@@ -319,6 +319,7 @@ def install_script():
     # Parse arguments
     import argparse
     parser = argparse.ArgumentParser(
+        prog="cobaya install",
         description="Cobaya's installation tool for external packages.")
     parser.add_argument("files_or_components", action="store", nargs="+",
                         metavar="input_file.yaml|component_name",

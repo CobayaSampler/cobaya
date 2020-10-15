@@ -254,8 +254,10 @@ def create_singularity_image(filenames, MPI_version=None):
 def create_image_script():
     warn_deprecation()
     logger_setup()
-    parser = argparse.ArgumentParser(description=(
-        "Cobaya's tool for preparing Docker (for Shifter) and Singularity images."))
+    parser = argparse.ArgumentParser(
+        prog="cobaya create-image",
+        description=(
+            "Cobaya's tool for preparing Docker (for Shifter) and Singularity images."))
     parser.add_argument("files", action="store", nargs="+", metavar="input_file.yaml",
                         help="One or more input files.")
     parser.add_argument("-v", "--mpi-version", action="store", nargs=1, default=[None],
@@ -279,6 +281,7 @@ def prepare_data_script():
         raise LoggedError(log, "This command should only be run within a container. "
                                "Run 'cobaya-install' instead.")
     parser = argparse.ArgumentParser(
+        prog="cobaya prepare-data"
         description="Cobaya's installation tool for the data needed by a container.")
     parser.add_argument("-f", "--force", action="store_true", default=False,
                         help="Force re-installation of apparently installed packages.")

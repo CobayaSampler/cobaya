@@ -1,5 +1,9 @@
 ## 3.0.1  – 2020-XX-XX
 
+### General
+
+- Cobaya can (and should!) now be called as `python -m cobaya run` instead of `cobaya-run`, and the same for the rest of the scripts.
+
 ### Installation scripts
 
 - File downloader function now uses `requests` instead of `wget` (less prone to segfaults), and stores intermediate files in a tmp folder.
