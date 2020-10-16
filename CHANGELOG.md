@@ -1,4 +1,10 @@
-## 3.0.1  – 2020-10-15
+## 3.0.2 – 2020-10-16
+
+### General
+
+- Installation bug fix.
+
+## 3.0.1 – 2020-10-15
 
 ### General
 
@@ -29,7 +35,7 @@
 - Better MPI error handling: will now fail gracefully when called inside a user's script (as opposed to `cobaya-run`).
 
 
-## 3.0  – 2020-05-12
+## 3.0 – 2020-05-12
 
 ### General
 

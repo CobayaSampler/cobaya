@@ -7,7 +7,6 @@ Allows calling `cobaya-[command]` as `python -m cobaya [command]`.
 
 import sys
 from importlib import import_module
-import readline
 
 commands = {"install": ["install", "install_script"],
             "doc": ["doc", "doc_script"],
@@ -21,16 +20,6 @@ commands = {"install": ["install", "install_script"],
             "run-job": ["grid_tools.runMPI", "run_single"],
             }
 
-
-def completer(text, state):
-    options = [i for i in commands if i.startswith(text)]
-    if state < len(options):
-        return options[state]
-    else:
-        return None
-
-readline.parse_and_bind("tab: complete")
-readline.set_completer(completer)
 
 help_msg = ("Add a one of the following commands and its arguments "
             "(`<command> -h` for help): %r" % list(commands))
