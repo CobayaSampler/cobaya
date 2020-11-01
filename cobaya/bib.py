@@ -22,7 +22,7 @@ _default_symbol = "="
 _default_length = 80
 
 # Cobaya's own bib info
-cobaya_bib = """
+cobaya_bib = r"""
 The posterior has been explored/maximised/reweighted using Cobaya \cite{torrado:2020xyz}.
 
 @article{Torrado:2020xyz,
