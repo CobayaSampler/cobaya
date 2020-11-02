@@ -120,7 +120,7 @@ def install(*infos, **kwargs):
             has_been_installed = False
             if not debug:
                 logging.disable(logging.ERROR)
-            if kwargs["skip_global"]:
+            if kwargs.get("skip_global"):
                 has_been_installed = is_installed(path="global", **kwargs_install)
             if not has_been_installed:
                 has_been_installed = is_installed(path=install_path, **kwargs_install)
@@ -130,7 +130,7 @@ def install(*infos, **kwargs):
                 log.info("External dependencies for this component already installed.")
                 if kwargs.get(_test_run, False):
                     continue
-                if kwargs_install["force"] and not kwargs["skip_global"]:
+                if kwargs_install["force"] and not kwargs.get("skip_global"):
                     log.info("Forcing re-installation, as requested.")
                 else:
                     log.info("Doing nothing.")
