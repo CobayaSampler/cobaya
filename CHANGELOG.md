@@ -1,8 +1,18 @@
+## 3.0.3beta – 2020-XX-XX
+
+### Cosmological likelihoods
+
+#### BAO
+
+- Added Hubble distance and fix to `bao.generic` (Thanks @Pablo-Lemos)
+
+
 ## 3.0.2 – 2020-10-16
 
 ### General
 
 - Installation bug fix.
+
 
 ## 3.0.1 – 2020-10-15
 

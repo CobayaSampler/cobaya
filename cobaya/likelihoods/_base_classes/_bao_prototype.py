@@ -291,7 +291,7 @@ class _bao_prototype(_InstallableLikelihood):
             return self.provider.get_angular_diameter_distance(z) / self.rs()
         # Hubble distance [c/H(z)] over sound horizon radius.
         elif observable == "DH_over_rs":
-            return 1./self.provider.get_Hubble(z, units="1/Mpc")/self.rs()
+            return 1 / self.provider.get_Hubble(z, units="1/Mpc") / self.rs()
         # Hubble parameter, times sound horizon radius
         elif observable == "Hz_rs":
             return self.provider.get_Hubble(z, units="km/s/Mpc") * self.rs()
