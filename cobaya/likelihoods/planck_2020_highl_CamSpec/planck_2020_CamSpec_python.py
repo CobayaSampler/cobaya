@@ -26,10 +26,10 @@ class planck_2020_CamSpec_python(_planck_2018_CamSpec_python):
         return C_powerlaw
 
     def chi_squared(self, CT, CTE, CEE, data_params):
-        use_fg_residual_model = data_params['use_fg_residual_model']
         cals = self.get_cals(data_params)
         
         if np.any(self.cl_used[:4]):
+            use_fg_residual_model = data_params['use_fg_residual_model']
             if use_fg_residual_model == 0:
                 foregrounds = self.get_powerlaw_residuals(data_params)
             elif use_fg_residual_model == 1:
