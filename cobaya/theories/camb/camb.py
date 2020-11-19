@@ -531,6 +531,8 @@ class camb(BoltzmannBase):
                 return derived
         # Specific calls, if general ones fail:
         if p == "sigma8":
+            intermediates.camb_params.Transfer.PK_redshifts = [0]
+            res = self.camb.get_results(intermediates.camb_params)
             return intermediates.results.get_sigma8()[-1]
         try:
             return getattr(intermediates.camb_params, p)
