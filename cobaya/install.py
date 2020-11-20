@@ -226,7 +226,8 @@ def download_file(url, path, no_progress_bars=False, decompress=False, logger=No
             except KeyError:
                 filename = os.path.basename(url)
             filename_tmp_path = os.path.normpath(os.path.join(tmp_path, filename))
-            open(filename_tmp_path, 'wb').write(req.content)
+            with open(filename_tmp_path, 'wb') as f:
+                f.write(req.content)
             logger.info('Downloaded filename %s', filename)
         except Exception as e:
             logger.error(
