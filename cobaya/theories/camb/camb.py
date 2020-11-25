@@ -413,6 +413,7 @@ class camb(BoltzmannBase):
                 if k == "sigma8":
                     self.extra_attrs["WantTransfer"] = True
                     self.needs_perts = True
+                    self.add_to_redshifts([0.])
             else:
                 raise LoggedError(self.log, "This should not be happening. Contact the "
                                             "developers.")
@@ -531,7 +532,7 @@ class camb(BoltzmannBase):
                 return derived
         # Specific calls, if general ones fail:
         if p == "sigma8":
-            return intermediates.results.get_sigma8()[-1]
+            return intermediates.results.get_sigma8_0()
         try:
             return getattr(intermediates.camb_params, p)
         except AttributeError:
