@@ -285,6 +285,9 @@ class LikelihoodCollection(ComponentCollection):
                                             "likelihood (no get_current_logp function)",
                                   name)
 
+    def get_helper_theory_collection(self):
+        return self.theory
+
     @property
     def all_types(self):
         if not hasattr(self, "_all_types"):
