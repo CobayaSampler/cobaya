@@ -158,8 +158,9 @@ class mcmc(CovmatSampler):
                and self.measure_speeds:
                 self.blocking = None
             if self.measure_speeds and self.blocking:
-                self.log.warning(
-                    "Parameter blocking manually fixed: speeds will not be measured.")
+                if is_main_process():
+                    self.log.warning(
+                        "Parameter blocking manually fixed: speeds will not be measured.")
             elif self.measure_speeds:
                 n = None if self.measure_speeds is True else int(self.measure_speeds)
                 self.model.measure_and_set_speeds(n=n, discard=0)
