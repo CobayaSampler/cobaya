@@ -247,10 +247,10 @@ class Sampler(CobayaComponent):
                             self.checkpoint_filename())
             except (IOError, TypeError):
                 pass
-        else:
+        elif not isinstance(self, Minimizer):
             try:
-                os.remove(self.checkpoint_filename())
-                os.remove(self.progress_filename())
+                output.delete_file_or_folder(self.checkpoint_filename())
+                output.delete_file_or_folder(self.progress_filename())
             except (OSError, TypeError):
                 pass
         self._set_rng()

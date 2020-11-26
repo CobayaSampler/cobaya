@@ -305,15 +305,21 @@ class Output(HasLogger):
             file_names = [root]
             self.log.debug("Deleting folder %r", root)
         for f in file_names:
+            self.delete_file_or_folder(f)
+
+    def delete_file_or_folder(self, filename):
+        """
+        Deletes a file or a folder. Fails silently.
+        """
+        try:
+            os.remove(filename)
+        except IsADirectoryError:
             try:
-                os.remove(f)
-            except IsADirectoryError:
-                try:
-                    shutil.rmtree(f)
-                except:
-                    raise
-            except OSError:
-                pass
+                shutil.rmtree(filename)
+            except:
+                raise
+        except OSError:
+            pass
 
     def prepare_collection(self, name=None, extension=None):
         """
