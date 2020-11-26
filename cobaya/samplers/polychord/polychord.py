@@ -262,7 +262,7 @@ class polychord(CovmatSampler):
         if self.use_supernest:
             self.mpi_info('Creating proposal')
             cov, where_nan = self._load_covmat(prefer_load_old=False)
-            mu  = self.mean
+            mu = self.mean or self.model.prior.reference()
             # TODO Check compatibility of arguments
             proposal= supernest.gaussian_proposal(self.bounds, mu, cov, loglike=logpost)
             self.mpi_info('Success!')
