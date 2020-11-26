@@ -417,6 +417,9 @@ class minimize(Minimizer, CovmatSampler):
         (including deleting some output files when forcing).
         """
         if output.is_resuming():
-            output.log.warning("Minimizer does not support resuming. Ignoring.")
-            output.set_resuming(False)
+            if is_main_process():
+                raise LoggedError(
+                    output.log, "Minimizer does not support resuming. "
+                                "If you want to start over, force "
+                                "('-f', '--force', 'force: True')")
         super().check_force_resume(output, info=info)
