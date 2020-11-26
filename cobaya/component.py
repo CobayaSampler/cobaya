@@ -175,7 +175,7 @@ class ComponentCollection(dict, HasLogger):
     def add_instance(self, name, component):
         helpers = component.get_helper_theories()
         component.update_for_helper_theories(helpers)
-        self.get_theory_collection().update(helpers)
+        self.get_helper_theory_collection().update(helpers)
         self[name] = component
 
     def dump_timing(self):
