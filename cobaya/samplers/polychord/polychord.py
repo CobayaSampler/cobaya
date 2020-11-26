@@ -20,14 +20,13 @@ import re
 # Local
 from cobaya.tools import read_dnumber, get_external_function, PythonPath, \
     find_with_regexp, NumberWithUnits, load_module, VersionCheckError
-from cobaya.sampler import Sampler
+from cobaya.sampler import Sampler, CovmatSampler
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
 from cobaya.collection import Collection
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, NotInstalledError
 from cobaya.yaml import yaml_dump_file
 from cobaya.conventions import _separator, _evidence_extension, _packages_path_arg
-from pypolychord.settings import PolyChordSettings
 # TODO Jesus fetch supenest if not installed with cobaya-install
 # TODO Jesus: add bibtex to cobaya
 
@@ -72,6 +71,7 @@ class polychord(CovmatSampler):
                           "To install it, run 'cobaya-install polychord --%s "
                           "[packages_path]'", _packages_path_arg)
         # Prepare arguments and settings
+        from pypolychord.settings import PolyChordSettings
         self.n_sampled = len(self.model.parameterization.sampled_params())
         self.n_derived = len(self.model.parameterization.derived_params())
         self.n_priors = len(self.model.prior)
@@ -261,9 +261,8 @@ class polychord(CovmatSampler):
         self.mpi_info("Calling PolyChord...")
         if self.use_supernest:
             self.mpi_info('Creating proposal')
-            # TODO Check for empty misshapen lists. 
-            cov = self.covmat
-            mu  = self.mu
+            cov, where_nan = self._load_covmat(prefer_load_old=False)
+            mu  = self.mean
             # TODO Check compatibility of arguments
             proposal= supernest.gaussian_proposal(self.bounds, mu, cov, loglike=logpost)
             self.mpi_info('Success!')
