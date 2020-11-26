@@ -177,6 +177,8 @@ class polychord(Sampler):
         self.mpi_info("Initialized!")
 
     def dumper(self, live_points, dead_points, logweights, logZ, logZstd):
+        if self.callback_function is None:
+            return
         # Store live and dead points and evidence computed so far
         self.live.reset()
         for point in live_points:
