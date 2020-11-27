@@ -19,6 +19,7 @@ from importlib import import_module
 from copy import deepcopy
 from packaging import version
 from itertools import permutations
+import traceback
 from typing import Mapping
 from types import ModuleType
 from inspect import cleandoc, getfullargspec
@@ -220,6 +221,7 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
             try:
                 import_module(module_name)
             except Exception:
+                traceback.print_exc()
                 pass
             else:
                 try:
