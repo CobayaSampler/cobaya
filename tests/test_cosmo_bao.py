@@ -3,7 +3,7 @@ import pytest
 
 from cobaya.tools import get_class
 
-from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE
+from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE, derived_lowTEB_highTTTEEE
 from .common_cosmo import body_of_test
 
 
@@ -39,8 +39,11 @@ def test_sdss_dr12_consensus_full_shape_camb(packages_path, skip_not_installed):
     like = "bao.sdss_dr12_consensus_full_shape"
     info_likelihood = {like: {}}
     info_theory = {"camb": None}
+    # Check sigma8(z=0): it used to fail bc it was computed internally by the theory code
+    # for different redshifts
+    derived = {"sigma8": derived_lowTEB_highTTTEEE["sigma8"]}
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
-                 chi2_sdss_dr12_consensus_full_shape,
+                 chi2_sdss_dr12_consensus_full_shape, best_fit_derived=derived,
                  skip_not_installed=skip_not_installed)
 
 
@@ -50,8 +53,12 @@ def test_sdss_dr12_consensus_full_shape_classy(packages_path, skip_not_installed
     info_likelihood = {like: {}}
     info_theory = {"classy": None}
     chi2_classy = deepcopy(chi2_sdss_dr12_consensus_full_shape)
+    # Check sigma8(z=0): it used to fail bc it was computed internally by the theory code
+    # for different redshifts
+    derived = {"sigma8": derived_lowTEB_highTTTEEE["sigma8"]}
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
-                 chi2_classy, skip_not_installed=skip_not_installed)
+                 chi2_classy, best_fit_derived=derived,
+                 skip_not_installed=skip_not_installed)
 
 
 def test_sdss_dr12_consensus_final_camb(packages_path, skip_not_installed):

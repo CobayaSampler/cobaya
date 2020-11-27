@@ -281,7 +281,7 @@ def prepare_data_script():
         raise LoggedError(log, "This command should only be run within a container. "
                                "Run 'cobaya-install' instead.")
     parser = argparse.ArgumentParser(
-        prog="cobaya prepare-data"
+        prog="cobaya prepare-data",
         description="Cobaya's installation tool for the data needed by a container.")
     parser.add_argument("-f", "--force", action="store_true", default=False,
                         help="Force re-installation of apparently installed packages.")
@@ -289,7 +289,7 @@ def prepare_data_script():
     try:
         info = load_input(requirements_file_path)
     except IOError:
-        raise LoggedError(log,
-                          "Cannot find the requirements file. This should not be happening.")
+        raise LoggedError(log, "Cannot find the requirements file. "
+                               "This should not be happening.")
     install(info, path=_packages_path, force=arguments.force,
             **{_code: False, _data: True})
