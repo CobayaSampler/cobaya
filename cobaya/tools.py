@@ -19,12 +19,12 @@ from importlib import import_module
 from copy import deepcopy
 from packaging import version
 from itertools import permutations
-import traceback
 from typing import Mapping
 from types import ModuleType
 from inspect import cleandoc, getfullargspec
 from math import gcd
 from ast import parse
+import traceback
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore")
@@ -221,7 +221,7 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
             try:
                 import_module(module_name)
             except Exception:
-                traceback.print_exc()
+                exc_info = sys.exc_info()
                 pass
             else:
                 try:
@@ -241,6 +241,7 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
             else:
                 raise LoggedError(log, "'%s' not found", name)
         else:
+            log.error("".join(list(traceback.format_exception(*exc_info))))
             log.error("There was a problem when importing %s '%s':", kind or "external",
                       name)
             raise exc_info[1]
