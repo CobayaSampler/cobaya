@@ -33,7 +33,7 @@ import numpy as np
 
 # Local
 from cobaya.conventions import kinds, _external, _component_path, empty_dict, \
-    _input_params, _output_params, _requires
+    _input_params, _output_params, _requires, _inherits
 from cobaya.tools import get_class, get_external_function, getfullargspec, str_to_list
 from cobaya.log import LoggedError
 from cobaya.component import ComponentCollection
@@ -275,7 +275,8 @@ class LikelihoodCollection(ComponentCollection):
                                                                        timing=timing))
             else:
                 like_class = get_class(name, kind=kinds.likelihood,
-                                       component_path=info.pop(_component_path, None))
+                                       component_path=info.pop(_component_path, None),
+                                       inherits=info.get(_inherits))
                 self.add_instance(name, like_class(info, packages_path=packages_path,
                                                    timing=timing, standalone=False,
                                                    name=name))

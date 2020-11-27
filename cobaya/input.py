@@ -23,7 +23,7 @@ from cobaya.conventions import _products_path, _packages_path, _resume, _force, 
     partag, _external, _output_prefix, _debug, _debug_file, _auto_params, _prior, \
     kinds, _provides, _requires, _input_params, _output_params, _component_path, \
     _aliases, _yaml_extensions, reserved_attributes, empty_dict, _get_chi2_name, \
-    _get_chi2_label, _test_run, _version
+    _get_chi2_label, _test_run, _version, _inherits
 from cobaya.tools import recursive_update, str_to_list, get_base_classes, \
     fuzzy_match, deepcopy_where_possible, get_class, get_kind
 from cobaya.yaml import yaml_load_file, yaml_dump
@@ -66,8 +66,14 @@ def load_input_MPI(input_file):
 
 
 def get_used_components(*infos):
-    """Returns all requested components as an dict ``{kind: set([components])}``.
-    Priors are not included."""
+    """
+    Returns all requested components as an dict ``{kind: set([components])}``.
+    Priors are not included.
+
+    Components which are just renames of others (i.e. defined with `inherit`) return
+    the inherited one's name.
+    """
+    # TODO: take inheritance into account
     components = defaultdict(list)
     for info in infos:
         for field in kinds:
@@ -85,7 +91,7 @@ def get_used_components(*infos):
 
 def get_default_info(component_or_class, kind=None, return_yaml=False,
                      yaml_expand_defaults=True, component_path=None,
-                     input_options=empty_dict):
+                     input_options=empty_dict, inherits=None):
     """
     Get default info for a component_or_class.
     """
@@ -94,8 +100,9 @@ def get_default_info(component_or_class, kind=None, return_yaml=False,
         if inspect.isclass(component_or_class):
             cls = component_or_class
         else:
-            _kind = _kind or get_kind(component_or_class)
-            cls = get_class(component_or_class, _kind, component_path=component_path)
+            _kind = _kind or get_kind(component_or_class, inherits=inherits)
+            cls = get_class(component_or_class, _kind, component_path=component_path,
+                            inherits=inherits)
         default_component_info = \
             cls.get_defaults(return_yaml=return_yaml,
                              yaml_expand_defaults=yaml_expand_defaults,
@@ -161,20 +168,22 @@ def update_info(info):
             else:
                 component_path = input_block[component].get(_component_path, None)
                 default_class_info = get_default_info(
-                    component, block,
+                    component, block, inherits=input_block[component].get(_inherits),
                     component_path=component_path, input_options=input_block[component])
             updated[component] = default_class_info or {}
             # Update default options with input info
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
-            ignore = {_external, _provides, _requires, partag.renames, _input_params,
-                      _output_params, _component_path, _aliases}
+            # TODO: check if necessary to include _inherits here
+            ignore = {_external, _inherits, _provides, _requires, partag.renames,
+                      _input_params, _output_params, _component_path, _aliases}
             options_not_recognized = (set(input_block[component])
                                       .difference(ignore)
                                       .difference(set(updated[component])))
             if options_not_recognized:
                 alternatives = {}
                 available = (
-                    {_external, _requires, partag.renames}.union(
+                    # TODO: check if necessary to include _inherits here
+                    {_external, _inherits, _requires, partag.renames}.union(
                         updated_info[block][component]))
                 while options_not_recognized:
                     option = options_not_recognized.pop()
@@ -394,7 +403,8 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
                         try:
                             component_path = block1[k].pop(_component_path, None) \
                                 if isinstance(block1[k], dict) else None
-                            cls = get_class(k, block_name, component_path=component_path)
+                            cls = get_class(k, block_name, component_path=component_path,
+                                            inherits=(block1[k] or {}).get(_inherits))
                             ignore_k_this = ignore_k_this.union(
                                 set(getattr(cls, "_at_resume_prefer_new", {})))
                         except ImportError:
@@ -427,7 +437,8 @@ def get_preferred_old_values(info_old):
             try:
                 component_path = block[k].pop(_component_path, None) \
                     if isinstance(block[k], dict) else None
-                cls = get_class(k, block_name, component_path=component_path)
+                cls = get_class(k, block_name, component_path=component_path,
+                                inherits=(block[k] or {}).get(_inherits))
                 prefer_old_k_this = getattr(cls, "_at_resume_prefer_old", {})
                 if prefer_old_k_this:
                     if block_name not in keep_old:
