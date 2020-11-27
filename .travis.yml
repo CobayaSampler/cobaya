@@ -23,6 +23,8 @@ cache:
 
 # (Pre)Installation
 jobs:
+  allow_failures:
+    - python: "3.9"
   include:
     - name: "Minimum requisites for Cosmology: gcc-6, Python 3.6"
       addons:
@@ -38,15 +40,16 @@ jobs:
         - PYVER="3"
       python: "3.6"
     - name: "Typical scenario: latest Ubuntu LTS"
+      dist: focal
       addons:
         apt:
           packages:
             - gfortran
       env:
-        - GCC_VERSION="bionic"
+        - GCC_VERSION="focal"
         - PYVER="3"
-      python: "3.6"
-    - name: "Edge scenario: gcc-8, Python 3.7 with Anaconda"
+      python: "3.8"
+    - name: "Anaconda: gcc-8, Python 3.7"
       addons:
         apt:
           sources:
@@ -61,7 +64,8 @@ jobs:
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="defaults"
       python: "3.7"
-    - name: "Bleeding Edge: gcc-10, Python 3.8 Anaconda (conda-forge)"
+    - name: "Bleeding Edge: gcc-10, Python 3.9 Anaconda (conda-forge)"
+      dist: focal
       addons:
         apt:
           sources:
@@ -75,11 +79,11 @@ jobs:
         - PYVER="3"
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="conda-forge"
-      python: "3.8"
+      python: "3.9"
 
 before_install:
   # Configure right compilers version
-  - if [[ "$GCC_VERSION" != "bionic" ]]; then
+  - if [[ "$GCC_VERSION" != "focal" ]]; then
       mkdir -p gcc-symlinks;
       ln -s /usr/bin/gfortran-$GCC_VERSION gcc-symlinks/gfortran;
       ln -s /usr/bin/gcc-$GCC_VERSION gcc-symlinks/gcc;
@@ -135,7 +139,7 @@ deploy: # only if it builds and if the commit has been tagged
     secure: FVCgqGT0sMJyvlY3sJFBwvO4RycAbWbVyHl4p9CG7XRSSgVOLGy9RZjAJkX8dJjH06fPNdQDYfkkj1PV8I42y0n4uqKkQ9RB63Yq6skbuuzjXLGQK9Xop10/1GDBhMHietDibzl8ZIuJyibdFYsc3rM/j8QcKjOYpDe10jO8K+dZaXsgAvqHk4P3d3ScG1u+X+wr8K6qik21YbTpiILS0LdUxmP4DWQw/7NKGWDX1b7sImRmvQfO20KuPTMu8pPz9ThZyPl6zEPgtKi2sQej5sgDlfim/heYk4W8Bf7bggS8GLseffssL5ru96eNUWT1OSbxnsEFqyyYepngNHPpvifflvtCiFU+3f7rzzcgYqmybhdM4ZEOk0pL5y/NS/rHn/1iW7Cqxs+GfUCbr9fWuBgKmVuDqEfvtSu83U1x6zz9C3R259Oe6n0vXfCGSfJqiHhsW8wuXx+bODyDaMAUn+gRSCLuqJVQzdcYwF2pGFf1WUH5iTQItUHZjYbAIXdnSqDKnvGalNDJdNsF3vwNEdbe8hFqfHMMzG73ZkkLOCjDW+mswIKYJUflxIyOdRqtB+XE056dA+c8Zwc4ktg4iss/O3ZBtUVPmba/ivpyYm7Fk8EUN/zY+24NK4iKk6z543rfx2w+wNXAuQiwgN2f+JshqI8kzTuCxPTgf2N49ME=
   on:
     tags: true
-    python: '3.6'
+    python: '3.8'
     condition: "$GCC_VERSION != 6"
     branch: master
     repo: CobayaSampler/cobaya

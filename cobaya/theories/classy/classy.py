@@ -388,6 +388,7 @@ class classy(BoltzmannBase):
 
         To get a parameter *from a likelihood* use `get_param` instead.
         """
+        # TODO: fails with derived_requested=False
         # Put all parameters in CLASS nomenclature (self.derived_extra already is)
         requested = [self.translate_param(p) for p in (
             self.output_params if derived_requested else [])]

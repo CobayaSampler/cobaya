@@ -1,5 +1,6 @@
 measurements_file: /full/path/to/myBAO.dat
 cov_file: /full/path/to/myBAO.cov
+invcov_file: /full/path/to/myBAO.cov
 # Fiducial sound horizon with which data have been stored
 rs_fid:  #  in Mpc
 # Speed in evaluations/second

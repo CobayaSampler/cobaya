@@ -5,7 +5,7 @@ import platform
 import signal
 from pprint import pformat
 import numpy as np
-import matplotlib.pyplot as plt
+from matplotlib import cm as cmap
 import io
 
 # Local
@@ -48,7 +48,7 @@ except ImportError:
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 # Color map for correlatins
-cmap_corr = plt.get_cmap("coolwarm_r")
+cmap_corr = cmap.get_cmap("coolwarm_r")
 
 
 def text(key, contents):
@@ -158,7 +158,7 @@ class MainWindow(QWidget):
             self.display[k].setReadOnly(True)
             self.display_tabs.addTab(self.display[k], k)
         self.display["covmat"] = QWidget()
-        covmat_tab_layout = QVBoxLayout(group_box)
+        covmat_tab_layout = group_layout
         self.display["covmat"].setLayout(covmat_tab_layout)
         self.covmat_text = QLabel()
         self.covmat_text.setWordWrap(True)
