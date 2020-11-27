@@ -165,7 +165,7 @@ def load_module(name, package=None, path=None, min_version=None,
 
 
 def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
-              allow_internal=True, component_path=None):
+              allow_internal=True, component_path=None, inherits=None):
     """
     Retrieves the requested class from its reference name. The name can be a
     fully-qualified package.module.classname string, or an internal name of the particular
@@ -183,6 +183,7 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
     If allow_external=True, allows loading explicit name from anywhere on path.
     If allow_internal=True, will first try to load internal components
     """
+    name = inherits or name
     if allow_internal and kind is None:
         kind = get_kind(name)
     if '.' in name:
