@@ -11,6 +11,7 @@ import io
 # Local
 from cobaya.yaml import yaml_dump
 from cobaya.cosmo_input import input_database
+from .input_database import  _combo_dict_text
 from cobaya.cosmo_input.autoselect_covmat import get_best_covmat, covmat_folders
 from cobaya.cosmo_input.create_input import create_input
 from cobaya.bib import prettyprint_bib, get_bib_info, get_bib_component
@@ -101,27 +102,8 @@ class MainWindow(QWidget):
         self.options_scroll.setWidget(self.options)
         self.options_scroll.setWidgetResizable(True)
         self.layout_left.addWidget(self.options_scroll)
-        titles = (
-            ["Presets", (["preset", "Presets"],)],
-            ["Cosmological Model", (
-                ["theory", "Theory code"],
-                ["primordial", "Primordial perturbations"],
-                ["geometry", "Geometry"],
-                ["hubble", "Hubble parameter constraint"],
-                ["matter", "Matter sector"],
-                ["neutrinos", "Neutrinos and other extra matter"],
-                ["dark_energy", "Lambda / Dark energy"],
-                ["bbn", "BBN"],
-                ["reionization", "Reionization history"])],
-            ["Data sets", (
-                ["like_cmb", "CMB experiments"],
-                ["like_bao", "BAO experiments"],
-                ["like_des", "DES measurements"],
-                ["like_sn", "SN experiments"],
-                ["like_H0", "Local H0 measurements"])],
-            ["Sampler", (["sampler", "Samplers"],)])
         self.combos = dict()
-        for group, fields in titles:
+        for group, fields in _combo_dict_text:
             group_box = QGroupBox(group)
             self.layout_options.addWidget(group_box)
             group_layout = QVBoxLayout(group_box)
