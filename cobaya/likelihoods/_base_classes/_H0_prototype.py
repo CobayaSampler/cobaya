@@ -46,11 +46,11 @@ class _H0_prototype(Likelihood):
     H0_std: float
 
     def initialize(self):
-        self.norm = norm(loc=self.H0_mean, scale=self.H0_std)
+        self.minus_half_invvar = - 0.5 / self.H0_std**2
 
     def get_requirements(self):
         return {'H0': None}
 
     def logp(self, **params_values):
         H0_theory = self.provider.get_param("H0")
-        return self.norm.logpdf(H0_theory)
+        return self.minus_half_invvar * (H0_theory - self.H0_mean)**2

@@ -49,7 +49,7 @@ def body_of_test(packages_path, like_name=None, like_info=None, skip_not_install
     # The default values for .get are for the _docs_ test
     mean = updated_info[kinds.likelihood][like_name].get("H0_mean", fiducial_H0)
     std = updated_info[kinds.likelihood][like_name].get("H0_std", fiducial_H0_std)
-    reference_value = -2 * norm.logpdf(fiducial_H0, loc=mean, scale=std)
-    computed_value = (
+    reference_chi2 = (fiducial_H0 - mean)**2 / std**2
+    computed_chi2 = (
         products["sample"]["chi2__" + list(info[kinds.likelihood])[0]].values[0])
-    assert np.allclose(computed_value, reference_value)
+    assert np.allclose(computed_chi2, reference_chi2)
