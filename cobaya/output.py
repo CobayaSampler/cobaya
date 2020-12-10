@@ -460,7 +460,7 @@ class Output_MPI(Output):
                 raise ValueError(
                     "Cannot call `reload_updated_info` from non-main process "
                     "unless cached version (`use_cache=True`) requested.")
-            return self._old_updated_info
+            return getattr(self, "_old_updated_info", None)
 
     def create_folder(self, *args, **kwargs):
         if is_main_process():
