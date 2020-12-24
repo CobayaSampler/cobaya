@@ -204,7 +204,8 @@ class classy(BoltzmannBase):
                 self.extra_args["output"] += " lCl"
                 self.extra_args["lensing"] = "yes"
                 # For l_max_scalars, remember previous entries.
-                self.extra_args["l_max_scalars"] = max(v.values())
+                self.extra_args["l_max_scalars"] = \
+                    max(self.extra_args.get("l_max_scalars", 0), max(v.values()))
                 self.collectors[k] = Collector(
                     method="lensed_cl", kwargs={"lmax": self.extra_args["l_max_scalars"]})
                 if 'T_cmb' not in self.derived_extra:
