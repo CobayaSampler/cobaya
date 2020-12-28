@@ -237,6 +237,15 @@ class polychord(CovmatSampler):
                 self.log.error("The callback function produced an error: %r", str(e))
             self.last_point_callback = len(self.dead)
 
+    # TODO: Eventually this will be somewhere else (e.g. in CovmatSampler)
+    def _load_mean(self):
+        ref_point = dict(zip(self.model.parameterization.sampled_params(), self.model.prior.reference()))
+        try:
+            return {p: (self.mean or {}).get(p, ref_point[p])
+                    for p in self.model.parameterization.sampled_params()}
+        except:
+            raise LoggedError(self.log, "`mean` must be a dictionary 'param: value'")
+
     def _run(self):
         """
         Prepares the posterior function and calls ``PolyChord``'s ``run`` function.
@@ -260,11 +269,12 @@ class polychord(CovmatSampler):
         sync_processes()
         self.mpi_info("Calling PolyChord...")
         if self.use_supernest:
+            # TODO: most of this below should be in `initialise`
             self.mpi_info('Creating proposal')
             cov, where_nan = self._load_covmat(prefer_load_old=False)
-            mu = self.mean or self.model.prior.reference()
+            mu = self._load_mean()
             # TODO Check compatibility of arguments
-            proposal= supernest.gaussian_proposal(self.bounds, mu, cov, loglike=logpost)
+            proposal = supernest.gaussian_proposal(self.bounds, mu, cov, loglike=logpost)
             self.mpi_info('Success!')
             nDims, ll, prior = supernest.superimpose((self.pc_prior, logpost), nDims = self.nDims)
             self.pc.run_polychord(ll, nDims, self.nDerived, self.pc_settings, prior, self.dumper)
