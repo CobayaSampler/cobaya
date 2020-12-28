@@ -15,6 +15,7 @@ from itertools import chain
 from random import random
 from typing import Any
 from tempfile import gettempdir
+from pandas import DataFrame
 import re
 
 # Local
@@ -26,7 +27,8 @@ from cobaya.collection import Collection
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, NotInstalledError
 from cobaya.yaml import yaml_dump_file
-from cobaya.conventions import _separator, _evidence_extension, _packages_path_arg
+from cobaya.conventions import _separator, _evidence_extension, _packages_path_arg, \
+    _line_width
 # TODO Jesus fetch supenest if not installed with cobaya-install
 # TODO Jesus: add bibtex to cobaya
 
@@ -159,6 +161,18 @@ class polychord(CovmatSampler):
                 seed=(self.seed if self.seed is not None else -1),
                 **{p: getattr(self, p) for p in pc_args
                    if getattr(self, p) is not None})
+            self.mpi_info('Creating proposal')
+            self._mean = self._load_mean()
+            self.log.debug(
+                "Proposal mean: %r",
+                dict(zip(self.model.parameterization.sampled_params(), self._mean)))
+            self._covmat, where_nan = self._load_covmat(prefer_load_old=False)
+            self.log.debug(
+                "Proposal covmat:\n%s",
+                DataFrame(self._covmat,
+                          columns=self.model.parameterization.sampled_params(),
+                          index=self.model.parameterization.sampled_params()).to_string(
+                    line_width=_line_width))
         else:
             self.pc_settings = PolyChordSettings(
                 self.nDims,
@@ -241,8 +255,8 @@ class polychord(CovmatSampler):
     def _load_mean(self):
         ref_point = dict(zip(self.model.parameterization.sampled_params(), self.model.prior.reference()))
         try:
-            return {p: (self.mean or {}).get(p, ref_point[p])
-                    for p in self.model.parameterization.sampled_params()}
+            return np.array([(self.mean or {}).get(p, ref_point[p])
+                             for p in self.model.parameterization.sampled_params()])
         except:
             raise LoggedError(self.log, "`mean` must be a dictionary 'param: value'")
 
@@ -269,12 +283,9 @@ class polychord(CovmatSampler):
         sync_processes()
         self.mpi_info("Calling PolyChord...")
         if self.use_supernest:
-            # TODO: most of this below should be in `initialise`
-            self.mpi_info('Creating proposal')
-            cov, where_nan = self._load_covmat(prefer_load_old=False)
-            mu = self._load_mean()
-            # TODO Check compatibility of arguments
-            proposal = supernest.gaussian_proposal(self.bounds, mu, cov, loglike=logpost)
+            # TODO Check compatibility of arguments (in particular self._mean and self._covmat)
+            proposal = supernest.gaussian_proposal(
+                self.bounds, self._mean, self._covmat, loglike=logpost)
             self.mpi_info('Success!')
             nDims, ll, prior = supernest.superimpose((self.pc_prior, logpost), nDims = self.nDims)
             self.pc.run_polychord(ll, nDims, self.nDerived, self.pc_settings, prior, self.dumper)
