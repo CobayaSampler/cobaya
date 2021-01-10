@@ -244,8 +244,8 @@ class Output(HasLogger):
                                       "newer version of Cobaya: %r (you are using %r). "
                                       "Please, update your Cobaya installation.",
                             old_version, new_version)
-                for k in (kind for kind in kinds if kind in updated_info):
-                    if k in ignore_blocks:
+                for k in set(kinds).intersection(updated_info):
+                    if k in ignore_blocks or updated_info[k] is None:
                         continue
                     for c in updated_info[k]:
                         new_version = updated_info[k][c].get(_version)
