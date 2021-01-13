@@ -4,6 +4,7 @@
 
 - Bugfixes when using `cobaya.sample.get_sampler()`
 - More informative error tracebacks; fixes #121 (thanks @msyriac)
+- Uniform priors can now be specified simply as `[<min>, <max>]`
 
 ### Installation scripts
 
@@ -33,7 +34,7 @@
 - Fixed ignoring `l_max_scalars`
 - Fixed #106 (thanks @lukashergt)
 
-### cosmo-generator
+#### cosmo-generator
 
 - Fixed PySide2 problem in newer systems; fixes #114 (thanks @talabadi)
 
@@ -68,7 +69,7 @@
 ### Collections
 
 - Collections are picklable again.
-- Slices with ommited limits, e.g. `[::2]`, now work.
+- Slices with omitted limits, e.g. `[::2]`, now work.
 - Slicing now returns a copy of the `Collection`, instead of a raw `pandas.DataFrame`.
 
 ### MCMC
