@@ -7,6 +7,8 @@ class native(_CMBlikes):
     install_options = {"github_repository": "CobayaSampler/planck_supp_data_and_covmats",
                        "github_release": last_version_supp_data_and_covmats}
 
+    bibtex_file = 'PlanckLensing2018.bibtex'
+
 
 class CMBMarged(native):
     pass

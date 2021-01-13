@@ -1,5 +1,5 @@
-from cobaya.likelihoods._base_classes import _planck_clik_prototype
+from cobaya.likelihoods._base_classes import Planck2018Clik
 
 
-class EE(_planck_clik_prototype):
+class EE(Planck2018Clik):
     pass

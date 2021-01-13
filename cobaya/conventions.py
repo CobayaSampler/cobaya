@@ -53,7 +53,7 @@ partag = ParTags(*ParTags._fields)
 ComponentKinds = namedtuple('ComponentKinds', ("sampler", "theory", "likelihood"))
 kinds = ComponentKinds(*ComponentKinds._fields)
 
-reserved_attributes = {_input_params, _output_params, "install_options"}
+reserved_attributes = {_input_params, _output_params, "install_options", "bibtex_file"}
 
 # Conventional order for yaml dumping (purely cosmetic)
 _dump_sort_cosmetic = [

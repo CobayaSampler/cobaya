@@ -515,7 +515,11 @@ class HasDefaults:
         from this class, it will return the result from an inherited class if that
         provides bibtex.
         """
-        bib = cls.get_associated_file_content('.bibtex')
+        filename = cls.__dict__.get('bibtex_file', None)
+        if filename:
+            bib = pkg_resources.resource_string(cls.__module__, filename)
+        else:
+            bib = cls.get_associated_file_content('.bibtex')
         if bib:
             try:
                 return bib.decode("utf-8")
@@ -532,11 +536,12 @@ class HasDefaults:
         return None
 
     @classmethod
-    def get_associated_file_content(cls, ext):
+    def get_associated_file_content(cls, ext, file_root=None):
         # handle extracting package files when may be inside a zipped package so files
         # not accessible directly
         try:
-            string = pkg_resources.resource_string(cls.__module__, cls.__name__ + ext)
+            string = pkg_resources.resource_string(cls.__module__,
+                                                   (file_root or cls.__name__) + ext)
             try:
                 return string.decode("utf-8")
             except:
