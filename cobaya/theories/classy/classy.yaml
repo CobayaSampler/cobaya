@@ -1,3 +1,5 @@
+# Path to local CLASS, if desired,
+# or 'global' to force global-scope import
 path: null
 # Speed in evaluations/second
 speed: 0.2

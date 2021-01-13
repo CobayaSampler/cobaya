@@ -22,7 +22,7 @@ _default_symbol = "="
 _default_length = 80
 
 # Cobaya's own bib info
-cobaya_bib = """
+cobaya_bib = r"""
 The posterior has been explored/maximised/reweighted using Cobaya \cite{torrado:2020xyz}.
 
 @article{Torrado:2020xyz,
@@ -74,6 +74,7 @@ def bib_script():
     # Parse arguments and launch
     import argparse
     parser = argparse.ArgumentParser(
+        prog="cobaya bib",
         description="Prints bibliography to be cited for a component or input file.")
     parser.add_argument("components_or_files", action="store", nargs="+",
                         metavar="component_name or input_file.yaml",

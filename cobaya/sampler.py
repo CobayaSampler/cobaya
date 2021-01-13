@@ -230,7 +230,7 @@ class Sampler(CobayaComponent):
             # MPI-awareness: sum the rank to the seed
             if more_than_one_process():
                 self.seed += get_mpi_rank()
-            self.log.warning("This run has been SEEDED with seed %d", self.seed)
+            self.mpi_warning("This run has been SEEDED with seed %d", self.seed)
         # Load checkpoint info, if resuming
         if self.output.is_resuming() and not isinstance(self, Minimizer):
             try:
@@ -247,10 +247,10 @@ class Sampler(CobayaComponent):
                             self.checkpoint_filename())
             except (IOError, TypeError):
                 pass
-        else:
+        elif not isinstance(self, Minimizer):
             try:
-                os.remove(self.checkpoint_filename())
-                os.remove(self.progress_filename())
+                output.delete_file_or_folder(self.checkpoint_filename())
+                output.delete_file_or_folder(self.progress_filename())
             except (OSError, TypeError):
                 pass
         self._set_rng()
@@ -408,14 +408,14 @@ class CovmatSampler(Sampler):
     """
     covmat_params: Sequence[str]
 
-    def _load_covmat(self, from_old_chain, auto_params=None):
-        if from_old_chain and os.path.exists(self.covmat_filename()):
+    def _load_covmat(self, prefer_load_old, auto_params=None):
+        if prefer_load_old and os.path.exists(self.covmat_filename()):
             if is_main_process():
                 covmat = np.atleast_2d(np.loadtxt(self.covmat_filename()))
             else:
                 covmat = None
             covmat = share_mpi(covmat)
-            self.mpi_info("Covariance matrix from checkpoint.")
+            self.mpi_info("Covariance matrix from previous sample.")
             return covmat, []
         else:
             return share_mpi(self.initial_proposal_covmat(auto_params=auto_params) if
@@ -486,19 +486,28 @@ class CovmatSampler(Sampler):
         elif self.covmat:
             raise LoggedError(self.log, "Invalid covmat")
         if self.covmat is not None:
+            str_msg = "the `covmat_params` list"
+            if isinstance(self.covmat, str):
+                str_msg = "the header of the covmat file %r" % self.covmat
             if len(loaded_params) != len(set(loaded_params)):
+                duplicated = list(set(
+                    p for p in loaded_params if list(loaded_params).count(p) > 1))
                 raise LoggedError(
-                    self.log, "There are duplicated parameters in the header of the "
-                              "covmat file '%s' ", self.covmat)
+                    self.log,
+                    "Parameter(s) %r appear more than once in %s", duplicated, str_msg)
             if len(loaded_params) != loaded_covmat.shape[0]:
                 raise LoggedError(
-                    self.log, "The number of parameters in the header of '%s' and the "
-                              "dimensions of the matrix do not coincide.", self.covmat)
+                    self.log, "The number of parameters in %s and the "
+                              "dimensions of the matrix do not agree: %d vs %r",
+                    str_msg, len(loaded_params), loaded_covmat.shape)
             if not (np.allclose(loaded_covmat.T, loaded_covmat) and
                     np.all(np.linalg.eigvals(loaded_covmat) > 0)):
+                str_msg = "passed"
+                if isinstance(self.covmat, str):
+                    str_msg = "loaded from %r" % self.covmat
                 raise LoggedError(
-                    self.log, "The covmat loaded from '%s' is not a positive-definite, "
-                              "symmetric square matrix.", self.covmat)
+                    self.log, "The covariance matrix %s is not a positive-definite, "
+                              "symmetric square matrix.", str_msg)
             # Fill with parameters in the loaded covmat
             renames = [[p] + np.atleast_1d(v.get(partag.renames, [])).tolist()
                        for p, v in params_infos.items()]
@@ -555,3 +564,9 @@ class CovmatSampler(Sampler):
             return os.path.join(
                 self.output.folder, self.output.prefix + _covmat_extension)
         return None
+
+    def dump_covmat(self, covmat=None):
+        if covmat is None:
+            covmat = self.covmat
+        np.savetxt(self.covmat_filename(), covmat, header=" ".join(
+            list(self.model.parameterization.sampled_params())))

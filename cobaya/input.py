@@ -71,8 +71,14 @@ def get_used_components(*infos):
     components = defaultdict(list)
     for info in infos:
         for field in kinds:
-            components[field] += [a for a in (info.get(field) or [])
-                                  if a not in components[field]]
+            try:
+                components[field] += [a for a in (info.get(field) or [])
+                                      if a not in components[field]]
+            except TypeError:
+                raise LoggedError(
+                    log, "Your input info is not well formatted at the '%s' block. "
+                         "It must be a dictionary {'%s_i':{options}, ...}. ",
+                    field, field)
     # return dictionary of non-empty blocks
     return {k: v for k, v in components.items() if v}
 
@@ -125,7 +131,8 @@ def update_info(info):
             except TypeError:
                 raise LoggedError(
                     log, "Your input info is not well formatted at the '%s' block. "
-                         "It must be a dictionary {'%s':{options}, ...}. ", block, block)
+                         "It must be a dictionary {'%s_i':{options}, ...}. ",
+                    block, block)
             if isinstance(component, CobayaComponent) or \
                     isinstance(input_block[component], CobayaComponent):
                 raise LoggedError(log, "Input for %s:%s should specify a class not "

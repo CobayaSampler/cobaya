@@ -5,12 +5,13 @@ import platform
 import signal
 from pprint import pformat
 import numpy as np
-import matplotlib.pyplot as plt
+from matplotlib import cm as cmap
 import io
 
 # Local
 from cobaya.yaml import yaml_dump
 from cobaya.cosmo_input import input_database
+from .input_database import  _combo_dict_text
 from cobaya.cosmo_input.autoselect_covmat import get_best_covmat, covmat_folders
 from cobaya.cosmo_input.create_input import create_input
 from cobaya.bib import prettyprint_bib, get_bib_info, get_bib_component
@@ -48,7 +49,7 @@ except ImportError:
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 # Color map for correlatins
-cmap_corr = plt.get_cmap("coolwarm_r")
+cmap_corr = cmap.get_cmap("coolwarm_r")
 
 
 def text(key, contents):
@@ -101,27 +102,8 @@ class MainWindow(QWidget):
         self.options_scroll.setWidget(self.options)
         self.options_scroll.setWidgetResizable(True)
         self.layout_left.addWidget(self.options_scroll)
-        titles = (
-            ["Presets", (["preset", "Presets"],)],
-            ["Cosmological Model", (
-                ["theory", "Theory code"],
-                ["primordial", "Primordial perturbations"],
-                ["geometry", "Geometry"],
-                ["hubble", "Hubble parameter constraint"],
-                ["matter", "Matter sector"],
-                ["neutrinos", "Neutrinos and other extra matter"],
-                ["dark_energy", "Lambda / Dark energy"],
-                ["bbn", "BBN"],
-                ["reionization", "Reionization history"])],
-            ["Data sets", (
-                ["like_cmb", "CMB experiments"],
-                ["like_bao", "BAO experiments"],
-                ["like_des", "DES measurements"],
-                ["like_sn", "SN experiments"],
-                ["like_H0", "Local H0 measurements"])],
-            ["Sampler", (["sampler", "Samplers"],)])
         self.combos = dict()
-        for group, fields in titles:
+        for group, fields in _combo_dict_text:
             group_box = QGroupBox(group)
             self.layout_options.addWidget(group_box)
             group_layout = QVBoxLayout(group_box)
@@ -158,7 +140,7 @@ class MainWindow(QWidget):
             self.display[k].setReadOnly(True)
             self.display_tabs.addTab(self.display[k], k)
         self.display["covmat"] = QWidget()
-        covmat_tab_layout = QVBoxLayout(group_box)
+        covmat_tab_layout = group_layout
         self.display["covmat"].setLayout(covmat_tab_layout)
         self.covmat_text = QLabel()
         self.covmat_text.setWordWrap(True)

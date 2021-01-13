@@ -28,7 +28,7 @@ def doc_script():
     # Parse arguments
     import argparse
     parser = argparse.ArgumentParser(
-        description="Prints defaults for Cobaya's components.")
+        prog="cobaya doc", description="Prints defaults for Cobaya's components.")
     parser.add_argument("component", action="store", nargs="?", default="",
                         metavar="component_name",
                         help="The component whose defaults are requested.")

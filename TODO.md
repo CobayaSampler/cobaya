@@ -26,14 +26,12 @@
 ## minimize:
 + unbounded parameters with flat prior (this would make it safe to rotate the unbounded ones in minimize) [JT: not very much in favour, since that would break a bunch of other stuff. Maybe let's explore an alternative solution? e.g. auto-extend uniform priors.]
 + add MINUIT
-+ maybe should not overwrite `sampler` block of original sample (either append or leave as it was)
 ## mcmc:
 * finish removing .checkpoint in favour of updated.yaml and .progress
 * For learning checks, X should perhaps ideally also depend slightly on the speed of the cycles, e.g. if either check becomes slow compared to a fast cycle.
 * Update output thin factor once chains get over a given size, so that asymptotically the memory size of the chains doesn't grow indefinitely (and convergence checking time also doesn't grow correspondingly), just the thinning factor increases.
 * more clever learning of covmat when only a few parameters missing: update only the row/columns of missing params, shrinkage estimator etc.
 ## CLASS: make it non-agnostic
-## Regexp-ize checks for `COBAYA_INSTALL_SKIP` (in `install.py::_skip_helper`) and `COBAYA_TEST_SKIP` (in `conftests.py`), to be able to use underscores
 ## Test installed only (would need more clever pytest marking?)
 ## auto-covmats:
 + separate parameter matching into slow ones and fast ones, and prefer missing some fast parameters than missing slow ones.

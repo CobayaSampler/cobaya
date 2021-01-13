@@ -20,7 +20,7 @@ Development flow for contributors
    WIP!
 
 1. Fork and clone the repo from github.
-2. From its folder, install in editable mode: ``pip install -e . --user``
+2. From its folder, install in editable mode: ``pip install -e .``
 3. Modify stuff.
 4. Test with pytest
 5. Pull requests, etc.

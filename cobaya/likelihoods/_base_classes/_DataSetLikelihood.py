@@ -12,6 +12,7 @@ from getdist import IniFile
 # Local
 from cobaya.conventions import _packages_path
 from cobaya.log import LoggedError
+from cobaya.install import NotInstalledError
 from ._InstallableLikelihood import _InstallableLikelihood
 
 
@@ -57,7 +58,7 @@ class _DataSetLikelihood(_InstallableLikelihood):
 
             data_file = os.path.normpath(os.path.join(self.path, self.dataset_file))
         if not os.path.exists(data_file):
-            raise LoggedError(
+            raise NotInstalledError(
                 self.log, "The data file '%s' could not be found at '%s'. "
                           "Either you have not installed this likelihood, "
                           "or have given the wrong packages installation path.",

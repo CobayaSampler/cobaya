@@ -1,5 +1,4 @@
 likelihood:
   my_H0:
-    external: 'lambda _self: stats.norm.logpdf(
-        _self.provider.get_param("H0"), loc=mu_H0, scale=sigma_H0)'
+    external: 'lambda _self: -0.5 * (_self.provider.get_param("H0") - mu_H0)**2 / (sigma_H0)**2'
     requires: ["H0"]

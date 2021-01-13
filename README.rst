@@ -13,7 +13,7 @@
 
 :Support: For general support, CosmoCoffee_; for bugs and issues, use the `issue tracker <https://github.com/CobayaSampler/cobaya/issues>`_.
 
-:Installation: ``pip install cobaya --upgrade --user`` (see the `installation instructions <https://cobaya.readthedocs.io/en/latest/installation.html>`_; in general do *not* clone)
+:Installation: ``pip install cobaya --upgrade`` (see the `installation instructions <https://cobaya.readthedocs.io/en/latest/installation.html>`_; in general do *not* clone)
 
 .. image:: https://travis-ci.org/CobayaSampler/cobaya.svg?branch=master
    :target: https://travis-ci.org/CobayaSampler/cobaya

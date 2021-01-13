@@ -20,9 +20,11 @@ from copy import deepcopy
 from packaging import version
 from itertools import permutations
 from typing import Mapping
+from types import ModuleType
 from inspect import cleandoc, getfullargspec
 from math import gcd
 from ast import parse
+import traceback
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore")
@@ -150,7 +152,8 @@ def check_component_version(component, min_version):
              getattr(component, "__version__", "(non-given)"), min_version))
 
 
-def load_module(name, package=None, path=None, min_version=None, check_path=False):
+def load_module(name, package=None, path=None, min_version=None,
+                check_path=False) -> ModuleType:
     with PythonPath(path):
         component = import_module(name, package=package)
     if path and check_path:
@@ -218,6 +221,7 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
             try:
                 import_module(module_name)
             except Exception:
+                exc_info = sys.exc_info()
                 pass
             else:
                 try:
@@ -237,6 +241,7 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
             else:
                 raise LoggedError(log, "'%s' not found", name)
         else:
+            log.error("".join(list(traceback.format_exception(*exc_info))))
             log.error("There was a problem when importing %s '%s':", kind or "external",
                       name)
             raise exc_info[1]
@@ -352,6 +357,17 @@ def recursive_update(base, update):
         if isinstance(v, Mapping) and len(v) == 0:
             base[k] = None
     return base
+
+
+def invert_dict(dict_in):
+    """
+    Inverts a dictionary, where values in the returned ones are always lists of the
+    original keys. Order is not preserved.
+    """
+    dict_out = {v: [] for v in dict_in.values()}
+    for k, v in dict_in.items():
+        dict_out[v].append(k)
+    return dict_out
 
 
 def ensure_latex(string):

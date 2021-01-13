@@ -17,8 +17,8 @@ from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
 from cobaya.conventions import _packages_path, kinds
 from cobaya.input import get_default_info
-from cobaya.install import pip_install, download_file
-from cobaya.tools import are_different_params_lists, create_banner
+from cobaya.install import pip_install, download_file, NotInstalledError
+from cobaya.tools import are_different_params_lists, create_banner, load_module
 
 _deprecation_msg_2015 = create_banner("""
 The likelihoods from the Planck 2015 data release have been superseded
@@ -42,30 +42,22 @@ class _planck_clik_prototype(Likelihood):
                 self.log.warning(line)
         code_path = common_path
         data_path = get_data_path(self.__class__.get_qualified_class_name())
+        # Allow global import if no direct path specification
+        allow_global = not self.path
         if self.path:
-            has_clik = False
+            self.path_clik = self.path
+        elif self.packages_path:
+            self.path_clik = self.get_code_path(self.packages_path)
         else:
-            try:
-                import clik
-                has_clik = True
-            except ImportError:
-                clik = None
-                has_clik = False
-        if not has_clik:
-            if not self.path:
-                if self.packages_path:
-                    self.path_clik = os.path.join(self.packages_path, "code", code_path)
-                else:
-                    raise LoggedError(
-                        self.log, "No path given to the Planck likelihood. Set the "
-                                  "likelihood property 'path' or the common property "
-                                  "'%s'.", _packages_path)
-            else:
-                self.path_clik = self.path
-            self.log.info("Importing clik from %s", self.path_clik)
-            # test and import clik
-            is_installed_clik(self.path_clik, log_and_fail=True, import_it=False)
-            import clik
+            raise LoggedError(
+                self.log, "No path given to the Planck likelihood. Set the "
+                          "likelihood property 'path' or the common property "
+                          "'%s'.", _packages_path)
+        clik = is_installed_clik(path=self.path_clik, allow_global=allow_global)
+        if not clik:
+            raise NotInstalledError(
+                self.log, "Could not find the 'clik' Planck likelihood code. "
+                          "Check error message above.")
         # Loading the likelihood data
         if not os.path.isabs(self.clik_file):
             self.path_data = getattr(self, "path_data", os.path.join(
@@ -79,7 +71,7 @@ class _planck_clik_prototype(Likelihood):
         except clik.lkl.CError:
             # Is it that the file was not found?
             if not os.path.exists(self.clik_file):
-                raise LoggedError(
+                raise NotInstalledError(
                     self.log, "The .clik file was not found where specified in the "
                               "'clik_file' field of the settings of this likelihood. "
                               "Maybe the 'path' given is not correct? The full path where"
@@ -104,6 +96,7 @@ class _planck_clik_prototype(Likelihood):
         # Placeholder for vector passed to clik
         length = (len(self.l_maxs) if self.lensing else len(self.clik.get_has_cl()))
         self.vector = np.zeros(np.sum(self.l_maxs) + length + len(self.expected_params))
+        self.log.info("Initialized!")
 
     def initialize_with_params(self):
         # Check that the parameters are the right ones
@@ -121,7 +114,7 @@ class _planck_clik_prototype(Likelihood):
 
     def logp(self, **params_values):
         # get Cl's from the theory code
-        cl = self.provider.get_Cl(units="muK2")
+        cl = self.provider.get_Cl(units="FIRASmuK2")
         return self.log_likelihood(cl, **params_values)
 
     def log_likelihood(self, cl, **params_values):
@@ -144,14 +137,25 @@ class _planck_clik_prototype(Likelihood):
         # Actually, it does not work for low-l likelihoods, which is quite dangerous!
 
     @classmethod
+    def get_code_path(cls, path):
+        return os.path.realpath(os.path.join(path, "code", common_path))
+
+    @classmethod
+    def is_compatible(cls):
+        import platform
+        if platform.system() == "Windows":
+            return False
+        return True
+
+    @classmethod
     def is_installed(cls, **kwargs):
         code_path = common_path
         data_path = get_data_path(cls.get_qualified_class_name())
         result = True
-        if kwargs["code"]:
-            result &= is_installed_clik(os.path.realpath(
-                os.path.join(kwargs["path"], "code", code_path)))
-        if kwargs["data"]:
+        if kwargs.get("code", True):
+            result &= bool(is_installed_clik(os.path.realpath(
+                os.path.join(kwargs["path"], "code", code_path))))
+        if kwargs.get("data", True):
             _, filename = get_product_id_and_clik_file(cls.get_qualified_class_name())
             result &= os.path.exists(os.path.realpath(
                 os.path.join(kwargs["path"], "data", data_path, filename)))
@@ -198,7 +202,6 @@ class _planck_clik_prototype(Likelihood):
                 product_id, _ = get_product_id_and_clik_file(name)
                 # Download and decompress the particular likelihood
                 url = pla_url_prefix + product_id
-
                 if not download_file(url, paths["data"], decompress=True,
                                      logger=log, no_progress_bars=no_progress_bars):
                     log.error("Not possible to download this likelihood.")
@@ -250,25 +253,37 @@ def get_clik_source_folder(starting_path):
     return source_dir
 
 
-def is_installed_clik(path, log_and_fail=False, import_it=True):
+def is_installed_clik(path, allow_global=False):
     log = logging.getLogger("clik")
+    if path is not None and path.lower() == "global":
+        path = None
     clik_path = None
+    if path and path.lower() != "global":
+        try:
+            clik_path = os.path.join(
+                get_clik_source_folder(path), 'lib/python/site-packages')
+        except FileNotFoundError:
+            log.error("The given folder does not exist: '%s'", clik_path or path)
+            return False
+    if path and not allow_global:
+        log.info("Importing *local* clik from %s ", path)
+    elif not path:
+        log.info("Importing *global* clik.")
+    else:
+        log.info("Importing *auto-installed* clik (but defaulting to *global*).")
     try:
-        clik_path = os.path.join(get_clik_source_folder(path), 'lib/python/site-packages')
-    except FileNotFoundError:
-        if log_and_fail:
-            raise LoggedError(log, "The given folder does not exist: '%s'",
-                              clik_path or path)
-        return False
-    sys.path.insert(0, clik_path)
-    try:
-        if import_it:
-            import clik
-        return True
-    except:
-        print('Failed to import clik')
-        if log_and_fail:
-            raise LoggedError(log, "Error importing click from: '%s'", clik_path)
+        return load_module("clik", path=clik_path)
+    except ImportError:
+        if path is not None and path.lower() != "global":
+            log.error("Couldn't find the clik python interface at '%s'. "
+                      "Are you sure it has been installed and compiled there?", path)
+        else:
+            log.error("Could not import global clik installation. "
+                      "Specify a Cobaya or clik installation path, "
+                      "or install the clik Python interface globally.")
+    except Exception as excpt:
+        log.error("Error when trying to import clik from %s [%s]. Error message: [%s].",
+                  path, clik_path, str(excpt))
         return False
 
 

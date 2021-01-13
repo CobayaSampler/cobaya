@@ -162,26 +162,25 @@ the input block for CAMB (otherwise a system-wide CAMB may be used instead):
 .. note::
 
    In any of these methods, if you intent to switch between different versions or
-   modifications of CAMB you should not  install CAMB as python package using
-   ``python setup.py install --user``, as the official instructions suggest.
+   modifications of CAMB you should not install CAMB as python package using
+   ``python setup.py install``, as the official instructions suggest.
 """
 
 # Global
 import sys
 import os
 import logging
-from copy import deepcopy
-import numpy as np
 import numbers
 import ctypes
+from copy import deepcopy
 from typing import NamedTuple, Any
-
+import numpy as np
 # Local
 from cobaya.theories._cosmo import BoltzmannBase
 from cobaya.log import LoggedError
-from cobaya.install import download_github_release, check_gcc_version
-from cobaya.tools import getfullargspec, get_class_methods, get_properties
-from cobaya.tools import load_module, VersionCheckError, str_to_list
+from cobaya.install import download_github_release, check_gcc_version, NotInstalledError
+from cobaya.tools import getfullargspec, get_class_methods, get_properties, load_module, \
+    VersionCheckError, str_to_list
 from cobaya.theory import HelperTheory
 from cobaya.conventions import _requires
 
@@ -207,45 +206,18 @@ class camb(BoltzmannBase):
     _min_camb_version = '1.1.3'
 
     external_primordial_pk: bool
+    camb: Any
 
     def initialize(self):
         """Importing CAMB from the correct path, if given."""
+        # Allow global import if no direct path specification
+        allow_global = not self.path
         if not self.path and self.packages_path:
             self.path = self.get_path(self.packages_path)
-        camb_path = None
-        if self.path and not os.path.exists(self.path):
-            # Fail if this was a directly specified path,
-            # or ignore and try to global-import if it came from a packages_path
-            if self.packages_path:
-                self.log.info("*local* CAMB not found at " + self.path)
-                self.log.info("Importing *global* CAMB.")
-            else:
-                raise LoggedError(self.log, "*local* CAMB not found at " + self.path)
-        elif self.path:
-            self.log.info("Importing *local* CAMB from " + self.path)
-            if not os.path.exists(self.path):
-                raise LoggedError(
-                    self.log, "The given folder does not exist: '%s'", self.path)
-            camb_path = self.path
-            if not os.path.exists(os.path.join(self.path, "setup.py")):
-                raise LoggedError(
-                    self.log,
-                    "Either CAMB is not in the given folder, '%s', or you are using a "
-                    "very old version without the Python interface.", self.path)
-        else:
-            self.log.info("Importing *global* CAMB.")
-        try:
-            self.camb = load_module("camb", path=camb_path,
-                                    min_version=self._min_camb_version)
-        except ImportError:
-            raise LoggedError(
-                self.log, "Couldn't find the CAMB python interface.\n"
-                          "Make sure that you have compiled it, and that you either\n"
-                          " (a) specify a path (you didn't) or\n"
-                          " (b) install the Python interface globally with\n"
-                          "     'python -m pip install -e /path/to/camb [--user]'")
-        except VersionCheckError as e:
-            raise LoggedError(self.log, str(e))
+        self.camb = self.is_installed(path=self.path, allow_global=allow_global)
+        if not self.camb:
+            raise NotInstalledError(
+                self.log, "Could not find CAMB. Check error message above.")
         super().initialize()
         self.extra_attrs = {"Want_CMB": False, "Want_cl_2D_array": False,
                             'WantCls': False}
@@ -283,16 +255,22 @@ class camb(BoltzmannBase):
         self._transfer_requires = [p for p in self.requires if
                                    p not in self.get_can_support_params()]
         self.requires = [p for p in self.requires if p not in self._transfer_requires]
+        self.log.info("Initialized!")
 
     def _extract_params(self, set_func):
         args = {}
         params = []
         pars = getfullargspec(set_func)
-        for arg, v in zip(pars.args[1:], pars.defaults[1:]):
-            if arg in self.extra_args:
-                args[arg] = self.extra_args.pop(arg)
-            elif isinstance(v, numbers.Number) or v is None:
-                params.append(arg)
+        for arg in pars.args[1:len(pars.args) - len(pars.defaults or [])]:
+            params.append(arg)
+        if pars.defaults:
+            for arg, v in zip(pars.args[len(pars.args) - len(pars.defaults):],
+                              pars.defaults):
+                if arg in self.extra_args:
+                    args[arg] = self.extra_args.pop(arg)
+                elif (isinstance(v,
+                                 numbers.Number) or v is None) and 'version' not in arg:
+                    params.append(arg)
         return args, params
 
     def initialize_with_params(self):
@@ -440,6 +418,7 @@ class camb(BoltzmannBase):
                 if k == "sigma8":
                     self.extra_attrs["WantTransfer"] = True
                     self.needs_perts = True
+                    self.add_to_redshifts([0.])
             else:
                 raise LoggedError(self.log, "This should not be happening. Contact the "
                                             "developers.")
@@ -558,7 +537,7 @@ class camb(BoltzmannBase):
                 return derived
         # Specific calls, if general ones fail:
         if p == "sigma8":
-            return intermediates.results.get_sigma8()[-1]
+            return intermediates.results.get_sigma8_0()
         try:
             return getattr(intermediates.camb_params, p)
         except AttributeError:
@@ -583,7 +562,7 @@ class camb(BoltzmannBase):
                                             " in the CAMB interface", p)
         return derived
 
-    def get_Cl(self, ell_factor=False, units="muK2"):
+    def get_Cl(self, ell_factor=False, units="FIRASmuK2"):
         current_state = self._current_state
         # get C_l^XX from the cosmological code
         try:
@@ -592,15 +571,8 @@ class camb(BoltzmannBase):
             raise LoggedError(self.log, "No Cl's were computed. Are you sure that you "
                                         "have requested them?")
 
-        temp = current_state['derived_extra']['TCMB']
-        units_factors = {"1": 1,
-                         "muK2": temp * 1.e6,
-                         "K2": temp}
-        try:
-            units_factor = units_factors[units]
-        except KeyError:
-            raise LoggedError(self.log, "Units '%s' not recognized. Use one of %s.",
-                              units, list(units_factors))
+        units_factor = self._cmb_unit_factor(units,
+                                             current_state['derived_extra']['TCMB'])
 
         ls = np.arange(cl_camb.shape[0], dtype=np.int64)
         if not ell_factor:
@@ -800,13 +772,47 @@ class camb(BoltzmannBase):
 
     @classmethod
     def is_installed(cls, **kwargs):
+        log = logging.getLogger(cls.__name__)
         import platform
-        if not kwargs["code"]:
+        if not kwargs.get("code", True):
             return True
-        return os.path.isfile(os.path.realpath(
-            os.path.join(cls.get_path(kwargs["path"]),
-                         "camb", "cambdll.dll" if (
-                        platform.system() == "Windows") else "camblib.so")))
+        path = kwargs["path"]
+        if path is not None and path.lower() == "global":
+            path = None
+        if path and not kwargs.get("allow_global"):
+            log.info("Importing *local* CAMB from " + path)
+            if not os.path.exists(path):
+                log.error("The given folder does not exist: '%s'", path)
+                return False
+            if not os.path.exists(os.path.join(path, "setup.py")):
+                log.error("Either CAMB is not in the given folder, '%s', or you are using"
+                          " a very old version without the Python interface.", path)
+                return False
+            if not os.path.isfile(os.path.realpath(
+                    os.path.join(path,
+                                 "camb", "cambdll.dll" if (
+                                platform.system() == "Windows") else "camblib.so"))):
+                log.error("CAMB installation at '%s' appears not to be compiled.", path)
+                return False
+        elif not path:
+            log.info("Importing *global* CAMB.")
+            path = None
+        else:
+            log.info("Importing *auto-installed* CAMB (but defaulting to *global*).")
+        try:
+            return load_module("camb", path=path, min_version=cls._min_camb_version)
+        except ImportError:
+            if path is not None and path.lower() != "global":
+                log.error("Couldn't find the CAMB python interface at '%s'. "
+                          "Are you sure it has been installed there?", path)
+            else:
+                log.error("Could not import global CAMB installation. "
+                          "Specify a Cobaya or CAMB installation path, "
+                          "or install the 'camb' Python package globally.")
+            return False
+        except VersionCheckError as e:
+            log.error(str(e))
+            return False
 
     @classmethod
     def install(cls, path=None, code=True, no_progress_bars=False, **kwargs):

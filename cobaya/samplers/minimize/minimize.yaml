@@ -25,4 +25,10 @@ override_bobyqa:
   # option: value
   # Relaxed convergence criterion for numerically-noisy likelihoods
   rhoend: 0.05
-covmat: auto
+# File (including path) or matrix defining a covariance matrix for the proposal:
+# - null (default): will be generated from params info (prior and proposal)
+# - matrix: remember to set `covmat_params` to the parameters in the matrix
+# - "auto" (cosmology runs only): will be looked up in a library
+# In any case, if an old chain its present, its covmat will be loaded instead.
+covmat:
+covmat_params:

@@ -1,5 +1,5 @@
-# Riess et al (2018b) value of H0 = 73.52 +/- 1.62 km/s/Mpc
-# https://arxiv.org/abs/1804.10655
+# Riess et al (2019) value of H0 = 74.03 +/- 1.42 km/s/Mpc
+# https://arxiv.org/abs/1903.07603
 
 H0_mean: 74.03
 H0_std: 1.42

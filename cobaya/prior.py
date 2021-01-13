@@ -610,9 +610,10 @@ class Prior(HasLogger):
             if self.logp(ref_sample) > -np.inf:
                 return ref_sample
             if tries == warn_if_tries:
-                self.log.warning("If stuck here, maybe it is not possible to sample from "
-                                 "the reference pdf a point with non-null prior. Check "
-                                 "that they are consistent.")
+                self.log.warning(
+                    "If stuck here, maybe it is not possible to sample from the "
+                    "reference pdf a point with non-null prior. Check that the reference "
+                    "pdf and the prior are consistent.")
         if self.reference_is_pointlike():
             raise LoggedError(self.log, "The reference point provided has null prior. "
                                         "Set 'ref' to a different point or a pdf.")
