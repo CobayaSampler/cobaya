@@ -60,6 +60,7 @@ To test the installation, run in a terminal
 
 This should print the version of ``mpi4py``, e.g. ``3.0.0``. If it prints a version smaller than 3, doesn't print anything, or fails with an error similar to ``ImportError: libmpi.so.12``, make sure that you have installed/loaded an MPI implementation and repeat the installation, or ask your local IT service for help.
 
+Note that some clusters do not allow you to run ``mpirun`` on a head node.
 
 .. _install:
 
