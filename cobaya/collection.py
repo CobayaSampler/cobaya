@@ -413,12 +413,16 @@ class Collection(BaseCollection):
                 for col in self.data.columns]
         do_header = not n_min
         if do_header:
+            # TODO: this should be done with file locks instead
             if os.path.exists(self.file_name):
-                raise LoggedError(self.log,
-                                  "The output file %s already exists. You may be running "
-                                  "multiple jobs with the same output when you intended"
-                                  "to run with MPI. Check you installed mpi4py and your"
-                                  "mpi/mpirun configuration.", self.file_name)
+                raise LoggedError(
+                    self.log, "The output file %s already exists. You may be running "
+                              "multiple jobs with the same output when you intended to "
+                              "run with MPI. Check that mpi4py is correctly installed and"
+                              " configured; e.g. try the test at "
+                              "https://cobaya.readthedocs.io/en/latest/installation."
+                              "html#mpi-parallelization-optional-but-encouraged",
+                    self.file_name)
             with open(self.file_name, "a", encoding="utf-8") as out:
                 out.write("#" + " ".join(
                     f(col) for f, col

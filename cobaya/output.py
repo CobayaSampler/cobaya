@@ -96,13 +96,6 @@ class Output(HasLogger):
             self.log.debug("Creating output folder '%s'", self.folder)
             try:
                 os.makedirs(self.folder)
-            except FileExistsError:
-                raise LoggedError(
-                    self.log, "You may have multiple jobs but not running as MPI as"
-                              "they should be. \nCheck mpi4py installed and your mpi "
-                              "installation and configuration. e.g. try the test at\n"
-                              "https://cobaya.readthedocs.io/en/latest/installation."
-                              "html#mpi-parallelization-optional-but-encouraged")
             except OSError:
                 self.log.error("".join(["-"] * 20 + ["\n\n"] +
                                        list(traceback.format_exception(*sys.exc_info())) +

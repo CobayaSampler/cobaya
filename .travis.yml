@@ -37,7 +37,6 @@ jobs:
             - g++-6
       env:
         - GCC_VERSION="6"
-        - PYVER="3"
       python: "3.6"
     - name: "Typical scenario: latest Ubuntu LTS"
       dist: focal
@@ -47,7 +46,6 @@ jobs:
             - gfortran
       env:
         - GCC_VERSION="focal"
-        - PYVER="3"
       python: "3.8"
     - name: "Anaconda: gcc-8, Python 3.7"
       addons:
@@ -60,7 +58,6 @@ jobs:
             - g++-8
       env:
         - GCC_VERSION="8"
-        - PYVER="3"
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="defaults"
       python: "3.7"
@@ -76,7 +73,6 @@ jobs:
             - g++-10
       env:
         - GCC_VERSION="10"
-        - PYVER="3"
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="conda-forge"
       python: "3.9"
@@ -95,7 +91,7 @@ before_install:
   - sudo apt install openmpi-bin openmpi-common libopenmpi-dev libopenblas-dev liblapack-dev
   # Python requisites
   - if [[ "$PYDIST" == "ANACONDA" ]]; then
-      wget https://repo.continuum.io/miniconda/Miniconda$PYVER-latest-Linux-x86_64.sh -O miniconda.sh;
+      wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
       bash miniconda.sh -b -p $HOME/miniconda;
       export PATH="$HOME/miniconda/bin:$PATH";
       hash -r;
