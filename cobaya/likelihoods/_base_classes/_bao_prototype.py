@@ -85,6 +85,9 @@ Now, add to your likelihood block:
 .. literalinclude:: ../cobaya/likelihoods/bao/generic.yaml
    :language: yaml
 
+You can rename your BAO likelihood and use multiple ones with different data (see
+:ref:`likelihood_rename`).
+
 
 Installation
 ------------

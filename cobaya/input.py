@@ -560,7 +560,7 @@ class HasDefaults:
         """
         Returns dictionary of names and values for class variables that can also be
         input and output in yaml files, by default it takes all the
-        (non-inherited and non-private)  attributes of the class excluding known
+        (non-inherited and non-private) attributes of the class excluding known
         specials.
 
         Could be overridden using input_options to dynamically generate defaults,
