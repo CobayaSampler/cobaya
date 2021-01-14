@@ -437,8 +437,8 @@ def get_preferred_old_values(info_old):
             try:
                 component_path = block[k].pop(_component_path, None) \
                     if isinstance(block[k], dict) else None
-                class_name = (block[k] or {}).get(_class_name) or name
-                cls = get_class(k, block_name, component_path=component_path)
+                class_name = (block[k] or {}).get(_class_name) or k
+                cls = get_class(class_name, block_name, component_path=component_path)
                 prefer_old_k_this = getattr(cls, "_at_resume_prefer_old", {})
                 if prefer_old_k_this:
                     if block_name not in keep_old:
