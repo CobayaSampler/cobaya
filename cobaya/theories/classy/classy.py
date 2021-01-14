@@ -143,7 +143,8 @@ from typing import NamedTuple, Sequence, Union, Optional
 # Local
 from cobaya.theories._cosmo import BoltzmannBase
 from cobaya.log import LoggedError
-from cobaya.install import download_github_release, pip_install, NotInstalledError
+from cobaya.install import download_github_release, pip_install, NotInstalledError, \
+    check_gcc_version
 from cobaya.tools import load_module, VersionCheckError
 
 
@@ -165,6 +166,7 @@ class classy(BoltzmannBase):
     # Name of the Class repo/folder and version to download
     _classy_repo_name = "lesgourg/class_public"
     _min_classy_version = "v2.9.3"
+    _classy_min_gcc_version = "6.4"  # Lower ones are possible atm, but leak memory!
     _classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', _min_classy_version)
 
     def initialize(self):
@@ -553,7 +555,18 @@ class classy(BoltzmannBase):
         if not success:
             log.error("Could not download classy.")
             return False
+        # Compilation
+        # gcc check after downloading, in case the user wants to change the compiler by
+        # hand in the Makefile
         classy_path = cls.get_path(path)
+        if not check_gcc_version(cls._classy_min_gcc_version, error_returns=False):
+            log.error("Your gcc version is too low! CLASS would probably compile, "
+                      "but it would leak memory when running a chain. Please use a "
+                      "gcc version newer than %s. You can still compile CLASS by hand, "
+                      "maybe changing the compiler in the Makefile. CLASS has been "
+                      "downloaded into %r",
+                      cls._classy_min_gcc_version, classy_path)
+            return False
         log.info("Compiling classy...")
         from subprocess import Popen, PIPE
         env = deepcopy(os.environ)
