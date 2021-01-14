@@ -144,8 +144,7 @@ It is up to you where to define your likelihood class(es): the ``__init__`` file
 Using an *internal* likelihood class
 ------------------------------------
 
-Assuming your ``__init__`` file defines the class, or imports it (``from .module_name import ClassName``),
-when running Cobaya you can reference the internal likelihood using:
+Assuming your ``__init__`` file defines the class, or imports it (``from .module_name import ClassName``), when running Cobaya you can reference the internal likelihood using:
 
   .. code-block:: yaml
 
@@ -164,6 +163,27 @@ If you defined the class in *module_name.py* then you would reference it as
          [...]
 
 If the class name is the same as the module name it can be omitted.
+
+
+.. _likelihood_rename:
+
+Custom names and multiple instances of the same *internal* class
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To rename an internal likelihood to your liking, or to use simultaneously several instances of the same internal likelihood class (e.g. with different options), give each instance a name of your choice and specify the original likelihood name using the ``class`` keyword:
+
+  .. code-block:: yaml
+
+     likelihood:
+       my_like_1:
+         class: directory_name.ClassName
+         [option 1]: [value 1]
+         [...]
+       my_like_2:
+         class: directory_name.ClassName
+         [option 1]: [value 1]
+         [...]
+
 
 Using an *external* likelihood class
 ------------------------------------
