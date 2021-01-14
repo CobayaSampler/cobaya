@@ -5,6 +5,7 @@
 - Bugfixes when using `cobaya.sample.get_sampler()`
 - More informative error tracebacks; fixes #121 (thanks @msyriac)
 - Uniform priors can now be specified simply as `[<min>, <max>]`
+- Likelihoods can now be renamed and used mutiple times simultaneously; fixes #126 (thanks @Pablo-Lemos)
 
 ### Installation scripts
 
