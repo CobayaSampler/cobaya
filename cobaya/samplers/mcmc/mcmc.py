@@ -859,6 +859,17 @@ class mcmc(CovmatSampler):
     def get_version(cls):
         return __version__
 
+    @classmethod
+    def get_desc(cls, info=None):
+        drag = (info or {}).get("drag")
+        drag_string = {
+            True: ", using the fast-dragging procedure described in \cite{Neal:2005}",
+            False: ""}
+        # Unknown case (no info passed)
+        drag_string[None] = "[(if drag: True) %s]" % drag_string[True]
+        return ("Adaptive, speed-hierarchy-aware MCMC sampler (adapted from CosmoMC) "
+                r"\cite{Lewis:2002ah,Lewis:2013hha}" + drag_string[drag])
+
 
 # Plotting tool for chain progress #######################################################
 
