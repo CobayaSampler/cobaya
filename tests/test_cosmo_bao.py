@@ -1,19 +1,23 @@
 from copy import deepcopy
 import pytest
 
+from cobaya.conventions import _class_name
 from cobaya.tools import get_class
 
 from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE, derived_lowTEB_highTTTEEE
 from .common_cosmo import body_of_test
 
 
+# Tests both the bao.generic class, and class renaming for multiple instances
 def test_generic_camb(packages_path, skip_not_installed):
     like = "bao.sdss_dr12_consensus_bao"
+    like_rename = "my_bao"
     chi2_generic = deepcopy(chi2_sdss_dr12_consensus_bao)
-    chi2_generic["bao.generic"] = chi2_generic.pop(like)
+    chi2_generic[like_rename] = chi2_generic.pop(like)
     likelihood_defaults = get_class(like).get_defaults()
     likelihood_defaults.pop("path")
-    info_likelihood = {"bao.generic": likelihood_defaults}
+    likelihood_defaults[_class_name] = "bao.generic"
+    info_likelihood = {like_rename: likelihood_defaults}
     info_theory = {"camb": None}
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_generic, skip_not_installed=skip_not_installed)
