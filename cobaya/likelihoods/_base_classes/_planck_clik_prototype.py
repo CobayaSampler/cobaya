@@ -258,7 +258,7 @@ def is_installed_clik(path, allow_global=False):
     if path is not None and path.lower() == "global":
         path = None
     clik_path = None
-    if path and path.lower() != "global":
+    if isinstance(path, str) and path.lower() != "global":
         try:
             clik_path = os.path.join(
                 get_clik_source_folder(path), 'lib/python/site-packages')

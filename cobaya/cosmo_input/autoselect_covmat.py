@@ -97,7 +97,7 @@ def get_best_covmat(info, packages_path=None, cached=True):
     return covmat_data
 
 
-def _get_best_covmat(packages_path, params_info, likelihoods_info, cached=True):
+def _get_best_covmat(packages_path, params_info, likelihoods_info, cached=True) -> dict:
     """
     Actual covmat finder used by `get_best_covmat`. Call directly for more control on
     the parameters used.

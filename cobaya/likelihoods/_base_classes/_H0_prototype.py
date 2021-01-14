@@ -30,9 +30,6 @@ standard deviation, simply add the following likelihood, substituting ``mu_H0`` 
 
 """
 
-# Global
-from scipy.stats import norm
-
 # Local
 from cobaya.likelihood import Likelihood
 
@@ -46,11 +43,11 @@ class _H0_prototype(Likelihood):
     H0_std: float
 
     def initialize(self):
-        self.minus_half_invvar = - 0.5 / self.H0_std**2
+        self.minus_half_invvar = - 0.5 / self.H0_std ** 2
 
     def get_requirements(self):
         return {'H0': None}
 
     def logp(self, **params_values):
         H0_theory = self.provider.get_param("H0")
-        return self.minus_half_invvar * (H0_theory - self.H0_mean)**2
+        return self.minus_half_invvar * (H0_theory - self.H0_mean) ** 2

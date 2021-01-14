@@ -1,7 +1,6 @@
 from .common import process_packages_path
 from .conftest import install_test_wrapper
 import os
-import pytest
 import numpy as np
 from cobaya.model import get_model
 from cobaya.tools import load_module
