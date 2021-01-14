@@ -514,9 +514,10 @@ class HasDefaults:
         Returns a short description of the class. By default, returns the class docstring.
 
         You can redefine this method to dynamically generate the description based on the
-        class initialisation `info` (see e.g. `mcmc.get_desc`).
+        class initialisation ``info`` (see e.g. the source code of MCMC's
+        :meth:`~.mcmc.get_desc`).
 
-        This class method is called by the `__str__` instance method.
+        This class method is called by the ``__str__`` instance method.
         """
         return cls.__doc__
 
