@@ -104,11 +104,10 @@ def _get_best_covmat(packages_path, params_info, likelihoods_info, cached=True) 
 
     Returns the same dict as `get_best_covmat`, except for the covariance matrix itself.
     """
-    if cached:
-        global _loaded_covmats_database
-        covmats_database = (
-            _loaded_covmats_database or get_covmat_database(packages_path, cached=cached))
-        _loaded_covmats_database = covmats_database
+    global _loaded_covmats_database
+    covmats_database = (
+        _loaded_covmats_database or get_covmat_database(packages_path, cached=cached))
+    _loaded_covmats_database = covmats_database
     # Prepare params and likes aliases
     params_renames = set(chain(*[
         [p] + str_to_list(info.get(partag.renames, [])) for p, info in
