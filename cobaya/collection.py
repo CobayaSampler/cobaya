@@ -257,7 +257,7 @@ class Collection(BaseCollection):
 
     @property
     def values(self):
-        self.data.values
+        return self.data.values
 
     def _copy(self, data=None):
         """
