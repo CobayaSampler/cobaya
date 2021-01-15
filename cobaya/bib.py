@@ -11,9 +11,10 @@ Inspired by a similar characteristic of
 
 # Global
 import os
+from inspect import cleandoc
 
 # Local
-from cobaya.conventions import _yaml_extensions, kinds
+from cobaya.conventions import _yaml_extensions, kinds, _dump_sort_cosmetic
 from cobaya.tools import create_banner, warn_deprecation
 from cobaya.input import load_input, get_used_components, get_class
 
@@ -22,9 +23,11 @@ _default_symbol = "="
 _default_length = 80
 
 # Cobaya's own bib info
-cobaya_bib = r"""
+cobaya_desc = cleandoc(r"""
 The posterior has been explored/maximised/reweighted using Cobaya \cite{torrado:2020xyz}.
+""")
 
+cobaya_bib = r"""
 @article{Torrado:2020xyz,
     author = "Torrado, Jesus and Lewis, Antony",
     title = "{Cobaya: Code for Bayesian Analysis of hierarchical physical models}",
@@ -38,30 +41,58 @@ The posterior has been explored/maximised/reweighted using Cobaya \cite{torrado:
 """.lstrip("\n")
 
 
+def get_desc_component(component, kind, info=None):
+    cls = get_class(component, kind, None_if_not_found=True)
+    if cls:
+        lines = cleandoc(cls.get_desc(info))
+    else:
+        lines = "[no description found]"
+    return lines + "\n"
+
+
 def get_bib_component(component, kind):
     cls = get_class(component, kind, None_if_not_found=True)
     if cls:
-        lines = cls.get_bibtex() or "[no bibliography information found]"
+        lines = (cls.get_bibtex().lstrip("\n").rstrip("\n")
+                 or "# [no bibliography information found]")
     else:
-        lines = "[Component '%s.%s' not known.]" % (kind, component)
+        lines = "# [Component '%s.%s' not known.]" % (kind, component)
     return lines + "\n"
 
 
 def get_bib_info(*infos):
-    blocks_text = {"Cobaya": cobaya_bib}
+    used_components, component_infos = get_used_components(*infos, return_infos=True)
+    descs = {}
+    bibs = {}
     for kind, components in get_used_components(*infos).items():
+        descs[kind], bibs[kind] = {}, {}
         for component in components:
-            blocks_text["%s:%s" % (kind, component)] = get_bib_component(component, kind)
-    return blocks_text
+            descs[kind][component] = get_desc_component(
+                component, kind, component_infos[component])
+            bibs[kind][component] = get_bib_component(component, kind)
+    descs["cobaya"] = {"cobaya": cobaya_desc}
+    bibs["cobaya"] = {"cobaya": cobaya_bib}
+    return descs, bibs
 
 
-def prettyprint_bib(blocks_text):
+def prettyprint_bib(descs, bibs):
+    # Sort them "optimally"
+    sorted_kinds = [k for k in _dump_sort_cosmetic if k in descs]
+    sorted_kinds += [k for k in descs if k not in _dump_sort_cosmetic]
     txt = ""
-    for block, text in blocks_text.items():
-        if not txt.endswith("\n\n"):
-            txt += "\n"
-        txt += create_banner(block, symbol=_default_symbol, length=_default_length)
-        txt += "\n" + text
+    txt += create_banner(
+        "Descriptions", symbol=_default_symbol, length=_default_length) + "\n"
+    for kind in sorted_kinds:
+        txt += kind + ":\n\n"
+        for component, desc in descs[kind].items():
+            txt += " * [%s] %s\n" % (component, desc)
+        txt += "\n"
+    txt += "\n" + create_banner(
+        "Bibtex", symbol=_default_symbol, length=_default_length) + "\n"
+    for kind in sorted_kinds:
+        for component, bib in bibs[kind].items():
+            txt += "\n### %s " % component + "########################" + "\n\n"
+            txt += bib
     return txt.lstrip().rstrip() + "\n"
 
 
@@ -92,7 +123,7 @@ def bib_script():
         (os.path.splitext(f)[1] in _yaml_extensions) for f in arguments.components_or_files]
     if all(are_yaml):
         infos = [load_input(f) for f in arguments.components_or_files]
-        print(prettyprint_bib(get_bib_info(*infos)))
+        print(prettyprint_bib(*get_bib_info(*infos)))
     elif not any(are_yaml):
         if arguments.kind:
             arguments.kind = arguments.kind[0].lower()

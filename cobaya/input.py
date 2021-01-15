@@ -66,28 +66,36 @@ def load_input_MPI(input_file):
     return share_mpi(load_input(input_file) if is_main_process() else None)
 
 
-def get_used_components(*infos):
+def get_used_components(*infos, return_infos=False):
     """
     Returns all requested components as an dict ``{kind: set([components])}``.
     Priors are not included.
+
+    If ``return_infos=True`` (default: ``False``), returns too a dictionary of inputs per
+    component, updated in the order in which the info arguments are given.
 
     Components which are just renames of others (i.e. defined with `class_name`) return
     the original class' name.
     """
     # TODO: take inheritance into account
     components = defaultdict(list)
+    components_infos = defaultdict(dict)
     for info in infos:
-        for field in kinds:
+        for kind in kinds:
             try:
-                components[field] += [a for a in (info.get(field) or [])
-                                      if a not in components[field]]
+                components[kind] += [a for a in (info.get(kind) or [])
+                                      if a not in components[kind]]
             except TypeError:
                 raise LoggedError(
                     log, "Your input info is not well formatted at the '%s' block. "
                          "It must be a dictionary {'%s_i':{options}, ...}. ",
-                    field, field)
+                    kind, kind)
+            if return_infos:
+                for c in components[kind]:
+                    components_infos[c].update(info[kind][c] or {})
     # return dictionary of non-empty blocks
-    return {k: v for k, v in components.items() if v}
+    components = {k: v for k, v in components.items() if v}
+    return (components, dict(components_infos)) if return_infos else components
 
 
 def get_default_info(component_or_class, kind=None, return_yaml=False,

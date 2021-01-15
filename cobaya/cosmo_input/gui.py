@@ -243,7 +243,7 @@ class MainWindow(QWidget):
             comments_text = ""
         self.display["python"].setText("info = " + pformat(info) + comments_text)
         self.display["yaml"].setText(yaml_dump(sort_cosmetic(info)) + comments_text)
-        self.display["bibliography"].setText(prettyprint_bib(get_bib_info(info)))
+        self.display["bibliography"].setText(prettyprint_bib(*get_bib_info(info)))
         # Display covmat
         packages_path = resolve_packages_path()
         if not packages_path:
