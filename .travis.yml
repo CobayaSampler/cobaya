@@ -91,7 +91,7 @@ before_install:
   - sudo apt install openmpi-bin openmpi-common libopenmpi-dev libopenblas-dev liblapack-dev
   # Python requisites
   - if [[ "$PYDIST" == "ANACONDA" ]]; then
-      wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+      wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
       bash miniconda.sh -b -p $HOME/miniconda;
       export PATH="$HOME/miniconda/bin:$PATH";
       hash -r;
