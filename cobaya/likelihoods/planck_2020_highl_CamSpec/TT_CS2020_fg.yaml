@@ -5,7 +5,7 @@ dataset_params:
 # Aliases for automatic covariance matrix
 aliases: [CamSpec2020HM_TT]
 # Speed in evaluations/second
-speed: 90
+speed: 30
 
 params: !defaults [params_calib_CamSpec_2020, params_TT_CamSpec_fg, params_TT_CamSpec_fixedcalpol]
 

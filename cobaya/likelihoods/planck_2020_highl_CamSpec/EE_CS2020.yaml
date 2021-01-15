@@ -4,7 +4,7 @@ dataset_params:
   use_cl: EE
 # Aliases for automatic covariance matrix
 aliases: [CamSpec2020HM_EE]
-
+speed: 160
 params: !defaults [params_calib_CamSpec_2020, params_EE_CamSpec, params_fixedcalTE]
 
 #prior: !defaults [prior_SZ_CamSpec]
