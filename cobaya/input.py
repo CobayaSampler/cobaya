@@ -516,13 +516,8 @@ class HasDefaults:
         You can redefine this method to dynamically generate the description based on the
         class initialisation ``info`` (see e.g. the source code of MCMC's
         :meth:`~.mcmc.get_desc`).
-
-        This class method is called by the ``__str__`` instance method.
         """
         return cls.__doc__
-
-    def __str__(self):
-        return self.__class__.get_desc(info=self.__dict__)
 
     @classmethod
     def get_bibtex(cls):
