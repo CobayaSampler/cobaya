@@ -163,6 +163,9 @@ non_linear_default_code = "hmcode"
 
 
 class classy(BoltzmannBase):
+    r"""
+    CLASS cosmological Boltzmann code \cite{Blas:2011rf}.
+    """
     # Name of the Class repo/folder and version to download
     _classy_repo_name = "lesgourg/class_public"
     _min_classy_version = "v2.9.3"

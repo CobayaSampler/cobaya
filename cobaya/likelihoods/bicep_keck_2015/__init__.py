@@ -81,6 +81,9 @@ T_CMB_K = 2.7255  # fiducial CMB temperature
 
 
 class bicep_keck_2015(_CMBlikes):
+    r"""
+    CMB power spectrum likelihood of Bicep2/Keck Array X \cite{Ade:2018gkx}.
+    """
     install_options = {
         "download_url": r"http://bicepkeck.org/BK15_datarelease/BK15_cosmomc.tgz"}
 
