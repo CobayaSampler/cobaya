@@ -12,6 +12,6 @@ aliases: [CamSpec2020HM_TT]
 # Speed in evaluations/second
 speed: 90
 
-params: !defaults [params_calib_CamSpec_2020, params_TT_CamSpec, params_TT_CamSpec_fg, params_CamSpec_both]
+params: !defaults [params_calib_CamSpec_2020, params_TT_CamSpec, params_TT_CamSpec_fg, params_CamSpec_both, params_TT_CamSpec_fixedcalpol]]
 
 #prior: !defaults [prior_SZ_CamSpec]

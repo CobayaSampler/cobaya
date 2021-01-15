@@ -11,6 +11,6 @@ dataset_params:
 aliases: [CamSpec2020HM_TE]
 # Speed in evaluations/second
 
-params: !defaults [params_TE_CamSpec]
+params: !defaults [params_calib_CamSpec_2020, params_TE_CamSpec, params_fixedcalEE]
 
 #prior: !defaults [prior_SZ_CamSpec]

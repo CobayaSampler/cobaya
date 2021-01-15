@@ -12,6 +12,6 @@ aliases: [CamSpec2020HM_TTTEEE]
 # Speed in evaluations/second
 speed: 40
 
-params: !defaults [params_calib_CamSpec_2020, params_TT_CamSpec, params_TE_CamSpec]
+params: !defaults [params_calib_CamSpec_2020, params_TT_CamSpec, params_fixedcalEE, params_TE_CamSpec]
 
 #prior: !defaults [prior_SZ_CamSpec]
