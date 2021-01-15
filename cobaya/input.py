@@ -16,6 +16,7 @@ from itertools import chain
 from functools import reduce
 from typing import Mapping
 from collections import defaultdict
+from inspect import cleandoc
 import pkg_resources
 
 # Local
@@ -65,28 +66,36 @@ def load_input_MPI(input_file):
     return share_mpi(load_input(input_file) if is_main_process() else None)
 
 
-def get_used_components(*infos):
+def get_used_components(*infos, return_infos=False):
     """
     Returns all requested components as an dict ``{kind: set([components])}``.
     Priors are not included.
+
+    If ``return_infos=True`` (default: ``False``), returns too a dictionary of inputs per
+    component, updated in the order in which the info arguments are given.
 
     Components which are just renames of others (i.e. defined with `class_name`) return
     the original class' name.
     """
     # TODO: take inheritance into account
     components = defaultdict(list)
+    components_infos = defaultdict(dict)
     for info in infos:
-        for field in kinds:
+        for kind in kinds:
             try:
-                components[field] += [a for a in (info.get(field) or [])
-                                      if a not in components[field]]
+                components[kind] += [a for a in (info.get(kind) or [])
+                                      if a not in components[kind]]
             except TypeError:
                 raise LoggedError(
                     log, "Your input info is not well formatted at the '%s' block. "
                          "It must be a dictionary {'%s_i':{options}, ...}. ",
-                    field, field)
+                    kind, kind)
+            if return_infos:
+                for c in components[kind]:
+                    components_infos[c].update(info[kind][c] or {})
     # return dictionary of non-empty blocks
-    return {k: v for k, v in components.items() if v}
+    components = {k: v for k, v in components.items() if v}
+    return (components, dict(components_infos)) if return_infos else components
 
 
 def get_default_info(component_or_class, kind=None, return_yaml=False,
@@ -450,6 +459,24 @@ def get_preferred_old_values(info_old):
     return keep_old
 
 
+class Description(object):
+    """Allows for calling get_desc as both class and instance method."""
+
+    def __get__(self, instance, cls):
+        if instance is None:
+            return_func = lambda info=None: cls._get_desc(info)
+        else:
+            return_func = lambda info=None: cls._get_desc(info=instance.__dict__)
+        return_func.__doc__ = cleandoc("""
+            Returns a short description of the class. By default, returns the class'
+            docstring.
+
+            You can redefine this method to dynamically generate the description based
+            on the class initialisation ``info`` (see e.g. the source code of MCMC's
+            *class method* :meth:`~.mcmc._get_desc`).""")
+        return return_func
+
+
 class HasDefaults:
     """
     Base class for components that can read settings from a .yaml file.
@@ -519,6 +546,12 @@ class HasDefaults:
             return filename
         return None
 
+    get_desc = Description()
+
+    @classmethod
+    def _get_desc(cls, info=None):
+        return cleandoc(cls.__doc__)
+
     @classmethod
     def get_bibtex(cls):
         """
@@ -526,7 +559,11 @@ class HasDefaults:
         from this class, it will return the result from an inherited class if that
         provides bibtex.
         """
-        bib = cls.get_associated_file_content('.bibtex')
+        filename = cls.__dict__.get('bibtex_file', None)
+        if filename:
+            bib = pkg_resources.resource_string(cls.__module__, filename)
+        else:
+            bib = cls.get_associated_file_content('.bibtex')
         if bib:
             try:
                 return bib.decode("utf-8")
@@ -543,11 +580,12 @@ class HasDefaults:
         return None
 
     @classmethod
-    def get_associated_file_content(cls, ext):
+    def get_associated_file_content(cls, ext, file_root=None):
         # handle extracting package files when may be inside a zipped package so files
         # not accessible directly
         try:
-            string = pkg_resources.resource_string(cls.__module__, cls.__name__ + ext)
+            string = pkg_resources.resource_string(cls.__module__,
+                                                   (file_root or cls.__name__) + ext)
             try:
                 return string.decode("utf-8")
             except:

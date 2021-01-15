@@ -32,6 +32,10 @@ _error_tag = 99
 
 
 class mcmc(CovmatSampler):
+    r"""
+    Adaptive, speed-hierarchy-aware MCMC sampler (adapted from CosmoMC)
+    \cite{Lewis:2002ah,Lewis:2013hha}.
+    """
     _at_resume_prefer_new = CovmatSampler._at_resume_prefer_new + [
         "burn_in", "callback_function", "callback_every", "max_tries", "output_every",
         "learn_every", "learn_proposal_Rminus1_max", "learn_proposal_Rminus1_max_early",
@@ -858,6 +862,20 @@ class mcmc(CovmatSampler):
     @classmethod
     def get_version(cls):
         return __version__
+
+    @classmethod
+    def _get_desc(cls, info=None):
+        if info is None:
+            drag = None
+        else:
+            drag = info.get("drag", cls.get_defaults()["drag"])
+        drag_string = {
+            True: r" using the fast-dragging procedure described in \cite{Neal:2005}",
+            False: ""}
+        # Unknown case (no info passed)
+        drag_string[None] = " [(if drag: True)%s]" % drag_string[True]
+        return ("Adaptive, speed-hierarchy-aware MCMC sampler (adapted from CosmoMC) "
+                r"\cite{Lewis:2002ah,Lewis:2013hha}" + drag_string[drag] + ".")
 
 
 # Plotting tool for chain progress #######################################################

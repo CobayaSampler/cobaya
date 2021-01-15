@@ -7,6 +7,12 @@
 - Uniform priors can now be specified simply as `[<min>, <max>]`
 - Likelihoods can now be renamed and used mutiple times simultaneously; fixes #126 (thanks @Pablo-Lemos)
 
+### Bibliography tools
+
+- Bibtex files can now be specified via a class attribute, making inheritance easier (used to remove duplication)
+- Component description now separate from bibtex code; by default, the component class docstring is used as description.
+- Descriptions can be overridden to account for component input options (e.g. the actual method used in the minimizer).
+
 ### Installation scripts
 
 - Several bugs fixed: #123, #127 and others (thanks @timothydmorton, @xgarrido)

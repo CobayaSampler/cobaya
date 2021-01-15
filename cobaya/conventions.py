@@ -56,7 +56,7 @@ kinds = ComponentKinds(*ComponentKinds._fields)
 
 # Reserved attributes for component classes with defaults.
 # These are ignored by HasDefaults.get_class_options()
-reserved_attributes = {_input_params, _output_params, "install_options"}
+reserved_attributes = {_input_params, _output_params, "install_options", "bibtex_file"}
 
 # Conventional order for yaml dumping (purely cosmetic)
 _dump_sort_cosmetic = [

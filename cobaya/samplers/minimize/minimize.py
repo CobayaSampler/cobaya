@@ -423,3 +423,23 @@ class minimize(Minimizer, CovmatSampler):
                                 "If you want to start over, force "
                                 "('-f', '--force', 'force: True')")
         super().check_force_resume(output, info=info)
+
+    @classmethod
+    def _get_desc(cls, info=None):
+        if info is None:
+            method = None
+        else:
+            method = info.get("method", cls.get_defaults()["method"])
+        desc_bobyqa = (r"Py-BOBYQA implementation "
+                       r"\cite{2018arXiv180400154C,2018arXiv181211343C} of the BOBYQA "
+                       r"minimization algorithm \cite{BOBYQA}")
+        desc_scipy = (r"Scipy minimizer \cite{2020SciPy-NMeth} (check citation for the "
+                      r"actual algorithm used at \url{https://docs.scipy.org/doc/scipy/re"
+                      r"ference/generated/scipy.optimize.minimize.html}")
+        if method and method and method.lower() == "bobyqa":
+            return desc_bobyqa
+        elif method and method.lower() == "scipy":
+            return desc_scipy
+        else:  # unknown method or no info passed (None)
+            return ("Minimizer -- method unknown, possibly one of:"
+                    "\na) " + desc_bobyqa + "\nb) " + desc_scipy)

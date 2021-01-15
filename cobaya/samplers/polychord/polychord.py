@@ -30,6 +30,10 @@ from cobaya.conventions import _separator, _evidence_extension, _packages_path_a
 
 
 class polychord(Sampler):
+    r"""
+    PolyChord sampler \cite{Handley:2015fda,2015MNRAS.453.4384H}, a nested sampler
+    tailored for high-dimensional parameter spaces with a speed hierarchy.
+    """
     # Name of the PolyChord repo and version to download
     _pc_repo_name = "PolyChord/PolyChordLite"
     _pc_repo_version = "1.17.1"

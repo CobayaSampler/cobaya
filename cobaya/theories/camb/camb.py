@@ -199,6 +199,9 @@ class CAMBOutputs(NamedTuple):
 
 
 class camb(BoltzmannBase):
+    r"""
+    CAMB cosmological Boltzmann code \cite{Lewis:1999bs,Howlett:2012mh}.
+    """
     # Name of the Class repo/folder and version to download
     _camb_repo_name = "cmbant/CAMB"
     _camb_repo_version = os.environ.get("CAMB_REPO_VERSION", "master")
