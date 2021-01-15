@@ -48,7 +48,7 @@ Acknowledgements
 
 Thanks to `J. Lesgourgues`_ and `W. Handley`_ for support on interfacing CLASS_ and PolyChord_ respectively.
 
-Thanks too to `G. Cañas Herrera`_, `A. Finke`_, `X. Garrido`_, `S. Heimersheim`_, `L. Hergt`_, `M.S. Madhavacheril`_, `V. Miranda`_, `T. Morton`_, `J. Zunz`_ and many others for extensive and somewhat painful testing.
+Thanks too to `G. Cañas Herrera`_, `A. Finke`_, `X. Garrido`_, `S. Heimersheim`_, `L. Hergt`_, `C. Hill`_, `P. Lemos`_, `M.S. Madhavacheril`_, `V. Miranda`_, `T. Morton`_,  `M. Rashkovetskyi`_, `J. Zunz`_ and many others for extensive and somewhat painful testing.
 
 .. _`Jesus Torrado`: https://web.physik.rwth-aachen.de/user/torrado
 .. _`Antony Lewis`: https://cosmologist.info
@@ -67,9 +67,12 @@ Thanks too to `G. Cañas Herrera`_, `A. Finke`_, `X. Garrido`_, `S. Heimersheim`
 .. _`X. Garrido`: https://xgarrido.github.io/
 .. _`S. Heimersheim`: https://www.ast.cam.ac.uk/people/Stefan.Heimersheim
 .. _`L. Hergt`: https://www.kicc.cam.ac.uk/directory/lh561
+.. _`C. Hill`: http://user.astro.columbia.edu/~jch/
+.. _`P. Lemos`: https://pablo-lemos.github.io/
 .. _`M.S. Madhavacheril`: https://msyriac.github.io/
 .. _`V. Miranda`: https://github.com/vivianmiranda
 .. _`T. Morton`: https://github.com/timothydmorton
+.. _`M. Rashkovetskyi`: https://misharash.github.io/
 .. _`J. Zunz`: https://github.com/joezuntz
 
 

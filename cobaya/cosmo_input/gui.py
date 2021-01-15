@@ -109,6 +109,7 @@ class MainWindow(QWidget):
             group_layout = QVBoxLayout(group_box)
             for a, desc in fields:
                 self.combos[a] = QComboBox()
+                # Combo box label only if not single element in group
                 if len(fields) > 1:
                     label = QLabel(desc)
                     group_layout.addWidget(label)
@@ -140,7 +141,7 @@ class MainWindow(QWidget):
             self.display[k].setReadOnly(True)
             self.display_tabs.addTab(self.display[k], k)
         self.display["covmat"] = QWidget()
-        covmat_tab_layout = group_layout
+        covmat_tab_layout = QVBoxLayout()
         self.display["covmat"].setLayout(covmat_tab_layout)
         self.covmat_text = QLabel()
         self.covmat_text.setWordWrap(True)

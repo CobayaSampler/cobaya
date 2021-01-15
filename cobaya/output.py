@@ -20,7 +20,7 @@ from cobaya import __version__
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
 from cobaya.conventions import _input_suffix, _updated_suffix, _separator_files, _version
 from cobaya.conventions import _resume, _resume_default, _force, _yaml_extensions
-from cobaya.conventions import _output_prefix, _debug, kinds, _params
+from cobaya.conventions import _output_prefix, _debug, kinds, _params, _class_name
 from cobaya.log import LoggedError, HasLogger
 from cobaya.input import is_equal_info, get_class
 from cobaya.mpi import is_main_process, more_than_one_process, share_mpi
@@ -244,8 +244,8 @@ class Output(HasLogger):
                                       "newer version of Cobaya: %r (you are using %r). "
                                       "Please, update your Cobaya installation.",
                             old_version, new_version)
-                for k in (kind for kind in kinds if kind in updated_info):
-                    if k in ignore_blocks:
+                for k in set(kinds).intersection(updated_info):
+                    if k in ignore_blocks or updated_info[k] is None:
                         continue
                     for c in updated_info[k]:
                         new_version = updated_info[k][c].get(_version)
@@ -254,7 +254,8 @@ class Output(HasLogger):
                             updated_info[k][c][_version] = old_version
                             updated_info_trimmed[k][c][_version] = old_version
                         elif old_version is not None:
-                            cls = get_class(c, k, None_if_not_found=True)
+                            class_name = updated_info[k][c].get(_class_name) or c
+                            cls = get_class(class_name, k, None_if_not_found=True)
                             if cls and cls.compare_versions(
                                     old_version, new_version, equal=False):
                                 raise LoggedError(

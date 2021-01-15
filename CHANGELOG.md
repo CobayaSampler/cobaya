@@ -1,10 +1,43 @@
 ## 3.0.3beta – 2020-XX-XX
 
-### Cosmological likelihoods
+### General
+
+- Bugfixes when using `cobaya.sample.get_sampler()`
+- More informative error tracebacks; fixes #121 (thanks @msyriac)
+- Uniform priors can now be specified simply as `[<min>, <max>]`
+- Likelihoods can now be renamed and used mutiple times simultaneously; fixes #126 (thanks @Pablo-Lemos)
+
+### Installation scripts
+
+- Several bugs fixed: #123, #127 and others (thanks @timothydmorton, @xgarrido)
+
+### Minimize
+
+- MCMC checkpoints are not deleted any more (was preventing resuming); fixes #124 (thanks @misharash)
+
+### Cosmological likelihoods and theory codes
 
 #### BAO
 
 - Added Hubble distance and fix to `bao.generic` (Thanks @Pablo-Lemos)
+
+#### H0
+
+- Added Riess 2020 and Freedman et al 2020
+- Normalisation changed to chi2; fixes #105 (thanks @jcolinhill)
+
+#### CAMB
+
+- Fixed wrong sigma8 when z=0 not requested; fixes #128, #130, #132 (thanks @Pablo-Lemos and @msyriac)
+
+#### CLASS
+
+- Fixed ignoring `l_max_scalars`
+- Fixed #106 (thanks @lukashergt)
+
+#### cosmo-generator
+
+- Fixed PySide2 problem in newer systems; fixes #114 (thanks @talabadi)
 
 
 ## 3.0.2 – 2020-10-16
@@ -37,7 +70,7 @@
 ### Collections
 
 - Collections are picklable again.
-- Slices with ommited limits, e.g. `[::2]`, now work.
+- Slices with omitted limits, e.g. `[::2]`, now work.
 - Slicing now returns a copy of the `Collection`, instead of a raw `pandas.DataFrame`.
 
 ### MCMC

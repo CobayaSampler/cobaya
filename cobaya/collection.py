@@ -204,6 +204,7 @@ class Collection(BaseCollection):
                          "in favor of `len(Collection)`")
         # BEHAVIOUR TO BE REPLACED BY ERROR:
         return len(self)
+
     # END OF DEPRECATION BLOCK
 
     def __len__(self):
@@ -243,7 +244,7 @@ class Collection(BaseCollection):
         elif hasattr(args[0], "__len__"):
             try:
                 return self.data.iloc[:self._n,
-                                          [self.data.columns.get_loc(c) for c in args[0]]]
+                       [self.data.columns.get_loc(c) for c in args[0]]]
             except KeyError:
                 raise ValueError("Some of the indices are not valid columns.")
         elif isinstance(args[0], int):
@@ -256,7 +257,7 @@ class Collection(BaseCollection):
 
     @property
     def values(self):
-        self.data.values
+        return self.data.values
 
     def _copy(self, data=None):
         """
@@ -328,10 +329,6 @@ class Collection(BaseCollection):
             self[list(self.sampled_params) +
                  (list(self.derived_params) if derived else [])][first:last].T,
             **weights_kwarg))
-        return np.atleast_2d(np.cov(
-            self[list(self.sampled_params) +
-                 (list(self.derived_params) if derived else [])][first:last].T,
-            **weights))
 
     def bestfit(self):
         """Best fit (maximum likelihood) sample. Returns a copy."""
@@ -393,6 +390,7 @@ class Collection(BaseCollection):
         self._n_last_out = n_max
         if not getattr(self, "_txt_formatters", False):
             n_float = 8
+
             # Add to this 7 places: sign, leading 0's, exp with sign and 3 figures.
 
             def width_col(col):
@@ -412,6 +410,16 @@ class Collection(BaseCollection):
                 for col in self.data.columns]
         do_header = not n_min
         if do_header:
+            # TODO: this should be done with file locks instead
+            if os.path.exists(self.file_name):
+                raise LoggedError(
+                    self.log, "The output file %s already exists. You may be running "
+                              "multiple jobs with the same output when you intended to "
+                              "run with MPI. Check that mpi4py is correctly installed and"
+                              " configured; e.g. try the test at "
+                              "https://cobaya.readthedocs.io/en/latest/installation."
+                              "html#mpi-parallelization-optional-but-encouraged",
+                    self.file_name)
             with open(self.file_name, "a", encoding="utf-8") as out:
                 out.write("#" + " ".join(
                     f(col) for f, col

@@ -18,7 +18,7 @@ from tempfile import gettempdir
 import re
 
 # Local
-from cobaya.tools import read_dnumber, get_external_function, PythonPath, \
+from cobaya.tools import read_dnumber, get_external_function, \
     find_with_regexp, NumberWithUnits, load_module, VersionCheckError
 from cobaya.sampler import Sampler
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
@@ -371,7 +371,6 @@ class polychord(Sampler):
                 self.logZ, self.logZstd,
                 *[np.exp(self.logZ + n * self.logZstd) for n in [-1, 1]])
 
-
     def products(self):
         """
         Auxiliary function to define what should be returned in a scripted call.
@@ -476,7 +475,8 @@ class polychord(Sampler):
             poly_build_path = None
         else:
             if is_main_process():
-                log.info("Importing *auto-installed* PolyChord (but defaulting to *global*).")
+                log.info(
+                    "Importing *auto-installed* PolyChord (but defaulting to *global*).")
             poly_build_path = cls.get_import_path(path)
         try:
             # TODO: add min_version when polychord module version available

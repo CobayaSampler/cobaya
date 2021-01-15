@@ -261,11 +261,16 @@ class camb(BoltzmannBase):
         args = {}
         params = []
         pars = getfullargspec(set_func)
-        for arg, v in zip(pars.args[1:], pars.defaults[1:]):
-            if arg in self.extra_args:
-                args[arg] = self.extra_args.pop(arg)
-            elif isinstance(v, numbers.Number) or v is None:
-                params.append(arg)
+        for arg in pars.args[1:len(pars.args) - len(pars.defaults or [])]:
+            params.append(arg)
+        if pars.defaults:
+            for arg, v in zip(pars.args[len(pars.args) - len(pars.defaults):],
+                              pars.defaults):
+                if arg in self.extra_args:
+                    args[arg] = self.extra_args.pop(arg)
+                elif (isinstance(v,
+                                 numbers.Number) or v is None) and 'version' not in arg:
+                    params.append(arg)
         return args, params
 
     def initialize_with_params(self):
@@ -566,7 +571,8 @@ class camb(BoltzmannBase):
             raise LoggedError(self.log, "No Cl's were computed. Are you sure that you "
                                         "have requested them?")
 
-        units_factor = self._cmb_unit_factor(units, current_state['derived_extra']['TCMB'])
+        units_factor = self._cmb_unit_factor(units,
+                                             current_state['derived_extra']['TCMB'])
 
         ls = np.arange(cl_camb.shape[0], dtype=np.int64)
         if not ell_factor:
@@ -773,7 +779,7 @@ class camb(BoltzmannBase):
         path = kwargs["path"]
         if path is not None and path.lower() == "global":
             path = None
-        if path and not kwargs.get("allow_global"):
+        if isinstance(path, str) and not kwargs.get("allow_global"):
             log.info("Importing *local* CAMB from " + path)
             if not os.path.exists(path):
                 log.error("The given folder does not exist: '%s'", path)

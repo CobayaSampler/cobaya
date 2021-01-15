@@ -19,7 +19,8 @@ from importlib import import_module
 from copy import deepcopy
 from packaging import version
 from itertools import permutations
-from typing import Mapping
+from typing import Mapping, Sequence
+from numbers import Number
 from types import ModuleType
 from inspect import cleandoc, getfullargspec
 from math import gcd
@@ -109,7 +110,6 @@ def get_kind(name, allow_external=True):
                 for kind, tp in get_base_classes().items():
                     if issubclass(cls, tp):
                         return kind
-
         raise LoggedError(log, "Could not find component with name %r", name)
 
 
@@ -490,6 +490,13 @@ def get_scipy_1d_pdf(info):
     if not info2:
         raise LoggedError(log, "No specific prior info given for "
                                "sampled parameter '%s'." % param)
+    # If list of 2 numbers, it's a uniform prior
+    elif isinstance(info2, Sequence) and len(info2) == 2 and all(
+            isinstance(n, Number) for n in info2):
+        info2 = {"min": info2[0], "max": info2[1]}
+    elif not isinstance(info2, Mapping):
+        raise LoggedError(log, "Prior format not recognized. "
+                               "Check documentation for prior specification.")
     # What distribution?
     try:
         dist = info2.pop(partag.dist).lower()
