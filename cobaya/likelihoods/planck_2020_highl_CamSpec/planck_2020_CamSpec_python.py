@@ -6,6 +6,7 @@ class planck_2020_CamSpec_python(_planck_2018_CamSpec_python):
         "download_url":
             r"https://cdn.cosmologist.info/cosmobox/test2019_kaml/CamSpec2020.zip",
         "data_path": "CamSpec2020"}
+    bibtex_file = 'CamSpec2020.bibtex'
     def get_powerlaw_residuals(self, data_params):
         
         amp = np.empty(4)
