@@ -1,4 +1,4 @@
-## 3.0.3beta – 2020-XX-XX
+## 3.0.3 – 2021-01-16
 
 ### General
 
@@ -38,13 +38,14 @@
 
 #### CLASS
 
-- Fixed ignoring `l_max_scalars`
+- Fixed ignoring `l_max_scalars` (thanks Florian Stadtmann)
 - Fixed #106 (thanks @lukashergt)
+- Adds min gcc version check for 6.4 (thanks @williamjameshandley)
 
 #### cosmo-generator
 
 - Fixed PySide2 problem in newer systems; fixes #114 (thanks @talabadi)
-
+- Fixed missing `Sampler` combo box (thanks @williamjameshandley)
 
 ## 3.0.2 – 2020-10-16
 
