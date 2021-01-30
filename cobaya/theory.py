@@ -274,7 +274,8 @@ class Theory(CobayaComponent):
             return self._current_state
         except AttributeError:
             raise LoggedError(self.log, "Cannot retrieve calculated quantities: "
-                                        "nothing has been computed yet.")
+                                        "nothing has been computed yet "
+                                        "(maybe the prior was -infinity?)")
 
     def get_current_derived(self):
         return self.current_state.get("derived", {})
