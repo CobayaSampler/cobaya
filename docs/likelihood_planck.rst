@@ -157,17 +157,17 @@ Finally, download and decompress in the ``planck_2018`` folder the last release 
 Interface for official ``clik`` code
 ------------------------------------
 
-.. automodule:: cobaya.likelihoods._base_classes._planck_clik_prototype
+.. automodule:: cobaya.likelihoods._base_classes.planck_clik_prototype
    :noindex:
 
 Native ``CamSpec`` version
 --------------------------
       
-.. automodule:: cobaya.likelihoods._base_classes._planck_2018_CamSpec_python
+.. automodule:: cobaya.likelihoods._base_classes.planck_2018_CamSpec_python
    :noindex:
 
 Native ``lite`` version
 -----------------------
       
-.. automodule:: cobaya.likelihoods._base_classes._planck_pliklite_prototype
+.. automodule:: cobaya.likelihoods._base_classes.planck_pliklite_prototype
    :noindex:

@@ -205,7 +205,7 @@ related to the likelihood (specified as *dataset_file* in the input .yaml).
         ...
 
 
-_CMBlikes
+CMBlikes
 --------------------
 
 This the *CMBlikes* self-describing text .dataset format likelihood inherited from *_DataSetLikelihood* (as used by the
@@ -216,9 +216,9 @@ Extensions and optimizations are welcome as pull requests.
 
 .. code:: python
 
-    from cobaya.likelihoods._base_classes import _CMBlikes
+    from cobaya.likelihoods._base_classes import CMBlikes
 
-    class MyLikelihood(_CMBlikes):
+    class MyLikelihood(CMBlikes):
         install_options = {"github_repository": "CobayaSampler/planck_supp_data_and_covmats"}
         pass
 
