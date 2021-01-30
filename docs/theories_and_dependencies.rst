@@ -32,7 +32,7 @@ The theory code also needs to tell other theory codes and likelihoods the things
 Use a ``get_X`` method when you need to add optional arguments to provide different outputs from the computed quantity.
 Quantities returned by  :meth:`~.theory.Theory.get_can_provide` should be stored in the state dictionary by the calculate function
 or returned by the ``get_results(X)`` for each quantity ``X`` (which by default just returns the value stored in the current state dictionary).
-The results stored by calculate for a given set of input parameters are cached, and ``self._current_state`` is set to the current state
+The results stored by calculate for a given set of input parameters are cached, and ``self.current_state`` is set to the current state
 whenever ``get_X``, ``get_param`` etc are called.
 
 For example, this is a class that would calculate ``A = B*b_derived`` using inputs ``B`` and derived parameter ``b_derived`` from
@@ -74,7 +74,7 @@ another theory code, and provide the method to return ``A`` with a custom normal
             state['derived'] = {'Aderived': 10}
 
         def get_A(self, normalization=1):
-            return self._current_state['A'] * normalization
+            return self.current_state['A'] * normalization
 
 
 Likelihood codes (that return ``A`` in their get_requirements method) can then use,

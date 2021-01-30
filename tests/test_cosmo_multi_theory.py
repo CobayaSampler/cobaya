@@ -185,7 +185,7 @@ class ExamplePrimordialPk(Theory):
                                          'Pk': pk, 'log_regular': True}
 
     def get_primordial_scalar_pk(self):
-        return self._current_state['primordial_scalar_pk']
+        return self.current_state['primordial_scalar_pk']
 
     def get_can_support_params(self):
         return ['testAs', 'testns']
@@ -260,7 +260,7 @@ class BinnedPk(Theory):
                                          'Pk': pk, 'log_regular': False}
 
     def get_primordial_scalar_pk(self):
-        return self._current_state['primordial_scalar_pk']
+        return self.current_state['primordial_scalar_pk']
 
     @classmethod
     def get_class_options(cls, input_options=empty_dict):

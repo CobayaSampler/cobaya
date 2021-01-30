@@ -566,7 +566,7 @@ class camb(BoltzmannBase):
         return derived
 
     def get_Cl(self, ell_factor=False, units="FIRASmuK2"):
-        current_state = self._current_state
+        current_state = self.current_state
         # get C_l^XX from the cosmological code
         try:
             cl_camb = current_state["Cl"]["total"].copy()
@@ -612,7 +612,7 @@ class camb(BoltzmannBase):
         else:
             computed_redshifts = self.collectors[quantity].kwargs["z"]
             i_kwarg_z = np.searchsorted(computed_redshifts, np.atleast_1d(z))
-        return np.array(self._current_state[quantity], copy=True)[i_kwarg_z]
+        return np.array(self.current_state[quantity], copy=True)[i_kwarg_z]
 
     def get_fsigma8(self, z):
         return self._get_z_dependent("fsigma8", z)
@@ -620,7 +620,7 @@ class camb(BoltzmannBase):
     def get_source_Cl(self):
         # get C_l^XX from the cosmological code
         try:
-            cls = deepcopy(self._current_state["source_Cl"])
+            cls = deepcopy(self.current_state["source_Cl"])
         except:
             raise LoggedError(
                 self.log, "No source Cl's were computed. "
@@ -641,7 +641,7 @@ class camb(BoltzmannBase):
         :return: CAMB's `CAMBdata <https://camb.readthedocs.io/en/latest/results.html>`_
                  result instance for the current parameters
         """
-        return self._current_state['CAMBdata']
+        return self.current_state['CAMBdata']
 
     def get_can_provide_params(self):
         # possible derived parameters for derived_extra, excluding things that are
@@ -889,7 +889,7 @@ class CambTransfers(HelperTheory):
         self.cobaya_camb.check_no_repeated_input_extra()
 
     def get_CAMB_transfers(self):
-        return self._current_state['results']
+        return self.current_state['results']
 
     def calculate(self, state, want_derived=True, **params_values_dict):
         # Set parameters
