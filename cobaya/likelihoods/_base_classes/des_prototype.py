@@ -1,5 +1,5 @@
 """
-.. module:: _des_prototype
+.. module:: des_prototype
 
 :Synopsis: DES likelihood, independent Python implementation.
            Well tested and agrees with likelihoods in DES chains for fixed nu mass.
@@ -52,7 +52,7 @@ from scipy import special
 import copy
 
 # Local
-from cobaya.likelihoods._base_classes import _DataSetLikelihood
+from cobaya.likelihoods._base_classes import DataSetLikelihood
 from cobaya.log import LoggedError
 from cobaya.conventions import _c_km_s
 
@@ -150,7 +150,7 @@ else:
                     powers[ix, i] = 0
 
 
-class _des_prototype(_DataSetLikelihood):
+class des_prototype(DataSetLikelihood):
     install_options = {"github_repository": "CobayaSampler/des_data",
                        "github_release": "v1.0"}
 
