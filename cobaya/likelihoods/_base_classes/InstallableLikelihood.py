@@ -1,5 +1,5 @@
 r"""
-.. module:: _InstallableLikelihood
+.. module:: InstallableLikelihood
 
 :Synopsis: Prototype class adding class methods for simple installation of likelihood data.
 :Author: Jesus Torrado and Antony Lewis
@@ -14,7 +14,7 @@ import logging
 from cobaya.likelihood import Likelihood
 
 
-class _InstallableLikelihood(Likelihood):
+class InstallableLikelihood(Likelihood):
     install_options = {}
 
     @classmethod

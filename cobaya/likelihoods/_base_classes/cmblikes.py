@@ -1,5 +1,5 @@
 """
-.. module:: _cmblikes
+.. module:: cmblikes
 
 :Synopsis: Definition of the CMBlikes class for CMB real or simulated data.
 :Author: Antony Lewis (adapted to Cobaya by Jesus Torrado with little modification)
@@ -17,12 +17,12 @@ from typing import Sequence
 
 # Local
 from cobaya.log import LoggedError
-from cobaya.likelihoods._base_classes import _DataSetLikelihood
+from cobaya.likelihoods._base_classes import DataSetLikelihood
 
 CMB_keys = ['tt', 'te', 'ee', 'bb']
 
 
-class _CMBlikes(_DataSetLikelihood):
+class _CMBlikes(DataSetLikelihood):
     # Data type for aggregated chi2 (case sensitive)
     type = "CMB"
 

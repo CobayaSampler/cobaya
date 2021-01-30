@@ -1,10 +1,10 @@
-from ._InstallableLikelihood import _InstallableLikelihood
-from ._bao_prototype import _bao_prototype
-from ._DataSetLikelihood import _DataSetLikelihood, _fast_chi_square
-from ._cmblikes import _CMBlikes, make_forecast_cmb_dataset
-from ._des_prototype import _des_prototype
-from ._H0_prototype import _H0_prototype
-from ._planck_2018_CamSpec_python import _planck_2018_CamSpec_python
-from ._planck_clik_prototype import _planck_clik_prototype, Planck2018Clik, Planck2015Clik
-from ._planck_pliklite_prototype import _planck_pliklite_prototype
-from ._sn_prototype import _sn_prototype
+from .InstallableLikelihood import InstallableLikelihood
+from .bao_prototype import bao_prototype
+from .DataSetLikelihood import DataSetLikelihood, _fast_chi_square
+from .cmblikes import _CMBlikes, make_forecast_cmb_dataset
+from .des_prototype import des_prototype
+from .H0_prototype import H0_prototype
+from .planck_2018_CamSpec_python import planck_2018_CamSpec_python
+from .planck_clik_prototype import planck_clik_prototype, Planck2018Clik, Planck2015Clik
+from .planck_pliklite_prototype import planck_pliklite_prototype
+from .sn_prototype import sn_prototype
