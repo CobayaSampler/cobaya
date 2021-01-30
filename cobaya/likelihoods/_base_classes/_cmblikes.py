@@ -11,13 +11,15 @@
 # Global
 import os
 import numpy as np
-from getdist import ParamNames
+from getdist import ParamNames, IniFile
 from scipy.linalg import sqrtm
 from typing import Sequence
 
 # Local
 from cobaya.log import LoggedError
 from cobaya.likelihoods._base_classes import _DataSetLikelihood
+
+CMB_keys = ['tt', 'te', 'ee', 'bb']
 
 
 class _CMBlikes(_DataSetLikelihood):
@@ -681,3 +683,126 @@ def last_top_comment(fname):
                 result = x[1:].strip()
             x = f.readline()
     return None
+
+
+def white_noise_from_muK_arcmin(noise_muK_arcmin):
+    return (noise_muK_arcmin * np.pi / 180 / 60.) ** 2
+
+
+def save_cl_dict(filename, array_dict, lmin=2, lmax=None, cl_dict_lmin=0):
+    """
+    Save a Cobaya dict of CL to a text file,
+    with each line starting with L.
+    :param filename: filename to save
+    :param array_dict: dictionary of power spectra
+    :param lmin: L to start output in file (usually 0 or 2)
+    """
+    cols = []
+    labels = []
+    for key in CMB_keys:
+        if key in array_dict:
+            lmax = lmax or array_dict[key].shape[0] - 1 + cl_dict_lmin
+            cols.append(array_dict[key][lmin - cl_dict_lmin:lmax - cl_dict_lmin + 1])
+            labels.append(key.upper())
+    if 'pp' in CMB_keys:
+        cols.append(array_dict['pp'][lmin - cl_dict_lmin::lmax - cl_dict_lmin + 1])
+        labels.append('PP')
+    ls = np.arange(lmin, lmax + 1)
+    np.savetxt(filename, np.vstack((ls,) + tuple(cols)).T,
+               fmt=['%4u'] + ['%12.7e'] * len(cols),
+               header=' L ' + ' '.join(['{:13s}'.format(lab) for lab in labels]))
+
+
+def make_forecast_cmb_dataset(fiducial_Cl, output_root, output_dir=None,
+                              noise_muK_arcmin_T=None,
+                              noise_muK_arcmin_P=None,
+                              NoiseVar=None, ENoiseFac=2, fwhm_arcmin=None,
+                              lmin=2, lmax=None, fsky=1.0,
+                              lens_recon_noise=None, cl_dict_lmin=0):
+    """
+    Make a simulated .dataset and associated files with 'data' set at the input fiducial model.
+
+    :param fiducial_Cl: dictionary of Cls to use, any of tt, te, ee, bb, pp
+    :param output_root: root name for output files, e.g. 'my_sim1'
+    :param output_dir: output directory
+    :param noise_muK_arcmin_T: temperature noise in muK-arcmin
+    :param noise_muK_arcmin_P: polarization noise in muK-arcmin
+    :param NoiseVar: alternatively if noise_muK_arcmin_T is None, effective
+        isotropic noise variance for the temperature (N_L=NoiseVar with no beam)
+    :param ENoiseFac: factor by which polarization noise variance is higher thab
+                NoiseVar (usually 2, for Planck about 4
+                        as only half the detectors polarized)
+    :param fwhm_arcmin: beam fwhm in arcminutes
+    :param lmin: l_min
+    :param lmax: l_max
+    :param fsky: sky fraction
+    :param lens_recon_noise: optional array, starting at L=0, for the
+       pp lensing reconstruction noise, in [L(L+1)]^2C_L^phi/2pi units
+    :param cl_dict_lmin: l_min for the arrays in fiducial_Cl
+    :return: IniFile that was saved
+    """
+    ini = IniFile()
+    dataset = ini.params
+
+    cl_keys = fiducial_Cl.keys()
+    use_CMB = set(cl_keys).intersection(set(CMB_keys))
+    use_lensing = lens_recon_noise
+
+    if use_CMB:
+        if NoiseVar is None:
+            if noise_muK_arcmin_T is None:
+                raise ValueError('Must specify noise')
+            NoiseVar = white_noise_from_muK_arcmin(noise_muK_arcmin_T)
+            if noise_muK_arcmin_P is not None:
+                ENoiseFac = (noise_muK_arcmin_P / noise_muK_arcmin_T) ** 2
+        elif noise_muK_arcmin_T is not None or noise_muK_arcmin_P is not None:
+            raise ValueError('Specific either noise_muK_arcmin or NoiseVar')
+        fields_use = ''
+        if 'tt' in cl_keys or 'te' in cl_keys: fields_use = 'T'
+        if 'ee' in cl_keys or 'te' in cl_keys: fields_use += ' E'
+        if 'bb' in cl_keys: fields_use += ' B'
+        if 'pp' in cl_keys and use_lensing: fields_use += ' P'
+    else:
+        fields_use = 'P'
+
+    if not os.path.exists(output_dir): os.makedirs(output_dir)
+
+    dataset['fields_use'] = fields_use
+
+    if use_CMB:
+        fwhm = fwhm_arcmin / 60
+        xlc = 180 * np.sqrt(8. * np.log(2.)) / np.pi
+        sigma2 = (fwhm / xlc) ** 2
+        noise_cols = 'TT           EE          BB'
+        if use_lensing: noise_cols += '          PP'
+    elif use_lensing:
+        noise_cols = 'PP'
+    noise_file = output_root + '_Noise.dat'
+    with open(os.path.join(output_dir, noise_file), 'w') as f:
+        f.write('#L %s\n' % noise_cols)
+
+        for l in range(lmin, lmax + 1):
+            NoiseCl = l * (l + 1.) / 2 / np.pi * NoiseVar * np.exp(l * (l + 1) * sigma2)
+            noises = []
+            if use_CMB: noises += [NoiseCl, ENoiseFac * NoiseCl, ENoiseFac * NoiseCl]
+            if use_lensing: noises += [lens_recon_noise[l]]
+            f.write("%d " % l + " ".join("%E" % elem for elem in noises) + "\n")
+
+    dataset['fullsky_exact_fksy'] = fsky
+    dataset['dataset_format'] = 'CMBLike2'
+    dataset['like_approx'] = 'exact'
+
+    dataset['cl_lmin'] = lmin
+    dataset['cl_lmax'] = lmax
+
+    dataset['binned'] = False
+
+    dataset['cl_hat_includes_noise'] = False
+
+    save_cl_dict(os.path.join(output_dir, output_root + '.dat'),
+                 fiducial_Cl, cl_dict_lmin=cl_dict_lmin)
+    dataset['cl_hat_file'] = output_root + '.dat'
+    dataset['cl_noise_file '] = noise_file
+
+    ini.saveFile(os.path.join(output_dir, output_root + '.dataset'))
+    return ini
