@@ -423,7 +423,7 @@ class classy(BoltzmannBase):
 
     def get_Cl(self, ell_factor=False, units="FIRASmuK2"):
         try:
-            cls = deepcopy(self._current_state["Cl"])
+            cls = deepcopy(self.current_state["Cl"])
         except:
             raise LoggedError(
                 self.log,
@@ -432,7 +432,7 @@ class classy(BoltzmannBase):
         ells_factor = ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[
                       2:] if ell_factor else 1
         units_factor = self._cmb_unit_factor(
-            units, self._current_state['derived_extra']['T_cmb'])
+            units, self.current_state['derived_extra']['T_cmb'])
 
         for cl in cls:
             if cl not in ['pp', 'ell']:
@@ -451,7 +451,7 @@ class classy(BoltzmannBase):
                 self.collectors[quantity].args_names.index("z")]
         i_kwarg_z = np.concatenate(
             [np.where(computed_redshifts == zi)[0] for zi in np.atleast_1d(z)])
-        values = np.array(deepcopy(self._current_state[quantity]))
+        values = np.array(deepcopy(self.current_state[quantity]))
         if quantity == "comoving_radial_distance":
             values = values[0]
         return values[i_kwarg_z]

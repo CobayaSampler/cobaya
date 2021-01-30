@@ -43,7 +43,7 @@ class BoltzmannBase(Theory):
     def get_param(self, p):
         translated = self.translate_param(p)
         for pool in ["params", "derived", "derived_extra"]:
-            value = (self._current_state[pool] or {}).get(translated, None)
+            value = (self.current_state[pool] or {}).get(translated, None)
             if value is not None:
                 return value
 
@@ -289,10 +289,10 @@ class BoltzmannBase(Theory):
                  and PK[i,j] is the value at z[i], k[j]
         """
         try:
-            return self._current_state[
+            return self.current_state[
                 ("Pk_grid", bool(nonlinear)) + tuple(sorted(var_pair))]
         except KeyError:
-            if ("Pk_grid", False) + tuple(sorted(var_pair)) in self._current_state:
+            if ("Pk_grid", False) + tuple(sorted(var_pair)) in self.current_state:
                 raise LoggedError(self.log,
                                   "Getting non-linear matter power but nonlinear "
                                   "not specified in requirements")
@@ -312,8 +312,8 @@ class BoltzmannBase(Theory):
         """
         nonlinear = bool(nonlinear)
         key = ("Pk_interpolator", nonlinear, extrap_kmax) + tuple(sorted(var_pair))
-        if key in self._current_state:
-            return self._current_state[key]
+        if key in self.current_state:
+            return self.current_state[key]
         k, z, pk = self.get_Pk_grid(var_pair=var_pair, nonlinear=nonlinear)
         log_p = True
         sign = 1
@@ -330,7 +330,7 @@ class BoltzmannBase(Theory):
                               'for %s, %s' % var_pair)
         result = PowerSpectrumInterpolator(z, k, pk, logP=log_p, logsign=sign,
                                            extrap_kmax=extrap_kmax)
-        self._current_state[key] = result
+        self.current_state[key] = result
         return result
 
     def get_sigma_R(self, var_pair=("delta_tot", "delta_tot")):
@@ -346,7 +346,7 @@ class BoltzmannBase(Theory):
                  and sigma_R[i,j] is the value for z[i], R[j]
         """
         try:
-            return self._current_state[("sigma_R",) + tuple(sorted(var_pair))]
+            return self.current_state[("sigma_R",) + tuple(sorted(var_pair))]
         except KeyError:
             raise LoggedError(self.log, "sigmaR %s not computed" % var_pair)
 

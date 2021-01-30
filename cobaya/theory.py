@@ -134,7 +134,7 @@ class Theory(CobayaComponent):
         Interface function for likelihoods and other theory components to get derived
         parameters.
         """
-        return self._current_state["derived"][p]
+        return self.current_state["derived"][p]
 
     def get_result(self, result_name, **kwargs):
         """
@@ -147,7 +147,7 @@ class Theory(CobayaComponent):
         :param kwargs: options specific to X or this component
         :return: result
         """
-        return self._current_state[result_name]
+        return self.current_state[result_name]
 
     def get_can_provide_methods(self):
         """
@@ -268,8 +268,16 @@ class Theory(CobayaComponent):
         self._current_state = state
         return True
 
+    @property
+    def current_state(self):
+        try:
+            return self._current_state
+        except AttributeError:
+            raise LoggedError(self.log, "Cannot retrieve calculated quantities: "
+                                        "nothing has been computed yet.")
+
     def get_current_derived(self):
-        return self._current_state.get("derived", {})
+        return self.current_state.get("derived", {})
 
     def get_provider(self):
         """

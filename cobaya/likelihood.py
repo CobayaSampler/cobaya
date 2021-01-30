@@ -59,7 +59,7 @@ class LikelihoodInterface:
 
         :return:  log likelihood from the current state
         """
-        return self._current_state["logp"]
+        return self.current_state["logp"]
 
 
 class Likelihood(Theory, LikelihoodInterface):
