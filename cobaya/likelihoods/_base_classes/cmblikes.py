@@ -22,7 +22,7 @@ from cobaya.likelihoods._base_classes import DataSetLikelihood
 CMB_keys = ['tt', 'te', 'ee', 'bb']
 
 
-class _CMBlikes(DataSetLikelihood):
+class CMBlikes(DataSetLikelihood):
     # Data type for aggregated chi2 (case sensitive)
     type = "CMB"
 
