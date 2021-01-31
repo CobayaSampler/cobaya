@@ -288,6 +288,18 @@ class camb(BoltzmannBase):
     def get_allow_agnostic(self):
         return False
 
+    def set_cl_reqs(self, reqs):
+        """
+        Sets some common settings for both lensend and unlensed Cl's.
+        """
+        self.extra_args["lmax"] = max(
+            max(reqs.values()), self.extra_args.get("lmax", 0))
+        self.needs_perts = True
+        self.extra_attrs["Want_CMB"] = True
+        self.extra_attrs["WantCls"] = True
+        if 'TCMB' not in self.derived_extra:
+            self.derived_extra += ['TCMB']
+
     def must_provide(self, **requirements):
         # Computed quantities required by the likelihoods
         # Note that redshifts below are treated differently for background quantities,
@@ -304,8 +316,7 @@ class camb(BoltzmannBase):
         for k, v in self._must_provide.items():
             # Products and other computations
             if k == "Cl":
-                self.extra_args["lmax"] = max(
-                    max(v.values()), self.extra_args.get("lmax", 0))
+                self.set_cl_reqs(v)
                 cls = [a.lower() for a in v]
                 needs_lensing = set(cls).intersection({"pp", "pt", "pe", "tp", "ep"})
                 self.collectors[k] = Collector(
@@ -316,9 +327,6 @@ class camb(BoltzmannBase):
                              if k in self.collectors else []) +
                             ["total"] + (["lens_potential"] if needs_lensing else []))),
                         "raw_cl": False})
-                self.needs_perts = True
-                self.extra_attrs["Want_CMB"] = True
-                self.extra_attrs["WantCls"] = True
                 if "pp" in cls and self.extra_args.get(
                         "lens_potential_accuracy") is None:
                     self.extra_args["lens_potential_accuracy"] = 1
@@ -326,8 +334,11 @@ class camb(BoltzmannBase):
                                                               1) >= 1
                 if set(cls).intersection({"pt", "pe", "tp", "ep"}):
                     self._needs_lensing_cross = True
-                if 'TCMB' not in self.derived_extra:
-                    self.derived_extra += ['TCMB']
+            elif k == "unlensed_Cl":
+                self.set_cl_reqs(v)
+                self.collectors[k] = Collector(
+                    method=CAMBdata.get_cmb_power_spectra,
+                    kwargs={"spectra": ["unlensed_total"], "raw_cl": False})
             elif k == "Hubble":
                 self.collectors[k] = Collector(
                     method=CAMBdata.h_of_z,
@@ -565,18 +576,18 @@ class camb(BoltzmannBase):
                                             " in the CAMB interface", p)
         return derived
 
-    def get_Cl(self, ell_factor=False, units="FIRASmuK2"):
-        current_state = self.current_state
-        # get C_l^XX from the cosmological code
+    def _get_Cl(self, ell_factor=False, units="FIRASmuK2", lensed=True):
+        which_key = "Cl" if lensed else "unlensed_Cl"
+        which_result = "total" if lensed else "unlensed_total"
+        which_error = "lensed" if lensed else "unlensed"
         try:
-            cl_camb = current_state["Cl"]["total"].copy()
+            cl_camb = self.current_state[which_key][which_result].copy()
         except:
-            raise LoggedError(self.log, "No Cl's were computed. Are you sure that you "
-                                        "have requested them?")
-
-        units_factor = self._cmb_unit_factor(units,
-                                             current_state['derived_extra']['TCMB'])
-
+            raise
+            raise LoggedError(self.log, "No %s Cl's were computed. Are you sure that you "
+                                        "have requested them?", which_error)
+        units_factor = self._cmb_unit_factor(
+            units, self.current_state['derived_extra']['TCMB'])
         ls = np.arange(cl_camb.shape[0], dtype=np.int64)
         if not ell_factor:
             # unit conversion and ell_factor. CAMB output is *with* the factors already
@@ -585,24 +596,29 @@ class camb(BoltzmannBase):
             cl_camb[1:, :] *= (2 * np.pi) * units_factor ** 2
         elif units_factor != 1:
             cl_camb *= units_factor ** 2
-
         mapping = {"tt": 0, "ee": 1, "bb": 2, "te": 3, "et": 3}
         cls = {"ell": ls}
         for sp, i in mapping.items():
             cls[sp] = cl_camb[:, i]
-
-        cl_lens = current_state["Cl"].get("lens_potential")
-        if cl_lens is not None:
-            cls["pp"] = cl_lens[:, 0].copy()
-            if not ell_factor:
-                cls["pp"][1:] /= ells_factor ** 2 / (2 * np.pi)
-            if self._needs_lensing_cross:
-                for i, cross in enumerate(['pt', 'pe']):
-                    cls[cross] = cl_lens[:, i + 1].copy() * units_factor
-                    if not ell_factor:
-                        cls[cross][1:] /= ells_factor ** (3. / 2) / (2 * np.pi)
-                    cls[cross[::-1]] = cls[cross]
+        if lensed:
+            cl_lens = self.current_state["Cl"].get("lens_potential")
+            if cl_lens is not None:
+                cls["pp"] = cl_lens[:, 0].copy()
+                if not ell_factor:
+                    cls["pp"][1:] /= ells_factor ** 2 / (2 * np.pi)
+                if self._needs_lensing_cross:
+                    for i, cross in enumerate(['pt', 'pe']):
+                        cls[cross] = cl_lens[:, i + 1].copy() * units_factor
+                        if not ell_factor:
+                            cls[cross][1:] /= ells_factor ** (3. / 2) / (2 * np.pi)
+                        cls[cross[::-1]] = cls[cross]
         return cls
+
+    def get_Cl(self, ell_factor=False, units="FIRASmuK2"):
+        return self._get_Cl(ell_factor=ell_factor, units=units, lensed=True)
+
+    def get_unlensed_Cl(self, ell_factor=False, units="FIRASmuK2"):
+        return self._get_Cl(ell_factor=ell_factor, units=units, lensed=False)
 
     def _get_z_dependent(self, quantity, z):
         if quantity == "fsigma8":

@@ -82,6 +82,9 @@ class BoltzmannBase(Theory):
         - ``Cl={...}``: CMB lensed power spectra, as a dictionary ``{spectrum:l_max}``,
           where the possible spectra are combinations of "t", "e", "b" and "p"
           (lensing potential). Get with :func:`~BoltzmannBase.get_Cl`.
+        - ``unlensed_Cl={...}``: CMB unlensed power spectra, as a dictionary
+          ``{spectrum:l_max}``, where the possible spectra are combinations of "t", "e",
+          "b". Get with :func:`~BoltzmannBase.get_unlensed_Cl`.
         - **[BETA: CAMB only; notation may change!]** ``source_Cl={...}``:
           :math:`C_\ell` of given sources with given windows, e.g.:
           ``source_name: {"function": "spline"|"gaussian", [source_args]``;
@@ -129,6 +132,11 @@ class BoltzmannBase(Theory):
         for k, v in requirements.items():
             # Products and other computations
             if k == "Cl":
+                current = self._must_provide.get(k, {})
+                self._must_provide[k] = {
+                    cl.lower(): max(current.get(cl.lower(), 0), v.get(cl, 0))
+                    for cl in set(current).union(v)}
+            elif k == "unlensed_Cl":
                 current = self._must_provide.get(k, {})
                 self._must_provide[k] = {
                     cl.lower(): max(current.get(cl.lower(), 0), v.get(cl, 0))
@@ -239,6 +247,22 @@ class BoltzmannBase(Theory):
         If ``ell_factor=True`` (default: False), multiplies the spectra by
         :math:`\ell(\ell+1)/(2\pi)` (or by :math:`\ell^2(\ell+1)^2/(2\pi)` in the case of
         the lensing potential ``pp`` spectrum).
+        """
+        pass
+
+    def get_unlensed_Cl(self, ell_factor=False, units="FIRASmuK2"):
+        r"""
+        Returns a dictionary of unlensed CMB power spectra.
+
+        Set the units with the keyword ``units=number|'muK2'|'K2'|'FIRASmuK2'|'FIRASK2'``
+        (default: 'FIRASmuK2' gives FIRAS-calibrated microKelvin^2, except for the lensing
+        potential power spectrum, which is always unitless).
+        Note the muK2 and K2 options use the model's CMB temperature; experimental data
+        are usually calibrated to the FIRAS measurement which is a fixed temperature.
+        The default FIRASmuK2 takes CMB C_l scaled by 2.7255e6^2 (to get result in muK^2).
+
+        If ``ell_factor=True`` (default: False), multiplies the spectra by
+        :math:`\ell(\ell+1)/(2\pi)`.
         """
         pass
 
