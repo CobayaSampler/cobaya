@@ -7,6 +7,7 @@
 """
 # Global
 import logging
+from copy import deepcopy
 from itertools import chain
 from typing import NamedTuple, Sequence, Mapping
 import numpy as np
@@ -47,6 +48,12 @@ class Requirement(NamedTuple):
 
     def __repr__(self):
         return "{%r:%r}" % (self.name, self.options)
+
+
+# Dummy component prefix for manual requirements
+_dummy_prefix = "_DUMMY"
+is_dummy_component = lambda component: \
+    isinstance(component, str) and component.startswith(_dummy_prefix)
 
 
 def _dict_equal(d1, d2):
@@ -557,7 +564,14 @@ class Model(HasLogger):
                 providers[k] = providers.get(k, []) + [component]
         # Add requirements requested by hand
         if manual_requirements:
-            requirements[None] = _tidy_requirements(manual_requirements)
+            if not hasattr(self, "_manual_requirements"):
+                self._manual_requirements = {}
+                self._last_dummy = -1
+            self._last_dummy += 1
+            self._manual_requirements[_dummy_prefix + str(self._last_dummy)] = \
+                _tidy_requirements(manual_requirements)
+            for dummy in self._manual_requirements:
+                requirements[dummy] = deepcopy(self._manual_requirements[dummy])
 
         ### 2. Assign each requirement to a provider ###
         # store requirements assigned to each provider:
@@ -609,7 +623,8 @@ class Model(HasLogger):
                         dependencies.get(component, set()) | {supplier}
                     # Requirements per component excluding input params
                     # -- saves some overhead in theory.check_cache_and_compute
-                    if component and requirement.name not in component.input_params and \
+                    if not is_dummy_component(component) and \
+                            requirement.name not in component.input_params and \
                             requirement.options is None:
                         component._input_params_extra.add(requirement.name)
             # tell each component what it must provide, and collect the
@@ -619,7 +634,7 @@ class Model(HasLogger):
                 # empty the list of requirements, since they have already been assigned,
                 # and store here new (conditional) ones
                 requires[:] = []
-                # .get here accounts for the null component of manual reqs
+                # .get here accounts for the dummy components of manual reqs
                 if must_provide.get(component, False):
                     for request in must_provide[component]:
                         conditional_requirements = \
@@ -636,7 +651,9 @@ class Model(HasLogger):
             # component.get_requirements() return the conditional reqs actually used too,
             # or maybe assign conditional used ones to a property?
         # Expunge manual requirements
-        requirements.pop(None, None)
+        for component in list(requirements):
+            if is_dummy_component(component):
+                requirements.pop(component)
         # Check that unassigned input parameters are at least required by some component
         if self._unassigned_input:
             self._unassigned_input.difference_update(*direct_param_dependence.values())
