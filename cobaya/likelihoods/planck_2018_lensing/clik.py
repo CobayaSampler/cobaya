@@ -1,7 +1,7 @@
-from cobaya.likelihoods._base_classes import planck_clik
+from cobaya.likelihoods._base_classes import PlanckClik
 
 
-class clik(planck_clik):
+class clik(PlanckClik):
     r"""
     Lensing likelihood of Planck's 2018 data release based on temperature+polarization
     map-based lensing reconstruction \cite{Aghanim:2018oex}.

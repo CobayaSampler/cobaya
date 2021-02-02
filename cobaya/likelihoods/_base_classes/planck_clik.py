@@ -30,7 +30,7 @@ pla_url_prefix = r"https://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLO
 last_version_supp_data_and_covmats = "v2.01"
 
 
-class planck_clik(Likelihood):
+class PlanckClik(Likelihood):
     # Data type for aggregated chi2 (case sensitive)
     type = "CMB"
 
@@ -364,9 +364,9 @@ def get_product_id_and_clik_file(name):
     return defaults.get("product_id"), defaults.get("clik_file")
 
 
-class Planck2015Clik(planck_clik):
+class Planck2015Clik(PlanckClik):
     bibtex_file = 'planck2015.bibtex'
 
 
-class Planck2018Clik(planck_clik):
+class Planck2018Clik(PlanckClik):
     bibtex_file = 'planck2018.bibtex'

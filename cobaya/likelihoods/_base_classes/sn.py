@@ -112,7 +112,7 @@ _twopi = 2 * np.pi
 
 
 # noinspection PyUnresolvedReferences
-class sn(DataSetLikelihood):
+class SN(DataSetLikelihood):
     # Data type for aggregated chi2 (case sensitive)
     type = "SN"
 
