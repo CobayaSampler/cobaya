@@ -150,7 +150,7 @@ else:
                     powers[ix, i] = 0
 
 
-class des(DataSetLikelihood):
+class DES(DataSetLikelihood):
     install_options = {"github_repository": "CobayaSampler/des_data",
                        "github_release": "v1.0"}
 

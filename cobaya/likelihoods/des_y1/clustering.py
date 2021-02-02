@@ -1,7 +1,7 @@
-from cobaya.likelihoods._base_classes import des
+from cobaya.likelihoods._base_classes import DES
 
 
-class clustering(des):
+class clustering(DES):
     r"""
     Galaxy clustering data from the first year of the Dark Energy Survey (DES Y1)
     \cite{Abbott:2017wau}.

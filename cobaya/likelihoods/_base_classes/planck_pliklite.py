@@ -19,7 +19,7 @@ from cobaya.likelihoods._base_classes import DataSetLikelihood
 cl_names = ['tt', 'te', 'ee']
 
 
-class planck_pliklite(DataSetLikelihood):
+class PlanckPlikLite(DataSetLikelihood):
     install_options = {
         "download_url": "https://cdn.cosmologist.info/cosmobox/test2019_kaml/plik_lite_AL.zip",
         "data_path": "planck_2018_pliklite_native"}

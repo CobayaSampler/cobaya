@@ -132,7 +132,7 @@ from cobaya.conventions import _packages_path, _c_km_s
 from cobaya.likelihoods._base_classes import InstallableLikelihood
 
 
-class bao(InstallableLikelihood):
+class BAO(InstallableLikelihood):
     # Data type for aggregated chi2 (case sensitive)
     type = "BAO"
 
