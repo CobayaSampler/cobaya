@@ -1,5 +1,5 @@
-from cobaya.likelihoods._base_classes import bao_prototype
+from cobaya.likelihoods._base_classes import bao
 
 
-class generic(bao_prototype):
+class generic(bao):
     pass

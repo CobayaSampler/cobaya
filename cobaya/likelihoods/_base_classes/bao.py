@@ -1,5 +1,5 @@
 r"""
-.. module:: bao_prototype
+.. module:: bao
 
 :Synopsis: BAO, f_sigma8 and other measurements at single redshifts, with correlations
 :Author: Antony Lewis (adapted to Cobaya by Jesus Torrado, with little modification)
@@ -132,7 +132,7 @@ from cobaya.conventions import _packages_path, _c_km_s
 from cobaya.likelihoods._base_classes import InstallableLikelihood
 
 
-class bao_prototype(InstallableLikelihood):
+class bao(InstallableLikelihood):
     # Data type for aggregated chi2 (case sensitive)
     type = "BAO"
 

@@ -1,5 +1,5 @@
 """
-.. module:: sn_prototype
+.. module:: sn
 
 :Synopsis: Supernovae likelihood, from CosmoMC's JLA module, for Pantheon and JLA samples.
 :Author: Alex Conley, Marc Betoule, Antony Lewis (see source for more specific authorship)
@@ -112,7 +112,7 @@ _twopi = 2 * np.pi
 
 
 # noinspection PyUnresolvedReferences
-class sn_prototype(DataSetLikelihood):
+class sn(DataSetLikelihood):
     # Data type for aggregated chi2 (case sensitive)
     type = "SN"
 
