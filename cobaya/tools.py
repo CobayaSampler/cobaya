@@ -250,9 +250,13 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
 def import_all_classes(path, pkg, subclass_of, hidden=False, helpers=False):
     import pkgutil
     result = set()
+    ignore = {"cobaya/likelihoods": ["base_classes", "test"]}
     from cobaya.theory import HelperTheory
     for (module_loader, name, ispkg) in pkgutil.iter_modules([path]):
-        if hidden or not name.startswith('_'):
+        ignore_this_one = \
+            name in next((which for p, which in ignore.items() if path.endswith(p)), [])
+        ignore_this_one = ignore_this_one or name.startswith('_')
+        if hidden or not ignore_this_one:
             module_name = pkg + '.' + name
             m = load_module(module_name)
             for class_name, cls in inspect.getmembers(m, inspect.isclass):

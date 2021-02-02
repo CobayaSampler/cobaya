@@ -52,7 +52,7 @@ from scipy import special
 import copy
 
 # Local
-from cobaya.likelihoods._base_classes import DataSetLikelihood
+from cobaya.likelihoods.base_classes import DataSetLikelihood
 from cobaya.log import LoggedError
 from cobaya.conventions import _c_km_s
 

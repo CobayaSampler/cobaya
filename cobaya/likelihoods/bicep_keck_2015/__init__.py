@@ -72,7 +72,7 @@ After this, mention the path to this likelihood when you include it in an input 
 import numpy as np
 
 # Local
-from cobaya.likelihoods._base_classes import CMBlikes
+from cobaya.likelihoods.base_classes import CMBlikes
 from cobaya.conventions import _h_J_s, _kB_J_K
 
 # Physical constants

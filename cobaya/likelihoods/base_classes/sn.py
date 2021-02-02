@@ -106,7 +106,7 @@ import os
 
 # Local
 from cobaya.log import LoggedError
-from cobaya.likelihoods._base_classes import DataSetLikelihood
+from cobaya.likelihoods.base_classes import DataSetLikelihood
 
 _twopi = 2 * np.pi
 

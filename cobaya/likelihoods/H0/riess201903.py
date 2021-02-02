@@ -1,4 +1,4 @@
-from cobaya.likelihoods._base_classes import H0
+from cobaya.likelihoods.base_classes import H0
 
 
 class riess201903(H0):
