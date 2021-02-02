@@ -154,7 +154,7 @@ The ``bibtex`` for those citations, along with a short text snippet for each ele
 
 You can pass multiple input files this way, or even a (list of) component name(s), as in ``cobaya-doc``.
 
-You can also do this interactively, by passing your input info, as a python dictionary, to the function :func:`~citation.citation`:
+You can also do this interactively, by passing your input info, as a python dictionary, to the function :func:`~bib.get_bib_info`:
 
 .. code-block:: python
 

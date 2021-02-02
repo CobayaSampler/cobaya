@@ -1,6 +1,5 @@
 from cobaya.likelihoods.base_classes import CMBlikes
-from cobaya.likelihoods.base_classes.planck_clik_prototype import \
-    last_version_supp_data_and_covmats
+from cobaya.likelihoods.base_classes.planck_clik import last_version_supp_data_and_covmats
 
 
 class native(CMBlikes):
