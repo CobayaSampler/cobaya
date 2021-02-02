@@ -1,4 +1,4 @@
-from cobaya.likelihoods._base_classes import SN
+from cobaya.likelihoods.base_classes import SN
 
 
 class jla_lite(SN):

@@ -1,4 +1,4 @@
-from cobaya.likelihoods._base_classes import DES
+from cobaya.likelihoods.base_classes import DES
 
 
 class shear(DES):

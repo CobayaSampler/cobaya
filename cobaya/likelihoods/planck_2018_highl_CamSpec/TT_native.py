@@ -1,4 +1,4 @@
-from cobaya.likelihoods._base_classes import Planck2018CamSpecPython
+from cobaya.likelihoods.base_classes import Planck2018CamSpecPython
 
 
 class TT_native(Planck2018CamSpecPython):

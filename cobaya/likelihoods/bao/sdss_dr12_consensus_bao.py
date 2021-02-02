@@ -1,4 +1,4 @@
-from cobaya.likelihoods._base_classes import BAO
+from cobaya.likelihoods.base_classes import BAO
 
 
 class sdss_dr12_consensus_bao(BAO):

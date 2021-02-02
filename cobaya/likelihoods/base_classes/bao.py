@@ -129,7 +129,7 @@ from typing import Optional, Sequence
 # Local
 from cobaya.log import LoggedError
 from cobaya.conventions import _packages_path, _c_km_s
-from cobaya.likelihoods._base_classes import InstallableLikelihood
+from cobaya.likelihoods.base_classes import InstallableLikelihood
 
 
 class BAO(InstallableLikelihood):

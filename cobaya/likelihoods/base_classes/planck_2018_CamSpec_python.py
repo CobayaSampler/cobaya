@@ -24,7 +24,7 @@ import os
 import scipy
 
 # Local
-from cobaya.likelihoods._base_classes import DataSetLikelihood
+from cobaya.likelihoods.base_classes import DataSetLikelihood
 
 use_cache = True
 

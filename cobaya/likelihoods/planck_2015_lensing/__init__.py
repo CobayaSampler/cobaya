@@ -1,4 +1,4 @@
-from cobaya.likelihoods._base_classes import PlanckClik
+from cobaya.likelihoods.base_classes import PlanckClik
 
 
 class planck_2015_lensing(PlanckClik):

@@ -17,7 +17,7 @@ from typing import Sequence
 
 # Local
 from cobaya.log import LoggedError
-from cobaya.likelihoods._base_classes import DataSetLikelihood
+from cobaya.likelihoods.base_classes import DataSetLikelihood
 
 CMB_keys = ['tt', 'te', 'ee', 'bb']
 

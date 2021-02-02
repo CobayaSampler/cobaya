@@ -1,4 +1,4 @@
-from cobaya.likelihoods._base_classes import PlanckPlikLite
+from cobaya.likelihoods.base_classes import PlanckPlikLite
 
 
 class TTTEEE_lite_native(PlanckPlikLite):

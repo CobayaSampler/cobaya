@@ -1,4 +1,4 @@
-from cobaya.likelihoods._base_classes import BAO
+from cobaya.likelihoods.base_classes import BAO
 
 
 class sixdf_2011_bao(BAO):
