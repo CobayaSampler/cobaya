@@ -691,11 +691,12 @@ def white_noise_from_muK_arcmin(noise_muK_arcmin):
 
 def save_cl_dict(filename, array_dict, lmin=2, lmax=None, cl_dict_lmin=0):
     """
-    Save a Cobaya dict of CL to a text file,
-    with each line starting with L.
+    Save a Cobaya dict of CL to a text file, with each line starting with L.
+
     :param filename: filename to save
     :param array_dict: dictionary of power spectra
-    :param lmin: L to start output in file (usually 0 or 2)
+    :param lmax: maximum L to save
+    :param cl_dict_lmin: L to start output in file (usually 0 or 2)
     """
     cols = []
     labels = []
