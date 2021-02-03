@@ -26,7 +26,7 @@ from cobaya.conventions import _products_path, _packages_path, _resume, _force, 
     _aliases, _yaml_extensions, reserved_attributes, empty_dict, _get_chi2_name, \
     _get_chi2_label, _test_run, _version, _class_name
 from cobaya.tools import recursive_update, str_to_list, get_base_classes, \
-    fuzzy_match, deepcopy_where_possible, get_class, get_kind
+    fuzzy_match, deepcopy_where_possible, get_class
 from cobaya.yaml import yaml_load_file, yaml_dump
 from cobaya.log import LoggedError
 from cobaya.parameterization import expand_info_param
