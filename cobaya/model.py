@@ -21,7 +21,7 @@ from cobaya.input import update_info
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection, LikelihoodExternalFunction, \
-    AbsorbUnusedParamsLikelihood
+    AbsorbUnusedParamsLikelihood, is_LikelihoodInterface
 from cobaya.theory import TheoryCollection
 from cobaya.log import LoggedError, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
@@ -252,16 +252,16 @@ class Model(HasLogger):
                     "Calculation failed, skipping rest of calculations ")
                 break
             if return_derived:
-                derived_dict.update(component.get_current_derived())
+                derived_dict.update(component.current_derived)
             # Add chi2's to derived parameters
-            if hasattr(component, "get_current_logp"):
+            if is_LikelihoodInterface(component):
                 try:
-                    loglikes[index - n_theory] = float(component.get_current_logp())
+                    loglikes[index - n_theory] = float(component.current_logp)
                 except TypeError:
                     raise LoggedError(
                         self.log,
                         "Likelihood %s has not returned a valid log-likelihood, "
-                        "but %r instead.", str(component), component.get_current_logp())
+                        "but %r instead.", str(component), component.current_logp)
                 if return_derived:
                     derived_dict[_get_chi2_name(component.get_name().replace(".", "_"))] \
                         = -2 * loglikes[index - n_theory]
