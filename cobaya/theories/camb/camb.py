@@ -583,7 +583,6 @@ class camb(BoltzmannBase):
         try:
             cl_camb = self.current_state[which_key][which_result].copy()
         except:
-            raise
             raise LoggedError(self.log, "No %s Cl's were computed. Are you sure that you "
                                         "have requested them?", which_error)
         units_factor = self._cmb_unit_factor(

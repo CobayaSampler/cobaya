@@ -109,7 +109,6 @@ def get_default_info(component_or_class, kind=None, return_yaml=False,
         if inspect.isclass(component_or_class):
             cls = component_or_class
         else:
-            _kind = _kind or get_kind(component_or_class, class_name=class_name)
             cls = get_class(
                 class_name or component_or_class, _kind, component_path=component_path)
         default_component_info = \
