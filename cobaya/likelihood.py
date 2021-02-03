@@ -10,7 +10,7 @@ all the individual likelihoods.
 
 Likelihoods inherit from :class:`~theory.Theory`, adding an additional method
 to return the likelihood. As with all theories, likelihoods cache results, and the
-function :meth:`LikelihoodInterface.get_current_logp` is used by :class:`model.Model` to
+function :meth:`LikelihoodInterface.current_logp` is used by :class:`model.Model` to
 calculate the total likelihood. The default Likelihood implementation does the actual
 calculation of the log likelihood in the `logp` function, which is then called
 by :meth:`Likelihood.calculate` to save the result into the current state.
@@ -47,19 +47,28 @@ class LikelihoodInterface:
     the current parameters), or likelihoods can directly inherit from :class:`Likelihood`
     instead.
 
-    The get_current_logp function returns the current state's logp, and does not normally
+    The current_logp property returns the current state's logp, and does not normally
     need to be changed.
     """
 
-    _current_state: Mapping[str, Mapping]
+    current_state: Mapping[str, Mapping]
 
-    def get_current_logp(self):
+    @property
+    def current_logp(self):
         """
         Gets log likelihood for the current point
 
         :return:  log likelihood from the current state
         """
         return self.current_state["logp"]
+
+
+def is_LikelihoodInterface(class_instance):
+    """
+    Checks for `current_logp` property. `hasattr()` cannot be used in this case because
+    `self._current_state` has not yet been defined.
+    """
+    return "current_logp" in dir(class_instance)
 
 
 class Likelihood(Theory, LikelihoodInterface):
@@ -258,11 +267,11 @@ class LikelihoodCollection(ComponentCollection):
                 if isinstance(info[_external], Theory):
                     self.add_instance(name, info[_external])
                 elif inspect.isclass(info[_external]):
-                    if not hasattr(info[_external], "get_current_logp") or \
+                    if not is_LikelihoodInterface(info[_external]) or \
                             not issubclass(info[_external], Theory):
                         raise LoggedError(self.log, "%s: external class likelihood must "
                                                     "be a subclass of Theory and have "
-                                                    "logp, get_current_logp functions",
+                                                    "logp, current_logp attributes",
                                           info[_external].__name__)
                     self.add_instance(name,
                                       info[_external](info, packages_path=packages_path,
@@ -281,9 +290,9 @@ class LikelihoodCollection(ComponentCollection):
                                                    timing=timing, standalone=False,
                                                    name=name))
 
-            if not hasattr(self[name], "get_current_logp"):
+            if not is_LikelihoodInterface(self[name]):
                 raise LoggedError(self.log, "'Likelihood' %s is not actually a "
-                                            "likelihood (no get_current_logp function)",
+                                            "likelihood (no current_logp attribute)",
                                   name)
 
     def get_helper_theory_collection(self):

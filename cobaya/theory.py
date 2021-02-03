@@ -219,7 +219,7 @@ class Theory(CobayaComponent):
         Takes a dictionary of parameter values and computes the products needed by the
         likelihood, or uses the cached value if that exists for these parameters.
         If want_derived, the derived parameters are saved in the computed state
-        (retrieved using get_current_derived()).
+        (retrieved using current_derived).
         """
         self.log.debug("Got parameters %r", params_values_dict)
         for p in self._input_params_extra:
@@ -277,8 +277,18 @@ class Theory(CobayaComponent):
                                         "nothing has been computed yet "
                                         "(maybe the prior was -infinity?)")
 
-    def get_current_derived(self):
+    @property
+    def current_derived(self):
         return self.current_state.get("derived", {})
+
+    # MARKED FOR DEPRECATION IN v3.1
+    def get_current_derived(self):
+        self.log.warning("'Theory.get_current_derived()' method will soon be deprecated "
+                         "in favour of 'Theory.current_derived' attribute. Please, "
+                         "rename your call.")
+        # BEHAVIOUR TO BE REPLACED BY AN ERROR
+        return self.current_derived
+    # END OF DEPRECATION BLOCK
 
     def get_provider(self):
         """
