@@ -339,6 +339,10 @@ class camb(BoltzmannBase):
                 self.collectors[k] = Collector(
                     method=CAMBdata.get_cmb_power_spectra,
                     kwargs={"spectra": ["unlensed_total"], "raw_cl": False})
+            elif k == "partially_lensed_Cl":
+                self.set_cl_reqs(v)
+                # Just get CAMB results object -- retrieving for different Alens is fast
+                self.collectors['CAMBdata'] = None
             elif k == "Hubble":
                 self.collectors[k] = Collector(
                     method=CAMBdata.h_of_z,
@@ -577,11 +581,15 @@ class camb(BoltzmannBase):
         return derived
 
     def _get_Cl(self, ell_factor=False, units="FIRASmuK2", lensed=True):
-        which_key = "Cl" if lensed else "unlensed_Cl"
-        which_result = "total" if lensed else "unlensed_total"
-        which_error = "lensed" if lensed else "unlensed"
+        which_key = {True: "Cl", False: "unlensed_Cl"}.get(lensed, "CAMBdata")
+        which_result = {True: "total", False: "unlensed_total"}.get(lensed)
+        which_error = {True: "lensed", False: "unlensed"}.get(lensed, "partially lensed")
         try:
-            cl_camb = self.current_state[which_key][which_result].copy()
+            if lensed in [True, False]:
+                cl_camb = self.current_state[which_key][which_result].copy()
+            else:
+                cl_camb = self.current_state[which_key].get_partially_lensed_cls(
+                    Alens=lensed, raw_cl=False)
         except:
             raise LoggedError(self.log, "No %s Cl's were computed. Are you sure that you "
                                         "have requested them?", which_error)
@@ -599,7 +607,7 @@ class camb(BoltzmannBase):
         cls = {"ell": ls}
         for sp, i in mapping.items():
             cls[sp] = cl_camb[:, i]
-        if lensed:
+        if lensed is True:  # could be Alens=float=>False
             cl_lens = self.current_state["Cl"].get("lens_potential")
             if cl_lens is not None:
                 cls["pp"] = cl_lens[:, 0].copy()
@@ -615,6 +623,9 @@ class camb(BoltzmannBase):
 
     def get_Cl(self, ell_factor=False, units="FIRASmuK2"):
         return self._get_Cl(ell_factor=ell_factor, units=units, lensed=True)
+
+    def get_partially_lensed_Cl(self, Alens, ell_factor=False, units="FIRASmuK2"):
+        return self._get_Cl(ell_factor=ell_factor, units=units, lensed=Alens)
 
     def get_unlensed_Cl(self, ell_factor=False, units="FIRASmuK2"):
         return self._get_Cl(ell_factor=ell_factor, units=units, lensed=False)
