@@ -27,7 +27,7 @@ class _DataSetLikelihood(DataSetLikelihood):
         # END OF DEPRECATION BLOCK
 
 
-class _CMBlikes(CMBlikes):
+class CMBlikes(CMBlikes):
 
     def __init__(self, *args, **kwargs):
         # MARKED FOR DEPRECATION IN v3.0
