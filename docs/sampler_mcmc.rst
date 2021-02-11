@@ -129,7 +129,7 @@ Two different sampling schemes are available in the ``mcmc`` sampler to take add
 
 In general, the *dragging* method is the recommended one if there are non-trivial degeneracies between fast and slow parameters that are not well captured by a covariance matrix,  and you have a fairly large speed hierarchy. Oversampling can potentially produce very large output files (less so if the ``oversample_thin`` option is left to its default ``True`` value); dragging outputs smaller chain files since fast parameters are effectively partially marginalized over internally. For a thorough description of both methods and references, see `A. Lewis, "Efficient sampling of fast and slow cosmological parameters" (arXiv:1304.4473) <https://arxiv.org/abs/1304.4473>`_.
 
-The relative speeds can be specified per likelihood/theory, with the option ``speed``, preferably in evaluations per second (approximately). The speeds can also be measured automatically when you run a chain (with mcmc, ``measured_speeds: True``), allowing for variations with the number of threads used and machine differences. This option only tests the speed on one point (per MPI instance) by default, so if your speed varies significantly with where you are in parameter space it may be better to either turn the automatic selection off and keep to manually specified average speeds, or to pass a large number instead of ``True`` as the value of ``measure_speeds`` (it will evaluate the posterior that many times, so the chains will take longer to initialise).
+The relative speeds can be specified per likelihood/theory, with the option ``speed``, preferably in evaluations per second (approximately). The speeds can also be measured automatically when you run a chain (with mcmc, ``measure_speeds: True``), allowing for variations with the number of threads used and machine differences. This option only tests the speed on one point (per MPI instance) by default, so if your speed varies significantly with where you are in parameter space it may be better to either turn the automatic selection off and keep to manually specified average speeds, or to pass a large number instead of ``True`` as the value of ``measure_speeds`` (it will evaluate the posterior that many times, so the chains will take longer to initialise).
 
 To **manually** measure the average speeds, set ``measure_speeds`` in the ``mcmc`` block to a high value and run your input file with the ``--test`` option; alternatively, add ``timing: True`` at the highest level of your input (i.e. not inside any of the blocks), set the ``mcmc`` options ``burn_in: 0`` and ``max_samples`` to a reasonably large number (so that it will be done in a few minutes), and check the output: it should have printed, towards the end, computation times for the likelihood and theory codes in seconds, the *inverse* of which are the speeds.
 
@@ -239,6 +239,61 @@ A callback function can be specified through the ``callback_function`` option. I
         print(sampler.collection[sampler.last_point_callback:])
 
 The callback function is called every ``callback_every`` points have been added to the chain, or at every checkpoint if that option has not been defined.
+
+
+.. _mcmc_mpi_in_script:
+
+Interaction with MPI when using MCMC inside your own script
+-----------------------------------------------------------
+
+When integrating Cobaya in your pipeline inside a Python script (as opposed to calling it with `cobaya-run`), you need to be careful when using MPI: exceptions will not me caught properly unless some wrapping is used:
+
+.. code:: python
+
+    from mpi4py import MPI
+
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+
+    from cobaya.run import run
+    from cobaya.log import LoggedError
+
+    success = False
+    try:
+        upd_info, mcmc = run(info)
+        success = True
+    except LoggedError as err:
+        pass
+
+    # Did it work? (e.g. did not get stuck)
+    success = all(comm.allgather(success))
+
+    if not success and rank == 0:
+        print("Sampling failed!")
+
+In this case, if one of the chains fails, the rest will learn about it and raise an exception too *as soon as they arrive at the next checkpoint* (in order for them to be able to learn about the failing process earlier, we would need to have used much more aggressive MPI polling in Cobaya, that would have introduced a lot of communication overhead).
+
+As sampler products, every MPI process receives its own chain via the :meth:`~.mcmc.products` method. To gather all of them in the root process and combine them, skipping the first third of each, do:
+
+.. code:: python
+
+    all_chains = comm.gather(mcmc.products()["sample"], root=0)
+
+    # Pass all of them to GetDist in rank = 0
+
+    if rank == 0:
+        from getdist.mcsamples import MCSamplesFromCobaya
+        gd_sample = MCSamplesFromCobaya(upd_info, all_chains)
+
+    # Manually concatenate them in rank = 0 for some custom manipulation,
+    # skipping 1st 3rd of each chain
+
+    copy_and_skip_1st_3rd = lambda chain: chain[int(len(chain) / 3):]
+    if rank == 0:
+        full_chain = copy_and_skip_1st_3rd(all_chains[0])
+        for chain in all_chains[1:]:
+            full_chain.append(copy_and_skip_1st_3rd(chain))
+        # The combined chain is now `full_chain`
 
 
 Options and defaults

@@ -258,7 +258,7 @@ def is_installed_clik(path, allow_global=False):
     if path is not None and path.lower() == "global":
         path = None
     clik_path = None
-    if path and path.lower() != "global":
+    if isinstance(path, str) and path.lower() != "global":
         try:
             clik_path = os.path.join(
                 get_clik_source_folder(path), 'lib/python/site-packages')
@@ -362,3 +362,11 @@ def get_product_id_and_clik_file(name):
     """Gets the PLA product info from the defaults file."""
     defaults = get_default_info(name, kinds.likelihood)
     return defaults.get("product_id"), defaults.get("clik_file")
+
+
+class Planck2015Clik(_planck_clik_prototype):
+    bibtex_file = 'planck2015.bibtex'
+
+
+class Planck2018Clik(_planck_clik_prototype):
+    bibtex_file = 'planck2018.bibtex'

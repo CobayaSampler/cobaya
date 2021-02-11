@@ -24,6 +24,8 @@ class _planck_pliklite_prototype(_DataSetLikelihood):
         "download_url": "https://cdn.cosmologist.info/cosmobox/test2019_kaml/plik_lite_AL.zip",
         "data_path": "planck_2018_pliklite_native"}
 
+    bibtex_file = 'planck2018.bibtex'
+
     def init_params(self, ini):
         self.use_cl = [c.lower() for c in ini.list('use_cl')]
         assert len(self.use_cl)

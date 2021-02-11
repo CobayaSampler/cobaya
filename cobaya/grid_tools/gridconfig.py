@@ -25,7 +25,9 @@ from cobaya.parameterization import is_sampled_param
 
 
 def getArgs(vals=None):
-    parser = argparse.ArgumentParser('Initialize grid using settings file')
+    parser = argparse.ArgumentParser(
+        prog="cobaya grid-create",
+        description='Initialize grid using settings file')
     parser.add_argument('batchPath', help=(
         'root directory containing/to contain the grid '
         '(e.g. ./PLA where directories base, base_xx etc are under ./PLA)'))

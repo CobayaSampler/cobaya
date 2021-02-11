@@ -9,7 +9,9 @@ from cobaya.tools import warn_deprecation
 
 def run():
     warn_deprecation()
-    Opts = batchjob_args.batchArgs('Submit jobs to run chains or importance sample',
+    Opts = batchjob_args.batchArgs(
+        prog='cobaya grid-run',
+        desc='Submit jobs to run chains or importance sample',
                                    notExist=True, notall=True, converge=True)
     jobqueue.addArguments(Opts.parser, combinedJobs=True)
     Opts.parser.add_argument('--subitems', action='store_true',

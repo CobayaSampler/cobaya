@@ -204,11 +204,11 @@ lik_info_lowl_highTT_lensing = {
 
 chi2_lowl_highTT_lensing = {
     "planck_2018_lowl.TT": 22.92,
-    "planck_2018_highl_plik.TT": 757.77,
+    "planck_2018_highl_plik.TT": 757.93,
     "planck_2018_lensing.clik": 9.11,
     "tolerance": 0.11}
 
-chi2_planck_2018_plikHM_highTT_lite = 204.45
+chi2_planck_2018_plikHM_highTT_lite = 204.54
 
 params_lowl_highTT_lite_lensing = {
     # Sampled
@@ -275,7 +275,7 @@ chi2_lowTE_highTTTEEE_lensingcmblikes = {
     "planck_2018_highl_plik.TTTEEE": 2344.93, "planck_2018_lensing.native": 8.87,
     "tolerance": 0.11}
 
-chi2_planck_2018_plikHM_highTTTEEE_lite = 584.65
+chi2_planck_2018_plikHM_highTTTEEE_lite = 584.61
 
 params_lowTE_highTTTEEE_lite_lensingcmblikes = {
     # Sampled

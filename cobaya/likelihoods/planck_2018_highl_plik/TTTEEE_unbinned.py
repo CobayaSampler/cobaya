@@ -1,5 +1,9 @@
-from cobaya.likelihoods._base_classes import _planck_clik_prototype
+from cobaya.likelihoods._base_classes import Planck2018Clik
 
 
-class TTTEEE_unbinned(_planck_clik_prototype):
+class TTTEEE_unbinned(Planck2018Clik):
+    r"""
+    Unbinned high-$\ell$ temperature and polarization \textsc{plik} likelihood of Planck's
+    2018 data release \cite{Aghanim:2019ame}.
+    """
     pass

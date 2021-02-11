@@ -85,7 +85,7 @@ from copy import deepcopy
 from cobaya.sampler import Minimizer
 from cobaya.conventions import _undo_chi2_name
 from cobaya.mpi import get_mpi_size, get_mpi_comm, is_main_process, get_mpi_rank, \
-    more_than_one_process
+    more_than_one_process, share_mpi
 from cobaya.collection import OnePoint, Collection
 from cobaya.log import LoggedError
 from cobaya.tools import read_dnumber, recursive_update
@@ -120,6 +120,7 @@ class minimize(Minimizer, CovmatSampler):
         # Try to load info from previous samples.
         # If none, sample from reference (make sure that it has finite like/post)
         initial_point = None
+        covmat_in = None
         if self.output:
             files = self.output.find_collections()
             collection_in = None
@@ -139,6 +140,10 @@ class minimize(Minimizer, CovmatSampler):
                     list(self.model.parameterization.sampled_params())].values
                 self.log.info("Starting from %s of previous chain:",
                               "best fit" if self.ignore_prior else "MAP")
+                # Compute covmat if input but no .covmat file (e.g. with PolyChord)
+                # Prefer old over `covmat` definition in yaml (same as MCMC)
+                self.covmat = collection_in.cov(derived=False)
+                self.covmat_params = list(self.model.parameterization.sampled_params())
         if initial_point is None:
             this_logp = -np.inf
             while not np.isfinite(this_logp):
@@ -147,17 +152,13 @@ class minimize(Minimizer, CovmatSampler):
             self.log.info("Starting from random initial point:")
         self.log.info(
             dict(zip(self.model.parameterization.sampled_params(), initial_point)))
-
         self._bounds = self.model.prior.bounds(
             confidence_for_unbounded=self.confidence_for_unbounded)
-
         # TODO: if ignore_prior, one should use *like* covariance (this is *post*)
-        covmat = self._load_covmat(self.output)[0]
-
+        covmat = self._load_covmat(prefer_load_old=self.output)[0]
         # scale by conditional parameter widths (since not using correlation structure)
         scales = np.minimum(1 / np.sqrt(np.diag(np.linalg.inv(covmat))),
                             (self._bounds[:, 1] - self._bounds[:, 0]) / 3)
-
         # Cov and affine transformation
         # Transform to space where initial point is at centre, and cov is normalised
         # Cannot do rotation, as supported minimization routines assume bounds aligned
@@ -311,6 +312,14 @@ class minimize(Minimizer, CovmatSampler):
                 "Parameter values at minimum:\n%s", self.minimum.data.to_string())
             self.minimum.out_update()
             self.dump_getdist()
+        # Share results ('result' object may not be picklable)
+        self.minimum = share_mpi(getattr(self, "minimum", None))
+        self._inv_affine_transform_matrix = share_mpi(getattr(self, "_inv_affine_transform_matrix"))
+        self._affine_transform_baseline = share_mpi(getattr(self, "_affine_transform_baseline"))
+        try:
+            self.result = share_mpi(getattr(self, "result"))
+        except:
+            self.result = None
 
     def products(self):
         r"""
@@ -336,10 +345,9 @@ class minimize(Minimizer, CovmatSampler):
         transformation needs to be applied to the coordinates appearing inside the
         ``result_object``.
         """
-        if is_main_process():
-            return {"minimum": self.minimum, "result_object": self.result,
-                    "M": self._inv_affine_transform_matrix,
-                    "X0": self._affine_transform_baseline}
+        return {"minimum": self.minimum, "result_object": self.result,
+                "M": self._inv_affine_transform_matrix,
+                "X0": self._affine_transform_baseline}
 
     def getdist_point_text(self, params, weight=None, minuslogpost=None):
         lines = []
@@ -409,6 +417,29 @@ class minimize(Minimizer, CovmatSampler):
         (including deleting some output files when forcing).
         """
         if output.is_resuming():
-            output.log.warning("Minimizer does not support resuming. Ignoring.")
-            output.set_resuming(False)
+            if is_main_process():
+                raise LoggedError(
+                    output.log, "Minimizer does not support resuming. "
+                                "If you want to start over, force "
+                                "('-f', '--force', 'force: True')")
         super().check_force_resume(output, info=info)
+
+    @classmethod
+    def _get_desc(cls, info=None):
+        if info is None:
+            method = None
+        else:
+            method = info.get("method", cls.get_defaults()["method"])
+        desc_bobyqa = (r"Py-BOBYQA implementation "
+                       r"\cite{2018arXiv180400154C,2018arXiv181211343C} of the BOBYQA "
+                       r"minimization algorithm \cite{BOBYQA}")
+        desc_scipy = (r"Scipy minimizer \cite{2020SciPy-NMeth} (check citation for the "
+                      r"actual algorithm used at \url{https://docs.scipy.org/doc/scipy/re"
+                      r"ference/generated/scipy.optimize.minimize.html}")
+        if method and method and method.lower() == "bobyqa":
+            return desc_bobyqa
+        elif method and method.lower() == "scipy":
+            return desc_scipy
+        else:  # unknown method or no info passed (None)
+            return ("Minimizer -- method unknown, possibly one of:"
+                    "\na) " + desc_bobyqa + "\nb) " + desc_scipy)

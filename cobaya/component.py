@@ -169,10 +169,13 @@ class ComponentCollection(dict, HasLogger):
     Base class for a dictionary of components (e.g. likelihoods or theories)
     """
 
+    def get_helper_theory_collection(self):
+        return self
+
     def add_instance(self, name, component):
         helpers = component.get_helper_theories()
         component.update_for_helper_theories(helpers)
-        self.update(helpers)
+        self.get_helper_theory_collection().update(helpers)
         self[name] = component
 
     def dump_timing(self):

@@ -19,11 +19,13 @@ from importlib import import_module
 from copy import deepcopy
 from packaging import version
 from itertools import permutations
-from typing import Mapping
+from typing import Mapping, Sequence
+from numbers import Number
 from types import ModuleType
 from inspect import cleandoc, getfullargspec
 from math import gcd
 from ast import parse
+import traceback
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore")
@@ -108,7 +110,6 @@ def get_kind(name, allow_external=True):
                 for kind, tp in get_base_classes().items():
                     if issubclass(cls, tp):
                         return kind
-
         raise LoggedError(log, "Could not find component with name %r", name)
 
 
@@ -220,6 +221,7 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
             try:
                 import_module(module_name)
             except Exception:
+                exc_info = sys.exc_info()
                 pass
             else:
                 try:
@@ -239,6 +241,7 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
             else:
                 raise LoggedError(log, "'%s' not found", name)
         else:
+            log.error("".join(list(traceback.format_exception(*exc_info))))
             log.error("There was a problem when importing %s '%s':", kind or "external",
                       name)
             raise exc_info[1]
@@ -354,6 +357,17 @@ def recursive_update(base, update):
         if isinstance(v, Mapping) and len(v) == 0:
             base[k] = None
     return base
+
+
+def invert_dict(dict_in):
+    """
+    Inverts a dictionary, where values in the returned ones are always lists of the
+    original keys. Order is not preserved.
+    """
+    dict_out = {v: [] for v in dict_in.values()}
+    for k, v in dict_in.items():
+        dict_out[v].append(k)
+    return dict_out
 
 
 def ensure_latex(string):
@@ -476,6 +490,13 @@ def get_scipy_1d_pdf(info):
     if not info2:
         raise LoggedError(log, "No specific prior info given for "
                                "sampled parameter '%s'." % param)
+    # If list of 2 numbers, it's a uniform prior
+    elif isinstance(info2, Sequence) and len(info2) == 2 and all(
+            isinstance(n, Number) for n in info2):
+        info2 = {"min": info2[0], "max": info2[1]}
+    elif not isinstance(info2, Mapping):
+        raise LoggedError(log, "Prior format not recognized. "
+                               "Check documentation for prior specification.")
     # What distribution?
     try:
         dist = info2.pop(partag.dist).lower()

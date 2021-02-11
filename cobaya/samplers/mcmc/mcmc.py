@@ -28,8 +28,14 @@ from cobaya.log import LoggedError
 from cobaya.tools import get_external_function, NumberWithUnits, load_DataFrame
 from cobaya.yaml import yaml_dump_file
 
+_error_tag = 99
+
 
 class mcmc(CovmatSampler):
+    r"""
+    Adaptive, speed-hierarchy-aware MCMC sampler (adapted from CosmoMC)
+    \cite{Lewis:2002ah,Lewis:2013hha}.
+    """
     _at_resume_prefer_new = CovmatSampler._at_resume_prefer_new + [
         "burn_in", "callback_function", "callback_every", "max_tries", "output_every",
         "learn_every", "learn_proposal_Rminus1_max", "learn_proposal_Rminus1_max_early",
@@ -100,7 +106,7 @@ class mcmc(CovmatSampler):
                 raise LoggedError(
                     self.log,
                     "Cannot resume a run with a different number of chains: "
-                    "was %d and now is %d.", max(self.mpi_size, 1),
+                    "was %d and now is %d.", max(self.mpi_size or 0, 1),
                     max(get_mpi_size(), 1))
             if more_than_one_process():
                 if get_mpi().Get_version()[0] < 3:
@@ -153,11 +159,12 @@ class mcmc(CovmatSampler):
             # If resuming but no existing chain, assume failed run and ignore blocking
             # if speeds measurement requested
             if self.output.is_resuming() and not len(self.collection) \
-               and self.measure_speeds:
+                    and self.measure_speeds:
                 self.blocking = None
             if self.measure_speeds and self.blocking:
-                self.log.warning(
-                    "Parameter blocking manually fixed: speeds will not be measured.")
+                if is_main_process():
+                    self.log.warning(
+                        "Parameter blocking manually fixed: speeds will not be measured.")
             elif self.measure_speeds:
                 n = None if self.measure_speeds is True else int(self.measure_speeds)
                 self.model.measure_and_set_speeds(n=n, discard=0)
@@ -289,7 +296,8 @@ class mcmc(CovmatSampler):
     def set_proposer_covmat(self, load=False):
         if load:
             # Build the initial covariance matrix of the proposal, or load from checkpoint
-            self._covmat, where_nan = self._load_covmat(self.output.is_resuming())
+            self._covmat, where_nan = self._load_covmat(
+                prefer_load_old=self.output.is_resuming())
             if np.any(where_nan) and self.learn_proposal:
                 # We want to start learning the covmat earlier.
                 self.mpi_info("Covariance matrix " +
@@ -320,10 +328,11 @@ class mcmc(CovmatSampler):
         """
         Runs the sampler.
         """
-        self.log.info("Sampling!" +
-                      (" (NB: no accepted step will be saved until %d burn-in samples " %
-                       self.burn_in.value + "have been obtained)"
-                       if self.burn_in.value else ""))
+        self.mpi_info(
+            "Sampling!" +
+            (" (NB: no accepted step will be saved until %d burn-in samples " %
+             self.burn_in.value + "have been obtained)"
+             if self.burn_in.value else ""))
         self.n_steps_raw = 0
         last_output = 0
         last_n = self.n()
@@ -389,8 +398,12 @@ class mcmc(CovmatSampler):
         """
         trial = self.current_point.values.copy()
         self.proposer.get_proposal(trial)
-        logpost_trial, logprior_trial, loglikes_trial, derived = \
-            self.model.logposterior(trial)
+        try:
+            logpost_trial, logprior_trial, loglikes_trial, derived = \
+                self.model.logposterior(trial)
+        except:
+            self.send_error_signal()
+            raise
         accept = self.metropolis_accept(logpost_trial, self.current_point.logpost)
         self.process_accept_or_reject(accept, trial, derived,
                                       logpost_trial, logprior_trial, loglikes_trial)
@@ -530,6 +543,7 @@ class mcmc(CovmatSampler):
                             (1 + (10 - 1) * np.sign(self.burn_in_left))
             if self.current_point.weight > max_tries_now:
                 self.collection.out_update()
+                self.send_error_signal()
                 raise LoggedError(
                     self.log,
                     "The chain has been stuck for %d attempts. Stopping sampling. "
@@ -555,6 +569,7 @@ class mcmc(CovmatSampler):
             if more_than_one_process():
                 self.been_waiting += 1
                 if self.been_waiting > self.max_waiting:
+                    self.send_error_signal()
                     raise LoggedError(
                         self.log, "Waiting for too long for all chains to be ready. "
                                   "Maybe one of them is stuck or died unexpectedly?")
@@ -563,6 +578,8 @@ class mcmc(CovmatSampler):
             if not more_than_one_process():
                 self.log.debug(msg_ready)
                 return True
+            # Error check in case any process already sent an error signal
+            self.check_error_signal()
             # If MPI, tell the rest that we are ready -- we use a "gather"
             # ("reduce" was problematic), but we are in practice just pinging
             if not hasattr(self, "req"):  # just once!
@@ -579,6 +596,8 @@ class mcmc(CovmatSampler):
                 self.log.info("All chains are r" + msg_ready[1:])
             delattr(self, "req")
             self.been_waiting = 0
+            # Another error check, in case the error occurred after sending "ready" signal
+            self.check_error_signal()
             # Just in case, a barrier here
             sync_processes()
             return True
@@ -586,7 +605,7 @@ class mcmc(CovmatSampler):
 
     def check_convergence_and_learn_proposal(self):
         """
-        Checks the convergence of the sampling process (MPI only), and, if requested,
+        Checks the convergence of the sampling process, and, if requested,
         learns a new covariance matrix for the proposal distribution from the covariance
         of the last samples.
         """
@@ -662,7 +681,11 @@ class mcmc(CovmatSampler):
             # For numerical stability, we turn mean_of_covs into correlation matrix:
             #   rho = (diag(Sigma))^(-1/2) * Sigma * (diag(Sigma))^(-1/2)
             # and apply the same transformation to the mean of covs (same eigenvals!)
+            # NB: disables warnings from numpy
+            prev_err_state = deepcopy(np.geterr())
+            np.seterr(divide="ignore")
             diagSinvsqrt = np.diag(np.power(np.diag(cov_of_means), -0.5))
+            np.seterr(**prev_err_state)
             corr_of_means = diagSinvsqrt.dot(cov_of_means).dot(diagSinvsqrt)
             norm_mean_of_covs = diagSinvsqrt.dot(mean_of_covs).dot(diagSinvsqrt)
             success = False
@@ -758,6 +781,30 @@ class mcmc(CovmatSampler):
         # Save checkpoint info
         self.write_checkpoint()
 
+    def send_error_signal(self):
+        """
+        Sends an error signal to the other MPI processes.
+        """
+        for i_rank in range(get_mpi_size()):
+            if i_rank != get_mpi_rank():
+                get_mpi_comm().isend(True, dest=i_rank, tag=_error_tag)
+
+    def check_error_signal(self):
+        """
+        Checks if any of the other process has sent an error signal, and fails.
+
+        NB: This behaviour only shows up when running this sampler inside a Python script,
+            not when running with `cobaya run` (in that case, the process raising an error
+            will call `MPI_ABORT` and kill the rest.
+        """
+        for i in range(get_mpi_size()):
+            if i != get_mpi_rank():
+                from mpi4py import MPI
+                status = MPI.Status()
+                get_mpi_comm().iprobe(i, status=status)
+                if status.tag == _error_tag:
+                    raise LoggedError(self.log, "Another process failed! Exiting.")
+
     def do_output(self, date_time):
         self.collection.out_update()
         msg = "Progress @ %s : " % date_time.strftime("%Y-%m-%d %H:%M:%S")
@@ -771,9 +818,7 @@ class mcmc(CovmatSampler):
     def write_checkpoint(self):
         if is_main_process() and self.output:
             checkpoint_filename = self.checkpoint_filename()
-            covmat_filename = self.covmat_filename()
-            np.savetxt(covmat_filename, self.proposer.get_covariance(), header=" ".join(
-                list(self.model.parameterization.sampled_params())))
+            self.dump_covmat(self.proposer.get_covariance())
             checkpoint_info = {kinds.sampler: {self.get_name(): dict([
                 ("converged", bool(self.converged)),
                 ("Rminus1_last", self.Rminus1_last),
@@ -817,6 +862,20 @@ class mcmc(CovmatSampler):
     @classmethod
     def get_version(cls):
         return __version__
+
+    @classmethod
+    def _get_desc(cls, info=None):
+        if info is None:
+            drag = None
+        else:
+            drag = info.get("drag", cls.get_defaults()["drag"])
+        drag_string = {
+            True: r" using the fast-dragging procedure described in \cite{Neal:2005}",
+            False: ""}
+        # Unknown case (no info passed)
+        drag_string[None] = " [(if drag: True)%s]" % drag_string[True]
+        return ("Adaptive, speed-hierarchy-aware MCMC sampler (adapted from CosmoMC) "
+                r"\cite{Lewis:2002ah,Lewis:2013hha}" + drag_string[drag] + ".")
 
 
 # Plotting tool for chain progress #######################################################

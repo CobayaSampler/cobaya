@@ -117,6 +117,10 @@ Now, let's run the example.
 .. literalinclude:: ./src_examples/quickstart/run.py
    :language: python
 
+.. note::
+
+   If using MPI and the :doc:`MCMC <sampler_mcmc>` sampler, take a look at :ref:`this section <mcmc_mpi_in_script>`.
+
 The ``run`` function returns two variables:
 
 - An information dictionary updated with the defaults, equivalent to the ``updated`` yaml file produced by the shell invocation.

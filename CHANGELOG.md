@@ -1,4 +1,64 @@
-## 3.0.1  – 2020-XX-XX
+## 3.0.3 – 2021-01-16
+
+### General
+
+- Bugfixes when using `cobaya.sample.get_sampler()`
+- More informative error tracebacks; fixes #121 (thanks @msyriac)
+- Uniform priors can now be specified simply as `[<min>, <max>]`
+- Likelihoods can now be renamed and used mutiple times simultaneously; fixes #126 (thanks @Pablo-Lemos)
+
+### Bibliography tools
+
+- Bibtex files can now be specified via a class attribute, making inheritance easier (used to remove duplication)
+- Component description now separate from bibtex code; by default, the component class docstring is used as description.
+- Descriptions can be overridden to account for component input options (e.g. the actual method used in the minimizer).
+
+### Installation scripts
+
+- Several bugs fixed: #123, #127 and others (thanks @timothydmorton, @xgarrido)
+
+### Minimize
+
+- MCMC checkpoints are not deleted any more (was preventing resuming); fixes #124 (thanks @misharash)
+
+### Cosmological likelihoods and theory codes
+
+#### BAO
+
+- Added Hubble distance and fix to `bao.generic` (Thanks @Pablo-Lemos)
+
+#### H0
+
+- Added Riess 2020 and Freedman et al 2020
+- Normalisation changed to chi2; fixes #105 (thanks @jcolinhill)
+
+#### CAMB
+
+- Fixed wrong sigma8 when z=0 not requested; fixes #128, #130, #132 (thanks @Pablo-Lemos and @msyriac)
+
+#### CLASS
+
+- Fixed ignoring `l_max_scalars` (thanks Florian Stadtmann)
+- Fixed #106 (thanks @lukashergt)
+- Adds min gcc version check for 6.4 (thanks @williamjameshandley)
+
+#### cosmo-generator
+
+- Fixed PySide2 problem in newer systems; fixes #114 (thanks @talabadi)
+- Fixed missing `Sampler` combo box (thanks @williamjameshandley)
+
+## 3.0.2 – 2020-10-16
+
+### General
+
+- Installation bug fix.
+
+
+## 3.0.1 – 2020-10-15
+
+### General
+
+- Cobaya can (and should!) now be called as `python -m cobaya run` instead of `cobaya-run`, and the same for the rest of the scripts.
 
 ### Installation scripts
 
@@ -8,8 +68,24 @@
 - Added ``--skip-not-installed`` to pytest command, to allow tests of non-installed components to fail.
 - Installable components can define a class method ``is_compatible`` determining OS compatibility (assumed compatible by default). Installation of OS-incompatible components is skipped.
 
+### Minimize
 
-## 3.0  – 2020-05-12
+- Results shared with all MPI processes.
+- `[prefix].updated.yaml` is now `[prefix].minimize.updated.yaml` (GetDist needs to know the original sampler).
+- Loads covmat correcly when starting from PolyChord sample.
+
+### Collections
+
+- Collections are picklable again.
+- Slices with omitted limits, e.g. `[::2]`, now work.
+- Slicing now returns a copy of the `Collection`, instead of a raw `pandas.DataFrame`.
+
+### MCMC
+
+- Better MPI error handling: will now fail gracefully when called inside a user's script (as opposed to `cobaya-run`).
+
+
+## 3.0 – 2020-05-12
 
 ### General
 

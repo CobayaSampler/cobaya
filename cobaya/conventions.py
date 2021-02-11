@@ -34,6 +34,7 @@ _debug_file = "debug_file"
 _output_prefix = "output"
 _packages_path = "packages_path"
 _external = "external"
+_class_name = "class"
 _provides = "provides"
 _requires = "requires"
 _resume = "resume"
@@ -53,7 +54,9 @@ partag = ParTags(*ParTags._fields)
 ComponentKinds = namedtuple('ComponentKinds', ("sampler", "theory", "likelihood"))
 kinds = ComponentKinds(*ComponentKinds._fields)
 
-reserved_attributes = {_input_params, _output_params, "install_options"}
+# Reserved attributes for component classes with defaults.
+# These are ignored by HasDefaults.get_class_options()
+reserved_attributes = {_input_params, _output_params, "install_options", "bibtex_file"}
 
 # Conventional order for yaml dumping (purely cosmetic)
 _dump_sort_cosmetic = [

@@ -85,6 +85,9 @@ Now, add to your likelihood block:
 .. literalinclude:: ../cobaya/likelihoods/bao/generic.yaml
    :language: yaml
 
+You can rename your BAO likelihood and use multiple ones with different data (see
+:ref:`likelihood_rename`).
+
 
 Installation
 ------------
@@ -244,6 +247,9 @@ class _bao_prototype(_InstallableLikelihood):
             "DA_over_rs": {
                 "angular_diameter_distance": {"z": zs.get("DA_over_rs", None)},
                 "rdrag": None},
+            "DH_over_rs": {
+                "Hubble": {"z": zs.get("DH_over_rs", None)},
+                "rdrag": None},
             "Hz_rs": {
                 "Hubble": {"z": zs.get("Hz_rs", None)},
                 "rdrag": None},
@@ -286,6 +292,9 @@ class _bao_prototype(_InstallableLikelihood):
         # Physical angular diameter distance, over sound horizon radius
         elif observable == "DA_over_rs":
             return self.provider.get_angular_diameter_distance(z) / self.rs()
+        # Hubble distance [c/H(z)] over sound horizon radius.
+        elif observable == "DH_over_rs":
+            return 1 / self.provider.get_Hubble(z, units="1/Mpc") / self.rs()
         # Hubble parameter, times sound horizon radius
         elif observable == "Hz_rs":
             return self.provider.get_Hubble(z, units="km/s/Mpc") * self.rs()

@@ -162,8 +162,8 @@ the input block for CAMB (otherwise a system-wide CAMB may be used instead):
 .. note::
 
    In any of these methods, if you intent to switch between different versions or
-   modifications of CAMB you should not  install CAMB as python package using
-   ``python setup.py install --user``, as the official instructions suggest.
+   modifications of CAMB you should not install CAMB as python package using
+   ``python setup.py install``, as the official instructions suggest.
 """
 
 # Global
@@ -199,6 +199,9 @@ class CAMBOutputs(NamedTuple):
 
 
 class camb(BoltzmannBase):
+    r"""
+    CAMB cosmological Boltzmann code \cite{Lewis:1999bs,Howlett:2012mh}.
+    """
     # Name of the Class repo/folder and version to download
     _camb_repo_name = "cmbant/CAMB"
     _camb_repo_version = os.environ.get("CAMB_REPO_VERSION", "master")
@@ -261,11 +264,16 @@ class camb(BoltzmannBase):
         args = {}
         params = []
         pars = getfullargspec(set_func)
-        for arg, v in zip(pars.args[1:], pars.defaults[1:]):
-            if arg in self.extra_args:
-                args[arg] = self.extra_args.pop(arg)
-            elif isinstance(v, numbers.Number) or v is None:
-                params.append(arg)
+        for arg in pars.args[1:len(pars.args) - len(pars.defaults or [])]:
+            params.append(arg)
+        if pars.defaults:
+            for arg, v in zip(pars.args[len(pars.args) - len(pars.defaults):],
+                              pars.defaults):
+                if arg in self.extra_args:
+                    args[arg] = self.extra_args.pop(arg)
+                elif (isinstance(v,
+                                 numbers.Number) or v is None) and 'version' not in arg:
+                    params.append(arg)
         return args, params
 
     def initialize_with_params(self):
@@ -413,6 +421,7 @@ class camb(BoltzmannBase):
                 if k == "sigma8":
                     self.extra_attrs["WantTransfer"] = True
                     self.needs_perts = True
+                    self.add_to_redshifts([0.])
             else:
                 raise LoggedError(self.log, "This should not be happening. Contact the "
                                             "developers.")
@@ -531,7 +540,7 @@ class camb(BoltzmannBase):
                 return derived
         # Specific calls, if general ones fail:
         if p == "sigma8":
-            return intermediates.results.get_sigma8()[-1]
+            return intermediates.results.get_sigma8_0()
         try:
             return getattr(intermediates.camb_params, p)
         except AttributeError:
@@ -565,7 +574,8 @@ class camb(BoltzmannBase):
             raise LoggedError(self.log, "No Cl's were computed. Are you sure that you "
                                         "have requested them?")
 
-        units_factor = self._cmb_unit_factor(units, current_state['derived_extra']['TCMB'])
+        units_factor = self._cmb_unit_factor(units,
+                                             current_state['derived_extra']['TCMB'])
 
         ls = np.arange(cl_camb.shape[0], dtype=np.int64)
         if not ell_factor:
@@ -772,7 +782,7 @@ class camb(BoltzmannBase):
         path = kwargs["path"]
         if path is not None and path.lower() == "global":
             path = None
-        if path and not kwargs.get("allow_global"):
+        if isinstance(path, str) and not kwargs.get("allow_global"):
             log.info("Importing *local* CAMB from " + path)
             if not os.path.exists(path):
                 log.error("The given folder does not exist: '%s'", path)

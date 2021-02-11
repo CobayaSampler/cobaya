@@ -100,7 +100,7 @@ If you are planning to modify CLASS or use an already modified version,
 you should not use the automatic installation script. Use the method below instead.
 
 CLASS's python interface utilizes the ``cython`` compiler. If typing ``cython`` in the
-shell produces an error, install it with ``python -m pip install cython --user``.
+shell produces an error, install it with ``python -m pip install cython``.
 
 .. note::
    The fast way, assuming you are installing all your cosmological codes under
@@ -143,7 +143,8 @@ from typing import NamedTuple, Sequence, Union, Optional
 # Local
 from cobaya.theories._cosmo import BoltzmannBase
 from cobaya.log import LoggedError
-from cobaya.install import download_github_release, pip_install, NotInstalledError
+from cobaya.install import download_github_release, pip_install, NotInstalledError, \
+    check_gcc_version
 from cobaya.tools import load_module, VersionCheckError
 
 
@@ -162,9 +163,13 @@ non_linear_default_code = "hmcode"
 
 
 class classy(BoltzmannBase):
+    r"""
+    CLASS cosmological Boltzmann code \cite{Blas:2011rf}.
+    """
     # Name of the Class repo/folder and version to download
     _classy_repo_name = "lesgourg/class_public"
     _min_classy_version = "v2.9.3"
+    _classy_min_gcc_version = "6.4"  # Lower ones are possible atm, but leak memory!
     _classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', _min_classy_version)
 
     def initialize(self):
@@ -204,7 +209,8 @@ class classy(BoltzmannBase):
                 self.extra_args["output"] += " lCl"
                 self.extra_args["lensing"] = "yes"
                 # For l_max_scalars, remember previous entries.
-                self.extra_args["l_max_scalars"] = max(v.values())
+                self.extra_args["l_max_scalars"] = \
+                    max(self.extra_args.get("l_max_scalars", 0), max(v.values()))
                 self.collectors[k] = Collector(
                     method="lensed_cl", kwargs={"lmax": self.extra_args["l_max_scalars"]})
                 if 'T_cmb' not in self.derived_extra:
@@ -267,10 +273,10 @@ class classy(BoltzmannBase):
             self.extra_args["modes"] = "s,t"
         # If B spectrum with l>50, or lensing, recommend using Halofit
         cls = self._must_provide.get("Cl", {})
-        if (((any(("b" in cl.lower()) for cl in cls) and
-              max(cls[cl] for cl in cls if "b" in cl.lower()) > 50) or
-             any(("p" in cl.lower()) for cl in cls) and
-             not self.extra_args.get("non linear"))):
+        has_BB_l_gt_50 = (any(("b" in cl.lower()) for cl in cls) and
+                          max(cls[cl] for cl in cls if "b" in cl.lower()) > 50)
+        has_lensing = any(("p" in cl.lower()) for cl in cls)
+        if (has_BB_l_gt_50 or has_lensing) and not self.extra_args.get("non linear"):
             self.log.warning("Requesting BB for ell>50 or lensing Cl's: "
                              "using a non-linear code is recommended (and you are not "
                              "using any). To activate it, set "
@@ -339,8 +345,8 @@ class classy(BoltzmannBase):
         # CLASS not correctly initialized, or input parameters not correct
         except CosmoSevereError:
             self.log.error("Serious error setting parameters or computing results. "
-                           "The parameters passed were %r and %r. "
-                           "See original CLASS's error traceback below.\n",
+                           "The parameters passed were %r and %r. To see the original "
+                           "CLASS' error traceback, make 'debug: True'.",
                            state["params"], self.extra_args)
             raise  # No LoggedError, so that CLASS traceback gets printed
         # Gather products
@@ -388,6 +394,7 @@ class classy(BoltzmannBase):
 
         To get a parameter *from a likelihood* use `get_param` instead.
         """
+        # TODO: fails with derived_requested=False
         # Put all parameters in CLASS nomenclature (self.derived_extra already is)
         requested = [self.translate_param(p) for p in (
             self.output_params if derived_requested else [])]
@@ -551,7 +558,18 @@ class classy(BoltzmannBase):
         if not success:
             log.error("Could not download classy.")
             return False
+        # Compilation
+        # gcc check after downloading, in case the user wants to change the compiler by
+        # hand in the Makefile
         classy_path = cls.get_path(path)
+        if not check_gcc_version(cls._classy_min_gcc_version, error_returns=False):
+            log.error("Your gcc version is too low! CLASS would probably compile, "
+                      "but it would leak memory when running a chain. Please use a "
+                      "gcc version newer than %s. You can still compile CLASS by hand, "
+                      "maybe changing the compiler in the Makefile. CLASS has been "
+                      "downloaded into %r",
+                      cls._classy_min_gcc_version, classy_path)
+            return False
         log.info("Compiling classy...")
         from subprocess import Popen, PIPE
         env = deepcopy(os.environ)

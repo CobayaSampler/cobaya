@@ -12,11 +12,7 @@ The only pre-requisites are **Python** (version ≥ 3.6) and the Python package 
 
    In some systems, the Python 3 command may be ``python3`` instead of ``python``. In this documentation, the shell command ``python`` always means Python 3.
 
-To check if you have Python installed, type ``python --version`` in the shell, and you should get ``Python 3.[whatever]``. Then, type ``python -m pip --version`` in the shell, and see if you get a proper version line starting with ``pip 20.0.0 [...]``. If an older version is shown, please update pip with ``python -m pip install pip --upgrade``. If either Python 3 is not installed, or the ``pip`` version check produces a ``no module named pip`` error, use your system's package manager or contact your local IT service.
-
-.. warning::
-
-   If any of the ``python -m pip install`` commands below fails (most likely with an ``[Errno 13] Permission denied``), add a ``--user`` flag at the end of the command.
+To check if you have Python installed, type ``python --version`` in the shell, and you should get ``Python 3.[whatever]``. Then, type ``python -m pip --version`` in the shell, and see if you get a proper version line starting with ``pip 20.0.0 [...]`` or a higher version. If an older version is shown, please update pip with ``python -m pip install pip --upgrade``. If either Python 3 is not installed, or the ``pip`` version check produces a ``no module named pip`` error, use your system's package manager or contact your local IT service.
 
 .. note::
 
@@ -64,6 +60,7 @@ To test the installation, run in a terminal
 
 This should print the version of ``mpi4py``, e.g. ``3.0.0``. If it prints a version smaller than 3, doesn't print anything, or fails with an error similar to ``ImportError: libmpi.so.12``, make sure that you have installed/loaded an MPI implementation and repeat the installation, or ask your local IT service for help.
 
+Note that some clusters do not allow you to run ``mpirun`` on a head node.
 
 .. _install:
 
@@ -101,6 +98,10 @@ If everything went well, you should be able to import **cobaya** in Python from 
 If you get an error message, something went wrong. Check twice the instructions above, try again, or contact us or your local Python guru.
 
 **cobaya** also installs some shell scripts. If everything went well, if you try to run in the shell ``cobaya-run``, you should get a message asking you for an input file, instead of a ``command not found`` error.
+
+.. warning::
+
+   Calling **cobaya**'s scripts directly may be deprecated in the future in favour of (safer) ``python -m cobaya [command]`` (e.g. ``python -m cobaya run`` instead of ``cobaya-run``), so you can ignore that ``command_not_found`` error and use the new behaviour instead.
 
 .. note::
 
@@ -201,7 +202,7 @@ The recommended way is to get a `GitHub <https://github.com>`_ user and `fork th
    $ git clone https://YOUR_USERNAME@github.com/YOUR_USERNAME/cobaya.git
    $ python -m pip install --editable cobaya[test,gui] --upgrade
 
-(add the --user option if you don't have write access to the default pip installation location). Here ``cobaya[test,gui]`` should include the square brackets. Remove ``,gui`` if desired to avoid unnecessary dependencies.
+Here ``cobaya[test,gui]`` should include the square brackets. Remove ``,gui`` if desired to avoid unnecessary dependencies.
 
 Alternatively, you can clone from the official **cobaya** repo (but this way you won't be able to upload your changes!).
 

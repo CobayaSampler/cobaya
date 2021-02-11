@@ -1,0 +1,10 @@
+# Freedman et al (2020) value of H0 = 69.6 +/- 1.88 km/s/Mpc
+# https://arxiv.org/abs/2002.01550
+
+H0_mean: 69.6
+# Error assuming Gaussian and adding systematic and statistical in quadrature
+H0_std: 1.88
+# Aliases for automatic covariance matrix
+aliases: [Riess18]
+# Speed in evaluations/second
+speed: 4500

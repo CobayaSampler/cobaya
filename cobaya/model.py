@@ -1061,7 +1061,7 @@ class Model(HasLogger):
         while n_done < int(n) + int(discard):
             point = self.prior.reference(
                 max_tries=max_tries, ignore_fixed=True, warn_if_no_ref=False)
-            if self.loglike(point, cached=False, return_derived=False) != -np.inf:
+            if self.loglike(point, cached=False, return_derived=True)[0] != -np.inf:
                 n_done += 1
         self.log.debug("Computed %d points to measure speeds.", n_done)
         times = [component.timer.get_time_avg() for component in self.components]

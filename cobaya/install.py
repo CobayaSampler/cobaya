@@ -120,7 +120,7 @@ def install(*infos, **kwargs):
             has_been_installed = False
             if not debug:
                 logging.disable(logging.ERROR)
-            if kwargs["skip_global"]:
+            if kwargs.get("skip_global"):
                 has_been_installed = is_installed(path="global", **kwargs_install)
             if not has_been_installed:
                 has_been_installed = is_installed(path=install_path, **kwargs_install)
@@ -130,7 +130,7 @@ def install(*infos, **kwargs):
                 log.info("External dependencies for this component already installed.")
                 if kwargs.get(_test_run, False):
                     continue
-                if kwargs_install["force"] and not kwargs["skip_global"]:
+                if kwargs_install["force"] and not kwargs.get("skip_global"):
                     log.info("Forcing re-installation, as requested.")
                 else:
                     log.info("Doing nothing.")
@@ -226,7 +226,8 @@ def download_file(url, path, no_progress_bars=False, decompress=False, logger=No
             except KeyError:
                 filename = os.path.basename(url)
             filename_tmp_path = os.path.normpath(os.path.join(tmp_path, filename))
-            open(filename_tmp_path, 'wb').write(req.content)
+            with open(filename_tmp_path, 'wb') as f:
+                f.write(req.content)
             logger.info('Downloaded filename %s', filename)
         except Exception as e:
             logger.error(
@@ -285,15 +286,11 @@ def pip_install(packages, upgrade=False):
     """
     Takes package name or list of them.
 
-    Uses ``--user`` flag if does not appear to have write permission to python path
-
     Returns exit status.
     """
     if hasattr(packages, "split"):
         packages = [packages]
     cmd = [sys.executable, '-m', 'pip', 'install']
-    if not os.access(os.path.dirname(sys.executable), os.W_OK):
-        cmd += ['--user']
     if upgrade:
         cmd += ['--upgrade']
     res = subprocess.call(cmd + packages)
@@ -323,6 +320,7 @@ def install_script():
     # Parse arguments
     import argparse
     parser = argparse.ArgumentParser(
+        prog="cobaya install",
         description="Cobaya's installation tool for external packages.")
     parser.add_argument("files_or_components", action="store", nargs="+",
                         metavar="input_file.yaml|component_name",

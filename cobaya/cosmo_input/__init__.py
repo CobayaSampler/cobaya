@@ -6,4 +6,4 @@ except ImportError:
 from .autoselect_covmat import get_best_covmat, _get_best_covmat
 from .create_input import create_input
 from .input_database import planck_base_model, base_precision, cmb_precision
-from .input_database import install_basic, install_tests
+from .input_database import install_basic, install_tests, _combo_dict_text
