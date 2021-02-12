@@ -352,7 +352,7 @@ class camb(BoltzmannBase):
 
                 def get_sigmaR(results, **tmp):
                     _indices = self._sigmaR_z_indices.get(var_pair)
-                    if not _indices:
+                    if _indices is None or list(_indices) == []:
                         z_indices = []
                         calc = np.array(results.Params.Transfer.PK_redshifts[
                                         :results.Params.Transfer.PK_num_redshifts])
