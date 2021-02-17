@@ -114,6 +114,9 @@ class BoltzmannBase(Theory):
         - ``comoving_radial_distance={'z': [z_1, ...]}``: Comoving radial distance
           from us to the redshifts requested. Get it with
           :func:`~BoltzmannBase.get_comoving_radial_distance`.
+        - ``sigma8={'z': [z_1, ...]}``: Amplitude of rms fluctuations
+          :math:`\sigma_8` at the redshifts requested. Get it with
+          :func:`~BoltzmannBase.get_sigma8`.
         - ``fsigma8={'z': [z_1, ...]}``: Structure growth rate
           :math:`f\sigma_8` at the redshifts requested. Get it with
           :func:`~BoltzmannBase.get_fsigma8`.
@@ -127,6 +130,7 @@ class BoltzmannBase(Theory):
         # Accumulate the requirements across several calls in a safe way;
         # e.g. take maximum of all values of a requested precision parameter
         for k, v in requirements.items():
+            #k = kk
             # Products and other computations
             if k == "Cl":
                 current = self._must_provide.get(k, {})
@@ -181,7 +185,7 @@ class BoltzmannBase(Theory):
                 #                 "%r vs %r.", window, self.sources[source])
                 self._must_provide[k].update(v)
             elif k in ["Hubble", "angular_diameter_distance",
-                       "comoving_radial_distance", "fsigma8"]:
+                       "comoving_radial_distance", "sigma8z", "fsigma8"]:
                 if k not in self._must_provide:
                     self._must_provide[k] = {}
                 self._must_provide[k]["z"] = np.unique(np.concatenate(
@@ -356,6 +360,16 @@ class BoltzmannBase(Theory):
         sources ``([source1], [source2])``, and an additional key ``ell`` containing the
         multipoles.
         """
+
+    def get_sigma8z(self, z):
+        r"""
+        Present day linear theory root-mean-square amplitude of the matter 
+        fluctuation spectrum averaged in spheres of radius 8 h^{−1} Mpc.
+
+        The redshifts must be a subset of those requested when
+        :func:`~BoltzmannBase.must_provide` was called.
+        """
+        pass
 
     def get_fsigma8(self, z):
         r"""
