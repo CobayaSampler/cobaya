@@ -22,8 +22,8 @@ import requests
 # Local
 from cobaya.log import logger_setup, LoggedError
 from cobaya.tools import create_banner, warn_deprecation, get_class, \
-    write_packages_path_in_config_file, get_config_path
-from cobaya.input import get_used_components, get_kind
+    write_packages_path_in_config_file, get_config_path, get_kind
+from cobaya.input import get_used_components
 from cobaya.conventions import _component_path, _code, _data, _external, _force, \
     _packages_path, _packages_path_arg, _packages_path_env, _yaml_extensions, _debug, \
     _install_skip_env, _packages_path_arg_posix, _packages_path_config_file, _test_run
