@@ -3,6 +3,7 @@
 
 :Synopsis: Interface for the PolyChord nested sampler
 :Author: Will Handley, Mike Hobson and Anthony Lasenby (for PolyChord),
+         Aleksandr Petrosyan (for supernest)
          Jesus Torrado (for the cobaya wrapper only)
 """
 # Global
@@ -34,8 +35,6 @@ from cobaya.conventions import _separator, _evidence_extension, _packages_path_a
 
 
 
-# TODO change to inherit from  CovmatSampler
-# TODO Jesus: Modify CovmatSampler to provide defaults to self.mean
 class polychord(CovmatSampler):
     # Name of the PolyChord repo and version to download
     _pc_repo_name = "PolyChord/PolyChordLite"
@@ -60,7 +59,8 @@ class polychord(CovmatSampler):
         # Allow global import if no direct path specification
         try:
             import supernest
-            self.use_supernest = self.use_supernest and True
+            # self.use_supernest = self.use_supernest and True
+            # This is effectively a no-op. 
         except ImportError as e:
             self.use_supernest = False
         allow_global = not self.path
@@ -156,7 +156,7 @@ class polychord(CovmatSampler):
         # TODO check this!
         if self.use_supernest:
             self.pc_settings = PolyChordSettings(
-                self.nDims+1,
+                self.nDims + 1, # FIXME: only true for one proposal. True for now, but may change in the future. 
                 self.nDerived,
                 seed=(self.seed if self.seed is not None else -1),
                 **{p: getattr(self, p) for p in pc_args
@@ -284,11 +284,15 @@ class polychord(CovmatSampler):
         self.mpi_info("Calling PolyChord...")
         if self.use_supernest:
             # TODO Check compatibility of arguments (in particular self._mean and self._covmat)
-            proposal = supernest.gaussian_proposal(
-                self.bounds, self._mean, self._covmat, loglike=logpost)
-            self.mpi_info('Success!')
-            nDims, ll, prior = supernest.superimpose((self.pc_prior, logpost), nDims = self.nDims)
-            self.pc.run_polychord(ll, nDims, self.nDerived, self.pc_settings, prior, self.dumper)
+            # AP: This is unnecessary if they're incompatible, raises a ValueError, at contruction.
+            try:
+                proposal = supernest.gaussian_proposal(
+                    self.bounds, self._mean, self._covmat, loglike=logpost)
+                self.mpi_info('Success!')
+                nDims, ll, prior = supernest.superimpose((self.pc_prior, logpost), nDims = self.nDims)
+                self.pc.run_polychord(ll, nDims, self.nDerived, self.pc_settings, prior, self.dumper)
+            except ValueError as e:
+                self.mpi_info(f'Failure: {e.message()}')
         else:
             self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
                                   self.pc_prior, self.dumper)
