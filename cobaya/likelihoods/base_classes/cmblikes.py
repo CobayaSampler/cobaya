@@ -306,7 +306,8 @@ class CMBlikes(DataSetLikelihood):
             self.nbins = ini.int('nbins')
             self.bin_min = ini.int('use_min', 1) - 1
             self.bin_max = ini.int('use_max', self.nbins) - 1
-            self.nbins_used = self.bin_max - self.bin_min + 1  # needed by read_bin_windows
+            # needed by read_bin_windows:
+            self.nbins_used = self.bin_max - self.bin_min + 1
             self.bins = self.read_bin_windows(ini, 'bin_window')
         else:
             if self.nmaps != self.nmaps_required:
@@ -551,7 +552,8 @@ class CMBlikes(DataSetLikelihood):
                         c.append(cls[i, j].CL[b - self.pcl_lmin])
                 f.write(("%I5 " + "%17.8e " * len(cols)) % tuple(c))
 
-    def transform(self, C, Chat, Cfhalf):
+    @staticmethod
+    def transform(C, Chat, Cfhalf):
         # HL transformation of the matrices
         if C.shape[0] == 1:
             rat = Chat[0, 0] / C[0, 0]
@@ -695,6 +697,7 @@ def save_cl_dict(filename, array_dict, lmin=2, lmax=None, cl_dict_lmin=0):
 
     :param filename: filename to save
     :param array_dict: dictionary of power spectra
+    :param lmin: minimum L to save
     :param lmax: maximum L to save
     :param cl_dict_lmin: L to start output in file (usually 0 or 2)
     """
@@ -798,15 +801,15 @@ def make_forecast_cmb_dataset(fiducial_Cl, output_root, output_dir=None,
     with open(os.path.join(output_dir, noise_file), 'w') as f:
         f.write('#L %s\n' % noise_cols)
 
-        for l in range(lmin, lmax + 1):
+        for ell in range(lmin, lmax + 1):
             noises = []
             if use_CMB:
-                noise_cl = l * (l + 1.) / 2 / np.pi * NoiseVar * np.exp(
-                    l * (l + 1) * sigma2)
+                noise_cl = ell * (ell + 1.) / 2 / np.pi * NoiseVar * np.exp(
+                    ell * (ell + 1) * sigma2)
                 noises += [noise_cl, ENoiseFac * noise_cl, ENoiseFac * noise_cl]
             if use_lensing:
-                noises += [lens_recon_noise[l]]
-            f.write("%d " % l + " ".join("%E" % elem for elem in noises) + "\n")
+                noises += [lens_recon_noise[ell]]
+            f.write("%d " % ell + " ".join("%E" % elem for elem in noises) + "\n")
 
     dataset['fullsky_exact_fksy'] = fsky
     dataset['dataset_format'] = 'CMBLike2'
