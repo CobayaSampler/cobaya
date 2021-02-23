@@ -721,9 +721,14 @@ def make_forecast_cmb_dataset(fiducial_Cl, output_root, output_dir=None,
                               lmin=2, lmax=None, fsky=1.0,
                               lens_recon_noise=None, cl_dict_lmin=0):
     """
-    Make a simulated .dataset and associated files with 'data' set at the input fiducial model.
+    Make a simulated .dataset and associated files with 'data' set at the input fiducial
+    model. Uses the exact full-sky log-likelihood, scaled by fsky.
 
-    :param fiducial_Cl: dictionary of Cls to use, any of tt, te, ee, bb, pp
+    If you want to use numerical N_L CMB noise files, you can just replace the noise
+    .dat text file produced by this function.
+
+    :param fiducial_Cl: dictionary of Cls to use, combination of tt, te, ee, bb, pp;
+                        note te must be included with tt and ee when using them
     :param output_root: root name for output files, e.g. 'my_sim1'
     :param output_dir: output directory
     :param noise_muK_arcmin_T: temperature noise in muK-arcmin
@@ -759,14 +764,22 @@ def make_forecast_cmb_dataset(fiducial_Cl, output_root, output_dir=None,
         elif noise_muK_arcmin_T is not None or noise_muK_arcmin_P is not None:
             raise ValueError('Specific either noise_muK_arcmin or NoiseVar')
         fields_use = ''
-        if 'tt' in cl_keys or 'te' in cl_keys: fields_use = 'T'
-        if 'ee' in cl_keys or 'te' in cl_keys: fields_use += ' E'
-        if 'bb' in cl_keys: fields_use += ' B'
-        if 'pp' in cl_keys and use_lensing: fields_use += ' P'
+        if 'tt' in cl_keys or 'te' in cl_keys:
+            fields_use = 'T'
+        if 'ee' in cl_keys or 'te' in cl_keys:
+            fields_use += ' E'
+        if 'bb' in cl_keys:
+            fields_use += ' B'
+        if 'pp' in cl_keys and use_lensing:
+            fields_use += ' P'
+        if 'tt' in cl_keys and 'ee' in cl_keys and 'te' not in cl_keys:
+            raise ValueError('Input power spectra should have te if using tt and ee -'
+                             'using the exact likelihood requires the full covariance.')
     else:
         fields_use = 'P'
 
-    if not os.path.exists(output_dir): os.makedirs(output_dir)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
     dataset['fields_use'] = fields_use
 
@@ -775,18 +788,24 @@ def make_forecast_cmb_dataset(fiducial_Cl, output_root, output_dir=None,
         xlc = 180 * np.sqrt(8. * np.log(2.)) / np.pi
         sigma2 = (fwhm / xlc) ** 2
         noise_cols = 'TT           EE          BB'
-        if use_lensing: noise_cols += '          PP'
+        if use_lensing:
+            noise_cols += '          PP'
     elif use_lensing:
         noise_cols = 'PP'
+    else:
+        raise ValueError('Must use CMB or lensing C_L')
     noise_file = output_root + '_Noise.dat'
     with open(os.path.join(output_dir, noise_file), 'w') as f:
         f.write('#L %s\n' % noise_cols)
 
         for l in range(lmin, lmax + 1):
-            NoiseCl = l * (l + 1.) / 2 / np.pi * NoiseVar * np.exp(l * (l + 1) * sigma2)
             noises = []
-            if use_CMB: noises += [NoiseCl, ENoiseFac * NoiseCl, ENoiseFac * NoiseCl]
-            if use_lensing: noises += [lens_recon_noise[l]]
+            if use_CMB:
+                noise_cl = l * (l + 1.) / 2 / np.pi * NoiseVar * np.exp(
+                    l * (l + 1) * sigma2)
+                noises += [noise_cl, ENoiseFac * noise_cl, ENoiseFac * noise_cl]
+            if use_lensing:
+                noises += [lens_recon_noise[l]]
             f.write("%d " % l + " ".join("%E" % elem for elem in noises) + "\n")
 
     dataset['fullsky_exact_fksy'] = fsky
