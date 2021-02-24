@@ -336,7 +336,7 @@ class camb(BoltzmannBase):
                 self.collectors[k] = Collector(
                     method=getattr(CAMBdata, k),
                     kwargs={"z": self._combine_z(k, v)})
-            elif k == "sigma8z":
+            elif k == "sigma8_z":
                 self.add_to_redshifts(v["z"])
                 self.collectors[k] = Collector(
                     method=CAMBdata.get_sigma8,
@@ -611,7 +611,7 @@ class camb(BoltzmannBase):
         return cls
 
     def _get_z_dependent(self, quantity, z):
-        if quantity in ["sigma8z", "fsigma8"]:
+        if quantity in ["sigma8_z", "fsigma8"]:
             computed_redshifts = self.extra_args["redshifts"]
             i_kwarg_z = np.concatenate(
                 [np.where(computed_redshifts == zi)[0] for zi in np.atleast_1d(z)])
@@ -620,8 +620,8 @@ class camb(BoltzmannBase):
             i_kwarg_z = np.searchsorted(computed_redshifts, np.atleast_1d(z))
         return np.array(self._current_state[quantity], copy=True)[i_kwarg_z]
 
-    def get_sigma8z(self, z):        
-        return self._get_z_dependent("sigma8z", z)
+    def get_sigma8_z(self, z):        
+        return self._get_z_dependent("sigma8_z", z)
 
     def get_fsigma8(self, z):
         return self._get_z_dependent("fsigma8", z)
