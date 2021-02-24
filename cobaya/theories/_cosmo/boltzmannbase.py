@@ -114,7 +114,7 @@ class BoltzmannBase(Theory):
         - ``comoving_radial_distance={'z': [z_1, ...]}``: Comoving radial distance
           from us to the redshifts requested. Get it with
           :func:`~BoltzmannBase.get_comoving_radial_distance`.
-        - ``sigma8={'z': [z_1, ...]}``: Amplitude of rms fluctuations
+        - ``sigma8_z={'z': [z_1, ...]}``: Amplitude of rms fluctuations
           :math:`\sigma_8` at the redshifts requested. Get it with
           :func:`~BoltzmannBase.get_sigma8`.
         - ``fsigma8={'z': [z_1, ...]}``: Structure growth rate
@@ -130,7 +130,6 @@ class BoltzmannBase(Theory):
         # Accumulate the requirements across several calls in a safe way;
         # e.g. take maximum of all values of a requested precision parameter
         for k, v in requirements.items():
-            #k = kk
             # Products and other computations
             if k == "Cl":
                 current = self._must_provide.get(k, {})
