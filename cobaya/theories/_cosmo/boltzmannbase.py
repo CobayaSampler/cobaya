@@ -252,6 +252,7 @@ class BoltzmannBase(Theory):
         the lensing potential ``pp`` spectrum).
         """
 
+    @abstract
     def get_unlensed_Cl(self, ell_factor=False, units="FIRASmuK2"):
         r"""
         Returns a dictionary of unlensed CMB power spectra.
@@ -261,7 +262,6 @@ class BoltzmannBase(Theory):
         If ``ell_factor=True`` (default: ``False``), multiplies the spectra by
         :math:`\ell(\ell+1)/(2\pi)`.
         """
-        pass
 
     def get_Hubble(self, z, units="km/s/Mpc"):
         r"""
