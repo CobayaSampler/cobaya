@@ -235,7 +235,9 @@ class LikelihoodExternalFunction(Likelihood):
         except Exception as ex:
             if isinstance(ex, LoggedError):
                 # Assume proper error info was written before raising LoggedError
-                pass
+                self.log.error("The external likelihood '%s' failed at evaluation.",
+                               self.get_name())
+                raise
             else:
                 # Print traceback
                 self.log.error("".join(

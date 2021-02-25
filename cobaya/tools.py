@@ -735,7 +735,8 @@ def get_class_methods(cls, not_base=None, start='get_', excludes=(), first='self
     for k, v in inspect.getmembers(cls):
         if k.startswith(start) and k not in excludes and \
                 (not_base is None or not hasattr(not_base, k)) and \
-                getfullargspec(v).args[:1] == [first]:
+                getfullargspec(v).args[:1] == [first] and \
+                not getattr(v, '_is_abstract', None):
             methods[k[len(start):]] = v
     return methods
 
