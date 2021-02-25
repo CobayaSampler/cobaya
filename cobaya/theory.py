@@ -252,7 +252,12 @@ class Theory(CobayaComponent):
                 raise
             except Exception as e:
                 if self.stop_at_error:
-                    raise LoggedError(self.log, "Error at evaluation: %r", e)
+                    if isinstance(e, LoggedError):
+                        # Assume informative error message provided
+                        raise LoggedError(self.log, "Error at evaluation: %r", e)
+                    else:
+                        self.log.error("Error at evaluation. See traceback below.")
+                        raise
                 else:
                     self.log.debug(
                         "Ignored error at evaluation and assigned 0 likelihood "
