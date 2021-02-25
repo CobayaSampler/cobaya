@@ -13,7 +13,7 @@ from typing import Mapping, Iterable
 # Local
 from cobaya.theory import Theory
 from cobaya.tools import deepcopy_where_possible
-from cobaya.log import LoggedError
+from cobaya.log import LoggedError, abstract
 from cobaya.conventions import _c_km_s, empty_dict
 
 H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": _c_km_s}
@@ -224,6 +224,7 @@ class BoltzmannBase(Theory):
             raise LoggedError(self.log, "Units '%s' not recognized. Use one of %s.",
                               units, list(units_factors))
 
+    @abstract
     def get_Cl(self, ell_factor=False, units="FIRASmuK2"):
         r"""
         Returns a dictionary of lensed CMB power spectra and the lensing potential ``pp``
@@ -240,7 +241,6 @@ class BoltzmannBase(Theory):
         :math:`\ell(\ell+1)/(2\pi)` (or by :math:`\ell^2(\ell+1)^2/(2\pi)` in the case of
         the lensing potential ``pp`` spectrum).
         """
-        pass
 
     def get_Hubble(self, z, units="km/s/Mpc"):
         r"""
@@ -350,6 +350,7 @@ class BoltzmannBase(Theory):
         except KeyError:
             raise LoggedError(self.log, "sigmaR %s not computed" % var_pair)
 
+    @abstract
     def get_source_Cl(self):
         r"""
         Returns a dict of power spectra of for the computed sources, with keys a tuple of
@@ -357,6 +358,7 @@ class BoltzmannBase(Theory):
         multipoles.
         """
 
+    @abstract
     def get_fsigma8(self, z):
         r"""
         Structure growth rate :math:`f\sigma_8`, as defined in eq. 33 of
@@ -366,7 +368,6 @@ class BoltzmannBase(Theory):
         The redshifts must be a subset of those requested when
         :func:`~BoltzmannBase.must_provide` was called.
         """
-        pass
 
     def get_auto_covmat(self, params_info, likes_info):
         r"""

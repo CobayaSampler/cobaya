@@ -11,6 +11,7 @@ import sys
 import logging
 import traceback
 from copy import deepcopy
+import functools
 
 # Local
 from cobaya.conventions import _debug, _debug_file
@@ -36,6 +37,23 @@ class LoggedError(Exception):
 # Exceptions that will never be ignored when a component's calculation fails
 always_stop_exceptions = (LoggedError, KeyboardInterrupt, SystemExit, NameError,
                           SyntaxError, AttributeError, KeyError)
+
+
+def abstract(method):
+    # abstract method decorator for base class HasLogger methods
+
+    @functools.wraps(method)
+    def not_implemented(self, *args, **kwargs):
+        if getattr(getattr(self, method.__name__, None), '_is_abstract', None):
+            # OK to call if called via super, but not if not over-ridden
+            raise LoggedError(self.log, "%s NotImplemented in %s", method.__name__,
+                              self.__class__.__name__)
+        else:
+            return method(self, *args, **kwargs)
+
+    not_implemented._is_abstract = True
+
+    return not_implemented
 
 
 def safe_exit():
