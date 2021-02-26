@@ -216,37 +216,25 @@ class LikelihoodExternalFunction(Likelihood):
         # END OF DEPRECATION BLOCK
         try:
             return_value = self.external_function(**params_values)
-            bad_return_msg = "Expected return value `(logp, {derived_params_dict})`."
-            if hasattr(return_value, "__len__"):
-                logp = return_value[0]
-                if self.output_params:
-                    try:
-                        if _derived is not None:
-                            _derived.update(return_value[1])
-                            params_values["_derived"] = _derived
-                    except:
-                        raise LoggedError(self.log, bad_return_msg)
-            # MARKED FOR DEPRECATION IN v3.0 --> just after the `not` below
-            elif self.output_params and not self._derived_through_arg:
-                raise LoggedError(self.log, bad_return_msg)
-            else:  # no return.__len__ and output_params expected
-                logp = return_value
-            return logp
-        except Exception as ex:
-            if isinstance(ex, LoggedError):
-                # Assume proper error info was written before raising LoggedError
-                self.log.error("The external likelihood '%s' failed at evaluation.",
-                               self.get_name())
-                raise
-            else:
-                # Print traceback
-                self.log.error("".join(
-                    ["-"] * 16 + ["\n\n"] +
-                    list(traceback.format_exception(*sys.exc_info())) +
-                    ["\n"] + ["-"] * 37))
-            raise LoggedError(
-                self.log, "The external likelihood '%s' failed at evaluation. "
-                          "See error info on top of this message.", self.get_name())
+        except:
+            self.log.debug("External function failed at evaluation.")
+            raise
+        bad_return_msg = "Expected return value `(logp, {derived_params_dict})`."
+        if hasattr(return_value, "__len__"):
+            logp = return_value[0]
+            if self.output_params:
+                try:
+                    if _derived is not None:
+                        _derived.update(return_value[1])
+                        params_values["_derived"] = _derived
+                except:
+                    raise LoggedError(self.log, bad_return_msg)
+        # MARKED FOR DEPRECATION IN v3.0 --> just after the `not` below
+        elif self.output_params and not self._derived_through_arg:
+            raise LoggedError(self.log, bad_return_msg)
+        else:  # no return.__len__ and output_params expected
+            logp = return_value
+        return logp
 
 
 class LikelihoodCollection(ComponentCollection):

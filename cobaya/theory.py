@@ -250,24 +250,18 @@ class Theory(CobayaComponent):
                     return False
             except always_stop_exceptions:
                 raise
-            except Exception as e:
+            except Exception as excpt:
                 if self.stop_at_error:
-                    if isinstance(e, LoggedError):
-                        # Assume informative error message provided
-                        raise LoggedError(self.log, "Error at evaluation: %r", e)
-                    else:
-                        self.log.error("Error at evaluation. See traceback below.")
-                        raise
+                    self.log.error("Error at evaluation. See error information below.")
+                    raise
                 else:
                     self.log.debug(
                         "Ignored error at evaluation and assigned 0 likelihood "
                         "(set 'stop_at_error: True' as an option for this component "
-                        "to stop here). Error message: %r", e)
+                        "to stop here and print a traceback). Error message: %r", excpt)
                     return False
-
             if self.timer:
                 self.timer.increment(self.log)
-
         # make this state the current one
         self._states.appendleft(state)
         self._current_state = state
