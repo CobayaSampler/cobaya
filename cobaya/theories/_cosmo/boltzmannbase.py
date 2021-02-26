@@ -135,6 +135,7 @@ class BoltzmannBase(Theory):
             # Products and other computations
             if k == "Cl":
                 current = self._must_provide.get(k, {})
+                v = {cl.lower(): v[cl] for cl in v}  # to lowercase
                 self._must_provide[k] = {
                     cl.lower(): max(current.get(cl.lower(), 0), v.get(cl, 0))
                     for cl in set(current).union(v)}
