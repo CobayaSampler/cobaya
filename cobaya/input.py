@@ -124,7 +124,7 @@ def get_default_info(component_or_class, kind=None, return_yaml=False,
         raise LoggedError(log, "Failed to get defaults for component or class '%s' [%s]",
                           component_or_class, e)
     if return_undefined_annotations:
-        annotations = {k: v for k, v in cls.get_annotations() if
+        annotations = {k: v for k, v in cls.get_annotations().items() if
                        k not in default_component_info}
         return default_component_info, annotations
     else:
