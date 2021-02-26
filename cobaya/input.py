@@ -84,7 +84,7 @@ def get_used_components(*infos, return_infos=False):
         for kind in kinds:
             try:
                 components[kind] += [a for a in (info.get(kind) or [])
-                                      if a not in components[kind]]
+                                     if a not in components[kind]]
             except TypeError:
                 raise LoggedError(
                     log, "Your input info is not well formatted at the '%s' block. "
@@ -98,19 +98,24 @@ def get_used_components(*infos, return_infos=False):
     return (components, dict(components_infos)) if return_infos else components
 
 
+def get_resolved_class(component_or_class, kind=None, component_path=None,
+                       class_name=None):
+    if inspect.isclass(component_or_class):
+        return component_or_class
+    else:
+        return get_class(
+            class_name or component_or_class, kind, component_path=component_path)
+
+
 def get_default_info(component_or_class, kind=None, return_yaml=False,
                      yaml_expand_defaults=True, component_path=None,
-                     input_options=empty_dict, class_name=None):
+                     input_options=empty_dict, class_name=None,
+                     return_undefined_annotations=False):
     """
     Get default info for a component_or_class.
     """
-    _kind = kind
     try:
-        if inspect.isclass(component_or_class):
-            cls = component_or_class
-        else:
-            cls = get_class(
-                class_name or component_or_class, _kind, component_path=component_path)
+        cls = get_resolved_class(component_or_class, kind, component_path, class_name)
         default_component_info = \
             cls.get_defaults(return_yaml=return_yaml,
                              yaml_expand_defaults=yaml_expand_defaults,
@@ -118,7 +123,13 @@ def get_default_info(component_or_class, kind=None, return_yaml=False,
     except Exception as e:
         raise LoggedError(log, "Failed to get defaults for component or class '%s' [%s]",
                           component_or_class, e)
-    return default_component_info
+    if return_undefined_annotations:
+        annotations = cls.__annotations__.copy()
+        for k in default_component_info:
+            annotations.pop(k, None)
+        return default_component_info, annotations
+    else:
+        return default_component_info
 
 
 def update_info(info):
@@ -165,19 +176,21 @@ def update_info(info):
                     not isinstance(input_block[component], dict):
                 input_block[component] = {_external: input_block[component]}
             ext = input_block[component].get(_external)
+            annotations = {}
             if ext:
                 if inspect.isclass(ext):
-                    default_class_info = get_default_info(ext, block,
-                                                          input_options=input_block[
-                                                              component])
+                    default_class_info, annotations = \
+                        get_default_info(ext, block, input_options=input_block[component],
+                                         return_undefined_annotations=True)
                 else:
                     default_class_info = deepcopy_where_possible(
                         component_base_classes[block].get_defaults())
             else:
                 component_path = input_block[component].get(_component_path, None)
-                default_class_info = get_default_info(
+                default_class_info, annotations = get_default_info(
                     component, block, class_name=input_block[component].get(_class_name),
-                    component_path=component_path, input_options=input_block[component])
+                    component_path=component_path, input_options=input_block[component],
+                    return_undefined_annotations=True)
             updated[component] = default_class_info or {}
             # Update default options with input info
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
@@ -186,7 +199,8 @@ def update_info(info):
                         _input_params, _output_params, _component_path, _aliases}
             options_not_recognized = (set(input_block[component])
                                       .difference(reserved)
-                                      .difference(set(updated[component])))
+                                      .difference(set(updated[component]))
+                                      .difference(set(annotations)))
             if options_not_recognized:
                 alternatives = {}
                 available = (
