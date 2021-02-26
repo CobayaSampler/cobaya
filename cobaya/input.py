@@ -691,7 +691,8 @@ class HasDefaults:
             if issubclass(base, HasDefaults) and base is not HasDefaults:
                 d.update(base.get_annotations())
 
-        d.update({k: v for k, v in cls.__annotations__.items() if not k.startswith('_')})
+            d.update({k: v for k, v in cls.__dict__.get("__annotations__", {}).items()
+                      if not k.startswith('_')})
         return d
 
 

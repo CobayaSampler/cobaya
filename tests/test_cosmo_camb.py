@@ -43,6 +43,8 @@ def test_sources(packages_path, skip_not_installed):
 
     # noinspection PyDefaultArgument
     def test_likelihood(_self):
+        import cobaya.log
+        raise LoggedError("test msg")
         assert abs(
             _self.provider.get_source_Cl()[('source1', 'source1')][100] / dic['W1xW1'][
                 100] - 1) < 0.001, \
