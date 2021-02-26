@@ -689,10 +689,8 @@ class HasDefaults:
         d = {}
         for base in cls.__bases__:
             if issubclass(base, HasDefaults) and base is not HasDefaults:
-                try:
-                    d.update(base.get_annotations())
-                except AttributeError:
-                    pass
+                d.update(base.get_annotations())
+
         d.update({k: v for k, v in cls.__annotations__.items() if not k.startswith('_')})
         return d
 
