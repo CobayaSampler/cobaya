@@ -124,8 +124,8 @@ def get_default_info(component_or_class, kind=None, return_yaml=False,
         raise LoggedError(log, "Failed to get defaults for component or class '%s' [%s]",
                           component_or_class, e)
     if return_undefined_annotations:
-        annotations = {k: v for k, v in cls.__annotations__ if not k.startswith('_')
-                       and k not in default_component_info}
+        annotations = {k: v for k, v in cls.get_annotations() if
+                       k not in default_component_info}
         return default_component_info, annotations
     else:
         return default_component_info
@@ -683,6 +683,18 @@ class HasDefaults:
             return yaml_dump(defaults)
         else:
             return defaults
+
+    @classmethod
+    def get_annotations(cls):
+        d = {}
+        for base in cls.__bases__:
+            if issubclass(base, HasDefaults) and base is not HasDefaults:
+                try:
+                    d.update(base.get_annotations())
+                except AttributeError:
+                    pass
+        d.update({k: v for k, v in cls.__annotations__.items() if not k.startswith('_')})
+        return d
 
 
 def make_auto_params(auto_params, params_info):
