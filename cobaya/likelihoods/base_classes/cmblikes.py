@@ -26,11 +26,8 @@ class CMBlikes(DataSetLikelihood):
     # Data type for aggregated chi2 (case sensitive)
     type = "CMB"
 
-    map_separator: str
-    lmin: Sequence[int]
-    lmax: Sequence[int]
-    lav: Sequence[int]
-    Ahat: np.ndarray  # not used by likelihood
+    # used to form spectra names, e.g. AmapxBmap
+    map_separator: str = 'x'
 
     def get_requirements(self):
         # State requisites to the theory code
@@ -429,23 +426,16 @@ class CMBlikes(DataSetLikelihood):
 
     def writeData(self, froot):
         np.savetxt(froot + '_cov.dat', self.cov)
-        # self.saveCl(froot + '_fid_cl.dat', self.fid_cl[:, 1:],
-        #             cols=['TT', 'EE', 'TE', 'PP'])
-        with open(froot + '_bandpowers.dat', 'w', encoding="utf-8") as f:
-            f.write("#%4s %5s %5s %8s %12s %10s %7s\n" %
-                    ('bin', 'L_min', 'L_max', 'L_av', 'PP', 'Error', 'Ahat'))
-            for b in range(self.nbins):
-                f.write("%5u %5u %5u %8.2f %12.5e %10.3e %7.3f\n" %
-                        (b + 1, self.lmin[b], self.lmax[b], self.lav[b],
-                         self.bandpowers[b], np.sqrt(self.cov[b, b]), self.Ahat[b]))
+        np.savetxt(froot + '_bandpowers.dat', self.full_bandpowers,
+                   header=" ".join(self.full_bandpower_headers))
         self.bins.write(froot, 'bin')
         if self.linear_correction is not None:
             self.linear_correction.write(froot, 'linear_correction_bin')
 
-        with open(froot + '_lensing_fiducial_correction', 'w', encoding="utf-8") as f:
-            f.write("#%4s %12s \n" % ('bin', 'PP'))
-            for b in range(self.nbins):
-                f.write("%5u %12.5e\n" % (b + 1, self.fid_correction[b]))
+            with open(froot + '_lensing_fiducial_correction', 'w', encoding="utf-8") as f:
+                f.write("#%4s %12s \n" % ('bin', 'PP'))
+                for b in range(self.nbins):
+                    f.write("%5u %12.5e\n" % (b + 1, self.fid_correction[b]))
 
     def diag_sigma(self):
         return np.sqrt(np.diag(self.full_cov))
