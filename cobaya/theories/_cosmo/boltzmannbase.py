@@ -302,7 +302,7 @@ class BoltzmannBase(Theory):
 
     def get_Pk_interpolator(self, var_pair=("delta_tot", "delta_tot"), nonlinear=True,
                             extrap_kmax=None):
-        """
+        r"""
         Get a :math:`P(z,k)` bicubic interpolation object
         (:class:`PowerSpectrumInterpolator`).
 
@@ -340,7 +340,7 @@ class BoltzmannBase(Theory):
         return result
 
     def get_Pk_grid(self, var_pair=("delta_tot", "delta_tot"), nonlinear=True):
-        """
+        r"""
         Get  matter power spectrum, e.g. suitable for splining.
         Returned arrays may be bigger or more densely sampled than requested, but will
         include required values.
@@ -366,7 +366,7 @@ class BoltzmannBase(Theory):
             raise LoggedError(self.log, "Matter power %s, %s not computed" % var_pair)
 
     def get_sigma_R(self, var_pair=("delta_tot", "delta_tot")):
-        """
+        r"""
         Get :math:`\sigma_R(z)`, the RMS power in an sphere of radius :math:`R` at
         redshift :math:`z`.
 
