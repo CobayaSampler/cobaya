@@ -9,7 +9,7 @@
    <br />
 
 This module imports and manages the CAMB cosmological code.
-It requires CAMB 1.1.2 or higher.
+It requires CAMB 1.1.3 or higher.
 
 .. note::
 
@@ -358,7 +358,7 @@ class camb(BoltzmannBase):
 
                 def get_sigmaR(results, **tmp):
                     _indices = self._sigmaR_z_indices.get(var_pair)
-                    if not _indices:
+                    if _indices is None or list(_indices) == []:
                         z_indices = []
                         calc = np.array(results.Params.Transfer.PK_redshifts[
                                         :results.Params.Transfer.PK_num_redshifts])
@@ -732,8 +732,7 @@ class camb(BoltzmannBase):
                     params.SourceWindows = source_windows
                     params.SourceTerms.limber_windows = self.limber
                 self._base_params = params
-            else:
-                args.update(self._reduced_extra_args)
+            args.update(self._reduced_extra_args)
             return self.camb.set_params(self._base_params.copy(), **args)
         except self.camb.baseconfig.CAMBParamRangeError:
             if self.stop_at_error:
