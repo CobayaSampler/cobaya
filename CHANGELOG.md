@@ -35,6 +35,7 @@
 #### CAMB
 
 - Fixed wrong sigma8 when z=0 not requested; fixes #128, #130, #132 (thanks @Pablo-Lemos and @msyriac)
+- Interfaced sigma8 for arbitrary redshift (PR #144; thanks @Pablo-Lemos)
 
 #### CLASS
 
