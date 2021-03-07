@@ -27,8 +27,8 @@ class LoggedError(Exception):
 
     def __init__(self, logger, *args, **kwargs):
         if not isinstance(logger, logging.Logger):
-            raise ValueError("The first argument of %s must be a logger instance." %
-                             self.__class__.__name__)
+            raise SyntaxError("The first argument of %s must be a logger instance." %
+                              self.__class__.__name__)
         if args:
             logger.error(*args, **kwargs)
         msg = args[0] if len(args) else ""
