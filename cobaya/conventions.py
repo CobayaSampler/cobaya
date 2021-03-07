@@ -43,7 +43,6 @@ _timing = "timing"
 _force = "force"
 _test_run = "test"
 _component_path = "python_path"
-_component_class_name = "class_name"
 _aliases = "aliases"
 _version = "version"
 

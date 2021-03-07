@@ -23,8 +23,6 @@ class can be used as and when needed.
 """
 
 # Global
-import sys
-import traceback
 import inspect
 from time import sleep
 from typing import Mapping, Optional, Union
@@ -34,7 +32,8 @@ import numpy as np
 # Local
 from cobaya.conventions import kinds, _external, _component_path, empty_dict, \
     _input_params, _output_params, _requires, _class_name
-from cobaya.tools import get_class, get_external_function, getfullargspec, str_to_list
+from cobaya.tools import get_resolved_class, get_external_function, getfullargspec, \
+    str_to_list
 from cobaya.log import LoggedError
 from cobaya.component import ComponentCollection
 from cobaya.theory import Theory
@@ -273,9 +272,10 @@ class LikelihoodCollection(ComponentCollection):
                     self.add_instance(name, LikelihoodExternalFunction(info, name,
                                                                        timing=timing))
             else:
-                like_class = get_class(
-                    info.get(_class_name) or name, kind=kinds.likelihood,
-                    component_path=info.pop(_component_path, None))
+                like_class = get_resolved_class(
+                    name, kind=kinds.likelihood,
+                    component_path=info.pop(_component_path, None),
+                    class_name=info.get(_class_name))
                 self.add_instance(name, like_class(info, packages_path=packages_path,
                                                    timing=timing, standalone=False,
                                                    name=name))

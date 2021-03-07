@@ -247,6 +247,22 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
             raise exc_info[1]
 
 
+def get_resolved_class(component_or_class, kind=None, component_path=None,
+                       class_name=None):
+    """
+    Returns the class corresponding to the component indicated as first argument.
+
+    If the first argument is a class, it is simply returned. If it is a string, it
+    retrieves the corresponding class name, using the value of `class_name` instead if
+    present.
+    """
+    if inspect.isclass(component_or_class):
+        return component_or_class
+    else:
+        return get_class(
+            class_name or component_or_class, kind, component_path=component_path)
+
+
 def import_all_classes(path, pkg, subclass_of, hidden=False, helpers=False):
     import pkgutil
     result = set()

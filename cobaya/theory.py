@@ -37,7 +37,7 @@ from typing import Sequence, Optional, Union
 from cobaya.conventions import _external, kinds, _requires, _params, empty_dict, \
     _class_name
 from cobaya.component import CobayaComponent, ComponentCollection
-from cobaya.tools import get_class, str_to_list
+from cobaya.tools import get_resolved_class, str_to_list
 from cobaya.log import LoggedError, always_stop_exceptions
 from cobaya.tools import get_class_methods
 
@@ -369,8 +369,8 @@ class TheoryCollection(ComponentCollection):
                             raise LoggedError(self.log,
                                               "Theory %s is not a Theory subclass", name)
                     else:
-                        theory_class = get_class(
-                            info.get(_class_name) or name, kind=kinds.theory)
+                        theory_class = get_resolved_class(
+                            name, kind=kinds.theory, class_name=info.get(_class_name))
                     self.add_instance(
                         name, theory_class(
                             info, packages_path=packages_path, timing=timing, name=name))

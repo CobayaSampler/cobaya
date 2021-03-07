@@ -26,7 +26,7 @@ from cobaya.conventions import _products_path, _packages_path, _resume, _force, 
     _aliases, _yaml_extensions, reserved_attributes, empty_dict, _get_chi2_name, \
     _get_chi2_label, _test_run, _version, _class_name
 from cobaya.tools import recursive_update, str_to_list, get_base_classes, \
-    fuzzy_match, deepcopy_where_possible, get_class
+    fuzzy_match, deepcopy_where_possible, get_resolved_class
 from cobaya.yaml import yaml_load_file, yaml_dump
 from cobaya.log import LoggedError
 from cobaya.parameterization import expand_info_param
@@ -96,15 +96,6 @@ def get_used_components(*infos, return_infos=False):
     # return dictionary of non-empty blocks
     components = {k: v for k, v in components.items() if v}
     return (components, dict(components_infos)) if return_infos else components
-
-
-def get_resolved_class(component_or_class, kind=None, component_path=None,
-                       class_name=None):
-    if inspect.isclass(component_or_class):
-        return component_or_class
-    else:
-        return get_class(
-            class_name or component_or_class, kind, component_path=component_path)
 
 
 def get_default_info(component_or_class, kind=None, return_yaml=False,
@@ -423,9 +414,9 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
                         try:
                             component_path = block1[k].pop(_component_path, None) \
                                 if isinstance(block1[k], dict) else None
-                            class_name = (block1[k] or {}).get(_class_name) or k
-                            cls = get_class(
-                                class_name, block_name, component_path=component_path)
+                            cls = get_resolved_class(
+                                k, kind=block_name, component_path=component_path,
+                                class_name=(block1[k] or {}).get(_class_name))
                             ignore_k_this = ignore_k_this.union(
                                 set(getattr(cls, "_at_resume_prefer_new", {})))
                         except ImportError:
@@ -458,8 +449,9 @@ def get_preferred_old_values(info_old):
             try:
                 component_path = block[k].pop(_component_path, None) \
                     if isinstance(block[k], dict) else None
-                class_name = (block[k] or {}).get(_class_name) or k
-                cls = get_class(class_name, block_name, component_path=component_path)
+                cls = get_resolved_class(
+                    k, kind=block_name, component_path=component_path,
+                    class_name=(block[k] or {}).get(_class_name))
                 prefer_old_k_this = getattr(cls, "_at_resume_prefer_old", {})
                 if prefer_old_k_this:
                     if block_name not in keep_old:
