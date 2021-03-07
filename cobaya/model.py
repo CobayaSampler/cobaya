@@ -775,7 +775,7 @@ class Model(HasLogger):
                                     raise LoggedError(
                                         self.log,
                                         "Parameter '%s' needed as input for '%s', "
-                                        "but not provided.", p, component.name)
+                                        "but not provided.", p, component.get_name())
                 # 2. Is there a params prefix?
                 elif getattr(component, prefix, None) is not None:
                     for p in params_assign[io_kind]:
