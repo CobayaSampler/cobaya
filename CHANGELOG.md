@@ -1,3 +1,10 @@
+## 3.1 – 2021-YY-ZZ
+
+#### CAMB
+
+- Interfaced sigma8 for arbitrary redshift (PR #144; thanks @Pablo-Lemos)
+
+
 ## 3.0.3 – 2021-01-16
 
 ### General
@@ -35,7 +42,6 @@
 #### CAMB
 
 - Fixed wrong sigma8 when z=0 not requested; fixes #128, #130, #132 (thanks @Pablo-Lemos and @msyriac)
-- Interfaced sigma8 for arbitrary redshift (PR #144; thanks @Pablo-Lemos)
 
 #### CLASS
 
