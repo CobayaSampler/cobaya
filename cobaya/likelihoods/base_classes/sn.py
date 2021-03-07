@@ -234,7 +234,7 @@ class SN(DataSetLikelihood):
             self.int_points = _int_points
             self.alpha_grid = self.alpha_grid[:_int_points]
             self.beta_grid = self.beta_grid[:_int_points]
-            self.invcovs = np.empty(_int_points, dtype=np.object)
+            self.invcovs = np.empty(_int_points, dtype=object)
             if self.precompute_covmats:
                 for i, (alpha, beta) in enumerate(zip(self.alpha_grid, self.beta_grid)):
                     self.invcovs[i] = self.inverse_covariance_matrix(alpha, beta)

@@ -213,10 +213,10 @@ class DES(DataSetLikelihood):
         self.thetas = []
         for i, tp in enumerate(self.data_types):
             xi = np.loadtxt(ini.relativeFileName('measurements[%s]' % tp))
-            bin1 = xi[:, 0].astype(np.int) - 1
-            bin2 = xi[:, 1].astype(np.int) - 1
-            tbin = xi[:, 2].astype(np.int) - 1
-            corr = np.empty((maxbin, maxbin), dtype=np.object)
+            bin1 = xi[:, 0].astype(int) - 1
+            bin2 = xi[:, 1].astype(int) - 1
+            tbin = xi[:, 2].astype(int) - 1
+            corr = np.empty((maxbin, maxbin), dtype=object)
             corr[:, :] = None
             self.data_arrays.append(corr)
             self.bin_pairs.append([])
@@ -277,9 +277,9 @@ class DES(DataSetLikelihood):
                     self.used_items.append(self.indices[-1])
                 cov_ix += 1
         self.nzbins = 4  # for lensing sources
-        corrs_p = np.empty((self.nzbins, self.nzbins), dtype=np.object)
+        corrs_p = np.empty((self.nzbins, self.nzbins), dtype=object)
         corrs_p[:, :] = None
-        corrs_m = np.empty((self.nzbins, self.nzbins), dtype=np.object)
+        corrs_m = np.empty((self.nzbins, self.nzbins), dtype=object)
         corrs_m[:, :] = None
         ntheta = 20
         self.theta_bins = np.empty(ntheta)
@@ -294,7 +294,7 @@ class DES(DataSetLikelihood):
                 assert (np.abs(self.theta_bins[ix] / theta - 1) < 2e-3)
                 corrs[f1, f2][ix] = dat
         self.nwbins = 5  # for galaxies
-        corrs_w = np.empty((self.nwbins, self.nwbins), dtype=np.object)
+        corrs_w = np.empty((self.nwbins, self.nwbins), dtype=object)
         for f1 in range(self.nwbins):
             corrs_w[f1, f1] = np.empty(ntheta)
         wdata = hdulist['wtheta'].data
@@ -303,7 +303,7 @@ class DES(DataSetLikelihood):
             assert (f1 == f2)
             assert (np.abs(self.theta_bins[ix] / theta - 1) < 2e-3)
             corrs_w[f1, f2][ix] = dat
-        corrs_t = np.empty((self.nwbins, self.nwbins), dtype=np.object)
+        corrs_t = np.empty((self.nwbins, self.nwbins), dtype=object)
         corrs_t[:, :] = None
         tdata = hdulist['gammat'].data
         for f1, f2, ix, dat, theta in zip(tdata.field(0) - 1, tdata.field(1) - 1,
@@ -351,7 +351,7 @@ class DES(DataSetLikelihood):
             # bessel in each bin. Here we crudely precompute an approximation to the
             # bessel integral by brute force
             dls = np.diff(np.unique((np.exp(np.linspace(
-                np.log(1.), np.log(self.l_max), int(500 * self.acc)))).astype(np.int)))
+                np.log(1.), np.log(self.l_max), int(500 * self.acc)))).astype(int)))
             groups = []
             ell = 2  # ell_min
             self.ls_bessel = np.zeros(dls.size)
@@ -489,10 +489,10 @@ class DES(DataSetLikelihood):
                     tmplens[ix, :] = weight * PKWeyl.P(self.zs, k, grid=False)
         else:
             tmplens = tmp
-        corrs_th_p = np.empty((self.nzbins, self.nzbins), dtype=np.object)
-        corrs_th_m = np.empty((self.nzbins, self.nzbins), dtype=np.object)
-        corrs_th_w = np.empty((self.nwbins, self.nwbins), dtype=np.object)
-        corrs_th_t = np.empty((self.nwbins, self.nzbins), dtype=np.object)
+        corrs_th_p = np.empty((self.nzbins, self.nzbins), dtype=object)
+        corrs_th_m = np.empty((self.nzbins, self.nzbins), dtype=object)
+        corrs_th_w = np.empty((self.nwbins, self.nwbins), dtype=object)
+        corrs_th_t = np.empty((self.nwbins, self.nzbins), dtype=object)
         if self.use_hankel:
             # Note that the absolute value of the correlation depends
             # on what you do about L_min (e.g. 1 vs 2 vs 0 makes a difference).

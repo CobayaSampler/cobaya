@@ -934,7 +934,7 @@ class Model(HasLogger):
         # a) Multiple blocks
         if not split_fast_slow:
             i_optimal_ordering, costs, oversample_factors = sort_parameter_blocks(
-                blocks, np.array(list(speeds.values()), dtype=np.float),
+                blocks, np.array(list(speeds.values()), dtype=float),
                 different_footprints, oversample_power=oversample_power)
             blocks_sorted = [blocks[i] for i in i_optimal_ordering]
         # b) 2-block slow-fast separation
@@ -944,7 +944,7 @@ class Model(HasLogger):
                                             "but all parameters have the same speed.")
             # First sort them optimally (w/o oversampling)
             i_optimal_ordering, costs, oversample_factors = sort_parameter_blocks(
-                blocks, np.array(list(speeds.values()), dtype=np.float),
+                blocks, np.array(list(speeds.values()), dtype=float),
                 different_footprints, oversample_power=0)
             blocks_sorted = [blocks[i] for i in i_optimal_ordering]
             footprints_sorted = np.array(different_footprints)[list(i_optimal_ordering)]
@@ -963,7 +963,7 @@ class Model(HasLogger):
             footprints_split = np.clip(np.array(footprints_split), 0, 1)
             # Recalculate oversampling factor with 2 blocks
             _, _, oversample_factors = sort_parameter_blocks(
-                blocks_split, np.array(list(speeds.values()), dtype=np.float),
+                blocks_split, np.array(list(speeds.values()), dtype=float),
                 footprints_split, oversample_power=oversample_power)
             # If no oversampling, slow-fast separation makes no sense: warn and set to 2
             if oversample_factors[1] == 1:

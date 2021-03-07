@@ -177,7 +177,7 @@ class BAO(InstallableLikelihood):
         # Columns: z value [err] [type]
         self.has_type = self.data.iloc[:, -1].dtype == np.dtype("O")
         assert self.has_type  # mandatory for now!
-        self.has_err = len(self.data.columns) > 2 and self.data[2].dtype == np.float
+        self.has_err = len(self.data.columns) > 2 and self.data[2].dtype == float
         if self.has_err:
             self.data.columns = ["z", "value", "error", "observable"]
         else:
