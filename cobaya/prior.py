@@ -342,6 +342,7 @@ Just give it a try and it should work fine, but, in case you need the details:
 import numpy as np
 import numbers
 from types import MethodType
+from typing import Sequence
 
 # Local
 from cobaya.conventions import _prior, partag, _prior_1d_name
@@ -385,6 +386,8 @@ class Prior(HasLogger):
             # Get the reference (1d) pdf
             ref = sampled_params_info[p].get(partag.ref)
             # Cases: number, pdf (something, but not a number), nothing
+            if isinstance(ref, Sequence) and len(ref) == 2:
+                ref = {partag.dist: "norm", "loc": ref[0], "scale": ref[1]}
             if isinstance(ref, numbers.Real):
                 self.ref_pdf += [float(ref)]
             elif ref is not None:
