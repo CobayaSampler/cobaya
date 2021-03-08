@@ -51,7 +51,7 @@ def expand_info_param(info_param, default_derived=True):
     if not isinstance(info_param, Mapping):
         if info_param is None:
             info_param = {}
-        elif isinstance(info_param, Sequence):
+        elif isinstance(info_param, Sequence) and not isinstance(info_param, str):
             values = info_param.copy()
             allowed_lengths = [2, 4, 5]
             if len(values) not in allowed_lengths:
