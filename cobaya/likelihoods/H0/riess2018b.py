@@ -1,7 +1,7 @@
-from cobaya.likelihoods._base_classes import _H0_prototype
+from cobaya.likelihoods.base_classes import H0
 
 
-class riess2018b(_H0_prototype):
+class riess2018b(H0):
     r"""
     Local $H_0$ measurement from \cite{Riess:2018byc}.
     """

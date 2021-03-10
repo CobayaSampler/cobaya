@@ -98,7 +98,7 @@ There is no fundamental difference between internal likelihood classes (in the C
 distributed externally. However, if you are distributing externally you may also wish to provide a way to
 calculate the likelihood from pre-computed theory inputs as well as via Cobaya. This is easily done by extracting
 the theory results in ``logp`` and them passing them and the nuisance parameters to a separate function,
-e.g. `log_likelihood` where the calculation is actually done. For example, adapting the example above to:
+e.g. ``log_likelihood`` where the calculation is actually done. For example, adapting the example above to:
 
 .. code:: python
 
@@ -117,12 +117,11 @@ e.g. `log_likelihood` where the calculation is actually done. For example, adapt
             return -chi2 / 2
 
 
-You can then create an instance of your class and call log_likelihood, entirely independently of
+You can then create an instance of your class and call ``log_likelihood``, entirely independently of
 Cobaya. However, in this case you have to provide the full theory results to the function, rather than using the self.provider to get them
 for the current parameters (self.provider is only available in Cobaya once a full model has been instantiated).
 
-If you want to call your likelihood for specific parameters (rather than the corresponding computed theory results), you need to
-call get_model() to instantiate a full model specifying which components calculate the required theory inputs. For example,
+If you want to call your likelihood for specific parameters (rather than the corresponding computed theory results), you need to call :func:`~model.get_model` to instantiate a full model specifying which components calculate the required theory inputs. For example,
 
 .. code:: python
 
@@ -142,7 +141,7 @@ call get_model() to instantiate a full model specifying which components calcula
 
 Input parameters can be specified in the likelihood's .yaml file as shown above.
 Alternatively, they can be specified as class attributes. For example, this would
-be equivalent to the .yaml-based example above
+be equivalent to the ``.yaml``-based example above
 
 .. code:: python
 
@@ -161,38 +160,37 @@ be equivalent to the .yaml-based example above
 If your likelihood has class attributes that are not possible input parameters, they should be
 made private by starting the name with an underscore.
 
-Any class can have class attributes or a .yaml file, but not both. Class
-attributes or .yaml files are inherited, with re-definitions override the inherited value.
+Any class can have class attributes or a ``.yaml`` file, but not both. Class
+attributes or ``.yaml`` files are inherited, with re-definitions override the inherited value.
 
-_InstallableLikelihood
--------------------------
+InstallableLikelihood
+---------------------
 
 This supports the default auto-installation. Just add a class-level string specifying installation options, e.g.
 
 .. code:: python
 
-    from cobaya.likelihoods._base_classes import _InstallableLikelihood
+    from cobaya.likelihoods.base_classes import InstallableLikelihood
 
-    class MyLikelihood(_InstallableLikelihood):
+    class MyLikelihood(InstallableLikelihood):
         install_options = {"github_repository": "MyGithub/my_repository",
                            "github_release": "master"}
 
         ...
 
 
-You can also use install_options = {"download_url":"..url.."}
+You can also use ``install_options = {"download_url":"..url.."}``
 
-_DataSetLikelihood
--------------------
+DataSetLikelihood
+-----------------
 
-This inherits from *_InstallableLikelihood* and wraps loading settings from a .ini-format .dataset file giving setting
-related to the likelihood (specified as *dataset_file* in the input .yaml).
+This inherits from :class:`~likelihoods.base_classes.InstallableLikelihood` and wraps loading settings from a ``.ini``-format .dataset file giving setting related to the likelihood (specified as ``dataset_file`` in the input ``.yaml``).
 
 .. code:: python
 
-    from cobaya.likelihoods._base_classes import _DataSetLikelihood
+    from cobaya.likelihoods.base_classes import DataSetLikelihood
 
-    class MyLikelihood(_DataSetLikelihood):
+    class MyLikelihood(DataSetLikelihood):
 
         def init_params(self, ini):
             """
@@ -205,24 +203,20 @@ related to the likelihood (specified as *dataset_file* in the input .yaml).
         ...
 
 
-_CMBlikes
---------------------
+CMBlikes
+--------
 
-This the *CMBlikes* self-describing text .dataset format likelihood inherited from *_DataSetLikelihood* (as used by the
-Bicep and Planck lensing likelihoods). This already implements the calculation of Gaussian and Hammimeche-Lewis
-likelihoods from binned C_L data, so in simple cases you don't need to override anything, you just supply the
-.yaml and .dataset file (and corresponding references data and covariance files).
-Extensions and optimizations are welcome as pull requests.
+This the :class:`~likelihoods.base_classes.CMBlikes` self-describing text .dataset format likelihood inherited from :class:`~likelihoods.base_classes.DataSetLikelihood` (as used by the Bicep and Planck lensing likelihoods). This already implements the calculation of Gaussian and Hammimeche-Lewis likelihoods from binned :math:`C_\ell` data, so in simple cases you don't need to override anything, you just supply the ``.yaml`` and ``.dataset`` file (and corresponding references data and covariance files). Extensions and optimizations are welcome as pull requests.
 
 .. code:: python
 
-    from cobaya.likelihoods._base_classes import _CMBlikes
+    from cobaya.likelihoods.base_classes import CMBlikes
 
-    class MyLikelihood(_CMBlikes):
+    class MyLikelihood(CMBlikes):
         install_options = {"github_repository": "CobayaSampler/planck_supp_data_and_covmats"}
         pass
 
-For example *planck_2018_lensing.native* (which is installed as an internal likelihood) has this .yaml file
+For example :class:`~likelihoods.planck_2018_lensing.native` (which is installed as an internal likelihood) has this ``.yaml`` file
 
 .. code:: yaml
 
@@ -246,22 +240,21 @@ The :class:`bicep_keck_2015` likelihood provides a more complicated model that a
 
 This example also demonstrates how to share nuisance parameter settings between likelihoods: in this example all the
 Planck likelihoods depend on the calibration parameter, where here the default settings for that are loaded from the
-.yaml file under *planck_2018_highl_plik*.
+``.yaml`` file under ``planck_2018_highl_plik``.
 
 Real-world examples
---------------------
+-------------------
 
-The simplest example are the :class:`_H0_prototype` likelihoods, which are just implemented as simple Gaussians.
+The simplest example are the :class:`H0` likelihoods, which are just implemented as simple Gaussians.
 
-For an examples of more complex real-world CMB likelihoods, see :class:`bicep_keck_2015` and the lensing likelihood shown above (both
-using CMBlikes format), or :class:`_planck_2018_CamSpec_python` for a full Python implementation of the
-multi-frequency Planck likelihood (based from *_DataSetLikelihood*). The :class:`_planck_pliklite_prototype`
+For an examples of more complex real-world CMB likelihoods, see :class:`bicep_keck_2015` and the lensing likelihood shown above (both using CMBlikes format), or :class:`Planck2018CamSpecPython` for a full Python implementation of the
+multi-frequency Planck likelihood (based from :class:`DataSetLikelihood`). The :class:`PlanckPlikLite`
 likelihood implements the plik-lite foreground-marginalized likelihood. Both the plik-like and CamSpec likelihoods
 support doing general multipole and spectrum cuts on the fly by setting override dataset parameters in the input .yaml.
 
-The provided BAO likelihoods base from :class:`_bao_prototype`, reading from simple text files.
+The provided BAO likelihoods base from :class:`BAO`, reading from simple text files.
 
-The  :class:`_des_prototype` likelihood (based from *_DataSetLikelihood*) implements the DES Y1 likelihood, using the
+The  :class:`DES` likelihood (based from :class:`DataSetLikelihood`) implements the DES Y1 likelihood, using the
 matter power spectra to calculate shear, count and cross-correlation angular power spectra internally.
 
 The `example external CMB likelihood <https://github.com/CobayaSampler/planck_lensing_external>`_ is a complete example

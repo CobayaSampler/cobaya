@@ -26,6 +26,9 @@ class LoggedError(Exception):
     """
 
     def __init__(self, logger, *args, **kwargs):
+        if not isinstance(logger, logging.Logger):
+            raise SyntaxError("The first argument of %s must be a logger instance." %
+                              self.__class__.__name__)
         if args:
             logger.error(*args, **kwargs)
         msg = args[0] if len(args) else ""
@@ -36,7 +39,7 @@ class LoggedError(Exception):
 
 # Exceptions that will never be ignored when a component's calculation fails
 always_stop_exceptions = (LoggedError, KeyboardInterrupt, SystemExit, NameError,
-                          SyntaxError, AttributeError, KeyError)
+                          SyntaxError, AttributeError, KeyError, ImportError)
 
 
 def abstract(method):

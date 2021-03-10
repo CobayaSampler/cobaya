@@ -1,5 +1,5 @@
 r"""
-.. module:: _H0_prototype
+.. module:: H0
 
 :Synopsis: Prototype class for local Hubble parameter measurements
 :Author: Jesus Torrado
@@ -34,7 +34,7 @@ standard deviation, simply add the following likelihood, substituting ``mu_H0`` 
 from cobaya.likelihood import Likelihood
 
 
-class _H0_prototype(Likelihood):
+class H0(Likelihood):
     # Data type for aggregated chi2 (case sensitive)
     type = "H0"
 

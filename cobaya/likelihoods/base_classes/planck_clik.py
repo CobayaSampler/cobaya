@@ -1,5 +1,5 @@
 r"""
-.. module:: _planck_clik_prototype
+.. module:: planck_clik
 
 :Synopsis: Definition of the clik-based likelihoods
 :Author: Jesus Torrado
@@ -30,7 +30,7 @@ pla_url_prefix = r"https://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLO
 last_version_supp_data_and_covmats = "v2.01"
 
 
-class _planck_clik_prototype(Likelihood):
+class PlanckClik(Likelihood):
     # Data type for aggregated chi2 (case sensitive)
     type = "CMB"
 
@@ -364,9 +364,9 @@ def get_product_id_and_clik_file(name):
     return defaults.get("product_id"), defaults.get("clik_file")
 
 
-class Planck2015Clik(_planck_clik_prototype):
+class Planck2015Clik(PlanckClik):
     bibtex_file = 'planck2015.bibtex'
 
 
-class Planck2018Clik(_planck_clik_prototype):
+class Planck2018Clik(PlanckClik):
     bibtex_file = 'planck2018.bibtex'
