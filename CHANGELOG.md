@@ -12,6 +12,7 @@
 
 ### Cosmology:
 
+- Interfaced sigma8 for arbitrary redshift (PR #144; thanks @Pablo-Lemos)
 - Standardised naming conventions of base classes (CamelCasing, no leading underscores, simpler names). Added workarounds and deprecation notices for some of the old names.
 - Updated cosmology `Model` example in docs.
 - Added A. Lewis' CMB forecast data generator in `CMBlikes` definition file.
