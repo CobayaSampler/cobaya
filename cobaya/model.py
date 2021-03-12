@@ -545,8 +545,9 @@ class Model(HasLogger):
             # END OF DEPRECATION BLOCK
             component.initialize_with_params()
             _requirements = component.get_requirements()
-            _requirements.update({p: None for p in getattr(component, _params, {}) if p
-                                  not in component.input_params})
+            _requirements.update(
+                {p: None for p, v in getattr(component, _params, {}).items() if p
+                 not in component.input_params + component.output_params})
             requirements[component] = _tidy_requirements(_requirements, component)
             # Gather what this component can provide
             can_provide = (
@@ -593,7 +594,8 @@ class Model(HasLogger):
                     if not suppliers:
                         raise LoggedError(
                             self.log, "Requirement %s of %r is not provided by any "
-                                      "component", requirement.name, component)
+                                      "component, nor sampled directly",
+                            requirement.name, component)
                     if len(suppliers) == 1:
                         supplier = suppliers[0]
                     else:
@@ -786,14 +788,13 @@ class Model(HasLogger):
                 # 3. Does it have a general (mixed) list of params? (set from default)
                 elif getattr(component, _params, None):
                     for p, options in getattr(component, _params).items():
-                        if p in params_assign[io_kind]:
-                            if not hasattr(options, 'get') or \
-                                    options.get('derived',
-                                                derived_param) is derived_param:
+                        if not hasattr(options, 'get') or \
+                                options.get('derived', derived_param) is derived_param:
+                            if p in params_assign[io_kind]:
                                 params_assign[io_kind][p] += [component]
-                        elif io_kind == "input":
-                            required_params.add(p)
-                # 4. otherwise explicitly supported?
+                            elif not derived_param:
+                                required_params.add(p)
+                    # 4. otherwise explicitly supported?
                 elif supports_params:
                     # outputs this parameter unless explicitly told
                     # another component provides it
