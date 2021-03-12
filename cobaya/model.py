@@ -457,7 +457,7 @@ class Model(HasLogger):
         else:
             if self.prior.reference_is_pointlike():
                 raise LoggedError(self.log, "The reference point provided has null "
-                                  "likelihood. Set 'ref' to a different point or a pdf.")
+                                            "likelihood. Set 'ref' to a different point or a pdf.")
             raise LoggedError(self.log, "Could not find random point giving finite "
                                         "likelihood after %g tries", max_tries)
         return initial_point, logpost, logpriors, loglikes, derived
@@ -544,8 +544,10 @@ class Model(HasLogger):
                                   "instead" % component)
             # END OF DEPRECATION BLOCK
             component.initialize_with_params()
-            requirements[component] = _tidy_requirements(
-                component.get_requirements(), component)
+            _requirements = component.get_requirements()
+            _requirements.update({p: None for p in getattr(component, _params, {}) if p
+                                  not in component.input_params})
+            requirements[component] = _tidy_requirements(_requirements, component)
             # Gather what this component can provide
             can_provide = (
                     list(component.get_can_provide()) +
@@ -789,6 +791,8 @@ class Model(HasLogger):
                                     options.get('derived',
                                                 derived_param) is derived_param:
                                 params_assign[io_kind][p] += [component]
+                        elif io_kind == "input":
+                            required_params.add(p)
                 # 4. otherwise explicitly supported?
                 elif supports_params:
                     # outputs this parameter unless explicitly told
