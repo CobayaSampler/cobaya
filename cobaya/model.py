@@ -544,11 +544,10 @@ class Model(HasLogger):
                                   "instead" % component)
             # END OF DEPRECATION BLOCK
             component.initialize_with_params()
-            _requirements = component.get_requirements()
-            _requirements.update(
-                {p: None for p, v in getattr(component, _params, {}).items() if p
-                 not in component.input_params + component.output_params})
-            requirements[component] = _tidy_requirements(_requirements, component)
+            requirements[component] = \
+                _tidy_requirements(component.get_requirements(), component) + \
+                [Requirement(p, None) for p in getattr(component, _params, {}) if
+                 p not in component.input_params + component.output_params]
             # Gather what this component can provide
             can_provide = (
                     list(component.get_can_provide()) +
@@ -592,10 +591,10 @@ class Model(HasLogger):
                 for requirement in requires:
                     suppliers = providers.get(requirement.name)
                     if not suppliers:
-                        raise LoggedError(
-                            self.log, "Requirement %s of %r is not provided by any "
-                                      "component, nor sampled directly",
-                            requirement.name, component)
+                        raise LoggedError(self.log,
+                                          "Requirement %s of %r is not provided by any "
+                                          "component, nor sampled directly",
+                                          requirement.name, component)
                     if len(suppliers) == 1:
                         supplier = suppliers[0]
                     else:
