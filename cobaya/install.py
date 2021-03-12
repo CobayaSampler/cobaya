@@ -18,6 +18,7 @@ import logging
 from itertools import chain
 from pkg_resources import parse_version
 import requests
+import tqdm
 
 # Local
 from cobaya.log import logger_setup, LoggedError
@@ -222,7 +223,7 @@ def download_file(url, path, no_progress_bars=False, decompress=False, logger=No
     logger = logger or logging.getLogger(__name__)
     with tempfile.TemporaryDirectory() as tmp_path:
         try:
-            req = requests.get(url, allow_redirects=True)
+            req = requests.get(url, allow_redirects=True, stream=True)
             # get hinted filename if available:
             try:
                 filename = re.findall(
@@ -231,8 +232,17 @@ def download_file(url, path, no_progress_bars=False, decompress=False, logger=No
             except KeyError:
                 filename = os.path.basename(url)
             filename_tmp_path = os.path.normpath(os.path.join(tmp_path, filename))
+            size = int(req.headers.get('content-length', 0))
+            # Adapted from https://gist.github.com/yanqd0/c13ed29e29432e3cf3e7c38467f42f51
+            if not no_progress_bars:
+                bar = tqdm.tqdm(total=size, unit='iB', unit_scale=True, unit_divisor=1024)
             with open(filename_tmp_path, 'wb') as f:
-                f.write(req.content)
+                for data in req.iter_content(chunk_size=1024):
+                    chunk_size = f.write(data)
+                    if not no_progress_bars:
+                        bar.update(chunk_size)
+            if not no_progress_bars:
+                bar.close()
             logger.info('Downloaded filename %s', filename)
         except Exception as e:
             logger.error(
