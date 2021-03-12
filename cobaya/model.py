@@ -546,7 +546,7 @@ class Model(HasLogger):
             component.initialize_with_params()
             requirements[component] = \
                 _tidy_requirements(component.get_requirements(), component) + \
-                [Requirement(p, None) for p in getattr(component, _params, {}) if
+                [Requirement(p, None) for p in (getattr(component, _params, {}) or []) if
                  p not in component.input_params + component.output_params]
             # Gather what this component can provide
             can_provide = (
