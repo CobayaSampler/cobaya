@@ -59,8 +59,8 @@ and contain the best-fit (maximum of the likelihood) instead of the MAP
    For historical reasons, in the first two lines of the GetDist-formatted output file
    ``-log(Like)`` indicates the negative log-**posterior**, and similarly ``chi-sq`` is
    :math:`-2` times the log-**posterior**. The actual log-likelihood can be obtained as
-   :math:`-2` times the sum of the ``chi2__`` (double-underscore) individual
-   :math:`\chi^2` in the table that follows these first lines.
+   :math:`-2` times the sum of the individual :math:`\chi^2` (``chi2__``, with double
+   underscore) in the table that follows these first lines.
 
 When called from a Python script, Cobaya's ``run`` function returns the updated info
 and the products described below in the method
