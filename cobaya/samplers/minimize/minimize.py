@@ -187,7 +187,8 @@ class minimize(Minimizer, CovmatSampler):
                 "bounds": np.array(list(zip(*bounds))),
                 "seek_global_minimum": (
                     True if get_mpi_size() in [0, 1] else False),
-                "maxfun": int(self.max_evals)}
+                "maxfun": int(self.max_evals),
+                "do_logging": (self.log.getEffectiveLevel() == logging.DEBUG)}
             self.kwargs = recursive_update(
                 deepcopy(self.kwargs), self.override_bobyqa or {})
             self.log.debug("Arguments for pybobyqa.solve:\n%r",

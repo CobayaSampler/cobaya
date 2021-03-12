@@ -1,3 +1,10 @@
+## 3.0.5 – 2021-YY-ZZ
+
+### Minimize
+
+- `PyBOBYQA` updated to 1.2, and quieter by default.
+
+
 ## 3.0.4 – 2021-03-10
 
 ### General
