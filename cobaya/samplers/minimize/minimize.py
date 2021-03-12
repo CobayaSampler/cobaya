@@ -54,6 +54,14 @@ If ``ignore_prior: True``, those files are named ``.bestfit[.txt]`` instead of `
 and contain the best-fit (maximum of the likelihood) instead of the MAP
 (maximum of the posterior).
 
+.. warning::
+
+   For historical reasons, in the first two lines of the GetDist-formatted output file
+   ``-log(Like)`` indicates the negative log-**posterior**, and similarly ``chi-sq`` is
+   :math:`-2` times the log-**posterior**. The actual log-likelihood can be obtained as
+   :math:`-2` times the sum of the ``chi2__`` (double-underscore) individual
+   :math:`\chi^2` in the table that follows these first lines.
+
 When called from a Python script, Cobaya's ``run`` function returns the updated info
 and the products described below in the method
 :func:`products <samplers.minimize.minimize.products>`.
