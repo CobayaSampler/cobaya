@@ -168,7 +168,7 @@ class classy(BoltzmannBase):
     """
     # Name of the Class repo/folder and version to download
     _classy_repo_name = "lesgourg/class_public"
-    _min_classy_version = "v2.9.3"
+    _min_classy_version = "v3.0.0"
     _classy_min_gcc_version = "6.4"  # Lower ones are possible atm, but leak memory!
     _classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', _min_classy_version)
 
@@ -251,7 +251,6 @@ class classy(BoltzmannBase):
                 # (default: 0.1). But let's leave it like this in case this changes
                 # in the future.
                 self.add_z_for_matter_power(v.pop("z"))
-
                 if v["nonlinear"] and "non linear" not in self.extra_args:
                     self.extra_args["non linear"] = non_linear_default_code
                 pair = k[2:]
