@@ -545,7 +545,9 @@ class Model(HasLogger):
             # END OF DEPRECATION BLOCK
             component.initialize_with_params()
             requirements[component] = \
-                _tidy_requirements(component.get_requirements(), component) + \
+                _tidy_requirements(component.get_requirements(), component)
+            # Component params converted to requirements if not explicitly sampled
+            requirements[component] += \
                 [Requirement(p, None) for p in (getattr(component, _params, {}) or []) if
                  p not in component.input_params + component.output_params]
             # Gather what this component can provide
@@ -793,7 +795,7 @@ class Model(HasLogger):
                                 params_assign[io_kind][p] += [component]
                             elif not derived_param:
                                 required_params.add(p)
-                    # 4. otherwise explicitly supported?
+                # 4. otherwise explicitly supported?
                 elif supports_params:
                     # outputs this parameter unless explicitly told
                     # another component provides it
