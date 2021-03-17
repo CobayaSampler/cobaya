@@ -64,10 +64,11 @@ class LikelihoodInterface:
 
 def is_LikelihoodInterface(class_instance):
     """
-    Checks for `current_logp` property. `hasattr()` cannot be used in this case because
-    `self._current_state` has not yet been defined.
+    Checks for `current_logp` property. `hasattr()` cannot safely be used in this case
+    because `self._current_state` has not yet been defined.
     """
-    return "current_logp" in dir(class_instance)
+    # NB: This is much faster than "<method> in dir(class)"
+    return isinstance(getattr(type(class_instance), "current_logp", None), property)
 
 
 class Likelihood(Theory, LikelihoodInterface):
