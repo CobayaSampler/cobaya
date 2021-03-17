@@ -384,9 +384,9 @@ def post(info, sample=None):
     #   Prefer to rescale +inf to finite, and ignore final points with -inf.
     #   Remove -inf's (0-weight), and correct indices
     difflogmax = max(collection_in[_minuslogpost] - collection_out[_minuslogpost])
-    collection_out.data[_weight] *= np.exp(
+    collection_out._data[_weight] *= np.exp(
         collection_in[_minuslogpost] - collection_out[_minuslogpost] - difflogmax)
-    collection_out.data = (
+    collection_out._data = (
         collection_out.data[collection_out.data.weight > 0].reset_index(drop=True))
     collection_out._n = collection_out.data.last_valid_index() + 1
     # Write!
