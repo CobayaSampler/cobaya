@@ -9,11 +9,13 @@
 # Global
 import os
 import logging
+import functools
 import numpy as np
 import pandas as pd
 from typing import Optional
 from getdist import MCSamples
 from copy import deepcopy
+from math import isclose
 
 # Local
 from cobaya.conventions import _weight, _chi2, _minuslogpost, _minuslogprior, \
@@ -32,6 +34,10 @@ chains.print_load_details = False
 enlargement_size: int = 100
 enlargement_factor: Optional[int] = None
 
+# Size of fast numpy cache
+# (used to avoid "setting" in Pandas too often, which is expensive)
+cache_size = 20
+assert cache_size <= enlargement_size
 
 # Make sure that we don't reach the empty part of the dataframe
 def check_index(i, imax):
@@ -76,6 +82,19 @@ class BaseCollection(HasLogger):
         self.columns = columns
 
 
+def ensure_cache_dumped(method):
+    """
+    Decorator for Collection methods that need the cache is clean before running.
+    """
+
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        self._cache_dump()
+        return method(self, *args, **kwargs)
+
+    return wrapper
+
+
 class Collection(BaseCollection):
     """
     Holds a collection of samples, stored internally into a ``pandas.DataFrame``.
@@ -88,7 +107,6 @@ class Collection(BaseCollection):
                  initial_size=enlargement_size, name=None, extension=None, file_name=None,
                  resuming=False, load=False, onload_skip=0, onload_thin=1):
         super().__init__(model, name)
-        self._value_dict = {p: np.nan for p in self.columns}
         # Create/load the main data frame and the tracking indices
         # Create the DataFrame structure
         if output:
@@ -127,6 +145,9 @@ class Collection(BaseCollection):
             # TODO: the following 2 lines should go into the `reset` method.
             if output:
                 self._n_last_out = 0
+        # Prepare fast numpy cache
+        self._icol = {col: i for i, col in enumerate(self.columns)}
+        self._cache_reset()
 
     def reset(self, columns=None, index=None):
         """Create/reset the DataFrame."""
@@ -134,67 +155,126 @@ class Collection(BaseCollection):
             columns = self.data.columns
         if index is None:
             index = self.data.index
-        self.data = pd.DataFrame(np.nan, columns=columns, index=index)
+        self._data = pd.DataFrame(np.nan, columns=columns, index=index)
         self._n = 0
+        self._cache_reset()
 
     def add(self,
             values, derived=None, weight=1, logpost=None, logpriors=None, loglikes=None):
-        self._enlarge_if_needed()
-        self._add_dict(self._value_dict, values, derived, weight, logpost, logpriors,
-                       loglikes)
-        self.data.iloc[self._n] = np.array(list(self._value_dict.values()))
-        self._n += 1
+        logps = self._check_before_adding(values, logpriors, loglikes, logpost=logpost,
+                                          derived=derived, weight=weight)
+        self._cache_add(values, logps, derived=derived, weight=weight,
+                        logpriors=logpriors, loglikes=loglikes)
 
-    def _add_dict(self, dic, values, derived=None, weight=1, logpost=None, logpriors=None,
-                  loglikes=None):
-        dic[_weight] = weight
-        if logpost is None:
-            try:
-                logpost = sum(logpriors) + sum(loglikes)
-            except ValueError:
-                raise LoggedError(
-                    self.log, "If a log-posterior is not specified, you need to pass "
-                              "a log-likelihood and a log-prior.")
-        dic[_minuslogpost] = -logpost
-        if logpriors is not None:
-            for name, value in zip(self.minuslogprior_names, logpriors):
-                dic[name] = -value
-            dic[_minuslogprior] = -sum(logpriors)
-        if loglikes is not None:
-            for name, value in zip(self.chi2_names, loglikes):
-                dic[name] = -2 * value
-            dic[_chi2] = -2 * sum(loglikes)
+    def _check_before_adding(self, values, logpriors, loglikes, logpost=None,
+                             derived=None, weight=None):
+        """
+        Checks that the arguments of collection.add are correctly formatted.
+
+        Returns a tuple `(logpost, sum(logpriors), sum(loglikes))`, since it needs to sum
+        log-prior and log-likelihood for testing purposes.
+        """
+        if weight is not None and weight <= 0:
+            raise LoggedError(self.log, "Weights must be positive. Got %r", weight)
         if len(values) != len(self.sampled_params):
             raise LoggedError(
                 self.log, "Got %d values for the sampled parameters. Should be %d.",
                 len(values), len(self.sampled_params))
-        for name, value in zip(self.sampled_params, values):
-            dic[name] = value
         if derived is not None:
             if len(derived) != len(self.derived_params):
                 raise LoggedError(
                     self.log, "Got %d values for the derived parameters. Should be %d.",
                     len(derived), len(self.derived_params))
+        logpriors_sum = sum(logpriors) if logpriors is not None else None
+        loglikes_sum = sum(loglikes) if loglikes is not None else None
+        try:
+            logpost_sum = logpriors_sum + loglikes_sum
+            if logpost is None:
+                logpost = logpost_sum
+            else:
+                if not isclose(logpost, logpost_sum):
+                    raise LoggedError(
+                        self.log, "The given log-posterior is not equal to the "
+                                  "sum of given log-likelihoods and log-priors")
+        except TypeError:  # at least one of logpriors|likes not defined
+            if logpost is None:
+                raise LoggedError(
+                    self.log, "If a log-posterior is not specified, you need to pass "
+                              "a log-likelihood and a log-prior.")
+        return (logpost, logpriors_sum, loglikes_sum)
+
+    def _cache_reset(self):
+        self._cache = np.full((cache_size, len(self.columns)), np.nan)
+        self._cache_last = -1
+
+    def _cache_add(self, values, logps, derived=None, weight=1, logpriors=None,
+                   loglikes=None):
+        """
+        Adds the given point to the cache. Dumps and resets the cache if full.
+
+        `logps` must be a tuple `(logpost, sum(logpriors), sum(loglikes))`, where the last
+        two elements can be `None`.
+        """
+        if self._cache_last == cache_size - 1:
+            self._cache_dump()
+        self._cache_add_row(self._cache_last + 1, values, logps, derived=derived,
+                            weight=weight, logpriors=logpriors, loglikes=loglikes)
+        self._cache_last += 1
+
+    def _cache_add_row(self, pos, values, logps, derived=None, weight=1, logpriors=None,
+                       loglikes=None):
+        """
+        Adds the given point to the cache at the given position.
+
+        `logps` must be a tuple `(logpost, sum(logpriors), sum(loglikes))`, where the last
+        two elements can be `None`.
+        """
+        self._cache[pos, self._icol[_weight]] = weight if weight is not None else 1
+        self._cache[pos, self._icol[_minuslogpost]] = -logps[0]
+        for name, value in zip(self.sampled_params, values):
+            self._cache[pos, self._icol[name]] = value
+        if logpriors is not None:
+            for name, value in zip(self.minuslogprior_names, logpriors):
+                self._cache[pos, self._icol[name]] = -value
+            self._cache[pos, self._icol[_minuslogprior]] = logps[1]
+        if loglikes is not None:
+            for name, value in zip(self.chi2_names, loglikes):
+                self._cache[pos, self._icol[name]] = -2 * value
+            self._cache[pos, self._icol[_chi2]] = -2 * logps[2]
+        if derived is not None:
             for name, value in zip(self.derived_params, derived):
-                dic[name] = value
+                self._cache[pos, self._icol[name]] = value
+
+    def _cache_dump(self):
+        """
+        Dumps the cache into the pandas table (unless empty).
+        """
+        if self._cache_last == -1:
+            return
+        self._enlarge_if_needed()
+        self._data.iloc[self._n:self._n + self._cache_last + 1] = \
+            self._cache[:self._cache_last + 1]
+        self._n += self._cache_last + 1
+        self._cache_reset()
 
     def _enlarge_if_needed(self):
-        if self._n >= self.data.shape[0]:
+        if self._n >= self._data.shape[0]:
             if enlargement_factor:
-                enlarge_by = self.data.shape[0] * enlargement_factor
+                enlarge_by = self._data.shape[0] * enlargement_factor
             else:
                 enlarge_by = enlargement_size
-            self.data = pd.concat([
-                self.data, pd.DataFrame(np.nan, columns=self.data.columns,
-                                        index=np.arange(len(self),
-                                                        len(self) + enlarge_by))])
+            self._data = pd.concat([
+                self._data, pd.DataFrame(np.nan, columns=self._data.columns,
+                                         index=np.arange(len(self),
+                                                         len(self) + enlarge_by))])
 
+    @ensure_cache_dumped
     def append(self, collection):
         """
         Append another collection.
         Internal method: does not check for consistency!
         """
-        self.data = pd.concat([self.data[:len(self)], collection.data], ignore_index=True)
+        self._data = pd.concat([self.data[:len(self)], collection.data], ignore_index=True)
         self._n = len(self) + len(collection)
 
     # Retrieve-like methods
@@ -208,20 +288,28 @@ class Collection(BaseCollection):
     # END OF DEPRECATION BLOCK
 
     def __len__(self):
-        return self._n
+        return self._n + (self._cache_last + 1)
 
     def n_last_out(self):
         return self._n_last_out
 
+    @property
+    @ensure_cache_dumped
+    def data(self):
+        return self._data
+
     # Make the dataframe printable (but only the filled ones!)
+    @ensure_cache_dumped
     def __repr__(self):
         return self.data[:len(self)].__repr__()
 
     # Make the dataframe iterable over rows
+    @ensure_cache_dumped
     def __iter__(self):
         return self.data[:len(self)].iterrows()
 
     # Accessing the dataframe
+    @ensure_cache_dumped
     def __getitem__(self, *args):
         """
         This is a hack of the DataFrame __getitem__ in order to never go
@@ -244,7 +332,7 @@ class Collection(BaseCollection):
         elif hasattr(args[0], "__len__"):
             try:
                 return self.data.iloc[:self._n,
-                       [self.data.columns.get_loc(c) for c in args[0]]]
+                                      [self.data.columns.get_loc(c) for c in args[0]]]
             except KeyError:
                 raise ValueError("Some of the indices are not valid columns.")
         elif isinstance(args[0], int):
@@ -256,9 +344,11 @@ class Collection(BaseCollection):
         return self._copy(data=new_data)
 
     @property
+    @ensure_cache_dumped
     def values(self):
         return self.data.values
 
+    @ensure_cache_dumped
     def _copy(self, data=None):
         """
         Returns a copy of the collection.
@@ -271,21 +361,22 @@ class Collection(BaseCollection):
         if data is None:
             data = current_data
         # Avoids creating a copy of the data, to save memory
-        delattr(self, "data")
+        delattr(self, "_data")
         self_copy = deepcopy(self)
-        setattr(self, "data", current_data)
-        setattr(self_copy, "data", data)
+        setattr(self, "_data", current_data)
+        setattr(self_copy, "_data", data)
         setattr(self_copy, "_n", len(data))
         return self_copy
 
     # Dummy function to avoid exposing `data` kwarg, since no checks are performed on it.
-    def copy(self, data=None):
+    def copy(self):
         """
         Returns a copy of the collection.
         """
         return self._copy()
 
     # Statistical computations
+    @ensure_cache_dumped
     def mean(self, first=None, last=None, derived=False, pweight=False):
         """
         Returns the (weighted) mean of the parameters in the chain,
@@ -307,6 +398,7 @@ class Collection(BaseCollection):
             [first:last].T,
             weights=weights, axis=-1)
 
+    @ensure_cache_dumped
     def cov(self, first=None, last=None, derived=False, pweight=False):
         """
         Returns the (weighted) covariance matrix of the parameters in the chain,
@@ -330,14 +422,17 @@ class Collection(BaseCollection):
                  (list(self.derived_params) if derived else [])][first:last].T,
             **weights_kwarg))
 
+    @ensure_cache_dumped
     def bestfit(self):
         """Best fit (maximum likelihood) sample. Returns a copy."""
         return self.data.loc[self.data[_chi2].idxmin()].copy()
 
+    @ensure_cache_dumped
     def MAP(self):
         """Maximum-a-posteriori (MAP) sample. Returns a copy."""
         return self.data.loc[self.data[_minuslogpost].idxmin()].copy()
 
+    @ensure_cache_dumped
     def _sampled_to_getdist_mcsamples(self, first=None, last=None):
         """
         Basic interface with getdist -- internal use only!
@@ -361,9 +456,11 @@ class Collection(BaseCollection):
     # Load a pre-existing file
     def _out_load(self, **kwargs):
         self._get_driver("_load")(**kwargs)
+        self._cache_reset()
 
     # Dump/update/delete collection
 
+    @ensure_cache_dumped
     def out_update(self):
         self._get_driver("_update")()
 
@@ -373,8 +470,8 @@ class Collection(BaseCollection):
     # txt driver
     def _load__txt(self, skip=0, thin=1):
         self.log.debug("Skipping %d rows and thinning with factor %d.", skip, thin)
-        self.data = load_DataFrame(self.file_name, skip=skip, thin=thin)
-        self.log.info("Loaded %d samples from '%s'", len(self.data), self.file_name)
+        self._data = load_DataFrame(self.file_name, skip=skip, thin=thin)
+        self.log.info("Loaded %d samples from '%s'", len(self._data), self.file_name)
 
     def _dump__txt(self):
         self._dump_slice__txt(0, len(self))
