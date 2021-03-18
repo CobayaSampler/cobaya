@@ -34,10 +34,10 @@ chains.print_load_details = False
 enlargement_size: int = 100
 enlargement_factor: Optional[int] = None
 
-# Size of fast numpy cache
+# Size of fast numpy cache; should be larger than enlargement_size.
 # (used to avoid "setting" in Pandas too often, which is expensive)
 cache_size = 20
-assert cache_size <= enlargement_size
+
 
 # Make sure that we don't reach the empty part of the dataframe
 def check_index(i, imax):
@@ -236,7 +236,7 @@ class Collection(BaseCollection):
         if logpriors is not None:
             for name, value in zip(self.minuslogprior_names, logpriors):
                 self._cache[pos, self._icol[name]] = -value
-            self._cache[pos, self._icol[_minuslogprior]] = logps[1]
+            self._cache[pos, self._icol[_minuslogprior]] = - logps[1]
         if loglikes is not None:
             for name, value in zip(self.chi2_names, loglikes):
                 self._cache[pos, self._icol[name]] = -2 * value
@@ -251,22 +251,26 @@ class Collection(BaseCollection):
         """
         if self._cache_last == -1:
             return
-        self._enlarge_if_needed()
+        self._enlarge_if_needed(plus=cache_size)
         self._data.iloc[self._n:self._n + self._cache_last + 1] = \
             self._cache[:self._cache_last + 1]
         self._n += self._cache_last + 1
         self._cache_reset()
 
-    def _enlarge_if_needed(self):
-        if self._n >= self._data.shape[0]:
+    def _enlarge_if_needed(self, plus=0):
+        """
+        Enlarges the DataFrame if the last position (or last plus `plus`) reached.
+        """
+        if self._n + plus >= self._data.shape[0]:
             if enlargement_factor:
                 enlarge_by = self._data.shape[0] * enlargement_factor
             else:
                 enlarge_by = enlargement_size
+            enlarge_by = max(enlarge_by, plus)
             self._data = pd.concat([
                 self._data, pd.DataFrame(np.nan, columns=self._data.columns,
-                                         index=np.arange(len(self),
-                                                         len(self) + enlarge_by))])
+                                         index=np.arange(len(self._data),
+                                                         len(self._data) + enlarge_by))])
 
     @ensure_cache_dumped
     def append(self, collection):
