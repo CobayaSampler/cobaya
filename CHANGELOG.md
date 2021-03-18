@@ -1,5 +1,9 @@
 ## 3.0.5 – 2021-YY-ZZ
 
+### MCMC
+
+- Overhead reduced by at least 40%, thanks to caching in Collection
+
 ### Minimize
 
 - `PyBOBYQA` updated to 1.2, and quieter by default.
