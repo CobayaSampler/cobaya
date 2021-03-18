@@ -31,12 +31,12 @@ chains.print_load_details = False
 # Default chunk size for enlarging collections more efficiently
 # If a factor is defined (as a fraction !=0), it is used instead
 # (e.g. 0.10 to grow the number of rows by 10%)
-enlargement_size: int = 100
+enlargement_size: int = 500
 enlargement_factor: Optional[int] = None
 
 # Size of fast numpy cache; should be larger than enlargement_size.
 # (used to avoid "setting" in Pandas too often, which is expensive)
-cache_size = 20
+cache_size = 100
 
 
 # Make sure that we don't reach the empty part of the dataframe
