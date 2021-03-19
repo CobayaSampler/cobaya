@@ -480,7 +480,7 @@ class camb(BoltzmannBase):
     def calculate(self, state, want_derived=True, **params_values_dict):
         try:
             params, results = self.provider.get_CAMB_transfers()
-            if self.collectors:
+            if self.collectors or 'sigma8' in self.derived_extra:
                 if self.external_primordial_pk and self.needs_perts:
                     primordial_pk = self.provider.get_primordial_scalar_pk()
                     if primordial_pk.get('log_regular', True):
