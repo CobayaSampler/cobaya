@@ -440,19 +440,17 @@ class Prior(HasLogger):
                               "are known *fixed* or *sampled* parameters. "
                               "This prior recognizes: %r", name,
                     opts["argspec"].args)
-            params_without_default = opts["argspec"].args[
-                                     :(len(opts["argspec"].args) -
+            params_without_default = \
+                opts["argspec"].args[:(len(opts["argspec"].args) -
                                        len(opts["argspec"].defaults or []))]
-            if not all((p in opts["params"] or
-                        p in opts["constant_params"] or
-                        p in chain(*parameterization.sampled_input_dependence().values()))
-                       for p in params_without_default):
+            unknown = set(params_without_default).difference(
+                opts["params"]).difference(opts["constant_params"]).difference(
+                chain(*parameterization.sampled_input_dependence().values()))
+            if unknown:
                 raise LoggedError(
                     self.log, "Some of the arguments of the external prior '%s' cannot "
                               "be found and don't have a default value either: %s",
-                    name, list(set(params_without_default)
-                               .difference(opts["params"])
-                               .difference(opts["constant_params"])))
+                    name, list(unknown))
             self.mpi_warning("External prior '%s' loaded. "
                              "Mind that it might not be normalized!", name)
 
