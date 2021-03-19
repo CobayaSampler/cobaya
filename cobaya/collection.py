@@ -28,15 +28,9 @@ from getdist import chains
 
 chains.print_load_details = False
 
-# Default chunk size for enlarging collections more efficiently
-# If a factor is defined (as a fraction !=0), it is used instead
-# (e.g. 0.10 to grow the number of rows by 10%)
-enlargement_size: int = 500
-enlargement_factor: Optional[int] = None
-
-# Size of fast numpy cache; should be larger than enlargement_size.
+# Size of fast numpy cache
 # (used to avoid "setting" in Pandas too often, which is expensive)
-cache_size = 100
+_default_cache_size = 100
 
 
 # Make sure that we don't reach the empty part of the dataframe
@@ -50,17 +44,18 @@ def check_index(i, imax):
 
 
 # Notice that slices are never supposed to raise IndexError, but an empty list at worst!
-def check_slice(ij, imax):
+def check_slice(ij, imax=None):
     newlims = {"start": ij.start, "stop": ij.stop}
     if ij.start is None:
         newlims["start"] = 0
-    if ij.stop is None:
+    if ij.stop is None and imax is not None:
         newlims["stop"] = imax
-    for limname, lim in newlims.items():
-        if lim >= 0:
-            newlims[limname] = min(imax, lim)
-        else:
-            newlims[limname] = imax + lim
+    if imax is not None:
+        for limname, lim in newlims.items():
+            if lim >= 0:
+                newlims[limname] = min(imax, lim)
+            else:
+                newlims[limname] = imax + lim
     return slice(newlims["start"], newlims["stop"], ij.step)
 
 
@@ -100,7 +95,7 @@ class Collection(BaseCollection):
     Holds a collection of samples, stored internally into a ``pandas.DataFrame``.
 
     The DataFrame itself is accessible as the ``Collection.data`` property, but slicing
-    can be done on the ``Collection`` itself.
+    can be done on the ``Collection`` itself (returns a copy, not a view).
 
     Note for developers: when expanding this class or inheriting from it, always access
     the underlying DataFrame as `self.data` and not `self._data`, to ensure the cache has
@@ -108,10 +103,11 @@ class Collection(BaseCollection):
     method, make sure to decorate it with `@ensure_cache_dumped`.
     """
 
-    def __init__(self, model, output=None,
-                 initial_size=enlargement_size, name=None, extension=None, file_name=None,
-                 resuming=False, load=False, onload_skip=0, onload_thin=1):
+    def __init__(self, model, output=None, cache_size=_default_cache_size, name=None,
+                 extension=None, file_name=None, resuming=False, load=False,
+                 onload_skip=0, onload_thin=1):
         super().__init__(model, name)
+        self.cache_size = cache_size
         # Create/load the main data frame and the tracking indices
         # Create the DataFrame structure
         if output:
@@ -130,8 +126,7 @@ class Collection(BaseCollection):
                             self.log,
                             "Unexpected column names!\nLoaded: %s\nShould be: %s",
                             list(self.data.columns), self.columns)
-                    self._n = self.data.shape[0]
-                    self._n_last_out = self._n
+                    self._n_last_out = len(self)
                 except IOError:
                     if resuming:
                         self.log.info(
@@ -146,26 +141,24 @@ class Collection(BaseCollection):
         else:
             self._out_delete()
         if not resuming and not load:
-            self.reset(columns=self.columns, index=range(initial_size))
-            # TODO: the following 2 lines should go into the `reset` method.
-            if output:
-                self._n_last_out = 0
+            self.reset()
         # Prepare fast numpy cache
         self._icol = {col: i for i, col in enumerate(self.columns)}
         self._cache_reset()
 
-    def reset(self, columns=None, index=None):
+    def reset(self):
         """Create/reset the DataFrame."""
-        if columns is None:
-            columns = self.data.columns
-        if index is None:
-            index = self.data.index
-        self._data = pd.DataFrame(np.nan, columns=columns, index=index)
-        self._n = 0
         self._cache_reset()
+        self._data = pd.DataFrame(columns=self.columns)
+        if getattr(self, "file_name", None):
+            self._n_last_out = 0
 
     def add(self,
             values, derived=None, weight=1, logpost=None, logpriors=None, loglikes=None):
+        """
+        Adds a point to the collection. If `logpost` not given, it is obtained as the sum
+        of `logpriors` and `loglikes` (both optional otherwise).
+        """
         logps = self._check_before_adding(values, logpriors, loglikes, logpost=logpost,
                                           derived=derived, weight=weight)
         self._cache_add(values, logps, derived=derived, weight=weight,
@@ -209,7 +202,7 @@ class Collection(BaseCollection):
         return (logpost, logpriors_sum, loglikes_sum)
 
     def _cache_reset(self):
-        self._cache = np.full((cache_size, len(self.columns)), np.nan)
+        self._cache = np.full((self.cache_size, len(self.columns)), np.nan)
         self._cache_last = -1
 
     def _cache_add(self, values, logps, derived=None, weight=1, logpriors=None,
@@ -220,7 +213,7 @@ class Collection(BaseCollection):
         `logps` must be a tuple `(logpost, sum(logpriors), sum(loglikes))`, where the last
         two elements can be `None`.
         """
-        if self._cache_last == cache_size - 1:
+        if self._cache_last == self.cache_size - 1:
             self._cache_dump()
         self._cache_add_row(self._cache_last + 1, values, logps, derived=derived,
                             weight=weight, logpriors=logpriors, loglikes=loglikes)
@@ -256,26 +249,19 @@ class Collection(BaseCollection):
         """
         if self._cache_last == -1:
             return
-        self._enlarge_if_needed(plus=cache_size)
-        self._data.iloc[self._n:self._n + self._cache_last + 1] = \
+        self._enlarge(self._cache_last + 1)
+        self._data.iloc[len(self._data) - (self._cache_last + 1):len(self._data)] = \
             self._cache[:self._cache_last + 1]
-        self._n += self._cache_last + 1
         self._cache_reset()
 
-    def _enlarge_if_needed(self, plus=0):
+    def _enlarge(self, n):
         """
-        Enlarges the DataFrame if the last position (or last plus `plus`) reached.
+        Enlarges the DataFrame by `n` rows.
         """
-        if self._n + plus >= self._data.shape[0]:
-            if enlargement_factor:
-                enlarge_by = self._data.shape[0] * enlargement_factor
-            else:
-                enlarge_by = enlargement_size
-            enlarge_by = max(enlarge_by, plus)
-            self._data = pd.concat([
-                self._data, pd.DataFrame(np.nan, columns=self._data.columns,
-                                         index=np.arange(len(self._data),
-                                                         len(self._data) + enlarge_by))])
+        self._data = pd.concat([
+            self._data, pd.DataFrame(
+                np.nan, columns=self._data.columns,
+                index=np.arange(len(self._data), len(self._data) + n))])
 
     def append(self, collection):
         """
@@ -283,7 +269,6 @@ class Collection(BaseCollection):
         Internal method: does not check for consistency!
         """
         self._data = pd.concat([self.data[:len(self)], collection.data], ignore_index=True)
-        self._n = len(self) + len(collection)
 
     # Retrieve-like methods
     # MARKED FOR DEPRECATION IN v3.0
@@ -296,7 +281,7 @@ class Collection(BaseCollection):
     # END OF DEPRECATION BLOCK
 
     def __len__(self):
-        return self._n + (self._cache_last + 1)
+        return len(self._data) + (self._cache_last + 1)
 
     def n_last_out(self):
         return self._n_last_out
@@ -333,17 +318,16 @@ class Collection(BaseCollection):
             raise ValueError("Use just one index/column, or use .loc[row, column]. "
                              "(Notice that slices in .loc *include* the last point.)")
         if isinstance(args[0], str):
-            return self.data.iloc[:self._n, self.data.columns.get_loc(args[0])]
-        elif hasattr(args[0], "__len__"):
+            return self.data.iloc[:, self.data.columns.get_loc(args[0])]
+        elif hasattr(args[0], "__len__"):  # assume list of columns
             try:
-                return self.data.iloc[:self._n,
-                                      [self.data.columns.get_loc(c) for c in args[0]]]
+                return self.data.iloc[:, [self.data.columns.get_loc(c) for c in args[0]]]
             except KeyError:
                 raise ValueError("Some of the indices are not valid columns.")
         elif isinstance(args[0], int):
-            new_data = self.data.iloc[check_index(args[0], self._n)]
+            new_data = self.data.iloc[check_index(args[0])]
         elif isinstance(args[0], slice):
-            new_data = self.data.iloc[check_slice(args[0], self._n)]
+            new_data = self.data.iloc[check_slice(args[0])]
         else:
             raise ValueError("Index type not recognized: use column names or slices.")
         return self._copy(data=new_data)
@@ -589,10 +573,6 @@ class OnePoint(Collection):
     """Wrapper of :class:`~collection.Collection` to hold a single point,
     e.g. the current point of an MCMC."""
 
-    def __init__(self, *args, **kwargs):
-        kwargs["initial_size"] = 1
-        super().__init__(*args, **kwargs)
-
     def __getitem__(self, columns):
         if isinstance(columns, str):
             return self.data.values[0, self.data.columns.get_loc(columns)]
@@ -603,10 +583,9 @@ class OnePoint(Collection):
             except KeyError:
                 raise ValueError("Some of the indices are not valid columns.")
 
-    # Resets the counter, so the DataFrame never fills up!
     def add(self, *args, **kwargs):
+        self.reset()  # resets the DataFrame, so never goes beyond 1 point
         super().add(*args, **kwargs)
-        self._n = 0
 
     def increase_weight(self, increase):
         # For some reason, faster than `self.data[_weight] += increase`
@@ -616,6 +595,6 @@ class OnePoint(Collection):
     def __repr__(self):
         return self.data.__repr__()
 
-    # Dumper changed: since we have made self._n=0, it would print nothing
+    # Dumper changed: always force to print the single element.
     def _update__txt(self):
         self._dump_slice__txt(0, 1)
