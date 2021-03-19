@@ -194,15 +194,14 @@ class Parameterization(HasLogger):
                 list(dropped_but_never_used), partag.drop)
         # input params depend on input and sampled only, never on output/derived
         all_input_arguments = set(chain(*self._input_args.values()))
-        bad_input_dependencies = all_input_arguments.difference(
-            set(self.input_params()).union(set(self.sampled_params())).union(
-                set(self.constant_params())))
+        bad_input_dependencies = \
+            set(all_input_arguments).intersection(set(self._input_funcs))
         if bad_input_dependencies:
             raise LoggedError(
                 self.log,
                 "Input parameters defined as functions can only depend on other "
                 "input parameters that are not defined as functions. "
-                "In particular, an input parameter cannot depend on %r."
+                "In particular, an input parameter cannot depend on %r. "
                 "Use an explicit Theory calculator for more complex dependencies.",
                 list(bad_input_dependencies))
         self._wrapped_input_funcs, self._wrapped_derived_funcs = \
