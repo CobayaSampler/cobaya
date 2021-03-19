@@ -832,7 +832,11 @@ class Model(HasLogger):
         # If there are unassigned input params, check later that they are used by
         # *conditional* requirements of a component (and if not raise error)
         self._unassigned_input = set(p for p, assigned in params_assign["input"].items()
-                                     if not assigned)
+                                     if not assigned).difference(
+            chain(*(self.parameterization._input_dependencies[p] for p, assigned in
+                        params_assign["input"].items() if assigned and
+                    p in self.parameterization._input_dependencies)))
+
         # Remove aggregated chi2 that may have been picked up by an agnostic component
         aggr_chi2_names = [_get_chi2_name(t) for t in self.likelihood.all_types]
         for p in aggr_chi2_names:

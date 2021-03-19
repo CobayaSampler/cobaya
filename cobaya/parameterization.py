@@ -112,6 +112,7 @@ class Parameterization(HasLogger):
         self._input = {}
         self._input_funcs = {}
         self._input_args = {}
+        self._input_dependencies = {}
         self._output = {}
         self._constant = {}
         self._sampled = {}
@@ -119,6 +120,7 @@ class Parameterization(HasLogger):
         self._derived = {}
         self._derived_funcs = {}
         self._derived_args = {}
+        self._derived_dependencies = {}
         # Notice here that expand_info_param *always* adds a partag.derived:True tag
         # to infos without _prior or partag.value, and a partag.value field
         # to fixed params
@@ -177,9 +179,27 @@ class Parameterization(HasLogger):
         # Useful sets: directly-sampled input parameters and directly "output-ed" derived
         self._directly_sampled = [p for p in self._input if p in self._sampled]
         self._directly_output = [p for p in self._derived if p in self._output]
+
+        # input params depend on input and sampled only,
+        # never on output/derived unless constant
+        all_input_arguments = set(chain(*self._input_args.values()))
+        bad_input_dependencies = all_input_arguments.difference(
+            set(self._input).union(set(self._sampled)).union(
+                set(self._constant)))
+        if bad_input_dependencies:
+            raise LoggedError(
+                self.log,
+                "Input parameters defined as functions can only depend on other "
+                "input parameters. In particular, an input parameter cannot depend on %r."
+                " Use an explicit Theory calculator for more complex dependencies.",
+                list(bad_input_dependencies))
+
+        self._wrapped_input_funcs, self._wrapped_derived_funcs = \
+            self._get_wrapped_functions_evaluation_order()
+
         # Useful mapping: input params that vary if each sample is varied
         self._sampled_input_dependence = {s: [i for i in self._input
-                                              if s in self._input_args.get(i, {})]
+                                              if s in self._input_dependencies.get(i, {})]
                                           for s in self._sampled}
         # From here on, some error control.
         dropped_but_never_used = (
@@ -192,20 +212,7 @@ class Parameterization(HasLogger):
                 "code, and never used as arguments for any parameter functions. "
                 "Check that you are not using the '%s' tag unintentionally.",
                 list(dropped_but_never_used), partag.drop)
-        # input params depend on input and sampled only, never on output/derived
-        all_input_arguments = set(chain(*self._input_args.values()))
-        bad_input_dependencies = \
-            set(all_input_arguments).intersection(set(self._input_funcs))
-        if bad_input_dependencies:
-            raise LoggedError(
-                self.log,
-                "Input parameters defined as functions can only depend on other "
-                "input parameters that are not defined as functions. "
-                "In particular, an input parameter cannot depend on %r. "
-                "Use an explicit Theory calculator for more complex dependencies.",
-                list(bad_input_dependencies))
-        self._wrapped_input_funcs, self._wrapped_derived_funcs = \
-            self._get_wrapped_functions_evaluation_order()
+
         # warn if repeated labels
         labels_inv_repeated = invert_dict(self.labels())
         for k in list(labels_inv_repeated):
@@ -387,10 +394,12 @@ class Parameterization(HasLogger):
                 input_args = self._derived_args
                 known.update(self._output)
                 output = self._derived
+                dependencies = self._derived_dependencies
             else:
                 inputs = self._input_funcs.copy()
                 input_args = self._input_args
                 output = self._input
+                dependencies = self._input_dependencies
 
             while inputs:
                 for p, func in inputs.items():
@@ -398,6 +407,9 @@ class Parameterization(HasLogger):
                     if set(args).difference(known):
                         continue
                     known.add(p)
+                    dependencies[p] = set(args)
+                    for arg in set(args).intersection(dependencies):
+                        dependencies[p].update(dependencies[arg])
 
                     if not set(args).difference(self._constant):
                         # all inputs are constant, so output is constant and precomputed
@@ -412,7 +424,6 @@ class Parameterization(HasLogger):
                         wrapped_func[p] = \
                             (func, {arg: self._constant.get(arg) for arg in args},
                              [arg for arg in args if arg not in self._constant])
-
                     del inputs[p]
                     break
                 else:

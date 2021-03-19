@@ -343,6 +343,7 @@ import numpy as np
 import numbers
 from types import MethodType
 from typing import Sequence
+from itertools import chain
 
 # Local
 from cobaya.conventions import _prior, partag, _prior_1d_name
@@ -441,10 +442,10 @@ class Prior(HasLogger):
                     opts["argspec"].args)
             params_without_default = opts["argspec"].args[
                                      :(len(opts["argspec"].args) -
-                                       len(opts[
-                                               "argspec"].defaults or []))]
+                                       len(opts["argspec"].defaults or []))]
             if not all((p in opts["params"] or
-                        p in opts["constant_params"])
+                        p in opts["constant_params"] or
+                        p in chain(*parameterization.sampled_input_dependence().values()))
                        for p in params_without_default):
                 raise LoggedError(
                     self.log, "Some of the arguments of the external prior '%s' cannot "
