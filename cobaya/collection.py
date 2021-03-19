@@ -99,8 +99,13 @@ class Collection(BaseCollection):
     """
     Holds a collection of samples, stored internally into a ``pandas.DataFrame``.
 
-    The DataFrame itself is accessible as the ``Collection.data`` attribute, but slicing
+    The DataFrame itself is accessible as the ``Collection.data`` property, but slicing
     can be done on the ``Collection`` itself.
+
+    Note for developers: when expanding this class or inheriting from it, always access
+    the underlying DataFrame as `self.data` and not `self._data`, to ensure the cache has
+    been dumped. If you really need to access the actual attribute `self._data` in a
+    method, make sure to decorate it with `@ensure_cache_dumped`.
     """
 
     def __init__(self, model, output=None,
@@ -272,7 +277,6 @@ class Collection(BaseCollection):
                                          index=np.arange(len(self._data),
                                                          len(self._data) + enlarge_by))])
 
-    @ensure_cache_dumped
     def append(self, collection):
         """
         Append another collection.
@@ -303,17 +307,14 @@ class Collection(BaseCollection):
         return self._data
 
     # Make the dataframe printable (but only the filled ones!)
-    @ensure_cache_dumped
     def __repr__(self):
         return self.data[:len(self)].__repr__()
 
     # Make the dataframe iterable over rows
-    @ensure_cache_dumped
     def __iter__(self):
         return self.data[:len(self)].iterrows()
 
     # Accessing the dataframe
-    @ensure_cache_dumped
     def __getitem__(self, *args):
         """
         This is a hack of the DataFrame __getitem__ in order to never go
@@ -348,11 +349,9 @@ class Collection(BaseCollection):
         return self._copy(data=new_data)
 
     @property
-    @ensure_cache_dumped
     def values(self):
         return self.data.values
 
-    @ensure_cache_dumped
     def _copy(self, data=None):
         """
         Returns a copy of the collection.
@@ -380,7 +379,6 @@ class Collection(BaseCollection):
         return self._copy()
 
     # Statistical computations
-    @ensure_cache_dumped
     def mean(self, first=None, last=None, derived=False, pweight=False):
         """
         Returns the (weighted) mean of the parameters in the chain,
@@ -402,7 +400,6 @@ class Collection(BaseCollection):
             [first:last].T,
             weights=weights, axis=-1)
 
-    @ensure_cache_dumped
     def cov(self, first=None, last=None, derived=False, pweight=False):
         """
         Returns the (weighted) covariance matrix of the parameters in the chain,
@@ -426,17 +423,14 @@ class Collection(BaseCollection):
                  (list(self.derived_params) if derived else [])][first:last].T,
             **weights_kwarg))
 
-    @ensure_cache_dumped
     def bestfit(self):
         """Best fit (maximum likelihood) sample. Returns a copy."""
         return self.data.loc[self.data[_chi2].idxmin()].copy()
 
-    @ensure_cache_dumped
     def MAP(self):
         """Maximum-a-posteriori (MAP) sample. Returns a copy."""
         return self.data.loc[self.data[_minuslogpost].idxmin()].copy()
 
-    @ensure_cache_dumped
     def _sampled_to_getdist_mcsamples(self, first=None, last=None):
         """
         Basic interface with getdist -- internal use only!
@@ -464,7 +458,6 @@ class Collection(BaseCollection):
 
     # Dump/update/delete collection
 
-    @ensure_cache_dumped
     def out_update(self):
         self._get_driver("_update")()
 
