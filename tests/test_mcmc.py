@@ -113,6 +113,7 @@ def _test_overhead_timing(dim=15):
     prof.enable()
     run(info)
     prof.disable()
+    # prof.dump_stats("out.prof")  # to visualize with e.g. snakeviz
     s = StringIO()
     ps = pstats.Stats(prof, stream=s)
     print_n_calls = 10

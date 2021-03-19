@@ -30,7 +30,7 @@ chains.print_load_details = False
 
 # Size of fast numpy cache
 # (used to avoid "setting" in Pandas too often, which is expensive)
-_default_cache_size = 100
+_default_cache_size = 200
 
 
 # Make sure that we don't reach the empty part of the dataframe
