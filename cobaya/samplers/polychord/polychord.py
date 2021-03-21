@@ -34,7 +34,6 @@ from cobaya.conventions import _separator, _evidence_extension, _packages_path_a
 # TODO Jesus: add bibtex to cobaya
 
 
-
 class polychord(CovmatSampler):
     # Name of the PolyChord repo and version to download
     _pc_repo_name = "PolyChord/PolyChordLite"
@@ -61,7 +60,7 @@ class polychord(CovmatSampler):
             import supernest
             # self.use_supernest = self.use_supernest and True
             # This is effectively a no-op. 
-        except ImportError as e:
+        except ImportError:
             self.use_supernest = False
         allow_global = not self.path
         if not self.path and self.packages_path:
@@ -95,9 +94,9 @@ class polychord(CovmatSampler):
                 setattr(self, p, NumberWithUnits(
                     getattr(self, p), "nlive", scale=self.nlive, dtype=int).value)
         # Fill the automatic ones
-        if getattr(self, "feedback", None) is None:
-            values = {logging.CRITICAL: 0, logging.ERROR: 0, logging.WARNING: 0,
-                      logging.INFO: 1, logging.DEBUG: 2}
+        if getattr(self, 'feedback', None) is None:
+            values = {logging.CRITICAL: 0, logging.ERROR: 0,
+                      logging.WARNING: 0,  logging.INFO: 1, logging.DEBUG: 2}
             self.feedback = values[self.log.getEffectiveLevel()]
         # Prepare output folders and prefixes
         if self.output:
@@ -132,7 +131,8 @@ class polychord(CovmatSampler):
         self._updated_info["blocking"] = list(zip(oversampling_factors, blocks))
         blocks_flat = list(chain(*blocks))
         self.ordering = [
-            blocks_flat.index(p) for p in self.model.parameterization.sampled_params()]
+            blocks_flat.index(p)
+            for p in self.model.parameterization.sampled_params()]
         self.grade_dims = [len(block) for block in blocks]
         # Steps per block
         # NB: num_repeats is ignored by PolyChord when int "grade_frac" given,
@@ -152,11 +152,10 @@ class polychord(CovmatSampler):
         # As stated above, num_repeats is ignored, so let's not pass it
         pc_args.pop(pc_args.index("num_repeats"))
 
-
         # TODO check this!
         if self.use_supernest:
             self.pc_settings = PolyChordSettings(
-                self.nDims + 1, # FIXME: only true for one proposal. True for now, but may change in the future. 
+                self.nDims + 1,  # FIXME: only true for one proposal.
                 self.nDerived,
                 seed=(self.seed if self.seed is not None else -1),
                 **{p: getattr(self, p) for p in pc_args
@@ -389,7 +388,8 @@ class polychord(CovmatSampler):
             # Prepare the evidence(s) and write to file
             pre = "log(Z"
             active = "(Still active)"
-            with open(self.raw_prefix + ".stats", "r", encoding="utf-8-sig") as statsfile:
+            _statsFile = self.raw_prefix + ".stats"
+            with open(_statsFile, "r", encoding="utf-8-sig") as statsfile:
                 lines = [l for l in statsfile.readlines() if l.startswith(pre)]
             for l in lines:
                 logZ, logZstd = [float(n.replace(active, "")) for n in
