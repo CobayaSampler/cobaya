@@ -33,9 +33,14 @@ from cobaya.conventions import _separator, _evidence_extension,\
 # TODO Jesus fetch supenest if not installed with cobaya-install
 # TODO Jesus: add bibtex to cobaya
 
+try:
+    import supernest
+    use_supernest = True
+except ImportError:
+    use_supernest = False
+
 
 class polychord(CovmatSampler):
-    # Name of the PolyChord repo and version to download
     _pc_repo_name = "PolyChord/PolyChordLite"
     _pc_repo_version = "1.18.2"
     _base_dir_suffix = "polychord_raw"
@@ -43,7 +48,7 @@ class polychord(CovmatSampler):
     _at_resume_prefer_old = Sampler._at_resume_prefer_old + ["blocking"]
     _at_resume_prefer_new = Sampler._at_resume_prefer_new + ["callback_function"]
 
-    # variables from yaml
+    # Variables from yaml
     do_clustering: bool
     num_repeats: int
     confidence_for_unbounded: float
@@ -56,12 +61,8 @@ class polychord(CovmatSampler):
     def initialize(self):
         """Import the PolyChord sampler and prepare its arguments."""
         # Allow global import if no direct path specification
-        try:
-            import supernest
-            # self.use_supernest = self.use_supernest and True
-            # This is effectively a no-op. 
-        except ImportError:
-            self.use_supernest = False
+
+        self.use_supernest = use_supernest
         allow_global = not self.path
         if not self.path and self.packages_path:
             self.path = self.get_path(self.packages_path)
@@ -163,8 +164,9 @@ class polychord(CovmatSampler):
         # As stated above, num_repeats is ignored, so let's not pass it
         pc_args.pop(pc_args.index("num_repeats"))
 
-        # TODO check this!
         if self.use_supernest:
+            self.grade_dims.append(1)
+            self.grade_frac.append(1.0)
             self.pc_settings = PolyChordSettings(
                 self.nDims + 1,  # FIXME: only true for one proposal.
                 self.nDerived,
@@ -181,30 +183,30 @@ class polychord(CovmatSampler):
                 "Proposal covmat:\n%s",
                 DataFrame(self._covmat,
                           columns=self.model.parameterization.sampled_params(),
-                          index=self.model.parameterization.sampled_params()).to_string(
-                    line_width=_line_width))
+                          index=self.model.parameterization.sampled_params())\
+                .to_string(line_width=_line_width))
         else:
             self.pc_settings = PolyChordSettings(
                 self.nDims,
                 self.nDerived,
                 seed=(self.seed if self.seed is not None else -1),
-                # TODO This is where we want the := operator
                 **{p: getattr(self, p) for p in pc_args
-                   if getattr(self, p) is not None})
+                   if getattr(self, p) is not None}
+            )
 
         # prior conversion from the hypercube
-        bounds = self.model.prior.bounds(
+        self.bounds = self.model.prior.bounds(
             confidence_for_unbounded=self.confidence_for_unbounded)
         # Check if priors are bounded (nan's to inf)
-        inf = np.where(np.isinf(bounds))
+        inf = np.where(np.isinf(self.bounds))
         if len(inf[0]):
             params_names = self.model.parameterization.sampled_params()
             params = [params_names[i] for i in sorted(list(set(inf[0])))]
             raise LoggedError(
                 self.log, "PolyChord needs bounded priors, but the parameter(s) '"
                           "', '".join(params) + "' is(are) unbounded.")
-        locs = bounds[:, 0]
-        scales = bounds[:, 1] - bounds[:, 0]
+        locs = self.bounds[:, 0]
+        scales = self.bounds[:, 1] - self.bounds[:, 0]
         # This function re-scales the parameters AND puts them in the right order
         self.pc_prior = lambda x: (locs + np.array(x)[self.ordering] * scales).tolist()
         # We will need the volume of the prior domain; PolyChord divides by it
@@ -285,7 +287,8 @@ class polychord(CovmatSampler):
             derived = list(derived) + list(logpriors) + list(loglikes)
             return (
                 max(logposterior + self.logvolume, self.pc_settings.logzero),
-                derived)
+                derived
+            )
 
         sync_processes()
         self.mpi_info("Calling PolyChord...")
@@ -296,11 +299,12 @@ class polychord(CovmatSampler):
                 proposal = supernest.gaussian_proposal(
                     self.bounds, self._mean, self._covmat, loglike=logpost)
                 self.mpi_info('Success!')
-                nDims, ll, prior = supernest.superimpose((self.pc_prior, logpost), nDims = self.nDims)
+                nDims, ll, prior = supernest.superimpose([(self.pc_prior, logpost)], nDims = self.nDims)
                 self.pc.run_polychord(ll, nDims, self.nDerived, self.pc_settings, prior, self.dumper)
             except ValueError as e:
                 self.mpi_info(f'Failure: {e.message()}')
         else:
+            self.mpi_info('Not using SuperNest.')
             self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
                                   self.pc_prior, self.dumper)
         self.process_raw_output()
