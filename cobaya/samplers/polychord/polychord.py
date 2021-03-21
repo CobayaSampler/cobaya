@@ -143,11 +143,14 @@ class polychord(CovmatSampler):
             for o, dim_block in zip(oversampling_factors, self.grade_dims)]
         # Assign settings
         pc_args = ["nlive", "num_repeats", "nprior", "do_clustering",
-                   "precision_criterion", "max_ndead", "boost_posterior", "feedback",
-                   "logzero", "posteriors", "equals", "compression_factor",
-                   "cluster_posteriors", "write_resume", "read_resume", "write_stats",
-                   "write_live", "write_dead", "base_dir", "grade_frac", "grade_dims",
-                   "feedback", "read_resume", "base_dir", "file_root", "grade_frac",
+                   "precision_criterion", "max_ndead",
+                   "boost_posterior", "feedback", "logzero",
+                   "posteriors", "equals", "compression_factor",
+                   "cluster_posteriors", "write_resume",
+                   "read_resume", "write_stats", "write_live",
+                   "write_dead", "base_dir", "grade_frac",
+                   "grade_dims", "feedback", "read_resume",
+                   "base_dir", "file_root", "grade_frac",
                    "grade_dims"]
         # As stated above, num_repeats is ignored, so let's not pass it
         pc_args.pop(pc_args.index("num_repeats"))
@@ -176,8 +179,7 @@ class polychord(CovmatSampler):
             self.pc_settings = PolyChordSettings(
                 self.nDims,
                 self.nDerived,
-                seed=(self.seed if self.seed is not
-                      None else -1),
+                seed=(self.seed if self.seed is not None else -1),
                 # TODO This is where we want the := operator
                 **{p: getattr(self, p) for p in pc_args
                    if getattr(self, p) is not None})
@@ -197,7 +199,7 @@ class polychord(CovmatSampler):
         scales = bounds[:, 1] - bounds[:, 0]
         # This function re-scales the parameters AND puts them in the right order
         self.pc_prior = lambda x: (locs + np.array(x)[self.ordering] * scales).tolist()
-        # We will need the volume of the prior domain, since PolyChord divides by it
+        # We will need the volume of the prior domain; PolyChord divides by it
         self.logvolume = np.log(np.prod(scales))
         # Prepare callback function
         if self.callback_function is not None:
@@ -430,7 +432,8 @@ class polychord(CovmatSampler):
         if is_main_process():
             self.log.info("Finished! Raw PolyChord output stored in '%s', "
                           "with prefix '%s'",
-                          self.pc_settings.base_dir, self.pc_settings.file_root)
+                          self.pc_settings.base_dir,
+                          self.pc_settings.file_root)
             self.log.info(
                 "log(Z) = %g +/- %g ; Z in [%.8g, %.8g] (68%% C.L. log-gaussian)",
                 self.logZ, self.logZstd,
@@ -571,11 +574,13 @@ class polychord(CovmatSampler):
             return True
         log = logging.getLogger(__name__.split(".")[-1])
         log.info("Downloading PolyChord...")
-        success = download_github_release(os.path.join(path, "code"),
-                                          cls._pc_repo_name,
-                                          cls._pc_repo_version,
-                                          no_progress_bars=no_progress_bars,
-                                          logger=log)
+        success = download_github_release(
+            os.path.join(path, "code"),
+            cls._pc_repo_name,
+            cls._pc_repo_version,
+            no_progress_bars=no_progress_bars,
+            logger=log
+        )
         if not success:
             log.error("Could not download PolyChord.")
             return False
