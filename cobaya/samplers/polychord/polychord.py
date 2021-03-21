@@ -54,7 +54,7 @@ class polychord(CovmatSampler):
     nlive: NumberWithUnits
 
     def initialize(self):
-        """Imports the PolyChord sampler and prepares its arguments."""
+        """Import the PolyChord sampler and prepare its arguments."""
         # Allow global import if no direct path specification
         try:
             import supernest
