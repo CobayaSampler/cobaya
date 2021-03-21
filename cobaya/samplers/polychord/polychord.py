@@ -264,10 +264,7 @@ class polychord(CovmatSampler):
             raise LoggedError(self.log, "`mean` must be a dict 'param: value'")
 
     def _run(self):
-        """
-        Prepare the posterior function and call ``pypolychord.run_polychord()``.
-        """
-
+        """Prepare the posterior; call ``pypolychord.run_polychord()``."""
         # Prepare the posterior
         # Don't forget to multiply by the volume of the physical hypercube,
         # since PolyChord divides by it
