@@ -20,7 +20,7 @@ from pandas import DataFrame
 import re
 
 # Local
-from cobaya.tools import read_dnumber, get_external_function, PythonPath, \
+from cobaya.tools import read_dnumber, get_external_function,  \
     find_with_regexp, NumberWithUnits, load_module, VersionCheckError
 from cobaya.sampler import Sampler, CovmatSampler
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
@@ -28,8 +28,8 @@ from cobaya.collection import Collection
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, NotInstalledError
 from cobaya.yaml import yaml_dump_file
-from cobaya.conventions import _separator, _evidence_extension, _packages_path_arg, \
-    _line_width
+from cobaya.conventions import _separator, _evidence_extension,\
+    _packages_path_arg, _line_width
 # TODO Jesus fetch supenest if not installed with cobaya-install
 # TODO Jesus: add bibtex to cobaya
 
@@ -92,7 +92,9 @@ class polychord(CovmatSampler):
         for p in self._quants_nlive_units:
             if getattr(self, p) is not None:
                 setattr(self, p, NumberWithUnits(
-                    getattr(self, p), "nlive", scale=self.nlive, dtype=int).value)
+                    getattr(self, p),
+                    "nlive",
+                    scale=self.nlive, dtype=int).value)
         # Fill the automatic ones
         if getattr(self, 'feedback', None) is None:
             values = {
@@ -123,7 +125,7 @@ class polychord(CovmatSampler):
         self.mpi_info("Storing raw PolyChord output in '%s'.", self.base_dir)
         # Exploiting the speed hierarchy
         if self.blocking:
-            blocks, oversampling_factors = self.model.check_blocking(self.blocking)
+            blocks, oversampling_factors = self.model.check_blocking(True)
         else:
             if self.measure_speeds:
                 self.model.measure_and_set_speeds(n=self.measure_speeds)
