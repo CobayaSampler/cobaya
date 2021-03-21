@@ -365,7 +365,7 @@ class polychord(CovmatSampler):
 
     def process_raw_output(self):
         """
-        Loads the sample of live points from ``PolyChord``'s raw output and writes it
+        Load the sample of live points from ``PolyChord``'s raw output and write it
         (if ``txt`` output requested).
         """
         if is_main_process():
