@@ -181,7 +181,7 @@ class polychord(CovmatSampler):
                 # TODO This is where we want the := operator
                 **{p: getattr(self, p) for p in pc_args
                    if getattr(self, p) is not None})
-        
+
         # prior conversion from the hypercube
         bounds = self.model.prior.bounds(
             confidence_for_unbounded=self.confidence_for_unbounded)
@@ -247,17 +247,19 @@ class polychord(CovmatSampler):
             try:
                 self.callback_function_callable(self)
             except Exception as e:
-                self.log.error("The callback function produced an error: %r", str(e))
+                self.log.error("The callback function produced an error: %r",
+                               str(e))
             self.last_point_callback = len(self.dead)
 
     # TODO: Eventually this will be somewhere else (e.g. in CovmatSampler)
     def _load_mean(self):
         ref_point = dict(zip(self.model.parameterization.sampled_params(), self.model.prior.reference()))
         try:
-            return np.array([(self.mean or {}).get(p, ref_point[p])
-                             for p in self.model.parameterization.sampled_params()])
+            return np.array(
+                [(self.mean or {}).get(p, ref_point[p])
+                 for p in self.model.parameterization.sampled_params()])
         except:
-            raise LoggedError(self.log, "`mean` must be a dictionary 'param: value'")
+            raise LoggedError(self.log, "`mean` must be a dict 'param: value'")
 
     def _run(self):
         """
@@ -374,8 +376,11 @@ class polychord(CovmatSampler):
                 clusters_raw_regexp = re.compile(
                     re.escape(self.pc_settings.file_root + "_") + r"\d+\.txt")
                 cluster_raw_files = sorted(find_with_regexp(
-                    clusters_raw_regexp, os.path.join(
-                        self.pc_settings.base_dir, self._clusters_dir), walk_tree=True))
+                    clusters_raw_regexp,
+                    os.path.join(
+                        self.pc_settings.base_dir,
+                        self._clusters_dir),
+                    walk_tree=True))
                 for f in cluster_raw_files:
                     i = int(f[f.rfind("_") + 1:-len(".txt")])
                     if self.output:
@@ -441,7 +446,10 @@ class polychord(CovmatSampler):
         """
         if is_main_process():
             products = {
-                "sample": self.collection, "logZ": self.logZ, "logZstd": self.logZstd}
+                "sample": self.collection,
+                "logZ": self.logZ,
+                "logZstd": self.logZstd
+            }
             if self.pc_settings.do_clustering:
                 products.update({"clusters": self.clusters})
             return products
@@ -547,9 +555,9 @@ class polychord(CovmatSampler):
                 log.error("Couldn't find the PolyChord python interface at '%s'. "
                           "Are you sure it has been installed there?", path)
             else:
-                log.error("Could not import global PolyChord installation. "
-                          "Specify a Cobaya or PolyChord installation path, "
-                          "or install the PolyChord Python interface globally with "
+                log.error("Could not import *global* PolyChord installation. "
+                          "Specify a Cobaya or PolyChord installation path, or "
+                          "install the PolyChord Python interface globally with "
                           "'cd /path/to/polychord/ ; python setup.py install'")
             return False
         except VersionCheckError as e:
@@ -563,7 +571,8 @@ class polychord(CovmatSampler):
             return True
         log = logging.getLogger(__name__.split(".")[-1])
         log.info("Downloading PolyChord...")
-        success = download_github_release(os.path.join(path, "code"), cls._pc_repo_name,
+        success = download_github_release(os.path.join(path, "code"),
+                                          cls._pc_repo_name,
                                           cls._pc_repo_version,
                                           no_progress_bars=no_progress_bars,
                                           logger=log)
@@ -578,8 +587,8 @@ class polychord(CovmatSampler):
                            cls._pc_repo_name[cls._pc_repo_name.find("/") + 1:])
         my_env = os.environ.copy()
         my_env.update({"PWD": cwd})
-        process_make = Popen(["make", "pypolychord", "MPI=1"], cwd=cwd, env=my_env,
-                             stdout=PIPE, stderr=PIPE)
+        process_make = Popen(["make", "pypolychord", "MPI=1"], cwd=cwd,
+                             env=my_env, stdout=PIPE, stderr=PIPE)
         out, err = process_make.communicate()
         if process_make.returncode:
             log.info(out.decode("utf-8"))
