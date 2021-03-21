@@ -219,7 +219,7 @@ class polychord(CovmatSampler):
         self.mpi_info("Initialized!")
 
     def dumper(self, live_points, dead_points, logweights, logZ, logZstd):
-        # Store live and dead points and evidence computed so far
+        """Store live and dead points and evidence computed so far"""
         self.live.reset()
         for point in live_points:
             self.live.add(
@@ -265,7 +265,7 @@ class polychord(CovmatSampler):
 
     def _run(self):
         """
-        Prepares the posterior function and calls ``PolyChord``'s ``run`` function.
+        Prepare the posterior function and call ``pypolychord.run_polychord()``.
         """
 
         # Prepare the posterior
