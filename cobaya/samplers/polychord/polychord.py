@@ -68,9 +68,10 @@ class polychord(CovmatSampler):
         self.pc = self.is_installed(path=self.path, allow_global=allow_global)
         if not self.pc:
             raise NotInstalledError(
-                self.log, "Could not find PolyChord. Check error message above. "
-                          "To install it, run 'cobaya-install polychord --%s "
-                          "[packages_path]'", _packages_path_arg)
+                self.log,
+                "Could not find PolyChord. Check error message above. "
+                "To install it, run 'cobaya-install polychord --%s "
+                "[packages_path]'", _packages_path_arg)
         # Prepare arguments and settings
         from pypolychord.settings import PolyChordSettings
         self.n_sampled = len(self.model.parameterization.sampled_params())
@@ -138,19 +139,16 @@ class polychord(CovmatSampler):
         # Save blocking in updated info, in case we want to resume
         self._updated_info["blocking"] = list(zip(oversampling_factors, blocks))
         blocks_flat = list(chain(*blocks))
-        self.ordering = [
-            blocks_flat.index(p)
-            for p in self.model.parameterization.sampled_params()
-        ]
+        self.ordering = [blocks_flat.index(p) for p in
+                         self.model.parameterization.sampled_params()]
         self.grade_dims = [len(block) for block in blocks]
         # Steps per block
         # NB: num_repeats is ignored by PolyChord when int "grade_frac" given,
         # so needs to be applied by hand.
         # In num_repeats, `d` is interpreted as dimension of each block
-        self.grade_frac = [
-            int(o * read_dnumber(self.num_repeats, dim_block))
-            for o, dim_block in zip(oversampling_factors, self.grade_dims)
-        ]
+        self.grade_frac = [int(o * read_dnumber(self.num_repeats, dim_block))
+                           for o, dim_block in
+                           zip(oversampling_factors, self.grade_dims)]
         # Assign settings
         pc_args = ["nlive", "num_repeats", "nprior", "do_clustering",
                    "precision_criterion", "max_ndead",
