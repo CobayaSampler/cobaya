@@ -95,16 +95,22 @@ class polychord(CovmatSampler):
                     getattr(self, p), "nlive", scale=self.nlive, dtype=int).value)
         # Fill the automatic ones
         if getattr(self, 'feedback', None) is None:
-            values = {logging.CRITICAL: 0, logging.ERROR: 0,
-                      logging.WARNING: 0,  logging.INFO: 1, logging.DEBUG: 2}
+            values = {
+                logging.CRITICAL: 0,
+                logging.ERROR: 0,
+                logging.WARNING: 0,
+                logging.INFO: 1,
+                logging.DEBUG: 2
+            }
             self.feedback = values[self.log.getEffectiveLevel()]
         # Prepare output folders and prefixes
         if self.output:
             self.file_root = self.output.prefix
             self.read_resume = self.output.is_resuming()
         else:
-            output_prefix = share_mpi(hex(int(random() * 16 ** 6))[2:]
-                                      if is_main_process() else None)
+            output_prefix = share_mpi(
+                hex(int(random() * 16 ** 6))[2:]
+                if is_main_process() else None)
             self.file_root = output_prefix
             # dummy output -- no resume!
             self.read_resume = False
@@ -132,7 +138,8 @@ class polychord(CovmatSampler):
         blocks_flat = list(chain(*blocks))
         self.ordering = [
             blocks_flat.index(p)
-            for p in self.model.parameterization.sampled_params()]
+            for p in self.model.parameterization.sampled_params()
+        ]
         self.grade_dims = [len(block) for block in blocks]
         # Steps per block
         # NB: num_repeats is ignored by PolyChord when int "grade_frac" given,
@@ -140,7 +147,8 @@ class polychord(CovmatSampler):
         # In num_repeats, `d` is interpreted as dimension of each block
         self.grade_frac = [
             int(o * read_dnumber(self.num_repeats, dim_block))
-            for o, dim_block in zip(oversampling_factors, self.grade_dims)]
+            for o, dim_block in zip(oversampling_factors, self.grade_dims)
+        ]
         # Assign settings
         pc_args = ["nlive", "num_repeats", "nprior", "do_clustering",
                    "precision_criterion", "max_ndead",
@@ -265,7 +273,6 @@ class polychord(CovmatSampler):
 
     def _run(self):
         """Prepare the posterior & call ``pypolychord.run_polychord()``."""
-        # Prepare the posterior
         # Don't forget to multiply by the volume of the physical hypercube,
         # since PolyChord divides by it
         def logpost(params_values):
