@@ -35,9 +35,9 @@ from cobaya.conventions import _separator, _evidence_extension,\
 
 try:
     import supernest
-    use_supernest = True
+    supernest_loaded = True
 except ImportError:
-    use_supernest = False
+    supernest_loaded = False
 
 
 class polychord(CovmatSampler):
@@ -62,7 +62,7 @@ class polychord(CovmatSampler):
         """Import the PolyChord sampler and prepare its arguments."""
         # Allow global import if no direct path specification
 
-        self.use_supernest = use_supernest
+        self.use_supernest = supernest_loaded and self.use_supernest
         allow_global = not self.path
         if not self.path and self.packages_path:
             self.path = self.get_path(self.packages_path)
@@ -299,10 +299,10 @@ class polychord(CovmatSampler):
                 proposal = supernest.gaussian_proposal(
                     self.bounds, self._mean, self._covmat, loglike=logpost)
                 self.mpi_info('Success!')
-                nDims, ll, prior = supernest.superimpose([(self.pc_prior, logpost)], nDims = self.nDims)
-                self.pc.run_polychord(ll, nDims, self.nDerived, self.pc_settings, prior, self.dumper)
+                nDims, prior, ll = supernest.superimpose([(self.pc_prior, logpost)], nDims = self.nDims)
             except ValueError as e:
-                self.mpi_info(f'Failure: {e.message()}')
+                self.mpi_info(f'Failure: {str(e)}')
+            self.pc.run_polychord(ll, nDims, self.nDerived, self.pc_settings, prior, self.dumper)
         else:
             self.mpi_info('Not using SuperNest.')
             self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
