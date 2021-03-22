@@ -22,7 +22,7 @@ from cobaya.conventions import _input_suffix, _updated_suffix, _separator_files,
 from cobaya.conventions import _resume, _resume_default, _force, _yaml_extensions
 from cobaya.conventions import _output_prefix, _debug, kinds, _params, _class_name
 from cobaya.log import LoggedError, HasLogger
-from cobaya.input import is_equal_info, get_class
+from cobaya.input import is_equal_info, get_resolved_class
 from cobaya.mpi import is_main_process, more_than_one_process, share_mpi
 from cobaya.collection import Collection
 from cobaya.tools import deepcopy_where_possible, find_with_regexp, sort_cosmetic
@@ -254,8 +254,9 @@ class Output(HasLogger):
                             updated_info[k][c][_version] = old_version
                             updated_info_trimmed[k][c][_version] = old_version
                         elif old_version is not None:
-                            class_name = updated_info[k][c].get(_class_name) or c
-                            cls = get_class(class_name, k, None_if_not_found=True)
+                            cls = get_resolved_class(
+                                c, k, None_if_not_found=True,
+                                class_name=updated_info[k][c].get(_class_name))
                             if cls and cls.compare_versions(
                                     old_version, new_version, equal=False):
                                 raise LoggedError(

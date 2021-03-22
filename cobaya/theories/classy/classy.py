@@ -195,26 +195,36 @@ class classy(BoltzmannBase):
         self.derived_extra = []
         self.log.info("Initialized!")
 
+    def set_cl_reqs(self, reqs):
+        """
+        Sets some common settings for both lensend and unlensed Cl's.
+        """
+        if any(("t" in cl.lower()) for cl in reqs):
+            self.extra_args["output"] += " tCl"
+        if any((("e" in cl.lower()) or ("b" in cl.lower())) for cl in reqs):
+            self.extra_args["output"] += " pCl"
+        # For l_max_scalars, remember previous entries.
+        self.extra_args["l_max_scalars"] = \
+            max(self.extra_args.get("l_max_scalars", 0), max(reqs.values()))
+        if 'T_cmb' not in self.derived_extra:
+            self.derived_extra += ['T_cmb']
+
     def must_provide(self, **requirements):
         # Computed quantities required by the likelihood
         super().must_provide(**requirements)
         for k, v in self._must_provide.items():
             # Products and other computations
             if k == "Cl":
-                if any(("t" in cl.lower()) for cl in v):
-                    self.extra_args["output"] += " tCl"
-                if any((("e" in cl.lower()) or ("b" in cl.lower())) for cl in v):
-                    self.extra_args["output"] += " pCl"
+                self.set_cl_reqs(v)
                 # For modern experiments, always lensed Cl's!
                 self.extra_args["output"] += " lCl"
                 self.extra_args["lensing"] = "yes"
-                # For l_max_scalars, remember previous entries.
-                self.extra_args["l_max_scalars"] = \
-                    max(self.extra_args.get("l_max_scalars", 0), max(v.values()))
                 self.collectors[k] = Collector(
                     method="lensed_cl", kwargs={"lmax": self.extra_args["l_max_scalars"]})
-                if 'T_cmb' not in self.derived_extra:
-                    self.derived_extra += ['T_cmb']
+            elif k == "unlensed_Cl":
+                self.set_cl_reqs(v)
+                self.collectors[k] = Collector(
+                    method="raw_cl", kwargs={"lmax": self.extra_args["l_max_scalars"]})
             elif k == "Hubble":
                 self.collectors[k] = Collector(
                     method="Hubble",
@@ -421,25 +431,31 @@ class classy(BoltzmannBase):
         derived_extra = {p: requested_and_extra[p] for p in self.derived_extra}
         return derived, derived_extra
 
-    def get_Cl(self, ell_factor=False, units="FIRASmuK2"):
+    def _get_Cl(self, ell_factor=False, units="FIRASmuK2", lensed=True):
+        which_key = "Cl" if lensed else "unlensed_Cl"
+        which_error = "lensed" if lensed else "unlensed"
         try:
-            cls = deepcopy(self._current_state["Cl"])
+            cls = deepcopy(self.current_state[which_key])
         except:
-            raise LoggedError(
-                self.log,
-                "No Cl's were computed. Are you sure that you have requested them?")
+            raise LoggedError(self.log, "No %s Cl's were computed. Are you sure that you "
+                              "have requested them?", which_error)
         # unit conversion and ell_factor
         ells_factor = ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[
                       2:] if ell_factor else 1
         units_factor = self._cmb_unit_factor(
-            units, self._current_state['derived_extra']['T_cmb'])
-
+            units, self.current_state['derived_extra']['T_cmb'])
         for cl in cls:
             if cl not in ['pp', 'ell']:
                 cls[cl][2:] *= units_factor ** 2 * ells_factor
-        if "pp" in cls and ell_factor:
+        if lensed and "pp" in cls and ell_factor:
             cls['pp'][2:] *= ells_factor ** 2 * (2 * np.pi)
         return cls
+
+    def get_Cl(self, ell_factor=False, units="FIRASmuK2"):
+        return self._get_Cl(ell_factor=ell_factor, units=units, lensed=True)
+
+    def get_unlensed_Cl(self, ell_factor=False, units="FIRASmuK2"):
+        return self._get_Cl(ell_factor=ell_factor, units=units, lensed=False)
 
     def _get_z_dependent(self, quantity, z):
         try:
@@ -451,7 +467,7 @@ class classy(BoltzmannBase):
                 self.collectors[quantity].args_names.index("z")]
         i_kwarg_z = np.concatenate(
             [np.where(computed_redshifts == zi)[0] for zi in np.atleast_1d(z)])
-        values = np.array(deepcopy(self._current_state[quantity]))
+        values = np.array(deepcopy(self.current_state[quantity]))
         if quantity == "comoving_radial_distance":
             values = values[0]
         return values[i_kwarg_z]

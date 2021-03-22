@@ -1,5 +1,5 @@
 r"""
-.. module:: _InstallableLikelihood
+.. module:: InstallableLikelihood
 
 :Synopsis: Prototype class adding class methods for simple installation of likelihood data.
 :Author: Jesus Torrado and Antony Lewis
@@ -14,7 +14,7 @@ import logging
 from cobaya.likelihood import Likelihood
 
 
-class _InstallableLikelihood(Likelihood):
+class InstallableLikelihood(Likelihood):
     install_options = {}
 
     @classmethod
@@ -36,8 +36,10 @@ class _InstallableLikelihood(Likelihood):
         log = logging.getLogger(cls.__name__)
         if kwargs.get("data", True):
             path = kwargs["path"]
-            if not (cls.get_install_options() and
-                    os.path.exists(path) and len(os.listdir(path)) > 0):
+            opts = cls.get_install_options()
+            if not opts:
+                return True
+            elif not (os.path.exists(path) and len(os.listdir(path)) > 0):
                 log.error("The given installation path does not exist: '%s'", path)
                 return False
         return True
@@ -49,6 +51,9 @@ class _InstallableLikelihood(Likelihood):
             return True
         log = logging.getLogger(cls.get_qualified_class_name())
         opts = cls.get_install_options()
+        if not opts:
+            log.info("No install options. Nothing to do.")
+            return True
         repo = opts.get("github_repository", None)
         if repo:
             from cobaya.install import download_github_release

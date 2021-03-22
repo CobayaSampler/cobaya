@@ -1,5 +1,5 @@
 r"""
-.. module:: _bao_prototype
+.. module:: bao
 
 :Synopsis: BAO, f_sigma8 and other measurements at single redshifts, with correlations
 :Author: Antony Lewis (adapted to Cobaya by Jesus Torrado, with little modification)
@@ -129,10 +129,10 @@ from typing import Optional, Sequence
 # Local
 from cobaya.log import LoggedError
 from cobaya.conventions import _packages_path, _c_km_s
-from cobaya.likelihoods._base_classes import _InstallableLikelihood
+from cobaya.likelihoods.base_classes import InstallableLikelihood
 
 
-class _bao_prototype(_InstallableLikelihood):
+class BAO(InstallableLikelihood):
     # Data type for aggregated chi2 (case sensitive)
     type = "BAO"
 
@@ -177,7 +177,7 @@ class _bao_prototype(_InstallableLikelihood):
         # Columns: z value [err] [type]
         self.has_type = self.data.iloc[:, -1].dtype == np.dtype("O")
         assert self.has_type  # mandatory for now!
-        self.has_err = len(self.data.columns) > 2 and self.data[2].dtype == np.float
+        self.has_err = len(self.data.columns) > 2 and self.data[2].dtype == float
         if self.has_err:
             self.data.columns = ["z", "value", "error", "observable"]
         else:

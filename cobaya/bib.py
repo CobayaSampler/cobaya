@@ -53,7 +53,7 @@ def get_desc_component(component, kind, info=None):
 def get_bib_component(component, kind):
     cls = get_class(component, kind, None_if_not_found=True)
     if cls:
-        lines = (cls.get_bibtex().lstrip("\n").rstrip("\n")
+        lines = ((cls.get_bibtex() or "").lstrip("\n").rstrip("\n")
                  or "# [no bibliography information found]")
     else:
         lines = "# [Component '%s.%s' not known.]" % (kind, component)

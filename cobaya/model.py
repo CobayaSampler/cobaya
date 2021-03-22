@@ -7,6 +7,7 @@
 """
 # Global
 import logging
+from copy import deepcopy
 from itertools import chain
 from typing import NamedTuple, Sequence, Mapping
 import numpy as np
@@ -20,7 +21,7 @@ from cobaya.input import update_info
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection, LikelihoodExternalFunction, \
-    AbsorbUnusedParamsLikelihood
+    AbsorbUnusedParamsLikelihood, is_LikelihoodInterface
 from cobaya.theory import TheoryCollection
 from cobaya.log import LoggedError, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
@@ -47,6 +48,12 @@ class Requirement(NamedTuple):
 
     def __repr__(self):
         return "{%r:%r}" % (self.name, self.options)
+
+
+# Dummy component prefix for manual requirements
+_dummy_prefix = "_DUMMY"
+is_dummy_component = lambda component: \
+    isinstance(component, str) and component.startswith(_dummy_prefix)
 
 
 def _dict_equal(d1, d2):
@@ -245,16 +252,16 @@ class Model(HasLogger):
                     "Calculation failed, skipping rest of calculations ")
                 break
             if return_derived:
-                derived_dict.update(component.get_current_derived())
+                derived_dict.update(component.current_derived)
             # Add chi2's to derived parameters
-            if hasattr(component, "get_current_logp"):
+            if is_LikelihoodInterface(component):
                 try:
-                    loglikes[index - n_theory] = float(component.get_current_logp())
+                    loglikes[index - n_theory] = float(component.current_logp)
                 except TypeError:
                     raise LoggedError(
                         self.log,
                         "Likelihood %s has not returned a valid log-likelihood, "
-                        "but %r instead.", str(component), component.get_current_logp())
+                        "but %r instead.", str(component), component.current_logp)
                 if return_derived:
                     derived_dict[_get_chi2_name(component.get_name().replace(".", "_"))] \
                         = -2 * loglikes[index - n_theory]
@@ -450,7 +457,7 @@ class Model(HasLogger):
         else:
             if self.prior.reference_is_pointlike():
                 raise LoggedError(self.log, "The reference point provided has null "
-                                  "likelihood. Set 'ref' to a different point or a pdf.")
+                                            "likelihood. Set 'ref' to a different point or a pdf.")
             raise LoggedError(self.log, "Could not find random point giving finite "
                                         "likelihood after %g tries", max_tries)
         return initial_point, logpost, logpriors, loglikes, derived
@@ -537,8 +544,12 @@ class Model(HasLogger):
                                   "instead" % component)
             # END OF DEPRECATION BLOCK
             component.initialize_with_params()
-            requirements[component] = _tidy_requirements(
-                component.get_requirements(), component)
+            requirements[component] = \
+                _tidy_requirements(component.get_requirements(), component)
+            # Component params converted to requirements if not explicitly sampled
+            requirements[component] += \
+                [Requirement(p, None) for p in (getattr(component, _params, {}) or []) if
+                 p not in component.input_params + component.output_params]
             # Gather what this component can provide
             can_provide = (
                     list(component.get_can_provide()) +
@@ -557,7 +568,14 @@ class Model(HasLogger):
                 providers[k] = providers.get(k, []) + [component]
         # Add requirements requested by hand
         if manual_requirements:
-            requirements[None] = _tidy_requirements(manual_requirements)
+            if not hasattr(self, "_manual_requirements"):
+                self._manual_requirements = {}
+                self._last_dummy = -1
+            self._last_dummy += 1
+            self._manual_requirements[_dummy_prefix + str(self._last_dummy)] = \
+                _tidy_requirements(manual_requirements)
+            for dummy in self._manual_requirements:
+                requirements[dummy] = deepcopy(self._manual_requirements[dummy])
 
         ### 2. Assign each requirement to a provider ###
         # store requirements assigned to each provider:
@@ -575,9 +593,10 @@ class Model(HasLogger):
                 for requirement in requires:
                     suppliers = providers.get(requirement.name)
                     if not suppliers:
-                        raise LoggedError(
-                            self.log, "Requirement %s of %r is not provided by any "
-                                      "component", requirement.name, component)
+                        raise LoggedError(self.log,
+                                          "Requirement %s of %r is not provided by any "
+                                          "component, nor sampled directly",
+                                          requirement.name, component)
                     if len(suppliers) == 1:
                         supplier = suppliers[0]
                     else:
@@ -609,7 +628,8 @@ class Model(HasLogger):
                         dependencies.get(component, set()) | {supplier}
                     # Requirements per component excluding input params
                     # -- saves some overhead in theory.check_cache_and_compute
-                    if component and requirement.name not in component.input_params and \
+                    if not is_dummy_component(component) and \
+                            requirement.name not in component.input_params and \
                             requirement.options is None:
                         component._input_params_extra.add(requirement.name)
             # tell each component what it must provide, and collect the
@@ -619,7 +639,7 @@ class Model(HasLogger):
                 # empty the list of requirements, since they have already been assigned,
                 # and store here new (conditional) ones
                 requires[:] = []
-                # .get here accounts for the null component of manual reqs
+                # .get here accounts for the dummy components of manual reqs
                 if must_provide.get(component, False):
                     for request in must_provide[component]:
                         conditional_requirements = \
@@ -636,7 +656,9 @@ class Model(HasLogger):
             # component.get_requirements() return the conditional reqs actually used too,
             # or maybe assign conditional used ones to a property?
         # Expunge manual requirements
-        requirements.pop(None, None)
+        for component in list(requirements):
+            if is_dummy_component(component):
+                requirements.pop(component)
         # Check that unassigned input parameters are at least required by some component
         if self._unassigned_input:
             self._unassigned_input.difference_update(*direct_param_dependence.values())
@@ -758,7 +780,7 @@ class Model(HasLogger):
                                     raise LoggedError(
                                         self.log,
                                         "Parameter '%s' needed as input for '%s', "
-                                        "but not provided.", p, component.name)
+                                        "but not provided.", p, component.get_name())
                 # 2. Is there a params prefix?
                 elif getattr(component, prefix, None) is not None:
                     for p in params_assign[io_kind]:
@@ -767,11 +789,12 @@ class Model(HasLogger):
                 # 3. Does it have a general (mixed) list of params? (set from default)
                 elif getattr(component, _params, None):
                     for p, options in getattr(component, _params).items():
-                        if p in params_assign[io_kind]:
-                            if not hasattr(options, 'get') or \
-                                    options.get('derived',
-                                                derived_param) is derived_param:
+                        if not hasattr(options, 'get') or \
+                                options.get('derived', derived_param) is derived_param:
+                            if p in params_assign[io_kind]:
                                 params_assign[io_kind][p] += [component]
+                            elif not derived_param:
+                                required_params.add(p)
                 # 4. otherwise explicitly supported?
                 elif supports_params:
                     # outputs this parameter unless explicitly told
@@ -917,7 +940,7 @@ class Model(HasLogger):
         # a) Multiple blocks
         if not split_fast_slow:
             i_optimal_ordering, costs, oversample_factors = sort_parameter_blocks(
-                blocks, np.array(list(speeds.values()), dtype=np.float),
+                blocks, np.array(list(speeds.values()), dtype=float),
                 different_footprints, oversample_power=oversample_power)
             blocks_sorted = [blocks[i] for i in i_optimal_ordering]
         # b) 2-block slow-fast separation
@@ -927,7 +950,7 @@ class Model(HasLogger):
                                             "but all parameters have the same speed.")
             # First sort them optimally (w/o oversampling)
             i_optimal_ordering, costs, oversample_factors = sort_parameter_blocks(
-                blocks, np.array(list(speeds.values()), dtype=np.float),
+                blocks, np.array(list(speeds.values()), dtype=float),
                 different_footprints, oversample_power=0)
             blocks_sorted = [blocks[i] for i in i_optimal_ordering]
             footprints_sorted = np.array(different_footprints)[list(i_optimal_ordering)]
@@ -946,7 +969,7 @@ class Model(HasLogger):
             footprints_split = np.clip(np.array(footprints_split), 0, 1)
             # Recalculate oversampling factor with 2 blocks
             _, _, oversample_factors = sort_parameter_blocks(
-                blocks_split, np.array(list(speeds.values()), dtype=np.float),
+                blocks_split, np.array(list(speeds.values()), dtype=float),
                 footprints_split, oversample_power=oversample_power)
             # If no oversampling, slow-fast separation makes no sense: warn and set to 2
             if oversample_factors[1] == 1:

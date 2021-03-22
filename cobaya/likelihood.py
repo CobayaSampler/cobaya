@@ -10,7 +10,7 @@ all the individual likelihoods.
 
 Likelihoods inherit from :class:`~theory.Theory`, adding an additional method
 to return the likelihood. As with all theories, likelihoods cache results, and the
-function :meth:`LikelihoodInterface.get_current_logp` is used by :class:`model.Model` to
+function :meth:`LikelihoodInterface.current_logp` is used by :class:`model.Model` to
 calculate the total likelihood. The default Likelihood implementation does the actual
 calculation of the log likelihood in the `logp` function, which is then called
 by :meth:`Likelihood.calculate` to save the result into the current state.
@@ -23,8 +23,6 @@ class can be used as and when needed.
 """
 
 # Global
-import sys
-import traceback
 import inspect
 from time import sleep
 from typing import Mapping, Optional, Union
@@ -34,7 +32,8 @@ import numpy as np
 # Local
 from cobaya.conventions import kinds, _external, _component_path, empty_dict, \
     _input_params, _output_params, _requires, _class_name
-from cobaya.tools import get_class, get_external_function, getfullargspec, str_to_list
+from cobaya.tools import get_resolved_class, get_external_function, getfullargspec, \
+    str_to_list
 from cobaya.log import LoggedError
 from cobaya.component import ComponentCollection
 from cobaya.theory import Theory
@@ -47,19 +46,33 @@ class LikelihoodInterface:
     the current parameters), or likelihoods can directly inherit from :class:`Likelihood`
     instead.
 
-    The get_current_logp function returns the current state's logp, and does not normally
+    The current_logp property returns the current state's logp, and does not normally
     need to be changed.
     """
 
-    _current_state: Mapping[str, Mapping]
+    current_state: Mapping[str, Mapping]
 
-    def get_current_logp(self):
+    @property
+    def current_logp(self):
         """
         Gets log likelihood for the current point
 
         :return:  log likelihood from the current state
         """
-        return self._current_state["logp"]
+        return self.current_state["logp"]
+
+
+def is_LikelihoodInterface(class_instance):
+    """
+    Checks for `current_logp` property. `hasattr()` cannot safely be used in this case
+    because `self._current_state` has not yet been defined.
+
+    Works for both classes and instances.
+    """
+    # NB: This is much faster than "<method> in dir(class)"
+    cls = class_instance if class_instance.__class__ is type \
+        else class_instance.__class__
+    return isinstance(getattr(cls, "current_logp", None), property)
 
 
 class Likelihood(Theory, LikelihoodInterface):
@@ -207,35 +220,25 @@ class LikelihoodExternalFunction(Likelihood):
         # END OF DEPRECATION BLOCK
         try:
             return_value = self.external_function(**params_values)
-            bad_return_msg = "Expected return value `(logp, {derived_params_dict})`."
-            if hasattr(return_value, "__len__"):
-                logp = return_value[0]
-                if self.output_params:
-                    try:
-                        if _derived is not None:
-                            _derived.update(return_value[1])
-                            params_values["_derived"] = _derived
-                    except:
-                        raise LoggedError(self.log, bad_return_msg)
-            # MARKED FOR DEPRECATION IN v3.0 --> just after the `not` below
-            elif self.output_params and not self._derived_through_arg:
-                raise LoggedError(self.log, bad_return_msg)
-            else:  # no return.__len__ and output_params expected
-                logp = return_value
-            return logp
-        except Exception as ex:
-            if isinstance(ex, LoggedError):
-                # Assume proper error info was written before raising LoggedError
-                pass
-            else:
-                # Print traceback
-                self.log.error("".join(
-                    ["-"] * 16 + ["\n\n"] +
-                    list(traceback.format_exception(*sys.exc_info())) +
-                    ["\n"] + ["-"] * 37))
-            raise LoggedError(
-                self.log, "The external likelihood '%s' failed at evaluation. "
-                          "See error info on top of this message.", self.get_name())
+        except:
+            self.log.debug("External function failed at evaluation.")
+            raise
+        bad_return_msg = "Expected return value `(logp, {derived_params_dict})`."
+        if hasattr(return_value, "__len__"):
+            logp = return_value[0]
+            if self.output_params:
+                try:
+                    if _derived is not None:
+                        _derived.update(return_value[1])
+                        params_values["_derived"] = _derived
+                except:
+                    raise LoggedError(self.log, bad_return_msg)
+        # MARKED FOR DEPRECATION IN v3.0 --> just after the `not` below
+        elif self.output_params and not self._derived_through_arg:
+            raise LoggedError(self.log, bad_return_msg)
+        else:  # no return.__len__ and output_params expected
+            logp = return_value
+        return logp
 
 
 class LikelihoodCollection(ComponentCollection):
@@ -258,11 +261,11 @@ class LikelihoodCollection(ComponentCollection):
                 if isinstance(info[_external], Theory):
                     self.add_instance(name, info[_external])
                 elif inspect.isclass(info[_external]):
-                    if not hasattr(info[_external], "get_current_logp") or \
+                    if not is_LikelihoodInterface(info[_external]) or \
                             not issubclass(info[_external], Theory):
                         raise LoggedError(self.log, "%s: external class likelihood must "
                                                     "be a subclass of Theory and have "
-                                                    "logp, get_current_logp functions",
+                                                    "logp, current_logp attributes",
                                           info[_external].__name__)
                     self.add_instance(name,
                                       info[_external](info, packages_path=packages_path,
@@ -274,16 +277,17 @@ class LikelihoodCollection(ComponentCollection):
                     self.add_instance(name, LikelihoodExternalFunction(info, name,
                                                                        timing=timing))
             else:
-                like_class = get_class(
-                    info.get(_class_name) or name, kind=kinds.likelihood,
-                    component_path=info.pop(_component_path, None))
+                like_class = get_resolved_class(
+                    name, kind=kinds.likelihood,
+                    component_path=info.pop(_component_path, None),
+                    class_name=info.get(_class_name))
                 self.add_instance(name, like_class(info, packages_path=packages_path,
                                                    timing=timing, standalone=False,
                                                    name=name))
 
-            if not hasattr(self[name], "get_current_logp"):
+            if not is_LikelihoodInterface(self[name]):
                 raise LoggedError(self.log, "'Likelihood' %s is not actually a "
-                                            "likelihood (no get_current_logp function)",
+                                            "likelihood (no current_logp attribute)",
                                   name)
 
     def get_helper_theory_collection(self):

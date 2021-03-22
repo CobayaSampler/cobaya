@@ -247,12 +247,32 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
             raise exc_info[1]
 
 
+def get_resolved_class(component_or_class, kind=None, component_path=None,
+                       class_name=None):
+    """
+    Returns the class corresponding to the component indicated as first argument.
+
+    If the first argument is a class, it is simply returned. If it is a string, it
+    retrieves the corresponding class name, using the value of `class_name` instead if
+    present.
+    """
+    if inspect.isclass(component_or_class):
+        return component_or_class
+    else:
+        return get_class(
+            class_name or component_or_class, kind, component_path=component_path)
+
+
 def import_all_classes(path, pkg, subclass_of, hidden=False, helpers=False):
     import pkgutil
     result = set()
+    ignore = {"cobaya/likelihoods": ["base_classes", "test"]}
     from cobaya.theory import HelperTheory
     for (module_loader, name, ispkg) in pkgutil.iter_modules([path]):
-        if hidden or not name.startswith('_'):
+        ignore_this_one = \
+            name in next((which for p, which in ignore.items() if path.endswith(p)), [])
+        ignore_this_one = ignore_this_one or name.startswith('_')
+        if hidden or not ignore_this_one:
             module_name = pkg + '.' + name
             m = load_module(module_name)
             for class_name, cls in inspect.getmembers(m, inspect.isclass):
@@ -525,7 +545,7 @@ def get_scipy_1d_pdf(info):
         for limit in minmaxvalues:
             try:
                 value = info2.pop(limit, minmaxvalues[limit])
-                minmaxvalues[limit] = np.float(value)
+                minmaxvalues[limit] = float(value)
             except (TypeError, ValueError):
                 raise LoggedError(
                     log, "Invalid value '%s: %r' in param '%s' (it must be a number)",
@@ -731,7 +751,8 @@ def get_class_methods(cls, not_base=None, start='get_', excludes=(), first='self
     for k, v in inspect.getmembers(cls):
         if k.startswith(start) and k not in excludes and \
                 (not_base is None or not hasattr(not_base, k)) and \
-                getfullargspec(v).args[:1] == [first]:
+                getfullargspec(v).args[:1] == [first] and \
+                not getattr(v, '_is_abstract', None):
             methods[k[len(start):]] = v
     return methods
 

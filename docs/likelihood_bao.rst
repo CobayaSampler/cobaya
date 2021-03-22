@@ -1,5 +1,5 @@
 Baryonic Acoustic Oscillations
 ==============================
 
-.. automodule:: cobaya.likelihoods._base_classes._bao_prototype
+.. automodule:: cobaya.likelihoods.base_classes.BAO
    :noindex:

@@ -25,7 +25,7 @@ class A(Theory):
             state['derived'] = {'Aderived': 1}
 
     def get_Aresult(self):
-        return self._current_state['Aout']
+        return self.current_state['Aout']
 
     def get_can_provide_params(self):
         return ['Aderived']
@@ -45,7 +45,7 @@ class B(Theory):
             state['derived'] = {'Bderived': 10}
 
     def get_Bout(self):
-        return self._current_state['Bout']
+        return self.current_state['Bout']
 
 
 class B2(Theory):
@@ -61,7 +61,7 @@ class B2(Theory):
             state['derived'] = {'Bderived': 10}
 
     def get_Bout(self):
-        return self._current_state['Bout']
+        return self.current_state['Bout']
 
 
 class A2(Theory):  # circular
@@ -81,7 +81,7 @@ class C(Theory):  # ambiguous
         state['Cout'] = (3, [5])
 
     def get_Bout(self):
-        return self._current_state['Cout']
+        return self.current_state['Cout']
 
 
 class Like(Likelihood):
@@ -147,7 +147,7 @@ class D(Theory):
 
     def get_result(self, result_name, **kwargs):
         if result_name == 'Dresult':
-            return self._current_state['D']
+            return self.current_state['D']
 
     def get_can_provide(self):
         return ['Dresult']
@@ -163,7 +163,7 @@ class E(Theory):
         state['E'] = self.provider.get_result('Dresult') * 2
 
     def get_Eresult(self):
-        return self._current_state['E']
+        return self.current_state['E']
 
     def must_provide(self, **must_provide):
         if 'Eresult' in must_provide:

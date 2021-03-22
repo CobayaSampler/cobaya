@@ -18,15 +18,17 @@ import logging
 from itertools import chain
 from pkg_resources import parse_version
 import requests
+import tqdm
 
 # Local
 from cobaya.log import logger_setup, LoggedError
-from cobaya.tools import create_banner, warn_deprecation, get_class, \
-    write_packages_path_in_config_file, get_config_path
-from cobaya.input import get_used_components, get_kind
+from cobaya.tools import create_banner, warn_deprecation, get_resolved_class, \
+    write_packages_path_in_config_file, get_config_path, get_kind
+from cobaya.input import get_used_components
 from cobaya.conventions import _component_path, _code, _data, _external, _force, \
     _packages_path, _packages_path_arg, _packages_path_env, _yaml_extensions, _debug, \
-    _install_skip_env, _packages_path_arg_posix, _packages_path_config_file, _test_run
+    _install_skip_env, _packages_path_arg_posix, _packages_path_config_file, _test_run, \
+    _class_name
 from cobaya.mpi import set_mpi_disabled
 from cobaya.tools import resolve_packages_path
 
@@ -77,7 +79,8 @@ def install(*infos, **kwargs):
     skip_keywords_env = set(
         os.environ.get(_install_skip_env, "").replace(",", " ").lower().split())
     skip_keywords = skip_keywords_arg.union(skip_keywords_env)
-    for kind, components in get_used_components(*infos).items():
+    used_components, components_infos = get_used_components(*infos, return_infos=True)
+    for kind, components in used_components.items():
         for component in components:
             print()
             print(create_banner(kind + ":" + component,
@@ -85,15 +88,18 @@ def install(*infos, **kwargs):
             print()
             if _skip_helper(component.lower(), skip_keywords, skip_keywords_env, log):
                 continue
-            info = (next(info for info in infos if component in
-                         info.get(kind, {}))[kind][component]) or {}
+            info = components_infos[component]
             if isinstance(info, str) or _external in info:
                 log.warning("Component '%s' is a custom function. "
                             "Nothing to do.", component)
                 continue
             try:
-                imported_class = get_class(component, kind,
-                                           component_path=info.pop(_component_path, None))
+                class_name = (info or {}).get(_class_name)
+                if class_name:
+                    log.info("Class to be installed for this component: %r", class_name)
+                imported_class = get_resolved_class(
+                    component, kind=kind, component_path=info.pop(_component_path, None),
+                    class_name=class_name)
             except ImportError as excpt:
                 log.error("Component '%s' not recognized. [%s].", component, excpt)
                 failed_components += ["%s:%s" % (kind, component)]
@@ -217,7 +223,7 @@ def download_file(url, path, no_progress_bars=False, decompress=False, logger=No
     logger = logger or logging.getLogger(__name__)
     with tempfile.TemporaryDirectory() as tmp_path:
         try:
-            req = requests.get(url, allow_redirects=True)
+            req = requests.get(url, allow_redirects=True, stream=True)
             # get hinted filename if available:
             try:
                 filename = re.findall(
@@ -226,8 +232,17 @@ def download_file(url, path, no_progress_bars=False, decompress=False, logger=No
             except KeyError:
                 filename = os.path.basename(url)
             filename_tmp_path = os.path.normpath(os.path.join(tmp_path, filename))
+            size = int(req.headers.get('content-length', 0))
+            # Adapted from https://gist.github.com/yanqd0/c13ed29e29432e3cf3e7c38467f42f51
+            if not no_progress_bars:
+                bar = tqdm.tqdm(total=size, unit='iB', unit_scale=True, unit_divisor=1024)
             with open(filename_tmp_path, 'wb') as f:
-                f.write(req.content)
+                for data in req.iter_content(chunk_size=1024):
+                    chunk_size = f.write(data)
+                    if not no_progress_bars:
+                        bar.update(chunk_size)
+            if not no_progress_bars:
+                bar.close()
             logger.info('Downloaded filename %s', filename)
         except Exception as e:
             logger.error(

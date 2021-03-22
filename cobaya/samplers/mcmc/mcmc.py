@@ -132,9 +132,11 @@ class mcmc(CovmatSampler):
             self.progress = DataFrame(columns=cols)
             self.i_learn = 1
             if self.output and not self.output.is_resuming():
+                header_fmt = {"N": 6 * " " + "N", "timestamp": 17 * " " + "timestamp"}
+                fmt = lambda col: header_fmt.get(col, ((7 + 8) - len(col)) * " " + col)
                 with open(self.progress_filename(), "w",
                           encoding="utf-8") as progress_file:
-                    progress_file.write("# " + " ".join(self.progress.columns) + "\n")
+                    progress_file.write("# " + " ".join([fmt(col) for col in self.progress.columns]) + "\n")
         # Get first point, to be discarded -- not possible to determine its weight
         # Still, we need to compute derived parameters, since, as the proposal "blocked",
         # we may be saving the initial state of some block.
@@ -609,24 +611,15 @@ class mcmc(CovmatSampler):
         learns a new covariance matrix for the proposal distribution from the covariance
         of the last samples.
         """
+        # Compute Rminus1 of means
         if more_than_one_process():
-            # Compute and gather means, covs and CL intervals of last half of chains
+            # Compute and gather means and covs
             use_first = int(self.n() / 2)
             mean = self.collection.mean(first=use_first)
             cov = self.collection.cov(first=use_first)
-            mcsamples = self.collection._sampled_to_getdist_mcsamples(first=use_first)
-            try:
-                bound = np.array([[
-                    mcsamples.confidence(i, limfrac=self.Rminus1_cl_level / 2.,
-                                         upper=which)
-                    for i in range(self.model.prior.d())] for which in [False, True]]).T
-                success_bounds = True
-            except:
-                bound = None
-                success_bounds = False
-            Ns, means, covs, bounds, acceptance_rates = map(
+            Ns, means, covs, acceptance_rates = map(
                 lambda x: np.array(get_mpi_comm().gather(x)),
-                [self.n(), mean, cov, bound, self.acceptance_rate])
+                [self.n(), mean, cov, self.acceptance_rate])
         else:
             # Compute and gather means, covs and CL intervals of last m-1 chain fractions
             m = 1 + self.Rminus1_single_split
@@ -639,25 +632,11 @@ class mcmc(CovmatSampler):
                 covs = np.array(
                     [self.collection.cov(first=i * cut, last=(i + 1) * cut - 1) for i in
                      range(1, m)])
-                mcsamples_list = [
-                    self.collection._sampled_to_getdist_mcsamples(
-                        first=i * cut, last=(i + 1) * cut - 1)
-                    for i in range(1, m)]
             except:
                 self.log.info("Not enough points in chain to check convergence. "
                               "Waiting for next checkpoint.")
                 return
             acceptance_rates = self.acceptance_rate
-            try:
-                bounds = [np.array(
-                    [[mcs.confidence(i, limfrac=self.Rminus1_cl_level / 2., upper=which)
-                      for i in range(self.model.prior.d())] for which in [False, True]]).T
-                          for mcs in mcsamples_list]
-                success_bounds = True
-            except:
-                bounds = None
-                success_bounds = False
-        # Compute convergence diagnostics
         if is_main_process():
             self.progress.at[self.i_learn, "N"] = (
                 sum(Ns) if more_than_one_process() else self.n())
@@ -688,7 +667,8 @@ class mcmc(CovmatSampler):
             np.seterr(**prev_err_state)
             corr_of_means = diagSinvsqrt.dot(cov_of_means).dot(diagSinvsqrt)
             norm_mean_of_covs = diagSinvsqrt.dot(mean_of_covs).dot(diagSinvsqrt)
-            success = False
+            success_means = False
+            converged_means = False
             # Cholesky of (normalized) mean of covs and eigvals of Linv*cov_of_means*L
             try:
                 L = np.linalg.cholesky(norm_mean_of_covs)
@@ -705,7 +685,7 @@ class mcmc(CovmatSampler):
                 np.seterr(all="ignore")
                 try:
                     eigvals = np.linalg.eigvalsh(Linv.dot(corr_of_means).dot(Linv.T))
-                    success = True
+                    success_means = True
                 except np.linalg.LinAlgError:
                     self.log.warning("Could not compute eigenvalues. "
                                      "Skipping learning a new covmat for now.")
@@ -722,39 +702,76 @@ class mcmc(CovmatSampler):
                         (" = sum(%r)" % list(Ns) if more_than_one_process() else ""))
                     # Have we converged in means?
                     # (criterion must be fulfilled twice in a row)
-                    if max(Rminus1, self.Rminus1_last) < self.Rminus1_stop:
-                        # Check the convergence of the bounds of the confidence intervals
-                        # Same as R-1, but with the rms deviation from the mean bound
-                        # in units of the mean standard deviation of the chains
-                        if success_bounds:
-                            Rminus1_cl = (np.std(bounds, axis=0).T /
-                                          np.sqrt(np.diag(mean_of_covs)))
-                            self.log.debug(" - normalized std's of bounds = %r",
-                                           Rminus1_cl)
-                            Rminus1_cl = np.max(Rminus1_cl)
-                            self.progress.at[self.i_learn, "Rminus1_cl"] = Rminus1_cl
-                            self.log.info(
-                                " - Convergence of bounds: R-1 = %f after %d " % (
-                                    Rminus1_cl,
-                                    (sum(Ns) if more_than_one_process() else self.n())) +
-                                "accepted steps" +
-                                (" = sum(%r)" % list(
-                                    Ns) if more_than_one_process() else ""))
-                            if Rminus1_cl < self.Rminus1_cl_stop:
-                                self.converged = True
-                                self.log.info("The run has converged!")
-                            self._Ns = Ns
-                        else:
-                            self.log.info("Computation of the bounds was not possible. "
-                                          "Waiting until the next converge check.")
-                np.seterr(**error_handling)
+                    converged_means = max(Rminus1, self.Rminus1_last) < self.Rminus1_stop
         else:
             mean_of_covs = np.empty((self.model.prior.d(), self.model.prior.d()))
-            success = None
+            success_means = None
+            converged_means = False
             Rminus1 = None
+        success_means = share_mpi(success_means)
+        converged_means = share_mpi(converged_means)
+        # Check the convergence of the bounds of the confidence intervals
+        # Same as R-1, but with the rms deviation from the mean bound
+        # in units of the mean standard deviation of the chains
+        if converged_means:
+            if more_than_one_process():
+                mcsamples = self.collection._sampled_to_getdist_mcsamples(first=use_first)
+                try:
+                    bound = np.array([[
+                        mcsamples.confidence(
+                            i, limfrac=self.Rminus1_cl_level / 2., upper=which)
+                        for i in range(self.model.prior.d())]
+                                      for which in [False, True]]).T
+                    success_bounds = True
+                except:
+                    bound = None
+                    success_bounds = False
+                bounds = np.array(get_mpi_comm().gather(bound))
+            else:
+                try:
+                    mcsamples_list = [
+                        self.collection._sampled_to_getdist_mcsamples(
+                            first=i * cut, last=(i + 1) * cut - 1)
+                        for i in range(1, m)]
+                except:
+                    self.log.info("Not enough points in chain to check c.l. convergence. "
+                                  "Waiting for next checkpoint.")
+                    return
+                try:
+                    bounds = [
+                        np.array(
+                            [[mcs.confidence(
+                                i, limfrac=self.Rminus1_cl_level / 2., upper=which)
+                              for i in range(self.model.prior.d())]
+                             for which in [False, True]]).T
+                        for mcs in mcsamples_list]
+                    success_bounds = True
+                except:
+                    bounds = None
+                    success_bounds = False
+            if is_main_process():
+                if success_bounds:
+                    Rminus1_cl = (np.std(bounds, axis=0).T /
+                                  np.sqrt(np.diag(mean_of_covs)))
+                    self.log.debug(" - normalized std's of bounds = %r", Rminus1_cl)
+                    Rminus1_cl = np.max(Rminus1_cl)
+                    self.progress.at[self.i_learn, "Rminus1_cl"] = Rminus1_cl
+                    self.log.info(
+                        " - Convergence of bounds: R-1 = %f after %d " % (
+                            Rminus1_cl,
+                            (sum(Ns) if more_than_one_process() else self.n())) +
+                        "accepted steps" + (" = sum(%r)" % list(
+                            Ns) if more_than_one_process() else ""))
+                    if Rminus1_cl < self.Rminus1_cl_stop:
+                        self.converged = True
+                        self.log.info("The run has converged!")
+                        self._Ns = Ns
+                else:
+                    self.log.info("Computation of the bounds was not possible. "
+                                  "Waiting until the next converge check.")
+                np.seterr(**error_handling)
         # Broadcast and save the convergence status and the last R-1 of means
-        success = share_mpi(success)
-        if success:
+        if success_means:
             self.Rminus1_last, self.converged = share_mpi(
                 (Rminus1, self.converged) if is_main_process() else None)
             # Do we want to learn a better proposal pdf?
@@ -830,8 +847,11 @@ class mcmc(CovmatSampler):
             if not self.progress.empty:
                 with open(self.progress_filename(), "a",
                           encoding="utf-8") as progress_file:
-                    progress_file.write(
-                        self.progress.tail(1).to_string(header=False, index=False) + "\n")
+                    fmts = {"N": lambda x: "{:9d}".format(x)}
+                    # TODO: next one is ignored when added to the dict
+                    #        "acceptance_rate": lambda x: "{:15.8g}".format(x)}
+                    progress_file.write(self.progress.tail(1).to_string(
+                        header=False, index=False, formatters=fmts) + "\n")
             self.log.debug("Dumped checkpoint and progress info, and current covmat.")
 
     # Finally: returning the computed products ###########################################

@@ -124,7 +124,7 @@
       loc: 1
       scale: 0.1
     proposal: 0.1
-    latex:  A^{\rm dust}_{100}
+    latex:  A^{\rm dust}_{143}
   dust217:
     prior:
       dist: norm

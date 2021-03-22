@@ -550,7 +550,7 @@ class CovmatSampler(Sampler):
         where_nan = np.isnan(covmat.diagonal())
         if np.any(where_nan):
             covmat[where_nan, where_nan] = np.array(
-                [info.get(partag.proposal, np.nan) ** 2
+                [(info.get(partag.proposal, np.nan) or np.nan) ** 2
                  for info in params_infos.values()])[where_nan]
         where_nan2 = np.isnan(covmat.diagonal())
         if np.any(where_nan2):

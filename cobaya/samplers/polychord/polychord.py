@@ -169,8 +169,7 @@ class polychord(Sampler):
                 get_external_function(self.callback_function))
         self.last_point_callback = 0
         # Prepare runtime live and dead points collections
-        self.live = Collection(
-            self.model, None, name="live", initial_size=self.pc_settings.nlive)
+        self.live = Collection(self.model, None, name="live")
         self.dead = Collection(self.model, self.output, name="dead")
         # Done!
         if is_main_process():

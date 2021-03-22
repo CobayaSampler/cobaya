@@ -97,7 +97,7 @@ def _make_gaussian_like(nparam):
     return LikeTest
 
 
-def _test_overhead_timing():
+def _test_overhead_timing(dim=15):
     # prints timing for simple Gaussian vanilla mcmc
     import pstats
     from cProfile import Profile
@@ -105,7 +105,7 @@ def _test_overhead_timing():
     # noinspection PyUnresolvedReferences
     from cobaya.samplers.mcmc import proposal  # one-time numba compile out of profiling
 
-    LikeTest = _make_gaussian_like(15)
+    LikeTest = _make_gaussian_like(dim)
     info = {'likelihood': {'like': LikeTest}, 'debug': False, 'sampler': {
         'mcmc': {'max_samples': 1000, 'burn_in': 0, "learn_proposal": False,
                  "Rminus1_stop": 0.0001}}}
@@ -113,11 +113,13 @@ def _test_overhead_timing():
     prof.enable()
     run(info)
     prof.disable()
+    # prof.dump_stats("out.prof")  # to visualize with e.g. snakeviz
     s = StringIO()
     ps = pstats.Stats(prof, stream=s)
+    print_n_calls = 10
     ps.strip_dirs()
     ps.sort_stats('time')
-    ps.print_stats(10)
+    ps.print_stats(print_n_calls)
     ps.sort_stats('cumtime')
-    ps.print_stats(10)
+    ps.print_stats(print_n_calls)
     print(s.getvalue())

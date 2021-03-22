@@ -13,7 +13,7 @@ from typing import Mapping, Iterable
 # Local
 from cobaya.theory import Theory
 from cobaya.tools import deepcopy_where_possible
-from cobaya.log import LoggedError
+from cobaya.log import LoggedError, abstract
 from cobaya.conventions import _c_km_s, empty_dict
 
 H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": _c_km_s}
@@ -43,7 +43,7 @@ class BoltzmannBase(Theory):
     def get_param(self, p):
         translated = self.translate_param(p)
         for pool in ["params", "derived", "derived_extra"]:
-            value = (self._current_state[pool] or {}).get(translated, None)
+            value = (self.current_state[pool] or {}).get(translated, None)
             if value is not None:
                 return value
 
@@ -79,33 +79,38 @@ class BoltzmannBase(Theory):
 
         Typical requisites in Cosmology (as keywords, case insensitive):
 
-        - ``Cl={...}``: CMB lensed power spectra, as a dictionary ``{spectrum:l_max}``,
-          where the possible spectra are combinations of "t", "e", "b" and "p"
-          (lensing potential). Get with :func:`~BoltzmannBase.get_Cl`.
+        - ``Cl={...}``: CMB lensed power spectra, as a dictionary ``{[spectrum]:
+          l_max}``, where the possible spectra are combinations of ``"t"``, ``"e"``,
+          ``"b"`` and ``"p"`` (lensing potential). Get with :func:`~BoltzmannBase.get_Cl`.
+        - ``unlensed_Cl={...}``: CMB unlensed power spectra, as a dictionary
+          ``{[spectrum]: l_max}``, where the possible spectra are combinations of
+          ``"t"``, ``"e"``, ``"b"``. Get with :func:`~BoltzmannBase.get_unlensed_Cl`.
         - **[BETA: CAMB only; notation may change!]** ``source_Cl={...}``:
           :math:`C_\ell` of given sources with given windows, e.g.:
           ``source_name: {"function": "spline"|"gaussian", [source_args]``;
-          for now, ``[source_args]`` follow the notation of ``CAMBSources``.
-          If can also take ``lmax: [int]``, ``limber: True`` if Limber approximation
-          desired, and ``non_linear: True`` if non-linear contributions requested.
+          for now, ``[source_args]`` follows the notation of `CAMBSources
+          <https://camb.readthedocs.io/en/latest/sources.html>`_.
+          If can also take ``"lmax": [int]``, ``"limber": True`` if Limber approximation
+          desired, and ``"non_linear": True`` if non-linear contributions requested.
           Get with :func:`~BoltzmannBase.get_source_Cl`.
         - ``Pk_interpolator={...}``: Matter power spectrum interpolator in :math:`(z, k)`.
           Takes ``"z": [list_of_evaluated_redshifts]``, ``"k_max": [k_max]``,
           ``"extrap_kmax": [max_k_max_extrapolated]``, ``"nonlinear": [True|False]``,
           ``"vars_pairs": [["delta_tot", "delta_tot"], ["Weyl", "Weyl"], [...]]}``.
-          Non-linear contributions are included by default. Note that the nonlinear setting
-          determines whether nonlinear corrections are calculated; the get_Pk_interpolator
-          function also has a nonlinear argument to specify if you want the linear or
-          nonlinear spectrum returned (to have both linear and non-linear spectra
-          available request a tuple (False,True) for the nonlinear argument).
-          All ``k`` values should be in units of ``1/Mpc``.
-        - ``Pk_grid={...}``: similar to Pk_interpolator except that rather than returning
-          a bicubic spline object it returns the raw power spectrum grid as a (k, z, PK)
-          set of arrays.
-        - ``sigma_R{...}``: RMS linear fluctuation in spheres of radius R at redshifts z.
-          Takes ``"z": [list_of_evaluated_redshifts]``, ``"k_max": [k_max]``,
-          ``"vars_pairs": [["delta_tot", "delta_tot"],  [...]]}``,
-          ``"R": [list_of_evaluated_R]``. Note that R is in Mpc, not h^{-1} Mpc.
+          Non-linear contributions are included by default. Note that the non-linear
+          setting determines whether non-linear corrections are calculated; the
+          :func:`~get_Pk_interpolator` method also has a non-linear argument to specify if
+          you want the linear or non-linear spectrum returned (to have both linear and
+          non-linear spectra available request a tuple ``(False,True)`` for the non-linear
+          argument). All :math:`k` values should be in units of :math:`1/\mathrm{Mpc}`.
+        - ``Pk_grid={...}``: similar to ``Pk_interpolator`` except that rather than
+          returning a bicubic spline object it returns the raw power spectrum grid as
+          a ``(k, z, P(z,k))`` set of arrays. Get with :func:`~BoltzmannBase.get_Pk_grid`.
+        - ``sigma_R={...}``: RMS linear fluctuation in spheres of radius :math:`R` at
+          redshifts :math:`z`. Takes ``"z": [list_of_evaluated_redshifts]``,
+          ``"k_max": [k_max]``, ``"vars_pairs": [["delta_tot", "delta_tot"],  [...]]}``,
+          ``"R": [list_of_evaluated_R]``. Note that :math:`R` is in :math:`\mathrm{Mpc}`,
+          not :math:`h^{-1}\,\mathrm{Mpc}`. Get with :func:`~BoltzmannBase.get_sigma_R`.
         - ``Hubble={'z': [z_1, ...]}``: Hubble rate at the requested redshifts.
           Get it with :func:`~BoltzmannBase.get_Hubble`.
         - ``angular_diameter_distance={'z': [z_1, ...]}``: Physical angular
@@ -114,6 +119,9 @@ class BoltzmannBase(Theory):
         - ``comoving_radial_distance={'z': [z_1, ...]}``: Comoving radial distance
           from us to the redshifts requested. Get it with
           :func:`~BoltzmannBase.get_comoving_radial_distance`.
+        - ``sigma8_z={'z': [z_1, ...]}``: Amplitude of rms fluctuations
+          :math:`\sigma_8` at the redshifts requested. Get it with
+          :func:`~BoltzmannBase.get_sigma8`.
         - ``fsigma8={'z': [z_1, ...]}``: Structure growth rate
           :math:`f\sigma_8` at the redshifts requested. Get it with
           :func:`~BoltzmannBase.get_fsigma8`.
@@ -129,6 +137,12 @@ class BoltzmannBase(Theory):
         for k, v in requirements.items():
             # Products and other computations
             if k == "Cl":
+                current = self._must_provide.get(k, {})
+                v = {cl.lower(): v[cl] for cl in v}  # to lowercase
+                self._must_provide[k] = {
+                    cl.lower(): max(current.get(cl.lower(), 0), v.get(cl, 0))
+                    for cl in set(current).union(v)}
+            elif k == "unlensed_Cl":
                 current = self._must_provide.get(k, {})
                 self._must_provide[k] = {
                     cl.lower(): max(current.get(cl.lower(), 0), v.get(cl, 0))
@@ -181,7 +195,7 @@ class BoltzmannBase(Theory):
                 #                 "%r vs %r.", window, self.sources[source])
                 self._must_provide[k].update(v)
             elif k in ["Hubble", "angular_diameter_distance",
-                       "comoving_radial_distance", "fsigma8"]:
+                       "comoving_radial_distance", "sigma8_z", "fsigma8"]:
                 if k not in self._must_provide:
                     self._must_provide[k] = {}
                 self._must_provide[k]["z"] = np.unique(np.concatenate(
@@ -224,32 +238,43 @@ class BoltzmannBase(Theory):
             raise LoggedError(self.log, "Units '%s' not recognized. Use one of %s.",
                               units, list(units_factors))
 
+    @abstract
     def get_Cl(self, ell_factor=False, units="FIRASmuK2"):
         r"""
         Returns a dictionary of lensed CMB power spectra and the lensing potential ``pp``
         power spectrum.
 
-        Set the units with the keyword ``units=number|'muK2'|'K2'|'FIRASmuK2'|'FIRASK2'``
-        (default: 'FIRASmuK2' gives FIRAS-calibrated microKelvin^2, except for the lensing
-        potential power spectrum, which is always unitless).
-        Note the muK2 and K2 options use the model's CMB temperature; experimental data
-        are usually calibrated to the FIRAS measurement which is a fixed temperature.
-        The default FIRASmuK2 takes CMB C_l scaled by 2.7255e6^2 (to get result in muK^2).
+        Set the units with the keyword ``units=number|'muK2'|'K2'|'FIRASmuK2'|'FIRASK2'``.
+        The default is ``FIRASmuK2``, which returns CMB :math:`C_\ell`'s in
+        FIRAS-calibrated :math:`\mu K^2`, i.e. scaled by a fixed factor of
+        :math:`(2.7255\cdot 10^6)^2` (except for the lensing potential power spectrum,
+        which is always unitless).
+        The ``muK2`` and ``K2`` options use the model's CMB temperature.
 
-        If ``ell_factor=True`` (default: False), multiplies the spectra by
+        If ``ell_factor=True`` (default: ``False``), multiplies the spectra by
         :math:`\ell(\ell+1)/(2\pi)` (or by :math:`\ell^2(\ell+1)^2/(2\pi)` in the case of
         the lensing potential ``pp`` spectrum).
         """
-        pass
+
+    @abstract
+    def get_unlensed_Cl(self, ell_factor=False, units="FIRASmuK2"):
+        r"""
+        Returns a dictionary of unlensed CMB power spectra.
+
+        For ``units`` options, see :func:`~BoltzmannBase.get_Cl`.
+
+        If ``ell_factor=True`` (default: ``False``), multiplies the spectra by
+        :math:`\ell(\ell+1)/(2\pi)`.
+        """
 
     def get_Hubble(self, z, units="km/s/Mpc"):
         r"""
-        Returns the Hubble rate at the given redshifts.
+        Returns the Hubble rate at the given redshift(s) ``z``.
 
         The redshifts must be a subset of those requested when
         :func:`~BoltzmannBase.must_provide` was called.
-
-        The available units are ``km/s/Mpc`` (i.e. ``c*H(Mpc^-1)``) and ``1/Mpc``.
+        The available units are ``"km/s/Mpc"`` (i.e. :math:`cH(\mathrm(Mpc)^{-1})`) and
+        ``1/Mpc``.
         """
         try:
             return self._get_z_dependent("Hubble", z) * H_units_conv_factor[units]
@@ -260,7 +285,8 @@ class BoltzmannBase(Theory):
 
     def get_angular_diameter_distance(self, z):
         r"""
-        Returns the physical angular diameter distance to the given redshifts in Mpc.
+        Returns the physical angular diameter distance in :math:`\mathrm{Mpc}` to the
+        given redshift(s) ``z``.
 
         The redshifts must be a subset of those requested when
         :func:`~BoltzmannBase.must_provide` was called.
@@ -269,51 +295,34 @@ class BoltzmannBase(Theory):
 
     def get_comoving_radial_distance(self, z):
         r"""
-        Returns the comoving radial distance to the given redshifts in Mpc.
+        Returns the comoving radial distance in :math:`\mathrm{Mpc}` to the given
+        redshift(s) ``z``.
 
         The redshifts must be a subset of those requested when
         :func:`~BoltzmannBase.must_provide` was called.
         """
         return self._get_z_dependent("comoving_radial_distance", z)
 
-    def get_Pk_grid(self, var_pair=("delta_tot", "delta_tot"), nonlinear=True):
-        """
-        Get  matter power spectrum, e.g. suitable for splining.
-        Returned arrays may be bigger or more densely sampled than requested, but will
-        include required values. Neither k nor PK are in h^{-1} units.
-        z and k are in ascending order.
-
-        :param nonlinear: whether the linear or nonlinear spectrum
-        :param var_pair: which power spectrum
-        :return: k, z, PK, where k and z are arrays,
-                 and PK[i,j] is the value at z[i], k[j]
-        """
-        try:
-            return self._current_state[
-                ("Pk_grid", bool(nonlinear)) + tuple(sorted(var_pair))]
-        except KeyError:
-            if ("Pk_grid", False) + tuple(sorted(var_pair)) in self._current_state:
-                raise LoggedError(self.log,
-                                  "Getting non-linear matter power but nonlinear "
-                                  "not specified in requirements")
-            raise LoggedError(self.log, "Matter power %s, %s not computed" % var_pair)
-
     def get_Pk_interpolator(self, var_pair=("delta_tot", "delta_tot"), nonlinear=True,
                             extrap_kmax=None):
-        """
-        Get P(z,k) bicubic interpolation object (:class:`PowerSpectrumInterpolator`).
-        Neither k nor PK are in h^{-1} units.
+        r"""
+        Get a :math:`P(z,k)` bicubic interpolation object
+        (:class:`PowerSpectrumInterpolator`).
+
+        In the interpolator returned, both the input :math:`k` and resulting
+        :math:`P(z,k)` values are in units of :math:`1/\mathrm{Mpc}` (not :math:`h^{-1}`
+        units).
 
         :param var_pair: variable pair for power spectrum
         :param nonlinear: non-linear spectrum (default True)
-        :param extrap_kmax: use log linear extrapolation beyond max k computed up to
-                            extrap_kmax
+        :param extrap_kmax: use log linear extrapolation beyond max :math:`k` computed up
+                            to ``extrap_kmax``.
         :return: :class:`PowerSpectrumInterpolator` instance.
         """
         nonlinear = bool(nonlinear)
         key = ("Pk_interpolator", nonlinear, extrap_kmax) + tuple(sorted(var_pair))
-        if key in self._current_state:
-            return self._current_state[key]
+        if key in self.current_state:
+            return self.current_state[key]
         k, z, pk = self.get_Pk_grid(var_pair=var_pair, nonlinear=nonlinear)
         log_p = True
         sign = 1
@@ -330,43 +339,85 @@ class BoltzmannBase(Theory):
                               'for %s, %s' % var_pair)
         result = PowerSpectrumInterpolator(z, k, pk, logP=log_p, logsign=sign,
                                            extrap_kmax=extrap_kmax)
-        self._current_state[key] = result
+        self.current_state[key] = result
         return result
 
-    def get_sigma_R(self, var_pair=("delta_tot", "delta_tot")):
-        """
-        Get sigma(R), the RMS power in an sphere of radius R
-        Note R is in Mpc not h^{-1}Mpc units and z and R are returned in ascending order.
+    def get_Pk_grid(self, var_pair=("delta_tot", "delta_tot"), nonlinear=True):
+        r"""
+        Get  matter power spectrum, e.g. suitable for splining.
+        Returned arrays may be bigger or more densely sampled than requested, but will
+        include required values.
 
-        You may get back more values than originally requested, but requested R and z
-        should in the returned arrays.
+        In the grid returned, both :math:`k` and :math:`P(z,k)` values are in units of
+        :math:`1/\mathrm{Mpc}` (not :math:`h^{-1}` units), and :math:`z` and :math:`k`
+        are in **ascending** order.
 
-        :param var_pair: which two fields to use for the RMS power
-        :return: R, z, sigma_R, where R and z are arrays of computed values,
-                 and sigma_R[i,j] is the value for z[i], R[j]
+        :param nonlinear: whether the linear or non-linear spectrum
+        :param var_pair: which power spectrum
+        :return: ``k``, ``z``, ``Pk``, where ``k`` and ``z`` are 1-d arrays,
+                 and the 2-d array ``Pk[i,j]`` is the value of :math:`P(z,k)` at ``z[i]``,
+                 ``k[j]``.
         """
         try:
-            return self._current_state[("sigma_R",) + tuple(sorted(var_pair))]
+            return self.current_state[
+                ("Pk_grid", bool(nonlinear)) + tuple(sorted(var_pair))]
+        except KeyError:
+            if ("Pk_grid", False) + tuple(sorted(var_pair)) in self.current_state:
+                raise LoggedError(self.log,
+                                  "Getting non-linear matter power but 'nonlinear' "
+                                  "not specified in requirements")
+            raise LoggedError(self.log, "Matter power %s, %s not computed" % var_pair)
+
+    def get_sigma_R(self, var_pair=("delta_tot", "delta_tot")):
+        r"""
+        Get :math:`\sigma_R(z)`, the RMS power in an sphere of radius :math:`R` at
+        redshift :math:`z`.
+
+        Note that :math:`R` is in :math:`\mathrm{Mpc}`, not :math:`h^{-1}\,\mathrm{Mpc}`,
+        and :math:`z` and :math:`R` are returned in **ascending** order.
+
+        You may get back more values than originally requested, but the requested
+        :math:`R` and :math:`z` should be in the returned arrays.
+
+        :param var_pair: which two fields to use for the RMS power
+        :return: ``R``, ``z``, ``sigma_R``, where ``R`` and ``z`` are arrays of computed
+                 values, and ``sigma_R[i,j]`` is the value :math:`\sigma_R(z)` for
+                 ``z[i]``, ``R[j]``.
+        """
+        try:
+            return self.current_state[("sigma_R",) + tuple(sorted(var_pair))]
         except KeyError:
             raise LoggedError(self.log, "sigmaR %s not computed" % var_pair)
 
+    @abstract
     def get_source_Cl(self):
         r"""
         Returns a dict of power spectra of for the computed sources, with keys a tuple of
         sources ``([source1], [source2])``, and an additional key ``ell`` containing the
         multipoles.
         """
-
-    def get_fsigma8(self, z):
+    
+    @abstract
+    def get_sigma8_z(self, z):
         r"""
-        Structure growth rate :math:`f\sigma_8`, as defined in eq. 33 of
-        `Planck 2015 results. XIII. Cosmological parameters <https://arxiv.org/pdf/1502.01589.pdf>`_,
-        at the given redshifts.
+        Present day linear theory root-mean-square amplitude of the matter 
+        fluctuation spectrum averaged in spheres of radius 8 h^{−1} Mpc.
 
         The redshifts must be a subset of those requested when
         :func:`~BoltzmannBase.must_provide` was called.
         """
         pass
+
+    @abstract
+    def get_fsigma8(self, z):
+        r"""
+        Structure growth rate :math:`f\sigma_8`, as defined in eq. 33 of
+        `Planck 2015 results. XIII. Cosmological parameters <https://arxiv.org/pdf/1502.01589.pdf>`_,
+        at the given redshift(s) ``z``.
+
+        The redshifts must be a subset of those requested when
+        :func:`~BoltzmannBase.must_provide` was called.
+        """
 
     def get_auto_covmat(self, params_info, likes_info):
         r"""
