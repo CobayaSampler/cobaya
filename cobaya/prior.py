@@ -340,7 +340,6 @@ import numpy as np
 import numbers
 from types import MethodType
 from typing import Sequence, NamedTuple, Callable
-from itertools import chain
 
 # Local
 from cobaya.conventions import _prior, partag, _prior_1d_name
@@ -429,8 +428,9 @@ class Prior(HasLogger):
             logp = get_external_function(info_prior[name], name=name)
 
             argspec = getfullargspec(logp)
-            known = set(sampled_params_info).union(constant_params_info).union(
-                chain(*parameterization.sampled_input_dependence().values()))
+            known = set(sampled_params_info).union(
+                constant_params_info,
+                *parameterization.sampled_input_dependence().values())
             params = [p for p in argspec.args if p in known]
             if not params:
                 raise LoggedError(
@@ -441,10 +441,14 @@ class Prior(HasLogger):
                 argspec.args[:(len(argspec.args) - len(argspec.defaults or []))]
             unknown = set(params_without_default).difference(known)
             if unknown:
-                raise LoggedError(
-                    self.log, "Some of the arguments of the external prior '%s' cannot "
-                              "be found and don't have a default value either: %s",
-                    name, list(unknown))
+                if unknown.intersection(parameterization.derived_params()):
+                    err = ("External prior '%s' has arguments %s that are output derived "
+                           "parameters, Priors must be functions of input parameters."
+                           "Use a separate 'likelihood' for the prior if needed.")
+                else:
+                    err = ("Some of the arguments of the external prior '%s' cannot be "
+                           "found and don't have a default value either: %s")
+                raise LoggedError(self.log, err, name, list(unknown))
 
             self.external[name] = ExternalPrior(logp=logp, params=params)
             self.mpi_warning("External prior '%s' loaded. "

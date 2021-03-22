@@ -757,26 +757,19 @@ class Model(HasLogger):
         # Go through all components.
         # NB: self.components iterates over likelihoods first, and then theories
         # so unassigned can by default go to theories
+        assign_components = [c for c in self.components
+                             if not isinstance(c, AbsorbUnusedParamsLikelihood)]
         for io_kind, assign, option, prefix, derived_param in (
                 ["input", input_assign, _input_params, _input_params_prefix, False],
                 ["output", output_assign, _output_params, _output_params_prefix, True]):
-            for component in self.components:
-                if isinstance(component, AbsorbUnusedParamsLikelihood):
-                    # take leftover parameters
-                    continue
-                if component.get_allow_agnostic():
-                    supports_params = None
-                elif derived_param:
-                    supports_params = set(component.get_can_provide_params())
-                    provide = str_to_list(getattr(component, _provides, []))
-                    supports_params |= set(provide)
+            for component in assign_components:
+                if derived_param:
+                    required_params = str_to_list(getattr(component, _provides, []))
                 else:
                     required_params = set(
                         p for p, v in ensure_dict(component.get_requirements()).items()
                         # ignore non-params; it's ok if some non-param goes through
                         if v is None)
-                    supports_params = required_params.union(
-                        set(component.get_can_support_params()))
                 # Identify parameters understood by this likelihood/theory
                 # 1a. Does it have input/output params list?
                 #     (takes into account that for callables, we can ignore elements)
@@ -808,22 +801,32 @@ class Model(HasLogger):
                                 assign[p] += [component]
                             elif not derived_param:
                                 required_params.add(p)
-                # 4. otherwise explicitly supported?
-                elif supports_params:
+                # 4. otherwise required
+                elif required_params:
+                    for p in required_params:
+                        if p in assign:
+                            assign[p] += [component]
+                # 5. No parameter knowledge: store as parameter agnostic
+                elif component.get_allow_agnostic():
+                    agnostic_likes[io_kind] += [component]
+
+            # 6. If parameter not already assigned give to any component that supports it
+            unassigned = [p for p in assign if not assign[p]]
+            for component in assign_components:
+                if component not in agnostic_likes[io_kind]:
+                    if derived_param:
+                        supports_params = component.get_can_provide_params()
+                    else:
+                        supports_params = component.get_can_support_params()
+                    # 5. otherwise explicitly supported?
                     # outputs this parameter unless explicitly told
                     # another component provides it
-                    for p in supports_params:
-                        if p in assign:
-                            if not any((c is not component and p in
-                                        str_to_list(getattr(c, _provides, []))) for c in
-                                       self.components):
-                                assign[p] += [component]
-                # 5. No parameter knowledge: store as parameter agnostic
-                elif supports_params is None:
-                    agnostic_likes[io_kind] += [component]
+                    for p in unassigned:
+                        if p in supports_params:
+                            assign[p] += [component]
             # Check that there is only one non-knowledgeable element, and assign
             # unused params
-            if (len(agnostic_likes[io_kind]) > 1 and not all(assign.values())):
+            if len(agnostic_likes[io_kind]) > 1 and not all(assign.values()):
                 raise LoggedError(
                     self.log, "More than one parameter-agnostic likelihood/theory "
                               "with respect to %s parameters: %r. Cannot decide "
@@ -834,6 +837,7 @@ class Model(HasLogger):
                     if not assigned or not derived_param and \
                             p in component.get_requirements():
                         assign[p] += [component]
+
         # If unit likelihood is present, assign all unassigned inputs to it
         for like in self.likelihood.values():
             if isinstance(like, AbsorbUnusedParamsLikelihood):

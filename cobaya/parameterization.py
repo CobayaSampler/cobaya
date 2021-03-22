@@ -168,31 +168,30 @@ class Parameterization(HasLogger):
                     "" if is_in else " remove it and",
                     "sampled" if is_in else "derived",
                     eg_in if is_in else eg_out)
-        # Assume that the *un*known function arguments are likelihood/theory
-        # output parameters
-        for arg in (set(chain(*self._input_args.values()))
-                            .union(chain(*self._derived_args.values()))
-                    - set(self._constant) - set(self._input)
-                    - set(self._sampled) - set(self._derived)):
-            self._output[arg] = None
-
-        # Useful sets: directly-sampled input parameters and directly "output-ed" derived
-        self._directly_sampled = [p for p in self._input if p in self._sampled]
-        self._directly_output = [p for p in self._derived if p in self._output]
 
         # input params depend on input and sampled only,
         # never on output/derived unless constant
+        known_input = set(self._input).union(*(self._sampled, self._constant))
         all_input_arguments = set(chain(*self._input_args.values()))
-        bad_input_dependencies = all_input_arguments.difference(
-            set(self._input).union(set(self._sampled)).union(
-                set(self._constant)))
+        bad_input_dependencies = all_input_arguments.difference(known_input)
         if bad_input_dependencies:
             raise LoggedError(
                 self.log,
                 "Input parameters defined as functions can only depend on other "
                 "input parameters. In particular, an input parameter cannot depend on %r."
-                " Use an explicit Theory calculator for more complex dependencies.",
-                list(bad_input_dependencies))
+                " Use an explicit Theory calculator for more complex dependencies.\n"
+                "If you intended to define a derived output parameter use derived: "
+                "instead of value:", list(bad_input_dependencies))
+
+        # Assume that the *un*known function arguments are likelihood/theory
+        # output parameters
+        for arg in (all_input_arguments.union(*self._derived_args.values())
+                .difference(known_input).difference(self._derived)):
+            self._output[arg] = None
+
+        # Useful sets: directly-sampled input parameters and directly "output-ed" derived
+        self._directly_sampled = [p for p in self._input if p in self._sampled]
+        self._directly_output = [p for p in self._derived if p in self._output]
 
         self._wrapped_input_funcs, self._wrapped_derived_funcs = \
             self._get_wrapped_functions_evaluation_order()
@@ -204,7 +203,7 @@ class Parameterization(HasLogger):
         # From here on, some error control.
         dropped_but_never_used = (
             set(p for p, v in self._sampled_input_dependence.items() if not v)
-                .difference(set(self._directly_sampled)))
+                .difference(self._directly_sampled))
         if dropped_but_never_used and not ignore_unused_sampled:
             raise LoggedError(
                 self.log,

@@ -111,9 +111,13 @@ def test_parameterization_dependencies():
     class TestLike(Likelihood):
         params = {'a': None, 'b': None}
 
+        def get_can_provide_params(self):
+            return ['D']
+
         def logp(self, **params_values):
             a = params_values['a']
             b = params_values['b']
+            params_values['_derived']['D'] = -7
             return a + 100 * b
 
     info_yaml = r"""
@@ -127,7 +131,9 @@ def test_parameterization_dependencies():
       a: 
         value: "lambda c, aa: c*aa"  
       b: 1
-
+      D:
+      E:
+       derived: "lambda D,c,a,aa: D*c/a+aa"      
     prior:
       pr: "lambda bb, a: bb-10*a"
 
@@ -140,11 +146,15 @@ def test_parameterization_dependencies():
     assert np.isclose(model.loglike({'bb': 0.5, 'aa': 2})[0], 105)
     assert np.isclose(model.logposterior({'bb': 0.5, 'aa': 2}).logpriors[1], -49.5)
     info['params']['b'] = {'value': 'lambda a, c, bb: a*c*bb'}
-    assert np.isclose(get_model(info).loglike({'bb': 0.5, 'aa': 2})[0], 630)
+    loglike, derived = get_model(info).loglike({'bb': 0.5, 'aa': 2})
+    assert np.isclose(loglike, 630)
+    assert derived == [2.5, 5.0, 6.25, -7, -1.5]
     assert np.isclose(model.logposterior({'bb': 0.5, 'aa': 2}).logpriors[1], -49.5)
     info['params']['aa'] = 2
     info['params']['bb'] = 0.5
-    assert np.isclose(get_model(info).loglike()[0], 630)
+    loglike, derived = get_model(info).loglike()
+    assert np.isclose(loglike, 630)
+    assert derived == [2.5, 5.0, 6.25, -7, -1.5]
 
 
 # MARKED FOR DEPRECATION IN v3.0 -- Everything below this line
