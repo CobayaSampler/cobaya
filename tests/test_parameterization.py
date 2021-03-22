@@ -11,6 +11,8 @@ from cobaya.conventions import kinds, _params
 from cobaya.yaml import yaml_load
 from cobaya.run import run
 from cobaya.tools import get_external_function
+from cobaya.likelihood import Likelihood
+from cobaya.model import get_model
 
 x_func = lambda _: _ / 3
 e_func = lambda _: _ + 1
@@ -105,16 +107,58 @@ def test_parameterization():
         assert np.allclose(bcefffg_getdist, [b, c, e, f, g, j, k])
 
 
+def test_parameterization_dependencies():
+    class TestLike(Likelihood):
+        params = {'a': None, 'b': None}
+
+        def logp(self, **params_values):
+            a = params_values['a']
+            b = params_values['b']
+            return a + 100 * b
+
+    info_yaml = r"""
+    params:
+      aa:  
+        prior: [2,4]
+      bb:
+        prior: [0,1]
+      c:
+        value: "lambda aa, bb: aa+bb"  
+      a: 
+        value: "lambda c, aa: c*aa"  
+      b: 1
+
+    prior:
+      pr: "lambda bb, a: bb-10*a"
+
+    stop_at_error: True
+    """
+    info = yaml_load(info_yaml)
+    info["likelihood"] = {"Like": TestLike}
+
+    model = get_model(info)
+    assert np.isclose(model.loglike({'bb': 0.5, 'aa': 2})[0], 105)
+    assert np.isclose(model.logposterior({'bb': 0.5, 'aa': 2}).logpriors[1], -49.5)
+    info['params']['b'] = {'value': 'lambda a, c, bb: a*c*bb'}
+    assert np.isclose(get_model(info).loglike({'bb': 0.5, 'aa': 2})[0], 630)
+    assert np.isclose(model.logposterior({'bb': 0.5, 'aa': 2}).logpriors[1], -49.5)
+    info['params']['aa'] = 2
+    info['params']['bb'] = 0.5
+    assert np.isclose(get_model(info).loglike()[0], 630)
+
+
 # MARKED FOR DEPRECATION IN v3.0 -- Everything below this line
 
 from typing import Sequence, Union
 
 DerivedArg = Union[dict, Sequence, None]
 
+
 def loglik_OLD(a, b, c, d, h, i, j, _derived: DerivedArg = ("x", "e")):
     if isinstance(_derived, dict):
         _derived.update({"x": x_func(c), "e": e_func(b)})
     return multivariate_normal.logpdf((a, b, c, d, h, i, j), cov=0.1 * np.eye(7))
+
 
 # MARKED FOR DEPRECATION IN v3.0
 info_OLD = info.copy()

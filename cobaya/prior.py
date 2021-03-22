@@ -342,7 +342,7 @@ Just give it a try and it should work fine, but, in case you need the details:
 import numpy as np
 import numbers
 from types import MethodType
-from typing import Sequence
+from typing import Sequence, NamedTuple, Callable
 from itertools import chain
 
 # Local
@@ -355,6 +355,11 @@ from cobaya.log import LoggedError, HasLogger
 fast_logpdfs = {"uniform": _fast_uniform_logpdf, "norm": _fast_norm_logpdf}
 
 
+class ExternalPrior(NamedTuple):
+    logp: Callable
+    params: list
+
+
 class Prior(HasLogger):
     """
     Class managing the prior and reference pdf's.
@@ -365,6 +370,7 @@ class Prior(HasLogger):
         Initializes the prior and reference pdf's from the input information.
         """
         self.set_logger()
+        self._parameterization = parameterization
         constant_params_info = parameterization.constant_params()
         sampled_params_info = parameterization.sampled_params_info()
         if not sampled_params_info:
@@ -423,34 +429,27 @@ class Prior(HasLogger):
                                             "Please use a different one.", _prior_1d_name)
             self.log.debug(
                 "Loading external prior '%s' from: '%s'", name, info_prior[name])
-            opts = {"logp": get_external_function(info_prior[name], name=name)}
-            self.external[name] = opts
-            opts["argspec"] = (
-                getfullargspec(opts["logp"]))
-            opts["params"] = {
-                p: list(sampled_params_info).index(p)
-                for p in opts["argspec"].args if p in sampled_params_info}
-            opts["constant_params"] = {
-                p: constant_params_info[p]
-                for p in opts["argspec"].args if p in constant_params_info}
-            if (not (len(opts["params"]) +
-                     len(opts["constant_params"]))):
+            logp = get_external_function(info_prior[name], name=name)
+
+            argspec = getfullargspec(logp)
+            known = set(sampled_params_info).union(constant_params_info).union(
+                chain(*parameterization.sampled_input_dependence().values()))
+            params = [p for p in argspec.args if p in known]
+            if not params:
                 raise LoggedError(
                     self.log, "None of the arguments of the external prior '%s' "
-                              "are known *fixed* or *sampled* parameters. "
-                              "This prior recognizes: %r", name,
-                    opts["argspec"].args)
+                              "are known parameters. "
+                              "This prior recognizes: %r", name, argspec.args)
             params_without_default = \
-                opts["argspec"].args[:(len(opts["argspec"].args) -
-                                       len(opts["argspec"].defaults or []))]
-            unknown = set(params_without_default).difference(
-                opts["params"]).difference(opts["constant_params"]).difference(
-                chain(*parameterization.sampled_input_dependence().values()))
+                argspec.args[:(len(argspec.args) - len(argspec.defaults or []))]
+            unknown = set(params_without_default).difference(known)
             if unknown:
                 raise LoggedError(
                     self.log, "Some of the arguments of the external prior '%s' cannot "
                               "be found and don't have a default value either: %s",
                     name, list(unknown))
+
+            self.external[name] = ExternalPrior(logp=logp, params=params)
             self.mpi_warning("External prior '%s' loaded. "
                              "Mind that it might not be normalized!", name)
 
@@ -530,18 +529,13 @@ class Prior(HasLogger):
            ones (if present) are the priors specified in the ``prior`` block
            in the same order.
         """
-        self.log.debug("Evaluating prior at %r", x)
+        logps = self.logps_internal(x)
         # noinspection PyTypeChecker
-        if all(x <= self._upper_limits) and all(x >= self._lower_limits):
-            logps = [self._uniform_logp + (sum([logpdf(xi) for logpdf, xi in
-                                                zip(self._non_uniform_logpdf,
-                                                    x[self._non_uniform_indices])])
-                                           if len(self._non_uniform_indices) else 0)] \
-                    + self.logps_external(x)
+        if logps != -np.inf:
+            input_params = self._parameterization.to_input(x, copied=False)
+            logps = [logps] + self.logps_external(input_params)
         else:
             logps = [-np.inf] * (1 + len(self.external))
-
-        self.log.debug("Got logpriors = %r", logps)
         return logps
 
     def logp(self, x):
@@ -553,10 +547,31 @@ class Prior(HasLogger):
         """
         return np.sum(self.logps(x), axis=0)
 
-    def logps_external(self, x):
+    def logps_internal(self, x):
+        """
+        Takes a point (sampled parameter values, in the correct order).
+
+        Returns:
+           The prior log-probability density of the given point
+           or array of points, only including the products
+           of 1d priors specified in the ``params`` block, no external priors
+        """
+        self.log.debug("Evaluating prior at %r", x)
+        # noinspection PyTypeChecker
+        if all(x <= self._upper_limits) and all(x >= self._lower_limits):
+            logps = self._uniform_logp + (sum([logpdf(xi) for logpdf, xi in
+                                               zip(self._non_uniform_logpdf,
+                                                   x[self._non_uniform_indices])])
+                                          if len(self._non_uniform_indices) else 0)
+        else:
+            logps = -np.inf
+
+        self.log.debug("Got logpriors = %r", logps)
+        return logps
+
+    def logps_external(self, input_params):
         """Evaluates the logprior using the external prior only."""
-        return [ext["logp"](**dict({p: x[i] for p, i in ext["params"].items()},
-                                   **ext["constant_params"]))
+        return [ext.logp(**{p: input_params[p] for p in ext.params})
                 for ext in self.external.values()]
 
     def covmat(self, ignore_external=False):

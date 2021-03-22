@@ -309,7 +309,11 @@ class Model(HasLogger):
             params_values = self.parameterization.check_sampled(**params_values)
 
         input_params = self.parameterization.to_input(params_values, copied=False)
+        return self._loglikes_input_params(input_params, return_derived=return_derived,
+                                           cached=cached, make_finite=make_finite)
 
+    def _loglikes_input_params(self, input_params, return_derived=True, make_finite=False,
+                               cached=True):
         result = self.logps(input_params, return_derived=return_derived,
                             cached=cached, make_finite=make_finite)
         if return_derived:
@@ -357,8 +361,8 @@ class Model(HasLogger):
                 return np.nan_to_num(loglike)
             return loglike
 
-    def logposterior(
-            self, params_values, return_derived=True, make_finite=False, cached=True):
+    def logposterior(self, params_values,
+                     return_derived=True, make_finite=False, cached=True):
         """
         Takes an array or dictionary of sampled parameter values.
         If the argument is an array, parameters must have the same order as in the input.
@@ -399,13 +403,22 @@ class Model(HasLogger):
             raise LoggedError(
                 self.log, "Got non-finite parameter values: %r",
                 dict(zip(self.parameterization.sampled_params(), params_values_array)))
+
         # Notice that we don't use the make_finite in the prior call,
         # to correctly check if we have to compute the likelihood
-        logpriors = self.prior.logps(params_values_array)
-        logpost = sum(logpriors)
-        if -np.inf not in logpriors:
-            like = self.loglikes(params_values, return_derived=return_derived,
-                                 make_finite=make_finite, cached=cached, _no_check=True)
+        logps = self.prior.logps_internal(params_values_array)
+        if logps == -np.inf:
+            logpriors = [-np.inf] * (1 + len(self.prior.external))
+            logpost = -np.inf
+        else:
+            input_params = self.parameterization.to_input(params_values_array,
+                                                          copied=False)
+            logpriors = [logps] + self.prior.logps_external(input_params)
+            logpost = sum(logpriors)
+        if logps != -np.inf:
+            like = self._loglikes_input_params(input_params,
+                                               return_derived=return_derived,
+                                               cached=cached, make_finite=make_finite)
             loglikes, derived_sampler = like if return_derived else (like, [])
             logpost += sum(loglikes)
         else:
@@ -834,7 +847,7 @@ class Model(HasLogger):
         self._unassigned_input = set(p for p, assigned in params_assign["input"].items()
                                      if not assigned).difference(
             chain(*(self.parameterization._input_dependencies[p] for p, assigned in
-                        params_assign["input"].items() if assigned and
+                    params_assign["input"].items() if assigned and
                     p in self.parameterization._input_dependencies)))
 
         # Remove aggregated chi2 that may have been picked up by an agnostic component
