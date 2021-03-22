@@ -142,17 +142,14 @@ b) **As a string,** which will be passed to ``eval()``. The string can be a
 
 .. warning::
 
-   At this moment, external priors can only be functions of **sampled** and **fixed**
-   parameters. This may be extended in the future to dependence on **derived** parameters,
-   probably just for dynamically defined ones, but not for those computed by the theory
-   code, since otherwise the full prior could not be computed **before** the likelihood,
+   External priors can only be functions **sampled** and **fixed**
+   and **derived** parameters that are dynamically defined in terms of other inputs.
+   Derived parameters computed by the theory code cannot be used in in a prior, since
+   otherwise the full prior could not be computed **before** the likelihood,
    preventing us from avoiding computing the likelihood when the prior is null, or
    forcing a *post-call* to the prior.
 
-   **Workaround #1:** If the derived parameter(s) can be computed easily from sampled and
-   fixed parameters, do the computation inside the call to the external prior.
-
-   **Workaround #2:** Define your function as a
+   **Workaround:** Define your function as a
    :ref:`external likelihood <likelihood_external>` instead, since likelihoods do have
    access to derived parameters (for an example, see `this comment
    <https://github.com/CobayaSampler/cobaya/issues/18#issuecomment-447818811>`_).
@@ -216,7 +213,7 @@ parameters:
 + **Sampled** parameters, i.e. those that have a prior, including ``logx`` but not ``x``
   (it does not have a prior: it's fixed by a function). Those are the ones with which the
   **sampler** interacts. Since the likelihood does not understand them, they must be
-  **dropped** with ``drop: True``.
+  **dropped** with ``drop: True`` if you are using any parameter-agnostic components.
 
 + Likelihood **input** parameters: those that will be passed to the likelihood
   (or theory). They are identified by either having a prior and not being **dropped**, or

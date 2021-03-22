@@ -751,22 +751,22 @@ class Model(HasLogger):
         """
         self.input_params = list(self.parameterization.input_params())
         self.output_params = list(self.parameterization.output_params())
-        params_assign = {"input": {p: [] for p in self.input_params},
-                         "output": {p: [] for p in self.output_params}}
+        input_assign = {p: [] for p in self.input_params}
+        output_assign = {p: [] for p in self.output_params}
         agnostic_likes = {"input": [], "output": []}
         # Go through all components.
         # NB: self.components iterates over likelihoods first, and then theories
         # so unassigned can by default go to theories
-        for io_kind, option, prefix, derived_param in (
-                ["input", _input_params, _input_params_prefix, False],
-                ["output", _output_params, _output_params_prefix, True]):
+        for io_kind, assign, option, prefix, derived_param in (
+                ["input", input_assign, _input_params, _input_params_prefix, False],
+                ["output", output_assign, _output_params, _output_params_prefix, True]):
             for component in self.components:
                 if isinstance(component, AbsorbUnusedParamsLikelihood):
                     # take leftover parameters
                     continue
                 if component.get_allow_agnostic():
                     supports_params = None
-                elif io_kind == 'output':
+                elif derived_param:
                     supports_params = set(component.get_can_provide_params())
                     provide = str_to_list(getattr(component, _provides, []))
                     supports_params |= set(provide)
@@ -783,9 +783,9 @@ class Model(HasLogger):
                 if getattr(component, option, None) is not None:
                     for p in getattr(component, option):
                         try:
-                            params_assign[io_kind][p] += [component]
+                            assign[p] += [component]
                         except KeyError:
-                            if io_kind == "input":
+                            if not derived_param:
                                 # If external function, no problem: it may have
                                 # default value
                                 if not isinstance(component,
@@ -796,16 +796,16 @@ class Model(HasLogger):
                                         "but not provided.", p, component.get_name())
                 # 2. Is there a params prefix?
                 elif getattr(component, prefix, None) is not None:
-                    for p in params_assign[io_kind]:
+                    for p in assign:
                         if p.startswith(getattr(component, prefix)):
-                            params_assign[io_kind][p] += [component]
+                            assign[p] += [component]
                 # 3. Does it have a general (mixed) list of params? (set from default)
                 elif getattr(component, _params, None):
                     for p, options in getattr(component, _params).items():
                         if not hasattr(options, 'get') or \
                                 options.get('derived', derived_param) is derived_param:
-                            if p in params_assign[io_kind]:
-                                params_assign[io_kind][p] += [component]
+                            if p in assign:
+                                assign[p] += [component]
                             elif not derived_param:
                                 required_params.add(p)
                 # 4. otherwise explicitly supported?
@@ -813,49 +813,47 @@ class Model(HasLogger):
                     # outputs this parameter unless explicitly told
                     # another component provides it
                     for p in supports_params:
-                        if p in params_assign[io_kind]:
+                        if p in assign:
                             if not any((c is not component and p in
                                         str_to_list(getattr(c, _provides, []))) for c in
                                        self.components):
-                                params_assign[io_kind][p] += [component]
+                                assign[p] += [component]
                 # 5. No parameter knowledge: store as parameter agnostic
                 elif supports_params is None:
                     agnostic_likes[io_kind] += [component]
             # Check that there is only one non-knowledgeable element, and assign
             # unused params
-            if (len(agnostic_likes[io_kind]) > 1 and not all(
-                    params_assign[io_kind].values())):
+            if (len(agnostic_likes[io_kind]) > 1 and not all(assign.values())):
                 raise LoggedError(
                     self.log, "More than one parameter-agnostic likelihood/theory "
                               "with respect to %s parameters: %r. Cannot decide "
                               "parameter assignments.", io_kind, agnostic_likes)
             elif agnostic_likes[io_kind]:  # if there is only one
                 component = agnostic_likes[io_kind][0]
-                for p, assigned in params_assign[io_kind].items():
+                for p, assigned in assign.items():
                     if not assigned or not derived_param and \
                             p in component.get_requirements():
-                        params_assign[io_kind][p] += [component]
+                        assign[p] += [component]
         # If unit likelihood is present, assign all unassigned inputs to it
         for like in self.likelihood.values():
             if isinstance(like, AbsorbUnusedParamsLikelihood):
-                for p, assigned in params_assign["input"].items():
+                for p, assigned in input_assign.items():
                     if not assigned:
                         assigned.append(like)
                 break
         # If there are unassigned input params, check later that they are used by
         # *conditional* requirements of a component (and if not raise error)
-        self._unassigned_input = set(p for p, assigned in params_assign["input"].items()
-                                     if not assigned).difference(
-            chain(*(self.parameterization._input_dependencies[p] for p, assigned in
-                    params_assign["input"].items() if assigned and
-                    p in self.parameterization._input_dependencies)))
+        self._unassigned_input = set(
+            p for p, assigned in input_assign.items() if not assigned).difference(
+            chain(*(self.parameterization._input_dependencies.get(p, []) for p, assigned
+                    in input_assign.items() if assigned)))
 
         # Remove aggregated chi2 that may have been picked up by an agnostic component
         aggr_chi2_names = [_get_chi2_name(t) for t in self.likelihood.all_types]
         for p in aggr_chi2_names:
-            params_assign["output"].pop(p, None)
+            output_assign.pop(p, None)
         # Assign the single-likelihood "chi2__" output parameters
-        for p in params_assign["output"]:
+        for p in output_assign:
             if p.startswith(_get_chi2_name("")):
                 if p in aggr_chi2_names:
                     continue  # it's an aggregated likelihood
@@ -866,33 +864,29 @@ class Model(HasLogger):
                                   "likelihood: '%s'", like)
                 # They may have been already assigned to an agnostic likelihood,
                 # so purge first: no "=+"
-                params_assign["output"][p] = [self.likelihood[like]]
+                output_assign[p] = [self.likelihood[like]]
         # Check that there are no unassigned parameters (with the exception of aggr chi2)
-        unassigned_output = [
-            p for p, assigned in params_assign["output"].items()
-            if not assigned and p not in aggr_chi2_names]
+        unassigned_output = [p for p, assigned in output_assign.items()
+                             if not assigned and p not in aggr_chi2_names]
         if unassigned_output:
             raise LoggedError(
                 self.log, "Could not find whom to assign output parameters %r.",
                 unassigned_output)
         # Check that output parameters are assigned exactly once
-        multiassigned_output = {
-            p: assigned for p, assigned in params_assign["output"].items()
-            if len(assigned) > 1}
+        multiassigned_output = {p: assigned for p, assigned in output_assign.items()
+                                if len(assigned) > 1}
         if multiassigned_output:
             raise LoggedError(
                 self.log,
                 "Output params can only be computed by one likelihood/theory, "
-                "but some were claimed by more than one: %r.",
-                multiassigned_output)
+                "but some were claimed by more than one: %r.", multiassigned_output)
         # Finished! Assign and update infos
-        for io_kind, option, attr in (
-                ["input", _input_params, "input_params"],
-                ["output", _output_params, "output_params"]):
+        for assign, option, attr in (
+                [input_assign, _input_params, "input_params"],
+                [output_assign, _output_params, "output_params"]):
             for component in self.components:
                 setattr(component, attr,
-                        [p for p, assign in params_assign[io_kind].items() if
-                         component in assign])
+                        [p for p, assign in assign.items() if component in assign])
                 # Update infos! (helper theory parameters stored in yaml with host)
                 inf = (info_theory, info_likelihood)[
                     component in self.likelihood.values()]
