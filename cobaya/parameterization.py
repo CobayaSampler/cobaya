@@ -176,7 +176,7 @@ class Parameterization(HasLogger):
         # never on output/derived unless constant
         known_input = set(self._input)
         all_input_arguments = set(chain(*self._input_args.values()))
-        bad_input_dependencies = all_input_arguments.difference(known_input)
+        bad_input_dependencies = all_input_arguments - known_input
         if bad_input_dependencies:
             raise LoggedError(
                 self.log,
@@ -388,7 +388,7 @@ class Parameterization(HasLogger):
         # and pre-prepare argument dicts
 
         wrapped_funcs = ({}, {})
-        known = set(self._constant).union(self._sampled)
+        known = set(chain(self._constant, self._sampled))
 
         for derived, wrapped_func in zip((False, True), wrapped_funcs):
             if derived:
@@ -406,14 +406,13 @@ class Parameterization(HasLogger):
             while inputs:
                 for p, func in inputs.items():
                     args = input_args[p]
-                    if set(args).difference(known):
+                    if not known.issuperset(args):
                         continue
                     known.add(p)
-                    dependencies[p] = set(args)
-                    for arg in set(args).intersection(dependencies):
-                        dependencies[p].update(dependencies[arg])
+                    dependencies[p] = set(
+                        chain(args, *(dependencies.get(arg, []) for arg in args)))
 
-                    if not set(args).difference(self._constant):
+                    if set(args).issubset(self._constant):
                         # all inputs are constant, so output is constant and precomputed
                         self._constant[p] = \
                             self._call_param_func(p, func,

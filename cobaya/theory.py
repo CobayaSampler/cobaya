@@ -222,12 +222,12 @@ class Theory(CobayaComponent):
         (retrieved using current_derived).
         """
         self.log.debug("Got parameters %r", params_values_dict)
-        for p in self._input_params_extra:
+        for p in list(self._input_params_extra):
             try:
                 params_values_dict[p] = self.provider.get_param(p)
             except:
                 # Pop non-parameter (only done during 1st call)
-                self._input_params_extra = self._input_params_extra.difference({p})
+                self._input_params_extra.discard(p)
         state = None
         if cached:
             for _state in self._states:
@@ -287,6 +287,7 @@ class Theory(CobayaComponent):
                          "rename your call.")
         # BEHAVIOUR TO BE REPLACED BY AN ERROR
         return self.current_derived
+
     # END OF DEPRECATION BLOCK
 
     def get_provider(self):

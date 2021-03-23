@@ -837,7 +837,7 @@ def get_translated_params(params_info, params_list):
     """
     translations = {}
     for p, pinfo in params_info.items():
-        renames = {p}.union(set(str_to_list(pinfo.get(partag.renames, []))))
+        renames = {p}.union(str_to_list(pinfo.get(partag.renames, [])))
         try:
             trans = next(r for r in renames if r in params_list)
             translations[p] = trans

@@ -682,14 +682,13 @@ class Model(HasLogger):
         if self._unassigned_input:
             self._unassigned_input.difference_update(*direct_param_dependence.values())
             if self._unassigned_input:
-                unassigned = self._unassigned_input.difference(
-                    self.prior.external_dependence)
+                unassigned = self._unassigned_input - self.prior.external_dependence
                 if unassigned:
                     raise LoggedError(
                         self.log, "Could not find anything to use input parameter(s) %r.",
                         unassigned)
                 else:
-                    self.log.warning("Parameters %s are only used by the prior",
+                    self.log.warning("Parameter(s) %s are only used by the prior",
                                      self._unassigned_input)
         if self.log.getEffectiveLevel() <= logging.DEBUG:
             self.log.debug("Components will be computed in the order:")

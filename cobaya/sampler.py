@@ -538,7 +538,7 @@ class CovmatSampler(Sampler):
                 "Covariance matrix loaded for params %r",
                 [list(params_infos)[i] for i in indices_sampler])
             missing_params = set(params_infos).difference(
-                set(list(params_infos)[i] for i in indices_sampler))
+                list(params_infos)[i] for i in indices_sampler)
             if missing_params:
                 self.log.info(
                     "Missing proposal covariance for params %r",

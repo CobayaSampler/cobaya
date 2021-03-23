@@ -187,10 +187,8 @@ def update_info(info):
             # Reserved attributes not necessarily already in default info:
             reserved = {_external, _class_name, _provides, _requires, partag.renames,
                         _input_params, _output_params, _component_path, _aliases}
-            options_not_recognized = (set(input_block[component])
-                                      .difference(reserved)
-                                      .difference(set(updated[component]))
-                                      .difference(set(annotations)))
+            options_not_recognized = set(input_block[component]).difference(
+                chain(reserved, updated[component], annotations))
             if options_not_recognized:
                 alternatives = {}
                 available = (
@@ -253,7 +251,7 @@ def update_info(info):
                         this_renames = reduce(
                             lambda x, y: x.union(y), [a for a in renames_flat if p in a])
                         updated_info[_params][p][partag.renames] = \
-                            list(set(this_renames).union(set(str_to_list(
+                            list(set(chain(this_renames, str_to_list(
                                 updated_info[_params][p].get(partag.renames, []))))
                                  .difference({p}))
     # Rest of the options
@@ -356,7 +354,7 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
     myname = inspect.stack()[0][3]
     ignore = set() if strict else \
         {_debug, _debug_file, _resume, _force, _packages_path, _test_run, _version}
-    ignore = ignore.union(set(ignore_blocks or []))
+    ignore = ignore.union(ignore_blocks or [])
     if set(info for info in info_old if info_old[info] is not None).difference(ignore) \
             != set(info for info in info_new if info_new[info] is not None).difference(
         ignore):
@@ -386,14 +384,14 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
         if not strict:
             ignore_k = set()
             if block_name in [kinds.theory, kinds.likelihood]:
-                ignore_k = ignore_k.union({_input_params, _output_params})
+                ignore_k.update({_input_params, _output_params})
             elif block_name == _params:
                 for param in block1:
                     # Unify notation
                     block1[param] = expand_info_param(block1[param])
                     block2[param] = expand_info_param(block2[param])
-                    ignore_k = ignore_k.union({partag.latex, partag.renames, partag.ref,
-                                               partag.proposal, "min", "max"})
+                    ignore_k.update({partag.latex, partag.renames, partag.ref,
+                                     partag.proposal, "min", "max"})
                     # Fixed params, it doesn't matter if they are saved as derived
                     if partag.value in block1[param]:
                         block1[param].pop(partag.derived, None)
@@ -409,7 +407,7 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
             if not strict:
                 # Add component-specific options to be ignored
                 if block_name in kinds:
-                    ignore_k_this = ignore_k.copy()
+                    ignore_k_this = ignore_k.union({_component_path})
                     if _external not in block1[k]:
                         try:
                             component_path = block1[k].pop(_component_path, None) \
@@ -417,12 +415,12 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
                             cls = get_resolved_class(
                                 k, kind=block_name, component_path=component_path,
                                 class_name=(block1[k] or {}).get(_class_name))
-                            ignore_k_this = ignore_k_this.union(
-                                set(getattr(cls, "_at_resume_prefer_new", {})))
+                            ignore_k_this.update(set(
+                                getattr(cls, "_at_resume_prefer_new", {})))
                         except ImportError:
                             pass
                     # Pop ignored and kept options
-                    for j in list(ignore_k_this):
+                    for j in ignore_k_this:
                         block1[k].pop(j, None)
                         block2[k].pop(j, None)
             if block1[k] != block2[k]:

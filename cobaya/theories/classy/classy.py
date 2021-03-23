@@ -408,7 +408,7 @@ class classy(BoltzmannBase):
         # Put all parameters in CLASS nomenclature (self.derived_extra already is)
         requested = [self.translate_param(p) for p in (
             self.output_params if derived_requested else [])]
-        requested_and_extra = dict.fromkeys(set(requested).union(set(self.derived_extra)))
+        requested_and_extra = dict.fromkeys(set(requested).union(self.derived_extra))
         # Parameters with their own getters
         if "rs_drag" in requested_and_extra:
             requested_and_extra["rs_drag"] = self.classy.rs_drag()
