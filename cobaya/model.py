@@ -52,8 +52,10 @@ class Requirement(NamedTuple):
 
 # Dummy component prefix for manual requirements
 _dummy_prefix = "_DUMMY"
-is_dummy_component = lambda component: \
-    isinstance(component, str) and component.startswith(_dummy_prefix)
+
+
+def is_dummy_component(component):
+    return isinstance(component, str) and component.startswith(_dummy_prefix)
 
 
 def _dict_equal(d1, d2):
@@ -239,8 +241,7 @@ class Model(HasLogger):
         loglikes = np.empty(len(self.likelihood))
         for (component, index), param_dep in zip(self._component_order.items(),
                                                  self._params_of_dependencies):
-            depend_list = \
-                [input_params[p] for p in param_dep]
+            depend_list = [input_params[p] for p in param_dep]
             params = {p: input_params[p] for p in component.input_params}
             compute_success = component.check_cache_and_compute(
                 want_derived=return_derived,
@@ -248,8 +249,7 @@ class Model(HasLogger):
                 cached=cached, **params)
             if not compute_success:
                 loglikes[:] = -np.inf
-                self.log.debug(
-                    "Calculation failed, skipping rest of calculations ")
+                self.log.debug("Calculation failed, skipping rest of calculations ")
                 break
             if return_derived:
                 derived_dict.update(component.current_derived)
@@ -413,8 +413,13 @@ class Model(HasLogger):
         else:
             input_params = self.parameterization.to_input(params_values_array,
                                                           copied=False)
-            logpriors = [logps] + self.prior.logps_external(input_params)
-            logpost = sum(logpriors)
+            logpriors = [logps]
+            if self.prior.external:
+                logpriors.extend(self.prior.logps_external(input_params))
+                logpost = sum(logpriors)
+            else:
+                logpost = logps
+
         if logps != -np.inf:
             like = self._loglikes_input_params(input_params,
                                                return_derived=return_derived,
@@ -470,7 +475,8 @@ class Model(HasLogger):
         else:
             if self.prior.reference_is_pointlike():
                 raise LoggedError(self.log, "The reference point provided has null "
-                                            "likelihood. Set 'ref' to a different point or a pdf.")
+                                            "likelihood. Set 'ref' to a different point "
+                                            "or a pdf.")
             raise LoggedError(self.log, "Could not find random point giving finite "
                                         "likelihood after %g tries", max_tries)
         return initial_point, logpost, logpriors, loglikes, derived
@@ -676,9 +682,15 @@ class Model(HasLogger):
         if self._unassigned_input:
             self._unassigned_input.difference_update(*direct_param_dependence.values())
             if self._unassigned_input:
-                raise LoggedError(
-                    self.log, "Could not find anything to use input parameter(s) %r.",
-                    self._unassigned_input)
+                unassigned = self._unassigned_input.difference(
+                    self.prior.external_dependence)
+                if unassigned:
+                    raise LoggedError(
+                        self.log, "Could not find anything to use input parameter(s) %r.",
+                        unassigned)
+                else:
+                    self.log.warning("Parameters %s are only used by the prior",
+                                     self._unassigned_input)
         if self.log.getEffectiveLevel() <= logging.DEBUG:
             self.log.debug("Components will be computed in the order:")
             self.log.debug(" - %r" % list(self._component_order))
@@ -749,7 +761,8 @@ class Model(HasLogger):
         Assign parameters to theories and likelihoods, following the algorithm explained
         in :doc:`DEVEL`.
         """
-        self.input_params = list(self.parameterization.input_params())
+        self.input_params = [p for p in self.parameterization.input_params() if p not in
+                             self.parameterization.dropped_param_set()]
         self.output_params = list(self.parameterization.output_params())
         input_assign = {p: [] for p in self.input_params}
         output_assign = {p: [] for p in self.output_params}
@@ -1025,8 +1038,7 @@ class Model(HasLogger):
             raise LoggedError(
                 self.log, "Manual blocking not understood. Check documentation.")
         sampled_params = list(self.sampled_dependence)
-        check = are_different_params_lists(
-            list(chain(*blocks)), sampled_params)
+        check = are_different_params_lists(list(chain(*blocks)), sampled_params)
         duplicate = check.pop("duplicate_A", None)
         missing = check.pop("B_but_not_A", None)
         unknown = check.pop("A_but_not_B", None)

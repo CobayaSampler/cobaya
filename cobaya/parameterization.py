@@ -113,6 +113,7 @@ class Parameterization(HasLogger):
         self._input_funcs = {}
         self._input_args = {}
         self._input_dependencies = {}
+        self._dropped = set()
         self._output = {}
         self._constant = {}
         self._sampled = {}
@@ -129,16 +130,18 @@ class Parameterization(HasLogger):
             if is_fixed_param(info):
                 if isinstance(info[partag.value], Number):
                     self._constant[p] = info[partag.value]
-                    if not info.get(partag.drop, False):
-                        self._input[p] = self._constant[p]
+                    self._input[p] = self._constant[p]
+                    if info.get(partag.drop, False):
+                        self._dropped.add(p)
                 else:
                     self._input[p] = None
                     self._input_funcs[p] = get_external_function(info[partag.value])
                     self._input_args[p] = getfullargspec(self._input_funcs[p]).args
             if is_sampled_param(info):
                 self._sampled[p] = None
-                if not info.get(partag.drop, False):
-                    self._input[p] = None
+                self._input[p] = None
+                if info.get(partag.drop, False):
+                    self._dropped.add(p)
                 self._sampled_renames[p] = (
                     (lambda x: [x] if isinstance(x, str) else x)
                     (info.get(partag.renames, [])))
@@ -171,7 +174,7 @@ class Parameterization(HasLogger):
 
         # input params depend on input and sampled only,
         # never on output/derived unless constant
-        known_input = set(self._input).union(*(self._sampled, self._constant))
+        known_input = set(self._input)
         all_input_arguments = set(chain(*self._input_args.values()))
         bad_input_dependencies = all_input_arguments.difference(known_input)
         if bad_input_dependencies:
@@ -189,8 +192,7 @@ class Parameterization(HasLogger):
                 .difference(known_input).difference(self._derived)):
             self._output[arg] = None
 
-        # Useful sets: directly-sampled input parameters and directly "output-ed" derived
-        self._directly_sampled = [p for p in self._input if p in self._sampled]
+        # Useful set: directly "output-ed" derived
         self._directly_output = [p for p in self._derived if p in self._output]
 
         self._wrapped_input_funcs, self._wrapped_derived_funcs = \
@@ -201,16 +203,12 @@ class Parameterization(HasLogger):
                                               if s in self._input_dependencies.get(i, {})]
                                           for s in self._sampled}
         # From here on, some error control.
-        dropped_but_never_used = (
-            set(p for p, v in self._sampled_input_dependence.items() if not v)
-                .difference(self._directly_sampled))
-        if dropped_but_never_used and not ignore_unused_sampled:
-            raise LoggedError(
-                self.log,
-                "Parameters %r are sampled but not passed to a likelihood or theory "
-                "code, and never used as arguments for any parameter functions. "
-                "Check that you are not using the '%s' tag unintentionally.",
-                list(dropped_but_never_used), partag.drop)
+        # Only actually raise error after checking if used by prior.
+        if not ignore_unused_sampled:
+            self._dropped_not_directly_used = self._dropped.intersection(
+                p for p, v in self._sampled_input_dependence.items() if not v)
+        else:
+            self._dropped_not_directly_used = None
 
         # warn if repeated labels
         labels_inv_repeated = invert_dict(self.labels())
@@ -220,6 +218,9 @@ class Parameterization(HasLogger):
         if labels_inv_repeated:
             self.log.warning(
                 "There are repeated parameter labels: %r", labels_inv_repeated)
+
+    def dropped_param_set(self):
+        return self._dropped.copy()
 
     def input_params(self):
         return self._input.copy()
@@ -247,16 +248,19 @@ class Parameterization(HasLogger):
         return deepcopy(self._sampled_input_dependence)
 
     def to_input(self, sampled_params_values, copied=True):
+        # Gets all current sampled and input derived parameters as a dictionary,
+        # including dropped parameters.
+
         # Store sampled params, so that derived can depend on them
         if not isinstance(sampled_params_values, dict):
             sampled_params_values = dict(zip(self._sampled, sampled_params_values))
         else:
             sampled_params_values = sampled_params_values.copy()
-
         self._sampled = sampled_params_values
-        # Fill first directly sampled input parameters
-        for p in self._directly_sampled:
-            self._input[p] = sampled_params_values[p]
+
+        # First include all sampled input parameters,
+        self._input.update(sampled_params_values)
+
         if self._wrapped_input_funcs:
             # Then evaluate the functions
             for p, (func, args, to_set) in self._wrapped_input_funcs.items():
@@ -282,8 +286,7 @@ class Parameterization(HasLogger):
                         val = output_params_values.get(arg)
                         if val is None:
                             val = self._derived.get(arg)
-                            if val is None:
-                                val = self._sampled.get(arg)
+
                     args[arg] = val
                 self._derived[p] = self._call_param_func(p, func, args)
         return list(self._derived.values())
@@ -303,7 +306,7 @@ class Parameterization(HasLogger):
                     sampled_output[p] = sampled_input.pop(pprime)
                     break
         if len(sampled_output) < len(self._sampled):
-            not_found = set(self.sampled_params()).difference(set(sampled_output))
+            not_found = set(self.sampled_params()).difference(sampled_output)
             if self.allow_renames:
                 msg = ("The following expected sampled parameters " +
                        ("(or their aliases) " if self.allow_renames else "") +
@@ -332,12 +335,12 @@ class Parameterization(HasLogger):
             sampled_input.pop(p)
         if sampled_input:
             not_used = set(sampled_input)
-            duplicated = not_used.intersection(set(
+            duplicated = not_used.intersection(
                 chain(
-                    *[list(chain(*[[k], v])) for k, v in self._sampled_renames.items()])))
+                    *[list(chain(*[[k], v])) for k, v in self._sampled_renames.items()]))
             not_used = not_used.difference(duplicated)
-            derived = not_used.intersection(set(self.derived_params()))
-            input_ = not_used.intersection(set(self.input_params()))
+            derived = not_used.intersection(self.derived_params())
+            input_ = not_used.intersection(self.input_params())
             unknown = not_used.difference(derived).difference(input_)
             msg = ("Incorrect parameters! " +
                    ("\n   Duplicated entries (using their aliases): %r" % list(duplicated)

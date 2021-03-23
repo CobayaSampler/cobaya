@@ -419,6 +419,7 @@ class Prior(HasLogger):
 
         # Process the external prior(s):
         self.external = {}
+        self.external_dependence = set()
         for name in (info_prior if info_prior else {}):
             if name == _prior_1d_name:
                 raise LoggedError(self.log, "The name '%s' is a reserved prior name. "
@@ -428,15 +429,8 @@ class Prior(HasLogger):
             logp = get_external_function(info_prior[name], name=name)
 
             argspec = getfullargspec(logp)
-            known = set(sampled_params_info).union(
-                constant_params_info,
-                *parameterization.sampled_input_dependence().values())
+            known = set(parameterization.input_params())
             params = [p for p in argspec.args if p in known]
-            if not params:
-                raise LoggedError(
-                    self.log, "None of the arguments of the external prior '%s' "
-                              "are known parameters. "
-                              "This prior recognizes: %r", name, argspec.args)
             params_without_default = \
                 argspec.args[:(len(argspec.args) - len(argspec.defaults or []))]
             unknown = set(params_without_default).difference(known)
@@ -449,10 +443,22 @@ class Prior(HasLogger):
                     err = ("Some of the arguments of the external prior '%s' cannot be "
                            "found and don't have a default value either: %s")
                 raise LoggedError(self.log, err, name, list(unknown))
-
+            self.external_dependence.update(params)
             self.external[name] = ExternalPrior(logp=logp, params=params)
             self.mpi_warning("External prior '%s' loaded. "
                              "Mind that it might not be normalized!", name)
+        # From here on, some error control.
+        if parameterization._dropped_not_directly_used:
+            # only raise error after checking not used by prior
+            if parameterization._dropped_not_directly_used.difference(
+                    self.external_dependence):
+                raise LoggedError(
+                    self.log,
+                    "Parameters %r are sampled but not passed to a likelihood or theory "
+                    "code, and never used as arguments for any prior or parameter "
+                    "functions. Check that you are not using "
+                    "the '%s' tag unintentionally.",
+                    list(parameterization._dropped_not_directly_used), partag.drop)
 
     def d(self):
         """
