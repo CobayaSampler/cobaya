@@ -233,21 +233,23 @@ class Sampler(CobayaComponent):
             self.mpi_warning("This run has been SEEDED with seed %d", self.seed)
         # Load checkpoint info, if resuming
         if self.output.is_resuming() and not isinstance(self, Minimizer):
-            try:
-                checkpoint_info = yaml_load_file(self.checkpoint_filename())
+            checkpoint_info = None
+            if is_main_process():
                 try:
-                    for k, v in checkpoint_info[kinds.sampler][self.get_name()].items():
-                        setattr(self, k, v)
-                    self.mpi_info("Resuming from previous sample!")
-                except KeyError:
-                    if is_main_process():
+                    checkpoint_info = yaml_load_file(self.checkpoint_filename())
+
+                    if self.get_name() not in checkpoint_info[kinds.sampler]:
                         raise LoggedError(
                             self.log, "Checkpoint file found at '%s' "
                                       "but it corresponds to a different sampler.",
                             self.checkpoint_filename())
-            except (IOError, TypeError):
-                pass
-        elif not isinstance(self, Minimizer):
+                except (IOError, TypeError):
+                    pass
+            checkpoint_info = share_mpi(checkpoint_info)
+            if checkpoint_info:
+                self.set_checkpoint_info(checkpoint_info)
+                self.mpi_info("Resuming from previous sample!")
+        elif not isinstance(self, Minimizer) and is_main_process():
             try:
                 output.delete_file_or_folder(self.checkpoint_filename())
                 output.delete_file_or_folder(self.progress_filename())
@@ -289,6 +291,18 @@ class Sampler(CobayaComponent):
             return os.path.join(
                 self.output.folder, self.output.prefix + _progress_extension)
         return None
+
+    def set_checkpoint_info(self, checkpoint_info):
+        for k, v in checkpoint_info[kinds.sampler][self.get_name()].items():
+            setattr(self, k, v)
+        # check if convergence parameters changed, and if so converged=False
+        old_info = self.output.reload_updated_info(use_cache=True)
+        if self.converge_info_changed(old_info[kinds.sampler][self.get_name()],
+                                      self._updated_info):
+            self.converged = False
+
+    def converge_info_changed(self, old_info, new_info):
+        return old_info != new_info
 
     def _get_requested_cache_size(self):
         """
