@@ -121,8 +121,10 @@ class SN(DataSetLikelihood):
     def init_params(self, ini):
 
         self.twoscriptmfit = ini.bool('twoscriptmfit')
+        #self.use_abs_mag = ini.bool('use_absolute_magnitude')
         if self.twoscriptmfit:
             scriptmcut = ini.float('scriptmcut', 10.)
+
         assert not ini.float('intrinsicdisp', 0) and not ini.float('intrinsicdisp0', 0)
         if getattr(self, "alpha_beta_names", None) is not None:
             self.alpha_name = self.alpha_beta_names[0]
@@ -284,61 +286,75 @@ class SN(DataSetLikelihood):
         self.invcov = np.linalg.inv(invcovmat)
         return self.invcov
 
-    def alpha_beta_logp(self, lumdists, alpha=0, beta=0, invcovmat=None):
+    def alpha_beta_logp(self, lumdists, alpha=0, beta=0, Mb = 0, invcovmat=None):
         if self.alphabeta_covmat:
-            alphasq = alpha * alpha
-            betasq = beta * beta
-            alphabeta = alpha * beta
-            invvars = 1.0 / (self.pre_vars + alphasq * self.stretch_var +
-                             betasq * self.colour_var +
-                             2.0 * alpha * self.cov_mag_stretch -
-                             2.0 * beta * self.cov_mag_colour -
-                             2.0 * alphabeta * self.cov_stretch_colour)
-            wtval = np.sum(invvars)
-            estimated_scriptm = np.sum((self.mag - lumdists) * invvars) / wtval
+            if self.use_abs_mag:
+                estimated_scriptm = Mb + 25
+            else:
+                alphasq = alpha * alpha
+                betasq = beta * beta
+                alphabeta = alpha * beta
+                invvars = 1.0 / (self.pre_vars + alphasq * self.stretch_var +
+                                betasq * self.colour_var +
+                                2.0 * alpha * self.cov_mag_stretch -
+                                2.0 * beta * self.cov_mag_colour -
+                                2.0 * alphabeta * self.cov_stretch_colour)
+                wtval = np.sum(invvars)
+                estimated_scriptm = np.sum((self.mag - lumdists) * invvars) / wtval
             diffmag = (self.mag - lumdists + alpha * self.stretch -
                        beta * self.colour - estimated_scriptm)
             if invcovmat is None:
                 invcovmat = self.inverse_covariance_matrix(alpha, beta)
         else:
-            invvars = 1.0 / self.pre_vars
-            wtval = np.sum(invvars)
-            estimated_scriptm = np.sum((self.mag - lumdists) * invvars) / wtval
+            if self.use_abs_mag:
+                estimated_scriptm = Mb + 25
+            else:
+                invvars = 1.0 / self.pre_vars
+                wtval = np.sum(invvars)
+                estimated_scriptm = np.sum((self.mag - lumdists) * invvars) / wtval
             diffmag = self.mag - lumdists - estimated_scriptm
             invcovmat = self.invcov
+
         invvars = invcovmat.dot(diffmag)
         amarg_A = invvars.dot(diffmag)
-        if self.twoscriptmfit:
-            # could simplify this..
-            amarg_B = invvars.dot(self.A1)
-            amarg_C = invvars.dot(self.A2)
-            invvars = invcovmat.dot(self.A1)
-            amarg_D = invvars.dot(self.A2)
-            amarg_E = invvars.dot(self.A1)
-            invvars = invcovmat.dot(self.A2)
-            amarg_F = invvars.dot(self.A2)
-            tempG = amarg_F - amarg_D * amarg_D / amarg_E
-            assert tempG >= 0
-            chi2 = (amarg_A + np.log(amarg_E / _twopi) +
-                    np.log(tempG / _twopi) - amarg_C * amarg_C / tempG -
-                    amarg_B * amarg_B * amarg_F / (amarg_E * tempG) +
-                    2.0 * amarg_B * amarg_C * amarg_D / (amarg_E * tempG))
-        else:
-            amarg_B = np.sum(invvars)
+        if self.use_abs_mag:
             amarg_E = np.sum(invcovmat)
-            chi2 = amarg_A + np.log(amarg_E / _twopi) - amarg_B ** 2 / amarg_E
+            chi2 = amarg_A + np.log(amarg_E / _twopi)
+        else:
+            if self.twoscriptmfit:
+                # could simplify this..
+                amarg_B = invvars.dot(self.A1)
+                amarg_C = invvars.dot(self.A2)
+                invvars = invcovmat.dot(self.A1)
+                amarg_D = invvars.dot(self.A2)
+                amarg_E = invvars.dot(self.A1)
+                invvars = invcovmat.dot(self.A2)
+                amarg_F = invvars.dot(self.A2)
+                tempG = amarg_F - amarg_D * amarg_D / amarg_E
+                assert tempG >= 0
+                chi2 = (amarg_A + np.log(amarg_E / _twopi) +
+                        np.log(tempG / _twopi) - amarg_C * amarg_C / tempG -
+                        amarg_B * amarg_B * amarg_F / (amarg_E * tempG) +
+                        2.0 * amarg_B * amarg_C * amarg_D / (amarg_E * tempG))
+            else:
+                amarg_B = np.sum(invvars)
+                amarg_E = np.sum(invcovmat)
+                chi2 = amarg_A + np.log(amarg_E / _twopi) - amarg_B ** 2 / amarg_E
         return - chi2 / 2
 
     def logp(self, **params_values):
         angular_diameter_distances = self.provider.get_angular_diameter_distance(self.zcmb)
         lumdists = (5 * np.log10((1 + self.zhel) * (1 + self.zcmb) *
                                  angular_diameter_distances))
+        
+        Mb = params_values.get('Mb', None)
         if self.marginalize:
             # Should parallelize this loop
             for i in range(self.int_points):
                 self.marge_grid[i] = - self.alpha_beta_logp(
                     lumdists, self.alpha_grid[i],
-                    self.beta_grid[i], invcovmat=self.invcovs[i])
+                    self.beta_grid[i], Mb, 
+                    invcovmat=self.invcovs[i])
             grid_best = np.min(self.marge_grid)
             return - grid_best + np.log(
                 np.sum(np.exp(- self.marge_grid[self.marge_grid != np.inf] + grid_best)) *
@@ -346,6 +362,6 @@ class SN(DataSetLikelihood):
         else:
             if self.alphabeta_covmat:
                 return self.alpha_beta_logp(lumdists, params_values[self.alpha_name],
-                                            params_values[self.beta_name])
+                                            params_values[self.beta_name], Mb)
             else:
-                return self.alpha_beta_logp(lumdists)
+                return self.alpha_beta_logp(lumdists, Mb=Mb)
