@@ -235,9 +235,9 @@ def load_input_file(input_file, no_mpi=False, help_commands: [str, None] = None)
             info = load_input(updated_file)
         except IOError:
             err_msg = "Not a valid input file, or non-existent run to resume."
-            if _help_commands:
+            if help_commands:
                 err_msg += (" Maybe you mistyped one of the following commands: "
-                            + _help_commands)
+                            + help_commands)
             raise ValueError(err_msg)
         # We need to update the output_prefix to resume the run *where it is*
         info[_output_prefix] = input_file
