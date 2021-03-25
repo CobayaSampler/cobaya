@@ -9,6 +9,7 @@
 # Global
 from typing import Mapping
 import logging
+import os
 
 # Local
 from cobaya import __version__
@@ -20,7 +21,7 @@ from cobaya.output import get_output, split_prefix, get_info_path
 from cobaya.model import Model
 from cobaya.sampler import get_sampler_name_and_class, check_sampler_info
 from cobaya.log import logger_setup, LoggedError
-from cobaya.yaml import yaml_dump
+from cobaya.yaml import yaml_dump, yaml_load
 from cobaya.input import update_info
 from cobaya.mpi import import_MPI, is_main_process, set_mpi_disabled
 from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic, \
@@ -28,15 +29,63 @@ from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic, \
 from cobaya.post import post
 
 
-def run(info):
+def run(info_or_yaml_or_file, packages_path: [str, None] = None,
+        output: [str, None] = None, debug: [bool, None] = None,
+        stop_at_error: [bool, None] = None, resume=False, force=False,
+        no_mpi=False, test=False):
+    """
+    Run from an input dictionary, file name or yaml string, with optional arguments
+    to override settings in the input as needed.
+
+    :param info_or_yaml_or_file: dictionary, yaml file name, or yaml text with options
+    :param packages_path: path where external packages were installed
+    :param output: path name prefix for output files
+    :param debug: verbose debug output
+    :param stop_at_error: stop if an error is raised
+    :param resume: continue an existing run
+    :param force: overwrite existing output if it exists
+    :param no_mpi: run without MPI
+    :param test: only test initialization rather than actually running
+    :return: (updated_info, sampler) tuple of options dictionary and Sampler instance
+    """
+
     # This function reproduces the model-->output-->sampler pipeline one would follow
     # when instantiating by hand, but alters the order to performs checks and dump info
     # as early as possible, e.g. to check if resuming possible or `force` needed.
-    assert isinstance(info, Mapping), (
-        "The first argument must be a dictionary with the info needed for the run. "
-        "If you were trying to pass the name of an input file instead, "
-        "load it first with 'cobaya.input.load_input', "
-        "or, if you were passing a yaml string, load it with 'cobaya.yaml.yaml_load'.")
+    if no_mpi or test:
+        set_mpi_disabled()
+    if isinstance(info_or_yaml_or_file, str):
+        if "\n" in info_or_yaml_or_file:
+            info = yaml_load(info_or_yaml_or_file)
+        else:
+            info = load_input_file(info_or_yaml_or_file)
+    else:
+        assert isinstance(info_or_yaml_or_file, Mapping), (
+            "The first argument must be a dictionary, file name or yaml string with the "
+            "info needed for the run.")
+        info = dict(info_or_yaml_or_file)
+
+    # solve packages installation path cmd > env > input
+    if packages_path:
+        info[_packages_path] = packages_path
+    if debug is not None:
+        info[_debug] = bool(debug)
+    if test:
+        info[_test_run] = True
+    if stop_at_error is not None:
+        info["stop_at_error"] = bool(stop_at_error)
+    # If any of resume|force given as cmd args, ignore those in the input file
+    if resume or force:
+        if resume and force:
+            raise ValueError("'rename' and 'force' are exclusive options")
+        info[_resume] = bool(resume)
+        info[_force] = bool(force)
+    if output:
+        info[_output_prefix] = output
+    if _post in info:
+        post(info)
+        return
+
     logger_setup(info.get(_debug), info.get(_debug_file))
     logger_run = logging.getLogger(__name__.split(".")[-1])
     # MARKED FOR DEPRECATION IN v3.0
@@ -113,26 +162,25 @@ def run(info):
 # Command-line script
 def run_script(help_commands=None):
     warn_deprecation()
-    import os
     import argparse
     parser = argparse.ArgumentParser(
         prog="cobaya run", description="Cobaya's run script.")
-    parser.add_argument("input_file", nargs=1, action="store", metavar="input_file.yaml",
+    parser.add_argument("input_file", action="store", metavar="input_file.yaml",
                         help="An input file to run.")
     parser.add_argument("-" + _packages_path_arg[0], "--" + _packages_path_arg_posix,
-                        action="store", nargs=1, metavar="/packages/path", default=[None],
+                        action="store", metavar="/packages/path", default=None,
                         help="Path where external packages were installed.")
     # MARKED FOR DEPRECATION IN v3.0
     modules = "modules"
     parser.add_argument("-" + modules[0], "--" + modules,
-                        action="store", nargs=1, required=False,
-                        metavar="/packages/path", default=[None],
+                        action="store", required=False,
+                        metavar="/packages/path", default=None,
                         help="To be deprecated! "
                              "Alias for %s, which should be used instead." %
                              _packages_path_arg_posix)
     # END OF DEPRECATION BLOCK -- CONTINUES BELOW!
     parser.add_argument("-" + _output_prefix[0], "--" + _output_prefix,
-                        action="store", nargs=1, metavar="/some/path", default=[None],
+                        action="store", metavar="/some/path", default=None,
                         help="Path and prefix for the text output.")
     parser.add_argument("-" + _debug[0], "--" + _debug, action="store_true",
                         help="Produce verbose debug output.")
@@ -150,57 +198,49 @@ def run_script(help_commands=None):
                         help="disable MPI when mpi4py installed but MPI does "
                              "not actually work")
     arguments = parser.parse_args()
-    if arguments.no_mpi or getattr(arguments, _test_run, False):
-        set_mpi_disabled()
-    if any((os.path.splitext(f)[0] in ("input", "updated"))
-           for f in arguments.input_file):
-        raise ValueError("'input' and 'updated' are reserved file names. "
-                         "Please, use a different one.")
-    load_input = import_MPI(".input", "load_input")
-    given_input = arguments.input_file[0]
-    if any(given_input.lower().endswith(ext) for ext in _yaml_extensions):
-        info = load_input(given_input)
-        output_prefix_cmd = getattr(arguments, _output_prefix)[0]
-        output_prefix_input = info.get(_output_prefix)
-        info[_output_prefix] = output_prefix_cmd or output_prefix_input
-    else:
-        # Passed an existing output_prefix? Try to find the corresponding *.updated.yaml
-        updated_file = get_info_path(*split_prefix(given_input), kind="updated")
-        try:
-            info = load_input(updated_file)
-        except IOError:
-            err_msg = "Not a valid input file, or non-existent run to resume."
-            if help_commands:
-                err_msg += (" Maybe you mistyped one of the following commands: "
-                            + help_commands)
-            raise ValueError(err_msg)
-        # We need to update the output_prefix to resume the run *where it is*
-        info[_output_prefix] = given_input
-        # If input given this way, we obviously want to resume!
-        info[_resume] = True
-    # solve packages installation path cmd > env > input
+
     # MARKED FOR DEPRECATION IN v3.0
-    if getattr(arguments, modules) != [None]:
+    if arguments.modules is not None:
         logger_setup()
         logger = logging.getLogger(__name__.split(".")[-1])
         logger.warning("*DEPRECATION*: -m/--modules will be deprecated in favor of "
                        "-%s/--%s in the next version. Please, use that one instead.",
                        _packages_path_arg[0], _packages_path_arg_posix)
         # BEHAVIOUR TO BE REPLACED BY ERROR:
-        if getattr(arguments, _packages_path_arg) == [None]:
-            setattr(arguments, _packages_path_arg, getattr(arguments, modules))
-    # BEHAVIOUR TO BE REPLACED BY ERROR:
-    check_deprecated_modules_path(info)
+        if getattr(arguments, _packages_path_arg) is None:
+            setattr(arguments, _packages_path_arg, arguments.modules)
+    del arguments.modules
     # END OF DEPRECATION BLOCK
-    info[_packages_path] = \
-        getattr(arguments, _packages_path_arg)[0] or info.get(_packages_path)
-    info[_debug] = getattr(arguments, _debug) or info.get(_debug, _debug_default)
-    info[_test_run] = getattr(arguments, _test_run, False)
-    # If any of resume|force given as cmd args, ignore those in the input file
-    resume_arg, force_arg = [getattr(arguments, arg) for arg in [_resume, _force]]
-    if any([resume_arg, force_arg]):
-        info[_resume], info[_force] = resume_arg, force_arg
-    if _post in info:
-        post(info)
+    info = load_input_file(arguments.input_file,
+                           no_mpi=arguments.no_mpi or arguments.test,
+                           help_commands=help_commands)
+    del arguments.input_file
+    run(info, **arguments.__dict__)
+
+
+def load_input_file(input_file, no_mpi=False, help_commands: [str, None] = None):
+    if no_mpi:
+        set_mpi_disabled()
+    if any((os.path.splitext(f)[0] in ("input", "updated"))
+           for f in input_file):
+        raise ValueError("'input' and 'updated' are reserved file names. "
+                         "Please, use a different one.")
+    load_input = import_MPI(".input", "load_input")
+    if any(input_file.lower().endswith(ext) for ext in _yaml_extensions):
+        info = load_input(input_file)
     else:
-        run(info)
+        # Passed an existing output_prefix? Try to find the corresponding *.updated.yaml
+        updated_file = get_info_path(*split_prefix(input_file), kind="updated")
+        try:
+            info = load_input(updated_file)
+        except IOError:
+            err_msg = "Not a valid input file, or non-existent run to resume."
+            if _help_commands:
+                err_msg += (" Maybe you mistyped one of the following commands: "
+                            + _help_commands)
+            raise ValueError(err_msg)
+        # We need to update the output_prefix to resume the run *where it is*
+        info[_output_prefix] = input_file
+        # If input given this way, we obviously want to resume!
+        info[_resume] = True
+    return info
