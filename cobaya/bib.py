@@ -15,8 +15,8 @@ from inspect import cleandoc
 
 # Local
 from cobaya.conventions import _yaml_extensions, kinds, _dump_sort_cosmetic
-from cobaya.tools import create_banner, warn_deprecation
-from cobaya.input import load_input, get_used_components, get_class
+from cobaya.tools import create_banner, warn_deprecation, get_class
+from cobaya.input import load_input, get_used_components
 
 # Banner defaults
 _default_symbol = "="

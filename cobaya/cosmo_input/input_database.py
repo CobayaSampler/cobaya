@@ -343,7 +343,7 @@ dark_energy = dict([
                 [p.proposal, 0.02], [p.latex, r"w_\mathrm{DE}"]])]])}],
     ["de_w_wa", {
         _desc: "Varying constant eq of state with w(a) = w0 + (1-a) wa",
-        kinds.theory: {_camb: None,
+        kinds.theory: {_camb: {_extra_args: {'dark_energy_model': 'ppf'}},
                        _classy: {_params: {"Omega_Lambda": 0}}},
         _params: dict([
             ["w", dict([
@@ -726,4 +726,3 @@ _combo_dict_text = (
         ["like_sn", "SN experiments"],
         ["like_H0", "Local H0 measurements"])],
     ["Sampler", (["sampler", "Samplers"],)])
-

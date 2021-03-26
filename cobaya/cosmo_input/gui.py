@@ -11,7 +11,7 @@ import io
 # Local
 from cobaya.yaml import yaml_dump
 from cobaya.cosmo_input import input_database
-from .input_database import  _combo_dict_text
+from cobaya.cosmo_input.input_database import  _combo_dict_text
 from cobaya.cosmo_input.autoselect_covmat import get_best_covmat, covmat_folders
 from cobaya.cosmo_input.create_input import create_input
 from cobaya.bib import prettyprint_bib, get_bib_info, get_bib_component
