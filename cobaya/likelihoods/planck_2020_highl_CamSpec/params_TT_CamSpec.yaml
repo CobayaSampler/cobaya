@@ -1,0 +1,73 @@
+  use_fg_residual_model: 0
+  cal0: 1
+  cal2: 1
+    
+  amp_100: 0
+  amp_143:
+    prior:
+      dist: uniform
+      min: 0
+      max: 50
+    ref:
+      dist: norm
+      loc: 10
+      scale: 1
+    latex: A^{\rm power}_{143}
+    proposal: 1
+  amp_217:
+    prior:
+      dist: uniform
+      min: 0
+      max: 50
+    ref:
+      dist: norm
+      loc: 20
+      scale: 1
+    latex: A^{\rm power}_{217}
+    proposal: 1
+  amp_143x217:
+    prior:
+      dist: uniform
+      min: 0
+      max: 50
+    ref:
+      dist: norm
+      loc: 10
+      scale: 1
+    latex: A^{\rm power}_{143\times217}
+    proposal: 1
+      
+  n_100: 1
+  n_143:
+    prior:
+      dist: uniform
+      min: 0
+      max: 5
+    ref:
+      dist: norm
+      loc: 1
+      scale: 0.2
+    latex: \gamma^{\rm power}_{143}
+    proposal: 0.2
+  n_217:
+    prior:
+      dist: uniform
+      min: 0
+      max: 5
+    ref:
+      dist: norm
+      loc: 1
+      scale: 0.2
+    latex: \gamma^{\rm power}_{143}
+    proposal: 0.2
+  n_143x217:
+    prior:
+      dist: uniform
+      min: 0
+      max: 5
+    ref:
+      dist: norm
+      loc: 1
+      scale: 0.2
+    latex: \gamma^{\rm power}_{143}
+    proposal: 0.2

@@ -1,0 +1,11 @@
+  calEE:
+    prior:
+      dist: norm
+      loc: 1
+      scale: 0.01
+    ref:
+      dist: norm
+      loc: 1
+      scale: 0.01
+    proposal: 0.01
+    latex: c_{EE}
