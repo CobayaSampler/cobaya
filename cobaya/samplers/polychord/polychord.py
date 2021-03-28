@@ -160,7 +160,7 @@ class polychord(Sampler):
         locs = bounds[:, 0]
         scales = bounds[:, 1] - bounds[:, 0]
         # This function re-scales the parameters AND puts them in the right order
-        self.pc_prior = lambda x: (locs + np.array(x)[self.ordering] * scales).tolist()
+        self.pc_prior = lambda x: [self.model.prior.pdf[i].ppf(xi) for i, xi in enumerate(np.array(x)[self.ordering])]
         # We will need the volume of the prior domain, since PolyChord divides by it
         self.logvolume = np.log(np.prod(scales))
         # Prepare callback function
@@ -232,7 +232,7 @@ class polychord(Sampler):
                 loglikes = np.full(self.n_likes, np.nan)
             derived = list(derived) + list(logpriors) + list(loglikes)
             return (
-                max(logposterior + self.logvolume, self.pc_settings.logzero),
+                max(loglikes.sum(), self.pc_settings.logzero),
                 derived)
 
         sync_processes()
@@ -260,7 +260,7 @@ class polychord(Sampler):
             for p in self.model.prior:
                 f_paramnames.write("%s*\t%s\n" % (
                     "logprior" + _separator + p,
-                    r"\pi_\mathrm{" + p.replace("_", r"\ ") + r"}"))
+                    r"\log\pi_\mathrm{" + p.replace("_", r"\ ") + r"}"))
             for p in self.model.likelihood:
                 f_paramnames.write("%s*\t%s\n" % (
                     "loglike" + _separator + p,
