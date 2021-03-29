@@ -304,7 +304,7 @@ class polychord(CovmatSampler):
                 self.mpi_info(f'Failure: {str(e)}')
             self.pc.run_polychord(ll, nDims, self.nDerived, self.pc_settings, prior, self.dumper)
         else:
-            self.mpi_info('Not using SuperNest.')
+            self.mpi_info('Not using SuperNest. Add `use_supernest: True`')
             self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
                                   self.pc_prior, self.dumper)
         self.process_raw_output()
