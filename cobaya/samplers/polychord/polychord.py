@@ -323,8 +323,9 @@ class polychord(CovmatSampler):
         labels = self.model.parameterization.labels()
         with open(prefix + ".paramnames", "w") as f_paramnames:
             for p in self.model.parameterization.sampled_params():
-                print(f"{p} - {labels.get(p, "")}")
                 f_paramnames.write("%s\t%s\n" % (p, labels.get(p, "")))
+            if self.use_supernest:
+                f_paramnames.write("%s" % "proposal0")
             for p in self.model.parameterization.derived_params():
                 f_paramnames.write("%s*\t%s\n" % (p, labels.get(p, "")))
             for p in self.model.prior:
