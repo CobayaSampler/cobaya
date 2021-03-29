@@ -319,6 +319,7 @@ class polychord(CovmatSampler):
                       [p + "*" for p in (
                               list(self.model.parameterization.derived_params()) +
                               list(self.model.prior) + list(self.model.likelihood))])
+        self.mpi.info(f'Dumping paramnames {paramnames}')
         labels = self.model.parameterization.labels()
         with open(prefix + ".paramnames", "w") as f_paramnames:
             for p in self.model.parameterization.sampled_params():
