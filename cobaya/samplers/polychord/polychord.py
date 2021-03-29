@@ -323,14 +323,22 @@ class polychord(CovmatSampler):
         labels = self.model.parameterization.labels()
         with open(prefix + ".paramnames", "w") as f_paramnames:
             for p in self.model.parameterization.sampled_params():
+                print("%s\t%s\n" % (p, labels.get(p, "")))
                 f_paramnames.write("%s\t%s\n" % (p, labels.get(p, "")))
-            for p in self.model.parameterization.derived_params():
+            For p in self.model.parameterization.derived_params():
+                print("%s*\t%s\n" % (p, labels.get(p, "")))
                 f_paramnames.write("%s*\t%s\n" % (p, labels.get(p, "")))
             for p in self.model.prior:
+                print("%s*\t%s\n" % (
+                    "logprior" + _separator + p,
+                    r"\pi_\mathrm{" + p.replace("_", r"\ ") + r"}"))
                 f_paramnames.write("%s*\t%s\n" % (
                     "logprior" + _separator + p,
                     r"\pi_\mathrm{" + p.replace("_", r"\ ") + r"}"))
             for p in self.model.likelihood:
+                print("%s*\t%s\n" % (
+                    "loglike" + _separator + p,
+                    r"\log\mathcal{L}_\mathrm{" + p.replace("_", r"\ ") + r"}"))
                 f_paramnames.write("%s*\t%s\n" % (
                     "loglike" + _separator + p,
                     r"\log\mathcal{L}_\mathrm{" + p.replace("_", r"\ ") + r"}"))
