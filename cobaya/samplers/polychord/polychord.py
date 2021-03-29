@@ -304,7 +304,7 @@ class polychord(CovmatSampler):
                 self.mpi_info(f'Failure: {str(e)}')
             self.pc.run_polychord(ll, nDims, self.nDerived, self.pc_settings, prior, self.dumper)
         else:
-            self.mpi_info('Not using SuperNest.')
+            self.mpi_info('Not using SuperNest. Add `use_supernest: True`')
             self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
                                   self.pc_prior, self.dumper)
         self.process_raw_output()
@@ -319,10 +319,13 @@ class polychord(CovmatSampler):
                       [p + "*" for p in (
                               list(self.model.parameterization.derived_params()) +
                               list(self.model.prior) + list(self.model.likelihood))])
+        print(f'Dumping paramnames {paramnames}')
         labels = self.model.parameterization.labels()
         with open(prefix + ".paramnames", "w") as f_paramnames:
             for p in self.model.parameterization.sampled_params():
                 f_paramnames.write("%s\t%s\n" % (p, labels.get(p, "")))
+            if self.use_supernest:
+                f_paramnames.write("%s" % "proposal0")
             for p in self.model.parameterization.derived_params():
                 f_paramnames.write("%s*\t%s\n" % (p, labels.get(p, "")))
             for p in self.model.prior:
