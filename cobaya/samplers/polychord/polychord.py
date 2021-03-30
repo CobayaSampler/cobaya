@@ -61,8 +61,16 @@ class polychord(CovmatSampler):
     def initialize(self):
         """Import the PolyChord sampler and prepare its arguments."""
         # Allow global import if no direct path specification
-
-        self.use_supernest = supernest_loaded and self.use_supernest
+        if self.use_supernest and not supernest_loaded:
+            raise NotInstalledError(
+                self.log,
+                "Could not find"
+                "supernest. Check error message above. The setup you"
+                "requested depends on 'supernest', which is an external"
+                "package not yet handled by 'cobaya-install'. Please"
+                "install it using 'pip3 install supernest' or"
+                "otherwise, remove 'use_supernest: True' from the"
+                "run-time parameters." )
         allow_global = not self.path
         if not self.path and self.packages_path:
             self.path = self.get_path(self.packages_path)
