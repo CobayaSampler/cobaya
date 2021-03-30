@@ -3,7 +3,7 @@
 
 :Synopsis: Interface for the PolyChord nested sampler
 :Author: Will Handley, Mike Hobson and Anthony Lasenby (for PolyChord),
-         Aleksandr Petrosyan (for supernest)
+         Aleksandr Petrosyan, and Will Handley (for supernest)
          Jesus Torrado (for the cobaya wrapper only)
 """
 # Global
