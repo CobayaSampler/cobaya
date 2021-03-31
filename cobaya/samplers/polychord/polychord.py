@@ -3,6 +3,7 @@
 
 :Synopsis: Interface for the PolyChord nested sampler
 :Author: Will Handley, Mike Hobson and Anthony Lasenby (for PolyChord),
+         Aleksandr Petrosyan, and Will Handley (for supernest)
          Jesus Torrado (for the cobaya wrapper only)
 """
 # Global
@@ -32,6 +33,11 @@ from cobaya.conventions import _separator, _evidence_extension, _packages_path_a
 # TODO Jesus fetch supenest if not installed with cobaya-install
 # TODO Jesus: add bibtex to cobaya
 
+try:
+    import supernest
+    supernest_loaded = True
+except ImportError:
+    supernest_loaded = False
 
 
 # TODO change to inherit from  CovmatSampler
@@ -39,7 +45,7 @@ from cobaya.conventions import _separator, _evidence_extension, _packages_path_a
 class polychord(CovmatSampler):
     # Name of the PolyChord repo and version to download
     _pc_repo_name = "PolyChord/PolyChordLite"
-    _pc_repo_version = "1.17.1"
+    _pc_repo_version = "1.18.2"
     _base_dir_suffix = "polychord_raw"
     _clusters_dir = "clusters"
     _at_resume_prefer_old = Sampler._at_resume_prefer_old + ["blocking"]
