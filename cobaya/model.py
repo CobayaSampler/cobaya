@@ -824,14 +824,13 @@ class Model(HasLogger):
             #    Input parameters always assigned to any supporting component.
             unassigned = [p for p in assign if not assign[p]]
             for component in assign_components:
-                if component not in agnostic_likes[io_kind]:
-                    if derived_param:
-                        supports_params = component.get_can_provide_params()
-                    else:
-                        supports_params = component.get_can_support_params()
-                    for p in (unassigned if derived_param else assign):
-                        if p in supports_params and component not in assign[p]:
-                            assign[p] += [component]
+                if derived_param:
+                    supports_params = component.get_can_provide_params()
+                else:
+                    supports_params = component.get_can_support_params()
+                for p in (unassigned if derived_param else assign):
+                    if p in supports_params and component not in assign[p]:
+                        assign[p] += [component]
             # Check that there is only one non-knowledgeable element, and assign
             # unused params
             if len(agnostic_likes[io_kind]) > 1 and not all(assign.values()):
