@@ -64,20 +64,26 @@ class polychord(CovmatSampler):
     def initialize(self):
         """Imports the PolyChord sampler and prepares its arguments."""
         # Allow global import if no direct path specification
-        try:
-            import supernest
-            self.use_supernest = self.use_supernest and True
-        except ImportError as e:
-            self.use_supernest = False
+        if self.use_supernest and not supernest_loaded:
+            raise NotInstalledError(
+                self.log,
+                "Could not find"
+                "supernest. Check error message above. The setup you"
+                "requested depends on 'supernest', which is an external"
+                "package not yet handled by 'cobaya-install'. Please"
+                "install it using 'pip3 install supernest' or"
+                "otherwise, remove 'use_supernest: True' from the"
+                "run-time parameters." )
         allow_global = not self.path
         if not self.path and self.packages_path:
             self.path = self.get_path(self.packages_path)
         self.pc = self.is_installed(path=self.path, allow_global=allow_global)
         if not self.pc:
             raise NotInstalledError(
-                self.log, "Could not find PolyChord. Check error message above. "
-                          "To install it, run 'cobaya-install polychord --%s "
-                          "[packages_path]'", _packages_path_arg)
+                self.log,
+                "Could not find PolyChord. Check error message above. "
+                "To install it, run 'cobaya-install polychord --%s "
+                "[packages_path]'", _packages_path_arg)
         # Prepare arguments and settings
         from pypolychord.settings import PolyChordSettings
         self.n_sampled = len(self.model.parameterization.sampled_params())
@@ -290,12 +296,17 @@ class polychord(CovmatSampler):
         self.mpi_info("Calling PolyChord...")
         if self.use_supernest:
             # TODO Check compatibility of arguments (in particular self._mean and self._covmat)
-            proposal = supernest.gaussian_proposal(
-                self.bounds, self._mean, self._covmat, loglike=logpost)
-            self.mpi_info('Success!')
-            nDims, ll, prior = supernest.superimpose((self.pc_prior, logpost), nDims = self.nDims)
+            # AP: This is unnecessary if they're incompatible, raises a ValueError, at contruction.
+            try:
+                proposal = supernest.gaussian_proposal(
+                    self.bounds, self._mean, self._covmat, loglike=logpost)
+                self.mpi_info('Success!')
+                nDims, prior, ll = supernest.superimpose([(self.pc_prior, logpost)], nDims = self.nDims)
+            except ValueError as e:
+                self.mpi_info(f'Failure: {str(e)}')
             self.pc.run_polychord(ll, nDims, self.nDerived, self.pc_settings, prior, self.dumper)
         else:
+            self.mpi_info('Not using SuperNest. Add `use_supernest: True`')
             self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
                                   self.pc_prior, self.dumper)
         self.process_raw_output()
