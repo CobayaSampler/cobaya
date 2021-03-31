@@ -757,8 +757,8 @@ class Model(HasLogger):
 
     def _assign_params(self, info_likelihood, info_theory=None):
         """
-        Assign parameters to theories and likelihoods, following the algorithm explained
-        in :doc:`DEVEL`.
+        Assign input and output parameters to theories and likelihoods, following the
+        algorithm explained in :doc:`DEVEL`.
         """
         self.input_params = [p for p in self.parameterization.input_params() if p not in
                              self.parameterization.dropped_param_set()]
@@ -805,24 +805,23 @@ class Model(HasLogger):
                         if p.startswith(getattr(component, prefix)):
                             assign[p] += [component]
                 # 3. Does it have a general (mixed) list of params? (set from default)
-                elif getattr(component, _params, None):
-                    for p, options in getattr(component, _params).items():
+                # 4. or otherwise required
+                elif getattr(component, _params, None) or required_params:
+                    for p, options in getattr(component, _params, {}).items():
                         if not hasattr(options, 'get') or \
                                 options.get('derived', derived_param) is derived_param:
                             if p in assign:
                                 assign[p] += [component]
-                            elif not derived_param:
-                                required_params.add(p)
-                # 4. otherwise required
-                elif required_params:
-                    for p in required_params:
-                        if p in assign:
-                            assign[p] += [component]
+                    if required_params:
+                        for p in required_params:
+                            if p in assign and component not in assign[p]:
+                                assign[p] += [component]
                 # 5. No parameter knowledge: store as parameter agnostic
                 elif component.get_allow_agnostic():
                     agnostic_likes[io_kind] += [component]
 
             # 6. If parameter not already assigned give to any component that supports it
+            #    Input parameters always assigned to any supporting component.
             unassigned = [p for p in assign if not assign[p]]
             for component in assign_components:
                 if component not in agnostic_likes[io_kind]:
@@ -830,11 +829,8 @@ class Model(HasLogger):
                         supports_params = component.get_can_provide_params()
                     else:
                         supports_params = component.get_can_support_params()
-                    # 5. otherwise explicitly supported?
-                    # outputs this parameter unless explicitly told
-                    # another component provides it
-                    for p in unassigned:
-                        if p in supports_params:
+                    for p in (unassigned if derived_param else assign):
+                        if p in supports_params and component not in assign[p]:
                             assign[p] += [component]
             # Check that there is only one non-knowledgeable element, and assign
             # unused params
