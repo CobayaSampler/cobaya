@@ -175,6 +175,7 @@ import ctypes
 from copy import deepcopy
 from typing import NamedTuple, Any
 import numpy as np
+from itertools import chain
 # Local
 from cobaya.theories._cosmo import BoltzmannBase
 from cobaya.log import LoggedError
@@ -635,7 +636,7 @@ class camb(BoltzmannBase):
             i_kwarg_z = np.searchsorted(computed_redshifts, np.atleast_1d(z))
         return np.array(self.current_state[quantity], copy=True)[i_kwarg_z]
 
-    def get_sigma8_z(self, z):        
+    def get_sigma8_z(self, z):
         return self._get_z_dependent("sigma8_z", z)
 
     def get_fsigma8(self, z):
@@ -684,8 +685,7 @@ class camb(BoltzmannBase):
             if mapped in names:
                 names.append(name)
         # remove any parameters explicitly tagged as input requirements
-        return set(names).difference(
-            set(self._transfer_requires).union(set(self.requires)))
+        return set(names).difference(chain(self._transfer_requires,self.requires))
 
     def get_version(self):
         return self.camb.__version__
@@ -815,9 +815,8 @@ class camb(BoltzmannBase):
                           " a very old version without the Python interface.", path)
                 return False
             if not os.path.isfile(os.path.realpath(
-                    os.path.join(path,
-                                 "camb", "cambdll.dll" if (
-                                platform.system() == "Windows") else "camblib.so"))):
+                    os.path.join(path, "camb", "cambdll.dll" if (
+                            platform.system() == "Windows") else "camblib.so"))):
                 log.error("CAMB installation at '%s' appears not to be compiled.", path)
                 return False
         elif not path:

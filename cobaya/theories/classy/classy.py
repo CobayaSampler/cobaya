@@ -408,7 +408,7 @@ class classy(BoltzmannBase):
         # Put all parameters in CLASS nomenclature (self.derived_extra already is)
         requested = [self.translate_param(p) for p in (
             self.output_params if derived_requested else [])]
-        requested_and_extra = dict.fromkeys(set(requested).union(set(self.derived_extra)))
+        requested_and_extra = dict.fromkeys(set(requested).union(self.derived_extra))
         # Parameters with their own getters
         if "rs_drag" in requested_and_extra:
             requested_and_extra["rs_drag"] = self.classy.rs_drag()
@@ -438,7 +438,7 @@ class classy(BoltzmannBase):
             cls = deepcopy(self.current_state[which_key])
         except:
             raise LoggedError(self.log, "No %s Cl's were computed. Are you sure that you "
-                              "have requested them?", which_error)
+                                        "have requested them?", which_error)
         # unit conversion and ell_factor
         ells_factor = ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[
                       2:] if ell_factor else 1
@@ -482,6 +482,11 @@ class classy(BoltzmannBase):
             if mapped in names:
                 names.append(name)
         return names
+
+    def get_can_support_params(self):
+        # non-exhaustive list of supported input parameters that will be assigne do classy
+        # if they are varied
+        return ['H0']
 
     def get_version(self):
         return getattr(self.classy_module, '__version__', None)

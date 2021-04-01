@@ -279,7 +279,7 @@ class LikelihoodCollection(ComponentCollection):
             else:
                 like_class = get_resolved_class(
                     name, kind=kinds.likelihood,
-                    component_path=info.pop(_component_path, None),
+                    component_path=info.get(_component_path, None),
                     class_name=info.get(_class_name))
                 self.add_instance(name, like_class(info, packages_path=packages_path,
                                                    timing=timing, standalone=False,

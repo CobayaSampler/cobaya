@@ -52,8 +52,10 @@ class Requirement(NamedTuple):
 
 # Dummy component prefix for manual requirements
 _dummy_prefix = "_DUMMY"
-is_dummy_component = lambda component: \
-    isinstance(component, str) and component.startswith(_dummy_prefix)
+
+
+def is_dummy_component(component):
+    return isinstance(component, str) and component.startswith(_dummy_prefix)
 
 
 def _dict_equal(d1, d2):
@@ -239,8 +241,7 @@ class Model(HasLogger):
         loglikes = np.empty(len(self.likelihood))
         for (component, index), param_dep in zip(self._component_order.items(),
                                                  self._params_of_dependencies):
-            depend_list = \
-                [input_params[p] for p in param_dep]
+            depend_list = [input_params[p] for p in param_dep]
             params = {p: input_params[p] for p in component.input_params}
             compute_success = component.check_cache_and_compute(
                 want_derived=return_derived,
@@ -248,8 +249,7 @@ class Model(HasLogger):
                 cached=cached, **params)
             if not compute_success:
                 loglikes[:] = -np.inf
-                self.log.debug(
-                    "Calculation failed, skipping rest of calculations ")
+                self.log.debug("Calculation failed, skipping rest of calculations ")
                 break
             if return_derived:
                 derived_dict.update(component.current_derived)
@@ -309,7 +309,11 @@ class Model(HasLogger):
             params_values = self.parameterization.check_sampled(**params_values)
 
         input_params = self.parameterization.to_input(params_values, copied=False)
+        return self._loglikes_input_params(input_params, return_derived=return_derived,
+                                           cached=cached, make_finite=make_finite)
 
+    def _loglikes_input_params(self, input_params, return_derived=True, make_finite=False,
+                               cached=True):
         result = self.logps(input_params, return_derived=return_derived,
                             cached=cached, make_finite=make_finite)
         if return_derived:
@@ -357,8 +361,8 @@ class Model(HasLogger):
                 return np.nan_to_num(loglike)
             return loglike
 
-    def logposterior(
-            self, params_values, return_derived=True, make_finite=False, cached=True):
+    def logposterior(self, params_values,
+                     return_derived=True, make_finite=False, cached=True):
         """
         Takes an array or dictionary of sampled parameter values.
         If the argument is an array, parameters must have the same order as in the input.
@@ -399,13 +403,27 @@ class Model(HasLogger):
             raise LoggedError(
                 self.log, "Got non-finite parameter values: %r",
                 dict(zip(self.parameterization.sampled_params(), params_values_array)))
+
         # Notice that we don't use the make_finite in the prior call,
         # to correctly check if we have to compute the likelihood
-        logpriors = self.prior.logps(params_values_array)
-        logpost = sum(logpriors)
-        if -np.inf not in logpriors:
-            like = self.loglikes(params_values, return_derived=return_derived,
-                                 make_finite=make_finite, cached=cached, _no_check=True)
+        logps = self.prior.logps_internal(params_values_array)
+        if logps == -np.inf:
+            logpriors = [-np.inf] * (1 + len(self.prior.external))
+            logpost = -np.inf
+        else:
+            input_params = self.parameterization.to_input(params_values_array,
+                                                          copied=False)
+            logpriors = [logps]
+            if self.prior.external:
+                logpriors.extend(self.prior.logps_external(input_params))
+                logpost = sum(logpriors)
+            else:
+                logpost = logps
+
+        if logps != -np.inf:
+            like = self._loglikes_input_params(input_params,
+                                               return_derived=return_derived,
+                                               cached=cached, make_finite=make_finite)
             loglikes, derived_sampler = like if return_derived else (like, [])
             logpost += sum(loglikes)
         else:
@@ -457,7 +475,8 @@ class Model(HasLogger):
         else:
             if self.prior.reference_is_pointlike():
                 raise LoggedError(self.log, "The reference point provided has null "
-                                            "likelihood. Set 'ref' to a different point or a pdf.")
+                                            "likelihood. Set 'ref' to a different point "
+                                            "or a pdf.")
             raise LoggedError(self.log, "Could not find random point giving finite "
                                         "likelihood after %g tries", max_tries)
         return initial_point, logpost, logpriors, loglikes, derived
@@ -663,9 +682,14 @@ class Model(HasLogger):
         if self._unassigned_input:
             self._unassigned_input.difference_update(*direct_param_dependence.values())
             if self._unassigned_input:
-                raise LoggedError(
-                    self.log, "Could not find anything to use input parameter(s) %r.",
-                    self._unassigned_input)
+                unassigned = self._unassigned_input - self.prior.external_dependence
+                if unassigned:
+                    raise LoggedError(
+                        self.log, "Could not find anything to use input parameter(s) %r.",
+                        unassigned)
+                else:
+                    self.log.warning("Parameter(s) %s are only used by the prior",
+                                     self._unassigned_input)
         if self.log.getEffectiveLevel() <= logging.DEBUG:
             self.log.debug("Components will be computed in the order:")
             self.log.debug(" - %r" % list(self._component_order))
@@ -733,46 +757,40 @@ class Model(HasLogger):
 
     def _assign_params(self, info_likelihood, info_theory=None):
         """
-        Assign parameters to theories and likelihoods, following the algorithm explained
-        in :doc:`DEVEL`.
+        Assign input and output parameters to theories and likelihoods, following the
+        algorithm explained in :doc:`DEVEL`.
         """
-        self.input_params = list(self.parameterization.input_params())
+        self.input_params = [p for p in self.parameterization.input_params() if p not in
+                             self.parameterization.dropped_param_set()]
         self.output_params = list(self.parameterization.output_params())
-        params_assign = {"input": {p: [] for p in self.input_params},
-                         "output": {p: [] for p in self.output_params}}
+        input_assign = {p: [] for p in self.input_params}
+        output_assign = {p: [] for p in self.output_params}
         agnostic_likes = {"input": [], "output": []}
         # Go through all components.
         # NB: self.components iterates over likelihoods first, and then theories
         # so unassigned can by default go to theories
-        for io_kind, option, prefix, derived_param in (
-                ["input", _input_params, _input_params_prefix, False],
-                ["output", _output_params, _output_params_prefix, True]):
-            for component in self.components:
-                if isinstance(component, AbsorbUnusedParamsLikelihood):
-                    # take leftover parameters
-                    continue
-                if component.get_allow_agnostic():
-                    supports_params = None
-                elif io_kind == 'output':
-                    supports_params = set(component.get_can_provide_params())
-                    provide = str_to_list(getattr(component, _provides, []))
-                    supports_params |= set(provide)
+        assign_components = [c for c in self.components
+                             if not isinstance(c, AbsorbUnusedParamsLikelihood)]
+        for io_kind, assign, option, prefix, derived_param in (
+                ["input", input_assign, _input_params, _input_params_prefix, False],
+                ["output", output_assign, _output_params, _output_params_prefix, True]):
+            for component in assign_components:
+                if derived_param:
+                    required_params = str_to_list(getattr(component, _provides, []))
                 else:
                     required_params = set(
                         p for p, v in ensure_dict(component.get_requirements()).items()
                         # ignore non-params; it's ok if some non-param goes through
                         if v is None)
-                    supports_params = required_params.union(
-                        set(component.get_can_support_params()))
                 # Identify parameters understood by this likelihood/theory
                 # 1a. Does it have input/output params list?
                 #     (takes into account that for callables, we can ignore elements)
                 if getattr(component, option, None) is not None:
                     for p in getattr(component, option):
                         try:
-                            params_assign[io_kind][p] += [component]
+                            assign[p] += [component]
                         except KeyError:
-                            if io_kind == "input":
+                            if not derived_param:
                                 # If external function, no problem: it may have
                                 # default value
                                 if not isinstance(component,
@@ -783,62 +801,73 @@ class Model(HasLogger):
                                         "but not provided.", p, component.get_name())
                 # 2. Is there a params prefix?
                 elif getattr(component, prefix, None) is not None:
-                    for p in params_assign[io_kind]:
+                    for p in assign:
                         if p.startswith(getattr(component, prefix)):
-                            params_assign[io_kind][p] += [component]
+                            assign[p] += [component]
                 # 3. Does it have a general (mixed) list of params? (set from default)
-                elif getattr(component, _params, None):
-                    for p, options in getattr(component, _params).items():
-                        if not hasattr(options, 'get') or \
-                                options.get('derived', derived_param) is derived_param:
-                            if p in params_assign[io_kind]:
-                                params_assign[io_kind][p] += [component]
-                            elif not derived_param:
-                                required_params.add(p)
-                # 4. otherwise explicitly supported?
-                elif supports_params:
-                    # outputs this parameter unless explicitly told
-                    # another component provides it
-                    for p in supports_params:
-                        if p in params_assign[io_kind]:
-                            if not any((c is not component and p in
-                                        str_to_list(getattr(c, _provides, []))) for c in
-                                       self.components):
-                                params_assign[io_kind][p] += [component]
+                # 4. or otherwise required
+                elif getattr(component, _params, None) or required_params:
+                    if getattr(component, _params, None):
+                        for p, options in getattr(component, _params, {}).items():
+                            if not hasattr(options, 'get') or \
+                                    options.get('derived',
+                                                derived_param) is derived_param:
+                                if p in assign:
+                                    assign[p] += [component]
+                    elif component.get_allow_agnostic():
+                        agnostic_likes[io_kind] += [component]
+                    if required_params:
+                        for p in required_params:
+                            if p in assign and component not in assign[p]:
+                                assign[p] += [component]
                 # 5. No parameter knowledge: store as parameter agnostic
-                elif supports_params is None:
+                elif component.get_allow_agnostic():
                     agnostic_likes[io_kind] += [component]
+
+            # 6. If parameter not already assigned give to any component that supports it
+            #    Input parameters always assigned to any supporting component.
+            unassigned = [p for p in assign if not assign[p]]
+            for component in assign_components:
+                if derived_param:
+                    supports_params = component.get_can_provide_params()
+                else:
+                    supports_params = component.get_can_support_params()
+                for p in (unassigned if derived_param else assign):
+                    if p in supports_params and component not in assign[p]:
+                        assign[p] += [component]
             # Check that there is only one non-knowledgeable element, and assign
             # unused params
-            if (len(agnostic_likes[io_kind]) > 1 and not all(
-                    params_assign[io_kind].values())):
+            if len(agnostic_likes[io_kind]) > 1 and not all(assign.values()):
                 raise LoggedError(
                     self.log, "More than one parameter-agnostic likelihood/theory "
                               "with respect to %s parameters: %r. Cannot decide "
                               "parameter assignments.", io_kind, agnostic_likes)
             elif agnostic_likes[io_kind]:  # if there is only one
                 component = agnostic_likes[io_kind][0]
-                for p, assigned in params_assign[io_kind].items():
-                    if not assigned or not derived_param and \
-                            p in component.get_requirements():
-                        params_assign[io_kind][p] += [component]
+                for p, assigned in assign.items():
+                    if not assigned:
+                        assign[p] += [component]
+
         # If unit likelihood is present, assign all unassigned inputs to it
         for like in self.likelihood.values():
             if isinstance(like, AbsorbUnusedParamsLikelihood):
-                for p, assigned in params_assign["input"].items():
+                for p, assigned in input_assign.items():
                     if not assigned:
                         assigned.append(like)
                 break
         # If there are unassigned input params, check later that they are used by
         # *conditional* requirements of a component (and if not raise error)
-        self._unassigned_input = set(p for p, assigned in params_assign["input"].items()
-                                     if not assigned)
+        self._unassigned_input = set(
+            p for p, assigned in input_assign.items() if not assigned).difference(
+            chain(*(self.parameterization._input_dependencies.get(p, []) for p, assigned
+                    in input_assign.items() if assigned)))
+
         # Remove aggregated chi2 that may have been picked up by an agnostic component
         aggr_chi2_names = [_get_chi2_name(t) for t in self.likelihood.all_types]
         for p in aggr_chi2_names:
-            params_assign["output"].pop(p, None)
+            output_assign.pop(p, None)
         # Assign the single-likelihood "chi2__" output parameters
-        for p in params_assign["output"]:
+        for p in output_assign:
             if p.startswith(_get_chi2_name("")):
                 if p in aggr_chi2_names:
                     continue  # it's an aggregated likelihood
@@ -849,33 +878,29 @@ class Model(HasLogger):
                                   "likelihood: '%s'", like)
                 # They may have been already assigned to an agnostic likelihood,
                 # so purge first: no "=+"
-                params_assign["output"][p] = [self.likelihood[like]]
+                output_assign[p] = [self.likelihood[like]]
         # Check that there are no unassigned parameters (with the exception of aggr chi2)
-        unassigned_output = [
-            p for p, assigned in params_assign["output"].items()
-            if not assigned and p not in aggr_chi2_names]
+        unassigned_output = [p for p, assigned in output_assign.items()
+                             if not assigned and p not in aggr_chi2_names]
         if unassigned_output:
             raise LoggedError(
                 self.log, "Could not find whom to assign output parameters %r.",
                 unassigned_output)
         # Check that output parameters are assigned exactly once
-        multiassigned_output = {
-            p: assigned for p, assigned in params_assign["output"].items()
-            if len(assigned) > 1}
+        multiassigned_output = {p: assigned for p, assigned in output_assign.items()
+                                if len(assigned) > 1}
         if multiassigned_output:
             raise LoggedError(
                 self.log,
                 "Output params can only be computed by one likelihood/theory, "
-                "but some were claimed by more than one: %r.",
-                multiassigned_output)
+                "but some were claimed by more than one: %r.", multiassigned_output)
         # Finished! Assign and update infos
-        for io_kind, option, attr in (
-                ["input", _input_params, "input_params"],
-                ["output", _output_params, "output_params"]):
+        for assign, option, attr in (
+                [input_assign, _input_params, "input_params"],
+                [output_assign, _output_params, "output_params"]):
             for component in self.components:
                 setattr(component, attr,
-                        [p for p, assign in params_assign[io_kind].items() if
-                         component in assign])
+                        [p for p, assign in assign.items() if component in assign])
                 # Update infos! (helper theory parameters stored in yaml with host)
                 inf = (info_theory, info_likelihood)[
                     component in self.likelihood.values()]
@@ -1010,8 +1035,7 @@ class Model(HasLogger):
             raise LoggedError(
                 self.log, "Manual blocking not understood. Check documentation.")
         sampled_params = list(self.sampled_dependence)
-        check = are_different_params_lists(
-            list(chain(*blocks)), sampled_params)
+        check = are_different_params_lists(list(chain(*blocks)), sampled_params)
         duplicate = check.pop("duplicate_A", None)
         missing = check.pop("B_but_not_A", None)
         unknown = check.pop("A_but_not_B", None)

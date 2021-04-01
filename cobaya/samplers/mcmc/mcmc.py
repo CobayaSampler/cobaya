@@ -136,7 +136,8 @@ class mcmc(CovmatSampler):
                 fmt = lambda col: header_fmt.get(col, ((7 + 8) - len(col)) * " " + col)
                 with open(self.progress_filename(), "w",
                           encoding="utf-8") as progress_file:
-                    progress_file.write("# " + " ".join([fmt(col) for col in self.progress.columns]) + "\n")
+                    progress_file.write("# " + " ".join(
+                        [fmt(col) for col in self.progress.columns]) + "\n")
         # Get first point, to be discarded -- not possible to determine its weight
         # Still, we need to compute derived parameters, since, as the proposal "blocked",
         # we may be saving the initial state of some block.
@@ -718,10 +719,10 @@ class mcmc(CovmatSampler):
                 mcsamples = self.collection._sampled_to_getdist_mcsamples(first=use_first)
                 try:
                     bound = np.array([[
-                        mcsamples.confidence(
-                            i, limfrac=self.Rminus1_cl_level / 2., upper=which)
+                        mcsamples.confidence(i, limfrac=self.Rminus1_cl_level / 2.,
+                                             upper=which)
                         for i in range(self.model.prior.d())]
-                                      for which in [False, True]]).T
+                        for which in [False, True]]).T
                     success_bounds = True
                 except:
                     bound = None
@@ -742,8 +743,8 @@ class mcmc(CovmatSampler):
                         np.array(
                             [[mcs.confidence(
                                 i, limfrac=self.Rminus1_cl_level / 2., upper=which)
-                              for i in range(self.model.prior.d())]
-                             for which in [False, True]]).T
+                                for i in range(self.model.prior.d())]
+                                for which in [False, True]]).T
                         for mcs in mcsamples_list]
                     success_bounds = True
                 except:
