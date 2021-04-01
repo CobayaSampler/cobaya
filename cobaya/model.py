@@ -807,11 +807,15 @@ class Model(HasLogger):
                 # 3. Does it have a general (mixed) list of params? (set from default)
                 # 4. or otherwise required
                 elif getattr(component, _params, None) or required_params:
-                    for p, options in getattr(component, _params, {}).items():
-                        if not hasattr(options, 'get') or \
-                                options.get('derived', derived_param) is derived_param:
-                            if p in assign:
-                                assign[p] += [component]
+                    if getattr(component, _params, None):
+                        for p, options in getattr(component, _params, {}).items():
+                            if not hasattr(options, 'get') or \
+                                    options.get('derived',
+                                                derived_param) is derived_param:
+                                if p in assign:
+                                    assign[p] += [component]
+                    elif component.get_allow_agnostic():
+                        agnostic_likes[io_kind] += [component]
                     if required_params:
                         for p in required_params:
                             if p in assign and component not in assign[p]:
@@ -841,8 +845,7 @@ class Model(HasLogger):
             elif agnostic_likes[io_kind]:  # if there is only one
                 component = agnostic_likes[io_kind][0]
                 for p, assigned in assign.items():
-                    if not assigned or not derived_param and \
-                            p in component.get_requirements():
+                    if not assigned:
                         assign[p] += [component]
 
         # If unit likelihood is present, assign all unassigned inputs to it
