@@ -126,7 +126,8 @@ class Parameterization(HasLogger):
         # to infos without _prior or partag.value, and a partag.value field
         # to fixed params
         for p, info in info_params.items():
-            self._infos[p] = deepcopy_where_possible(info)
+            info = expand_info_param(info)
+            self._infos[p] = info
             if is_fixed_param(info):
                 if isinstance(info[partag.value], Number):
                     self._constant[p] = info[partag.value]

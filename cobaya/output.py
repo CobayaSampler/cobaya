@@ -84,7 +84,8 @@ class Output(HasLogger):
         self.name = "output"  # so that the MPI-wrapped class conserves the name
         self.set_logger(self.name)
         self.folder, self.prefix = split_prefix(prefix)
-        self.prefix_regexp_str = re.escape(self.prefix) + (r"\." if self.prefix else "")
+        self.prefix_regexp_str = re.escape(self.prefix) + (
+            r"[\._]" if self.prefix else "")
         self.force = force
         if resume and force and prefix:
             # No resume and force at the same time (if output)

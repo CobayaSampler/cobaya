@@ -463,15 +463,27 @@ def read_dnumber(n, dim):
     return NumberWithUnits(n, "d", dtype=int, scale=dim).value
 
 
-def load_DataFrame(file_name, skip=0, thin=1):
+def load_DataFrame(file_name, skip=0, thin=1, root_file_name=None):
     """
     Loads a `pandas.DataFrame` from a text file
     with column names in the first line, preceded by ``#``.
 
     Can skip any number of first lines, and thin with some factor.
     """
-    with open(file_name, "r") as inp:
-        cols = [a.strip() for a in inp.readline().lstrip("#").split()]
+    with open(file_name, "r", encoding="utf-8-sig") as inp:
+        top_line = inp.readline().strip()
+        if not top_line.startswith('#'):
+            # try getdist format chains with .paramnames file
+            if root_file_name and os.path.exists(root_file_name + '.paramnames'):
+                from getdist import ParamNames
+                cols = ['weight', 'minuslogpost']
+                cols.extend(name.name for name in
+                            ParamNames(root_file_name + '.paramnames').names)
+            else:
+                raise LoggedError(log, "Input sample file does not have header: %s",
+                                  file_name)
+        else:
+            cols = [a.strip() for a in top_line.lstrip("#").split()]
         if 0 < skip < 1:
             # turn into #lines (need to know total line number)
             for n, line in enumerate(inp):

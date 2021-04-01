@@ -61,15 +61,15 @@ def post(info, sample=None):
     # 1. Load existing sample
     output_in = get_output(prefix=info.get(_output_prefix))
     if output_in:
-        try:
-            info_in = output_in.reload_updated_info()
-        except FileNotFoundError:
-            raise LoggedError(log, "Error loading input model: "
-                                   "could not find input info at %s",
-                              output_in.file_updated)
+        info_in = output_in.reload_updated_info()
+        if info_in is None:
+            info_in = deepcopy_where_possible(info)
+    #            raise LoggedError(log, "Error loading input model: "
+    #                                   "could not find input info at %s",
+    #                              output_in.file_updated)
     else:
         info_in = deepcopy_where_possible(info)
-    dummy_model_in = DummyModel(info_in[_params], info_in[kinds.likelihood],
+    dummy_model_in = DummyModel(info_in[_params], info_in.get(kinds.likelihood, {}),
                                 info_in.get(_prior, None))
     if output_in:
         if not output_in.find_collections():

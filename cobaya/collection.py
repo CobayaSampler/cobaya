@@ -79,7 +79,7 @@ class BaseCollection(HasLogger):
 
 def ensure_cache_dumped(method):
     """
-    Decorator for Collection methods that need the cache is clean before running.
+    Decorator for Collection methods that need the cache cleaned before running.
     """
 
     @functools.wraps(method)
@@ -115,8 +115,10 @@ class Collection(BaseCollection):
                 name=self.name, extension=extension)
             if file_name:
                 self.file_name = file_name
+            self.root_file_name = os.path.join(output.folder, output.prefix)
         else:
             self.driver = "dummy"
+            self.root_file_name = None
         if resuming or load:
             if output:
                 try:
@@ -451,7 +453,8 @@ class Collection(BaseCollection):
     # txt driver
     def _load__txt(self, skip=0, thin=1):
         self.log.debug("Skipping %d rows and thinning with factor %d.", skip, thin)
-        self._data = load_DataFrame(self.file_name, skip=skip, thin=thin)
+        self._data = load_DataFrame(self.file_name, skip=skip, thin=thin,
+                                    root_file_name=self.root_file_name)
         self.log.info("Loaded %d samples from '%s'", len(self._data), self.file_name)
 
     def _dump__txt(self):
