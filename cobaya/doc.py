@@ -34,7 +34,7 @@ def doc_script():
                         help="The component whose defaults are requested.")
     kind_opt, kind_opt_ishort = "kind", 0
     parser.add_argument("-" + kind_opt[kind_opt_ishort], "--" + kind_opt, action="store",
-                        nargs=1, default=None, metavar="component_kind",
+                        default=None, metavar="component_kind",
                         help=("Kind of component whose defaults are requested: " +
                               ", ".join(['%s' % kind for kind in kinds]) + ". " +
                               "Use only when component name is not unique (it would fail)."))
@@ -67,7 +67,7 @@ def doc_script():
     # Otherwise, check if it's a unique component name
     try:
         if arguments.kind:
-            arguments.kind = arguments.kind[0].lower()
+            arguments.kind = arguments.kind.lower()
             if arguments.kind not in kinds:
                 print("Kind %r not recognized. Try one of %r" % (
                     arguments.kind, tuple(kinds)))

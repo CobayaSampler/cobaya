@@ -343,8 +343,8 @@ def install_script():
                              "(or simply 'cosmo' to install all the requisites for basic"
                              " cosmological runs)")
     parser.add_argument("-" + _packages_path_arg[0], "--" + _packages_path_arg_posix,
-                        action="store", nargs=1, required=False,
-                        metavar="/packages/path", default=[None],
+                        action="store", required=False,
+                        metavar="/packages/path", default=None,
                         help="Desired path where to install external packages. "
                              "Optional if one has been set globally or as an env variable"
                              " (run with '--show_%s' to check)." %
@@ -352,8 +352,8 @@ def install_script():
     # MARKED FOR DEPRECATION IN v3.0
     modules = "modules"
     parser.add_argument("-" + modules[0], "--" + modules,
-                        action="store", nargs=1, required=False,
-                        metavar="/packages/path", default=[None],
+                        action="store",  required=False,
+                        metavar="/packages/path", default=None,
                         help="To be deprecated! "
                              "Alias for %s, which should be used instead." %
                              _packages_path_arg_posix)
@@ -424,13 +424,13 @@ def install_script():
         return
     # MARKED FOR DEPRECATION IN v3.0
     deprecation_warnings = []
-    if getattr(arguments, modules) != [None]:
+    if getattr(arguments, modules) is not None:
         deprecation_warnings.append(
             "*DEPRECATION*: -m/--modules will be deprecated in favor of "
             "-%s/--%s in the next version. Please, use that one instead." %
             (_packages_path_arg[0], _packages_path_arg_posix))
         # BEHAVIOUR TO BE REPLACED BY ERROR:
-        if getattr(arguments, _packages_path_arg) == [None]:
+        if getattr(arguments, _packages_path_arg) is None:
             setattr(arguments, _packages_path_arg, getattr(arguments, modules))
     # END OF DEPRECATION BLOCK
     # MARKED FOR DEPRECATION IN v3.0
@@ -442,7 +442,7 @@ def install_script():
     setattr(arguments, _test_run, getattr(arguments, _test_run) or arguments.just_check)
     # END OF DEPRECATION BLOCK
     # Launch installer
-    install(*infos, path=getattr(arguments, _packages_path_arg)[0],
+    install(*infos, path=getattr(arguments, _packages_path_arg),
             **{arg: getattr(arguments, arg)
                for arg in ["force", _code, _data, "no_progress_bars", _test_run,
                            "no_set_global", "skip", "skip_global", _debug]})

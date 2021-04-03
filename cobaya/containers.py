@@ -260,7 +260,7 @@ def create_image_script():
             "Cobaya's tool for preparing Docker (for Shifter) and Singularity images."))
     parser.add_argument("files", action="store", nargs="+", metavar="input_file.yaml",
                         help="One or more input files.")
-    parser.add_argument("-v", "--mpi-version", action="store", nargs=1, default=[None],
+    parser.add_argument("-v", "--mpi-version", action="store", default=None,
                         metavar="X.Y(.Z)", dest="version", help="Version of the MPI lib.")
     group_type = parser.add_mutually_exclusive_group(required=True)
     group_type.add_argument("-d", "--docker", action="store_const", const="docker",
@@ -269,9 +269,9 @@ def create_image_script():
                             const="singularity", help="Create a Singularity image.")
     arguments = parser.parse_args()
     if arguments.type == "docker":
-        create_docker_image(arguments.files, MPI_version=arguments.version[0])
+        create_docker_image(arguments.files, MPI_version=arguments.version)
     elif arguments.type == "singularity":
-        create_singularity_image(arguments.files, MPI_version=arguments.version[0])
+        create_singularity_image(arguments.files, MPI_version=arguments.version)
 
 
 def prepare_data_script():
