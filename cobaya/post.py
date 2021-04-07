@@ -382,11 +382,11 @@ def post(info, sample=None):
         # Add/remove likelihoods
         if add[kinds.likelihood]:
             # Notice "one" (last in likelihood_add) is ignored: not in chi2_names
-            loglikes_add, output_like = model_add.logps(inputs, return_derived=True)
+            loglikes_add, output_derived = model_add.logps(inputs, return_derived=True)
             loglikes_add = dict(zip(chi2_names_add, loglikes_add))
-            output_like = dict(zip(model_add.output_params, output_like))
+            output_derived = dict(zip(model_add.output_params, output_derived))
         else:
-            output_like = {}
+            output_derived = {}
             loglikes_add = {}
         loglikes_new = [loglikes_add.get(name, -0.5 * point.get(name, 0))
                         for name in collection_out.chi2_names]
@@ -394,19 +394,19 @@ def post(info, sample=None):
             log.debug(
                 "New set of likelihoods: %r",
                 dict(zip(dummy_model_out.likelihood, loglikes_new)))
-            if output_like:
-                log.debug("New set of likelihood-derived parameters: %r", output_like)
+            if output_derived:
+                log.debug("New set of likelihood-derived parameters: %r", output_derived)
         if -np.inf in loglikes_new:
             continue
+        all_params.update(output_derived)
         # Add/remove derived parameters and change priors of sampled parameters
         for p in add[_params]:
             if p in dummy_model_out.parameterization._directly_output:
-                derived[p] = output_like[p]
+                derived[p] = output_derived[p]
             elif p in dummy_model_out.parameterization._derived_funcs:
                 func = dummy_model_out.parameterization._derived_funcs[p]
                 args = dummy_model_out.parameterization._derived_args[p]
-                derived[p] = func(
-                    *[point.get(arg, output_like.get(arg, None)) for arg in args])
+                derived[p] = func(*[all_params.get(arg, None) for arg in args])
         # We need to recompute the aggregated chi2 by hand
         for type_, likes in inv_types.items():
             derived[_get_chi2_name(type_)] = sum(
@@ -449,7 +449,7 @@ def post(info, sample=None):
     output_weights = collection_out._data[_weight]
     tot_weight = np.sum(output_weights)
     log.info("Effective number of single samples if independent (sum w)/max(w): %s",
-             int(tot_weight / np.max(collection_out._data[_weight])))
+             int(tot_weight / np.max(output_weights)))
     log.info("Effective number of weighted samples if independent (sum w)^2/sum(w^2): %s",
              int(tot_weight ** 2 / np.dot(output_weights, output_weights)))
 
