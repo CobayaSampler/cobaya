@@ -137,7 +137,7 @@ def post(info, sample=None):
                         "You tried to change the prior of parameter '%s', "
                         "but it was not a sampled parameter. "
                         "To change that prior, you need to define as an external one.", p)
-            ## recompute prior if potentially changed sampled parameter priors
+            # recompute prior if potentially changed sampled parameter priors
             prior_recompute_1d = True
         elif is_derived_param(pinfo):
             if p in out[_params]:
@@ -220,7 +220,7 @@ def post(info, sample=None):
         info_theory_out = add.get(kinds.theory)
     chi2_names_add = [
         _get_chi2_name(name) for name in add[kinds.likelihood] if name != "one"]
-    out[kinds.likelihood] += [l for l in add[kinds.likelihood] if l != "one"]
+    out[kinds.likelihood] += [_like for _like in add[kinds.likelihood] if _like != "one"]
     if recompute_theory:
         log.warning("You are recomputing the theory, but in the current version this does"
                     " not force recomputation of any likelihood or derived parameter, "
@@ -362,7 +362,7 @@ def post(info, sample=None):
         else:
             priors_add = []
         if model_add.prior.external:
-            priors_add.extend(self.logps_external(all_params))
+            priors_add.extend(model_add.prior.logps_external(all_params))
 
         logpriors_add = dict(zip(mlprior_names_add, priors_add))
         logpriors_new = [logpriors_add.get(name, - point.get(name, 0))

@@ -160,7 +160,8 @@ class Parameterization(HasLogger):
         for p in chain(self._sampled, self._derived):
             if not is_valid_variable_name(p):
                 is_in = p in self._sampled
-                eg_in = "  p_prime:\n    prior: ...\n  %s: 'lambda p_prime: p_prime'\n" % p
+                eg_in = "  p_prime:\n    prior: ...\n  %s: " \
+                        "'lambda p_prime: p_prime'\n" % p
                 eg_out = "  p_prime: 'lambda %s: %s'\n" % (p, p)
                 raise LoggedError(
                     self.log, "Parameter name '%s' is not a valid Python variable name "

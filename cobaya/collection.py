@@ -125,16 +125,21 @@ class Collection(BaseCollection):
                     self._out_load(skip=onload_skip, thin=onload_thin)
                     if load:
                         self.columns = list(self.data.columns)
-                        loaded_chi2_names = [name for name in self.columns if
-                                             name.startswith(_chi2 + _separator)]
-                        if _chi2 + _separator + 'prior' in loaded_chi2_names:
-                            loaded_chi2_names.remove(_chi2 + _separator + 'prior')
-                        if self.chi2_names != loaded_chi2_names:
+                        loaded_chi2_names = set(name for name in self.columns if
+                                                name.startswith(_chi2 + _separator))
+                        loaded_chi2_names.discard(_chi2 + _separator + 'prior')
+                        if set(self.chi2_names).difference(loaded_chi2_names):
                             raise LoggedError(self.log,
                                               "Input samples do not have chi2 values "
                                               "matching  likelihoods in the model:\n "
                                               "found: %s\nexpected: %s\n",
                                               loaded_chi2_names, self.chi2_names)
+                        unexpected = loaded_chi2_names.difference(
+                            self.chi2_names).difference(self.derived_params)
+                        if unexpected:
+                            raise LoggedError(self.log,
+                                              "Input samples do not have chi2 values "
+                                              "that are not expected: %s ", unexpected)
                     else:
                         data_col_set = set(self.data.columns)
                         col_set = set(self.columns)
@@ -497,9 +502,9 @@ class Collection(BaseCollection):
                 col: eval("lambda x, fmt=fmt: fmt.format(x)")
                 for col, fmt in zip(self.data.columns, fmts)}
             self._header_formatter = [
-                eval(
-                    'lambda s, w=width_col(col): ("{:>" + "{}".format(w) + "s}").format(s)',
-                    {'width_col': width_col, 'col': col})
+                eval('lambda s, w=width_col(col): '
+                     '("{:>" + "{}".format(w) + "s}").format(s)',
+                     {'width_col': width_col, 'col': col})
                 for col in self.data.columns]
         do_header = not n_min
         if do_header:
