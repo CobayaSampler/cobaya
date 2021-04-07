@@ -123,11 +123,26 @@ class Collection(BaseCollection):
             if output:
                 try:
                     self._out_load(skip=onload_skip, thin=onload_thin)
-                    if set(self.data.columns) != set(self.columns):
-                        raise LoggedError(
-                            self.log,
-                            "Unexpected column names!\nLoaded: %s\nShould be: %s",
-                            list(self.data.columns), self.columns)
+                    if load:
+                        self.columns = list(self.data.columns)
+                        loaded_chi2_names = [name for name in self.columns if
+                                             name.startswith(_chi2 + _separator)]
+                        if _chi2 + _separator + 'prior' in loaded_chi2_names:
+                            loaded_chi2_names.remove(_chi2 + _separator + 'prior')
+                        if self.chi2_names != loaded_chi2_names:
+                            raise LoggedError(self.log,
+                                              "Input samples do not have chi2 values "
+                                              "matching  likelihoods in the model:\n "
+                                              "found: %s\nexpected: %s\n",
+                                              loaded_chi2_names, self.chi2_names)
+                    else:
+                        data_col_set = set(self.data.columns)
+                        col_set = set(self.columns)
+                        if data_col_set != col_set:
+                            raise LoggedError(
+                                self.log,
+                                "Unexpected column names!\nLoaded: %s\nShould be: %s",
+                                list(self.data.columns), self.columns)
                     self._n_last_out = len(self)
                 except IOError:
                     if resuming:
@@ -155,8 +170,8 @@ class Collection(BaseCollection):
         if getattr(self, "file_name", None):
             self._n_last_out = 0
 
-    def add(self,
-            values, derived=None, weight=1, logpost=None, logpriors=None, loglikes=None):
+    def add(self, values, derived=None, weight=1,
+            logpost=None, logpriors=None, loglikes=None):
         """
         Adds a point to the collection. If `logpost` not given, it is obtained as the sum
         of `logpriors` and `loglikes` (both optional otherwise).
@@ -270,7 +285,8 @@ class Collection(BaseCollection):
         Append another collection.
         Internal method: does not check for consistency!
         """
-        self._data = pd.concat([self.data[:len(self)], collection.data], ignore_index=True)
+        self._data = pd.concat([self.data[:len(self)], collection.data],
+                               ignore_index=True)
 
     # Retrieve-like methods
     # MARKED FOR DEPRECATION IN v3.0

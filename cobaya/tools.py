@@ -476,9 +476,15 @@ def load_DataFrame(file_name, skip=0, thin=1, root_file_name=None):
             # try getdist format chains with .paramnames file
             if root_file_name and os.path.exists(root_file_name + '.paramnames'):
                 from getdist import ParamNames
+                from cobaya.conventions import _chi2, _separator
+                names = ParamNames(root_file_name + '.paramnames').list()
+                for i, name in enumerate(names):
+                    if name.startswith(_chi2 + '_') and not name.startswith(
+                            _chi2 + _separator):
+                        names[i] = name.replace(_chi2 + '_', _chi2 + _separator)
                 cols = ['weight', 'minuslogpost']
-                cols.extend(name.name for name in
-                            ParamNames(root_file_name + '.paramnames').names)
+                cols.extend(names)
+                inp.seek(0)
             else:
                 raise LoggedError(log, "Input sample file does not have header: %s",
                                   file_name)

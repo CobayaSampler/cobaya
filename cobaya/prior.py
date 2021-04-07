@@ -539,11 +539,13 @@ class Prior(HasLogger):
         logps = self.logps_internal(x)
         # noinspection PyTypeChecker
         if logps != -np.inf:
-            input_params = self._parameterization.to_input(x, copied=False)
-            logps = [logps] + self.logps_external(input_params)
+            if self.external:
+                input_params = self._parameterization.to_input(x, copied=False)
+                return [logps] + self.logps_external(input_params)
+            else:
+                return [logps]
         else:
-            logps = [-np.inf] * (1 + len(self.external))
-        return logps
+            return [-np.inf] * (1 + len(self.external))
 
     def logp(self, x):
         """

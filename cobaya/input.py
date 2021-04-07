@@ -2,7 +2,7 @@
 .. module:: input
 
 :Synopsis: Input-related functions
-:Author: Jesus Torrado
+:Author: Jesus Torrado and Antony Lewis
 
 """
 
