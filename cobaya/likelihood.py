@@ -150,13 +150,13 @@ class LikelihoodExternalFunction(Likelihood):
         argspec = getfullargspec(self.external_function)
         if info.get(_input_params, []):
             setattr(self, _input_params, str_to_list(info.get(_input_params)))
-        else:
-            ignore_args = [self._self_arg]
-            # MARKED FOR DEPRECATION IN v3.0
-            ignore_args += ["_derived", "_theory"]
-            # END OF DEPRECATION BLOCK
-            setattr(self, _input_params,
-                    [p for p in argspec.args if p not in ignore_args])
+
+        ignore_args = [self._self_arg]
+        # MARKED FOR DEPRECATION IN v3.0
+        ignore_args += ["_derived", "_theory"]
+        # END OF DEPRECATION BLOCK
+        self.params = {p: None for p in argspec.args[:-len(argspec.defaults)]
+                       if p not in ignore_args}
         # MARKED FOR DEPRECATION IN v3.0
         self._derived_through_arg = "_derived" in argspec.args
         # END OF DEPRECATION BLOCK
@@ -196,19 +196,27 @@ class LikelihoodExternalFunction(Likelihood):
             info[_requires] = argspec.defaults[
                 argspec.args[-len(argspec.defaults):].index("_theory")]
         # END OF DEPRECATION BLOCK
+        self._optional_args = \
+            dict.fromkeys(([p for p in argspec.args[-len(argspec.defaults):]
+                            if p not in ignore_args] if argspec.defaults else [])
+                          + argspec.kwonlyargs)
+        self._args = list(self._optional_args) + list(self.params)
         self._requirements = info.get(_requires, {}) or {}
         self.log.info("Initialized external likelihood.")
 
     def get_requirements(self):
         return self._requirements
 
+    def get_can_support_params(self):
+        return self._optional_args
+
     def logp(self, **params_values):
         # Remove non-input params (except _derived)
-        # TODO: this lines should be removed whenever input_params/reqs split is fixed
-        for p in list(params_values):
-            if p not in self.input_params and p != "_derived":
-                params_values.pop(p)
         _derived = params_values.pop("_derived", None)
+        # TODO: this lines should be removed whenever input_params/reqs split is fixed (?)
+        for p in list(params_values):
+            if p not in self._args:
+                params_values.pop(p)
         if self._uses_self_arg:
             params_values[self._self_arg] = self
         # MARKED FOR DEPRECATION IN v3.0

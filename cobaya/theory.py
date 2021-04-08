@@ -221,13 +221,13 @@ class Theory(CobayaComponent):
         If want_derived, the derived parameters are saved in the computed state
         (retrieved using current_derived).
         """
-        self.log.debug("Got parameters %r", params_values_dict)
         for p in list(self._input_params_extra):
             try:
                 params_values_dict[p] = self.provider.get_param(p)
             except:
                 # Pop non-parameter (only done during 1st call)
                 self._input_params_extra.discard(p)
+        self.log.debug("Got parameters %r", params_values_dict)
         state = None
         if cached:
             for _state in self._states:

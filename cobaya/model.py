@@ -570,9 +570,8 @@ class Model(HasLogger):
                 [Requirement(p, None) for p in (getattr(component, _params, {}) or []) if
                  p not in component.input_params + component.output_params]
             # Gather what this component can provide
-            can_provide = (
-                    list(component.get_can_provide()) +
-                    list(component.get_can_provide_methods()))
+            can_provide = (list(component.get_can_provide()) +
+                           list(component.get_can_provide_methods()))
             # Parameters that can be provided but not already explicitly assigned
             # (i.e. it is not a declared output param of that component)
             provide_params = [p for p in component.get_can_provide_params() if
@@ -580,7 +579,8 @@ class Model(HasLogger):
             # Corner case: some components can either take some parameters as input OR
             # provide their own calculation of them. Pop those if required as input.
             for p in provide_params.copy():  # iterating over copy
-                if p in component.get_requirements():  # no need to know which are params
+                if any(p == req.name for req in requirements[component]):
+                    # no need to know which are params
                     provide_params.remove(p)
             # Invert to get the provider(s) of each available product/parameter
             for k in can_provide + component.output_params + provide_params:
@@ -753,7 +753,7 @@ class Model(HasLogger):
         :return: dictionary giving list of requirements calculated by
                 each component name
         """
-        return dict(("%r" % c, v) for c, v in self._must_provide.items() if v)
+        return {"%r" % c: v for c, v in self._must_provide.items() if v}
 
     def _assign_params(self, info_likelihood, info_theory=None):
         """
@@ -791,14 +791,10 @@ class Model(HasLogger):
                             assign[p] += [component]
                         except KeyError:
                             if not derived_param:
-                                # If external function, no problem: it may have
-                                # default value
-                                if not isinstance(component,
-                                                  LikelihoodExternalFunction):
-                                    raise LoggedError(
-                                        self.log,
-                                        "Parameter '%s' needed as input for '%s', "
-                                        "but not provided.", p, component.get_name())
+                                raise LoggedError(
+                                    self.log,
+                                    "Parameter '%s' needed as input for '%s', "
+                                    "but not provided.", p, component.get_name())
                 # 2. Is there a params prefix?
                 elif getattr(component, prefix, None) is not None:
                     for p in assign:
