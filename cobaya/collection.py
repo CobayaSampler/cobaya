@@ -490,17 +490,12 @@ class Collection(BaseCollection):
         if self._n_last_out == n_max:
             return
         self._n_last_out = n_max
-        if not getattr(self, "_txt_formatters", False):
+        if not hasattr(self, "_numpy_fmts"):
             n_float = 8
             # Add to this 7 places: sign, leading 0's, exp with sign and 3 figures.
             width_col = lambda col: max(7 + n_float, len(col))
-            fmts = ["{:" + "{}.{}".format(width_col(col), n_float) + "g}"
-                    for col in self.data.columns]
-            # `fmt` as a kwarg with default value is needed to force substitution of var.
-            # lambda is defined as a string to allow picklability (also header formatter)
-            self._txt_formatters = {
-                col: eval("lambda x, fmt=fmt: fmt.format(x)")
-                for col, fmt in zip(self.data.columns, fmts)}
+            self._numpy_fmts = ["%{}.{}".format(width_col(col), n_float) + "g"
+                                for col in self.data.columns]
             self._header_formatter = [
                 eval('lambda s, w=width_col(col): '
                      '("{:>" + "{}".format(w) + "s}").format(s)',
@@ -523,10 +518,7 @@ class Collection(BaseCollection):
                     f(col) for f, col
                     in zip(self._header_formatter, self.data.columns))[1:] + "\n")
         with open(self.file_name, "a", encoding="utf-8") as out:
-            lines = self.data[n_min:n_max].to_string(
-                header=False, index=False, na_rep="nan", justify="right",
-                formatters=self._txt_formatters)
-            out.write(lines + "\n")
+            np.savetxt(out, self.data[n_min:n_max].to_numpy(), fmt=self._numpy_fmts)
 
     def _delete__txt(self):
         try:
@@ -548,7 +540,7 @@ class Collection(BaseCollection):
     # (they will be generated next time txt is dumped)
     def __getstate__(self):
         attributes = super().__getstate__().copy()
-        for attr in ['_txt_formatters', '_header_formatter']:
+        for attr in ['_numpy_fmts', '_header_formatter']:
             try:
                 del attributes[attr]
             except KeyError:

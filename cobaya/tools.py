@@ -13,6 +13,7 @@ import logging
 import platform
 import warnings
 import inspect
+import re
 import pandas as pd
 import numpy as np  # don't delete: necessary for get_external_function
 from importlib import import_module
@@ -310,6 +311,26 @@ def get_available_internal_class_names(kind, hidden=False):
         get_available_internal_classes(kind, hidden)))
 
 
+def replace_optimizations(function_string):
+    # make fast version of stats.norm.logpdf for fixed scale and loc
+    # can save quite a lot of time evaluating Gaussian priors
+    if 'stats.norm.logpdf' not in function_string:
+        return function_string
+    number = r"[+-]?(\d+([.]\d*)?(e[+-]?\d+)?|[.]\d+(e[+-]?\d+)?)"
+    regex = r"stats\.norm\.logpdf\((?P<arg>[^,\)]+)," \
+            r"\s*loc\s*=\s*(?P<loc>%s)\s*," \
+            r"\s*scale\s*=\s*(?P<scale>%s)\s*\)" % (number, number)
+    p = re.compile(regex)
+    match = p.search(function_string)
+    if not match:
+        return function_string
+    span = match.span()
+    loc, scale = float(match.group("loc")), float(match.group("scale"))
+    replacement = "(-(%s %+.16g)**2/%.16g %+.16g)" % (
+        match.group("arg"), -loc, 2 * scale ** 2, -np.log(2 * np.pi * scale ** 2) / 2)
+    return function_string[0:span[0]] + replacement + function_string[span[1]:]
+
+
 def get_external_function(string_or_function, name=None):
     """
     Processes an external prior or likelihood, given as a string or a function.
@@ -331,6 +352,7 @@ def get_external_function(string_or_function, name=None):
             import scipy.stats as stats  # provide default scope for eval
             scope['stats'] = stats
             scope['np'] = np
+            string_or_function = replace_optimizations(string_or_function)
             with PythonPath(os.curdir, when="import_module" in string_or_function):
                 function = eval(string_or_function, scope)
         except Exception as e:
