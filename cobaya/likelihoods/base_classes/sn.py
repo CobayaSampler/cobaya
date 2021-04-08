@@ -122,7 +122,6 @@ class SN(DataSetLikelihood):
     def init_params(self, ini):
 
         self.twoscriptmfit = ini.bool('twoscriptmfit')
-        #self.use_abs_mag = ini.bool('use_absolute_magnitude')
         if self.twoscriptmfit:
             scriptmcut = ini.float('scriptmcut', 10.)
 
@@ -152,6 +151,7 @@ class SN(DataSetLikelihood):
                         if rename in cols:
                             cols[cols.index(rename)] = new
                     self.has_third_var = 'third_var' in cols
+                    has_x0_cov = 'cov_s_x0' in cols
                     zeros = np.zeros(len(lines) - 1)
                     self.third_var = zeros.copy()
                     self.dthird_var = zeros.copy()
@@ -169,6 +169,12 @@ class SN(DataSetLikelihood):
                         else:
                             getattr(self, col)[ix] = np.float64(val)
                     ix += 1
+        
+        if has_x0_cov: 
+            sf = - 2.5/(self.x0*np.log(10))
+            self.cov_mag_stretch = self.cov_s_x0*sf
+            self.cov_mag_colour = self.cov_c_x0*sf
+
         self.z_var = self.dz ** 2
         self.mag_var = self.dmb ** 2
         self.stretch_var = self.dx1 ** 2
@@ -292,6 +298,7 @@ class SN(DataSetLikelihood):
         if self.alphabeta_covmat:
             if self.use_abs_mag:
                 estimated_scriptm = Mb + 25
+                Mb = params_values.get('Mb', None)
             else:
                 alphasq = alpha * alpha
                 betasq = beta * beta
@@ -319,28 +326,31 @@ class SN(DataSetLikelihood):
 
         invvars = invcovmat.dot(diffmag)
         amarg_A = invvars.dot(diffmag)
-        if self.use_abs_mag:
-            amarg_E = np.sum(invcovmat)
-            chi2 = amarg_A + np.log(amarg_E / _twopi)
-        else:
-            if self.twoscriptmfit:
-                # could simplify this..
-                amarg_B = invvars.dot(self.A1)
-                amarg_C = invvars.dot(self.A2)
-                invvars = invcovmat.dot(self.A1)
-                amarg_D = invvars.dot(self.A2)
-                amarg_E = invvars.dot(self.A1)
-                invvars = invcovmat.dot(self.A2)
-                amarg_F = invvars.dot(self.A2)
-                tempG = amarg_F - amarg_D * amarg_D / amarg_E
-                assert tempG >= 0
+
+        if self.twoscriptmfit:
+            # could simplify this..
+            amarg_B = invvars.dot(self.A1)
+            amarg_C = invvars.dot(self.A2)
+            invvars = invcovmat.dot(self.A1)
+            amarg_D = invvars.dot(self.A2)
+            amarg_E = invvars.dot(self.A1)
+            invvars = invcovmat.dot(self.A2)
+            amarg_F = invvars.dot(self.A2)
+            tempG = amarg_F - amarg_D * amarg_D / amarg_E
+            assert tempG >= 0
+            if self.use_abs_mag:
+                chi2 = amarg_A + np.log(amarg_E / _twopi) + np.log(tempG / _twopi)
+            else:
                 chi2 = (amarg_A + np.log(amarg_E / _twopi) +
                         np.log(tempG / _twopi) - amarg_C * amarg_C / tempG -
                         amarg_B * amarg_B * amarg_F / (amarg_E * tempG) +
                         2.0 * amarg_B * amarg_C * amarg_D / (amarg_E * tempG))
+        else:
+            amarg_B = np.sum(invvars)
+            amarg_E = np.sum(invcovmat)
+            if self.use_abs_mag:
+                chi2 = amarg_A + np.log(amarg_E / _twopi) 
             else:
-                amarg_B = np.sum(invvars)
-                amarg_E = np.sum(invcovmat)
                 chi2 = amarg_A + np.log(amarg_E / _twopi) - amarg_B ** 2 / amarg_E
         return - chi2 / 2
 
@@ -350,7 +360,10 @@ class SN(DataSetLikelihood):
         lumdists = (5 * np.log10((1 + self.zhel) * (1 + self.zcmb) *
                                  angular_diameter_distances))
         
-        Mb = params_values.get('Mb', None)
+        if self.use_abs_mag:
+            Mb = params_values.get('Mb', None)
+        else: 
+            Mb = 0
         if self.marginalize:
             # Should parallelize this loop
             for i in range(self.int_points):

@@ -28,10 +28,3 @@ marginalize_params:
 aliases: [JLA]
 # Speed in evaluations/second
 speed: 10
-
-params:
-  Mb: 
-    prior: 
-      min: -20
-      max: -18
-    latex: M_b
