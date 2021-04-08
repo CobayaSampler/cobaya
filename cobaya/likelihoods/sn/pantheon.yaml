@@ -13,10 +13,3 @@ aliases: [Pantheon, Pantheon18]
 use_abs_mag: False
 # Speed in evaluations/second
 speed: 100
-
-params:
-  Mb: 
-    prior: 
-      min: -20
-      max: -18
-    latex: M_b
