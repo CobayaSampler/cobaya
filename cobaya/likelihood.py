@@ -28,6 +28,7 @@ from time import sleep
 from typing import Mapping, Optional, Union
 from itertools import chain
 import numpy as np
+import numbers
 
 # Local
 from cobaya.conventions import kinds, _external, _component_path, empty_dict, \
@@ -199,13 +200,16 @@ class LikelihoodExternalFunction(Likelihood):
             info[_requires] = argspec.defaults[
                 argspec.args[-len(argspec.defaults):].index("_theory")]
         # END OF DEPRECATION BLOCK
+
         self._optional_args = \
-            dict.fromkeys(([p for p in argspec.args[-len(argspec.defaults):]
-                            if p not in ignore_args] if argspec.defaults else [])
-                          + argspec.kwonlyargs)
+            [p for p, val in chain(zip(argspec.args[-len(argspec.defaults):],
+                                       argspec.defaults) if argspec.defaults else [],
+                                   (argspec.kwonlydefaults or {}).items())
+             if p not in ignore_args and
+             (isinstance(val, numbers.Number) or val is None)]
         self._args = set(chain(self._optional_args, self.params,
                                getattr(self, _input_params, []) or []))
-        self._requirements = info.get(_requires, {}) or {}
+        self._requirements = info.get(_requires) or {}
         self.log.info("Initialized external likelihood.")
 
     def get_requirements(self):
