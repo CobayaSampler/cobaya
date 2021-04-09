@@ -203,7 +203,8 @@ class LikelihoodExternalFunction(Likelihood):
             dict.fromkeys(([p for p in argspec.args[-len(argspec.defaults):]
                             if p not in ignore_args] if argspec.defaults else [])
                           + argspec.kwonlyargs)
-        self._args = list(self._optional_args) + list(self.params)
+        self._args = set(chain(self._optional_args, self.params,
+                               getattr(self, _input_params, []) or []))
         self._requirements = info.get(_requires, {}) or {}
         self.log.info("Initialized external likelihood.")
 
