@@ -249,7 +249,7 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
 
 
 def get_resolved_class(component_or_class, kind=None, component_path=None,
-                       class_name=None):
+                       class_name=None, None_if_not_found=False):
     """
     Returns the class corresponding to the component indicated as first argument.
 
@@ -260,8 +260,9 @@ def get_resolved_class(component_or_class, kind=None, component_path=None,
     if inspect.isclass(component_or_class):
         return component_or_class
     else:
-        return get_class(
-            class_name or component_or_class, kind, component_path=component_path)
+        return get_class(class_name or component_or_class, kind,
+                         component_path=component_path,
+                         None_if_not_found=None_if_not_found)
 
 
 def import_all_classes(path, pkg, subclass_of, hidden=False, helpers=False):
@@ -519,7 +520,7 @@ def load_DataFrame(file_name, skip=0, thin=1, root_file_name=None):
             skip = int(skip * (n + 1))
             inp.seek(0)
         thin = int(thin)
-        skiprows = lambda i: i < skip or i % thin
+        skiprows = lambda _i: _i < skip or _i % thin
         if thin != 1:
             raise LoggedError(log, "thin is not supported yet")
         # TODO: looks like this thinning is not correctly account for weights???

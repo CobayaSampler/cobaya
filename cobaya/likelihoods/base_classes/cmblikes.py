@@ -13,7 +13,6 @@ import os
 import numpy as np
 from getdist import ParamNames, IniFile
 from scipy.linalg import sqrtm
-from typing import Sequence
 
 # Local
 from cobaya.log import LoggedError

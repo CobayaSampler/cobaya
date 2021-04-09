@@ -155,8 +155,11 @@ class LikelihoodExternalFunction(Likelihood):
         # MARKED FOR DEPRECATION IN v3.0
         ignore_args += ["_derived", "_theory"]
         # END OF DEPRECATION BLOCK
-        self.params = {p: None for p in argspec.args[:-len(argspec.defaults)]
-                       if p not in ignore_args}
+        if argspec.defaults:
+            required_args = argspec.args[:-len(argspec.defaults)]
+        else:
+            required_args = argspec.args
+        self.params = {p: None for p in required_args if p not in ignore_args}
         # MARKED FOR DEPRECATION IN v3.0
         self._derived_through_arg = "_derived" in argspec.args
         # END OF DEPRECATION BLOCK
@@ -213,7 +216,6 @@ class LikelihoodExternalFunction(Likelihood):
     def logp(self, **params_values):
         # Remove non-input params (except _derived)
         _derived = params_values.pop("_derived", None)
-        # TODO: this lines should be removed whenever input_params/reqs split is fixed (?)
         for p in list(params_values):
             if p not in self._args:
                 params_values.pop(p)

@@ -359,6 +359,7 @@ class TheoryCollection(ComponentCollection):
 
         if info_theory:
             for name, info in info_theory.items():
+                info = info or {}
                 # If it has an "external" key, wrap it up. Else, load it up
                 if isinstance(info, Theory):
                     self.add_instance(name, info)

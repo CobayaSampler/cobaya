@@ -52,7 +52,7 @@ def expand_info_param(info_param, default_derived=True):
         if info_param is None:
             info_param = {}
         elif isinstance(info_param, Sequence) and not isinstance(info_param, str):
-            values = info_param.copy()
+            values = list(info_param)
             allowed_lengths = [2, 4, 5]
             if len(values) not in allowed_lengths:
                 logger = logging.getLogger(__name__.split(".")[-1])

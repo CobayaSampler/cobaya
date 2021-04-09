@@ -410,6 +410,7 @@ class OutputDummy(Output):
     Dummy output class. Does nothing. Evaluates to 'False' as a class.
     """
 
+    # noinspection PyUnusedLocal
     def __init__(self, *args, **kwargs):
         self.set_logger(lowercase=True)
         self.log.debug("No output requested. Doing nothing.")

@@ -12,8 +12,7 @@ import logging
 import functools
 import numpy as np
 import pandas as pd
-from typing import Optional
-from getdist import MCSamples
+from getdist import MCSamples, chains
 from copy import deepcopy
 from math import isclose
 
@@ -24,8 +23,6 @@ from cobaya.tools import load_DataFrame
 from cobaya.log import LoggedError, HasLogger
 
 # Suppress getdist output
-from getdist import chains
-
 chains.print_load_details = False
 
 # Size of fast numpy cache
@@ -221,7 +218,7 @@ class Collection(BaseCollection):
                 raise LoggedError(
                     self.log, "If a log-posterior is not specified, you need to pass "
                               "a log-likelihood and a log-prior.")
-        return (logpost, logpriors_sum, loglikes_sum)
+        return logpost, logpriors_sum, loglikes_sum
 
     def _cache_reset(self):
         self._cache = np.full((self.cache_size, len(self.columns)), np.nan)

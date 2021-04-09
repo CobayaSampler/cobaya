@@ -685,7 +685,7 @@ class camb(BoltzmannBase):
             if mapped in names:
                 names.append(name)
         # remove any parameters explicitly tagged as input requirements
-        return set(names).difference(chain(self._transfer_requires,self.requires))
+        return set(names).difference(chain(self._transfer_requires, self.requires))
 
     def get_version(self):
         return self.camb.__version__

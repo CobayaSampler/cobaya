@@ -205,7 +205,7 @@ class Sampler(CobayaComponent):
         Returns the products expected in a scripted call of cobaya,
         (e.g. a collection of samples or a list of them).
         """
-        return None
+        return {}
 
     # Private methods: just ignore them:
     def __init__(self, info_sampler, model, output=None, packages_path=None, name=None):

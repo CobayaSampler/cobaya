@@ -367,7 +367,6 @@ class Prior(HasLogger):
         """
         self.set_logger()
         self._parameterization = parameterization
-        constant_params_info = parameterization.constant_params()
         sampled_params_info = parameterization.sampled_params_info()
         if not sampled_params_info:
             self.mpi_warning("No sampled parameters requested! "
@@ -431,9 +430,9 @@ class Prior(HasLogger):
             argspec = getfullargspec(logp)
             known = set(parameterization.input_params())
             params = [p for p in argspec.args if p in known]
-            params_without_default = \
-                argspec.args[:(len(argspec.args) - len(argspec.defaults or []))]
-            unknown = set(params_without_default).difference(known)
+            params_without_default = set(
+                argspec.args[:(len(argspec.args) - len(argspec.defaults or []))])
+            unknown = params_without_default - known
             if unknown:
                 if unknown.intersection(parameterization.derived_params()):
                     err = ("External prior '%s' has arguments %s that are output derived "

@@ -9,7 +9,7 @@
 import logging
 from copy import deepcopy
 from itertools import chain
-from typing import NamedTuple, Sequence, Mapping
+from typing import NamedTuple, Sequence, Mapping, Optional
 import numpy as np
 
 # Local
@@ -20,8 +20,8 @@ from cobaya.conventions import kinds, _prior, _timing, _params, _provides, \
 from cobaya.input import update_info
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
-from cobaya.likelihood import LikelihoodCollection, LikelihoodExternalFunction, \
-    AbsorbUnusedParamsLikelihood, is_LikelihoodInterface
+from cobaya.likelihood import LikelihoodCollection, AbsorbUnusedParamsLikelihood, \
+    is_LikelihoodInterface
 from cobaya.theory import TheoryCollection
 from cobaya.log import LoggedError, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
@@ -41,7 +41,7 @@ class LogPosterior(NamedTuple):
 
 class Requirement(NamedTuple):
     name: str
-    options: dict
+    options: Optional[dict]
 
     def __eq__(self, other):
         return self.name == other.name and _dict_equal(self.options, other.options)
@@ -129,7 +129,8 @@ class Model(HasLogger):
 
     def __init__(self, info_params, info_likelihood, info_prior=None, info_theory=None,
                  packages_path=None, timing=None, allow_renames=True, stop_at_error=False,
-                 post=False, prior_parameterization=None):
+                 post=False, prior_parameterization=None,
+                 skip_unused_theories=False, dropped_theory_params=None):
         self.set_logger(lowercase=True)
         self._updated_info = {
             _params: deepcopy_where_possible(info_params),
@@ -156,8 +157,8 @@ class Model(HasLogger):
             for component in self.components:
                 component.stop_at_error = stop_at_error
         # Assign input/output parameters
-        self._assign_params(info_likelihood, info_theory)
-        self._set_dependencies_and_providers()
+        self._assign_params(info_likelihood, info_theory, dropped_theory_params)
+        self._set_dependencies_and_providers(skip_unused_theories=skip_unused_theories)
         # Add to the updated info some values that are only available after initialisation
         self._updated_info = recursive_update(
             self._updated_info, self.get_versions(add_version_field=True))
@@ -529,7 +530,8 @@ class Model(HasLogger):
 
         self._component_order = {c: components.index(c) for c in dependence_order}
 
-    def _set_dependencies_and_providers(self, manual_requirements=empty_dict):
+    def _set_dependencies_and_providers(self, manual_requirements=empty_dict,
+                                        skip_unused_theories=False):
         # TODO: does it matter that theories come first, or can we use self.components?
         components = list(self.theory.values()) + list(self.likelihood.values())
         direct_param_dependence = {c: set() for c in components}
@@ -603,6 +605,7 @@ class Model(HasLogger):
         # this is the one we need to initialise the provider
         requirement_providers = {}
         dependencies = {}  # set of components of which each component depends
+        used_suppliers = set()
         there_are_more_requirements = True
         while there_are_more_requirements:
             # temp list of dictionary of requirements for each component
@@ -639,6 +642,7 @@ class Model(HasLogger):
                             self.log, "Component %r cannot provide %s to itself!",
                             component, requirement.name)
                     requirement_providers[requirement.name] = supplier.get_provider()
+                    used_suppliers.add(supplier)
                     declared_requirements_for_this_supplier = \
                         self._must_provide[supplier] + must_provide[supplier]
                     if requirement not in declared_requirements_for_this_supplier:
@@ -690,6 +694,19 @@ class Model(HasLogger):
                 else:
                     self.log.warning("Parameter(s) %s are only used by the prior",
                                      self._unassigned_input)
+
+        unused_theories = set(self.theory.values()) - used_suppliers
+        if unused_theories:
+            if skip_unused_theories:
+                self.log.debug('Theories %s do not need to be computed '
+                               'and will be skipped', unused_theories)
+                for theory in unused_theories:
+                    self._component_order.pop(theory, None)
+                    components.remove(theory)
+            else:
+                self.log.warning('Theories %s do not appear to be actually used '
+                                 'for anything', unused_theories)
+
         if self.log.getEffectiveLevel() <= logging.DEBUG:
             self.log.debug("Components will be computed in the order:")
             self.log.debug(" - %r" % list(self._component_order))
@@ -732,10 +749,14 @@ class Model(HasLogger):
         self.sampled_dependence = sampled_dependence
 
         ### 4. Initialize the provider and pass it to each component ###
-        if self.log.getEffectiveLevel() <= logging.DEBUG and requirement_providers:
-            self.log.debug("Requirements will be calculated by these components:")
-            for requirement, provider in requirement_providers.items():
-                self.log.debug("- %s: %s", requirement, provider)
+        if self.log.getEffectiveLevel() <= logging.DEBUG:
+            if requirement_providers:
+                self.log.debug("Requirements will be calculated by these components:")
+                for requirement, provider in requirement_providers.items():
+                    self.log.debug("- %s: %s", requirement, provider)
+            else:
+                self.log.debug("No requirements need to be computed")
+
         self.provider = Provider(self, requirement_providers)
         for component in components:
             component.initialize_with_provider(self.provider)
@@ -755,7 +776,8 @@ class Model(HasLogger):
         """
         return {"%r" % c: v for c, v in self._must_provide.items() if v}
 
-    def _assign_params(self, info_likelihood, info_theory=None):
+    def _assign_params(self, info_likelihood, info_theory=None,
+                       dropped_theory_params=None):
         """
         Assign input and output parameters to theories and likelihoods, following the
         algorithm explained in :doc:`DEVEL`.
@@ -828,8 +850,11 @@ class Model(HasLogger):
                     supports_params = component.get_can_provide_params()
                 else:
                     supports_params = component.get_can_support_params()
+                pars_to_assign = set(supports_params)
+                if dropped_theory_params and not is_LikelihoodInterface(component):
+                    pars_to_assign -= dropped_theory_params
                 for p in (unassigned if derived_param else assign):
-                    if p in supports_params and component not in assign[p]:
+                    if p in pars_to_assign and component not in assign[p]:
                         assign[p] += [component]
             # Check that there is only one non-knowledgeable element, and assign
             # unused params
