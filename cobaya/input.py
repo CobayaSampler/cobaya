@@ -122,6 +122,12 @@ def get_default_info(component_or_class, kind=None, return_yaml=False,
         return default_component_info
 
 
+def add_aggregated_chi2_params(param_info, all_types):
+    for t in sorted(all_types):
+        param_info[_get_chi2_name(t)] = {
+            partag.latex: _get_chi2_label(t), partag.derived: True}
+
+
 def update_info(info):
     """
     Creates an updated info starting from the defaults for each component and updating it
@@ -228,9 +234,7 @@ def update_info(info):
         all_types = set(chain(
             *[str_to_list(like_info.get("type", []) or [])
               for like_info in updated_info[kinds.likelihood].values()]))
-        for t in all_types:
-            updated_info[_params][_get_chi2_name(t)] = {
-                partag.latex: _get_chi2_label(t), partag.derived: True}
+        add_aggregated_chi2_params(updated_info[_params], all_types)
     # Add automatically-defined parameters
     if _auto_params in updated_info:
         make_auto_params(updated_info.pop(_auto_params), updated_info[_params])

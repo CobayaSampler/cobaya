@@ -22,7 +22,7 @@ from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_pref
     _separator_files, _post_add, _post_remove, _post_suffix, _undo_chi2_name
 from cobaya.collection import Collection
 from cobaya.log import logger_setup, LoggedError
-from cobaya.input import update_info
+from cobaya.input import update_info, add_aggregated_chi2_params
 from cobaya.output import get_output
 from cobaya.mpi import get_mpi_rank
 from cobaya.tools import progress_bar, recursive_update, deepcopy_where_possible, \
@@ -97,6 +97,8 @@ def post(info, sample=None):
                  "or skipping or thinning less.")
     # 2. Compare old and new info: determine what to do
     add = info_post.get(_post_add, {}) or {}
+    if _post_remove in add:
+        raise LoggedError(log, "remove block should be under 'post', not 'add'")
     remove = info_post.get(_post_remove, {})
     # Add a dummy 'one' likelihood, to absorb unused parameters
     if not add.get(kinds.likelihood):
@@ -120,7 +122,7 @@ def post(info, sample=None):
         if p.startswith(_get_chi2_name("")):
             out[_params].pop(p)
     prior_recompute_1d = False
-    for p, pinfo in add.get(_params, {}).items():
+    for p, pinfo in (add.get(_params) or {}).items():
         pinfo_in = info_in[_params].get(p)
         if is_sampled_param(pinfo):
             if not is_sampled_param(pinfo_in):
@@ -179,7 +181,7 @@ def post(info, sample=None):
         out[level] = getattr(dummy_model_in, level)
         if level == _prior:
             out[level].remove(_prior_1d_name)
-        for pdf in remove.get(level) or []:
+        for pdf in str_to_list(remove.get(level)) or []:
             try:
                 out[level].remove(pdf)
                 warn_remove = True
@@ -222,6 +224,19 @@ def post(info, sample=None):
     chi2_names_add = [
         _get_chi2_name(name) for name in add[kinds.likelihood] if name != "one"]
     out[kinds.likelihood] += [name for name in add[kinds.likelihood] if name != "one"]
+
+    # Prepare recomputation of aggregated chi2
+    # (they need to be recomputed by hand, because its autocomputation won't pick up
+    #  old likelihoods for a given type)
+    all_types = {
+        like: str_to_list(add[kinds.likelihood].get(
+            like, info_in.get(kinds.likelihood, {}).get(like) or {}).get("type",
+                                                                         []) or [])
+        for like in out[kinds.likelihood]}
+    types = set(chain(*all_types.values()))
+    inv_types = {t: [like for like, like_types in all_types.items() if t in like_types]
+                 for t in sorted(types)}
+    add_aggregated_chi2_params(out[_params], types)
 
     for level in [_prior, kinds.likelihood]:
         for i, x_i in enumerate(out[level]):
@@ -271,18 +286,7 @@ def post(info, sample=None):
     collection_out = Collection(dummy_model_out, output_out, name="1",
                                 cache_size=_default_post_cache_size)
     output_out.check_and_dump_info(None, info_out, check_compatible=False)
-    # Prepare recomputation of aggregated chi2
-    # (they need to be recomputed by hand, because its autocomputation won't pick up
-    #  old likelihoods for a given type)
-    # TODO: not sure type is available if the input dict has just an empty like reference?
-    all_types = {
-        like: str_to_list(add[kinds.likelihood].get(
-            like, info_in.get(kinds.likelihood, {}).get(like) or {}).get("type",
-                                                                         []) or [])
-        for like in out[kinds.likelihood]}
-    types = set(chain(*all_types.values()))
-    inv_types = {t: [like for like, like_types in all_types.items() if t in like_types]
-                 for t in types}
+
     last_percent = None
     known_constants = dummy_model_out.parameterization.constant_params()
     known_constants.update(dummy_model_in.parameterization.constant_params())

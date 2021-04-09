@@ -82,9 +82,9 @@ def test_post_likelihood(tmpdir):
         _output_prefix: os.path.join(str(tmpdir), "gaussian"), _force: True,
         _params: info_params_local, kinds.sampler: info_sampler,
         kinds.likelihood: {
-            "gaussian": {"external": sampled_pdf, "type": "A"},
-            "dummy": {"external": lambda dummy: 1, "type": "B"},
-            "dummy_remove": {"external": lambda dummy: dummy_loglike_add, "type": "B"}}}
+            "gaussian": {"external": sampled_pdf, "type": "AA"},
+            "dummy": {"external": lambda dummy: 1, "type": "BB"},
+            "dummy_remove": {"external": lambda dummy: dummy_loglike_add, "type": "BB"}}}
     info_run_out, sampler_run = run(info)
     info_post = {
         _output_prefix: info[_output_prefix], _force: True,
@@ -93,9 +93,9 @@ def test_post_likelihood(tmpdir):
                     "gaussian": None, "dummy_remove": None}},
                 _post_add: {kinds.likelihood: {
                     "target": {
-                        "external": target_pdf, "type": "A", "output_params": ["cprime"]},
+                        "external": target_pdf, "type": "AA", "output_params": ["cprime"]},
                     "dummy_add": {
-                        "external": lambda dummy: dummy_loglike_remove, "type": "B"}}}}}
+                        "external": lambda dummy: dummy_loglike_remove, "type": "BB"}}}}}
     info_post_out, products_post = post(info_post)
     # Load with GetDist and compare
     mcsamples = loadMCSamples(
@@ -103,9 +103,9 @@ def test_post_likelihood(tmpdir):
     new_mean = mcsamples.mean(["a", "b"])
     new_cov = mcsamples.getCovMat().matrix
     assert abs(KL_norm(target["mean"], target["cov"], new_mean, new_cov)) < 0.02
-    assert np.allclose(products_post["sample"]["chi2__A"],
+    assert np.allclose(products_post["sample"]["chi2__AA"],
                        products_post["sample"]["chi2__target"])
-    assert np.allclose(products_post["sample"]["chi2__B"],
+    assert np.allclose(products_post["sample"]["chi2__BB"],
                        products_post["sample"]["chi2__dummy"] +
                        products_post["sample"]["chi2__dummy_add"])
 

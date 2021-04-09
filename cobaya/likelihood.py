@@ -180,6 +180,8 @@ class LikelihoodExternalFunction(Likelihood):
         # END OF DEPRECATION BLOCK
         else:
             setattr(self, _output_params, [])
+        # Make sure `types` is a list of data types, for aggregated chi2
+        self.type = str_to_list(getattr(self, "type", []) or [])
         # Required quantities from other components
         self._uses_self_arg = self._self_arg in argspec.args
         if info.get(_requires) and not self._uses_self_arg:

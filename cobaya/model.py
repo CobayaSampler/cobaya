@@ -239,7 +239,7 @@ class Model(HasLogger):
         self.provider.set_current_input_params(input_params)
         self.log.debug("Got input parameters: %r", input_params)
         n_theory = len(self.theory)
-        loglikes = np.empty(len(self.likelihood))
+        loglikes = np.zeros(len(self.likelihood))
         for (component, index), param_dep in zip(self._component_order.items(),
                                                  self._params_of_dependencies):
             depend_list = [input_params[p] for p in param_dep]
@@ -262,7 +262,7 @@ class Model(HasLogger):
                     raise LoggedError(
                         self.log,
                         "Likelihood %s has not returned a valid log-likelihood, "
-                        "but %r instead.", str(component), component.current_logp)
+                        "but %r instead.", component, component.current_logp)
                 if return_derived:
                     derived_dict[_get_chi2_name(component.get_name().replace(".", "_"))] \
                         = -2 * loglikes[index - n_theory]
@@ -514,9 +514,9 @@ class Model(HasLogger):
     def _set_component_order(self, components, dependencies):
         dependence_order = []
         deps = {p: s.copy() for p, s in dependencies.items()}
-        comps = components[:]
+        comps = [c for c in components if not isinstance(c, AbsorbUnusedParamsLikelihood)]
         _last = 0
-        while len(dependence_order) < len(components):
+        while len(dependence_order) < len(comps):
             for component in list(comps):
                 if not deps.get(component):
                     dependence_order.append(component)
@@ -1129,10 +1129,10 @@ class Model(HasLogger):
         while n_done < int(n) + int(discard):
             point = self.prior.reference(
                 max_tries=max_tries, ignore_fixed=True, warn_if_no_ref=False)
-            if self.loglike(point, cached=False, return_derived=True)[0] != -np.inf:
+            if self.loglike(point, cached=False)[0] != -np.inf:
                 n_done += 1
         self.log.debug("Computed %d points to measure speeds.", n_done)
-        times = [component.timer.get_time_avg() for component in self.components]
+        times = [component.timer.get_time_avg() or 0 for component in self.components]
         if more_than_one_process():
             # average for different points
             times = np.average(get_mpi_comm().allgather(times), axis=0)

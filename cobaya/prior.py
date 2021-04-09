@@ -344,11 +344,11 @@ from typing import Sequence, NamedTuple, Callable
 # Local
 from cobaya.conventions import _prior, partag, _prior_1d_name
 from cobaya.tools import get_external_function, get_scipy_1d_pdf, read_dnumber
-from cobaya.tools import _fast_uniform_logpdf, _fast_norm_logpdf, getfullargspec
+from cobaya.tools import _fast_norm_logpdf, getfullargspec
 from cobaya.log import LoggedError, HasLogger
 
 # Fast logpdf for uniforms and norms (do not understand nan masks!)
-fast_logpdfs = {"uniform": _fast_uniform_logpdf, "norm": _fast_norm_logpdf}
+fast_logpdfs = {"norm": _fast_norm_logpdf}
 
 
 class ExternalPrior(NamedTuple):

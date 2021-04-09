@@ -611,20 +611,6 @@ def get_scipy_1d_pdf(info):
             "does not recognize the parameter mentioned in the 'scipy' error above.",
             str(tp), dist)
 
-
-def _fast_uniform_logpdf(self, x):
-    # not normally used since uniform handled as special case
-    """WARNING: logpdf(nan) = -inf"""
-    if not hasattr(self, "_cobaya_mlogscale"):
-        self._cobaya_mlogscale = -np.log(self.kwds["scale"])
-        self._cobaya_max = self.kwds["loc"] + self.kwds["scale"]
-        self._cobaya_loc = self.kwds['loc']
-    if self._cobaya_loc <= x <= self._cobaya_max:
-        return self._cobaya_mlogscale
-    else:
-        return -np.inf
-
-
 def _fast_norm_logpdf(self, x):
     """WARNING: logpdf(nan) = -inf"""
     if not hasattr(self, "_cobaya_mlogscale"):

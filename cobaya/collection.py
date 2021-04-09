@@ -128,14 +128,14 @@ class Collection(BaseCollection):
                         if set(self.chi2_names).difference(loaded_chi2_names):
                             raise LoggedError(self.log,
                                               "Input samples do not have chi2 values "
-                                              "matching  likelihoods in the model:\n "
+                                              "matching likelihoods in the model:\n "
                                               "found: %s\nexpected: %s\n",
                                               loaded_chi2_names, self.chi2_names)
                         unexpected = loaded_chi2_names.difference(
                             self.chi2_names).difference(self.derived_params)
                         if unexpected:
                             raise LoggedError(self.log,
-                                              "Input samples do not have chi2 values "
+                                              "Input samples have chi2 values "
                                               "that are not expected: %s ", unexpected)
                     else:
                         data_col_set = set(self.data.columns)
