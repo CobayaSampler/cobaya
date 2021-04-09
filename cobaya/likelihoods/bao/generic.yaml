@@ -1,3 +1,4 @@
+path: null
 measurements_file: /full/path/to/myBAO.dat
 cov_file: /full/path/to/myBAO.cov         # either this one,
 invcov_file: /full/path/to/myBAO_inv.cov  # or this one!
