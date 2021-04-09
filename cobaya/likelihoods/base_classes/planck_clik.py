@@ -40,7 +40,6 @@ class PlanckClik(Likelihood):
         if "2015" in self.get_name():
             for line in _deprecation_msg_2015.split("\n"):
                 self.log.warning(line)
-        code_path = common_path
         data_path = get_data_path(self.__class__.get_qualified_class_name())
         # Allow global import if no direct path specification
         allow_global = not self.path

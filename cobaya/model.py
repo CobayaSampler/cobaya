@@ -131,7 +131,7 @@ class Model(HasLogger):
                  packages_path=None, timing=None, allow_renames=True, stop_at_error=False,
                  post=False, prior_parameterization=None,
                  skip_unused_theories=False, dropped_theory_params=None):
-        self.set_logger(lowercase=True)
+        self.set_logger()
         self._updated_info = {
             _params: deepcopy_where_possible(info_params),
             kinds.likelihood: deepcopy_where_possible(info_likelihood)}

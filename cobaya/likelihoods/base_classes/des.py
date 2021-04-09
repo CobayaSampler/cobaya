@@ -547,7 +547,7 @@ class DES(DataSetLikelihood):
             data[i] = arrays[type_ix][f1, f2][theta_ix]
         return data
 
-    def make_thetas(self, arrays):
+    def make_thetas(self):
         nused = len(self.used_items)
         data = np.empty(nused)
         for i, (type_ix, f1, f2, theta_ix) in enumerate(self.used_items):
