@@ -515,8 +515,9 @@ class Model(HasLogger):
         dependence_order = []
         deps = {p: s.copy() for p, s in dependencies.items()}
         comps = [c for c in components if not isinstance(c, AbsorbUnusedParamsLikelihood)]
+        target_length = len(comps)
         _last = 0
-        while len(dependence_order) < len(comps):
+        while len(dependence_order) < target_length:
             for component in list(comps):
                 if not deps.get(component):
                     dependence_order.append(component)

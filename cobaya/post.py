@@ -108,7 +108,7 @@ def post(info, sample=None):
     add = update_info(add)
     # 2.1 Adding/removing derived parameters and changes in priors of sampled parameters
     out = {_params: deepcopy_where_possible(info_in[_params])}
-    remove_params = list(remove.get(_params, []))
+    remove_params = list(str_to_list(remove.get(_params)) or [])
     for p in remove_params:
         pinfo = info_in[_params].get(p)
         if pinfo is None or not is_derived_param(pinfo):
@@ -197,7 +197,7 @@ def post(info, sample=None):
                     "it is probably safer to explore it directly.")
 
     info_theory_out = deepcopy_where_possible(info_in.get(kinds.theory, {}))
-    for theory in remove.get(kinds.theory) or []:
+    for theory in str_to_list(remove.get(kinds.theory)) or []:
         info_theory_out.pop(theory, None)
 
     if _prior in add:
