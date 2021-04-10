@@ -75,17 +75,27 @@ class FileLock:
         self.lock_error_file = filename + '.lock_err'
         self.log = log
         try:
-            self._file_handle = os.open(self.lock_file,
-                                        os.O_CREAT | os.O_EXCL | os.O_RDWR)
+            try:
+                import portalocker
+                h = open(self.lock_file, 'wb')
+                portalocker.lock(h, portalocker.LOCK_EX + portalocker.LOCK_NB)
+                self._file_handle = h
+            except ModuleNotFoundError:
+                # will work, but crashes will leave .lock files that will raise error
+                self._file_handle = open(self.lock_file, 'xb')
+            except portalocker.exceptions.BaseLockException:
+                h.close()
+                self.lock_error()
         except OSError:
             self.lock_error()
 
     def lock_error(self):
-        try:
-            with open(self.lock_error_file, 'w'):
+        if not self.has_lock():
+            try:
+                with open(self.lock_error_file, 'wb'):
+                    pass
+            except OSError:
                 pass
-        except OSError:
-            pass
         raise LoggedError(self.log,
                           "File %s is locked.\nYou may be running multiple jobs with "
                           "the same output when you intended to run with MPI. "
@@ -102,9 +112,9 @@ class FileLock:
 
     def clear_lock(self):
         if self.has_lock():
-            os.close(self._file_handle)
-            os.unlink(self.lock_file)
+            self._file_handle.close()
             del self._file_handle
+            os.unlink(self.lock_file)
             if os.path.exists(self.lock_error_file):
                 os.unlink(self.lock_error_file)
 
