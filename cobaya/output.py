@@ -64,6 +64,57 @@ def get_info_path(folder, prefix, infix=None, kind="updated"):
     return info_file_prefix + infix + suffix + _yaml_extensions[0]
 
 
+class FileLock:
+    def __init__(self):
+        self.lock_error_file = None
+
+    def set_lock(self, log, filename):
+        if self.has_lock():
+            return
+        self.lock_file = filename + '.lock'
+        self.lock_error_file = filename + '.lock_err'
+        self.log = log
+        try:
+            self._file_handle = os.open(self.lock_file,
+                                        os.O_CREAT | os.O_EXCL | os.O_RDWR)
+        except OSError:
+            self.lock_error()
+
+    def lock_error(self):
+        try:
+            with open(self.lock_error_file, 'w'):
+                pass
+        except OSError:
+            pass
+        raise LoggedError(self.log,
+                          "File %s is locked.\nYou may be running multiple jobs with "
+                          "the same output when you intended to run with MPI. "
+                          "Check that mpi4py is correctly installed and "
+                          "configured (using the same mpi as mpirun/mpiexec);\n"
+                          "e.g. try the test at "
+                          "https://cobaya.readthedocs.io/en/latest/installation."
+                          "html#mpi-parallelization-optional-but-encouraged",
+                          self.lock_file)
+
+    def check_error(self):
+        if self.lock_error_file and os.path.exists(self.lock_error_file):
+            self.lock_error()
+
+    def clear_lock(self):
+        if self.has_lock():
+            os.close(self._file_handle)
+            os.unlink(self.lock_file)
+            del self._file_handle
+            if os.path.exists(self.lock_error_file):
+                os.unlink(self.lock_error_file)
+
+    def has_lock(self):
+        return hasattr(self, "_file_handle")
+
+    def __del__(self):
+        self.clear_lock()
+
+
 class Output(HasLogger):
     """
     Basic output driver. It takes care of creating the output files, checking
@@ -83,6 +134,7 @@ class Output(HasLogger):
         # END OF DEPRECATION BLOCK
         self.name = "output"  # so that the MPI-wrapped class conserves the name
         self.set_logger(self.name)
+        self.lock = FileLock()
         self.folder, self.prefix = split_prefix(prefix)
         self.prefix_regexp_str = re.escape(self.prefix) + (
             r"[\._]" if self.prefix else "")
@@ -109,6 +161,7 @@ class Output(HasLogger):
         # Prepare file names, and check if chain exists
         self.file_input = get_info_path(
             self.folder, self.prefix, infix=infix, kind="input")
+        self.lock.set_lock(self.log, self.file_input)
         self.file_updated = get_info_path(
             self.folder, self.prefix, infix=infix, kind="updated")
         self._resuming = False
@@ -173,6 +226,7 @@ class Output(HasLogger):
                 self.log, "Could not create folder %r. Reason: %r", folder, str(e))
 
     def delete_infos(self):
+        self.lock.check_error()
         for f in [self.file_input, self.file_updated]:
             if os.path.exists(f):
                 os.remove(f)
@@ -216,6 +270,7 @@ class Output(HasLogger):
         consistent.
         """
         # trim known params of each likelihood: for internal use only
+        self.lock.check_error()
         updated_info_trimmed = deepcopy_where_possible(updated_info)
         updated_info_trimmed[_version] = __version__
         for like_info in updated_info_trimmed.get(kinds.likelihood, {}).values():
@@ -314,6 +369,7 @@ class Output(HasLogger):
         """
         Deletes a file or a folder. Fails silently.
         """
+        self.lock.check_error()
         try:
             os.remove(filename)
         except IsADirectoryError:
