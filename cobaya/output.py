@@ -458,6 +458,7 @@ class Output(HasLogger):
         Use `name` for particular types of collections (default: any number).
         Pass `False` to mean there is nothing between the output prefix and the extension.
         """
+        self.lock.check_error()
         filenames = self.find_collections(name=name, extension=extension)
         collections = [
             Collection(model, self, name="%d" % (1 + i), file_name=filename,

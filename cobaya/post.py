@@ -46,11 +46,6 @@ class DummyModel:
 
 
 def post(info, sample=None):
-    import cobaya
-    import mpi4py
-    print(sys.argv)
-    print('rank', get_mpi_rank(), cobaya.mpi.get_mpi_size())
-    print(mpi4py.get_config())
     logger_setup(info.get(_debug), info.get(_debug_file))
     log = logging.getLogger(__name__.split(".")[-1])
     # MARKED FOR DEPRECATION IN v3.0
