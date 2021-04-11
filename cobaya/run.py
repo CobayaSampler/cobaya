@@ -22,10 +22,10 @@ from cobaya.sampler import get_sampler_name_and_class, check_sampler_info
 from cobaya.log import logger_setup, LoggedError
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info
-from cobaya.mpi import import_MPI, is_main_process, set_mpi_disabled
 from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic, \
     check_deprecated_modules_path
 from cobaya.post import post
+from cobaya import mpi
 
 
 def run(info):
@@ -58,7 +58,7 @@ def run(info):
     updated_info = update_info(info)
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
         # Dump only if not doing output (otherwise, the user can check the .updated file)
-        if not output and is_main_process():
+        if not output and mpi.is_main_process():
             logger_run.info(
                 "Input info updated with defaults (dumped to YAML):\n%s",
                 yaml_dump(sort_cosmetic(updated_info)))
@@ -101,12 +101,15 @@ def run(info):
         # TODO -- maybe also re-dump model info, now possibly with measured speeds
         # (waiting until the camb.transfers issue is solved)
         output.check_and_dump_info(None, updated_info, check_compatible=False)
+        mpi.sync_processes()
+        output.clear_lock()
         if info.get(_test_run, False):
             logger_run.info("Test initialization successful! "
                             "You can probably run now without `--%s`.", _test_run)
             return updated_info, sampler
         # Run the sampler
         sampler.run()
+
     return updated_info, sampler
 
 
@@ -151,12 +154,12 @@ def run_script(help_commands=None):
                              "not actually work")
     arguments = parser.parse_args()
     if arguments.no_mpi or getattr(arguments, _test_run, False):
-        set_mpi_disabled()
+        mpi.set_mpi_disabled()
     if any((os.path.splitext(f)[0] in ("input", "updated"))
            for f in arguments.input_file):
         raise ValueError("'input' and 'updated' are reserved file names. "
                          "Please, use a different one.")
-    load_input = import_MPI(".input", "load_input")
+    load_input = mpi.import_MPI(".input", "load_input")
     given_input = arguments.input_file[0]
     if any(given_input.lower().endswith(ext) for ext in _yaml_extensions):
         info = load_input(given_input)

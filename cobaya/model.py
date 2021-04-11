@@ -28,7 +28,7 @@ from cobaya.yaml import yaml_dump
 from cobaya.tools import deepcopy_where_possible, are_different_params_lists, \
     str_to_list, sort_parameter_blocks, recursive_update, sort_cosmetic, ensure_dict
 from cobaya.component import Provider
-from cobaya.mpi import more_than_one_process, get_mpi_comm
+from cobaya import mpi
 
 
 # Log-posterior namedtuple
@@ -269,7 +269,7 @@ class Model(HasLogger):
                     for this_type in getattr(component, "type", []) or []:
                         aggr_chi2_name = _get_chi2_name(this_type)
                         if aggr_chi2_name not in derived_dict:
-                            derived_dict[aggr_chi2_name] = 0
+                            derived_dict[aggr_chi2_name] = 0.
                         derived_dict[aggr_chi2_name] += -2 * loglikes[index - n_theory]
         if make_finite:
             loglikes = np.nan_to_num(loglikes)
@@ -601,16 +601,17 @@ class Model(HasLogger):
 
         ### 2. Assign each requirement to a provider ###
         # store requirements assigned to each provider:
-        self._must_provide = {component: [] for component in components}
+        self._must_provide = {c: [] for c in components}
         # inverse of the one above, *minus conditional requirements* --
         # this is the one we need to initialise the provider
         requirement_providers = {}
         dependencies = {}  # set of components of which each component depends
-        used_suppliers = set()
+        used_suppliers = set(c for c in components if c.output_params)
         there_are_more_requirements = True
+        # temp list of dictionary of requirements for each component
+        must_provide = {c: [Requirement(p, None) for p in c.output_params] for c in
+                        components}
         while there_are_more_requirements:
-            # temp list of dictionary of requirements for each component
-            must_provide = {c: [] for c in components}
             # Check supplier for each requirement, get dependency and must_provide
             for component, requires in requirements.items():
                 for requirement in requires:
@@ -664,21 +665,22 @@ class Model(HasLogger):
                 # and store here new (conditional) ones
                 requires[:] = []
                 # .get here accounts for the dummy components of manual reqs
-                if must_provide.get(component, False):
-                    for request in must_provide[component]:
-                        conditional_requirements = \
-                            _tidy_requirements(
-                                component.must_provide(
-                                    **{request.name: request.options}), component)
-                        self._must_provide[component].append(request)
-                        if conditional_requirements:
-                            there_are_more_requirements = True
-                            requires += conditional_requirements
+                for request in must_provide[component] or []:
+                    conditional_requirements = \
+                        _tidy_requirements(
+                            component.must_provide(
+                                **{request.name: request.options}), component)
+                    self._must_provide[component].append(request)
+                    if conditional_requirements:
+                        there_are_more_requirements = True
+                        requires += conditional_requirements
             # set component compute order and raise error if circular dependence
             self._set_component_order(components, dependencies)
             # TODO: it would be nice that after this loop we, in some way, have
             # component.get_requirements() return the conditional reqs actually used too,
             # or maybe assign conditional used ones to a property?
+            # Reset list
+            must_provide = {c: [] for c in components}
         # Expunge manual requirements
         for component in list(requirements):
             if is_dummy_component(component):
@@ -1125,7 +1127,7 @@ class Model(HasLogger):
             self.set_timing_on(True)
         self.mpi_info("Measuring speeds... (this may take a few seconds)")
         if n is None:
-            n = 1 if more_than_one_process() else 3
+            n = 1 if mpi.more_than_one_process() else 3
         n_done = 0
         while n_done < int(n) + int(discard):
             point = self.prior.reference(
@@ -1134,9 +1136,9 @@ class Model(HasLogger):
                 n_done += 1
         self.log.debug("Computed %d points to measure speeds.", n_done)
         times = [component.timer.get_time_avg() or 0 for component in self.components]
-        if more_than_one_process():
+        if mpi.more_than_one_process():
             # average for different points
-            times = np.average(get_mpi_comm().allgather(times), axis=0)
+            times = np.average(mpi.allgather(times), axis=0)
         measured_speeds = [1 / (1e-7 + time) for time in times]
         self.mpi_info('Setting measured speeds (per sec): %r',
                       {component: float("%.3g" % speed) for component, speed in

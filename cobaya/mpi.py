@@ -121,3 +121,19 @@ def share_mpi(data=None, root=0):
         return comm.bcast(data, root=root)
     else:
         return data
+
+
+def gather(data, root=0):
+    comm = get_mpi_comm()
+    if comm and more_than_one_process():
+        return comm.gather(data, root=root)
+    else:
+        return [data]
+
+
+def allgather(data):
+    comm = get_mpi_comm()
+    if comm and more_than_one_process():
+        return comm.allgather(data)
+    else:
+        return [data]

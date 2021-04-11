@@ -611,6 +611,7 @@ def get_scipy_1d_pdf(info):
             "does not recognize the parameter mentioned in the 'scipy' error above.",
             str(tp), dist)
 
+
 def _fast_norm_logpdf(self, x):
     """WARNING: logpdf(nan) = -inf"""
     if not hasattr(self, "_cobaya_mlogscale"):

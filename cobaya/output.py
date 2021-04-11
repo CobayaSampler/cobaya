@@ -73,6 +73,10 @@ class FileLock:
             return
         self.lock_file = filename + '.lock'
         self.lock_error_file = filename + '.lock_err'
+        try:
+            os.remove(self.lock_error_file)
+        except OSError:
+            pass
         self.log = log
         try:
             try:
@@ -92,6 +96,8 @@ class FileLock:
     def lock_error(self):
         if not self.has_lock():
             try:
+                # make lock_err so process holding lock can check
+                # another process had an error
                 with open(self.lock_error_file, 'wb'):
                     pass
             except OSError:
@@ -115,8 +121,11 @@ class FileLock:
             self._file_handle.close()
             del self._file_handle
             os.unlink(self.lock_file)
-            if os.path.exists(self.lock_error_file):
-                os.unlink(self.lock_error_file)
+            try:
+                os.remove(self.lock_error_file)
+            except OSError:
+                pass
+        self.lock_error_file = None
 
     def has_lock(self):
         return hasattr(self, "_file_handle")
@@ -436,6 +445,10 @@ class Output(HasLogger):
                 getattr(self.collection_regexp(name=name, extension=extension)
                         .match(file_name), "group", lambda: None)())
 
+    def clear_lock(self):
+        if is_main_process():
+            self.lock.clear_lock()
+
     def find_collections(self, name=None, extension=None):
         """
         Returns all collection files found which are compatible with this `Output`
@@ -479,7 +492,7 @@ class OutputDummy(Output):
 
     # noinspection PyUnusedLocal
     def __init__(self, *args, **kwargs):
-        self.set_logger(lowercase=True)
+        self.set_logger()
         self.log.debug("No output requested. Doing nothing.")
         # override all methods that actually produce output
         exclude = ["nullfunc"]
@@ -507,10 +520,10 @@ class Output_MPI(Output):
 
     def __init__(self, *args, **kwargs):
         if is_main_process():
-            Output.__init__(self, *args, **kwargs)
+            super().__init__(*args, **kwargs)
         if more_than_one_process():
-            to_broadcast = (
-                "folder", "prefix", "kind", "ext", "_resuming", "prefix_regexp_str")
+            to_broadcast = ("force", "folder", "prefix", "kind", "ext",
+                            "_resuming", "prefix_regexp_str")
             values = share_mpi([getattr(self, var) for var in to_broadcast]
                                if is_main_process() else None)
             for name, var in zip(to_broadcast, values):
@@ -518,13 +531,13 @@ class Output_MPI(Output):
 
     def check_and_dump_info(self, *args, **kwargs):
         if is_main_process():
-            Output.check_and_dump_info(self, *args, **kwargs)
+            super().check_and_dump_info(*args, **kwargs)
         # Share cached loaded info
         self._old_updated_info = share_mpi(getattr(self, "_old_updated_info", None))
 
     def reload_updated_info(self, *args, **kwargs):
         if is_main_process():
-            return Output.reload_updated_info(self, *args, **kwargs)
+            return super().reload_updated_info(*args, **kwargs)
         else:
             # Only cached possible when non main process
             if not kwargs.get("use_cache"):
@@ -535,11 +548,11 @@ class Output_MPI(Output):
 
     def create_folder(self, *args, **kwargs):
         if is_main_process():
-            Output.create_folder(self, *args, **kwargs)
+            super().create_folder(*args, **kwargs)
 
     def set_resuming(self, *args, **kwargs):
         if is_main_process():
-            Output.set_resuming(self, *args, **kwargs)
+            super().set_resuming(*args, **kwargs)
         if more_than_one_process():
             self._resuming = share_mpi(self._resuming if is_main_process() else None)
 

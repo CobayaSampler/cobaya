@@ -249,6 +249,16 @@ class Parameterization(HasLogger):
     def sampled_input_dependence(self):
         return deepcopy(self._sampled_input_dependence)
 
+    def get_input_func(self, p, **params_values):
+        func = self._input_funcs[p]
+        args = self._input_args[p]
+        return func(*[params_values.get(arg) for arg in args])
+
+    def get_derived_func(self, p, **params_values):
+        func = self._derived_funcs[p]
+        args = self._derived_args[p]
+        return func(*[params_values.get(arg) for arg in args])
+
     def to_input(self, sampled_params_values, copied=True):
         # Gets all current sampled and input derived parameters as a dictionary,
         # including dropped parameters.

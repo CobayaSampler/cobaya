@@ -451,6 +451,13 @@ class Collection(BaseCollection):
         logging.disable(logging.NOTSET)
         return mcsamples
 
+    def reweight(self, importance_weights):
+        self._cache_dump()
+        self._data[_weight] *= importance_weights
+        self._data = (
+            self.data[self._data.weight > 0].reset_index(drop=True))
+        self._n = self._data.last_valid_index() + 1
+
     # Saving and updating
     def _get_driver(self, method):
         return getattr(self, method + _separator + self.driver)
