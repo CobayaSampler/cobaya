@@ -665,7 +665,7 @@ class Model(HasLogger):
                 # and store here new (conditional) ones
                 requires[:] = []
                 # .get here accounts for the dummy components of manual reqs
-                for request in must_provide[component] or []:
+                for request in must_provide.get(component) or []:
                     conditional_requirements = \
                         _tidy_requirements(
                             component.must_provide(

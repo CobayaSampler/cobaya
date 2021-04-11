@@ -102,7 +102,6 @@ def run(info):
         # (waiting until the camb.transfers issue is solved)
         output.check_and_dump_info(None, updated_info, check_compatible=False)
         mpi.sync_processes()
-        output.clear_lock()
         if info.get(_test_run, False):
             logger_run.info("Test initialization successful! "
                             "You can probably run now without `--%s`.", _test_run)
@@ -110,6 +109,7 @@ def run(info):
         # Run the sampler
         sampler.run()
 
+    output.clear_lock()
     return updated_info, sampler
 
 
