@@ -30,7 +30,7 @@ from cobaya.tools import recursive_update, str_to_list, get_base_classes, \
 from cobaya.yaml import yaml_load_file, yaml_dump
 from cobaya.log import LoggedError
 from cobaya.parameterization import expand_info_param
-from cobaya.mpi import share_mpi, is_main_process
+from cobaya import mpi
 
 # Logger
 log = logging.getLogger(__name__.split(".")[-1])
@@ -61,9 +61,18 @@ def load_input(input_file):
     return info
 
 
-# MPI wrapper for loading the input info
 def load_input_MPI(input_file):
-    return share_mpi(load_input(input_file) if is_main_process() else None)
+    if mpi.is_main_process():
+        try:
+            return mpi.share_mpi(load_input(input_file))
+        except IOError as e:
+            mpi.share_mpi(e)
+            raise
+    else:
+        result = mpi.share_mpi()
+        if isinstance(result, IOError):
+            raise result
+        return result
 
 
 def get_used_components(*infos, return_infos=False):

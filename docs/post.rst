@@ -18,15 +18,17 @@ The `post` component provides a way to post-process an existing sample in differ
 
 The requested operations are detailed in a ``post`` block, which may contain one ``add`` and one ``remove`` sub-block. Under ``add``, *using standard input syntax*, specify what you want to add during preprocessing, and under ``remove`` what you would like to remove (no options necessary for removed stuff: just a mention). To force an update of a prior/likelihood/derived-parameter, include it both under ``remove`` and ``add``, with the new options, if needed inside ``add``.
 
-The input sample is specified via the ``output`` option with the same value as the original sample. Cobaya will look for it and check that it is compatible with the requested operations. If multiple samples are found (e.g. from an MPI run), all of them are loaded and concatenated. The resulting sample will have a suffix ``.post.[your_suffix]``, where ``[your_suffix]`` is specified with the ``suffix`` option of ``post`` (you can also change the original prefix [path and base for file name] by setting ``output: [new prefix]`` inside ``post``.
+The input sample is specified via the ``output`` option with the same value as the original sample. Cobaya will look for it and check that it is compatible with the requested operations. If multiple samples are found (e.g. from an MPI run), all of them are loaded and each processed separately. The resulting samples will have a suffix ``.post.[your_suffix]``, where ``[your_suffix]`` is specified with the ``suffix`` option of ``post`` (you can also change the original prefix [path and base for file name] by setting ``output: [new prefix]`` inside ``post``.
+
+You can run file postprocessing with MPI (with number of processes up to the number of input sample files): it will split the samples up as evenly as possible between the processors for processing, producing the same out files as a non-MPI run.
 
 .. note::
 
    In a **scripted call**, text I/O works a bit differently:
 
-   - If there is no text input, but an input :class:`collection.Collection` object (see example below), specify it (or a list of them) as the second argument of :func:`post.post`. In that case, no output will be produced (unless forced by setting ``output: [new prefix]`` inside ``post``). Notice that in this case, the input info for ``post`` must include the updated info of the original sample (see example below).
+   - If there is no text input, but an input :class:`collection.Collection` object (see example below), specify it (or a list of them) as the second argument of :func:`post.post`. In that case, no output files will be produced (unless forced by setting ``output: [new prefix]`` inside ``post``). Notice that in this case, the input info for ``post`` must include the updated info of the original sample (see example below).
 
-   - If the input sample is a text file (more precisely an ``output`` prefix), text output will be produced with a suffix, as explained above. To suppress the text output, set ``output: None`` inside ``post``.
+   - If the input sample is a text file (more precisely an ``output`` prefix), text file output will be produced with a suffix, as explained above. To suppress the text output, set ``output: None`` inside ``post``.
 
 
 Example

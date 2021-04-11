@@ -21,7 +21,7 @@ from cobaya.model import Model
 from cobaya.sampler import get_sampler_name_and_class, check_sampler_info
 from cobaya.log import logger_setup, LoggedError
 from cobaya.yaml import yaml_dump
-from cobaya.input import update_info
+from cobaya.input import update_info, load_input_MPI
 from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic, \
     check_deprecated_modules_path
 from cobaya.post import post
@@ -159,10 +159,9 @@ def run_script(help_commands=None):
            for f in arguments.input_file):
         raise ValueError("'input' and 'updated' are reserved file names. "
                          "Please, use a different one.")
-    load_input = mpi.import_MPI(".input", "load_input")
     given_input = arguments.input_file[0]
     if any(given_input.lower().endswith(ext) for ext in _yaml_extensions):
-        info = load_input(given_input)
+        info = load_input_MPI(given_input)
         output_prefix_cmd = getattr(arguments, _output_prefix)[0]
         output_prefix_input = info.get(_output_prefix)
         info[_output_prefix] = output_prefix_cmd or output_prefix_input
@@ -170,7 +169,7 @@ def run_script(help_commands=None):
         # Passed an existing output_prefix? Try to find the corresponding *.updated.yaml
         updated_file = get_info_path(*split_prefix(given_input), kind="updated")
         try:
-            info = load_input(updated_file)
+            info = load_input_MPI(updated_file)
         except IOError:
             err_msg = "Not a valid input file, or non-existent run to resume."
             if help_commands:

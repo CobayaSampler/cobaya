@@ -7,8 +7,7 @@
 """
 
 import os
-# Local
-from cobaya.conventions import _cobaya_package
+import functools
 
 # Vars to keep track of MPI parameters
 _mpi = None if os.environ.get('COBAYA_NOMPI', False) else -1
@@ -20,7 +19,7 @@ _mpi_rank = -1
 def set_mpi_disabled(disabled=True):
     """
     Disable MPI, e.g. for use on cluster head nodes where mpi4py may be installed
-    but not MPI functions will work.
+    but no MPI functions will work.
     """
     global _mpi, _mpi_size, _mpi_rank, _mpi_comm
     if disabled:
@@ -106,15 +105,6 @@ def sync_processes():
         get_mpi_comm().barrier()
 
 
-def import_MPI(module, target):
-    """Import helper for MPI wrappers."""
-    from importlib import import_module
-    target_name = target
-    if get_mpi_rank() is not None:
-        target_name = target + "_MPI"
-    return getattr(import_module(module, package=_cobaya_package), target_name)
-
-
 def share_mpi(data=None, root=0):
     comm = get_mpi_comm()
     if comm and more_than_one_process():
@@ -145,3 +135,51 @@ def allgather(data) -> list:
         return comm.allgather(data)
     else:
         return [data]
+
+
+def abort_if_mpi():
+    """Closes all MPI process, if more than one present."""
+    if get_mpi_size() > 1:
+        get_mpi_comm().Abort(1)
+
+
+# decorators to generalize functions/methods for mpi sharing
+
+def root_only(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if is_main_process():
+            return func(*args, **kwargs)
+
+    return wrapper
+
+
+def from_root(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return share_mpi(func(*args, **kwargs)
+                         if is_main_process() else None)
+
+    return wrapper
+
+
+def set_from_root(attributes):
+    atts = [attributes] if isinstance(attributes, str) else attributes
+
+    def set_method(method):
+
+        @functools.wraps(method)
+        def wrapper(self, *args, **kwargs):
+            if is_main_process():
+                result = method(self, *args, **kwargs)
+                share_mpi([result] + [getattr(self, var, None) for var in atts])
+            else:
+                values = share_mpi()
+                for name, var in zip(atts, values[1:]):
+                    setattr(self, name, var)
+                result = values[0]
+            return result
+
+        return wrapper
+
+    return set_method

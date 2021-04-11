@@ -98,9 +98,6 @@ def prettyprint_bib(descs, bibs):
 
 # Command-line script
 def bib_script():
-    from cobaya.mpi import is_main_process
-    if not is_main_process():
-        return
     warn_deprecation()
     # Parse arguments and launch
     import argparse
@@ -116,11 +113,13 @@ def bib_script():
                         help=("If component name given, "
                               "kind of component whose bib is requested: " +
                               ", ".join(['%s' % kind for kind in kinds]) + ". " +
-                              "Use only when component name is not unique (it would fail)."))
+                              "Use only when component name is not unique "
+                              "(it would fail)."))
     arguments = parser.parse_args()
     # Case of files
     are_yaml = [
-        (os.path.splitext(f)[1] in _yaml_extensions) for f in arguments.components_or_files]
+        (os.path.splitext(f)[1] in _yaml_extensions) for f in
+        arguments.components_or_files]
     if all(are_yaml):
         infos = [load_input(f) for f in arguments.components_or_files]
         print(prettyprint_bib(*get_bib_info(*infos)))

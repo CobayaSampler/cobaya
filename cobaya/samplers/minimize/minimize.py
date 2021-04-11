@@ -92,12 +92,12 @@ from copy import deepcopy
 # Local
 from cobaya.sampler import Minimizer
 from cobaya.conventions import _undo_chi2_name
-from cobaya.mpi import get_mpi_size, get_mpi_comm, is_main_process, get_mpi_rank, \
-    more_than_one_process, share_mpi
+from cobaya.mpi import get_mpi_comm, is_main_process, more_than_one_process, share_mpi
 from cobaya.collection import OnePoint, Collection
 from cobaya.log import LoggedError
 from cobaya.tools import read_dnumber, recursive_update
 from cobaya.sampler import CovmatSampler
+from cobaya import mpi
 
 # Handling scpiy vs BOBYQA
 evals_attr = {"scipy": "fun", "bobyqa": "f"}
@@ -134,9 +134,9 @@ class minimize(Minimizer, CovmatSampler):
             collection_in = None
             if files:
                 if more_than_one_process():
-                    if 1 + get_mpi_rank() <= len(files):
+                    if 1 + mpi.rank() <= len(files):
                         collection_in = Collection(
-                            self.model, self.output, name=str(1 + get_mpi_rank()),
+                            self.model, self.output, name=str(1 + mpi.rank()),
                             resuming=True)
                 else:
                     collection_in = self.output.load_collections(self.model,
@@ -185,8 +185,7 @@ class minimize(Minimizer, CovmatSampler):
                 "objfun": (lambda x: -self.logp_transf(x)),
                 "x0": initial_point,
                 "bounds": np.array(list(zip(*bounds))),
-                "seek_global_minimum": (
-                    True if get_mpi_size() in [0, 1] else False),
+                "seek_global_minimum": (True if mpi.size() else False),
                 "maxfun": int(self.max_evals),
                 "do_logging": (self.log.getEffectiveLevel() == logging.DEBUG)}
             self.kwargs = recursive_update(
@@ -323,8 +322,10 @@ class minimize(Minimizer, CovmatSampler):
             self.dump_getdist()
         # Share results ('result' object may not be picklable)
         self.minimum = share_mpi(getattr(self, "minimum", None))
-        self._inv_affine_transform_matrix = share_mpi(getattr(self, "_inv_affine_transform_matrix"))
-        self._affine_transform_baseline = share_mpi(getattr(self, "_affine_transform_baseline"))
+        self._inv_affine_transform_matrix = share_mpi(
+            getattr(self, "_inv_affine_transform_matrix"))
+        self._affine_transform_baseline = share_mpi(
+            getattr(self, "_affine_transform_baseline"))
         try:
             self.result = share_mpi(getattr(self, "result"))
         except:

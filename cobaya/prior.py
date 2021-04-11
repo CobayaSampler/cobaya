@@ -446,18 +446,8 @@ class Prior(HasLogger):
             self.external[name] = ExternalPrior(logp=logp, params=params)
             self.mpi_warning("External prior '%s' loaded. "
                              "Mind that it might not be normalized!", name)
-        # From here on, some error control.
-        if parameterization._dropped_not_directly_used:
-            # only raise error after checking not used by prior
-            if parameterization._dropped_not_directly_used.difference(
-                    self.external_dependence):
-                raise LoggedError(
-                    self.log,
-                    "Parameters %r are sampled but not passed to a likelihood or theory "
-                    "code, and never used as arguments for any prior or parameter "
-                    "functions. Check that you are not using "
-                    "the '%s' tag unintentionally.",
-                    list(parameterization._dropped_not_directly_used), partag.drop)
+
+        parameterization.check_dropped(self.external_dependence)
 
     def d(self):
         """
@@ -490,9 +480,9 @@ class Prior(HasLogger):
         """
         if confidence_for_unbounded >= 1:
             return self._bounds
+        bounds = self._bounds.copy()
+        infs = list(set(np.argwhere(np.isinf(bounds)).T[0]))
         try:
-            bounds = self._bounds.copy()
-            infs = list(set(np.argwhere(np.isinf(bounds)).T[0]))
             if infs:
                 self.mpi_warning("There are unbounded parameters (%r). Prior bounds "
                                  "are given at %s confidence level. Beware of "

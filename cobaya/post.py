@@ -9,7 +9,6 @@
 # Global
 import os
 import logging
-from copy import deepcopy
 from itertools import chain
 import numpy as np
 
@@ -82,9 +81,9 @@ def post(info, sample=None):
         files = output_in.find_collections()
         if files:
             if mpi.size() > len(files):
-                raise LoggedError(log, "Number of MPI processes %s is larger than "
-                                       "the number of sample files %s",
-                                  mpi.get_mpi_size(), len(files))
+                raise LoggedError(log, "Number of MPI processes (%s) is larger than "
+                                       "the number of sample files (%s)",
+                                  mpi.size(), len(files))
             for num in range(mpi.rank(), len(files), mpi.size()):
                 in_collections += [Collection(dummy_model_in, output_in,
                                               onload_thin=info_post.get("thin", 1),
@@ -456,12 +455,13 @@ def post(info, sample=None):
     results = mpi.gather([tot_weight, min_weight, max_weight, sum_w2, points])
     if mpi.is_main_process():
         tot_weight, min_weight, max_weight, sum_w2, points = zip(*results)
-        log.info("Finished! Final number of distinct sample points: %d", sum(points))
+        log.info("Finished! Final number of distinct sample points: %s", sum(points))
         log.info("Minimum scaled importance weight: %.4g", min(min_weight))
         log.info("Effective number of single samples if independent (sum w)/max(w): %s",
                  int(sum(tot_weight) / max(max_weight)))
         log.info(
             "Effective number of weighted samples if independent (sum w)^2/sum(w^2): "
-            "%s", int(sum(tot_weight) ** 2) / sum(sum_w2))
+            "%s", int(sum(tot_weight) ** 2 / sum(sum_w2)))
 
-        return info_out, {"sample": collection_out}
+        return info_out, {"sample": (out_collections[0] if
+                                     isinstance(sample, Collection) else out_collections)}

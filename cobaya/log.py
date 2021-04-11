@@ -15,8 +15,7 @@ import functools
 
 # Local
 from cobaya.conventions import _debug, _debug_file
-from cobaya.mpi import get_mpi_rank, get_mpi_size, get_mpi_comm, \
-    more_than_one_process, is_main_process
+from cobaya import mpi
 
 
 class LoggedError(Exception):
@@ -65,16 +64,10 @@ def abstract(method):
     return not_implemented
 
 
-def safe_exit():
-    """Closes all MPI process, if more than one present."""
-    if get_mpi_size() > 1:
-        get_mpi_comm().Abort(1)
-
-
 def exception_handler(exception_type, exception_instance, trace_back):
     # Do not print traceback if the exception has been handled and logged
     if exception_type == LoggedError:
-        safe_exit()
+        mpi.abort_if_mpi()
         return  # no traceback printed
     _logger_name = "exception handler"
     log = logging.getLogger(_logger_name)
@@ -95,7 +88,7 @@ def exception_handler(exception_type, exception_instance, trace_back):
             "which you can send it to a file setting '%s:[some_file_name]'.",
             _debug, _debug_file)
     # Exit all MPI processes
-    safe_exit()
+    mpi.abort_if_mpi()
 
 
 def logger_setup(debug=None, debug_file=None):
@@ -118,7 +111,8 @@ def logger_setup(debug=None, debug_file=None):
     class MyFormatter(logging.Formatter):
         def format(self, record):
             fmt = ((" %(asctime)s " if debug else "") +
-                   "[" + ("%d : " % get_mpi_rank() if more_than_one_process() else "") +
+                   "[" + ("%d : " % mpi.get_mpi_rank()
+                          if mpi.more_than_one_process() else "") +
                    "%(name)s" + "] " +
                    {logging.ERROR: "*ERROR* ",
                     logging.WARNING: "*WARNING* "}.get(record.levelno, "") +
@@ -175,10 +169,14 @@ class HasLogger:
         self.__dict__ = d
         self.set_logger()
 
+    @mpi.root_only
     def mpi_warning(self, msg, *args, **kwargs):
-        if is_main_process():
-            self.log.warning(msg, *args, **kwargs)
+        self.log.warning(msg, *args, **kwargs)
 
+    @mpi.root_only
     def mpi_info(self, msg, *args, **kwargs):
-        if is_main_process():
-            self.log.info(msg, *args, **kwargs)
+        self.log.info(msg, *args, **kwargs)
+
+    @mpi.root_only
+    def mpi_debug(self, msg, *args, **kwargs):
+        self.log.debug(msg, *args, **kwargs)

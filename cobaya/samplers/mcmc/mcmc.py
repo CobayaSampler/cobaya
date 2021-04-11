@@ -27,6 +27,7 @@ from cobaya.samplers.mcmc.proposal import BlockedProposer
 from cobaya.log import LoggedError
 from cobaya.tools import get_external_function, NumberWithUnits, load_DataFrame
 from cobaya.yaml import yaml_dump_file
+from cobaya import mpi
 
 _error_tag = 99
 
@@ -102,19 +103,18 @@ class mcmc(CovmatSampler):
         self.output_every = NumberWithUnits(self.output_every, "s", dtype=int)
         if is_main_process():
             if self.output.is_resuming() and (
-                    max(self.mpi_size or 0, 1) != max(get_mpi_size(), 1)):
+                    max(self.mpi_size or 0, 1) != mpi.size()):
                 raise LoggedError(
                     self.log,
                     "Cannot resume a run with a different number of chains: "
-                    "was %d and now is %d.", max(self.mpi_size or 0, 1),
-                    max(get_mpi_size(), 1))
+                    "was %d and now is %d.", max(self.mpi_size or 0, 1), mpi.size())
             if more_than_one_process():
                 if get_mpi().Get_version()[0] < 3:
                     raise LoggedError(self.log, "MPI use requires MPI version 3.0 or "
                                                 "higher to support IALLGATHER.")
         sync_processes()
         # One collection per MPI process: `name` is the MPI rank + 1
-        name = str(1 + (lambda r: r if r is not None else 0)(get_mpi_rank()))
+        name = str(1 + mpi.rank())
         self.collection = Collection(
             self.model, self.output, name=name, resuming=self.output.is_resuming())
         self.current_point = OneSamplePoint(self.model)
@@ -165,9 +165,8 @@ class mcmc(CovmatSampler):
                     and self.measure_speeds:
                 self.blocking = None
             if self.measure_speeds and self.blocking:
-                if is_main_process():
-                    self.log.warning(
-                        "Parameter blocking manually fixed: speeds will not be measured.")
+                self.mpi_warning(
+                    "Parameter blocking manually fixed: speeds will not be measured.")
             elif self.measure_speeds:
                 n = None if self.measure_speeds is True else int(self.measure_speeds)
                 self.model.measure_and_set_speeds(n=n, discard=0)
@@ -586,7 +585,7 @@ class mcmc(CovmatSampler):
             # If MPI, tell the rest that we are ready -- we use a "gather"
             # ("reduce" was problematic), but we are in practice just pinging
             if not hasattr(self, "req"):  # just once!
-                self.all_ready = np.empty(get_mpi_size())
+                self.all_ready = np.empty(mpi.size())
                 self.req = get_mpi_comm().Iallgather(
                     np.array([1.]), self.all_ready)
                 self.log.info(msg_ready + " (waiting for the rest...)")
@@ -789,13 +788,11 @@ class mcmc(CovmatSampler):
                     mean_of_covs = covs[0]
                 try:
                     self.proposer.set_covariance(mean_of_covs)
-                    if is_main_process():
-                        self.log.info(" - Updated covariance matrix of proposal pdf.")
-                        self.log.debug("%r", mean_of_covs)
+                    self.mpi_info(" - Updated covariance matrix of proposal pdf.")
+                    self.mpi_debug("%r", mean_of_covs)
                 except:
-                    if is_main_process():
-                        self.log.debug("Updating covariance matrix failed unexpectedly. "
-                                       "waiting until next covmat learning attempt.")
+                    self.mpi_debug("Updating covariance matrix failed unexpectedly. "
+                                   "waiting until next covmat learning attempt.")
         # Save checkpoint info
         self.write_checkpoint()
 

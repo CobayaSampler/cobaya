@@ -330,7 +330,7 @@ def check_gcc_version(min_version="6.4", error_returns=None):
 # Command-line script ####################################################################
 
 def install_script():
-    set_mpi_disabled(True)
+    set_mpi_disabled()
     warn_deprecation()
     # Parse arguments
     import argparse

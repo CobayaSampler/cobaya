@@ -23,9 +23,9 @@ from cobaya.conventions import _resume, _resume_default, _force, _yaml_extension
 from cobaya.conventions import _output_prefix, _debug, kinds, _params, _class_name
 from cobaya.log import LoggedError, HasLogger
 from cobaya.input import is_equal_info, get_resolved_class
-from cobaya.mpi import is_main_process, more_than_one_process, share_mpi
 from cobaya.collection import Collection
 from cobaya.tools import deepcopy_where_possible, find_with_regexp, sort_cosmetic
+from cobaya import mpi
 
 # Default output type and extension
 _kind = "txt"
@@ -67,6 +67,7 @@ def get_info_path(folder, prefix, infix=None, kind="updated"):
 class FileLock:
     def __init__(self):
         self.lock_error_file = None
+        self.lock_file = None
 
     def set_lock(self, log, filename):
         if self.has_lock():
@@ -79,6 +80,7 @@ class FileLock:
             pass
         self.log = log
         try:
+            h = None
             try:
                 import portalocker
                 h = open(self.lock_file, 'wb')
@@ -88,7 +90,8 @@ class FileLock:
                 # will work, but crashes will leave .lock files that will raise error
                 self._file_handle = open(self.lock_file, 'xb')
             except portalocker.exceptions.BaseLockException:
-                h.close()
+                if h:
+                    h.close()
                 self.lock_error()
         except OSError:
             self.lock_error()
@@ -120,12 +123,13 @@ class FileLock:
         if self.has_lock():
             self._file_handle.close()
             del self._file_handle
-            os.unlink(self.lock_file)
+            os.remove(self.lock_file)
             try:
                 os.remove(self.lock_error_file)
             except OSError:
                 pass
         self.lock_error_file = None
+        self.lock_file = None
 
     def has_lock(self):
         return hasattr(self, "_file_handle")
@@ -141,6 +145,8 @@ class Output(HasLogger):
     :class:`~collection.Collection` files, etc.
     """
 
+    @mpi.set_from_root(("force", "folder", "prefix", "kind", "ext",
+                        "_resuming", "prefix_regexp_str"))
     def __init__(self, prefix, resume=_resume_default, force=False, infix=None,
                  output_prefix=None):
         # MARKED FOR DEPRECATION IN v3.0
@@ -233,6 +239,7 @@ class Output(HasLogger):
         return os.path.join(self.folder,
                             self.prefix + self.separator_if_needed(separator) + suffix)
 
+    @mpi.root_only
     def create_folder(self, folder):
         """
         Creates the given folder (MPI-aware).
@@ -244,11 +251,14 @@ class Output(HasLogger):
             raise LoggedError(
                 self.log, "Could not create folder %r. Reason: %r", folder, str(e))
 
+    @mpi.root_only
     def delete_infos(self):
-        self.lock.check_error()
+        self.check_lock()
         for f in [self.file_input, self.file_updated]:
-            if os.path.exists(f):
+            try:
                 os.remove(f)
+            except OSError:
+                pass
 
     def updated_prefix(self):
         """
@@ -262,22 +272,32 @@ class Output(HasLogger):
     def is_resuming(self):
         return self._resuming
 
+    @mpi.set_from_root("_resuming")
     def set_resuming(self, value):
         self._resuming = value
 
     def reload_updated_info(self, cache=False, use_cache=False):
-        if use_cache and getattr(self, "_old_updated_info", None):
-            return self._old_updated_info
-        try:
-            loaded = yaml_load_file(self.file_updated)
-            if cache:
-                self._old_updated_info = loaded
-            return deepcopy_where_possible(loaded)
-        except IOError:
-            if cache:
-                self._old_updated_info = None
-            return None
+        if mpi.is_main_process():
+            if use_cache and getattr(self, "_old_updated_info", None):
+                return self._old_updated_info
+            try:
+                loaded = yaml_load_file(self.file_updated)
+                if cache:
+                    self._old_updated_info = loaded
+                return deepcopy_where_possible(loaded)
+            except IOError:
+                if cache:
+                    self._old_updated_info = None
+                return None
+        else:
+            # Only cached possible when non main process
+            if not use_cache:
+                raise LoggedError(self.log, "Cannot call `reload_updated_info` from "
+                                            "non-main process unless cached version "
+                                            "(`use_cache=True`) requested.")
+            return getattr(self, "_old_updated_info", None)
 
+    @mpi.set_from_root("_old_updated_info")
     def check_and_dump_info(self, input_info, updated_info, check_compatible=True,
                             cache_old=False, use_cache_old=False, ignore_blocks=()):
         """
@@ -289,7 +309,7 @@ class Output(HasLogger):
         consistent.
         """
         # trim known params of each likelihood: for internal use only
-        self.lock.check_error()
+        self.check_lock()
         updated_info_trimmed = deepcopy_where_possible(updated_info)
         updated_info_trimmed[_version] = __version__
         for like_info in updated_info_trimmed.get(kinds.likelihood, {}).values():
@@ -388,7 +408,7 @@ class Output(HasLogger):
         """
         Deletes a file or a folder. Fails silently.
         """
-        self.lock.check_error()
+        self.check_lock()
         try:
             os.remove(filename)
         except IsADirectoryError:
@@ -445,13 +465,13 @@ class Output(HasLogger):
                 getattr(self.collection_regexp(name=name, extension=extension)
                         .match(file_name), "group", lambda: None)())
 
+    @mpi.root_only
     def clear_lock(self):
-        if is_main_process():
-            self.lock.clear_lock()
+        self.lock.clear_lock()
 
+    @mpi.root_only
     def check_lock(self):
-        if is_main_process():
-            self.lock.check_error()
+        self.lock.check_error()
 
     def find_collections(self, name=None, extension=None):
         """
@@ -475,7 +495,7 @@ class Output(HasLogger):
         Use `name` for particular types of collections (default: any number).
         Pass `False` to mean there is nothing between the output prefix and the extension.
         """
-        self.lock.check_error()
+        self.check_lock()
         filenames = self.find_collections(name=name, extension=extension)
         collections = [
             Collection(model, self, name="%d" % (1 + i), file_name=filename,
@@ -516,51 +536,6 @@ class OutputDummy(Output):
         return False
 
 
-class Output_MPI(Output):
-    """
-    MPI wrapper around the Output class. Makes sure actual I/O operations are only done
-    once (except the opposite is explicitly requested).
-    """
-
-    def __init__(self, *args, **kwargs):
-        if is_main_process():
-            super().__init__(*args, **kwargs)
-        if more_than_one_process():
-            to_broadcast = ("force", "folder", "prefix", "kind", "ext",
-                            "_resuming", "prefix_regexp_str")
-            values = share_mpi([getattr(self, var) for var in to_broadcast]
-                               if is_main_process() else None)
-            for name, var in zip(to_broadcast, values):
-                setattr(self, name, var)
-
-    def check_and_dump_info(self, *args, **kwargs):
-        if is_main_process():
-            super().check_and_dump_info(*args, **kwargs)
-        # Share cached loaded info
-        self._old_updated_info = share_mpi(getattr(self, "_old_updated_info", None))
-
-    def reload_updated_info(self, *args, **kwargs):
-        if is_main_process():
-            return super().reload_updated_info(*args, **kwargs)
-        else:
-            # Only cached possible when non main process
-            if not kwargs.get("use_cache"):
-                raise ValueError(
-                    "Cannot call `reload_updated_info` from non-main process "
-                    "unless cached version (`use_cache=True`) requested.")
-            return getattr(self, "_old_updated_info", None)
-
-    def create_folder(self, *args, **kwargs):
-        if is_main_process():
-            super().create_folder(*args, **kwargs)
-
-    def set_resuming(self, *args, **kwargs):
-        if is_main_process():
-            super().set_resuming(*args, **kwargs)
-        if more_than_one_process():
-            self._resuming = share_mpi(self._resuming if is_main_process() else None)
-
-
 def get_output(*args, **kwargs):
     """
     Auxiliary function to retrieve the output driver
@@ -571,7 +546,6 @@ def get_output(*args, **kwargs):
         kwargs["prefix"] = kwargs["output_prefix"]
     # END OF DEPRECATION BLOCK
     if kwargs.get("prefix"):
-        from cobaya.mpi import import_MPI
-        return import_MPI(".output", "Output")(*args, **kwargs)
+        return Output(*args, **kwargs)
     else:
         return OutputDummy(*args, **kwargs)

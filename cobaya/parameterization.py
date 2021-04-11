@@ -368,6 +368,19 @@ class Parameterization(HasLogger):
             raise LoggedError
         return sampled_output
 
+    def check_dropped(self, external_dependence):
+        # some error control, given external_dependence from prior
+        if self._dropped_not_directly_used:
+            # only raise error after checking not used by prior
+            if self._dropped_not_directly_used.difference(external_dependence):
+                raise LoggedError(
+                    self.log,
+                    "Parameters %r are sampled but not passed to a likelihood or theory "
+                    "code, and never used as arguments for any prior or parameter "
+                    "functions. Check that you are not using "
+                    "the '%s' tag unintentionally.",
+                    list(self._dropped_not_directly_used), partag.drop)
+
     def labels(self):
         """
         Returns a dictionary of LaTeX labels of the sampled and derived parameters.

@@ -58,10 +58,10 @@ from cobaya.tools import get_class, deepcopy_where_possible, find_with_regexp
 from cobaya.tools import recursive_update
 from cobaya.log import LoggedError
 from cobaya.yaml import yaml_load_file, yaml_dump
-from cobaya.mpi import is_main_process, share_mpi, get_mpi_rank, more_than_one_process
 from cobaya.component import CobayaComponent
 from cobaya.input import update_info, is_equal_info, get_preferred_old_values
 from cobaya.output import OutputDummy
+from cobaya import mpi
 
 
 def get_sampler_name_and_class(info_sampler):
@@ -228,8 +228,7 @@ class Sampler(CobayaComponent):
                               "but got %r with type %r",
                     self.seed, type(self.seed))
             # MPI-awareness: sum the rank to the seed
-            if more_than_one_process():
-                self.seed += get_mpi_rank()
+            self.seed += mpi.rank()
             self.mpi_warning("This run has been SEEDED with seed %d", self.seed)
         # Load checkpoint info, if resuming
         if self.output.is_resuming() and not isinstance(self, Minimizer):
@@ -240,7 +239,7 @@ class Sampler(CobayaComponent):
                         setattr(self, k, v)
                     self.mpi_info("Resuming from previous sample!")
                 except KeyError:
-                    if is_main_process():
+                    if mpi.is_main_process():
                         raise LoggedError(
                             self.log, "Checkpoint file found at '%s' "
                                       "but it corresponds to a different sampler.",
@@ -346,8 +345,9 @@ class Sampler(CobayaComponent):
         return []
 
     @classmethod
+    @mpi.root_only
     def delete_output_files(cls, output, info=None):
-        if output and is_main_process():
+        if output:
             for (regexp, root) in cls.output_files_regexps(output, info=info):
                 # Special case: CovmatSampler's may have been given a covmat with the same
                 # name that the output one. In that case, don't delete it!
@@ -368,7 +368,7 @@ class Sampler(CobayaComponent):
         """
         if not output:
             return
-        if is_main_process():
+        if mpi.is_main_process():
             resuming = False
             if output.is_forcing():
                 cls.delete_output_files(output, info=info)
@@ -408,18 +408,14 @@ class CovmatSampler(Sampler):
     """
     covmat_params: Sequence[str]
 
+    @mpi.from_root
     def _load_covmat(self, prefer_load_old, auto_params=None):
         if prefer_load_old and os.path.exists(self.covmat_filename()):
-            if is_main_process():
-                covmat = np.atleast_2d(np.loadtxt(self.covmat_filename()))
-            else:
-                covmat = None
-            covmat = share_mpi(covmat)
+            covmat = np.atleast_2d(np.loadtxt(self.covmat_filename()))
             self.mpi_info("Covariance matrix from previous sample.")
             return covmat, []
         else:
-            return share_mpi(self.initial_proposal_covmat(auto_params=auto_params) if
-                             is_main_process() else None)
+            return self.initial_proposal_covmat(auto_params=auto_params)
 
     def initial_proposal_covmat(self, auto_params=None):
         """
