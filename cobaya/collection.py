@@ -62,8 +62,8 @@ class BaseCollection(HasLogger):
         self.set_logger(name)
         self.sampled_params = list(model.parameterization.sampled_params())
         self.derived_params = list(model.parameterization.derived_params())
-        self.minuslogprior_names = [
-            _minuslogprior + _separator + piname for piname in list(model.prior)]
+        self.minuslogprior_names = \
+            [_minuslogprior + _separator + piname for piname in list(model.prior)]
         self.chi2_names = [_get_chi2_name(likname) for likname in model.likelihood]
         columns = [_weight, _minuslogpost]
         columns += list(self.sampled_params)

@@ -449,6 +449,10 @@ class Output(HasLogger):
         if is_main_process():
             self.lock.clear_lock()
 
+    def check_lock(self):
+        if is_main_process():
+            self.lock.check_error()
+
     def find_collections(self, name=None, extension=None):
         """
         Returns all collection files found which are compatible with this `Output`

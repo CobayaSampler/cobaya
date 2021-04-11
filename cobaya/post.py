@@ -64,41 +64,32 @@ def post(info, sample=None):
             output_in.reload_updated_info() if mpi.is_main_process() else None)
         if info_in is None:
             info_in = deepcopy_where_possible(info)
+        output_in.check_lock()
     else:
         info_in = deepcopy_where_possible(info)
     dummy_model_in = DummyModel(info_in[_params], info_in.get(kinds.likelihood, {}),
                                 info_in.get(_prior, None))
-    chain_id = 1
+    in_collections = []
     if sample:
-        if not mpi.is_main_process():
-            log.warning("MPI not currently supported for postprocessing"
-                        "from sample, only using main process.")
-            return
+        if mpi.size() > 1:
+            raise LoggedError(log, "MPI not currently supported for postprocessing"
+                                   "from sample, only using main process.")
         if isinstance(sample, Collection):
-            sample = [sample]
-        collection_in = deepcopy(sample[0])
-        for s in sample[1:]:
-            try:
-                collection_in.append(s)
-            except:
-                raise LoggedError(log, "Failed to load some of the input samples.")
+            in_collections = [sample]
+        else:
+            in_collections = sample
     elif output_in:
         files = output_in.find_collections()
         if files:
-            skip = info_post.get("skip", 0)
-            thin = info_post.get("thin", 1)
-            if mpi.more_than_one_process():
-                if mpi.get_mpi_size() != len(files):
-                    raise LoggedError(log, "Number of MPI processes %s does not match "
-                                           "the number of sample files %s",
-                                      mpi.get_mpi_size(), len(files))
-
-                chain_id = 1 + mpi.get_mpi_rank()
-                collection_in = Collection(dummy_model_in, output_in, name=str(chain_id),
-                                           onload_thin=thin, onload_skip=skip, load=True)
-            else:
-                collection_in = output_in.load_collections(
-                    dummy_model_in, skip=skip, thin=thin, concatenate=True)
+            if mpi.size() > len(files):
+                raise LoggedError(log, "Number of MPI processes %s is larger than "
+                                       "the number of sample files %s",
+                                  mpi.get_mpi_size(), len(files))
+            for num in range(mpi.rank(), len(files), mpi.size()):
+                in_collections += [Collection(dummy_model_in, output_in,
+                                              onload_thin=info_post.get("thin", 1),
+                                              onload_skip=info_post.get("skip", 0),
+                                              load=True, name=str(num + 1))]
         else:
             raise LoggedError(log, "No samples found for the input model with prefix %s",
                               os.path.join(output_in.folder, output_in.prefix))
@@ -106,16 +97,17 @@ def post(info, sample=None):
     else:
         raise LoggedError(log, "No output from where to load from, "
                                "nor input collections given.")
-    log.info("Will process %d samples.", len(collection_in))
-    if len(collection_in) <= 1:
+    if any(len(c) <= 1 for c in in_collections):
         raise LoggedError(
             log, "Not enough samples for post-processing. Try using a larger sample, "
                  "or skipping or thinning less.")
+    log.info("Will process %d samples.", sum(len(c) for c in in_collections))
+
     # 2. Compare old and new info: determine what to do
-    add = info_post.get(_post_add, {}) or {}
+    add = info_post.get(_post_add) or {}
     if _post_remove in add:
         raise LoggedError(log, "remove block should be under 'post', not 'add'")
-    remove = info_post.get(_post_remove, {})
+    remove = info_post.get(_post_remove) or {}
     # Add a dummy 'one' likelihood, to absorb unused parameters
     if not add.get(kinds.likelihood):
         add[kinds.likelihood] = {}
@@ -213,7 +205,7 @@ def post(info, sample=None):
                     "than the original one, or displaced enough, "
                     "it is probably safer to explore it directly.")
 
-    info_theory_out = deepcopy_where_possible(info_in.get(kinds.theory, {}))
+    info_theory_out = deepcopy_where_possible(info_in.get(kinds.theory) or {})
     for theory in str_to_list(remove.get(kinds.theory)) or []:
         info_theory_out.pop(theory, None)
 
@@ -225,7 +217,7 @@ def post(info, sample=None):
 
     add_theory = add.get(kinds.theory)
     if add_theory:
-        if list(add[kinds.likelihood]) == ["one"] and not any(
+        if len(add[kinds.likelihood]) == 1 and not any(
                 is_derived_param(pinfo) for pinfo in add.get(_params, {}).values()):
             log.warning("You are adding a theory, but this does not force recomputation "
                         "of any likelihood or derived parameters unless explicitly "
@@ -302,9 +294,12 @@ def post(info, sample=None):
                       skip_unused_theories=True, dropped_theory_params=dropped_theory)
     # Remove auxiliary "one" before dumping -- 'add' *is* info_out[_post][_post_add]
     add[kinds.likelihood].pop("one")
-    collection_out = Collection(dummy_model_out, output_out, name=str(chain_id),
-                                cache_size=_default_post_cache_size)
+    out_collections = [Collection(dummy_model_out, output_out, name=c.name,
+                                  cache_size=_default_post_cache_size) for c in
+                       in_collections]
     output_out.check_and_dump_info(None, info_out, check_compatible=False)
+    collection_in = in_collections[0]
+    collection_out = out_collections[0]
 
     last_percent = None
     known_constants = dummy_model_out.parameterization.constant_params()
@@ -339,114 +334,130 @@ def post(info, sample=None):
         raise LoggedError(log, "Missing priors: %s", missing_priors)
 
     mpi.sync_processes()
+    output_in.check_lock()
 
     # 4. Main loop! Loop over input samples and adjust as required.
     if mpi.is_main_process():
         log.info("Running post-processing...")
-    for i, point in collection_in.data.iterrows():
-        all_params = point.to_dict()
-        for p in remove_params:
-            all_params.pop(p, None)
-        log.debug("Point: %r", point)
-        sampled = np.array([all_params[param] for param in
-                            dummy_model_in.parameterization.sampled_params()])
-        all_params = out_func_parameterization.to_input(all_params)
+    difflogmax = -np.inf
+    to_do = sum(len(c) for c in in_collections)
+    done = 0
+    for collection_in, collection_out in zip(in_collections, out_collections):
+        for i, point in collection_in.data.iterrows():
+            all_params = point.to_dict()
+            for p in remove_params:
+                all_params.pop(p, None)
+            log.debug("Point: %r", point)
+            sampled = np.array([all_params[param] for param in
+                                dummy_model_in.parameterization.sampled_params()])
+            all_params = out_func_parameterization.to_input(all_params)
 
-        # Add/remove priors
-        if prior_recompute_1d:
-            priors_add = [model_add.prior.logps_internal(sampled)]
-            if priors_add[0] == -np.inf:
+            # Add/remove priors
+            if prior_recompute_1d:
+                priors_add = [model_add.prior.logps_internal(sampled)]
+                if priors_add[0] == -np.inf:
+                    continue
+            else:
+                priors_add = []
+            if model_add.prior.external:
+                priors_add.extend(model_add.prior.logps_external(all_params))
+
+            logpriors_add = dict(zip(mlprior_names_add, priors_add))
+            logpriors_new = [logpriors_add.get(name, - point.get(name, 0))
+                             for name in collection_out.minuslogprior_names]
+            if prior_regenerate:
+                regenerated = dict(
+                    zip(regenerated_prior_names,
+                        prior_regenerate.logps_external(all_params)))
+                for _i, name in enumerate(collection_out.minuslogprior_names):
+                    if name in regenerated_prior_names:
+                        logpriors_new[_i] = regenerated[name]
+
+            if log.getEffectiveLevel() <= logging.DEBUG:
+                log.debug(
+                    "New set of priors: %r",
+                    dict(zip(dummy_model_out.prior, logpriors_new)))
+            if -np.inf in logpriors_new:
                 continue
-        else:
-            priors_add = []
-        if model_add.prior.external:
-            priors_add.extend(model_add.prior.logps_external(all_params))
+            # Add/remove likelihoods
+            loglikes_add, output_derived = model_add.logps(all_params)
+            loglikes_add = dict(zip(chi2_names_add, loglikes_add))
+            output_derived = dict(zip(model_add.output_params, output_derived))
+            loglikes_new = [loglikes_add.get(name, -0.5 * point.get(name, 0))
+                            for name in collection_out.chi2_names]
+            if log.getEffectiveLevel() <= logging.DEBUG:
+                log.debug(
+                    "New set of likelihoods: %r",
+                    dict(zip(dummy_model_out.likelihood, loglikes_new)))
+                if output_derived:
+                    log.debug("New set of derived parameters: %r", output_derived)
+            if -np.inf in loglikes_new:
+                continue
+            all_params.update(output_derived)
 
-        logpriors_add = dict(zip(mlprior_names_add, priors_add))
-        logpriors_new = [logpriors_add.get(name, - point.get(name, 0))
-                         for name in collection_out.minuslogprior_names]
-        if prior_regenerate:
-            regenerated = dict(
-                zip(regenerated_prior_names, prior_regenerate.logps_external(all_params)))
-            for _i, name in enumerate(collection_out.minuslogprior_names):
-                if name in regenerated_prior_names:
-                    logpriors_new[_i] = regenerated[name]
+            out_func_parameterization.to_derived(all_params)
+            all_params.update(out_func_parameterization.derived_params())
+            derived = {param: all_params.get(param)
+                       for param in dummy_model_out.parameterization.derived_params()}
+            # We need to recompute the aggregated chi2 by hand
+            for type_, likes in inv_types.items():
+                derived[_get_chi2_name(type_)] = sum(
+                    -2 * lvalue for lname, lvalue
+                    in zip(collection_out.chi2_names, loglikes_new)
+                    if _undo_chi2_name(lname) in likes)
+            if log.getEffectiveLevel() <= logging.DEBUG:
+                log.debug("New derived parameters: %r",
+                          {p: derived[p]
+                           for p in dummy_model_out.parameterization.derived_params()
+                           if p in add[_params]})
+            # Save to the collection (keep old weight for now)
+            collection_out.add(
+                sampled, derived=derived.values(), weight=point.get(_weight),
+                logpriors=logpriors_new, loglikes=loglikes_new)
+            # Display progress
+            percent = int(np.round((i + done) / to_do * 100))
+            if percent != last_percent and not percent % 5:
+                last_percent = percent
+                progress_bar(log, percent, " (%d/%d)" % (i + done, to_do))
+        if not collection_out.data.last_valid_index():
+            raise LoggedError(
+                log, "No elements in the final sample. Possible causes: "
+                     "added a prior or likelihood valued zero over the full sampled domain, "
+                     "or the computation of the theory failed everywhere, etc.")
 
-        if log.getEffectiveLevel() <= logging.DEBUG:
-            log.debug(
-                "New set of priors: %r", dict(zip(dummy_model_out.prior, logpriors_new)))
-        if -np.inf in logpriors_new:
-            continue
-        # Add/remove likelihoods
-        loglikes_add, output_derived = model_add.logps(all_params)
-        loglikes_add = dict(zip(chi2_names_add, loglikes_add))
-        output_derived = dict(zip(model_add.output_params, output_derived))
-        loglikes_new = [loglikes_add.get(name, -0.5 * point.get(name, 0))
-                        for name in collection_out.chi2_names]
-        if log.getEffectiveLevel() <= logging.DEBUG:
-            log.debug(
-                "New set of likelihoods: %r",
-                dict(zip(dummy_model_out.likelihood, loglikes_new)))
-            if output_derived:
-                log.debug("New set of derived parameters: %r", output_derived)
-        if -np.inf in loglikes_new:
-            continue
-        all_params.update(output_derived)
+        difflogmax = max(difflogmax, max(collection_in[_minuslogpost]
+                                         - collection_out[_minuslogpost]))
+        done += len(collection_in)
 
-        out_func_parameterization.to_derived(all_params)
-        all_params.update(out_func_parameterization.derived_params())
-        derived = {param: all_params.get(param)
-                   for param in dummy_model_out.parameterization.derived_params()}
-        # We need to recompute the aggregated chi2 by hand
-        for type_, likes in inv_types.items():
-            derived[_get_chi2_name(type_)] = sum(
-                -2 * lvalue for lname, lvalue
-                in zip(collection_out.chi2_names, loglikes_new)
-                if _undo_chi2_name(lname) in likes)
-        if log.getEffectiveLevel() <= logging.DEBUG:
-            log.debug("New derived parameters: %r",
-                      {p: derived[p]
-                       for p in dummy_model_out.parameterization.derived_params()
-                       if p in add[_params]})
-        # Save to the collection (keep old weight for now)
-        collection_out.add(
-            sampled, derived=derived.values(), weight=point.get(_weight),
-            logpriors=logpriors_new, loglikes=loglikes_new)
-        # Display progress
-        percent = int(np.round(i / len(collection_in) * 100))
-        if percent != last_percent and not percent % 5:
-            last_percent = percent
-            progress_bar(log, percent, " (%d/%d)" % (i, len(collection_in)))
-    if not collection_out.data.last_valid_index():
-        raise LoggedError(
-            log, "No elements in the final sample. Possible causes: "
-                 "added a prior or likelihood valued zero over the full sampled domain, "
-                 "or the computation of the theory failed everywhere, etc.")
+        # Reweight -- account for large dynamic range!
+        #   Prefer to rescale +inf to finite, and ignore final points with -inf.
+        #   Remove -inf's (0-weight), and correct indices
 
-    # Reweight -- account for large dynamic range!
-    #   Prefer to rescale +inf to finite, and ignore final points with -inf.
-    #   Remove -inf's (0-weight), and correct indices
-    difflogmax = max(collection_in[_minuslogpost] - collection_out[_minuslogpost])
     difflogmax = max(mpi.allgather(difflogmax))
     output_in.clear_lock()
 
-    importance_weights = np.exp(
-        collection_in[_minuslogpost] - collection_out[_minuslogpost] - difflogmax)
-    collection_out.reweight(importance_weights)
-    # Write!
-    collection_out.out_update()
-    output_weights = collection_out[_weight]
-
-    points = len(collection_out)
-    tot_weight = np.sum(output_weights)
-    min_weight = np.min(importance_weights)
-    max_weight = np.max(output_weights)
-    sum_w2 = np.dot(output_weights, output_weights)
+    points = 0
+    tot_weight = 0
+    min_weight = np.inf
+    max_weight = -np.inf
+    sum_w2 = 0
+    for collection_in, collection_out in zip(in_collections, out_collections):
+        importance_weights = np.exp(
+            collection_in[_minuslogpost] - collection_out[_minuslogpost] - difflogmax)
+        collection_out.reweight(importance_weights)
+        # Write!
+        collection_out.out_update()
+        output_weights = collection_out[_weight]
+        points += len(collection_out)
+        tot_weight += np.sum(output_weights)
+        min_weight = min(min_weight, np.min(importance_weights))
+        max_weight = max(max_weight, np.max(output_weights))
+        sum_w2 += np.dot(output_weights, output_weights)
     results = mpi.gather([tot_weight, min_weight, max_weight, sum_w2, points])
     if mpi.is_main_process():
         tot_weight, min_weight, max_weight, sum_w2, points = zip(*results)
         log.info("Finished! Final number of distinct sample points: %d", sum(points))
-        log.info("Minimum importance weight: %.3g", min(min_weight))
+        log.info("Minimum scaled importance weight: %.4g", min(min_weight))
         log.info("Effective number of single samples if independent (sum w)/max(w): %s",
                  int(sum(tot_weight) / max(max_weight)))
         log.info(

@@ -123,7 +123,15 @@ def share_mpi(data=None, root=0):
         return data
 
 
-def gather(data, root=0):
+def size() -> int:
+    return get_mpi_size() or 1
+
+
+def rank() -> int:
+    return get_mpi_rank() or 0
+
+
+def gather(data, root=0) -> list:
     comm = get_mpi_comm()
     if comm and more_than_one_process():
         return comm.gather(data, root=root)
@@ -131,7 +139,7 @@ def gather(data, root=0):
         return [data]
 
 
-def allgather(data):
+def allgather(data) -> list:
     comm = get_mpi_comm()
     if comm and more_than_one_process():
         return comm.allgather(data)
