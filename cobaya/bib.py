@@ -109,7 +109,7 @@ def bib_script():
                         help="Component(s) or input file(s) whose bib info is requested.")
     kind_opt, kind_opt_ishort = "kind", 0
     parser.add_argument("-" + kind_opt[kind_opt_ishort], "--" + kind_opt, action="store",
-                        nargs=1, default=None, metavar="component_kind",
+                        default=None, metavar="component_kind",
                         help=("If component name given, "
                               "kind of component whose bib is requested: " +
                               ", ".join(['%s' % kind for kind in kinds]) + ". " +
@@ -125,7 +125,7 @@ def bib_script():
         print(prettyprint_bib(*get_bib_info(*infos)))
     elif not any(are_yaml):
         if arguments.kind:
-            arguments.kind = arguments.kind[0].lower()
+            arguments.kind = arguments.kind.lower()
         for component in arguments.components_or_files:
             try:
                 print(create_banner(

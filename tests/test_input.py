@@ -51,7 +51,7 @@ def test_prior_inherit_samegiven_differentdefinition():
     name, prior = deepcopy(default_info[_prior]).popitem()
     test_info[_prior] = {name: "this is not a prior"}
     with pytest.raises(LoggedError):
-        updated_info, products = run(test_info)
+        run(test_info)
 
 
 def test_inherit_label_and_bounds():
