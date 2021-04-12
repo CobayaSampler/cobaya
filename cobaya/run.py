@@ -83,6 +83,10 @@ def run(info):
     # Check if resumable run
     sampler_class.check_force_resume(
         output, info=updated_info[kinds.sampler][sampler_name])
+    try:
+        updated_info[kinds.likelihood]
+    except KeyError as e:
+        raise LoggedError(logger_run, f"No {e} requested")
     # 4. Initialize the posterior and the sampler
     with Model(updated_info[_params], updated_info[kinds.likelihood],
                updated_info.get(_prior), updated_info.get(kinds.theory),
