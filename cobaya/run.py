@@ -202,9 +202,6 @@ def run_script(help_commands=None):
                              "not actually work")
     arguments = parser.parse_args()
 
-    if arguments.no_mpi or getattr(arguments, _test_run, False):
-        mpi.set_mpi_disabled()
-
     # MARKED FOR DEPRECATION IN v3.0
     if arguments.modules is not None:
         logger_setup()
@@ -227,8 +224,7 @@ def run_script(help_commands=None):
 def load_input_file(input_file, no_mpi=False, help_commands: [str, None] = None):
     if no_mpi:
         mpi.set_mpi_disabled()
-    if any((os.path.splitext(f)[0] in ("input", "updated"))
-           for f in input_file):
+    if any((os.path.splitext(f)[0] in ("input", "updated")) for f in input_file):
         raise ValueError("'input' and 'updated' are reserved file names. "
                          "Please, use a different one.")
     if any(input_file.lower().endswith(ext) for ext in _yaml_extensions):
