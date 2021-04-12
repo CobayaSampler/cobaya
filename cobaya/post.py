@@ -59,8 +59,7 @@ def post(info, sample=None):
     # 1. Load existing sample
     output_in = get_output(prefix=info.get(_output_prefix))
     if output_in:
-        info_in = mpi.share_mpi(
-            output_in.reload_updated_info() if mpi.is_main_process() else None)
+        info_in = output_in.load_updated_info()
         if info_in is None:
             info_in = deepcopy_where_possible(info)
         output_in.check_lock()
@@ -421,8 +420,8 @@ def post(info, sample=None):
         if not collection_out.data.last_valid_index():
             raise LoggedError(
                 log, "No elements in the final sample. Possible causes: "
-                     "added a prior or likelihood valued zero over the full sampled domain, "
-                     "or the computation of the theory failed everywhere, etc.")
+                     "added a prior or likelihood valued zero over the full sampled "
+                     "domain, or the computation of the theory failed everywhere, etc.")
 
         difflogmax = max(difflogmax, max(collection_in[_minuslogpost]
                                          - collection_out[_minuslogpost]))
@@ -464,4 +463,4 @@ def post(info, sample=None):
             "%s", int(sum(tot_weight) ** 2 / sum(sum_w2)))
 
         return info_out, {"sample": (out_collections[0] if
-                                     isinstance(sample, Collection) else out_collections)}
+                                     len(out_collections) == 1 else out_collections)}

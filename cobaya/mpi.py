@@ -34,6 +34,10 @@ def set_mpi_disabled(disabled=True):
         _mpi_rank = -1
 
 
+def is_disabled():
+    return _mpi is None
+
+
 # noinspection PyUnresolvedReferences
 def get_mpi():
     """

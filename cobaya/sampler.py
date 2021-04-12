@@ -370,7 +370,7 @@ class Sampler(CobayaComponent):
             return
         if mpi.is_main_process():
             resuming = False
-            if output.is_forcing():
+            if output.force:
                 cls.delete_output_files(output, info=info)
             elif any(find_with_regexp(regexp, root or output.folder) for (regexp, root)
                      in cls.output_files_regexps(output=output, info=info, minimal=True)):

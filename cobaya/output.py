@@ -13,6 +13,7 @@ import datetime
 import re
 import shutil
 import platform
+import logging
 from packaging import version
 
 # Local
@@ -65,9 +66,11 @@ def get_info_path(folder, prefix, infix=None, kind="updated"):
 
 
 class FileLock:
-    def __init__(self):
+    def __init__(self, filename=None, log=None):
         self.lock_error_file = None
         self.lock_file = None
+        if filename:
+            self.set_lock(log, filename)
 
     def set_lock(self, log, filename):
         if self.has_lock():
@@ -78,21 +81,23 @@ class FileLock:
             os.remove(self.lock_error_file)
         except OSError:
             pass
-        self.log = log
+        self.log = log or logging.getLogger("file_lock")
         try:
             h = None
             try:
                 import portalocker
-                h = open(self.lock_file, 'wb')
-                portalocker.lock(h, portalocker.LOCK_EX + portalocker.LOCK_NB)
-                self._file_handle = h
             except ModuleNotFoundError:
                 # will work, but crashes will leave .lock files that will raise error
                 self._file_handle = open(self.lock_file, 'xb')
-            except portalocker.exceptions.BaseLockException:
-                if h:
-                    h.close()
-                self.lock_error()
+            else:
+                try:
+                    h = open(self.lock_file, 'wb')
+                    portalocker.lock(h, portalocker.LOCK_EX + portalocker.LOCK_NB)
+                    self._file_handle = h
+                except portalocker.exceptions.BaseLockException:
+                    if h:
+                        h.close()
+                    self.lock_error()
         except OSError:
             self.lock_error()
 
@@ -105,15 +110,21 @@ class FileLock:
                     pass
             except OSError:
                 pass
+        if mpi.get_mpi():
+            import mpi4py
+        else:
+            mpi4py = None
         raise LoggedError(self.log,
                           "File %s is locked.\nYou may be running multiple jobs with "
                           "the same output when you intended to run with MPI. "
                           "Check that mpi4py is correctly installed and "
-                          "configured (using the same mpi as mpirun/mpiexec);\n"
-                          "e.g. try the test at "
+                          "configured (using the same mpi as mpirun/mpiexec);"
+                          "e.g. try the test at\n"
                           "https://cobaya.readthedocs.io/en/latest/installation."
-                          "html#mpi-parallelization-optional-but-encouraged",
-                          self.lock_file)
+                          "html#mpi-parallelization-optional-but-encouraged\n"
+                          + ("Your current mpi4py config is:"
+                             "\n %s" % mpi4py.get_config()
+                             if mpi4py is not None else ""), self.lock_file)
 
     def check_error(self):
         if self.lock_error_file and os.path.exists(self.lock_error_file):
@@ -146,9 +157,11 @@ class Output(HasLogger):
     """
 
     @mpi.set_from_root(("force", "folder", "prefix", "kind", "ext",
-                        "_resuming", "prefix_regexp_str"))
+                        "_resuming", "prefix_regexp_str", "log"))
     def __init__(self, prefix, resume=_resume_default, force=False, infix=None,
                  output_prefix=None):
+        self.name = "output"
+        self.set_logger(self.name)
         # MARKED FOR DEPRECATION IN v3.0
         # -- also remove output_prefix kwarg above
         if output_prefix is not None:
@@ -157,8 +170,6 @@ class Output(HasLogger):
             # BEHAVIOUR TO BE REPLACED BY ERROR:
             prefix = output_prefix
         # END OF DEPRECATION BLOCK
-        self.name = "output"  # so that the MPI-wrapped class conserves the name
-        self.set_logger(self.name)
         self.lock = FileLock()
         self.folder, self.prefix = split_prefix(prefix)
         self.prefix_regexp_str = re.escape(self.prefix) + (
@@ -266,15 +277,16 @@ class Output(HasLogger):
         """
         return self.prefix or "."
 
-    def is_forcing(self):
-        return self.force
-
     def is_resuming(self):
         return self._resuming
 
     @mpi.set_from_root("_resuming")
     def set_resuming(self, value):
         self._resuming = value
+
+    @mpi.from_root
+    def load_updated_info(self, cache=False, use_cache=False):
+        return self.reload_updated_info(cache=cache, use_cache=use_cache)
 
     def reload_updated_info(self, cache=False, use_cache=False):
         if mpi.is_main_process():

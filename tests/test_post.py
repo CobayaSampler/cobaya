@@ -19,8 +19,10 @@ sigma = 0.5
 cov = np.array([[sigma ** 2, 0], [0, sigma ** 2]])
 sampled = {"mean": mean, "cov": cov}
 target = {"mean": mean + np.array([sigma / 2, 0]), "cov": cov}
-sampled_pdf = lambda a, b: multivariate_normal.logpdf(
-    [a, b], mean=sampled["mean"], cov=sampled["cov"])
+
+
+def sampled_pdf(a, b):
+    return multivariate_normal.logpdf([a, b], mean=sampled["mean"], cov=sampled["cov"])
 
 
 def target_pdf(a, b, c=0):
@@ -30,7 +32,6 @@ def target_pdf(a, b, c=0):
 
 
 target_pdf_prior = lambda a, b, c=0: target_pdf(a, b, c=0)[0]
-
 
 _range = {"min": -2, "max": 2}
 ref_pdf = {partag.dist: "norm", "loc": 0, "scale": 0.1}
@@ -85,7 +86,7 @@ def test_post_likelihood(tmpdir):
             "gaussian": {"external": sampled_pdf, "type": "AA"},
             "dummy": {"external": lambda dummy: 1, "type": "BB"},
             "dummy_remove": {"external": lambda dummy: dummy_loglike_add, "type": "BB"}}}
-    info_run_out, sampler_run = run(info)
+    run(info)
     info_post = {
         _output_prefix: info[_output_prefix], _force: True,
         _post: {_post_suffix: "foo",
@@ -93,7 +94,8 @@ def test_post_likelihood(tmpdir):
                     "gaussian": None, "dummy_remove": None}},
                 _post_add: {kinds.likelihood: {
                     "target": {
-                        "external": target_pdf, "type": "AA", "output_params": ["cprime"]},
+                        "external": target_pdf, "type": "AA",
+                        "output_params": ["cprime"]},
                     "dummy_add": {
                         "external": lambda dummy: dummy_loglike_remove, "type": "BB"}}}}}
     info_post_out, products_post = post(info_post)
