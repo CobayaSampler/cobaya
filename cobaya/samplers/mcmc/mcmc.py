@@ -852,6 +852,11 @@ class mcmc(CovmatSampler):
                         header=False, index=False, formatters=fmts) + "\n")
             self.log.debug("Dumped checkpoint and progress info, and current covmat.")
 
+    def converge_info_changed(self, old_info, new_info):
+        converge_params = ['Rminus1_stop', "Rminus1_cl_stop", "Rminus1_cl_level",
+                           "max_samples"]
+        return any(old_info.get(p) != new_info.get(p) for p in converge_params)
+
     # Finally: returning the computed products ###########################################
 
     def products(self):
