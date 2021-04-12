@@ -377,7 +377,7 @@ def post(info, sample=None):
                     dict(zip(dummy_model_out.prior, logpriors_new)))
             if -np.inf in logpriors_new:
                 continue
-            # Add/remove likelihoods
+            # Add/remove likelihoods and/or (re-)calculate derived parameters
             loglikes_add, output_derived = model_add.logps(all_params)
             loglikes_add = dict(zip(chi2_names_add, loglikes_add))
             output_derived = dict(zip(model_add.output_params, output_derived))

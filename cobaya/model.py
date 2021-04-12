@@ -238,10 +238,9 @@ class Model(HasLogger):
         compute_success = True
         self.provider.set_current_input_params(input_params)
         self.log.debug("Got input parameters: %r", input_params)
-        n_theory = len(self.theory)
         loglikes = np.zeros(len(self.likelihood))
-        for (component, index), param_dep in zip(self._component_order.items(),
-                                                 self._params_of_dependencies):
+        for (component, like_index), param_dep in zip(self._component_order.items(),
+                                                      self._params_of_dependencies):
             depend_list = [input_params[p] for p in param_dep]
             params = {p: input_params[p] for p in component.input_params}
             compute_success = component.check_cache_and_compute(
@@ -257,7 +256,7 @@ class Model(HasLogger):
             # Add chi2's to derived parameters
             if is_LikelihoodInterface(component):
                 try:
-                    loglikes[index - n_theory] = float(component.current_logp)
+                    loglikes[like_index] = float(component.current_logp)
                 except TypeError:
                     raise LoggedError(
                         self.log,
@@ -265,12 +264,12 @@ class Model(HasLogger):
                         "but %r instead.", component, component.current_logp)
                 if return_derived:
                     derived_dict[_get_chi2_name(component.get_name().replace(".", "_"))] \
-                        = -2 * loglikes[index - n_theory]
+                        = -2 * loglikes[like_index]
                     for this_type in getattr(component, "type", []) or []:
                         aggr_chi2_name = _get_chi2_name(this_type)
                         if aggr_chi2_name not in derived_dict:
                             derived_dict[aggr_chi2_name] = 0.
-                        derived_dict[aggr_chi2_name] += -2 * loglikes[index - n_theory]
+                        derived_dict[aggr_chi2_name] += -2 * loglikes[like_index]
         if make_finite:
             loglikes = np.nan_to_num(loglikes)
         if return_derived:
@@ -528,13 +527,13 @@ class Model(HasLogger):
                 raise LoggedError(self.log, "Circular dependency, cannot calculate "
                                             "%r" % comps)
             _last = len(dependence_order)
-
-        self._component_order = {c: components.index(c) for c in dependence_order}
+        likes = list(self.likelihood.values())
+        self._component_order = {c: likes.index(c) if c in likes else None
+                                 for c in dependence_order}
 
     def _set_dependencies_and_providers(self, manual_requirements=empty_dict,
                                         skip_unused_theories=False):
-        # TODO: does it matter that theories come first, or can we use self.components?
-        components = list(self.theory.values()) + list(self.likelihood.values())
+        components = self.components
         direct_param_dependence = {c: set() for c in components}
 
         def _tidy_requirements(_require, _component=None):
@@ -554,7 +553,7 @@ class Model(HasLogger):
                     _require.pop(par, None)
             return [Requirement(p, v) for p, v in _require.items()]
 
-        ### 1. Get the requirements and providers ###
+        # ## 1. Get the requirements and providers ##
         requirements = {}  # requirements of each component
         providers = {}  # providers of each *available* requirement (requested or not)
         for component in components:
@@ -599,7 +598,7 @@ class Model(HasLogger):
             for dummy in self._manual_requirements:
                 requirements[dummy] = deepcopy(self._manual_requirements[dummy])
 
-        ### 2. Assign each requirement to a provider ###
+        # ## 2. Assign each requirement to a provider ##
         # store requirements assigned to each provider:
         self._must_provide = {c: [] for c in components}
         # inverse of the one above, *minus conditional requirements* --
@@ -721,7 +720,7 @@ class Model(HasLogger):
                 deps.update(dependencies_of(c))
             return deps
 
-        ### 3. Save dependencies on components and their parameters ###
+        # ## 3. Save dependencies on components and their parameters ##
         self._dependencies = {c: dependencies_of(c) for c in components}
         # this next one is not a dict to save a lookup per iteration
         self._params_of_dependencies = [set() for _ in self._component_order]
@@ -751,7 +750,7 @@ class Model(HasLogger):
                             sampled_dependence[p].append(comp)
         self.sampled_dependence = sampled_dependence
 
-        ### 4. Initialize the provider and pass it to each component ###
+        # ## 4. Initialize the provider and pass it to each component ##
         if self.log.getEffectiveLevel() <= logging.DEBUG:
             if requirement_providers:
                 self.log.debug("Requirements will be calculated by these components:")
