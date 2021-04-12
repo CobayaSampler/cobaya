@@ -10,9 +10,9 @@
 from pprint import pformat
 
 # Local
-from cobaya.tools import warn_deprecation, get_available_internal_class_names
+from cobaya.tools import warn_deprecation, get_available_internal_class_names, get_kind
 from cobaya.conventions import subfolders, kinds
-from cobaya.input import get_default_info, get_kind
+from cobaya.input import get_default_info
 from cobaya.log import LoggedError
 
 _indent = 2 * " "
@@ -28,7 +28,7 @@ def doc_script():
     # Parse arguments
     import argparse
     parser = argparse.ArgumentParser(
-        description="Prints defaults for Cobaya's components.")
+        prog="cobaya doc", description="Prints defaults for Cobaya's components.")
     parser.add_argument("component", action="store", nargs="?", default="",
                         metavar="component_name",
                         help="The component whose defaults are requested.")

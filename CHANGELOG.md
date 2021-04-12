@@ -1,4 +1,101 @@
-## 3.0.1  – 2020-XX-XX
+## 3.0.5 – 2021-YY-ZZ
+
+### MCMC
+
+- Overhead reduced by at least 40%, thanks to caching in Collection
+
+### Minimize
+
+- `PyBOBYQA` updated to 1.2, and quieter by default.
+
+
+## 3.0.4 – 2021-03-10
+
+### General
+
+- Added current-state-related properties to Theory (`current_state` replacing `_current_state` attribute, and `current_derived` replacing `get_current_derived()` method) and LikelihoodInterface(`current_logp` replacing `get_current_logp`).
+- Reworked and simplified error propagation for `Theory` and `Likelihood`: clearer error messages and more predictable traceback printing.
+- `@abstract` decorator for base classes: better control of which methods of a parent class have been implemented/overridden (useful e.g. for Theory classes inheriting from a more general one but not implementing all possible quantities that the parent class defines).
+- For components with defaults, type annotations for class attributes now automatically recognised as possible input options (previously only class attributes definitions).
+- Shorter parameter specification now possible: `<param_name>: [<prior_min>,<prior_max>,<ref_loc>,<ref_scale>,<proposal_width>]`, assuming a uniform prior and a normal reference pdf.
+- Got up to date with changes in numpy 1.20.
+- bugfix: `model.add_requirements()` does not overwrite previous calls any more.
+
+### Cosmology:
+
+- Interfaced sigma8 for arbitrary redshift (PR #144; thanks @Pablo-Lemos)
+- Standardised naming conventions of base classes (CamelCasing, no leading underscores, simpler names). Added workarounds and deprecation notices for some of the old names.
+- Updated cosmology `Model` example in docs.
+- Added A. Lewis' CMB forecast data generator in `CMBlikes` definition file.
+- `Boltzmann`: added unlensed Cl's with CAMB and CLASS.
+- `CMBlikes`: small improvements, fixes, and docs.
+- `InstallableLikelihood` now works with no `install_options` defined (local data).
+- bugfix: bad handling of CMB polarisation capitalisation in `Boltzmann`.
+- bugfix: bad `if` condition when retrieving sigmaR from `camb` (thanks @gcanasherrera and @matmartinelli)
+- bugfix: unnecessary `camb` recomputations when setting some parameters as `extra_args`; fixes #142 (thanks @kimmywu)
+
+
+## 3.0.3 – 2021-01-16
+
+### General
+
+- Bugfixes when using `cobaya.sample.get_sampler()`
+- More informative error tracebacks; fixes #121 (thanks @msyriac)
+- Uniform priors can now be specified simply as `[<min>, <max>]`
+- Likelihoods can now be renamed and used mutiple times simultaneously; fixes #126 (thanks @Pablo-Lemos)
+
+### Bibliography tools
+
+- Bibtex files can now be specified via a class attribute, making inheritance easier (used to remove duplication)
+- Component description now separate from bibtex code; by default, the component class docstring is used as description.
+- Descriptions can be overridden to account for component input options (e.g. the actual method used in the minimizer).
+
+### Installation scripts
+
+- Several bugs fixed: #123, #127 and others (thanks @timothydmorton, @xgarrido)
+
+### Minimize
+
+- MCMC checkpoints are not deleted any more (was preventing resuming); fixes #124 (thanks @misharash)
+
+### Cosmological likelihoods and theory codes
+
+#### BAO
+
+- Added Hubble distance and fix to `bao.generic` (Thanks @Pablo-Lemos)
+
+#### H0
+
+- Added Riess 2020 and Freedman et al 2020
+- Normalisation changed to chi2; fixes #105 (thanks @jcolinhill)
+
+#### CAMB
+
+- Fixed wrong sigma8 when z=0 not requested; fixes #128, #130, #132 (thanks @Pablo-Lemos and @msyriac)
+
+#### CLASS
+
+- Fixed ignoring `l_max_scalars` (thanks Florian Stadtmann)
+- Fixed #106 (thanks @lukashergt)
+- Adds min gcc version check for 6.4 (thanks @williamjameshandley)
+
+#### cosmo-generator
+
+- Fixed PySide2 problem in newer systems; fixes #114 (thanks @talabadi)
+- Fixed missing `Sampler` combo box (thanks @williamjameshandley)
+
+## 3.0.2 – 2020-10-16
+
+### General
+
+- Installation bug fix.
+
+
+## 3.0.1 – 2020-10-15
+
+### General
+
+- Cobaya can (and should!) now be called as `python -m cobaya run` instead of `cobaya-run`, and the same for the rest of the scripts.
 
 ### Installation scripts
 
@@ -17,7 +114,7 @@
 ### Collections
 
 - Collections are picklable again.
-- Slices with ommited limits, e.g. `[::2]`, now work.
+- Slices with omitted limits, e.g. `[::2]`, now work.
 - Slicing now returns a copy of the `Collection`, instead of a raw `pandas.DataFrame`.
 
 ### MCMC
@@ -25,7 +122,7 @@
 - Better MPI error handling: will now fail gracefully when called inside a user's script (as opposed to `cobaya-run`).
 
 
-## 3.0  – 2020-05-12
+## 3.0 – 2020-05-12
 
 ### General
 

@@ -31,7 +31,7 @@ class evaluate(Sampler):
                 self.log,
                 "Could not convert the number of samples to an integer: %r", self.N)
         self.one_point = Collection(
-            self.model, self.output, initial_size=self.N, name="1")
+            self.model, self.output, name="1")
         self.log.info("Initialized!")
 
     def _run(self):

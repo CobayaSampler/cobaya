@@ -19,11 +19,13 @@ from importlib import import_module
 from copy import deepcopy
 from packaging import version
 from itertools import permutations
-from typing import Mapping
+from typing import Mapping, Sequence
+from numbers import Number
 from types import ModuleType
 from inspect import cleandoc, getfullargspec
 from math import gcd
 from ast import parse
+import traceback
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore")
@@ -108,7 +110,6 @@ def get_kind(name, allow_external=True):
                 for kind, tp in get_base_classes().items():
                     if issubclass(cls, tp):
                         return kind
-
         raise LoggedError(log, "Could not find component with name %r", name)
 
 
@@ -220,6 +221,7 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
             try:
                 import_module(module_name)
             except Exception:
+                exc_info = sys.exc_info()
                 pass
             else:
                 try:
@@ -239,17 +241,38 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
             else:
                 raise LoggedError(log, "'%s' not found", name)
         else:
+            log.error("".join(list(traceback.format_exception(*exc_info))))
             log.error("There was a problem when importing %s '%s':", kind or "external",
                       name)
             raise exc_info[1]
 
 
+def get_resolved_class(component_or_class, kind=None, component_path=None,
+                       class_name=None):
+    """
+    Returns the class corresponding to the component indicated as first argument.
+
+    If the first argument is a class, it is simply returned. If it is a string, it
+    retrieves the corresponding class name, using the value of `class_name` instead if
+    present.
+    """
+    if inspect.isclass(component_or_class):
+        return component_or_class
+    else:
+        return get_class(
+            class_name or component_or_class, kind, component_path=component_path)
+
+
 def import_all_classes(path, pkg, subclass_of, hidden=False, helpers=False):
     import pkgutil
     result = set()
+    ignore = {"cobaya/likelihoods": ["base_classes", "test"]}
     from cobaya.theory import HelperTheory
     for (module_loader, name, ispkg) in pkgutil.iter_modules([path]):
-        if hidden or not name.startswith('_'):
+        ignore_this_one = \
+            name in next((which for p, which in ignore.items() if path.endswith(p)), [])
+        ignore_this_one = ignore_this_one or name.startswith('_')
+        if hidden or not ignore_this_one:
             module_name = pkg + '.' + name
             m = load_module(module_name)
             for class_name, cls in inspect.getmembers(m, inspect.isclass):
@@ -487,6 +510,13 @@ def get_scipy_1d_pdf(info):
     if not info2:
         raise LoggedError(log, "No specific prior info given for "
                                "sampled parameter '%s'." % param)
+    # If list of 2 numbers, it's a uniform prior
+    elif isinstance(info2, Sequence) and len(info2) == 2 and all(
+            isinstance(n, Number) for n in info2):
+        info2 = {"min": info2[0], "max": info2[1]}
+    elif not isinstance(info2, Mapping):
+        raise LoggedError(log, "Prior format not recognized. "
+                               "Check documentation for prior specification.")
     # What distribution?
     try:
         dist = info2.pop(partag.dist).lower()
@@ -515,7 +545,7 @@ def get_scipy_1d_pdf(info):
         for limit in minmaxvalues:
             try:
                 value = info2.pop(limit, minmaxvalues[limit])
-                minmaxvalues[limit] = np.float(value)
+                minmaxvalues[limit] = float(value)
             except (TypeError, ValueError):
                 raise LoggedError(
                     log, "Invalid value '%s: %r' in param '%s' (it must be a number)",
@@ -721,7 +751,8 @@ def get_class_methods(cls, not_base=None, start='get_', excludes=(), first='self
     for k, v in inspect.getmembers(cls):
         if k.startswith(start) and k not in excludes and \
                 (not_base is None or not hasattr(not_base, k)) and \
-                getfullargspec(v).args[:1] == [first]:
+                getfullargspec(v).args[:1] == [first] and \
+                not getattr(v, '_is_abstract', None):
             methods[k[len(start):]] = v
     return methods
 

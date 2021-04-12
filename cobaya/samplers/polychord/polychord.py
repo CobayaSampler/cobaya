@@ -39,8 +39,12 @@ try:
 except ImportError:
     supernest_loaded = False
 
-
 class polychord(CovmatSampler):
+    r"""
+    PolyChord sampler \cite{Handley:2015fda,2015MNRAS.453.4384H}, a nested sampler
+    tailored for high-dimensional parameter spaces with a speed hierarchy.
+    """
+    # Name of the PolyChord repo and version to download
     _pc_repo_name = "PolyChord/PolyChordLite"
     _pc_repo_version = "1.18.2"
     _base_dir_suffix = "polychord_raw"
@@ -225,8 +229,7 @@ class polychord(CovmatSampler):
                 get_external_function(self.callback_function))
         self.last_point_callback = 0
         # Prepare runtime live and dead points collections
-        self.live = Collection(
-            self.model, None, name="live", initial_size=self.pc_settings.nlive)
+        self.live = Collection(self.model, None, name="live")
         self.dead = Collection(self.model, self.output, name="dead")
         # Done!
         if is_main_process():
@@ -238,6 +241,9 @@ class polychord(CovmatSampler):
 
     def dumper(self, live_points, dead_points, logweights, logZ, logZstd):
         """Store live and dead points and evidence computed so far"""
+        if self.callback_function is None:
+            return
+        # Store live and dead points and evidence computed so far
         self.live.reset()
         for point in live_points:
             self.live.add(
@@ -458,7 +464,6 @@ class polychord(CovmatSampler):
                 self.logZ, self.logZstd,
                 *[np.exp(self.logZ + n * self.logZstd) for n in [-1, 1]])
 
-
     def products(self):
         """
         Auxiliary function to define what should be returned in a scripted call.
@@ -566,7 +571,8 @@ class polychord(CovmatSampler):
             poly_build_path = None
         else:
             if is_main_process():
-                log.info("Importing *auto-installed* PolyChord (but defaulting to *global*).")
+                log.info(
+                    "Importing *auto-installed* PolyChord (but defaulting to *global*).")
             poly_build_path = cls.get_import_path(path)
         try:
             # TODO: add min_version when polychord module version available

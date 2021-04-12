@@ -20,9 +20,9 @@ from cobaya import __version__
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
 from cobaya.conventions import _input_suffix, _updated_suffix, _separator_files, _version
 from cobaya.conventions import _resume, _resume_default, _force, _yaml_extensions
-from cobaya.conventions import _output_prefix, _debug, kinds, _params
+from cobaya.conventions import _output_prefix, _debug, kinds, _params, _class_name
 from cobaya.log import LoggedError, HasLogger
-from cobaya.input import is_equal_info, get_class
+from cobaya.input import is_equal_info, get_resolved_class
 from cobaya.mpi import is_main_process, more_than_one_process, share_mpi
 from cobaya.collection import Collection
 from cobaya.tools import deepcopy_where_possible, find_with_regexp, sort_cosmetic
@@ -244,8 +244,8 @@ class Output(HasLogger):
                                       "newer version of Cobaya: %r (you are using %r). "
                                       "Please, update your Cobaya installation.",
                             old_version, new_version)
-                for k in (kind for kind in kinds if kind in updated_info):
-                    if k in ignore_blocks:
+                for k in set(kinds).intersection(updated_info):
+                    if k in ignore_blocks or updated_info[k] is None:
                         continue
                     for c in updated_info[k]:
                         new_version = updated_info[k][c].get(_version)
@@ -254,7 +254,9 @@ class Output(HasLogger):
                             updated_info[k][c][_version] = old_version
                             updated_info_trimmed[k][c][_version] = old_version
                         elif old_version is not None:
-                            cls = get_class(c, k, None_if_not_found=True)
+                            cls = get_resolved_class(
+                                c, k, None_if_not_found=True,
+                                class_name=updated_info[k][c].get(_class_name))
                             if cls and cls.compare_versions(
                                     old_version, new_version, equal=False):
                                 raise LoggedError(
@@ -305,15 +307,21 @@ class Output(HasLogger):
             file_names = [root]
             self.log.debug("Deleting folder %r", root)
         for f in file_names:
+            self.delete_file_or_folder(f)
+
+    def delete_file_or_folder(self, filename):
+        """
+        Deletes a file or a folder. Fails silently.
+        """
+        try:
+            os.remove(filename)
+        except IsADirectoryError:
             try:
-                os.remove(f)
-            except IsADirectoryError:
-                try:
-                    shutil.rmtree(f)
-                except:
-                    raise
-            except OSError:
-                pass
+                shutil.rmtree(filename)
+            except:
+                raise
+        except OSError:
+            pass
 
     def prepare_collection(self, name=None, extension=None):
         """
@@ -454,7 +462,7 @@ class Output_MPI(Output):
                 raise ValueError(
                     "Cannot call `reload_updated_info` from non-main process "
                     "unless cached version (`use_cache=True`) requested.")
-            return self._old_updated_info
+            return getattr(self, "_old_updated_info", None)
 
     def create_folder(self, *args, **kwargs):
         if is_main_process():

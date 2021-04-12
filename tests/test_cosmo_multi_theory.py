@@ -1,15 +1,14 @@
-import os
 import numpy as np
 from typing import Any
 from copy import deepcopy
 from cobaya.model import get_model
 from cobaya.theory import Theory
-from cobaya.tools import load_module
 from cobaya.likelihood import LikelihoodInterface, Likelihood
 from cobaya.conventions import empty_dict
 from .common import process_packages_path
 from .conftest import install_test_wrapper
 from .test_cosmo_camb import get_camb
+
 
 # Test separating out the BBN consistency constraint into separate theory code,
 # using CAMB's BBN interpolator class. Tests dependencies/multi-theory with one
@@ -45,6 +44,7 @@ def cmb_likelihood(_self):
     results = _self.provider.get_CAMBdata()
     derived = {'check': results.Params.YHe}
     return results.Params.YHe, derived
+
 
 cmb_likelihood_info = {'external': cmb_likelihood, 'output_params': 'check',
                        'requires': {'Hubble': {'z': [0.5]}, 'CAMBdata': None}}
@@ -185,7 +185,7 @@ class ExamplePrimordialPk(Theory):
                                          'Pk': pk, 'log_regular': True}
 
     def get_primordial_scalar_pk(self):
-        return self._current_state['primordial_scalar_pk']
+        return self.current_state['primordial_scalar_pk']
 
     def get_can_support_params(self):
         return ['testAs', 'testns']
@@ -260,7 +260,7 @@ class BinnedPk(Theory):
                                          'Pk': pk, 'log_regular': False}
 
     def get_primordial_scalar_pk(self):
-        return self._current_state['primordial_scalar_pk']
+        return self.current_state['primordial_scalar_pk']
 
     @classmethod
     def get_class_options(cls, input_options=empty_dict):
@@ -285,22 +285,22 @@ def test_pk_binning(packages_path, skip_not_installed):
     k_min_bin = -5.5
     k_max_bin = 2
 
-    info = {'packages_path': process_packages_path(packages_path),
-            'likelihood': {'cmb': Pklike},
-            'theory': {'camb': {"external_primordial_pk": True},
-                       'my_pk': {"external": BinnedPk,
-                                 'nbins': nbins, 'k_min_bin': k_min_bin,
-                                 'k_max_bin': k_max_bin
-                                 }},
-            'params': {
-                "ombh2": 0.022274,
-                "omch2": 0.11913,
-                "cosmomc_theta": 0.01040867,
-                "tau": tau,
-                "nnu": 3.046
-            },
-            'stop_at_error': True,
-            'debug': debug}
+    _info = {'packages_path': process_packages_path(packages_path),
+             'likelihood': {'cmb': Pklike},
+             'theory': {'camb': {"external_primordial_pk": True},
+                        'my_pk': {"external": BinnedPk,
+                                  'nbins': nbins, 'k_min_bin': k_min_bin,
+                                  'k_max_bin': k_max_bin
+                                  }},
+             'params': {
+                 "ombh2": 0.022274,
+                 "omch2": 0.11913,
+                 "cosmomc_theta": 0.01040867,
+                 "tau": tau,
+                 "nnu": 3.046
+             },
+             'stop_at_error': True,
+             'debug': debug}
     scale = 1e-9
     ks = np.logspace(k_min_bin, k_max_bin, nbins)
 
@@ -308,5 +308,5 @@ def test_pk_binning(packages_path, skip_not_installed):
         return testAs * (k / 0.05) ** (testns - 1) / scale * np.exp(-2 * tau)
 
     pars = {'b%s' % (b + 1): pk_test(ks[b]) for b in range(nbins)}
-    model = install_test_wrapper(skip_not_installed, get_model, info)
+    model = install_test_wrapper(skip_not_installed, get_model, _info)
     model.loglikes(pars)

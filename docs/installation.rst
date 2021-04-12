@@ -60,6 +60,7 @@ To test the installation, run in a terminal
 
 This should print the version of ``mpi4py``, e.g. ``3.0.0``. If it prints a version smaller than 3, doesn't print anything, or fails with an error similar to ``ImportError: libmpi.so.12``, make sure that you have installed/loaded an MPI implementation and repeat the installation, or ask your local IT service for help.
 
+Note that some clusters do not allow you to run ``mpirun`` on a head node.
 
 .. _install:
 
@@ -97,6 +98,10 @@ If everything went well, you should be able to import **cobaya** in Python from 
 If you get an error message, something went wrong. Check twice the instructions above, try again, or contact us or your local Python guru.
 
 **cobaya** also installs some shell scripts. If everything went well, if you try to run in the shell ``cobaya-run``, you should get a message asking you for an input file, instead of a ``command not found`` error.
+
+.. warning::
+
+   Calling **cobaya**'s scripts directly may be deprecated in the future in favour of (safer) ``python -m cobaya [command]`` (e.g. ``python -m cobaya run`` instead of ``cobaya-run``), so you can ignore that ``command_not_found`` error and use the new behaviour instead.
 
 .. note::
 

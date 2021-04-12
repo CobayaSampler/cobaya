@@ -247,10 +247,10 @@ class Sampler(CobayaComponent):
                             self.checkpoint_filename())
             except (IOError, TypeError):
                 pass
-        else:
+        elif not isinstance(self, Minimizer):
             try:
-                os.remove(self.checkpoint_filename())
-                os.remove(self.progress_filename())
+                output.delete_file_or_folder(self.checkpoint_filename())
+                output.delete_file_or_folder(self.progress_filename())
             except (OSError, TypeError):
                 pass
         self._set_rng()
@@ -551,7 +551,7 @@ class CovmatSampler(Sampler):
         where_nan = np.isnan(covmat.diagonal())
         if np.any(where_nan):
             covmat[where_nan, where_nan] = np.array(
-                [info.get(partag.proposal, np.nan) ** 2
+                [(info.get(partag.proposal, np.nan) or np.nan) ** 2
                  for info in params_infos.values()])[where_nan]
         where_nan2 = np.isnan(covmat.diagonal())
         if np.any(where_nan2):

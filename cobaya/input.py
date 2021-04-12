@@ -16,6 +16,7 @@ from itertools import chain
 from functools import reduce
 from typing import Mapping
 from collections import defaultdict
+from inspect import cleandoc
 import pkg_resources
 
 # Local
@@ -23,9 +24,9 @@ from cobaya.conventions import _products_path, _packages_path, _resume, _force, 
     partag, _external, _output_prefix, _debug, _debug_file, _auto_params, _prior, \
     kinds, _provides, _requires, _input_params, _output_params, _component_path, \
     _aliases, _yaml_extensions, reserved_attributes, empty_dict, _get_chi2_name, \
-    _get_chi2_label, _test_run, _version
+    _get_chi2_label, _test_run, _version, _class_name
 from cobaya.tools import recursive_update, str_to_list, get_base_classes, \
-    fuzzy_match, deepcopy_where_possible, get_class, get_kind
+    fuzzy_match, deepcopy_where_possible, get_resolved_class
 from cobaya.yaml import yaml_load_file, yaml_dump
 from cobaya.log import LoggedError
 from cobaya.parameterization import expand_info_param
@@ -65,37 +66,47 @@ def load_input_MPI(input_file):
     return share_mpi(load_input(input_file) if is_main_process() else None)
 
 
-def get_used_components(*infos):
-    """Returns all requested components as an dict ``{kind: set([components])}``.
-    Priors are not included."""
+def get_used_components(*infos, return_infos=False):
+    """
+    Returns all requested components as an dict ``{kind: set([components])}``.
+    Priors are not included.
+
+    If ``return_infos=True`` (default: ``False``), returns too a dictionary of inputs per
+    component, updated in the order in which the info arguments are given.
+
+    Components which are just renames of others (i.e. defined with `class_name`) return
+    the original class' name.
+    """
+    # TODO: take inheritance into account
     components = defaultdict(list)
+    components_infos = defaultdict(dict)
     for info in infos:
-        for field in kinds:
+        for kind in kinds:
             try:
-                components[field] += [a for a in (info.get(field) or [])
-                                      if a not in components[field]]
+                components[kind] += [a for a in (info.get(kind) or [])
+                                     if a not in components[kind]]
             except TypeError:
                 raise LoggedError(
                     log, "Your input info is not well formatted at the '%s' block. "
                          "It must be a dictionary {'%s_i':{options}, ...}. ",
-                    field, field)
+                    kind, kind)
+            if return_infos:
+                for c in components[kind]:
+                    components_infos[c].update(info[kind][c] or {})
     # return dictionary of non-empty blocks
-    return {k: v for k, v in components.items() if v}
+    components = {k: v for k, v in components.items() if v}
+    return (components, dict(components_infos)) if return_infos else components
 
 
 def get_default_info(component_or_class, kind=None, return_yaml=False,
                      yaml_expand_defaults=True, component_path=None,
-                     input_options=empty_dict):
+                     input_options=empty_dict, class_name=None,
+                     return_undefined_annotations=False):
     """
     Get default info for a component_or_class.
     """
-    _kind = kind
     try:
-        if inspect.isclass(component_or_class):
-            cls = component_or_class
-        else:
-            _kind = _kind or get_kind(component_or_class)
-            cls = get_class(component_or_class, _kind, component_path=component_path)
+        cls = get_resolved_class(component_or_class, kind, component_path, class_name)
         default_component_info = \
             cls.get_defaults(return_yaml=return_yaml,
                              yaml_expand_defaults=yaml_expand_defaults,
@@ -103,7 +114,12 @@ def get_default_info(component_or_class, kind=None, return_yaml=False,
     except Exception as e:
         raise LoggedError(log, "Failed to get defaults for component or class '%s' [%s]",
                           component_or_class, e)
-    return default_component_info
+    if return_undefined_annotations:
+        annotations = {k: v for k, v in cls.get_annotations().items() if
+                       k not in default_component_info}
+        return default_component_info, annotations
+    else:
+        return default_component_info
 
 
 def update_info(info):
@@ -150,31 +166,35 @@ def update_info(info):
                     not isinstance(input_block[component], dict):
                 input_block[component] = {_external: input_block[component]}
             ext = input_block[component].get(_external)
+            annotations = {}
             if ext:
                 if inspect.isclass(ext):
-                    default_class_info = get_default_info(ext, block,
-                                                          input_options=input_block[
-                                                              component])
+                    default_class_info, annotations = \
+                        get_default_info(ext, block, input_options=input_block[component],
+                                         return_undefined_annotations=True)
                 else:
                     default_class_info = deepcopy_where_possible(
                         component_base_classes[block].get_defaults())
             else:
                 component_path = input_block[component].get(_component_path, None)
-                default_class_info = get_default_info(
-                    component, block,
-                    component_path=component_path, input_options=input_block[component])
+                default_class_info, annotations = get_default_info(
+                    component, block, class_name=input_block[component].get(_class_name),
+                    component_path=component_path, input_options=input_block[component],
+                    return_undefined_annotations=True)
             updated[component] = default_class_info or {}
             # Update default options with input info
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
-            ignore = {_external, _provides, _requires, partag.renames, _input_params,
-                      _output_params, _component_path, _aliases}
+            # Reserved attributes not necessarily already in default info:
+            reserved = {_external, _class_name, _provides, _requires, partag.renames,
+                        _input_params, _output_params, _component_path, _aliases}
             options_not_recognized = (set(input_block[component])
-                                      .difference(ignore)
-                                      .difference(set(updated[component])))
+                                      .difference(reserved)
+                                      .difference(set(updated[component]))
+                                      .difference(set(annotations)))
             if options_not_recognized:
                 alternatives = {}
                 available = (
-                    {_external, _requires, partag.renames}.union(
+                    {_external, _class_name, _requires, partag.renames}.union(
                         updated_info[block][component]))
                 while options_not_recognized:
                     option = options_not_recognized.pop()
@@ -394,7 +414,9 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
                         try:
                             component_path = block1[k].pop(_component_path, None) \
                                 if isinstance(block1[k], dict) else None
-                            cls = get_class(k, block_name, component_path=component_path)
+                            cls = get_resolved_class(
+                                k, kind=block_name, component_path=component_path,
+                                class_name=(block1[k] or {}).get(_class_name))
                             ignore_k_this = ignore_k_this.union(
                                 set(getattr(cls, "_at_resume_prefer_new", {})))
                         except ImportError:
@@ -427,7 +449,9 @@ def get_preferred_old_values(info_old):
             try:
                 component_path = block[k].pop(_component_path, None) \
                     if isinstance(block[k], dict) else None
-                cls = get_class(k, block_name, component_path=component_path)
+                cls = get_resolved_class(
+                    k, kind=block_name, component_path=component_path,
+                    class_name=(block[k] or {}).get(_class_name))
                 prefer_old_k_this = getattr(cls, "_at_resume_prefer_old", {})
                 if prefer_old_k_this:
                     if block_name not in keep_old:
@@ -437,6 +461,24 @@ def get_preferred_old_values(info_old):
             except ImportError:
                 pass
     return keep_old
+
+
+class Description(object):
+    """Allows for calling get_desc as both class and instance method."""
+
+    def __get__(self, instance, cls):
+        if instance is None:
+            return_func = lambda info=None: cls._get_desc(info)
+        else:
+            return_func = lambda info=None: cls._get_desc(info=instance.__dict__)
+        return_func.__doc__ = cleandoc("""
+            Returns a short description of the class. By default, returns the class'
+            docstring.
+
+            You can redefine this method to dynamically generate the description based
+            on the class initialisation ``info`` (see e.g. the source code of MCMC's
+            *class method* :meth:`~.mcmc._get_desc`).""")
+        return return_func
 
 
 class HasDefaults:
@@ -508,6 +550,12 @@ class HasDefaults:
             return filename
         return None
 
+    get_desc = Description()
+
+    @classmethod
+    def _get_desc(cls, info=None):
+        return cleandoc(cls.__doc__)
+
     @classmethod
     def get_bibtex(cls):
         """
@@ -515,7 +563,11 @@ class HasDefaults:
         from this class, it will return the result from an inherited class if that
         provides bibtex.
         """
-        bib = cls.get_associated_file_content('.bibtex')
+        filename = cls.__dict__.get('bibtex_file', None)
+        if filename:
+            bib = pkg_resources.resource_string(cls.__module__, filename)
+        else:
+            bib = cls.get_associated_file_content('.bibtex')
         if bib:
             try:
                 return bib.decode("utf-8")
@@ -532,11 +584,12 @@ class HasDefaults:
         return None
 
     @classmethod
-    def get_associated_file_content(cls, ext):
+    def get_associated_file_content(cls, ext, file_root=None):
         # handle extracting package files when may be inside a zipped package so files
         # not accessible directly
         try:
-            string = pkg_resources.resource_string(cls.__module__, cls.__name__ + ext)
+            string = pkg_resources.resource_string(cls.__module__,
+                                                   (file_root or cls.__name__) + ext)
             try:
                 return string.decode("utf-8")
             except:
@@ -549,7 +602,7 @@ class HasDefaults:
         """
         Returns dictionary of names and values for class variables that can also be
         input and output in yaml files, by default it takes all the
-        (non-inherited and non-private)  attributes of the class excluding known
+        (non-inherited and non-private) attributes of the class excluding known
         specials.
 
         Could be overridden using input_options to dynamically generate defaults,
@@ -622,6 +675,17 @@ class HasDefaults:
             return yaml_dump(defaults)
         else:
             return defaults
+
+    @classmethod
+    def get_annotations(cls):
+        d = {}
+        for base in cls.__bases__:
+            if issubclass(base, HasDefaults) and base is not HasDefaults:
+                d.update(base.get_annotations())
+
+            d.update({k: v for k, v in cls.__dict__.get("__annotations__", {}).items()
+                      if not k.startswith('_')})
+        return d
 
 
 def make_auto_params(auto_params, params_info):

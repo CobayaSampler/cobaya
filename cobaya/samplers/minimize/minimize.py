@@ -54,6 +54,14 @@ If ``ignore_prior: True``, those files are named ``.bestfit[.txt]`` instead of `
 and contain the best-fit (maximum of the likelihood) instead of the MAP
 (maximum of the posterior).
 
+.. warning::
+
+   For historical reasons, in the first two lines of the GetDist-formatted output file
+   ``-log(Like)`` indicates the negative log-**posterior**, and similarly ``chi-sq`` is
+   :math:`-2` times the log-**posterior**. The actual log-likelihood can be obtained as
+   :math:`-2` times the sum of the individual :math:`\chi^2` (``chi2__``, with double
+   underscore) in the table that follows these first lines.
+
 When called from a Python script, Cobaya's ``run`` function returns the updated info
 and the products described below in the method
 :func:`products <samplers.minimize.minimize.products>`.
@@ -179,7 +187,8 @@ class minimize(Minimizer, CovmatSampler):
                 "bounds": np.array(list(zip(*bounds))),
                 "seek_global_minimum": (
                     True if get_mpi_size() in [0, 1] else False),
-                "maxfun": int(self.max_evals)}
+                "maxfun": int(self.max_evals),
+                "do_logging": (self.log.getEffectiveLevel() == logging.DEBUG)}
             self.kwargs = recursive_update(
                 deepcopy(self.kwargs), self.override_bobyqa or {})
             self.log.debug("Arguments for pybobyqa.solve:\n%r",
@@ -417,6 +426,29 @@ class minimize(Minimizer, CovmatSampler):
         (including deleting some output files when forcing).
         """
         if output.is_resuming():
-            output.log.warning("Minimizer does not support resuming. Ignoring.")
-            output.set_resuming(False)
+            if is_main_process():
+                raise LoggedError(
+                    output.log, "Minimizer does not support resuming. "
+                                "If you want to start over, force "
+                                "('-f', '--force', 'force: True')")
         super().check_force_resume(output, info=info)
+
+    @classmethod
+    def _get_desc(cls, info=None):
+        if info is None:
+            method = None
+        else:
+            method = info.get("method", cls.get_defaults()["method"])
+        desc_bobyqa = (r"Py-BOBYQA implementation "
+                       r"\cite{2018arXiv180400154C,2018arXiv181211343C} of the BOBYQA "
+                       r"minimization algorithm \cite{BOBYQA}")
+        desc_scipy = (r"Scipy minimizer \cite{2020SciPy-NMeth} (check citation for the "
+                      r"actual algorithm used at \url{https://docs.scipy.org/doc/scipy/re"
+                      r"ference/generated/scipy.optimize.minimize.html}")
+        if method and method and method.lower() == "bobyqa":
+            return desc_bobyqa
+        elif method and method.lower() == "scipy":
+            return desc_scipy
+        else:  # unknown method or no info passed (None)
+            return ("Minimizer -- method unknown, possibly one of:"
+                    "\na) " + desc_bobyqa + "\nb) " + desc_scipy)

@@ -72,7 +72,7 @@ After this, mention the path to this likelihood when you include it in an input 
 import numpy as np
 
 # Local
-from cobaya.likelihoods._base_classes import _CMBlikes
+from cobaya.likelihoods.base_classes import CMBlikes
 from cobaya.conventions import _h_J_s, _kB_J_K
 
 # Physical constants
@@ -80,7 +80,10 @@ Ghz_Kelvin = _h_J_s / _kB_J_K * 1e9
 T_CMB_K = 2.7255  # fiducial CMB temperature
 
 
-class bicep_keck_2015(_CMBlikes):
+class bicep_keck_2015(CMBlikes):
+    r"""
+    CMB power spectrum likelihood of Bicep2/Keck Array X \cite{Ade:2018gkx}.
+    """
     install_options = {
         "download_url": r"http://bicepkeck.org/BK15_datarelease/BK15_cosmomc.tgz"}
 

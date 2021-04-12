@@ -1,5 +1,9 @@
-from cobaya.likelihoods._base_classes import _planck_2018_CamSpec_python
+from cobaya.likelihoods.base_classes import Planck2018CamSpecPython
 
 
-class TT_native(_planck_2018_CamSpec_python):
+class TT_native(Planck2018CamSpecPython):
+    """
+    High-$\ell$ temperature-only \textsc{CamSpec} likelihood of Planck's 2018 data release
+    \cite{Aghanim:2019ame} (native Python re-implemetation, by A.~Lewis).
+    """
     pass

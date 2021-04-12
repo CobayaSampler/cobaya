@@ -7,10 +7,12 @@
 
 """
 # Global
+import logging
 import numpy as np
 from numbers import Number
 from itertools import chain
 from copy import deepcopy
+from typing import Mapping, Sequence
 
 # Local
 from cobaya.conventions import partag
@@ -46,9 +48,24 @@ def expand_info_param(info_param, default_derived=True):
     to a more unambiguous one.
     """
     info_param = deepcopy_where_possible(info_param)
-    if not isinstance(info_param, dict):
+    if not isinstance(info_param, Mapping):
         if info_param is None:
             info_param = {}
+        elif isinstance(info_param, Sequence) and not isinstance(info_param, str):
+            values = info_param.copy()
+            allowed_lengths = [2, 4, 5]
+            if len(values) not in allowed_lengths:
+                logger = logging.getLogger(__name__.split(".")[-1])
+                raise LoggedError(
+                    logger, "Parameter info length not valid: %d. "
+                            "The allowed lengths are %r. See documentation.",
+                    len(values), allowed_lengths)
+            if len(values) >= 2:
+                info_param = {partag.prior: [values[0], values[1]]}
+            if len(values) >= 4:
+                info_param[partag.ref] = [values[2], values[3]]
+            if len(values) == 5:
+                info_param[partag.proposal] = values[4]
         else:
             info_param = {partag.value: info_param}
     if all(f not in info_param for f in [partag.prior, partag.value, partag.derived]):

@@ -111,11 +111,12 @@ def run(info):
 
 
 # Command-line script
-def run_script():
+def run_script(help_commands=None):
     warn_deprecation()
     import os
     import argparse
-    parser = argparse.ArgumentParser(description="Cobaya's run script.")
+    parser = argparse.ArgumentParser(
+        prog="cobaya run", description="Cobaya's run script.")
     parser.add_argument("input_file", nargs=1, action="store", metavar="input_file.yaml",
                         help="An input file to run.")
     parser.add_argument("-" + _packages_path_arg[0], "--" + _packages_path_arg_posix,
@@ -168,7 +169,11 @@ def run_script():
         try:
             info = load_input(updated_file)
         except IOError:
-            raise ValueError("Not a valid input file, or non-existent run to resume")
+            err_msg = "Not a valid input file, or non-existent run to resume."
+            if help_commands:
+                err_msg += (" Maybe you mistyped one of the following commands: "
+                            + help_commands)
+            raise ValueError(err_msg)
         # We need to update the output_prefix to resume the run *where it is*
         info[_output_prefix] = given_input
         # If input given this way, we obviously want to resume!

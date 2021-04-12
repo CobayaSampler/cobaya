@@ -24,7 +24,7 @@ import os
 import scipy
 
 # Local
-from cobaya.likelihoods._base_classes import _DataSetLikelihood
+from cobaya.likelihoods.base_classes import DataSetLikelihood
 
 use_cache = True
 
@@ -45,11 +45,12 @@ def range_to_ells(use_range):
         return use_range
 
 
-class _planck_2018_CamSpec_python(_DataSetLikelihood):
+class Planck2018CamSpecPython(DataSetLikelihood):
     install_options = {
         "download_url":
             r"https://cdn.cosmologist.info/cosmobox/test2019_kaml/CamSpec2018.zip",
         "data_path": "planck_2018_CamSpec_native"}
+    bibtex_file = 'planck2018.bibtex'
 
     def read_normalized(self, filename, pivot=None):
         # arrays all based at L=0, in L(L+1)/2pi units
@@ -84,11 +85,11 @@ class _planck_2018_CamSpec_python(_DataSetLikelihood):
             lines = f.readlines()
             while not lines[-1].strip(): lines = lines[:-1]
             self.Nspec = len(lines)
-            lmin = np.zeros(self.Nspec, dtype=np.int)
-            lmax = np.zeros(self.Nspec, dtype=np.int)
+            lmin = np.zeros(self.Nspec, dtype=int)
+            lmax = np.zeros(self.Nspec, dtype=int)
             self.cl_names = []
-            self.ell_ranges = np.empty(self.Nspec, dtype=np.object)
-            self.used_sizes = np.zeros(self.Nspec, dtype=np.int)
+            self.ell_ranges = np.empty(self.Nspec, dtype=object)
+            self.used_sizes = np.zeros(self.Nspec, dtype=int)
             for i, line in enumerate(lines):
                 items = line.split()
                 tp = items[0]
@@ -106,7 +107,7 @@ class _planck_2018_CamSpec_python(_DataSetLikelihood):
                                 ells = used_ell
                             self.ell_ranges[i] = np.array(
                                 [L for L in range(lmin[i], lmax[i] + 1) if L in ells],
-                                dtype=np.int)
+                                dtype=int)
                             used_indices.append(self.ell_ranges[i] + (nX - lmin[i]))
                         else:
                             used_indices.append(range(nX, nX + n))
@@ -295,7 +296,7 @@ class _planck_2018_CamSpec_python(_DataSetLikelihood):
         lmin = np.min([min(r) for r in self.ell_ranges[:4]])
         lmax = np.max([max(r) for r in self.ell_ranges[:4]])
         n_p = lmax - lmin + 1
-        LS = np.zeros(delta_vector.shape, dtype=np.int)
+        LS = np.zeros(delta_vector.shape, dtype=int)
         ix = 0
         for i, (cal, n) in enumerate(zip(cals[:4], self.used_sizes[:4])):
             if n > 0:
@@ -309,7 +310,7 @@ class _planck_2018_CamSpec_python(_DataSetLikelihood):
         ix1 = 0
         ell_offsets = [LS - lmin for LS in self.ell_ranges[:4]]
         contiguous = not np.any(np.count_nonzero(LS - np.arange(LS[0],
-                                                                LS[-1] + 1, dtype=np.int))
+                                                                LS[-1] + 1, dtype=int))
                                 for LS in self.ell_ranges[:4])
         for i, (cal, LS, n) in enumerate(zip(cals[:4], ell_offsets, self.used_sizes[:4])):
             dL[LS] += d[ix1:ix1 + n] / cal

@@ -343,7 +343,7 @@ dark_energy = dict([
                 [p.proposal, 0.02], [p.latex, r"w_\mathrm{DE}"]])]])}],
     ["de_w_wa", {
         _desc: "Varying constant eq of state with w(a) = w0 + (1-a) wa",
-        kinds.theory: {_camb: None,
+        kinds.theory: {_camb: {_extra_args: {'dark_energy_model': 'ppf'}},
                        _classy: {_params: {"Omega_Lambda": 0}}},
         _params: dict([
             ["w", dict([
@@ -704,3 +704,25 @@ install_tests[kinds.likelihood].update({"planck_2015_lowl": None,
                                         "planck_2018_highl_CamSpec.TT": None,
                                         "planck_2018_highl_CamSpec.TT_native": None,
                                         })
+
+# CONTENTS FOR COMBO-BOXED IN A GUI ######################################################
+
+_combo_dict_text = (
+    ["Presets", (["preset", "Presets"],)],
+    ["Cosmological Model", (
+        ["theory", "Theory code"],
+        ["primordial", "Primordial perturbations"],
+        ["geometry", "Geometry"],
+        ["hubble", "Hubble parameter constraint"],
+        ["matter", "Matter sector"],
+        ["neutrinos", "Neutrinos and other extra matter"],
+        ["dark_energy", "Lambda / Dark energy"],
+        ["bbn", "BBN"],
+        ["reionization", "Reionization history"])],
+    ["Data sets", (
+        ["like_cmb", "CMB experiments"],
+        ["like_bao", "BAO experiments"],
+        ["like_des", "DES measurements"],
+        ["like_sn", "SN experiments"],
+        ["like_H0", "Local H0 measurements"])],
+    ["Sampler", (["sampler", "Samplers"],)])

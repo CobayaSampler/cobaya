@@ -1,5 +1,5 @@
 """
-.. module:: _cmblikes
+.. module:: cmblikes
 
 :Synopsis: Definition of the CMBlikes class for CMB real or simulated data.
 :Author: Antony Lewis (adapted to Cobaya by Jesus Torrado with little modification)
@@ -11,24 +11,23 @@
 # Global
 import os
 import numpy as np
-from getdist import ParamNames
+from getdist import ParamNames, IniFile
 from scipy.linalg import sqrtm
 from typing import Sequence
 
 # Local
 from cobaya.log import LoggedError
-from cobaya.likelihoods._base_classes import _DataSetLikelihood
+from cobaya.likelihoods.base_classes import DataSetLikelihood
+
+CMB_keys = ['tt', 'te', 'ee', 'bb']
 
 
-class _CMBlikes(_DataSetLikelihood):
+class CMBlikes(DataSetLikelihood):
     # Data type for aggregated chi2 (case sensitive)
     type = "CMB"
 
-    map_separator: str
-    lmin: Sequence[int]
-    lmax: Sequence[int]
-    lav: Sequence[int]
-    Ahat: np.ndarray  # not used by likelihood
+    # used to form spectra names, e.g. AmapxBmap
+    map_separator: str = 'x'
 
     def get_requirements(self):
         # State requisites to the theory code
@@ -304,7 +303,8 @@ class _CMBlikes(_DataSetLikelihood):
             self.nbins = ini.int('nbins')
             self.bin_min = ini.int('use_min', 1) - 1
             self.bin_max = ini.int('use_max', self.nbins) - 1
-            self.nbins_used = self.bin_max - self.bin_min + 1  # needed by read_bin_windows
+            # needed by read_bin_windows:
+            self.nbins_used = self.bin_max - self.bin_min + 1
             self.bins = self.read_bin_windows(ini, 'bin_window')
         else:
             if self.nmaps != self.nmaps_required:
@@ -426,23 +426,16 @@ class _CMBlikes(_DataSetLikelihood):
 
     def writeData(self, froot):
         np.savetxt(froot + '_cov.dat', self.cov)
-        # self.saveCl(froot + '_fid_cl.dat', self.fid_cl[:, 1:],
-        #             cols=['TT', 'EE', 'TE', 'PP'])
-        with open(froot + '_bandpowers.dat', 'w', encoding="utf-8") as f:
-            f.write("#%4s %5s %5s %8s %12s %10s %7s\n" %
-                    ('bin', 'L_min', 'L_max', 'L_av', 'PP', 'Error', 'Ahat'))
-            for b in range(self.nbins):
-                f.write("%5u %5u %5u %8.2f %12.5e %10.3e %7.3f\n" %
-                        (b + 1, self.lmin[b], self.lmax[b], self.lav[b],
-                         self.bandpowers[b], np.sqrt(self.cov[b, b]), self.Ahat[b]))
+        np.savetxt(froot + '_bandpowers.dat', self.full_bandpowers,
+                   header=" ".join(self.full_bandpower_headers))
         self.bins.write(froot, 'bin')
         if self.linear_correction is not None:
             self.linear_correction.write(froot, 'linear_correction_bin')
 
-        with open(froot + '_lensing_fiducial_correction', 'w', encoding="utf-8") as f:
-            f.write("#%4s %12s \n" % ('bin', 'PP'))
-            for b in range(self.nbins):
-                f.write("%5u %12.5e\n" % (b + 1, self.fid_correction[b]))
+            with open(froot + '_lensing_fiducial_correction', 'w', encoding="utf-8") as f:
+                f.write("#%4s %12s \n" % ('bin', 'PP'))
+                for b in range(self.nbins):
+                    f.write("%5u %12.5e\n" % (b + 1, self.fid_correction[b]))
 
     def diag_sigma(self):
         return np.sqrt(np.diag(self.full_cov))
@@ -549,7 +542,8 @@ class _CMBlikes(_DataSetLikelihood):
                         c.append(cls[i, j].CL[b - self.pcl_lmin])
                 f.write(("%I5 " + "%17.8e " * len(cols)) % tuple(c))
 
-    def transform(self, C, Chat, Cfhalf):
+    @staticmethod
+    def transform(C, Chat, Cfhalf):
         # HL transformation of the matrices
         if C.shape[0] == 1:
             rat = Chat[0, 0] / C[0, 0]
@@ -681,3 +675,147 @@ def last_top_comment(fname):
                 result = x[1:].strip()
             x = f.readline()
     return None
+
+
+def white_noise_from_muK_arcmin(noise_muK_arcmin):
+    return (noise_muK_arcmin * np.pi / 180 / 60.) ** 2
+
+
+def save_cl_dict(filename, array_dict, lmin=2, lmax=None, cl_dict_lmin=0):
+    """
+    Save a Cobaya dict of CL to a text file, with each line starting with L.
+
+    :param filename: filename to save
+    :param array_dict: dictionary of power spectra
+    :param lmin: minimum L to save
+    :param lmax: maximum L to save
+    :param cl_dict_lmin: L to start output in file (usually 0 or 2)
+    """
+    cols = []
+    labels = []
+    for key in CMB_keys:
+        if key in array_dict:
+            lmax = lmax or array_dict[key].shape[0] - 1 + cl_dict_lmin
+            cols.append(array_dict[key][lmin - cl_dict_lmin:lmax - cl_dict_lmin + 1])
+            labels.append(key.upper())
+    if 'pp' in CMB_keys:
+        cols.append(array_dict['pp'][lmin - cl_dict_lmin::lmax - cl_dict_lmin + 1])
+        labels.append('PP')
+    ls = np.arange(lmin, lmax + 1)
+    np.savetxt(filename, np.vstack((ls,) + tuple(cols)).T,
+               fmt=['%4u'] + ['%12.7e'] * len(cols),
+               header=' L ' + ' '.join(['{:13s}'.format(lab) for lab in labels]))
+
+
+def make_forecast_cmb_dataset(fiducial_Cl, output_root, output_dir=None,
+                              noise_muK_arcmin_T=None,
+                              noise_muK_arcmin_P=None,
+                              NoiseVar=None, ENoiseFac=2, fwhm_arcmin=None,
+                              lmin=2, lmax=None, fsky=1.0,
+                              lens_recon_noise=None, cl_dict_lmin=0):
+    """
+    Make a simulated .dataset and associated files with 'data' set at the input fiducial
+    model. Uses the exact full-sky log-likelihood, scaled by fsky.
+
+    If you want to use numerical N_L CMB noise files, you can just replace the noise
+    .dat text file produced by this function.
+
+    :param fiducial_Cl: dictionary of Cls to use, combination of tt, te, ee, bb, pp;
+                        note te must be included with tt and ee when using them
+    :param output_root: root name for output files, e.g. 'my_sim1'
+    :param output_dir: output directory
+    :param noise_muK_arcmin_T: temperature noise in muK-arcmin
+    :param noise_muK_arcmin_P: polarization noise in muK-arcmin
+    :param NoiseVar: alternatively if noise_muK_arcmin_T is None, effective
+        isotropic noise variance for the temperature (N_L=NoiseVar with no beam)
+    :param ENoiseFac: factor by which polarization noise variance is higher thab
+                NoiseVar (usually 2, for Planck about 4
+                        as only half the detectors polarized)
+    :param fwhm_arcmin: beam fwhm in arcminutes
+    :param lmin: l_min
+    :param lmax: l_max
+    :param fsky: sky fraction
+    :param lens_recon_noise: optional array, starting at L=0, for the
+       pp lensing reconstruction noise, in [L(L+1)]^2C_L^phi/2pi units
+    :param cl_dict_lmin: l_min for the arrays in fiducial_Cl
+    :return: IniFile that was saved
+    """
+    ini = IniFile()
+    dataset = ini.params
+
+    cl_keys = fiducial_Cl.keys()
+    use_CMB = set(cl_keys).intersection(set(CMB_keys))
+    use_lensing = lens_recon_noise
+
+    if use_CMB:
+        if NoiseVar is None:
+            if noise_muK_arcmin_T is None:
+                raise ValueError('Must specify noise')
+            NoiseVar = white_noise_from_muK_arcmin(noise_muK_arcmin_T)
+            if noise_muK_arcmin_P is not None:
+                ENoiseFac = (noise_muK_arcmin_P / noise_muK_arcmin_T) ** 2
+        elif noise_muK_arcmin_T is not None or noise_muK_arcmin_P is not None:
+            raise ValueError('Specific either noise_muK_arcmin or NoiseVar')
+        fields_use = ''
+        if 'tt' in cl_keys or 'te' in cl_keys:
+            fields_use = 'T'
+        if 'ee' in cl_keys or 'te' in cl_keys:
+            fields_use += ' E'
+        if 'bb' in cl_keys:
+            fields_use += ' B'
+        if 'pp' in cl_keys and use_lensing:
+            fields_use += ' P'
+        if 'tt' in cl_keys and 'ee' in cl_keys and 'te' not in cl_keys:
+            raise ValueError('Input power spectra should have te if using tt and ee -'
+                             'using the exact likelihood requires the full covariance.')
+    else:
+        fields_use = 'P'
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    dataset['fields_use'] = fields_use
+
+    if use_CMB:
+        fwhm = fwhm_arcmin / 60
+        xlc = 180 * np.sqrt(8. * np.log(2.)) / np.pi
+        sigma2 = (fwhm / xlc) ** 2
+        noise_cols = 'TT           EE          BB'
+        if use_lensing:
+            noise_cols += '          PP'
+    elif use_lensing:
+        noise_cols = 'PP'
+    else:
+        raise ValueError('Must use CMB or lensing C_L')
+    noise_file = output_root + '_Noise.dat'
+    with open(os.path.join(output_dir, noise_file), 'w') as f:
+        f.write('#L %s\n' % noise_cols)
+
+        for ell in range(lmin, lmax + 1):
+            noises = []
+            if use_CMB:
+                noise_cl = ell * (ell + 1.) / 2 / np.pi * NoiseVar * np.exp(
+                    ell * (ell + 1) * sigma2)
+                noises += [noise_cl, ENoiseFac * noise_cl, ENoiseFac * noise_cl]
+            if use_lensing:
+                noises += [lens_recon_noise[ell]]
+            f.write("%d " % ell + " ".join("%E" % elem for elem in noises) + "\n")
+
+    dataset['fullsky_exact_fksy'] = fsky
+    dataset['dataset_format'] = 'CMBLike2'
+    dataset['like_approx'] = 'exact'
+
+    dataset['cl_lmin'] = lmin
+    dataset['cl_lmax'] = lmax
+
+    dataset['binned'] = False
+
+    dataset['cl_hat_includes_noise'] = False
+
+    save_cl_dict(os.path.join(output_dir, output_root + '.dat'),
+                 fiducial_Cl, cl_dict_lmin=cl_dict_lmin)
+    dataset['cl_hat_file'] = output_root + '.dat'
+    dataset['cl_noise_file '] = noise_file
+
+    ini.saveFile(os.path.join(output_dir, output_root + '.dataset'))
+    return ini

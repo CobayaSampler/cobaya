@@ -34,9 +34,10 @@ import inspect
 from collections import deque
 from typing import Sequence, Optional, Union
 # Local
-from cobaya.conventions import _external, kinds, _requires, _params, empty_dict
+from cobaya.conventions import _external, kinds, _requires, _params, empty_dict, \
+    _class_name
 from cobaya.component import CobayaComponent, ComponentCollection
-from cobaya.tools import get_class, str_to_list
+from cobaya.tools import get_resolved_class, str_to_list
 from cobaya.log import LoggedError, always_stop_exceptions
 from cobaya.tools import get_class_methods
 
@@ -133,7 +134,7 @@ class Theory(CobayaComponent):
         Interface function for likelihoods and other theory components to get derived
         parameters.
         """
-        return self._current_state["derived"][p]
+        return self.current_state["derived"][p]
 
     def get_result(self, result_name, **kwargs):
         """
@@ -146,7 +147,7 @@ class Theory(CobayaComponent):
         :param kwargs: options specific to X or this component
         :return: result
         """
-        return self._current_state[result_name]
+        return self.current_state[result_name]
 
     def get_can_provide_methods(self):
         """
@@ -218,7 +219,7 @@ class Theory(CobayaComponent):
         Takes a dictionary of parameter values and computes the products needed by the
         likelihood, or uses the cached value if that exists for these parameters.
         If want_derived, the derived parameters are saved in the computed state
-        (retrieved using get_current_derived()).
+        (retrieved using current_derived).
         """
         self.log.debug("Got parameters %r", params_values_dict)
         for p in self._input_params_extra:
@@ -249,26 +250,44 @@ class Theory(CobayaComponent):
                     return False
             except always_stop_exceptions:
                 raise
-            except Exception as e:
+            except Exception as excpt:
                 if self.stop_at_error:
-                    raise LoggedError(self.log, "Error at evaluation: %r", e)
+                    self.log.error("Error at evaluation. See error information below.")
+                    raise
                 else:
                     self.log.debug(
                         "Ignored error at evaluation and assigned 0 likelihood "
                         "(set 'stop_at_error: True' as an option for this component "
-                        "to stop here). Error message: %r", e)
+                        "to stop here and print a traceback). Error message: %r", excpt)
                     return False
-
             if self.timer:
                 self.timer.increment(self.log)
-
         # make this state the current one
         self._states.appendleft(state)
         self._current_state = state
         return True
 
+    @property
+    def current_state(self):
+        try:
+            return self._current_state
+        except AttributeError:
+            raise LoggedError(self.log, "Cannot retrieve calculated quantities: "
+                                        "nothing has been computed yet "
+                                        "(maybe the prior was -infinity?)")
+
+    @property
+    def current_derived(self):
+        return self.current_state.get("derived", {})
+
+    # MARKED FOR DEPRECATION IN v3.1
     def get_current_derived(self):
-        return self._current_state.get("derived", {})
+        self.log.warning("'Theory.get_current_derived()' method will soon be deprecated "
+                         "in favour of 'Theory.current_derived' attribute. Please, "
+                         "rename your call.")
+        # BEHAVIOUR TO BE REPLACED BY AN ERROR
+        return self.current_derived
+    # END OF DEPRECATION BLOCK
 
     def get_provider(self):
         """
@@ -350,7 +369,8 @@ class TheoryCollection(ComponentCollection):
                             raise LoggedError(self.log,
                                               "Theory %s is not a Theory subclass", name)
                     else:
-                        theory_class = get_class(name, kind=kinds.theory)
+                        theory_class = get_resolved_class(
+                            name, kind=kinds.theory, class_name=info.get(_class_name))
                     self.add_instance(
                         name, theory_class(
                             info, packages_path=packages_path, timing=timing, name=name))

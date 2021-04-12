@@ -1,5 +1,5 @@
 """
-.. module:: _DataSetLikelihood
+.. module:: DataSetLikelihood
 
 :Synopsis: Base class for .dataset based likelihoods.
 :Author: Antony Lewis
@@ -13,7 +13,7 @@ from getdist import IniFile
 from cobaya.conventions import _packages_path
 from cobaya.log import LoggedError
 from cobaya.install import NotInstalledError
-from ._InstallableLikelihood import _InstallableLikelihood
+from .InstallableLikelihood import InstallableLikelihood
 
 
 class _fast_chi_square:
@@ -29,7 +29,7 @@ class _fast_chi_square:
         return fast_chi_squared
 
 
-class _DataSetLikelihood(_InstallableLikelihood):
+class DataSetLikelihood(InstallableLikelihood):
     """A likelihood reading parameters and file names from a .dataset plain text
     .ini file (as CosmoMC)"""
 
