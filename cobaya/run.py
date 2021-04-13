@@ -9,6 +9,8 @@
 # Global
 from typing import Mapping
 import logging
+import os
+import sys
 
 # Local
 from cobaya import __version__
@@ -19,7 +21,7 @@ from cobaya.conventions import kinds, _prior, _params, _packages_path, _output_p
 from cobaya.output import get_output, split_prefix, get_info_path
 from cobaya.model import Model
 from cobaya.sampler import get_sampler_name_and_class, check_sampler_info
-from cobaya.log import logger_setup, LoggedError
+from cobaya.log import logger_setup, LoggedError, get_traceback_text
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info, load_input_MPI
 from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic, \
@@ -32,6 +34,8 @@ def run(info):
     # This function reproduces the model-->output-->sampler pipeline one would follow
     # when instantiating by hand, but alters the order to performs checks and dump info
     # as early as possible, e.g. to check if resuming possible or `force` needed.
+
+    # Allow info not to be passed in non-root processes
     assert isinstance(info, Mapping), (
         "The first argument must be a dictionary with the info needed for the run. "
         "If you were trying to pass the name of an input file instead, "
@@ -84,32 +88,47 @@ def run(info):
     sampler_class.check_force_resume(
         output, info=updated_info[kinds.sampler][sampler_name])
     # 4. Initialize the posterior and the sampler
-    with Model(updated_info[_params], updated_info[kinds.likelihood],
-               updated_info.get(_prior), updated_info.get(kinds.theory),
-               packages_path=info.get(_packages_path), timing=updated_info.get(_timing),
-               allow_renames=False, stop_at_error=info.get("stop_at_error", False)) \
-            as model:
-        # Re-dump the updated info, now containing parameter routes and version info
-        updated_info = recursive_update(updated_info, model.info())
-        output.check_and_dump_info(None, updated_info, check_compatible=False)
-        sampler = sampler_class(updated_info[kinds.sampler][sampler_name],
-                                model, output, packages_path=info.get(_packages_path))
-        # Re-dump updated info, now also containing updates from the sampler
-        updated_info[kinds.sampler][sampler.get_name()] = \
-            recursive_update(
-                updated_info[kinds.sampler][sampler.get_name()], sampler.info())
-        # TODO -- maybe also re-dump model info, now possibly with measured speeds
-        # (waiting until the camb.transfers issue is solved)
-        output.check_and_dump_info(None, updated_info, check_compatible=False)
-        mpi.sync_processes()
-        if info.get(_test_run, False):
-            logger_run.info("Test initialization successful! "
-                            "You can probably run now without `--%s`.", _test_run)
-            return updated_info, sampler
-        # Run the sampler
-        sampler.run()
-
-    output.clear_lock()
+    try:
+        with Model(updated_info[_params], updated_info[kinds.likelihood],
+                   updated_info.get(_prior), updated_info.get(kinds.theory),
+                   packages_path=info.get(_packages_path),
+                   timing=updated_info.get(_timing),
+                   allow_renames=False,
+                   stop_at_error=info.get("stop_at_error", False)) as model:
+            # Re-dump the updated info, now containing parameter routes and version info
+            updated_info = recursive_update(updated_info, model.info())
+            output.check_and_dump_info(None, updated_info, check_compatible=False)
+            sampler = sampler_class(updated_info[kinds.sampler][sampler_name],
+                                    model, output, packages_path=info.get(_packages_path))
+            # Re-dump updated info, now also containing updates from the sampler
+            updated_info[kinds.sampler][sampler.get_name()] = \
+                recursive_update(
+                    updated_info[kinds.sampler][sampler.get_name()], sampler.info())
+            # TODO -- maybe also re-dump model info, now possibly with measured speeds
+            # (waiting until the camb.transfers issue is solved)
+            output.check_and_dump_info(None, updated_info, check_compatible=False)
+            mpi.sync_processes()
+            if info.get(_test_run, False):
+                logger_run.info("Test initialization successful! "
+                                "You can probably run now without `--%s`.", _test_run)
+                return updated_info, sampler
+            # Run the sampler
+            sampler.run()
+    except Exception as e:
+        if "PYTEST_CURRENT_TEST" in os.environ and mpi.more_than_one_process():
+            # in pytest, LoggedError never gets to the system hook to kill mpi
+            # TODO: unfortunately unless run with -s, pytest will also not show this
+            #  as killed before printing captured output...
+            logger_run.error(get_traceback_text(sys.exc_info()))
+            logger_run.error('Error sampling: %s', e)
+            mpi.abort_if_mpi()
+        if isinstance(e, LoggedError):
+            raise
+        else:
+            logger_run.error(get_traceback_text(sys.exc_info()))
+            raise LoggedError(logger_run, 'Error sampling: %s', e)
+    finally:
+        output.clear_lock()
     return updated_info, sampler
 
 

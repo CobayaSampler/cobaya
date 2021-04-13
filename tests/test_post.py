@@ -49,7 +49,7 @@ info_sampler_dummy = {"evaluate": {"N": 10}}
 @mpi.synch_errors
 def test_post_prior(tmpdir):
     # Generate original chain
-    tmpdir = mpi.share_mpi(str(tmpdir))
+    tmpdir = mpi.share(str(tmpdir))
     info = {
         _output_prefix: os.path.join(tmpdir, "gaussian"), _force: True,
         _params: info_params, kinds.sampler: info_sampler,
@@ -67,9 +67,9 @@ def test_post_prior(tmpdir):
             info_post[_output_prefix] + _post_ + info_post[_post][_post_suffix])
         new_mean = mcsamples.mean(["a", "b"])
         new_cov = mcsamples.getCovMat().matrix
-        mpi.share_mpi((new_mean, new_cov))
+        mpi.share((new_mean, new_cov))
     else:
-        new_mean, new_cov = mpi.share_mpi()
+        new_mean, new_cov = mpi.share()
     assert abs(KL_norm(target["mean"], target["cov"], new_mean, new_cov)) < 0.02
 
 
@@ -112,9 +112,9 @@ def test_post_likelihood():
         mcsamples = MCSamplesFromCobaya(info_post_out, samples, name_tag="sample")
         new_mean = mcsamples.mean(["a", "b"])
         new_cov = mcsamples.getCovMat().matrix
-        mpi.share_mpi((new_mean, new_cov))
+        mpi.share((new_mean, new_cov))
     else:
-        new_mean, new_cov = mpi.share_mpi()
+        new_mean, new_cov = mpi.share()
     assert abs(KL_norm(target["mean"], target["cov"], new_mean, new_cov)) < 0.02
     assert np.allclose(products_post["sample"]["chi2__AA"],
                        products_post["sample"]["chi2__target"])

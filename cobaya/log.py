@@ -145,6 +145,12 @@ def logger_setup(debug=None, debug_file=None):
     sys.excepthook = exception_handler
 
 
+def get_traceback_text(exec_info):
+    return "".join(["-"] * 20 + ["\n\n"] +
+                   list(traceback.format_exception(*exec_info)) +
+                   ["\n"] + ["-"] * 37)
+
+
 class HasLogger:
     """
     Class having a logger with its name (or an alternative one).

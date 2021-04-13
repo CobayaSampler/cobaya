@@ -17,6 +17,7 @@ from cobaya.run import run
 from cobaya.yaml import yaml_load
 from cobaya.tools import getfullargspec
 from cobaya.likelihood import Likelihood
+from cobaya import mpi
 
 # Definition of external (log)pdf's
 
@@ -47,13 +48,14 @@ info_derived = {"half_ring": {
 
 # Common part of all tests
 
+@mpi.synch_errors
 def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
     # For pytest's handling of tmp dirs
-    if hasattr(tmpdir, "dirpath"):
-        tmpdir = tmpdir.dirname
-    prefix = os.path.join(tmpdir, "%d" % round(1e8 * random())) + os.sep
-    if os.path.exists(prefix):
-        shutil.rmtree(prefix)
+    tmpdir, rand = mpi.share((str(tmpdir), random()))
+    prefix = os.path.join(tmpdir, "%d" % round(1e8 * rand)) + os.sep
+    if mpi.is_main_process():
+        if os.path.exists(prefix):
+            shutil.rmtree(prefix)
     # build updated info
     info = {
         _output_prefix: prefix,

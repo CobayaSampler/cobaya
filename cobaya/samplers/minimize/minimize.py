@@ -92,7 +92,6 @@ from copy import deepcopy
 # Local
 from cobaya.sampler import Minimizer
 from cobaya.conventions import _undo_chi2_name
-from cobaya.mpi import get_mpi_comm, is_main_process, more_than_one_process, share_mpi
 from cobaya.collection import OnePoint, Collection
 from cobaya.log import LoggedError
 from cobaya.tools import read_dnumber, recursive_update
@@ -133,7 +132,7 @@ class minimize(Minimizer, CovmatSampler):
             files = self.output.find_collections()
             collection_in = None
             if files:
-                if more_than_one_process():
+                if mpi.more_than_one_process():
                     if 1 + mpi.rank() <= len(files):
                         collection_in = Collection(
                             self.model, self.output, name=str(1 + mpi.rank()),
@@ -270,27 +269,22 @@ class minimize(Minimizer, CovmatSampler):
         # If something failed
         if not hasattr(self, "result"):
             return
-        if more_than_one_process():
-            results = get_mpi_comm().gather(self.result, root=0)
-            successes = get_mpi_comm().gather(self.success, root=0)
-            _affine_transform_baselines = get_mpi_comm().gather(
-                self._affine_transform_baseline, root=0)
-            if is_main_process():
+        results, successes, _affine_transform_baselines = mpi.zip_gather(
+            [self.result, self.success, self._affine_transform_baseline])
+        if mpi.is_main_process():
+            if mpi.more_than_one_process():
                 mins = [(getattr(r, evals_attr_) if s else np.inf)
                         for r, s in zip(results, successes)]
                 i_min = np.argmin(mins)
                 self.result = results[i_min]
                 self._affine_transform_baseline = _affine_transform_baselines[i_min]
-        else:
-            successes = [self.success]
-        if is_main_process():
             if not any(successes):
                 raise LoggedError(
                     self.log, "Minimization failed! Here is the raw result object:\n%s",
                     str(self.result))
             elif not all(successes):
                 self.log.warning('Some minimizations failed!')
-            elif more_than_one_process():
+            elif mpi.more_than_one_process():
                 if max(mins) - min(mins) > 1:
                     self.log.warning('Big spread in minima: %r', mins)
                 elif max(mins) - min(mins) > 0.2:
@@ -321,15 +315,10 @@ class minimize(Minimizer, CovmatSampler):
             self.minimum.out_update()
             self.dump_getdist()
         # Share results ('result' object may not be picklable)
-        self.minimum = share_mpi(getattr(self, "minimum", None))
-        self._inv_affine_transform_matrix = share_mpi(
-            getattr(self, "_inv_affine_transform_matrix"))
-        self._affine_transform_baseline = share_mpi(
-            getattr(self, "_affine_transform_baseline"))
-        try:
-            self.result = share_mpi(getattr(self, "result"))
-        except:
-            self.result = None
+        self.minimum = mpi.share(getattr(self, "minimum", None))
+        self._inv_affine_transform_matrix, self._affine_transform_baseline, self.result \
+            = mpi.share((self._inv_affine_transform_matrix,
+                             self._affine_transform_baseline, self.result))
 
     def products(self):
         r"""
@@ -427,7 +416,7 @@ class minimize(Minimizer, CovmatSampler):
         (including deleting some output files when forcing).
         """
         if output.is_resuming():
-            if is_main_process():
+            if mpi.is_main_process():
                 raise LoggedError(
                     output.log, "Minimizer does not support resuming. "
                                 "If you want to start over, force "

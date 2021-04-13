@@ -8,6 +8,8 @@
 
 import os
 import functools
+from typing import List, Iterable
+import numpy as np
 
 # Vars to keep track of MPI parameters
 _mpi = None if os.environ.get('COBAYA_NOMPI', False) else -1
@@ -117,6 +119,9 @@ def share_mpi(data=None, root=0):
         return data
 
 
+share = share_mpi
+
+
 def size() -> int:
     return get_mpi_size() or 1
 
@@ -139,6 +144,23 @@ def allgather(data) -> list:
         return comm.allgather(data)
     else:
         return [data]
+
+
+def zip_gather(list_of_data, root=0) -> Iterable[tuple]:
+    """
+    Takes a list of items and returns a iterable of lists of items from each process
+    e.g. for root node
+    [(a_1, a_2),(b_1,b_2),...] = zip_gather([a,b,...])
+    """
+    comm = get_mpi_comm()
+    if comm and more_than_one_process():
+        return zip(*(comm.gather(list_of_data, root=root) or [list_of_data]))
+    else:
+        return ((item,) for item in list_of_data)
+
+
+def array_gather(list_of_data, root=0) -> List[np.array]:
+    return [np.array(i) for i in zip_gather(list_of_data, root=root)]
 
 
 def abort_if_mpi():
@@ -189,17 +211,23 @@ def set_from_root(attributes):
     return set_method
 
 
+class OtherProcessError(Exception):
+    pass
+
+
 def synch_errors(func):
+    err = 'Another process raised an error in %s' % func.__name__
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
-            func(*args, **kwargs)
+            result = func(*args, **kwargs)
         except Exception as e:
             allgather(e)
             raise
         else:
-            for result in allgather(True):
-                if isinstance(result, Exception):
-                    raise result
+            if any(allgather(False)):
+                raise OtherProcessError(err)
+            return result
 
     return wrapper

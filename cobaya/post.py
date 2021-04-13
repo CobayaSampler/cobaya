@@ -462,9 +462,9 @@ def post(info, sample=None):
         min_weight = min(min_weight, np.min(importance_weights))
         max_weight = max(max_weight, np.max(output_weights))
         sum_w2 += np.dot(output_weights, output_weights)
-    results = mpi.gather([tot_weight, min_weight, max_weight, sum_w2, points])
+        tot_weight, min_weight, max_weight, sum_w2, points = \
+            mpi.zip_gather([tot_weight, min_weight, max_weight, sum_w2, points])
     if mpi.is_main_process():
-        tot_weight, min_weight, max_weight, sum_w2, points = zip(*results)
         log.info("Finished! Final number of distinct sample points: %s", sum(points))
         log.info("Minimum scaled importance weight: %.4g", min(min_weight))
         log.info("Effective number of single samples if independent (sum w)/max(w): %s",

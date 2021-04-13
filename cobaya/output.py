@@ -8,7 +8,6 @@
 # Global
 import os
 import sys
-import traceback
 import datetime
 import re
 import shutil
@@ -22,7 +21,7 @@ from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
 from cobaya.conventions import _input_suffix, _updated_suffix, _separator_files, _version
 from cobaya.conventions import _resume, _resume_default, _force, _yaml_extensions
 from cobaya.conventions import _output_prefix, _debug, kinds, _params, _class_name
-from cobaya.log import LoggedError, HasLogger
+from cobaya.log import LoggedError, HasLogger, get_traceback_text
 from cobaya.input import is_equal_info, get_resolved_class
 from cobaya.collection import Collection
 from cobaya.tools import deepcopy_where_possible, find_with_regexp, sort_cosmetic
@@ -186,9 +185,7 @@ class Output(HasLogger):
             try:
                 os.makedirs(self.folder)
             except OSError:
-                self.log.error("".join(["-"] * 20 + ["\n\n"] +
-                                       list(traceback.format_exception(*sys.exc_info())) +
-                                       ["\n"] + ["-"] * 37))
+                self.log.error(get_traceback_text(sys.exc_info()))
                 raise LoggedError(
                     self.log, "Could not create folder '%s'. "
                               "See traceback on top of this message.", self.folder)

@@ -26,7 +26,7 @@ distance_factor = 4
 def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
                  packages_path=None, skip_not_installed=False):
     # Info of likelihood and prior
-    tmpdir = mpi.share_mpi(tmpdir)
+    tmpdir = mpi.share(str(tmpdir))
     ranges = np.array([[-1, 1] for _ in range(dimension)])
     while True:
         info = info_random_gaussian_mixture(
@@ -52,7 +52,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
                 list(info["params"])[:dimension])
     info[_debug] = False
     info[_debug_file] = None
-    info[_output_prefix] = str(tmpdir)
+    info[_output_prefix] = tmpdir
     if packages_path:
         info[_packages_path] = process_packages_path(packages_path)
     # Delay to one chain to check that MPI communication of the sampler is non-blocking

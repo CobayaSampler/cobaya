@@ -614,15 +614,12 @@ class mcmc(CovmatSampler):
         of the last samples.
         """
         # Compute Rminus1 of means
-        # TODO might be more efficient to do an async iallgather so chains do not need to
-        # synchronise
         if more_than_one_process():
             # Compute and gather means and covs
             use_first = int(self.n() / 2)
             mean = self.collection.mean(first=use_first)
             cov = self.collection.cov(first=use_first)
-            Ns, means, covs, acceptance_rates = map(
-                lambda x: np.array(get_mpi_comm().gather(x)),
+            Ns, means, covs, acceptance_rates = mpi.array_gather(
                 [self.n(), mean, cov, self.acceptance_rate])
         else:
             # Compute and gather means, covs and CL intervals of last m-1 chain fractions
@@ -640,19 +637,16 @@ class mcmc(CovmatSampler):
                 self.log.info("Not enough points in chain to check convergence. "
                               "Waiting for next checkpoint.")
                 return
-            acceptance_rates = self.acceptance_rate
+            acceptance_rates = None
         if is_main_process():
-            self.progress.at[self.i_learn, "N"] = (
-                sum(Ns) if more_than_one_process() else self.n())
+            self.progress.at[self.i_learn, "N"] = sum(Ns)
             self.progress.at[self.i_learn, "timestamp"] = \
                 datetime.datetime.now().isoformat()
-            acceptance_rate = (
-                np.average(acceptance_rates, weights=Ns)
-                if more_than_one_process() else acceptance_rates)
+            acceptance_rate = (np.average(acceptance_rates, weights=Ns)
+                               if acceptance_rates is not None else self.acceptance_rate)
             self.log.info(" - Acceptance rate: %.3f" +
                           (" = avg(%r)" % list(acceptance_rates)
-                           if more_than_one_process() else ""),
-                          acceptance_rate)
+                           if acceptance_rates is not None else ""), acceptance_rate)
             self.progress.at[self.i_learn, "acceptance_rate"] = acceptance_rate
             # "Within" or "W" term -- our "units" for assessing convergence
             # and our prospective new covariance matrix
@@ -702,13 +696,13 @@ class mcmc(CovmatSampler):
                     self.log.debug(" - Eigenvalues = %r", eigvals)
                     self.log.info(
                         " - Convergence of means: R-1 = %f after %d accepted steps" % (
-                            Rminus1, (sum(Ns) if more_than_one_process() else self.n())) +
+                            Rminus1, sum(Ns)) +
                         (" = sum(%r)" % list(Ns) if more_than_one_process() else ""))
                     # Have we converged in means?
                     # (criterion must be fulfilled twice in a row)
                     converged_means = max(Rminus1, self.Rminus1_last) < self.Rminus1_stop
         else:
-            mean_of_covs = np.empty((self.model.prior.d(), self.model.prior.d()))
+            mean_of_covs = None
             success_means = None
             converged_means = False
             Rminus1 = None
@@ -785,10 +779,7 @@ class mcmc(CovmatSampler):
                     self.mpi_info("Convergence less than requested for updates: "
                                   "waiting until the next convergence check.")
                     return
-                if more_than_one_process():
-                    get_mpi_comm().Bcast(mean_of_covs, root=0)
-                else:
-                    mean_of_covs = covs[0]
+                mean_of_covs = mpi.share(mean_of_covs)
                 try:
                     self.proposer.set_covariance(mean_of_covs)
                     self.mpi_info(" - Updated covariance matrix of proposal pdf.")

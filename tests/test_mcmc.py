@@ -16,7 +16,7 @@ max_runs = 3
 def test_mcmc(tmpdir, packages_path=None):
     dimension = 3
     # Random initial proposal
-    S0 = mpi.share_mpi(
+    S0 = mpi.share(
         random_cov(dimension * [[0, 1]], n_modes=1, O_std_min=0.01, O_std_max=0.5)
         if mpi.is_main_process() else None)
     info_sampler = {"mcmc": {
@@ -45,8 +45,7 @@ def test_mcmc(tmpdir, packages_path=None):
         info_sampler["mcmc"].update({
             # Callback to check KL divergence -- disabled in the automatic test
             "callback_function": check_gaussian, "callback_every": 100})
-    body_of_test(
-        dimension=dimension, n_modes=1, info_sampler=info_sampler, tmpdir=str(tmpdir))
+    body_of_test(dimension=dimension, info_sampler=info_sampler, tmpdir=tmpdir)
 
 
 @flaky(max_runs=max_runs, min_passes=1)
