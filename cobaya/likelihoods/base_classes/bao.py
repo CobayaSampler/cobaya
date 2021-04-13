@@ -142,9 +142,11 @@ class BAO(InstallableLikelihood):
     prob_dist_bounds: Optional[Sequence[float]]
     measurements_file: str
     rs_fid: Optional[float]
+    rs_rescale: Optional[float]
     prob_dist: Optional[str]
     cov_file: Optional[str]
     invcov_file: Optional[str]
+    path: Optional[str]
 
     def initialize(self):
         self.log.info("Initialising.")

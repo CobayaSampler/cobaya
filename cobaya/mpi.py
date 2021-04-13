@@ -128,7 +128,7 @@ def rank() -> int:
 def gather(data, root=0) -> list:
     comm = get_mpi_comm()
     if comm and more_than_one_process():
-        return comm.gather(data, root=root)
+        return comm.gather(data, root=root) or []
     else:
         return [data]
 
@@ -187,3 +187,19 @@ def set_from_root(attributes):
         return wrapper
 
     return set_method
+
+
+def synch_errors(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except Exception as e:
+            allgather(e)
+            raise
+        else:
+            for result in allgather(True):
+                if isinstance(result, Exception):
+                    raise result
+
+    return wrapper

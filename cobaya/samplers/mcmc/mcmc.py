@@ -109,7 +109,9 @@ class mcmc(CovmatSampler):
                     "Cannot resume a run with a different number of chains: "
                     "was %d and now is %d.", max(self.mpi_size or 0, 1), mpi.size())
             if more_than_one_process():
-                if get_mpi().Get_version()[0] < 3:
+                if get_mpi().Get_version()[0] < 3 \
+                        and 'Microsoft' not in get_mpi().Get_library_version():
+                    # Microsoft MPI currently only supports all MPI 2 but has IALLGATHER
                     raise LoggedError(self.log, "MPI use requires MPI version 3.0 or "
                                                 "higher to support IALLGATHER.")
         sync_processes()
@@ -366,18 +368,21 @@ class mcmc(CovmatSampler):
                         self.check_convergence_and_learn_proposal()
                         if is_main_process():
                             self.i_learn += 1
+
+        # Make sure the last batch of samples ( < output_every (not in sec)) are written
+        self.collection.out_update()
+
         if last_n == self.max_samples:
             self.log.info("Reached maximum number of accepted steps allowed. "
                           "Stopping.")
-        # Make sure the last batch of samples ( < output_every (not in sec)) are written
-        self.collection.out_update()
-        if more_than_one_process():
-            Ns = (lambda x: np.array(get_mpi_comm().gather(x)))(self.n())
-            if not is_main_process():
-                Ns = []
-        else:
-            Ns = [self.n()]
-        self.mpi_info("Sampling complete after %d accepted steps.", sum(Ns))
+            if hasattr(self, "req"):
+                # if have signalled ready, make sure don't leave others waiting
+                self.req.Wait()
+                delattr(self, "req")
+                mpi.allgather(False)
+
+        ns = mpi.gather(self.n())
+        self.mpi_info("Sampling complete after %d accepted steps.", sum(ns))
 
     def n(self, burn_in=False):
         """
@@ -590,19 +595,16 @@ class mcmc(CovmatSampler):
                     np.array([1.]), self.all_ready)
                 self.log.info(msg_ready + " (waiting for the rest...)")
         # If all processes are ready to learn (= communication finished)
-        if self.req.Test() if hasattr(self, "req") else False:
+        if hasattr(self, "req") and self.req.Test():
             # Sanity check: actually all processes have finished
             assert np.all(self.all_ready == 1), (
                 "This should not happen! Notify the developers. (Got %r)", self.all_ready)
-            if more_than_one_process() and is_main_process():
-                self.log.info("All chains are r" + msg_ready[1:])
+            self.mpi_info("All chains are r" + msg_ready[1:])
             delattr(self, "req")
             self.been_waiting = 0
             # Another error check, in case the error occurred after sending "ready" signal
             self.check_error_signal()
-            # Just in case, a barrier here
-            sync_processes()
-            return True
+            return all(mpi.allgather(True))
         return False
 
     def check_convergence_and_learn_proposal(self):
@@ -612,6 +614,8 @@ class mcmc(CovmatSampler):
         of the last samples.
         """
         # Compute Rminus1 of means
+        # TODO might be more efficient to do an async iallgather so chains do not need to
+        # synchronise
         if more_than_one_process():
             # Compute and gather means and covs
             use_first = int(self.n() / 2)
@@ -708,8 +712,7 @@ class mcmc(CovmatSampler):
             success_means = None
             converged_means = False
             Rminus1 = None
-        success_means = share_mpi(success_means)
-        converged_means = share_mpi(converged_means)
+        success_means, converged_means = share_mpi((success_means, converged_means))
         # Check the convergence of the bounds of the confidence intervals
         # Same as R-1, but with the rms deviation from the mean bound
         # in units of the mean standard deviation of the chains

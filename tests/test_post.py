@@ -2,7 +2,7 @@ import os
 from copy import deepcopy
 from flaky import flaky
 from scipy.stats import multivariate_normal
-from getdist.mcsamples import loadMCSamples
+from getdist.mcsamples import loadMCSamples, MCSamplesFromCobaya
 import numpy as np
 
 from cobaya.run import run
@@ -11,6 +11,7 @@ from cobaya.tools import KL_norm
 from cobaya.conventions import _output_prefix, _params, _force, kinds
 from cobaya.conventions import _prior, partag, _separator_files
 from cobaya.conventions import _post, _post_add, _post_remove, _post_suffix
+from cobaya import mpi
 
 _post_ = _separator_files + _post + _separator_files
 
@@ -40,15 +41,17 @@ info_params = dict([
     ("b", {"prior": _range, "ref": ref_pdf, partag.proposal: sigma}),
     ("a_plus_b", {partag.derived: lambda a, b: a + b})])
 
-info_sampler = {"mcmc": {"Rminus1_stop": 0.01}}
+info_sampler = {"mcmc": {"Rminus1_stop": 0.005}}
 info_sampler_dummy = {"evaluate": {"N": 10}}
 
 
 @flaky(max_runs=3, min_passes=1)
+@mpi.synch_errors
 def test_post_prior(tmpdir):
     # Generate original chain
+    tmpdir = mpi.share_mpi(str(tmpdir))
     info = {
-        _output_prefix: os.path.join(str(tmpdir), "gaussian"), _force: True,
+        _output_prefix: os.path.join(tmpdir, "gaussian"), _force: True,
         _params: info_params, kinds.sampler: info_sampler,
         kinds.likelihood: {"one": None}, _prior: {"gaussian": sampled_pdf}}
     run(info)
@@ -59,15 +62,19 @@ def test_post_prior(tmpdir):
                 _post_add: {_prior: {"target": target_pdf_prior}}}}
     post(info_post)
     # Load with GetDist and compare
-    mcsamples = loadMCSamples(
-        info_post[_output_prefix] + _post_ + info_post[_post][_post_suffix])
-    new_mean = mcsamples.mean(["a", "b"])
-    new_cov = mcsamples.getCovMat().matrix
+    if mpi.is_main_process():
+        mcsamples = loadMCSamples(
+            info_post[_output_prefix] + _post_ + info_post[_post][_post_suffix])
+        new_mean = mcsamples.mean(["a", "b"])
+        new_cov = mcsamples.getCovMat().matrix
+        mpi.share_mpi((new_mean, new_cov))
+    else:
+        new_mean, new_cov = mpi.share_mpi()
     assert abs(KL_norm(target["mean"], target["cov"], new_mean, new_cov)) < 0.02
 
 
 @flaky(max_runs=3, min_passes=1)
-def test_post_likelihood(tmpdir):
+def test_post_likelihood():
     """
     Swaps likelihood "gaussian" for "target".
 
@@ -80,15 +87,14 @@ def test_post_likelihood(tmpdir):
     dummy_loglike_add = 0.1
     dummy_loglike_remove = 0.01
     info = {
-        _output_prefix: os.path.join(str(tmpdir), "gaussian"), _force: True,
+        _output_prefix: None, _force: True,
         _params: info_params_local, kinds.sampler: info_sampler,
         kinds.likelihood: {
             "gaussian": {"external": sampled_pdf, "type": "AA"},
             "dummy": {"external": lambda dummy: 1, "type": "BB"},
             "dummy_remove": {"external": lambda dummy: dummy_loglike_add, "type": "BB"}}}
-    run(info)
-    info_post = {
-        _output_prefix: info[_output_prefix], _force: True,
+    info_out, sampler = run(info)
+    info_out.update({
         _post: {_post_suffix: "foo",
                 _post_remove: {kinds.likelihood: {
                     "gaussian": None, "dummy_remove": None}},
@@ -97,13 +103,18 @@ def test_post_likelihood(tmpdir):
                         "external": target_pdf, "type": "AA",
                         "output_params": ["cprime"]},
                     "dummy_add": {
-                        "external": lambda dummy: dummy_loglike_remove, "type": "BB"}}}}}
-    info_post_out, products_post = post(info_post)
+                        "external": lambda dummy: dummy_loglike_remove, "type": "BB"}}}}})
+    info_post_out, products_post = post(info_out, sampler.products()["sample"])
+    samples = mpi.gather(products_post["sample"])
+
     # Load with GetDist and compare
-    mcsamples = loadMCSamples(
-        info_post[_output_prefix] + _post_ + info_post[_post][_post_suffix])
-    new_mean = mcsamples.mean(["a", "b"])
-    new_cov = mcsamples.getCovMat().matrix
+    if mpi.is_main_process():
+        mcsamples = MCSamplesFromCobaya(info_post_out, samples, name_tag="sample")
+        new_mean = mcsamples.mean(["a", "b"])
+        new_cov = mcsamples.getCovMat().matrix
+        mpi.share_mpi((new_mean, new_cov))
+    else:
+        new_mean, new_cov = mpi.share_mpi()
     assert abs(KL_norm(target["mean"], target["cov"], new_mean, new_cov)) < 0.02
     assert np.allclose(products_post["sample"]["chi2__AA"],
                        products_post["sample"]["chi2__target"])

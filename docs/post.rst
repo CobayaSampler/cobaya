@@ -145,7 +145,7 @@ Ignoring burn-in and thinning the sample
 
 You can **skip** any number of initial samples using the option ``skip``, with an integer value for a precise number of rows, and and a value :math:`<1` for an initial fraction of the chain.
 
-To **thin** the sample, give the ``thin`` option any value :math:`>1`, and only one every ``[thin]`` samples will be used (not currently implemented).
+To **thin** the sample, give the ``thin`` option any value :math:`>1`, and only one every ``[thin]`` samples will be used (accounting for sample weights, which must be integer).
 
 
 Sequential application of post-processing
