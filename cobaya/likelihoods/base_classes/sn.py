@@ -253,6 +253,9 @@ class SN(DataSetLikelihood):
         # State requisites to the theory code
         return {"angular_diameter_distance": {"z": self.zcmb}}
 
+    def get_can_support_params(self):
+        return {"Mb": None}
+
     def _read_covmat(self, filename):
         cov = np.loadtxt(filename)
         if np.isscalar(cov[0]) and cov[0] ** 2 + 1 == len(cov):
