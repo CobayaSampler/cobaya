@@ -309,7 +309,7 @@ class polychord(CovmatSampler):
         if self.use_supernest:
             # TODO Check compatibility of arguments (in particular self._mean and self._covmat)
             # AP: This is unnecessary if they're incompatible, raises a ValueError, at contruction.
-            
+            self.mpi_info("bounds: {}".format(bounds))
             proposal = supernest.gaussian_proposal(
                 self.bounds, self._mean, self._covmat, loglike=logpost)
             self.mpi_info('Success!')
