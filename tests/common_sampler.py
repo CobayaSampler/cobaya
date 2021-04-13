@@ -1,7 +1,6 @@
 """General test for samplers. Checks convergence, cluster detection, evidence."""
 
 import numpy as np
-from mpi4py import MPI
 from random import shuffle, choice
 from scipy.stats import multivariate_normal
 from getdist.mcsamples import MCSamplesFromCobaya
@@ -14,6 +13,7 @@ from cobaya.tools import KL_norm
 from cobaya.run import run
 from .common import process_packages_path, is_travis
 from .conftest import install_test_wrapper
+from cobaya import mpi
 
 KL_tolerance = 0.05
 logZ_nsigmas = 2
@@ -22,11 +22,11 @@ O_std_max = 0.05
 distance_factor = 4
 
 
+@mpi.synch_errors
 def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
                  packages_path=None, skip_not_installed=False):
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
     # Info of likelihood and prior
+    tmpdir = mpi.share_mpi(tmpdir)
     ranges = np.array([[-1, 1] for _ in range(dimension)])
     while True:
         info = info_random_gaussian_mixture(
@@ -39,7 +39,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
                             for i, m1 in enumerate(means)])
         if min(distances) >= distance_factor * O_std_max:
             break
-    if rank == 0:
+    if mpi.is_main_process():
         print("Original mean of the gaussian mode:")
         print(info["likelihood"]["gaussian_mixture"]["means"])
         print("Original covmat of the gaussian mode:")
@@ -52,8 +52,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
                 list(info["params"])[:dimension])
     info[_debug] = False
     info[_debug_file] = None
-    # TODO: this looks weird/bug:?
-    info[_output_prefix] = getattr(tmpdir, "realpath()", lambda: tmpdir)()
+    info[_output_prefix] = str(tmpdir)
     if packages_path:
         info[_packages_path] = process_packages_path(packages_path)
     # Delay to one chain to check that MPI communication of the sampler is non-blocking
@@ -61,8 +60,9 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
     #        info["likelihood"]["gaussian_mixture"]["delay"] = 0.1
     updated_info, sampler = install_test_wrapper(skip_not_installed, run, info)
     products = sampler.products()
+    products["sample"] = mpi.gather(products["sample"])
     # Done! --> Tests
-    if rank == 0:
+    if mpi.is_main_process():
         if sampler_name == "mcmc":
             ignore_rows = 0.5
         else:
@@ -90,7 +90,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
             g = gdplots.getSubplotPlotter()
             to_plot = [mixture, results]
             if clusters:
-                to_plot = to_plot + clusters
+                to_plot += clusters
             g.triangle_plot(to_plot, params=sampled_params)
             g.export("test.png")
         except:
@@ -130,6 +130,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
                     products["logZ"] + logZ_nsigmas * products["logZstd"])
 
 
+@mpi.synch_errors
 def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False,
                         packages_path=None, skip_not_installed=False):
     # #dimensions and speed ratio mutually prime (e.g. 2,3,5)
@@ -221,7 +222,9 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False,
     elif sampler_name == "mcmc" and info["sampler"][sampler_name].get("drag"):
         assert test_func(n_evals, dim0, speed0, dim1, 2 * speed1) <= tolerance, (
             ("%g > %g" % (test_func(n_evals, dim0, speed0, dim1, speed1), tolerance)))
-    elif sampler_name == "mcmc" and info["sampler"][sampler_name].get("oversample"):
+    elif sampler_name == "mcmc" and (
+            info["sampler"][sampler_name].get("oversample") or
+            info["sampler"][sampler_name].get("oversample_power", 0) > 0):
         assert test_func(n_evals, dim0, speed0, dim1, speed1) <= tolerance, (
             ("%g > %g" % (test_func(n_evals, dim0, speed0, dim1, speed1), tolerance)))
     elif sampler_name == "mcmc":  # just blocking

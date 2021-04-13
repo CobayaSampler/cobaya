@@ -65,8 +65,6 @@ jobs:
       dist: focal
       addons:
         apt:
-          sources:
-            - ubuntu-toolchain-r-test
           packages:
             - gcc-10
             - gfortran-10
@@ -107,6 +105,10 @@ before_install:
 
 script:
   - export COBAYA_PACKAGES_PATH="../packages"
+  # mpi tests [not sure why it hangs in py3.6]
+  - if [[ "$GCC_VERSION" != "6" ]]; then
+      mpiexec -np 2 --mca orte_base_help_aggregate 0 --mca btl ^openib --oversubscribe pytest -x tests/test_mcmc.py tests/test_post.py --no-flaky-report ;
+    fi;
   # General tests:
   - cobaya-install polychord --debug
   - pytest tests/ -k "not cosmo" --skip-not-installed --no-flaky-report

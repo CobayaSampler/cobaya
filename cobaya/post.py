@@ -68,14 +68,25 @@ def post(info, sample=None):
     dummy_model_in = DummyModel(info_in[_params], info_in.get(kinds.likelihood, {}),
                                 info_in.get(_prior, None))
     in_collections = []
+    thin = info_post.get("thin", 1)
+    skip = info_post.get("skip", 0)
     if sample:
-        if mpi.size() > 1:
-            raise LoggedError(log, "MPI not currently supported for postprocessing"
-                                   "from sample, only using main process.")
+        # If MPI, assume for each MPI process post is passed in the list of
+        # collections that should be processed by that process
+        # (e.g. single chain output from sampler)
         if isinstance(sample, Collection):
             in_collections = [sample]
         else:
             in_collections = sample
+        for i, collection in enumerate(in_collections):
+            if skip:
+                if 0 < skip < 1:
+                    skip = int(skip * len(collection))
+                collection = collection.data.iloc[skip:, :]
+            if thin != 1:
+                collection = collection.copy()
+                collection.thin_samples(thin)
+            in_collections[i] = collection
     elif output_in:
         files = output_in.find_collections()
         if files:
@@ -85,8 +96,7 @@ def post(info, sample=None):
                                   mpi.size(), len(files))
             for num in range(mpi.rank(), len(files), mpi.size()):
                 in_collections += [Collection(dummy_model_in, output_in,
-                                              onload_thin=info_post.get("thin", 1),
-                                              onload_skip=info_post.get("skip", 0),
+                                              onload_thin=thin, onload_skip=skip,
                                               load=True, name=str(num + 1))]
         else:
             raise LoggedError(log, "No samples found for the input model with prefix %s",
@@ -99,7 +109,8 @@ def post(info, sample=None):
         raise LoggedError(
             log, "Not enough samples for post-processing. Try using a larger sample, "
                  "or skipping or thinning less.")
-    log.info("Will process %d samples.", sum(len(c) for c in in_collections))
+    mpi.sync_processes()
+    log.info("Will process %d sample points.", sum(len(c) for c in in_collections))
 
     # 2. Compare old and new info: determine what to do
     add = info_post.get(_post_add) or {}
@@ -462,5 +473,5 @@ def post(info, sample=None):
             "Effective number of weighted samples if independent (sum w)^2/sum(w^2): "
             "%s", int(sum(tot_weight) ** 2 / sum(sum_w2)))
 
-        return info_out, {"sample": (out_collections[0] if
-                                     len(out_collections) == 1 else out_collections)}
+    return info_out, {"sample": (out_collections[0] if
+                                 len(out_collections) == 1 else out_collections)}

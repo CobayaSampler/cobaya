@@ -486,7 +486,7 @@ def read_dnumber(n, dim):
     return NumberWithUnits(n, "d", dtype=int, scale=dim).value
 
 
-def load_DataFrame(file_name, skip=0, thin=1, root_file_name=None):
+def load_DataFrame(file_name, skip=0, root_file_name=None):
     """
     Loads a `pandas.DataFrame` from a text file
     with column names in the first line, preceded by ``#``.
@@ -519,14 +519,11 @@ def load_DataFrame(file_name, skip=0, thin=1, root_file_name=None):
                 pass
             skip = int(skip * (n + 1))
             inp.seek(0)
-        thin = int(thin)
-        skiprows = lambda _i: _i < skip or _i % thin
-        if thin != 1:
-            raise LoggedError(log, "thin is not supported yet")
-        # TODO: looks like this thinning is not correctly account for weights???
-        return pd.read_csv(
+        data = pd.read_csv(
             inp, sep=" ", header=None, names=cols, comment="#", skipinitialspace=True,
-            skiprows=skiprows, index_col=False)
+            skiprows=skip, index_col=False)
+
+        return data
 
 
 def prepare_comment(comment):

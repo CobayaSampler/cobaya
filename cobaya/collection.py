@@ -119,7 +119,9 @@ class Collection(BaseCollection):
         if resuming or load:
             if output:
                 try:
-                    self._out_load(skip=onload_skip, thin=onload_thin)
+                    self._out_load(skip=onload_skip)
+                    if onload_thin != 1:
+                        self.thin_samples(onload_thin)
                     if load:
                         self.columns = list(self.data.columns)
                         loaded_chi2_names = set(name for name in self.columns if
@@ -427,6 +429,33 @@ class Collection(BaseCollection):
                  (list(self.derived_params) if derived else [])][first:last].T,
             **weights_kwarg))
 
+    def thin_samples(self, thin):
+        if thin == 1:
+            return
+        if thin != int(thin) or thin < 1:
+            raise LoggedError(self.log, "Thin factor must be an positive integer, got %s",
+                              thin)
+        from getdist.chains import WeightedSamples, WeightedSampleError
+        thin = int(thin)
+        try:
+            if hasattr(WeightedSamples, "thin_indices_and_weights"):
+                unique, counts = \
+                    WeightedSamples.thin_indices_and_weights(thin, self[_weight].values)
+            else:
+                # TODO remove once getdist updated
+                thin_ix = WeightedSamples.thin_indices(None, thin, self[_weight].values)
+                unique, counts = np.unique(thin_ix, return_counts=True)
+        except WeightedSampleError as e:
+            raise LoggedError(self.log, "Error thinning: %s", e)
+        else:
+            data = self._data.iloc[unique, :].copy()
+            data.iloc[:, 0] = counts
+            data.reset_index(drop=True, inplace=True)
+            self._data = data
+            self._n = self._data.last_valid_index() + 1
+        self.log.debug("Thinned samples by %s, sample points after thinning %s",
+                       thin, len(self._data))
+
     def bestfit(self):
         """Best fit (maximum likelihood) sample. Returns a copy."""
         return self.data.loc[self.data[_chi2].idxmin()].copy()
@@ -476,11 +505,12 @@ class Collection(BaseCollection):
         self._get_driver("_delete")()
 
     # txt driver
-    def _load__txt(self, skip=0, thin=1):
-        self.log.debug("Skipping %d rows and thinning with factor %d.", skip, thin)
-        self._data = load_DataFrame(self.file_name, skip=skip, thin=thin,
+    def _load__txt(self, skip=0):
+        self.log.debug("Skipping %d rows", skip)
+        self._data = load_DataFrame(self.file_name, skip=skip,
                                     root_file_name=self.root_file_name)
-        self.log.info("Loaded %d samples from '%s'", len(self._data), self.file_name)
+        self.log.info("Loaded %d sample points from '%s'", len(self._data),
+                      self.file_name)
 
     def _dump__txt(self):
         self._dump_slice__txt(0, len(self))

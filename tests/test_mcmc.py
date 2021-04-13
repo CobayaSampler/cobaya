@@ -1,4 +1,3 @@
-from mpi4py import MPI
 from flaky import flaky
 import numpy as np
 
@@ -6,11 +5,8 @@ from cobaya.likelihoods.gaussian_mixture import random_cov
 from cobaya.tools import KL_norm
 from cobaya.likelihood import Likelihood
 from cobaya.run import run
-
+from cobaya import mpi
 from .common_sampler import body_of_test, body_of_test_speeds
-
-### import pytest
-### @pytest.mark.mpi
 
 # Max number of tries per test
 max_runs = 3
@@ -20,13 +16,9 @@ max_runs = 3
 def test_mcmc(tmpdir, packages_path=None):
     dimension = 3
     # Random initial proposal
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    if rank == 0:
-        S0 = random_cov(dimension * [[0, 1]], n_modes=1, O_std_min=0.01, O_std_max=0.5)
-    else:
-        S0 = None
-    S0 = comm.bcast(S0, root=0)
+    S0 = mpi.share_mpi(
+        random_cov(dimension * [[0, 1]], n_modes=1, O_std_min=0.01, O_std_max=0.5)
+        if mpi.is_main_process() else None)
     info_sampler = {"mcmc": {
         # Bad guess for covmat, so big burn in and max_tries
         # TODO: why * dimension here?
@@ -34,7 +26,7 @@ def test_mcmc(tmpdir, packages_path=None):
         # Learn proposal
         # "learn_proposal": True,  # default now!
         # Proposal
-        "covmat": S0, }}
+        "covmat": S0}}
 
     def check_gaussian(sampler_instance):
         KL_proposer = KL_norm(
@@ -49,7 +41,7 @@ def test_mcmc(tmpdir, packages_path=None):
                 first=int(sampler_instance.n() / 2)))
         print("KL proposer: %g ; KL sample: %g" % (KL_proposer, KL_sample))
 
-    if rank == 0:
+    if mpi.rank() == 0:
         info_sampler["mcmc"].update({
             # Callback to check KL divergence -- disabled in the automatic test
             "callback_function": check_gaussian, "callback_every": 100})
@@ -65,8 +57,7 @@ def test_mcmc_blocking():
 
 @flaky(max_runs=max_runs, min_passes=1)
 def test_mcmc_oversampling():
-    info_mcmc = {"mcmc": {"burn_in": 0, "learn_proposal": False,
-                          "oversample": True, "oversample_power": 1}}
+    info_mcmc = {"mcmc": {"burn_in": 0, "learn_proposal": False, "oversample_power": 1}}
     body_of_test_speeds(info_mcmc)
 
 
