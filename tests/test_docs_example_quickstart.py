@@ -6,6 +6,7 @@ to make sure it remains up to date.
 from flaky import flaky
 from io import StringIO
 import os
+import pytest
 
 from cobaya.yaml import yaml_load_file
 from cobaya.input import is_equal_info
@@ -14,6 +15,8 @@ from cobaya.tools import KL_norm
 from .common_sampler import KL_tolerance
 from .common import stdout_redirector
 from cobaya import mpi
+
+pytestmark = pytest.mark.mpi
 
 docs_folder = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "docs")
 docs_src_folder = os.path.join(docs_folder, "src_examples", "quickstart")

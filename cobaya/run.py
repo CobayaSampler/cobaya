@@ -9,7 +9,6 @@
 # Global
 from typing import Mapping
 import logging
-import os
 import sys
 
 # Local
@@ -21,7 +20,7 @@ from cobaya.conventions import kinds, _prior, _params, _packages_path, _output_p
 from cobaya.output import get_output, split_prefix, get_info_path
 from cobaya.model import Model
 from cobaya.sampler import get_sampler_name_and_class, check_sampler_info
-from cobaya.log import logger_setup, LoggedError, get_traceback_text
+from cobaya.log import logger_setup, LoggedError, abort_if_test
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info, load_input_MPI
 from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic, \
@@ -114,20 +113,11 @@ def run(info):
                 return updated_info, sampler
             # Run the sampler
             sampler.run()
-    except Exception as e:
-        if "PYTEST_CURRENT_TEST" in os.environ and mpi.more_than_one_process():
-            # in pytest, LoggedError never gets to the system hook to kill mpi
-            # TODO: unfortunately unless run with -s, pytest will also not show this
-            #  as killed before printing captured output...
-            logger_run.error(get_traceback_text(sys.exc_info()))
-            logger_run.error('Error sampling: %s', e)
-            mpi.abort_if_mpi()
-        if isinstance(e, LoggedError):
-            raise
-        else:
-            logger_run.error(get_traceback_text(sys.exc_info()))
-            raise LoggedError(logger_run, 'Error sampling: %s', e)
-    finally:
+    except Exception:
+        output.clear_lock()
+        abort_if_test(logger_run, sys.exc_info())
+        raise
+    else:
         output.clear_lock()
     return updated_info, sampler
 

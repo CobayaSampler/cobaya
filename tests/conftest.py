@@ -1,6 +1,9 @@
+import logging
+
 import pytest
 import os
-import inspect
+from cobaya.install import NotInstalledError
+from cobaya import mpi
 
 # Paths ##################################################################################
 
@@ -15,7 +18,7 @@ def pytest_addoption(parser):
                      help="Path to folder of automatic installation of packages")
     parser.addoption("--skip-not-installed", action="store_true",
                      help="Skip tests for which dependencies of used components are not "
-                     "installed.")
+                          "installed.")
 
 
 @pytest.fixture
@@ -37,14 +40,11 @@ def pytest_collection_modifyitems(config, items):
         skip_mark = pytest.mark.skip(
             reason="'%s' skipped by envvar '%s'" % (k, _test_skip_env))
         for item in items:
-            if any([(k.lower() in x) for x in [item.name.lower(), item.keywords]]):
+            if any((k.lower() in x) for x in [item.name.lower(), item.keywords]):
                 item.add_marker(skip_mark)
 
 
 # Skip not installed #####################################################################
-
-from cobaya.install import NotInstalledError
-
 
 @pytest.fixture
 def skip_not_installed(request):
@@ -58,3 +58,28 @@ def install_test_wrapper(skip_not_installed, func, *args, **kwargs):
         if skip_not_installed:
             pytest.xfail("Missing dependencies.")
         raise
+
+
+# Allow printing of errors when MPI aborting even if output captured by pytest
+
+
+@pytest.fixture(scope="session", autouse=True)
+def mpi_handling(request):
+    if mpi.more_than_one_process():
+        capmanager = request.config.pluginmanager.getplugin("capturemanager")
+        old_abort = mpi.abort_if_mpi
+
+        def aborter(log=None, msg=None):
+            if log and msg:
+                log.error(msg)
+            capmanager.stop_global_capturing()
+            old_abort()
+
+        mpi.abort_if_mpi = aborter
+
+
+def pytest_configure(config):
+    # register an additional marker
+    config.addinivalue_line(
+        "markers", "mpi: mark test explicitly supports mpi"
+    )

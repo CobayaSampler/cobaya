@@ -107,7 +107,7 @@ script:
   - export COBAYA_PACKAGES_PATH="../packages"
   # mpi tests [not sure why it hangs in py3.6]
   - if [[ "$GCC_VERSION" != "6" ]]; then
-      mpiexec -np 2 --mca orte_base_help_aggregate 0 --mca btl ^openib --oversubscribe pytest -x tests/test_mcmc.py tests/test_post.py --no-flaky-report ;
+      mpiexec -np 2 --mca orte_base_help_aggregate 0 --mca btl ^openib --oversubscribe pytest -x -m mpi tests/ --no-flaky-report ;
     fi;
   # General tests:
   - cobaya-install polychord --debug

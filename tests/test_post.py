@@ -4,6 +4,7 @@ from flaky import flaky
 from scipy.stats import multivariate_normal
 from getdist.mcsamples import loadMCSamples, MCSamplesFromCobaya
 import numpy as np
+import pytest
 
 from cobaya.run import run
 from cobaya.post import post
@@ -12,6 +13,8 @@ from cobaya.conventions import _output_prefix, _params, _force, kinds
 from cobaya.conventions import _prior, partag, _separator_files
 from cobaya.conventions import _post, _post_add, _post_remove, _post_suffix
 from cobaya import mpi
+
+pytestmark = pytest.mark.mpi
 
 _post_ = _separator_files + _post + _separator_files
 

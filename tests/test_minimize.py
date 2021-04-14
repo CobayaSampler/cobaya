@@ -1,14 +1,16 @@
 # Minimization of a random Gaussian likelihood using the minimize sampler.
 
 import numpy as np
-from mpi4py import MPI
 from scipy.stats import multivariate_normal
 from flaky import flaky
+import pytest
 
 from cobaya.conventions import kinds
 from cobaya.likelihoods.gaussian_mixture import info_random_gaussian_mixture
 from cobaya.run import run
 from cobaya import mpi
+
+pytestmark = pytest.mark.mpi
 
 
 @flaky(max_runs=3, min_passes=1)

@@ -1,5 +1,6 @@
 from flaky import flaky
 import numpy as np
+import pytest
 
 from cobaya.likelihoods.gaussian_mixture import random_cov
 from cobaya.tools import KL_norm
@@ -7,6 +8,8 @@ from cobaya.likelihood import Likelihood
 from cobaya.run import run
 from cobaya import mpi
 from .common_sampler import body_of_test, body_of_test_speeds
+
+pytestmark = pytest.mark.mpi
 
 # Max number of tries per test
 max_runs = 3

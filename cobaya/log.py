@@ -7,6 +7,7 @@
 """
 
 # Global
+import os
 import sys
 import logging
 import traceback
@@ -149,6 +150,13 @@ def get_traceback_text(exec_info):
     return "".join(["-"] * 20 + ["\n\n"] +
                    list(traceback.format_exception(*exec_info)) +
                    ["\n"] + ["-"] * 37)
+
+
+def abort_if_test(log, exc_info):
+    if "PYTEST_CURRENT_TEST" in os.environ and mpi.more_than_one_process():
+        # in pytest, never gets to the system hook to kill mpi so do it here
+        # (mpi.abort_if_mpi is replaced by conftest.py::mpi_handling session fixture)
+        mpi.abort_if_mpi(log, get_traceback_text(exc_info))
 
 
 class HasLogger:

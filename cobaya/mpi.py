@@ -7,6 +7,7 @@
 """
 
 import os
+import sys
 import functools
 from typing import List, Iterable
 import numpy as np
@@ -163,9 +164,11 @@ def array_gather(list_of_data, root=0) -> List[np.array]:
     return [np.array(i) for i in zip_gather(list_of_data, root=root)]
 
 
-def abort_if_mpi():
+def abort_if_mpi(log=None, msg=None):
     """Closes all MPI process, if more than one present."""
     if get_mpi_size() > 1:
+        if log and msg:
+            log.error(msg)
         get_mpi_comm().Abort(1)
 
 

@@ -806,10 +806,13 @@ class mcmc(CovmatSampler):
             not when running with `cobaya run` (in that case, the process raising an error
             will call `MPI_ABORT` and kill the rest.
         """
+        # TODO: error signal/trap should be in run?
+        #  (but doesn't guarantee no deadlock? could be in wait loop)
         for i in range(get_mpi_size()):
             if i != get_mpi_rank():
                 from mpi4py import MPI
                 status = MPI.Status()
+                # TODO should be tag=_error_tag here, and actually receive if exists?
                 get_mpi_comm().iprobe(i, status=status)
                 if status.tag == _error_tag:
                     raise LoggedError(self.log, "Another process failed! Exiting.")
