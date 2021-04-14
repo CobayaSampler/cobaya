@@ -450,7 +450,7 @@ class polychord(CovmatSampler):
         #     bcast_from_0 = lambda attrname: setattr(self,
         #         attrname, get_mpi_comm().bcast(getattr(self, attrname, None), root=0))
         #     map(bcast_from_0, ["collection", "logZ", "logZstd", "clusters"])
-        if is_main_process():   # This seems redundant.
+        if is_main_process():
             self.log.info("Finished! Raw PolyChord output stored in '%s', "
                           "with prefix '%s'",
                           self.pc_settings.base_dir,
