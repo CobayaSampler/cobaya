@@ -253,11 +253,11 @@ class SN(DataSetLikelihood):
 
     def get_requirements(self):
         # State requisites to the theory code
-        return {"angular_diameter_distance": {"z": self.zcmb}}
-
-    def get_can_support_params(self):
-        return {"Mb": None}
-
+        reqs = {"angular_diameter_distance": {"z": self.zcmb}}
+        if self.use_abs_mag:
+            reqs["Mb"] = None
+        return reqs
+        
     def _read_covmat(self, filename):
         cov = np.loadtxt(filename)
         if np.isscalar(cov[0]) and cov[0] ** 2 + 1 == len(cov):
@@ -301,7 +301,6 @@ class SN(DataSetLikelihood):
         if self.alphabeta_covmat:
             if self.use_abs_mag:
                 estimated_scriptm = Mb + 25
-                Mb = params_values.get('Mb', None)
             else:
                 alphasq = alpha * alpha
                 betasq = beta * beta
