@@ -17,7 +17,7 @@ from copy import deepcopy
 # Local
 from cobaya import __version__
 from cobaya.sampler import CovmatSampler
-from cobaya.mpi import get_mpi_size, get_mpi_rank, get_mpi_comm, get_mpi, share_mpi
+from cobaya.mpi import get_mpi_size, get_mpi_comm, get_mpi, share_mpi
 from cobaya.mpi import more_than_one_process, is_main_process, sync_processes
 from cobaya.collection import Collection, OneSamplePoint
 from cobaya.conventions import kinds, _weight, _minuslogpost, _covmat_extension
@@ -28,8 +28,6 @@ from cobaya.log import LoggedError
 from cobaya.tools import get_external_function, NumberWithUnits, load_DataFrame
 from cobaya.yaml import yaml_dump_file
 from cobaya import mpi
-
-_error_tag = 99
 
 
 class mcmc(CovmatSampler):
@@ -328,6 +326,17 @@ class mcmc(CovmatSampler):
         i_max = np.argmin(log_differences)
         return i_max
 
+    def _clear_ready(self, status, wait=True):
+        # if have signalled ready, make sure don't leave others waiting fpr nothing
+        if hasattr(self, "req"):
+            if wait:
+                self.req.Wait()
+            delattr(self, "req")
+            gather_status = mpi.allgather(status)
+            if status <= 1 and any(status > 1 for status in gather_status):
+                raise LoggedError(self.log, "Another process failed! Exiting.")
+            return all(status == 1 for status in gather_status)
+
     def _run(self):
         """
         Runs the sampler.
@@ -340,46 +349,49 @@ class mcmc(CovmatSampler):
         self.n_steps_raw = 0
         last_output = 0
         last_n = self.n()
-        while last_n < self.max_samples and not self.converged:
-            self.get_new_sample()
-            self.n_steps_raw += 1
-            if self.output_every.unit:
-                # if output_every in sec, print some info and dump at fixed time intervals
-                now = datetime.datetime.now()
-                now_sec = now.timestamp()
-                if now_sec >= last_output + self.output_every.value:
-                    self.do_output(now)
-                    last_output = now_sec
-            if self.current_point.weight == 1:
-                # have added new point
-                # Callback function
-                n = self.n()
-                if n != last_n:
-                    # and actually added
-                    last_n = n
-                    if (hasattr(self, "callback_function_callable") and
-                            not (max(n, 1) % self.callback_every.value) and
-                            self.current_point.weight == 1):
-                        self.callback_function_callable(self)
-                        self.last_point_callback = len(self.collection)
-                    # Checking convergence and (optionally) learning
-                    # the covmat of the proposal
-                    if self.check_all_ready():
-                        self.check_convergence_and_learn_proposal()
-                        if is_main_process():
-                            self.i_learn += 1
+        try:
+            while last_n < self.max_samples and not self.converged:
+                self.get_new_sample()
+                self.n_steps_raw += 1
+                if self.output_every.unit:
+                    # if output_every in sec, print some info
+                    # and dump at fixed time intervals
+                    now = datetime.datetime.now()
+                    now_sec = now.timestamp()
+                    if now_sec >= last_output + self.output_every.value:
+                        self.do_output(now)
+                        last_output = now_sec
+                if self.current_point.weight == 1:
+                    # have added new point
+                    # Callback function
+                    n = self.n()
+                    if n != last_n:
+                        # and actually added
+                        last_n = n
+                        if (hasattr(self, "callback_function_callable") and
+                                not (max(n, 1) % self.callback_every.value) and
+                                self.current_point.weight == 1):
+                            self.callback_function_callable(self)
+                            self.last_point_callback = len(self.collection)
+                        # Checking convergence and (optionally) learning
+                        # the covmat of the proposal
+                        if self.check_all_ready():
+                            self.check_convergence_and_learn_proposal()
+                            if is_main_process():
+                                self.i_learn += 1
+        except Exception:
+            self._clear_ready(2)
+            raise
 
         # Make sure the last batch of samples ( < output_every (not in sec)) are written
         self.collection.out_update()
+        self._clear_ready(0)
 
         if last_n == self.max_samples:
             self.log.info("Reached maximum number of accepted steps allowed. "
                           "Stopping.")
-            if hasattr(self, "req"):
-                # if have signalled ready, make sure don't leave others waiting
-                self.req.Wait()
-                delattr(self, "req")
-                mpi.allgather(False)
+
+        mpi.check_error_signal(self.log)
 
         ns = mpi.gather(self.n())
         self.mpi_info("Sampling complete after %d accepted steps.", sum(ns))
@@ -405,12 +417,8 @@ class mcmc(CovmatSampler):
         """
         trial = self.current_point.values.copy()
         self.proposer.get_proposal(trial)
-        try:
-            logpost_trial, logprior_trial, loglikes_trial, derived = \
-                self.model.logposterior(trial)
-        except:
-            self.send_error_signal()
-            raise
+        logpost_trial, logprior_trial, loglikes_trial, derived = \
+            self.model.logposterior(trial)
         accept = self.metropolis_accept(logpost_trial, self.current_point.logpost)
         self.process_accept_or_reject(accept, trial, derived,
                                       logpost_trial, logprior_trial, loglikes_trial)
@@ -550,7 +558,6 @@ class mcmc(CovmatSampler):
                             (1 + (10 - 1) * np.sign(self.burn_in_left))
             if self.current_point.weight > max_tries_now:
                 self.collection.out_update()
-                self.send_error_signal()
                 raise LoggedError(
                     self.log,
                     "The chain has been stuck for %d attempts. Stopping sampling. "
@@ -576,7 +583,6 @@ class mcmc(CovmatSampler):
             if more_than_one_process():
                 self.been_waiting += 1
                 if self.been_waiting > self.max_waiting:
-                    self.send_error_signal()
                     raise LoggedError(
                         self.log, "Waiting for too long for all chains to be ready. "
                                   "Maybe one of them is stuck or died unexpectedly?")
@@ -586,7 +592,7 @@ class mcmc(CovmatSampler):
                 self.log.debug(msg_ready)
                 return True
             # Error check in case any process already sent an error signal
-            self.check_error_signal()
+            mpi.check_error_signal(self.log)
             # If MPI, tell the rest that we are ready -- we use a "gather"
             # ("reduce" was problematic), but we are in practice just pinging
             if not hasattr(self, "req"):  # just once!
@@ -600,11 +606,8 @@ class mcmc(CovmatSampler):
             assert np.all(self.all_ready == 1), (
                 "This should not happen! Notify the developers. (Got %r)", self.all_ready)
             self.mpi_info("All chains are r" + msg_ready[1:])
-            delattr(self, "req")
             self.been_waiting = 0
-            # Another error check, in case the error occurred after sending "ready" signal
-            self.check_error_signal()
-            return all(mpi.allgather(True))
+            return self._clear_ready(1, wait=False)
         return False
 
     def check_convergence_and_learn_proposal(self):
@@ -789,33 +792,6 @@ class mcmc(CovmatSampler):
                                    "waiting until next covmat learning attempt.")
         # Save checkpoint info
         self.write_checkpoint()
-
-    def send_error_signal(self):
-        """
-        Sends an error signal to the other MPI processes.
-        """
-        for i_rank in range(get_mpi_size()):
-            if i_rank != get_mpi_rank():
-                get_mpi_comm().isend(True, dest=i_rank, tag=_error_tag)
-
-    def check_error_signal(self):
-        """
-        Checks if any of the other process has sent an error signal, and fails.
-
-        NB: This behaviour only shows up when running this sampler inside a Python script,
-            not when running with `cobaya run` (in that case, the process raising an error
-            will call `MPI_ABORT` and kill the rest.
-        """
-        # TODO: error signal/trap should be in run?
-        #  (but doesn't guarantee no deadlock? could be in wait loop)
-        for i in range(get_mpi_size()):
-            if i != get_mpi_rank():
-                from mpi4py import MPI
-                status = MPI.Status()
-                # TODO should be tag=_error_tag here, and actually receive if exists?
-                get_mpi_comm().iprobe(i, status=status)
-                if status.tag == _error_tag:
-                    raise LoggedError(self.log, "Another process failed! Exiting.")
 
     def do_output(self, date_time):
         self.collection.out_update()

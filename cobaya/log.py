@@ -72,6 +72,10 @@ def exception_handler(exception_type, exception_instance, trace_back):
         return  # no traceback printed
     _logger_name = "exception handler"
     log = logging.getLogger(_logger_name)
+    if exception_type == mpi.OtherProcessError:
+        log.error(str(exception_instance))
+        return
+
     line = "-------------------------------------------------------------\n"
     log.critical(line[len(_logger_name) + 5:] + "\n" +
                  "".join(traceback.format_exception(

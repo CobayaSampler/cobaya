@@ -7,15 +7,15 @@
 """
 
 import os
-import sys
 import functools
 from typing import List, Iterable
 import numpy as np
+from typing import Any
 
 # Vars to keep track of MPI parameters
-_mpi = None if os.environ.get('COBAYA_NOMPI', False) else -1
+_mpi: Any = None if os.environ.get('COBAYA_NOMPI', False) else -1
 _mpi_size = -1
-_mpi_comm = -1
+_mpi_comm: Any = -1
 _mpi_rank = -1
 
 
@@ -172,12 +172,64 @@ def abort_if_mpi(log=None, msg=None):
         get_mpi_comm().Abort(1)
 
 
+class OtherProcessError(Exception):
+    pass
+
+
+_error_tag = 99
+
+
+def send_error_signal(tag=_error_tag):
+    """
+    Sends an error signal to the other MPI processes.
+    """
+    for i_rank in range(size()):
+        if i_rank != rank():
+            get_mpi_comm().isend(True, dest=i_rank, tag=tag).Test()
+
+
+def check_error_signal(log, tag=_error_tag, msg="Another process failed! Exiting."):
+    """
+    Checks if any of the other process has sent an error signal, and raises an error.
+
+    """
+    if more_than_one_process() and _mpi_comm.iprobe(source=_mpi.ANY_SOURCE, tag=tag):
+        clear_error_signal(tag)
+        raise OtherProcessError("[%s: %s] %s" % (rank(), log.name, msg))
+
+
+def clear_error_signal(tag=_error_tag):
+    if more_than_one_process():
+        while _mpi_comm.iprobe(source=_mpi.ANY_SOURCE, tag=tag):
+            _mpi_comm.recv(source=_mpi.ANY_SOURCE, tag=tag)
+
+
+def time_out_barrier(time_out_seconds=4):
+    import time
+    req = _mpi_comm.Ibarrier()
+    time_start = time.time()
+    while not req.Test():
+        time.sleep(0.01)
+        if time.time() - time_start > time_out_seconds:
+            return False
+    return True
+
+
 # decorators to generalize functions/methods for mpi sharing
 
 def root_only(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         if is_main_process():
+            return func(*args, **kwargs)
+
+    return wrapper
+
+
+def more_than_one(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if more_than_one_process():
             return func(*args, **kwargs)
 
     return wrapper
@@ -214,10 +266,6 @@ def set_from_root(attributes):
     return set_method
 
 
-class OtherProcessError(Exception):
-    pass
-
-
 def synch_errors(func):
     err = 'Another process raised an error in %s' % func.__name__
 
@@ -225,8 +273,8 @@ def synch_errors(func):
     def wrapper(*args, **kwargs):
         try:
             result = func(*args, **kwargs)
-        except Exception as e:
-            allgather(e)
+        except Exception:
+            allgather(True)
             raise
         else:
             if any(allgather(False)):

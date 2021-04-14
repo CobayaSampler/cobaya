@@ -113,9 +113,14 @@ def run(info):
                 return updated_info, sampler
             # Run the sampler
             sampler.run()
-    except Exception:
+    except Exception as e:
         output.clear_lock()
-        abort_if_test(logger_run, sys.exc_info())
+        if mpi.more_than_one_process():
+            if not isinstance(e, mpi.OtherProcessError):
+                mpi.send_error_signal()
+            if not mpi.time_out_barrier():
+                abort_if_test(logger_run, sys.exc_info())
+            mpi.clear_error_signal()
         raise
     else:
         output.clear_lock()
