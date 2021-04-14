@@ -310,7 +310,8 @@ class polychord(CovmatSampler):
             # Compatibility checked and if fails, causes a ValueError.
             proposal = supernest.gaussian_proposal(self.bounds.T, self._mean, self._covmat,
                                                    loglike=logpost)
-            nDims, prior, ll = supernest.superimpose([(proposal, logpost)], nDims = self.nDims)
+            nDims, prior, ll = supernest.superimpose([proposal,
+                                                      (self.pc_prior, logpost)], nDims = self.nDims)
             self.pc.run_polychord(ll, nDims, self.nDerived, self.pc_settings, prior, self.dumper)
         else:
             self.mpi_info('Not using SuperNest. Add `use_supernest: True`')
