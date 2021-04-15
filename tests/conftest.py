@@ -3,6 +3,7 @@ import logging
 import pytest
 import os
 from cobaya.install import NotInstalledError
+from cobaya.log import LoggedError
 from cobaya import mpi
 
 # Paths ##################################################################################
@@ -60,14 +61,15 @@ def install_test_wrapper(skip_not_installed, func, *args, **kwargs):
         raise
 
 
-# Allow printing of errors when MPI aborting even if output captured by pytest
+if mpi.more_than_one_process():
+
+    # Allow printing of errors when MPI aborting even if output captured by pytest
+    old_abort = mpi.abort_if_mpi
 
 
-@pytest.fixture(scope="session", autouse=True)
-def mpi_handling(request):
-    if mpi.more_than_one_process():
+    @pytest.fixture(scope="session", autouse=True)
+    def mpi_handling(request):
         capmanager = request.config.pluginmanager.getplugin("capturemanager")
-        old_abort = mpi.abort_if_mpi
 
         def aborter(log=None, msg=None):
             if log and msg:
@@ -76,6 +78,35 @@ def mpi_handling(request):
             old_abort()
 
         mpi.abort_if_mpi = aborter
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    outcome = yield
+    rep = outcome.get_result()
+    if rep.when == "call" and rep.failed:
+        rep.sections = [i for i in rep.sections if i[0] != "Captured log call"]
+        if isinstance(call.excinfo.value, mpi.OtherProcessError):
+            # Only need very short message
+            #rep.longrepr = str(call.excinfo.value)
+            rep.longrepr = str(rep.longrepr).split("\n")[-10:]
+            rep.sections = []
+        elif isinstance(call.excinfo.value, LoggedError):
+            # Don't show call stack, do show output (but log is already printed)
+            if logging.root.getEffectiveLevel() > logging.DEBUG:
+                rep.longrepr = str(rep.longrepr).split("\n")[-1]
+    return rep
+
+
+# use one shared tmpdir
+if mpi.is_main_process():
+    @pytest.fixture
+    def tmpdir(tmpdir):
+        return mpi.share_mpi(str(tmpdir))
+else:
+    @pytest.fixture
+    def tmpdir():
+        return mpi.share_mpi()
 
 
 def pytest_configure(config):

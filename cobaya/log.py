@@ -7,7 +7,6 @@
 """
 
 # Global
-import os
 import sys
 import logging
 import traceback
@@ -66,15 +65,24 @@ def abstract(method):
 
 
 def exception_handler(exception_type, exception_instance, trace_back):
-    # Do not print traceback if the exception has been handled and logged
-    if exception_type == LoggedError:
-        mpi.abort_if_mpi()
-        return  # no traceback printed
+    # Do not print traceback if the exception has been handled and logged by LoggedError
+    # MPI abort if all processes don't raise exception in short timeframe (e.g. deadlock).
+    want_abort = not mpi.time_out_barrier()
     _logger_name = "exception handler"
     log = logging.getLogger(_logger_name)
-    if exception_type == mpi.OtherProcessError:
-        log.error(str(exception_instance))
-        return
+
+    if exception_type == LoggedError:
+        # make show error easily visible at end of log
+        if mpi.more_than_one_process():
+            log.error(str(exception_instance))
+        if want_abort:
+            mpi.abort_if_mpi()
+        if log.getEffectiveLevel() > logging.DEBUG:
+            return  # no traceback printed
+    elif exception_type == mpi.OtherProcessError:
+        log.info(str(exception_instance))
+        if log.getEffectiveLevel() > logging.DEBUG:
+            return  # no traceback printed
 
     line = "-------------------------------------------------------------\n"
     log.critical(line[len(_logger_name) + 5:] + "\n" +
@@ -93,7 +101,8 @@ def exception_handler(exception_type, exception_instance, trace_back):
             "which you can send it to a file setting '%s:[some_file_name]'.",
             _debug, _debug_file)
     # Exit all MPI processes
-    mpi.abort_if_mpi()
+    if want_abort:
+        mpi.abort_if_mpi()
 
 
 def logger_setup(debug=None, debug_file=None):
@@ -154,13 +163,6 @@ def get_traceback_text(exec_info):
     return "".join(["-"] * 20 + ["\n\n"] +
                    list(traceback.format_exception(*exec_info)) +
                    ["\n"] + ["-"] * 37)
-
-
-def abort_if_test(log, exc_info):
-    if "PYTEST_CURRENT_TEST" in os.environ and mpi.more_than_one_process():
-        # in pytest, never gets to the system hook to kill mpi so do it here
-        # (mpi.abort_if_mpi is replaced by conftest.py::mpi_handling session fixture)
-        mpi.abort_if_mpi(log, get_traceback_text(exc_info))
 
 
 class HasLogger:

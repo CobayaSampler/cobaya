@@ -13,6 +13,7 @@ import datetime
 from typing import Sequence, Optional
 import re
 from copy import deepcopy
+import time
 
 # Local
 from cobaya import __version__
@@ -28,6 +29,10 @@ from cobaya.log import LoggedError
 from cobaya.tools import get_external_function, NumberWithUnits, load_DataFrame
 from cobaya.yaml import yaml_dump_file
 from cobaya import mpi
+
+
+class _ReadyError(mpi.OtherProcessError):
+    pass
 
 
 class mcmc(CovmatSampler):
@@ -181,6 +186,10 @@ class mcmc(CovmatSampler):
         self.max_waiting = max(50, self.max_tries.unit_value)
         # Burning-in countdown -- the +1 accounts for the initial point (always accepted)
         self.burn_in_left = self.burn_in.value * self.current_point.output_thin + 1
+        self._msg_ready = ("Ready to check convergence" +
+                           (" and learn a new proposal covmat"
+                            if self.learn_proposal else ""))
+
         # Initial dummy checkpoint
         # (needed when 1st "learn point" not reached in prev. run)
         self.write_checkpoint()
@@ -326,29 +335,40 @@ class mcmc(CovmatSampler):
         i_max = np.argmin(log_differences)
         return i_max
 
+    @mpi.more_than_one
     def _clear_ready(self, status, wait=True):
         # if have signalled ready, make sure don't leave others waiting fpr nothing
-        if hasattr(self, "req"):
-            if wait:
-                self.req.Wait()
-            delattr(self, "req")
-            gather_status = mpi.allgather(status)
-            if status <= 1 and any(status > 1 for status in gather_status):
-                raise LoggedError(self.log, "Another process failed! Exiting.")
-            return all(status == 1 for status in gather_status)
+        if status > 1:
+            mpi.send_signal()
+        if not self._req:
+            self.all_ready = np.empty(mpi.size())
+            self._req = get_mpi_comm().Iallgather(np.array([float(status)]),
+                                                  self.all_ready)
+            wait = True
+        if wait:
+            if status > 1:
+                if not mpi.wait_for_request(self._req):
+                    return None
+            else:
+                self._req.Wait()
+        mpi.clear_signal()
+        self._req = None
+        if status <= 1 and any(self.all_ready > 1.):
+            raise _ReadyError("Another process failed in mcmc loop - exiting.")
+        return all(self.all_ready == 1.)
 
     def _run(self):
         """
         Runs the sampler.
         """
-        self.mpi_info(
-            "Sampling!" +
-            (" (NB: no accepted step will be saved until %d burn-in samples " %
-             self.burn_in.value + "have been obtained)"
-             if self.burn_in.value else ""))
+        self.mpi_info("Sampling!" +
+                      (" (NB: no accepted step will be saved until %d burn-in samples " %
+                       self.burn_in.value + "have been obtained)"
+                       if self.burn_in.value else ""))
         self.n_steps_raw = 0
         last_output = 0
         last_n = self.n()
+        self._req = None
         try:
             while last_n < self.max_samples and not self.converged:
                 self.get_new_sample()
@@ -361,6 +381,7 @@ class mcmc(CovmatSampler):
                     if now_sec >= last_output + self.output_every.value:
                         self.do_output(now)
                         last_output = now_sec
+                        mpi.check_error_signal(self.log)
                 if self.current_point.weight == 1:
                     # have added new point
                     # Callback function
@@ -373,19 +394,24 @@ class mcmc(CovmatSampler):
                                 self.current_point.weight == 1):
                             self.callback_function_callable(self)
                             self.last_point_callback = len(self.collection)
+                        mpi.check_error_signal(self.log)
+
                         # Checking convergence and (optionally) learning
                         # the covmat of the proposal
                         if self.check_all_ready():
                             self.check_convergence_and_learn_proposal()
                             if is_main_process():
                                 self.i_learn += 1
-        except Exception:
-            self._clear_ready(2)
+        except Exception as e:
+            if not isinstance(e, _ReadyError):
+                self._clear_ready(2)
             raise
+        else:
+            # Make sure the last batch of samples
+            # ( < output_every (not in sec)) are written
+            self._clear_ready(0)
 
-        # Make sure the last batch of samples ( < output_every (not in sec)) are written
-        self.collection.out_update()
-        self._clear_ready(0)
+            self.collection.out_update()
 
         if last_n == self.max_samples:
             self.log.info("Reached maximum number of accepted steps allowed. "
@@ -573,41 +599,34 @@ class mcmc(CovmatSampler):
         Checks if the chain(s) is(/are) ready to check convergence and, if requested,
         learn a new covariance matrix for the proposal distribution.
         """
-        msg_ready = ("Ready to check convergence" +
-                     (" and learn a new proposal covmat"
-                      if self.learn_proposal else ""))
         n = len(self.collection)
         # If *just* (weight==1) got ready to check+learn
         if not (n % self.learn_every.value) and n > 0:
             self.log.info("Learn + convergence test @ %d samples accepted.", n)
+            self.model.dump_timing()
             if more_than_one_process():
                 self.been_waiting += 1
                 if self.been_waiting > self.max_waiting:
                     raise LoggedError(
                         self.log, "Waiting for too long for all chains to be ready. "
                                   "Maybe one of them is stuck or died unexpectedly?")
-            self.model.dump_timing()
-            # If not MPI size > 1, we are ready
-            if not more_than_one_process():
-                self.log.debug(msg_ready)
+            else:
+                # If not MPI size > 1, we are ready
+                self.log.debug(self._msg_ready)
                 return True
-            # Error check in case any process already sent an error signal
-            mpi.check_error_signal(self.log)
             # If MPI, tell the rest that we are ready -- we use a "gather"
             # ("reduce" was problematic), but we are in practice just pinging
-            if not hasattr(self, "req"):  # just once!
+            if not self._req:  # just once!
                 self.all_ready = np.empty(mpi.size())
-                self.req = get_mpi_comm().Iallgather(
+                self._req = get_mpi_comm().Iallgather(
                     np.array([1.]), self.all_ready)
-                self.log.info(msg_ready + " (waiting for the rest...)")
+                self.log.info(self._msg_ready + " (waiting for the rest...)")
         # If all processes are ready to learn (= communication finished)
-        if hasattr(self, "req") and self.req.Test():
-            # Sanity check: actually all processes have finished
-            assert np.all(self.all_ready == 1), (
-                "This should not happen! Notify the developers. (Got %r)", self.all_ready)
-            self.mpi_info("All chains are r" + msg_ready[1:])
+        if self._req and self._req.Test():
             self.been_waiting = 0
-            return self._clear_ready(1, wait=False)
+            if self._clear_ready(1, wait=False):
+                self.mpi_info("All chains are r" + self._msg_ready[1:])
+                return True
         return False
 
     def check_convergence_and_learn_proposal(self):

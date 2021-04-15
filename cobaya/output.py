@@ -517,6 +517,12 @@ class Output(HasLogger):
             collections = collection
         return collections
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.clear_lock()
+
 
 class OutputDummy(Output):
     """

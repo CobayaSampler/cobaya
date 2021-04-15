@@ -7,10 +7,13 @@
 """
 
 import os
+import sys
 import functools
 from typing import List, Iterable
 import numpy as np
 from typing import Any
+import logging
+import time
 
 # Vars to keep track of MPI parameters
 _mpi: Any = None if os.environ.get('COBAYA_NOMPI', False) else -1
@@ -168,7 +171,7 @@ def abort_if_mpi(log=None, msg=None):
     """Closes all MPI process, if more than one present."""
     if get_mpi_size() > 1:
         if log and msg:
-            log.error(msg)
+            log.critical(msg)
         get_mpi_comm().Abort(1)
 
 
@@ -177,15 +180,18 @@ class OtherProcessError(Exception):
 
 
 _error_tag = 99
+_synch_tag = _error_tag + 1
+
+default_error_timeout_seconds = 5
 
 
-def send_error_signal(tag=_error_tag):
+def send_signal(tag=_error_tag, value=False):
     """
     Sends an error signal to the other MPI processes.
     """
     for i_rank in range(size()):
         if i_rank != rank():
-            get_mpi_comm().isend(True, dest=i_rank, tag=tag).Test()
+            get_mpi_comm().isend(value, dest=i_rank, tag=tag).Test()
 
 
 def check_error_signal(log, tag=_error_tag, msg="Another process failed! Exiting."):
@@ -194,24 +200,29 @@ def check_error_signal(log, tag=_error_tag, msg="Another process failed! Exiting
 
     """
     if more_than_one_process() and _mpi_comm.iprobe(source=_mpi.ANY_SOURCE, tag=tag):
-        clear_error_signal(tag)
-        raise OtherProcessError("[%s: %s] %s" % (rank(), log.name, msg))
+        clear_signal(tag)
+        raise OtherProcessError(
+            "[%s: %s] %s" % (rank(), log if isinstance(log, str) else log.name, msg))
 
 
-def clear_error_signal(tag=_error_tag):
+def clear_signal(tag=_error_tag):
     if more_than_one_process():
         while _mpi_comm.iprobe(source=_mpi.ANY_SOURCE, tag=tag):
             _mpi_comm.recv(source=_mpi.ANY_SOURCE, tag=tag)
 
 
-def time_out_barrier(time_out_seconds=4):
-    import time
-    req = _mpi_comm.Ibarrier()
+def wait_for_request(req, time_out_seconds=default_error_timeout_seconds, interval=0.01):
     time_start = time.time()
     while not req.Test():
-        time.sleep(0.01)
+        time.sleep(interval)
         if time.time() - time_start > time_out_seconds:
             return False
+    return True
+
+
+def time_out_barrier(time_out_seconds=default_error_timeout_seconds):
+    if more_than_one_process():
+        return wait_for_request(_mpi_comm.Ibarrier(), time_out_seconds)
     return True
 
 
@@ -238,8 +249,20 @@ def more_than_one(func):
 def from_root(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        return share_mpi(func(*args, **kwargs)
-                         if is_main_process() else None)
+        if is_main_process():
+            try:
+                result = func(*args, **kwargs)
+            except Exception:
+                share_mpi()
+                raise
+            else:
+                share_mpi([result])
+                return result
+        else:
+            result = share_mpi()
+            if result is None:
+                raise OtherProcessError('Root errored in %s' % func.__name__)
+            return result[0]
 
     return wrapper
 
@@ -252,10 +275,17 @@ def set_from_root(attributes):
         @functools.wraps(method)
         def wrapper(self, *args, **kwargs):
             if is_main_process():
-                result = method(self, *args, **kwargs)
-                share_mpi([result] + [getattr(self, var, None) for var in atts])
+                try:
+                    result = method(self, *args, **kwargs)
+                except Exception:
+                    share_mpi()
+                    raise
+                else:
+                    share_mpi([result] + [getattr(self, var, None) for var in atts])
             else:
                 values = share_mpi()
+                if values is None:
+                    raise OtherProcessError('Root errored in %s' % method.__name__)
                 for name, var in zip(atts, values[1:]):
                     setattr(self, name, var)
                 result = values[0]
@@ -279,6 +309,57 @@ def synch_errors(func):
         else:
             if any(allgather(False)):
                 raise OtherProcessError(err)
+            return result
+
+    return wrapper
+
+
+def abort_if_test(log, exc_info):
+    if "PYTEST_CURRENT_TEST" in os.environ and more_than_one_process():
+        # in pytest, never gets to the system hook to kill mpi so do it here
+        # (mpi.abort_if_mpi is replaced by conftest.py::mpi_handling session fixture)
+        from cobaya.log import get_traceback_text
+        abort_if_mpi(log, get_traceback_text(exc_info))
+
+
+# Wrapper for main functions. Traps MPI deadlock via timeout MPI_ABORT if needed,
+
+def synch_error_signal(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        clear_signal()
+        clear_signal(_synch_tag)
+        log = logging.getLogger(func.__name__)
+        try:
+            result = func(*args, **kwargs)
+            check_error_signal(func.__name__)
+        except Exception as e:
+            if more_than_one_process():
+                if not isinstance(e, OtherProcessError):
+                    send_signal()
+                send_signal(tag=_synch_tag)
+                if not time_out_barrier() and not isinstance(e, OtherProcessError):
+                    # Handling errors here will also work in pytest which doesn't get
+                    # to global handler
+                    from cobaya.log import get_traceback_text, LoggedError
+                    abort_if_mpi(log,
+                                 "Aborting MPI deadlock (original error above)"
+                                 if isinstance(e, LoggedError) else get_traceback_text(
+                                     sys.exc_info()))
+                clear_signal()
+                clear_signal(_synch_tag)
+                raise
+        else:
+            if more_than_one_process():
+                send_signal(value=True, tag=_synch_tag)
+                for i in range(size()):
+                    if i != rank():
+                        status = _mpi_comm.recv(source=i, tag=_synch_tag)
+                        if not status:
+                            time_out_barrier()
+                            clear_signal(_synch_tag)
+                            raise OtherProcessError('Another process failed - exiting.')
+
             return result
 
     return wrapper

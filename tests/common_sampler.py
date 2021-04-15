@@ -26,7 +26,6 @@ distance_factor = 4
 def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
                  packages_path=None, skip_not_installed=False):
     # Info of likelihood and prior
-    tmpdir = mpi.share(str(tmpdir))
     ranges = np.array([[-1, 1] for _ in range(dimension)])
     while True:
         info = info_random_gaussian_mixture(
@@ -76,25 +75,24 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
                 name_tag="cluster %d" % (i + 1))
                 for i in products["clusters"]]
         # Plots!
-        try:
-            if is_travis():
-                raise ValueError
-            import getdist.plots as gdplots
-            from getdist.gaussian_mixtures import MixtureND
-            sampled_params = [
-                p for p, v in info["params"].items() if partag.prior not in v]
-            mixture = MixtureND(
-                info[kinds.likelihood]["gaussian_mixture"]["means"],
-                info[kinds.likelihood]["gaussian_mixture"]["covs"],
-                names=sampled_params, label="truth")
-            g = gdplots.getSubplotPlotter()
-            to_plot = [mixture, results]
-            if clusters:
-                to_plot += clusters
-            g.triangle_plot(to_plot, params=sampled_params)
-            g.export("test.png")
-        except:
-            print("Plotting failed!")
+        if not is_travis():
+            try:
+                import getdist.plots as gdplots
+                from getdist.gaussian_mixtures import MixtureND
+                sampled_params = [
+                    p for p, v in info["params"].items() if partag.prior not in v]
+                mixture = MixtureND(
+                    info[kinds.likelihood]["gaussian_mixture"]["means"],
+                    info[kinds.likelihood]["gaussian_mixture"]["covs"],
+                    names=sampled_params, label="truth")
+                g = gdplots.getSubplotPlotter()
+                to_plot = [mixture, results]
+                if clusters:
+                    to_plot += clusters
+                g.triangle_plot(to_plot, params=sampled_params)
+                g.export("test.png")
+            except:
+                print("Plotting failed!")
         # 1st test: KL divergence
         if n_modes == 1:
             cov_sample, mean_sample = results.getCov(), results.getMeans()

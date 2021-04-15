@@ -52,7 +52,6 @@ info_sampler_dummy = {"evaluate": {"N": 10}}
 @mpi.synch_errors
 def test_post_prior(tmpdir):
     # Generate original chain
-    tmpdir = mpi.share(str(tmpdir))
     info = {
         _output_prefix: os.path.join(tmpdir, "gaussian"), _force: True,
         _params: info_params, kinds.sampler: info_sampler,

@@ -9,7 +9,6 @@
 # Global
 from typing import Mapping
 import logging
-import sys
 
 # Local
 from cobaya import __version__
@@ -20,7 +19,7 @@ from cobaya.conventions import kinds, _prior, _params, _packages_path, _output_p
 from cobaya.output import get_output, split_prefix, get_info_path
 from cobaya.model import Model
 from cobaya.sampler import get_sampler_name_and_class, check_sampler_info
-from cobaya.log import logger_setup, LoggedError, abort_if_test
+from cobaya.log import logger_setup, LoggedError
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info, load_input_MPI
 from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic, \
@@ -29,6 +28,7 @@ from cobaya.post import post
 from cobaya import mpi
 
 
+@mpi.synch_error_signal
 def run(info):
     # This function reproduces the model-->output-->sampler pipeline one would follow
     # when instantiating by hand, but alters the order to performs checks and dump info
@@ -41,7 +41,7 @@ def run(info):
         "load it first with 'cobaya.input.load_input', "
         "or, if you were passing a yaml string, load it with 'cobaya.yaml.yaml_load'.")
     logger_setup(info.get(_debug), info.get(_debug_file))
-    logger_run = logging.getLogger(__name__.split(".")[-1])
+    logger_run = logging.getLogger(run.__name__)
     # MARKED FOR DEPRECATION IN v3.0
     # BEHAVIOUR TO BE REPLACED BY ERROR:
     check_deprecated_modules_path(info)
@@ -55,39 +55,38 @@ def run(info):
             logger_run, "You need to specify a sampler using the 'sampler' key as e.g. "
                         "`sampler: {mcmc: None}.`")
     infix = "minimize" if which_sampler == "minimize" else None
-    output = get_output(prefix=info.get(_output_prefix), resume=info.get(_resume),
-                        force=info.get(_force), infix=infix)
-    # 2. Update the input info with the defaults for each component
-    updated_info = update_info(info)
-    if logging.root.getEffectiveLevel() <= logging.DEBUG:
-        # Dump only if not doing output (otherwise, the user can check the .updated file)
-        if not output and mpi.is_main_process():
-            logger_run.info(
-                "Input info updated with defaults (dumped to YAML):\n%s",
-                yaml_dump(sort_cosmetic(updated_info)))
-    # 3. If output requested, check compatibility if existing one, and dump.
-    # 3.1 First: model only
-    output.check_and_dump_info(info, updated_info, cache_old=True,
-                               ignore_blocks=[kinds.sampler])
-    # 3.2 Then sampler -- 1st get the last sampler mentioned in the updated.yaml
-    # TODO: ideally, using Minimizer would *append* to the sampler block.
-    #       Some code already in place, but not possible at the moment.
-    try:
-        last_sampler = list(updated_info[kinds.sampler])[-1]
-        last_sampler_info = {last_sampler: updated_info[kinds.sampler][last_sampler]}
-    except (KeyError, TypeError):
-        raise LoggedError(logger_run, "No sampler requested.")
-    sampler_name, sampler_class = get_sampler_name_and_class(last_sampler_info)
-    check_sampler_info(
-        (output.reload_updated_info(use_cache=True) or {}).get(kinds.sampler),
-        updated_info[kinds.sampler], is_resuming=output.is_resuming())
-    # Dump again, now including sampler info
-    output.check_and_dump_info(info, updated_info, check_compatible=False)
-    # Check if resumable run
-    sampler_class.check_force_resume(
-        output, info=updated_info[kinds.sampler][sampler_name])
-    # 4. Initialize the posterior and the sampler
-    try:
+    with get_output(prefix=info.get(_output_prefix), resume=info.get(_resume),
+                        force=info.get(_force), infix=infix) as output:
+        # 2. Update the input info with the defaults for each component
+        updated_info = update_info(info)
+        if logging.root.getEffectiveLevel() <= logging.DEBUG:
+            # Dump only if not doing output (otherwise, the user can check the .updated file)
+            if not output and mpi.is_main_process():
+                logger_run.info(
+                    "Input info updated with defaults (dumped to YAML):\n%s",
+                    yaml_dump(sort_cosmetic(updated_info)))
+        # 3. If output requested, check compatibility if existing one, and dump.
+        # 3.1 First: model only
+        output.check_and_dump_info(info, updated_info, cache_old=True,
+                                   ignore_blocks=[kinds.sampler])
+        # 3.2 Then sampler -- 1st get the last sampler mentioned in the updated.yaml
+        # TODO: ideally, using Minimizer would *append* to the sampler block.
+        #       Some code already in place, but not possible at the moment.
+        try:
+            last_sampler = list(updated_info[kinds.sampler])[-1]
+            last_sampler_info = {last_sampler: updated_info[kinds.sampler][last_sampler]}
+        except (KeyError, TypeError):
+            raise LoggedError(logger_run, "No sampler requested.")
+        sampler_name, sampler_class = get_sampler_name_and_class(last_sampler_info)
+        check_sampler_info(
+            (output.reload_updated_info(use_cache=True) or {}).get(kinds.sampler),
+            updated_info[kinds.sampler], is_resuming=output.is_resuming())
+        # Dump again, now including sampler info
+        output.check_and_dump_info(info, updated_info, check_compatible=False)
+        # Check if resumable run
+        sampler_class.check_force_resume(
+            output, info=updated_info[kinds.sampler][sampler_name])
+        # 4. Initialize the posterior and the sampler
         with Model(updated_info[_params], updated_info[kinds.likelihood],
                    updated_info.get(_prior), updated_info.get(kinds.theory),
                    packages_path=info.get(_packages_path),
@@ -113,17 +112,7 @@ def run(info):
                 return updated_info, sampler
             # Run the sampler
             sampler.run()
-    except Exception as e:
-        output.clear_lock()
-        if mpi.more_than_one_process():
-            if not isinstance(e, mpi.OtherProcessError):
-                mpi.send_error_signal()
-            if not mpi.time_out_barrier():
-                abort_if_test(logger_run, sys.exc_info())
-            mpi.clear_error_signal()
-        raise
-    else:
-        output.clear_lock()
+
     return updated_info, sampler
 
 
