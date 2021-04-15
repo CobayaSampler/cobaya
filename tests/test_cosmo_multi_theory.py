@@ -4,7 +4,7 @@ from copy import deepcopy
 from cobaya.model import get_model
 from cobaya.theory import Theory
 from cobaya.likelihood import LikelihoodInterface, Likelihood
-from cobaya.conventions import empty_dict
+from cobaya.conventions import empty_dict, InfoDict
 from .common import process_packages_path
 from .conftest import install_test_wrapper
 from .test_cosmo_camb import get_camb
@@ -60,17 +60,17 @@ camb_params = {
 
 bbn_table = "PRIMAT_Yp_DH_Error.dat"
 debug = True
-info = {'likelihood': {'cmb': cmb_likelihood_info},
-        'theory': {
-            'camb': {"extra_args": {"lens_potential_accuracy": 1},
-                     "requires": ['YHe', 'ombh2']},
-            'bbn': {'external': BBN, 'provides': ['YHe']}},
-        'params': camb_params,
-        'debug': debug, 'stop_at_error': True}
+info: InfoDict = {'likelihood': {'cmb': cmb_likelihood_info},
+                  'theory': {
+                      'camb': {"extra_args": {"lens_potential_accuracy": 1},
+                               "requires": ['YHe', 'ombh2']},
+                      'bbn': {'external': BBN, 'provides': ['YHe']}},
+                  'params': camb_params,
+                  'debug': debug, 'stop_at_error': True}
 
-info2 = {'likelihood': {'cmb': cmb_likelihood_info},
-         'theory': {'camb': {"requires": ['YHe', 'ombh2']}, 'bbn': BBN2},
-         'params': camb_params, 'debug': debug}
+info2: InfoDict = {'likelihood': {'cmb': cmb_likelihood_info},
+                   'theory': {'camb': {"requires": ['YHe', 'ombh2']}, 'bbn': BBN2},
+                   'params': camb_params, 'debug': debug}
 
 
 def test_bbn_yhe(packages_path, skip_not_installed):

@@ -18,7 +18,7 @@ from cobaya.parameterization import is_fixed_param, is_sampled_param, is_derived
 from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_prefix, \
     _post, _params, _prior, kinds, _weight, _resume, _separator, _get_chi2_name, \
     _minuslogpost, _force, partag, _minuslogprior, _packages_path, \
-    _separator_files, _post_add, _post_remove, _post_suffix, _undo_chi2_name
+    _separator_files, _post_add, _post_remove, _post_suffix, _undo_chi2_name, InfoDict
 from cobaya.collection import Collection
 from cobaya.log import logger_setup, LoggedError
 from cobaya.input import update_info, add_aggregated_chi2_params
@@ -43,7 +43,8 @@ class DummyModel:
         self.likelihood = list(info_likelihood)
 
 
-def post(info, sample=None):
+@mpi.sync_error_signal
+def post(info: InfoDict, sample=None):
     logger_setup(info.get(_debug), info.get(_debug_file))
     log = logging.getLogger(__name__.split(".")[-1])
     # MARKED FOR DEPRECATION IN v3.0
@@ -207,7 +208,6 @@ def post(info, sample=None):
                 raise LoggedError(
                     log, "Trying to remove %s '%s', but it is not present. "
                          "Existing ones: %r", level, pdf, out[level])
-
     if warn_remove and mpi.is_main_process():
         log.warning("You are removing a prior or likelihood pdf. "
                     "Notice that if the resulting posterior is much wider "
@@ -383,9 +383,8 @@ def post(info, sample=None):
                         logpriors_new[_i] = regenerated[name]
 
             if log.getEffectiveLevel() <= logging.DEBUG:
-                log.debug(
-                    "New set of priors: %r",
-                    dict(zip(dummy_model_out.prior, logpriors_new)))
+                log.debug("New set of priors: %r",
+                          dict(zip(dummy_model_out.prior, logpriors_new)))
             if -np.inf in logpriors_new:
                 continue
             # Add/remove likelihoods and/or (re-)calculate derived parameters
@@ -423,6 +422,7 @@ def post(info, sample=None):
             collection_out.add(
                 sampled, derived=derived.values(), weight=point.get(_weight),
                 logpriors=logpriors_new, loglikes=loglikes_new)
+            mpi.error_signal.check()
             # Display progress
             percent = int(np.round((i + done) / to_do * 100))
             if percent != last_percent and not percent % 5:

@@ -14,6 +14,9 @@ import numpy as np
 from typing import Any
 import logging
 import time
+from enum import IntEnum
+
+default_error_timeout_seconds = 5
 
 # Vars to keep track of MPI parameters
 _mpi: Any = None if os.environ.get('COBAYA_NOMPI', False) else -1
@@ -107,18 +110,18 @@ def is_main_process():
 
 
 def more_than_one_process():
-    return bool(max(get_mpi_size(), 1) - 1)
+    return get_mpi_size() > 1
 
 
 def sync_processes():
     if get_mpi_size() > 1:
+        error_signal.check()
         get_mpi_comm().barrier()
 
 
 def share_mpi(data=None, root=0):
-    comm = get_mpi_comm()
-    if comm and more_than_one_process():
-        return comm.bcast(data, root=root)
+    if get_mpi_size() > 1:
+        return get_mpi_comm().bcast(data, root=root)
     else:
         return data
 
@@ -143,9 +146,8 @@ def gather(data, root=0) -> list:
 
 
 def allgather(data) -> list:
-    comm = get_mpi_comm()
-    if comm and more_than_one_process():
-        return comm.allgather(data)
+    if get_mpi_size() > 1:
+        return get_mpi_comm().allgather(data)
     else:
         return [data]
 
@@ -156,9 +158,8 @@ def zip_gather(list_of_data, root=0) -> Iterable[tuple]:
     e.g. for root node
     [(a_1, a_2),(b_1,b_2),...] = zip_gather([a,b,...])
     """
-    comm = get_mpi_comm()
-    if comm and more_than_one_process():
-        return zip(*(comm.gather(list_of_data, root=root) or [list_of_data]))
+    if get_mpi_size() > 1:
+        return zip(*(get_mpi_comm().gather(list_of_data, root=root) or [list_of_data]))
     else:
         return ((item,) for item in list_of_data)
 
@@ -175,40 +176,11 @@ def abort_if_mpi(log=None, msg=None):
         get_mpi_comm().Abort(1)
 
 
+_other_process_msg = "Another process failed - exiting."
+
+
 class OtherProcessError(Exception):
     pass
-
-
-_error_tag = 99
-_synch_tag = _error_tag + 1
-
-default_error_timeout_seconds = 5
-
-
-def send_signal(tag=_error_tag, value=False):
-    """
-    Sends an error signal to the other MPI processes.
-    """
-    for i_rank in range(size()):
-        if i_rank != rank():
-            get_mpi_comm().isend(value, dest=i_rank, tag=tag).Test()
-
-
-def check_error_signal(log, tag=_error_tag, msg="Another process failed! Exiting."):
-    """
-    Checks if any of the other process has sent an error signal, and raises an error.
-
-    """
-    if more_than_one_process() and _mpi_comm.iprobe(source=_mpi.ANY_SOURCE, tag=tag):
-        clear_signal(tag)
-        raise OtherProcessError(
-            "[%s: %s] %s" % (rank(), log if isinstance(log, str) else log.name, msg))
-
-
-def clear_signal(tag=_error_tag):
-    if more_than_one_process():
-        while _mpi_comm.iprobe(source=_mpi.ANY_SOURCE, tag=tag):
-            _mpi_comm.recv(source=_mpi.ANY_SOURCE, tag=tag)
 
 
 def wait_for_request(req, time_out_seconds=default_error_timeout_seconds, interval=0.01):
@@ -324,42 +296,158 @@ def abort_if_test(log, exc_info):
 
 # Wrapper for main functions. Traps MPI deadlock via timeout MPI_ABORT if needed,
 
-def synch_error_signal(func):
+def sync_error_signal(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        clear_signal()
-        clear_signal(_synch_tag)
-        log = logging.getLogger(func.__name__)
-        try:
-            result = func(*args, **kwargs)
-            check_error_signal(func.__name__)
-        except Exception as e:
-            if more_than_one_process():
+        if not more_than_one_process():
+            return func(*args, **kwargs)
+
+        with Signal(func.__name__) as error, Signal(func.__name__, "sync") as sync:
+            try:
+                result = func(*args, **kwargs)
+                error.check()
+            except Exception as e:
                 if not isinstance(e, OtherProcessError):
-                    send_signal()
-                send_signal(tag=_synch_tag)
+                    error.send()
+                sync.send()
                 if not time_out_barrier() and not isinstance(e, OtherProcessError):
                     # Handling errors here will also work in pytest which doesn't get
                     # to global handler
                     from cobaya.log import get_traceback_text, LoggedError
-                    abort_if_mpi(log,
+                    abort_if_mpi(logging.getLogger(func.__name__),
                                  "Aborting MPI deadlock (original error above)"
                                  if isinstance(e, LoggedError) else get_traceback_text(
                                      sys.exc_info()))
-                clear_signal()
-                clear_signal(_synch_tag)
                 raise
-        else:
-            if more_than_one_process():
-                send_signal(value=True, tag=_synch_tag)
+            else:
+                sync.send(value=True)
                 for i in range(size()):
                     if i != rank():
-                        status = _mpi_comm.recv(source=i, tag=_synch_tag)
+                        status = _mpi_comm.recv(source=i, tag=sync.tag)
                         if not status:
                             time_out_barrier()
-                            clear_signal(_synch_tag)
-                            raise OtherProcessError('Another process failed - exiting.')
-
-            return result
+                            raise OtherProcessError(_other_process_msg)
+                return result
 
     return wrapper
+
+
+# signalling
+
+class State(IntEnum):
+    END = 0
+    READY = 1
+    ERROR = 2
+
+
+class SignalError(OtherProcessError):
+    pass
+
+
+_tags = []
+
+
+class Signal:
+
+    def __init__(self, owner='error_signal', name='error'):
+        self.owner = owner
+        self.name = name
+        self.req = None
+        if name not in _tags:
+            _tags.append(name)
+        self.tag = _tags.index(name) + 1
+        self.requests = []
+
+    @more_than_one
+    def send(self, value=False):
+        """
+        Sends an error signal to the other MPI processes.
+        """
+        for i_rank in range(size()):
+            if i_rank != rank():
+                self.requests.append(
+                    get_mpi_comm().isend(value, dest=i_rank, tag=self.tag).Test())
+
+    @more_than_one
+    def check(self):
+        """
+        Checks if any of the other process has sent an error signal, and raises an error.
+
+        """
+        if _mpi_comm.iprobe(source=_mpi.ANY_SOURCE, tag=self.tag):
+            self.clear()
+            self.fire()
+
+    @more_than_one
+    def clear(self):
+        while _mpi_comm.iprobe(source=_mpi.ANY_SOURCE, tag=self.tag):
+            _mpi_comm.recv(source=_mpi.ANY_SOURCE, tag=self.tag)
+        # Unclear if this is needed or safe...
+        # for req in self.requests:
+        #    req.Cancel()
+        self.requests = []
+
+    def fire(self, cls=OtherProcessError, msg=_other_process_msg):
+        raise cls("[%s: %s] %s" % (rank(), self.owner, msg))
+
+    def __enter__(self):
+        self.clear()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.clear()
+
+
+error_signal = Signal()
+
+
+class SyncError(SignalError):
+    pass
+
+
+class SyncState:
+
+    def __init__(self, owner):
+        self.statuses = np.empty(size(), dtype=int)
+        self.name = owner
+        self.req = None
+        self.error = Signal(owner)
+
+    def set_ready(self, status=State.READY) -> bool:
+        if not self.req:
+            self.req = get_mpi_comm().Iallgather(np.array([status], dtype=int),
+                                                 self.statuses)
+            return True
+        return False
+
+    @more_than_one
+    def check(self, status=State.READY, wait=True) -> bool:
+        # if have signalled ready, make sure don't leave others waiting fpr nothing
+        if self.set_ready(status):
+            wait = True
+        if wait:
+            if status == State.ERROR:
+                if not wait_for_request(self.req):
+                    return False
+            else:
+                self.req.Wait()
+        self.error.clear()
+        self.req = None
+        if status != State.ERROR and any(self.statuses == State.ERROR):
+            self.error.fire(SyncError)
+        return all(self.statuses == State.READY)
+
+    def all_ready(self) -> bool:
+        return self.req and self.req.Test() and self.check(wait=False)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_type is None:
+            self.check(State.END)
+        elif exc_type and exc_type is not SyncError:
+            self.error.send()
+            self.check(State.ERROR)
+        self.error.clear()
+        self.req = None

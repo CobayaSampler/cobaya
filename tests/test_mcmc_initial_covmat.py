@@ -9,7 +9,7 @@ from itertools import chain
 from random import shuffle
 
 from cobaya.likelihoods.gaussian_mixture import random_cov
-from cobaya.conventions import kinds, partag, _prior, _params
+from cobaya.conventions import kinds, partag, _prior, _params, InfoDict
 from cobaya.run import run
 from cobaya import mpi
 
@@ -52,7 +52,7 @@ def body_of_test(dim, tmpdir=None):
     else:
         input_order = None
     input_order = mpi.share(input_order)
-    info = {kinds.likelihood: {"one": None}, _params: {}}
+    info: InfoDict = {kinds.likelihood: {"one": None}, _params: {}}
     for i in input_order:
         p = prefix + str(i)
         info[_params][p] = {_prior: {partag.dist: "norm", "loc": 0, "scale": 1000}}

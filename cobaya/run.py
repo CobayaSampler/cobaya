@@ -28,7 +28,7 @@ from cobaya.post import post
 from cobaya import mpi
 
 
-@mpi.synch_error_signal
+@mpi.sync_error_signal
 def run(info):
     # This function reproduces the model-->output-->sampler pipeline one would follow
     # when instantiating by hand, but alters the order to performs checks and dump info

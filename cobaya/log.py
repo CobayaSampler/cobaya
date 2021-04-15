@@ -91,7 +91,7 @@ def exception_handler(exception_type, exception_instance, trace_back):
                  line)
     if exception_type == KeyboardInterrupt:
         log.critical("Interrupted by the user.")
-    else:
+    elif log.getEffectiveLevel() > logging.DEBUG:
         log.critical(
             "Some unexpected ERROR occurred. "
             "You can see the exception information above.\n"

@@ -8,6 +8,7 @@
 """
 from collections import namedtuple
 from types import MappingProxyType
+from typing import Dict, Any
 
 # Package name (for importlib)
 # (apparently __package__ is only defined if you import something locally.
@@ -15,6 +16,7 @@ _cobaya_package = __name__.rpartition('.')[0]
 
 # an immutable empty dict (e.g. for argument defaults)
 empty_dict = MappingProxyType({})
+InfoDict = Dict[str, Any]
 
 # Names for block and fields in the input
 _prior = "prior"

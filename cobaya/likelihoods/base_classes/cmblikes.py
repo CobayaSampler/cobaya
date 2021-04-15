@@ -423,6 +423,7 @@ class CMBlikes(DataSetLikelihood):
             raise LoggedError(self.log, 'unbinned covariance not implemented yet')
         return pcov
 
+    # noinspection PyTypeChecker
     def writeData(self, froot):
         np.savetxt(froot + '_cov.dat', self.cov)
         np.savetxt(froot + '_bandpowers.dat', self.full_bandpowers,

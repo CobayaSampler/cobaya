@@ -11,6 +11,7 @@ import os
 import sys
 import numpy as np
 import logging
+from typing import Any
 
 # Local
 from cobaya.likelihood import Likelihood
@@ -52,7 +53,7 @@ class PlanckClik(Likelihood):
                 self.log, "No path given to the Planck likelihood. Set the "
                           "likelihood property 'path' or the common property "
                           "'%s'.", _packages_path)
-        clik = is_installed_clik(path=self.path_clik, allow_global=allow_global)
+        clik: Any = is_installed_clik(path=self.path_clik, allow_global=allow_global)
         if not clik:
             raise NotInstalledError(
                 self.log, "Could not find the 'clik' Planck likelihood code. "

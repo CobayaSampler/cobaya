@@ -172,6 +172,7 @@ class classy(BoltzmannBase):
     _classy_min_gcc_version = "6.4"  # Lower ones are possible atm, but leak memory!
     _classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', _min_classy_version)
 
+    # noinspection PyUnresolvedReferences
     def initialize(self):
         """Importing CLASS from the correct path, if given, and if not, globally."""
         # Allow global import if no direct path specification

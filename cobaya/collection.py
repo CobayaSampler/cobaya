@@ -443,6 +443,7 @@ class Collection(BaseCollection):
                     WeightedSamples.thin_indices_and_weights(thin, self[_weight].values)
             else:
                 # TODO remove once getdist updated
+                # noinspection PyTypeChecker
                 thin_ix = WeightedSamples.thin_indices(None, thin, self[_weight].values)
                 unique, counts = np.unique(thin_ix, return_counts=True)
         except WeightedSampleError as e:

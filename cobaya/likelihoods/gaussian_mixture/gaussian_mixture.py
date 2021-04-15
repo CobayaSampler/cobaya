@@ -27,8 +27,8 @@ class gaussian_mixture(Likelihood):
     """
 
     # yaml variables
-    means: Optional[Sequence]
-    covs: Optional[Sequence]
+    means: Optional[Sequence, np.ndarray]
+    covs: Optional[Sequence, np.ndarray]
     weights: Optional[Sequence[float]]
     derived: bool
     input_params_prefix: str

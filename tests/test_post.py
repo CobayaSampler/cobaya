@@ -9,7 +9,7 @@ import pytest
 from cobaya.run import run
 from cobaya.post import post
 from cobaya.tools import KL_norm
-from cobaya.conventions import _output_prefix, _params, _force, kinds
+from cobaya.conventions import _output_prefix, _params, _force, kinds, InfoDict
 from cobaya.conventions import _prior, partag, _separator_files
 from cobaya.conventions import _post, _post_add, _post_remove, _post_suffix
 from cobaya import mpi
@@ -39,7 +39,7 @@ target_pdf_prior = lambda a, b, c=0: target_pdf(a, b, c=0)[0]
 
 _range = {"min": -2, "max": 2}
 ref_pdf = {partag.dist: "norm", "loc": 0, "scale": 0.1}
-info_params = dict([
+info_params: InfoDict= dict([
     ("a", {"prior": _range, "ref": ref_pdf, partag.proposal: sigma}),
     ("b", {"prior": _range, "ref": ref_pdf, partag.proposal: sigma}),
     ("a_plus_b", {partag.derived: lambda a, b: a + b})])

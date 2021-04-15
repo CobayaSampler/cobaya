@@ -20,7 +20,7 @@ from importlib import import_module
 from copy import deepcopy
 from packaging import version
 from itertools import permutations
-from typing import Mapping, Sequence
+from typing import Mapping, Sequence, Any
 from numbers import Number
 from types import ModuleType
 from inspect import cleandoc, getfullargspec
@@ -144,7 +144,7 @@ def check_component_path(component, path):
             component.__name__, path)
 
 
-def check_component_version(component, min_version):
+def check_component_version(component: Any, min_version):
     if not hasattr(component, "__version__") or \
             version.parse(component.__version__) < version.parse(min_version):
         raise VersionCheckError(

@@ -87,9 +87,8 @@ def pytest_runtest_makereport(item, call):
     if rep.when == "call" and rep.failed:
         rep.sections = [i for i in rep.sections if i[0] != "Captured log call"]
         if isinstance(call.excinfo.value, mpi.OtherProcessError):
-            # Only need very short message
-            #rep.longrepr = str(call.excinfo.value)
-            rep.longrepr = str(rep.longrepr).split("\n")[-10:]
+            # Only need very short message; stdout printed in raised-error process
+            rep.longrepr = str(call.excinfo.value)
             rep.sections = []
         elif isinstance(call.excinfo.value, LoggedError):
             # Don't show call stack, do show output (but log is already printed)
