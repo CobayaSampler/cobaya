@@ -39,7 +39,7 @@ target_pdf_prior = lambda a, b, c=0: target_pdf(a, b, c=0)[0]
 
 _range = {"min": -2, "max": 2}
 ref_pdf = {partag.dist: "norm", "loc": 0, "scale": 0.1}
-info_params: InfoDict= dict([
+info_params: InfoDict = dict([
     ("a", {"prior": _range, "ref": ref_pdf, partag.proposal: sigma}),
     ("b", {"prior": _range, "ref": ref_pdf, partag.proposal: sigma}),
     ("a_plus_b", {partag.derived: lambda a, b: a + b})])
