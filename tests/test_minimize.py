@@ -14,7 +14,7 @@ pytestmark = pytest.mark.mpi
 
 
 @flaky(max_runs=3, min_passes=1)
-@mpi.synch_errors
+@mpi.sync_errors
 def test_minimize_gaussian():
     # parameters
     dimension = 3

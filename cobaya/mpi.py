@@ -168,11 +168,17 @@ def array_gather(list_of_data, root=0) -> List[np.array]:
     return [np.array(i) for i in zip_gather(list_of_data, root=root)]
 
 
+# set if being run from pytest
+capture_manager: Any = None
+
+
 def abort_if_mpi(log=None, msg=None):
     """Closes all MPI process, if more than one present."""
     if get_mpi_size() > 1:
         if log and msg:
             log.critical(msg)
+        if capture_manager:
+            capture_manager.stop_global_capturing()
         get_mpi_comm().Abort(1)
 
 
@@ -268,7 +274,7 @@ def set_from_root(attributes):
     return set_method
 
 
-def synch_errors(func):
+def sync_errors(func):
     err = 'Another process raised an error in %s' % func.__name__
 
     @functools.wraps(func)
@@ -405,16 +411,20 @@ class SyncError(SignalError):
     pass
 
 
+# For testing and synchronizing processing when ready or ended/errored
+
 class SyncState:
 
     def __init__(self, owner):
         self.statuses = np.empty(size(), dtype=int)
-        self.name = owner
+        self.owner = owner
         self.req = None
         self.error = Signal(owner)
+        self.ending = False
 
     def set_ready(self, status=State.READY) -> bool:
-        if not self.req:
+        if self.req is None and not self.ending:
+            self.owner.log.debug('Set process status: %s', status)
             self.req = get_mpi_comm().Iallgather(np.array([status], dtype=int),
                                                  self.statuses)
             return True
@@ -423,9 +433,10 @@ class SyncState:
     @more_than_one
     def check(self, status=State.READY, wait=True) -> bool:
         # if have signalled ready, make sure don't leave others waiting fpr nothing
-        if self.set_ready(status):
-            wait = True
-        if wait:
+        if self.ending:
+            return False
+        was_set = self.set_ready(status)
+        if wait or was_set:
             if status == State.ERROR:
                 if not wait_for_request(self.req):
                     return False
@@ -433,12 +444,17 @@ class SyncState:
                 self.req.Wait()
         self.error.clear()
         self.req = None
+        self.owner.log.debug('Got process statuses: %s', self.statuses)
+        self.ending = any(self.statuses != State.READY)
         if status != State.ERROR and any(self.statuses == State.ERROR):
             self.error.fire(SyncError)
-        return all(self.statuses == State.READY)
+        if not was_set and not self.ending:
+            # always need to sent at least one END or ERROR
+            self.check(status)
+        return not self.ending
 
     def all_ready(self) -> bool:
-        return self.req and self.req.Test() and self.check(wait=False)
+        return self.req is not None and self.req.Test() and self.check(wait=False)
 
     def __enter__(self):
         return self

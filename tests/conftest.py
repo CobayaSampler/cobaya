@@ -62,22 +62,9 @@ def install_test_wrapper(skip_not_installed, func, *args, **kwargs):
 
 
 if mpi.more_than_one_process():
-
-    # Allow printing of errors when MPI aborting even if output captured by pytest
-    old_abort = mpi.abort_if_mpi
-
-
     @pytest.fixture(scope="session", autouse=True)
     def mpi_handling(request):
-        capmanager = request.config.pluginmanager.getplugin("capturemanager")
-
-        def aborter(log=None, msg=None):
-            if log and msg:
-                log.error(msg)
-            capmanager.stop_global_capturing()
-            old_abort()
-
-        mpi.abort_if_mpi = aborter
+        mpi.capture_manager = request.config.pluginmanager.getplugin("capturemanager")
 
 
 @pytest.hookimpl(hookwrapper=True)
@@ -86,14 +73,15 @@ def pytest_runtest_makereport(item, call):
     rep = outcome.get_result()
     if rep.when == "call" and rep.failed:
         rep.sections = [i for i in rep.sections if i[0] != "Captured log call"]
-        if isinstance(call.excinfo.value, mpi.OtherProcessError):
+        if call.excinfo and isinstance(call.excinfo.value, mpi.OtherProcessError):
             # Only need very short message; stdout printed in raised-error process
             rep.longrepr = str(call.excinfo.value)
             rep.sections = []
-        elif isinstance(call.excinfo.value, LoggedError):
+        elif call.excinfo and isinstance(call.excinfo.value, LoggedError):
             # Don't show call stack, do show output (but log is already printed)
-            if logging.root.getEffectiveLevel() > logging.DEBUG:
+            if logging.root.getEffectiveLevel() > logging.DEBUG and rep.longrepr:
                 rep.longrepr = str(rep.longrepr).split("\n")[-1]
+
     return rep
 
 

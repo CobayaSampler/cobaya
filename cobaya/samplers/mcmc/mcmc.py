@@ -382,13 +382,12 @@ class mcmc(CovmatSampler):
                             if self.check_ready():
                                 self.check_convergence_and_learn_proposal()
                                 self.i_learn += 1
+            if last_n == self.max_samples:
+                self.log.info("Reached maximum number of accepted steps allowed. "
+                              "Stopping.")
 
-        # Make sure the last batch of samples ( < output_every (not in sec)) are written
-        self.collection.out_update()
-
-        if last_n == self.max_samples:
-            self.log.info("Reached maximum number of accepted steps allowed. "
-                          "Stopping.")
+            # Make sure the last batch of samples ( < output_every (not in sec)) are written
+            self.collection.out_update()
 
         mpi.error_signal.check()
 

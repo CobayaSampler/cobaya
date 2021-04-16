@@ -49,7 +49,7 @@ info_derived = {"half_ring": {
 
 # Common part of all tests
 
-@mpi.synch_errors
+@mpi.sync_errors
 def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
     # For pytest's handling of tmp dirs
     tmpdir, rand = mpi.share((str(tmpdir), random()))

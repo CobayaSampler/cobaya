@@ -24,7 +24,7 @@ docs_img_folder = os.path.join(docs_folder, "img")
 
 
 @flaky(max_runs=3, min_passes=1)
-@mpi.synch_errors
+@mpi.sync_errors
 def test_example():
     # temporarily change working directory to be able to run the files "as is"
     cwd = os.getcwd()

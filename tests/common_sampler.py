@@ -22,7 +22,7 @@ O_std_max = 0.05
 distance_factor = 4
 
 
-@mpi.synch_errors
+@mpi.sync_errors
 def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
                  packages_path=None, skip_not_installed=False):
     # Info of likelihood and prior
@@ -128,7 +128,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
                     products["logZ"] + logZ_nsigmas * products["logZstd"])
 
 
-@mpi.synch_errors
+@mpi.sync_errors
 def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False,
                         packages_path=None, skip_not_installed=False):
     # #dimensions and speed ratio mutually prime (e.g. 2,3,5)

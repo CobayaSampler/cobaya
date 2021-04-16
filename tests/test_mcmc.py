@@ -65,6 +65,7 @@ def test_mcmc_oversampling():
 
 @flaky(max_runs=max_runs, min_passes=1)
 def test_mcmc_oversampling_manual():
+    # TODO - update ('oversample')
     info_mcmc = {"mcmc": {"burn_in": 0, "learn_proposal": False, "oversample": True}}
     body_of_test_speeds(info_mcmc, manual_blocking=True)
 

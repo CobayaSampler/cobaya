@@ -56,7 +56,7 @@ def run(info):
                         "`sampler: {mcmc: None}.`")
     infix = "minimize" if which_sampler == "minimize" else None
     with get_output(prefix=info.get(_output_prefix), resume=info.get(_resume),
-                        force=info.get(_force), infix=infix) as output:
+                    force=info.get(_force), infix=infix) as output:
         # 2. Update the input info with the defaults for each component
         updated_info = update_info(info)
         if logging.root.getEffectiveLevel() <= logging.DEBUG:
