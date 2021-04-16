@@ -2,14 +2,14 @@
 .. module:: model
 
 :Synopsis: Wrapper for models: parameterization+prior+likelihood+theory
-:Author: Jesus Torrado
+:Author: Jesus Torrado and Antony Lewis
 
 """
 # Global
 import logging
 from copy import deepcopy
 from itertools import chain
-from typing import NamedTuple, Sequence, Mapping
+from typing import NamedTuple, Sequence, Mapping, Optional
 import numpy as np
 
 # Local
@@ -20,15 +20,15 @@ from cobaya.conventions import kinds, _prior, _timing, _params, _provides, \
 from cobaya.input import update_info
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
-from cobaya.likelihood import LikelihoodCollection, LikelihoodExternalFunction, \
-    AbsorbUnusedParamsLikelihood, is_LikelihoodInterface
+from cobaya.likelihood import LikelihoodCollection, AbsorbUnusedParamsLikelihood, \
+    is_LikelihoodInterface
 from cobaya.theory import TheoryCollection
 from cobaya.log import LoggedError, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
 from cobaya.tools import deepcopy_where_possible, are_different_params_lists, \
     str_to_list, sort_parameter_blocks, recursive_update, sort_cosmetic, ensure_dict
 from cobaya.component import Provider
-from cobaya.mpi import more_than_one_process, get_mpi_comm
+from cobaya import mpi
 
 
 # Log-posterior namedtuple
@@ -41,7 +41,7 @@ class LogPosterior(NamedTuple):
 
 class Requirement(NamedTuple):
     name: str
-    options: dict
+    options: Optional[dict]
 
     def __eq__(self, other):
         return self.name == other.name and _dict_equal(self.options, other.options)
@@ -129,8 +129,9 @@ class Model(HasLogger):
 
     def __init__(self, info_params, info_likelihood, info_prior=None, info_theory=None,
                  packages_path=None, timing=None, allow_renames=True, stop_at_error=False,
-                 post=False, prior_parameterization=None):
-        self.set_logger(lowercase=True)
+                 post=False, prior_parameterization=None,
+                 skip_unused_theories=False, dropped_theory_params=None):
+        self.set_logger()
         self._updated_info = {
             _params: deepcopy_where_possible(info_params),
             kinds.likelihood: deepcopy_where_possible(info_likelihood)}
@@ -156,8 +157,8 @@ class Model(HasLogger):
             for component in self.components:
                 component.stop_at_error = stop_at_error
         # Assign input/output parameters
-        self._assign_params(info_likelihood, info_theory)
-        self._set_dependencies_and_providers()
+        self._assign_params(info_likelihood, info_theory, dropped_theory_params)
+        self._set_dependencies_and_providers(skip_unused_theories=skip_unused_theories)
         # Add to the updated info some values that are only available after initialisation
         self._updated_info = recursive_update(
             self._updated_info, self.get_versions(add_version_field=True))
@@ -237,10 +238,9 @@ class Model(HasLogger):
         compute_success = True
         self.provider.set_current_input_params(input_params)
         self.log.debug("Got input parameters: %r", input_params)
-        n_theory = len(self.theory)
-        loglikes = np.empty(len(self.likelihood))
-        for (component, index), param_dep in zip(self._component_order.items(),
-                                                 self._params_of_dependencies):
+        loglikes = np.zeros(len(self.likelihood))
+        for (component, like_index), param_dep in zip(self._component_order.items(),
+                                                      self._params_of_dependencies):
             depend_list = [input_params[p] for p in param_dep]
             params = {p: input_params[p] for p in component.input_params}
             compute_success = component.check_cache_and_compute(
@@ -256,20 +256,20 @@ class Model(HasLogger):
             # Add chi2's to derived parameters
             if is_LikelihoodInterface(component):
                 try:
-                    loglikes[index - n_theory] = float(component.current_logp)
+                    loglikes[like_index] = float(component.current_logp)
                 except TypeError:
                     raise LoggedError(
                         self.log,
                         "Likelihood %s has not returned a valid log-likelihood, "
-                        "but %r instead.", str(component), component.current_logp)
+                        "but %r instead.", component, component.current_logp)
                 if return_derived:
                     derived_dict[_get_chi2_name(component.get_name().replace(".", "_"))] \
-                        = -2 * loglikes[index - n_theory]
+                        = -2 * loglikes[like_index]
                     for this_type in getattr(component, "type", []) or []:
                         aggr_chi2_name = _get_chi2_name(this_type)
                         if aggr_chi2_name not in derived_dict:
-                            derived_dict[aggr_chi2_name] = 0
-                        derived_dict[aggr_chi2_name] += -2 * loglikes[index - n_theory]
+                            derived_dict[aggr_chi2_name] = 0.
+                        derived_dict[aggr_chi2_name] += -2 * loglikes[like_index]
         if make_finite:
             loglikes = np.nan_to_num(loglikes)
         if return_derived:
@@ -421,6 +421,7 @@ class Model(HasLogger):
                 logpost = logps
 
         if logps != -np.inf:
+            # noinspection PyUnboundLocalVariable
             like = self._loglikes_input_params(input_params,
                                                return_derived=return_derived,
                                                cached=cached, make_finite=make_finite)
@@ -513,9 +514,10 @@ class Model(HasLogger):
     def _set_component_order(self, components, dependencies):
         dependence_order = []
         deps = {p: s.copy() for p, s in dependencies.items()}
-        comps = components[:]
+        comps = [c for c in components if not isinstance(c, AbsorbUnusedParamsLikelihood)]
+        target_length = len(comps)
         _last = 0
-        while len(dependence_order) < len(components):
+        while len(dependence_order) < target_length:
             for component in list(comps):
                 if not deps.get(component):
                     dependence_order.append(component)
@@ -526,12 +528,13 @@ class Model(HasLogger):
                 raise LoggedError(self.log, "Circular dependency, cannot calculate "
                                             "%r" % comps)
             _last = len(dependence_order)
+        likes = list(self.likelihood.values())
+        self._component_order = {c: likes.index(c) if c in likes else None
+                                 for c in dependence_order}
 
-        self._component_order = {c: components.index(c) for c in dependence_order}
-
-    def _set_dependencies_and_providers(self, manual_requirements=empty_dict):
-        # TODO: does it matter that theories come first, or can we use self.components?
-        components = list(self.theory.values()) + list(self.likelihood.values())
+    def _set_dependencies_and_providers(self, manual_requirements=empty_dict,
+                                        skip_unused_theories=False):
+        components = self.components
         direct_param_dependence = {c: set() for c in components}
 
         def _tidy_requirements(_require, _component=None):
@@ -551,7 +554,7 @@ class Model(HasLogger):
                     _require.pop(par, None)
             return [Requirement(p, v) for p, v in _require.items()]
 
-        ### 1. Get the requirements and providers ###
+        # ## 1. Get the requirements and providers ##
         requirements = {}  # requirements of each component
         providers = {}  # providers of each *available* requirement (requested or not)
         for component in components:
@@ -570,9 +573,8 @@ class Model(HasLogger):
                 [Requirement(p, None) for p in (getattr(component, _params, {}) or []) if
                  p not in component.input_params + component.output_params]
             # Gather what this component can provide
-            can_provide = (
-                    list(component.get_can_provide()) +
-                    list(component.get_can_provide_methods()))
+            can_provide = (list(component.get_can_provide()) +
+                           list(component.get_can_provide_methods()))
             # Parameters that can be provided but not already explicitly assigned
             # (i.e. it is not a declared output param of that component)
             provide_params = [p for p in component.get_can_provide_params() if
@@ -580,7 +582,8 @@ class Model(HasLogger):
             # Corner case: some components can either take some parameters as input OR
             # provide their own calculation of them. Pop those if required as input.
             for p in provide_params.copy():  # iterating over copy
-                if p in component.get_requirements():  # no need to know which are params
+                if any(p == req.name for req in requirements[component]):
+                    # no need to know which are params
                     provide_params.remove(p)
             # Invert to get the provider(s) of each available product/parameter
             for k in can_provide + component.output_params + provide_params:
@@ -596,17 +599,19 @@ class Model(HasLogger):
             for dummy in self._manual_requirements:
                 requirements[dummy] = deepcopy(self._manual_requirements[dummy])
 
-        ### 2. Assign each requirement to a provider ###
+        # ## 2. Assign each requirement to a provider ##
         # store requirements assigned to each provider:
-        self._must_provide = {component: [] for component in components}
+        self._must_provide = {c: [] for c in components}
         # inverse of the one above, *minus conditional requirements* --
         # this is the one we need to initialise the provider
         requirement_providers = {}
         dependencies = {}  # set of components of which each component depends
+        used_suppliers = set(c for c in components if c.output_params)
         there_are_more_requirements = True
+        # temp list of dictionary of requirements for each component
+        must_provide = {c: [Requirement(p, None) for p in c.output_params] for c in
+                        components}
         while there_are_more_requirements:
-            # temp list of dictionary of requirements for each component
-            must_provide = {c: [] for c in components}
             # Check supplier for each requirement, get dependency and must_provide
             for component, requires in requirements.items():
                 for requirement in requires:
@@ -639,6 +644,7 @@ class Model(HasLogger):
                             self.log, "Component %r cannot provide %s to itself!",
                             component, requirement.name)
                     requirement_providers[requirement.name] = supplier.get_provider()
+                    used_suppliers.add(supplier)
                     declared_requirements_for_this_supplier = \
                         self._must_provide[supplier] + must_provide[supplier]
                     if requirement not in declared_requirements_for_this_supplier:
@@ -659,21 +665,22 @@ class Model(HasLogger):
                 # and store here new (conditional) ones
                 requires[:] = []
                 # .get here accounts for the dummy components of manual reqs
-                if must_provide.get(component, False):
-                    for request in must_provide[component]:
-                        conditional_requirements = \
-                            _tidy_requirements(
-                                component.must_provide(
-                                    **{request.name: request.options}), component)
-                        self._must_provide[component].append(request)
-                        if conditional_requirements:
-                            there_are_more_requirements = True
-                            requires += conditional_requirements
+                for request in must_provide.get(component) or []:
+                    conditional_requirements = \
+                        _tidy_requirements(
+                            component.must_provide(
+                                **{request.name: request.options}), component)
+                    self._must_provide[component].append(request)
+                    if conditional_requirements:
+                        there_are_more_requirements = True
+                        requires += conditional_requirements
             # set component compute order and raise error if circular dependence
             self._set_component_order(components, dependencies)
             # TODO: it would be nice that after this loop we, in some way, have
             # component.get_requirements() return the conditional reqs actually used too,
             # or maybe assign conditional used ones to a property?
+            # Reset list
+            must_provide = {c: [] for c in components}
         # Expunge manual requirements
         for component in list(requirements):
             if is_dummy_component(component):
@@ -690,6 +697,19 @@ class Model(HasLogger):
                 else:
                     self.log.warning("Parameter(s) %s are only used by the prior",
                                      self._unassigned_input)
+
+        unused_theories = set(self.theory.values()) - used_suppliers
+        if unused_theories:
+            if skip_unused_theories:
+                self.log.debug('Theories %s do not need to be computed '
+                               'and will be skipped', unused_theories)
+                for theory in unused_theories:
+                    self._component_order.pop(theory, None)
+                    components.remove(theory)
+            else:
+                self.log.warning('Theories %s do not appear to be actually used '
+                                 'for anything', unused_theories)
+
         if self.log.getEffectiveLevel() <= logging.DEBUG:
             self.log.debug("Components will be computed in the order:")
             self.log.debug(" - %r" % list(self._component_order))
@@ -701,7 +721,7 @@ class Model(HasLogger):
                 deps.update(dependencies_of(c))
             return deps
 
-        ### 3. Save dependencies on components and their parameters ###
+        # ## 3. Save dependencies on components and their parameters ##
         self._dependencies = {c: dependencies_of(c) for c in components}
         # this next one is not a dict to save a lookup per iteration
         self._params_of_dependencies = [set() for _ in self._component_order]
@@ -731,11 +751,15 @@ class Model(HasLogger):
                             sampled_dependence[p].append(comp)
         self.sampled_dependence = sampled_dependence
 
-        ### 4. Initialize the provider and pass it to each component ###
-        if self.log.getEffectiveLevel() <= logging.DEBUG and requirement_providers:
-            self.log.debug("Requirements will be calculated by these components:")
-            for requirement, provider in requirement_providers.items():
-                self.log.debug("- %s: %s", requirement, provider)
+        # ## 4. Initialize the provider and pass it to each component ##
+        if self.log.getEffectiveLevel() <= logging.DEBUG:
+            if requirement_providers:
+                self.log.debug("Requirements will be calculated by these components:")
+                for requirement, provider in requirement_providers.items():
+                    self.log.debug("- %s: %s", requirement, provider)
+            else:
+                self.log.debug("No requirements need to be computed")
+
         self.provider = Provider(self, requirement_providers)
         for component in components:
             component.initialize_with_provider(self.provider)
@@ -753,9 +777,10 @@ class Model(HasLogger):
         :return: dictionary giving list of requirements calculated by
                 each component name
         """
-        return dict(("%r" % c, v) for c, v in self._must_provide.items() if v)
+        return {"%r" % c: v for c, v in self._must_provide.items() if v}
 
-    def _assign_params(self, info_likelihood, info_theory=None):
+    def _assign_params(self, info_likelihood, info_theory=None,
+                       dropped_theory_params=None):
         """
         Assign input and output parameters to theories and likelihoods, following the
         algorithm explained in :doc:`DEVEL`.
@@ -791,14 +816,10 @@ class Model(HasLogger):
                             assign[p] += [component]
                         except KeyError:
                             if not derived_param:
-                                # If external function, no problem: it may have
-                                # default value
-                                if not isinstance(component,
-                                                  LikelihoodExternalFunction):
-                                    raise LoggedError(
-                                        self.log,
-                                        "Parameter '%s' needed as input for '%s', "
-                                        "but not provided.", p, component.get_name())
+                                raise LoggedError(
+                                    self.log,
+                                    "Parameter '%s' needed as input for '%s', "
+                                    "but not provided.", p, component.get_name())
                 # 2. Is there a params prefix?
                 elif getattr(component, prefix, None) is not None:
                     for p in assign:
@@ -832,8 +853,11 @@ class Model(HasLogger):
                     supports_params = component.get_can_provide_params()
                 else:
                     supports_params = component.get_can_support_params()
+                pars_to_assign = set(supports_params)
+                if dropped_theory_params and not is_LikelihoodInterface(component):
+                    pars_to_assign -= dropped_theory_params
                 for p in (unassigned if derived_param else assign):
-                    if p in supports_params and component not in assign[p]:
+                    if p in pars_to_assign and component not in assign[p]:
                         assign[p] += [component]
             # Check that there is only one non-knowledgeable element, and assign
             # unused params
@@ -959,7 +983,7 @@ class Model(HasLogger):
             for j, comp in enumerate(speeds):
                 footprints[i, j] = comp in ls
         # Group parameters by footprint
-        different_footprints = list(set(tuple(row) for row in footprints.tolist()))
+        different_footprints = list(set(tuple(row) for row in footprints))
         blocks = [[p for ip, p in enumerate(self.sampled_dependence)
                    if all(footprints[ip] == fp)] for fp in different_footprints]
         # a) Multiple blocks
@@ -1103,18 +1127,18 @@ class Model(HasLogger):
             self.set_timing_on(True)
         self.mpi_info("Measuring speeds... (this may take a few seconds)")
         if n is None:
-            n = 1 if more_than_one_process() else 3
+            n = 1 if mpi.more_than_one_process() else 3
         n_done = 0
         while n_done < int(n) + int(discard):
             point = self.prior.reference(
                 max_tries=max_tries, ignore_fixed=True, warn_if_no_ref=False)
-            if self.loglike(point, cached=False, return_derived=True)[0] != -np.inf:
+            if self.loglike(point, cached=False)[0] != -np.inf:
                 n_done += 1
         self.log.debug("Computed %d points to measure speeds.", n_done)
-        times = [component.timer.get_time_avg() for component in self.components]
-        if more_than_one_process():
+        times = [component.timer.get_time_avg() or 0 for component in self.components]
+        if mpi.more_than_one_process():
             # average for different points
-            times = np.average(get_mpi_comm().allgather(times), axis=0)
+            times = np.average(mpi.allgather(times), axis=0)
         measured_speeds = [1 / (1e-7 + time) for time in times]
         self.mpi_info('Setting measured speeds (per sec): %r',
                       {component: float("%.3g" % speed) for component, speed in

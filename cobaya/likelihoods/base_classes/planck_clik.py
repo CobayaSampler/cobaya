@@ -11,6 +11,7 @@ import os
 import sys
 import numpy as np
 import logging
+from typing import Any
 
 # Local
 from cobaya.likelihood import Likelihood
@@ -40,7 +41,6 @@ class PlanckClik(Likelihood):
         if "2015" in self.get_name():
             for line in _deprecation_msg_2015.split("\n"):
                 self.log.warning(line)
-        code_path = common_path
         data_path = get_data_path(self.__class__.get_qualified_class_name())
         # Allow global import if no direct path specification
         allow_global = not self.path
@@ -53,7 +53,7 @@ class PlanckClik(Likelihood):
                 self.log, "No path given to the Planck likelihood. Set the "
                           "likelihood property 'path' or the common property "
                           "'%s'.", _packages_path)
-        clik = is_installed_clik(path=self.path_clik, allow_global=allow_global)
+        clik: Any = is_installed_clik(path=self.path_clik, allow_global=allow_global)
         if not clik:
             raise NotInstalledError(
                 self.log, "Could not find the 'clik' Planck likelihood code. "
@@ -226,6 +226,7 @@ _clik_verbose = any(
     [(s in os.getenv('TRAVIS_COMMIT_MESSAGE', '')) for s in ["clik", "planck"]])
 # Don't try again to install clik if it failed for a previous likelihood
 try:
+    # noinspection PyUnboundLocalVariable
     _clik_install_failed
 except NameError:
     _clik_install_failed = False

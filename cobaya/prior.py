@@ -344,11 +344,11 @@ from typing import Sequence, NamedTuple, Callable
 # Local
 from cobaya.conventions import _prior, partag, _prior_1d_name
 from cobaya.tools import get_external_function, get_scipy_1d_pdf, read_dnumber
-from cobaya.tools import _fast_uniform_logpdf, _fast_norm_logpdf, getfullargspec
+from cobaya.tools import _fast_norm_logpdf, getfullargspec
 from cobaya.log import LoggedError, HasLogger
 
 # Fast logpdf for uniforms and norms (do not understand nan masks!)
-fast_logpdfs = {"uniform": _fast_uniform_logpdf, "norm": _fast_norm_logpdf}
+fast_logpdfs = {"norm": _fast_norm_logpdf}
 
 
 class ExternalPrior(NamedTuple):
@@ -367,7 +367,6 @@ class Prior(HasLogger):
         """
         self.set_logger()
         self._parameterization = parameterization
-        constant_params_info = parameterization.constant_params()
         sampled_params_info = parameterization.sampled_params_info()
         if not sampled_params_info:
             self.mpi_warning("No sampled parameters requested! "
@@ -431,9 +430,9 @@ class Prior(HasLogger):
             argspec = getfullargspec(logp)
             known = set(parameterization.input_params())
             params = [p for p in argspec.args if p in known]
-            params_without_default = \
-                argspec.args[:(len(argspec.args) - len(argspec.defaults or []))]
-            unknown = set(params_without_default).difference(known)
+            params_without_default = set(
+                argspec.args[:(len(argspec.args) - len(argspec.defaults or []))])
+            unknown = params_without_default - known
             if unknown:
                 if unknown.intersection(parameterization.derived_params()):
                     err = ("External prior '%s' has arguments %s that are output derived "
@@ -447,18 +446,8 @@ class Prior(HasLogger):
             self.external[name] = ExternalPrior(logp=logp, params=params)
             self.mpi_warning("External prior '%s' loaded. "
                              "Mind that it might not be normalized!", name)
-        # From here on, some error control.
-        if parameterization._dropped_not_directly_used:
-            # only raise error after checking not used by prior
-            if parameterization._dropped_not_directly_used.difference(
-                    self.external_dependence):
-                raise LoggedError(
-                    self.log,
-                    "Parameters %r are sampled but not passed to a likelihood or theory "
-                    "code, and never used as arguments for any prior or parameter "
-                    "functions. Check that you are not using "
-                    "the '%s' tag unintentionally.",
-                    list(parameterization._dropped_not_directly_used), partag.drop)
+
+        parameterization.check_dropped(self.external_dependence)
 
     def d(self):
         """
@@ -491,9 +480,9 @@ class Prior(HasLogger):
         """
         if confidence_for_unbounded >= 1:
             return self._bounds
+        bounds = self._bounds.copy()
+        infs = list(set(np.argwhere(np.isinf(bounds)).T[0]))
         try:
-            bounds = self._bounds.copy()
-            infs = list(set(np.argwhere(np.isinf(bounds)).T[0]))
             if infs:
                 self.mpi_warning("There are unbounded parameters (%r). Prior bounds "
                                  "are given at %s confidence level. Beware of "
@@ -539,11 +528,13 @@ class Prior(HasLogger):
         logps = self.logps_internal(x)
         # noinspection PyTypeChecker
         if logps != -np.inf:
-            input_params = self._parameterization.to_input(x, copied=False)
-            logps = [logps] + self.logps_external(input_params)
+            if self.external:
+                input_params = self._parameterization.to_input(x, copied=False)
+                return [logps] + self.logps_external(input_params)
+            else:
+                return [logps]
         else:
-            logps = [-np.inf] * (1 + len(self.external))
-        return logps
+            return [-np.inf] * (1 + len(self.external))
 
     def logp(self, x):
         """

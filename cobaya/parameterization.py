@@ -52,7 +52,7 @@ def expand_info_param(info_param, default_derived=True):
         if info_param is None:
             info_param = {}
         elif isinstance(info_param, Sequence) and not isinstance(info_param, str):
-            values = info_param.copy()
+            values = list(info_param)
             allowed_lengths = [2, 4, 5]
             if len(values) not in allowed_lengths:
                 logger = logging.getLogger(__name__.split(".")[-1])
@@ -126,7 +126,8 @@ class Parameterization(HasLogger):
         # to infos without _prior or partag.value, and a partag.value field
         # to fixed params
         for p, info in info_params.items():
-            self._infos[p] = deepcopy_where_possible(info)
+            info = expand_info_param(info)
+            self._infos[p] = info
             if is_fixed_param(info):
                 if isinstance(info[partag.value], Number):
                     self._constant[p] = info[partag.value]
@@ -159,7 +160,8 @@ class Parameterization(HasLogger):
         for p in chain(self._sampled, self._derived):
             if not is_valid_variable_name(p):
                 is_in = p in self._sampled
-                eg_in = "  p_prime:\n    prior: ...\n  %s: 'lambda p_prime: p_prime'\n" % p
+                eg_in = "  p_prime:\n    prior: ...\n  %s: " \
+                        "'lambda p_prime: p_prime'\n" % p
                 eg_out = "  p_prime: 'lambda %s: %s'\n" % (p, p)
                 raise LoggedError(
                     self.log, "Parameter name '%s' is not a valid Python variable name "
@@ -246,6 +248,16 @@ class Parameterization(HasLogger):
 
     def sampled_input_dependence(self):
         return deepcopy(self._sampled_input_dependence)
+
+    def get_input_func(self, p, **params_values):
+        func = self._input_funcs[p]
+        args = self._input_args[p]
+        return func(*[params_values.get(arg) for arg in args])
+
+    def get_derived_func(self, p, **params_values):
+        func = self._derived_funcs[p]
+        args = self._derived_args[p]
+        return func(*[params_values.get(arg) for arg in args])
 
     def to_input(self, sampled_params_values, copied=True):
         # Gets all current sampled and input derived parameters as a dictionary,
@@ -355,6 +367,19 @@ class Parameterization(HasLogger):
                 self.log.error(line)
             raise LoggedError
         return sampled_output
+
+    def check_dropped(self, external_dependence):
+        # some error control, given external_dependence from prior
+        if self._dropped_not_directly_used:
+            # only raise error after checking not used by prior
+            if self._dropped_not_directly_used.difference(external_dependence):
+                raise LoggedError(
+                    self.log,
+                    "Parameters %r are sampled but not passed to a likelihood or theory "
+                    "code, and never used as arguments for any prior or parameter "
+                    "functions. Check that you are not using "
+                    "the '%s' tag unintentionally.",
+                    list(self._dropped_not_directly_used), partag.drop)
 
     def labels(self):
         """

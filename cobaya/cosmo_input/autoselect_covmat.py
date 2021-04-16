@@ -5,6 +5,7 @@ from random import choice
 from itertools import chain
 import numpy as np
 import re
+from typing import Optional, List
 
 # Local
 from cobaya.conventions import _covmats_file, _aliases, _packages_path, partag, _params
@@ -27,11 +28,10 @@ covmat_folders = [
 _loaded_covmats_database = None
 
 
-def get_covmat_database(packages_path, cached=True):
+def get_covmat_database(packages_path, cached=True) -> List[dict]:
     # Get folders with corresponding components installed
-    installed_folders = [folder for folder in covmat_folders
-                         if os.path.exists(
-                             folder.format(**{_packages_path: packages_path}))]
+    installed_folders = [folder for folder in covmat_folders if
+                         os.path.exists(folder.format(**{_packages_path: packages_path}))]
     covmats_database_fullpath = os.path.join(get_cache_path(), _covmats_file)
     # Check if there is a usable cached one
     if cached:
@@ -58,7 +58,8 @@ def get_covmat_database(packages_path, cached=True):
             **{_packages_path: packages_path}).replace("/", os.sep)
         for filename in os.listdir(folder_full):
             try:
-                with open(os.path.join(folder_full, filename), encoding="utf-8") as covmat:
+                with open(os.path.join(folder_full, filename),
+                          encoding="utf-8") as covmat:
                     header = covmat.readline()
                 assert header.strip().startswith("#")
                 params = header.strip().lstrip("#").split()
@@ -97,7 +98,8 @@ def get_best_covmat(info, packages_path=None, cached=True):
     return covmat_data
 
 
-def _get_best_covmat(packages_path, params_info, likelihoods_info, cached=True) -> dict:
+def _get_best_covmat(packages_path, params_info, likelihoods_info,
+                     cached=True) -> Optional[dict]:
     """
     Actual covmat finder used by `get_best_covmat`. Call directly for more control on
     the parameters used.
@@ -106,7 +108,7 @@ def _get_best_covmat(packages_path, params_info, likelihoods_info, cached=True) 
     """
     global _loaded_covmats_database
     covmats_database = (
-        _loaded_covmats_database or get_covmat_database(packages_path, cached=cached))
+            _loaded_covmats_database or get_covmat_database(packages_path, cached=cached))
     _loaded_covmats_database = covmats_database
     # Prepare params and likes aliases
     params_renames = set(chain(*[
@@ -115,8 +117,8 @@ def _get_best_covmat(packages_path, params_info, likelihoods_info, cached=True) 
     likes_renames = set(chain(*[[like] + str_to_list((info or {}).get(_aliases, []))
                                 for like, info in likelihoods_info.items()]))
     delimiters = r"[_\.]"
-    likes_regexps = [re.compile(delimiters + re.escape(l) + delimiters)
-                             for l in likes_renames]
+    likes_regexps = [re.compile(delimiters + re.escape(_like) + delimiters)
+                     for _like in likes_renames]
     # Match number of params
     score_params = (
         lambda covmat: len(set(covmat["params"]).intersection(params_renames)))
@@ -133,9 +135,12 @@ def _get_best_covmat(packages_path, params_info, likelihoods_info, cached=True) 
     if log.getEffectiveLevel() <= logging.DEBUG:
         log.debug("Subset based on params + likes:\n - " +
                   "\n - ".join([b["name"] for b in best_p_l]))
+
     # Finally, in case there is more than one, select shortest #params and name (simpler!)
     # #params first, to avoid extended models with shorter covmat name
-    score_simpler_params = lambda covmat: -len(covmat["params"])
+    def score_simpler_params(covmat):
+        return -len(covmat["params"])
+
     best_p_l_sp = get_best_score(best_p_l, score_simpler_params)
     if log.getEffectiveLevel() <= logging.DEBUG:
         log.debug("Subset based on params + likes + fewest params:\n - " +
@@ -153,7 +158,7 @@ def _get_best_covmat(packages_path, params_info, likelihoods_info, cached=True) 
     return best_p_l_sp_sn[choice(range(len(best_p_l_sp_sn)))].copy()
 
 
-def get_best_score(covmats, score_func):
+def get_best_score(covmats, score_func) -> List[dict]:
     scores = np.array([score_func(covmat) for covmat in covmats])
     i_max = np.argwhere(scores == np.max(scores)).T[0]
     return [covmats[i] for i in i_max]

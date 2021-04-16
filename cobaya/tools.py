@@ -13,13 +13,14 @@ import logging
 import platform
 import warnings
 import inspect
+import re
 import pandas as pd
-import numpy as np  # don't delete: necessary for get_external_function
+import numpy as np
 from importlib import import_module
 from copy import deepcopy
 from packaging import version
 from itertools import permutations
-from typing import Mapping, Sequence
+from typing import Mapping, Sequence, Any, List
 from numbers import Number
 from types import ModuleType
 from inspect import cleandoc, getfullargspec
@@ -43,7 +44,7 @@ from cobaya.log import LoggedError
 log = logging.getLogger(__name__.split(".")[-1])
 
 
-def str_to_list(x):
+def str_to_list(x) -> List:
     """
     Makes sure that the input is a list of strings (could be string).
     """
@@ -143,7 +144,7 @@ def check_component_path(component, path):
             component.__name__, path)
 
 
-def check_component_version(component, min_version):
+def check_component_version(component: Any, min_version):
     if not hasattr(component, "__version__") or \
             version.parse(component.__version__) < version.parse(min_version):
         raise VersionCheckError(
@@ -248,7 +249,7 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
 
 
 def get_resolved_class(component_or_class, kind=None, component_path=None,
-                       class_name=None):
+                       class_name=None, None_if_not_found=False):
     """
     Returns the class corresponding to the component indicated as first argument.
 
@@ -259,8 +260,9 @@ def get_resolved_class(component_or_class, kind=None, component_path=None,
     if inspect.isclass(component_or_class):
         return component_or_class
     else:
-        return get_class(
-            class_name or component_or_class, kind, component_path=component_path)
+        return get_class(class_name or component_or_class, kind,
+                         component_path=component_path,
+                         None_if_not_found=None_if_not_found)
 
 
 def import_all_classes(path, pkg, subclass_of, hidden=False, helpers=False):
@@ -310,6 +312,26 @@ def get_available_internal_class_names(kind, hidden=False):
         get_available_internal_classes(kind, hidden)))
 
 
+def replace_optimizations(function_string):
+    # make fast version of stats.norm.logpdf for fixed scale and loc
+    # can save quite a lot of time evaluating Gaussian priors
+    if 'stats.norm.logpdf' not in function_string:
+        return function_string
+    number = r"[+-]?(\d+([.]\d*)?(e[+-]?\d+)?|[.]\d+(e[+-]?\d+)?)"
+    regex = r"stats\.norm\.logpdf\((?P<arg>[^,\)]+)," \
+            r"\s*loc\s*=\s*(?P<loc>%s)\s*," \
+            r"\s*scale\s*=\s*(?P<scale>%s)\s*\)" % (number, number)
+    p = re.compile(regex)
+    match = p.search(function_string)
+    if not match:
+        return function_string
+    span = match.span()
+    loc, scale = float(match.group("loc")), float(match.group("scale"))
+    replacement = "(-(%s %+.16g)**2/%.16g %+.16g)" % (
+        match.group("arg"), -loc, 2 * scale ** 2, -np.log(2 * np.pi * scale ** 2) / 2)
+    return function_string[0:span[0]] + replacement + function_string[span[1]:]
+
+
 def get_external_function(string_or_function, name=None):
     """
     Processes an external prior or likelihood, given as a string or a function.
@@ -331,6 +353,7 @@ def get_external_function(string_or_function, name=None):
             import scipy.stats as stats  # provide default scope for eval
             scope['stats'] = stats
             scope['np'] = np
+            string_or_function = replace_optimizations(string_or_function)
             with PythonPath(os.curdir, when="import_module" in string_or_function):
                 function = eval(string_or_function, scope)
         except Exception as e:
@@ -463,29 +486,44 @@ def read_dnumber(n, dim):
     return NumberWithUnits(n, "d", dtype=int, scale=dim).value
 
 
-def load_DataFrame(file_name, skip=0, thin=1):
+def load_DataFrame(file_name, skip=0, root_file_name=None):
     """
     Loads a `pandas.DataFrame` from a text file
     with column names in the first line, preceded by ``#``.
 
     Can skip any number of first lines, and thin with some factor.
     """
-    with open(file_name, "r") as inp:
-        cols = [a.strip() for a in inp.readline().lstrip("#").split()]
+    with open(file_name, "r", encoding="utf-8-sig") as inp:
+        top_line = inp.readline().strip()
+        if not top_line.startswith('#'):
+            # try getdist format chains with .paramnames file
+            if root_file_name and os.path.exists(root_file_name + '.paramnames'):
+                from getdist import ParamNames
+                from cobaya.conventions import _chi2, _separator
+                names = ParamNames(root_file_name + '.paramnames').list()
+                for i, name in enumerate(names):
+                    if name.startswith(_chi2 + '_') and not name.startswith(
+                            _chi2 + _separator):
+                        names[i] = name.replace(_chi2 + '_', _chi2 + _separator)
+                cols = ['weight', 'minuslogpost']
+                cols.extend(names)
+                inp.seek(0)
+            else:
+                raise LoggedError(log, "Input sample file does not have header: %s",
+                                  file_name)
+        else:
+            cols = [a.strip() for a in top_line.lstrip("#").split()]
         if 0 < skip < 1:
             # turn into #lines (need to know total line number)
             for n, line in enumerate(inp):
                 pass
             skip = int(skip * (n + 1))
             inp.seek(0)
-        thin = int(thin)
-        skiprows = lambda i: i < skip or i % thin
-        if thin != 1:
-            raise LoggedError(log, "thin is not supported yet")
-        # TODO: looks like this thinning is not correctly account for weights???
-        return pd.read_csv(
+        data = pd.read_csv(
             inp, sep=" ", header=None, names=cols, comment="#", skipinitialspace=True,
-            skiprows=skiprows, index_col=False)
+            skiprows=skip, index_col=False)
+
+        return data
 
 
 def prepare_comment(comment):
@@ -543,8 +581,8 @@ def get_scipy_1d_pdf(info):
                      "convention at the same time. Either use one or the other.")
         minmaxvalues = {"min": 0, "max": 1}
         for limit in minmaxvalues:
+            value = info2.pop(limit, minmaxvalues[limit])
             try:
-                value = info2.pop(limit, minmaxvalues[limit])
                 minmaxvalues[limit] = float(value)
             except (TypeError, ValueError):
                 raise LoggedError(
@@ -569,19 +607,6 @@ def get_scipy_1d_pdf(info):
             "This probably means that the distribution '%s' "
             "does not recognize the parameter mentioned in the 'scipy' error above.",
             str(tp), dist)
-
-
-def _fast_uniform_logpdf(self, x):
-    # not normally used since uniform handled as special case
-    """WARNING: logpdf(nan) = -inf"""
-    if not hasattr(self, "_cobaya_mlogscale"):
-        self._cobaya_mlogscale = -np.log(self.kwds["scale"])
-        self._cobaya_max = self.kwds["loc"] + self.kwds["scale"]
-        self._cobaya_loc = self.kwds['loc']
-    if self._cobaya_loc <= x <= self._cobaya_max:
-        return self._cobaya_mlogscale
-    else:
-        return -np.inf
 
 
 def _fast_norm_logpdf(self, x):
@@ -878,6 +903,7 @@ def get_config_path():
     """
     Gets path for config files, and creates it if it does not exist.
     """
+    config_path = None
     try:
         if platform.system() == "Windows":
             base = os.environ.get("LOCALAPPDATA")
@@ -950,17 +976,18 @@ def write_packages_path_in_config_file(packages_path):
 
 
 def resolve_packages_path(infos=None):
+    # noinspection PyStatementEffect
     """
-    Gets the external packages installation path given some infos.
-    If more than one occurrence of the external packages path in the infos,
-    raises an error.
-
-    If there is no external packages path defined in the given infos,
-    defaults to the env variable `%s`, and in its absence to that stored
-    in the config file.
-
-    If no path at all could be found, returns `None`.
-    """ % _packages_path_env
+        Gets the external packages installation path given some infos.
+        If more than one occurrence of the external packages path in the infos,
+        raises an error.
+    
+        If there is no external packages path defined in the given infos,
+        defaults to the env variable `%s`, and in its absence to that stored
+        in the config file.
+    
+        If no path at all could be found, returns `None`.
+        """ % _packages_path_env
     if not infos:
         infos = []
     elif isinstance(infos, Mapping):
@@ -995,10 +1022,11 @@ def resolve_packages_path(infos=None):
 
 
 def sort_cosmetic(info):
+    # noinspection PyStatementEffect
     """
-    Returns a sorted version of the given info dict, re-ordered as %r, and finally the
-    rest of the blocks/options.
-    """ % _dump_sort_cosmetic
+        Returns a sorted version of the given info dict, re-ordered as %r, and finally the
+        rest of the blocks/options.
+        """ % _dump_sort_cosmetic
     sorted_info = dict()
     for k in _dump_sort_cosmetic:
         if k in info:

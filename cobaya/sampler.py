@@ -55,13 +55,13 @@ from cobaya.conventions import kinds, _checkpoint_extension, _version
 from cobaya.conventions import _progress_extension, _covmat_extension
 from cobaya.conventions import partag, _packages_path, _force, _resume, _output_prefix
 from cobaya.tools import get_class, deepcopy_where_possible, find_with_regexp
-from cobaya.tools import recursive_update
+from cobaya.tools import recursive_update, str_to_list
 from cobaya.log import LoggedError
 from cobaya.yaml import yaml_load_file, yaml_dump
-from cobaya.mpi import is_main_process, share_mpi, get_mpi_rank, more_than_one_process
 from cobaya.component import CobayaComponent
 from cobaya.input import update_info, is_equal_info, get_preferred_old_values
 from cobaya.output import OutputDummy
+from cobaya import mpi
 
 
 def get_sampler_name_and_class(info_sampler):
@@ -205,7 +205,7 @@ class Sampler(CobayaComponent):
         Returns the products expected in a scripted call of cobaya,
         (e.g. a collection of samples or a list of them).
         """
-        return None
+        return {}
 
     # Private methods: just ignore them:
     def __init__(self, info_sampler, model, output=None, packages_path=None, name=None):
@@ -228,8 +228,7 @@ class Sampler(CobayaComponent):
                               "but got %r with type %r",
                     self.seed, type(self.seed))
             # MPI-awareness: sum the rank to the seed
-            if more_than_one_process():
-                self.seed += get_mpi_rank()
+            self.seed += mpi.rank()
             self.mpi_warning("This run has been SEEDED with seed %d", self.seed)
         # Load checkpoint info, if resuming
         if self.output.is_resuming() and not isinstance(self, Minimizer):
@@ -240,7 +239,7 @@ class Sampler(CobayaComponent):
                         setattr(self, k, v)
                     self.mpi_info("Resuming from previous sample!")
                 except KeyError:
-                    if is_main_process():
+                    if mpi.is_main_process():
                         raise LoggedError(
                             self.log, "Checkpoint file found at '%s' "
                                       "but it corresponds to a different sampler.",
@@ -346,8 +345,9 @@ class Sampler(CobayaComponent):
         return []
 
     @classmethod
+    @mpi.root_only
     def delete_output_files(cls, output, info=None):
-        if output and is_main_process():
+        if output:
             for (regexp, root) in cls.output_files_regexps(output, info=info):
                 # Special case: CovmatSampler's may have been given a covmat with the same
                 # name that the output one. In that case, don't delete it!
@@ -368,9 +368,9 @@ class Sampler(CobayaComponent):
         """
         if not output:
             return
-        if is_main_process():
+        if mpi.is_main_process():
             resuming = False
-            if output.is_forcing():
+            if output.force:
                 cls.delete_output_files(output, info=info)
             elif any(find_with_regexp(regexp, root or output.folder) for (regexp, root)
                      in cls.output_files_regexps(output=output, info=info, minimal=True)):
@@ -408,19 +408,16 @@ class CovmatSampler(Sampler):
     """
     covmat_params: Sequence[str]
 
+    @mpi.from_root
     def _load_covmat(self, prefer_load_old, auto_params=None):
         if prefer_load_old and os.path.exists(self.covmat_filename()):
-            if is_main_process():
-                covmat = np.atleast_2d(np.loadtxt(self.covmat_filename()))
-            else:
-                covmat = None
-            covmat = share_mpi(covmat)
+            covmat = np.atleast_2d(np.loadtxt(self.covmat_filename()))
             self.mpi_info("Covariance matrix from previous sample.")
             return covmat, []
         else:
-            return share_mpi(self.initial_proposal_covmat(auto_params=auto_params) if
-                             is_main_process() else None)
+            return self.initial_proposal_covmat(auto_params=auto_params)
 
+    # noinspection PyUnboundLocalVariable
     def initial_proposal_covmat(self, auto_params=None):
         """
         Build the initial covariance matrix, using the data provided, in descending order
@@ -509,9 +506,8 @@ class CovmatSampler(Sampler):
                     self.log, "The covariance matrix %s is not a positive-definite, "
                               "symmetric square matrix.", str_msg)
             # Fill with parameters in the loaded covmat
-            renames = [[p] + np.atleast_1d(v.get(partag.renames, [])).tolist()
-                       for p, v in params_infos.items()]
-            renames = {a[0]: a for a in renames}
+            renames = {p: [p] + str_to_list(v.get(partag.renames) or [])
+                       for p, v in params_infos.items()}
             indices_used, indices_sampler = zip(*[
                 [loaded_params.index(p),
                  [list(params_infos).index(q) for q, a in renames.items() if p in a]]

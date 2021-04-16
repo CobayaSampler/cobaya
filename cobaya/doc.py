@@ -21,9 +21,6 @@ _indent = 2 * " "
 # Command-line script ####################################################################
 
 def doc_script():
-    from cobaya.mpi import is_main_process
-    if not is_main_process():
-        return
     warn_deprecation()
     # Parse arguments
     import argparse

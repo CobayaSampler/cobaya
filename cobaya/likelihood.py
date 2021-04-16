@@ -28,6 +28,7 @@ from time import sleep
 from typing import Mapping, Optional, Union
 from itertools import chain
 import numpy as np
+import numbers
 
 # Local
 from cobaya.conventions import kinds, _external, _component_path, empty_dict, \
@@ -150,13 +151,16 @@ class LikelihoodExternalFunction(Likelihood):
         argspec = getfullargspec(self.external_function)
         if info.get(_input_params, []):
             setattr(self, _input_params, str_to_list(info.get(_input_params)))
+
+        ignore_args = [self._self_arg]
+        # MARKED FOR DEPRECATION IN v3.0
+        ignore_args += ["_derived", "_theory"]
+        # END OF DEPRECATION BLOCK
+        if argspec.defaults:
+            required_args = argspec.args[:-len(argspec.defaults)]
         else:
-            ignore_args = [self._self_arg]
-            # MARKED FOR DEPRECATION IN v3.0
-            ignore_args += ["_derived", "_theory"]
-            # END OF DEPRECATION BLOCK
-            setattr(self, _input_params,
-                    [p for p in argspec.args if p not in ignore_args])
+            required_args = argspec.args
+        self.params = {p: None for p in required_args if p not in ignore_args}
         # MARKED FOR DEPRECATION IN v3.0
         self._derived_through_arg = "_derived" in argspec.args
         # END OF DEPRECATION BLOCK
@@ -176,6 +180,8 @@ class LikelihoodExternalFunction(Likelihood):
         # END OF DEPRECATION BLOCK
         else:
             setattr(self, _output_params, [])
+        # Make sure `types` is a list of data types, for aggregated chi2
+        self.type = str_to_list(getattr(self, "type", []) or [])
         # Required quantities from other components
         self._uses_self_arg = self._self_arg in argspec.args
         if info.get(_requires) and not self._uses_self_arg:
@@ -196,19 +202,30 @@ class LikelihoodExternalFunction(Likelihood):
             info[_requires] = argspec.defaults[
                 argspec.args[-len(argspec.defaults):].index("_theory")]
         # END OF DEPRECATION BLOCK
-        self._requirements = info.get(_requires, {}) or {}
+
+        self._optional_args = \
+            [p for p, val in chain(zip(argspec.args[-len(argspec.defaults):],
+                                       argspec.defaults) if argspec.defaults else [],
+                                   (argspec.kwonlydefaults or {}).items())
+             if p not in ignore_args and
+             (isinstance(val, numbers.Number) or val is None)]
+        self._args = set(chain(self._optional_args, self.params,
+                               getattr(self, _input_params, []) or []))
+        self._requirements = info.get(_requires) or {}
         self.log.info("Initialized external likelihood.")
 
     def get_requirements(self):
         return self._requirements
 
+    def get_can_support_params(self):
+        return self._optional_args
+
     def logp(self, **params_values):
         # Remove non-input params (except _derived)
-        # TODO: this lines should be removed whenever input_params/reqs split is fixed
-        for p in list(params_values):
-            if p not in self.input_params and p != "_derived":
-                params_values.pop(p)
         _derived = params_values.pop("_derived", None)
+        for p in list(params_values):
+            if p not in self._args:
+                params_values.pop(p)
         if self._uses_self_arg:
             params_values[self._self_arg] = self
         # MARKED FOR DEPRECATION IN v3.0

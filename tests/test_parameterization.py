@@ -6,6 +6,7 @@ parameter names) gaussian likelihood.
 # Global
 from scipy.stats import multivariate_normal
 import numpy as np
+from typing import Sequence, Union
 # Local
 from cobaya.conventions import kinds, _params
 from cobaya.yaml import yaml_load
@@ -139,27 +140,26 @@ def test_parameterization_dependencies():
 
     stop_at_error: True
     """
-    info = yaml_load(info_yaml)
-    info["likelihood"] = {"Like": TestLike}
+    test_info = yaml_load(info_yaml)
+    test_info["likelihood"] = {"Like": TestLike}
 
-    model = get_model(info)
+    model = get_model(test_info)
     assert np.isclose(model.loglike({'bb': 0.5, 'aa': 2})[0], 105)
     assert np.isclose(model.logposterior({'bb': 0.5, 'aa': 2}).logpriors[1], -49.5)
-    info['params']['b'] = {'value': 'lambda a, c, bb: a*c*bb'}
-    loglike, derived = get_model(info).loglike({'bb': 0.5, 'aa': 2})
+    test_info['params']['b'] = {'value': 'lambda a, c, bb: a*c*bb'}
+    loglike, derived = get_model(test_info).loglike({'bb': 0.5, 'aa': 2})
     assert np.isclose(loglike, 630)
     assert derived == [2.5, 5.0, 6.25, -7, -1.5]
     assert np.isclose(model.logposterior({'bb': 0.5, 'aa': 2}).logpriors[1], -49.5)
-    info['params']['aa'] = 2
-    info['params']['bb'] = 0.5
-    loglike, derived = get_model(info).loglike()
+    test_info['params']['aa'] = 2
+    test_info['params']['bb'] = 0.5
+    loglike, derived = get_model(test_info).loglike()
     assert np.isclose(loglike, 630)
     assert derived == [2.5, 5.0, 6.25, -7, -1.5]
 
 
 # MARKED FOR DEPRECATION IN v3.0 -- Everything below this line
 
-from typing import Sequence, Union
 
 DerivedArg = Union[dict, Sequence, None]
 

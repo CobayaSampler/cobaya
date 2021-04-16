@@ -12,8 +12,7 @@ import logging
 import functools
 import numpy as np
 import pandas as pd
-from typing import Optional
-from getdist import MCSamples
+from getdist import MCSamples, chains
 from copy import deepcopy
 from math import isclose
 
@@ -24,8 +23,6 @@ from cobaya.tools import load_DataFrame
 from cobaya.log import LoggedError, HasLogger
 
 # Suppress getdist output
-from getdist import chains
-
 chains.print_load_details = False
 
 # Size of fast numpy cache
@@ -65,8 +62,8 @@ class BaseCollection(HasLogger):
         self.set_logger(name)
         self.sampled_params = list(model.parameterization.sampled_params())
         self.derived_params = list(model.parameterization.derived_params())
-        self.minuslogprior_names = [
-            _minuslogprior + _separator + piname for piname in list(model.prior)]
+        self.minuslogprior_names = \
+            [_minuslogprior + _separator + piname for piname in list(model.prior)]
         self.chi2_names = [_get_chi2_name(likname) for likname in model.likelihood]
         columns = [_weight, _minuslogpost]
         columns += list(self.sampled_params)
@@ -79,7 +76,7 @@ class BaseCollection(HasLogger):
 
 def ensure_cache_dumped(method):
     """
-    Decorator for Collection methods that need the cache is clean before running.
+    Decorator for Collection methods that need the cache cleaned before running.
     """
 
     @functools.wraps(method)
@@ -115,17 +112,41 @@ class Collection(BaseCollection):
                 name=self.name, extension=extension)
             if file_name:
                 self.file_name = file_name
+            self.root_file_name = os.path.join(output.folder, output.prefix)
         else:
             self.driver = "dummy"
+            self.root_file_name = None
         if resuming or load:
             if output:
                 try:
-                    self._out_load(skip=onload_skip, thin=onload_thin)
-                    if set(self.data.columns) != set(self.columns):
-                        raise LoggedError(
-                            self.log,
-                            "Unexpected column names!\nLoaded: %s\nShould be: %s",
-                            list(self.data.columns), self.columns)
+                    self._out_load(skip=onload_skip)
+                    if onload_thin != 1:
+                        self.thin_samples(onload_thin)
+                    if load:
+                        self.columns = list(self.data.columns)
+                        loaded_chi2_names = set(name for name in self.columns if
+                                                name.startswith(_chi2 + _separator))
+                        loaded_chi2_names.discard(_chi2 + _separator + 'prior')
+                        if set(self.chi2_names).difference(loaded_chi2_names):
+                            raise LoggedError(self.log,
+                                              "Input samples do not have chi2 values "
+                                              "matching likelihoods in the model:\n "
+                                              "found: %s\nexpected: %s\n",
+                                              loaded_chi2_names, self.chi2_names)
+                        unexpected = loaded_chi2_names.difference(
+                            self.chi2_names).difference(self.derived_params)
+                        if unexpected:
+                            raise LoggedError(self.log,
+                                              "Input samples have chi2 values "
+                                              "that are not expected: %s ", unexpected)
+                    else:
+                        data_col_set = set(self.data.columns)
+                        col_set = set(self.columns)
+                        if data_col_set != col_set:
+                            raise LoggedError(
+                                self.log,
+                                "Unexpected column names!\nLoaded: %s\nShould be: %s",
+                                list(self.data.columns), self.columns)
                     self._n_last_out = len(self)
                 except IOError:
                     if resuming:
@@ -153,8 +174,8 @@ class Collection(BaseCollection):
         if getattr(self, "file_name", None):
             self._n_last_out = 0
 
-    def add(self,
-            values, derived=None, weight=1, logpost=None, logpriors=None, loglikes=None):
+    def add(self, values, derived=None, weight=1,
+            logpost=None, logpriors=None, loglikes=None):
         """
         Adds a point to the collection. If `logpost` not given, it is obtained as the sum
         of `logpriors` and `loglikes` (both optional otherwise).
@@ -199,7 +220,7 @@ class Collection(BaseCollection):
                 raise LoggedError(
                     self.log, "If a log-posterior is not specified, you need to pass "
                               "a log-likelihood and a log-prior.")
-        return (logpost, logpriors_sum, loglikes_sum)
+        return logpost, logpriors_sum, loglikes_sum
 
     def _cache_reset(self):
         self._cache = np.full((self.cache_size, len(self.columns)), np.nan)
@@ -268,7 +289,8 @@ class Collection(BaseCollection):
         Append another collection.
         Internal method: does not check for consistency!
         """
-        self._data = pd.concat([self.data[:len(self)], collection.data], ignore_index=True)
+        self._data = pd.concat([self.data[:len(self)], collection.data],
+                               ignore_index=True)
 
     # Retrieve-like methods
     # MARKED FOR DEPRECATION IN v3.0
@@ -407,6 +429,34 @@ class Collection(BaseCollection):
                  (list(self.derived_params) if derived else [])][first:last].T,
             **weights_kwarg))
 
+    def thin_samples(self, thin):
+        if thin == 1:
+            return
+        if thin != int(thin) or thin < 1:
+            raise LoggedError(self.log, "Thin factor must be an positive integer, got %s",
+                              thin)
+        from getdist.chains import WeightedSamples, WeightedSampleError
+        thin = int(thin)
+        try:
+            if hasattr(WeightedSamples, "thin_indices_and_weights"):
+                unique, counts = \
+                    WeightedSamples.thin_indices_and_weights(thin, self[_weight].values)
+            else:
+                # TODO remove once getdist updated
+                # noinspection PyTypeChecker
+                thin_ix = WeightedSamples.thin_indices(None, thin, self[_weight].values)
+                unique, counts = np.unique(thin_ix, return_counts=True)
+        except WeightedSampleError as e:
+            raise LoggedError(self.log, "Error thinning: %s", e)
+        else:
+            data = self._data.iloc[unique, :].copy()
+            data.iloc[:, 0] = counts
+            data.reset_index(drop=True, inplace=True)
+            self._data = data
+            self._n = self._data.last_valid_index() + 1
+        self.log.debug("Thinned samples by %s, sample points after thinning %s",
+                       thin, len(self._data))
+
     def bestfit(self):
         """Best fit (maximum likelihood) sample. Returns a copy."""
         return self.data.loc[self.data[_chi2].idxmin()].copy()
@@ -431,6 +481,13 @@ class Collection(BaseCollection):
         logging.disable(logging.NOTSET)
         return mcsamples
 
+    def reweight(self, importance_weights):
+        self._cache_dump()
+        self._data[_weight] *= importance_weights
+        self._data = (
+            self.data[self._data.weight > 0].reset_index(drop=True))
+        self._n = self._data.last_valid_index() + 1
+
     # Saving and updating
     def _get_driver(self, method):
         return getattr(self, method + _separator + self.driver)
@@ -449,10 +506,12 @@ class Collection(BaseCollection):
         self._get_driver("_delete")()
 
     # txt driver
-    def _load__txt(self, skip=0, thin=1):
-        self.log.debug("Skipping %d rows and thinning with factor %d.", skip, thin)
-        self._data = load_DataFrame(self.file_name, skip=skip, thin=thin)
-        self.log.info("Loaded %d samples from '%s'", len(self._data), self.file_name)
+    def _load__txt(self, skip=0):
+        self.log.debug("Skipping %d rows", skip)
+        self._data = load_DataFrame(self.file_name, skip=skip,
+                                    root_file_name=self.root_file_name)
+        self.log.info("Loaded %d sample points from '%s'", len(self._data),
+                      self.file_name)
 
     def _dump__txt(self):
         self._dump_slice__txt(0, len(self))
@@ -466,43 +525,29 @@ class Collection(BaseCollection):
         if self._n_last_out == n_max:
             return
         self._n_last_out = n_max
-        if not getattr(self, "_txt_formatters", False):
+        if not hasattr(self, "_numpy_fmts"):
             n_float = 8
             # Add to this 7 places: sign, leading 0's, exp with sign and 3 figures.
             width_col = lambda col: max(7 + n_float, len(col))
-            fmts = ["{:" + "{}.{}".format(width_col(col), n_float) + "g}"
-                    for col in self.data.columns]
-            # `fmt` as a kwarg with default value is needed to force substitution of var.
-            # lambda is defined as a string to allow picklability (also header formatter)
-            self._txt_formatters = {
-                col: eval("lambda x, fmt=fmt: fmt.format(x)")
-                for col, fmt in zip(self.data.columns, fmts)}
+            self._numpy_fmts = ["%{}.{}".format(width_col(col), n_float) + "g"
+                                for col in self.data.columns]
             self._header_formatter = [
-                eval(
-                    'lambda s, w=width_col(col): ("{:>" + "{}".format(w) + "s}").format(s)',
-                    {'width_col': width_col, 'col': col})
+                eval('lambda s, w=width_col(col): '
+                     '("{:>" + "{}".format(w) + "s}").format(s)',
+                     {'width_col': width_col, 'col': col})
                 for col in self.data.columns]
         do_header = not n_min
         if do_header:
-            # TODO: this should be done with file locks instead
             if os.path.exists(self.file_name):
-                raise LoggedError(
-                    self.log, "The output file %s already exists. You may be running "
-                              "multiple jobs with the same output when you intended to "
-                              "run with MPI. Check that mpi4py is correctly installed and"
-                              " configured; e.g. try the test at "
-                              "https://cobaya.readthedocs.io/en/latest/installation."
-                              "html#mpi-parallelization-optional-but-encouraged",
-                    self.file_name)
+                raise LoggedError(self.log,
+                                  "Output file %s already exists (report bug)",
+                                  self.file_name)
             with open(self.file_name, "a", encoding="utf-8") as out:
                 out.write("#" + " ".join(
                     f(col) for f, col
                     in zip(self._header_formatter, self.data.columns))[1:] + "\n")
         with open(self.file_name, "a", encoding="utf-8") as out:
-            lines = self.data[n_min:n_max].to_string(
-                header=False, index=False, na_rep="nan", justify="right",
-                formatters=self._txt_formatters)
-            out.write(lines + "\n")
+            np.savetxt(out, self.data[n_min:n_max].to_numpy(), fmt=self._numpy_fmts)
 
     def _delete__txt(self):
         try:
@@ -524,7 +569,7 @@ class Collection(BaseCollection):
     # (they will be generated next time txt is dumped)
     def __getstate__(self):
         attributes = super().__getstate__().copy()
-        for attr in ['_txt_formatters', '_header_formatter']:
+        for attr in ['_numpy_fmts', '_header_formatter']:
             try:
                 del attributes[attr]
             except KeyError:

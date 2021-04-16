@@ -254,6 +254,7 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         for i, (cal, n) in enumerate(zip(cals, self.used_sizes)):
             if n > 0:
                 if i <= 3:
+                    # noinspection PyUnboundLocalVariable
                     delta_vector[ix:ix + n] -= (CT[self.ell_ranges[i]] +
                                                 foregrounds[i][self.ell_ranges[i]]) / cal
                 elif i == 4:

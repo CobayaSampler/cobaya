@@ -2,7 +2,7 @@
 .. module:: input
 
 :Synopsis: Input-related functions
-:Author: Jesus Torrado
+:Author: Jesus Torrado and Antony Lewis
 
 """
 
@@ -30,7 +30,7 @@ from cobaya.tools import recursive_update, str_to_list, get_base_classes, \
 from cobaya.yaml import yaml_load_file, yaml_dump
 from cobaya.log import LoggedError
 from cobaya.parameterization import expand_info_param
-from cobaya.mpi import share_mpi, is_main_process
+from cobaya import mpi
 
 # Logger
 log = logging.getLogger(__name__.split(".")[-1])
@@ -61,9 +61,18 @@ def load_input(input_file):
     return info
 
 
-# MPI wrapper for loading the input info
 def load_input_MPI(input_file):
-    return share_mpi(load_input(input_file) if is_main_process() else None)
+    if mpi.is_main_process():
+        try:
+            return mpi.share(load_input(input_file))
+        except IOError as e:
+            mpi.share(e)
+            raise
+    else:
+        result = mpi.share()
+        if isinstance(result, IOError):
+            raise result
+        return result
 
 
 def get_used_components(*infos, return_infos=False):
@@ -120,6 +129,12 @@ def get_default_info(component_or_class, kind=None, return_yaml=False,
         return default_component_info, annotations
     else:
         return default_component_info
+
+
+def add_aggregated_chi2_params(param_info, all_types):
+    for t in sorted(all_types):
+        param_info[_get_chi2_name(t)] = {
+            partag.latex: _get_chi2_label(t), partag.derived: True}
 
 
 def update_info(info):
@@ -228,9 +243,7 @@ def update_info(info):
         all_types = set(chain(
             *[str_to_list(like_info.get("type", []) or [])
               for like_info in updated_info[kinds.likelihood].values()]))
-        for t in all_types:
-            updated_info[_params][_get_chi2_name(t)] = {
-                partag.latex: _get_chi2_label(t), partag.derived: True}
+        add_aggregated_chi2_params(updated_info[_params], all_types)
     # Add automatically-defined parameters
     if _auto_params in updated_info:
         make_auto_params(updated_info.pop(_auto_params), updated_info[_params])
@@ -327,6 +340,7 @@ def merge_info(*infos):
     previous_info = deepcopy(infos[0])
     if len(infos) == 1:
         return previous_info
+    current_info = None
     for new_info in infos[1:]:
         previous_params_info = deepcopy(previous_info.pop(_params, {}) or {})
         new_params_info = deepcopy(new_info).pop(_params, {}) or {}
@@ -355,9 +369,8 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
     ignore = set() if strict else \
         {_debug, _debug_file, _resume, _force, _packages_path, _test_run, _version}
     ignore = ignore.union(ignore_blocks or [])
-    if set(info for info in info_old if info_old[info] is not None).difference(ignore) \
-            != set(info for info in info_new if info_new[info] is not None).difference(
-        ignore):
+    if set(info for info in info_old if info_old[info] is not None) - ignore \
+            != set(info for info in info_new if info_new[info] is not None) - ignore:
         myprint(myname + ": different blocks or options: %r (old) vs %r (new)" % (
             set(info_old).difference(ignore), set(info_new).difference(ignore)))
         return False
@@ -381,8 +394,8 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
                     block_name, list(block1), list(block2)))
             return False
         # 2. Gather general options to be ignored
+        ignore_k = set()
         if not strict:
-            ignore_k = set()
             if block_name in [kinds.theory, kinds.likelihood]:
                 ignore_k.update({_input_params, _output_params})
             elif block_name == _params:

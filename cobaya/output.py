@@ -8,11 +8,11 @@
 # Global
 import os
 import sys
-import traceback
 import datetime
 import re
 import shutil
 import platform
+import logging
 from packaging import version
 
 # Local
@@ -21,11 +21,11 @@ from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
 from cobaya.conventions import _input_suffix, _updated_suffix, _separator_files, _version
 from cobaya.conventions import _resume, _resume_default, _force, _yaml_extensions
 from cobaya.conventions import _output_prefix, _debug, kinds, _params, _class_name
-from cobaya.log import LoggedError, HasLogger
+from cobaya.log import LoggedError, HasLogger, get_traceback_text
 from cobaya.input import is_equal_info, get_resolved_class
-from cobaya.mpi import is_main_process, more_than_one_process, share_mpi
 from cobaya.collection import Collection
 from cobaya.tools import deepcopy_where_possible, find_with_regexp, sort_cosmetic
+from cobaya import mpi
 
 # Default output type and extension
 _kind = "txt"
@@ -64,6 +64,90 @@ def get_info_path(folder, prefix, infix=None, kind="updated"):
     return info_file_prefix + infix + suffix + _yaml_extensions[0]
 
 
+class FileLock:
+    def __init__(self, filename=None, log=None):
+        self.lock_error_file = None
+        self.lock_file = None
+        if filename:
+            self.set_lock(log, filename)
+
+    def set_lock(self, log, filename):
+        if self.has_lock():
+            return
+        self.lock_file = filename + '.lock'
+        self.lock_error_file = filename + '.lock_err'
+        try:
+            os.remove(self.lock_error_file)
+        except OSError:
+            pass
+        self.log = log or logging.getLogger("file_lock")
+        try:
+            h = None
+            try:
+                import portalocker
+            except ModuleNotFoundError:
+                # will work, but crashes will leave .lock files that will raise error
+                self._file_handle = open(self.lock_file, 'xb')
+            else:
+                try:
+                    h = open(self.lock_file, 'wb')
+                    portalocker.lock(h, portalocker.LOCK_EX + portalocker.LOCK_NB)
+                    self._file_handle = h
+                except portalocker.exceptions.BaseLockException:
+                    if h:
+                        h.close()
+                    self.lock_error()
+        except OSError:
+            self.lock_error()
+
+    def lock_error(self):
+        if not self.has_lock():
+            try:
+                # make lock_err so process holding lock can check
+                # another process had an error
+                with open(self.lock_error_file, 'wb'):
+                    pass
+            except OSError:
+                pass
+        if mpi.get_mpi():
+            import mpi4py
+        else:
+            mpi4py = None
+        raise LoggedError(self.log,
+                          "File %s is locked.\nYou may be running multiple jobs with "
+                          "the same output when you intended to run with MPI. "
+                          "Check that mpi4py is correctly installed and "
+                          "configured (using the same mpi as mpirun/mpiexec);"
+                          "e.g. try the test at\n"
+                          "https://cobaya.readthedocs.io/en/latest/installation."
+                          "html#mpi-parallelization-optional-but-encouraged\n"
+                          + ("Your current mpi4py config is:"
+                             "\n %s" % mpi4py.get_config()
+                             if mpi4py is not None else ""), self.lock_file)
+
+    def check_error(self):
+        if self.lock_error_file and os.path.exists(self.lock_error_file):
+            self.lock_error()
+
+    def clear_lock(self):
+        if self.has_lock():
+            self._file_handle.close()
+            del self._file_handle
+            os.remove(self.lock_file)
+            try:
+                os.remove(self.lock_error_file)
+            except OSError:
+                pass
+        self.lock_error_file = None
+        self.lock_file = None
+
+    def has_lock(self):
+        return hasattr(self, "_file_handle")
+
+    def __del__(self):
+        self.clear_lock()
+
+
 class Output(HasLogger):
     """
     Basic output driver. It takes care of creating the output files, checking
@@ -71,8 +155,12 @@ class Output(HasLogger):
     :class:`~collection.Collection` files, etc.
     """
 
+    @mpi.set_from_root(("force", "folder", "prefix", "kind", "ext",
+                        "_resuming", "prefix_regexp_str", "log"))
     def __init__(self, prefix, resume=_resume_default, force=False, infix=None,
                  output_prefix=None):
+        self.name = "output"
+        self.set_logger(self.name)
         # MARKED FOR DEPRECATION IN v3.0
         # -- also remove output_prefix kwarg above
         if output_prefix is not None:
@@ -81,10 +169,10 @@ class Output(HasLogger):
             # BEHAVIOUR TO BE REPLACED BY ERROR:
             prefix = output_prefix
         # END OF DEPRECATION BLOCK
-        self.name = "output"  # so that the MPI-wrapped class conserves the name
-        self.set_logger(self.name)
+        self.lock = FileLock()
         self.folder, self.prefix = split_prefix(prefix)
-        self.prefix_regexp_str = re.escape(self.prefix) + (r"\." if self.prefix else "")
+        self.prefix_regexp_str = re.escape(self.prefix) + (
+            r"[\._]" if self.prefix else "")
         self.force = force
         if resume and force and prefix:
             # No resume and force at the same time (if output)
@@ -97,9 +185,7 @@ class Output(HasLogger):
             try:
                 os.makedirs(self.folder)
             except OSError:
-                self.log.error("".join(["-"] * 20 + ["\n\n"] +
-                                       list(traceback.format_exception(*sys.exc_info())) +
-                                       ["\n"] + ["-"] * 37))
+                self.log.error(get_traceback_text(sys.exc_info()))
                 raise LoggedError(
                     self.log, "Could not create folder '%s'. "
                               "See traceback on top of this message.", self.folder)
@@ -108,6 +194,7 @@ class Output(HasLogger):
         # Prepare file names, and check if chain exists
         self.file_input = get_info_path(
             self.folder, self.prefix, infix=infix, kind="input")
+        self.lock.set_lock(self.log, self.file_input)
         self.file_updated = get_info_path(
             self.folder, self.prefix, infix=infix, kind="updated")
         self._resuming = False
@@ -160,6 +247,7 @@ class Output(HasLogger):
         return os.path.join(self.folder,
                             self.prefix + self.separator_if_needed(separator) + suffix)
 
+    @mpi.root_only
     def create_folder(self, folder):
         """
         Creates the given folder (MPI-aware).
@@ -171,10 +259,14 @@ class Output(HasLogger):
             raise LoggedError(
                 self.log, "Could not create folder %r. Reason: %r", folder, str(e))
 
+    @mpi.root_only
     def delete_infos(self):
+        self.check_lock()
         for f in [self.file_input, self.file_updated]:
-            if os.path.exists(f):
+            try:
                 os.remove(f)
+            except OSError:
+                pass
 
     def updated_prefix(self):
         """
@@ -182,28 +274,39 @@ class Output(HasLogger):
         """
         return self.prefix or "."
 
-    def is_forcing(self):
-        return self.force
-
     def is_resuming(self):
         return self._resuming
 
+    @mpi.set_from_root("_resuming")
     def set_resuming(self, value):
         self._resuming = value
 
-    def reload_updated_info(self, cache=False, use_cache=False):
-        if use_cache and getattr(self, "_old_updated_info", None):
-            return self._old_updated_info
-        try:
-            loaded = yaml_load_file(self.file_updated)
-            if cache:
-                self._old_updated_info = loaded
-            return deepcopy_where_possible(loaded)
-        except IOError:
-            if cache:
-                self._old_updated_info = None
-            return None
+    @mpi.from_root
+    def load_updated_info(self, cache=False, use_cache=False):
+        return self.reload_updated_info(cache=cache, use_cache=use_cache)
 
+    def reload_updated_info(self, cache=False, use_cache=False):
+        if mpi.is_main_process():
+            if use_cache and getattr(self, "_old_updated_info", None):
+                return self._old_updated_info
+            try:
+                loaded = yaml_load_file(self.file_updated)
+                if cache:
+                    self._old_updated_info = loaded
+                return deepcopy_where_possible(loaded)
+            except IOError:
+                if cache:
+                    self._old_updated_info = None
+                return None
+        else:
+            # Only cached possible when non main process
+            if not use_cache:
+                raise LoggedError(self.log, "Cannot call `reload_updated_info` from "
+                                            "non-main process unless cached version "
+                                            "(`use_cache=True`) requested.")
+            return getattr(self, "_old_updated_info", None)
+
+    @mpi.set_from_root("_old_updated_info")
     def check_and_dump_info(self, input_info, updated_info, check_compatible=True,
                             cache_old=False, use_cache_old=False, ignore_blocks=()):
         """
@@ -215,6 +318,7 @@ class Output(HasLogger):
         consistent.
         """
         # trim known params of each likelihood: for internal use only
+        self.check_lock()
         updated_info_trimmed = deepcopy_where_possible(updated_info)
         updated_info_trimmed[_version] = __version__
         for like_info in updated_info_trimmed.get(kinds.likelihood, {}).values():
@@ -313,6 +417,7 @@ class Output(HasLogger):
         """
         Deletes a file or a folder. Fails silently.
         """
+        self.check_lock()
         try:
             os.remove(filename)
         except IsADirectoryError:
@@ -369,6 +474,14 @@ class Output(HasLogger):
                 getattr(self.collection_regexp(name=name, extension=extension)
                         .match(file_name), "group", lambda: None)())
 
+    @mpi.root_only
+    def clear_lock(self):
+        self.lock.clear_lock()
+
+    @mpi.root_only
+    def check_lock(self):
+        self.lock.check_error()
+
     def find_collections(self, name=None, extension=None):
         """
         Returns all collection files found which are compatible with this `Output`
@@ -391,6 +504,7 @@ class Output(HasLogger):
         Use `name` for particular types of collections (default: any number).
         Pass `False` to mean there is nothing between the output prefix and the extension.
         """
+        self.check_lock()
         filenames = self.find_collections(name=name, extension=extension)
         collections = [
             Collection(model, self, name="%d" % (1 + i), file_name=filename,
@@ -403,14 +517,22 @@ class Output(HasLogger):
             collections = collection
         return collections
 
+    def __enter__(self):
+        return self
 
+    def __exit__(self, *args):
+        self.clear_lock()
+
+
+# noinspection PyMissingConstructor
 class OutputDummy(Output):
     """
     Dummy output class. Does nothing. Evaluates to 'False' as a class.
     """
 
+    # noinspection PyUnusedLocal
     def __init__(self, *args, **kwargs):
-        self.set_logger(lowercase=True)
+        self.set_logger()
         self.log.debug("No output requested. Doing nothing.")
         # override all methods that actually produce output
         exclude = ["nullfunc"]
@@ -430,51 +552,6 @@ class OutputDummy(Output):
         return False
 
 
-class Output_MPI(Output):
-    """
-    MPI wrapper around the Output class. Makes sure actual I/O operations are only done
-    once (except the opposite is explicitly requested).
-    """
-
-    def __init__(self, *args, **kwargs):
-        if is_main_process():
-            Output.__init__(self, *args, **kwargs)
-        if more_than_one_process():
-            to_broadcast = (
-                "folder", "prefix", "kind", "ext", "_resuming", "prefix_regexp_str")
-            values = share_mpi([getattr(self, var) for var in to_broadcast]
-                               if is_main_process() else None)
-            for name, var in zip(to_broadcast, values):
-                setattr(self, name, var)
-
-    def check_and_dump_info(self, *args, **kwargs):
-        if is_main_process():
-            Output.check_and_dump_info(self, *args, **kwargs)
-        # Share cached loaded info
-        self._old_updated_info = share_mpi(getattr(self, "_old_updated_info", None))
-
-    def reload_updated_info(self, *args, **kwargs):
-        if is_main_process():
-            return Output.reload_updated_info(self, *args, **kwargs)
-        else:
-            # Only cached possible when non main process
-            if not kwargs.get("use_cache"):
-                raise ValueError(
-                    "Cannot call `reload_updated_info` from non-main process "
-                    "unless cached version (`use_cache=True`) requested.")
-            return getattr(self, "_old_updated_info", None)
-
-    def create_folder(self, *args, **kwargs):
-        if is_main_process():
-            Output.create_folder(self, *args, **kwargs)
-
-    def set_resuming(self, *args, **kwargs):
-        if is_main_process():
-            Output.set_resuming(self, *args, **kwargs)
-        if more_than_one_process():
-            self._resuming = share_mpi(self._resuming if is_main_process() else None)
-
-
 def get_output(*args, **kwargs):
     """
     Auxiliary function to retrieve the output driver
@@ -485,7 +562,6 @@ def get_output(*args, **kwargs):
         kwargs["prefix"] = kwargs["output_prefix"]
     # END OF DEPRECATION BLOCK
     if kwargs.get("prefix"):
-        from cobaya.mpi import import_MPI
-        return import_MPI(".output", "Output")(*args, **kwargs)
+        return Output(*args, **kwargs)
     else:
         return OutputDummy(*args, **kwargs)

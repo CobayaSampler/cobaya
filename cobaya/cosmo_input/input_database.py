@@ -11,7 +11,8 @@
 from copy import deepcopy
 
 # Local
-from cobaya.conventions import kinds, partag as p, _params
+from cobaya.conventions import kinds, partag as p, _params, InfoDict
+
 
 _camb = "camb"
 _classy = "classy"
@@ -22,10 +23,10 @@ _error_msg = "error_msg"
 _none = "(None)"
 
 # Theory codes
-theory = {_camb: None, _classy: None}
+theory: InfoDict = {_camb: None, _classy: None}
 
 # Primordial perturbations
-primordial = dict([
+primordial: InfoDict = dict([
     ("SFSR", {
         _desc: "Adiabatic scalar perturbations, power law spectrum",
         kinds.theory: {_camb: None, _classy: None},
@@ -109,7 +110,7 @@ primordial.update(dict([
              list(primordial["SFSR_t"][_params].items())))}]]))
 
 # Geometry
-geometry = dict([
+geometry: InfoDict = dict([
     ["flat", {
         _desc: "Flat FLRW universe",
         kinds.theory: {_camb: None, _classy: None}}],
@@ -125,7 +126,7 @@ geometry = dict([
 
 # Hubble parameter constraints
 H0_min, H0_max = 20, 100
-hubble = dict([
+hubble: InfoDict = dict([
     ["H", {
         _desc: "Hubble parameter",
         kinds.theory: {_camb: None, _classy: None},
@@ -178,7 +179,7 @@ hubble = dict([
 # Matter sector (minus light species)
 N_eff_std = 3.046
 nu_mass_fac = 94.0708
-matter = dict([
+matter: InfoDict = dict([
     ["omegab_h2, omegac_h2", {
         _desc: "Flat prior on Omega*h^2 for baryons and cold dark matter",
         kinds.theory: {_camb: None, _classy: None},
@@ -225,7 +226,7 @@ for m in matter.values():
         [p.latex, r"\Omega_\mathrm{m} h^2"]])
 
 # Neutrinos and other extra matter
-neutrinos = dict([
+neutrinos: InfoDict = dict([
     ["one_heavy_planck", {
         _desc: "Two massless nu and one with m=0.06. Neff=3.046",
         kinds.theory: {
@@ -325,7 +326,7 @@ neutrinos.update(dict([
 #    #             [p.latex, r"m_{\nu,\mathrm{sterile}}^\mathrm{eff}"]])]])}]
 
 # Dark Energy
-dark_energy = dict([
+dark_energy: InfoDict = dict([
     ["lambda", {
         _desc: "Cosmological constant (w=-1)",
         kinds.theory: {_camb: None, _classy: None},
@@ -357,7 +358,7 @@ dark_energy = dict([
                 [p.proposal, 0.05], [p.latex, r"w_{a,\mathrm{DE}}"]])]])}]])
 
 # BBN
-bbn_derived_camb = dict([
+bbn_derived_camb: InfoDict = dict([
     ["YpBBN", dict([[p.latex, r"Y_P^\mathrm{BBN}"]])],
     ["DHBBN", dict([[p.derived, r"lambda DH: 10**5*DH"],
                     [p.latex, r"10^5 \mathrm{D}/\mathrm{H}"]])]])
@@ -386,7 +387,7 @@ bbn = dict([
                 [p.proposal, 0.006], [p.latex, r"Y_\mathrm{P}"]])]])}], ])
 
 # Reionization
-reionization = dict([
+reionization: InfoDict = dict([
     ["std", {
         _desc: "Standard reio, lasting delta_z=0.5",
         kinds.theory: {_camb: None, _classy: None},
@@ -414,15 +415,15 @@ reionization = dict([
         _params: dict([])}], ])
 
 # EXPERIMENTS ############################################################################
-base_precision = {_camb: {"halofit_version": "mead"},
-                  _classy: {"non linear": "hmcode", "hmcode_min_k_max": 20}}
+base_precision: InfoDict = {_camb: {"halofit_version": "mead"},
+                            _classy: {"non linear": "hmcode", "hmcode_min_k_max": 20}}
 cmb_precision = deepcopy(base_precision)
 cmb_precision[_camb].update({"bbn_predictor": "PArthENoPE_880.2_standard.dat",
                              "lens_potential_accuracy": 1})
-cmb_sampler_recommended = {"mcmc": {
+cmb_sampler_recommended: InfoDict = {"mcmc": {
     "drag": True, "oversample_power": 0.4, "proposal_scale": 1.9}}
 
-like_cmb = dict([
+like_cmb: InfoDict = dict([
     [_none, {}],
     ["planck_2018", {
         _desc: "Planck 2018 (Polarized CMB + lensing)",
@@ -500,7 +501,7 @@ for name, m in like_cmb.items():
 #    "thetaeq":     {"latex": r"100\theta_\mathrm{eq}"},
 #    "thetarseq":   {"latex": r"100\theta_\mathrm{s,eq}"},
 
-like_bao = dict([
+like_bao: InfoDict = dict([
     [_none, {}],
     ["BAO_planck_2018", {
         _desc: "Baryon acoustic oscillation data from DR12, MGS and 6DF",
@@ -511,7 +512,7 @@ like_bao = dict([
             ["bao.sdss_dr12_consensus_bao", None]])}],
 ])
 
-like_des = dict([
+like_des: InfoDict = dict([
     [_none, {}],
     ["des_y1_clustering", {
         _desc: "Galaxy clustering from DES Y1",
@@ -539,7 +540,7 @@ like_des = dict([
             ["des_y1.joint", None]])}],
 ])
 
-like_sn = dict([
+like_sn: InfoDict = dict([
     [_none, {}],
     ["Pantheon", {
         _desc: "Supernovae data from the Pantheon sample",
@@ -548,7 +549,7 @@ like_sn = dict([
             ["sn.pantheon", None]])}],
 ])
 
-like_H0 = dict([
+like_H0: InfoDict = dict([
     [_none, {}],
     ["Riess2018a", {
         _desc: "Local H0 measurement from Riess et al. 2018a (used in Planck 2018)",
@@ -564,7 +565,7 @@ like_H0 = dict([
 
 # SAMPLERS ###############################################################################
 
-sampler = dict([
+sampler: InfoDict = dict([
     ["MCMC", {
         _desc: "MCMC sampler with covmat learning",
         kinds.sampler: {"mcmc": {"covmat": "auto"}}}],
@@ -585,7 +586,7 @@ planck_base_model = {
     "reionization": "std"}
 default_sampler = {"sampler": "MCMC"}
 
-preset = dict([
+preset: InfoDict = dict([
     [_none, {_desc: "(No preset chosen)"}],
     # Pure CMB #######################################################
     ["planck_2018_camb", {
@@ -687,7 +688,7 @@ for name, pre in preset.items():
         pre.update(default_sampler)
 
 # BASIC INSTALLATION #####################################################################
-install_basic = {
+install_basic: InfoDict = {
     kinds.theory: {_camb: None, _classy: None},
     kinds.likelihood: {
         "planck_2018_lowl.TT": None,
