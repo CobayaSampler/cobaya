@@ -15,12 +15,12 @@ import warnings
 import inspect
 import re
 import pandas as pd
-import numpy as np  # don't delete: necessary for get_external_function
+import numpy as np
 from importlib import import_module
 from copy import deepcopy
 from packaging import version
 from itertools import permutations
-from typing import Mapping, Sequence
+from typing import Mapping, Sequence, Any, List
 from numbers import Number
 from types import ModuleType
 from inspect import cleandoc, getfullargspec
@@ -44,7 +44,7 @@ from cobaya.log import LoggedError
 log = logging.getLogger(__name__.split(".")[-1])
 
 
-def str_to_list(x):
+def str_to_list(x) -> List:
     """
     Makes sure that the input is a list of strings (could be string).
     """
@@ -144,7 +144,7 @@ def check_component_path(component, path):
             component.__name__, path)
 
 
-def check_component_version(component, min_version):
+def check_component_version(component: Any, min_version):
     if not hasattr(component, "__version__") or \
             version.parse(component.__version__) < version.parse(min_version):
         raise VersionCheckError(
@@ -581,8 +581,8 @@ def get_scipy_1d_pdf(info):
                      "convention at the same time. Either use one or the other.")
         minmaxvalues = {"min": 0, "max": 1}
         for limit in minmaxvalues:
+            value = info2.pop(limit, minmaxvalues[limit])
             try:
-                value = info2.pop(limit, minmaxvalues[limit])
                 minmaxvalues[limit] = float(value)
             except (TypeError, ValueError):
                 raise LoggedError(
@@ -691,16 +691,6 @@ def are_different_params_lists(list_A, list_B, name_A="A", name_B="B"):
         if missing:
             result["%s_but_not_%s" % (names[n1], names[n2])] = list(missing)
     return result
-
-
-def relative_to_int(numbers, precision=1 / 10):
-    """
-    Turns relative numbers (e.g. relative speeds) into integer,
-    up to some given `precision` on differences.
-    """
-    numbers = np.array(np.round(np.array(numbers) / min(numbers) / precision), dtype=int)
-    return np.array(
-        numbers / np.ufunc.reduce(np.frompyfunc(gcd, 2, 1), numbers), dtype=int)
 
 
 def create_banner(msg, symbol="*", length=None):
@@ -903,6 +893,7 @@ def get_config_path():
     """
     Gets path for config files, and creates it if it does not exist.
     """
+    config_path = None
     try:
         if platform.system() == "Windows":
             base = os.environ.get("LOCALAPPDATA")
@@ -975,17 +966,18 @@ def write_packages_path_in_config_file(packages_path):
 
 
 def resolve_packages_path(infos=None):
+    # noinspection PyStatementEffect
     """
-    Gets the external packages installation path given some infos.
-    If more than one occurrence of the external packages path in the infos,
-    raises an error.
-
-    If there is no external packages path defined in the given infos,
-    defaults to the env variable `%s`, and in its absence to that stored
-    in the config file.
-
-    If no path at all could be found, returns `None`.
-    """ % _packages_path_env
+        Gets the external packages installation path given some infos.
+        If more than one occurrence of the external packages path in the infos,
+        raises an error.
+    
+        If there is no external packages path defined in the given infos,
+        defaults to the env variable `%s`, and in its absence to that stored
+        in the config file.
+    
+        If no path at all could be found, returns `None`.
+        """ % _packages_path_env
     if not infos:
         infos = []
     elif isinstance(infos, Mapping):
@@ -1020,10 +1012,11 @@ def resolve_packages_path(infos=None):
 
 
 def sort_cosmetic(info):
+    # noinspection PyStatementEffect
     """
-    Returns a sorted version of the given info dict, re-ordered as %r, and finally the
-    rest of the blocks/options.
-    """ % _dump_sort_cosmetic
+        Returns a sorted version of the given info dict, re-ordered as %r, and finally the
+        rest of the blocks/options.
+        """ % _dump_sort_cosmetic
     sorted_info = dict()
     for k in _dump_sort_cosmetic:
         if k in info:

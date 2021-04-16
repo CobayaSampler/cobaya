@@ -5,14 +5,14 @@ from copy import deepcopy
 import pytest
 
 # Local
-from cobaya.conventions import kinds, partag, _prior, _params
+from cobaya.conventions import kinds, partag, _prior, _params, InfoDict
 from cobaya.run import run
 from cobaya.log import LoggedError
 from cobaya.input import get_default_info
 
 # Aux definitions and functions
 
-test_info_common = {
+test_info_common: InfoDict = {
     kinds.likelihood: {"_test": None},
     kinds.sampler: {"evaluate": None}}
 

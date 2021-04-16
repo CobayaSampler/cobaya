@@ -9,13 +9,12 @@
 import numpy as np
 from scipy.stats import multivariate_normal, uniform, random_correlation
 from scipy.special import logsumexp
-from typing import Sequence, Optional
 
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
 from cobaya.mpi import share_mpi, is_main_process
-from cobaya.conventions import kinds, _params
+from cobaya.conventions import kinds, _params, ArrayLike, ArrayOrFloat
 from cobaya.conventions import _input_params_prefix, _output_params_prefix
 
 derived_suffix = "_derived"
@@ -27,9 +26,9 @@ class gaussian_mixture(Likelihood):
     """
 
     # yaml variables
-    means: Optional[Sequence]
-    covs: Optional[Sequence]
-    weights: Optional[Sequence[float]]
+    means: ArrayLike
+    covs: ArrayLike
+    weights: ArrayOrFloat
     derived: bool
     input_params_prefix: str
     output_params_prefix: str
@@ -40,6 +39,7 @@ class gaussian_mixture(Likelihood):
         """
         return len(self.input_params)
 
+    # noinspection PyTupleAssignmentBalance
     def initialize_with_params(self):
         """
         Initializes the gaussian distributions.
@@ -171,7 +171,7 @@ def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1, mpi_warn=True):
     dim = len(ranges)
     scales = np.array([r[1] - r[0] for r in ranges])
     cov = []
-    for i in range(n_modes):
+    for _ in range(n_modes):
         stds = scales * 10 ** (uniform.rvs(size=dim, loc=np.log10(O_std_min),
                                            scale=np.log10(O_std_max / O_std_min)))
         this_cov = np.diag(stds).dot(
@@ -204,14 +204,16 @@ def info_random_gaussian_mixture(
         for i in range(n_modes):
             std = np.sqrt(cov[i].diagonal())
             factor = 3
-            ranges_mean = [[l[0] + factor * s, l[1] - +factor * s] for l, s in
+            ranges_mean = [[r[0] + factor * s, r[1] - +factor * s] for r, s in
                            zip(ranges, std)]
             # If this implies min>max, take the centre
             ranges_mean = [
-                (l if l[0] <= l[1] else 2 * [(l[0] + l[1]) / 2]) for l in ranges_mean]
+                (r if r[0] <= r[1] else 2 * [(r[0] + r[1]) / 2]) for r in ranges_mean]
             mean[i] = random_mean(ranges_mean, n_modes=1, mpi_warn=False)
+    else:
+        mean, cov = None, None
     if mpi_aware:
-        mean, cov = share_mpi((mean, cov) if is_main_process() else None)
+        mean, cov = share_mpi((mean, cov))
     dimension = len(ranges)
     info = {kinds.likelihood: {"gaussian_mixture": {
         "means": mean, "covs": cov, _input_params_prefix: input_params_prefix,

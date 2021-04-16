@@ -7,8 +7,8 @@ import os
 import shutil
 from random import random
 import numpy as np
-import scipy.stats as stats
 from copy import deepcopy
+import scipy.stats as stats
 
 # Local
 from cobaya.conventions import _output_prefix, _params, _prior, kinds, _updated_suffix, \
@@ -17,6 +17,7 @@ from cobaya.run import run
 from cobaya.yaml import yaml_load
 from cobaya.tools import getfullargspec
 from cobaya.likelihood import Likelihood
+from cobaya import mpi
 
 # Definition of external (log)pdf's
 
@@ -34,6 +35,7 @@ def half_ring_func_derived(x, y=0.5):
 
 gaussian_str = "lambda y: stats.norm.logpdf(y, loc=0, scale=0.2)"
 gaussian_func = lambda y: eval(gaussian_str)(y)
+assert gaussian_func(0.1) == stats.norm.logpdf(0.1, loc=0, scale=0.2)
 
 # Info for the different tests
 
@@ -47,13 +49,14 @@ info_derived = {"half_ring": {
 
 # Common part of all tests
 
+@mpi.sync_errors
 def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
     # For pytest's handling of tmp dirs
-    if hasattr(tmpdir, "dirpath"):
-        tmpdir = tmpdir.dirname
-    prefix = os.path.join(tmpdir, "%d" % round(1e8 * random())) + os.sep
-    if os.path.exists(prefix):
-        shutil.rmtree(prefix)
+    tmpdir, rand = mpi.share((str(tmpdir), random()))
+    prefix = os.path.join(tmpdir, "%d" % round(1e8 * rand)) + os.sep
+    if mpi.is_main_process():
+        if os.path.exists(prefix):
+            shutil.rmtree(prefix)
     # build updated info
     info = {
         _output_prefix: prefix,

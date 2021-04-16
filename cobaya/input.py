@@ -64,12 +64,12 @@ def load_input(input_file):
 def load_input_MPI(input_file):
     if mpi.is_main_process():
         try:
-            return mpi.share_mpi(load_input(input_file))
+            return mpi.share(load_input(input_file))
         except IOError as e:
-            mpi.share_mpi(e)
+            mpi.share(e)
             raise
     else:
-        result = mpi.share_mpi()
+        result = mpi.share()
         if isinstance(result, IOError):
             raise result
         return result
@@ -340,6 +340,7 @@ def merge_info(*infos):
     previous_info = deepcopy(infos[0])
     if len(infos) == 1:
         return previous_info
+    current_info = None
     for new_info in infos[1:]:
         previous_params_info = deepcopy(previous_info.pop(_params, {}) or {})
         new_params_info = deepcopy(new_info).pop(_params, {}) or {}
@@ -393,8 +394,8 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
                     block_name, list(block1), list(block2)))
             return False
         # 2. Gather general options to be ignored
+        ignore_k = set()
         if not strict:
-            ignore_k = set()
             if block_name in [kinds.theory, kinds.likelihood]:
                 ignore_k.update({_input_params, _output_params})
             elif block_name == _params:

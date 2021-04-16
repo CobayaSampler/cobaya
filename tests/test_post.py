@@ -4,14 +4,17 @@ from flaky import flaky
 from scipy.stats import multivariate_normal
 from getdist.mcsamples import loadMCSamples, MCSamplesFromCobaya
 import numpy as np
+import pytest
 
 from cobaya.run import run
 from cobaya.post import post
 from cobaya.tools import KL_norm
-from cobaya.conventions import _output_prefix, _params, _force, kinds
+from cobaya.conventions import _output_prefix, _params, _force, kinds, InfoDict
 from cobaya.conventions import _prior, partag, _separator_files
 from cobaya.conventions import _post, _post_add, _post_remove, _post_suffix
 from cobaya import mpi
+
+pytestmark = pytest.mark.mpi
 
 _post_ = _separator_files + _post + _separator_files
 
@@ -36,7 +39,7 @@ target_pdf_prior = lambda a, b, c=0: target_pdf(a, b, c=0)[0]
 
 _range = {"min": -2, "max": 2}
 ref_pdf = {partag.dist: "norm", "loc": 0, "scale": 0.1}
-info_params = dict([
+info_params: InfoDict = dict([
     ("a", {"prior": _range, "ref": ref_pdf, partag.proposal: sigma}),
     ("b", {"prior": _range, "ref": ref_pdf, partag.proposal: sigma}),
     ("a_plus_b", {partag.derived: lambda a, b: a + b})])
@@ -46,10 +49,9 @@ info_sampler_dummy = {"evaluate": {"N": 10}}
 
 
 @flaky(max_runs=3, min_passes=1)
-@mpi.synch_errors
+@mpi.sync_errors
 def test_post_prior(tmpdir):
     # Generate original chain
-    tmpdir = mpi.share_mpi(str(tmpdir))
     info = {
         _output_prefix: os.path.join(tmpdir, "gaussian"), _force: True,
         _params: info_params, kinds.sampler: info_sampler,
@@ -67,9 +69,9 @@ def test_post_prior(tmpdir):
             info_post[_output_prefix] + _post_ + info_post[_post][_post_suffix])
         new_mean = mcsamples.mean(["a", "b"])
         new_cov = mcsamples.getCovMat().matrix
-        mpi.share_mpi((new_mean, new_cov))
+        mpi.share((new_mean, new_cov))
     else:
-        new_mean, new_cov = mpi.share_mpi()
+        new_mean, new_cov = mpi.share()
     assert abs(KL_norm(target["mean"], target["cov"], new_mean, new_cov)) < 0.02
 
 
@@ -112,9 +114,9 @@ def test_post_likelihood():
         mcsamples = MCSamplesFromCobaya(info_post_out, samples, name_tag="sample")
         new_mean = mcsamples.mean(["a", "b"])
         new_cov = mcsamples.getCovMat().matrix
-        mpi.share_mpi((new_mean, new_cov))
+        mpi.share((new_mean, new_cov))
     else:
-        new_mean, new_cov = mpi.share_mpi()
+        new_mean, new_cov = mpi.share()
     assert abs(KL_norm(target["mean"], target["cov"], new_mean, new_cov)) < 0.02
     assert np.allclose(products_post["sample"]["chi2__AA"],
                        products_post["sample"]["chi2__target"])

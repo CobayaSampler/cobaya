@@ -1,12 +1,17 @@
 from flaky import flaky
 import numpy as np
+import pytest
+import time
 
 from cobaya.likelihoods.gaussian_mixture import random_cov
 from cobaya.tools import KL_norm
 from cobaya.likelihood import Likelihood
 from cobaya.run import run
 from cobaya import mpi
+from cobaya.yaml import yaml_load
 from .common_sampler import body_of_test, body_of_test_speeds
+
+pytestmark = pytest.mark.mpi
 
 # Max number of tries per test
 max_runs = 3
@@ -16,17 +21,16 @@ max_runs = 3
 def test_mcmc(tmpdir, packages_path=None):
     dimension = 3
     # Random initial proposal
-    S0 = mpi.share_mpi(
-        random_cov(dimension * [[0, 1]], n_modes=1, O_std_min=0.01, O_std_max=0.5)
+    cov = mpi.share(
+        random_cov(dimension * [[0, 1]], O_std_min=0.01, O_std_max=0.5)
         if mpi.is_main_process() else None)
     info_sampler = {"mcmc": {
         # Bad guess for covmat, so big burn in and max_tries
-        # TODO: why * dimension here?
-        "max_tries": 1000 * dimension, "burn_in": 100 * dimension,
+        "max_tries": 3000, "burn_in": 100 * dimension,
         # Learn proposal
         # "learn_proposal": True,  # default now!
         # Proposal
-        "covmat": S0}}
+        "covmat": cov}}
 
     def check_gaussian(sampler_instance):
         KL_proposer = KL_norm(
@@ -45,8 +49,75 @@ def test_mcmc(tmpdir, packages_path=None):
         info_sampler["mcmc"].update({
             # Callback to check KL divergence -- disabled in the automatic test
             "callback_function": check_gaussian, "callback_every": 100})
-    body_of_test(
-        dimension=dimension, n_modes=1, info_sampler=info_sampler, tmpdir=str(tmpdir))
+    body_of_test(dimension=dimension, info_sampler=info_sampler, tmpdir=tmpdir)
+
+
+yaml = r"""
+likelihood:
+  gaussian_mixture:
+    means: [0.2, 0]
+    covs: [[0.1, 0.05], [0.05,0.2]]
+
+params:
+  a:
+    prior:
+      min: -0.5
+      max: 3
+    latex: \alpha
+  b:
+    prior:
+      dist: norm
+      loc: 0
+      scale: 1
+    ref: 0
+    proposal: 0.5
+    latex: \beta
+sampler:
+  mcmc:
+    """
+
+
+@pytest.mark.mpionly
+def test_mcmc_sync():
+    info = yaml_load(yaml)
+    print('Test end synchronization')
+
+    if mpi.rank() == 1:
+        max_samples = 200
+    else:
+        max_samples = 600
+    # simulate asynchronous ending sampling loop
+    info['sampler']['mcmc'] = {'max_samples': max_samples}
+
+    updated_info, sampler = run(info)
+    assert len(sampler.products()["sample"]) == max_samples
+
+    print('Test error synchronization')
+    if mpi.rank() == 0:
+        info['sampler']['mcmc'] = {'max_samples': 'none'}
+        with pytest.raises(TypeError):
+            run(info)
+    else:
+        with pytest.raises(mpi.OtherProcessError):
+            run(info)
+
+    aborted = False
+
+    def test_abort():
+        nonlocal aborted
+        aborted = True
+
+    # test error converted into MPI_ABORT after timeout
+    # noinspection PyTypeChecker
+    with pytest.raises((ValueError, mpi.OtherProcessError)):
+        with mpi.ProcessState('test', time_out_seconds=0.5,
+                              timeout_abort_proc=test_abort):
+            if mpi.rank() != 1:
+                time.sleep(0.6)  # fake hang
+            else:
+                raise ValueError('errored')
+    if mpi.rank() == 1:
+        assert aborted
 
 
 @flaky(max_runs=max_runs, min_passes=1)
@@ -63,6 +134,7 @@ def test_mcmc_oversampling():
 
 @flaky(max_runs=max_runs, min_passes=1)
 def test_mcmc_oversampling_manual():
+    # TODO - update ('oversample')
     info_mcmc = {"mcmc": {"burn_in": 0, "learn_proposal": False, "oversample": True}}
     body_of_test_speeds(info_mcmc, manual_blocking=True)
 

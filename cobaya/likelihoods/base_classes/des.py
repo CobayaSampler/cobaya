@@ -407,6 +407,7 @@ class DES(DataSetLikelihood):
             "comoving_radial_distance": {"z": self.zs},
             "Hubble": {"z": self.zs}}
 
+    # noinspection PyUnboundLocalVariable
     def get_theory(self, PKdelta, PKWeyl, bin_bias, shear_calibration_parameters,
                    intrinsic_alignment_A, intrinsic_alignment_alpha,
                    intrinsic_alignment_z0, wl_photoz_errors, lens_photoz_errors):
@@ -752,6 +753,7 @@ def convert_txt(filename, root, outdir, ranges=None):
                                for n in list(hdulist[tp].data.names)[:-2]]))
         # fix anomaly that z bins are 1 based but theta bins zero based
         dat[:, 2] += 1
+        # noinspection PyTypeChecker
         np.savetxt(outdir + root + '_%s.dat' % tp, dat, fmt=['%u', '%u', '%u', '%.8e'],
                    header=" ".join(list(hdulist[tp].data.dtype.names)[:-2]))
         outlines += ['measurements[%s] = %s_%s.dat' % (tp, root, tp)]

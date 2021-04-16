@@ -423,6 +423,7 @@ class CMBlikes(DataSetLikelihood):
             raise LoggedError(self.log, 'unbinned covariance not implemented yet')
         return pcov
 
+    # noinspection PyTypeChecker
     def writeData(self, froot):
         np.savetxt(froot + '_cov.dat', self.cov)
         np.savetxt(froot + '_bandpowers.dat', self.full_bandpowers,
@@ -577,6 +578,7 @@ class CMBlikes(DataSetLikelihood):
         cls = self.provider.get_Cl(ell_factor=True)
         return self.log_likelihood(cls, **data_params)
 
+    # noinspection PyUnboundLocalVariable
     def log_likelihood(self, dls, **data_params):
         r"""
         Get log likelihood from the dls (CMB C_l scaled by L(L+1)/2\pi)
@@ -793,6 +795,7 @@ def make_forecast_cmb_dataset(fiducial_Cl, output_root, output_dir=None,
         for ell in range(lmin, lmax + 1):
             noises = []
             if use_CMB:
+                # noinspection PyUnboundLocalVariable
                 noise_cl = ell * (ell + 1.) / 2 / np.pi * NoiseVar * np.exp(
                     ell * (ell + 1) * sigma2)
                 noises += [noise_cl, ENoiseFac * noise_cl, ENoiseFac * noise_cl]

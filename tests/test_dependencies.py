@@ -4,9 +4,11 @@ from cobaya.model import get_model
 from cobaya.theory import Theory
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
+from cobaya.conventions import InfoDict
 from .common import process_packages_path
 
 debug = True
+
 
 # Aderived = 1
 # Aout = [Ain]
@@ -94,9 +96,9 @@ class Like(Likelihood):
         state["logp"] = res[0] + res[1][0]
 
 
-info = {'likelihood': {'like': Like},
-        'params': {'Bpar': 3, 'Ain': 5},
-        'debug': debug}
+info: InfoDict = {'likelihood': {'like': Like},
+                  'params': {'Bpar': 3, 'Ain': 5},
+                  'debug': debug}
 
 
 def _test_loglike(theories):
@@ -208,9 +210,9 @@ class Like4(Likelihood):
         pass
 
 
-info2 = {'likelihood': {'like': Like2},
-         'params': {'Ain': 5},
-         'debug': debug, 'stop_at_error': True}
+info2: InfoDict = {'likelihood': {'like': Like2},
+                   'params': {'Ain': 5},
+                   'debug': debug, 'stop_at_error': True}
 
 
 def _test_loglike2(theories):

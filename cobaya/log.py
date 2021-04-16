@@ -65,12 +65,25 @@ def abstract(method):
 
 
 def exception_handler(exception_type, exception_instance, trace_back):
-    # Do not print traceback if the exception has been handled and logged
-    if exception_type == LoggedError:
-        mpi.abort_if_mpi()
-        return  # no traceback printed
+    # Do not print traceback if the exception has been handled and logged by LoggedError
+    # MPI abort if all processes don't raise exception in short timeframe (e.g. deadlock).
+    want_abort = not mpi.time_out_barrier()
     _logger_name = "exception handler"
     log = logging.getLogger(_logger_name)
+
+    if exception_type == LoggedError:
+        # make show error easily visible at end of log
+        if mpi.more_than_one_process():
+            log.error(str(exception_instance))
+        if want_abort:
+            mpi.abort_if_mpi()
+        if log.getEffectiveLevel() > logging.DEBUG:
+            return  # no traceback printed
+    elif exception_type == mpi.OtherProcessError:
+        log.info(str(exception_instance))
+        if log.getEffectiveLevel() > logging.DEBUG:
+            return  # no traceback printed
+
     line = "-------------------------------------------------------------\n"
     log.critical(line[len(_logger_name) + 5:] + "\n" +
                  "".join(traceback.format_exception(
@@ -78,7 +91,7 @@ def exception_handler(exception_type, exception_instance, trace_back):
                  line)
     if exception_type == KeyboardInterrupt:
         log.critical("Interrupted by the user.")
-    else:
+    elif log.getEffectiveLevel() > logging.DEBUG:
         log.critical(
             "Some unexpected ERROR occurred. "
             "You can see the exception information above.\n"
@@ -88,7 +101,8 @@ def exception_handler(exception_type, exception_instance, trace_back):
             "which you can send it to a file setting '%s:[some_file_name]'.",
             _debug, _debug_file)
     # Exit all MPI processes
-    mpi.abort_if_mpi()
+    if want_abort:
+        mpi.abort_if_mpi()
 
 
 def logger_setup(debug=None, debug_file=None):
@@ -143,6 +157,12 @@ def logger_setup(debug=None, debug_file=None):
         logging.root.addHandler(handle_stdout)
     # Configure the logger to manage exceptions
     sys.excepthook = exception_handler
+
+
+def get_traceback_text(exec_info):
+    return "".join(["-"] * 20 + ["\n\n"] +
+                   list(traceback.format_exception(*exec_info)) +
+                   ["\n"] + ["-"] * 37)
 
 
 class HasLogger:

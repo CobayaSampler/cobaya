@@ -8,7 +8,6 @@
 # Global
 import os
 import sys
-import traceback
 import datetime
 import re
 import shutil
@@ -22,7 +21,7 @@ from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
 from cobaya.conventions import _input_suffix, _updated_suffix, _separator_files, _version
 from cobaya.conventions import _resume, _resume_default, _force, _yaml_extensions
 from cobaya.conventions import _output_prefix, _debug, kinds, _params, _class_name
-from cobaya.log import LoggedError, HasLogger
+from cobaya.log import LoggedError, HasLogger, get_traceback_text
 from cobaya.input import is_equal_info, get_resolved_class
 from cobaya.collection import Collection
 from cobaya.tools import deepcopy_where_possible, find_with_regexp, sort_cosmetic
@@ -118,13 +117,14 @@ class FileLock:
                           "File %s is locked.\nYou may be running multiple jobs with "
                           "the same output when you intended to run with MPI. "
                           "Check that mpi4py is correctly installed and "
-                          "configured (using the same mpi as mpirun/mpiexec);"
+                          "configured (using the same mpi as mpirun/mpiexec); "
                           "e.g. try the test at\n"
                           "https://cobaya.readthedocs.io/en/latest/installation."
                           "html#mpi-parallelization-optional-but-encouraged\n"
                           + ("Your current mpi4py config is:"
                              "\n %s" % mpi4py.get_config()
-                             if mpi4py is not None else ""), self.lock_file)
+                             if mpi4py is not None else
+                             "mpi4py is NOT currently installed."), self.lock_file)
 
     def check_error(self):
         if self.lock_error_file and os.path.exists(self.lock_error_file):
@@ -186,9 +186,7 @@ class Output(HasLogger):
             try:
                 os.makedirs(self.folder)
             except OSError:
-                self.log.error("".join(["-"] * 20 + ["\n\n"] +
-                                       list(traceback.format_exception(*sys.exc_info())) +
-                                       ["\n"] + ["-"] * 37))
+                self.log.error(get_traceback_text(sys.exc_info()))
                 raise LoggedError(
                     self.log, "Could not create folder '%s'. "
                               "See traceback on top of this message.", self.folder)
@@ -520,7 +518,14 @@ class Output(HasLogger):
             collections = collection
         return collections
 
+    def __enter__(self):
+        return self
 
+    def __exit__(self, *args):
+        self.clear_lock()
+
+
+# noinspection PyMissingConstructor
 class OutputDummy(Output):
     """
     Dummy output class. Does nothing. Evaluates to 'False' as a class.

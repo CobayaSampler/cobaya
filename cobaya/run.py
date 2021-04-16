@@ -7,7 +7,7 @@
 """
 
 # Global
-from typing import Mapping
+from typing import Mapping, Union
 import logging
 import os
 
@@ -16,7 +16,7 @@ from cobaya import __version__
 from cobaya.conventions import kinds, _prior, _params, _packages_path, _output_prefix, \
     _debug, _debug_file, _resume, _timing, _force, _post, _test_run, \
     _yaml_extensions, _packages_path_arg, \
-    _packages_path_arg_posix
+    _packages_path_arg_posix, InfoDict
 from cobaya.output import get_output, split_prefix, get_info_path
 from cobaya.model import Model
 from cobaya.sampler import get_sampler_name_and_class, check_sampler_info
@@ -29,10 +29,14 @@ from cobaya.post import post
 from cobaya import mpi
 
 
-def run(info_or_yaml_or_file, packages_path: [str, None] = None,
-        output: [str, None] = None, debug: [bool, None] = None,
-        stop_at_error: [bool, None] = None, resume=False, force=False,
-        no_mpi=False, test=False):
+@mpi.sync_state
+def run(info_or_yaml_or_file: Union[InfoDict, str],
+        packages_path: [str, None] = None,
+        output: [str, None] = None,
+        debug: [bool, None] = None,
+        stop_at_error: [bool, None] = None,
+        resume: bool = False, force: bool = False,
+        no_mpi: bool = False, test: bool = False):
     """
     Run from an input dictionary, file name or yaml string, with optional arguments
     to override settings in the input as needed.
@@ -87,7 +91,7 @@ def run(info_or_yaml_or_file, packages_path: [str, None] = None,
         return
 
     logger_setup(info.get(_debug), info.get(_debug_file))
-    logger_run = logging.getLogger(__name__.split(".")[-1])
+    logger_run = logging.getLogger(run.__name__)
     # MARKED FOR DEPRECATION IN v3.0
     # BEHAVIOUR TO BE REPLACED BY ERROR:
     check_deprecated_modules_path(info)
@@ -101,64 +105,65 @@ def run(info_or_yaml_or_file, packages_path: [str, None] = None,
             logger_run, "You need to specify a sampler using the 'sampler' key as e.g. "
                         "`sampler: {mcmc: None}.`")
     infix = "minimize" if which_sampler == "minimize" else None
-    output = get_output(prefix=info.get(_output_prefix), resume=info.get(_resume),
-                        force=info.get(_force), infix=infix)
-    # 2. Update the input info with the defaults for each component
-    updated_info = update_info(info)
-    if logging.root.getEffectiveLevel() <= logging.DEBUG:
-        # Dump only if not doing output (otherwise, the user can check the .updated file)
-        if not output and mpi.is_main_process():
-            logger_run.info(
-                "Input info updated with defaults (dumped to YAML):\n%s",
-                yaml_dump(sort_cosmetic(updated_info)))
-    # 3. If output requested, check compatibility if existing one, and dump.
-    # 3.1 First: model only
-    output.check_and_dump_info(info, updated_info, cache_old=True,
-                               ignore_blocks=[kinds.sampler])
-    # 3.2 Then sampler -- 1st get the last sampler mentioned in the updated.yaml
-    # TODO: ideally, using Minimizer would *append* to the sampler block.
-    #       Some code already in place, but not possible at the moment.
-    try:
-        last_sampler = list(updated_info[kinds.sampler])[-1]
-        last_sampler_info = {last_sampler: updated_info[kinds.sampler][last_sampler]}
-    except (KeyError, TypeError):
-        raise LoggedError(logger_run, "No sampler requested.")
-    sampler_name, sampler_class = get_sampler_name_and_class(last_sampler_info)
-    check_sampler_info(
-        (output.reload_updated_info(use_cache=True) or {}).get(kinds.sampler),
-        updated_info[kinds.sampler], is_resuming=output.is_resuming())
-    # Dump again, now including sampler info
-    output.check_and_dump_info(info, updated_info, check_compatible=False)
-    # Check if resumable run
-    sampler_class.check_force_resume(
-        output, info=updated_info[kinds.sampler][sampler_name])
-    # 4. Initialize the posterior and the sampler
-    with Model(updated_info[_params], updated_info[kinds.likelihood],
-               updated_info.get(_prior), updated_info.get(kinds.theory),
-               packages_path=info.get(_packages_path), timing=updated_info.get(_timing),
-               allow_renames=False, stop_at_error=info.get("stop_at_error", False)) \
-            as model:
-        # Re-dump the updated info, now containing parameter routes and version info
-        updated_info = recursive_update(updated_info, model.info())
-        output.check_and_dump_info(None, updated_info, check_compatible=False)
-        sampler = sampler_class(updated_info[kinds.sampler][sampler_name],
-                                model, output, packages_path=info.get(_packages_path))
-        # Re-dump updated info, now also containing updates from the sampler
-        updated_info[kinds.sampler][sampler.get_name()] = \
-            recursive_update(
-                updated_info[kinds.sampler][sampler.get_name()], sampler.info())
-        # TODO -- maybe also re-dump model info, now possibly with measured speeds
-        # (waiting until the camb.transfers issue is solved)
-        output.check_and_dump_info(None, updated_info, check_compatible=False)
-        mpi.sync_processes()
-        if info.get(_test_run, False):
-            logger_run.info("Test initialization successful! "
-                            "You can probably run now without `--%s`.", _test_run)
-            return updated_info, sampler
-        # Run the sampler
-        sampler.run()
+    with get_output(prefix=info.get(_output_prefix), resume=info.get(_resume),
+                    force=info.get(_force), infix=infix) as output:
+        # 2. Update the input info with the defaults for each component
+        updated_info = update_info(info)
+        if logging.root.getEffectiveLevel() <= logging.DEBUG:
+            # Dump only if not doing output
+            # (otherwise, the user can check the .updated file)
+            if not output and mpi.is_main_process():
+                logger_run.info(
+                    "Input info updated with defaults (dumped to YAML):\n%s",
+                    yaml_dump(sort_cosmetic(updated_info)))
+        # 3. If output requested, check compatibility if existing one, and dump.
+        # 3.1 First: model only
+        output.check_and_dump_info(info, updated_info, cache_old=True,
+                                   ignore_blocks=[kinds.sampler])
+        # 3.2 Then sampler -- 1st get the last sampler mentioned in the updated.yaml
+        # TODO: ideally, using Minimizer would *append* to the sampler block.
+        #       Some code already in place, but not possible at the moment.
+        try:
+            last_sampler = list(updated_info[kinds.sampler])[-1]
+            last_sampler_info = {last_sampler: updated_info[kinds.sampler][last_sampler]}
+        except (KeyError, TypeError):
+            raise LoggedError(logger_run, "No sampler requested.")
+        sampler_name, sampler_class = get_sampler_name_and_class(last_sampler_info)
+        check_sampler_info(
+            (output.reload_updated_info(use_cache=True) or {}).get(kinds.sampler),
+            updated_info[kinds.sampler], is_resuming=output.is_resuming())
+        # Dump again, now including sampler info
+        output.check_and_dump_info(info, updated_info, check_compatible=False)
+        # Check if resumable run
+        sampler_class.check_force_resume(
+            output, info=updated_info[kinds.sampler][sampler_name])
+        # 4. Initialize the posterior and the sampler
+        with Model(updated_info[_params], updated_info[kinds.likelihood],
+                   updated_info.get(_prior), updated_info.get(kinds.theory),
+                   packages_path=info.get(_packages_path),
+                   timing=updated_info.get(_timing),
+                   allow_renames=False,
+                   stop_at_error=info.get("stop_at_error", False)) as model:
+            # Re-dump the updated info, now containing parameter routes and version info
+            updated_info = recursive_update(updated_info, model.info())
+            output.check_and_dump_info(None, updated_info, check_compatible=False)
+            sampler = sampler_class(updated_info[kinds.sampler][sampler_name],
+                                    model, output, packages_path=info.get(_packages_path))
+            # Re-dump updated info, now also containing updates from the sampler
+            updated_info[kinds.sampler][sampler.get_name()] = \
+                recursive_update(
+                    updated_info[kinds.sampler][sampler.get_name()], sampler.info())
+            # TODO -- maybe also re-dump model info, now possibly with measured speeds
+            # (waiting until the camb.transfers issue is solved)
+            output.check_and_dump_info(None, updated_info, check_compatible=False)
+            mpi.sync_processes()
+            if info.get(_test_run, False):
+                logger_run.info("Test initialization successful! "
+                                "You can probably run now without `--%s`.", _test_run)
+                return updated_info, sampler
+            # Run the sampler
+            sampler.run()
 
-    output.clear_lock()
     return updated_info, sampler
 
 

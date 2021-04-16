@@ -27,9 +27,11 @@ def test_polychord_resume(packages_path, skip_not_installed, tmpdir):
     """
     nlive = 10
     max_ndead = 2 * nlive
+
     def callback(sampler):
         global dead_points
         dead_points = sampler.dead[["a", "b"]].values.copy()
+
     info = {
         kinds.likelihood: {
             "A": {"external": "lambda a: stats.norm.logpdf(a)", "speed": 1},
@@ -45,10 +47,10 @@ def test_polychord_resume(packages_path, skip_not_installed, tmpdir):
                 "callback_function": callback,
             }},
         _output_prefix: str(tmpdir)}
-    upd_info, sampler = install_test_wrapper(skip_not_installed, run, info)
+    install_test_wrapper(skip_not_installed, run, info)
     old_dead_points = dead_points.copy()
     info["resume"] = True
-    upd_info, sampler = run(info)
+    run(info)
     assert np.allclose(old_dead_points, dead_points)
 
 
@@ -98,8 +100,8 @@ def test_polychord_unphysical(packages_path, skip_not_installed):
     bound = 10
     info = {
         "likelihood": {
-            "gaussian":
-            "lambda a_0, a_1: stats.multivariate_normal.logpdf([a_0, a_1], mean=[0,0])"},
+            "gaussian": "lambda a_0, a_1: "
+                        "stats.multivariate_normal.logpdf([a_0, a_1], mean=[0,0])"},
         "prior": {"prior0": "lambda a_0, a_1: np.log(a_0 > a_1)"},
         "params": {
             "a_0": {"prior": {"min": -bound, "max": bound}},
@@ -119,5 +121,5 @@ def test_polychord_unphysical(packages_path, skip_not_installed):
     logZlikestd = sampler_with_like.products()["logZstd"]
     logZ = logZlike - logZpi
     sigma = logZlikestd + logZpistd
-    truth = 1/((2*bound)**2 / 2) * 0.5
-    assert logZ - 2*sigma < np.log(truth) < logZ + 2*sigma
+    truth = 1 / ((2 * bound) ** 2 / 2) * 0.5
+    assert logZ - 2 * sigma < np.log(truth) < logZ + 2 * sigma

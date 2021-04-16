@@ -194,7 +194,10 @@ class ComponentCollection(dict, HasLogger):
         Get version dictionary
         :return: dictionary of versions for all components
         """
-        format_version = lambda x: {_version: x} if add_version_field else x
+
+        def format_version(x):
+            return {_version: x} if add_version_field else x
+
         return {component.get_name(): format_version(component.get_version())
                 for component in self.values() if component.has_version()}
 

@@ -199,6 +199,7 @@ class SN(DataSetLikelihood):
         if self.twoscriptmfit:
             A1 = np.zeros(self.nsn)
             A2 = np.zeros(self.nsn)
+            # noinspection PyUnboundLocalVariable
             A1[self.third_var <= scriptmcut] = 1
             A2[self.third_var > scriptmcut] = 1
             has_A1 = np.any(A1)

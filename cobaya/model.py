@@ -421,6 +421,7 @@ class Model(HasLogger):
                 logpost = logps
 
         if logps != -np.inf:
+            # noinspection PyUnboundLocalVariable
             like = self._loglikes_input_params(input_params,
                                                return_derived=return_derived,
                                                cached=cached, make_finite=make_finite)
@@ -982,7 +983,7 @@ class Model(HasLogger):
             for j, comp in enumerate(speeds):
                 footprints[i, j] = comp in ls
         # Group parameters by footprint
-        different_footprints = list(set(tuple(row) for row in footprints.tolist()))
+        different_footprints = list(set(tuple(row) for row in footprints))
         blocks = [[p for ip, p in enumerate(self.sampled_dependence)
                    if all(footprints[ip] == fp)] for fp in different_footprints]
         # a) Multiple blocks
