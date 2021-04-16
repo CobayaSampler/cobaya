@@ -7,8 +7,8 @@ import os
 import shutil
 from random import random
 import numpy as np
-import scipy.stats as stats
 from copy import deepcopy
+import scipy.stats as stats
 
 # Local
 from cobaya.conventions import _output_prefix, _params, _prior, kinds, _updated_suffix, \
@@ -35,6 +35,7 @@ def half_ring_func_derived(x, y=0.5):
 
 gaussian_str = "lambda y: stats.norm.logpdf(y, loc=0, scale=0.2)"
 gaussian_func = lambda y: eval(gaussian_str)(y)
+assert gaussian_func(0.1) == stats.norm.logpdf(0.1, loc=0, scale=0.2)
 
 # Info for the different tests
 

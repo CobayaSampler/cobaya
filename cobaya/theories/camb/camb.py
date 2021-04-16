@@ -183,7 +183,7 @@ from cobaya.install import download_github_release, check_gcc_version, NotInstal
 from cobaya.tools import getfullargspec, get_class_methods, get_properties, load_module, \
     VersionCheckError, str_to_list
 from cobaya.theory import HelperTheory
-from cobaya.conventions import _requires
+from cobaya.conventions import _requires, OptionalArrayLike
 
 
 # Result collector
@@ -607,10 +607,11 @@ class camb(BoltzmannBase):
         for sp, i in mapping.items():
             cls[sp] = cl_camb[:, i]
         if lensed:
-            cl_lens = self.current_state["Cl"].get("lens_potential")
+            cl_lens: OptionalArrayLike = self.current_state["Cl"].get("lens_potential")
             if cl_lens is not None:
                 cls["pp"] = cl_lens[:, 0].copy()
                 if not ell_factor:
+                    # noinspection PyUnboundLocalVariable
                     cls["pp"][1:] /= ells_factor ** 2 / (2 * np.pi)
                 if self._needs_lensing_cross:
                     for i, cross in enumerate(['pt', 'pe']):

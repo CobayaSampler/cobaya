@@ -15,12 +15,12 @@ import warnings
 import inspect
 import re
 import pandas as pd
-import numpy as np  # don't delete: necessary for get_external_function
+import numpy as np
 from importlib import import_module
 from copy import deepcopy
 from packaging import version
 from itertools import permutations
-from typing import Mapping, Sequence, Any
+from typing import Mapping, Sequence, Any, List
 from numbers import Number
 from types import ModuleType
 from inspect import cleandoc, getfullargspec
@@ -44,7 +44,7 @@ from cobaya.log import LoggedError
 log = logging.getLogger(__name__.split(".")[-1])
 
 
-def str_to_list(x):
+def str_to_list(x) -> List:
     """
     Makes sure that the input is a list of strings (could be string).
     """
@@ -581,8 +581,8 @@ def get_scipy_1d_pdf(info):
                      "convention at the same time. Either use one or the other.")
         minmaxvalues = {"min": 0, "max": 1}
         for limit in minmaxvalues:
+            value = info2.pop(limit, minmaxvalues[limit])
             try:
-                value = info2.pop(limit, minmaxvalues[limit])
                 minmaxvalues[limit] = float(value)
             except (TypeError, ValueError):
                 raise LoggedError(
@@ -903,6 +903,7 @@ def get_config_path():
     """
     Gets path for config files, and creates it if it does not exist.
     """
+    config_path = None
     try:
         if platform.system() == "Windows":
             base = os.environ.get("LOCALAPPDATA")

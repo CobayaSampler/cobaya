@@ -285,6 +285,7 @@ class minimize(Minimizer, CovmatSampler):
             elif not all(successes):
                 self.log.warning('Some minimizations failed!')
             elif mpi.more_than_one_process():
+                # noinspection PyUnboundLocalVariable
                 if max(mins) - min(mins) > 1:
                     self.log.warning('Big spread in minima: %r', mins)
                 elif max(mins) - min(mins) > 0.2:
@@ -318,7 +319,7 @@ class minimize(Minimizer, CovmatSampler):
         self.minimum = mpi.share(getattr(self, "minimum", None))
         self._inv_affine_transform_matrix, self._affine_transform_baseline, self.result \
             = mpi.share((self._inv_affine_transform_matrix,
-                             self._affine_transform_baseline, self.result))
+                         self._affine_transform_baseline, self.result))
 
     def products(self):
         r"""

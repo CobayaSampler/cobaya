@@ -55,7 +55,7 @@ from cobaya.conventions import kinds, _checkpoint_extension, _version
 from cobaya.conventions import _progress_extension, _covmat_extension
 from cobaya.conventions import partag, _packages_path, _force, _resume, _output_prefix
 from cobaya.tools import get_class, deepcopy_where_possible, find_with_regexp
-from cobaya.tools import recursive_update
+from cobaya.tools import recursive_update, str_to_list
 from cobaya.log import LoggedError
 from cobaya.yaml import yaml_load_file, yaml_dump
 from cobaya.component import CobayaComponent
@@ -417,6 +417,7 @@ class CovmatSampler(Sampler):
         else:
             return self.initial_proposal_covmat(auto_params=auto_params)
 
+    # noinspection PyUnboundLocalVariable
     def initial_proposal_covmat(self, auto_params=None):
         """
         Build the initial covariance matrix, using the data provided, in descending order
@@ -505,9 +506,8 @@ class CovmatSampler(Sampler):
                     self.log, "The covariance matrix %s is not a positive-definite, "
                               "symmetric square matrix.", str_msg)
             # Fill with parameters in the loaded covmat
-            renames = [[p] + np.atleast_1d(v.get(partag.renames, [])).tolist()
-                       for p, v in params_infos.items()]
-            renames = {a[0]: a for a in renames}
+            renames = {p: [p] + str_to_list(v.get(partag.renames) or [])
+                       for p, v in params_infos.items()}
             indices_used, indices_sampler = zip(*[
                 [loaded_params.index(p),
                  [list(params_infos).index(q) for q, a in renames.items() if p in a]]

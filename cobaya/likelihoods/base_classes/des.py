@@ -407,6 +407,7 @@ class DES(DataSetLikelihood):
             "comoving_radial_distance": {"z": self.zs},
             "Hubble": {"z": self.zs}}
 
+    # noinspection PyUnboundLocalVariable
     def get_theory(self, PKdelta, PKWeyl, bin_bias, shear_calibration_parameters,
                    intrinsic_alignment_A, intrinsic_alignment_alpha,
                    intrinsic_alignment_z0, wl_photoz_errors, lens_photoz_errors):

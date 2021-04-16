@@ -226,6 +226,7 @@ _clik_verbose = any(
     [(s in os.getenv('TRAVIS_COMMIT_MESSAGE', '')) for s in ["clik", "planck"]])
 # Don't try again to install clik if it failed for a previous likelihood
 try:
+    # noinspection PyUnboundLocalVariable
     _clik_install_failed
 except NameError:
     _clik_install_failed = False

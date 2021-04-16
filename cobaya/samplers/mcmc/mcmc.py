@@ -589,6 +589,7 @@ class mcmc(CovmatSampler):
             return True
         return False
 
+    # noinspection PyUnboundLocalVariable
     def check_convergence_and_learn_proposal(self):
         """
         Checks the convergence of the sampling process, and, if requested,

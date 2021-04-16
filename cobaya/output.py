@@ -524,6 +524,7 @@ class Output(HasLogger):
         self.clear_lock()
 
 
+# noinspection PyMissingConstructor
 class OutputDummy(Output):
     """
     Dummy output class. Does nothing. Evaluates to 'False' as a class.
