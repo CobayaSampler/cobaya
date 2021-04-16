@@ -186,23 +186,24 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False,
     info["packages_path"] = packages_path
     # Adjust number of samples
     n_cycles_all_params = 10
+    info_sampler = info["sampler"][sampler_name]
     if sampler_name == "mcmc":
-        info["sampler"][sampler_name]["measure_speeds"] = False
-        info["sampler"][sampler_name]["burn_in"] = 0
-        info["sampler"][sampler_name]["max_samples"] = n_cycles_all_params * 10 * (
-                dim0 + dim1)
+        info_sampler["measure_speeds"] = False
+        info_sampler["burn_in"] = 0
+        info_sampler["max_samples"] = \
+            info_sampler.get("max_samples", n_cycles_all_params * 10 * (dim0 + dim1))
         # Force mixing of blocks:
-        info["sampler"][sampler_name]["covmat_params"] = list(info["params"])
-        info["sampler"][sampler_name]["covmat"] = 1 / 10000 * np.eye(len(info["params"]))
+        info_sampler["covmat_params"] = list(info["params"])
+        info_sampler["covmat"] = 1 / 10000 * np.eye(len(info["params"]))
         i_0th, i_1st = map(
-            lambda x: info["sampler"][sampler_name]["covmat_params"].index(x),
+            lambda x: info_sampler["covmat_params"].index(x),
             [prefix + "0", prefix + "%d" % dim0])
-        info["sampler"][sampler_name]["covmat"][i_0th, i_1st] = 1 / 100000
-        info["sampler"][sampler_name]["covmat"][i_1st, i_0th] = 1 / 100000
-        info["sampler"][sampler_name]["learn_proposal"] = False
+        info_sampler["covmat"][i_0th, i_1st] = 1 / 100000
+        info_sampler["covmat"][i_1st, i_0th] = 1 / 100000
+        # info_sampler["learn_proposal"] = False
     elif sampler_name == "polychord":
-        info["sampler"][sampler_name]["nlive"] = dim0 + dim1
-        info["sampler"][sampler_name]["max_ndead"] = n_cycles_all_params * (dim0 + dim1)
+        info_sampler["nlive"] = dim0 + dim1
+        info_sampler["max_ndead"] = n_cycles_all_params * (dim0 + dim1)
     else:
         assert False, "Unknown sampler for this test."
     updated_info, sampler = install_test_wrapper(skip_not_installed, run, info)

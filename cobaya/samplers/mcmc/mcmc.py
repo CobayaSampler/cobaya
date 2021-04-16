@@ -341,7 +341,7 @@ class mcmc(CovmatSampler):
         self.n_steps_raw = 0
         last_output = 0
         last_n = self.n()
-        with mpi.SyncState(self) as state:
+        with mpi.ProcessState(self) as state:
             while last_n < self.max_samples and not self.converged:
                 self.get_new_sample()
                 self.n_steps_raw += 1
@@ -353,7 +353,7 @@ class mcmc(CovmatSampler):
                     if now_sec >= last_output + self.output_every.value:
                         self.do_output(now)
                         last_output = now_sec
-                        state.error.check()
+                        state.check_error()
                 if self.current_point.weight == 1:
                     # have added new point
                     # Callback function
@@ -368,10 +368,9 @@ class mcmc(CovmatSampler):
                             self.last_point_callback = len(self.collection)
 
                         if more_than_one_process():
-                            state.error.check()
                             # Checking convergence and (optionally) learning
                             # the covmat of the proposal
-                            if self.check_ready() and state.set_ready():
+                            if self.check_ready() and state.set(mpi.State.READY):
                                 self.log.info(
                                     self._msg_ready + " (waiting for the rest...)")
                             if state.all_ready():
@@ -380,16 +379,15 @@ class mcmc(CovmatSampler):
                                 self.i_learn += 1
                         else:
                             if self.check_ready():
+                                self.log.debug(self._msg_ready)
                                 self.check_convergence_and_learn_proposal()
                                 self.i_learn += 1
             if last_n == self.max_samples:
-                self.log.info("Reached maximum number of accepted steps allowed. "
-                              "Stopping.")
+                self.log.info("Reached maximum number of accepted steps allowed (%s). "
+                              "Stopping.", self.max_samples)
 
-            # Make sure the last batch of samples ( < output_every (not in sec)) are written
+            # Write the last batch of samples ( < output_every (not in sec))
             self.collection.out_update()
-
-        mpi.error_signal.check()
 
         ns = mpi.gather(self.n())
         self.mpi_info("Sampling complete after %d accepted steps.", sum(ns))
@@ -582,9 +580,6 @@ class mcmc(CovmatSampler):
                     raise LoggedError(
                         self.log, "Waiting for too long for all chains to be ready. "
                                   "Maybe one of them is stuck or died unexpectedly?")
-            else:
-                # If not MPI size > 1, we are ready
-                self.log.debug(self._msg_ready)
             return True
         return False
 
@@ -596,6 +591,7 @@ class mcmc(CovmatSampler):
         of the last samples.
         """
         # Compute Rminus1 of means
+        self.been_waiting = 0
         if more_than_one_process():
             # Compute and gather means and covs
             use_first = int(self.n() / 2)

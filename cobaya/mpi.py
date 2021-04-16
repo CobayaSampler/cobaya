@@ -11,7 +11,7 @@ import sys
 import functools
 from typing import List, Iterable
 import numpy as np
-from typing import Any
+from typing import Any, Optional
 import logging
 import time
 from enum import IntEnum
@@ -115,7 +115,8 @@ def more_than_one_process():
 
 def sync_processes():
     if get_mpi_size() > 1:
-        error_signal.check()
+        if process_state:
+            process_state.check_error()
         get_mpi_comm().barrier()
 
 
@@ -292,178 +293,143 @@ def sync_errors(func):
     return wrapper
 
 
-def abort_if_test(log, exc_info):
-    if "PYTEST_CURRENT_TEST" in os.environ and more_than_one_process():
-        # in pytest, never gets to the system hook to kill mpi so do it here
-        # (mpi.abort_if_mpi is replaced by conftest.py::mpi_handling session fixture)
-        from cobaya.log import get_traceback_text
-        abort_if_mpi(log, get_traceback_text(exc_info))
-
-
 # Wrapper for main functions. Traps MPI deadlock via timeout MPI_ABORT if needed,
 
-def sync_error_signal(func):
+def sync_state(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         if not more_than_one_process():
             return func(*args, **kwargs)
 
-        with Signal(func.__name__) as error, Signal(func.__name__, "sync") as sync:
-            try:
-                result = func(*args, **kwargs)
-                error.check()
-            except Exception as e:
-                if not isinstance(e, OtherProcessError):
-                    error.send()
-                sync.send()
-                if not time_out_barrier() and not isinstance(e, OtherProcessError):
-                    # Handling errors here will also work in pytest which doesn't get
-                    # to global handler
-                    from cobaya.log import get_traceback_text, LoggedError
-                    abort_if_mpi(logging.getLogger(func.__name__),
-                                 "Aborting MPI deadlock (original error above)"
-                                 if isinstance(e, LoggedError) else get_traceback_text(
-                                     sys.exc_info()))
-                raise
-            else:
-                sync.send(value=True)
-                for i in range(size()):
-                    if i != rank():
-                        status = _mpi_comm.recv(source=i, tag=sync.tag)
-                        if not status:
-                            time_out_barrier()
-                            raise OtherProcessError(_other_process_msg)
-                return result
+        with ProcessState(func.__name__):
+            return func(*args, **kwargs)
 
     return wrapper
 
 
-# signalling
+# Synchronization between processes, generating OtherProcessError in other threads if
+# any one process raises an exception
 
 class State(IntEnum):
-    END = 0
+    NONE = 0
     READY = 1
-    ERROR = 2
+    END = 2
+    ERROR = 3
 
 
-class SignalError(OtherProcessError):
+class SyncError(OtherProcessError):
     pass
 
 
 _tags = []
 
+# log = logging.getLogger('state')
+log: Any = None
 
-class Signal:
 
-    def __init__(self, owner='error_signal', name='error'):
-        self.owner = owner
-        self.name = name
-        self.req = None
+class ProcessState:
+
+    def __init__(self, name='error', time_out_seconds=None, sleep_interval=0.01):
+        self.name = str(name)
         if name not in _tags:
             _tags.append(name)
         self.tag = _tags.index(name) + 1
-        self.requests = []
+        self.states = np.empty(size(), dtype=int)
+        self.sleep_interval = sleep_interval
+        self.time_out_seconds = time_out_seconds or default_error_timeout_seconds
+        self._recv_state = np.empty(1, dtype=int)
+        self._rank = rank()
+        self._others = [i for i in range(size()) if i != self._rank]
 
-    @more_than_one
-    def send(self, value=False):
+    def set(self, value: State):
         """
         Sends an error signal to the other MPI processes.
         """
-        for i_rank in range(size()):
-            if i_rank != rank():
-                self.requests.append(
-                    get_mpi_comm().isend(value, dest=i_rank, tag=self.tag).Test())
-
-    @more_than_one
-    def check(self):
-        """
-        Checks if any of the other process has sent an error signal, and raises an error.
-
-        """
-        if _mpi_comm.iprobe(source=_mpi.ANY_SOURCE, tag=self.tag):
-            self.clear()
-            self.fire()
-
-    @more_than_one
-    def clear(self):
-        while _mpi_comm.iprobe(source=_mpi.ANY_SOURCE, tag=self.tag):
-            _mpi_comm.recv(source=_mpi.ANY_SOURCE, tag=self.tag)
-        # Unclear if this is needed or safe...
-        # for req in self.requests:
-        #    req.Cancel()
-        self.requests = []
-
-    def fire(self, cls=OtherProcessError, msg=_other_process_msg):
-        raise cls("[%s: %s] %s" % (rank(), self.owner, msg))
-
-    def __enter__(self):
-        self.clear()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.clear()
-
-
-error_signal = Signal()
-
-
-class SyncError(SignalError):
-    pass
-
-
-# For testing and synchronizing processing when ready or ended/errored
-
-class SyncState:
-
-    def __init__(self, owner):
-        self.statuses = np.empty(size(), dtype=int)
-        self.owner = owner
-        self.req = None
-        self.error = Signal(owner)
-        self.ending = False
-
-    def set_ready(self, status=State.READY) -> bool:
-        if self.req is None and not self.ending:
-            self.owner.log.debug('Set process status: %s', status)
-            self.req = get_mpi_comm().Iallgather(np.array([status], dtype=int),
-                                                 self.statuses)
+        if self.states[self._rank] != value:
+            if log:
+                log.info('SET %s', value)
+            self.states[self._rank] = value
+            for i_rank in self._others:
+                _mpi_comm.Isend(self.states[self._rank],
+                                dest=i_rank, tag=self.tag).Test()
             return True
-        return False
+        else:
+            return False
 
     @more_than_one
-    def check(self, status=State.READY, wait=True) -> bool:
-        # if have signalled ready, make sure don't leave others waiting fpr nothing
-        if self.ending:
-            return False
-        was_set = self.set_ready(status)
-        if wait or was_set:
-            if status == State.ERROR:
-                if not wait_for_request(self.req):
-                    return False
-            else:
-                self.req.Wait()
-        self.error.clear()
-        self.req = None
-        self.owner.log.debug('Got process statuses: %s', self.statuses)
-        self.ending = any(self.statuses != State.READY)
-        if status != State.ERROR and any(self.statuses == State.ERROR):
-            self.error.fire(SyncError)
-        if not was_set and not self.ending:
-            # always need to sent at least one END or ERROR
-            self.check(status)
-        return not self.ending
+    def sync(self, check_error=False):
+        """
+        Gets any messages from other processes without waiting, and optionally
+        raises error if any others are in error state.
+        """
+        while _mpi_comm.iprobe(source=_mpi.ANY_SOURCE, tag=self.tag):
+            status = _mpi.Status()
+            _mpi_comm.Recv(self._recv_state, source=_mpi.ANY_SOURCE, tag=self.tag,
+                           status=status)
+            state = self._recv_state[0]
+            self.states[status.Get_source()] = state
+            if check_error and state == State.ERROR:
+                self.fire_error(SyncError)
+            if log:
+                log.info('SYNC %s', self.states)
+
+    def check_error(self):
+        """
+        Raises error if any other processes in error state
+        """
+        self.sync(check_error=True)
+
+    def fire_error(self, cls=OtherProcessError, msg=_other_process_msg):
+        raise cls("[%s: %s] %s" % (rank(), self.name, msg))
+
+    def wait_all_ended(self, timeout=False):
+        """
+        Wait until all processes in ERROR or END state.
+        """
+        self.sync()
+        time_start = time.time()
+        while any(self.states < State.END):
+            time.sleep(self.sleep_interval)
+            if timeout and time.time() - time_start > self.time_out_seconds:
+                return False
+            self.sync()
+        return True
 
     def all_ready(self) -> bool:
-        return self.req is not None and self.req.Test() and self.check(wait=False)
+        """
+        Test is all processes in READY state (and if they are reset to NONE).
+        """
+        self.sync(check_error=True)
+        all_ready = all(self.states == State.READY)
+        if all_ready:
+            self.states[:] = State.NONE
+        return all_ready
 
     def __enter__(self):
+        global process_state
+        self.last_process_state = process_state
+        process_state = self
+        self.sync()
+        self.states[:] = State.NONE
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        if exc_type is None:
-            self.check(State.END)
-        elif exc_type and exc_type is not SyncError:
-            self.error.send()
-            self.check(State.ERROR)
-        self.error.clear()
-        self.req = None
+    @more_than_one
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type:
+            self.set(State.ERROR)
+            if not self.wait_all_ended(timeout=issubclass(exc_type, OtherProcessError)):
+                from cobaya.log import get_traceback_text, LoggedError
+                abort_if_mpi(logging.getLogger(self.name),
+                             "Aborting MPI deadlock (original error above)"
+                             if issubclass(exc_type, LoggedError) else get_traceback_text(
+                                 sys.exc_info()))
+        else:
+            self.set(State.END)
+            self.wait_all_ended()
+        global process_state
+        process_state = self.last_process_state
+        if not exc_type and any(self.states == State.ERROR):
+            self.fire_error()
+
+
+process_state: Optional[ProcessState] = None

@@ -976,17 +976,18 @@ def write_packages_path_in_config_file(packages_path):
 
 
 def resolve_packages_path(infos=None):
+    # noinspection PyStatementEffect
     """
-    Gets the external packages installation path given some infos.
-    If more than one occurrence of the external packages path in the infos,
-    raises an error.
-
-    If there is no external packages path defined in the given infos,
-    defaults to the env variable `%s`, and in its absence to that stored
-    in the config file.
-
-    If no path at all could be found, returns `None`.
-    """ % _packages_path_env
+        Gets the external packages installation path given some infos.
+        If more than one occurrence of the external packages path in the infos,
+        raises an error.
+    
+        If there is no external packages path defined in the given infos,
+        defaults to the env variable `%s`, and in its absence to that stored
+        in the config file.
+    
+        If no path at all could be found, returns `None`.
+        """ % _packages_path_env
     if not infos:
         infos = []
     elif isinstance(infos, Mapping):
@@ -1021,10 +1022,11 @@ def resolve_packages_path(infos=None):
 
 
 def sort_cosmetic(info):
+    # noinspection PyStatementEffect
     """
-    Returns a sorted version of the given info dict, re-ordered as %r, and finally the
-    rest of the blocks/options.
-    """ % _dump_sort_cosmetic
+        Returns a sorted version of the given info dict, re-ordered as %r, and finally the
+        rest of the blocks/options.
+        """ % _dump_sort_cosmetic
     sorted_info = dict()
     for k in _dump_sort_cosmetic:
         if k in info:

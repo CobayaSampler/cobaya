@@ -43,7 +43,7 @@ class DummyModel:
         self.likelihood = list(info_likelihood)
 
 
-@mpi.sync_error_signal
+@mpi.sync_state
 def post(info: InfoDict, sample=None):
     logger_setup(info.get(_debug), info.get(_debug_file))
     log = logging.getLogger(__name__.split(".")[-1])
@@ -422,7 +422,7 @@ def post(info: InfoDict, sample=None):
             collection_out.add(
                 sampled, derived=derived.values(), weight=point.get(_weight),
                 logpriors=logpriors_new, loglikes=loglikes_new)
-            mpi.error_signal.check()
+            mpi.process_state.check_error()
             # Display progress
             percent = int(np.round((i + done) / to_do * 100))
             if percent != last_percent and not percent % 5:
