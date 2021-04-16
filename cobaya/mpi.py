@@ -406,9 +406,8 @@ class ProcessState:
         return all_ready
 
     def __enter__(self):
-        global process_state
         self.last_process_state = process_state
-        process_state = self
+        set_current_process_state(self)
         self.sync()
         self.states[:] = State.NONE
         return self
@@ -426,10 +425,14 @@ class ProcessState:
         else:
             self.set(State.END)
             self.wait_all_ended()
-        global process_state
-        process_state = self.last_process_state
+        set_current_process_state(self.last_process_state)
         if not exc_type and any(self.states == State.ERROR):
             self.fire_error()
 
 
 process_state: Optional[ProcessState] = None
+
+
+def set_current_process_state(state: ProcessState):
+    global process_state
+    process_state = state
