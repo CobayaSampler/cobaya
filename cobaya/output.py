@@ -113,6 +113,11 @@ class FileLock:
             import mpi4py
         else:
             mpi4py = None
+        if mpi.is_main_process():
+            try:
+                import portalocker
+            except ModuleNotFoundError:
+                self.log.warning('install "portalocker" for better file lock control.')
         raise LoggedError(self.log,
                           "File %s is locked.\nYou may be running multiple jobs with "
                           "the same output when you intended to run with MPI. "

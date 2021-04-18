@@ -52,6 +52,63 @@ def test_mcmc(tmpdir, packages_path=None):
     body_of_test(dimension=dimension, info_sampler=info_sampler, tmpdir=tmpdir)
 
 
+yaml_drag = r"""
+params:
+  a:
+    prior:
+      min: -0.5
+      max: 3
+    proposal: 0.2
+  b:
+    prior:
+      dist: norm
+      loc: 0
+      scale: 1
+    ref: 0
+    proposal: 0.5
+sampler:
+  mcmc:
+   drag: True
+   measure_speeds: False
+   Rminus1_stop: 0.001   
+   Rminus1_cl_stop: 0.05
+output: z:\testchain_drag
+"""
+
+
+class GaussLike(Likelihood):
+    speed = 100
+    params = {'a': None}
+
+    def calculate(self, state, want_derived=True, **params_values_dict):
+        state["logp"] = - (params_values_dict['a'] - 0.2) ** 2 / 0.15 / 2
+
+
+class GaussLike2(Likelihood):
+    speed = 600
+    params = {'a': None, 'b': None}
+
+    def calculate(self, state, want_derived=True, **params_values_dict):
+        state["logp"] = - ((params_values_dict['a'] - 0.2) ** 2 +
+                           params_values_dict['b'] ** 2) / 0.2 / 2
+
+
+@flaky(max_runs=max_runs, min_passes=1)
+@mpi.sync_errors
+def test_mcmc_drag_results():
+    info = yaml_load(yaml_drag)
+    info['likelihood'] = {'g1': {'external': GaussLike}, 'g2': {'external': GaussLike2}}
+    updated_info, sampler = run(info, force=True)
+    products = sampler.products()
+    from getdist.mcsamples import MCSamplesFromCobaya
+    products["sample"] = mpi.allgather(products["sample"])
+    gdample = MCSamplesFromCobaya(updated_info, products["sample"], ignore_rows=0.3)
+    assert abs(gdample.mean('a') - 0.2) < 0.015
+    assert abs(gdample.mean('b')) < 0.015
+    assert abs(gdample.std('a') - 0.293) < 0.03
+    assert abs(gdample.std('b') - 0.4) < 0.03
+
+
 yaml = r"""
 likelihood:
   gaussian_mixture:

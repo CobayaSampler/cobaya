@@ -51,8 +51,7 @@ info_derived = {"half_ring": {
 
 @mpi.sync_errors
 def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
-    # For pytest's handling of tmp dirs
-    tmpdir, rand = mpi.share((str(tmpdir), random()))
+    rand = mpi.share(random())
     prefix = os.path.join(tmpdir, "%d" % round(1e8 * rand)) + os.sep
     if mpi.is_main_process():
         if os.path.exists(prefix):

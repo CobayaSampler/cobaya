@@ -457,11 +457,13 @@ class mcmc(CovmatSampler):
         # at the end of the interpolation
         start_drag_logpost_acc = start_slow_logpost
         end_drag_logpost_acc = end_slow_logpost
+        # alloc mem
+        delta_fast = np.zeros(len(current_start_point))
         # start dragging
         for i_step in range(1, 1 + self.drag_interp_steps):
             self.log.debug("Dragging step: %d", i_step)
             # take a step in the fast direction in both slow extremes
-            delta_fast = np.zeros(len(current_start_point))
+            delta_fast[:] = 0.
             self.proposer.get_proposal_fast(delta_fast)
             self.log.debug("Proposed fast step delta: %r", delta_fast)
             proposal_start_point = current_start_point + delta_fast
@@ -502,8 +504,9 @@ class mcmc(CovmatSampler):
             start_drag_logpost_acc += current_start_logpost
             end_drag_logpost_acc += current_end_logpost
         # Test for the TOTAL step
-        accept = self.metropolis_accept(end_drag_logpost_acc / self.drag_interp_steps,
-                                        start_drag_logpost_acc / self.drag_interp_steps)
+        n_average = 1 + self.drag_interp_steps
+        accept = self.metropolis_accept(end_drag_logpost_acc / n_average,
+                                        start_drag_logpost_acc / n_average)
         self.process_accept_or_reject(
             accept, current_end_point, derived,
             current_end_logpost, current_end_logprior, current_end_loglikes)
