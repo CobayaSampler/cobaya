@@ -61,18 +61,10 @@ def load_input(input_file):
     return info
 
 
+# separate MPI function, as sometimes just use load_input from root process only
+@mpi.from_root
 def load_input_MPI(input_file):
-    if mpi.is_main_process():
-        try:
-            return mpi.share(load_input(input_file))
-        except IOError as e:
-            mpi.share(e)
-            raise
-    else:
-        result = mpi.share()
-        if isinstance(result, IOError):
-            raise result
-        return result
+    return load_input(input_file)
 
 
 def get_used_components(*infos, return_infos=False):

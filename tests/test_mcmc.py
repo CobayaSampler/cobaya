@@ -72,7 +72,6 @@ sampler:
    measure_speeds: False
    Rminus1_stop: 0.001   
    Rminus1_cl_stop: 0.05
-output: z:\testchain_drag
 """
 
 
@@ -98,7 +97,7 @@ class GaussLike2(Likelihood):
 def test_mcmc_drag_results():
     info = yaml_load(yaml_drag)
     info['likelihood'] = {'g1': {'external': GaussLike}, 'g2': {'external': GaussLike2}}
-    updated_info, sampler = run(info, force=True)
+    updated_info, sampler = run(info)
     products = sampler.products()
     from getdist.mcsamples import MCSamplesFromCobaya
     products["sample"] = mpi.allgather(products["sample"])

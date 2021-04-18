@@ -314,11 +314,13 @@ class minimize(Minimizer, CovmatSampler):
                 "Parameter values at minimum:\n%s", self.minimum.data.to_string())
             self.minimum.out_update()
             self.dump_getdist()
+        else:
+            self.minimum = None
         # Share results ('result' object may not be picklable)
-        self.minimum = mpi.share(getattr(self, "minimum", None))
-        self._inv_affine_transform_matrix, self._affine_transform_baseline, self.result \
-            = mpi.share((self._inv_affine_transform_matrix,
-                         self._affine_transform_baseline, self.result))
+        (self._inv_affine_transform_matrix, self._affine_transform_baseline,
+         self.result, self.minimum) = mpi.share(
+            (self._inv_affine_transform_matrix, self._affine_transform_baseline,
+             self.result, self.minimum))
 
     def products(self):
         r"""

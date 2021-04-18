@@ -30,7 +30,7 @@ from cobaya import mpi
 
 
 @mpi.sync_state
-def run(info_or_yaml_or_file: Union[InfoDict, str],
+def run(info_or_yaml_or_file: Union[InfoDict, str, os.PathLike],
         packages_path: [str, None] = None,
         output: [str, None] = None,
         debug: [bool, None] = None,
@@ -58,7 +58,9 @@ def run(info_or_yaml_or_file: Union[InfoDict, str],
     # as early as possible, e.g. to check if resuming possible or `force` needed.
     if no_mpi or test:
         mpi.set_mpi_disabled()
-    if isinstance(info_or_yaml_or_file, str):
+    if isinstance(info_or_yaml_or_file, os.PathLike):
+        info = load_input_file(info_or_yaml_or_file)
+    elif isinstance(info_or_yaml_or_file, str):
         if "\n" in info_or_yaml_or_file:
             info = yaml_load(info_or_yaml_or_file)
         else:
@@ -226,13 +228,16 @@ def run_script(help_commands=None):
     run(info, **arguments.__dict__)
 
 
-def load_input_file(input_file, no_mpi=False, help_commands: [str, None] = None):
+def load_input_file(input_file: Union[str, os.PathLike],
+                    no_mpi: bool = False, help_commands: [str, None] = None):
     if no_mpi:
         mpi.set_mpi_disabled()
-    if any((os.path.splitext(f)[0] in ("input", "updated")) for f in input_file):
+    input_file = str(input_file)
+    stem, suffix = os.path.splitext(input_file)
+    if os.path.basename(stem) in ("input", "updated"):
         raise ValueError("'input' and 'updated' are reserved file names. "
                          "Please, use a different one.")
-    if any(input_file.lower().endswith(ext) for ext in _yaml_extensions):
+    if suffix.lower() in _yaml_extensions:
         info = load_input_MPI(input_file)
     else:
         # Passed an existing output_prefix? Try to find the corresponding *.updated.yaml

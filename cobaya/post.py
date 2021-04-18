@@ -282,7 +282,6 @@ def post(info: InfoDict, sample=None):
     elif output_out and output_out.force and mpi.is_main_process():
         output_out.delete_infos()
         for _file in output_out.find_collections():
-            # # TODO: was using regexp which does work on full path, bug or needed?
             output_out.delete_file_or_folder(_file)
     info_out = deepcopy_where_possible(info)
     info_out[_post] = info_post
