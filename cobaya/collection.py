@@ -442,10 +442,7 @@ class Collection(BaseCollection):
                 unique, counts = \
                     WeightedSamples.thin_indices_and_weights(thin, self[_weight].values)
             else:
-                # TODO remove once getdist updated
-                # noinspection PyTypeChecker
-                thin_ix = WeightedSamples.thin_indices(None, thin, self[_weight].values)
-                unique, counts = np.unique(thin_ix, return_counts=True)
+                raise LoggedError(self.log, "Thinning requires GetDist 1.2+", )
         except WeightedSampleError as e:
             raise LoggedError(self.log, "Error thinning: %s", e)
         else:
