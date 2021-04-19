@@ -9,7 +9,7 @@
 import logging
 from copy import deepcopy
 from itertools import chain
-from typing import NamedTuple, Sequence, Mapping, Optional
+from typing import NamedTuple, Sequence, Mapping, Iterable, Optional
 import numpy as np
 
 # Local
@@ -26,7 +26,7 @@ from cobaya.theory import TheoryCollection
 from cobaya.log import LoggedError, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
 from cobaya.tools import deepcopy_where_possible, are_different_params_lists, \
-    str_to_list, sort_parameter_blocks, recursive_update, sort_cosmetic, ensure_dict
+    str_to_list, sort_parameter_blocks, recursive_update, sort_cosmetic
 from cobaya.component import Provider
 from cobaya import mpi
 
@@ -48,6 +48,27 @@ class Requirement(NamedTuple):
 
     def __repr__(self):
         return "{%r:%r}" % (self.name, self.options)
+
+
+def as_requirement_list(requirements):
+    if isinstance(requirements, Mapping):
+        return [Requirement(name, options) for name, options in requirements.items()]
+    elif isinstance(requirements, str):
+        return [Requirement(requirements, None)]
+    elif isinstance(requirements, Iterable):
+        if all(isinstance(term, str) for term in requirements):
+            return [Requirement(name, None) for name in requirements]
+        result = []
+        for item in requirements:
+            if isinstance(item, Sequence) and len(item) == 2:
+                result += Requirement(item[0], item[1])
+            else:
+                break
+        else:
+            return result
+
+    raise ValueError('Requirements must be a dict of names and options, a list of names, '
+                     'or an iterable of requirement (name, option) pairs')
 
 
 # Dummy component prefix for manual requirements
@@ -538,21 +559,21 @@ class Model(HasLogger):
         direct_param_dependence = {c: set() for c in components}
 
         def _tidy_requirements(_require, _component=None):
-            # take input requirement dictionary and split into list of tuples of
+            # take input requirement and return tuples of
             # requirement names and requirement options
             if not _require:
                 return []
-            if isinstance(_require, Mapping):
-                _require = dict(_require)
+            _require = as_requirement_list(_require)
+            requirements_in_input_params = set(
+                req.name for req in _require).intersection(self.input_params)
+            if requirements_in_input_params and _component is not None:
+                # Save parameters dependence
+                direct_param_dependence[_component].update(requirements_in_input_params)
+                # requirements that are sampled parameters automatically satisfied
+                return [_req for _req in _require
+                        if _req.name not in requirements_in_input_params]
             else:
-                _require = dict.fromkeys(_require)
-            # Save parameters dependence
-            for par in self.input_params:
-                if par in _require and _component is not None:
-                    direct_param_dependence[_component].add(par)
-                    # requirements that are sampled parameters automatically satisfied
-                    _require.pop(par, None)
-            return [Requirement(p, v) for p, v in _require.items()]
+                return _require
 
         # ## 1. Get the requirements and providers ##
         requirements = {}  # requirements of each component
@@ -804,7 +825,7 @@ class Model(HasLogger):
                     required_params = str_to_list(getattr(component, _provides, []))
                 else:
                     required_params = set(
-                        p for p, v in ensure_dict(component.get_requirements()).items()
+                        p for p, v in as_requirement_list(component.get_requirements())
                         # ignore non-params; it's ok if some non-param goes through
                         if v is None)
                 # Identify parameters understood by this likelihood/theory

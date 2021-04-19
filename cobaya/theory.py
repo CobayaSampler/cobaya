@@ -71,23 +71,25 @@ class Theory(CobayaComponent):
 
     def get_requirements(self):
         """
-        Get a dictionary of requirements that are always needed (e.g. must be calculated
-        by a another component or provided as input parameters).
+        Get a dictionary of requirements (or a list of requirement name, option tuples)
+        that are always needed (e.g. must be calculated by a another component
+        or provided as input parameters).
 
-        :return: dictionary of requirements (or iterable of requirement names if no
-                 optional parameters are needed)
+        :return: dictionary or list of tuples of of requirement names and options
+                (or iterable of requirement names if no optional parameters are needed)
         """
-        return dict.fromkeys(str_to_list(getattr(self, _requires, [])))
+        return str_to_list(getattr(self, _requires, []))
 
     def must_provide(self, **requirements):
         """
         Function to be called specifying any output products that are needed and hence
-        should be calculated by this component.
+        should be calculated by this component depending..
 
-        Requirements is a dictionary of requirement names with optional parameters for
-        each. This function may be called more than once with different requirements.
+        The requirements argument is a requirement name with any optional parameters.
+        This function may be called more than once with different requirements.
 
-        :return: optional dictionary of conditional requirements for the ones requested.
+        :return: optional dictionary (or list of requirement name, option tuples) of
+                 conditional requirements for the ones requested.
         """
         # reset states whenever requirements change
         self._states.clear()

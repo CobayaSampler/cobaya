@@ -131,7 +131,7 @@ class BoltzmannBase(Theory):
 
         """
         super().must_provide(**requirements)
-        self._must_provide = self._must_provide or dict.fromkeys(self.output_params)
+        self._must_provide: dict = self._must_provide or dict.fromkeys(self.output_params)
         # Accumulate the requirements across several calls in a safe way;
         # e.g. take maximum of all values of a requested precision parameter
         for k, v in requirements.items():

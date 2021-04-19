@@ -24,7 +24,6 @@ from typing import Mapping, Sequence, Any, List
 from numbers import Number
 from types import ModuleType
 from inspect import cleandoc, getfullargspec
-from math import gcd
 from ast import parse
 import traceback
 
