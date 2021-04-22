@@ -345,7 +345,7 @@ def get_external_function(string_or_function, name=None):
     Returns the function.
     """
     if isinstance(string_or_function, Mapping):
-        string_or_function = string_or_function.get(partag.value, None)
+        string_or_function = string_or_function.get(partag.value)
     if isinstance(string_or_function, str):
         try:
             scope = globals()

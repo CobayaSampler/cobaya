@@ -21,7 +21,7 @@ import requests
 import tqdm
 
 # Local
-from cobaya.log import logger_setup, LoggedError
+from cobaya.log import logger_setup, LoggedError, NoLogging
 from cobaya.tools import create_banner, warn_deprecation, get_resolved_class, \
     write_packages_path_in_config_file, get_config_path, get_kind
 from cobaya.input import get_used_components
@@ -124,14 +124,11 @@ def install(*infos, **kwargs):
             if get_path:
                 install_path = get_path(install_path)
             has_been_installed = False
-            if not debug:
-                logging.disable(logging.ERROR)
-            if kwargs.get("skip_global"):
-                has_been_installed = is_installed(path="global", **kwargs_install)
-            if not has_been_installed:
-                has_been_installed = is_installed(path=install_path, **kwargs_install)
-            if not debug:
-                logging.disable(logging.NOTSET)
+            with NoLogging(None if debug else logging.ERROR):
+                if kwargs.get("skip_global"):
+                    has_been_installed = is_installed(path="global", **kwargs_install)
+                if not has_been_installed:
+                    has_been_installed = is_installed(path=install_path, **kwargs_install)
             if has_been_installed:
                 log.info("External dependencies for this component already installed.")
                 if kwargs.get(_test_run, False):
@@ -171,11 +168,8 @@ def install(*infos, **kwargs):
                 failed_components += ["%s:%s" % (kind, component)]
                 continue
             # test installation
-            if not debug:
-                logging.disable(logging.ERROR)
-            successfully_installed = is_installed(path=install_path, **kwargs_install)
-            if not debug:
-                logging.disable(logging.NOTSET)
+            with NoLogging(None if debug else logging.ERROR):
+                successfully_installed = is_installed(path=install_path, **kwargs_install)
             if not successfully_installed:
                 log.error("Installation apparently worked, "
                           "but the subsequent installation test failed! "
@@ -352,7 +346,7 @@ def install_script():
     # MARKED FOR DEPRECATION IN v3.0
     modules = "modules"
     parser.add_argument("-" + modules[0], "--" + modules,
-                        action="store",  required=False,
+                        action="store", required=False,
                         metavar="/packages/path", default=None,
                         help="To be deprecated! "
                              "Alias for %s, which should be used instead." %

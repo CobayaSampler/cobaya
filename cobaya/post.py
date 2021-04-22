@@ -14,7 +14,7 @@ import numpy as np
 
 # Local
 from cobaya.parameterization import Parameterization
-from cobaya.parameterization import is_fixed_param, is_sampled_param, is_derived_param
+from cobaya.parameterization import is_fixed_or_function_param, is_sampled_param, is_derived_param
 from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_prefix, \
     _post, _params, _prior, kinds, _weight, _resume, _separator, _get_chi2_name, \
     _minuslogpost, _force, partag, _minuslogprior, _packages_path, \
@@ -164,7 +164,7 @@ def post(info: InfoDict, sample=None):
                 raise LoggedError(
                     log, "You tried to add derived parameter '%s', which is already "
                          "present. To force its recomputation, 'remove' it too.", p)
-        elif is_fixed_param(pinfo):
+        elif is_fixed_or_function_param(pinfo):
             # Only one possibility left "fixed" parameter that was not present before:
             # input of new likelihood, or just an argument for dynamical derived (dropped)
             if ((p in info_in[_params] and

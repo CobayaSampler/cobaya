@@ -17,15 +17,15 @@ from typing import Mapping, Sequence
 # Local
 from cobaya.conventions import partag
 from cobaya.tools import get_external_function, ensure_nolatex, is_valid_variable_name, \
-    getfullargspec, deepcopy_where_possible, invert_dict
+    getfullargspec, deepcopy_where_possible, invert_dict, str_to_list
 from cobaya.log import LoggedError, HasLogger
 
 
-def is_fixed_param(info_param):
+def is_fixed_or_function_param(info_param):
     """
     Returns True if the parameter has been fixed to a value or through a function.
     """
-    return expand_info_param(info_param).get(partag.value, None) is not None
+    return expand_info_param(info_param).get(partag.value) is not None
 
 
 def is_sampled_param(info_param):
@@ -71,7 +71,7 @@ def expand_info_param(info_param, default_derived=True):
     if all(f not in info_param for f in [partag.prior, partag.value, partag.derived]):
         info_param[partag.derived] = default_derived
     # Dynamical input parameters: save as derived by default
-    value = info_param.get(partag.value, None)
+    value = info_param.get(partag.value)
     if isinstance(value, str) or callable(value):
         info_param[partag.derived] = info_param.get(partag.derived, True)
     return info_param
@@ -101,7 +101,7 @@ class Parameterization(HasLogger):
     """
 
     def __init__(self, info_params, allow_renames=True, ignore_unused_sampled=False):
-        self.set_logger(lowercase=True)
+        self.set_logger()
         self.allow_renames = allow_renames
         # First, we load the parameters,
         # not caring about whether they are understood by any likelihood.
@@ -119,6 +119,7 @@ class Parameterization(HasLogger):
         self._sampled = {}
         self._sampled_renames = {}
         self._derived = {}
+        self._derived_inputs = []
         self._derived_funcs = {}
         self._derived_args = {}
         self._derived_dependencies = {}
@@ -128,11 +129,11 @@ class Parameterization(HasLogger):
         for p, info in info_params.items():
             info = expand_info_param(info)
             self._infos[p] = info
-            if is_fixed_param(info):
+            if is_fixed_or_function_param(info):
                 if isinstance(info[partag.value], Number):
                     self._constant[p] = info[partag.value]
                     self._input[p] = self._constant[p]
-                    if info.get(partag.drop, False):
+                    if info.get(partag.drop):
                         self._dropped.add(p)
                 else:
                     self._input[p] = None
@@ -141,17 +142,16 @@ class Parameterization(HasLogger):
             if is_sampled_param(info):
                 self._sampled[p] = None
                 self._input[p] = None
-                if info.get(partag.drop, False):
+                if info.get(partag.drop):
                     self._dropped.add(p)
-                self._sampled_renames[p] = (
-                    (lambda x: [x] if isinstance(x, str) else x)
-                    (info.get(partag.renames, [])))
+                self._sampled_renames[p] = str_to_list(info.get(partag.renames) or [])
             if is_derived_param(info):
                 self._derived[p] = deepcopy_where_possible(info)
                 # Dynamical parameters whose value we want to save
-                if info[partag.derived] is True and is_fixed_param(info):
-                    info[partag.derived] = "lambda %s: %s" % (p, p)
-                if info[partag.derived] is True:
+                if info[partag.derived] is True and is_fixed_or_function_param(info):
+                    # parameters that are already known or computed by input funcs
+                    self._derived_inputs.append(p)
+                elif info[partag.derived] is True:
                     self._output[p] = None
                 else:
                     self._derived_funcs[p] = get_external_function(info[partag.derived])
@@ -254,11 +254,6 @@ class Parameterization(HasLogger):
         args = self._input_args[p]
         return func(*[params_values.get(arg) for arg in args])
 
-    def get_derived_func(self, p, **params_values):
-        func = self._derived_funcs[p]
-        args = self._derived_args[p]
-        return func(*[params_values.get(arg) for arg in args])
-
     def to_input(self, sampled_params_values, copied=True):
         # Gets all current sampled and input derived parameters as a dictionary,
         # including dropped parameters.
@@ -288,7 +283,9 @@ class Parameterization(HasLogger):
         # Fill first derived parameters which are direct output parameters
         for p in self._directly_output:
             self._derived[p] = output_params_values[p]
-        # Then evaluate the functions
+        for p in self._derived_inputs:
+            self._derived[p] = self._input.get(p)
+            # Then evaluate the functions
         if self._wrapped_derived_funcs:
             # Then evaluate the functions
             for p, (func, args, to_set) in self._wrapped_derived_funcs.items():
@@ -311,14 +308,13 @@ class Parameterization(HasLogger):
         Returns dict of parameters (model's naming) and their values.
         """
         sampled_output = {}
-        sampled_input = sampled_params.copy()
         for p, renames in self._sampled_renames.items():
-            for pprime in sampled_input:
+            for pprime in sampled_params:
                 if pprime == p or (pprime in renames if self.allow_renames else False):
-                    sampled_output[p] = sampled_input.pop(pprime)
+                    sampled_output[p] = sampled_params.pop(pprime)
                     break
         if len(sampled_output) < len(self._sampled):
-            not_found = set(self.sampled_params()).difference(sampled_output)
+            not_found = set(self._sampled).difference(sampled_output)
             if self.allow_renames:
                 msg = ("The following expected sampled parameters " +
                        ("(or their aliases) " if self.allow_renames else "") +
@@ -331,28 +327,25 @@ class Parameterization(HasLogger):
                        {p: self._sampled_renames[p] for p in not_found})
             raise LoggedError(self.log, *msg)
         # Ignore fixed input parameters if they have the correct value
-        to_pop = []
-        for p, value in sampled_input.items():
-            known_value = self.constant_params().get(p, None)
+        not_used = set(sampled_params)
+        for p, value in sampled_params.items():
+            known_value = self._constant.get(p)
             if known_value is None:
                 raise LoggedError(self.log, "Unknown parameter %r.", p)
             elif np.allclose(value, known_value):
-                to_pop.append(p)
+                not_used.remove(p)
                 self.log.debug("Fixed parameter %r ignored.", p)
             else:
                 raise LoggedError(
                     self.log, "Cannot change value of constant parameter: "
                               "%s = %g (new) vs %g (old).", p, value, known_value)
-        for p in to_pop:
-            sampled_input.pop(p)
-        if sampled_input:
-            not_used = set(sampled_input)
+        if not_used:
             duplicated = not_used.intersection(
                 chain(
                     *[list(chain(*[[k], v])) for k, v in self._sampled_renames.items()]))
             not_used = not_used.difference(duplicated)
-            derived = not_used.intersection(self.derived_params())
-            input_ = not_used.intersection(self.input_params())
+            derived = not_used.intersection(self._derived)
+            input_ = not_used.intersection(self._input)
             unknown = not_used.difference(derived).difference(input_)
             msg = ("Incorrect parameters! " +
                    ("\n   Duplicated entries (using their aliases): %r" % list(duplicated)

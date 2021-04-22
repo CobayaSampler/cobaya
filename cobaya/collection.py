@@ -8,7 +8,6 @@
 
 # Global
 import os
-import logging
 import functools
 import numpy as np
 import pandas as pd
@@ -20,7 +19,7 @@ from math import isclose
 from cobaya.conventions import _weight, _chi2, _minuslogpost, _minuslogprior, \
     _get_chi2_name, _separator
 from cobaya.tools import load_DataFrame
-from cobaya.log import LoggedError, HasLogger
+from cobaya.log import LoggedError, HasLogger, NoLogging
 
 # Suppress getdist output
 chains.print_load_details = False
@@ -470,12 +469,12 @@ class Collection(BaseCollection):
         """
         names = list(self.sampled_params)
         # No logging of warnings temporarily, so getdist won't complain unnecessarily
-        logging.disable(logging.WARNING)
-        mcsamples = MCSamples(
-            samples=self.data[:len(self)][names].values[first:last],
-            weights=self.data[:len(self)][_weight].values[first:last],
-            loglikes=self.data[:len(self)][_minuslogpost].values[first:last], names=names)
-        logging.disable(logging.NOTSET)
+        with NoLogging():
+            mcsamples = MCSamples(
+                samples=self.data[:len(self)][names].values[first:last],
+                weights=self.data[:len(self)][_weight].values[first:last],
+                loglikes=self.data[:len(self)][_minuslogpost].values[first:last],
+                names=names)
         return mcsamples
 
     def reweight(self, importance_weights):

@@ -64,6 +64,19 @@ def abstract(method):
     return not_implemented
 
 
+class NoLogging:
+    def __init__(self, level=logging.WARNING):
+        self._level = level
+
+    def __enter__(self):
+        if self._level:
+            logging.disable(self._level)
+
+    def __exit__(self, exit_type, exit_value, exit_traceback):
+        if self._level:
+            logging.disable(logging.NOTSET)
+
+
 def exception_handler(exception_type, exception_instance, trace_back):
     # Do not print traceback if the exception has been handled and logged by LoggedError
     # MPI abort if all processes don't raise exception in short timeframe (e.g. deadlock).
