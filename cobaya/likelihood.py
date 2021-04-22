@@ -210,6 +210,8 @@ class LikelihoodExternalFunction(Likelihood):
              if p not in ignore_args and
              (isinstance(val, numbers.Number) or val is None)]
         self._args = set(chain(self._optional_args, self.params))
+        if argspec.varkw:
+            self._args.update(self.input_params)
         self._requirements = info.get(_requires) or {}
         self.log.info("Initialized external likelihood.")
 
