@@ -735,6 +735,14 @@ def fuzzy_match(input_string, choices, n=3, score_cutoff=50):
         return []
 
 
+def has_non_yaml_reproducible(info):
+    for value in info.values():
+        if callable(value) or \
+                isinstance(value, Mapping) and not has_non_yaml_reproducible(value):
+            return True
+    return False
+
+
 def deepcopy_where_possible(base):
     """
     Deepcopies an object whenever possible. If the object cannot be copied, returns a

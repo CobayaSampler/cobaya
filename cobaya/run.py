@@ -15,14 +15,14 @@ import os
 from cobaya import __version__
 from cobaya.conventions import kinds, _prior, _params, _packages_path, _output_prefix, \
     _debug, _debug_file, _resume, _timing, _force, _post, _test_run, \
-    _yaml_extensions, _packages_path_arg, \
+    _yaml_extensions, _dill_extension, _packages_path_arg, \
     _packages_path_arg_posix, InfoDict
 from cobaya.output import get_output, split_prefix, get_info_path
 from cobaya.model import Model
 from cobaya.sampler import get_sampler_name_and_class, check_sampler_info
 from cobaya.log import logger_setup, LoggedError
 from cobaya.yaml import yaml_dump, yaml_load
-from cobaya.input import update_info, load_input_MPI
+from cobaya.input import update_info, load_input_MPI, load_info_dump
 from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic, \
     check_deprecated_modules_path
 from cobaya.post import post
@@ -41,7 +41,7 @@ def run(info_or_yaml_or_file: Union[InfoDict, str, os.PathLike],
     Run from an input dictionary, file name or yaml string, with optional arguments
     to override settings in the input as needed.
 
-    :param info_or_yaml_or_file: dictionary, yaml file name, or yaml text with options
+    :param info_or_yaml_or_file: input options dictionary, yaml file, or yaml text
     :param packages_path: path where external packages were installed
     :param output: path name prefix for output files
     :param debug: verbose debug output
@@ -229,7 +229,7 @@ def run_script(help_commands=None):
 
 
 def load_input_file(input_file: Union[str, os.PathLike],
-                    no_mpi: bool = False, help_commands: [str, None] = None):
+                    no_mpi: bool = False, help_commands: [str, None] = None) -> InfoDict:
     if no_mpi:
         mpi.set_mpi_disabled()
     input_file = str(input_file)
@@ -239,18 +239,26 @@ def load_input_file(input_file: Union[str, os.PathLike],
                          "Please, use a different one.")
     if suffix.lower() in _yaml_extensions:
         info = load_input_MPI(input_file)
+    elif suffix == _dill_extension:
+        info = load_info_dump(input_file)
     else:
-        # Passed an existing output_prefix? Try to find the corresponding *.updated.yaml
-        updated_file = get_info_path(*split_prefix(input_file))
-        try:
-            info = load_input_MPI(updated_file)
-        except IOError:
-            err_msg = "Not a valid input file, or non-existent run to resume."
-            if help_commands:
-                err_msg += (" Maybe you mistyped one of the following commands: "
-                            + help_commands)
-            raise ValueError(err_msg)
-        # We need to update the output_prefix to resume the run *where it is*
+        # Passed an existing output_prefix?
+        # First see if there is a binary info pickle
+        updated_file = get_info_path(*split_prefix(input_file), ext=_dill_extension)
+        if os.path.exists(updated_file):
+            info = load_info_dump(updated_file)
+        else:
+            # Try to find the corresponding *.updated.yaml
+            updated_file = get_info_path(*split_prefix(input_file))
+            try:
+                info = load_input_MPI(updated_file)
+            except IOError:
+                err_msg = "Not a valid input file, or non-existent run to resume."
+                if help_commands:
+                    err_msg += (" Maybe you mistyped one of the following commands: "
+                                + help_commands)
+                raise ValueError(err_msg)
+            # We need to update the output_prefix to resume the run *where it is*
         info[_output_prefix] = input_file
         # If input given this way, we obviously want to resume!
         info[_resume] = True

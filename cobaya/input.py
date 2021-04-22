@@ -67,6 +67,13 @@ def load_input_MPI(input_file):
     return load_input(input_file)
 
 
+@mpi.from_root
+def load_info_dump(input_file):
+    import dill
+    with open(input_file, 'rb') as f:
+        return dill.load(f)
+
+
 def get_used_components(*infos, return_infos=False):
     """
     Returns all requested components as an dict ``{kind: set([components])}``.

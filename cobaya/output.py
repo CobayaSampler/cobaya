@@ -16,16 +16,17 @@ import logging
 from packaging import version
 
 # Local
-from cobaya import __version__
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
 from cobaya.conventions import _input_suffix, _updated_suffix, _separator_files, _version
-from cobaya.conventions import _resume, _resume_default, _force, _yaml_extensions
+from cobaya.conventions import _resume, _resume_default, _force
+from cobaya.conventions import _yaml_extensions, _dill_extension
 from cobaya.conventions import _output_prefix, _debug, kinds, _params, _class_name
 from cobaya.log import LoggedError, HasLogger, get_traceback_text
 from cobaya.input import is_equal_info, get_resolved_class
 from cobaya.collection import Collection
 from cobaya.tools import deepcopy_where_possible, find_with_regexp, sort_cosmetic
-from cobaya import mpi
+from cobaya.tools import has_non_yaml_reproducible
+from cobaya import mpi, __version__
 
 # Default output type and extension
 _kind = "txt"
@@ -47,7 +48,7 @@ def split_prefix(prefix):
     return folder, file_prefix
 
 
-def get_info_path(folder, prefix, infix=None, kind="updated"):
+def get_info_path(folder, prefix, infix=None, kind="updated", ext=_yaml_extensions[0]):
     """
     Gets path to info files saved by Output.
     """
@@ -61,7 +62,7 @@ def get_info_path(folder, prefix, infix=None, kind="updated"):
         suffix = {"input": _input_suffix, "updated": _updated_suffix}[kind.lower()]
     except KeyError:
         raise ValueError("`kind` must be `input|updated`")
-    return info_file_prefix + infix + suffix + _yaml_extensions[0]
+    return info_file_prefix + infix + suffix + ext
 
 
 class FileLock:
@@ -71,7 +72,7 @@ class FileLock:
         if filename:
             self.set_lock(log, filename)
 
-    def set_lock(self, log, filename):
+    def set_lock(self, log, filename, force=False):
         if self.has_lock():
             return
         self.lock_file = filename + '.lock'
@@ -87,7 +88,7 @@ class FileLock:
                 import portalocker
             except ModuleNotFoundError:
                 # will work, but crashes will leave .lock files that will raise error
-                self._file_handle = open(self.lock_file, 'xb')
+                self._file_handle = open(self.lock_file, 'wb' if force else 'xb')
             else:
                 try:
                     h = open(self.lock_file, 'wb')
@@ -200,9 +201,11 @@ class Output(HasLogger):
         # Prepare file names, and check if chain exists
         self.file_input = get_info_path(
             self.folder, self.prefix, infix=infix, kind="input")
-        self.lock.set_lock(self.log, self.file_input)
+        self.lock.set_lock(self.log, self.file_input, force=force)
         self.file_updated = get_info_path(
             self.folder, self.prefix, infix=infix, kind="updated")
+        self.dump_file_updated = self.file_updated.replace(_yaml_extensions[0],
+                                                           _dill_extension)
         self._resuming = False
         # Output kind and collection extension
         self.kind = _kind
@@ -268,7 +271,7 @@ class Output(HasLogger):
     @mpi.root_only
     def delete_infos(self):
         self.check_lock()
-        for f in [self.file_input, self.file_updated]:
+        for f in [self.file_input, self.file_updated, self.dump_file_updated]:
             try:
                 os.remove(f)
             except OSError:
@@ -398,6 +401,14 @@ class Output(HasLogger):
                         f_out.write(yaml_dump(sort_cosmetic(info)))
                     except OutputError as e:
                         raise LoggedError(self.log, str(e))
+        if updated_info_trimmed and has_non_yaml_reproducible(updated_info_trimmed):
+            try:
+                import dill
+            except ImportError:
+                self.mpi_info('Install "dill" to save reproducible options file.')
+            else:
+                with open(self.dump_file_updated, 'wb') as f:
+                    dill.dump(sort_cosmetic(updated_info_trimmed), f)
 
     def delete_with_regexp(self, regexp, root=None):
         """

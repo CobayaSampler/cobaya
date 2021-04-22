@@ -11,10 +11,12 @@ import os
 import logging
 from itertools import chain
 import numpy as np
+from typing import List
 
 # Local
 from cobaya.parameterization import Parameterization
-from cobaya.parameterization import is_fixed_or_function_param, is_sampled_param, is_derived_param
+from cobaya.parameterization import is_fixed_or_function_param, is_sampled_param, \
+    is_derived_param
 from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_prefix, \
     _post, _params, _prior, kinds, _weight, _resume, _separator, _get_chi2_name, \
     _minuslogpost, _force, partag, _minuslogprior, _packages_path, \
@@ -44,7 +46,7 @@ class DummyModel:
 
 
 @mpi.sync_state
-def post(info: InfoDict, sample=None):
+def post(info: InfoDict, sample: [Collection, List[Collection], None] = None):
     logger_setup(info.get(_debug), info.get(_debug_file))
     log = logging.getLogger(__name__.split(".")[-1])
     # MARKED FOR DEPRECATION IN v3.0
