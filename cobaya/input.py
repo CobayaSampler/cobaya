@@ -24,7 +24,7 @@ from cobaya.conventions import _products_path, _packages_path, _resume, _force, 
     partag, _external, _output_prefix, _debug, _debug_file, _auto_params, _prior, \
     kinds, _provides, _requires, _input_params, _output_params, _component_path, \
     _aliases, _yaml_extensions, reserved_attributes, empty_dict, _get_chi2_name, \
-    _get_chi2_label, _test_run, _version, _class_name
+    _get_chi2_label, _test_run, _version, _class_name, _dill_extension
 from cobaya.tools import recursive_update, str_to_list, get_base_classes, \
     fuzzy_match, deepcopy_where_possible, get_resolved_class
 from cobaya.yaml import yaml_load_file, yaml_dump
@@ -42,9 +42,13 @@ def load_input(input_file):
     """
     file_name, extension = os.path.splitext(input_file)
     file_name = os.path.basename(file_name)
-    if extension.lower() not in _yaml_extensions:
+    if extension.lower() in _yaml_extensions:
+        info = yaml_load_file(input_file) or {}
+    elif extension == _dill_extension:
+        info = load_info_dump(input_file) or {}
+    else:
         raise LoggedError(log, "Extension of input file '%s' not recognized.", input_file)
-    info = yaml_load_file(input_file) or {}
+
     # if output_prefix not defined, default to input_file name (sans ext.) as prefix;
     if _output_prefix not in info:
         info[_output_prefix] = file_name
@@ -67,7 +71,7 @@ def load_input_MPI(input_file):
     return load_input(input_file)
 
 
-@mpi.from_root
+# load from dill pickle, including any lambda functions or external classes
 def load_info_dump(input_file):
     import dill
     with open(input_file, 'rb') as f:

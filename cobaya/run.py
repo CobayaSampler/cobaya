@@ -22,7 +22,7 @@ from cobaya.model import Model
 from cobaya.sampler import get_sampler_name_and_class, check_sampler_info
 from cobaya.log import logger_setup, LoggedError
 from cobaya.yaml import yaml_dump, yaml_load
-from cobaya.input import update_info, load_input_MPI, load_info_dump
+from cobaya.input import update_info, load_input_MPI
 from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic, \
     check_deprecated_modules_path
 from cobaya.post import post
@@ -237,28 +237,24 @@ def load_input_file(input_file: Union[str, os.PathLike],
     if os.path.basename(stem) in ("input", "updated"):
         raise ValueError("'input' and 'updated' are reserved file names. "
                          "Please, use a different one.")
-    if suffix.lower() in _yaml_extensions:
+    if suffix.lower() in _yaml_extensions + (_dill_extension,):
         info = load_input_MPI(input_file)
-    elif suffix == _dill_extension:
-        info = load_info_dump(input_file)
     else:
         # Passed an existing output_prefix?
         # First see if there is a binary info pickle
         updated_file = get_info_path(*split_prefix(input_file), ext=_dill_extension)
-        if os.path.exists(updated_file):
-            info = load_info_dump(updated_file)
-        else:
+        if not os.path.exists(updated_file):
             # Try to find the corresponding *.updated.yaml
             updated_file = get_info_path(*split_prefix(input_file))
-            try:
-                info = load_input_MPI(updated_file)
-            except IOError:
-                err_msg = "Not a valid input file, or non-existent run to resume."
-                if help_commands:
-                    err_msg += (" Maybe you mistyped one of the following commands: "
-                                + help_commands)
-                raise ValueError(err_msg)
-            # We need to update the output_prefix to resume the run *where it is*
+        try:
+            info = load_input_MPI(updated_file)
+        except IOError:
+            err_msg = "Not a valid input file, or non-existent run to resume."
+            if help_commands:
+                err_msg += (" Maybe you mistyped one of the following commands: "
+                            + help_commands)
+            raise ValueError(err_msg)
+        # We need to update the output_prefix to resume the run *where it is*
         info[_output_prefix] = input_file
         # If input given this way, we obviously want to resume!
         info[_resume] = True

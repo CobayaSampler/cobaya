@@ -22,7 +22,7 @@ from cobaya.conventions import _resume, _resume_default, _force
 from cobaya.conventions import _yaml_extensions, _dill_extension
 from cobaya.conventions import _output_prefix, _debug, kinds, _params, _class_name
 from cobaya.log import LoggedError, HasLogger, get_traceback_text
-from cobaya.input import is_equal_info, get_resolved_class
+from cobaya.input import is_equal_info, get_resolved_class, load_info_dump
 from cobaya.collection import Collection
 from cobaya.tools import deepcopy_where_possible, find_with_regexp, sort_cosmetic
 from cobaya.tools import has_non_yaml_reproducible
@@ -202,10 +202,9 @@ class Output(HasLogger):
         self.file_input = get_info_path(
             self.folder, self.prefix, infix=infix, kind="input")
         self.lock.set_lock(self.log, self.file_input, force=force)
-        self.file_updated = get_info_path(
-            self.folder, self.prefix, infix=infix, kind="updated")
-        self.dump_file_updated = self.file_updated.replace(_yaml_extensions[0],
-                                                           _dill_extension)
+        self.file_updated = get_info_path(self.folder, self.prefix, infix=infix)
+        self.dump_file_updated = get_info_path(
+            self.folder, self.prefix, infix=infix, ext=_dill_extension)
         self._resuming = False
         # Output kind and collection extension
         self.kind = _kind
@@ -296,13 +295,16 @@ class Output(HasLogger):
 
     def reload_updated_info(self, cache=False, use_cache=False):
         if mpi.is_main_process():
-            if use_cache and getattr(self, "_old_updated_info", None):
+            if use_cache and hasattr(self, "_old_updated_info"):
                 return self._old_updated_info
             try:
-                loaded = yaml_load_file(self.file_updated)
+                if os.path.isfile(self.dump_file_updated):
+                    loaded = load_info_dump(self.dump_file_updated)
+                else:
+                    loaded = yaml_load_file(self.file_updated)
                 if cache:
-                    self._old_updated_info = loaded
-                return deepcopy_where_possible(loaded)
+                    self._old_updated_info = deepcopy_where_possible(loaded)
+                return loaded
             except IOError:
                 if cache:
                     self._old_updated_info = None
@@ -337,6 +339,10 @@ class Output(HasLogger):
             # This is because we can't actually check if python objects do change
             old_info = self.reload_updated_info(cache=cache_old, use_cache=use_cache_old)
             if old_info:
+                # use consistent yaml read-in types
+                # TODO: could probably just compare full infos here, with externals?
+                #  for the moment cautiously keeping old behaviour
+                old_info = yaml_load(yaml_dump(old_info))
                 new_info = yaml_load(yaml_dump(updated_info_trimmed))
                 if not is_equal_info(old_info, new_info, strict=False,
                                      ignore_blocks=list(ignore_blocks) + [
@@ -348,8 +354,8 @@ class Output(HasLogger):
                 # - If not specified now, take the one used in resume info
                 # - If specified both now and before, check new older than old one
                 # (For Cobaya's own version, prefer new one always)
-                old_version = old_info.get(_version, None)
-                new_version = new_info.get(_version, None)
+                old_version = old_info.get(_version)
+                new_version = new_info.get(_version)
                 if old_version:
                     if version.parse(old_version) > version.parse(new_version):
                         raise LoggedError(

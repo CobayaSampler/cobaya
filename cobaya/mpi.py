@@ -61,6 +61,15 @@ def get_mpi():
             _mpi = MPI
         except ImportError:
             _mpi = None
+        else:
+            if more_than_one_process():
+                try:
+                    import dill
+                except ImportError:
+                    pass
+                else:
+                    _mpi.pickle.__init__(dill.dumps, dill.loads)
+
     return _mpi
 
 
