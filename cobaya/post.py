@@ -11,7 +11,8 @@ import os
 import logging
 from itertools import chain
 import numpy as np
-from typing import List
+import sys
+from typing import List, Union, Dict, Tuple
 
 # Local
 from cobaya.parameterization import Parameterization
@@ -31,6 +32,15 @@ from cobaya.tools import progress_bar, recursive_update, deepcopy_where_possible
 from cobaya.model import Model
 from cobaya.prior import Prior
 
+if sys.version_info >= (3, 8):
+    from typing import TypedDict
+
+
+    class ResultDict(TypedDict):
+        sample: Union[Collection, List[Collection]]
+else:
+    ResultDict = Dict[str, Union[Collection, List[Collection]]]
+
 _minuslogprior_1d_name = _minuslogprior + _separator + _prior_1d_name
 _default_post_cache_size = 2000
 
@@ -46,7 +56,8 @@ class DummyModel:
 
 
 @mpi.sync_state
-def post(info: InfoDict, sample: [Collection, List[Collection], None] = None):
+def post(info: InfoDict, sample: Union[Collection, List[Collection], None] = None
+         ) -> Tuple[InfoDict, ResultDict]:
     logger_setup(info.get(_debug), info.get(_debug_file))
     log = logging.getLogger(__name__.split(".")[-1])
     # MARKED FOR DEPRECATION IN v3.0
@@ -59,6 +70,12 @@ def post(info: InfoDict, sample: [Collection, List[Collection], None] = None):
         raise LoggedError(log, "No 'post' block given. Nothing to do!")
     if mpi.is_main_process() and info.get(_resume):
         log.warning("Resuming not implemented for post-processing. Re-starting.")
+    if not info.get(_output_prefix) and info_post.get(_output_prefix) \
+            and not info.get(_params):
+        raise LoggedError(log, "The input dictionary must have be a full option "
+                               "dictionary, or have an existing 'output' root to load "
+                               "previous settings from ('output' to read from is in the "
+                               "main block not under 'post'). ")
     # 1. Load existing sample
     output_in = get_output(prefix=info.get(_output_prefix))
     if output_in:
@@ -423,7 +440,8 @@ def post(info: InfoDict, sample: [Collection, List[Collection], None] = None):
             collection_out.add(
                 sampled, derived=derived.values(), weight=point.get(_weight),
                 logpriors=logpriors_new, loglikes=loglikes_new)
-            mpi.process_state.check_error()
+            if mpi.process_state:
+                mpi.process_state.check_error()
             # Display progress
             percent = int(np.round((i + done) / to_do * 100))
             if percent != last_percent and not percent % 5:

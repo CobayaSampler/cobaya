@@ -417,9 +417,10 @@ class ProcessState:
         return all_ready
 
     def __enter__(self):
-        self.last_process_state = process_state
-        set_current_process_state(self)
-        self.sync()
+        if more_than_one_process():
+            self.last_process_state = process_state
+            set_current_process_state(self)
+            self.sync()
         self.states[:] = State.NONE
         return self
 

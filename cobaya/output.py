@@ -75,7 +75,7 @@ class FileLock:
     def set_lock(self, log, filename, force=False):
         if self.has_lock():
             return
-        self.lock_file = filename + '.lock'
+        self.lock_file = filename + '.locked'
         self.lock_error_file = filename + '.lock_err'
         try:
             os.remove(self.lock_error_file)

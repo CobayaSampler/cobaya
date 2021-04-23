@@ -609,19 +609,21 @@ class Prior(HasLogger):
             self.log.info(
                 "Reference values or pdf's for some parameters were not provided. "
                 "Sampling from the prior instead for those parameters.")
-        ignore_cond = (
-            lambda x: (x is np.nan or
-                       (isinstance(x, numbers.Real) if ignore_fixed else False)))
-        where_ignore_ref = [ignore_cond(r) for r in self.ref_pdf]
+
+        where_ignore_ref = [r is np.nan or ignore_fixed and isinstance(r, numbers.Real)
+                            for r in self.ref_pdf]
         tries = 0
         warn_if_tries = read_dnumber(warn_if_tries, self.d())
+        ref_sample = np.empty(len(self.ref_pdf))
         while tries < max_tries:
             tries += 1
-            ref_sample = np.array([getattr(ref_pdf, "rvs", lambda: ref_pdf.real)()
-                                   for i, ref_pdf in enumerate(self.ref_pdf)])
-            if np.any(where_ignore_ref):
+            if any(where_ignore_ref):
                 prior_sample = self.sample(ignore_external=True)[0]
                 ref_sample[where_ignore_ref] = prior_sample[where_ignore_ref]
+            for i, ref_pdf in enumerate(self.ref_pdf):
+                if not where_ignore_ref[i]:
+                    ref_sample[i] = getattr(ref_pdf, "rvs", lambda: ref_pdf.real)()
+
             if self.logp(ref_sample) > -np.inf:
                 return ref_sample
             if tries == warn_if_tries:

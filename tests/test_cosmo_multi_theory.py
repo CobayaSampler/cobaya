@@ -271,7 +271,7 @@ class BinnedPk(Theory):
         params = {}
         for b in range(nbins):
             par = deepcopy(bin_par.copy())
-            par['label'] = 'b_%s' % (b + 1)
+            par['latex'] = 'b_%s' % (b + 1)
             params['b%s' % (b + 1)] = par
         options['params'] = params
         return options

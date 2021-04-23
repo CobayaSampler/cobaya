@@ -127,6 +127,9 @@ class Parameterization(HasLogger):
         # to infos without _prior or partag.value, and a partag.value field
         # to fixed params
         for p, info in info_params.items():
+            if isinstance(info, Mapping) and set(info).difference(partag):
+                raise LoggedError(self.log, "Parameter '%s' has unknown options %s",
+                                  p, set(info).difference(partag))
             info = expand_info_param(info)
             self._infos[p] = info
             if is_fixed_or_function_param(info):

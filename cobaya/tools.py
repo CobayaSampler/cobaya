@@ -394,7 +394,7 @@ def recursive_update(base, update):
                 base.get(update_key, {}), update_value)
         else:
             base[update_key] = update_value
-    # Trim terminal (o)dicts
+    # Trim terminal dicts
     for k, v in (base or {}).items():
         if isinstance(v, Mapping) and len(v) == 0:
             base[k] = None

@@ -592,7 +592,7 @@ class Model(HasLogger):
             # Component params converted to requirements if not explicitly sampled
             requirements[component] += \
                 [Requirement(p, None) for p in (getattr(component, _params, {}) or []) if
-                 p not in component.input_params + component.output_params]
+                 p not in self.input_params + component.output_params]
             # Gather what this component can provide
             can_provide = (list(component.get_can_provide()) +
                            list(component.get_can_provide_methods()))
