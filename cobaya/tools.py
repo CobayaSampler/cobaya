@@ -388,10 +388,12 @@ def recursive_update(base, update):
     """
     base = base or {}
     for update_key, update_value in (update or {}).items():
-        update_value = update_value if update_value is not None else {}
         if isinstance(update_value, Mapping):
             base[update_key] = recursive_update(
                 base.get(update_key, {}), update_value)
+        elif update_value is None:
+            if update_key not in base:
+                base[update_key] = {}
         else:
             base[update_key] = update_value
     # Trim terminal dicts
