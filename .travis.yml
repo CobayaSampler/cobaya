@@ -96,11 +96,11 @@ before_install:
       hash -r;
       conda config --set always_yes yes --set changeps1 no;
       conda info -a;
-      conda create -q -n test-environment -c $ANACONDA_CHANNEL python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML pytest pytest-forked flaky;
+      conda create -q -n test-environment -c $ANACONDA_CHANNEL python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML pytest pytest-forked flaky dill;
       source activate test-environment;
       pip install mpi4py;
     else
-      pip install mpi4py pytest-forked flaky matplotlib;
+      pip install mpi4py pytest-forked flaky matplotlib dill;
     fi
   - python --version
 
