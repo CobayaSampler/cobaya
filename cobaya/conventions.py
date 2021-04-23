@@ -58,7 +58,7 @@ _aliases = "aliases"
 _version = "version"
 
 ParTags = namedtuple('ParTags', ("prior", "ref", "proposal", "value", "dist", "drop",
-                                 "derived", "latex", "renames"))
+                                 "derived", "latex", "renames", "min", "max"))
 partag = ParTags(*ParTags._fields)
 
 ComponentKinds = namedtuple('ComponentKinds', ("sampler", "theory", "likelihood"))
