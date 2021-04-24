@@ -69,7 +69,7 @@ def test_cosmo_run_resume_post(tmpdir, packages_path=None):
                                 override={'sampler': {'mcmc': {'Rminus1_stop': 0.05}}})
     products = sampler.products()
     results = mpi.allgather(products["sample"])
-    samp = MCSamplesFromCobaya(updated_info, results, ignore_rows=0.3)
+    samp = MCSamplesFromCobaya(updated_info, results, ignore_rows=0.2)
     if local:
         from getdist import plots
         g = plots.get_subplot_plotter()
@@ -90,6 +90,7 @@ def test_cosmo_run_resume_post(tmpdir, packages_path=None):
     samp2 = MCSamplesFromCobaya(output_info, results2)
     assert abs(samp2.mean('sigma8') - 0.75) < 0.02
 
+    # from save info, no output
     info_post['output'] = None
     output_info, products = run({'output': info['output'], 'post': info_post}, force=True)
     results3 = mpi.allgather(products["sample"])
@@ -99,6 +100,22 @@ def test_cosmo_run_resume_post(tmpdir, packages_path=None):
     samps4 = loadMCSamples(info['output'] + '.post.testpost')
     assert np.isclose(samp3.mean("joint"), samps4.mean("joint"))
 
+    # test recover original answer swapping likelihoods back
+    info_revert = {'add': {'likelihood': info['likelihood']},
+                   'remove': {'likelihood': ["test_likelihood2"]},
+                   'suffix': 'revert',
+                   'skip': 0, 'thin': 1,
+                   'output': None
+                   }
+    output_info, products = run({'output': info['output'] + '.post.testpost',
+                                 'post': info_revert}, force=True)
+    results_revert = mpi.allgather(products["sample"])
+    samp_revert = MCSamplesFromCobaya(output_info, results_revert)
+    samp.weighted_thin(4)
+    assert samp.numrows == samp_revert.numrows
+    assert np.isclose(samp_revert.mean("sigma8"), samp.mean("sigma8"))
+
+    # no remove
     info_post = {
         'add': {'params': {'h': None}, "likelihood": {"test_likelihood2": likelihood2}},
         'suffix': 'test2', 'skip': 0.2, 'thin': 4}

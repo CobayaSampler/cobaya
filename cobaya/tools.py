@@ -516,9 +516,8 @@ def load_DataFrame(file_name, skip=0, root_file_name=None):
             cols = [a.strip() for a in top_line.lstrip("#").split()]
         if 0 < skip < 1:
             # turn into #lines (need to know total line number)
-            for n, line in enumerate(inp):
-                pass
-            skip = int(skip * (n + 1))
+            n = sum(1 for _ in inp)
+            skip = int(round(skip * n)) + 1  # match getdist
             inp.seek(0)
         data = pd.read_csv(
             inp, sep=" ", header=None, names=cols, comment="#", skipinitialspace=True,
