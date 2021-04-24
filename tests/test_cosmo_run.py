@@ -56,8 +56,9 @@ info: InfoDict = {"params": {
 def test_cosmo_run_resume_post(tmpdir, packages_path=None):
     # only vary As, so fast chain
     info['output'] = os.path.join(tmpdir, 'testchain')
-    ##
-    info['output'] = r'z:\testchain'
+    local = False
+    if local:
+        info['output'] = r'z:\testchain'
 
     if packages_path:
         info[_packages_path] = process_packages_path(packages_path)
@@ -69,8 +70,7 @@ def test_cosmo_run_resume_post(tmpdir, packages_path=None):
     products = sampler.products()
     results = mpi.allgather(products["sample"])
     samp = MCSamplesFromCobaya(updated_info, results, ignore_rows=0.3)
-    print(samp.getParamSampleDict(-1))
-    if False:
+    if local:
         from getdist import plots
         g = plots.get_subplot_plotter()
         g.plots_1d([samp])
