@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from getdist.mcsamples import MCSamplesFromCobaya
+from getdist.mcsamples import MCSamplesFromCobaya, loadMCSamples
 from cobaya.theory import Theory
 from cobaya.run import run
 from cobaya import mpi
@@ -42,6 +42,7 @@ info: InfoDict = {"params": {
     "joint": {"derived": "lambda sigma8, omegam, As100: sigma8 ** 2 * omegam*As100"}},
     "likelihood": {
         "test_likelihood": {'external': likelihood,
+                            'type': 'type1',
                             'requires': ['As', 'sigma8']}},
     'theory': {'test_theory': ATheory,
                'camb': {'stop_at_error': True,
@@ -55,6 +56,9 @@ info: InfoDict = {"params": {
 def test_cosmo_run_resume_post(tmpdir, packages_path=None):
     # only vary As, so fast chain
     info['output'] = os.path.join(tmpdir, 'testchain')
+    ##
+    info['output'] = r'z:\testchain'
+
     if packages_path:
         info[_packages_path] = process_packages_path(packages_path)
     run(info, force=True)
@@ -65,23 +69,44 @@ def test_cosmo_run_resume_post(tmpdir, packages_path=None):
     products = sampler.products()
     results = mpi.allgather(products["sample"])
     samp = MCSamplesFromCobaya(updated_info, results, ignore_rows=0.3)
+    print(samp.getParamSampleDict(-1))
+    if False:
+        from getdist import plots
+        g = plots.get_subplot_plotter()
+        g.plots_1d([samp])
+        g.export(r'z:\test.pdf')
 
     assert np.isclose(samp.mean('As100'), 100 * samp.mean('As'))
     assert abs(samp.mean('sigma8') - 0.69) < 0.02
 
     info_post = {'add': {'params': {'h': None},
                          "likelihood": {"test_likelihood2": likelihood2}},
-                 'remove': {'likelihood': "test_likelihood"},
+                 'remove': {'likelihood': ["test_likelihood"]},
                  'suffix': 'testpost',
                  'skip': 0.2, 'thin': 4
                  }
-    output_info, products = run(updated_info, override={'post': info_post})
+    output_info, products = run(updated_info, override={'post': info_post}, force=True)
     results2 = mpi.allgather(products["sample"])
     samp2 = MCSamplesFromCobaya(output_info, results2)
     assert abs(samp2.mean('sigma8') - 0.75) < 0.02
 
     info_post['output'] = None
-    output_info, products = run({'output': info['output'], 'post': info_post})
+    output_info, products = run({'output': info['output'], 'post': info_post}, force=True)
     results3 = mpi.allgather(products["sample"])
     samp3 = MCSamplesFromCobaya(output_info, results3)
+    assert abs(samp3.mean('sigma8') - 0.75) < 0.02
     assert np.isclose(samp3.mean("joint"), samp2.mean("joint"))
+    samps4 = loadMCSamples(info['output'] + '.post.testpost')
+    assert np.isclose(samp3.mean("joint"), samps4.mean("joint"))
+
+    info_post = {
+        'add': {'params': {'h': None}, "likelihood": {"test_likelihood2": likelihood2}},
+        'suffix': 'test2', 'skip': 0.2, 'thin': 4}
+    output_info, products = run(updated_info, override={'post': info_post}, force=True)
+    results2 = mpi.allgather(products["sample"])
+    samp2 = MCSamplesFromCobaya(output_info, results2)
+    assert "chi2__type1" in samp2.paramNames.list()
+    # check what has been saved to disk is consistent
+    samps4 = loadMCSamples(updated_info['output'] + '.post.test2')
+    assert samp2.paramNames.list() == samps4.paramNames.list()
+    assert np.isclose(samp2.mean("sigma8"), samps4.mean("sigma8"))

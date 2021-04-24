@@ -86,7 +86,7 @@ def post(info: InfoDict, sample: Union[Collection, List[Collection], None] = Non
     else:
         info_in = deepcopy_where_possible(info)
     dummy_model_in = DummyModel(info_in[_params], info_in.get(kinds.likelihood, {}),
-                                info_in.get(_prior, None))
+                                info_in.get(_prior))
     in_collections = []
     thin = info_post.get("thin", 1)
     skip = info_post.get("skip", 0)
@@ -144,7 +144,7 @@ def post(info: InfoDict, sample: Union[Collection, List[Collection], None] = Non
     # Expand the "add" info
     add = update_info(add)
     # 2.1 Adding/removing derived parameters and changes in priors of sampled parameters
-    out = {_params: deepcopy_where_possible(info_in[_params])}
+    out_combined = {_params: deepcopy_where_possible(info_in[_params])}
     remove_params = list(str_to_list(remove.get(_params)) or [])
     for p in remove_params:
         pinfo = info_in[_params].get(p)
@@ -153,11 +153,11 @@ def post(info: InfoDict, sample: Union[Collection, List[Collection], None] = Non
                 log,
                 "You tried to remove parameter '%s', which is not a derived parameter. "
                 "Only derived parameters can be removed during post-processing.", p)
-        out[_params].pop(p)
+        out_combined[_params].pop(p)
     # Force recomputation of aggregated chi2
-    for p in list(out[_params]):
+    for p in list(out_combined[_params]):
         if p.startswith(_get_chi2_name("")):
-            out[_params].pop(p)
+            out_combined[_params].pop(p)
     prior_recompute_1d = False
     for p, pinfo in (add.get(_params) or {}).items():
         pinfo_in = info_in[_params].get(p)
@@ -179,7 +179,7 @@ def post(info: InfoDict, sample: Union[Collection, List[Collection], None] = Non
             # recompute prior if potentially changed sampled parameter priors
             prior_recompute_1d = True
         elif is_derived_param(pinfo):
-            if p in out[_params]:
+            if p in out_combined[_params]:
                 raise LoggedError(
                     log, "You tried to add derived parameter '%s', which is already "
                          "present. To force its recomputation, 'remove' it too.", p)
@@ -196,7 +196,7 @@ def post(info: InfoDict, sample: Union[Collection, List[Collection], None] = Non
                     p, dict(pinfo), p, dict(pinfo_in))
         else:
             raise LoggedError(log, "This should not happen. Contact the developers.")
-        out[_params][p] = pinfo
+        out_combined[_params][p] = pinfo
     # Turn the rest of *derived* parameters into constants,
     # so that the likelihoods do not try to recompute them
     # But be careful to exclude *input* params that have a "derived: True" value
@@ -205,7 +205,7 @@ def post(info: InfoDict, sample: Union[Collection, List[Collection], None] = Non
     # recomputed if needed. If the theory does not need to be computed, it doesn't matter
     # if it is already assigned parameters in the usual way; likelihoods can get
     # the required derived parameters from the stored sample derived parameter inputs.
-    out_params_with_computed = deepcopy_where_possible(out[_params])
+    out_params_with_computed = deepcopy_where_possible(out_combined[_params])
     dropped_theory = set()
     for p, pinfo in out_params_with_computed.items():
         if (is_derived_param(pinfo) and not (partag.value in pinfo)
@@ -214,34 +214,37 @@ def post(info: InfoDict, sample: Union[Collection, List[Collection], None] = Non
             dropped_theory.add(p)
     # 2.2 Manage adding/removing priors and likelihoods
     warn_remove = False
-    for level in [_prior, kinds.likelihood]:
-        out[level] = getattr(dummy_model_in, level)
-        if level == _prior:
-            out[level].remove(_prior_1d_name)
-        for pdf in str_to_list(remove.get(level)) or []:
+    for kind in [_prior, kinds.likelihood, kinds.theory]:
+        out_combined[kind] = deepcopy_where_possible(info_in.get(kind)) or {}
+        for remove_item in str_to_list(remove.get(kind)) or []:
             try:
-                out[level].remove(pdf)
-                if pdf not in add.get(level, {}) or []:
+                out_combined[kind].pop(remove_item, None)
+                if remove_item not in add.get(kind, {}) or [] and kind != kinds.theory:
                     warn_remove = True
             except ValueError:
                 raise LoggedError(
                     log, "Trying to remove %s '%s', but it is not present. "
-                         "Existing ones: %r", level, pdf, out[level])
+                         "Existing ones: %r", kind, remove_item, list(out_combined[kind]))
+        if kind != kinds.theory and kind in add:
+            dups = set(add.get(kind)).intersection(out_combined[kind]) - {"one"}
+            if dups:
+                raise LoggedError(
+                    log, "You have added %s '%s', which was already present. If you "
+                         "want to force its recomputation, you must also 'remove' it.",
+                    kind, dups)
+            out_combined[kind].update(add[kind])
+
     if warn_remove and mpi.is_main_process():
         log.warning("You are removing a prior or likelihood pdf. "
                     "Notice that if the resulting posterior is much wider "
                     "than the original one, or displaced enough, "
                     "it is probably safer to explore it directly.")
 
-    info_theory_out = deepcopy_where_possible(info_in.get(kinds.theory) or {})
-    for theory in str_to_list(remove.get(kinds.theory)) or []:
-        info_theory_out.pop(theory, None)
-
-    if _prior in add:
-        mlprior_names_add = [_minuslogprior + _separator + name for name in add[_prior]]
-        out[_prior] += list(add[_prior])
-    else:
-        mlprior_names_add = []
+    mlprior_names_add = [_minuslogprior + _separator + name for name in
+                         (add.get(_prior) or [])]
+    chi2_names_add = [_get_chi2_name(name) for name in add[kinds.likelihood] if
+                      name != "one"]
+    out_combined[kinds.likelihood].pop("one", None)
 
     add_theory = add.get(kinds.theory)
     if add_theory:
@@ -252,36 +255,22 @@ def post(info: InfoDict, sample: Union[Collection, List[Collection], None] = Non
                         "removed+added.")
         # Inherit from the original chain (input|output_params, renames, etc)
         added_theory = add_theory.copy()
-        for theory, theory_info in info_theory_out.items():
-            if theory in added_theory:
-                info_theory_out[theory] = \
+        for theory, theory_info in out_combined[kinds.theory].items():
+            if theory in list(added_theory):
+                out_combined[kinds.theory][theory] = \
                     recursive_update(theory_info, added_theory.pop(theory))
-        info_theory_out.update(added_theory)
-
-    chi2_names_add = [
-        _get_chi2_name(name) for name in add[kinds.likelihood] if name != "one"]
-    out[kinds.likelihood] += [name for name in add[kinds.likelihood] if name != "one"]
+        out_combined[kinds.theory].update(added_theory)
 
     # Prepare recomputation of aggregated chi2
     # (they need to be recomputed by hand, because its auto-computation won't pick up
     #  old likelihoods for a given type)
-    all_types = {
-        like: str_to_list(add[kinds.likelihood].get(
-            like, info_in.get(kinds.likelihood, {}).get(like) or {}).get("type",
-                                                                         []) or [])
-        for like in out[kinds.likelihood]}
+    all_types = {like: str_to_list(opts.get("type") or [])
+                 for like, opts in out_combined[kinds.likelihood].items()}
     types = set(chain(*all_types.values()))
     inv_types = {t: [like for like, like_types in all_types.items() if t in like_types]
                  for t in sorted(types)}
-    add_aggregated_chi2_params(out[_params], types)
+    add_aggregated_chi2_params(out_combined[_params], types)
 
-    for level in [_prior, kinds.likelihood]:
-        for i, x_i in enumerate(out[level]):
-            if x_i in list(out[level])[i + 1:]:
-                raise LoggedError(
-                    log, "You have added %s '%s', which was already present. If you "
-                         "want to force its recomputation, you must also 'remove' it.",
-                    level, x_i)
     # 3. Create output collection
     if _post_suffix not in info_post:
         raise LoggedError(log, "You need to provide a '%s' for your output chains.",
@@ -303,17 +292,19 @@ def post(info: InfoDict, sample: Union[Collection, List[Collection], None] = Non
         for _file in output_out.find_collections():
             output_out.delete_file_or_folder(_file)
     info_out = deepcopy_where_possible(info)
+    info_post = info_post.copy()
     info_out[_post] = info_post
     # Updated with input info and extended (updated) add info
     info_out.update(info_in)
-    info_out[_post][_post_add] = add
-    dummy_model_out = DummyModel(out[_params], out[kinds.likelihood],
-                                 info_prior=out[_prior])
+    info_post[_post_add] = add
+
+    dummy_model_out = DummyModel(out_combined[_params], out_combined[kinds.likelihood],
+                                 info_prior=out_combined[_prior])
     out_func_parameterization = Parameterization(out_params_with_computed)
 
     # TODO: check allow_renames=False?
     model_add = Model(out_params_with_computed, add[kinds.likelihood],
-                      info_prior=add.get(_prior), info_theory=info_theory_out,
+                      info_prior=add.get(_prior), info_theory=out_combined[kinds.theory],
                       packages_path=info_post.get(_packages_path) or
                                     info.get(_packages_path),
                       allow_renames=False, post=True,
@@ -322,9 +313,9 @@ def post(info: InfoDict, sample: Union[Collection, List[Collection], None] = Non
     # Remove auxiliary "one" before dumping -- 'add' *is* info_out[_post][_post_add]
     add[kinds.likelihood].pop("one")
     out_collections = [Collection(dummy_model_out, output_out, name=c.name,
-                                  cache_size=_default_post_cache_size) for c in
-                       in_collections]
-    output_out.check_and_dump_info(None, info_out, check_compatible=False)
+                                  cache_size=_default_post_cache_size)
+                       for c in in_collections]
+    output_out.check_and_dump_info(info_out, out_combined, check_compatible=False)
     collection_in = in_collections[0]
     collection_out = out_collections[0]
 
@@ -440,8 +431,7 @@ def post(info: InfoDict, sample: Union[Collection, List[Collection], None] = Non
             collection_out.add(
                 sampled, derived=derived.values(), weight=point.get(_weight),
                 logpriors=logpriors_new, loglikes=loglikes_new)
-            if mpi.process_state:
-                mpi.process_state.check_error()
+            mpi.check_errors()
             # Display progress
             percent = int(np.round((i + done) / to_do * 100))
             if percent != last_percent and not percent % 5:
@@ -492,5 +482,5 @@ def post(info: InfoDict, sample: Union[Collection, List[Collection], None] = Non
             "Effective number of weighted samples if independent (sum w)^2/sum(w^2): "
             "%s", int(sum(tot_weight) ** 2 / sum(sum_w2)))
 
-    return info_out, {"sample": (out_collections[0] if
-                                 len(out_collections) == 1 else out_collections)}
+    return out_combined, {"sample": (out_collections[0] if
+                                     len(out_collections) == 1 else out_collections)}

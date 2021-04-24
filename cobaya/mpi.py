@@ -122,10 +122,14 @@ def more_than_one_process():
     return get_mpi_size() > 1
 
 
+def check_errors():
+    if process_state:
+        process_state.check_error()
+
+
 def sync_processes():
     if get_mpi_size() > 1:
-        if process_state:
-            process_state.check_error()
+        check_errors()
         get_mpi_comm().barrier()
 
 
@@ -447,6 +451,6 @@ class ProcessState:
 process_state: Optional[ProcessState] = None
 
 
-def set_current_process_state(state: ProcessState):
+def set_current_process_state(state: Optional[ProcessState]):
     global process_state
     process_state = state
