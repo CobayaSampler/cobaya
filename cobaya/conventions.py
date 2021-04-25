@@ -22,8 +22,14 @@ InfoDict = Dict[str, Any]
 # specific cases (typing to be refined in future using TypedDict)
 InputDict = InfoDict
 ParamDict = InfoDict
+ParamsDict = Dict[str, ParamDict]
 LikeDict = InfoDict
+LikesDict = Dict[str, LikeDict]
 TheoryDict = InfoDict
+TheoriesDict = Dict[str, TheoryDict]
+PriorDict = InfoDict
+PriorsDict = Dict[str, PriorDict]
+ParamValuesDict = Dict[str, Optional[float]]
 
 # Package name (for importlib)
 # (apparently __package__ is only defined if you import something locally.

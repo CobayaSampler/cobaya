@@ -316,6 +316,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     out_collections = [Collection(dummy_model_out, output_out, name=c.name,
                                   cache_size=_default_post_cache_size)
                        for c in in_collections]
+    # TODO: should maybe add skip/thin to out_combined, so can tell?
     output_out.check_and_dump_info(info_out, out_combined, check_compatible=False)
     collection_in = in_collections[0]
     collection_out = out_collections[0]
@@ -413,8 +414,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                 continue
             all_params.update(output_derived)
 
-            out_func_parameterization.to_derived(all_params)
-            all_params.update(out_func_parameterization.derived_params())
+            all_params.update(out_func_parameterization.to_derived(all_params))
             derived = {param: all_params.get(param)
                        for param in dummy_model_out.parameterization.derived_params()}
             # We need to recompute the aggregated chi2 by hand

@@ -17,7 +17,8 @@ import os
 from cobaya.conventions import kinds, _prior, _timing, _params, _provides, \
     _overhead_time, _packages_path, _debug, _debug_default, _debug_file, _input_params, \
     _output_params, _get_chi2_name, _input_params_prefix, \
-    _output_params_prefix, empty_dict, InputDict
+    _output_params_prefix, empty_dict
+from cobaya.conventions import InputDict, LikesDict, TheoriesDict, ParamsDict, PriorsDict
 from cobaya.input import update_info, load_input_dict
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
@@ -119,7 +120,9 @@ class Model(HasLogger):
     with some info as input.
     """
 
-    def __init__(self, info_params, info_likelihood, info_prior=None, info_theory=None,
+    def __init__(self, info_params: ParamsDict, info_likelihood: LikesDict,
+                 info_prior: Optional[PriorsDict] = None,
+                 info_theory: Optional[TheoriesDict] = None,
                  packages_path=None, timing=None, allow_renames=True, stop_at_error=False,
                  post=False, prior_parameterization=None,
                  skip_unused_theories=False, dropped_theory_params=None):
@@ -313,9 +316,8 @@ class Model(HasLogger):
             derived_sampler = self.parameterization.to_derived(derived_list)
             if self.log.getEffectiveLevel() <= logging.DEBUG:
                 self.log.debug(
-                    "Computed derived parameters: %s",
-                    dict(zip(self.parameterization.derived_params(), derived_sampler)))
-            return loglikes, derived_sampler
+                    "Computed derived parameters: %s", derived_sampler)
+            return loglikes, list(derived_sampler.values())
         return result
 
     def loglike(self, params_values=None, return_derived=True, make_finite=False,
@@ -1142,7 +1144,6 @@ class Model(HasLogger):
 
 
 def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike]) -> Model:
-
     info = load_input_dict(info_or_yaml_or_file)
     logger_setup(info.pop(_debug, _debug_default), info.pop(_debug_file, None))
     # Inform about ignored info keys

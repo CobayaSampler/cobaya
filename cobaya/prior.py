@@ -339,13 +339,14 @@ Just give it a try and it should work fine, but, in case you need the details:
 import numpy as np
 import numbers
 from types import MethodType
-from typing import Sequence, NamedTuple, Callable
+from typing import Sequence, NamedTuple, Callable, Optional
 
 # Local
-from cobaya.conventions import _prior, partag, _prior_1d_name
+from cobaya.conventions import _prior, partag, _prior_1d_name, PriorsDict
 from cobaya.tools import get_external_function, get_scipy_1d_pdf, read_dnumber
 from cobaya.tools import _fast_norm_logpdf, getfullargspec
 from cobaya.log import LoggedError, HasLogger
+from cobaya.parameterization import Parameterization
 
 # Fast logpdf for uniforms and norms (do not understand nan masks!)
 fast_logpdfs = {"norm": _fast_norm_logpdf}
@@ -353,7 +354,7 @@ fast_logpdfs = {"norm": _fast_norm_logpdf}
 
 class ExternalPrior(NamedTuple):
     logp: Callable
-    params: list
+    params: Sequence[str]
 
 
 class Prior(HasLogger):
@@ -361,7 +362,8 @@ class Prior(HasLogger):
     Class managing the prior and reference pdf's.
     """
 
-    def __init__(self, parameterization, info_prior=None):
+    def __init__(self, parameterization: Parameterization,
+                 info_prior: Optional[PriorsDict] = None):
         """
         Initializes the prior and reference pdf's from the input information.
         """
