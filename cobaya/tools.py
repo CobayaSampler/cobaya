@@ -388,13 +388,15 @@ def recursive_update(base, update):
     """
     base = base or {}
     for update_key, update_value in (update or {}).items():
-        update_value = update_value if update_value is not None else {}
         if isinstance(update_value, Mapping):
             base[update_key] = recursive_update(
                 base.get(update_key, {}), update_value)
+        elif update_value is None:
+            if update_key not in base:
+                base[update_key] = {}
         else:
             base[update_key] = update_value
-    # Trim terminal (o)dicts
+    # Trim terminal dicts
     for k, v in (base or {}).items():
         if isinstance(v, Mapping) and len(v) == 0:
             base[k] = None
@@ -514,9 +516,8 @@ def load_DataFrame(file_name, skip=0, root_file_name=None):
             cols = [a.strip() for a in top_line.lstrip("#").split()]
         if 0 < skip < 1:
             # turn into #lines (need to know total line number)
-            for n, line in enumerate(inp):
-                pass
-            skip = int(skip * (n + 1))
+            n = sum(1 for _ in inp)
+            skip = int(round(skip * n)) + 1  # match getdist
             inp.seek(0)
         data = pd.read_csv(
             inp, sep=" ", header=None, names=cols, comment="#", skipinitialspace=True,
@@ -733,6 +734,14 @@ def fuzzy_match(input_string, choices, n=3, score_cutoff=50):
             input_string, choices, score_cutoff=score_cutoff))))[0][:n]
     except IndexError:
         return []
+
+
+def has_non_yaml_reproducible(info):
+    for value in info.values():
+        if callable(value) or \
+                isinstance(value, Mapping) and not has_non_yaml_reproducible(value):
+            return True
+    return False
 
 
 def deepcopy_where_possible(base):

@@ -61,6 +61,15 @@ def get_mpi():
             _mpi = MPI
         except ImportError:
             _mpi = None
+        else:
+            if more_than_one_process():
+                try:
+                    import dill
+                except ImportError:
+                    pass
+                else:
+                    _mpi.pickle.__init__(dill.dumps, dill.loads)
+
     return _mpi
 
 
@@ -113,10 +122,14 @@ def more_than_one_process():
     return get_mpi_size() > 1
 
 
+def check_errors():
+    if process_state:
+        process_state.check_error()
+
+
 def sync_processes():
     if get_mpi_size() > 1:
-        if process_state:
-            process_state.check_error()
+        check_errors()
         get_mpi_comm().barrier()
 
 
@@ -408,9 +421,10 @@ class ProcessState:
         return all_ready
 
     def __enter__(self):
-        self.last_process_state = process_state
-        set_current_process_state(self)
-        self.sync()
+        if more_than_one_process():
+            self.last_process_state = process_state
+            set_current_process_state(self)
+            self.sync()
         self.states[:] = State.NONE
         return self
 
@@ -437,6 +451,6 @@ class ProcessState:
 process_state: Optional[ProcessState] = None
 
 
-def set_current_process_state(state: ProcessState):
+def set_current_process_state(state: Optional[ProcessState]):
     global process_state
     process_state = state

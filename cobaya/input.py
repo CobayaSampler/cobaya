@@ -10,11 +10,12 @@
 import os
 import inspect
 import logging
+import platform
 from copy import deepcopy
 from importlib import import_module
 from itertools import chain
 from functools import reduce
-from typing import Mapping
+from typing import Mapping, Union
 from collections import defaultdict
 from inspect import cleandoc
 import pkg_resources
@@ -24,10 +25,11 @@ from cobaya.conventions import _products_path, _packages_path, _resume, _force, 
     partag, _external, _output_prefix, _debug, _debug_file, _auto_params, _prior, \
     kinds, _provides, _requires, _input_params, _output_params, _component_path, \
     _aliases, _yaml_extensions, reserved_attributes, empty_dict, _get_chi2_name, \
-    _get_chi2_label, _test_run, _version, _class_name
+    _get_chi2_label, _test_run, _version, _class_name, _dill_extension, InputDict, \
+    _updated_suffix, _input_suffix, _post, _separator_files
 from cobaya.tools import recursive_update, str_to_list, get_base_classes, \
     fuzzy_match, deepcopy_where_possible, get_resolved_class
-from cobaya.yaml import yaml_load_file, yaml_dump
+from cobaya.yaml import yaml_load_file, yaml_dump, yaml_load
 from cobaya.log import LoggedError
 from cobaya.parameterization import expand_info_param
 from cobaya import mpi
@@ -36,15 +38,73 @@ from cobaya import mpi
 log = logging.getLogger(__name__.split(".")[-1])
 
 
-def load_input(input_file):
+def load_input_dict(info_or_yaml_or_file: Union[InputDict, str, os.PathLike]
+                    ) -> InputDict:
+    if isinstance(info_or_yaml_or_file, os.PathLike):
+        return load_input_file(info_or_yaml_or_file)
+    elif isinstance(info_or_yaml_or_file, str):
+        if "\n" in info_or_yaml_or_file:
+            return yaml_load(info_or_yaml_or_file)
+        else:
+            return load_input_file(info_or_yaml_or_file)
+    else:
+        assert isinstance(info_or_yaml_or_file, Mapping), (
+            "The first argument must be a dictionary, file name or yaml string with the "
+            "required input options.")
+        return deepcopy_where_possible(info_or_yaml_or_file)
+
+
+def load_input_file(input_file: Union[str, os.PathLike],
+                    no_mpi: bool = False, help_commands: [str, None] = None) -> InputDict:
+    if no_mpi:
+        mpi.set_mpi_disabled()
+    input_file = str(input_file)
+    stem, suffix = os.path.splitext(input_file)
+    if os.path.basename(stem) in ("input", "updated"):
+        raise ValueError("'input' and 'updated' are reserved file names. "
+                         "Please, use a different one.")
+    if suffix.lower() in _yaml_extensions + (_dill_extension,):
+        info = load_input_MPI(input_file)
+        root, suffix = os.path.splitext(stem)
+        if suffix == ".updated":
+            # path may have been removed, so put in full path and name
+            info[_output_prefix] = root
+    else:
+        # Passed an existing output_prefix?
+        # First see if there is a binary info pickle
+        updated_file = get_info_path(*split_prefix(input_file), ext=_dill_extension)
+        if not os.path.exists(updated_file):
+            # Try to find the corresponding *.updated.yaml
+            updated_file = get_info_path(*split_prefix(input_file))
+        try:
+            info = load_input_MPI(updated_file)
+        except IOError:
+            err_msg = "Not a valid input file, or non-existent run to resume."
+            if help_commands:
+                err_msg += (" Maybe you mistyped one of the following commands: "
+                            + help_commands)
+            raise ValueError(err_msg)
+        # We need to update the output_prefix to resume the run *where it is*
+        info[_output_prefix] = input_file
+        if _post not in info:
+            # If input given this way, we obviously want to resume!
+            info[_resume] = True
+    return info
+
+
+def load_input(input_file: str) -> InputDict:
     """
     Loads general info, and splits it into the right parts.
     """
     file_name, extension = os.path.splitext(input_file)
     file_name = os.path.basename(file_name)
-    if extension.lower() not in _yaml_extensions:
+    if extension.lower() in _yaml_extensions:
+        info = yaml_load_file(input_file) or {}
+    elif extension == _dill_extension:
+        info = load_info_dump(input_file) or {}
+    else:
         raise LoggedError(log, "Extension of input file '%s' not recognized.", input_file)
-    info = yaml_load_file(input_file) or {}
+
     # if output_prefix not defined, default to input_file name (sans ext.) as prefix;
     if _output_prefix not in info:
         info[_output_prefix] = file_name
@@ -63,8 +123,47 @@ def load_input(input_file):
 
 # separate MPI function, as sometimes just use load_input from root process only
 @mpi.from_root
-def load_input_MPI(input_file):
+def load_input_MPI(input_file) -> InputDict:
     return load_input(input_file)
+
+
+# load from dill pickle, including any lambda functions or external classes
+def load_info_dump(input_file) -> InputDict:
+    import dill
+    with open(input_file, 'rb') as f:
+        return dill.load(f)
+
+
+def split_prefix(prefix):
+    """
+    Splits an output prefix into folder and file name prefix.
+
+    If on Windows, allows for unix-like input.
+    """
+    if platform.system() == "Windows":
+        prefix = prefix.replace("/", os.sep)
+    folder = os.path.dirname(prefix) or "."
+    file_prefix = os.path.basename(prefix)
+    if file_prefix == ".":
+        file_prefix = ""
+    return folder, file_prefix
+
+
+def get_info_path(folder, prefix, infix=None, kind="updated", ext=_yaml_extensions[0]):
+    """
+    Gets path to info files saved by Output.
+    """
+    if infix is None:
+        infix = ""
+    elif not infix.endswith("."):
+        infix += "."
+    info_file_prefix = os.path.join(
+        folder, prefix + (_separator_files if prefix else ""))
+    try:
+        suffix = {"input": _input_suffix, "updated": _updated_suffix}[kind.lower()]
+    except KeyError:
+        raise ValueError("`kind` must be `input|updated`")
+    return info_file_prefix + infix + suffix + ext
 
 
 def get_used_components(*infos, return_infos=False):
@@ -129,7 +228,7 @@ def add_aggregated_chi2_params(param_info, all_types):
             partag.latex: _get_chi2_label(t), partag.derived: True}
 
 
-def update_info(info):
+def update_info(info: InputDict) -> InputDict:
     """
     Creates an updated info starting from the defaults for each component and updating it
     with the input info.

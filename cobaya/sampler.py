@@ -127,6 +127,7 @@ def check_sampler_info(info_old=None, info_new=None, is_resuming=False):
 
 
 def get_sampler(info_sampler, model, output=None, packages_path=None):
+    # TODO: unused, what is it for?
     assert isinstance(info_sampler, Mapping), (
         "The first argument must be a dictionary with the info needed for the sampler. "
         "If you were trying to pass the name of an input file instead, "

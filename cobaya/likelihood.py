@@ -33,6 +33,7 @@ import numbers
 # Local
 from cobaya.conventions import kinds, _external, _component_path, empty_dict, \
     _input_params, _output_params, _requires, _class_name
+from cobaya.conventions import LikesDict, LikeDict
 from cobaya.tools import get_resolved_class, get_external_function, getfullargspec, \
     str_to_list
 from cobaya.log import LoggedError
@@ -83,7 +84,10 @@ class Likelihood(Theory, LikelihoodInterface):
 
     type: Optional[Union[list, str]] = []
 
-    def __init__(self, info=empty_dict, name=None, timing=None, packages_path=None,
+    def __init__(self, info: LikeDict = empty_dict,
+                 name: Optional[str] = None,
+                 timing: Optional[bool] = None,
+                 packages_path: Optional[str] = None,
                  initialize=True, standalone=True):
         self.delay = 0
         super().__init__(info, name=name, timing=timing,
@@ -209,8 +213,9 @@ class LikelihoodExternalFunction(Likelihood):
                                    (argspec.kwonlydefaults or {}).items())
              if p not in ignore_args and
              (isinstance(val, numbers.Number) or val is None)]
-        self._args = set(chain(self._optional_args, self.params,
-                               getattr(self, _input_params, []) or []))
+        self._args = set(chain(self._optional_args, self.params))
+        if argspec.varkw:
+            self._args.update(self.input_params)
         self._requirements = info.get(_requires) or {}
         self.log.info("Initialized external likelihood.")
 
@@ -264,7 +269,8 @@ class LikelihoodCollection(ComponentCollection):
     by their names.
     """
 
-    def __init__(self, info_likelihood, packages_path=None, timing=None, theory=None):
+    def __init__(self, info_likelihood: LikesDict, packages_path=None, timing=None,
+                 theory=None):
         super().__init__()
         self.set_logger("likelihood")
         self.theory = theory

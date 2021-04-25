@@ -96,20 +96,16 @@ before_install:
       hash -r;
       conda config --set always_yes yes --set changeps1 no;
       conda info -a;
-      conda create -q -n test-environment -c $ANACONDA_CHANNEL python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML pytest pytest-forked flaky;
+      conda create -q -n test-environment -c $ANACONDA_CHANNEL python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML pytest pytest-forked flaky dill;
       source activate test-environment;
       pip install mpi4py;
     else
-      pip install mpi4py pytest-forked flaky matplotlib;
+      pip install mpi4py pytest-forked flaky matplotlib dill;
     fi
   - python --version
 
 script:
   - export COBAYA_PACKAGES_PATH="../packages"
-  # mpi tests [not sure why it hangs in py3.6]
-  - if [[ "$GCC_VERSION" != "6" ]]; then
-      mpiexec -np 2 --mca orte_base_help_aggregate 0 --mca btl ^openib --oversubscribe pytest -x -m mpi tests/ --no-flaky-report ;
-    fi;
   # General tests:
   - cobaya-install polychord --debug
   - pytest tests/ -k "not cosmo" --skip-not-installed --no-flaky-report
@@ -120,6 +116,10 @@ script:
       git clone --recursive --depth 1 -b $CAMB_BRANCH https://github.com/cmbant/CAMB $COBAYA_PACKAGES_PATH/code/CAMB ;
       python $COBAYA_PACKAGES_PATH/code/CAMB/setup.py build ;
     fi
+  # mpi tests [not sure why it hangs in py3.6]
+  - if [[ "$GCC_VERSION" != "6" ]]; then
+      mpiexec -np 2 --mca orte_base_help_aggregate 0 --mca btl ^openib --oversubscribe pytest -x -m mpi tests/ --no-flaky-report ;
+    fi;
   - pytest tests/ -v -s -k "cosmo" --forked --skip-not-installed --no-flaky-report
   # Test external cosmological likelihoods
   - python $COBAYA_PACKAGES_PATH/code/CAMB/setup.py install

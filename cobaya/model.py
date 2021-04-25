@@ -9,15 +9,17 @@
 import logging
 from copy import deepcopy
 from itertools import chain
-from typing import NamedTuple, Sequence, Mapping, Iterable, Optional
+from typing import NamedTuple, Sequence, Mapping, Iterable, Optional, Union
 import numpy as np
+import os
 
 # Local
 from cobaya.conventions import kinds, _prior, _timing, _params, _provides, \
     _overhead_time, _packages_path, _debug, _debug_default, _debug_file, _input_params, \
     _output_params, _get_chi2_name, _input_params_prefix, \
     _output_params_prefix, empty_dict
-from cobaya.input import update_info
+from cobaya.conventions import InputDict, LikesDict, TheoriesDict, ParamsDict, PriorsDict
+from cobaya.input import update_info, load_input_dict
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection, AbsorbUnusedParamsLikelihood, \
@@ -108,36 +110,6 @@ def _dict_equal(d1, d2):
     return d1 == d2
 
 
-def get_model(info):
-    assert isinstance(info, Mapping), (
-        "The first argument must be a dictionary with the info needed for the model. "
-        "If you were trying to pass the name of an input file instead, "
-        "load it first with 'cobaya.input.load_input', "
-        "or, if you were passing a yaml string, load it with 'cobaya.yaml.yaml_load'.")
-    info = deepcopy_where_possible(info)
-    logger_setup(info.pop(_debug, _debug_default), info.pop(_debug_file, None))
-    # Inform about ignored info keys
-    ignored_info = {}
-    for k in list(info):
-        if k not in [_params, kinds.likelihood, _prior, kinds.theory, _packages_path,
-                     _timing, "stop_at_error"]:
-            ignored_info[k] = info.pop(k)
-    if ignored_info:
-        logging.getLogger(__name__.split(".")[-1]).warning(
-            "Ignored blocks/options: %r", list(ignored_info))
-    # Create the updated input information, including defaults for each component.
-    updated_info = update_info(info)
-    if logging.root.getEffectiveLevel() <= logging.DEBUG:
-        logging.getLogger(__name__.split(".")[-1]).debug(
-            "Input info updated with defaults (dumped to YAML):\n%s",
-            yaml_dump(sort_cosmetic(updated_info)))
-    # Initialize the parameters and posterior
-    return Model(updated_info[_params], updated_info[kinds.likelihood],
-                 updated_info.get(_prior), updated_info.get(kinds.theory),
-                 packages_path=info.get(_packages_path), timing=updated_info.get(_timing),
-                 stop_at_error=info.get("stop_at_error", False))
-
-
 class Model(HasLogger):
     """
     Class containing all the information necessary to compute the unnormalized posterior.
@@ -148,7 +120,9 @@ class Model(HasLogger):
     with some info as input.
     """
 
-    def __init__(self, info_params, info_likelihood, info_prior=None, info_theory=None,
+    def __init__(self, info_params: ParamsDict, info_likelihood: LikesDict,
+                 info_prior: Optional[PriorsDict] = None,
+                 info_theory: Optional[TheoriesDict] = None,
                  packages_path=None, timing=None, allow_renames=True, stop_at_error=False,
                  post=False, prior_parameterization=None,
                  skip_unused_theories=False, dropped_theory_params=None):
@@ -166,7 +140,7 @@ class Model(HasLogger):
                                                  allow_renames=allow_renames,
                                                  ignore_unused_sampled=post)
         self.prior = Prior(prior_parameterization or self.parameterization,
-                           self._updated_info.get(_prior, None))
+                           self._updated_info.get(_prior))
         self.timing = timing
         info_theory = self._updated_info.get(kinds.theory)
         self.theory = TheoryCollection(info_theory, packages_path=packages_path,
@@ -342,9 +316,8 @@ class Model(HasLogger):
             derived_sampler = self.parameterization.to_derived(derived_list)
             if self.log.getEffectiveLevel() <= logging.DEBUG:
                 self.log.debug(
-                    "Computed derived parameters: %s",
-                    dict(zip(self.parameterization.derived_params(), derived_sampler)))
-            return loglikes, derived_sampler
+                    "Computed derived parameters: %s", derived_sampler)
+            return loglikes, list(derived_sampler.values())
         return result
 
     def loglike(self, params_values=None, return_derived=True, make_finite=False,
@@ -592,7 +565,7 @@ class Model(HasLogger):
             # Component params converted to requirements if not explicitly sampled
             requirements[component] += \
                 [Requirement(p, None) for p in (getattr(component, _params, {}) or []) if
-                 p not in component.input_params + component.output_params]
+                 p not in self.input_params + component.output_params]
             # Gather what this component can provide
             can_provide = (list(component.get_can_provide()) +
                            list(component.get_can_provide_methods()))
@@ -1168,3 +1141,28 @@ class Model(HasLogger):
             self.set_timing_on(False)
         for component, speed in zip(self.components, measured_speeds):
             component.set_measured_speed(speed)
+
+
+def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike]) -> Model:
+    info = load_input_dict(info_or_yaml_or_file)
+    logger_setup(info.pop(_debug, _debug_default), info.pop(_debug_file, None))
+    # Inform about ignored info keys
+    ignored_info = {}
+    for k in list(info):
+        if k not in [_params, kinds.likelihood, _prior, kinds.theory, _packages_path,
+                     _timing, "stop_at_error"]:
+            ignored_info[k] = info.pop(k)
+    if ignored_info:
+        logging.getLogger(__name__.split(".")[-1]).warning(
+            "Ignored blocks/options: %r", list(ignored_info))
+    # Create the updated input information, including defaults for each component.
+    updated_info = update_info(info)
+    if logging.root.getEffectiveLevel() <= logging.DEBUG:
+        logging.getLogger(__name__.split(".")[-1]).debug(
+            "Input info updated with defaults (dumped to YAML):\n%s",
+            yaml_dump(sort_cosmetic(updated_info)))
+    # Initialize the parameters and posterior
+    return Model(updated_info[_params], updated_info[kinds.likelihood],
+                 updated_info.get(_prior), updated_info.get(kinds.theory),
+                 packages_path=info.get(_packages_path), timing=updated_info.get(_timing),
+                 stop_at_error=info.get("stop_at_error", False))

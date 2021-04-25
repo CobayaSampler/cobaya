@@ -12,37 +12,37 @@ import numpy as np
 from numbers import Number
 from itertools import chain
 from copy import deepcopy
-from typing import Mapping, Sequence
+from typing import Mapping, Sequence, Optional
 
 # Local
-from cobaya.conventions import partag
+from cobaya.conventions import partag, ParamsDict, ParamDict, ParamValuesDict
 from cobaya.tools import get_external_function, ensure_nolatex, is_valid_variable_name, \
     getfullargspec, deepcopy_where_possible, invert_dict, str_to_list
 from cobaya.log import LoggedError, HasLogger
 
 
-def is_fixed_or_function_param(info_param):
+def is_fixed_or_function_param(info_param: ParamDict) -> bool:
     """
     Returns True if the parameter has been fixed to a value or through a function.
     """
     return expand_info_param(info_param).get(partag.value) is not None
 
 
-def is_sampled_param(info_param):
+def is_sampled_param(info_param: ParamDict) -> bool:
     """
     Returns True if the parameter has a prior.
     """
     return partag.prior in expand_info_param(info_param)
 
 
-def is_derived_param(info_param):
+def is_derived_param(info_param: ParamDict) -> bool:
     """
     Returns True if the parameter is saved as a derived one.
     """
     return expand_info_param(info_param).get(partag.derived, False)
 
 
-def expand_info_param(info_param, default_derived=True):
+def expand_info_param(info_param: ParamDict, default_derived=True) -> ParamDict:
     """
     Expands the info of a parameter, from the user friendly, shorter format
     to a more unambiguous one.
@@ -77,7 +77,7 @@ def expand_info_param(info_param, default_derived=True):
     return info_param
 
 
-def reduce_info_param(info_param):
+def reduce_info_param(info_param: ParamDict) -> Optional[ParamDict]:
     """
     Compresses the info of a parameter, suppressing default values.
     This is the opposite of :func:`~input.expand_info_param`.
@@ -100,7 +100,8 @@ class Parameterization(HasLogger):
     Translates parameter between sampler+prior and likelihood
     """
 
-    def __init__(self, info_params, allow_renames=True, ignore_unused_sampled=False):
+    def __init__(self, info_params: ParamsDict, allow_renames=True,
+                 ignore_unused_sampled=False):
         self.set_logger()
         self.allow_renames = allow_renames
         # First, we load the parameters,
@@ -109,16 +110,16 @@ class Parameterization(HasLogger):
         #   with its fixed value, its fixing function, or None if their value is given
         #   directly by the sampler.
         self._infos = {}
-        self._input = {}
+        self._input: ParamValuesDict = {}
         self._input_funcs = {}
         self._input_args = {}
         self._input_dependencies = {}
         self._dropped = set()
-        self._output = {}
-        self._constant = {}
-        self._sampled = {}
+        self._output: ParamValuesDict = {}
+        self._constant: ParamValuesDict = {}
+        self._sampled: ParamValuesDict = {}
         self._sampled_renames = {}
-        self._derived = {}
+        self._derived: ParamValuesDict = {}
         self._derived_inputs = []
         self._derived_funcs = {}
         self._derived_args = {}
@@ -127,6 +128,9 @@ class Parameterization(HasLogger):
         # to infos without _prior or partag.value, and a partag.value field
         # to fixed params
         for p, info in info_params.items():
+            if isinstance(info, Mapping) and set(info).difference(partag):
+                raise LoggedError(self.log, "Parameter '%s' has unknown options %s",
+                                  p, set(info).difference(partag))
             info = expand_info_param(info)
             self._infos[p] = info
             if is_fixed_or_function_param(info):
@@ -214,36 +218,34 @@ class Parameterization(HasLogger):
 
         # warn if repeated labels
         labels_inv_repeated = invert_dict(self.labels())
-        for k in list(labels_inv_repeated):
-            if len(labels_inv_repeated[k]) == 1:
-                labels_inv_repeated.pop(k)
+        labels_inv_repeated = {k: v for k, v in labels_inv_repeated.items() if len(v) > 1}
         if labels_inv_repeated:
             self.log.warning(
                 "There are repeated parameter labels: %r", labels_inv_repeated)
 
-    def dropped_param_set(self):
+    def dropped_param_set(self) -> set:
         return self._dropped.copy()
 
-    def input_params(self):
+    def input_params(self) -> ParamValuesDict:
         return self._input.copy()
 
-    def output_params(self):
+    def output_params(self) -> ParamValuesDict:
         return self._output.copy()
 
-    def constant_params(self):
+    def constant_params(self) -> ParamValuesDict:
         return self._constant.copy()
 
-    def sampled_params(self):
+    def sampled_params(self) -> ParamValuesDict:
         return self._sampled.copy()
 
-    def sampled_params_info(self):
+    def sampled_params_info(self) -> ParamsDict:
         return {p: deepcopy_where_possible(info) for p, info
                 in self._infos.items() if p in self._sampled}
 
     def sampled_params_renames(self):
         return deepcopy(self._sampled_renames)
 
-    def derived_params(self):
+    def derived_params(self) -> ParamValuesDict:
         return self._derived.copy()
 
     def sampled_input_dependence(self):
@@ -254,7 +256,7 @@ class Parameterization(HasLogger):
         args = self._input_args[p]
         return func(*[params_values.get(arg) for arg in args])
 
-    def to_input(self, sampled_params_values, copied=True):
+    def to_input(self, sampled_params_values, copied=True) -> ParamValuesDict:
         # Gets all current sampled and input derived parameters as a dictionary,
         # including dropped parameters.
 
@@ -277,7 +279,7 @@ class Parameterization(HasLogger):
                 self._input[p] = self._call_param_func(p, func, args)
         return self.input_params() if copied else self._input
 
-    def to_derived(self, output_params_values):
+    def to_derived(self, output_params_values) -> ParamValuesDict:
         if not isinstance(output_params_values, dict):
             output_params_values = dict(zip(self._output, output_params_values))
         # Fill first derived parameters which are direct output parameters
@@ -285,9 +287,8 @@ class Parameterization(HasLogger):
             self._derived[p] = output_params_values[p]
         for p in self._derived_inputs:
             self._derived[p] = self._input.get(p)
-            # Then evaluate the functions
+        # Then evaluate the functions
         if self._wrapped_derived_funcs:
-            # Then evaluate the functions
             for p, (func, args, to_set) in self._wrapped_derived_funcs.items():
                 for arg in to_set:
                     val = self._input.get(arg)
@@ -298,7 +299,7 @@ class Parameterization(HasLogger):
 
                     args[arg] = val
                 self._derived[p] = self._call_param_func(p, func, args)
-        return list(self._derived.values())
+        return self._derived
 
     def check_sampled(self, **sampled_params):
         """

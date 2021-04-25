@@ -7,41 +7,42 @@
 """
 
 # Global
-from typing import Mapping, Union
+from typing import Union, Optional, Tuple
 import logging
 import os
 
 # Local
 from cobaya import __version__
 from cobaya.conventions import kinds, _prior, _params, _packages_path, _output_prefix, \
-    _debug, _debug_file, _resume, _timing, _force, _post, _test_run, \
-    _yaml_extensions, _packages_path_arg, \
-    _packages_path_arg_posix, InfoDict
-from cobaya.output import get_output, split_prefix, get_info_path
+    _debug, _debug_file, _resume, _timing, _force, _post, _test_run, _packages_path_arg, \
+    _packages_path_arg_posix, InputDict
+from cobaya.output import get_output
 from cobaya.model import Model
-from cobaya.sampler import get_sampler_name_and_class, check_sampler_info
+from cobaya.sampler import get_sampler_name_and_class, check_sampler_info, Sampler
 from cobaya.log import logger_setup, LoggedError
-from cobaya.yaml import yaml_dump, yaml_load
-from cobaya.input import update_info, load_input_MPI
+from cobaya.yaml import yaml_dump
+from cobaya.input import update_info, load_input_file, load_input_dict
 from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic, \
     check_deprecated_modules_path
-from cobaya.post import post
+from cobaya.post import post, ResultDict
 from cobaya import mpi
 
 
 @mpi.sync_state
-def run(info_or_yaml_or_file: Union[InfoDict, str, os.PathLike],
-        packages_path: [str, None] = None,
-        output: [str, None] = None,
-        debug: [bool, None] = None,
-        stop_at_error: [bool, None] = None,
+def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
+        packages_path: Optional[str] = None,
+        output: Optional[str] = None,
+        debug: Optional[bool] = None,
+        stop_at_error: Optional[bool] = None,
         resume: bool = False, force: bool = False,
-        no_mpi: bool = False, test: bool = False):
+        no_mpi: bool = False, test: bool = False,
+        override: Optional[InputDict] = None
+        ) -> Tuple[InputDict, Union[Sampler, ResultDict]]:
     """
     Run from an input dictionary, file name or yaml string, with optional arguments
     to override settings in the input as needed.
 
-    :param info_or_yaml_or_file: dictionary, yaml file name, or yaml text with options
+    :param info_or_yaml_or_file: input options dictionary, yaml file, or yaml text
     :param packages_path: path where external packages were installed
     :param output: path name prefix for output files
     :param debug: verbose debug output
@@ -50,7 +51,10 @@ def run(info_or_yaml_or_file: Union[InfoDict, str, os.PathLike],
     :param force: overwrite existing output if it exists
     :param no_mpi: run without MPI
     :param test: only test initialization rather than actually running
-    :return: (updated_info, sampler) tuple of options dictionary and Sampler instance
+    :param override: option dictionary to merge into the input one, overriding settings
+       (but with lower precedence than the explicit keyword arguments)
+    :return: (updated_info, sampler) tuple of options dictionary and Sampler instance,
+              or (updated_info, results) if using "post" post-processing
     """
 
     # This function reproduces the model-->output-->sampler pipeline one would follow
@@ -58,19 +62,13 @@ def run(info_or_yaml_or_file: Union[InfoDict, str, os.PathLike],
     # as early as possible, e.g. to check if resuming possible or `force` needed.
     if no_mpi or test:
         mpi.set_mpi_disabled()
-    if isinstance(info_or_yaml_or_file, os.PathLike):
-        info = load_input_file(info_or_yaml_or_file)
-    elif isinstance(info_or_yaml_or_file, str):
-        if "\n" in info_or_yaml_or_file:
-            info = yaml_load(info_or_yaml_or_file)
-        else:
-            info = load_input_file(info_or_yaml_or_file)
-    else:
-        assert isinstance(info_or_yaml_or_file, Mapping), (
-            "The first argument must be a dictionary, file name or yaml string with the "
-            "info needed for the run.")
-        info = dict(info_or_yaml_or_file)
 
+    info: InputDict = load_input_dict(info_or_yaml_or_file)
+
+    if override:
+        if _post in override:
+            info[_resume] = False
+        info = recursive_update(info, override)
     # solve packages installation path cmd > env > input
     if packages_path:
         info[_packages_path] = packages_path
@@ -89,8 +87,7 @@ def run(info_or_yaml_or_file: Union[InfoDict, str, os.PathLike],
     if output:
         info[_output_prefix] = output
     if _post in info:
-        post(info)
-        return
+        return post(info)
 
     logger_setup(info.get(_debug), info.get(_debug_file))
     logger_run = logging.getLogger(run.__name__)
@@ -226,32 +223,3 @@ def run_script(help_commands=None):
                            help_commands=help_commands)
     del arguments.input_file
     run(info, **arguments.__dict__)
-
-
-def load_input_file(input_file: Union[str, os.PathLike],
-                    no_mpi: bool = False, help_commands: [str, None] = None):
-    if no_mpi:
-        mpi.set_mpi_disabled()
-    input_file = str(input_file)
-    stem, suffix = os.path.splitext(input_file)
-    if os.path.basename(stem) in ("input", "updated"):
-        raise ValueError("'input' and 'updated' are reserved file names. "
-                         "Please, use a different one.")
-    if suffix.lower() in _yaml_extensions:
-        info = load_input_MPI(input_file)
-    else:
-        # Passed an existing output_prefix? Try to find the corresponding *.updated.yaml
-        updated_file = get_info_path(*split_prefix(input_file))
-        try:
-            info = load_input_MPI(updated_file)
-        except IOError:
-            err_msg = "Not a valid input file, or non-existent run to resume."
-            if help_commands:
-                err_msg += (" Maybe you mistyped one of the following commands: "
-                            + help_commands)
-            raise ValueError(err_msg)
-        # We need to update the output_prefix to resume the run *where it is*
-        info[_output_prefix] = input_file
-        # If input given this way, we obviously want to resume!
-        info[_resume] = True
-    return info

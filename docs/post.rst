@@ -151,6 +151,5 @@ To **thin** the sample, give the ``thin`` option any value :math:`>1`, and only 
 Sequential application of post-processing
 -----------------------------------------
 
-.. warning::
-
-   This is still WIP, sorry!
+The .updated.yaml file produced by ``post`` contains a merged set of likelihood and parameters, similar to an MCMC run.
+The post-processed chain can therefore be used as an an original chain for further importance sampling if required.

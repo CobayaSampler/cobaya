@@ -32,10 +32,10 @@ see :doc:`theories_and_dependencies`.
 
 import inspect
 from collections import deque
-from typing import Sequence, Optional, Union
+from typing import Sequence, Optional, Union, Tuple, Dict, Iterable
 # Local
 from cobaya.conventions import _external, kinds, _requires, _params, empty_dict, \
-    _class_name
+    _class_name, TheoryDict, TheoriesDict, InfoDict, ParamValuesDict
 from cobaya.component import CobayaComponent, ComponentCollection
 from cobaya.tools import get_resolved_class, str_to_list
 from cobaya.log import LoggedError, always_stop_exceptions
@@ -54,7 +54,9 @@ class Theory(CobayaComponent):
     input_params: Sequence[str] = None
     output_params: Sequence[str] = None
 
-    def __init__(self, info=empty_dict, name=None, timing=None, packages_path=None,
+    def __init__(self, info: TheoryDict = empty_dict,
+                 name: Optional[str] = None, timing: Optional[bool] = None,
+                 packages_path: Optional[str] = None,
                  initialize=True, standalone=True):
 
         self._measured_speed = None
@@ -69,7 +71,8 @@ class Theory(CobayaComponent):
         self._helpers = {}
         self._input_params_extra = set()
 
-    def get_requirements(self):
+    def get_requirements(self) -> Union[InfoDict, Sequence[str],
+                                        Sequence[Tuple[str, InfoDict]]]:
         """
         Get a dictionary of requirements (or a list of requirement name, option tuples)
         that are always needed (e.g. must be calculated by a another component
@@ -80,7 +83,8 @@ class Theory(CobayaComponent):
         """
         return str_to_list(getattr(self, _requires, []))
 
-    def must_provide(self, **requirements):
+    def must_provide(self, **requirements) -> Union[None, InfoDict, Sequence[str],
+                                                    Sequence[Tuple[str, InfoDict]]]:
         """
         Function to be called specifying any output products that are needed and hence
         should be calculated by this component depending..
@@ -131,7 +135,7 @@ class Theory(CobayaComponent):
         """
         self.provider = provider
 
-    def get_param(self, p):
+    def get_param(self, p: str) -> float:
         """
         Interface function for likelihoods and other theory components to get derived
         parameters.
@@ -159,7 +163,7 @@ class Theory(CobayaComponent):
         """
         return get_class_methods(self.get_provider().__class__, not_base=Theory)
 
-    def get_can_provide(self):
+    def get_can_provide(self) -> Iterable[str]:
         """
         Get a list of names of quantities that can be retrieved using the general
         get_result(X) method.
@@ -168,7 +172,7 @@ class Theory(CobayaComponent):
         """
         return []
 
-    def get_can_provide_params(self):
+    def get_can_provide_params(self) -> Iterable[str]:
         """
         Get a list of derived parameters that this component can calculate.
         The default implementation returns the result based on the params attribute set
@@ -183,7 +187,7 @@ class Theory(CobayaComponent):
         else:
             return []
 
-    def get_can_support_params(self):
+    def get_can_support_params(self) -> Iterable[str]:
         """
         Get a list of parameters supported by this component, can be used to support
         parameters that don't explicitly appear in the .yaml or class params attribute
@@ -270,7 +274,7 @@ class Theory(CobayaComponent):
         return True
 
     @property
-    def current_state(self):
+    def current_state(self) -> Dict:
         try:
             return self._current_state
         except AttributeError:
@@ -279,7 +283,7 @@ class Theory(CobayaComponent):
                                         "(maybe the prior was -infinity?)")
 
     @property
-    def current_derived(self):
+    def current_derived(self) -> ParamValuesDict:
         return self.current_state.get("derived", {})
 
     # MARKED FOR DEPRECATION IN v3.1
@@ -355,7 +359,7 @@ class TheoryCollection(ComponentCollection):
     Initializes the list of theory codes.
     """
 
-    def __init__(self, info_theory, packages_path=None, timing=None):
+    def __init__(self, info_theory: TheoriesDict, packages_path=None, timing=None):
         super().__init__()
         self.set_logger("theory")
 

@@ -1,9 +1,10 @@
 import time
 from packaging import version
+from typing import Optional, Union, List, Any
 
 from cobaya.log import HasLogger, LoggedError
 from cobaya.input import HasDefaults
-from cobaya.conventions import _version, empty_dict
+from cobaya.conventions import _version, empty_dict, InfoDict
 from cobaya.tools import resolve_packages_path
 
 
@@ -58,7 +59,10 @@ class CobayaComponent(HasLogger, HasDefaults):
     _at_resume_prefer_new = [_version]
     _at_resume_prefer_old = []
 
-    def __init__(self, info=empty_dict, name=None, timing=None, packages_path=None,
+    def __init__(self, info: InfoDict = empty_dict,
+                 name: Optional[str] = None,
+                 timing: Optional[bool] = None,
+                 packages_path: Optional[str] = None,
                  initialize=True, standalone=True):
         if standalone:
             # TODO: would probably be more natural if defaults were always read here
@@ -100,7 +104,7 @@ class CobayaComponent(HasLogger, HasDefaults):
     def set_timing_on(self, on):
         self.timer = Timer() if on else None
 
-    def get_name(self):
+    def get_name(self) -> str:
         """
         Get the name. This is usually set by the name used in the input .yaml, but
         otherwise defaults to the fully-qualified class name.
@@ -129,7 +133,7 @@ class CobayaComponent(HasLogger, HasDefaults):
         """
         pass
 
-    def get_version(self):
+    def get_version(self) -> Union[None, str, InfoDict]:
         """
         Get version information for this component.
 
@@ -189,7 +193,7 @@ class ComponentCollection(dict, HasLogger):
                         component.timer.n_avg(), component.timer.time_sum)
                      for component in timers]))
 
-    def get_versions(self, add_version_field=False):
+    def get_versions(self, add_version_field=False) -> InfoDict:
         """
         Get version dictionary
         :return: dictionary of versions for all components
@@ -201,7 +205,7 @@ class ComponentCollection(dict, HasLogger):
         return {component.get_name(): format_version(component.get_version())
                 for component in self.values() if component.has_version()}
 
-    def get_speeds(self, ignore_sub=False):
+    def get_speeds(self, ignore_sub=False) -> InfoDict:
         """
         Get speeds dictionary
         :return: dictionary of versions for all components
@@ -237,7 +241,7 @@ class Provider:
     def set_current_input_params(self, params):
         self.params = params
 
-    def get_param(self, param):
+    def get_param(self, param) -> Union[float, List[float]]:
         """
         Returns the value of a derived (or sampled) parameter. If it is not a sampled
         parameter it calls :meth:`Theory.get_param` on component assigned to compute
@@ -253,7 +257,7 @@ class Provider:
         else:
             return self.requirement_providers[param].get_param(param)
 
-    def get_result(self, result_name, **kwargs):
+    def get_result(self, result_name, **kwargs) -> Any:
         return self.requirement_providers[result_name].get_result(result_name, **kwargs)
 
     def __getattr__(self, name):

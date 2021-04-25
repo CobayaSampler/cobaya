@@ -11,58 +11,25 @@ import sys
 import datetime
 import re
 import shutil
-import platform
 import logging
 from packaging import version
 
 # Local
-from cobaya import __version__
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
-from cobaya.conventions import _input_suffix, _updated_suffix, _separator_files, _version
-from cobaya.conventions import _resume, _resume_default, _force, _yaml_extensions
+from cobaya.conventions import _version, _resume, _resume_default, _force
+from cobaya.conventions import  _dill_extension
 from cobaya.conventions import _output_prefix, _debug, kinds, _params, _class_name
 from cobaya.log import LoggedError, HasLogger, get_traceback_text
-from cobaya.input import is_equal_info, get_resolved_class
+from cobaya.input import is_equal_info, get_resolved_class, load_info_dump, split_prefix
+from cobaya.input import get_info_path
 from cobaya.collection import Collection
 from cobaya.tools import deepcopy_where_possible, find_with_regexp, sort_cosmetic
-from cobaya import mpi
+from cobaya.tools import has_non_yaml_reproducible
+from cobaya import mpi, __version__
 
 # Default output type and extension
 _kind = "txt"
 _ext = "txt"
-
-
-def split_prefix(prefix):
-    """
-    Splits an output prefix into folder and file name prefix.
-
-    If on Windows, allows for unix-like input.
-    """
-    if platform.system() == "Windows":
-        prefix = prefix.replace("/", os.sep)
-    folder = os.path.dirname(prefix) or "."
-    file_prefix = os.path.basename(prefix)
-    if file_prefix == ".":
-        file_prefix = ""
-    return folder, file_prefix
-
-
-def get_info_path(folder, prefix, infix=None, kind="updated"):
-    """
-    Gets path to info files saved by Output.
-    """
-    if infix is None:
-        infix = ""
-    elif not infix.endswith("."):
-        infix += "."
-    info_file_prefix = os.path.join(
-        folder, prefix + (_separator_files if prefix else ""))
-    try:
-        suffix = {"input": _input_suffix, "updated": _updated_suffix}[kind.lower()]
-    except KeyError:
-        raise ValueError("`kind` must be `input|updated`")
-    return info_file_prefix + infix + suffix + _yaml_extensions[0]
-
 
 class FileLock:
     def __init__(self, filename=None, log=None):
@@ -71,10 +38,10 @@ class FileLock:
         if filename:
             self.set_lock(log, filename)
 
-    def set_lock(self, log, filename):
+    def set_lock(self, log, filename, force=False):
         if self.has_lock():
             return
-        self.lock_file = filename + '.lock'
+        self.lock_file = filename + '.locked'
         self.lock_error_file = filename + '.lock_err'
         try:
             os.remove(self.lock_error_file)
@@ -87,7 +54,7 @@ class FileLock:
                 import portalocker
             except ModuleNotFoundError:
                 # will work, but crashes will leave .lock files that will raise error
-                self._file_handle = open(self.lock_file, 'xb')
+                self._file_handle = open(self.lock_file, 'wb' if force else 'xb')
             else:
                 try:
                     h = open(self.lock_file, 'wb')
@@ -200,9 +167,10 @@ class Output(HasLogger):
         # Prepare file names, and check if chain exists
         self.file_input = get_info_path(
             self.folder, self.prefix, infix=infix, kind="input")
-        self.lock.set_lock(self.log, self.file_input)
-        self.file_updated = get_info_path(
-            self.folder, self.prefix, infix=infix, kind="updated")
+        self.lock.set_lock(self.log, self.file_input, force=force)
+        self.file_updated = get_info_path(self.folder, self.prefix, infix=infix)
+        self.dump_file_updated = get_info_path(
+            self.folder, self.prefix, infix=infix, ext=_dill_extension)
         self._resuming = False
         # Output kind and collection extension
         self.kind = _kind
@@ -268,7 +236,7 @@ class Output(HasLogger):
     @mpi.root_only
     def delete_infos(self):
         self.check_lock()
-        for f in [self.file_input, self.file_updated]:
+        for f in [self.file_input, self.file_updated, self.dump_file_updated]:
             try:
                 os.remove(f)
             except OSError:
@@ -293,13 +261,16 @@ class Output(HasLogger):
 
     def reload_updated_info(self, cache=False, use_cache=False):
         if mpi.is_main_process():
-            if use_cache and getattr(self, "_old_updated_info", None):
+            if use_cache and hasattr(self, "_old_updated_info"):
                 return self._old_updated_info
             try:
-                loaded = yaml_load_file(self.file_updated)
+                if os.path.isfile(self.dump_file_updated):
+                    loaded = load_info_dump(self.dump_file_updated)
+                else:
+                    loaded = yaml_load_file(self.file_updated)
                 if cache:
-                    self._old_updated_info = loaded
-                return deepcopy_where_possible(loaded)
+                    self._old_updated_info = deepcopy_where_possible(loaded)
+                return loaded
             except IOError:
                 if cache:
                     self._old_updated_info = None
@@ -334,6 +305,10 @@ class Output(HasLogger):
             # This is because we can't actually check if python objects do change
             old_info = self.reload_updated_info(cache=cache_old, use_cache=use_cache_old)
             if old_info:
+                # use consistent yaml read-in types
+                # TODO: could probably just compare full infos here, with externals?
+                #  for the moment cautiously keeping old behaviour
+                old_info = yaml_load(yaml_dump(old_info))
                 new_info = yaml_load(yaml_dump(updated_info_trimmed))
                 if not is_equal_info(old_info, new_info, strict=False,
                                      ignore_blocks=list(ignore_blocks) + [
@@ -345,8 +320,8 @@ class Output(HasLogger):
                 # - If not specified now, take the one used in resume info
                 # - If specified both now and before, check new older than old one
                 # (For Cobaya's own version, prefer new one always)
-                old_version = old_info.get(_version, None)
-                new_version = new_info.get(_version, None)
+                old_version = old_info.get(_version)
+                new_version = new_info.get(_version)
                 if old_version:
                     if version.parse(old_version) > version.parse(new_version):
                         raise LoggedError(
@@ -398,6 +373,14 @@ class Output(HasLogger):
                         f_out.write(yaml_dump(sort_cosmetic(info)))
                     except OutputError as e:
                         raise LoggedError(self.log, str(e))
+        if updated_info_trimmed and has_non_yaml_reproducible(updated_info_trimmed):
+            try:
+                import dill
+            except ImportError:
+                self.mpi_info('Install "dill" to save reproducible options file.')
+            else:
+                with open(self.dump_file_updated, 'wb') as f:
+                    dill.dump(sort_cosmetic(updated_info_trimmed), f)
 
     def delete_with_regexp(self, regexp, root=None):
         """

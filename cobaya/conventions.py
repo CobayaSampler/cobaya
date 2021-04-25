@@ -19,6 +19,17 @@ OptionalArrayLike = Optional[ArrayLike]
 ArrayOrFloat = Union[float, ArrayLike]
 # type for Cobaya input parameter dictionaries (as from yaml)
 InfoDict = Dict[str, Any]
+# specific cases (typing to be refined in future using TypedDict)
+InputDict = InfoDict
+ParamDict = InfoDict
+ParamsDict = Dict[str, ParamDict]
+LikeDict = InfoDict
+LikesDict = Dict[str, LikeDict]
+TheoryDict = InfoDict
+TheoriesDict = Dict[str, TheoryDict]
+PriorDict = InfoDict
+PriorsDict = Dict[str, PriorDict]
+ParamValuesDict = Dict[str, Optional[float]]
 
 # Package name (for importlib)
 # (apparently __package__ is only defined if you import something locally.
@@ -58,7 +69,7 @@ _aliases = "aliases"
 _version = "version"
 
 ParTags = namedtuple('ParTags', ("prior", "ref", "proposal", "value", "dist", "drop",
-                                 "derived", "latex", "renames"))
+                                 "derived", "latex", "renames", "min", "max"))
 partag = ParTags(*ParTags._fields)
 
 ComponentKinds = namedtuple('ComponentKinds', ("sampler", "theory", "likelihood"))
@@ -70,7 +81,7 @@ reserved_attributes = {_input_params, _output_params, "install_options", "bibtex
 
 # Conventional order for yaml dumping (purely cosmetic)
 _dump_sort_cosmetic = [
-    kinds.theory, kinds.likelihood, _prior, _params, kinds.sampler, "post"]
+    kinds.theory, kinds.likelihood, _prior, _params, kinds.sampler, _post]
 
 # Separator for
 # fields in parameter names and files
@@ -92,6 +103,7 @@ _prior_1d_name = "0"
 _input_suffix = "input"
 _updated_suffix = "updated"
 _yaml_extensions = ".yaml", ".yml"
+_dill_extension = ".dill_pickle"
 _checkpoint_extension = ".checkpoint"
 _progress_extension = ".progress"
 _covmat_extension = ".covmat"
