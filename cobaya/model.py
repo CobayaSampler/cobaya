@@ -9,15 +9,16 @@
 import logging
 from copy import deepcopy
 from itertools import chain
-from typing import NamedTuple, Sequence, Mapping, Iterable, Optional
+from typing import NamedTuple, Sequence, Mapping, Iterable, Optional, Union
 import numpy as np
+import os
 
 # Local
 from cobaya.conventions import kinds, _prior, _timing, _params, _provides, \
     _overhead_time, _packages_path, _debug, _debug_default, _debug_file, _input_params, \
     _output_params, _get_chi2_name, _input_params_prefix, \
-    _output_params_prefix, empty_dict
-from cobaya.input import update_info
+    _output_params_prefix, empty_dict, InputDict
+from cobaya.input import update_info, load_input_dict
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection, AbsorbUnusedParamsLikelihood, \
@@ -106,36 +107,6 @@ def _dict_equal(d1, d2):
                 return False
         return True
     return d1 == d2
-
-
-def get_model(info):
-    assert isinstance(info, Mapping), (
-        "The first argument must be a dictionary with the info needed for the model. "
-        "If you were trying to pass the name of an input file instead, "
-        "load it first with 'cobaya.input.load_input', "
-        "or, if you were passing a yaml string, load it with 'cobaya.yaml.yaml_load'.")
-    info = deepcopy_where_possible(info)
-    logger_setup(info.pop(_debug, _debug_default), info.pop(_debug_file, None))
-    # Inform about ignored info keys
-    ignored_info = {}
-    for k in list(info):
-        if k not in [_params, kinds.likelihood, _prior, kinds.theory, _packages_path,
-                     _timing, "stop_at_error"]:
-            ignored_info[k] = info.pop(k)
-    if ignored_info:
-        logging.getLogger(__name__.split(".")[-1]).warning(
-            "Ignored blocks/options: %r", list(ignored_info))
-    # Create the updated input information, including defaults for each component.
-    updated_info = update_info(info)
-    if logging.root.getEffectiveLevel() <= logging.DEBUG:
-        logging.getLogger(__name__.split(".")[-1]).debug(
-            "Input info updated with defaults (dumped to YAML):\n%s",
-            yaml_dump(sort_cosmetic(updated_info)))
-    # Initialize the parameters and posterior
-    return Model(updated_info[_params], updated_info[kinds.likelihood],
-                 updated_info.get(_prior), updated_info.get(kinds.theory),
-                 packages_path=info.get(_packages_path), timing=updated_info.get(_timing),
-                 stop_at_error=info.get("stop_at_error", False))
 
 
 class Model(HasLogger):
@@ -1168,3 +1139,29 @@ class Model(HasLogger):
             self.set_timing_on(False)
         for component, speed in zip(self.components, measured_speeds):
             component.set_measured_speed(speed)
+
+
+def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike]) -> Model:
+
+    info = load_input_dict(info_or_yaml_or_file)
+    logger_setup(info.pop(_debug, _debug_default), info.pop(_debug_file, None))
+    # Inform about ignored info keys
+    ignored_info = {}
+    for k in list(info):
+        if k not in [_params, kinds.likelihood, _prior, kinds.theory, _packages_path,
+                     _timing, "stop_at_error"]:
+            ignored_info[k] = info.pop(k)
+    if ignored_info:
+        logging.getLogger(__name__.split(".")[-1]).warning(
+            "Ignored blocks/options: %r", list(ignored_info))
+    # Create the updated input information, including defaults for each component.
+    updated_info = update_info(info)
+    if logging.root.getEffectiveLevel() <= logging.DEBUG:
+        logging.getLogger(__name__.split(".")[-1]).debug(
+            "Input info updated with defaults (dumped to YAML):\n%s",
+            yaml_dump(sort_cosmetic(updated_info)))
+    # Initialize the parameters and posterior
+    return Model(updated_info[_params], updated_info[kinds.likelihood],
+                 updated_info.get(_prior), updated_info.get(kinds.theory),
+                 packages_path=info.get(_packages_path), timing=updated_info.get(_timing),
+                 stop_at_error=info.get("stop_at_error", False))

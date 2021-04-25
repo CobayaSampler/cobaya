@@ -19,6 +19,11 @@ OptionalArrayLike = Optional[ArrayLike]
 ArrayOrFloat = Union[float, ArrayLike]
 # type for Cobaya input parameter dictionaries (as from yaml)
 InfoDict = Dict[str, Any]
+# specific cases (typing to be refined in future using TypedDict)
+InputDict = InfoDict
+ParamDict = InfoDict
+LikeDict = InfoDict
+TheoryDict = InfoDict
 
 # Package name (for importlib)
 # (apparently __package__ is only defined if you import something locally.
@@ -70,7 +75,7 @@ reserved_attributes = {_input_params, _output_params, "install_options", "bibtex
 
 # Conventional order for yaml dumping (purely cosmetic)
 _dump_sort_cosmetic = [
-    kinds.theory, kinds.likelihood, _prior, _params, kinds.sampler, "post"]
+    kinds.theory, kinds.likelihood, _prior, _params, kinds.sampler, _post]
 
 # Separator for
 # fields in parameter names and files

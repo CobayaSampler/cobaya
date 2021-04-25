@@ -11,18 +11,17 @@ import sys
 import datetime
 import re
 import shutil
-import platform
 import logging
 from packaging import version
 
 # Local
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
-from cobaya.conventions import _input_suffix, _updated_suffix, _separator_files, _version
-from cobaya.conventions import _resume, _resume_default, _force
-from cobaya.conventions import _yaml_extensions, _dill_extension
+from cobaya.conventions import _version, _resume, _resume_default, _force
+from cobaya.conventions import  _dill_extension
 from cobaya.conventions import _output_prefix, _debug, kinds, _params, _class_name
 from cobaya.log import LoggedError, HasLogger, get_traceback_text
-from cobaya.input import is_equal_info, get_resolved_class, load_info_dump
+from cobaya.input import is_equal_info, get_resolved_class, load_info_dump, split_prefix
+from cobaya.input import get_info_path
 from cobaya.collection import Collection
 from cobaya.tools import deepcopy_where_possible, find_with_regexp, sort_cosmetic
 from cobaya.tools import has_non_yaml_reproducible
@@ -31,39 +30,6 @@ from cobaya import mpi, __version__
 # Default output type and extension
 _kind = "txt"
 _ext = "txt"
-
-
-def split_prefix(prefix):
-    """
-    Splits an output prefix into folder and file name prefix.
-
-    If on Windows, allows for unix-like input.
-    """
-    if platform.system() == "Windows":
-        prefix = prefix.replace("/", os.sep)
-    folder = os.path.dirname(prefix) or "."
-    file_prefix = os.path.basename(prefix)
-    if file_prefix == ".":
-        file_prefix = ""
-    return folder, file_prefix
-
-
-def get_info_path(folder, prefix, infix=None, kind="updated", ext=_yaml_extensions[0]):
-    """
-    Gets path to info files saved by Output.
-    """
-    if infix is None:
-        infix = ""
-    elif not infix.endswith("."):
-        infix += "."
-    info_file_prefix = os.path.join(
-        folder, prefix + (_separator_files if prefix else ""))
-    try:
-        suffix = {"input": _input_suffix, "updated": _updated_suffix}[kind.lower()]
-    except KeyError:
-        raise ValueError("`kind` must be `input|updated`")
-    return info_file_prefix + infix + suffix + ext
-
 
 class FileLock:
     def __init__(self, filename=None, log=None):

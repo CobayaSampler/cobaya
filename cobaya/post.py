@@ -20,11 +20,11 @@ from cobaya.parameterization import is_fixed_or_function_param, is_sampled_param
     is_derived_param
 from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_prefix, \
     _post, _params, _prior, kinds, _weight, _resume, _separator, _get_chi2_name, \
-    _minuslogpost, _force, partag, _minuslogprior, _packages_path, \
-    _separator_files, _post_add, _post_remove, _post_suffix, _undo_chi2_name, InfoDict
+    _minuslogpost, _force, partag, _minuslogprior, _packages_path, InputDict, \
+    _separator_files, _post_add, _post_remove, _post_suffix, _undo_chi2_name
 from cobaya.collection import Collection
 from cobaya.log import logger_setup, LoggedError
-from cobaya.input import update_info, add_aggregated_chi2_params
+from cobaya.input import update_info, add_aggregated_chi2_params, load_input_dict
 from cobaya.output import get_output
 from cobaya import mpi
 from cobaya.tools import progress_bar, recursive_update, deepcopy_where_possible, \
@@ -56,17 +56,18 @@ class DummyModel:
 
 
 @mpi.sync_state
-def post(info: InfoDict, sample: Union[Collection, List[Collection], None] = None
-         ) -> Tuple[InfoDict, ResultDict]:
+def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
+         sample: Union[Collection, List[Collection], None] = None
+         ) -> Tuple[InputDict, ResultDict]:
+    info = load_input_dict(info_or_yaml_or_file)
     logger_setup(info.get(_debug), info.get(_debug_file))
     log = logging.getLogger(__name__.split(".")[-1])
     # MARKED FOR DEPRECATION IN v3.0
     # BEHAVIOUR TO BE REPLACED BY ERROR:
     check_deprecated_modules_path(info)
     # END OF DEPRECATION BLOCK
-    try:
-        info_post = info[_post]
-    except KeyError:
+    info_post = info.get(_post)
+    if not info_post:
         raise LoggedError(log, "No 'post' block given. Nothing to do!")
     if mpi.is_main_process() and info.get(_resume):
         log.warning("Resuming not implemented for post-processing. Re-starting.")
@@ -81,10 +82,10 @@ def post(info: InfoDict, sample: Union[Collection, List[Collection], None] = Non
     if output_in:
         info_in = output_in.load_updated_info()
         if info_in is None:
-            info_in = deepcopy_where_possible(info)
+            info_in = info
         output_in.check_lock()
     else:
-        info_in = deepcopy_where_possible(info)
+        info_in = info
     dummy_model_in = DummyModel(info_in[_params], info_in.get(kinds.likelihood, {}),
                                 info_in.get(_prior))
     in_collections = []

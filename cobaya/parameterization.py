@@ -217,9 +217,7 @@ class Parameterization(HasLogger):
 
         # warn if repeated labels
         labels_inv_repeated = invert_dict(self.labels())
-        for k in list(labels_inv_repeated):
-            if len(labels_inv_repeated[k]) == 1:
-                labels_inv_repeated.pop(k)
+        labels_inv_repeated = {k: v for k, v in labels_inv_repeated.items() if len(v) > 1}
         if labels_inv_repeated:
             self.log.warning(
                 "There are repeated parameter labels: %r", labels_inv_repeated)
@@ -288,9 +286,8 @@ class Parameterization(HasLogger):
             self._derived[p] = output_params_values[p]
         for p in self._derived_inputs:
             self._derived[p] = self._input.get(p)
-            # Then evaluate the functions
+        # Then evaluate the functions
         if self._wrapped_derived_funcs:
-            # Then evaluate the functions
             for p, (func, args, to_set) in self._wrapped_derived_funcs.items():
                 for arg in to_set:
                     val = self._input.get(arg)

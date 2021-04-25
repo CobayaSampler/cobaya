@@ -101,9 +101,9 @@ def test_mcmc_drag_results():
     products = sampler.products()
     from getdist.mcsamples import MCSamplesFromCobaya
     products["sample"] = mpi.allgather(products["sample"])
-    gdample = MCSamplesFromCobaya(updated_info, products["sample"], ignore_rows=0.1)
-    assert abs(gdample.mean('a') - 0.2) < 0.015
-    assert abs(gdample.mean('b')) < 0.015
+    gdample = MCSamplesFromCobaya(updated_info, products["sample"], ignore_rows=0.2)
+    assert abs(gdample.mean('a') - 0.2) < 0.02
+    assert abs(gdample.mean('b')) < 0.02
     assert abs(gdample.std('a') - 0.293) < 0.03
     assert abs(gdample.std('b') - 0.4) < 0.03
 

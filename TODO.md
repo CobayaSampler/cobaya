@@ -12,6 +12,7 @@
 ## dump log info along with each chain file if saving to file (currently in stdout)
 ## PolyChord: check overhead
 ## PolyChord: lower dimension of tests?
+## use TypedDict for all dicts, remove _prior, _... etc constants
 
 # Enhancements/Refactorings
 
