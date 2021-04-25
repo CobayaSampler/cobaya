@@ -609,7 +609,7 @@ class Prior(HasLogger):
         """
         if np.nan in self.ref_pdf and warn_if_no_ref:
             self.log.info(
-                "Reference values or pdf's for some parameters were not provided. "
+                "Reference values or pdfs for some parameters were not provided. "
                 "Sampling from the prior instead for those parameters.")
 
         where_ignore_ref = [r is np.nan or ignore_fixed and isinstance(r, numbers.Real)

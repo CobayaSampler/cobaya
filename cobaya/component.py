@@ -133,7 +133,7 @@ class CobayaComponent(HasLogger, HasDefaults):
         """
         pass
 
-    def get_version(self) -> Optional[str, InfoDict]:
+    def get_version(self) -> Union[None, str, InfoDict]:
         """
         Get version information for this component.
 
