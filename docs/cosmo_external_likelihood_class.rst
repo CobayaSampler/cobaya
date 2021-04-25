@@ -177,7 +177,7 @@ Likelihoods, like Theory classes,  can also provide derived parameters. To do th
 
         ...
 
-Alternatively, you could implement the Theory-inherited ``calculate'' method,
+Alternatively, you could implement the Theory-inherited ``calculate`` method,
 and set both ``state['logp']`` and ``state['derived']``.
 
 InstallableLikelihood
