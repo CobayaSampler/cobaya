@@ -32,9 +32,9 @@ fixed_info: InputDict = {'likelihood': {
     'params': {'a__0': {'prior': {'min': -1, 'max': 1}, 'latex': '\\alpha_{0}'},
                'a__1': {'prior': {'min': -1, 'max': 1}, 'latex': '\\alpha_{1}'},
                'a__2': {'prior': {'min': -1, 'max': 1}, 'latex': '\\alpha_{2}'},
-               '_0': {'min': -3, 'max': 3, 'latex': '\\beta_{0}'},
-               '_1': {'min': -3, 'max': 3, 'latex': '\\beta_{1}'},
-               '_2': {'min': -3, 'max': 3, 'latex': '\\beta_{2}'}}}
+               '_0': {'latex': '\\beta_{0}'},
+               '_1': {'latex': '\\beta_{1}'},
+               '_2': {'latex': '\\beta_{2}'}}}
 
 
 def generate_random_info(n_modes, ranges):

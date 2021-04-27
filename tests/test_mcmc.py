@@ -3,7 +3,6 @@ import numpy as np
 import pytest
 import time
 
-from cobaya.likelihoods.gaussian_mixture import random_cov
 from cobaya.tools import KL_norm
 from cobaya.likelihood import Likelihood
 from cobaya.run import run

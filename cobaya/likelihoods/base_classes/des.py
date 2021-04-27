@@ -337,7 +337,7 @@ class DES(DataSetLikelihood):
         # Note hankel assumes integral starts at ell=0
         # (though could change spline to zero at zero).
         # At percent level it matters what is assumed
-        if self.use_hankel:
+        if self.use_hankel:  # pragma: no cover
             # noinspection PyUnresolvedReferences
             import hankel
             maxx = self.theta_bins_radians[-1] * self.l_max
@@ -368,7 +368,7 @@ class DES(DataSetLikelihood):
                     for j, g in enumerate(groups):
                         js[ix, j, i] = np.sum(bigj[g])
             self.bessel_cache = js[0, :, :], js[1, :, :], js[2, :, :]
-        else:
+        else:  # pragma: no cover
             # get ell for bessel transform in dense array,
             # and precompute bessel function matrices
             # Much slower than binned_bessels as many more sampling points
@@ -494,7 +494,7 @@ class DES(DataSetLikelihood):
         corrs_th_m = np.empty((self.nzbins, self.nzbins), dtype=object)
         corrs_th_w = np.empty((self.nwbins, self.nwbins), dtype=object)
         corrs_th_t = np.empty((self.nwbins, self.nzbins), dtype=object)
-        if self.use_hankel:
+        if self.use_hankel:  # pragma: no cover
             # Note that the absolute value of the correlation depends
             # on what you do about L_min (e.g. 1 vs 2 vs 0 makes a difference).
             if 'xip' in self.used_types or 'xim' in self.used_types:
@@ -641,7 +641,7 @@ class DES(DataSetLikelihood):
         return axs
 
     def plot_lensing(self, corrs_p=None, corrs_m=None, errors=True,
-                     diff=False, axs=None, ls='-'):
+                     diff=False, axs=None, ls='-'):  # pragma: no cover
         if any(t not in self.used_types for t in ["xip", "xim"]):
             self.log.warning("Shear not computed. Nothing to plot.")
             return

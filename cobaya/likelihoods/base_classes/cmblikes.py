@@ -424,7 +424,7 @@ class CMBlikes(DataSetLikelihood):
         return pcov
 
     # noinspection PyTypeChecker
-    def writeData(self, froot):
+    def writeData(self, froot):  # pragma: no cover
         np.savetxt(froot + '_cov.dat', self.cov)
         np.savetxt(froot + '_bandpowers.dat', self.full_bandpowers,
                    header=" ".join(self.full_bandpower_headers))
@@ -682,7 +682,8 @@ def white_noise_from_muK_arcmin(noise_muK_arcmin):
     return (noise_muK_arcmin * np.pi / 180 / 60.) ** 2
 
 
-def save_cl_dict(filename, array_dict, lmin=2, lmax=None, cl_dict_lmin=0):
+def save_cl_dict(filename, array_dict, lmin=2, lmax=None,
+                 cl_dict_lmin=0):  # pragma: no cover
     """
     Save a Cobaya dict of CL to a text file, with each line starting with L.
 

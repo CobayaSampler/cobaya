@@ -124,10 +124,10 @@ class gaussian_mixture(Likelihood):
         if derived is not None:
             for i in range(self.n_modes):
                 standard = np.linalg.inv(self.choleskyL[i]).dot((x - self.means[i]))
-                derived.update(dict(
-                    [(p, v) for p, v in
-                     zip(list(self.output_params)[i * self.d():(i + 1) * self.d()],
-                         standard)]))
+                derived.update(
+                    (p, v) for p, v in
+                    zip(list(self.output_params)[i * self.d():(i + 1) * self.d()],
+                        standard))
         # Compute the likelihood and return
         return logsumexp([gauss.logpdf(x) for gauss in self.gaussians], b=self.weights)
 

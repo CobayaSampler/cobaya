@@ -74,7 +74,8 @@ class Planck2018CamSpecPython(DataSetLikelihood):
                 for key, value in used_ell.items():
                     used_ell[key] = range_to_ells(value)
             else:
-                if silent: print('CamSpec using range: %s' % used_ell)
+                if silent:
+                    print('CamSpec using range: %s' % used_ell)
                 used_ell = range_to_ells(used_ell)
         else:
             used_ell = None
@@ -83,7 +84,8 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         used_indices = []
         with open(ini.relativeFileName('data_ranges'), "r", encoding="utf-8-sig") as f:
             lines = f.readlines()
-            while not lines[-1].strip(): lines = lines[:-1]
+            while not lines[-1].strip():
+                lines = lines[:-1]
             self.Nspec = len(lines)
             lmin = np.zeros(self.Nspec, dtype=int)
             lmax = np.zeros(self.Nspec, dtype=int)
@@ -169,7 +171,8 @@ class Planck2018CamSpecPython(DataSetLikelihood):
             self.covinv = np.load(cache_file).astype(np.float64)
         else:
             self.covinv = np.linalg.inv(self.cov)
-            if use_cache: np.save(cache_file, self.covinv.astype(np.float32))
+            if use_cache:
+                np.save(cache_file, self.covinv.astype(np.float32))
 
     def get_foregrounds(self, data_params):
 
