@@ -13,7 +13,6 @@ from copy import deepcopy
 # Local
 from cobaya.conventions import kinds, partag as p, _params, InfoDict
 
-
 _camb = "camb"
 _classy = "classy"
 _desc = "desc"

@@ -17,7 +17,7 @@ from math import isclose
 
 # Local
 from cobaya.conventions import _weight, _chi2, _minuslogpost, _minuslogprior, \
-    _get_chi2_name, _separator
+    _get_chi2_name, _separator, Optional
 from cobaya.tools import load_DataFrame
 from cobaya.log import LoggedError, HasLogger, NoLogging
 
@@ -40,7 +40,7 @@ def check_index(i, imax):
 
 
 # Notice that slices are never supposed to raise IndexError, but an empty list at worst!
-def check_slice(ij, imax=None):
+def check_slice(ij: slice, imax=None):
     newlims = {"start": ij.start, "stop": ij.stop}
     if ij.start is None:
         newlims["start"] = 0
@@ -107,10 +107,12 @@ class Collection(BaseCollection):
         # Create/load the main data frame and the tracking indices
         # Create the DataFrame structure
         if output:
-            self.file_name, self.driver = output.prepare_collection(
-                name=self.name, extension=extension)
             if file_name:
                 self.file_name = file_name
+                self.driver = output.kind
+            else:
+                self.file_name, self.driver = output.prepare_collection(
+                    name=self.name, extension=extension)
             self.root_file_name = os.path.join(output.folder, output.prefix)
         else:
             self.driver = "dummy"
@@ -120,7 +122,7 @@ class Collection(BaseCollection):
                 try:
                     self._out_load(skip=onload_skip)
                     if onload_thin != 1:
-                        self.thin_samples(onload_thin)
+                        self.thin_samples(onload_thin, inplace=True)
                     if load:
                         self.columns = list(self.data.columns)
                         loaded_chi2_names = set(name for name in self.columns if
@@ -346,7 +348,7 @@ class Collection(BaseCollection):
             except KeyError:
                 raise ValueError("Some of the indices are not valid columns.")
         elif isinstance(args[0], int):
-            new_data = self.data.iloc[check_index(args[0])]
+            new_data = self.data.iloc[check_index(args[0], len(self.data))]
         elif isinstance(args[0], slice):
             new_data = self.data.iloc[check_slice(args[0])]
         else:
@@ -357,7 +359,7 @@ class Collection(BaseCollection):
     def values(self):
         return self.data.values
 
-    def _copy(self, data=None):
+    def _copy(self, data=None) -> 'Collection':
         """
         Returns a copy of the collection.
 
@@ -373,11 +375,11 @@ class Collection(BaseCollection):
         self_copy = deepcopy(self)
         setattr(self, "_data", current_data)
         setattr(self_copy, "_data", data)
-        setattr(self_copy, "_n", len(data))
+        setattr(self_copy, "_n", data.last_valid_index() + 1)
         return self_copy
 
     # Dummy function to avoid exposing `data` kwarg, since no checks are performed on it.
-    def copy(self):
+    def copy(self) -> 'Collection':
         """
         Returns a copy of the collection.
         """
@@ -428,9 +430,12 @@ class Collection(BaseCollection):
                  (list(self.derived_params) if derived else [])][first:last].T,
             **weights_kwarg))
 
-    def thin_samples(self, thin):
+    def filtered_copy(self, where) -> 'Collection':
+        return self._copy(self.data[where].reset_index(drop=True))
+
+    def thin_samples(self, thin, inplace=False) -> 'Optional[Collection]':
         if thin == 1:
-            return
+            return self if inplace else self.copy()
         if thin != int(thin) or thin < 1:
             raise LoggedError(self.log, "Thin factor must be an positive integer, got %s",
                               thin)
@@ -448,10 +453,11 @@ class Collection(BaseCollection):
             data = self._data.iloc[unique, :].copy()
             data.iloc[:, 0] = counts
             data.reset_index(drop=True, inplace=True)
-            self._data = data
-            self._n = self._data.last_valid_index() + 1
-        self.log.debug("Thinned samples by %s, sample points after thinning %s",
-                       thin, len(self._data))
+            if inplace:
+                self._data = data
+                self._n = self._data.last_valid_index() + 1
+            else:
+                return self._copy(data)
 
     def bestfit(self):
         """Best fit (maximum likelihood) sample. Returns a copy."""
@@ -480,8 +486,7 @@ class Collection(BaseCollection):
     def reweight(self, importance_weights):
         self._cache_dump()
         self._data[_weight] *= importance_weights
-        self._data = (
-            self.data[self._data.weight > 0].reset_index(drop=True))
+        self._data = self.data[self._data.weight > 0].reset_index(drop=True)
         self._n = self._data.last_valid_index() + 1
 
     # Saving and updating

@@ -323,7 +323,7 @@ def check_gcc_version(min_version="6.4", error_returns=None):
 
 # Command-line script ####################################################################
 
-def install_script():
+def install_script(args=None):
     set_mpi_disabled()
     warn_deprecation()
     # Parse arguments
@@ -389,7 +389,7 @@ def install_script():
                             help="Install code of the components.", dest=_data)
     group_just.add_argument("-D", "--just-data", action="store_false", default=True,
                             help="Install data of the components.", dest=_code)
-    arguments = parser.parse_args()
+    arguments = parser.parse_args(args)
     # Configure the logger ASAP
     logger_setup()
     logger = logging.getLogger(__name__.split(".")[-1])

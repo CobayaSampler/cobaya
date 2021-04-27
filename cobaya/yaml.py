@@ -18,7 +18,7 @@ import numpy as np
 from yaml.resolver import BaseResolver
 from yaml.constructor import ConstructorError
 from collections import OrderedDict
-from typing import Mapping
+from typing import Mapping, Optional
 
 # Local
 from cobaya.tools import prepare_comment, recursive_update
@@ -122,7 +122,7 @@ def yaml_load(text_stream, file_name=None):
             raise InputSyntaxError(errstr)
 
 
-def yaml_load_file(file_name, yaml_text=None):
+def yaml_load_file(file_name: str, yaml_text: Optional[str] = None):
     """Wrapper to load a yaml file.
 
     Manages !defaults directive."""
@@ -134,7 +134,7 @@ def yaml_load_file(file_name, yaml_text=None):
 
 # Custom dumper ##########################################################################
 
-def yaml_dump(info, stream=None, Dumper=yaml.Dumper, **kwds):
+def yaml_dump(info: dict, stream=None, Dumper=yaml.Dumper, **kwds):
     class CustomDumper(Dumper):
         pass
 
@@ -184,7 +184,7 @@ def yaml_dump(info, stream=None, Dumper=yaml.Dumper, **kwds):
     return yaml.dump(info, stream, CustomDumper, allow_unicode=True, **kwds)
 
 
-def yaml_dump_file(file_name, data, comment=None, error_if_exists=True):
+def yaml_dump_file(file_name: str, data, comment=None, error_if_exists=True):
     if error_if_exists and os.path.isfile(file_name):
         raise IOError("File exists: '%s'" % file_name)
     with open(file_name, "w+", encoding="utf-8") as f:

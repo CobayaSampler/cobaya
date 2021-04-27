@@ -97,7 +97,7 @@ def prettyprint_bib(descs, bibs):
 
 
 # Command-line script
-def bib_script():
+def bib_script(args=None):
     warn_deprecation()
     # Parse arguments and launch
     import argparse
@@ -115,7 +115,7 @@ def bib_script():
                               ", ".join(['%s' % kind for kind in kinds]) + ". " +
                               "Use only when component name is not unique "
                               "(it would fail)."))
-    arguments = parser.parse_args()
+    arguments = parser.parse_args(args)
     # Case of files
     are_yaml = [
         (os.path.splitext(f)[1] in _yaml_extensions) for f in
@@ -131,7 +131,6 @@ def bib_script():
                 print(create_banner(
                     component, symbol=_default_symbol, length=_default_length))
                 print(get_bib_component(component, arguments.kind))
-                return
             except:
                 if not arguments.kind:
                     print("Specify its kind with '--%s [component_kind]'." % kind_opt +
@@ -143,3 +142,7 @@ def bib_script():
               "or of component names (not a mix of them).")
         return 1
     return
+
+
+if __name__ == '__main__':
+    bib_script()

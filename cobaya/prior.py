@@ -339,7 +339,7 @@ Just give it a try and it should work fine, but, in case you need the details:
 import numpy as np
 import numbers
 from types import MethodType
-from typing import Sequence, NamedTuple, Callable, Optional
+from typing import Sequence, NamedTuple, Callable, Optional, Mapping
 
 # Local
 from cobaya.conventions import _prior, partag, _prior_1d_name, PriorsDict
@@ -390,16 +390,23 @@ class Prior(HasLogger):
             # Get the reference (1d) pdf
             ref = sampled_params_info[p].get(partag.ref)
             # Cases: number, pdf (something, but not a number), nothing
-            if isinstance(ref, Sequence) and len(ref) == 2:
+            if isinstance(ref, Sequence) and len(ref) == 2 and all(
+                    isinstance(n, numbers.Number) for n in ref):
                 ref = {partag.dist: "norm", "loc": ref[0], "scale": ref[1]}
             if isinstance(ref, numbers.Real):
                 self.ref_pdf += [float(ref)]
-            elif ref is not None:
+            elif isinstance(ref, Mapping):
                 self.ref_pdf += [get_scipy_1d_pdf({p: ref})]
                 self._ref_is_pointlike = False
-            else:
+            elif ref is None:
                 self.ref_pdf += [np.nan]
                 self._ref_is_pointlike = False
+            else:
+                raise LoggedError(self.log,
+                                  "'ref' for starting position should be None or a number"
+                                  ", a list of two numbers for normal mean and deviation,"
+                                  "or a dict with parameters for a scipy distribution.")
+
             self._bounds[i] = [-np.inf, np.inf]
             try:
                 self._bounds[i] = self.pdf[-1].interval(1)
@@ -438,7 +445,7 @@ class Prior(HasLogger):
             if unknown:
                 if unknown.intersection(parameterization.derived_params()):
                     err = ("External prior '%s' has arguments %s that are output derived "
-                           "parameters, Priors must be functions of input parameters."
+                           "parameters, Priors must be functions of input parameters. "
                            "Use a separate 'likelihood' for the prior if needed.")
                 else:
                     err = ("Some of the arguments of the external prior '%s' cannot be "

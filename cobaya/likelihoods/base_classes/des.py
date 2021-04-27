@@ -62,7 +62,7 @@ def_DES_types = ['xip', 'xim', 'gammat', 'wtheta']
 _spline = InterpolatedUnivariateSpline
 
 
-def get_def_cuts():
+def get_def_cuts():  # pragma: no cover
     ranges = {}
     for tp in def_DES_types:
         ranges[tp] = np.empty((6, 6), dtype=object)
@@ -247,7 +247,7 @@ class DES(DataSetLikelihood):
         # k_max actually computed, assumes extrapolated beyond that
         self.k_max = ini.float('kmax', 15)
 
-    def load_fits_data(self, filename, ranges=None):
+    def load_fits_data(self, filename, ranges=None):  # pragma: no cover
         # noinspection PyUnresolvedReferences
         import astropy.io.fits as fits
         if ranges is None:
@@ -718,7 +718,7 @@ class DES(DataSetLikelihood):
 
 # Conversion .fits --> .dataset  #########################################################
 
-def convert_txt(filename, root, outdir, ranges=None):
+def convert_txt(filename, root, outdir, ranges=None):  # pragma: no cover
     # noinspection PyUnresolvedReferences
     import astropy.io.fits as fits
     if ranges is None:

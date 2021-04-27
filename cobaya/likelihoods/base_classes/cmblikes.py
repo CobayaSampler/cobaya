@@ -713,7 +713,7 @@ def make_forecast_cmb_dataset(fiducial_Cl, output_root, output_dir=None,
                               noise_muK_arcmin_P=None,
                               NoiseVar=None, ENoiseFac=2, fwhm_arcmin=None,
                               lmin=2, lmax=None, fsky=1.0,
-                              lens_recon_noise=None, cl_dict_lmin=0):
+                              lens_recon_noise=None, cl_dict_lmin=0):  # pragma: no cover
     """
     Make a simulated .dataset and associated files with 'data' set at the input fiducial
     model. Uses the exact full-sky log-likelihood, scaled by fsky.

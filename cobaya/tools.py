@@ -217,34 +217,33 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
             raise Exception()
     except:
         exc_info = sys.exc_info()
-        if allow_external and not component_path:
+    if allow_external and not component_path:
+        try:
+            import_module(module_name)
+        except Exception:
+            exc_info = sys.exc_info()
+        else:
             try:
-                import_module(module_name)
-            except Exception:
+                return return_class(module_name)
+            except:
                 exc_info = sys.exc_info()
-                pass
-            else:
-                try:
-                    return return_class(module_name)
-                except:
-                    exc_info = sys.exc_info()
-        if ((exc_info[0] is ModuleNotFoundError and
-             str(exc_info[1]).rstrip("'").endswith(name))):
-            if None_if_not_found:
-                return None
-            if allow_internal:
+    if ((exc_info[0] is ModuleNotFoundError and
+         str(exc_info[1]).rstrip("'").endswith(name))):
+        if None_if_not_found:
+            return None
+        if allow_internal:
+            suggestions = fuzzy_match(name, get_available_internal_class_names(kind), n=3)
+            if suggestions:
                 raise LoggedError(
                     log, "%s '%s' not found. Maybe you meant one of the following "
                          "(capitalization is important!): %s",
-                    kind.capitalize(), name,
-                    fuzzy_match(name, get_available_internal_class_names(kind), n=3))
-            else:
-                raise LoggedError(log, "'%s' not found", name)
-        else:
-            log.error("".join(list(traceback.format_exception(*exc_info))))
-            log.error("There was a problem when importing %s '%s':", kind or "external",
-                      name)
-            raise exc_info[1]
+                    kind.capitalize(), name, suggestions)
+        raise LoggedError(log, "'%s' not found", name)
+    else:
+        log.error("".join(list(traceback.format_exception(*exc_info))))
+        log.error("There was a problem when importing %s '%s':", kind or "external",
+                  name)
+        raise exc_info[1]
 
 
 def get_resolved_class(component_or_class, kind=None, component_path=None,
@@ -506,8 +505,7 @@ def load_DataFrame(file_name, skip=0, root_file_name=None):
                     if name.startswith(_chi2 + '_') and not name.startswith(
                             _chi2 + _separator):
                         names[i] = name.replace(_chi2 + '_', _chi2 + _separator)
-                cols = ['weight', 'minuslogpost']
-                cols.extend(names)
+                cols = ['weight', 'minuslogpost'] + names
                 inp.seek(0)
             else:
                 raise LoggedError(log, "Input sample file does not have header: %s",
@@ -739,7 +737,7 @@ def fuzzy_match(input_string, choices, n=3, score_cutoff=50):
 def has_non_yaml_reproducible(info):
     for value in info.values():
         if callable(value) or \
-                isinstance(value, Mapping) and not has_non_yaml_reproducible(value):
+                isinstance(value, Mapping) and has_non_yaml_reproducible(value):
             return True
     return False
 

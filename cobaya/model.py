@@ -17,7 +17,7 @@ import os
 from cobaya.conventions import kinds, _prior, _timing, _params, _provides, \
     _overhead_time, _packages_path, _debug, _debug_default, _debug_file, _input_params, \
     _output_params, _get_chi2_name, _input_params_prefix, \
-    _output_params_prefix, empty_dict
+    _output_params_prefix, empty_dict, InfoDict
 from cobaya.conventions import InputDict, LikesDict, TheoriesDict, ParamsDict, PriorsDict
 from cobaya.input import update_info, load_input_dict
 from cobaya.parameterization import Parameterization
@@ -43,7 +43,7 @@ class LogPosterior(NamedTuple):
 
 class Requirement(NamedTuple):
     name: str
-    options: Optional[dict]
+    options: Optional[InfoDict]
 
     def __eq__(self, other):
         return self.name == other.name and _dict_equal(self.options, other.options)
@@ -63,7 +63,7 @@ def as_requirement_list(requirements):
         result = []
         for item in requirements:
             if isinstance(item, Sequence) and len(item) == 2:
-                result += Requirement(item[0], item[1])
+                result.append(Requirement(item[0], item[1]))
             else:
                 break
         else:
@@ -446,7 +446,7 @@ class Model(HasLogger):
         could be reused.
         """
         return self.logposterior(params_values, make_finite=make_finite,
-                                 return_derived=False, cached=cached)[0]
+                                 return_derived=False, cached=cached).logpost
 
     def get_valid_point(self, max_tries, ignore_fixed_ref=False):
         """
@@ -886,6 +886,7 @@ class Model(HasLogger):
             output_assign.pop(p, None)
         # Assign the single-likelihood "chi2__" output parameters
         for p in output_assign:
+            # TODO: do we nee this? (not used in tests)
             if p.startswith(_get_chi2_name("")):
                 if p in aggr_chi2_names:
                     continue  # it's an aggregated likelihood
@@ -988,6 +989,7 @@ class Model(HasLogger):
             blocks_sorted = [blocks[i] for i in i_optimal_ordering]
         # b) 2-block slow-fast separation
         else:
+            # TODO: this "else" not covered by tests
             if len(blocks) == 1:
                 raise LoggedError(self.log, "Requested fast/slow separation, "
                                             "but all parameters have the same speed.")

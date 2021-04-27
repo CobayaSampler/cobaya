@@ -1,11 +1,18 @@
 import os
 import numpy as np
+import pytest
+from flaky import flaky
 from getdist.mcsamples import MCSamplesFromCobaya, loadMCSamples
 from cobaya.theory import Theory
 from cobaya.run import run
 from cobaya import mpi
+from cobaya.log import LoggedError
 from cobaya.conventions import _packages_path, InfoDict, _dill_extension
+from cobaya.tools import deepcopy_where_possible
+from cobaya.cosmo_input.convert_cosmomc import cosmomc_root_to_cobaya_info_dict
 from .common import process_packages_path
+
+pytestmark = pytest.mark.mpi
 
 
 def likelihood(_self):
@@ -21,6 +28,17 @@ class ATheory(Theory):
 
     def calculate(self, state, want_derived=True, **params_values_dict):
         state['derived']['As100'] = params_values_dict['As'] * 100
+
+
+class BTheory(Theory):
+    params = {'As100': None, 'As1000': {'derived': True}}
+
+    def calculate(self, state, want_derived=True, **params_values_dict):
+        state['derived']['As1000'] = params_values_dict['As100'] * 10
+
+
+class CTheory(Theory):
+    params = {'AsX': None, 'As1000': {'derived': True}}
 
 
 info: InfoDict = {"params": {
@@ -52,37 +70,80 @@ info: InfoDict = {"params": {
 }
 
 
+def test_not_found():
+    inf = deepcopy_where_possible(info)
+    inf["likelihood"]["H0.perfect"] = None
+    with pytest.raises(LoggedError) as e:
+        run(inf)
+    assert "Failed to get defaults for component" in str(e)
+    inf = deepcopy_where_possible(info)
+    inf["likelihood"]["none"] = None
+    with pytest.raises(LoggedError) as e:
+        run(inf)
+    assert "Failed to get defaults for component" in str(e)
+    inf = deepcopy_where_possible(info)
+    inf["likelihood"]["pandas.plotting.PlotAccessor"] = None
+    with pytest.raises(LoggedError) as e:
+        run(inf)
+    assert "Failed to get defaults for component" in str(e)
+
+
+@flaky(max_runs=2, min_passes=1)
 @mpi.sync_errors
 def test_cosmo_run_resume_post(tmpdir, packages_path=None):
     # only vary As, so fast chain
     info['output'] = os.path.join(tmpdir, 'testchain')
-
     if packages_path:
         info[_packages_path] = process_packages_path(packages_path)
     run(info, force=True)
-    # note that continuing from files leads to text-file precision at ead in, so a mix of
+    # note that continuing from files leads to text-file precision at read in, so a mix of
     # precision in the output Collection returned from run
     run(info, resume=True, override={'sampler': {'mcmc': {'Rminus1_stop': 0.2}}})
     updated_info, sampler = run(info['output'] + '.updated' + _dill_extension,
                                 resume=True,
                                 override={'sampler': {'mcmc': {'Rminus1_stop': 0.05}}})
-    products = sampler.products()
-    results = mpi.allgather(products["sample"])
+    results = mpi.allgather(sampler.products()["sample"])
     samp = MCSamplesFromCobaya(updated_info, results, ignore_rows=0.2)
-
     assert np.isclose(samp.mean('As100'), 100 * samp.mean('As'))
     assert abs(samp.mean('sigma8') - 0.69) < 0.02
 
+    # post-processing
     info_post = {'add': {'params': {'h': None},
                          "likelihood": {"test_likelihood2": likelihood2}},
                  'remove': {'likelihood': ["test_likelihood"]},
                  'suffix': 'testpost',
                  'skip': 0.2, 'thin': 4
                  }
+
     output_info, products = run(updated_info, override={'post': info_post}, force=True)
     results2 = mpi.allgather(products["sample"])
     samp2 = MCSamplesFromCobaya(output_info, results2)
-    assert abs(samp2.mean('sigma8') - 0.75) < 0.02
+    assert abs(samp2.mean('sigma8') - 0.75) < 0.03
+
+    # from getdist-format chain files
+    root = os.path.join(tmpdir, 'getdist_format')
+    if mpi.is_main_process():
+        samp.saveChainsAsText(root)
+    mpi.sync_processes()
+
+    from_txt = dict(updated_info, output=root)
+    post_from_text = dict(info_post, skip=0)  # getdist already skipped
+    output_info, products = run(from_txt, override={'post': post_from_text}, force=True)
+    samp_getdist = MCSamplesFromCobaya(output_info, mpi.allgather(products["sample"]))
+    assert not products["stats"]["points_removed"]
+    assert samp2.numrows == samp_getdist.numrows
+    assert np.isclose(samp2.mean('sigma8'), samp_getdist.mean('sigma8'))
+
+    # again with inferred-inputs for params
+    info_conv = cosmomc_root_to_cobaya_info_dict(root)
+    # have to manually add consistent likelihoods if re-computing
+    info_conv['likelihood'] = info['likelihood']
+    info_conv['theory'] = info['theory']
+    post_from_text = dict(info_post, skip=0, suffix='getdist2')  # getdist already skipped
+    output_info, products = run(info_conv, override={'post': post_from_text},
+                                output=False)
+    samp_getdist2 = MCSamplesFromCobaya(output_info, mpi.allgather(products["sample"]))
+    assert np.isclose(samp2.mean('sigma8'), samp_getdist2.mean('sigma8'))
 
     # from save info, no output
     info_post['output'] = None
@@ -105,9 +166,16 @@ def test_cosmo_run_resume_post(tmpdir, packages_path=None):
                                  'post': info_revert}, force=True)
     results_revert = mpi.allgather(products["sample"])
     samp_revert = MCSamplesFromCobaya(output_info, results_revert)
-    samp.weighted_thin(4)
-    assert samp.numrows == samp_revert.numrows
-    assert np.isclose(samp_revert.mean("sigma8"), samp.mean("sigma8"))
+
+    results_thin = [chain.filtered_copy(slice(int(round(0.2 * len(chain))), None)
+                                        ).thin_samples(thin=4) for chain in results]
+    samp_thin = MCSamplesFromCobaya(updated_info, results_thin)
+    assert samp_thin.numrows == samp_revert.numrows + products["stats"]["points_removed"]
+    if not products["stats"]["points_removed"]:
+        assert np.isclose(samp_revert.mean("sigma8"), samp_thin.mean("sigma8"))
+    else:
+        assert abs(samp_revert.mean("sigma8") - samp_thin.mean("sigma8")) < 0.01
+    assert not products["stats"]["points_removed"]
 
     # no remove
     info_post = {
@@ -121,3 +189,17 @@ def test_cosmo_run_resume_post(tmpdir, packages_path=None):
     samps4 = loadMCSamples(updated_info['output'] + '.post.test2')
     assert samp2.paramNames.list() == samps4.paramNames.list()
     assert np.isclose(samp2.mean("sigma8"), samps4.mean("sigma8"))
+
+    # adding new theory derived
+    info_post['add']['theory'] = {'new_param_theory': BTheory}
+    # info_post['add']['params']['As1000'] = None
+    output_info, products = run(updated_info, override={'post': info_post}, output=False)
+    results3 = mpi.allgather(products["sample"])
+    samp3 = MCSamplesFromCobaya(output_info, results3)
+    assert np.isclose(samp3.mean("sigma8"), samp2.mean("sigma8"))
+    assert np.isclose(samp3.mean("As1000"), samp2.mean("As") * 1000)
+
+    info_post['add']['theory'] = {'new_param_theory': CTheory}
+    with pytest.raises(LoggedError) as e:
+        run(updated_info, override={'post': info_post}, output=False)
+    assert 'Parameter AsX no known value' in str(e)

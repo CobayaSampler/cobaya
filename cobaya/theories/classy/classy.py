@@ -533,6 +533,7 @@ class classy(BoltzmannBase):
             path = None
         if path and not kwargs.get("allow_global"):
             log.info("Importing *local* CLASS from '%s'.", path)
+            assert path is not None
             if not os.path.exists(path):
                 log.error("The given folder does not exist: '%s'", path)
                 return False

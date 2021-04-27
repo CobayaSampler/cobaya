@@ -35,6 +35,8 @@ def cosmomc_root_to_cobaya_info_dict(root: str, derived_to_input=()) -> InfoDict
             if name == 'chi2_prior':
                 continue
             name = name.replace('chi2_', 'chi2__')
+        if name.startswith('minuslogprior') or name == 'chi2':
+            continue
         d[name] = {'latex': par.label}
         if par.renames:
             d[name]['renames'] = par.renames
@@ -45,8 +47,9 @@ def cosmomc_root_to_cobaya_info_dict(root: str, derived_to_input=()) -> InfoDict
                 par.isDerived = False
         if ranges and name in ranges.names:
             if par.isDerived:
-                d[name]['min'] = ranges.getLower(name)
-                d[name]['max'] = ranges.getUpper(name)
+                low_up = ranges.getLower(name), ranges.getUpper(name)
+                if any(r is not None for r in low_up):
+                    d[name]['min'], d[name]['max'] = low_up
             else:
                 d[name]["prior"] = [ranges.getLower(name), ranges.getUpper(name)]
     if ranges:

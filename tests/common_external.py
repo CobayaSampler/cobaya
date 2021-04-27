@@ -104,6 +104,10 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
         assert np.allclose(logprior_base + sum(logps[p] for p in info_logpdf),
                            -products["sample"]["minuslogprior"].values), (
             "The value of the total prior is not reproduced correctly.")
+        assert np.isclose(sampler.model.logprior({'x': products["sample"]["x"][0],
+                                                  'y': products["sample"]["y"][0]}),
+                          -products["sample"]["minuslogprior"][0]), (
+            "The value of the total prior is not reproduced from mode.logprior.")
     elif kind == kinds.likelihood:
         for lik in info[kinds.likelihood]:
             assert np.allclose(-2 * logps[lik],

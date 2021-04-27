@@ -4,6 +4,7 @@ parameter names) gaussian likelihood.
 """
 
 # Global
+import pytest
 from scipy.stats import multivariate_normal
 import numpy as np
 from typing import Sequence, Union
@@ -14,6 +15,7 @@ from cobaya.run import run
 from cobaya.tools import get_external_function
 from cobaya.likelihood import Likelihood
 from cobaya.model import get_model
+from cobaya.log import LoggedError
 
 x_func = lambda _: _ / 3
 e_func = lambda _: _ + 1
@@ -127,6 +129,7 @@ def test_parameterization_dependencies():
         prior: [2,4]
       bb:
         prior: [0,1]
+        ref: [0.5, 0.1]
       c:
         value: "lambda aa, bb: aa+bb"  
       a: 
@@ -156,6 +159,17 @@ def test_parameterization_dependencies():
     loglike, derived = get_model(test_info).loglike()
     assert np.isclose(loglike, 630)
     assert derived == [2.5, 5.0, 6.25, -7, -1.5]
+
+    test_info["prior"]["on_derived"] = "lambda f: 5*f"
+    with pytest.raises(LoggedError) as e:
+        get_model(test_info)
+    assert "found and don't have a default value either" in str(e.value)
+
+    # currently don't allow priors on derived parameters
+    test_info["prior"]["on_derived"] = "lambda E: 5*E"
+    with pytest.raises(LoggedError) as e:
+        get_model(test_info)
+    assert "that are output derived parameters" in str(e.value)
 
 
 # MARKED FOR DEPRECATION IN v3.0 -- Everything below this line

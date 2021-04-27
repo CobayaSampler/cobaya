@@ -4,6 +4,7 @@ import numpy as np
 from scipy.stats import multivariate_normal
 from flaky import flaky
 import pytest
+import os
 
 from cobaya.conventions import kinds
 from cobaya.likelihoods.gaussian_mixture import info_random_gaussian_mixture
@@ -15,7 +16,7 @@ pytestmark = pytest.mark.mpi
 
 @flaky(max_runs=3, min_passes=1)
 @mpi.sync_errors
-def test_minimize_gaussian():
+def test_minimize_gaussian(tmpdir):
     # parameters
     dimension = 3
     n_modes = 1
@@ -34,9 +35,16 @@ def test_minimize_gaussian():
     info["debug"] = False
     info["debug_file"] = None
 
-    updated_info, sampler = run(info)
-    products = sampler.products()
+    products = run(info).sampler.products()
     # Done! --> Tests
     if mpi.is_main_process():
         rel_error = abs(maxloglik - -products["minimum"]["minuslogpost"]) / abs(maxloglik)
         assert rel_error < 0.001
+
+    info['output'] = os.path.join(tmpdir, 'testmin')
+    products = run(info).sampler.products()
+    from getdist.types import BestFit
+    res = BestFit(info['output'] + '.bestfit').getParamDict()
+    assert np.isclose(res["loglike"], products["minimum"]["minuslogpost"])
+    for p, v in list(res.items())[:-2]:
+        assert np.isclose(products["minimum"][p], v)

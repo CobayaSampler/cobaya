@@ -56,23 +56,25 @@ def test_post_prior(tmpdir):
         _output_prefix: os.path.join(tmpdir, "gaussian"), _force: True,
         _params: info_params, kinds.sampler: info_sampler,
         kinds.likelihood: {"one": None}, _prior: {"gaussian": sampled_pdf}}
-    run(info)
     info_post = {
         _output_prefix: info[_output_prefix], _force: True,
-        _post: {_post_suffix: "foo",
+        _post: {_post_suffix: "foo", 'skip': 0.05,
                 _post_remove: {_prior: {"gaussian": None}},
                 _post_add: {_prior: {"target": target_pdf_prior}}}}
-    post(info_post)
-    # Load with GetDist and compare
-    if mpi.is_main_process():
-        mcsamples = loadMCSamples(
-            info_post[_output_prefix] + _post_ + info_post[_post][_post_suffix])
-        new_mean = mcsamples.mean(["a", "b"])
-        new_cov = mcsamples.getCovMat().matrix
-        mpi.share((new_mean, new_cov))
-    else:
-        new_mean, new_cov = mpi.share()
-    assert abs(KL_norm(target["mean"], target["cov"], new_mean, new_cov)) < 0.02
+    _, sampler = run(info)
+    for mem in [False, True]:
+        post(info_post, sample=sampler.products()["sample"] if mem else None)
+
+        # Load with GetDist and compare
+        if mpi.is_main_process():
+            mcsamples = loadMCSamples(
+                info_post[_output_prefix] + _post_ + info_post[_post][_post_suffix])
+            new_mean = mcsamples.mean(["a", "b"])
+            new_cov = mcsamples.getCovMat().matrix
+            mpi.share((new_mean, new_cov))
+        else:
+            new_mean, new_cov = mpi.share()
+        assert abs(KL_norm(target["mean"], target["cov"], new_mean, new_cov)) < 0.02
 
 
 @flaky(max_runs=3, min_passes=1)
@@ -149,7 +151,7 @@ def test_post_params():
                             partag.derived: "lambda chi2__target: chi2__target"},
                         "cprime": None}}}}
     info_post.update(updated_info_gaussian)
-    updated_info, products = post(info_post, products_gaussian["sample"])
+    products = post(info_post, products_gaussian["sample"]).products
     # Compare parameters
     assert np.allclose(
         products["sample"]["a"] - products["sample"]["b"],

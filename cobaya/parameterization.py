@@ -12,7 +12,7 @@ import numpy as np
 from numbers import Number
 from itertools import chain
 from copy import deepcopy
-from typing import Mapping, Sequence, Optional
+from typing import Mapping, Sequence
 
 # Local
 from cobaya.conventions import partag, ParamsDict, ParamDict, ParamValuesDict
@@ -77,7 +77,7 @@ def expand_info_param(info_param: ParamDict, default_derived=True) -> ParamDict:
     return info_param
 
 
-def reduce_info_param(info_param: ParamDict) -> Optional[ParamDict]:
+def reduce_info_param(info_param: ParamDict) -> ParamDict:
     """
     Compresses the info of a parameter, suppressing default values.
     This is the opposite of :func:`~input.expand_info_param`.

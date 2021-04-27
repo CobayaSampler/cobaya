@@ -17,7 +17,7 @@ from packaging import version
 # Local
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
 from cobaya.conventions import _version, _resume, _resume_default, _force
-from cobaya.conventions import  _dill_extension
+from cobaya.conventions import _dill_extension
 from cobaya.conventions import _output_prefix, _debug, kinds, _params, _class_name
 from cobaya.log import LoggedError, HasLogger, get_traceback_text
 from cobaya.input import is_equal_info, get_resolved_class, load_info_dump, split_prefix
@@ -30,6 +30,7 @@ from cobaya import mpi, __version__
 # Default output type and extension
 _kind = "txt"
 _ext = "txt"
+
 
 class FileLock:
     def __init__(self, filename=None, log=None):
@@ -167,7 +168,6 @@ class Output(HasLogger):
         # Prepare file names, and check if chain exists
         self.file_input = get_info_path(
             self.folder, self.prefix, infix=infix, kind="input")
-        self.lock.set_lock(self.log, self.file_input, force=force)
         self.file_updated = get_info_path(self.folder, self.prefix, infix=infix)
         self.dump_file_updated = get_info_path(
             self.folder, self.prefix, infix=infix, ext=_dill_extension)
@@ -479,10 +479,10 @@ class Output(HasLogger):
         Use `name` for particular types of collections (default: matches any number).
         Pass `False` to mean there is nothing between the output prefix and the extension.
         """
-        return [
+        return sorted(
             f2 for f2 in [os.path.join(self.folder, f) for f in os.listdir(self.folder)]
             if self.is_collection_file_name(
-                os.path.split(f2)[1], name=name, extension=extension)]
+                os.path.split(f2)[1], name=name, extension=extension))
 
     def load_collections(self, model, skip=0, thin=1, concatenate=False,
                          name=None, extension=None):
@@ -506,7 +506,12 @@ class Output(HasLogger):
             collections = collection
         return collections
 
+    @mpi.root_only
+    def set_lock(self):
+        self.lock.set_lock(self.log, self.file_input, force=self.force)
+
     def __enter__(self):
+        self.set_lock()
         return self
 
     def __exit__(self, *args):

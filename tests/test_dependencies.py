@@ -68,7 +68,7 @@ class B2(Theory):
 
 class A2(Theory):  # circular
     def get_requirements(self):
-        return {'Ain', 'Bout'}
+        return ('Ain', None), ('Bout', None)
 
     def get_can_provide_params(self):
         return ['Aderived', 'Aresult']
@@ -139,6 +139,18 @@ def test_dependencies(packages_path):
         _test_loglike([('A', A), ('B', {'external': B2, 'provides': ['Bout']}),
                        ('C', {'external': C, 'provides': ['Bout']})])
     assert "more than one component provides Bout" in str(e.value)
+
+    inf = info.copy()
+    inf['params'] = info['params'].copy()
+    inf['params']['notused'] = [1, 10, 2, 5, 1]
+    inf['theory'] = dict(theories)
+    with pytest.raises(LoggedError) as e:
+        get_model(inf)
+    assert "Could not find anything to use input parameter" in str(e.value)
+    inf['params']['notused'] = [1, 10, 2]
+    with pytest.raises(LoggedError) as e:
+        get_model(inf)
+    assert "Parameter info length not valid" in str(e.value)
 
 
 # test conditional requirements

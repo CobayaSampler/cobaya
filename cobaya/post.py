@@ -12,7 +12,7 @@ import logging
 from itertools import chain
 import numpy as np
 import sys
-from typing import List, Union, Dict, Tuple
+from typing import List, Union, NamedTuple
 
 # Local
 from cobaya.parameterization import Parameterization
@@ -20,8 +20,9 @@ from cobaya.parameterization import is_fixed_or_function_param, is_sampled_param
     is_derived_param
 from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_prefix, \
     _post, _params, _prior, kinds, _weight, _resume, _separator, _get_chi2_name, \
-    _minuslogpost, _force, partag, _minuslogprior, _packages_path, InputDict, \
+    _minuslogpost, _force, partag, _minuslogprior, _packages_path, \
     _separator_files, _post_add, _post_remove, _post_suffix, _undo_chi2_name
+from cobaya.conventions import ParamValuesDict, InputDict, InfoDict
 from cobaya.collection import Collection
 from cobaya.log import logger_setup, LoggedError
 from cobaya.input import update_info, add_aggregated_chi2_params, load_input_dict
@@ -38,11 +39,25 @@ if sys.version_info >= (3, 8):
 
     class ResultDict(TypedDict):
         sample: Union[Collection, List[Collection]]
+        stats: ParamValuesDict
+        weights: Union[np.ndarray, List[np.ndarray]]
 else:
-    ResultDict = Dict[str, Union[Collection, List[Collection]]]
+    ResultDict = InfoDict
 
 _minuslogprior_1d_name = _minuslogprior + _separator + _prior_1d_name
 _default_post_cache_size = 2000
+
+
+class PostTuple(NamedTuple):
+    info: InputDict
+    products: ResultDict
+
+
+def value_or_list(lst: list):
+    if len(lst) == 1:
+        return lst[0]
+    else:
+        return lst
 
 
 # Dummy classes for loading chains for post processing
@@ -58,7 +73,7 @@ class DummyModel:
 @mpi.sync_state
 def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
          sample: Union[Collection, List[Collection], None] = None
-         ) -> Tuple[InputDict, ResultDict]:
+         ) -> PostTuple:
     info = load_input_dict(info_or_yaml_or_file)
     logger_setup(info.get(_debug), info.get(_debug_file))
     log = logging.getLogger(__name__.split(".")[-1])
@@ -82,15 +97,18 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     if output_in:
         info_in = output_in.load_updated_info()
         if info_in is None:
-            info_in = info
-        output_in.check_lock()
+            info_in = update_info(info)
     else:
-        info_in = info
+        info_in = update_info(info)
     dummy_model_in = DummyModel(info_in[_params], info_in.get(kinds.likelihood, {}),
                                 info_in.get(_prior))
     in_collections = []
     thin = info_post.get("thin", 1)
     skip = info_post.get("skip", 0)
+    if info.get('thin') is not None or info.get('skip') is not None:
+        raise LoggedError(log, "'thin' and 'skip' should be "
+                               "parameters of the 'post' block")
+
     if sample:
         # If MPI, assume for each MPI process post is passed in the list of
         # collections that should be processed by that process
@@ -102,14 +120,17 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         for i, collection in enumerate(in_collections):
             if skip:
                 if 0 < skip < 1:
-                    skip = int(skip * len(collection))
-                collection = collection.data.iloc[skip:, :]
+                    skip = int(round(skip * len(collection)))
+                collection = collection.filtered_copy(slice(skip, None))
             if thin != 1:
-                collection = collection.copy()
-                collection.thin_samples(thin)
+                collection = collection.thin_samples(thin)
             in_collections[i] = collection
     elif output_in:
         files = output_in.find_collections()
+        numbered = files
+        if not numbered:
+            # look for un-numbered output files
+            files = output_in.find_collections(name=False)
         if files:
             if mpi.size() > len(files):
                 raise LoggedError(log, "Number of MPI processes (%s) is larger than "
@@ -118,7 +139,8 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             for num in range(mpi.rank(), len(files), mpi.size()):
                 in_collections += [Collection(dummy_model_in, output_in,
                                               onload_thin=thin, onload_skip=skip,
-                                              load=True, name=str(num + 1))]
+                                              load=True, file_name=files[num],
+                                              name=str(num + 1) if numbered else "")]
         else:
             raise LoggedError(log, "No samples found for the input model with prefix %s",
                               os.path.join(output_in.folder, output_in.prefix))
@@ -142,8 +164,13 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     if not add.get(kinds.likelihood):
         add[kinds.likelihood] = {}
     add[kinds.likelihood]["one"] = None
-    # Expand the "add" info
+    # Expand the "add" info, but don't add new default sampled parameters
+    orig_params = set(add.get(_params) or [])
     add = update_info(add)
+    for p in set(add[_params]) - orig_params:
+        if p in info_in[_params]:
+            add[_params].pop(p)
+
     # 2.1 Adding/removing derived parameters and changes in priors of sampled parameters
     out_combined = {_params: deepcopy_where_possible(info_in[_params])}
     remove_params = list(str_to_list(remove.get(_params)) or [])
@@ -195,8 +222,8 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                     " but had a different value or was not fixed. This is not allowed. "
                     "The old info of the parameter was '%s: %r'",
                     p, dict(pinfo), p, dict(pinfo_in))
-        else:
-            raise LoggedError(log, "This should not happen. Contact the developers.")
+        elif not pinfo_in:  # OK as long as we have known value for it
+            raise LoggedError(log, "Parameter %s no known value. ", p)
         out_combined[_params][p] = pinfo
     # Turn the rest of *derived* parameters into constants,
     # so that the likelihoods do not try to recompute them
@@ -283,6 +310,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         out_prefix += _separator_files + _post + _separator_files + info_post[
             _post_suffix]
     output_out = get_output(prefix=out_prefix, force=info.get(_force))
+    output_out.set_lock()
 
     if output_out and not output_out.force and output_out.find_collections():
         raise LoggedError(log, "Found existing post-processing output with prefix %r. "
@@ -316,7 +344,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     out_collections = [Collection(dummy_model_out, output_out, name=c.name,
                                   cache_size=_default_post_cache_size)
                        for c in in_collections]
-    # TODO: should maybe add skip/thin to out_combined, so can tell?
+    # TODO: should maybe add skip/thin to out_combined, so can tell post-processed?
     output_out.check_and_dump_info(info_out, out_combined, check_compatible=False)
     collection_in = in_collections[0]
     collection_out = out_collections[0]
@@ -453,35 +481,48 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         #   Remove -inf's (0-weight), and correct indices
 
     difflogmax = max(mpi.allgather(difflogmax))
-    output_in.clear_lock()
 
     points = 0
     tot_weight = 0
     min_weight = np.inf
     max_weight = -np.inf
     sum_w2 = 0
+    points_removed = 0
+    weights = []
     for collection_in, collection_out in zip(in_collections, out_collections):
         importance_weights = np.exp(
             collection_in[_minuslogpost] - collection_out[_minuslogpost] - difflogmax)
+        weights.append(importance_weights)
         collection_out.reweight(importance_weights)
         # Write!
         collection_out.out_update()
         output_weights = collection_out[_weight]
         points += len(collection_out)
         tot_weight += np.sum(output_weights)
+        points_removed += len(importance_weights) - len(output_weights)
         min_weight = min(min_weight, np.min(importance_weights))
         max_weight = max(max_weight, np.max(output_weights))
         sum_w2 += np.dot(output_weights, output_weights)
-        tot_weight, min_weight, max_weight, sum_w2, points = \
-            mpi.zip_gather([tot_weight, min_weight, max_weight, sum_w2, points])
+    tot_weight, min_weight, max_weight, sum_w2, points, points_removed = \
+        mpi.zip_gather([tot_weight, min_weight, max_weight, sum_w2,
+                        points, points_removed])
     if mpi.is_main_process():
+        output_out.clear_lock()
         log.info("Finished! Final number of distinct sample points: %s", sum(points))
         log.info("Minimum scaled importance weight: %.4g", min(min_weight))
+        if sum(points_removed):
+            log.info("Points deleted due to zero weight: %s", sum(points_removed))
         log.info("Effective number of single samples if independent (sum w)/max(w): %s",
                  int(sum(tot_weight) / max(max_weight)))
         log.info(
             "Effective number of weighted samples if independent (sum w)^2/sum(w^2): "
             "%s", int(sum(tot_weight) ** 2 / sum(sum_w2)))
-
-    return out_combined, {"sample": (out_collections[0] if
-                                     len(out_collections) == 1 else out_collections)}
+    products = {"sample": value_or_list(out_collections),
+                "stats": {'min_weight': min(min_weight),
+                          'points_removed': sum(points_removed),
+                          'tot_weight': sum(tot_weight),
+                          'max_weight': max(max_weight),
+                          'sum_w2': sum(sum_w2),
+                          'points': sum(points)},
+                "weights": value_or_list(weights)}
+    return PostTuple(info=out_combined, products=products)

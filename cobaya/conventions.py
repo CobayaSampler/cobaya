@@ -21,14 +21,16 @@ ArrayOrFloat = Union[float, ArrayLike]
 InfoDict = Dict[str, Any]
 # specific cases (typing to be refined in future using TypedDict)
 InputDict = InfoDict
-ParamDict = InfoDict
+ParamDict = Optional[InfoDict]
 ParamsDict = Dict[str, ParamDict]
-LikeDict = InfoDict
+LikeDict = Optional[InfoDict]
 LikesDict = Dict[str, LikeDict]
-TheoryDict = InfoDict
+TheoryDict = Optional[InfoDict]
 TheoriesDict = Dict[str, TheoryDict]
 PriorDict = InfoDict
 PriorsDict = Dict[str, PriorDict]
+SamplerDict = InfoDict
+SamplersDict = Dict[str, SamplerDict]
 ParamValuesDict = Dict[str, Optional[float]]
 
 # Package name (for importlib)

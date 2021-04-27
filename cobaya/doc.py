@@ -20,7 +20,7 @@ _indent = 2 * " "
 
 # Command-line script ####################################################################
 
-def doc_script():
+def doc_script(args=None):
     warn_deprecation()
     # Parse arguments
     import argparse
@@ -34,13 +34,14 @@ def doc_script():
                         default=None, metavar="component_kind",
                         help=("Kind of component whose defaults are requested: " +
                               ", ".join(['%s' % kind for kind in kinds]) + ". " +
-                              "Use only when component name is not unique (it would fail)."))
+                              "Use only when component name is not unique "
+                              "(it would fail)."))
     parser.add_argument("-p", "--python", action="store_true", default=False,
                         help="Request Python instead of YAML.")
     expand_flag, expand_flag_ishort = "expand", 1
     parser.add_argument("-" + expand_flag[expand_flag_ishort], "--" + expand_flag,
                         action="store_true", default=False, help="Expand YAML defaults.")
-    arguments = parser.parse_args()
+    arguments = parser.parse_args(args)
     # Remove plurals (= name of src subfolders), for user-friendliness
     if arguments.component.lower() in subfolders.values():
         arguments.component = next(
@@ -91,3 +92,7 @@ def doc_script():
                 print("Specify its kind with '--%s [component_kind]'." % kind_opt)
         return 1
     return
+
+
+if __name__ == '__main__':
+    doc_script()

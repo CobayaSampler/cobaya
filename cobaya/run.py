@@ -7,7 +7,7 @@
 """
 
 # Global
-from typing import Union, Optional, Tuple
+from typing import Union, Optional, NamedTuple
 import logging
 import os
 
@@ -24,27 +24,32 @@ from cobaya.yaml import yaml_dump
 from cobaya.input import update_info, load_input_file, load_input_dict
 from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic, \
     check_deprecated_modules_path
-from cobaya.post import post, ResultDict
+from cobaya.post import post, PostTuple
 from cobaya import mpi
+
+
+class InfoSamplerTuple(NamedTuple):
+    info: InputDict
+    sampler: Sampler
 
 
 @mpi.sync_state
 def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         packages_path: Optional[str] = None,
-        output: Optional[str] = None,
+        output: Union[str, bool, None] = None,
         debug: Optional[bool] = None,
         stop_at_error: Optional[bool] = None,
         resume: bool = False, force: bool = False,
         no_mpi: bool = False, test: bool = False,
-        override: Optional[InputDict] = None
-        ) -> Tuple[InputDict, Union[Sampler, ResultDict]]:
+        override: Optional[InputDict] = None,
+        ) -> Union[InfoSamplerTuple, PostTuple]:
     """
     Run from an input dictionary, file name or yaml string, with optional arguments
     to override settings in the input as needed.
 
     :param info_or_yaml_or_file: input options dictionary, yaml file, or yaml text
     :param packages_path: path where external packages were installed
-    :param output: path name prefix for output files
+    :param output: path name prefix for output files, or False for no file output
     :param debug: verbose debug output
     :param stop_at_error: stop if an error is raised
     :param resume: continue an existing run
@@ -84,11 +89,13 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             raise ValueError("'rename' and 'force' are exclusive options")
         info[_resume] = bool(resume)
         info[_force] = bool(force)
-    if output:
-        info[_output_prefix] = output
     if _post in info:
+        if output or output is False:
+            info[_post][_output_prefix] = output or None
         return post(info)
 
+    if output or output is False:
+        info[_output_prefix] = output or None
     logger_setup(info.get(_debug), info.get(_debug_file))
     logger_run = logging.getLogger(run.__name__)
     # MARKED FOR DEPRECATION IN v3.0
@@ -159,15 +166,15 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             if info.get(_test_run, False):
                 logger_run.info("Test initialization successful! "
                                 "You can probably run now without `--%s`.", _test_run)
-                return updated_info, sampler
+                return InfoSamplerTuple(updated_info, sampler)
             # Run the sampler
             sampler.run()
 
-    return updated_info, sampler
+    return InfoSamplerTuple(updated_info, sampler)
 
 
 # Command-line script
-def run_script(help_commands=None):
+def run_script(args=None):
     warn_deprecation()
     import argparse
     parser = argparse.ArgumentParser(
@@ -204,7 +211,7 @@ def run_script(help_commands=None):
     parser.add_argument("--no-mpi", action='store_true',
                         help="disable MPI when mpi4py installed but MPI does "
                              "not actually work")
-    arguments = parser.parse_args()
+    arguments = parser.parse_args(args)
 
     # MARKED FOR DEPRECATION IN v3.0
     if arguments.modules is not None:
@@ -219,7 +226,10 @@ def run_script(help_commands=None):
     del arguments.modules
     # END OF DEPRECATION BLOCK
     info = load_input_file(arguments.input_file,
-                           no_mpi=arguments.no_mpi or arguments.test,
-                           help_commands=help_commands)
+                           no_mpi=arguments.no_mpi or arguments.test)
     del arguments.input_file
     run(info, **arguments.__dict__)
+
+
+if __name__ == '__main__':
+    run_script()

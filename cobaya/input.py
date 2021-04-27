@@ -656,7 +656,7 @@ class HasDefaults:
 
     @classmethod
     def _get_desc(cls, info=None):
-        return cleandoc(cls.__doc__)
+        return cleandoc(cls.__doc__) if cls.__doc__ else ""
 
     @classmethod
     def get_bibtex(cls):

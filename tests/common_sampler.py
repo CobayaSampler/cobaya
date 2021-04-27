@@ -2,9 +2,10 @@
 
 import numpy as np
 from random import shuffle, choice
+from itertools import chain
+import os
 from scipy.stats import multivariate_normal
 from getdist.mcsamples import MCSamplesFromCobaya
-from itertools import chain
 
 from cobaya.conventions import kinds, _output_prefix, empty_dict
 from cobaya.conventions import _debug, _debug_file, _packages_path, partag
@@ -51,7 +52,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
                 list(info["params"])[:dimension])
     info[_debug] = False
     info[_debug_file] = None
-    info[_output_prefix] = tmpdir
+    info[_output_prefix] = os.path.join(tmpdir, 'out_chain')
     if packages_path:
         info[_packages_path] = process_packages_path(packages_path)
     # Delay to one chain to check that MPI communication of the sampler is non-blocking

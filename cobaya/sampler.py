@@ -51,20 +51,21 @@ from typing import Optional, Sequence, Mapping, Union, Any
 from itertools import chain
 
 # Local
-from cobaya.conventions import kinds, _checkpoint_extension, _version
-from cobaya.conventions import _progress_extension, _covmat_extension
+from cobaya.conventions import kinds, _checkpoint_extension, _version, InfoDict
+from cobaya.conventions import _progress_extension, _covmat_extension, SamplersDict
 from cobaya.conventions import partag, _packages_path, _force, _resume, _output_prefix
 from cobaya.tools import get_class, deepcopy_where_possible, find_with_regexp
 from cobaya.tools import recursive_update, str_to_list
+from cobaya.model import Model
 from cobaya.log import LoggedError
 from cobaya.yaml import yaml_load_file, yaml_dump
 from cobaya.component import CobayaComponent
 from cobaya.input import update_info, is_equal_info, get_preferred_old_values
-from cobaya.output import OutputDummy
+from cobaya.output import OutputDummy, Output
 from cobaya import mpi
 
 
-def get_sampler_name_and_class(info_sampler):
+def get_sampler_name_and_class(info_sampler: SamplersDict):
     """
     Auxiliary function to retrieve the class of the required sampler.
     """
@@ -73,7 +74,7 @@ def get_sampler_name_and_class(info_sampler):
     return name, get_class(name, kind=kinds.sampler)
 
 
-def check_sane_info_sampler(info_sampler):
+def check_sane_info_sampler(info_sampler: SamplersDict):
     log = logging.getLogger(__name__.split(".")[-1])
     if not info_sampler:
         raise LoggedError(log, "No sampler given!")
@@ -86,7 +87,8 @@ def check_sane_info_sampler(info_sampler):
         raise LoggedError(log, "Only one sampler currently supported at a time.")
 
 
-def check_sampler_info(info_old=None, info_new=None, is_resuming=False):
+def check_sampler_info(info_old: Optional[SamplersDict] = None,
+                       info_new: Optional[SamplersDict] = None, is_resuming=False):
     """
     Checks compatibility between the new sampler info and that of a pre-existing run.
 
@@ -126,7 +128,8 @@ def check_sampler_info(info_old=None, info_new=None, is_resuming=False):
                                 "'-%s', '--%s', '%s: True'" % (_force[0], _force, _force))
 
 
-def get_sampler(info_sampler, model, output=None, packages_path=None):
+def get_sampler(info_sampler: SamplersDict, model: Model, output: Optional[Output] = None,
+                packages_path: Optional[str] = None) -> 'Sampler':
     # TODO: unused, what is it for?
     assert isinstance(info_sampler, Mapping), (
         "The first argument must be a dictionary with the info needed for the sampler. "
@@ -201,23 +204,33 @@ class Sampler(CobayaComponent):
         """
         pass
 
-    def products(self):
+    def products(self) -> InfoDict:
         """
         Returns the products expected in a scripted call of cobaya,
         (e.g. a collection of samples or a list of them).
         """
         return {}
 
+    @property
+    def model(self) -> Model:
+        return self._model
+
+    @property
+    def output(self) -> Output:
+        return self._output
+
     # Private methods: just ignore them:
-    def __init__(self, info_sampler, model, output=None, packages_path=None, name=None):
+    def __init__(self, info_sampler: SamplersDict, model: Model,
+                 output=Optional[Output], packages_path: Optional[str] = None,
+                 name: Optional[str] = None):
         """
         Actual initialization of the class. Loads the default and input information and
         call the custom ``initialize`` method.
 
         [Do not modify this one.]
         """
-        self.model = model
-        self.output = output
+        self._model = model
+        self._output = output
         self._updated_info = deepcopy_where_possible(info_sampler)
         super().__init__(info_sampler, packages_path=packages_path,
                          name=name, initialize=False, standalone=False)
@@ -258,7 +271,7 @@ class Sampler(CobayaComponent):
         self._set_rng()
         self.initialize()
         self._release_rng()
-        self.model.set_cache_size(self._get_requested_cache_size())
+        model.set_cache_size(self._get_requested_cache_size())
         # Add to the updated info some values which are
         # only available after initialisation
         self._updated_info[_version] = self.get_version()
