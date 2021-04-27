@@ -7,7 +7,7 @@ import os
 from scipy.stats import multivariate_normal
 from getdist.mcsamples import MCSamplesFromCobaya
 
-from cobaya.conventions import kinds, _output_prefix, empty_dict
+from cobaya.conventions import kinds, _output_prefix, empty_dict, InputDict
 from cobaya.conventions import _debug, _debug_file, _packages_path, partag
 from cobaya.likelihoods.gaussian_mixture import info_random_gaussian_mixture
 from cobaya.tools import KL_norm
@@ -22,23 +22,46 @@ O_std_min = 0.01
 O_std_max = 0.05
 distance_factor = 4
 
+fixed_info: InputDict = {'likelihood': {
+    'gaussian_mixture': {'means': [np.array([-0.48591462, 0.10064559, 0.64406749])],
+                         'covs': [np.array([[0.00078333, 0.00033134, -0.0002923],
+                                            [0.00033134, 0.00218118, -0.00170728],
+                                            [-0.0002923, -0.00170728, 0.00676922]])],
+                         'input_params_prefix': 'a_', 'output_params_prefix': '',
+                         'derived': True}},
+    'params': {'a__0': {'prior': {'min': -1, 'max': 1}, 'latex': '\\alpha_{0}'},
+               'a__1': {'prior': {'min': -1, 'max': 1}, 'latex': '\\alpha_{1}'},
+               'a__2': {'prior': {'min': -1, 'max': 1}, 'latex': '\\alpha_{2}'},
+               '_0': {'min': -3, 'max': 3, 'latex': '\\beta_{0}'},
+               '_1': {'min': -3, 'max': 3, 'latex': '\\beta_{1}'},
+               '_2': {'min': -3, 'max': 3, 'latex': '\\beta_{2}'}}}
 
-@mpi.sync_errors
-def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
-                 packages_path=None, skip_not_installed=False):
-    # Info of likelihood and prior
-    ranges = np.array([[-1, 1] for _ in range(dimension)])
+
+def generate_random_info(n_modes, ranges):
     while True:
-        info = info_random_gaussian_mixture(
+        inf = info_random_gaussian_mixture(
             ranges=ranges, n_modes=n_modes, input_params_prefix="a_",
             O_std_min=O_std_min, O_std_max=O_std_max, derived=True)
         if n_modes == 1:
             break
-        means = info["likelihood"]["gaussian_mixture"]["means"]
+        means = inf["likelihood"]["gaussian_mixture"]["means"]
         distances = chain(*[[np.linalg.norm(m1 - m2) for m2 in means[i + 1:]]
                             for i, m1 in enumerate(means)])
         if min(distances) >= distance_factor * O_std_max:
             break
+    return inf
+
+
+@mpi.sync_errors
+def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
+                 packages_path=None, skip_not_installed=False, fixed=False):
+    # Info of likelihood and prior
+    ranges = np.array([[-1, 1] for _ in range(dimension)])
+    if fixed:
+        info = fixed_info.copy()
+    else:
+        info = generate_random_info(n_modes, ranges)
+
     if mpi.is_main_process():
         print("Original mean of the gaussian mode:")
         print(info["likelihood"]["gaussian_mixture"]["means"])
@@ -55,9 +78,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
     info[_output_prefix] = os.path.join(tmpdir, 'out_chain')
     if packages_path:
         info[_packages_path] = process_packages_path(packages_path)
-    # Delay to one chain to check that MPI communication of the sampler is non-blocking
-    #    if rank == 1:
-    #        info["likelihood"]["gaussian_mixture"]["delay"] = 0.1
+
     updated_info, sampler = install_test_wrapper(skip_not_installed, run, info)
     products = sampler.products()
     products["sample"] = mpi.gather(products["sample"])

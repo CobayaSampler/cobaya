@@ -39,4 +39,3 @@
 ## Dependencies system
 * Maybe remove distinction between input parameters and requirements, so that `calculate`/`logp` takes both of them, which would be prepared by `check_cache_and_compute`. This would simplify the code a bit (in particular the part about input parameters that can be requirements, e.g. YHe) and makes all likelihood automatically callable outside a `Model` feeding requirements by hand. Problem: to prepare requirements we need arguments (e.g. units, `ell_factor` for Cl's) which are not passed to `must_compute`.
 * Provider: it should be possible to save retrieving methods at initialisation so that everything (params, results, methods) can be retrieved with Provider.get(**args). Maybe it is interesting?
-## Add MPI tests for resuming 

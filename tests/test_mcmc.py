@@ -21,9 +21,12 @@ max_runs = 3
 def test_mcmc(tmpdir, packages_path=None):
     dimension = 3
     # Random initial proposal
-    cov = mpi.share(
-        random_cov(dimension * [[0, 1]], O_std_min=0.01, O_std_max=0.5)
-        if mpi.is_main_process() else None)
+    # cov = mpi.share(
+    #    random_cov(dimension * [[0, 1]], O_std_min=0.01, O_std_max=0.5)
+    #    if mpi.is_main_process() else None)
+    cov = np.array([[0.01853538, - 0.02990048, 0.00046138],
+                    [-0.02990048, 0.14312571, - 0.00441829],
+                    [0.00046138, - 0.00441829, 0.00019141]])
     info_sampler = {"mcmc": {
         # Bad guess for covmat, so big burn in and max_tries
         "max_tries": 3000, "burn_in": 100 * dimension,
@@ -49,7 +52,8 @@ def test_mcmc(tmpdir, packages_path=None):
         info_sampler["mcmc"].update({
             # Callback to check KL divergence -- disabled in the automatic test
             "callback_function": check_gaussian, "callback_every": 100})
-    body_of_test(dimension=dimension, info_sampler=info_sampler, tmpdir=tmpdir)
+    body_of_test(dimension=dimension, fixed=True, info_sampler=info_sampler,
+                 tmpdir=tmpdir)
 
 
 yaml_drag = r"""
@@ -58,14 +62,14 @@ params:
     prior:
       min: -0.5
       max: 3
-    proposal: 0.2
+    proposal: 0.6
   b:
     prior:
       dist: norm
       loc: 0
       scale: 1
     ref: 0
-    proposal: 0.5
+    proposal: 0.6
 sampler:
   mcmc:
    drag: True
@@ -87,9 +91,9 @@ class GaussLike2(Likelihood):
     speed = 600
     params = {'a': None, 'b': None}
 
-    def calculate(self, state, want_derived=True, **params_values_dict):
-        state["logp"] = - ((params_values_dict['a'] - 0.2) ** 2 +
-                           params_values_dict['b'] ** 2) / 0.2 / 2
+    def logp(self, **params_values_dict):
+        return - ((params_values_dict['a'] - 0.2) ** 2 +
+                  params_values_dict['b'] ** 2) / 0.2 / 2
 
 
 @flaky(max_runs=max_runs, min_passes=1)

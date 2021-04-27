@@ -886,7 +886,7 @@ class Model(HasLogger):
             output_assign.pop(p, None)
         # Assign the single-likelihood "chi2__" output parameters
         for p in output_assign:
-            # TODO: do we nee this? (not used in tests)
+            # TODO: do we need this? (not used in tests)
             if p.startswith(_get_chi2_name("")):
                 if p in aggr_chi2_names:
                     continue  # it's an aggregated likelihood
@@ -989,7 +989,6 @@ class Model(HasLogger):
             blocks_sorted = [blocks[i] for i in i_optimal_ordering]
         # b) 2-block slow-fast separation
         else:
-            # TODO: this "else" not covered by tests
             if len(blocks) == 1:
                 raise LoggedError(self.log, "Requested fast/slow separation, "
                                             "but all parameters have the same speed.")
