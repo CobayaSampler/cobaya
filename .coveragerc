@@ -1,0 +1,32 @@
+[run]
+branch = False
+source = cobaya
+parallel = True
+
+[report]
+exclude_lines =
+    pragma: no cover
+    raise NotImplementedError
+    raise LoggedError
+    raise ValueError
+    except
+    self.log
+    .warning
+    mpi_warning
+    mpi_info
+    deprecation_warnings
+    log.info
+    platform
+    plot_
+    if __name__ == .__main__.:
+    if log.getEffectiveLevel() <= logging.DEBUG:
+ignore_errors = True
+omit =
+    cobaya/likelihoods/planck*2015*
+    cobaya/likelihoods/planck*CamSpec*
+    cobaya/likelihoods/planck*unbinned*
+    cobaya/likelihoods/base_classes/planck_2018_CamSpec*
+    cobaya/grid_tools/*
+    cobaya/cosmo_input/*
+    cobaya/containers.py
+    tests/*

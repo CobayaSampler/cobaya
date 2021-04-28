@@ -13,7 +13,6 @@ import os
 import numpy as np
 from getdist import ParamNames, IniFile
 from scipy.linalg import sqrtm
-from typing import Sequence
 
 # Local
 from cobaya.log import LoggedError
@@ -424,7 +423,8 @@ class CMBlikes(DataSetLikelihood):
             raise LoggedError(self.log, 'unbinned covariance not implemented yet')
         return pcov
 
-    def writeData(self, froot):
+    # noinspection PyTypeChecker
+    def writeData(self, froot):  # pragma: no cover
         np.savetxt(froot + '_cov.dat', self.cov)
         np.savetxt(froot + '_bandpowers.dat', self.full_bandpowers,
                    header=" ".join(self.full_bandpower_headers))
@@ -578,6 +578,7 @@ class CMBlikes(DataSetLikelihood):
         cls = self.provider.get_Cl(ell_factor=True)
         return self.log_likelihood(cls, **data_params)
 
+    # noinspection PyUnboundLocalVariable
     def log_likelihood(self, dls, **data_params):
         r"""
         Get log likelihood from the dls (CMB C_l scaled by L(L+1)/2\pi)
@@ -681,7 +682,8 @@ def white_noise_from_muK_arcmin(noise_muK_arcmin):
     return (noise_muK_arcmin * np.pi / 180 / 60.) ** 2
 
 
-def save_cl_dict(filename, array_dict, lmin=2, lmax=None, cl_dict_lmin=0):
+def save_cl_dict(filename, array_dict, lmin=2, lmax=None,
+                 cl_dict_lmin=0):  # pragma: no cover
     """
     Save a Cobaya dict of CL to a text file, with each line starting with L.
 
@@ -712,7 +714,7 @@ def make_forecast_cmb_dataset(fiducial_Cl, output_root, output_dir=None,
                               noise_muK_arcmin_P=None,
                               NoiseVar=None, ENoiseFac=2, fwhm_arcmin=None,
                               lmin=2, lmax=None, fsky=1.0,
-                              lens_recon_noise=None, cl_dict_lmin=0):
+                              lens_recon_noise=None, cl_dict_lmin=0):  # pragma: no cover
     """
     Make a simulated .dataset and associated files with 'data' set at the input fiducial
     model. Uses the exact full-sky log-likelihood, scaled by fsky.
@@ -794,6 +796,7 @@ def make_forecast_cmb_dataset(fiducial_Cl, output_root, output_dir=None,
         for ell in range(lmin, lmax + 1):
             noises = []
             if use_CMB:
+                # noinspection PyUnboundLocalVariable
                 noise_cl = ell * (ell + 1.) / 2 / np.pi * NoiseVar * np.exp(
                     ell * (ell + 1) * sigma2)
                 noises += [noise_cl, ENoiseFac * noise_cl, ENoiseFac * noise_cl]

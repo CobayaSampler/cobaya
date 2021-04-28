@@ -1,16 +1,16 @@
-from mpi4py import MPI
 from flaky import flaky
 import numpy as np
+import pytest
+import time
 
-from cobaya.likelihoods.gaussian_mixture import random_cov
 from cobaya.tools import KL_norm
 from cobaya.likelihood import Likelihood
 from cobaya.run import run
-
+from cobaya import mpi
+from cobaya.yaml import yaml_load
 from .common_sampler import body_of_test, body_of_test_speeds
 
-### import pytest
-### @pytest.mark.mpi
+pytestmark = pytest.mark.mpi
 
 # Max number of tries per test
 max_runs = 3
@@ -20,21 +20,19 @@ max_runs = 3
 def test_mcmc(tmpdir, packages_path=None):
     dimension = 3
     # Random initial proposal
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    if rank == 0:
-        S0 = random_cov(dimension * [[0, 1]], n_modes=1, O_std_min=0.01, O_std_max=0.5)
-    else:
-        S0 = None
-    S0 = comm.bcast(S0, root=0)
+    # cov = mpi.share(
+    #    random_cov(dimension * [[0, 1]], O_std_min=0.01, O_std_max=0.5)
+    #    if mpi.is_main_process() else None)
+    cov = np.array([[0.01853538, - 0.02990048, 0.00046138],
+                    [-0.02990048, 0.14312571, - 0.00441829],
+                    [0.00046138, - 0.00441829, 0.00019141]])
     info_sampler = {"mcmc": {
         # Bad guess for covmat, so big burn in and max_tries
-        # TODO: why * dimension here?
-        "max_tries": 1000 * dimension, "burn_in": 100 * dimension,
+        "max_tries": 3000, "burn_in": 100 * dimension,
         # Learn proposal
         # "learn_proposal": True,  # default now!
         # Proposal
-        "covmat": S0, }}
+        "covmat": cov}}
 
     def check_gaussian(sampler_instance):
         KL_proposer = KL_norm(
@@ -49,12 +47,136 @@ def test_mcmc(tmpdir, packages_path=None):
                 first=int(sampler_instance.n() / 2)))
         print("KL proposer: %g ; KL sample: %g" % (KL_proposer, KL_sample))
 
-    if rank == 0:
+    if mpi.rank() == 0:
         info_sampler["mcmc"].update({
             # Callback to check KL divergence -- disabled in the automatic test
             "callback_function": check_gaussian, "callback_every": 100})
-    body_of_test(
-        dimension=dimension, n_modes=1, info_sampler=info_sampler, tmpdir=str(tmpdir))
+    body_of_test(dimension=dimension, fixed=True, info_sampler=info_sampler,
+                 tmpdir=tmpdir)
+
+
+yaml_drag = r"""
+params:
+  a:
+    prior:
+      min: -0.5
+      max: 3
+    proposal: 0.6
+  b:
+    prior:
+      dist: norm
+      loc: 0
+      scale: 1
+    ref: 0
+    proposal: 0.6
+sampler:
+  mcmc:
+   drag: True
+   measure_speeds: False
+   Rminus1_stop: 0.001   
+   Rminus1_cl_stop: 0.04
+"""
+
+
+class GaussLike(Likelihood):
+    speed = 100
+    params = {'a': None}
+
+    def calculate(self, state, want_derived=True, **params_values_dict):
+        state["logp"] = - (params_values_dict['a'] - 0.2) ** 2 / 0.15 / 2
+
+
+class GaussLike2(Likelihood):
+    speed = 600
+    params = {'a': None, 'b': None}
+
+    def logp(self, **params_values_dict):
+        return - ((params_values_dict['a'] - 0.2) ** 2 +
+                  params_values_dict['b'] ** 2) / 0.2 / 2
+
+
+@flaky(max_runs=max_runs, min_passes=1)
+@mpi.sync_errors
+def test_mcmc_drag_results():
+    info = yaml_load(yaml_drag)
+    info['likelihood'] = {'g1': {'external': GaussLike}, 'g2': {'external': GaussLike2}}
+    updated_info, sampler = run(info)
+    products = sampler.products()
+    from getdist.mcsamples import MCSamplesFromCobaya
+    products["sample"] = mpi.allgather(products["sample"])
+    gdample = MCSamplesFromCobaya(updated_info, products["sample"], ignore_rows=0.2)
+    assert abs(gdample.mean('a') - 0.2) < 0.03
+    assert abs(gdample.mean('b')) < 0.03
+    assert abs(gdample.std('a') - 0.293) < 0.03
+    assert abs(gdample.std('b') - 0.4) < 0.03
+
+
+yaml = r"""
+likelihood:
+  gaussian_mixture:
+    means: [0.2, 0]
+    covs: [[0.1, 0.05], [0.05,0.2]]
+
+params:
+  a:
+    prior:
+      min: -0.5
+      max: 3
+    latex: \alpha
+  b:
+    prior:
+      dist: norm
+      loc: 0
+      scale: 1
+    ref: 0
+    proposal: 0.5
+    latex: \beta
+sampler:
+  mcmc:
+    """
+
+
+@pytest.mark.mpionly
+def test_mcmc_sync():
+    info = yaml_load(yaml)
+    print('Test end synchronization')
+
+    if mpi.rank() == 1:
+        max_samples = 200
+    else:
+        max_samples = 600
+    # simulate asynchronous ending sampling loop
+    info['sampler']['mcmc'] = {'max_samples': max_samples}
+
+    updated_info, sampler = run(info)
+    assert len(sampler.products()["sample"]) == max_samples
+
+    print('Test error synchronization')
+    if mpi.rank() == 0:
+        info['sampler']['mcmc'] = {'max_samples': 'none'}
+        with pytest.raises(TypeError):
+            run(info)
+    else:
+        with pytest.raises(mpi.OtherProcessError):
+            run(info)
+
+    aborted = False
+
+    def test_abort():
+        nonlocal aborted
+        aborted = True
+
+    # test error converted into MPI_ABORT after timeout
+    # noinspection PyTypeChecker
+    with pytest.raises((ValueError, mpi.OtherProcessError)):
+        with mpi.ProcessState('test', time_out_seconds=0.5,
+                              timeout_abort_proc=test_abort):
+            if mpi.rank() != 1:
+                time.sleep(0.6)  # fake hang
+            else:
+                raise ValueError('errored')
+    if mpi.rank() == 1:
+        assert aborted
 
 
 @flaky(max_runs=max_runs, min_passes=1)
@@ -65,13 +187,13 @@ def test_mcmc_blocking():
 
 @flaky(max_runs=max_runs, min_passes=1)
 def test_mcmc_oversampling():
-    info_mcmc = {"mcmc": {"burn_in": 0, "learn_proposal": False,
-                          "oversample": True, "oversample_power": 1}}
+    info_mcmc = {"mcmc": {"burn_in": 0, "learn_proposal": False, "oversample_power": 1}}
     body_of_test_speeds(info_mcmc)
 
 
 @flaky(max_runs=max_runs, min_passes=1)
 def test_mcmc_oversampling_manual():
+    # TODO - update ('oversample')
     info_mcmc = {"mcmc": {"burn_in": 0, "learn_proposal": False, "oversample": True}}
     body_of_test_speeds(info_mcmc, manual_blocking=True)
 

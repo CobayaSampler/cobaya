@@ -4,9 +4,11 @@ from cobaya.model import get_model
 from cobaya.theory import Theory
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
+from cobaya.conventions import InfoDict
 from .common import process_packages_path
 
 debug = True
+
 
 # Aderived = 1
 # Aout = [Ain]
@@ -66,7 +68,7 @@ class B2(Theory):
 
 class A2(Theory):  # circular
     def get_requirements(self):
-        return {'Ain', 'Bout'}
+        return ('Ain', None), ('Bout', None)
 
     def get_can_provide_params(self):
         return ['Aderived', 'Aresult']
@@ -94,9 +96,9 @@ class Like(Likelihood):
         state["logp"] = res[0] + res[1][0]
 
 
-info = {'likelihood': {'like': Like},
-        'params': {'Bpar': 3, 'Ain': 5},
-        'debug': debug}
+info: InfoDict = {'likelihood': {'like': Like},
+                  'params': {'Bpar': 3, 'Ain': 5},
+                  'debug': debug}
 
 
 def _test_loglike(theories):
@@ -137,6 +139,18 @@ def test_dependencies(packages_path):
         _test_loglike([('A', A), ('B', {'external': B2, 'provides': ['Bout']}),
                        ('C', {'external': C, 'provides': ['Bout']})])
     assert "more than one component provides Bout" in str(e.value)
+
+    inf = info.copy()
+    inf['params'] = info['params'].copy()
+    inf['params']['notused'] = [1, 10, 2, 5, 1]
+    inf['theory'] = dict(theories)
+    with pytest.raises(LoggedError) as e:
+        get_model(inf)
+    assert "Could not find anything to use input parameter" in str(e.value)
+    inf['params']['notused'] = [1, 10, 2]
+    with pytest.raises(LoggedError) as e:
+        get_model(inf)
+    assert "Parameter info length not valid" in str(e.value)
 
 
 # test conditional requirements
@@ -208,9 +222,9 @@ class Like4(Likelihood):
         pass
 
 
-info2 = {'likelihood': {'like': Like2},
-         'params': {'Ain': 5},
-         'debug': debug, 'stop_at_error': True}
+info2: InfoDict = {'likelihood': {'like': Like2},
+                   'params': {'Ain': 5},
+                   'debug': debug, 'stop_at_error': True}
 
 
 def _test_loglike2(theories):

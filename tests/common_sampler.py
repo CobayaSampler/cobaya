@@ -1,19 +1,20 @@
 """General test for samplers. Checks convergence, cluster detection, evidence."""
 
 import numpy as np
-from mpi4py import MPI
 from random import shuffle, choice
+from itertools import chain
+import os
 from scipy.stats import multivariate_normal
 from getdist.mcsamples import MCSamplesFromCobaya
-from itertools import chain
 
-from cobaya.conventions import kinds, _output_prefix, empty_dict
+from cobaya.conventions import kinds, _output_prefix, empty_dict, InputDict
 from cobaya.conventions import _debug, _debug_file, _packages_path, partag
 from cobaya.likelihoods.gaussian_mixture import info_random_gaussian_mixture
 from cobaya.tools import KL_norm
 from cobaya.run import run
 from .common import process_packages_path, is_travis
 from .conftest import install_test_wrapper
+from cobaya import mpi
 
 KL_tolerance = 0.05
 logZ_nsigmas = 2
@@ -21,25 +22,47 @@ O_std_min = 0.01
 O_std_max = 0.05
 distance_factor = 4
 
+fixed_info: InputDict = {'likelihood': {
+    'gaussian_mixture': {'means': [np.array([-0.48591462, 0.10064559, 0.64406749])],
+                         'covs': [np.array([[0.00078333, 0.00033134, -0.0002923],
+                                            [0.00033134, 0.00218118, -0.00170728],
+                                            [-0.0002923, -0.00170728, 0.00676922]])],
+                         'input_params_prefix': 'a_', 'output_params_prefix': '',
+                         'derived': True}},
+    'params': {'a__0': {'prior': {'min': -1, 'max': 1}, 'latex': '\\alpha_{0}'},
+               'a__1': {'prior': {'min': -1, 'max': 1}, 'latex': '\\alpha_{1}'},
+               'a__2': {'prior': {'min': -1, 'max': 1}, 'latex': '\\alpha_{2}'},
+               '_0': {'latex': '\\beta_{0}'},
+               '_1': {'latex': '\\beta_{1}'},
+               '_2': {'latex': '\\beta_{2}'}}}
 
-def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
-                 packages_path=None, skip_not_installed=False):
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    # Info of likelihood and prior
-    ranges = np.array([[-1, 1] for _ in range(dimension)])
+
+def generate_random_info(n_modes, ranges):
     while True:
-        info = info_random_gaussian_mixture(
+        inf = info_random_gaussian_mixture(
             ranges=ranges, n_modes=n_modes, input_params_prefix="a_",
             O_std_min=O_std_min, O_std_max=O_std_max, derived=True)
         if n_modes == 1:
             break
-        means = info["likelihood"]["gaussian_mixture"]["means"]
+        means = inf["likelihood"]["gaussian_mixture"]["means"]
         distances = chain(*[[np.linalg.norm(m1 - m2) for m2 in means[i + 1:]]
                             for i, m1 in enumerate(means)])
         if min(distances) >= distance_factor * O_std_max:
             break
-    if rank == 0:
+    return inf
+
+
+@mpi.sync_errors
+def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
+                 packages_path=None, skip_not_installed=False, fixed=False):
+    # Info of likelihood and prior
+    ranges = np.array([[-1, 1] for _ in range(dimension)])
+    if fixed:
+        info = fixed_info.copy()
+    else:
+        info = generate_random_info(n_modes, ranges)
+
+    if mpi.is_main_process():
         print("Original mean of the gaussian mode:")
         print(info["likelihood"]["gaussian_mixture"]["means"])
         print("Original covmat of the gaussian mode:")
@@ -52,17 +75,15 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
                 list(info["params"])[:dimension])
     info[_debug] = False
     info[_debug_file] = None
-    # TODO: this looks weird/bug:?
-    info[_output_prefix] = getattr(tmpdir, "realpath()", lambda: tmpdir)()
+    info[_output_prefix] = os.path.join(tmpdir, 'out_chain')
     if packages_path:
         info[_packages_path] = process_packages_path(packages_path)
-    # Delay to one chain to check that MPI communication of the sampler is non-blocking
-    #    if rank == 1:
-    #        info["likelihood"]["gaussian_mixture"]["delay"] = 0.1
+
     updated_info, sampler = install_test_wrapper(skip_not_installed, run, info)
     products = sampler.products()
+    products["sample"] = mpi.gather(products["sample"])
     # Done! --> Tests
-    if rank == 0:
+    if mpi.is_main_process():
         if sampler_name == "mcmc":
             ignore_rows = 0.5
         else:
@@ -76,25 +97,24 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
                 name_tag="cluster %d" % (i + 1))
                 for i in products["clusters"]]
         # Plots!
-        try:
-            if is_travis():
-                raise ValueError
-            import getdist.plots as gdplots
-            from getdist.gaussian_mixtures import MixtureND
-            sampled_params = [
-                p for p, v in info["params"].items() if partag.prior not in v]
-            mixture = MixtureND(
-                info[kinds.likelihood]["gaussian_mixture"]["means"],
-                info[kinds.likelihood]["gaussian_mixture"]["covs"],
-                names=sampled_params, label="truth")
-            g = gdplots.getSubplotPlotter()
-            to_plot = [mixture, results]
-            if clusters:
-                to_plot = to_plot + clusters
-            g.triangle_plot(to_plot, params=sampled_params)
-            g.export("test.png")
-        except:
-            print("Plotting failed!")
+        if not is_travis():
+            try:
+                import getdist.plots as gdplots
+                from getdist.gaussian_mixtures import MixtureND
+                sampled_params = [
+                    p for p, v in info["params"].items() if partag.prior not in v]
+                mixture = MixtureND(
+                    info[kinds.likelihood]["gaussian_mixture"]["means"],
+                    info[kinds.likelihood]["gaussian_mixture"]["covs"],
+                    names=sampled_params, label="truth")
+                g = gdplots.getSubplotPlotter()
+                to_plot = [mixture, results]
+                if clusters:
+                    to_plot += clusters
+                g.triangle_plot(to_plot, params=sampled_params)
+                g.export("test.png")
+            except:
+                print("Plotting failed!")
         # 1st test: KL divergence
         if n_modes == 1:
             cov_sample, mean_sample = results.getCov(), results.getMeans()
@@ -130,6 +150,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
                     products["logZ"] + logZ_nsigmas * products["logZstd"])
 
 
+@mpi.sync_errors
 def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False,
                         packages_path=None, skip_not_installed=False):
     # #dimensions and speed ratio mutually prime (e.g. 2,3,5)
@@ -187,23 +208,24 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False,
     info["packages_path"] = packages_path
     # Adjust number of samples
     n_cycles_all_params = 10
+    info_sampler = info["sampler"][sampler_name]
     if sampler_name == "mcmc":
-        info["sampler"][sampler_name]["measure_speeds"] = False
-        info["sampler"][sampler_name]["burn_in"] = 0
-        info["sampler"][sampler_name]["max_samples"] = n_cycles_all_params * 10 * (
-                dim0 + dim1)
+        info_sampler["measure_speeds"] = False
+        info_sampler["burn_in"] = 0
+        info_sampler["max_samples"] = \
+            info_sampler.get("max_samples", n_cycles_all_params * 10 * (dim0 + dim1))
         # Force mixing of blocks:
-        info["sampler"][sampler_name]["covmat_params"] = list(info["params"])
-        info["sampler"][sampler_name]["covmat"] = 1 / 10000 * np.eye(len(info["params"]))
+        info_sampler["covmat_params"] = list(info["params"])
+        info_sampler["covmat"] = 1 / 10000 * np.eye(len(info["params"]))
         i_0th, i_1st = map(
-            lambda x: info["sampler"][sampler_name]["covmat_params"].index(x),
+            lambda x: info_sampler["covmat_params"].index(x),
             [prefix + "0", prefix + "%d" % dim0])
-        info["sampler"][sampler_name]["covmat"][i_0th, i_1st] = 1 / 100000
-        info["sampler"][sampler_name]["covmat"][i_1st, i_0th] = 1 / 100000
-        info["sampler"][sampler_name]["learn_proposal"] = False
+        info_sampler["covmat"][i_0th, i_1st] = 1 / 100000
+        info_sampler["covmat"][i_1st, i_0th] = 1 / 100000
+        # info_sampler["learn_proposal"] = False
     elif sampler_name == "polychord":
-        info["sampler"][sampler_name]["nlive"] = dim0 + dim1
-        info["sampler"][sampler_name]["max_ndead"] = n_cycles_all_params * (dim0 + dim1)
+        info_sampler["nlive"] = dim0 + dim1
+        info_sampler["max_ndead"] = n_cycles_all_params * (dim0 + dim1)
     else:
         assert False, "Unknown sampler for this test."
     updated_info, sampler = install_test_wrapper(skip_not_installed, run, info)
@@ -221,7 +243,9 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False,
     elif sampler_name == "mcmc" and info["sampler"][sampler_name].get("drag"):
         assert test_func(n_evals, dim0, speed0, dim1, 2 * speed1) <= tolerance, (
             ("%g > %g" % (test_func(n_evals, dim0, speed0, dim1, speed1), tolerance)))
-    elif sampler_name == "mcmc" and info["sampler"][sampler_name].get("oversample"):
+    elif sampler_name == "mcmc" and (
+            info["sampler"][sampler_name].get("oversample") or
+            info["sampler"][sampler_name].get("oversample_power", 0) > 0):
         assert test_func(n_evals, dim0, speed0, dim1, speed1) <= tolerance, (
             ("%g > %g" % (test_func(n_evals, dim0, speed0, dim1, speed1), tolerance)))
     elif sampler_name == "mcmc":  # just blocking

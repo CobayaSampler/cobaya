@@ -60,7 +60,7 @@ class BoltzmannBase(Theory):
             vars_pairs = [vars_pairs]
         pairs = set()
         for pair in vars_pairs:
-            if len(pair) != 2 or not all(isinstance(x, str) for x in pair):
+            if len(list(pair)) != 2 or not all(isinstance(x, str) for x in pair):
                 raise LoggedError(self.log,
                                   "Cannot understand vars_pairs '%r' for %s",
                                   vars_pairs, name)
@@ -131,7 +131,7 @@ class BoltzmannBase(Theory):
 
         """
         super().must_provide(**requirements)
-        self._must_provide = self._must_provide or dict.fromkeys(self.output_params)
+        self._must_provide: dict = self._must_provide or dict.fromkeys(self.output_params)
         # Accumulate the requirements across several calls in a safe way;
         # e.g. take maximum of all values of a requested precision parameter
         for k, v in requirements.items():
@@ -396,7 +396,7 @@ class BoltzmannBase(Theory):
         sources ``([source1], [source2])``, and an additional key ``ell`` containing the
         multipoles.
         """
-    
+
     @abstract
     def get_sigma8_z(self, z):
         r"""

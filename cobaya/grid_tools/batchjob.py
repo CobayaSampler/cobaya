@@ -210,7 +210,7 @@ class ImportanceSetting:
         self.dist_settings = dist_settings or {}
         self.want_minimize = minimize
 
-    def wantImportance(self, jobItem):
+    def wantImportance(self, _jobItem):
         return True
 
 

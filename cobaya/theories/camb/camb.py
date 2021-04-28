@@ -175,6 +175,7 @@ import ctypes
 from copy import deepcopy
 from typing import NamedTuple, Any
 import numpy as np
+from itertools import chain
 # Local
 from cobaya.theories._cosmo import BoltzmannBase
 from cobaya.log import LoggedError
@@ -182,7 +183,7 @@ from cobaya.install import download_github_release, check_gcc_version, NotInstal
 from cobaya.tools import getfullargspec, get_class_methods, get_properties, load_module, \
     VersionCheckError, str_to_list
 from cobaya.theory import HelperTheory
-from cobaya.conventions import _requires
+from cobaya.conventions import _requires, OptionalArrayLike
 
 
 # Result collector
@@ -545,7 +546,8 @@ class camb(BoltzmannBase):
         state["derived_extra"] = {
             p: self._get_derived(p, intermediates) for p in self.derived_extra}
 
-    def _get_derived(self, p, intermediates):
+    @staticmethod
+    def _get_derived(p, intermediates):
         """
         General function to extract a single derived parameter.
 
@@ -606,10 +608,11 @@ class camb(BoltzmannBase):
         for sp, i in mapping.items():
             cls[sp] = cl_camb[:, i]
         if lensed:
-            cl_lens = self.current_state["Cl"].get("lens_potential")
+            cl_lens: OptionalArrayLike = self.current_state["Cl"].get("lens_potential")
             if cl_lens is not None:
                 cls["pp"] = cl_lens[:, 0].copy()
                 if not ell_factor:
+                    # noinspection PyUnboundLocalVariable
                     cls["pp"][1:] /= ells_factor ** 2 / (2 * np.pi)
                 if self._needs_lensing_cross:
                     for i, cross in enumerate(['pt', 'pe']):
@@ -635,7 +638,7 @@ class camb(BoltzmannBase):
             i_kwarg_z = np.searchsorted(computed_redshifts, np.atleast_1d(z))
         return np.array(self.current_state[quantity], copy=True)[i_kwarg_z]
 
-    def get_sigma8_z(self, z):        
+    def get_sigma8_z(self, z):
         return self._get_z_dependent("sigma8_z", z)
 
     def get_fsigma8(self, z):
@@ -684,8 +687,7 @@ class camb(BoltzmannBase):
             if mapped in names:
                 names.append(name)
         # remove any parameters explicitly tagged as input requirements
-        return set(names).difference(
-            set(self._transfer_requires).union(set(self.requires)))
+        return set(names).difference(chain(self._transfer_requires, self.requires))
 
     def get_version(self):
         return self.camb.__version__
@@ -815,9 +817,8 @@ class camb(BoltzmannBase):
                           " a very old version without the Python interface.", path)
                 return False
             if not os.path.isfile(os.path.realpath(
-                    os.path.join(path,
-                                 "camb", "cambdll.dll" if (
-                                platform.system() == "Windows") else "camblib.so"))):
+                    os.path.join(path, "camb", "cambdll.dll" if (
+                            platform.system() == "Windows") else "camblib.so"))):
                 log.error("CAMB installation at '%s' appears not to be compiled.", path)
                 return False
         elif not path:
@@ -841,7 +842,7 @@ class camb(BoltzmannBase):
             return False
 
     @classmethod
-    def install(cls, path=None, code=True, no_progress_bars=False, **kwargs):
+    def install(cls, path=None, code=True, no_progress_bars=False, **_kwargs):
         log = logging.getLogger(cls.__name__)
         if not code:
             log.info("Code not requested. Nothing to do.")

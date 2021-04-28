@@ -8,7 +8,8 @@ In each case, it tests the correctness of the values generated, and of the updat
 
 The test prior is a gaussian half-ring, combined with a gaussian in one of the tests.
 
-For manual testing, and observing/plotting the density, pass `manual=True` to `body of test`.
+For manual testing, and observing/plotting the density, pass `manual=True`
+to `body of test`.
 """
 # Local
 from cobaya.conventions import _prior
@@ -21,7 +22,7 @@ def test_prior_external_string(tmpdir):
 
 
 def test_prior_external_callable(tmpdir):
-    body_of_test(info_callable, _prior, tmpdir)  #####, test_yaml=False)
+    body_of_test(info_callable, _prior, tmpdir)
 
 
 def test_prior_external_mixed(tmpdir):

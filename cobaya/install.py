@@ -21,7 +21,7 @@ import requests
 import tqdm
 
 # Local
-from cobaya.log import logger_setup, LoggedError
+from cobaya.log import logger_setup, LoggedError, NoLogging
 from cobaya.tools import create_banner, warn_deprecation, get_resolved_class, \
     write_packages_path_in_config_file, get_config_path, get_kind
 from cobaya.input import get_used_components
@@ -124,14 +124,11 @@ def install(*infos, **kwargs):
             if get_path:
                 install_path = get_path(install_path)
             has_been_installed = False
-            if not debug:
-                logging.disable(logging.ERROR)
-            if kwargs.get("skip_global"):
-                has_been_installed = is_installed(path="global", **kwargs_install)
-            if not has_been_installed:
-                has_been_installed = is_installed(path=install_path, **kwargs_install)
-            if not debug:
-                logging.disable(logging.NOTSET)
+            with NoLogging(None if debug else logging.ERROR):
+                if kwargs.get("skip_global"):
+                    has_been_installed = is_installed(path="global", **kwargs_install)
+                if not has_been_installed:
+                    has_been_installed = is_installed(path=install_path, **kwargs_install)
             if has_been_installed:
                 log.info("External dependencies for this component already installed.")
                 if kwargs.get(_test_run, False):
@@ -171,11 +168,8 @@ def install(*infos, **kwargs):
                 failed_components += ["%s:%s" % (kind, component)]
                 continue
             # test installation
-            if not debug:
-                logging.disable(logging.ERROR)
-            successfully_installed = is_installed(path=install_path, **kwargs_install)
-            if not debug:
-                logging.disable(logging.NOTSET)
+            with NoLogging(None if debug else logging.ERROR):
+                successfully_installed = is_installed(path=install_path, **kwargs_install)
             if not successfully_installed:
                 log.error("Installation apparently worked, "
                           "but the subsequent installation test failed! "
@@ -329,8 +323,8 @@ def check_gcc_version(min_version="6.4", error_returns=None):
 
 # Command-line script ####################################################################
 
-def install_script():
-    set_mpi_disabled(True)
+def install_script(args=None):
+    set_mpi_disabled()
     warn_deprecation()
     # Parse arguments
     import argparse
@@ -343,8 +337,8 @@ def install_script():
                              "(or simply 'cosmo' to install all the requisites for basic"
                              " cosmological runs)")
     parser.add_argument("-" + _packages_path_arg[0], "--" + _packages_path_arg_posix,
-                        action="store", nargs=1, required=False,
-                        metavar="/packages/path", default=[None],
+                        action="store", required=False,
+                        metavar="/packages/path", default=None,
                         help="Desired path where to install external packages. "
                              "Optional if one has been set globally or as an env variable"
                              " (run with '--show_%s' to check)." %
@@ -352,8 +346,8 @@ def install_script():
     # MARKED FOR DEPRECATION IN v3.0
     modules = "modules"
     parser.add_argument("-" + modules[0], "--" + modules,
-                        action="store", nargs=1, required=False,
-                        metavar="/packages/path", default=[None],
+                        action="store", required=False,
+                        metavar="/packages/path", default=None,
                         help="To be deprecated! "
                              "Alias for %s, which should be used instead." %
                              _packages_path_arg_posix)
@@ -395,7 +389,7 @@ def install_script():
                             help="Install code of the components.", dest=_data)
     group_just.add_argument("-D", "--just-data", action="store_false", default=True,
                             help="Install data of the components.", dest=_code)
-    arguments = parser.parse_args()
+    arguments = parser.parse_args(args)
     # Configure the logger ASAP
     logger_setup()
     logger = logging.getLogger(__name__.split(".")[-1])
@@ -424,13 +418,13 @@ def install_script():
         return
     # MARKED FOR DEPRECATION IN v3.0
     deprecation_warnings = []
-    if getattr(arguments, modules) != [None]:
+    if getattr(arguments, modules) is not None:
         deprecation_warnings.append(
             "*DEPRECATION*: -m/--modules will be deprecated in favor of "
             "-%s/--%s in the next version. Please, use that one instead." %
             (_packages_path_arg[0], _packages_path_arg_posix))
         # BEHAVIOUR TO BE REPLACED BY ERROR:
-        if getattr(arguments, _packages_path_arg) == [None]:
+        if getattr(arguments, _packages_path_arg) is None:
             setattr(arguments, _packages_path_arg, getattr(arguments, modules))
     # END OF DEPRECATION BLOCK
     # MARKED FOR DEPRECATION IN v3.0
@@ -442,7 +436,7 @@ def install_script():
     setattr(arguments, _test_run, getattr(arguments, _test_run) or arguments.just_check)
     # END OF DEPRECATION BLOCK
     # Launch installer
-    install(*infos, path=getattr(arguments, _packages_path_arg)[0],
+    install(*infos, path=getattr(arguments, _packages_path_arg),
             **{arg: getattr(arguments, arg)
                for arg in ["force", _code, _data, "no_progress_bars", _test_run,
                            "no_set_global", "skip", "skip_global", _debug]})

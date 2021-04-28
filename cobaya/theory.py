@@ -32,10 +32,10 @@ see :doc:`theories_and_dependencies`.
 
 import inspect
 from collections import deque
-from typing import Sequence, Optional, Union
+from typing import Sequence, Optional, Union, Tuple, Dict, Iterable
 # Local
 from cobaya.conventions import _external, kinds, _requires, _params, empty_dict, \
-    _class_name
+    _class_name, TheoryDict, TheoriesDict, InfoDict, ParamValuesDict
 from cobaya.component import CobayaComponent, ComponentCollection
 from cobaya.tools import get_resolved_class, str_to_list
 from cobaya.log import LoggedError, always_stop_exceptions
@@ -54,7 +54,9 @@ class Theory(CobayaComponent):
     input_params: Sequence[str] = None
     output_params: Sequence[str] = None
 
-    def __init__(self, info=empty_dict, name=None, timing=None, packages_path=None,
+    def __init__(self, info: TheoryDict = empty_dict,
+                 name: Optional[str] = None, timing: Optional[bool] = None,
+                 packages_path: Optional[str] = None,
                  initialize=True, standalone=True):
 
         self._measured_speed = None
@@ -69,25 +71,29 @@ class Theory(CobayaComponent):
         self._helpers = {}
         self._input_params_extra = set()
 
-    def get_requirements(self):
+    def get_requirements(self) -> Union[InfoDict, Sequence[str],
+                                        Sequence[Tuple[str, InfoDict]]]:
         """
-        Get a dictionary of requirements that are always needed (e.g. must be calculated
-        by a another component or provided as input parameters).
+        Get a dictionary of requirements (or a list of requirement name, option tuples)
+        that are always needed (e.g. must be calculated by a another component
+        or provided as input parameters).
 
-        :return: dictionary of requirements (or iterable of requirement names if no
-                 optional parameters are needed)
+        :return: dictionary or list of tuples of of requirement names and options
+                (or iterable of requirement names if no optional parameters are needed)
         """
-        return dict.fromkeys(str_to_list(getattr(self, _requires, [])))
+        return str_to_list(getattr(self, _requires, []))
 
-    def must_provide(self, **requirements):
+    def must_provide(self, **requirements) -> Union[None, InfoDict, Sequence[str],
+                                                    Sequence[Tuple[str, InfoDict]]]:
         """
         Function to be called specifying any output products that are needed and hence
-        should be calculated by this component.
+        should be calculated by this component depending..
 
-        Requirements is a dictionary of requirement names with optional parameters for
-        each. This function may be called more than once with different requirements.
+        The requirements argument is a requirement name with any optional parameters.
+        This function may be called more than once with different requirements.
 
-        :return: optional dictionary of conditional requirements for the ones requested.
+        :return: optional dictionary (or list of requirement name, option tuples) of
+                 conditional requirements for the ones requested.
         """
         # reset states whenever requirements change
         self._states.clear()
@@ -129,7 +135,7 @@ class Theory(CobayaComponent):
         """
         self.provider = provider
 
-    def get_param(self, p):
+    def get_param(self, p: str) -> float:
         """
         Interface function for likelihoods and other theory components to get derived
         parameters.
@@ -157,7 +163,7 @@ class Theory(CobayaComponent):
         """
         return get_class_methods(self.get_provider().__class__, not_base=Theory)
 
-    def get_can_provide(self):
+    def get_can_provide(self) -> Iterable[str]:
         """
         Get a list of names of quantities that can be retrieved using the general
         get_result(X) method.
@@ -166,7 +172,7 @@ class Theory(CobayaComponent):
         """
         return []
 
-    def get_can_provide_params(self):
+    def get_can_provide_params(self) -> Iterable[str]:
         """
         Get a list of derived parameters that this component can calculate.
         The default implementation returns the result based on the params attribute set
@@ -181,7 +187,7 @@ class Theory(CobayaComponent):
         else:
             return []
 
-    def get_can_support_params(self):
+    def get_can_support_params(self) -> Iterable[str]:
         """
         Get a list of parameters supported by this component, can be used to support
         parameters that don't explicitly appear in the .yaml or class params attribute
@@ -221,13 +227,13 @@ class Theory(CobayaComponent):
         If want_derived, the derived parameters are saved in the computed state
         (retrieved using current_derived).
         """
-        self.log.debug("Got parameters %r", params_values_dict)
-        for p in self._input_params_extra:
+        for p in list(self._input_params_extra):
             try:
                 params_values_dict[p] = self.provider.get_param(p)
             except:
                 # Pop non-parameter (only done during 1st call)
-                self._input_params_extra = self._input_params_extra.difference({p})
+                self._input_params_extra.discard(p)
+        self.log.debug("Got parameters %r", params_values_dict)
         state = None
         if cached:
             for _state in self._states:
@@ -268,7 +274,7 @@ class Theory(CobayaComponent):
         return True
 
     @property
-    def current_state(self):
+    def current_state(self) -> Dict:
         try:
             return self._current_state
         except AttributeError:
@@ -277,7 +283,7 @@ class Theory(CobayaComponent):
                                         "(maybe the prior was -infinity?)")
 
     @property
-    def current_derived(self):
+    def current_derived(self) -> ParamValuesDict:
         return self.current_state.get("derived", {})
 
     # MARKED FOR DEPRECATION IN v3.1
@@ -287,6 +293,7 @@ class Theory(CobayaComponent):
                          "rename your call.")
         # BEHAVIOUR TO BE REPLACED BY AN ERROR
         return self.current_derived
+
     # END OF DEPRECATION BLOCK
 
     def get_provider(self):
@@ -352,12 +359,13 @@ class TheoryCollection(ComponentCollection):
     Initializes the list of theory codes.
     """
 
-    def __init__(self, info_theory, packages_path=None, timing=None):
+    def __init__(self, info_theory: TheoriesDict, packages_path=None, timing=None):
         super().__init__()
         self.set_logger("theory")
 
         if info_theory:
             for name, info in info_theory.items():
+                info = info or {}
                 # If it has an "external" key, wrap it up. Else, load it up
                 if isinstance(info, Theory):
                     self.add_instance(name, info)

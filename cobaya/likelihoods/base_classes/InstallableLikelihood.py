@@ -45,8 +45,7 @@ class InstallableLikelihood(Likelihood):
         return True
 
     @classmethod
-    def install(cls, path=None, force=False, code=False, data=True,
-                no_progress_bars=False):
+    def install(cls, path=None, data=True, no_progress_bars=False, **_kwargs):
         if not data:
             return True
         log = logging.getLogger(cls.get_qualified_class_name())

@@ -62,7 +62,7 @@ def_DES_types = ['xip', 'xim', 'gammat', 'wtheta']
 _spline = InterpolatedUnivariateSpline
 
 
-def get_def_cuts():
+def get_def_cuts():  # pragma: no cover
     ranges = {}
     for tp in def_DES_types:
         ranges[tp] = np.empty((6, 6), dtype=object)
@@ -247,7 +247,7 @@ class DES(DataSetLikelihood):
         # k_max actually computed, assumes extrapolated beyond that
         self.k_max = ini.float('kmax', 15)
 
-    def load_fits_data(self, filename, ranges=None):
+    def load_fits_data(self, filename, ranges=None):  # pragma: no cover
         # noinspection PyUnresolvedReferences
         import astropy.io.fits as fits
         if ranges is None:
@@ -337,7 +337,7 @@ class DES(DataSetLikelihood):
         # Note hankel assumes integral starts at ell=0
         # (though could change spline to zero at zero).
         # At percent level it matters what is assumed
-        if self.use_hankel:
+        if self.use_hankel:  # pragma: no cover
             # noinspection PyUnresolvedReferences
             import hankel
             maxx = self.theta_bins_radians[-1] * self.l_max
@@ -368,7 +368,7 @@ class DES(DataSetLikelihood):
                     for j, g in enumerate(groups):
                         js[ix, j, i] = np.sum(bigj[g])
             self.bessel_cache = js[0, :, :], js[1, :, :], js[2, :, :]
-        else:
+        else:  # pragma: no cover
             # get ell for bessel transform in dense array,
             # and precompute bessel function matrices
             # Much slower than binned_bessels as many more sampling points
@@ -407,6 +407,7 @@ class DES(DataSetLikelihood):
             "comoving_radial_distance": {"z": self.zs},
             "Hubble": {"z": self.zs}}
 
+    # noinspection PyUnboundLocalVariable
     def get_theory(self, PKdelta, PKWeyl, bin_bias, shear_calibration_parameters,
                    intrinsic_alignment_A, intrinsic_alignment_alpha,
                    intrinsic_alignment_z0, wl_photoz_errors, lens_photoz_errors):
@@ -493,7 +494,7 @@ class DES(DataSetLikelihood):
         corrs_th_m = np.empty((self.nzbins, self.nzbins), dtype=object)
         corrs_th_w = np.empty((self.nwbins, self.nwbins), dtype=object)
         corrs_th_t = np.empty((self.nwbins, self.nzbins), dtype=object)
-        if self.use_hankel:
+        if self.use_hankel:  # pragma: no cover
             # Note that the absolute value of the correlation depends
             # on what you do about L_min (e.g. 1 vs 2 vs 0 makes a difference).
             if 'xip' in self.used_types or 'xim' in self.used_types:
@@ -547,7 +548,7 @@ class DES(DataSetLikelihood):
             data[i] = arrays[type_ix][f1, f2][theta_ix]
         return data
 
-    def make_thetas(self, arrays):
+    def make_thetas(self):
         nused = len(self.used_items)
         data = np.empty(nused)
         for i, (type_ix, f1, f2, theta_ix) in enumerate(self.used_items):
@@ -640,7 +641,7 @@ class DES(DataSetLikelihood):
         return axs
 
     def plot_lensing(self, corrs_p=None, corrs_m=None, errors=True,
-                     diff=False, axs=None, ls='-'):
+                     diff=False, axs=None, ls='-'):  # pragma: no cover
         if any(t not in self.used_types for t in ["xip", "xim"]):
             self.log.warning("Shear not computed. Nothing to plot.")
             return
@@ -717,7 +718,7 @@ class DES(DataSetLikelihood):
 
 # Conversion .fits --> .dataset  #########################################################
 
-def convert_txt(filename, root, outdir, ranges=None):
+def convert_txt(filename, root, outdir, ranges=None):  # pragma: no cover
     # noinspection PyUnresolvedReferences
     import astropy.io.fits as fits
     if ranges is None:
@@ -752,6 +753,7 @@ def convert_txt(filename, root, outdir, ranges=None):
                                for n in list(hdulist[tp].data.names)[:-2]]))
         # fix anomaly that z bins are 1 based but theta bins zero based
         dat[:, 2] += 1
+        # noinspection PyTypeChecker
         np.savetxt(outdir + root + '_%s.dat' % tp, dat, fmt=['%u', '%u', '%u', '%.8e'],
                    header=" ".join(list(hdulist[tp].data.dtype.names)[:-2]))
         outlines += ['measurements[%s] = %s_%s.dat' % (tp, root, tp)]

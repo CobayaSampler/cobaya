@@ -97,10 +97,7 @@ def prettyprint_bib(descs, bibs):
 
 
 # Command-line script
-def bib_script():
-    from cobaya.mpi import is_main_process
-    if not is_main_process():
-        return
+def bib_script(args=None):
     warn_deprecation()
     # Parse arguments and launch
     import argparse
@@ -112,27 +109,28 @@ def bib_script():
                         help="Component(s) or input file(s) whose bib info is requested.")
     kind_opt, kind_opt_ishort = "kind", 0
     parser.add_argument("-" + kind_opt[kind_opt_ishort], "--" + kind_opt, action="store",
-                        nargs=1, default=None, metavar="component_kind",
+                        default=None, metavar="component_kind",
                         help=("If component name given, "
                               "kind of component whose bib is requested: " +
                               ", ".join(['%s' % kind for kind in kinds]) + ". " +
-                              "Use only when component name is not unique (it would fail)."))
-    arguments = parser.parse_args()
+                              "Use only when component name is not unique "
+                              "(it would fail)."))
+    arguments = parser.parse_args(args)
     # Case of files
     are_yaml = [
-        (os.path.splitext(f)[1] in _yaml_extensions) for f in arguments.components_or_files]
+        (os.path.splitext(f)[1] in _yaml_extensions) for f in
+        arguments.components_or_files]
     if all(are_yaml):
         infos = [load_input(f) for f in arguments.components_or_files]
         print(prettyprint_bib(*get_bib_info(*infos)))
     elif not any(are_yaml):
         if arguments.kind:
-            arguments.kind = arguments.kind[0].lower()
+            arguments.kind = arguments.kind.lower()
         for component in arguments.components_or_files:
             try:
                 print(create_banner(
                     component, symbol=_default_symbol, length=_default_length))
                 print(get_bib_component(component, arguments.kind))
-                return
             except:
                 if not arguments.kind:
                     print("Specify its kind with '--%s [component_kind]'." % kind_opt +
@@ -144,3 +142,7 @@ def bib_script():
               "or of component names (not a mix of them).")
         return 1
     return
+
+
+if __name__ == '__main__':
+    bib_script()
