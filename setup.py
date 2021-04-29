@@ -1,11 +1,17 @@
 # Always prefer setuptools over distutils
 from setuptools import setup, find_packages
-# To use a consistent encoding
 from os import path
 from itertools import chain
-# Package data and conventions
-from cobaya import __author__, __version__, __url__
+import re
 from cobaya.conventions import subfolders
+
+
+def find_version():
+    init_file = open(path.join(path.dirname(__file__), 'cobaya/__init__.py')).read()
+    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", init_file, re.M)
+    if version_match:
+        return version_match.group(1)
+    raise RuntimeError("Unable to find version string.")
 
 
 # Get the long description from the README file
@@ -21,16 +27,16 @@ def get_long_description():
 
 setup(
     name='cobaya',
-    version=__version__,
+    version=find_version(),
     description='Code for Bayesian Analysis',
     long_description=get_long_description(),
-    url=__url__,
+    url="https://cobaya.readthedocs.io",
     project_urls={
         'Source': 'https://github.com/CobayaSampler/cobaya',
         'Tracker': 'https://github.com/CobayaSampler/cobaya/issues',
         'Licensing': 'https://github.com/CobayaSampler/cobaya/blob/master/LICENCE.txt'
     },
-    author=__author__,
+    author="Jesus Torrado and Antony Lewis",
     license='LGPL',
     zip_safe=False,
     classifiers=[
