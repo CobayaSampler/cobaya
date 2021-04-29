@@ -1,5 +1,12 @@
 import sys
 import platform
+from cobaya.likelihood import Likelihood
+from cobaya.theory import Theory
+from cobaya.run import run
+from cobaya.model import get_model
+from cobaya.typing import InputDict, PostDict
+from cobaya.log import LoggedError
+from cobaya.post import post
 
 if sys.version_info < (3, 7):
     if sys.version_info < (3, 6):

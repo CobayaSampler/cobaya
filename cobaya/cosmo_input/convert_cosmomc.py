@@ -71,7 +71,7 @@ def cosmomc_root_to_cobaya_info_dict(root: str, derived_to_input=()) -> InputDic
                 if param in d:
                     mean, std = (float(v.strip()) for v in value.split())
                     if not names.parWithName(param).isDerived:
-                        info['prior'][param + '"prior"'] = \
+                        info['prior'][param + '_prior'] = \
                             "lambda %s: stats.norm.logpdf(%s, loc=%g, scale=%g)" % (
                                 param, param, mean, std)
 

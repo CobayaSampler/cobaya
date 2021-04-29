@@ -3,12 +3,8 @@ import numpy as np
 import pytest
 from flaky import flaky
 from getdist.mcsamples import MCSamplesFromCobaya, loadMCSamples
-from cobaya.theory import Theory
-from cobaya.run import run
-from cobaya import mpi
-from cobaya.log import LoggedError
+from cobaya import mpi, run, Theory, InputDict, PostDict, LoggedError
 from cobaya.conventions import Extension
-from cobaya.typing import InputDict, PostDict
 from cobaya.tools import deepcopy_where_possible
 from cobaya.cosmo_input.convert_cosmomc import cosmomc_root_to_cobaya_info_dict
 from .common import process_packages_path

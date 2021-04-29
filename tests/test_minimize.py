@@ -6,9 +6,7 @@ from flaky import flaky
 import pytest
 import os
 
-from cobaya.typing import InputDict
-from cobaya.run import run
-from cobaya import mpi
+from cobaya import mpi, run, InputDict
 
 pytestmark = pytest.mark.mpi
 
@@ -43,9 +41,7 @@ def test_minimize_gaussian(tmpdir):
     maxloglik = multivariate_normal.logpdf(mean, mean=mean, cov=cov)
     if mpi.is_main_process():
         print("Maximum of the gaussian mode to be found: %s" % mean)
-    info["sampler"] = {"minimize": {"ignore_prior": True}}
-    info["debug"] = False
-    info["debug_file"] = None
+        info["sampler"] = {"minimize": {"ignore_prior": True, "seed": 2}}
 
     products = run(info).sampler.products()
     # Done! --> Tests

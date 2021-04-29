@@ -94,7 +94,7 @@ class CobayaComponent(HasLogger, HasDefaults):
             if initialize:
                 self.initialize()
         except AttributeError as e:
-            if '"params"' in str(e):
+            if '_params' in str(e):
                 raise LoggedError(self.log, "use 'initialize_with_params' if you need to "
                                             "initialize after input and output parameters"
                                             " are set (%s, %s)", self, e)
