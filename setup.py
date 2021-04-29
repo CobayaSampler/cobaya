@@ -3,7 +3,8 @@ from setuptools import setup, find_packages
 from os import path
 from itertools import chain
 import re
-from cobaya.conventions import subfolders
+
+subfolders = {"likelihood": "likelihoods", "sampler": "samplers", "theory": "theories"}
 
 
 def find_version():
