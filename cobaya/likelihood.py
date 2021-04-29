@@ -137,7 +137,7 @@ class Likelihood(Theory, LikelihoodInterface):
     def wait(self):
         if self.delay:
             self.log.debug("Sleeping for %f seconds.", self.delay)
-        sleep(self.delay)
+            sleep(self.delay)
 
 
 class AbsorbUnusedParamsLikelihood(Likelihood):

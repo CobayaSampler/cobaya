@@ -52,7 +52,7 @@ from itertools import chain
 
 # Local
 from cobaya.conventions import Extension
-from cobaya.typing import InfoDict, SamplersDict
+from cobaya.typing import InfoDict, SamplersDict, SamplerDict
 from cobaya.tools import get_class, deepcopy_where_possible, find_with_regexp
 from cobaya.tools import recursive_update, str_to_list
 from cobaya.model import Model
@@ -124,8 +124,7 @@ def check_sampler_info(info_old: Optional[SamplersDict] = None,
                 logger_sampler, "Found old Sampler information which is not compatible "
                                 "with the new one. Delete the previous output manually, "
                                 "or automatically with either "
-                                "'-%s', '--%s', '%s: True'" % (
-                                "force"[0], "force", "force"))
+                                "'-f', '--force', 'force: True'")
 
 
 def get_sampler(info_sampler: SamplersDict, model: Model, output: Optional[Output] = None,
@@ -220,7 +219,7 @@ class Sampler(CobayaComponent):
         return self._output
 
     # Private methods: just ignore them:
-    def __init__(self, info_sampler: SamplersDict, model: Model,
+    def __init__(self, info_sampler: SamplerDict, model: Model,
                  output=Optional[Output], packages_path: Optional[str] = None,
                  name: Optional[str] = None):
         """
