@@ -9,7 +9,6 @@ from scipy.stats import multivariate_normal
 import numpy as np
 from typing import Sequence, Union
 # Local
-from cobaya.conventions import kinds, _params
 from cobaya.yaml import yaml_load
 from cobaya.run import run
 from cobaya.tools import get_external_function
@@ -36,10 +35,10 @@ def loglike(a, b, c, d, h, i, j):
 
 # Info
 info = {
-    kinds.likelihood:
+    "likelihood":
         {"test_lik": {"external": loglike, "output_params": ["x", "e"]}},
-    kinds.sampler: {"mcmc": {"burn_in": 0, "max_samples": 10}},
-    _params: yaml_load("""
+    "sampler": {"mcmc": {"burn_in": 0, "max_samples": 10}},
+    "params": yaml_load("""
        # Fixed to number
        a: 0.01
        # Fixed to function, non-explicitly requested as derived
@@ -93,15 +92,15 @@ def test_parameterization():
     from getdist.mcsamples import MCSamplesFromCobaya
     gdsample = MCSamplesFromCobaya(updated_info, products["sample"])
     for i, point in sample:
-        a = info[_params]["a"]
-        b = get_external_function(info[_params]["b"])(a, point["bprime"])
-        c = get_external_function(info[_params]["c"])(a, point["cprime"])
+        a = info["params"]["a"]
+        b = get_external_function(info["params"]["b"])(a, point["bprime"])
+        c = get_external_function(info["params"]["c"])(a, point["cprime"])
         e = get_external_function(e_func)(b)
         f = get_external_function(f_func)(b)
-        g = get_external_function(info[_params]["g"]["derived"])(x_func(point["c"]))
-        h = get_external_function(info[_params]["h"])(info[_params]["i"])
-        j = get_external_function(info[_params]["j"])(b)
-        k = get_external_function(info[_params]["k"]["derived"])(f)
+        g = get_external_function(info["params"]["g"]["derived"])(x_func(point["c"]))
+        h = get_external_function(info["params"]["h"])(info["params"]["i"])
+        j = get_external_function(info["params"]["j"])(b)
+        k = get_external_function(info["params"]["k"]["derived"])(f)
         assert np.allclose(
             point[["b", "c", "e", "f", "g", "h", "j", "k"]], [b, c, e, f, g, h, j, k])
         # Test for GetDist too (except fixed ones, ignored by GetDist)
@@ -186,7 +185,7 @@ def loglik_OLD(a, b, c, d, h, i, j, _derived: DerivedArg = ("x", "e")):
 
 # MARKED FOR DEPRECATION IN v3.0
 info_OLD = info.copy()
-info_OLD[kinds.likelihood] = {"test_lik": loglik_OLD}
+info_OLD["likelihood"] = {"test_lik": loglik_OLD}
 
 
 # MARKED FOR DEPRECATION IN v3.0
@@ -197,15 +196,15 @@ def test_parameterization_old_derived_specification():
     from getdist.mcsamples import MCSamplesFromCobaya
     gdsample = MCSamplesFromCobaya(updated_info, products["sample"])
     for i, point in sample:
-        a = info[_params]["a"]
-        b = get_external_function(info[_params]["b"])(a, point["bprime"])
-        c = get_external_function(info[_params]["c"])(a, point["cprime"])
+        a = info["params"]["a"]
+        b = get_external_function(info["params"]["b"])(a, point["bprime"])
+        c = get_external_function(info["params"]["c"])(a, point["cprime"])
         e = get_external_function(e_func)(b)
         f = get_external_function(f_func)(b)
-        g = get_external_function(info[_params]["g"]["derived"])(x_func(point["c"]))
-        h = get_external_function(info[_params]["h"])(info[_params]["i"])
-        j = get_external_function(info[_params]["j"])(b)
-        k = get_external_function(info[_params]["k"]["derived"])(f)
+        g = get_external_function(info["params"]["g"]["derived"])(x_func(point["c"]))
+        h = get_external_function(info["params"]["h"])(info["params"]["i"])
+        j = get_external_function(info["params"]["j"])(b)
+        k = get_external_function(info["params"]["k"]["derived"])(f)
         assert np.allclose(
             point[["b", "c", "e", "f", "g", "h", "j", "k"]], [b, c, e, f, g, h, j, k])
         # Test for GetDist too (except fixed ones, ignored by GetDist)

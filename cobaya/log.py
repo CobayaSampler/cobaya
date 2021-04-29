@@ -14,7 +14,6 @@ from copy import deepcopy
 import functools
 
 # Local
-from cobaya.conventions import _debug, _debug_file
 from cobaya import mpi
 
 
@@ -112,7 +111,7 @@ def exception_handler(exception_type, exception_instance, trace_back):
             "If you cannot solve it yourself and need to report it, "
             "include the debug output,\n"
             "which you can send it to a file setting '%s:[some_file_name]'.",
-            _debug, _debug_file)
+            "debug", "debug_file")
     # Exit all MPI processes
     if want_abort:
         mpi.abort_if_mpi()

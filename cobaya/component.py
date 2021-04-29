@@ -4,7 +4,7 @@ from typing import Optional, Union, List, Any
 
 from cobaya.log import HasLogger, LoggedError
 from cobaya.input import HasDefaults
-from cobaya.conventions import _version, empty_dict, InfoDict
+from cobaya.typing import InfoDict, empty_dict
 from cobaya.tools import resolve_packages_path
 
 
@@ -56,7 +56,7 @@ class CobayaComponent(HasLogger, HasDefaults):
     """
     # The next lists of options apply when comparing existing versus new info at resuming.
     # When defining it for subclasses, redefine append adding this list to new entries.
-    _at_resume_prefer_new = [_version]
+    _at_resume_prefer_new = ["version"]
     _at_resume_prefer_old = []
 
     def __init__(self, info: InfoDict = empty_dict,
@@ -83,8 +83,7 @@ class CobayaComponent(HasLogger, HasDefaults):
                         "in the next version. Please use `packages_path` instead.")
                     # BEHAVIOUR TO BE REPLACED BY ERROR:
                     # set BOTH old and new names, just in case old one is used internally
-                    from cobaya.conventions import _packages_path
-                    setattr(self, _packages_path, value)
+                    setattr(self, "packages_path", value)
                 # END OF DEPRECATION BLOCK
                 setattr(self, k, value)
             except AttributeError:
@@ -95,7 +94,7 @@ class CobayaComponent(HasLogger, HasDefaults):
             if initialize:
                 self.initialize()
         except AttributeError as e:
-            if '_params' in str(e):
+            if '"params"' in str(e):
                 raise LoggedError(self.log, "use 'initialize_with_params' if you need to "
                                             "initialize after input and output parameters"
                                             " are set (%s, %s)", self, e)
@@ -200,7 +199,7 @@ class ComponentCollection(dict, HasLogger):
         """
 
         def format_version(x):
-            return {_version: x} if add_version_field else x
+            return {"version": x} if add_version_field else x
 
         return {component.get_name(): format_version(component.get_version())
                 for component in self.values() if component.has_version()}

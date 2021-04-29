@@ -6,6 +6,7 @@ import time
 from cobaya.tools import KL_norm
 from cobaya.likelihood import Likelihood
 from cobaya.run import run
+from cobaya.typing import InputDict, Type
 from cobaya import mpi
 from cobaya.yaml import yaml_load
 from .common_sampler import body_of_test, body_of_test_speeds
@@ -208,7 +209,7 @@ def test_mcmc_dragging():
     body_of_test_speeds(info_mcmc)
 
 
-def _make_gaussian_like(nparam):
+def _make_gaussian_like(nparam) -> Type[Likelihood]:
     class LikeTest(Likelihood):
         params = {'x' + str(name): {'prior': {'min': -5, 'max': 5}, 'proposal': 1}
                   for name in range(nparam)}
@@ -228,7 +229,7 @@ def _test_overhead_timing(dim=15):
     from cobaya.samplers.mcmc import proposal  # one-time numba compile out of profiling
 
     LikeTest = _make_gaussian_like(dim)
-    info = {'likelihood': {'like': LikeTest}, 'debug': False, 'sampler': {
+    info: InputDict = {'likelihood': {'like': LikeTest}, 'debug': False, 'sampler': {
         'mcmc': {'max_samples': 1000, 'burn_in': 0, "learn_proposal": False,
                  "Rminus1_stop": 0.0001}}}
     prof = Profile()

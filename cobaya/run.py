@@ -12,10 +12,8 @@ import logging
 import os
 
 # Local
-from cobaya import __version__
-from cobaya.conventions import kinds, _prior, _params, _packages_path, _output_prefix, \
-    _debug, _debug_file, _resume, _timing, _force, _post, _test_run, _packages_path_arg, \
-    _packages_path_arg_posix, InputDict
+from cobaya.conventions import packages_path_arg, packages_path_arg_posix, get_version
+from cobaya.typing import InputDict
 from cobaya.output import get_output
 from cobaya.model import Model
 from cobaya.sampler import get_sampler_name_and_class, check_sampler_info, Sampler
@@ -71,32 +69,32 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     info: InputDict = load_input_dict(info_or_yaml_or_file)
 
     if override:
-        if _post in override:
-            info[_resume] = False
+        if "post" in override:
+            info["resume"] = False
         info = recursive_update(info, override)
     # solve packages installation path cmd > env > input
     if packages_path:
-        info[_packages_path] = packages_path
+        info["packages_path"] = packages_path
     if debug is not None:
-        info[_debug] = bool(debug)
+        info["debug"] = bool(debug)
     if test:
-        info[_test_run] = True
+        info["test"] = True
     if stop_at_error is not None:
         info["stop_at_error"] = bool(stop_at_error)
     # If any of resume|force given as cmd args, ignore those in the input file
     if resume or force:
         if resume and force:
             raise ValueError("'rename' and 'force' are exclusive options")
-        info[_resume] = bool(resume)
-        info[_force] = bool(force)
-    if _post in info:
+        info["resume"] = bool(resume)
+        info["force"] = bool(force)
+    if "post" in info:
         if output or output is False:
-            info[_post][_output_prefix] = output or None
+            info["post"]["output"] = output or None
         return post(info)
 
     if output or output is False:
-        info[_output_prefix] = output or None
-    logger_setup(info.get(_debug), info.get(_debug_file))
+        info["output"] = output or None
+    logger_setup(info.get("debug"), info.get("debug_file"))
     logger_run = logging.getLogger(run.__name__)
     # MARKED FOR DEPRECATION IN v3.0
     # BEHAVIOUR TO BE REPLACED BY ERROR:
@@ -111,8 +109,8 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             logger_run, "You need to specify a sampler using the 'sampler' key as e.g. "
                         "`sampler: {mcmc: None}.`")
     infix = "minimize" if which_sampler == "minimize" else None
-    with get_output(prefix=info.get(_output_prefix), resume=info.get(_resume),
-                    force=info.get(_force), infix=infix) as output:
+    with get_output(prefix=info.get("output"), resume=info.get("resume"),
+                    force=info.get("force"), infix=infix) as output:
         # 2. Update the input info with the defaults for each component
         updated_info = update_info(info)
         if logging.root.getEffectiveLevel() <= logging.DEBUG:
@@ -125,47 +123,48 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         # 3. If output requested, check compatibility if existing one, and dump.
         # 3.1 First: model only
         output.check_and_dump_info(info, updated_info, cache_old=True,
-                                   ignore_blocks=[kinds.sampler])
+                                   ignore_blocks=["sampler"])
         # 3.2 Then sampler -- 1st get the last sampler mentioned in the updated.yaml
         # TODO: ideally, using Minimizer would *append* to the sampler block.
         #       Some code already in place, but not possible at the moment.
         try:
-            last_sampler = list(updated_info[kinds.sampler])[-1]
-            last_sampler_info = {last_sampler: updated_info[kinds.sampler][last_sampler]}
+            last_sampler = list(updated_info["sampler"])[-1]
+            last_sampler_info = {last_sampler: updated_info["sampler"][last_sampler]}
         except (KeyError, TypeError):
             raise LoggedError(logger_run, "No sampler requested.")
         sampler_name, sampler_class = get_sampler_name_and_class(last_sampler_info)
         check_sampler_info(
-            (output.reload_updated_info(use_cache=True) or {}).get(kinds.sampler),
-            updated_info[kinds.sampler], is_resuming=output.is_resuming())
+            (output.reload_updated_info(use_cache=True) or {}).get("sampler"),
+            updated_info["sampler"], is_resuming=output.is_resuming())
         # Dump again, now including sampler info
         output.check_and_dump_info(info, updated_info, check_compatible=False)
         # Check if resumable run
         sampler_class.check_force_resume(
-            output, info=updated_info[kinds.sampler][sampler_name])
+            output, info=updated_info["sampler"][sampler_name])
         # 4. Initialize the posterior and the sampler
-        with Model(updated_info[_params], updated_info[kinds.likelihood],
-                   updated_info.get(_prior), updated_info.get(kinds.theory),
-                   packages_path=info.get(_packages_path),
-                   timing=updated_info.get(_timing),
+        with Model(updated_info["params"], updated_info["likelihood"],
+                   updated_info.get("prior"), updated_info.get("theory"),
+                   packages_path=info.get("packages_path"),
+                   timing=updated_info.get("timing"),
                    allow_renames=False,
                    stop_at_error=info.get("stop_at_error", False)) as model:
             # Re-dump the updated info, now containing parameter routes and version info
             updated_info = recursive_update(updated_info, model.info())
             output.check_and_dump_info(None, updated_info, check_compatible=False)
-            sampler = sampler_class(updated_info[kinds.sampler][sampler_name],
-                                    model, output, packages_path=info.get(_packages_path))
+            sampler = sampler_class(updated_info["sampler"][sampler_name],
+                                    model, output,
+                                    packages_path=info.get("packages_path"))
             # Re-dump updated info, now also containing updates from the sampler
-            updated_info[kinds.sampler][sampler.get_name()] = \
+            updated_info["sampler"][sampler.get_name()] = \
                 recursive_update(
-                    updated_info[kinds.sampler][sampler.get_name()], sampler.info())
+                    updated_info["sampler"][sampler.get_name()], sampler.info())
             # TODO -- maybe also re-dump model info, now possibly with measured speeds
             # (waiting until the camb.transfers issue is solved)
             output.check_and_dump_info(None, updated_info, check_compatible=False)
             mpi.sync_processes()
-            if info.get(_test_run, False):
+            if info.get("test", False):
                 logger_run.info("Test initialization successful! "
-                                "You can probably run now without `--%s`.", _test_run)
+                                "You can probably run now without `--%s`.", "test")
                 return InfoSamplerTuple(updated_info, sampler)
             # Run the sampler
             sampler.run()
@@ -181,7 +180,7 @@ def run_script(args=None):
         prog="cobaya run", description="Cobaya's run script.")
     parser.add_argument("input_file", action="store", metavar="input_file.yaml",
                         help="An input file to run.")
-    parser.add_argument("-" + _packages_path_arg[0], "--" + _packages_path_arg_posix,
+    parser.add_argument("-" + packages_path_arg[0], "--" + packages_path_arg_posix,
                         action="store", metavar="/packages/path", default=None,
                         help="Path where external packages were installed.")
     # MARKED FOR DEPRECATION IN v3.0
@@ -191,23 +190,23 @@ def run_script(args=None):
                         metavar="/packages/path", default=None,
                         help="To be deprecated! "
                              "Alias for %s, which should be used instead." %
-                             _packages_path_arg_posix)
+                             packages_path_arg_posix)
     # END OF DEPRECATION BLOCK -- CONTINUES BELOW!
-    parser.add_argument("-" + _output_prefix[0], "--" + _output_prefix,
+    parser.add_argument("-" + "output"[0], "--" + "output",
                         action="store", metavar="/some/path", default=None,
                         help="Path and prefix for the text output.")
-    parser.add_argument("-" + _debug[0], "--" + _debug, action="store_true",
+    parser.add_argument("-" + "debug"[0], "--" + "debug", action="store_true",
                         help="Produce verbose debug output.")
     continuation = parser.add_mutually_exclusive_group(required=False)
-    continuation.add_argument("-" + _resume[0], "--" + _resume, action="store_true",
+    continuation.add_argument("-" + "resume"[0], "--" + "resume", action="store_true",
                               help="Resume an existing chain if it has similar info "
                                    "(fails otherwise).")
-    continuation.add_argument("-" + _force[0], "--" + _force, action="store_true",
+    continuation.add_argument("-" + "force"[0], "--" + "force", action="store_true",
                               help="Overwrites previous output, if it exists "
                                    "(use with care!)")
-    parser.add_argument("--%s" % _test_run, action="store_true",
+    parser.add_argument("--%s" % "test", action="store_true",
                         help="Initialize model and sampler, and exit.")
-    parser.add_argument("--version", action="version", version=__version__)
+    parser.add_argument("--version", action="version", version=get_version())
     parser.add_argument("--no-mpi", action='store_true',
                         help="disable MPI when mpi4py installed but MPI does "
                              "not actually work")
@@ -219,10 +218,10 @@ def run_script(args=None):
         logger = logging.getLogger(__name__.split(".")[-1])
         logger.warning("*DEPRECATION*: -m/--modules will be deprecated in favor of "
                        "-%s/--%s in the next version. Please, use that one instead.",
-                       _packages_path_arg[0], _packages_path_arg_posix)
+                       packages_path_arg[0], packages_path_arg_posix)
         # BEHAVIOUR TO BE REPLACED BY ERROR:
-        if getattr(arguments, _packages_path_arg) is None:
-            setattr(arguments, _packages_path_arg, arguments.modules)
+        if getattr(arguments, packages_path_arg) is None:
+            setattr(arguments, packages_path_arg, arguments.modules)
     del arguments.modules
     # END OF DEPRECATION BLOCK
     info = load_input_file(arguments.input_file,

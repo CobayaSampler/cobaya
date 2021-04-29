@@ -315,7 +315,7 @@ class JobItem(PropertiesItem):
 
     def matchesDatatag(self, tagList):
         if self.datatag in tagList or self.normed_data in tagList: return True
-        return self.datatag.replace('_post', '') in [tag.replace('_post', '') for tag in
+        return self.datatag.replace('"post"', '') in [tag.replace('"post"', '') for tag in
                                                      tagList]
 
     def hasParam(self, name):
@@ -559,7 +559,7 @@ class BatchJob(PropertiesItem):
         return None
 
     def normalizeDataTag(self, tag):
-        return "_".join(sorted(tag.replace('_post', '').split('_')))
+        return "_".join(sorted(tag.replace('"post"', '').split('_')))
 
     def resolveName(self, paramtag, datatag, wantSubItems=True, wantImportance=True,
                     raiseError=True, base='base',

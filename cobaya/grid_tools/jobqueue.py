@@ -10,7 +10,7 @@ from typing import Any
 
 from distutils import spawn
 
-from cobaya.conventions import _yaml_extensions
+from cobaya.conventions import Extension
 from .conventions import _script_folder, _script_ext, _log_folder, _jobid_ext
 
 code_prefix = 'COSMOMC'
@@ -54,6 +54,9 @@ def checkArguments(**kwargs):
 
 
 class jobSettings:
+    names: list
+    jobId: str
+
     def __init__(self, jobName, msg=False, **kwargs):
         self.jobName = jobName
         grid_engine = 'PBS'
@@ -284,7 +287,7 @@ def submitJob(jobName, inputFiles, sequential=False, msg=False, **kwargs):
     if isinstance(inputFiles, str):
         inputFiles = [inputFiles]
     inputFiles = [
-        (os.path.splitext(p)[0] if os.path.splitext(p)[1] in _yaml_extensions else p)
+        (os.path.splitext(p)[0] if os.path.splitext(p)[1] in Extension.yamls else p)
         for p in inputFiles]
     j.runsPerJob = (len(inputFiles), 1)[sequential]
     # adjust omp for the actual number
@@ -350,7 +353,7 @@ def submitJob(jobName, inputFiles, sequential=False, msg=False, **kwargs):
             else:
                 j.inputFiles = inputFiles
                 if 'Your job ' in res:
-                    m = re.search('Your job (\d*) ', res)
+                    m = re.search(r'Your job (\d*) ', res)
                     res = m.group(1)
                 j.jobId = res
                 j.subTime = time.time()

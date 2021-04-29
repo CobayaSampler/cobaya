@@ -73,10 +73,10 @@ import numpy as np
 
 # Local
 from cobaya.likelihoods.base_classes import CMBlikes
-from cobaya.conventions import _h_J_s, _kB_J_K
+from cobaya.conventions import Const
 
 # Physical constants
-Ghz_Kelvin = _h_J_s / _kB_J_K * 1e9
+Ghz_Kelvin = Const.h_J_s / Const.kB_J_K * 1e9
 T_CMB_K = 2.7255  # fiducial CMB temperature
 
 

@@ -342,7 +342,8 @@ from types import MethodType
 from typing import Sequence, NamedTuple, Callable, Optional, Mapping
 
 # Local
-from cobaya.conventions import _prior, partag, _prior_1d_name, PriorsDict
+from cobaya.conventions import prior_1d_name
+from cobaya.typing import PriorsDict
 from cobaya.tools import get_external_function, get_scipy_1d_pdf, read_dnumber
 from cobaya.tools import _fast_norm_logpdf, getfullargspec
 from cobaya.log import LoggedError, HasLogger
@@ -382,17 +383,17 @@ class Prior(HasLogger):
         self._bounds = np.zeros((len(sampled_params_info), 2))
         for i, p in enumerate(sampled_params_info):
             self.params += [p]
-            prior = sampled_params_info[p].get(_prior)
+            prior = sampled_params_info[p].get("prior")
             self.pdf += [get_scipy_1d_pdf({p: prior})]
             fast_logpdf = fast_logpdfs.get(self.pdf[-1].dist.name)
             if fast_logpdf:
                 self.pdf[-1].logpdf = MethodType(fast_logpdf, self.pdf[-1])
             # Get the reference (1d) pdf
-            ref = sampled_params_info[p].get(partag.ref)
+            ref = sampled_params_info[p].get("ref")
             # Cases: number, pdf (something, but not a number), nothing
             if isinstance(ref, Sequence) and len(ref) == 2 and all(
                     isinstance(n, numbers.Number) for n in ref):
-                ref = {partag.dist: "norm", "loc": ref[0], "scale": ref[1]}
+                ref = {"dist": "norm", "loc": ref[0], "scale": ref[1]}
             if isinstance(ref, numbers.Real):
                 self.ref_pdf += [float(ref)]
             elif isinstance(ref, Mapping):
@@ -429,9 +430,9 @@ class Prior(HasLogger):
         self.external = {}
         self.external_dependence = set()
         for name in (info_prior if info_prior else {}):
-            if name == _prior_1d_name:
+            if name == prior_1d_name:
                 raise LoggedError(self.log, "The name '%s' is a reserved prior name. "
-                                            "Please use a different one.", _prior_1d_name)
+                                            "Please use a different one.", prior_1d_name)
             self.log.debug(
                 "Loading external prior '%s' from: '%s'", name, info_prior[name])
             logp = get_external_function(info_prior[name], name=name)
@@ -468,7 +469,7 @@ class Prior(HasLogger):
     # Not very useful, except for getting the prior names as list(self)
     # Created for consistency with likelihoods
     def __iter__(self):
-        return (p for p in [_prior_1d_name] + list(self.external))
+        return (p for p in [prior_1d_name] + list(self.external))
 
     def __len__(self):
         return 1 + len(self.external)

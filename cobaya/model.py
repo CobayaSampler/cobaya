@@ -14,11 +14,9 @@ import numpy as np
 import os
 
 # Local
-from cobaya.conventions import kinds, _prior, _timing, _params, _provides, \
-    _overhead_time, _packages_path, _debug, _debug_default, _debug_file, _input_params, \
-    _output_params, _get_chi2_name, _input_params_prefix, \
-    _output_params_prefix, empty_dict, InfoDict
-from cobaya.conventions import InputDict, LikesDict, TheoriesDict, ParamsDict, PriorsDict
+from cobaya.conventions import overhead_time, debug_default, get_chi2_name
+from cobaya.typing import InfoDict, InputDict, LikesDict, TheoriesDict, \
+    ParamsDict, PriorsDict, empty_dict
 from cobaya.input import update_info, load_input_dict
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
@@ -128,24 +126,24 @@ class Model(HasLogger):
                  skip_unused_theories=False, dropped_theory_params=None):
         self.set_logger()
         self._updated_info = {
-            _params: deepcopy_where_possible(info_params),
-            kinds.likelihood: deepcopy_where_possible(info_likelihood)}
-        if not self._updated_info[kinds.likelihood]:
+            "params": deepcopy_where_possible(info_params),
+            "likelihood": deepcopy_where_possible(info_likelihood)}
+        if not self._updated_info["likelihood"]:
             raise LoggedError(self.log, "No likelihood requested!")
-        for k, v in ((_prior, info_prior), (kinds.theory, info_theory),
-                     (_packages_path, packages_path), (_timing, timing)):
+        for k, v in (("prior", info_prior), ("theory", info_theory),
+                     ("packages_path", packages_path), ("timing", timing)):
             if v not in (None, {}):
                 self._updated_info[k] = deepcopy_where_possible(v)
-        self.parameterization = Parameterization(self._updated_info[_params],
+        self.parameterization = Parameterization(self._updated_info["params"],
                                                  allow_renames=allow_renames,
                                                  ignore_unused_sampled=post)
         self.prior = Prior(prior_parameterization or self.parameterization,
-                           self._updated_info.get(_prior))
+                           self._updated_info.get("prior"))
         self.timing = timing
-        info_theory = self._updated_info.get(kinds.theory)
+        info_theory = self._updated_info.get("theory")
         self.theory = TheoryCollection(info_theory, packages_path=packages_path,
                                        timing=timing)
-        info_likelihood = self._updated_info[kinds.likelihood]
+        info_likelihood = self._updated_info["likelihood"]
         self.likelihood = LikelihoodCollection(info_likelihood, theory=self.theory,
                                                packages_path=packages_path, timing=timing)
         if stop_at_error:
@@ -159,7 +157,7 @@ class Model(HasLogger):
             self._updated_info, self.get_versions(add_version_field=True))
         # Overhead per likelihood evaluation, approximately ind from # input params
         # Evaluation of non-uniform priors will add some overhead per parameter.
-        self.overhead = _overhead_time
+        self.overhead = overhead_time
 
     def info(self):
         """
@@ -258,10 +256,10 @@ class Model(HasLogger):
                         "Likelihood %s has not returned a valid log-likelihood, "
                         "but %r instead.", component, component.current_logp)
                 if return_derived:
-                    derived_dict[_get_chi2_name(component.get_name().replace(".", "_"))] \
+                    derived_dict[get_chi2_name(component.get_name().replace(".", "_"))] \
                         = -2 * loglikes[like_index]
                     for this_type in getattr(component, "type", []) or []:
-                        aggr_chi2_name = _get_chi2_name(this_type)
+                        aggr_chi2_name = get_chi2_name(this_type)
                         if aggr_chi2_name not in derived_dict:
                             derived_dict[aggr_chi2_name] = 0.
                         derived_dict[aggr_chi2_name] += -2 * loglikes[like_index]
@@ -564,7 +562,7 @@ class Model(HasLogger):
                 _tidy_requirements(component.get_requirements(), component)
             # Component params converted to requirements if not explicitly sampled
             requirements[component] += \
-                [Requirement(p, None) for p in (getattr(component, _params, {}) or []) if
+                [Requirement(p, None) for p in (getattr(component, "params", {}) or []) if
                  p not in self.input_params + component.output_params]
             # Gather what this component can provide
             can_provide = (list(component.get_can_provide()) +
@@ -791,11 +789,11 @@ class Model(HasLogger):
         assign_components = [c for c in self.components
                              if not isinstance(c, AbsorbUnusedParamsLikelihood)]
         for io_kind, assign, option, prefix, derived_param in (
-                ["input", input_assign, _input_params, _input_params_prefix, False],
-                ["output", output_assign, _output_params, _output_params_prefix, True]):
+                ["input", input_assign, "input_params", "input_params_prefix", False],
+                ["output", output_assign, "output_params", "output_params_prefix", True]):
             for component in assign_components:
                 if derived_param:
-                    required_params = str_to_list(getattr(component, _provides, []))
+                    required_params = str_to_list(getattr(component, "provides", []))
                 else:
                     required_params = set(
                         p for p, v in as_requirement_list(component.get_requirements())
@@ -821,9 +819,9 @@ class Model(HasLogger):
                             assign[p] += [component]
                 # 3. Does it have a general (mixed) list of params? (set from default)
                 # 4. or otherwise required
-                elif getattr(component, _params, None) or required_params:
-                    if getattr(component, _params, None):
-                        for p, options in getattr(component, _params, {}).items():
+                elif getattr(component, "params", None) or required_params:
+                    if getattr(component, "params", None):
+                        for p, options in getattr(component, "params", {}).items():
                             if not hasattr(options, 'get') or \
                                     options.get('derived',
                                                 derived_param) is derived_param:
@@ -881,16 +879,16 @@ class Model(HasLogger):
                     in input_assign.items() if assigned)))
 
         # Remove aggregated chi2 that may have been picked up by an agnostic component
-        aggr_chi2_names = [_get_chi2_name(t) for t in self.likelihood.all_types]
+        aggr_chi2_names = [get_chi2_name(t) for t in self.likelihood.all_types]
         for p in aggr_chi2_names:
             output_assign.pop(p, None)
         # Assign the single-likelihood "chi2__" output parameters
         for p in output_assign:
             # TODO: do we need this? (not used in tests)
-            if p.startswith(_get_chi2_name("")):
+            if p.startswith(get_chi2_name("")):
                 if p in aggr_chi2_names:
                     continue  # it's an aggregated likelihood
-                like = p[len(_get_chi2_name("")):]
+                like = p[len(get_chi2_name("")):]
                 if like not in [lik.replace(".", "_") for lik in self.likelihood]:
                     raise LoggedError(
                         self.log, "Your derived parameters depend on an unknown "
@@ -915,8 +913,8 @@ class Model(HasLogger):
                 "but some were claimed by more than one: %r.", multiassigned_output)
         # Finished! Assign and update infos
         for assign, option, attr in (
-                [input_assign, _input_params, "input_params"],
-                [output_assign, _output_params, "output_params"]):
+                [input_assign, "input_params", "input_params"],
+                [output_assign, "output_params", "output_params"]):
             for component in self.components:
                 setattr(component, attr,
                         [p for p, assign in assign.items() if component in assign])
@@ -925,7 +923,7 @@ class Model(HasLogger):
                     component in self.likelihood.values()]
                 inf = inf.get(component.get_name())
                 if inf:
-                    inf.pop(_params, None)
+                    inf.pop("params", None)
                     inf[option] = component.get_attr_list_with_helpers(attr)
         if self.log.getEffectiveLevel() <= logging.DEBUG:
             self.log.debug("Parameters were assigned as follows:")
@@ -1097,7 +1095,7 @@ class Model(HasLogger):
             for theory in self.theory.values():
                 if hasattr(theory, 'get_auto_covmat'):
                     return theory.get_auto_covmat(
-                        params_info, self.info()[kinds.likelihood])
+                        params_info, self.info()["likelihood"])
         except Exception as e:
             self.log.warning("Something went wrong when looking for a covmat: %r", str(e))
             return None
@@ -1146,12 +1144,12 @@ class Model(HasLogger):
 
 def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike]) -> Model:
     info = load_input_dict(info_or_yaml_or_file)
-    logger_setup(info.pop(_debug, _debug_default), info.pop(_debug_file, None))
+    logger_setup(info.pop("debug", debug_default), info.pop("debug_file", None))
     # Inform about ignored info keys
     ignored_info = {}
     for k in list(info):
-        if k not in [_params, kinds.likelihood, _prior, kinds.theory, _packages_path,
-                     _timing, "stop_at_error"]:
+        if k not in ["params", "likelihood", "prior", "theory", "packages_path",
+                     "timing", "stop_at_error"]:
             ignored_info[k] = info.pop(k)
     if ignored_info:
         logging.getLogger(__name__.split(".")[-1]).warning(
@@ -1163,7 +1161,8 @@ def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike]) -> Model
             "Input info updated with defaults (dumped to YAML):\n%s",
             yaml_dump(sort_cosmetic(updated_info)))
     # Initialize the parameters and posterior
-    return Model(updated_info[_params], updated_info[kinds.likelihood],
-                 updated_info.get(_prior), updated_info.get(kinds.theory),
-                 packages_path=info.get(_packages_path), timing=updated_info.get(_timing),
+    return Model(updated_info["params"], updated_info["likelihood"],
+                 updated_info.get("prior"), updated_info.get("theory"),
+                 packages_path=info.get("packages_path"),
+                 timing=updated_info.get("timing"),
                  stop_at_error=info.get("stop_at_error", False))

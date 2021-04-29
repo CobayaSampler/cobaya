@@ -7,7 +7,6 @@ import os
 import numpy as np
 from io import StringIO
 
-from cobaya.conventions import _packages_path
 from .common import process_packages_path, stdout_redirector
 from .conftest import install_test_wrapper
 
@@ -28,7 +27,7 @@ def test_cosmo_docs_model_classy(packages_path, skip_not_installed):
         os.chdir(docs_src_folder)
         globals_example = {}
         exec(open(os.path.join(docs_src_folder, "1.py")).read(), globals_example)
-        globals_example["info"][_packages_path] = packages_path
+        globals_example["info"]["packages_path"] = packages_path
         install_test_wrapper(
             skip_not_installed, exec,
             open(os.path.join(docs_src_folder, "2.py")).read(), globals_example)
@@ -56,16 +55,16 @@ def test_cosmo_docs_model_classy(packages_path, skip_not_installed):
                      globals_example)
             except:
                 assert False, "File %s failed." % filename
-    #        if test_figs:
-    #            # Compare plots
-    #            pre = "cosmo_model_"
-    #            for filename, imgname in zip(["4.py", "5.py"], ["cltt.png", "omegacdm.png"]):
-    #                exec(open(os.path.join(docs_src_folder, filename)).read(), globals_example)
-    #                old_img = imread(os.path.join(docs_img_folder, pre + imgname)).astype(float)
-    #                new_img = imread(imgname).astype(float)
-    #                npixels = (lambda x: x.shape[0] + x.shape[1])(old_img)
-    #                assert np.count_nonzero(old_img == new_img) / (4 * npixels) >= pixel_tolerance, (
-    #                        "Images '%s' are too different!" % imgname)
+        #        if test_figs:
+        #            # Compare plots
+        #            pre = "cosmo_model_"
+        #            for filename, imgname in zip(["4.py", "5.py"], ["cltt.png", "omegacdm.png"]):
+        #                exec(open(os.path.join(docs_src_folder, filename)).read(), globals_example)
+        #                old_img = imread(os.path.join(docs_img_folder, pre + imgname)).astype(float)
+        #                new_img = imread(imgname).astype(float)
+        #                npixels = (lambda x: x.shape[0] + x.shape[1])(old_img)
+        #                assert np.count_nonzero(old_img == new_img) / (4 * npixels) >= pixel_tolerance, (
+        #                        "Images '%s' are too different!" % imgname)
         # Passing the model to a sampler
         exec(open(os.path.join(docs_src_folder, "6.py")).read(), globals_example)
     finally:

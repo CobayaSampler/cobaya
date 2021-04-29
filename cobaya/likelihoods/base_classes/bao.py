@@ -128,7 +128,7 @@ from typing import Optional, Sequence
 
 # Local
 from cobaya.log import LoggedError
-from cobaya.conventions import _packages_path, _c_km_s
+from cobaya.conventions import Const
 from cobaya.likelihoods.base_classes import InstallableLikelihood
 
 
@@ -153,7 +153,7 @@ class BAO(InstallableLikelihood):
         if not getattr(self, "path", None) and not getattr(self, "packages_path", None):
             raise LoggedError(
                 self.log, "No path given to BAO data. Set the likelihood property "
-                          "'path' or the common property '%s'.", _packages_path)
+                          "'path' or the common property '%s'.", "packages_path")
         # If no path specified, use the external packages path
         data_file_path = os.path.normpath(getattr(self, "path", None) or
                                           os.path.join(self.packages_path, "data"))
@@ -281,12 +281,13 @@ class BAO(InstallableLikelihood):
         if observable == "DV_over_rs":
             return np.cbrt(
                 ((1 + z) * self.provider.get_angular_diameter_distance(z)) ** 2 *
-                _c_km_s * z / self.provider.get_Hubble(z, units="km/s/Mpc")) / self.rs()
+                Const.c_km_s * z / self.provider.get_Hubble(z,
+                                                            units="km/s/Mpc")) / self.rs()
         # Idem, inverse
         elif observable == "rs_over_DV":
             return np.cbrt(
                 ((1 + z) * self.provider.get_angular_diameter_distance(z)) ** 2 *
-                _c_km_s * z / self.provider.get_Hubble(z, units="km/s/Mpc")) ** (
+                Const.c_km_s * z / self.provider.get_Hubble(z, units="km/s/Mpc")) ** (
                        -1) * self.rs()
         # Comoving angular diameter distance, over sound horizon radius
         elif observable == "DM_over_rs":
@@ -306,7 +307,7 @@ class BAO(InstallableLikelihood):
         # Anisotropy (Alcock-Paczynski) parameter
         elif observable == "F_AP":
             return ((1 + z) * self.provider.get_angular_diameter_distance(z) *
-                    self.provider.get_Hubble(z, units="km/s/Mpc")) / _c_km_s
+                    self.provider.get_Hubble(z, units="km/s/Mpc")) / Const.c_km_s
 
     def rs(self):
         return self.provider.get_param("rdrag") * self.rs_rescale

@@ -51,9 +51,8 @@ from typing import Optional, Sequence, Mapping, Union, Any
 from itertools import chain
 
 # Local
-from cobaya.conventions import kinds, _checkpoint_extension, _version, InfoDict
-from cobaya.conventions import _progress_extension, _covmat_extension, SamplersDict
-from cobaya.conventions import partag, _packages_path, _force, _resume, _output_prefix
+from cobaya.conventions import Extension
+from cobaya.typing import InfoDict, SamplersDict
 from cobaya.tools import get_class, deepcopy_where_possible, find_with_regexp
 from cobaya.tools import recursive_update, str_to_list
 from cobaya.model import Model
@@ -71,7 +70,7 @@ def get_sampler_name_and_class(info_sampler: SamplersDict):
     """
     check_sane_info_sampler(info_sampler)
     name = list(info_sampler)[0]
-    return name, get_class(name, kind=kinds.sampler)
+    return name, get_class(name, kind="sampler")
 
 
 def check_sane_info_sampler(info_sampler: SamplersDict):
@@ -112,10 +111,10 @@ def check_sampler_info(info_old: Optional[SamplersDict] = None,
         return
     if list(info_old) == list(info_new):
         # Restore some selected old values for some classes
-        keep_old = get_preferred_old_values({kinds.sampler: info_old})
-        info_new = recursive_update(info_new, keep_old.get(kinds.sampler, {}))
+        keep_old = get_preferred_old_values({"sampler": info_old})
+        info_new = recursive_update(info_new, keep_old.get("sampler", {}))
     if not is_equal_info(
-            {kinds.sampler: info_old}, {kinds.sampler: info_new}, strict=False):
+            {"sampler": info_old}, {"sampler": info_new}, strict=False):
         if is_resuming:
             raise LoggedError(
                 logger_sampler, "Old and new Sampler information not compatible! "
@@ -125,7 +124,8 @@ def check_sampler_info(info_old: Optional[SamplersDict] = None,
                 logger_sampler, "Found old Sampler information which is not compatible "
                                 "with the new one. Delete the previous output manually, "
                                 "or automatically with either "
-                                "'-%s', '--%s', '%s: True'" % (_force[0], _force, _force))
+                                "'-%s', '--%s', '%s: True'" % (
+                                "force"[0], "force", "force"))
 
 
 def get_sampler(info_sampler: SamplersDict, model: Model, output: Optional[Output] = None,
@@ -141,7 +141,8 @@ def get_sampler(info_sampler: SamplersDict, model: Model, output: Optional[Outpu
         output = OutputDummy()
     # Check and update info
     check_sane_info_sampler(info_sampler)
-    updated_info_sampler = update_info({kinds.sampler: info_sampler})[kinds.sampler]
+    updated_info_sampler = update_info(
+        {"sampler": info_sampler})["sampler"]
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
         logger_sampler.debug(
             "Input info updated with defaults (dumped to YAML):\n%s",
@@ -149,7 +150,7 @@ def get_sampler(info_sampler: SamplersDict, model: Model, output: Optional[Outpu
     # Get sampler class & check resume/force compatibility
     sampler_name, sampler_class = get_sampler_name_and_class(updated_info_sampler)
     check_sampler_info(
-        (output.reload_updated_info(use_cache=True) or {}).get(kinds.sampler),
+        (output.reload_updated_info(use_cache=True) or {}).get("sampler"),
         updated_info_sampler, is_resuming=output.is_resuming())
     # Check if resumable run
     sampler_class.check_force_resume(output, info=updated_info_sampler[sampler_name])
@@ -159,8 +160,8 @@ def get_sampler(info_sampler: SamplersDict, model: Model, output: Optional[Outpu
     # If output, dump updated
     if output:
         to_dump = model.info()
-        to_dump[kinds.sampler] = {sampler_name: sampler_instance.info()}
-        to_dump[_output_prefix] = os.path.join(output.folder, output.prefix)
+        to_dump["sampler"] = {sampler_name: sampler_instance.info()}
+        to_dump["output"] = os.path.join(output.folder, output.prefix)
         output.check_and_dump_info(None, to_dump, check_compatible=False)
     return sampler_instance
 
@@ -250,7 +251,7 @@ class Sampler(CobayaComponent):
                 try:
                     checkpoint_info = yaml_load_file(self.checkpoint_filename())
 
-                    if self.get_name() not in checkpoint_info[kinds.sampler]:
+                    if self.get_name() not in checkpoint_info["sampler"]:
                         raise LoggedError(
                             self.log, "Checkpoint file found at '%s' "
                                       "but it corresponds to a different sampler.",
@@ -273,7 +274,7 @@ class Sampler(CobayaComponent):
         model.set_cache_size(self._get_requested_cache_size())
         # Add to the updated info some values which are
         # only available after initialisation
-        self._updated_info[_version] = self.get_version()
+        self._updated_info["version"] = self.get_version()
 
     def run(self):
         """
@@ -295,21 +296,21 @@ class Sampler(CobayaComponent):
     def checkpoint_filename(self):
         if self.output:
             return os.path.join(
-                self.output.folder, self.output.prefix + _checkpoint_extension)
+                self.output.folder, self.output.prefix + Extension.checkpoint)
         return None
 
     def progress_filename(self):
         if self.output:
             return os.path.join(
-                self.output.folder, self.output.prefix + _progress_extension)
+                self.output.folder, self.output.prefix + Extension.progress)
         return None
 
     def set_checkpoint_info(self, checkpoint_info):
-        for k, v in checkpoint_info[kinds.sampler][self.get_name()].items():
+        for k, v in checkpoint_info["sampler"][self.get_name()].items():
             setattr(self, k, v)
         # check if convergence parameters changed, and if so converged=False
         old_info = self.output.reload_updated_info(use_cache=True)
-        if self.converge_info_changed(old_info[kinds.sampler][self.get_name()],
+        if self.converge_info_changed(old_info["sampler"][self.get_name()],
                                       self._updated_info):
             self.converged = False
 
@@ -379,7 +380,7 @@ class Sampler(CobayaComponent):
                 # Special case: CovmatSampler's may have been given a covmat with the same
                 # name that the output one. In that case, don't delete it!
                 if issubclass(cls, CovmatSampler) and info:
-                    if regexp.pattern.rstrip("$").endswith(_covmat_extension):
+                    if regexp.pattern.rstrip("$").endswith(Extension.covmat):
                         covmat_file = info.get("covmat", "")
                         if (isinstance(covmat_file, str) and covmat_file ==
                                 getattr(regexp.match(covmat_file), "group",
@@ -408,9 +409,9 @@ class Sampler(CobayaComponent):
                     raise LoggedError(
                         output.log, "Delete the previous output manually, automatically "
                                     "('-%s', '--%s', '%s: True')" % (
-                                        _force[0], _force, _force) +
+                                        "force"[0], "force", "force") +
                                     " or request resuming ('-%s', '--%s', '%s: True')" % (
-                                        _resume[0], _resume, _resume))
+                                        "resume"[0], "resume", "resume"))
             else:
                 if output.is_resuming():
                     output.log.info(
@@ -479,10 +480,10 @@ class CovmatSampler(Sampler):
                               "Will generate from parameter info (proposal and prior).")
         # If given, load and test the covariance matrix
         if isinstance(self.covmat, str):
-            covmat_pre = "{%s}" % _packages_path
+            covmat_pre = "{%s}" % "packages_path"
             if self.covmat.startswith(covmat_pre):
                 self.covmat = self.covmat.format(
-                    **{_packages_path: self.packages_path}).replace("/", os.sep)
+                    **{"packages_path": self.packages_path}).replace("/", os.sep)
             try:
                 with open(self.covmat, "r", encoding="utf-8-sig") as file_covmat:
                     header = file_covmat.readline()
@@ -533,7 +534,7 @@ class CovmatSampler(Sampler):
                     self.log, "The covariance matrix %s is not a positive-definite, "
                               "symmetric square matrix.", str_msg)
             # Fill with parameters in the loaded covmat
-            renames = {p: [p] + str_to_list(v.get(partag.renames) or [])
+            renames = {p: [p] + str_to_list(v.get("renames") or [])
                        for p, v in params_infos.items()}
             indices_used, indices_sampler = zip(*[
                 [loaded_params.index(p),
@@ -573,7 +574,7 @@ class CovmatSampler(Sampler):
         where_nan = np.isnan(covmat.diagonal())
         if np.any(where_nan):
             covmat[where_nan, where_nan] = np.array(
-                [(info.get(partag.proposal, np.nan) or np.nan) ** 2
+                [(info.get("proposal", np.nan) or np.nan) ** 2
                  for info in params_infos.values()])[where_nan]
         where_nan2 = np.isnan(covmat.diagonal())
         if np.any(where_nan2):
@@ -585,7 +586,7 @@ class CovmatSampler(Sampler):
     def covmat_filename(self):
         if self.output:
             return os.path.join(
-                self.output.folder, self.output.prefix + _covmat_extension)
+                self.output.folder, self.output.prefix + Extension.covmat)
         return None
 
     def dump_covmat(self, covmat=None):

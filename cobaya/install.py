@@ -25,10 +25,9 @@ from cobaya.log import logger_setup, LoggedError, NoLogging
 from cobaya.tools import create_banner, warn_deprecation, get_resolved_class, \
     write_packages_path_in_config_file, get_config_path, get_kind
 from cobaya.input import get_used_components
-from cobaya.conventions import _component_path, _code, _data, _external, _force, \
-    _packages_path, _packages_path_arg, _packages_path_env, _yaml_extensions, _debug, \
-    _install_skip_env, _packages_path_arg_posix, _packages_path_config_file, _test_run, \
-    _class_name
+from cobaya.conventions import code_path, data_path, packages_path_arg, \
+    packages_path_env, Extension, install_skip_env, packages_path_arg_posix, \
+    packages_path_config_file
 from cobaya.mpi import set_mpi_disabled
 from cobaya.tools import resolve_packages_path
 
@@ -45,9 +44,9 @@ class NotInstalledError(LoggedError):
     """
 
 
-# noinspection PyUnresolvedReferences
 def install(*infos, **kwargs):
-    debug = kwargs.get(_debug)
+    debug = kwargs.get("debug")
+    # noinspection PyUnresolvedReferences
     if not log.root.handlers:
         logger_setup()
     path = kwargs.get("path")
@@ -58,12 +57,12 @@ def install(*infos, **kwargs):
             log, "No 'path' argument given, and none could be found in input infos "
                  "(as %r), the %r env variable or the config file. "
                  "Maybe specify one via a command line argument '-%s [...]'?",
-            _packages_path, _packages_path_env, _packages_path_arg[0])
+            "packages_path", packages_path_env, packages_path_arg[0])
     abspath = os.path.abspath(path)
     log.info("Installing external packages at '%s'", abspath)
     kwargs_install = {"force": kwargs.get("force", False),
                       "no_progress_bars": kwargs.get("no_progress_bars")}
-    for what in (_code, _data):
+    for what in (code_path, data_path):
         kwargs_install[what] = kwargs.get(what, True)
         spath = os.path.join(abspath, what)
         if kwargs_install[what] and not os.path.exists(spath):
@@ -77,7 +76,7 @@ def install(*infos, **kwargs):
     # NB: if passed with quotes as `--skip "a b"`, it's interpreted as a single key
     skip_keywords_arg = set(chain(*[word.split() for word in skip_keywords_arg]))
     skip_keywords_env = set(
-        os.environ.get(_install_skip_env, "").replace(",", " ").lower().split())
+        os.environ.get(install_skip_env, "").replace(",", " ").lower().split())
     skip_keywords = skip_keywords_arg.union(skip_keywords_env)
     used_components, components_infos = get_used_components(*infos, return_infos=True)
     for kind, components in used_components.items():
@@ -89,16 +88,16 @@ def install(*infos, **kwargs):
             if _skip_helper(component.lower(), skip_keywords, skip_keywords_env, log):
                 continue
             info = components_infos[component]
-            if isinstance(info, str) or _external in info:
+            if isinstance(info, str) or "external" in info:
                 log.warning("Component '%s' is a custom function. "
                             "Nothing to do.", component)
                 continue
             try:
-                class_name = (info or {}).get(_class_name)
+                class_name = (info or {}).get("class")
                 if class_name:
                     log.info("Class to be installed for this component: %r", class_name)
                 imported_class = get_resolved_class(
-                    component, kind=kind, component_path=info.pop(_component_path, None),
+                    component, kind=kind, component_path=info.pop("python_path", None),
                     class_name=class_name)
             except ImportError as excpt:
                 log.error("Component '%s' not recognized. [%s].", component, excpt)
@@ -131,7 +130,7 @@ def install(*infos, **kwargs):
                     has_been_installed = is_installed(path=install_path, **kwargs_install)
             if has_been_installed:
                 log.info("External dependencies for this component already installed.")
-                if kwargs.get(_test_run, False):
+                if kwargs.get("test", False):
                     continue
                 if kwargs_install["force"] and not kwargs.get("skip_global"):
                     log.info("Forcing re-installation, as requested.")
@@ -144,7 +143,7 @@ def install(*infos, **kwargs):
                     log.info(
                         "(If you expected this to be already installed, re-run "
                         "`cobaya-install` with --debug to get more verbose output.)")
-                if kwargs.get(_test_run, False):
+                if kwargs.get("test", False):
                     continue
                 log.info("Installing...")
             try:
@@ -194,17 +193,17 @@ def install(*infos, **kwargs):
             bullet + bullet.join(failed_components))
     log.info("All requested components' dependencies correctly installed.")
     # Set the installation path in the global config file
-    if not kwargs.get("no_set_global", False) and not kwargs.get(_test_run, False):
+    if not kwargs.get("no_set_global", False) and not kwargs.get("test", False):
         write_packages_path_in_config_file(abspath)
         log.info("The installation path has been written into the global config file: %s",
-                 os.path.join(get_config_path(), _packages_path_config_file))
+                 os.path.join(get_config_path(), packages_path_config_file))
 
 
 def _skip_helper(name, skip_keywords, skip_keywords_env, logger):
     try:
         this_skip_keyword = next(s for s in skip_keywords
                                  if s.lower() in name.lower())
-        env_msg = (" in env var %r" % _install_skip_env
+        env_msg = (" in env var %r" % install_skip_env
                    if this_skip_keyword in skip_keywords_env else "")
         logger.info("Skipping %r as per skip keyword %r" + env_msg,
                     name, this_skip_keyword)
@@ -336,13 +335,13 @@ def install_script(args=None):
                         help="One or more input files or component names "
                              "(or simply 'cosmo' to install all the requisites for basic"
                              " cosmological runs)")
-    parser.add_argument("-" + _packages_path_arg[0], "--" + _packages_path_arg_posix,
+    parser.add_argument("-" + packages_path_arg[0], "--" + packages_path_arg_posix,
                         action="store", required=False,
                         metavar="/packages/path", default=None,
                         help="Desired path where to install external packages. "
                              "Optional if one has been set globally or as an env variable"
                              " (run with '--show_%s' to check)." %
-                             _packages_path_arg_posix)
+                             packages_path_arg_posix)
     # MARKED FOR DEPRECATION IN v3.0
     modules = "modules"
     parser.add_argument("-" + modules[0], "--" + modules,
@@ -350,20 +349,20 @@ def install_script(args=None):
                         metavar="/packages/path", default=None,
                         help="To be deprecated! "
                              "Alias for %s, which should be used instead." %
-                             _packages_path_arg_posix)
+                             packages_path_arg_posix)
     # END OF DEPRECATION BLOCK -- CONTINUES BELOW!
     output_show_packages_path = resolve_packages_path()
-    if output_show_packages_path and os.environ.get(_packages_path_env):
-        output_show_packages_path += " (from env variable %r)" % _packages_path_env
+    if output_show_packages_path and os.environ.get(packages_path_env):
+        output_show_packages_path += " (from env variable %r)" % packages_path_env
     elif output_show_packages_path:
         output_show_packages_path += " (from config file)"
     else:
         output_show_packages_path = "(Not currently set.)"
-    parser.add_argument("--show-" + _packages_path_arg_posix, action="version",
+    parser.add_argument("--show-" + packages_path_arg_posix, action="version",
                         version=output_show_packages_path,
                         help="Prints default external packages installation folder "
                              "and exits.")
-    parser.add_argument("-" + _force[0], "--" + _force, action="store_true",
+    parser.add_argument("-" + "force"[0], "--" + "force", action="store_true",
                         default=False,
                         help="Force re-installation of apparently installed packages.")
     parser.add_argument("--skip", action="store", nargs="*",
@@ -372,7 +371,7 @@ def install_script(args=None):
                              "installation.")
     parser.add_argument("--no-progress-bars", action="store_true", default=False,
                         help="No progress bars shown. Shorter logs (used in Travis).")
-    parser.add_argument("--%s" % _test_run, action="store_true", default=False,
+    parser.add_argument("--%s" % "test", action="store_true", default=False,
                         help="Just check whether components are installed.")
     # MARKED FOR DEPRECATION IN v3.0
     parser.add_argument("--just-check", action="store_true", default=False,
@@ -382,13 +381,13 @@ def install_script(args=None):
                         help="Do not store the installation path for later runs.")
     parser.add_argument("--skip-global", action="store_true", default=False,
                         help="Skip installation of already-available Python modules.")
-    parser.add_argument("-" + _debug[0], "--" + _debug, action="store_true",
+    parser.add_argument("-" + "debug"[0], "--" + "debug", action="store_true",
                         help="Produce verbose debug output.")
     group_just = parser.add_mutually_exclusive_group(required=False)
     group_just.add_argument("-C", "--just-code", action="store_false", default=True,
-                            help="Install code of the components.", dest=_data)
+                            help="Install code of the components.", dest=data_path)
     group_just.add_argument("-D", "--just-data", action="store_false", default=True,
-                            help="Install data of the components.", dest=_code)
+                            help="Install data of the components.", dest=code_path)
     arguments = parser.parse_args(args)
     # Configure the logger ASAP
     logger_setup()
@@ -404,7 +403,7 @@ def install_script(args=None):
             logger.info("Installing *tested* cosmological packages.")
             from cobaya.cosmo_input import install_tests
             infos += [install_tests]
-        elif os.path.splitext(f)[1].lower() in _yaml_extensions:
+        elif os.path.splitext(f)[1].lower() in Extension.yamls:
             from cobaya.input import load_input
             infos += [load_input(f)]
         else:
@@ -422,24 +421,24 @@ def install_script(args=None):
         deprecation_warnings.append(
             "*DEPRECATION*: -m/--modules will be deprecated in favor of "
             "-%s/--%s in the next version. Please, use that one instead." %
-            (_packages_path_arg[0], _packages_path_arg_posix))
+            (packages_path_arg[0], packages_path_arg_posix))
         # BEHAVIOUR TO BE REPLACED BY ERROR:
-        if getattr(arguments, _packages_path_arg) is None:
-            setattr(arguments, _packages_path_arg, getattr(arguments, modules))
+        if getattr(arguments, packages_path_arg) is None:
+            setattr(arguments, packages_path_arg, getattr(arguments, modules))
     # END OF DEPRECATION BLOCK
     # MARKED FOR DEPRECATION IN v3.0
     if arguments.just_check is True:
         deprecation_warnings.append(
             "*DEPRECATION*: --just-check will be deprecated in favor of "
-            "--%s in the next version. Please, use that one instead." % _test_run)
+            "--%s in the next version. Please, use that one instead." % "test")
     # BEHAVIOUR TO BE REPLACED BY ERROR:
-    setattr(arguments, _test_run, getattr(arguments, _test_run) or arguments.just_check)
+    setattr(arguments, "test", getattr(arguments, "test") or arguments.just_check)
     # END OF DEPRECATION BLOCK
     # Launch installer
-    install(*infos, path=getattr(arguments, _packages_path_arg),
+    install(*infos, path=getattr(arguments, packages_path_arg),
             **{arg: getattr(arguments, arg)
-               for arg in ["force", _code, _data, "no_progress_bars", _test_run,
-                           "no_set_global", "skip", "skip_global", _debug]})
+               for arg in ["force", code_path, data_path, "no_progress_bars", "test",
+                           "no_set_global", "skip", "skip_global", "debug"]})
     # MARKED FOR DEPRECATION IN v3.0
     for warning_msg in deprecation_warnings:
         logger.warning(warning_msg)

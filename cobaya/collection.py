@@ -11,13 +11,14 @@ import os
 import functools
 import numpy as np
 import pandas as pd
+from typing import Optional
 from getdist import MCSamples, chains
 from copy import deepcopy
 from math import isclose
 
 # Local
-from cobaya.conventions import _weight, _chi2, _minuslogpost, _minuslogprior, \
-    _get_chi2_name, _separator, Optional
+from cobaya.conventions import OutPar, minuslogprior_names, \
+    chi2_names, derived_par_name_separator
 from cobaya.tools import load_DataFrame
 from cobaya.log import LoggedError, HasLogger, NoLogging
 
@@ -61,15 +62,14 @@ class BaseCollection(HasLogger):
         self.set_logger(name)
         self.sampled_params = list(model.parameterization.sampled_params())
         self.derived_params = list(model.parameterization.derived_params())
-        self.minuslogprior_names = \
-            [_minuslogprior + _separator + piname for piname in list(model.prior)]
-        self.chi2_names = [_get_chi2_name(likname) for likname in model.likelihood]
-        columns = [_weight, _minuslogpost]
+        self.minuslogprior_names = minuslogprior_names(model.prior)
+        self.chi2_names = chi2_names(model.likelihood)
+        columns = [OutPar.weight, OutPar.minuslogpost]
         columns += list(self.sampled_params)
         # Just in case: ignore derived names as likelihoods: would be duplicate cols
         columns += [p for p in self.derived_params if p not in self.chi2_names]
-        columns += [_minuslogprior] + self.minuslogprior_names
-        columns += [_chi2] + self.chi2_names
+        columns += [OutPar.minuslogprior] + self.minuslogprior_names
+        columns += [OutPar.chi2] + self.chi2_names
         self.columns = columns
 
 
@@ -126,8 +126,10 @@ class Collection(BaseCollection):
                     if load:
                         self.columns = list(self.data.columns)
                         loaded_chi2_names = set(name for name in self.columns if
-                                                name.startswith(_chi2 + _separator))
-                        loaded_chi2_names.discard(_chi2 + _separator + 'prior')
+                                                name.startswith(
+                                                    OutPar.chi2 + derived_par_name_separator))
+                        loaded_chi2_names.discard(
+                            OutPar.chi2 + derived_par_name_separator + 'prior')
                         if set(self.chi2_names).difference(loaded_chi2_names):
                             raise LoggedError(self.log,
                                               "Input samples do not have chi2 values "
@@ -249,18 +251,18 @@ class Collection(BaseCollection):
         `logps` must be a tuple `(logpost, sum(logpriors), sum(loglikes))`, where the last
         two elements can be `None`.
         """
-        self._cache[pos, self._icol[_weight]] = weight if weight is not None else 1
-        self._cache[pos, self._icol[_minuslogpost]] = -logps[0]
+        self._cache[pos, self._icol[OutPar.weight]] = weight if weight is not None else 1
+        self._cache[pos, self._icol[OutPar.minuslogpost]] = -logps[0]
         for name, value in zip(self.sampled_params, values):
             self._cache[pos, self._icol[name]] = value
         if logpriors is not None:
             for name, value in zip(self.minuslogprior_names, logpriors):
                 self._cache[pos, self._icol[name]] = -value
-            self._cache[pos, self._icol[_minuslogprior]] = - logps[1]
+            self._cache[pos, self._icol[OutPar.minuslogprior]] = - logps[1]
         if loglikes is not None:
             for name, value in zip(self.chi2_names, loglikes):
                 self._cache[pos, self._icol[name]] = -2 * value
-            self._cache[pos, self._icol[_chi2]] = -2 * logps[2]
+            self._cache[pos, self._icol[OutPar.chi2]] = -2 * logps[2]
         if derived is not None:
             for name, value in zip(self.derived_params, derived):
                 self._cache[pos, self._icol[name]] = value
@@ -396,11 +398,11 @@ class Collection(BaseCollection):
         The estimate of the mean in this case is unstable; use carefully.
         """
         if pweight:
-            logps = -self[_minuslogpost][first:last].values.copy()
+            logps = -self[OutPar.minuslogpost][first:last].values.copy()
             logps -= max(logps)
             weights = np.exp(logps)
         else:
-            weights = self[_weight][first:last].values
+            weights = self[OutPar.weight][first:last].values
         return np.average(
             self[list(self.sampled_params) +
                  (list(self.derived_params) if derived else [])]
@@ -417,12 +419,12 @@ class Collection(BaseCollection):
         The estimate of the covariance matrix in this case is unstable; use carefully.
         """
         if pweight:
-            logps = -self[_minuslogpost][first:last].values.copy()
+            logps = -self[OutPar.minuslogpost][first:last].values.copy()
             logps -= max(logps)
             weights = np.exp(logps)
             kwarg = "aweights"
         else:
-            weights = self[_weight][first:last].values
+            weights = self[OutPar.weight][first:last].values
             kwarg = "fweights" if np.allclose(np.round(weights), weights) else "aweights"
         weights_kwarg = {kwarg: weights}
         return np.atleast_2d(np.cov(
@@ -444,7 +446,8 @@ class Collection(BaseCollection):
         try:
             if hasattr(WeightedSamples, "thin_indices_and_weights"):
                 unique, counts = \
-                    WeightedSamples.thin_indices_and_weights(thin, self[_weight].values)
+                    WeightedSamples.thin_indices_and_weights(thin,
+                                                             self[OutPar.weight].values)
             else:
                 raise LoggedError(self.log, "Thinning requires GetDist 1.2+", )
         except WeightedSampleError as e:
@@ -461,11 +464,11 @@ class Collection(BaseCollection):
 
     def bestfit(self):
         """Best fit (maximum likelihood) sample. Returns a copy."""
-        return self.data.loc[self.data[_chi2].idxmin()].copy()
+        return self.data.loc[self.data[OutPar.chi2].idxmin()].copy()
 
     def MAP(self):
         """Maximum-a-posteriori (MAP) sample. Returns a copy."""
-        return self.data.loc[self.data[_minuslogpost].idxmin()].copy()
+        return self.data.loc[self.data[OutPar.minuslogpost].idxmin()].copy()
 
     def _sampled_to_getdist_mcsamples(self, first=None, last=None):
         """
@@ -478,20 +481,20 @@ class Collection(BaseCollection):
         with NoLogging():
             mcsamples = MCSamples(
                 samples=self.data[:len(self)][names].values[first:last],
-                weights=self.data[:len(self)][_weight].values[first:last],
-                loglikes=self.data[:len(self)][_minuslogpost].values[first:last],
+                weights=self.data[:len(self)][OutPar.weight].values[first:last],
+                loglikes=self.data[:len(self)][OutPar.minuslogpost].values[first:last],
                 names=names)
         return mcsamples
 
     def reweight(self, importance_weights):
         self._cache_dump()
-        self._data[_weight] *= importance_weights
+        self._data[OutPar.weight] *= importance_weights
         self._data = self.data[self._data.weight > 0].reset_index(drop=True)
         self._n = self._data.last_valid_index() + 1
 
     # Saving and updating
     def _get_driver(self, method):
-        return getattr(self, method + _separator + self.driver)
+        return getattr(self, method + derived_par_name_separator + self.driver)
 
     # Load a pre-existing file
     def _out_load(self, **kwargs):
@@ -634,8 +637,8 @@ class OnePoint(Collection):
         super().add(*args, **kwargs)
 
     def increase_weight(self, increase):
-        # For some reason, faster than `self.data[_weight] += increase`
-        self.data.at[0, _weight] += increase
+        # For some reason, faster than `self.data[Par.weight] += increase`
+        self.data.at[0, OutPar.weight] += increase
 
     # Restore original __repr__ (here, there is only 1 sample)
     def __repr__(self):

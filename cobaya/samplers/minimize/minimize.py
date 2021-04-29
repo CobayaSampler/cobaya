@@ -91,14 +91,14 @@ from copy import deepcopy
 
 # Local
 from cobaya.sampler import Minimizer
-from cobaya.conventions import _undo_chi2_name
+from cobaya.conventions import undo_chi2_name
 from cobaya.collection import OnePoint, Collection
 from cobaya.log import LoggedError
 from cobaya.tools import read_dnumber, recursive_update
 from cobaya.sampler import CovmatSampler
 from cobaya import mpi
 
-# Handling scpiy vs BOBYQA
+# Handling scipy vs BOBYQA
 evals_attr = {"scipy": "fun", "bobyqa": "f"}
 
 # Conventions conventions
@@ -385,7 +385,7 @@ class minimize(Minimizer, CovmatSampler):
             [[p, params[p]] for p in self.model.parameterization.derived_params()])
         if hasattr(params, 'chi2_names'):
             labels.update({p: r'\chi^2_{\rm %s}' % (
-                _undo_chi2_name(p).replace("_", r"\ "))
+                undo_chi2_name(p).replace("_", r"\ "))
                            for p in params.chi2_names})
             add_section([[chi2, params[chi2]] for chi2 in params.chi2_names])
         return "\n".join(lines)

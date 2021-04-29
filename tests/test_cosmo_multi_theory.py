@@ -4,7 +4,7 @@ from copy import deepcopy
 from cobaya.model import get_model
 from cobaya.theory import Theory
 from cobaya.likelihood import LikelihoodInterface, Likelihood
-from cobaya.conventions import empty_dict, InfoDict
+from cobaya.typing import InputDict, empty_dict
 from .common import process_packages_path
 from .conftest import install_test_wrapper
 from .test_cosmo_camb import get_camb
@@ -60,17 +60,17 @@ camb_params = {
 
 bbn_table = "PRIMAT_Yp_DH_Error.dat"
 debug = True
-info: InfoDict = {'likelihood': {'cmb': cmb_likelihood_info},
-                  'theory': {
-                      'camb': {"extra_args": {"lens_potential_accuracy": 1},
-                               "requires": ['YHe', 'ombh2']},
-                      'bbn': {'external': BBN, 'provides': ['YHe']}},
-                  'params': camb_params,
-                  'debug': debug, 'stop_at_error': True}
+info: InputDict = {'likelihood': {'cmb': cmb_likelihood_info},
+                   'theory': {
+                       'camb': {"extra_args": {"lens_potential_accuracy": 1},
+                                "requires": ['YHe', 'ombh2']},
+                       'bbn': {'external': BBN, 'provides': ['YHe']}},
+                   'params': camb_params,
+                   'debug': debug, 'stop_at_error': True}
 
-info2: InfoDict = {'likelihood': {'cmb': cmb_likelihood_info},
-                   'theory': {'camb': {"requires": ['YHe', 'ombh2']}, 'bbn': BBN2},
-                   'params': camb_params, 'debug': debug}
+info2: InputDict = {'likelihood': {'cmb': cmb_likelihood_info},
+                    'theory': {'camb': {"requires": ['YHe', 'ombh2']}, 'bbn': BBN2},
+                    'params': camb_params, 'debug': debug}
 
 
 def test_bbn_yhe(packages_path, skip_not_installed):
@@ -138,19 +138,20 @@ class BBN_with_theory_errors(BBN, LikelihoodInterface):
         state['logp'] = -params_values_dict['BBN_delta'] ** 2 / 2
 
 
-info_error = {'likelihood': dict([('cmb', cmb_likelihood_info),
-                                  ('BBN', BBN_likelihood)]),
-              'theory': {'camb': {"requires": ['YHe', 'ombh2']}},
-              'params': dict(YHe={'prior': {'min': 0, 'max': 1}}, **camb_params),
-              'debug': debug}
+info_error: InputDict = {'likelihood': dict([('cmb', cmb_likelihood_info),
+                                             ('BBN', BBN_likelihood)]),
+                         'theory': {'camb': {"requires": ['YHe', 'ombh2']}},
+                         'params': dict(YHe={'prior': {'min': 0, 'max': 1}},
+                                        **camb_params),
+                         'debug': debug}
 
-info_error2 = {'likelihood': {'cmb': cmb_likelihood_info,
-                              'BBN': {'external': BBN_with_theory_errors,
-                                      'provides': 'YHe'}},
-               'theory': {'camb': {"requires": ['YHe', 'ombh2']}},
-               'params': dict(BBN_delta={'prior': {'min': -5, 'max': 5}},
-                              **camb_params),
-               'debug': debug}
+info_error2: InputDict = {'likelihood': {'cmb': cmb_likelihood_info,
+                                         'BBN': {'external': BBN_with_theory_errors,
+                                                 'provides': 'YHe'}},
+                          'theory': {'camb': {"requires": ['YHe', 'ombh2']}},
+                          'params': dict(BBN_delta={'prior': {'min': -5, 'max': 5}},
+                                         **camb_params),
+                          'debug': debug}
 
 
 def test_bbn_likelihood(packages_path, skip_not_installed):
@@ -208,20 +209,20 @@ class Pklike(Likelihood):
         return {'Cl': {'tt': 1000}, 'CAMBdata': None}
 
 
-info_pk = {'likelihood': {'cmb': Pklike},
-           'theory': {'camb': {"external_primordial_pk": True},
-                      'my_pk': ExamplePrimordialPk},
-           'params': {
-               "ombh2": 0.022274,
-               "omch2": 0.11913,
-               "cosmomc_theta": 0.01040867,
-               "tau": 0.0639,
-               "nnu": 3.046,
-               'testAs': {'prior': {'min': 1e-9, 'max': 1e-8}},
-               'testns': {'prior': {'min': 0.8, 'max': 1.2}}
-           },
-           'stop_at_error': True,
-           'debug': debug}
+info_pk: InputDict = {'likelihood': {'cmb': Pklike},
+                      'theory': {'camb': {"external_primordial_pk": True},
+                                 'my_pk': ExamplePrimordialPk},
+                      'params': {
+                          "ombh2": 0.022274,
+                          "omch2": 0.11913,
+                          "cosmomc_theta": 0.01040867,
+                          "tau": 0.0639,
+                          "nnu": 3.046,
+                          'testAs': {'prior': {'min': 1e-9, 'max': 1e-8}},
+                          'testns': {'prior': {'min': 0.8, 'max': 1.2}}
+                      },
+                      'stop_at_error': True,
+                      'debug': debug}
 
 
 def test_primordial_pk(packages_path, skip_not_installed):
@@ -285,22 +286,23 @@ def test_pk_binning(packages_path, skip_not_installed):
     k_min_bin = -5.5
     k_max_bin = 2
 
-    _info = {'packages_path': process_packages_path(packages_path),
-             'likelihood': {'cmb': Pklike},
-             'theory': {'camb': {"external_primordial_pk": True},
-                        'my_pk': {"external": BinnedPk,
-                                  'nbins': nbins, 'k_min_bin': k_min_bin,
-                                  'k_max_bin': k_max_bin
-                                  }},
-             'params': {
-                 "ombh2": 0.022274,
-                 "omch2": 0.11913,
-                 "cosmomc_theta": 0.01040867,
-                 "tau": tau,
-                 "nnu": 3.046
-             },
-             'stop_at_error': True,
-             'debug': debug}
+    _info: InputDict = \
+        {'packages_path': process_packages_path(packages_path),
+         'likelihood': {'cmb': Pklike},
+         'theory': {'camb': {"external_primordial_pk": True},
+                    'my_pk': {"external": BinnedPk,
+                              'nbins': nbins, 'k_min_bin': k_min_bin,
+                              'k_max_bin': k_max_bin
+                              }},
+         'params': {
+             "ombh2": 0.022274,
+             "omch2": 0.11913,
+             "cosmomc_theta": 0.01040867,
+             "tau": tau,
+             "nnu": 3.046
+         },
+         'stop_at_error': True,
+         'debug': debug}
     scale = 1e-9
     ks = np.logspace(k_min_bin, k_max_bin, nbins)
 

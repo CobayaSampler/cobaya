@@ -8,7 +8,7 @@ weights:
 # Prefix of parameters names
 input_params_prefix: ""
 output_params_prefix: ""
-# Use derived standarized parameters for each component
+# Use derived standardized parameters for each component
 derived: False
 # Delay in likelihood evaluation
 delay: 0  # seconds

@@ -16,7 +16,6 @@ from typing import Any
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
-from cobaya.conventions import _packages_path, kinds
 from cobaya.input import get_default_info
 from cobaya.install import pip_install, download_file, NotInstalledError
 from cobaya.tools import are_different_params_lists, create_banner, load_module
@@ -52,7 +51,7 @@ class PlanckClik(Likelihood):
             raise LoggedError(
                 self.log, "No path given to the Planck likelihood. Set the "
                           "likelihood property 'path' or the common property "
-                          "'%s'.", _packages_path)
+                          "'%s'.", "packages_path")
         clik: Any = is_installed_clik(path=self.path_clik, allow_global=allow_global)
         if not clik:
             raise NotInstalledError(
@@ -361,7 +360,7 @@ def install_clik(path, no_progress_bars=False):
 
 def get_product_id_and_clik_file(name):
     """Gets the PLA product info from the defaults file."""
-    defaults = get_default_info(name, kinds.likelihood)
+    defaults = get_default_info(name, "likelihood")
     return defaults.get("product_id"), defaults.get("clik_file")
 
 

@@ -14,8 +14,7 @@ from scipy.special import logsumexp
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
 from cobaya.mpi import share_mpi, is_main_process
-from cobaya.conventions import kinds, _params, ArrayLike, ArrayOrFloat
-from cobaya.conventions import _input_params_prefix, _output_params_prefix
+from cobaya.typing import ArrayLike, ArrayOrFloat, InputDict
 
 derived_suffix = "_derived"
 
@@ -215,10 +214,10 @@ def info_random_gaussian_mixture(
     if mpi_aware:
         mean, cov = share_mpi((mean, cov))
     dimension = len(ranges)
-    info = {kinds.likelihood: {"gaussian_mixture": {
-        "means": mean, "covs": cov, _input_params_prefix: input_params_prefix,
-        _output_params_prefix: output_params_prefix, "derived": derived}}}
-    info[_params] = dict(
+    info: InputDict = {"likelihood": {"gaussian_mixture": {
+        "means": mean, "covs": cov, "input_params_prefix": input_params_prefix,
+        "output_params_prefix": output_params_prefix, "derived": derived}}}
+    info["params"] = dict(
         # sampled
         [(input_params_prefix + "_%d" % i,
           {"prior": {"min": ranges[i][0], "max": ranges[i][1]},
@@ -226,6 +225,6 @@ def info_random_gaussian_mixture(
          for i in range(dimension)] +
         # derived
         ([[output_params_prefix + "_%d" % i,
-           {"min": -3, "max": 3, "latex": r"\beta_{%i}" % i}]
+           {"latex": r"\beta_{%i}" % i}]
           for i in range(dimension * n_modes)] if derived else []))
     return info

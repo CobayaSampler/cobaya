@@ -1,10 +1,10 @@
 import os
 from getdist import IniFile, ParamNames
 from getdist.parampriors import ParamBounds
-from cobaya.conventions import InfoDict
+from cobaya.typing import InputDict, ParamsDict
 
 
-def cosmomc_root_to_cobaya_info_dict(root: str, derived_to_input=()) -> InfoDict:
+def cosmomc_root_to_cobaya_info_dict(root: str, derived_to_input=()) -> InputDict:
     """
     Given the root name of existing cosmomc chain files, tries to construct a Cobaya
     input parameter dictionary with roughly equivalent settings. The output
@@ -28,8 +28,8 @@ def cosmomc_root_to_cobaya_info_dict(root: str, derived_to_input=()) -> InfoDict
         ranges = ParamBounds(root + '.ranges')
     else:
         ranges = None
-    d: InfoDict = {}
-    info: InfoDict = {'params': d}
+    d: ParamsDict = {}
+    info: InputDict = {'params': d}
     for par, name in zip(names.names, names.list()):
         if name.startswith('chi2_') and not name.startswith('chi2__'):
             if name == 'chi2_prior':
@@ -71,7 +71,7 @@ def cosmomc_root_to_cobaya_info_dict(root: str, derived_to_input=()) -> InfoDict
                 if param in d:
                     mean, std = (float(v.strip()) for v in value.split())
                     if not names.parWithName(param).isDerived:
-                        info['prior'][param + '_prior'] = \
+                        info['prior'][param + '"prior"'] = \
                             "lambda %s: stats.norm.logpdf(%s, loc=%g, scale=%g)" % (
                                 param, param, mean, std)
 
