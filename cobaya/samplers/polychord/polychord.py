@@ -181,7 +181,7 @@ class polychord(CovmatSampler):
             self.grade_dims.extend([1, 1])
             self.grade_frac.extend([1.0, 1.0])
             self.pc_settings = PolyChordSettings(
-                self.nDims + 1,  # FIXME: only true for one proposal.
+                self.nDims + 2,  # FIXME: only true for one proposal.
                 self.nDerived,
                 seed=(self.seed if self.seed is not None else -1),
                 **{p: getattr(self, p) for p in pc_args
