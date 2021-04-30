@@ -1,28 +1,29 @@
 # Minimization of a random Gaussian likelihood using the minimize sampler.
 
 import numpy as np
-from scipy.stats import multivariate_normal
 from flaky import flaky
 import pytest
 import os
 
-from cobaya import mpi, run, InputDict
+from cobaya import mpi, run, InputDict, Likelihood
 
 pytestmark = pytest.mark.mpi
 
-info_min: InputDict = {'likelihood': {
-    'gaussian_mixture': {'means': [np.array([0.30245268, 0.61884443, 0.5])],
-                         'covs': [np.array([[0.00796336, -0.0014805, -0.00479433],
-                                            [-0.0014805, 0.00561415, 0.00434189],
-                                            [-0.00479433, 0.00434189, 0.03208593]])],
-                         'input_params_prefix': 'a_', 'output_params_prefix': '',
-                         'derived': True}},
-    'params': {'a__0': {'prior': {'min': 0, 'max': 1}, 'latex': '\\alpha_{0}'},
-               'a__1': {'prior': {'min': 0, 'max': 1}, 'latex': '\\alpha_{1}'},
-               'a__2': {'prior': {'min': 0, 'max': 1}, 'latex': '\\alpha_{2}'},
-               '_0': None,
-               '_1': None,
-               '_2': None}}
+mean = np.array([0.30245268, 0.61884443, 0.5])
+cov = np.array(
+    [[0.00796336, -0.0014805, -0.00479433], [-0.0014805, 0.00561415, 0.00434189],
+     [-0.00479433, 0.00434189, 0.03208593]])
+
+
+class NoisyCovLike(Likelihood):
+    params = {'a': [0, 1], 'b': [0, 1], 'c': [0, 1]}
+
+    def initialize(self):
+        self._inv_cov = np.linalg.inv(cov)
+
+    def logp(self, **params_values):
+        x = np.array([params_values['a'], params_values['b'], params_values['c']])
+        return -self._inv_cov.dot(x).dot(x) / 2 + np.random.random_sample() * 0.005
 
 
 @flaky(max_runs=3, min_passes=1)
@@ -35,19 +36,15 @@ def test_minimize_gaussian(tmpdir):
     # ranges = np.array([[0, 1] for _ in range(dimension)])
     # info = info_random_gaussian_mixture(ranges=ranges, n_modes=n_modes,
     #      input_params_prefix = "a_", derived = True)
-    info: InputDict = info_min.copy()
-    mean = info["likelihood"]["gaussian_mixture"]["means"][0]
-    cov = info["likelihood"]["gaussian_mixture"]["covs"][0]
-    maxloglik = multivariate_normal.logpdf(mean, mean=mean, cov=cov)
-    if mpi.is_main_process():
-        print("Maximum of the gaussian mode to be found: %s" % mean)
-        info["sampler"] = {"minimize": {"ignore_prior": True, "seed": 2}}
 
+    maxloglik = 0
+    info: InputDict = {'likelihood': {'like': NoisyCovLike},
+                       "sampler": {"minimize": {"ignore_prior": True, "seed": None}}}
     products = run(info).sampler.products()
     # Done! --> Tests
     if mpi.is_main_process():
-        rel_error = abs(maxloglik - -products["minimum"]["minuslogpost"]) / abs(maxloglik)
-        assert rel_error < 0.001
+        error = abs(maxloglik - -products["minimum"]["minuslogpost"])
+        assert error < 0.01
 
     info['output'] = os.path.join(tmpdir, 'testmin')
     products = run(info).sampler.products()

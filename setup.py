@@ -8,7 +8,7 @@ subfolders = {"likelihood": "likelihoods", "sampler": "samplers", "theory": "the
 
 
 def find_version():
-    init_file = open(path.join(path.dirname(__file__), 'cobaya/__init__.py')).read()
+    init_file = open(path.join(path.dirname(__file__), 'cobaya', '__init__.py')).read()
     version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", init_file, re.M)
     if version_match:
         return version_match.group(1)

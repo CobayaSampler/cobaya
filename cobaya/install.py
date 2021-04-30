@@ -239,7 +239,7 @@ def download_file(url, path, no_progress_bars=False, decompress=False, logger=No
             logger.info('Downloaded filename %s', filename)
         except Exception as e:
             logger.error(
-                "Error downloading file '%s' to folder '%s': %s", filename, tmp_path, e)
+                "Error downloading %s' to folder '%s': %s", url, tmp_path, e)
             return False
         logger.debug('Got: %s', filename)
         if not decompress:

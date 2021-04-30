@@ -163,8 +163,9 @@ class minimize(Minimizer, CovmatSampler):
         # TODO: if ignore_prior, one should use *like* covariance (this is *post*)
         covmat = self._load_covmat(prefer_load_old=self.output)[0]
         # scale by conditional parameter widths (since not using correlation structure)
+        rhobeg = 1
         scales = np.minimum(1 / np.sqrt(np.diag(np.linalg.inv(covmat))),
-                            (self._bounds[:, 1] - self._bounds[:, 0]) / 3)
+                            (self._bounds[:, 1] - self._bounds[:, 0]) / 3 / rhobeg)
         # Cov and affine transformation
         # Transform to space where initial point is at centre, and cov is normalised
         # Cannot do rotation, as supported minimization routines assume bounds aligned
@@ -185,6 +186,7 @@ class minimize(Minimizer, CovmatSampler):
                 "bounds": np.array(list(zip(*bounds))),
                 "seek_global_minimum": (True if mpi.size() else False),
                 "maxfun": int(self.max_evals),
+                "rhobeg": rhobeg,
                 "do_logging": (self.log.getEffectiveLevel() == logging.DEBUG)}
             self.kwargs = recursive_update(
                 deepcopy(self.kwargs), self.override_bobyqa or {})
