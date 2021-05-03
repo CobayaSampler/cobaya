@@ -1,0 +1,79 @@
+theory: null
+likelihood:
+  gaussian_mixture:
+    means:
+    - 0.2
+    - 0
+    covs:
+    - - 0.1
+      - 0.05
+    - - 0.05
+      - 0.2
+    weights: null
+    input_params_prefix: ''
+    output_params_prefix: ''
+    derived: true
+    delay: 0
+    type: []
+    speed: -1
+    stop_at_error: false
+    version: null
+    input_params:
+    - a
+    - b
+    output_params:
+    - derived_a
+    - derived_b
+params:
+  a:
+    prior:
+      min: -0.5
+      max: 3
+    latex: \alpha
+  b:
+    prior:
+      dist: norm
+      loc: 0
+      scale: 1
+    ref: 0
+    proposal: 0.5
+    latex: \beta
+  derived_a:
+    latex: \alpha^\prime
+    derived: true
+  derived_b:
+    latex: \beta^\prime
+    derived: true
+sampler:
+  polychord:
+    path: null
+    nlive: 25d
+    num_repeats: 2d
+    nprior: 10nlive
+    do_clustering: true
+    precision_criterion: 0.001
+    max_ndead: .inf
+    compression_factor: 0.36787944117144233
+    callback_function: null
+    logzero: -1.0e+30
+    boost_posterior: 0
+    feedback: null
+    measure_speeds: true
+    oversample_power: 0.4
+    blocking: null
+    confidence_for_unbounded: 0.9999995
+    seed: null
+    file_root: null
+    posteriors: true
+    equals: true
+    cluster_posteriors: true
+    write_resume: true
+    read_resume: true
+    write_stats: true
+    write_live: true
+    write_dead: true
+    version: null
+output: gaussian
+packages_path: /Users/app/Git/cobaya-modules/
+test: false
+version: '3.0'

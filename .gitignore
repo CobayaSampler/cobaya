@@ -27,3 +27,8 @@ tests/.ipynb_checkpoints
 
 # pytest
 .cache
+/cobaya/samplers/polychord/.mypy_cache/
+.*/.DS_.*
+/cobaya/.DS_Store
+/cobaya/samplers/.DS_Store
+/.DS_Store

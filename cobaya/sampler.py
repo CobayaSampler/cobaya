@@ -351,7 +351,8 @@ class Sampler(CobayaComponent):
             for (regexp, root) in cls.output_files_regexps(output, info=info):
                 # Special case: CovmatSampler's may have been given a covmat with the same
                 # name that the output one. In that case, don't delete it!
-                if issubclass(cls, CovmatSampler) and info:
+                # Exception: SuperNest does not create a covmat file --> regexp=None
+                if issubclass(cls, CovmatSampler) and info and regexp:
                     if regexp.pattern.rstrip("$").endswith(_covmat_extension):
                         covmat_file = info.get("covmat", "")
                         if (isinstance(covmat_file, str) and covmat_file ==

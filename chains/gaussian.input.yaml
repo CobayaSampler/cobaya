@@ -1,0 +1,34 @@
+likelihood:
+  gaussian_mixture:
+    means:
+    - 0.2
+    - 0
+    covs:
+    - - 0.1
+      - 0.05
+    - - 0.05
+      - 0.2
+    derived: true
+params:
+  a:
+    prior:
+      min: -0.5
+      max: 3
+    latex: \alpha
+  b:
+    prior:
+      dist: norm
+      loc: 0
+      scale: 1
+    ref: 0
+    proposal: 0.5
+    latex: \beta
+  derived_a:
+    latex: \alpha^\prime
+  derived_b:
+    latex: \beta^\prime
+sampler:
+  polychord: null
+output: gaussian
+packages_path: /Users/app/Git/cobaya-modules/
+test: false
