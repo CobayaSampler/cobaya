@@ -139,7 +139,7 @@ class polychord(CovmatSampler):
         self.mpi_info("Storing raw PolyChord output in '%s'.", self.base_dir)
         # Exploiting the speed hierarchy
         if self.blocking:
-            blocks, oversampling_factors = self.model.check_blocking(True)
+            blocks, oversampling_factors = self.model.check_blocking(self.blocking)
         else:
             if self.measure_speeds:
                 self.model.measure_and_set_speeds(n=self.measure_speeds)
