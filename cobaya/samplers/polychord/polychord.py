@@ -177,7 +177,7 @@ class polychord(CovmatSampler):
         pc_args.pop(pc_args.index("num_repeats"))
 
         if self.use_supernest:
-            # For the choice probability, and choice indicator. 
+            # For the choice probability, and choice indicator.
             self.grade_dims.extend([1, 1])
             self.grade_frac.extend([1.0, 1.0])
             self.pc_settings = PolyChordSettings(
