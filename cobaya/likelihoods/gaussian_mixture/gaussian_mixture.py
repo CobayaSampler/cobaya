@@ -109,7 +109,7 @@ class gaussian_mixture(Likelihood):
             self.weights = 1 / len(self.gaussians)
 
         # Prepare the transformation(s) for the derived parameters
-        self.choleskyL = [np.linalg.cholesky(cov) for cov in self.covs]
+        self.inv_choleskyL = [np.linalg.inv(np.linalg.cholesky(cov)) for cov in self.covs]
 
     def logp(self, **params_values):
         """
@@ -121,12 +121,12 @@ class gaussian_mixture(Likelihood):
         # Fill the derived parameters
         derived = params_values.get("_derived")
         if derived is not None:
+            n = self.d()
             for i in range(self.n_modes):
-                standard = np.linalg.inv(self.choleskyL[i]).dot((x - self.means[i]))
+                standard = self.inv_choleskyL[i].dot(x - self.means[i])
                 derived.update(
                     (p, v) for p, v in
-                    zip(list(self.output_params)[i * self.d():(i + 1) * self.d()],
-                        standard))
+                    zip(list(self.output_params)[i * n:(i + 1) * n], standard))
         # Compute the likelihood and return
         return logsumexp([gauss.logpdf(x) for gauss in self.gaussians], b=self.weights)
 

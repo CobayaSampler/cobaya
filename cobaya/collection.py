@@ -620,7 +620,7 @@ class OneSamplePoint:
 
 class OnePoint(Collection):
     """Wrapper of :class:`~collection.Collection` to hold a single point,
-    e.g. the current point of an MCMC."""
+    e.g. the best-fit point of a minimization run (not used by default MCMC)."""
 
     def __getitem__(self, columns):
         if isinstance(columns, str):
