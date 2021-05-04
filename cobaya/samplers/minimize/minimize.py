@@ -113,7 +113,6 @@ class minimize(Minimizer, CovmatSampler):
     method: str
     override_bobyqa: Optional[Mapping]
     override_scipy: Optional[Mapping]
-    seed: Optional[int]
 
     def initialize(self):
         self.mpi_info("Initializing")
@@ -153,7 +152,7 @@ class minimize(Minimizer, CovmatSampler):
         if initial_point is None:
             this_logp = -np.inf
             while not np.isfinite(this_logp):
-                initial_point = self.model.prior.reference()
+                initial_point = self.model.prior.reference(random_state=self._rng)
                 this_logp = self.logp(initial_point)
             self.log.info("Starting from random initial point:")
         self.log.info(
@@ -222,7 +221,7 @@ class minimize(Minimizer, CovmatSampler):
     def logp_transf(self, x):
         return self.logp(self.inv_affine_transform(x))
 
-    def _run(self):
+    def run(self):
         """
         Runs `scipy.minimize`
         """

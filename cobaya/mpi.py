@@ -143,6 +143,13 @@ def share_mpi(data=None, root=0):
 share = share_mpi
 
 
+def scatter(data=None, root=0):
+    if get_mpi_size() > 1:
+        return get_mpi_comm().scatter(data, root=root)
+    else:
+        return data[0]
+
+
 def size() -> int:
     return get_mpi_size() or 1
 

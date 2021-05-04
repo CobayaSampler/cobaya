@@ -342,6 +342,7 @@ from types import MethodType
 from typing import Sequence, NamedTuple, Callable, Optional, Mapping
 
 # Local
+import scipy.stats
 from cobaya.conventions import prior_1d_name
 from cobaya.typing import PriorsDict
 from cobaya.tools import get_external_function, get_scipy_1d_pdf, read_dnumber
@@ -507,7 +508,7 @@ class Prior(HasLogger):
                 self.log,
                 "Some parameter names (positions %r) have no bounds defined.", infs)
 
-    def sample(self, n=1, ignore_external=False):
+    def sample(self, n=1, ignore_external=False, random_state=None):
         """
         Generates samples from the prior pdf.
 
@@ -522,7 +523,7 @@ class Prior(HasLogger):
             raise LoggedError(
                 self.log, "It is not possible to sample from an external prior "
                           "(see help of this function on how to fix this).")
-        return np.array([pdf.rvs(n) for pdf in self.pdf]).T
+        return np.array([pdf.rvs(n, random_state=random_state) for pdf in self.pdf]).T
 
     def logps(self, x):
         """
@@ -597,7 +598,7 @@ class Prior(HasLogger):
         return self._ref_is_pointlike
 
     def reference(self, max_tries=np.inf, warn_if_tries="10d", ignore_fixed=False,
-                  warn_if_no_ref=True):
+                  warn_if_no_ref=True, random_state=None):
         """
         Returns:
           One sample from the ref pdf. For those parameters that do not have a ref pdf
@@ -632,7 +633,10 @@ class Prior(HasLogger):
                 ref_sample[where_ignore_ref] = prior_sample[where_ignore_ref]
             for i, ref_pdf in enumerate(self.ref_pdf):
                 if not where_ignore_ref[i]:
-                    ref_sample[i] = getattr(ref_pdf, "rvs", lambda: ref_pdf.real)()
+                    if hasattr(ref_pdf, "rvs"):
+                        ref_sample[i] = ref_pdf.rvs(random_state=random_state)
+                    else:
+                        ref_sample[i] = ref_pdf.real
 
             if self.logp(ref_sample) > -np.inf:
                 return ref_sample

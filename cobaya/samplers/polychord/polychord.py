@@ -12,7 +12,6 @@ import numpy as np
 import logging
 import inspect
 from itertools import chain
-from random import random
 from typing import Any
 from tempfile import gettempdir
 import re
@@ -96,7 +95,7 @@ class polychord(Sampler):
             self.file_root = self.output.prefix
             self.read_resume = self.output.is_resuming()
         else:
-            output_prefix = share_mpi(hex(int(random() * 16 ** 6))[2:]
+            output_prefix = share_mpi(hex(int(self._rng.random() * 16 ** 6))[2:]
                                       if is_main_process() else None)
             self.file_root = output_prefix
             # dummy output -- no resume!
@@ -215,7 +214,7 @@ class polychord(Sampler):
                 self.log.error("The callback function produced an error: %r", str(e))
             self.last_point_callback = len(self.dead)
 
-    def _run(self):
+    def run(self):
         """
         Prepares the posterior function and calls ``PolyChord``'s ``run`` function.
         """

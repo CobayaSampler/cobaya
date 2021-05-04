@@ -16,7 +16,7 @@ from copy import deepcopy
 
 # Local
 from cobaya.sampler import CovmatSampler
-from cobaya.mpi import get_mpi_size, share_mpi
+from cobaya.mpi import get_mpi_size
 from cobaya.mpi import more_than_one_process, is_main_process, sync_processes
 from cobaya.collection import Collection, OneSamplePoint
 from cobaya.conventions import OutPar, Extension, line_width, get_version
@@ -277,7 +277,8 @@ class mcmc(CovmatSampler):
         sampled_params_list = list(self.model.parameterization.sampled_params())
         blocks_indices = [[sampled_params_list.index(p) for p in b] for b in self.blocks]
         self.proposer = BlockedProposer(
-            blocks_indices, oversampling_factors=self.oversampling_factors,
+            blocks_indices, self._rng,
+            oversampling_factors=self.oversampling_factors,
             i_last_slow_block=(self.i_last_slow_block if self.drag else None),
             proposal_scale=self.proposal_scale)
         # Cycle length, taking into account oversampling/dragging
@@ -322,7 +323,7 @@ class mcmc(CovmatSampler):
         i_max = np.argmin(log_differences)
         return i_max
 
-    def _run(self):
+    def run(self):
         """
         Runs the sampler.
         """
@@ -517,7 +518,7 @@ class mcmc(CovmatSampler):
         elif logp_trial > logp_current:
             return True
         else:
-            return np.random.exponential() > (logp_current - logp_trial)
+            return self._rng.exponential() > (logp_current - logp_trial)
 
     def process_accept_or_reject(self, accept_state, trial=None, derived=None,
                                  logpost_trial=None, logprior_trial=None,
@@ -679,7 +680,7 @@ class mcmc(CovmatSampler):
             success_means = None
             converged_means = False
             Rminus1 = None
-        success_means, converged_means = share_mpi((success_means, converged_means))
+        success_means, converged_means = mpi.share((success_means, converged_means))
         # Check the convergence of the bounds of the confidence intervals
         # Same as R-1, but with the rms deviation from the mean bound
         # in units of the mean standard deviation of the chains
@@ -742,7 +743,7 @@ class mcmc(CovmatSampler):
                 np.seterr(**error_handling)
         # Broadcast and save the convergence status and the last R-1 of means
         if success_means:
-            self.Rminus1_last, self.converged = share_mpi(
+            self.Rminus1_last, self.converged = mpi.share(
                 (Rminus1, self.converged) if is_main_process() else None)
             # Do we want to learn a better proposal pdf?
             if self.learn_proposal and not self.converged:

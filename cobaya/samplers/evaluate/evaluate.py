@@ -34,7 +34,7 @@ class evaluate(Sampler):
             self.model, self.output, name="1")
         self.log.info("Initialized!")
 
-    def _run(self):
+    def run(self):
         """
         First gets a reference point. If a single reference point is not given,
         the point is sampled from the reference pdf. If that one is not defined either,
