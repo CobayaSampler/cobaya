@@ -10,7 +10,6 @@ import pytest
 
 from cobaya.yaml import yaml_load_file
 from cobaya.input import is_equal_info
-from cobaya.conventions import _output_prefix
 from cobaya.tools import KL_norm
 from .common_sampler import KL_tolerance
 from .common import stdout_redirector
@@ -31,14 +30,14 @@ def test_example():
     try:
         os.chdir(docs_src_folder)
         info_yaml = yaml_load_file("gaussian.yaml")
-        info_yaml.pop(_output_prefix)
+        info_yaml.pop("output")
         globals_example = {}
         exec(open(os.path.join(docs_src_folder, "create_info.py")).read(),
              globals_example)
         assert is_equal_info(info_yaml, globals_example["info"]), (
             "Inconsistent info between yaml and interactive.")
         exec(open(os.path.join(docs_src_folder, "load_info.py")).read(), globals_example)
-        globals_example["info_from_yaml"].pop(_output_prefix)
+        globals_example["info_from_yaml"].pop("output")
         assert is_equal_info(info_yaml, globals_example["info_from_yaml"]), (
             "Inconsistent info between interactive and *loaded* yaml.")
         # Run the chain -- constant seed so results are the same!

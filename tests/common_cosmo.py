@@ -3,7 +3,7 @@ Body of the best-fit test for cosmological likelihoods
 """
 from copy import deepcopy
 
-from cobaya.conventions import kinds, _params, _debug, _packages_path, empty_dict
+from cobaya.typing import empty_dict
 from cobaya.model import get_model
 from cobaya.input import update_info
 from cobaya.cosmo_input import create_input, planck_base_model
@@ -29,21 +29,19 @@ def body_of_test(packages_path, best_fit, info_likelihood, info_theory, ref_chi2
         best_fit_derived.pop("H0", None)
     info = create_input(planck_names=True, theory=theo, **planck_base_model_prime)
     # Add specifics for the test: theory, likelihoods and derived parameters
-    info = recursive_update(info, {kinds.theory: info_theory})
-    info[kinds.theory][theo]["use_renames"] = True
-    info = recursive_update(info, {kinds.likelihood: info_likelihood})
-    info[_params].update(dict.fromkeys(best_fit_derived or []))
+    info = recursive_update(info, {"theory": info_theory})
+    info["theory"][theo]["use_renames"] = True
+    info = recursive_update(info, {"likelihood": info_likelihood})
+    info["params"].update(dict.fromkeys(best_fit_derived or []))
     # We need UPDATED info, to get the likelihoods nuisance parameters
     info = update_info(info)
-    # Notice that update_info adds an aux internal-only _params property to the likes
-    for lik in info[kinds.likelihood]:
-        info[kinds.likelihood][lik].pop(_params, None)
-    info[_packages_path] = process_packages_path(packages_path)
+    # Notice that update_info adds an aux internal-only "params" property to the likes
+    for lik in info["likelihood"]:
+        info["likelihood"][lik].pop("params", None)
+    info["packages_path"] = process_packages_path(packages_path)
     # Ask for debug output and force stopping at any error
-    info[_debug] = True
-    for k in [kinds.theory, kinds.likelihood]:
-        for m in info[k]:
-            info[k][m].update({"stop_at_error": True})
+    info["debug"] = True
+    info["stop_at_error"] = True
     # Create the model and compute likelihood and derived parameters at best fit
     model = install_test_wrapper(skip_not_installed, get_model, info)
     best_fit_values = {p: best_fit[p] for p in model.parameterization.sampled_params()}
@@ -51,7 +49,7 @@ def body_of_test(packages_path, best_fit, info_likelihood, info_theory, ref_chi2
     likes = dict(zip(list(model.likelihood), likes))
     derived = dict(zip(list(model.parameterization.derived_params()), derived))
     # Check value of likelihoods
-    for like in info[kinds.likelihood]:
+    for like in info["likelihood"]:
         chi2 = -2 * likes[like]
         msg = ("Testing likelihood '%s': | %.2f (now) - %.2f (ref) | = %.2f >=? %.2f" % (
             like, chi2, ref_chi2[like], abs(chi2 - ref_chi2[like]),
@@ -69,7 +67,7 @@ def body_of_test(packages_path, best_fit, info_likelihood, info_theory, ref_chi2
                best_fit_derived[p][1])
         if rel > tolerance_derived * (
                 2 if p in (
-                    "YHe", "Y_p", "DH", "sigma8", "s8omegamp5", "thetastar") else 1):
+                        "YHe", "Y_p", "DH", "sigma8", "s8omegamp5", "thetastar") else 1):
             not_passed += [(p, rel)]
     if not_tested:
         print("Derived parameters not tested because not implemented: %r" % not_tested)

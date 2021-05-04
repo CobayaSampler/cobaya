@@ -18,11 +18,9 @@ from typing import List, Union, NamedTuple
 from cobaya.parameterization import Parameterization
 from cobaya.parameterization import is_fixed_or_function_param, is_sampled_param, \
     is_derived_param
-from cobaya.conventions import _prior_1d_name, _debug, _debug_file, _output_prefix, \
-    _post, _params, _prior, kinds, _weight, _resume, _separator, _get_chi2_name, \
-    _minuslogpost, _force, partag, _minuslogprior, _packages_path, \
-    _separator_files, _post_add, _post_remove, _post_suffix, _undo_chi2_name
-from cobaya.conventions import ParamValuesDict, InputDict, InfoDict
+from cobaya.conventions import prior_1d_name, OutPar, get_chi2_name, \
+    undo_chi2_name, get_minuslogpior_name, separator_files, minuslogprior_names
+from cobaya.typing import ParamValuesDict, InputDict, InfoDict
 from cobaya.collection import Collection
 from cobaya.log import logger_setup, LoggedError
 from cobaya.input import update_info, add_aggregated_chi2_params, load_input_dict
@@ -37,20 +35,20 @@ if sys.version_info >= (3, 8):
     from typing import TypedDict
 
 
-    class ResultDict(TypedDict):
+    class PostResultDict(TypedDict):
         sample: Union[Collection, List[Collection]]
         stats: ParamValuesDict
         weights: Union[np.ndarray, List[np.ndarray]]
 else:
-    ResultDict = InfoDict
+    PostResultDict = InfoDict
 
-_minuslogprior_1d_name = _minuslogprior + _separator + _prior_1d_name
+_minuslogprior_1d_name = get_minuslogpior_name(prior_1d_name)
 _default_post_cache_size = 2000
 
 
 class PostTuple(NamedTuple):
     info: InputDict
-    products: ResultDict
+    products: PostResultDict
 
 
 def value_or_list(lst: list):
@@ -66,45 +64,47 @@ class DummyModel:
 
     def __init__(self, info_params, info_likelihood, info_prior=None):
         self.parameterization = Parameterization(info_params, ignore_unused_sampled=True)
-        self.prior = [_prior_1d_name] + list(info_prior or [])
+        self.prior = [prior_1d_name] + list(info_prior or [])
         self.likelihood = list(info_likelihood)
 
 
+# noinspection PyTypedDict
 @mpi.sync_state
 def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
          sample: Union[Collection, List[Collection], None] = None
          ) -> PostTuple:
     info = load_input_dict(info_or_yaml_or_file)
-    logger_setup(info.get(_debug), info.get(_debug_file))
+    logger_setup(info.get("debug"), info.get("debug_file"))
     log = logging.getLogger(__name__.split(".")[-1])
     # MARKED FOR DEPRECATION IN v3.0
     # BEHAVIOUR TO BE REPLACED BY ERROR:
     check_deprecated_modules_path(info)
     # END OF DEPRECATION BLOCK
-    info_post = info.get(_post)
+    info_post = info.get("post")
     if not info_post:
         raise LoggedError(log, "No 'post' block given. Nothing to do!")
-    if mpi.is_main_process() and info.get(_resume):
+    if mpi.is_main_process() and info.get("resume"):
         log.warning("Resuming not implemented for post-processing. Re-starting.")
-    if not info.get(_output_prefix) and info_post.get(_output_prefix) \
-            and not info.get(_params):
+    if not info.get("output") and info_post.get("output") \
+            and not info.get("params"):
         raise LoggedError(log, "The input dictionary must have be a full option "
                                "dictionary, or have an existing 'output' root to load "
                                "previous settings from ('output' to read from is in the "
                                "main block not under 'post'). ")
     # 1. Load existing sample
-    output_in = get_output(prefix=info.get(_output_prefix))
+    output_in = get_output(prefix=info.get("output"))
     if output_in:
-        info_in = output_in.load_updated_info()
-        if info_in is None:
-            info_in = update_info(info)
+        info_in = output_in.load_updated_info() or update_info(info)
     else:
         info_in = update_info(info)
-    dummy_model_in = DummyModel(info_in[_params], info_in.get(kinds.likelihood, {}),
-                                info_in.get(_prior))
+    info_in: InputDict  # temp workaround for typing bug
+    dummy_model_in = DummyModel(info_in["params"], info_in.get("likelihood", {}),
+                                info_in.get("prior"))
+
     in_collections = []
     thin = info_post.get("thin", 1)
     skip = info_post.get("skip", 0)
+    # noinspection PyTypedDict
     if info.get('thin') is not None or info.get('skip') is not None:
         raise LoggedError(log, "'thin' and 'skip' should be "
                                "parameters of the 'post' block")
@@ -156,39 +156,39 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     log.info("Will process %d sample points.", sum(len(c) for c in in_collections))
 
     # 2. Compare old and new info: determine what to do
-    add = info_post.get(_post_add) or {}
-    if _post_remove in add:
+    add = info_post.get("add") or {}
+    if "remove" in add:
         raise LoggedError(log, "remove block should be under 'post', not 'add'")
-    remove = info_post.get(_post_remove) or {}
+    remove = info_post.get("remove") or {}
     # Add a dummy 'one' likelihood, to absorb unused parameters
-    if not add.get(kinds.likelihood):
-        add[kinds.likelihood] = {}
-    add[kinds.likelihood]["one"] = None
+    if not add.get("likelihood"):
+        add["likelihood"] = {}
+    add["likelihood"]["one"] = None
     # Expand the "add" info, but don't add new default sampled parameters
-    orig_params = set(add.get(_params) or [])
+    orig_params = set(add.get("params") or [])
     add = update_info(add)
-    for p in set(add[_params]) - orig_params:
-        if p in info_in[_params]:
-            add[_params].pop(p)
+    for p in set(add["params"]) - orig_params:
+        if p in info_in["params"]:
+            add["params"].pop(p)
 
     # 2.1 Adding/removing derived parameters and changes in priors of sampled parameters
-    out_combined = {_params: deepcopy_where_possible(info_in[_params])}
-    remove_params = list(str_to_list(remove.get(_params)) or [])
+    out_combined: InputDict = {"params": deepcopy_where_possible(info_in["params"])}
+    remove_params = list(str_to_list(remove.get("params")) or [])
     for p in remove_params:
-        pinfo = info_in[_params].get(p)
+        pinfo = info_in["params"].get(p)
         if pinfo is None or not is_derived_param(pinfo):
             raise LoggedError(
                 log,
                 "You tried to remove parameter '%s', which is not a derived parameter. "
                 "Only derived parameters can be removed during post-processing.", p)
-        out_combined[_params].pop(p)
+        out_combined["params"].pop(p)
     # Force recomputation of aggregated chi2
-    for p in list(out_combined[_params]):
-        if p.startswith(_get_chi2_name("")):
-            out_combined[_params].pop(p)
+    for p in list(out_combined["params"]):
+        if p.startswith(get_chi2_name("")):
+            out_combined["params"].pop(p)
     prior_recompute_1d = False
-    for p, pinfo in (add.get(_params) or {}).items():
-        pinfo_in = info_in[_params].get(p)
+    for p, pinfo in (add.get("params") or {}).items():
+        pinfo_in = info_in["params"].get(p)
         if is_sampled_param(pinfo):
             if not is_sampled_param(pinfo_in):
                 # No added sampled parameters (de-marginalisation not implemented)
@@ -207,15 +207,15 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             # recompute prior if potentially changed sampled parameter priors
             prior_recompute_1d = True
         elif is_derived_param(pinfo):
-            if p in out_combined[_params]:
+            if p in out_combined["params"]:
                 raise LoggedError(
                     log, "You tried to add derived parameter '%s', which is already "
                          "present. To force its recomputation, 'remove' it too.", p)
         elif is_fixed_or_function_param(pinfo):
             # Only one possibility left "fixed" parameter that was not present before:
             # input of new likelihood, or just an argument for dynamical derived (dropped)
-            if ((p in info_in[_params] and
-                 pinfo[partag.value] != (pinfo_in or {}).get(partag.value, None))):
+            if ((p in info_in["params"] and
+                 pinfo["value"] != (pinfo_in or {}).get("value", None))):
                 raise LoggedError(
                     log,
                     "You tried to add a fixed parameter '%s: %r' that was already present"
@@ -224,7 +224,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                     p, dict(pinfo), p, dict(pinfo_in))
         elif not pinfo_in:  # OK as long as we have known value for it
             raise LoggedError(log, "Parameter %s no known value. ", p)
-        out_combined[_params][p] = pinfo
+        out_combined["params"][p] = pinfo
     # Turn the rest of *derived* parameters into constants,
     # so that the likelihoods do not try to recompute them
     # But be careful to exclude *input* params that have a "derived: True" value
@@ -233,28 +233,28 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # recomputed if needed. If the theory does not need to be computed, it doesn't matter
     # if it is already assigned parameters in the usual way; likelihoods can get
     # the required derived parameters from the stored sample derived parameter inputs.
-    out_params_with_computed = deepcopy_where_possible(out_combined[_params])
+    out_params_with_computed = deepcopy_where_possible(out_combined["params"])
     dropped_theory = set()
     for p, pinfo in out_params_with_computed.items():
-        if (is_derived_param(pinfo) and not (partag.value in pinfo)
-                and p not in add.get(_params, {})):
-            out_params_with_computed[p] = {partag.value: np.nan}
+        if (is_derived_param(pinfo) and not ("value" in pinfo)
+                and p not in add.get("params", {})):
+            out_params_with_computed[p] = {"value": np.nan}
             dropped_theory.add(p)
     # 2.2 Manage adding/removing priors and likelihoods
     warn_remove = False
-    for kind in [_prior, kinds.likelihood, kinds.theory]:
+    for kind in ["prior", "likelihood", "theory"]:
         out_combined[kind] = deepcopy_where_possible(info_in.get(kind)) or {}
         for remove_item in str_to_list(remove.get(kind)) or []:
             try:
                 out_combined[kind].pop(remove_item, None)
-                if remove_item not in add.get(kind, {}) or [] and kind != kinds.theory:
+                if remove_item not in add.get(kind, {}) or [] and kind != "theory":
                     warn_remove = True
             except ValueError:
                 raise LoggedError(
                     log, "Trying to remove %s '%s', but it is not present. "
                          "Existing ones: %r", kind, remove_item, list(out_combined[kind]))
-        if kind != kinds.theory and kind in add:
-            dups = set(add.get(kind)).intersection(out_combined[kind]) - {"one"}
+        if kind != "theory" and kind in add:
+            dups = set(add.get(kind) or []).intersection(out_combined[kind]) - {"one"}
             if dups:
                 raise LoggedError(
                     log, "You have added %s '%s', which was already present. If you "
@@ -268,48 +268,47 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                     "than the original one, or displaced enough, "
                     "it is probably safer to explore it directly.")
 
-    mlprior_names_add = [_minuslogprior + _separator + name for name in
-                         (add.get(_prior) or [])]
-    chi2_names_add = [_get_chi2_name(name) for name in add[kinds.likelihood] if
+    mlprior_names_add = minuslogprior_names(add.get("prior") or [])
+    chi2_names_add = [get_chi2_name(name) for name in add["likelihood"] if
                       name != "one"]
-    out_combined[kinds.likelihood].pop("one", None)
+    out_combined["likelihood"].pop("one", None)
 
-    add_theory = add.get(kinds.theory)
+    add_theory = add.get("theory")
     if add_theory:
-        if len(add[kinds.likelihood]) == 1 and not any(
-                is_derived_param(pinfo) for pinfo in add.get(_params, {}).values()):
+        if len(add["likelihood"]) == 1 and not any(
+                is_derived_param(pinfo) for pinfo in add.get("params", {}).values()):
             log.warning("You are adding a theory, but this does not force recomputation "
                         "of any likelihood or derived parameters unless explicitly "
                         "removed+added.")
         # Inherit from the original chain (input|output_params, renames, etc)
         added_theory = add_theory.copy()
-        for theory, theory_info in out_combined[kinds.theory].items():
+        for theory, theory_info in out_combined["theory"].items():
             if theory in list(added_theory):
-                out_combined[kinds.theory][theory] = \
+                out_combined["theory"][theory] = \
                     recursive_update(theory_info, added_theory.pop(theory))
-        out_combined[kinds.theory].update(added_theory)
+        out_combined["theory"].update(added_theory)
 
     # Prepare recomputation of aggregated chi2
     # (they need to be recomputed by hand, because its auto-computation won't pick up
     #  old likelihoods for a given type)
     all_types = {like: str_to_list(opts.get("type") or [])
-                 for like, opts in out_combined[kinds.likelihood].items()}
+                 for like, opts in out_combined["likelihood"].items()}
     types = set(chain(*all_types.values()))
     inv_types = {t: [like for like, like_types in all_types.items() if t in like_types]
                  for t in sorted(types)}
-    add_aggregated_chi2_params(out_combined[_params], types)
+    add_aggregated_chi2_params(out_combined["params"], types)
 
     # 3. Create output collection
-    if _post_suffix not in info_post:
-        raise LoggedError(log, "You need to provide a '%s' for your output chains.",
-                          _post_suffix)
     # Use default prefix if it exists. If it does not, produce no output by default.
     # {post: {output: None}} suppresses output, and if it's a string, updates it.
-    out_prefix = info_post.get(_output_prefix, info.get(_output_prefix))
+    out_prefix = info_post.get("output", info.get("output"))
     if out_prefix not in [None, False]:
-        out_prefix += _separator_files + _post + _separator_files + info_post[
-            _post_suffix]
-    output_out = get_output(prefix=out_prefix, force=info.get(_force))
+        if "suffix" not in info_post:
+            raise LoggedError(log, "You need to provide a '%s' for your output chains.",
+                              "suffix")
+        out_prefix += separator_files + "post" + separator_files + info_post[
+            "suffix"]
+    output_out = get_output(prefix=out_prefix, force=info.get("force"))
     output_out.set_lock()
 
     if output_out and not output_out.force and output_out.find_collections():
@@ -322,25 +321,26 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             output_out.delete_file_or_folder(_file)
     info_out = deepcopy_where_possible(info)
     info_post = info_post.copy()
-    info_out[_post] = info_post
+    info_out["post"] = info_post
     # Updated with input info and extended (updated) add info
+    # noinspection PyTypeChecker
     info_out.update(info_in)
-    info_post[_post_add] = add
+    info_post["add"] = add
 
-    dummy_model_out = DummyModel(out_combined[_params], out_combined[kinds.likelihood],
-                                 info_prior=out_combined[_prior])
+    dummy_model_out = DummyModel(out_combined["params"], out_combined["likelihood"],
+                                 info_prior=out_combined["prior"])
     out_func_parameterization = Parameterization(out_params_with_computed)
 
     # TODO: check allow_renames=False?
-    model_add = Model(out_params_with_computed, add[kinds.likelihood],
-                      info_prior=add.get(_prior), info_theory=out_combined[kinds.theory],
-                      packages_path=info_post.get(_packages_path) or
-                                    info.get(_packages_path),
+    model_add = Model(out_params_with_computed, add["likelihood"],
+                      info_prior=add.get("prior"), info_theory=out_combined["theory"],
+                      packages_path=info_post.get("packages_path") or
+                                    info.get("packages_path"),
                       allow_renames=False, post=True,
                       stop_at_error=info.get('stop_at_error', False),
                       skip_unused_theories=True, dropped_theory_params=dropped_theory)
-    # Remove auxiliary "one" before dumping -- 'add' *is* info_out[_post][_post_add]
-    add[kinds.likelihood].pop("one")
+    # Remove auxiliary "one" before dumping -- 'add' *is* info_out["post"]["add"]
+    add["likelihood"].pop("one")
     out_collections = [Collection(dummy_model_out, output_out, name=c.name,
                                   cache_size=_default_post_cache_size)
                        for c in in_collections]
@@ -366,13 +366,14 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     if prior_recompute_1d:
         missing_priors.discard(_minuslogprior_1d_name)
         mlprior_names_add.insert(0, _minuslogprior_1d_name)
-    if missing_priors and _prior in info_in:
+    if missing_priors and "prior" in info_in:
         # in case there are input priors that are not stored in input samples
         # e.g. when postprocessing GetDist/CosmoMC-format chains
-        info_prior = {piname: info_in[_prior][piname] for piname in info_in[_prior] if
-                      (_minuslogprior + _separator + piname in missing_priors)}
-        regenerated_prior_names = [_minuslogprior + _separator + piname for piname in
-                                   info_prior]
+        in_names = minuslogprior_names(info_in["prior"])
+        info_prior = {piname: inf for (piname, inf), in_name in
+                      zip(info_in["prior"].items(), in_names) if
+                      in_name in missing_priors}
+        regenerated_prior_names = minuslogprior_names(info_prior)
         missing_priors.difference_update(regenerated_prior_names)
         prior_regenerate = Prior(dummy_model_in.parameterization, info_prior)
     else:
@@ -447,18 +448,19 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                        for param in dummy_model_out.parameterization.derived_params()}
             # We need to recompute the aggregated chi2 by hand
             for type_, likes in inv_types.items():
-                derived[_get_chi2_name(type_)] = sum(
+                derived[get_chi2_name(type_)] = sum(
                     -2 * lvalue for lname, lvalue
                     in zip(collection_out.chi2_names, loglikes_new)
-                    if _undo_chi2_name(lname) in likes)
+                    if undo_chi2_name(lname) in likes)
             if log.getEffectiveLevel() <= logging.DEBUG:
                 log.debug("New derived parameters: %r",
                           {p: derived[p]
                            for p in dummy_model_out.parameterization.derived_params()
-                           if p in add[_params]})
+                           if p in add["params"]})
             # Save to the collection (keep old weight for now)
             collection_out.add(
-                sampled, derived=derived.values(), weight=point.get(_weight),
+                sampled, derived=derived.values(),
+                weight=point.get(OutPar.weight),
                 logpriors=logpriors_new, loglikes=loglikes_new)
             mpi.check_errors()
             # Display progress
@@ -472,13 +474,13 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                      "added a prior or likelihood valued zero over the full sampled "
                      "domain, or the computation of the theory failed everywhere, etc.")
 
-        difflogmax = max(difflogmax, max(collection_in[_minuslogpost]
-                                         - collection_out[_minuslogpost]))
+        difflogmax = max(difflogmax, max(collection_in[OutPar.minuslogpost]
+                                         - collection_out[OutPar.minuslogpost]))
         done += len(collection_in)
 
-        # Reweight -- account for large dynamic range!
-        #   Prefer to rescale +inf to finite, and ignore final points with -inf.
-        #   Remove -inf's (0-weight), and correct indices
+    # Reweight -- account for large dynamic range!
+    #   Prefer to rescale +inf to finite, and ignore final points with -inf.
+    #   Remove -inf (0-weight), and correct indices
 
     difflogmax = max(mpi.allgather(difflogmax))
 
@@ -491,12 +493,13 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     weights = []
     for collection_in, collection_out in zip(in_collections, out_collections):
         importance_weights = np.exp(
-            collection_in[_minuslogpost] - collection_out[_minuslogpost] - difflogmax)
+            collection_in[OutPar.minuslogpost] - collection_out[
+                OutPar.minuslogpost] - difflogmax)
         weights.append(importance_weights)
         collection_out.reweight(importance_weights)
         # Write!
         collection_out.out_update()
-        output_weights = collection_out[_weight]
+        output_weights = collection_out[OutPar.weight]
         points += len(collection_out)
         tot_weight += np.sum(output_weights)
         points_removed += len(importance_weights) - len(output_weights)
@@ -517,12 +520,12 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         log.info(
             "Effective number of weighted samples if independent (sum w)^2/sum(w^2): "
             "%s", int(sum(tot_weight) ** 2 / sum(sum_w2)))
-    products = {"sample": value_or_list(out_collections),
-                "stats": {'min_weight': min(min_weight),
-                          'points_removed': sum(points_removed),
-                          'tot_weight': sum(tot_weight),
-                          'max_weight': max(max_weight),
-                          'sum_w2': sum(sum_w2),
-                          'points': sum(points)},
-                "weights": value_or_list(weights)}
+    products: PostResultDict = {"sample": value_or_list(out_collections),
+                                "stats": {'min_weight': min(min_weight),
+                                          'points_removed': sum(points_removed),
+                                          'tot_weight': sum(tot_weight),
+                                          'max_weight': max(max_weight),
+                                          'sum_w2': sum(sum_w2),
+                                          'points': sum(points)},
+                                "weights": value_or_list(weights)}
     return PostTuple(info=out_combined, products=products)

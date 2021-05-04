@@ -183,7 +183,7 @@ from cobaya.install import download_github_release, check_gcc_version, NotInstal
 from cobaya.tools import getfullargspec, get_class_methods, get_properties, load_module, \
     VersionCheckError, str_to_list
 from cobaya.theory import HelperTheory
-from cobaya.conventions import _requires, OptionalArrayLike
+from cobaya.typing import OptionalArrayLike
 
 
 # Result collector
@@ -255,7 +255,7 @@ class camb(BoltzmannBase):
 
         self.nonlin_args, self.nonlin_params = self._extract_params(nonlin.set_params)
 
-        self.requires = str_to_list(getattr(self, _requires, []))
+        self.requires = str_to_list(getattr(self, "requires", []))
         self._transfer_requires = [p for p in self.requires if
                                    p not in self.get_can_support_params()]
         self.requires = [p for p in self.requires if p not in self._transfer_requires]
@@ -676,6 +676,7 @@ class camb(BoltzmannBase):
         params_derived = list(get_class_methods(self.camb.CAMBparams))
         params_derived.remove("custom_source_names")
         fields = []
+        # noinspection PyProtectedMember
         for f, tp in self.camb.CAMBparams._fields_:
             if tp is ctypes.c_double and 'max_eta_k' not in f \
                     and f not in ['Alens', 'num_nu_massless']:
@@ -780,7 +781,7 @@ class camb(BoltzmannBase):
         self._camb_transfers = CambTransfers(self, 'camb.transfers',
                                              dict(stop_at_error=self.stop_at_error),
                                              timing=self.timer)
-        setattr(self._camb_transfers, _requires, self._transfer_requires)
+        setattr(self._camb_transfers, "requires", self._transfer_requires)
         return {'camb.transfers': self._camb_transfers}
 
     def get_speed(self):

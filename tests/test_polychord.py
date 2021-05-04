@@ -3,7 +3,6 @@ import numpy as np
 
 from cobaya.run import run
 from .common_sampler import body_of_test, body_of_test_speeds
-from cobaya.conventions import kinds, _params, partag, _output_prefix
 from .conftest import install_test_wrapper
 
 
@@ -33,20 +32,20 @@ def test_polychord_resume(packages_path, skip_not_installed, tmpdir):
         dead_points = sampler.dead[["a", "b"]].values.copy()
 
     info = {
-        kinds.likelihood: {
+        "likelihood": {
             "A": {"external": "lambda a: stats.norm.logpdf(a)", "speed": 1},
             "B": {"external": "lambda b: stats.norm.logpdf(b)", "speed": 0.01}},
-        _params: {
-            "a": {partag.prior: {"min": 0, "max": 1}},
-            "b": {partag.prior: {"min": 0, "max": 1}}},
-        kinds.sampler: {
+        "params": {
+            "a": {"prior": {"min": 0, "max": 1}},
+            "b": {"prior": {"min": 0, "max": 1}}},
+        "sampler": {
             "polychord": {
                 "measure_speeds": True,
                 "nlive": nlive,
                 "max_ndead": max_ndead,
                 "callback_function": callback,
             }},
-        _output_prefix: str(tmpdir)}
+        "output": str(tmpdir)}
     install_test_wrapper(skip_not_installed, run, info)
     old_dead_points = dead_points.copy()
     info["resume"] = True

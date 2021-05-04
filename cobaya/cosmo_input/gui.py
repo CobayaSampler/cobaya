@@ -11,14 +11,14 @@ import io
 # Local
 from cobaya.yaml import yaml_dump
 from cobaya.cosmo_input import input_database
-from cobaya.cosmo_input.input_database import  _combo_dict_text
+from cobaya.cosmo_input.input_database import _combo_dict_text
 from cobaya.cosmo_input.autoselect_covmat import get_best_covmat, covmat_folders
 from cobaya.cosmo_input.create_input import create_input
 from cobaya.bib import prettyprint_bib, get_bib_info, get_bib_component
 from cobaya.tools import warn_deprecation, get_available_internal_class_names, \
     cov_to_std_and_corr, resolve_packages_path, sort_cosmetic
 from cobaya.input import get_default_info
-from cobaya.conventions import subfolders, kinds, _packages_path_env, _packages_path
+from cobaya.conventions import subfolders, kinds, packages_path_env
 
 # per-platform settings for correct high-DPI scaling
 if platform.system() == "Linux":
@@ -48,12 +48,12 @@ except ImportError:
 # Quit with C-c
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-# Color map for correlatins
+# Color map for correlations
 cmap_corr = cmap.get_cmap("coolwarm_r")
 
 
 def text(key, contents):
-    desc = (contents or {}).get(input_database._desc)
+    desc = (contents or {}).get("desc")
     return desc or key
 
 
@@ -216,7 +216,7 @@ class MainWindow(QWidget):
     def refresh_preset(self):
         preset = list(getattr(input_database, "preset"))[
             self.combos["preset"].currentIndex()]
-        if preset is input_database._none:
+        if preset is input_database.none:
             return
         info = create_input(
             get_comments=True,
@@ -225,7 +225,7 @@ class MainWindow(QWidget):
         self.refresh_display(info)
         # Update combo boxes to reflect the preset values, without triggering update
         for k, v in input_database.preset[preset].items():
-            if k in [input_database._desc]:
+            if k in ["desc"]:
                 continue
             self.combos[k].blockSignals(True)
             self.combos[k].setCurrentIndex(
@@ -236,7 +236,7 @@ class MainWindow(QWidget):
     def refresh_display(self, info):
         QApplication.setOverrideCursor(Qt.WaitCursor)
         try:
-            comments = info.pop(input_database._comment, None)
+            comments = info.pop("comment", None)
             comments_text = "\n# " + "\n# ".join(comments)
         except (TypeError,  # No comments
                 AttributeError):  # Failed to generate info (returned str instead)
@@ -250,8 +250,8 @@ class MainWindow(QWidget):
             self.covmat_text.setText(
                 "\nIn order to find a covariance matrix, you need to define an external "
                 "packages installation path, e.g. via the env variable %r.\n" %
-                _packages_path_env)
-        elif any(not os.path.isdir(d.format(**{_packages_path: packages_path}))
+                packages_path_env)
+        elif any(not os.path.isdir(d.format(**{"packages_path": packages_path}))
                  for d in covmat_folders):
             self.covmat_text.setText(
                 "\nThe external cosmological packages appear not to be installed where "

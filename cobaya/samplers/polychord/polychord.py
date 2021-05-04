@@ -26,7 +26,7 @@ from cobaya.collection import Collection
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, NotInstalledError
 from cobaya.yaml import yaml_dump_file
-from cobaya.conventions import _separator, _evidence_extension, _packages_path_arg
+from cobaya.conventions import derived_par_name_separator, packages_path_arg, Extension
 
 
 class polychord(Sampler):
@@ -63,7 +63,7 @@ class polychord(Sampler):
             raise NotInstalledError(
                 self.log, "Could not find PolyChord. Check error message above. "
                           "To install it, run 'cobaya-install polychord --%s "
-                          "[packages_path]'", _packages_path_arg)
+                          "[packages_path]'", packages_path_arg)
         # Prepare arguments and settings
         from pypolychord.settings import PolyChordSettings
         self.n_sampled = len(self.model.parameterization.sampled_params())
@@ -259,11 +259,11 @@ class polychord(Sampler):
                 f_paramnames.write("%s*\t%s\n" % (p, labels.get(p, "")))
             for p in self.model.prior:
                 f_paramnames.write("%s*\t%s\n" % (
-                    "logprior" + _separator + p,
+                    "logprior" + derived_par_name_separator + p,
                     r"\pi_\mathrm{" + p.replace("_", r"\ ") + r"}"))
             for p in self.model.likelihood:
                 f_paramnames.write("%s*\t%s\n" % (
-                    "loglike" + _separator + p,
+                    "loglike" + derived_par_name_separator + p,
                     r"\log\mathcal{L}_\mathrm{" + p.replace("_", r"\ ") + r"}"))
 
     def save_sample(self, fname, name):
@@ -327,6 +327,7 @@ class polychord(Sampler):
                         self.output.folder = self.clusters_folder
                     sample = self.save_sample(f, str(i))
                     if self.output:
+                        # noinspection PyUnboundLocalVariable
                         self.output.folder = old_folder
                     self.clusters[i] = {"sample": sample}
             # Prepare the evidence(s) and write to file
@@ -357,7 +358,7 @@ class polychord(Sampler):
                             logZ=self.clusters[i]["logZ"],
                             logZstd=self.clusters[i]["logZstd"])
                 fname = os.path.join(self.output.folder,
-                                     self.output.prefix + _evidence_extension)
+                                     self.output.prefix + Extension.evidence)
                 yaml_dump_file(fname, out_evidences, comment="log-evidence",
                                error_if_exists=False)
         # TODO: try to broadcast the collections
@@ -414,7 +415,7 @@ class polychord(Sampler):
             # Main sample
             (output.collection_regexp(name=None), None),
             # Evidence
-            (re.compile(re.escape(output.prefix + _evidence_extension)), None),
+            (re.compile(re.escape(output.prefix + Extension.evidence)), None),
             # Clusters
             (None, cls.get_clusters_dir(output))
         ]
@@ -465,6 +466,7 @@ class polychord(Sampler):
         if path and not kwargs.get("allow_global"):
             if is_main_process():
                 log.info("Importing *local* PolyChord from '%s'.", path)
+            # noinspection PyTypeChecker
             if not os.path.exists(path):
                 if is_main_process():
                     log.error("The given folder does not exist: '%s'", path)

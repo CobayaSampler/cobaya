@@ -1,7 +1,6 @@
 from copy import deepcopy
 import pytest
 
-from cobaya.conventions import _class_name
 from cobaya.tools import get_class
 
 from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE, derived_lowTEB_highTTTEEE
@@ -16,7 +15,7 @@ def test_generic_camb(packages_path, skip_not_installed):
     chi2_generic[like_rename] = chi2_generic.pop(like)
     likelihood_defaults = get_class(like).get_defaults()
     likelihood_defaults.pop("path")
-    likelihood_defaults[_class_name] = "bao.generic"
+    likelihood_defaults["class"] = "bao.generic"
     info_likelihood = {like_rename: likelihood_defaults}
     info_theory = {"camb": None}
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,

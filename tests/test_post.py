@@ -9,14 +9,13 @@ import pytest
 from cobaya.run import run
 from cobaya.post import post
 from cobaya.tools import KL_norm
-from cobaya.conventions import _output_prefix, _params, _force, kinds, InfoDict
-from cobaya.conventions import _prior, partag, _separator_files
-from cobaya.conventions import _post, _post_add, _post_remove, _post_suffix
+from cobaya.typing import ParamsDict, InputDict
+from cobaya.conventions import separator_files
 from cobaya import mpi
 
 pytestmark = pytest.mark.mpi
 
-_post_ = _separator_files + _post + _separator_files
+_post_ = separator_files + "post" + separator_files
 
 mean = np.array([0, 0])
 sigma = 0.5
@@ -38,11 +37,11 @@ def target_pdf(a, b, c=0):
 target_pdf_prior = lambda a, b, c=0: target_pdf(a, b, c=0)[0]
 
 _range = {"min": -2, "max": 2}
-ref_pdf = {partag.dist: "norm", "loc": 0, "scale": 0.1}
-info_params: InfoDict = dict([
-    ("a", {"prior": _range, "ref": ref_pdf, partag.proposal: sigma}),
-    ("b", {"prior": _range, "ref": ref_pdf, partag.proposal: sigma}),
-    ("a_plus_b", {partag.derived: lambda a, b: a + b})])
+ref_pdf = {"dist": "norm", "loc": 0, "scale": 0.1}
+info_params: ParamsDict = dict([
+    ("a", {"prior": _range, "ref": ref_pdf, "proposal": sigma}),
+    ("b", {"prior": _range, "ref": ref_pdf, "proposal": sigma}),
+    ("a_plus_b", {"derived": lambda a, b: a + b})])
 
 info_sampler = {"mcmc": {"Rminus1_stop": 0.005}}
 info_sampler_dummy = {"evaluate": {"N": 10}}
@@ -52,15 +51,15 @@ info_sampler_dummy = {"evaluate": {"N": 10}}
 @mpi.sync_errors
 def test_post_prior(tmpdir):
     # Generate original chain
-    info = {
-        _output_prefix: os.path.join(tmpdir, "gaussian"), _force: True,
-        _params: info_params, kinds.sampler: info_sampler,
-        kinds.likelihood: {"one": None}, _prior: {"gaussian": sampled_pdf}}
-    info_post = {
-        _output_prefix: info[_output_prefix], _force: True,
-        _post: {_post_suffix: "foo", 'skip': 0.05,
-                _post_remove: {_prior: {"gaussian": None}},
-                _post_add: {_prior: {"target": target_pdf_prior}}}}
+    info: InputDict = {
+        "output": os.path.join(tmpdir, "gaussian"), "force": True,
+        "params": info_params, "sampler": info_sampler,
+        "likelihood": {"one": None}, "prior": {"gaussian": sampled_pdf}}
+    info_post: InputDict = {
+        "output": info["output"], "force": True,
+        "post": {"suffix": "foo", 'skip': 0.05,
+                 "remove": {"prior": {"gaussian": None}},
+                 "add": {"prior": {"target": target_pdf_prior}}}}
     _, sampler = run(info)
     for mem in [False, True]:
         post(info_post, sample=sampler.products()["sample"] if mem else None)
@@ -68,7 +67,7 @@ def test_post_prior(tmpdir):
         # Load with GetDist and compare
         if mpi.is_main_process():
             mcsamples = loadMCSamples(
-                info_post[_output_prefix] + _post_ + info_post[_post][_post_suffix])
+                info_post["output"] + _post_ + info_post["post"]["suffix"])
             new_mean = mcsamples.mean(["a", "b"])
             new_cov = mcsamples.getCovMat().matrix
             mpi.share((new_mean, new_cov))
@@ -91,23 +90,24 @@ def test_post_likelihood():
     dummy_loglike_add = 0.1
     dummy_loglike_remove = 0.01
     info = {
-        _output_prefix: None, _force: True,
-        _params: info_params_local, kinds.sampler: info_sampler,
-        kinds.likelihood: {
+        "output": None, "force": True,
+        "params": info_params_local, "sampler": info_sampler,
+        "likelihood": {
             "gaussian": {"external": sampled_pdf, "type": "AA"},
             "dummy": {"external": lambda dummy: 1, "type": "BB"},
             "dummy_remove": {"external": lambda dummy: dummy_loglike_add, "type": "BB"}}}
     info_out, sampler = run(info)
     info_out.update({
-        _post: {_post_suffix: "foo",
-                _post_remove: {kinds.likelihood: {
-                    "gaussian": None, "dummy_remove": None}},
-                _post_add: {kinds.likelihood: {
-                    "target": {
-                        "external": target_pdf, "type": "AA",
-                        "output_params": ["cprime"]},
-                    "dummy_add": {
-                        "external": lambda dummy: dummy_loglike_remove, "type": "BB"}}}}})
+        "post": {"suffix": "foo",
+                 "remove": {"likelihood": {
+                     "gaussian": None, "dummy_remove": None}},
+                 "add": {"likelihood": {
+                     "target": {
+                         "external": target_pdf, "type": "AA",
+                         "output_params": ["cprime"]},
+                     "dummy_add": {
+                         "external": lambda dummy: dummy_loglike_remove,
+                         "type": "BB"}}}}})
     info_post_out, products_post = post(info_out, sampler.products()["sample"])
     samples = mpi.gather(products_post["sample"])
 
@@ -134,22 +134,22 @@ def test_post_params():
     # - added new fixed input "c" + new derived-from-external-function "cprime"
     # Generate original chain
     info = {
-        _params: info_params, kinds.sampler: info_sampler_dummy,
-        kinds.likelihood: {"gaussian": sampled_pdf}}
+        "params": info_params, "sampler": info_sampler_dummy,
+        "likelihood": {"gaussian": sampled_pdf}}
     updated_info_gaussian, sampler_gaussian = run(info)
     products_gaussian = sampler_gaussian.products()
     info_post = {
-        _post: {_post_suffix: "foo",
-                _post_remove: {_params: {"a_plus_b": None}},
-                _post_add: {
-                    kinds.likelihood: {
-                        "target": {"external": target_pdf, "output_params": ["cprime"]}},
-                    _params: {
-                        "c": 1.234,
-                        "a_minus_b": {partag.derived: "lambda a,b: a-b"},
-                        "my_chi2__target": {
-                            partag.derived: "lambda chi2__target: chi2__target"},
-                        "cprime": None}}}}
+        "post": {"suffix": "foo",
+                 "remove": {"params": {"a_plus_b": None}},
+                 "add": {
+                     "likelihood": {
+                         "target": {"external": target_pdf, "output_params": ["cprime"]}},
+                     "params": {
+                         "c": 1.234,
+                         "a_minus_b": {"derived": "lambda a,b: a-b"},
+                         "my_chi2__target": {
+                             "derived": "lambda chi2__target: chi2__target"},
+                         "cprime": None}}}}
     info_post.update(updated_info_gaussian)
     products = post(info_post, products_gaussian["sample"]).products
     # Compare parameters
@@ -157,6 +157,6 @@ def test_post_params():
         products["sample"]["a"] - products["sample"]["b"],
         products["sample"]["a_minus_b"])
     assert np.allclose(
-        products["sample"]["cprime"], info_post[_post][_post_add][_params]["c"])
+        products["sample"]["cprime"], info_post["post"]["add"]["params"]["c"])
     assert np.allclose(
         products["sample"]["my_chi2__target"], products["sample"]["chi2__target"])

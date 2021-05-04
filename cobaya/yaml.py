@@ -22,7 +22,7 @@ from typing import Mapping, Optional
 
 # Local
 from cobaya.tools import prepare_comment, recursive_update
-from cobaya.conventions import _yaml_extensions
+from cobaya.conventions import Extension
 
 
 # Exceptions #############################################################################
@@ -70,7 +70,7 @@ def _construct_defaults(loader, node):
     for dfile in defaults_files:
         dfilename = os.path.abspath(os.path.join(folder, dfile))
         try:
-            dfilename += next(ext for ext in [""] + list(_yaml_extensions)
+            dfilename += next(ext for ext in [""] + list(Extension.yamls)
                               if (os.path.basename(dfilename) + ext
                                   in os.listdir(os.path.dirname(dfilename))))
         except StopIteration:

@@ -14,7 +14,7 @@ import os
 from inspect import cleandoc
 
 # Local
-from cobaya.conventions import _yaml_extensions, kinds, _dump_sort_cosmetic
+from cobaya.conventions import Extension, kinds, dump_sort_cosmetic
 from cobaya.tools import create_banner, warn_deprecation, get_class
 from cobaya.input import load_input, get_used_components
 
@@ -77,8 +77,8 @@ def get_bib_info(*infos):
 
 def prettyprint_bib(descs, bibs):
     # Sort them "optimally"
-    sorted_kinds = [k for k in _dump_sort_cosmetic if k in descs]
-    sorted_kinds += [k for k in descs if k not in _dump_sort_cosmetic]
+    sorted_kinds = [k for k in dump_sort_cosmetic if k in descs]
+    sorted_kinds += [k for k in descs if k not in dump_sort_cosmetic]
     txt = ""
     txt += create_banner(
         "Descriptions", symbol=_default_symbol, length=_default_length) + "\n"
@@ -118,7 +118,7 @@ def bib_script(args=None):
     arguments = parser.parse_args(args)
     # Case of files
     are_yaml = [
-        (os.path.splitext(f)[1] in _yaml_extensions) for f in
+        (os.path.splitext(f)[1] in Extension.yamls) for f in
         arguments.components_or_files]
     if all(are_yaml):
         infos = [load_input(f) for f in arguments.components_or_files]

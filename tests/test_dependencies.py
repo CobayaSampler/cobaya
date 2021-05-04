@@ -4,10 +4,10 @@ from cobaya.model import get_model
 from cobaya.theory import Theory
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
-from cobaya.conventions import InfoDict
+from cobaya.typing import InputDict
 from .common import process_packages_path
 
-debug = True
+debug = False
 
 
 # Aderived = 1
@@ -96,9 +96,9 @@ class Like(Likelihood):
         state["logp"] = res[0] + res[1][0]
 
 
-info: InfoDict = {'likelihood': {'like': Like},
-                  'params': {'Bpar': 3, 'Ain': 5},
-                  'debug': debug}
+info: InputDict = {'likelihood': {'like': Like},
+                   'params': {'Bpar': 3, 'Ain': 5},
+                   'debug': debug}
 
 
 def _test_loglike(theories):
@@ -140,7 +140,7 @@ def test_dependencies(packages_path):
                        ('C', {'external': C, 'provides': ['Bout']})])
     assert "more than one component provides Bout" in str(e.value)
 
-    inf = info.copy()
+    inf: InputDict = info.copy()
     inf['params'] = info['params'].copy()
     inf['params']['notused'] = [1, 10, 2, 5, 1]
     inf['theory'] = dict(theories)
@@ -222,9 +222,9 @@ class Like4(Likelihood):
         pass
 
 
-info2: InfoDict = {'likelihood': {'like': Like2},
-                   'params': {'Ain': 5},
-                   'debug': debug, 'stop_at_error': True}
+info2: InputDict = {'likelihood': {'like': Like2},
+                    'params': {'Ain': 5},
+                    'debug': debug, 'stop_at_error': True}
 
 
 def _test_loglike2(theories):

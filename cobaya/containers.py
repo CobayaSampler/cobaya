@@ -22,15 +22,16 @@ from cobaya.log import logger_setup, LoggedError
 from cobaya.input import get_used_components, load_input
 from cobaya.yaml import yaml_dump
 from cobaya.install import install
-from cobaya.conventions import _products_path, _code, _data
-from cobaya.conventions import _packages_path_env, _packages_path
-from cobaya.conventions import _requirements_file, _help_file, _packages_path_arg
+from cobaya.conventions import products_path, packages_path_env, packages_path_arg, code_path, data_path
 from cobaya.tools import warn_deprecation
 
 log = logging.getLogger(__name__.split(".")[-1])
 
-requirements_file_path = os.path.join(_packages_path, _requirements_file)
-help_file_path = os.path.join(_packages_path, _help_file)
+_requirements_file = "requirements.yaml"
+_help_file = "readme.md"
+
+requirements_file_path = os.path.join("packages_path", _requirements_file)
+help_file_path = os.path.join("packages_path", _help_file)
 
 base_recipe = r"""
 # OS -------------------------------------------------------------------------
@@ -58,8 +59,8 @@ RUN mkdir $%s && \
 # getdist fork (it will be an automatic requisite in the future)
 RUN cd $%s && git clone https://github.com/JesusTorrado/cobaya.git && \
     cd $%s/cobaya && python -m pip install -e .
-""" % (_packages_path_env, _packages_path, _products_path,
-       _packages_path_env, _packages_path_env, _packages_path_env)
+""" % (packages_path_env, "packages_path", products_path,
+       packages_path_env, packages_path_env, packages_path_env)
 
 MPI_URL = {
     "mpich": "https://www.mpich.org/static/downloads/_VER_/mpich-_VER_.tar.gz",
@@ -197,8 +198,8 @@ def create_docker_image(filenames, MPI_version=None):
     RUN cobaya-install %s --%s %s --just-code --force ### NEEDS PYTHON UPDATE! --no-progress-bars
     %s
     CMD ["cat", "%s"]
-    """ % (MPI_version, echos_reqs, requirements_file_path, _packages_path_arg,
-           _packages_path, echos_help, help_file_path)
+    """ % (MPI_version, echos_reqs, requirements_file_path, packages_path_arg,
+           "packages_path", echos_help, help_file_path)
     image_name = "cobaya:" + uuid.uuid4().hex[:6]
     with StringIO(recipe) as stream:
         dc.images.build(fileobj=stream, tag=image_name)
@@ -233,7 +234,8 @@ def create_singularity_image(filenames, MPI_version=None):
 
         %s
         """ % (requirements_file_path,
-               _packages_path, os.path.join(_packages_path_arg, _packages_path, _data),
+               # TODO: this looks wrong?
+               "packages_path", os.path.join(packages_path_arg, "packages_path", data_path),
                "\n        ".join(image_help("singularity").split("\n")[1:]))))
     with NamedTemporaryFile(delete=False) as recipe_file:
         recipe_file.write(recipe)
@@ -291,5 +293,5 @@ def prepare_data_script():
     except IOError:
         raise LoggedError(log, "Cannot find the requirements file. "
                                "This should not be happening.")
-    install(info, path=_packages_path, force=arguments.force,
-            **{_code: False, _data: True})
+    install(info, path="packages_path", force=arguments.force,
+            **{code_path: False, data_path: True})

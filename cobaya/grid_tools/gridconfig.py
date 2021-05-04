@@ -14,13 +14,12 @@ import argparse
 
 # Local
 from cobaya.yaml import yaml_load_file, yaml_dump_file
-from cobaya.conventions import _output_prefix, _packages_path, _yaml_extensions
-from cobaya.conventions import kinds, _params
+from cobaya.conventions import Extension
 from cobaya.input import get_used_components, merge_info, update_info
 from cobaya.install import install as install_reqs
 from cobaya.tools import sort_cosmetic, warn_deprecation
 from cobaya.grid_tools import batchjob
-from cobaya.cosmo_input import create_input, _get_best_covmat
+from cobaya.cosmo_input import create_input, get_best_covmat
 from cobaya.parameterization import is_sampled_param
 
 
@@ -69,7 +68,7 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         #            read_only = True
         #            sys.path.insert(0, batchPath + 'config')
         #            settings = __import__(IniFile(batchPath + 'config/config.ini').params['setting_file'].replace('.py', ''))
-        elif os.path.splitext(settingName)[-1].lower() in _yaml_extensions:
+        elif os.path.splitext(settingName)[-1].lower() in Extension.yamls:
             settings = yaml_load_file(settingName)
         else:
             raise NotImplementedError("Using a python script is work in progress...")
@@ -113,11 +112,11 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         if "preset" in combined_info:
             preset = combined_info.pop("preset")
             combined_info = merge_info(create_input(**preset), combined_info)
-        combined_info[_output_prefix] = jobItem.chainRoot
+        combined_info["output"] = jobItem.chainRoot
         # Requisites
         components_used = get_used_components(components_used, combined_info)
         if install_reqs_at:
-            combined_info[_packages_path] = os.path.abspath(install_reqs_at)
+            combined_info["packages_path"] = os.path.abspath(install_reqs_at)
         # Save the info (we will write it after installation:
         # we need to install to add auto covmats
         if jobItem.param_set not in infos:
@@ -135,11 +134,11 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         # Covariance matrices
         # We try to find them now, instead of at run time, to check if correctly selected
         try:
-            sampler = list(info[kinds.sampler])[0]
+            sampler = list(info["sampler"])[0]
         except KeyError:
             raise ValueError("No sampler has been chosen")
-        if sampler == "mcmc" and info[kinds.sampler][sampler].get("covmat", "auto"):
-            packages_path = install_reqs_at or info.get(_packages_path, None)
+        if sampler == "mcmc" and info["sampler"][sampler].get("covmat", "auto"):
+            packages_path = install_reqs_at or info.get("packages_path", None)
             if not packages_path:
                 raise ValueError("Cannot assign automatic covariance matrices because no "
                                  "external packages path has been defined.")
@@ -150,14 +149,13 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
             # as theory+sampled
             from itertools import chain
             like_params = set(chain(*[
-                list(like[_params])
-                for like in updated_info[kinds.likelihood].values()]))
-            params_info = {p: v for p, v in updated_info[_params].items()
+                list(like["params"])
+                for like in updated_info["likelihood"].values()]))
+            params_info = {p: v for p, v in updated_info["params"].items()
                            if is_sampled_param(v) and p not in like_params}
-            best_covmat = _get_best_covmat(
-                os.path.abspath(packages_path),
-                params_info, updated_info[kinds.likelihood])
-            info[kinds.sampler][sampler]["covmat"] = os.path.join(
+            best_covmat = get_best_covmat(os.path.abspath(packages_path),
+                                          params_info, updated_info["likelihood"])
+            info["sampler"][sampler]["covmat"] = os.path.join(
                 best_covmat["folder"], best_covmat["name"])
         # Write the info for this job
         # Allow overwrite since often will want to regenerate grid with tweaks
@@ -179,7 +177,7 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         # # add ini files for importance sampling runs
         # for imp in jobItem.importanceJobs():
         #     if getattr(imp, 'importanceFilter', None): continue
-        #     if batch.hasName(imp.name.replace('_post', '')):
+        #     if batch.hasName(imp.name.replace('"post"', '')):
         #         raise Exception('importance sampling something you already have?')
         #     for minimize in (False, True):
         #         if minimize and not getattr(imp, 'want_minimize', True): continue

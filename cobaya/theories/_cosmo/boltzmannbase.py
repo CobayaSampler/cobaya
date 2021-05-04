@@ -14,9 +14,10 @@ from typing import Mapping, Iterable
 from cobaya.theory import Theory
 from cobaya.tools import deepcopy_where_possible
 from cobaya.log import LoggedError, abstract
-from cobaya.conventions import _c_km_s, empty_dict
+from cobaya.conventions import Const
+from cobaya.typing import empty_dict
 
-H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": _c_km_s}
+H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": Const.c_km_s}
 
 
 class BoltzmannBase(Theory):
@@ -426,8 +427,8 @@ class BoltzmannBase(Theory):
 
         ``params_info`` should contain preferably the slow parameters only.
         """
-        from cobaya.cosmo_input import _get_best_covmat
-        return _get_best_covmat(self.packages_path, params_info, likes_info)
+        from cobaya.cosmo_input import get_best_covmat
+        return get_best_covmat(self.packages_path, params_info, likes_info)
 
 
 class PowerSpectrumInterpolator(RectBivariateSpline):

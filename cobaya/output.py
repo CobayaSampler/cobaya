@@ -13,19 +13,18 @@ import re
 import shutil
 import logging
 from packaging import version
-
+from typing import Optional
 # Local
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
-from cobaya.conventions import _version, _resume, _resume_default, _force
-from cobaya.conventions import _dill_extension
-from cobaya.conventions import _output_prefix, _debug, kinds, _params, _class_name
+from cobaya.conventions import resume_default, Extension, kinds, get_version
+from cobaya.typing import InputDict
 from cobaya.log import LoggedError, HasLogger, get_traceback_text
 from cobaya.input import is_equal_info, get_resolved_class, load_info_dump, split_prefix
 from cobaya.input import get_info_path
 from cobaya.collection import Collection
 from cobaya.tools import deepcopy_where_possible, find_with_regexp, sort_cosmetic
 from cobaya.tools import has_non_yaml_reproducible
-from cobaya import mpi, __version__
+from cobaya import mpi
 
 # Default output type and extension
 _kind = "txt"
@@ -131,7 +130,7 @@ class Output(HasLogger):
 
     @mpi.set_from_root(("force", "folder", "prefix", "kind", "ext",
                         "_resuming", "prefix_regexp_str", "log"))
-    def __init__(self, prefix, resume=_resume_default, force=False, infix=None,
+    def __init__(self, prefix, resume=resume_default, force=False, infix=None,
                  output_prefix=None):
         self.name = "output"
         self.set_logger(self.name)
@@ -170,7 +169,7 @@ class Output(HasLogger):
             self.folder, self.prefix, infix=infix, kind="input")
         self.file_updated = get_info_path(self.folder, self.prefix, infix=infix)
         self.dump_file_updated = get_info_path(
-            self.folder, self.prefix, infix=infix, ext=_dill_extension)
+            self.folder, self.prefix, infix=infix, ext=Extension.dill)
         self._resuming = False
         # Output kind and collection extension
         self.kind = _kind
@@ -256,10 +255,10 @@ class Output(HasLogger):
         self._resuming = value
 
     @mpi.from_root
-    def load_updated_info(self, cache=False, use_cache=False):
+    def load_updated_info(self, cache=False, use_cache=False) -> Optional[InputDict]:
         return self.reload_updated_info(cache=cache, use_cache=use_cache)
 
-    def reload_updated_info(self, cache=False, use_cache=False):
+    def reload_updated_info(self, cache=False, use_cache=False) -> Optional[InputDict]:
         if mpi.is_main_process():
             if use_cache and hasattr(self, "_old_updated_info"):
                 return self._old_updated_info
@@ -297,9 +296,9 @@ class Output(HasLogger):
         # trim known params of each likelihood: for internal use only
         self.check_lock()
         updated_info_trimmed = deepcopy_where_possible(updated_info)
-        updated_info_trimmed[_version] = __version__
-        for like_info in updated_info_trimmed.get(kinds.likelihood, {}).values():
-            (like_info or {}).pop(_params, None)
+        updated_info_trimmed["version"] = get_version()
+        for like_info in updated_info_trimmed.get("likelihood", {}).values():
+            (like_info or {}).pop("params", None)
         if check_compatible:
             # We will test the old info against the dumped+loaded new info.
             # This is because we can't actually check if python objects do change
@@ -312,7 +311,7 @@ class Output(HasLogger):
                 new_info = yaml_load(yaml_dump(updated_info_trimmed))
                 if not is_equal_info(old_info, new_info, strict=False,
                                      ignore_blocks=list(ignore_blocks) + [
-                                         _output_prefix]):
+                                         "output"]):
                     raise LoggedError(
                         self.log, "Old and new run information not compatible! "
                                   "Resuming not possible!")
@@ -320,8 +319,8 @@ class Output(HasLogger):
                 # - If not specified now, take the one used in resume info
                 # - If specified both now and before, check new older than old one
                 # (For Cobaya's own version, prefer new one always)
-                old_version = old_info.get(_version)
-                new_version = new_info.get(_version)
+                old_version = old_info.get("version")
+                new_version = new_info.get("version")
                 if old_version:
                     if version.parse(old_version) > version.parse(new_version):
                         raise LoggedError(
@@ -333,15 +332,15 @@ class Output(HasLogger):
                     if k in ignore_blocks or updated_info[k] is None:
                         continue
                     for c in updated_info[k]:
-                        new_version = updated_info[k][c].get(_version)
-                        old_version = old_info[k][c].get(_version)
+                        new_version = updated_info[k][c].get("version")
+                        old_version = old_info[k][c].get("version")
                         if new_version is None:
-                            updated_info[k][c][_version] = old_version
-                            updated_info_trimmed[k][c][_version] = old_version
+                            updated_info[k][c]["version"] = old_version
+                            updated_info_trimmed[k][c]["version"] = old_version
                         elif old_version is not None:
                             cls = get_resolved_class(
                                 c, k, None_if_not_found=True,
-                                class_name=updated_info[k][c].get(_class_name))
+                                class_name=updated_info[k][c].get("class"))
                             if cls and cls.compare_versions(
                                     old_version, new_version, equal=False):
                                 raise LoggedError(
@@ -362,12 +361,12 @@ class Output(HasLogger):
             if info:
                 for k in ignore_blocks:
                     info.pop(k, None)
-                info.pop(_debug, None)
-                info.pop(_force, None)
-                info.pop(_resume, None)
+                info.pop("debug", None)
+                info.pop("force", None)
+                info.pop("resume", None)
                 # make sure the dumped output_prefix does only contain the file prefix,
                 # not the folder, since it's already been placed inside it
-                info[_output_prefix] = self.updated_prefix()
+                info["output"] = self.updated_prefix()
                 with open(f, "w", encoding="utf-8") as f_out:
                     try:
                         f_out.write(yaml_dump(sort_cosmetic(info)))

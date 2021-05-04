@@ -7,9 +7,8 @@ import os
 from scipy.stats import multivariate_normal
 from getdist.mcsamples import MCSamplesFromCobaya
 
-from cobaya.conventions import kinds, _output_prefix, empty_dict, InputDict
-from cobaya.conventions import _debug, _debug_file, _packages_path, partag
 from cobaya.likelihoods.gaussian_mixture import info_random_gaussian_mixture
+from cobaya.typing import InputDict, empty_dict
 from cobaya.tools import KL_norm
 from cobaya.run import run
 from .common import process_packages_path, is_travis
@@ -67,17 +66,17 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
         print(info["likelihood"]["gaussian_mixture"]["means"])
         print("Original covmat of the gaussian mode:")
         print(info["likelihood"]["gaussian_mixture"]["covs"])
-    info[kinds.sampler] = info_sampler
+    info["sampler"] = info_sampler
     sampler_name = list(info_sampler)[0]
     if sampler_name == "mcmc":
         if "covmat" in info_sampler["mcmc"]:
-            info[kinds.sampler]["mcmc"]["covmat_params"] = (
+            info["sampler"]["mcmc"]["covmat_params"] = (
                 list(info["params"])[:dimension])
-    info[_debug] = False
-    info[_debug_file] = None
-    info[_output_prefix] = os.path.join(tmpdir, 'out_chain')
+    info["debug"] = False
+    info["debug_file"] = None
+    info["output"] = os.path.join(tmpdir, 'out_chain')
     if packages_path:
-        info[_packages_path] = process_packages_path(packages_path)
+        info["packages_path"] = process_packages_path(packages_path)
 
     updated_info, sampler = install_test_wrapper(skip_not_installed, run, info)
     products = sampler.products()
@@ -102,10 +101,10 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
                 import getdist.plots as gdplots
                 from getdist.gaussian_mixtures import MixtureND
                 sampled_params = [
-                    p for p, v in info["params"].items() if partag.prior not in v]
+                    p for p, v in info["params"].items() if "prior" not in v]
                 mixture = MixtureND(
-                    info[kinds.likelihood]["gaussian_mixture"]["means"],
-                    info[kinds.likelihood]["gaussian_mixture"]["covs"],
+                    info["likelihood"]["gaussian_mixture"]["means"],
+                    info["likelihood"]["gaussian_mixture"]["covs"],
                     names=sampled_params, label="truth")
                 g = gdplots.getSubplotPlotter()
                 to_plot = [mixture, results]
@@ -118,8 +117,8 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
         # 1st test: KL divergence
         if n_modes == 1:
             cov_sample, mean_sample = results.getCov(), results.getMeans()
-            KL_final = KL_norm(m1=info[kinds.likelihood]["gaussian_mixture"]["means"][0],
-                               S1=info[kinds.likelihood]["gaussian_mixture"]["covs"][0],
+            KL_final = KL_norm(m1=info["likelihood"]["gaussian_mixture"]["means"][0],
+                               S1=info["likelihood"]["gaussian_mixture"]["covs"][0],
                                m2=mean_sample[:dimension],
                                S2=cov_sample[:dimension, :dimension])
             print("Final KL: ", KL_final)
@@ -133,8 +132,8 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
                     cov_c2, mean_c2 = c2.getCov(), c2.getMeans()
                     KLs = [
                         KL_norm(
-                            m1=info[kinds.likelihood]["gaussian_mixture"]["means"][i_c1],
-                            S1=info[kinds.likelihood]["gaussian_mixture"]["covs"][i_c1],
+                            m1=info["likelihood"]["gaussian_mixture"]["means"][i_c1],
+                            S1=info["likelihood"]["gaussian_mixture"]["covs"][i_c1],
                             m2=mean_c2[:dimension],
                             S2=cov_c2[:dimension, :dimension])
                         for i_c1 in range(n_modes)]
@@ -164,12 +163,12 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False,
     mean0, cov0 = [info_random_gaussian_mixture(
         ranges=[ranges[i] for i in range(dim0)], n_modes=1, input_params_prefix=prefix,
         O_std_min=0.01, O_std_max=0.2, derived=True)
-                   [kinds.likelihood]["gaussian_mixture"][p][0] for p in
+                   ["likelihood"]["gaussian_mixture"][p][0] for p in
                    ["means", "covs"]]
     mean1, cov1 = [info_random_gaussian_mixture(
         ranges=[ranges[i] for i in range(dim0, dim0 + dim1)], n_modes=1,
         input_params_prefix=prefix, O_std_min=0.01, O_std_max=0.2, derived=True)
-                   [kinds.likelihood]["gaussian_mixture"][p][0] for p in
+                   ["likelihood"]["gaussian_mixture"][p][0] for p in
                    ["means", "covs"]]
     n_evals = [0, 0]
 
@@ -254,7 +253,7 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False,
     else:
         raise ValueError("This should not happen!")
     # Finally, test some points of the chain to reproduce the correct likes and derived
-    # These are not AssertionError's to override the flakyness of the test
+    # These are not AssertionError's to override the flakiness of the test
     for _ in range(10):
         i = choice(list(range(len(products["sample"]))))
         chi2_0_chain = -0.5 * products["sample"]["chi2__like0"][i]

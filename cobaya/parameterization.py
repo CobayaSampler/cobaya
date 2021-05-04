@@ -12,10 +12,10 @@ import numpy as np
 from numbers import Number
 from itertools import chain
 from copy import deepcopy
-from typing import Mapping, Sequence
+from typing import Mapping, Sequence, Union, Optional
 
 # Local
-from cobaya.conventions import partag, ParamsDict, ParamDict, ParamValuesDict
+from cobaya.typing import ParamsDict, ParamDict, ParamValuesDict, partags
 from cobaya.tools import get_external_function, ensure_nolatex, is_valid_variable_name, \
     getfullargspec, deepcopy_where_possible, invert_dict, str_to_list
 from cobaya.log import LoggedError, HasLogger
@@ -25,24 +25,25 @@ def is_fixed_or_function_param(info_param: ParamDict) -> bool:
     """
     Returns True if the parameter has been fixed to a value or through a function.
     """
-    return expand_info_param(info_param).get(partag.value) is not None
+    return expand_info_param(info_param).get("value") is not None
 
 
 def is_sampled_param(info_param: ParamDict) -> bool:
     """
     Returns True if the parameter has a prior.
     """
-    return partag.prior in expand_info_param(info_param)
+    return "prior" in expand_info_param(info_param)
 
 
 def is_derived_param(info_param: ParamDict) -> bool:
     """
     Returns True if the parameter is saved as a derived one.
     """
-    return expand_info_param(info_param).get(partag.derived, False)
+    return expand_info_param(info_param).get("derived", False)
 
 
-def expand_info_param(info_param: ParamDict, default_derived=True) -> ParamDict:
+def expand_info_param(info_param: Union[ParamDict, Sequence, None],
+                      default_derived=True) -> ParamDict:
     """
     Expands the info of a parameter, from the user friendly, shorter format
     to a more unambiguous one.
@@ -61,23 +62,23 @@ def expand_info_param(info_param: ParamDict, default_derived=True) -> ParamDict:
                             "The allowed lengths are %r. See documentation.",
                     len(values), allowed_lengths)
             if len(values) >= 2:
-                info_param = {partag.prior: [values[0], values[1]]}
+                info_param = {"prior": [values[0], values[1]]}
             if len(values) >= 4:
-                info_param[partag.ref] = [values[2], values[3]]
+                info_param["ref"] = [values[2], values[3]]
             if len(values) == 5:
-                info_param[partag.proposal] = values[4]
+                info_param["proposal"] = values[4]
         else:
-            info_param = {partag.value: info_param}
-    if all(f not in info_param for f in [partag.prior, partag.value, partag.derived]):
-        info_param[partag.derived] = default_derived
+            info_param = {"value": info_param}
+    if all(f not in info_param for f in ["prior", "value", "derived"]):
+        info_param["derived"] = default_derived
     # Dynamical input parameters: save as derived by default
-    value = info_param.get(partag.value)
+    value = info_param.get("value")
     if isinstance(value, str) or callable(value):
-        info_param[partag.derived] = info_param.get(partag.derived, True)
+        info_param["derived"] = info_param.get("derived", True)
     return info_param
 
 
-def reduce_info_param(info_param: ParamDict) -> ParamDict:
+def reduce_info_param(info_param: ParamDict) -> Optional[ParamDict]:
     """
     Compresses the info of a parameter, suppressing default values.
     This is the opposite of :func:`~input.expand_info_param`.
@@ -86,11 +87,11 @@ def reduce_info_param(info_param: ParamDict) -> ParamDict:
     if not isinstance(info_param, dict):
         return
     # All parameters without a prior are derived parameters unless otherwise specified
-    if info_param.get(partag.derived) is True:
-        info_param.pop(partag.derived)
+    if info_param.get("derived") is True:
+        info_param.pop("derived")
     # Fixed parameters with single "value" key
-    if list(info_param) == [partag.value]:
-        return info_param[partag.value]
+    if list(info_param) == ["value"]:
+        return info_param["value"]
     return info_param
 
 
@@ -124,41 +125,41 @@ class Parameterization(HasLogger):
         self._derived_funcs = {}
         self._derived_args = {}
         self._derived_dependencies = {}
-        # Notice here that expand_info_param *always* adds a partag.derived:True tag
-        # to infos without _prior or partag.value, and a partag.value field
+        # Notice here that expand_info_param *always* adds a "derived":True tag
+        # to infos without "prior" or "value", and a "value" field
         # to fixed params
         for p, info in info_params.items():
-            if isinstance(info, Mapping) and set(info).difference(partag):
+            if isinstance(info, Mapping) and not set(info).issubset(partags):
                 raise LoggedError(self.log, "Parameter '%s' has unknown options %s",
-                                  p, set(info).difference(partag))
+                                  p, set(info).difference(partags))
             info = expand_info_param(info)
             self._infos[p] = info
             if is_fixed_or_function_param(info):
-                if isinstance(info[partag.value], Number):
-                    self._constant[p] = info[partag.value]
+                if isinstance(info["value"], Number):
+                    self._constant[p] = info["value"]
                     self._input[p] = self._constant[p]
-                    if info.get(partag.drop):
+                    if info.get("drop"):
                         self._dropped.add(p)
                 else:
                     self._input[p] = None
-                    self._input_funcs[p] = get_external_function(info[partag.value])
+                    self._input_funcs[p] = get_external_function(info["value"])
                     self._input_args[p] = getfullargspec(self._input_funcs[p]).args
             if is_sampled_param(info):
                 self._sampled[p] = None
                 self._input[p] = None
-                if info.get(partag.drop):
+                if info.get("drop"):
                     self._dropped.add(p)
-                self._sampled_renames[p] = str_to_list(info.get(partag.renames) or [])
+                self._sampled_renames[p] = str_to_list(info.get("renames") or [])
             if is_derived_param(info):
-                self._derived[p] = deepcopy_where_possible(info)
+                self._derived[p] = None
                 # Dynamical parameters whose value we want to save
-                if info[partag.derived] is True and is_fixed_or_function_param(info):
+                if info["derived"] is True and is_fixed_or_function_param(info):
                     # parameters that are already known or computed by input funcs
                     self._derived_inputs.append(p)
-                elif info[partag.derived] is True:
+                elif info["derived"] is True:
                     self._output[p] = None
                 else:
-                    self._derived_funcs[p] = get_external_function(info[partag.derived])
+                    self._derived_funcs[p] = get_external_function(info["derived"])
                     self._derived_args[p] = getfullargspec(self._derived_funcs[p]).args
         # Check that the sampled and derived params are all valid python variable names
         for p in chain(self._sampled, self._derived):
@@ -373,7 +374,7 @@ class Parameterization(HasLogger):
                     "code, and never used as arguments for any prior or parameter "
                     "functions. Check that you are not using "
                     "the '%s' tag unintentionally.",
-                    list(self._dropped_not_directly_used), partag.drop)
+                    list(self._dropped_not_directly_used), "drop")
 
     def labels(self):
         """
@@ -384,7 +385,7 @@ class Parameterization(HasLogger):
 
         def get_label(p, info):
             return ensure_nolatex(getattr(info, "get", lambda x, y: y)
-                                  (partag.latex, p.replace("_", r"\ ")))
+                                  ("latex", p.replace("_", r"\ ")))
 
         return {p: get_label(p, info) for p, info in self._infos.items()}
 

@@ -54,7 +54,7 @@ import copy
 # Local
 from cobaya.likelihoods.base_classes import DataSetLikelihood
 from cobaya.log import LoggedError
-from cobaya.conventions import _c_km_s
+from cobaya.conventions import Const
 
 # DES data types
 def_DES_types = ['xip', 'xim', 'gammat', 'wtheta']
@@ -419,7 +419,7 @@ class DES(DataSetLikelihood):
             ((chis[1] + chis[0]) / 2, (chis[2:] - chis[:-2]) / 2, (chis[-1] - chis[-2])))
         D_growth = PKdelta.P(self.zs, 0.001)
         D_growth = np.sqrt(D_growth / PKdelta.P(0, 0.001))
-        c = _c_km_s * 1e3  # m/s
+        c = Const.c_km_s * 1e3  # m/s
 
         if any(t in self.used_types for t in ["gammat", "wtheta"]):
             qgal = []

@@ -91,14 +91,14 @@ from copy import deepcopy
 
 # Local
 from cobaya.sampler import Minimizer
-from cobaya.conventions import _undo_chi2_name
+from cobaya.conventions import undo_chi2_name
 from cobaya.collection import OnePoint, Collection
 from cobaya.log import LoggedError
 from cobaya.tools import read_dnumber, recursive_update
 from cobaya.sampler import CovmatSampler
 from cobaya import mpi
 
-# Handling scpiy vs BOBYQA
+# Handling scipy vs BOBYQA
 evals_attr = {"scipy": "fun", "bobyqa": "f"}
 
 # Conventions conventions
@@ -163,8 +163,9 @@ class minimize(Minimizer, CovmatSampler):
         # TODO: if ignore_prior, one should use *like* covariance (this is *post*)
         covmat = self._load_covmat(prefer_load_old=self.output)[0]
         # scale by conditional parameter widths (since not using correlation structure)
+        rhobeg = 1
         scales = np.minimum(1 / np.sqrt(np.diag(np.linalg.inv(covmat))),
-                            (self._bounds[:, 1] - self._bounds[:, 0]) / 3)
+                            (self._bounds[:, 1] - self._bounds[:, 0]) / 3 / rhobeg)
         # Cov and affine transformation
         # Transform to space where initial point is at centre, and cov is normalised
         # Cannot do rotation, as supported minimization routines assume bounds aligned
@@ -183,8 +184,9 @@ class minimize(Minimizer, CovmatSampler):
                 "objfun": (lambda x: -self.logp_transf(x)),
                 "x0": initial_point,
                 "bounds": np.array(list(zip(*bounds))),
-                "seek_global_minimum": (True if mpi.size() else False),
+                "seek_global_minimum": not mpi.more_than_one_process(),
                 "maxfun": int(self.max_evals),
+                "rhobeg": rhobeg,
                 "do_logging": (self.log.getEffectiveLevel() == logging.DEBUG)}
             self.kwargs = recursive_update(
                 deepcopy(self.kwargs), self.override_bobyqa or {})
@@ -385,7 +387,7 @@ class minimize(Minimizer, CovmatSampler):
             [[p, params[p]] for p in self.model.parameterization.derived_params()])
         if hasattr(params, 'chi2_names'):
             labels.update({p: r'\chi^2_{\rm %s}' % (
-                _undo_chi2_name(p).replace("_", r"\ "))
+                undo_chi2_name(p).replace("_", r"\ "))
                            for p in params.chi2_names})
             add_section([[chi2, params[chi2]] for chi2 in params.chi2_names])
         return "\n".join(lines)

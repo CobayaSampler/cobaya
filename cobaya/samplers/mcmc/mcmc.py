@@ -15,14 +15,12 @@ import re
 from copy import deepcopy
 
 # Local
-from cobaya import __version__
 from cobaya.sampler import CovmatSampler
-from cobaya.mpi import get_mpi_size, get_mpi_comm, get_mpi, share_mpi
+from cobaya.mpi import get_mpi_size, share_mpi
 from cobaya.mpi import more_than_one_process, is_main_process, sync_processes
 from cobaya.collection import Collection, OneSamplePoint
-from cobaya.conventions import kinds, _weight, _minuslogpost, _covmat_extension
-from cobaya.conventions import _line_width, _progress_extension, empty_dict
-from cobaya.conventions import _checkpoint_extension
+from cobaya.conventions import OutPar, Extension, line_width, get_version
+from cobaya.typing import empty_dict
 from cobaya.samplers.mcmc.proposal import BlockedProposer
 from cobaya.log import LoggedError
 from cobaya.tools import get_external_function, NumberWithUnits, load_DataFrame
@@ -106,12 +104,6 @@ class mcmc(CovmatSampler):
                     self.log,
                     "Cannot resume a run with a different number of chains: "
                     "was %d and now is %d.", max(self.mpi_size or 0, 1), mpi.size())
-            if more_than_one_process():
-                if get_mpi().Get_version()[0] < 3 \
-                        and 'Microsoft' not in get_mpi().Get_library_version():
-                    # Microsoft MPI currently only supports all MPI 2 but has IALLGATHER
-                    raise LoggedError(self.log, "MPI use requires MPI version 3.0 or "
-                                                "higher to support IALLGATHER.")
         sync_processes()
         # One collection per MPI process: `name` is the MPI rank + 1
         name = str(1 + mpi.rank())
@@ -145,7 +137,7 @@ class mcmc(CovmatSampler):
         if self.output.is_resuming() and len(self.collection):
             initial_point = (self.collection[self.collection.sampled_params]
                 .iloc[len(self.collection) - 1]).values.copy()
-            logpost = -(self.collection[_minuslogpost]
+            logpost = -(self.collection[OutPar.minuslogpost]
                         .iloc[len(self.collection) - 1].copy())
             logpriors = -(self.collection[self.collection.minuslogprior_names]
                           .iloc[len(self.collection) - 1].copy())
@@ -222,7 +214,7 @@ class mcmc(CovmatSampler):
 
     @property
     def acceptance_rate(self):
-        return self.n() / self.collection[_weight].sum()
+        return self.n() / self.collection[OutPar.weight].sum()
 
     def set_proposer_blocking(self):
         if self.blocking:
@@ -318,7 +310,7 @@ class mcmc(CovmatSampler):
                 DataFrame(self._covmat,
                           columns=self.model.parameterization.sampled_params(),
                           index=self.model.parameterization.sampled_params()).to_string(
-                    line_width=_line_width))
+                    line_width=line_width))
         self.proposer.set_covariance(self._covmat)
 
     def _get_last_nondragging_block(self, blocks, speeds):
@@ -704,7 +696,7 @@ class mcmc(CovmatSampler):
                 except:
                     bound = None
                     success_bounds = False
-                bounds = np.array(get_mpi_comm().gather(bound))
+                bounds = np.array(mpi.gather(bound))
             else:
                 try:
                     mcsamples_list = [
@@ -785,7 +777,7 @@ class mcmc(CovmatSampler):
         if is_main_process() and self.output:
             checkpoint_filename = self.checkpoint_filename()
             self.dump_covmat(self.proposer.get_covariance())
-            checkpoint_info = {kinds.sampler: {self.get_name(): dict([
+            checkpoint_info = {"sampler": {self.get_name(): dict([
                 ("converged", bool(self.converged)),
                 ("Rminus1_last", self.Rminus1_last),
                 ("burn_in", (self.burn_in.value  # initial: repeat burn-in if not finished
@@ -830,12 +822,12 @@ class mcmc(CovmatSampler):
             return [(r, None) for r in regexps]
         regexps += [
             re.compile(output.prefix_regexp_str + re.escape(ext.lstrip(".")) + "$")
-            for ext in [_checkpoint_extension, _progress_extension, _covmat_extension]]
+            for ext in [Extension.checkpoint, Extension.progress, Extension.covmat]]
         return [(r, None) for r in regexps]
 
     @classmethod
     def get_version(cls):
-        return __version__
+        return get_version()
 
     @classmethod
     def _get_desc(cls, info=None):
@@ -879,8 +871,8 @@ def plot_progress(progress, ax=None, index=None,
         pass  # go on to plotting
     elif isinstance(progress, str):
         try:
-            if not progress.endswith(_progress_extension):
-                progress += _progress_extension
+            if not progress.endswith(Extension.progress):
+                progress += Extension.progress
             progress = load_DataFrame(progress)
             # 1-based
             progress.index = np.arange(1, len(progress) + 1)

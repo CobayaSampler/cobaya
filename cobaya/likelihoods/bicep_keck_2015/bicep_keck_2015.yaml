@@ -72,7 +72,7 @@ params:
       scale: 0.01
     proposal: 0.01
     latex: \alpha_{B,\mathrm{dust}}
-  # sync spatial power specturm power law index
+  # sync spatial power spectrum power law index
   BBalphasync:
     prior:
       min: -1.0

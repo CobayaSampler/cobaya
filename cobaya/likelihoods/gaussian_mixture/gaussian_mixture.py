@@ -14,8 +14,7 @@ from scipy.special import logsumexp
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
 from cobaya.mpi import share_mpi, is_main_process
-from cobaya.conventions import kinds, _params, ArrayLike, ArrayOrFloat
-from cobaya.conventions import _input_params_prefix, _output_params_prefix
+from cobaya.typing import ArrayLike, ArrayOrFloat, InputDict
 
 derived_suffix = "_derived"
 
@@ -110,7 +109,7 @@ class gaussian_mixture(Likelihood):
             self.weights = 1 / len(self.gaussians)
 
         # Prepare the transformation(s) for the derived parameters
-        self.choleskyL = [np.linalg.cholesky(cov) for cov in self.covs]
+        self.inv_choleskyL = [np.linalg.inv(np.linalg.cholesky(cov)) for cov in self.covs]
 
     def logp(self, **params_values):
         """
@@ -122,14 +121,18 @@ class gaussian_mixture(Likelihood):
         # Fill the derived parameters
         derived = params_values.get("_derived")
         if derived is not None:
+            n = self.d()
             for i in range(self.n_modes):
-                standard = np.linalg.inv(self.choleskyL[i]).dot((x - self.means[i]))
+                standard = self.inv_choleskyL[i].dot(x - self.means[i])
                 derived.update(
                     (p, v) for p, v in
-                    zip(list(self.output_params)[i * self.d():(i + 1) * self.d()],
-                        standard))
+                    zip(list(self.output_params)[i * n:(i + 1) * n], standard))
         # Compute the likelihood and return
-        return logsumexp([gauss.logpdf(x) for gauss in self.gaussians], b=self.weights)
+        if len(self.gaussians) == 1:
+            return self.gaussians[0].logpdf(x)
+        else:
+            return logsumexp([gauss.logpdf(x) for gauss in self.gaussians],
+                             b=self.weights)
 
 
 # Scripts to generate random means and covariances #######################################
@@ -215,10 +218,10 @@ def info_random_gaussian_mixture(
     if mpi_aware:
         mean, cov = share_mpi((mean, cov))
     dimension = len(ranges)
-    info = {kinds.likelihood: {"gaussian_mixture": {
-        "means": mean, "covs": cov, _input_params_prefix: input_params_prefix,
-        _output_params_prefix: output_params_prefix, "derived": derived}}}
-    info[_params] = dict(
+    info: InputDict = {"likelihood": {"gaussian_mixture": {
+        "means": mean, "covs": cov, "input_params_prefix": input_params_prefix,
+        "output_params_prefix": output_params_prefix, "derived": derived}}}
+    info["params"] = dict(
         # sampled
         [(input_params_prefix + "_%d" % i,
           {"prior": {"min": ranges[i][0], "max": ranges[i][1]},
@@ -226,6 +229,6 @@ def info_random_gaussian_mixture(
          for i in range(dimension)] +
         # derived
         ([[output_params_prefix + "_%d" % i,
-           {"min": -3, "max": 3, "latex": r"\beta_{%i}" % i}]
+           {"latex": r"\beta_{%i}" % i}]
           for i in range(dimension * n_modes)] if derived else []))
     return info
