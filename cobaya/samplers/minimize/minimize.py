@@ -184,7 +184,7 @@ class minimize(Minimizer, CovmatSampler):
                 "objfun": (lambda x: -self.logp_transf(x)),
                 "x0": initial_point,
                 "bounds": np.array(list(zip(*bounds))),
-                "seek_global_minimum": (True if mpi.size() else False),
+                "seek_global_minimum": not mpi.more_than_one_process(),
                 "maxfun": int(self.max_evals),
                 "rhobeg": rhobeg,
                 "do_logging": (self.log.getEffectiveLevel() == logging.DEBUG)}

@@ -128,7 +128,11 @@ class gaussian_mixture(Likelihood):
                     (p, v) for p, v in
                     zip(list(self.output_params)[i * n:(i + 1) * n], standard))
         # Compute the likelihood and return
-        return logsumexp([gauss.logpdf(x) for gauss in self.gaussians], b=self.weights)
+        if len(self.gaussians) == 1:
+            return self.gaussians[0].logpdf(x)
+        else:
+            return logsumexp([gauss.logpdf(x) for gauss in self.gaussians],
+                             b=self.weights)
 
 
 # Scripts to generate random means and covariances #######################################
