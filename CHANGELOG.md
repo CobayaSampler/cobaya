@@ -45,6 +45,7 @@
 ### Minimize
 
 - `PyBOBYQA` updated to 1.2, and quieter by default.
+- 'best_of' parameter to probe different random starting positions (replacing seek_global_minimum for non-MPI)
 - 'rhobeg' parameter larger to avoid odd hangs
 
 ### Tests

@@ -1,7 +1,6 @@
 # Minimization of a random Gaussian likelihood using the minimize sampler.
 
 import numpy as np
-from flaky import flaky
 import pytest
 import os
 
@@ -24,7 +23,6 @@ class NoisyCovLike(Likelihood):
         return -_inv_cov.dot(x).dot(x) / 2 + np.random.random_sample() * 0.005
 
 
-@flaky(max_runs=3, min_passes=1)
 @mpi.sync_errors
 def test_minimize_gaussian(tmpdir):
     # parameters

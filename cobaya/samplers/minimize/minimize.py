@@ -82,12 +82,14 @@ it will finally pick the best among the results.
 # Global
 import os
 import numpy as np
-from scipy.optimize import minimize as scpminimize
+from scipy import optimize
 from typing import Mapping, Optional
 import re
 import pybobyqa
+from pybobyqa import controller
 import logging
 from copy import deepcopy
+from itertools import chain
 
 # Local
 from cobaya.sampler import Minimizer
@@ -106,15 +108,37 @@ getdist_ext_ignore_prior = {True: ".bestfit", False: ".minimum"}
 get_collection_extension = (
     lambda ignore_prior: getdist_ext_ignore_prior[ignore_prior] + ".txt")
 
+_bobyqa_errors = {
+    controller.EXIT_MAXFUN_WARNING:
+        "Maximum allowed objective evaluations reached. "
+        "This is the most likely return value when using multiple restarts.",
+    controller.EXIT_SLOW_WARNING:
+        "Maximum number of slow iterations reached.",
+    controller.EXIT_FALSE_SUCCESS_WARNING:
+        "Py-BOBYQA reached the maximum number of restarts which decreased the"
+        " objective, but to a worse value than was found in a previous run.",
+    controller.EXIT_INPUT_ERROR:
+        "Error in the inputs.",
+    controller.EXIT_TR_INCREASE_ERROR:
+        "Error occurred when solving the trust region subproblem.",
+    controller.EXIT_LINALG_ERROR:
+        "Linear algebra error, e.g. the interpolation points produced a "
+        "singular linear system."}
+
 
 class minimize(Minimizer, CovmatSampler):
     ignore_prior: bool
     confidence_for_unbounded: float
     method: str
+    best_of: int
     override_bobyqa: Optional[Mapping]
     override_scipy: Optional[Mapping]
 
     def initialize(self):
+        if self.method not in evals_attr:
+            raise LoggedError(self.log, "Method '%s' not recognized. Try one of %r.",
+                              self.method, list(evals_attr))
+
         self.mpi_info("Initializing")
         self.max_evals = read_dnumber(self.max_evals, self.model.prior.d())
         # Configure target
@@ -123,48 +147,63 @@ class minimize(Minimizer, CovmatSampler):
         if self.ignore_prior:
             kwargs["return_derived"] = False
         self.logp = lambda x: method(x, **kwargs)
+
         # Try to load info from previous samples.
         # If none, sample from reference (make sure that it has finite like/post)
-        initial_point = None
+        self.initial_points = []
+        assert self.best_of > 0
+        num_starts = int(np.ceil(self.best_of / mpi.size()))
         if self.output:
             files = self.output.find_collections()
-            collection_in = None
+        else:
+            files = None
+        for start in range(num_starts):
+            initial_point = None
             if files:
-                if mpi.more_than_one_process():
-                    if 1 + mpi.rank() <= len(files):
+                if mpi.more_than_one_process() or num_starts > 1:
+                    index = 1 + mpi.rank() * num_starts + start
+                    if index <= len(files):
                         collection_in = Collection(
-                            self.model, self.output, name=str(1 + mpi.rank()),
-                            resuming=True)
+                            self.model, self.output, name=str(index), resuming=True)
+                    else:
+                        collection_in = None
                 else:
                     collection_in = self.output.load_collections(self.model,
                                                                  concatenate=True)
-            if collection_in:
-                initial_point = (
-                    collection_in.bestfit() if self.ignore_prior else collection_in.MAP())
-                initial_point = initial_point[
-                    list(self.model.parameterization.sampled_params())].values
-                self.log.info("Starting from %s of previous chain:",
-                              "best fit" if self.ignore_prior else "MAP")
-                # Compute covmat if input but no .covmat file (e.g. with PolyChord)
-                # Prefer old over `covmat` definition in yaml (same as MCMC)
-                self.covmat = collection_in.cov(derived=False)
-                self.covmat_params = list(self.model.parameterization.sampled_params())
-        if initial_point is None:
-            this_logp = -np.inf
-            while not np.isfinite(this_logp):
-                initial_point = self.model.prior.reference(random_state=self._rng)
-                this_logp = self.logp(initial_point)
-            self.log.info("Starting from random initial point:")
-        self.log.info(
-            dict(zip(self.model.parameterization.sampled_params(), initial_point)))
+                if collection_in:
+                    initial_point = (collection_in.bestfit() if self.ignore_prior
+                                     else collection_in.MAP())
+                    initial_point = initial_point[
+                        list(self.model.parameterization.sampled_params())].values
+                    self.log.info("Starting %s/%s from %s of previous chain:", start + 1,
+                                  num_starts, "best fit" if self.ignore_prior else "MAP")
+                    # Compute covmat if input but no .covmat file (e.g. with PolyChord)
+                    # Prefer old over `covmat` definition in yaml (same as MCMC)
+                    self.covmat = collection_in.cov(derived=False)
+                    self.covmat_params = list(
+                        self.model.parameterization.sampled_params())
+            if initial_point is None:
+                for _ in range(self.max_evals // 10 + 5):
+                    initial_point = self.model.prior.reference(random_state=self._rng)
+                    if np.isfinite(self.logp(initial_point)):
+                        break
+                else:
+                    raise LoggedError(self.log, "Could not find random starting point "
+                                                "giving finite posterior")
+
+                self.log.info("Starting %s/%s random initial point:",
+                              start + 1, num_starts)
+            self.log.info(
+                dict(zip(self.model.parameterization.sampled_params(), initial_point)))
+            self.initial_points.append(initial_point)
+
         self._bounds = self.model.prior.bounds(
             confidence_for_unbounded=self.confidence_for_unbounded)
         # TODO: if ignore_prior, one should use *like* covariance (this is *post*)
         covmat = self._load_covmat(prefer_load_old=self.output)[0]
         # scale by conditional parameter widths (since not using correlation structure)
-        rhobeg = 1
         scales = np.minimum(1 / np.sqrt(np.diag(np.linalg.inv(covmat))),
-                            (self._bounds[:, 1] - self._bounds[:, 0]) / 3 / rhobeg)
+                            (self._bounds[:, 1] - self._bounds[:, 0]) / 3)
         # Cov and affine transformation
         # Transform to space where initial point is at centre, and cov is normalised
         # Cannot do rotation, as supported minimization routines assume bounds aligned
@@ -172,43 +211,7 @@ class minimize(Minimizer, CovmatSampler):
         self._affine_transform_matrix = np.diag(1 / scales)
         self._inv_affine_transform_matrix = np.diag(scales)
         self._scales = scales
-        self._affine_transform_baseline = initial_point
-        initial_point = self.affine_transform(initial_point)
-        np.testing.assert_allclose(initial_point, np.zeros(initial_point.shape))
-        bounds = np.array([self.affine_transform(self._bounds[:, i]) for i in range(2)]).T
-        # Configure method
-        if self.method.lower() == "bobyqa":
-            self.minimizer = pybobyqa.solve
-            self.kwargs = {
-                "objfun": (lambda x: -self.logp_transf(x)),
-                "x0": initial_point,
-                "bounds": np.array(list(zip(*bounds))),
-                "seek_global_minimum": not mpi.more_than_one_process(),
-                "maxfun": int(self.max_evals),
-                "rhobeg": rhobeg,
-                "do_logging": (self.log.getEffectiveLevel() == logging.DEBUG)}
-            self.kwargs = recursive_update(
-                deepcopy(self.kwargs), self.override_bobyqa or {})
-            self.log.debug("Arguments for pybobyqa.solve:\n%r",
-                           {k: v for k, v in self.kwargs.items() if k != "objfun"})
-        elif self.method.lower() == "scipy":
-            self.minimizer = scpminimize
-            self.kwargs = {
-                "fun": (lambda x: -self.logp_transf(x)),
-                "x0": initial_point,
-                "bounds": bounds,
-                "options": {
-                    "maxiter": self.max_evals,
-                    "disp": (self.log.getEffectiveLevel() == logging.DEBUG)}}
-            self.kwargs = recursive_update(
-                deepcopy(self.kwargs), self.override_scipy or {})
-            self.log.debug("Arguments for scipy.optimize.minimize:\n%r",
-                           {k: v for k, v in self.kwargs.items() if k != "fun"})
-        else:
-            methods = ["bobyqa", "scipy"]
-            raise LoggedError(
-                self.log, "Method '%s' not recognized. Try one of %r.", self.method,
-                methods)
+        self.result = None
 
     def affine_transform(self, x):
         return (x - self._affine_transform_baseline) / self._scales
@@ -218,110 +221,135 @@ class minimize(Minimizer, CovmatSampler):
         return np.clip(x * self._scales + self._affine_transform_baseline,
                        self._bounds[:, 0], self._bounds[:, 1])
 
-    def logp_transf(self, x):
-        return self.logp(self.inv_affine_transform(x))
-
     def run(self):
         """
         Runs `scipy.minimize`
         """
-        self.log.info("Starting minimization.")
-        try:
-            self.result = self.minimizer(**self.kwargs)
-        except:
-            self.log.error("Minimizer '%s' raised an unexpected error:", self.method)
-            raise
-        self.success = (self.result.success if self.method.lower() == "scipy" else
-                        self.result.flag == self.result.EXIT_SUCCESS)
-        if self.success:
-            self.log.info("Finished successfully!")
-        else:
-            if self.method.lower() == "bobyqa":
-                reason = {
-                    self.result.EXIT_MAXFUN_WARNING:
-                        "Maximum allowed objective evaluations reached. "
-                        "This is the most likely return value when using multiple restarts.",
-                    self.result.EXIT_SLOW_WARNING:
-                        "Maximum number of slow iterations reached.",
-                    self.result.EXIT_FALSE_SUCCESS_WARNING:
-                        "Py-BOBYQA reached the maximum number of restarts which decreased the"
-                        " objective, but to a worse value than was found in a previous run.",
-                    self.result.EXIT_INPUT_ERROR:
-                        "Error in the inputs.",
-                    self.result.EXIT_TR_INCREASE_ERROR:
-                        "Error occurred when solving the trust region subproblem.",
-                    self.result.EXIT_LINALG_ERROR:
-                        "Linear algebra error, e.g. the interpolation points produced a "
-                        "singular linear system."
-                }[self.result.flag]
-            else:
-                reason = ""
-            self.log.error("Finished unsuccessfully." +
-                           (" Reason: " + reason if reason else ""))
-        self.process_results()
+        results = []
+        successes = []
 
-    def process_results(self):
+        def minuslogp_transf(x):
+            return -self.logp(self.inv_affine_transform(x))
+
+        for i, initial_point in enumerate(self.initial_points):
+
+            self.log.debug("Starting minimization for starting point %s.", i)
+
+            self._affine_transform_baseline = initial_point
+            initial_point = self.affine_transform(initial_point)
+            np.testing.assert_allclose(initial_point, np.zeros(initial_point.shape))
+            bounds = np.array(
+                [self.affine_transform(self._bounds[:, i]) for i in range(2)]).T
+
+            try:
+                # Configure method
+                if self.method.lower() == "bobyqa":
+                    self.kwargs = {
+                        "objfun": minuslogp_transf,
+                        "x0": initial_point,
+                        "bounds": np.array(list(zip(*bounds))),
+                        "maxfun": int(self.max_evals),
+                        "rhobeg": 1.,
+                        "do_logging": (self.log.getEffectiveLevel() == logging.DEBUG)}
+                    self.kwargs = recursive_update(
+                        deepcopy(self.kwargs), self.override_bobyqa or {})
+                    self.log.debug("Arguments for pybobyqa.solve:\n%r",
+                                   {k: v for k, v in self.kwargs.items() if
+                                    k != "objfun"})
+                    result = pybobyqa.solve(**self.kwargs)
+                    success = result.flag == result.EXIT_SUCCESS
+                    if not success:
+                        self.log.error("Finished unsuccessfully. Reason: "
+                                       + _bobyqa_errors[result.flag])
+                else:
+                    self.kwargs = {
+                        "fun": minuslogp_transf,
+                        "x0": initial_point,
+                        "bounds": bounds,
+                        "options": {
+                            "maxiter": self.max_evals,
+                            "disp": (self.log.getEffectiveLevel() == logging.DEBUG)}}
+                    self.kwargs = recursive_update(
+                        deepcopy(self.kwargs), self.override_scipy or {})
+                    self.log.debug("Arguments for scipy.optimize.minimize:\n%r",
+                                   {k: v for k, v in self.kwargs.items() if k != "fun"})
+                    result = optimize.minimize(**self.kwargs)
+                    success = result.success
+                    if not success:
+                        self.log.error("Finished unsuccessfully.")
+            except:
+                self.log.error("Minimizer '%s' raised an unexpected error:", self.method)
+                raise
+            results += [result]
+            successes += [success]
+
+        self.process_results(*mpi.zip_gather(
+            [results, successes, self.initial_points,
+             [self._inv_affine_transform_matrix] * len(self.initial_points)]))
+
+    @mpi.set_from_root(("_inv_affine_transform_matrix", "_affine_transform_baseline",
+                        "result", "minimum"))
+    def process_results(self, results, successes, affine_transform_baselines,
+                        transform_matrices):
         """
-        Determines success (or not), chooses best (if MPI)
+        Determines success (or not), chooses best (if MPI or multiple starts)
         and produces output (if requested).
         """
-        evals_attr_ = evals_attr[self.method.lower()]
-        # If something failed
-        if not hasattr(self, "result"):
-            return
-        results, successes, _affine_transform_baselines = mpi.zip_gather(
-            [self.result, self.success, self._affine_transform_baseline])
-        if mpi.is_main_process():
-            if mpi.more_than_one_process():
-                mins = [(getattr(r, evals_attr_) if s else np.inf)
-                        for r, s in zip(results, successes)]
-                i_min = np.argmin(mins)
-                self.result = results[i_min]
-                self._affine_transform_baseline = _affine_transform_baselines[i_min]
-            if not any(successes):
-                raise LoggedError(
-                    self.log, "Minimization failed! Here is the raw result object:\n%s",
-                    str(self.result))
-            elif not all(successes):
-                self.log.warning('Some minimizations failed!')
-            elif mpi.more_than_one_process():
-                # noinspection PyUnboundLocalVariable
-                if max(mins) - min(mins) > 1:
-                    self.log.warning('Big spread in minima: %r', mins)
-                elif max(mins) - min(mins) > 0.2:
-                    self.log.warning('Modest spread in minima: %r', mins)
 
-            logp_min = -np.array(getattr(self.result, evals_attr_))
-            x_min = self.inv_affine_transform(self.result.x)
-            self.log.info("-log(%s) minimized to %g",
-                          "likelihood" if self.ignore_prior else "posterior", -logp_min)
-            recomputed_post_min = self.model.logposterior(x_min, cached=False)
-            recomputed_logp_min = (sum(recomputed_post_min.loglikes) if self.ignore_prior
-                                   else recomputed_post_min.logpost)
-            if not np.allclose(logp_min, recomputed_logp_min, atol=1e-2):
-                raise LoggedError(
-                    self.log, "Cannot reproduce log minimum to within 0.01. Maybe your "
-                              "likelihood is stochastic or large numerical error? "
-                              "Recomputed min: %g (was %g) at %r",
-                    recomputed_logp_min, logp_min, x_min)
-            self.minimum = OnePoint(
-                self.model, self.output, name="",
-                extension=get_collection_extension(self.ignore_prior))
-            self.minimum.add(x_min, derived=recomputed_post_min.derived,
-                             logpost=recomputed_post_min.logpost,
-                             logpriors=recomputed_post_min.logpriors,
-                             loglikes=recomputed_post_min.loglikes)
-            self.log.info(
-                "Parameter values at minimum:\n%s", self.minimum.data.to_string())
-            self.minimum.out_update()
-            self.dump_getdist()
+        evals_attr_ = evals_attr[self.method.lower()]
+        results = list(chain(*results))
+        successes = list(chain(*successes))
+        affine_transform_baselines = list(chain(*affine_transform_baselines))
+        transform_matrices = list(chain(*transform_matrices))
+
+        if len(results) > 1:
+            mins = [(getattr(r, evals_attr_) if s else np.inf)
+                    for r, s in zip(results, successes)]
+            i_min = np.argmin(mins)
         else:
-            self.minimum = None
-        # Share results ('result' object may not be picklable)
-        (self._inv_affine_transform_matrix, self._affine_transform_baseline,
-         self.result, self.minimum) = mpi.share(
-            (self._inv_affine_transform_matrix, self._affine_transform_baseline,
-             self.result, self.minimum))
+            i_min = 0
+
+        self.result = results[i_min]
+        self._affine_transform_baseline = affine_transform_baselines[i_min]
+        self._inv_affine_transform_matrix = transform_matrices[i_min]
+        if not any(successes):
+            raise LoggedError(
+                self.log, "Minimization failed! Here is the raw result object:\n%s",
+                str(self.result))
+        elif not all(successes):
+            self.log.warning('Some minimizations failed!')
+        elif len(results) > 1:
+            self.log.info('Finished successfully!')
+            # noinspection PyUnboundLocalVariable
+            if max(mins) - min(mins) > 1:
+                self.log.warning('Big spread in minima: %r', mins)
+            elif max(mins) - min(mins) > 0.2:
+                self.log.warning('Modest spread in minima: %r', mins)
+
+        logp_min = -np.array(getattr(self.result, evals_attr_))
+        x_min = self.inv_affine_transform(self.result.x)
+        self.log.info("-log(%s) minimized to %g",
+                      "likelihood" if self.ignore_prior else "posterior", -logp_min)
+        recomputed_post_min = self.model.logposterior(x_min, cached=False)
+        recomputed_logp_min = (sum(recomputed_post_min.loglikes) if self.ignore_prior
+                               else recomputed_post_min.logpost)
+        if not np.allclose(logp_min, recomputed_logp_min, atol=1e-2):
+            raise LoggedError(
+                self.log, "Cannot reproduce log minimum to within 0.01. Maybe your "
+                          "likelihood is stochastic or large numerical error? "
+                          "Recomputed min: %g (was %g) at %r",
+                recomputed_logp_min, logp_min, x_min)
+        self.minimum = OnePoint(
+            self.model, self.output, name="",
+            extension=get_collection_extension(self.ignore_prior))
+        self.minimum.add(x_min, derived=recomputed_post_min.derived,
+                         logpost=recomputed_post_min.logpost,
+                         logpriors=recomputed_post_min.logpriors,
+                         loglikes=recomputed_post_min.loglikes)
+        self.log.info(
+            "Parameter values at minimum:\n%s", self.minimum.data.to_string())
+        self.minimum.out_update()
+        self.dump_getdist()
 
     def products(self):
         r"""

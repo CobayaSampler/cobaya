@@ -463,7 +463,7 @@ class Model(HasLogger):
                                                  warn_if_no_ref=not loop,
                                                  random_state=random_state)
             logpost, logpriors, loglikes, derived = self.logposterior(initial_point)
-            if -np.inf not in loglikes:
+            if logpost != -np.inf:
                 break
         else:
             if self.prior.reference_is_pointlike():
@@ -471,7 +471,7 @@ class Model(HasLogger):
                                             "likelihood. Set 'ref' to a different point "
                                             "or a pdf.")
             raise LoggedError(self.log, "Could not find random point giving finite "
-                                        "likelihood after %g tries", max_tries)
+                                        "posterior after %g tries", max_tries)
         return initial_point, logpost, logpriors, loglikes, derived
 
     def dump_timing(self):
