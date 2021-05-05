@@ -237,9 +237,8 @@ class Model(HasLogger):
             depend_list = [input_params[p] for p in param_dep]
             params = {p: input_params[p] for p in component.input_params}
             compute_success = component.check_cache_and_compute(
-                want_derived=return_derived,
-                dependency_params=depend_list,
-                cached=cached, **params)
+                params, want_derived=return_derived,
+                dependency_params=depend_list, cached=cached)
             if not compute_success:
                 loglikes[:] = -np.inf
                 self.log.debug("Calculation failed, skipping rest of calculations ")
@@ -446,7 +445,7 @@ class Model(HasLogger):
         return self.logposterior(params_values, make_finite=make_finite,
                                  return_derived=False, cached=cached).logpost
 
-    def get_valid_point(self, max_tries, ignore_fixed_ref=False):
+    def get_valid_point(self, max_tries, ignore_fixed_ref=False, random_state=None):
         """
         Finds a point with finite posterior, sampled from from the reference pdf.
 
@@ -461,7 +460,8 @@ class Model(HasLogger):
         for loop in range(max(1, max_tries // self.prior.d())):
             initial_point = self.prior.reference(max_tries=max_tries,
                                                  ignore_fixed=ignore_fixed_ref,
-                                                 warn_if_no_ref=not loop)
+                                                 warn_if_no_ref=not loop,
+                                                 random_state=random_state)
             logpost, logpriors, loglikes, derived = self.logposterior(initial_point)
             if -np.inf not in loglikes:
                 break
@@ -1105,7 +1105,8 @@ class Model(HasLogger):
         for component in self.components:
             component.set_timing_on(on)
 
-    def measure_and_set_speeds(self, n=None, discard=1, max_tries=np.inf):
+    def measure_and_set_speeds(self, n=None, discard=1, max_tries=np.inf,
+                               random_state=None):
         """
         Measures the speeds of the different components (theories and likelihoods). To do
         that it evaluates the posterior at `n` points (default: 1 per MPI process, or 3 if
@@ -1123,8 +1124,9 @@ class Model(HasLogger):
             n = 1 if mpi.more_than_one_process() else 3
         n_done = 0
         while n_done < int(n) + int(discard):
-            point = self.prior.reference(
-                max_tries=max_tries, ignore_fixed=True, warn_if_no_ref=False)
+            point = self.prior.reference(random_state=random_state,
+                                         max_tries=max_tries, ignore_fixed=True,
+                                         warn_if_no_ref=False)
             if self.loglike(point, cached=False)[0] != -np.inf:
                 n_done += 1
         self.log.debug("Computed %d points to measure speeds.", n_done)

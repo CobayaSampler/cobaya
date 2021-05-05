@@ -220,13 +220,15 @@ class Theory(CobayaComponent):
         """
         self._states = deque(maxlen=n)
 
-    def check_cache_and_compute(self, dependency_params=None, want_derived=False,
-                                cached=True, **params_values_dict):
+    def check_cache_and_compute(self, params_values_dict,
+                                dependency_params=None, want_derived=False, cached=True):
         """
         Takes a dictionary of parameter values and computes the products needed by the
         likelihood, or uses the cached value if that exists for these parameters.
         If want_derived, the derived parameters are saved in the computed state
         (retrieved using current_derived).
+
+        params_values_dict can be safely modified and stored.
         """
 
         for p in list(self._input_params_extra):

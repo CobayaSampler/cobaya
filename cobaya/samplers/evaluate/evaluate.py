@@ -48,7 +48,7 @@ class evaluate(Sampler):
                 self.log.info("Evaluating sample #%d ------------------------------",
                               i + 1)
             self.log.info("Looking for a reference point with non-zero prior.")
-            reference_point = self.model.prior.reference()
+            reference_point = self.model.prior.reference(random_state=self._rng)
             reference_point = dict(
                 zip(self.model.parameterization.sampled_params(), reference_point))
             for p, v in (self.override or {}).items():
