@@ -2,12 +2,10 @@ from flaky import flaky
 import numpy as np
 import pytest
 import time
+from typing import Type
 
+from cobaya import mpi, run, Likelihood, InputDict
 from cobaya.tools import KL_norm
-from cobaya.likelihood import Likelihood
-from cobaya.run import run
-from cobaya.typing import InputDict, Type
-from cobaya import mpi
 from cobaya.yaml import yaml_load
 from .common_sampler import body_of_test, body_of_test_speeds
 

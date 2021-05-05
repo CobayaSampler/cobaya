@@ -12,7 +12,6 @@ import numpy as np
 import logging
 import inspect
 from itertools import chain
-from random import random
 from typing import Any
 from tempfile import gettempdir
 import re
@@ -96,7 +95,7 @@ class polychord(Sampler):
             self.file_root = self.output.prefix
             self.read_resume = self.output.is_resuming()
         else:
-            output_prefix = share_mpi(hex(int(random() * 16 ** 6))[2:]
+            output_prefix = share_mpi(hex(int(self._rng.random() * 16 ** 6))[2:]
                                       if is_main_process() else None)
             self.file_root = output_prefix
             # dummy output -- no resume!
@@ -113,7 +112,8 @@ class polychord(Sampler):
             blocks, oversampling_factors = self.model.check_blocking(self.blocking)
         else:
             if self.measure_speeds:
-                self.model.measure_and_set_speeds(n=self.measure_speeds)
+                self.model.measure_and_set_speeds(n=self.measure_speeds,
+                                                  random_state=self._rng)
             blocks, oversampling_factors = self.model.get_param_blocking_for_sampler(
                 oversample_power=self.oversample_power)
         self.mpi_info("Parameter blocks and their oversampling factors:")
@@ -215,7 +215,7 @@ class polychord(Sampler):
                 self.log.error("The callback function produced an error: %r", str(e))
             self.last_point_callback = len(self.dead)
 
-    def _run(self):
+    def run(self):
         """
         Prepares the posterior function and calls ``PolyChord``'s ``run`` function.
         """

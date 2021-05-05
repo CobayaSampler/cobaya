@@ -49,6 +49,7 @@ import logging
 import numpy as np
 from typing import Optional, Sequence, Mapping, Union, Any
 from itertools import chain
+from numpy.random import SeedSequence, default_rng
 
 # Local
 from cobaya.conventions import Extension
@@ -170,11 +171,10 @@ class Sampler(CobayaComponent):
 
     # What you *must* implement to create your own sampler:
 
-    seed: Optional[int]
+    seed: Any
     version: Optional[Union[dict, str]] = None
 
-    _old_rng_state: Any
-    _old_ext_rng_state: Any
+    _rng: np.random.Generator
 
     def initialize(self):
         """
@@ -190,7 +190,7 @@ class Sampler(CobayaComponent):
         """
         pass
 
-    def _run(self):
+    def run(self):
         """
         Runs the main part of the algorithm of the sampler.
         Normally, it looks somewhat like
@@ -209,6 +209,10 @@ class Sampler(CobayaComponent):
         (e.g. a collection of samples or a list of them).
         """
         return {}
+
+    @property
+    def random_state(self) -> np.random.Generator:
+        return self._rng
 
     @property
     def model(self) -> Model:
@@ -233,16 +237,6 @@ class Sampler(CobayaComponent):
         self._updated_info = deepcopy_where_possible(info_sampler)
         super().__init__(info_sampler, packages_path=packages_path,
                          name=name, initialize=False, standalone=False)
-        # Seed, if requested
-        if getattr(self, "seed", None) is not None:
-            if not isinstance(self.seed, int) or not (0 <= self.seed <= 2 ** 32 - 1):
-                raise LoggedError(
-                    self.log, "Seeds must be a *positive integer* < 2**32 - 1, "
-                              "but got %r with type %r",
-                    self.seed, type(self.seed))
-            # MPI-awareness: sum the rank to the seed
-            self.seed += mpi.rank()
-            self.mpi_warning("This run has been SEEDED with seed %d", self.seed)
         # Load checkpoint info, if resuming
         if self.output.is_resuming() and not isinstance(self, Minimizer):
             checkpoint_info = None
@@ -269,20 +263,10 @@ class Sampler(CobayaComponent):
                 pass
         self._set_rng()
         self.initialize()
-        self._release_rng()
         model.set_cache_size(self._get_requested_cache_size())
         # Add to the updated info some values which are
         # only available after initialisation
         self._updated_info["version"] = self.get_version()
-
-    def run(self):
-        """
-        Wrapper for `Sampler._run`, that takes care of seeding the
-        random number generator.
-        """
-        self._set_rng()
-        self._run()
-        self._release_rng()
 
     def info(self):
         """
@@ -327,28 +311,20 @@ class Sampler(CobayaComponent):
 
     def _set_rng(self):
         """
-        For seeded runs, sets the internal state of the RNG.#
+        Initialize random generator stream. For seeded runs, sets the state reproducibly.
         """
-        if getattr(self, "seed", None) is None:
-            return
-        # Store external state
-        self._old_ext_rng_state = np.random.get_state()
-        # Set our seed/state
-        if not hasattr(self, "_old_rng_state"):
-            np.random.seed(self.seed)
-        else:
-            np.random.set_state(self._old_rng_state)
 
-    def _release_rng(self):
-        """
-        For seeded runs, releases the state of the RNG, restoring the old one.
-        """
-        if getattr(self, "seed", None) is None:
-            return
-        # Store our state
-        self._old_rng_state = np.random.get_state()
-        # Restore external state
-        np.random.set_state(self._old_ext_rng_state)
+        if mpi.is_main_process():
+            seed = getattr(self, "seed", None)
+            if seed is not None:
+                self.mpi_warning("This run has been SEEDED with seed %d", seed)
+            ss = SeedSequence(seed)
+            child_seeds = ss.spawn(mpi.size())
+        else:
+            child_seeds = None
+        ss = mpi.scatter(child_seeds)
+        self._entropy = ss.entropy  # for debugging store for reproducibility
+        self._rng = default_rng(ss)
 
     # TO BE DEPRECATED IN NEXT SUBVERSION
     def __getitem__(self, k):
