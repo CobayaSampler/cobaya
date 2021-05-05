@@ -228,6 +228,7 @@ class Theory(CobayaComponent):
         If want_derived, the derived parameters are saved in the computed state
         (retrieved using current_derived).
         """
+
         for p in list(self._input_params_extra):
             try:
                 params_values_dict[p] = self.provider.get_param(p)

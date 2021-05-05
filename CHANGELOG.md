@@ -7,13 +7,15 @@
   filename
 - Support resuming of a completed run with changed convergence parameters
 - run has optional arguments to set debug, force, output, etc settings
-- More input and output typing  for easier static error detection
+- More input and output typing  for easier static error detection; added cobaya.typing for static checking of input dictionaries using TypedDict when available
+- Refactoring of cobaya.conventions to remove most string literals and rename non-private constants starting with _
 - Uses GetDist 1.2.1+ which fixes sign loading the logposterior value from Cobaya
   collection
 - Optimized calculation of Gaussian 1D priors
 - run settings saved to ".updated.dill_pickle" pickle file in cases where callable/class
   content cannot be preserved in yaml (install "dill")
 - File locks to avoid overwriting results accidentally from multiple non-MPI processes
+- Commonly-used classes can now be loaded simply using "from cobaya import Likelihood, InputDict, Theory, ..." etc., or call e.g. cobaya.run(..) 
 - run and post return NamedTuples (same content as before)
 - Fixed handling of "type" in external likelihood functions
 - bib_script and doc_script can now be called programmatically
@@ -25,6 +27,7 @@
 - Fixed bug with drag: True that gave wrong results
 - MPI reworked, now avoids ending and error deadlocks, and synchronizing exceptions
   (raising OtherProcessError on non-excepting processes)
+- Random number generation now using numpy 1.17 generators and MPI seeds generated using SeedSequence
 - Overhead reduced by at least 40%, thanks to caching in Collection
 
 ### Post-processing
@@ -42,6 +45,7 @@
 ### Minimize
 
 - `PyBOBYQA` updated to 1.2, and quieter by default.
+- 'rhobeg' parameter larger to avoid odd hangs
 
 ### Tests
 

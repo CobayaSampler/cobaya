@@ -257,6 +257,10 @@ class Parameterization(HasLogger):
         args = self._input_args[p]
         return func(*[params_values.get(arg) for arg in args])
 
+    @property
+    def input_dependencies(self):
+        return self._input_dependencies
+
     def to_input(self, sampled_params_values, copied=True) -> ParamValuesDict:
         # Gets all current sampled and input derived parameters as a dictionary,
         # including dropped parameters.

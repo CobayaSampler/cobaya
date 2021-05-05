@@ -648,7 +648,7 @@ class Model(HasLogger):
                     if not is_dummy_component(component) and \
                             requirement.name not in component.input_params and \
                             requirement.options is None:
-                        component._input_params_extra.add(requirement.name)
+                        component.input_params_extra.add(requirement.name)
             # tell each component what it must provide, and collect the
             # conditional requirements for those requests
             there_are_more_requirements = False
@@ -875,7 +875,7 @@ class Model(HasLogger):
         # *conditional* requirements of a component (and if not raise error)
         self._unassigned_input = set(
             p for p, assigned in input_assign.items() if not assigned).difference(
-            chain(*(self.parameterization._input_dependencies.get(p, []) for p, assigned
+            chain(*(self.parameterization.input_dependencies.get(p, []) for p, assigned
                     in input_assign.items() if assigned)))
 
         # Remove aggregated chi2 that may have been picked up by an agnostic component
