@@ -6,7 +6,6 @@ inheritance order.
 import os
 import numpy as np
 from itertools import chain
-from random import shuffle
 
 from cobaya.likelihoods.gaussian_mixture import random_cov
 from cobaya.typing import InputDict
@@ -24,14 +23,17 @@ def test_mcmc_initial_covmat_yaml(tmpdir):
     body_of_test(dim, tmpdir=tmpdir)
 
 
-def body_of_test(dim, tmpdir=None):
+def body_of_test(dim, tmpdir=None, random_state=None):
     mindim = 4
     assert dim > mindim, "Needs dimension>%d for the test." % mindim
-    i_s = list(range(dim))
-    shuffle(i_s)
-    initial_random_covmat = random_cov(dim * [[0, 1]])
-    tmpdir, i_s, initial_random_covmat = mpi.share(
-        (tmpdir, i_s, initial_random_covmat))
+    if mpi.is_main_process():
+        random_state = np.random.default_rng(random_state)
+        i_s = list(range(dim))
+        random_state.shuffle(i_s)
+        initial_random_covmat = random_cov(dim * [[0, 1]], random_state=random_state)
+        mpi.share((i_s, initial_random_covmat))
+    else:
+        i_s, initial_random_covmat = mpi.share()
 
     n_altered = int(dim / 4)
     i_proposal = i_s[:n_altered]
@@ -48,7 +50,7 @@ def body_of_test(dim, tmpdir=None):
     prefix = "a_"
     if mpi.is_main_process():
         input_order = list(range(dim))
-        shuffle(input_order)
+        random_state.shuffle(input_order)
     else:
         input_order = None
     input_order = mpi.share(input_order)

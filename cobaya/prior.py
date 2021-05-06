@@ -628,7 +628,8 @@ class Prior(HasLogger):
         while tries < max_tries:
             tries += 1
             if any(where_ignore_ref):
-                prior_sample = self.sample(ignore_external=True)[0]
+                prior_sample = self.sample(ignore_external=True,
+                                           random_state=random_state)[0]
                 ref_sample[where_ignore_ref] = prior_sample[where_ignore_ref]
             for i, ref_pdf in enumerate(self.ref_pdf):
                 if not where_ignore_ref[i]:

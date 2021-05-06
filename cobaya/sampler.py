@@ -313,11 +313,11 @@ class Sampler(CobayaComponent):
         """
         Initialize random generator stream. For seeded runs, sets the state reproducibly.
         """
-
+        # TODO: checkpointing save of self._rng.bit_generator.state per process
         if mpi.is_main_process():
             seed = getattr(self, "seed", None)
             if seed is not None:
-                self.mpi_warning("This run has been SEEDED with seed %d", seed)
+                self.mpi_warning("This run has been SEEDED with seed %s", seed)
             ss = SeedSequence(seed)
             child_seeds = ss.spawn(mpi.size())
         else:
@@ -445,7 +445,8 @@ class CovmatSampler(Sampler):
             for p in list(params_infos_covmat):
                 if p not in (auto_params or []):
                     params_infos_covmat.pop(p, None)
-            auto_covmat = self.model.get_auto_covmat(params_infos_covmat)
+            auto_covmat = self.model.get_auto_covmat(params_infos_covmat,
+                                                     random_state=self._rng)
             if auto_covmat:
                 self.covmat = os.path.join(auto_covmat["folder"], auto_covmat["name"])
                 self.log.info("Covariance matrix selected automatically: %s", self.covmat)

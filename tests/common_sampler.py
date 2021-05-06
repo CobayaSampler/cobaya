@@ -1,7 +1,6 @@
 """General test for samplers. Checks convergence, cluster detection, evidence."""
 
 import numpy as np
-from random import shuffle, choice
 from itertools import chain
 import os
 from scipy.stats import multivariate_normal
@@ -36,11 +35,12 @@ fixed_info: InputDict = {'likelihood': {
                '_2': {'latex': '\\beta_{2}'}}}
 
 
-def generate_random_info(n_modes, ranges):
+def generate_random_info(n_modes, ranges, random_state):
     while True:
-        inf = info_random_gaussian_mixture(
-            ranges=ranges, n_modes=n_modes, input_params_prefix="a_",
-            O_std_min=O_std_min, O_std_max=O_std_max, derived=True)
+        inf = info_random_gaussian_mixture(ranges=ranges,
+                                           n_modes=n_modes, input_params_prefix="a_",
+                                           O_std_min=O_std_min, O_std_max=O_std_max,
+                                           derived=True, random_state=random_state)
         if n_modes == 1:
             break
         means = inf["likelihood"]["gaussian_mixture"]["means"]
@@ -53,13 +53,14 @@ def generate_random_info(n_modes, ranges):
 
 @mpi.sync_errors
 def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
-                 packages_path=None, skip_not_installed=False, fixed=False):
+                 packages_path=None, skip_not_installed=False, fixed=False,
+                 random_state=None):
     # Info of likelihood and prior
     ranges = np.array([[-1, 1] for _ in range(dimension)])
     if fixed:
         info = fixed_info.copy()
     else:
-        info = generate_random_info(n_modes, ranges)
+        info = generate_random_info(n_modes, ranges, random_state=random_state)
 
     if mpi.is_main_process():
         print("Original mean of the gaussian mode:")
@@ -68,6 +69,8 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
         print(info["likelihood"]["gaussian_mixture"]["covs"])
     info["sampler"] = info_sampler
     sampler_name = list(info_sampler)[0]
+    if random_state is not None:
+        info_sampler[sampler_name]["seed"] = random_state.integers(0, 2 ** 31)
     if sampler_name == "mcmc":
         if "covmat" in info_sampler["mcmc"]:
             info["sampler"]["mcmc"]["covmat_params"] = (
@@ -151,7 +154,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
 
 @mpi.sync_errors
 def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False,
-                        packages_path=None, skip_not_installed=False):
+                        packages_path=None, skip_not_installed=False, random_state=None):
     # #dimensions and speed ratio mutually prime (e.g. 2,3,5)
     dim0, dim1 = 5, 2
     speed0, speed1 = 1, 10
@@ -160,14 +163,16 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False,
     params0, params1 = (lambda x: (x[:dim0], x[dim0:]))(
         [prefix + str(d) for d in range(dim0 + dim1)])
     derived0, derived1 = "sum_like0", "sum_like1"
+    random_state = np.random.default_rng(random_state)
     mean0, cov0 = [info_random_gaussian_mixture(
         ranges=[ranges[i] for i in range(dim0)], n_modes=1, input_params_prefix=prefix,
-        O_std_min=0.01, O_std_max=0.2, derived=True)
+        O_std_min=0.01, O_std_max=0.2, derived=True, random_state=random_state)
                    ["likelihood"]["gaussian_mixture"][p][0] for p in
                    ["means", "covs"]]
     mean1, cov1 = [info_random_gaussian_mixture(
         ranges=[ranges[i] for i in range(dim0, dim0 + dim1)], n_modes=1,
-        input_params_prefix=prefix, O_std_min=0.01, O_std_max=0.2, derived=True)
+        input_params_prefix=prefix, O_std_min=0.01, O_std_max=0.2, derived=True,
+        random_state=random_state)
                    ["likelihood"]["gaussian_mixture"][p][0] for p in
                    ["means", "covs"]]
     n_evals = [0, 0]
@@ -186,7 +191,7 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False,
 
     # Rearrange parameter in arbitrary order
     perm = list(range(dim0 + dim1))
-    shuffle(perm)
+    random_state.shuffle(perm)
     # Create info
     info = {"params": dict(
         {prefix + "%d" % i: {"prior": dict(zip(["min", "max"], ranges[i]))}
@@ -197,6 +202,7 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False,
                                  "input_params": params1, "output_params": derived1}},
         "sampler": info_sampler}
     sampler_name = list(info_sampler)[0]
+    info_sampler[sampler_name]["seed"] = random_state.integers(0, 2 ** 31)
     if manual_blocking:
         over0, over1 = speed0, speed1
         info["sampler"][sampler_name]["blocking"] = [
@@ -257,7 +263,7 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False,
     # Finally, test some points of the chain to reproduce the correct likes and derived
     # These are not AssertionError's to override the flakiness of the test
     for _ in range(10):
-        i = choice(list(range(len(products["sample"]))))
+        i = random_state.choice(list(range(len(products["sample"]))))
         chi2_0_chain = -0.5 * products["sample"]["chi2__like0"][i]
         chi2_0_good = like0(
             **{p: products["sample"][p][i] for p in params0})[0]

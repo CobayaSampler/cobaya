@@ -137,7 +137,7 @@ class gaussian_mixture(Likelihood):
 
 # Scripts to generate random means and covariances #######################################
 
-def random_mean(ranges, n_modes=1, mpi_warn=True):
+def random_mean(ranges, n_modes=1, mpi_warn=True, random_state=None):
     """
     Returns a uniformly sampled point (as an array) within a list of bounds ``ranges``.
 
@@ -149,15 +149,16 @@ def random_mean(ranges, n_modes=1, mpi_warn=True):
     if not is_main_process() and mpi_warn:
         print("WARNING! "
               "Using with MPI: different process will produce different random results.")
-    mean = np.array([uniform.rvs(loc=r[0], scale=r[1] - r[0], size=n_modes)
-                     for r in ranges])
+    mean = np.array([uniform.rvs(loc=r[0], scale=r[1] - r[0], size=n_modes,
+                                 random_state=random_state) for r in ranges])
     mean = mean.T
     if n_modes == 1:
         mean = mean[0]
     return mean
 
 
-def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1, mpi_warn=True):
+def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1,
+               mpi_warn=True, random_state=None):
     """
     Returns a random covariance matrix, with standard deviations sampled log-uniformly
     from the length of the parameter ranges times ``O_std_min`` and ``O_std_max``, and
@@ -176,10 +177,11 @@ def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1, mpi_warn=True):
     cov = []
     for _ in range(n_modes):
         stds = scales * 10 ** (uniform.rvs(size=dim, loc=np.log10(O_std_min),
-                                           scale=np.log10(O_std_max / O_std_min)))
+                                           scale=np.log10(O_std_max / O_std_min),
+                                           random_state=random_state))
         this_cov = np.diag(stds).dot(
-            (random_correlation.rvs(dim * stds / sum(stds)) if dim > 1 else np.eye(1))
-                .dot(np.diag(stds)))
+            (random_correlation.rvs(dim * stds / sum(stds), random_state=random_state)
+             if dim > 1 else np.eye(1)).dot(np.diag(stds)))
         # Symmetrize (numerical noise is usually introduced in the last step)
         cov += [(this_cov + this_cov.T) / 2]
     if n_modes == 1:
@@ -187,9 +189,10 @@ def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1, mpi_warn=True):
     return cov
 
 
-def info_random_gaussian_mixture(
-        ranges, n_modes=1, input_params_prefix="", output_params_prefix="",
-        O_std_min=1e-2, O_std_max=1, derived=False, mpi_aware=True):
+def info_random_gaussian_mixture(ranges, n_modes=1, input_params_prefix="",
+                                 output_params_prefix="", O_std_min=1e-2, O_std_max=1,
+                                 derived=False, mpi_aware=True,
+                                 random_state=None):
     """
     Wrapper around ``random_mean`` and ``random_cov`` to generate the likelihood and
     parameter info for a random Gaussian.
@@ -198,8 +201,8 @@ def info_random_gaussian_mixture(
     the rest of the MPI processes.
     """
     if is_main_process() or not mpi_aware:
-        cov = random_cov(ranges, n_modes=n_modes,
-                         O_std_min=O_std_min, O_std_max=O_std_max, mpi_warn=False)
+        cov = random_cov(ranges, n_modes=n_modes, O_std_min=O_std_min,
+                         O_std_max=O_std_max, mpi_warn=False, random_state=random_state)
         if n_modes == 1:
             cov = [cov]
         # Make sure it stays away from the edges
@@ -212,7 +215,8 @@ def info_random_gaussian_mixture(
             # If this implies min>max, take the centre
             ranges_mean = [
                 (r if r[0] <= r[1] else 2 * [(r[0] + r[1]) / 2]) for r in ranges_mean]
-            mean[i] = random_mean(ranges_mean, n_modes=1, mpi_warn=False)
+            mean[i] = random_mean(ranges_mean, n_modes=1, mpi_warn=False,
+                                  random_state=random_state)
     else:
         mean, cov = None, None
     if mpi_aware:

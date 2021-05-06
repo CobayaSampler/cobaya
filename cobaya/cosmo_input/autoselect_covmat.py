@@ -1,7 +1,6 @@
 # Global
 import os
 import pickle
-from random import choice
 from itertools import chain
 import numpy as np
 import re
@@ -32,7 +31,8 @@ _loaded_covmats_database = None
 def get_covmat_database(packages_path, cached=True) -> List[dict]:
     # Get folders with corresponding components installed
     installed_folders = [folder for folder in covmat_folders if
-                         os.path.exists(folder.format(**{"packages_path": packages_path}))]
+                         os.path.exists(
+                             folder.format(**{"packages_path": packages_path}))]
     covmats_database_fullpath = os.path.join(get_cache_path(), _covmats_file)
     # Check if there is a usable cached one
     if cached:
@@ -73,7 +73,7 @@ def get_covmat_database(packages_path, cached=True) -> List[dict]:
     return covmat_database
 
 
-def get_best_covmat(info, packages_path=None, cached=True):
+def get_best_covmat(info, packages_path=None, cached=True, random_state=None):
     """
     Chooses optimal covmat from a database, based on common parameters and likelihoods.
 
@@ -88,8 +88,8 @@ def get_best_covmat(info, packages_path=None, cached=True):
         if not is_sampled_param(pinfo):
             updated_info["params"].pop(p)
     info_sampled_params = updated_info["params"]
-    covmat_data = _get_best_covmat(packages_path, updated_info["params"],
-                                   updated_info["likelihood"], cached=cached)
+    covmat_data = get_best_covmat_ext(packages_path, updated_info["params"],
+                                      updated_info["likelihood"], random_state, cached)
     covmat = np.atleast_2d(np.loadtxt(os.path.join(
         covmat_data["folder"].format(packages_path=packages_path), covmat_data["name"])))
     params_in_covmat = get_translated_params(info_sampled_params, covmat_data["params"])
@@ -99,8 +99,8 @@ def get_best_covmat(info, packages_path=None, cached=True):
     return covmat_data
 
 
-def _get_best_covmat(packages_path, params_info, likelihoods_info,
-                     cached=True) -> Optional[dict]:
+def get_best_covmat_ext(packages_path, params_info, likelihoods_info, random_state,
+                        cached=True) -> Optional[dict]:
     """
     Actual covmat finder used by `get_best_covmat`. Call directly for more control on
     the parameters used.
@@ -156,7 +156,8 @@ def _get_best_covmat(packages_path, params_info, likelihoods_info,
     if len(best_p_l_sp_sn) > 1:
         log.warning("WARNING: >1 possible best covmats: %r",
                     [b["name"] for b in best_p_l_sp_sn])
-    return best_p_l_sp_sn[choice(range(len(best_p_l_sp_sn)))].copy()
+    random_state = np.random.default_rng(random_state)
+    return best_p_l_sp_sn[random_state.choice(range(len(best_p_l_sp_sn)))].copy()
 
 
 def get_best_score(covmats, score_func) -> List[dict]:

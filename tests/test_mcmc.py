@@ -51,7 +51,7 @@ def test_mcmc(tmpdir, packages_path=None):
             # Callback to check KL divergence -- disabled in the automatic test
             "callback_function": check_gaussian, "callback_every": 100})
     body_of_test(dimension=dimension, fixed=True, info_sampler=info_sampler,
-                 tmpdir=tmpdir)
+                 tmpdir=tmpdir, random_state=np.random.default_rng(1))
 
 
 yaml_drag = r"""
@@ -74,6 +74,7 @@ sampler:
    measure_speeds: False
    Rminus1_stop: 0.001   
    Rminus1_cl_stop: 0.04
+   seed: 1
 """
 
 

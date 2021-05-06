@@ -1082,7 +1082,7 @@ class Model(HasLogger):
         for theory in self.components:
             theory.set_cache_size(n_states)
 
-    def get_auto_covmat(self, params_info=None):
+    def get_auto_covmat(self, params_info=None, random_state=None):
         """
         Tries to get an automatic covariance matrix for the current model and data.
 
@@ -1095,7 +1095,7 @@ class Model(HasLogger):
             for theory in self.theory.values():
                 if hasattr(theory, 'get_auto_covmat'):
                     return theory.get_auto_covmat(
-                        params_info, self.info()["likelihood"])
+                        params_info, self.info()["likelihood"], random_state=random_state)
         except Exception as e:
             self.log.warning("Something went wrong when looking for a covmat: %r", str(e))
             return None
