@@ -5,6 +5,7 @@ import pytest
 import os
 
 from cobaya import mpi, run, InputDict, Likelihood
+from cobaya.samplers.minimize import valid_methods
 
 pytestmark = pytest.mark.mpi
 
@@ -17,36 +18,42 @@ _inv_cov = np.linalg.inv(cov)
 
 class NoisyCovLike(Likelihood):
     params = {'a': [0, 1], 'b': [0, 1], 'c': [0, 1]}
+    noise = 0
 
     def logp(self, **params_values):
         x = np.array([params_values['a'], params_values['b'], params_values['c']]) - mean
-        return -_inv_cov.dot(x).dot(x) / 2 + np.random.random_sample() * 0.005
+        return -_inv_cov.dot(x).dot(x) / 2 + self.noise * np.random.random_sample()
 
 
 @mpi.sync_errors
 def test_minimize_gaussian(tmpdir):
-    # parameters
-    # dimension = 3
-    # n_modes = 1
-    # Info of likelihood and prior
-    # ranges = np.array([[0, 1] for _ in range(dimension)])
-    # info = info_random_gaussian_mixture(ranges=ranges, n_modes=n_modes,
-    #      input_params_prefix = "a_", derived = True)
-
     maxloglik = 0
-    info: InputDict = {'likelihood': {'like': NoisyCovLike},
-                       "sampler": {"minimize": {"ignore_prior": True}}}
-    products = run(info).sampler.products()
-    # Done! --> Tests
-    if mpi.is_main_process():
+    for method in reversed(valid_methods):
+        NoisyCovLike.noise = 0.005 if method == 'bobyqa' else 0
+        info: InputDict = {'likelihood': {'like': NoisyCovLike},
+                           "sampler": {"minimize": {"ignore_prior": True,
+                                                    "method": method}}}
+        products = run(info).sampler.products()
         error = abs(maxloglik - -products["minimum"]["minuslogpost"])
         assert error < 0.01
 
-    info['output'] = os.path.join(tmpdir, 'testmin')
-    products = run(info).sampler.products()
-    if mpi.is_main_process():
-        from getdist.types import BestFit
-        res = BestFit(info['output'] + '.bestfit').getParamDict()
-        assert np.isclose(res["loglike"], products["minimum"]["minuslogpost"])
-        for p, v in list(res.items())[:-2]:
-            assert np.isclose(products["minimum"][p], v)
+        info['output'] = os.path.join(tmpdir, 'testmin')
+        products = run(info, force=True).sampler.products()
+        if mpi.is_main_process():
+            from getdist.types import BestFit
+            res = BestFit(info['output'] + '.bestfit').getParamDict()
+            assert np.isclose(res["loglike"], products["minimum"]["minuslogpost"])
+            for p, v in list(res.items())[:-2]:
+                assert np.isclose(products["minimum"][p], v)
+
+
+@mpi.sync_errors
+def test_run_minimize(tmpdir):
+    tmpdir = 'z:\\'
+    info: InputDict = {'likelihood': {'like': NoisyCovLike},
+                       "sampler": {"mcmc": {"Rminus1_stop": 0.5}},
+                       "output": os.path.join(tmpdir, 'testchain')}
+    run(info, force=True)
+    min_info: InputDict = dict(info, sampler={'minimize': None})
+    output_info, sampler = run(min_info, force=True)
+    assert (abs(sampler.products()["minimum"]["b"] - mean[1]) < 0.01)

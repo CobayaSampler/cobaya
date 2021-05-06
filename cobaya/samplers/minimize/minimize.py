@@ -102,6 +102,7 @@ from cobaya import mpi
 
 # Handling scipy vs BOBYQA
 evals_attr = {"scipy": "fun", "bobyqa": "f"}
+valid_methods = tuple(evals_attr)
 
 # Conventions conventions
 getdist_ext_ignore_prior = {True: ".bestfit", False: ".minimum"}
@@ -339,9 +340,8 @@ class minimize(Minimizer, CovmatSampler):
                           "likelihood is stochastic or large numerical error? "
                           "Recomputed min: %g (was %g) at %r",
                 recomputed_logp_min, logp_min, x_min)
-        self.minimum = OnePoint(
-            self.model, self.output, name="",
-            extension=get_collection_extension(self.ignore_prior))
+        self.minimum = OnePoint(self.model, self.output, name="",
+                                extension=get_collection_extension(self.ignore_prior))
         self.minimum.add(x_min, derived=recomputed_post_min.derived,
                          logpost=recomputed_post_min.logpost,
                          logpriors=recomputed_post_min.logpriors,

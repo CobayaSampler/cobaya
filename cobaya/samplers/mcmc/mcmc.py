@@ -687,7 +687,7 @@ class mcmc(CovmatSampler):
         # in units of the mean standard deviation of the chains
         if converged_means:
             if more_than_one_process():
-                mcsamples = self.collection._sampled_to_getdist_mcsamples(first=use_first)
+                mcsamples = self.collection.sampled_to_getdist_mcsamples(first=use_first)
                 try:
                     bound = np.array([[
                         mcsamples.confidence(i, limfrac=self.Rminus1_cl_level / 2.,
@@ -702,7 +702,7 @@ class mcmc(CovmatSampler):
             else:
                 try:
                     mcsamples_list = [
-                        self.collection._sampled_to_getdist_mcsamples(
+                        self.collection.sampled_to_getdist_mcsamples(
                             first=i * cut, last=(i + 1) * cut - 1)
                         for i in range(1, m)]
                 except:

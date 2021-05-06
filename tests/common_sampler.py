@@ -229,10 +229,12 @@ def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False,
         assert False, "Unknown sampler for this test."
     updated_info, sampler = install_test_wrapper(skip_not_installed, run, info)
     products = sampler.products()
+
     # TEST: same (steps block i / speed i / dim i) (steps block 1 = evals[1] - evals[0])
-    test_func = lambda n_evals, dim0, speed0, dim1, speed1: (
-            abs((n_evals[1] - n_evals[0]) / speed1 / dim1 / (
-                    n_evals[0] / speed0 / dim0)) - 1)
+    def test_func(_n_evals, _dim0, _speed0, _dim1, _speed1):
+        return (abs((_n_evals[1] - _n_evals[0]) / _speed1 / _dim1 /
+                    (_n_evals[0] / _speed0 / _dim0)) - 1)
+
     # Tolerance accounting for random starts of the proposers (PolyChord and MCMC) and for
     # steps outside prior bounds, where likelihoods are not evaluated (MCMC only)
     tolerance = 0.1

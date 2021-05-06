@@ -470,7 +470,7 @@ class Collection(BaseCollection):
         """Maximum-a-posteriori (MAP) sample. Returns a copy."""
         return self.data.loc[self.data[OutPar.minuslogpost].idxmin()].copy()
 
-    def _sampled_to_getdist_mcsamples(self, first=None, last=None):
+    def sampled_to_getdist_mcsamples(self, first=None, last=None):
         """
         Basic interface with getdist -- internal use only!
         (For analysis and plotting use `getdist.mcsamples.MCSamplesFromCobaya

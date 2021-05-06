@@ -26,9 +26,10 @@ def test_polychord_resume(packages_path, skip_not_installed, tmpdir):
     """
     nlive = 10
     max_ndead = 2 * nlive
+    dead_points = []
 
     def callback(sampler):
-        global dead_points
+        nonlocal dead_points
         dead_points = sampler.dead[["a", "b"]].values.copy()
 
     info = {

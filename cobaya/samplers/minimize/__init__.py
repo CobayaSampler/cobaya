@@ -1,1 +1,1 @@
-from .minimize import minimize
+from .minimize import minimize, valid_methods

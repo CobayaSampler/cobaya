@@ -220,15 +220,15 @@ def info_random_gaussian_mixture(
     dimension = len(ranges)
     info: InputDict = {"likelihood": {"gaussian_mixture": {
         "means": mean, "covs": cov, "input_params_prefix": input_params_prefix,
-        "output_params_prefix": output_params_prefix, "derived": derived}}}
-    info["params"] = dict(
-        # sampled
-        [(input_params_prefix + "_%d" % i,
-          {"prior": {"min": ranges[i][0], "max": ranges[i][1]},
-           "latex": r"\alpha_{%i}" % i})
-         for i in range(dimension)] +
-        # derived
-        ([[output_params_prefix + "_%d" % i,
-           {"latex": r"\beta_{%i}" % i}]
-          for i in range(dimension * n_modes)] if derived else []))
+        "output_params_prefix": output_params_prefix, "derived": derived}},
+        "params": dict(
+            # sampled
+            [(input_params_prefix + "_%d" % i,
+              {"prior": {"min": ranges[i][0], "max": ranges[i][1]},
+               "latex": r"\alpha_{%i}" % i})
+             for i in range(dimension)] +
+            # derived
+            ([[output_params_prefix + "_%d" % i,
+               {"latex": r"\beta_{%i}" % i}]
+              for i in range(dimension * n_modes)] if derived else []))}
     return info

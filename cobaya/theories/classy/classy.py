@@ -141,7 +141,7 @@ import logging
 from typing import NamedTuple, Sequence, Union, Optional
 
 # Local
-from cobaya.theories._cosmo import BoltzmannBase
+from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, pip_install, NotInstalledError, \
     check_gcc_version

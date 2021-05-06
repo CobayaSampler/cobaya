@@ -177,7 +177,7 @@ from typing import NamedTuple, Any
 import numpy as np
 from itertools import chain
 # Local
-from cobaya.theories._cosmo import BoltzmannBase
+from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, check_gcc_version, NotInstalledError
 from cobaya.tools import getfullargspec, get_class_methods, get_properties, load_module, \
