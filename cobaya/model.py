@@ -237,9 +237,8 @@ class Model(HasLogger):
             depend_list = [input_params[p] for p in param_dep]
             params = {p: input_params[p] for p in component.input_params}
             compute_success = component.check_cache_and_compute(
-                want_derived=return_derived,
-                dependency_params=depend_list,
-                cached=cached, **params)
+                params, want_derived=return_derived,
+                dependency_params=depend_list, cached=cached)
             if not compute_success:
                 loglikes[:] = -np.inf
                 self.log.debug("Calculation failed, skipping rest of calculations ")
@@ -446,7 +445,7 @@ class Model(HasLogger):
         return self.logposterior(params_values, make_finite=make_finite,
                                  return_derived=False, cached=cached).logpost
 
-    def get_valid_point(self, max_tries, ignore_fixed_ref=False):
+    def get_valid_point(self, max_tries, ignore_fixed_ref=False, random_state=None):
         """
         Finds a point with finite posterior, sampled from from the reference pdf.
 
@@ -461,9 +460,10 @@ class Model(HasLogger):
         for loop in range(max(1, max_tries // self.prior.d())):
             initial_point = self.prior.reference(max_tries=max_tries,
                                                  ignore_fixed=ignore_fixed_ref,
-                                                 warn_if_no_ref=not loop)
+                                                 warn_if_no_ref=not loop,
+                                                 random_state=random_state)
             logpost, logpriors, loglikes, derived = self.logposterior(initial_point)
-            if -np.inf not in loglikes:
+            if logpost != -np.inf:
                 break
         else:
             if self.prior.reference_is_pointlike():
@@ -471,7 +471,7 @@ class Model(HasLogger):
                                             "likelihood. Set 'ref' to a different point "
                                             "or a pdf.")
             raise LoggedError(self.log, "Could not find random point giving finite "
-                                        "likelihood after %g tries", max_tries)
+                                        "posterior after %g tries", max_tries)
         return initial_point, logpost, logpriors, loglikes, derived
 
     def dump_timing(self):
@@ -648,7 +648,7 @@ class Model(HasLogger):
                     if not is_dummy_component(component) and \
                             requirement.name not in component.input_params and \
                             requirement.options is None:
-                        component._input_params_extra.add(requirement.name)
+                        component.input_params_extra.add(requirement.name)
             # tell each component what it must provide, and collect the
             # conditional requirements for those requests
             there_are_more_requirements = False
@@ -875,7 +875,7 @@ class Model(HasLogger):
         # *conditional* requirements of a component (and if not raise error)
         self._unassigned_input = set(
             p for p, assigned in input_assign.items() if not assigned).difference(
-            chain(*(self.parameterization._input_dependencies.get(p, []) for p, assigned
+            chain(*(self.parameterization.input_dependencies.get(p, []) for p, assigned
                     in input_assign.items() if assigned)))
 
         # Remove aggregated chi2 that may have been picked up by an agnostic component
@@ -1082,7 +1082,7 @@ class Model(HasLogger):
         for theory in self.components:
             theory.set_cache_size(n_states)
 
-    def get_auto_covmat(self, params_info=None):
+    def get_auto_covmat(self, params_info=None, random_state=None):
         """
         Tries to get an automatic covariance matrix for the current model and data.
 
@@ -1095,7 +1095,7 @@ class Model(HasLogger):
             for theory in self.theory.values():
                 if hasattr(theory, 'get_auto_covmat'):
                     return theory.get_auto_covmat(
-                        params_info, self.info()["likelihood"])
+                        params_info, self.info()["likelihood"], random_state=random_state)
         except Exception as e:
             self.log.warning("Something went wrong when looking for a covmat: %r", str(e))
             return None
@@ -1105,7 +1105,8 @@ class Model(HasLogger):
         for component in self.components:
             component.set_timing_on(on)
 
-    def measure_and_set_speeds(self, n=None, discard=1, max_tries=np.inf):
+    def measure_and_set_speeds(self, n=None, discard=1, max_tries=np.inf,
+                               random_state=None):
         """
         Measures the speeds of the different components (theories and likelihoods). To do
         that it evaluates the posterior at `n` points (default: 1 per MPI process, or 3 if
@@ -1123,8 +1124,9 @@ class Model(HasLogger):
             n = 1 if mpi.more_than_one_process() else 3
         n_done = 0
         while n_done < int(n) + int(discard):
-            point = self.prior.reference(
-                max_tries=max_tries, ignore_fixed=True, warn_if_no_ref=False)
+            point = self.prior.reference(random_state=random_state,
+                                         max_tries=max_tries, ignore_fixed=True,
+                                         warn_if_no_ref=False)
             if self.loglike(point, cached=False)[0] != -np.inf:
                 n_done += 1
         self.log.debug("Computed %d points to measure speeds.", n_done)

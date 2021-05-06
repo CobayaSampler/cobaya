@@ -50,6 +50,20 @@ class B(Theory):
         return self.current_state['Bout']
 
 
+class Balt(Theory):
+    params = {'Bpar': None, 'Aderived': None}
+
+    def get_requirements(self):
+        return {'Aresult'}
+
+    def calculate(self, state, want_derived=True, **params_values_dict):
+        state['Bout'] = (params_values_dict['Aderived'] * params_values_dict['Bpar']
+                         , self.provider.get_Aresult())
+
+    def get_Bout(self):
+        return self.current_state['Bout']
+
+
 class B2(Theory):
 
     def get_requirements(self):
@@ -114,6 +128,7 @@ def test_dependencies(packages_path):
     theories = [('A', A), ('B', B)]
     _test_loglike(theories)
     _test_loglike([('A', A), ('B', B2)])
+    _test_loglike([('A', A), ('B', Balt)])
 
     info['params']['Bderived'] = {'derived': True}
     info['theory'] = dict(theories)

@@ -12,7 +12,6 @@ import numpy as np
 import logging
 import inspect
 from itertools import chain
-from random import random
 from typing import Any
 from tempfile import gettempdir
 import re
@@ -41,6 +40,7 @@ class polychord(Sampler):
     _clusters_dir = "clusters"
     _at_resume_prefer_old = Sampler._at_resume_prefer_old + ["blocking"]
     _at_resume_prefer_new = Sampler._at_resume_prefer_new + ["callback_function"]
+    pypolychord: Any
 
     # variables from yaml
     do_clustering: bool
@@ -58,14 +58,13 @@ class polychord(Sampler):
         allow_global = not self.path
         if not self.path and self.packages_path:
             self.path = self.get_path(self.packages_path)
-        self.pc = self.is_installed(path=self.path, allow_global=allow_global)
+        self.pc: Any = self.is_installed(path=self.path, allow_global=allow_global)
         if not self.pc:
             raise NotInstalledError(
                 self.log, "Could not find PolyChord. Check error message above. "
                           "To install it, run 'cobaya-install polychord --%s "
                           "[packages_path]'", packages_path_arg)
         # Prepare arguments and settings
-        from pypolychord.settings import PolyChordSettings
         self.n_sampled = len(self.model.parameterization.sampled_params())
         self.n_derived = len(self.model.parameterization.derived_params())
         self.n_priors = len(self.model.prior)
@@ -96,7 +95,7 @@ class polychord(Sampler):
             self.file_root = self.output.prefix
             self.read_resume = self.output.is_resuming()
         else:
-            output_prefix = share_mpi(hex(int(random() * 16 ** 6))[2:]
+            output_prefix = share_mpi(hex(int(self._rng.random() * 16 ** 6))[2:]
                                       if is_main_process() else None)
             self.file_root = output_prefix
             # dummy output -- no resume!
@@ -113,7 +112,8 @@ class polychord(Sampler):
             blocks, oversampling_factors = self.model.check_blocking(self.blocking)
         else:
             if self.measure_speeds:
-                self.model.measure_and_set_speeds(n=self.measure_speeds)
+                self.model.measure_and_set_speeds(n=self.measure_speeds,
+                                                  random_state=self._rng)
             blocks, oversampling_factors = self.model.get_param_blocking_for_sampler(
                 oversample_power=self.oversample_power)
         self.mpi_info("Parameter blocks and their oversampling factors:")
@@ -143,7 +143,7 @@ class polychord(Sampler):
                    "grade_dims"]
         # As stated above, num_repeats is ignored, so let's not pass it
         pc_args.pop(pc_args.index("num_repeats"))
-        self.pc_settings = PolyChordSettings(
+        self.pc_settings = self.pc.settings.PolyChordSettings(
             self.nDims, self.nDerived, seed=(self.seed if self.seed is not None else -1),
             **{p: getattr(self, p) for p in pc_args if getattr(self, p) is not None})
         # prior conversion from the hypercube
@@ -215,7 +215,7 @@ class polychord(Sampler):
                 self.log.error("The callback function produced an error: %r", str(e))
             self.last_point_callback = len(self.dead)
 
-    def _run(self):
+    def run(self):
         """
         Prepares the posterior function and calls ``PolyChord``'s ``run`` function.
         """
@@ -247,10 +247,6 @@ class polychord(Sampler):
             self.pc_settings.base_dir, self.pc_settings.file_root)
 
     def dump_paramnames(self, prefix):
-        paramnames = (list() +
-                      [p + "*" for p in (
-                              list(self.model.parameterization.derived_params()) +
-                              list(self.model.prior) + list(self.model.likelihood))])
         labels = self.model.parameterization.labels()
         with open(prefix + ".paramnames", "w") as f_paramnames:
             for p in self.model.parameterization.sampled_params():

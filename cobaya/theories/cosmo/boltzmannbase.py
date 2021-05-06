@@ -420,15 +420,16 @@ class BoltzmannBase(Theory):
         :func:`~BoltzmannBase.must_provide` was called.
         """
 
-    def get_auto_covmat(self, params_info, likes_info):
+    def get_auto_covmat(self, params_info, likes_info, random_state=None):
         r"""
         Tries to get match to a database of existing covariance matrix files for the
         current model and data.
 
         ``params_info`` should contain preferably the slow parameters only.
         """
-        from cobaya.cosmo_input import get_best_covmat
-        return get_best_covmat(self.packages_path, params_info, likes_info)
+        from cobaya.cosmo_input import get_best_covmat_ext
+        return get_best_covmat_ext(self.packages_path, params_info, likes_info,
+                                   random_state)
 
 
 class PowerSpectrumInterpolator(RectBivariateSpline):

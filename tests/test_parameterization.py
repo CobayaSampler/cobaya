@@ -149,14 +149,14 @@ def test_parameterization_dependencies():
     assert np.isclose(model.loglike({'bb': 0.5, 'aa': 2})[0], 105)
     assert np.isclose(model.logposterior({'bb': 0.5, 'aa': 2}).logpriors[1], -49.5)
     test_info['params']['b'] = {'value': 'lambda a, c, bb: a*c*bb'}
-    loglike, derived = get_model(test_info).loglike({'bb': 0.5, 'aa': 2})
-    assert np.isclose(loglike, 630)
+    like, derived = get_model(test_info).loglike({'bb': 0.5, 'aa': 2})
+    assert np.isclose(like, 630)
     assert derived == [2.5, 5.0, 6.25, -7, -1.5]
     assert np.isclose(model.logposterior({'bb': 0.5, 'aa': 2}).logpriors[1], -49.5)
     test_info['params']['aa'] = 2
     test_info['params']['bb'] = 0.5
-    loglike, derived = get_model(test_info).loglike()
-    assert np.isclose(loglike, 630)
+    like, derived = get_model(test_info).loglike()
+    assert np.isclose(like, 630)
     assert derived == [2.5, 5.0, 6.25, -7, -1.5]
 
     test_info["prior"]["on_derived"] = "lambda f: 5*f"

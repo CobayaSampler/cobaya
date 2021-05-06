@@ -2,12 +2,10 @@ from flaky import flaky
 import numpy as np
 import pytest
 import time
+from typing import Type
 
+from cobaya import mpi, run, Likelihood, InputDict
 from cobaya.tools import KL_norm
-from cobaya.likelihood import Likelihood
-from cobaya.run import run
-from cobaya.typing import InputDict, Type
-from cobaya import mpi
 from cobaya.yaml import yaml_load
 from .common_sampler import body_of_test, body_of_test_speeds
 
@@ -53,7 +51,7 @@ def test_mcmc(tmpdir, packages_path=None):
             # Callback to check KL divergence -- disabled in the automatic test
             "callback_function": check_gaussian, "callback_every": 100})
     body_of_test(dimension=dimension, fixed=True, info_sampler=info_sampler,
-                 tmpdir=tmpdir)
+                 tmpdir=tmpdir, random_state=np.random.default_rng(1))
 
 
 yaml_drag = r"""
@@ -76,6 +74,7 @@ sampler:
    measure_speeds: False
    Rminus1_stop: 0.001   
    Rminus1_cl_stop: 0.04
+   seed: 1
 """
 
 

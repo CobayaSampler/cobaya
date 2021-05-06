@@ -189,7 +189,6 @@ def test_cosmo_run_resume_post(tmpdir, packages_path=None):
 
     # adding new theory derived
     info_post['add']['theory'] = {'new_param_theory': BTheory}
-    # info_post['add']['params']['As1000'] = None
     output_info, products = run(updated_info, override={'post': info_post}, output=False)
     results3 = mpi.allgather(products["sample"])
     samp3 = MCSamplesFromCobaya(output_info, results3)
