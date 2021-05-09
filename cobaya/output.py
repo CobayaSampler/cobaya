@@ -13,7 +13,7 @@ import re
 import shutil
 import logging
 from packaging import version
-from typing import Optional
+from typing import Optional, Any
 # Local
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
 from cobaya.conventions import resume_default, Extension, kinds, get_version
@@ -32,9 +32,11 @@ _ext = "txt"
 
 
 class FileLock:
+    _file_handle: Any
+
     def __init__(self, filename=None, log=None):
-        self.lock_error_file = None
-        self.lock_file = None
+        self.lock_error_file = ""
+        self.lock_file = ""
         if filename:
             self.set_lock(log, filename)
 
@@ -49,7 +51,7 @@ class FileLock:
             pass
         self.log = log or logging.getLogger("file_lock")
         try:
-            h = None
+            h: Any = None
             try:
                 import portalocker
             except ModuleNotFoundError:
@@ -69,6 +71,7 @@ class FileLock:
 
     def lock_error(self):
         if not self.has_lock():
+            assert self.lock_error_file
             try:
                 # make lock_err so process holding lock can check
                 # another process had an error
@@ -111,8 +114,8 @@ class FileLock:
                 os.remove(self.lock_error_file)
             except OSError:
                 pass
-        self.lock_error_file = None
-        self.lock_file = None
+        self.lock_error_file = ""
+        self.lock_file = ""
 
     def has_lock(self):
         return hasattr(self, "_file_handle")
@@ -127,6 +130,8 @@ class Output(HasLogger):
     compatibility with old runs when resuming, cleaning up when forcing, preparing
     :class:`~collection.Collection` files, etc.
     """
+
+    _old_updated_info: Optional[InputDict]
 
     @mpi.set_from_root(("force", "folder", "prefix", "kind", "ext",
                         "_resuming", "prefix_regexp_str", "log"))
@@ -266,7 +271,7 @@ class Output(HasLogger):
                 if os.path.isfile(self.dump_file_updated):
                     loaded = load_info_dump(self.dump_file_updated)
                 else:
-                    loaded = yaml_load_file(self.file_updated)
+                    loaded = yaml_load_file(self.file_updated)  # type: ignore
                 if cache:
                     self._old_updated_info = deepcopy_where_possible(loaded)
                 return loaded
@@ -321,7 +326,7 @@ class Output(HasLogger):
                 # (For Cobaya's own version, prefer new one always)
                 old_version = old_info.get("version")
                 new_version = new_info.get("version")
-                if old_version:
+                if old_version and new_version:
                     if version.parse(old_version) > version.parse(new_version):
                         raise LoggedError(
                             self.log, "You are trying to resume a run performed with a "
@@ -502,7 +507,7 @@ class Output(HasLogger):
             collection = collections[0]
             for collection_i in collections[1:]:
                 collection.append(collection_i)
-            collections = collection
+            return collection
         return collections
 
     @mpi.root_only
@@ -545,7 +550,7 @@ class OutputDummy(Output):
         return False
 
 
-def get_output(*args, **kwargs):
+def get_output(*args, **kwargs) -> Output:
     """
     Auxiliary function to retrieve the output driver
     (e.g. whether to get the MPI-wrapped one, or a dummy output driver).

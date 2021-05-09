@@ -339,7 +339,7 @@ Just give it a try and it should work fine, but, in case you need the details:
 import numpy as np
 import numbers
 from types import MethodType
-from typing import Sequence, NamedTuple, Callable, Optional, Mapping
+from typing import Sequence, NamedTuple, Callable, Optional, Mapping, List
 
 # Local
 from cobaya.conventions import prior_1d_name
@@ -429,7 +429,8 @@ class Prior(HasLogger):
         # Process the external prior(s):
         self.external = {}
         self.external_dependence = set()
-        for name in (info_prior if info_prior else {}):
+        info_prior = info_prior or {}
+        for name in info_prior:
             if name == prior_1d_name:
                 raise LoggedError(self.log, "The name '%s' is a reserved prior name. "
                                             "Please use a different one.", prior_1d_name)
@@ -524,7 +525,7 @@ class Prior(HasLogger):
                           "(see help of this function on how to fix this).")
         return np.array([pdf.rvs(n, random_state=random_state) for pdf in self.pdf]).T
 
-    def logps(self, x):
+    def logps(self, x: np.ndarray) -> List[float]:
         """
         Takes a point (sampled parameter values, in the correct order).
 
@@ -536,17 +537,16 @@ class Prior(HasLogger):
            in the same order.
         """
         logps = self.logps_internal(x)
-        # noinspection PyTypeChecker
         if logps != -np.inf:
             if self.external:
-                input_params = self._parameterization.to_input(x, copied=False)
+                input_params = self._parameterization.to_input(x)
                 return [logps] + self.logps_external(input_params)
             else:
                 return [logps]
         else:
             return [-np.inf] * (1 + len(self.external))
 
-    def logp(self, x):
+    def logp(self, x: np.ndarray):
         """
         Takes a point (sampled parameter values, in the correct order).
 
@@ -555,7 +555,7 @@ class Prior(HasLogger):
         """
         return np.sum(self.logps(x), axis=0)
 
-    def logps_internal(self, x):
+    def logps_internal(self, x: np.ndarray) -> float:
         """
         Takes a point (sampled parameter values, in the correct order).
 
@@ -565,7 +565,6 @@ class Prior(HasLogger):
            of 1d priors specified in the ``params`` block, no external priors
         """
         self.log.debug("Evaluating prior at %r", x)
-        # noinspection PyTypeChecker
         if all(x <= self._upper_limits) and all(x >= self._lower_limits):
             logps = self._uniform_logp + (sum([logpdf(xi) for logpdf, xi in
                                                zip(self._non_uniform_logpdf,
@@ -577,7 +576,7 @@ class Prior(HasLogger):
         self.log.debug("Got logpriors = %r", logps)
         return logps
 
-    def logps_external(self, input_params):
+    def logps_external(self, input_params) -> List[float]:
         """Evaluates the logprior using the external prior only."""
         return [ext.logp(**{p: input_params[p] for p in ext.params})
                 for ext in self.external.values()]
@@ -593,7 +592,7 @@ class Prior(HasLogger):
                 "It is not possible to get the covariance matrix from an external prior.")
         return np.diag([pdf.var() for pdf in self.pdf]).T
 
-    def reference_is_pointlike(self):
+    def reference_is_pointlike(self) -> bool:
         return self._ref_is_pointlike
 
     def reference(self, max_tries=np.inf, warn_if_tries="10d", ignore_fixed=False,
@@ -634,7 +633,8 @@ class Prior(HasLogger):
             for i, ref_pdf in enumerate(self.ref_pdf):
                 if not where_ignore_ref[i]:
                     if hasattr(ref_pdf, "rvs"):
-                        ref_sample[i] = ref_pdf.rvs(random_state=random_state)
+                        ref_sample[i] = ref_pdf.rvs(
+                            random_state=random_state)  # type: ignore
                     else:
                         ref_sample[i] = ref_pdf.real
 

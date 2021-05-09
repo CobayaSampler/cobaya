@@ -70,6 +70,7 @@ After this, mention the path to this likelihood when you include it in an input 
 """
 
 import numpy as np
+from typing import Any
 
 # Local
 from cobaya.likelihoods.base_classes import CMBlikes
@@ -104,7 +105,7 @@ class bicep_keck_2015(CMBlikes):
         self.lform_sync_decorr = ini.string('lform_sync_decorr', 'flat')
 
     def read_bandpass(self, fname):
-        bandpass = Bandpass()
+        bandpass: Any = Bandpass()
         bandpass.R = np.loadtxt(fname)
         nu = bandpass.R[:, 0]
         bandpass.dnu = np.hstack(

@@ -58,7 +58,7 @@ def abstract(method):
         else:
             return method(self, *args, **kwargs)
 
-    not_implemented._is_abstract = True
+    not_implemented._is_abstract = True  # type: ignore
 
     return not_implemented
 

@@ -1,20 +1,33 @@
-from typing import Dict, Any, Optional, Union, Sequence, Type, Tuple, List
+from typing import Dict, Any, Optional, Union, Sequence, Type, Callable
 import numpy as np
 from types import MappingProxyType
 
 # an immutable empty dict (e.g. for argument defaults)
 empty_dict = MappingProxyType({})
+# empty list-type object that can be used like None to test if assigned
+unset_params: Sequence[str] = ()
 
 InfoDict = Dict[str, Any]
 LikeDict = InfoDict
 TheoryDict = InfoDict
 SamplerDict = InfoDict
 
-ParamValuesDict = Dict[str, Optional[float]]
+ParamValuesDict = Dict[str, float]
 TheoriesDict = Dict[str, Union[None, TheoryDict, Type]]
 LikesDict = Dict[str, Union[None, LikeDict, Type]]
 SamplersDict = Dict[str, Optional[SamplerDict]]
-PriorsDict = Dict[str, Union[str, callable]]
+PriorsDict = Dict[str, Union[str, Callable]]
+# parameters in a params list can be specified on input by
+# 1. a ParamDict dictionary
+# 2. constant value
+# 3. a string giving lambda function of other parameters
+# 4. None - must be a computed output parameter
+# 5. Sequence specifying uniform prior range [min, max] and optionally
+#    'ref' mean and standard deviation for starting positions, and optionally
+#    proposal width. Allowed lengths, 2, 4, 5
+ParamSpec = Union['ParamDict', None, str, float, Sequence[float]]
+ParamsDict = Dict[str, ParamSpec]
+ExpandedParamsDict = Dict[str, 'ParamDict']
 
 partags = {"prior", "ref", "proposal", "value", "drop",
            "derived", "latex", "renames", "min", "max"}
@@ -27,7 +40,6 @@ except ImportError:
     ParamDict = InfoDict
     ModelDict = InfoDict
     PostDict = InfoDict
-    ParamsDict = Dict[str, Union[ParamDict, None, str, float, List[float]]]
 else:
 
     class SciPyDistDict(TypedDict):
@@ -43,10 +55,10 @@ else:
 
 
     class ParamDict(TypedDict, total=False):
-        value: Union[float, callable, str]
-        derived: Union[bool, str, callable]
-        prior: Union[None, Tuple[float, float], SciPyDistDict, SciPyMinMaxDict]
-        ref: Union[None, Tuple[float, float], SciPyDistDict, SciPyMinMaxDict]
+        value: Union[float, Callable, str]
+        derived: Union[bool, str, Callable]
+        prior: Union[None, Sequence[float], SciPyDistDict, SciPyMinMaxDict]
+        ref: Union[None, Sequence[float], SciPyDistDict, SciPyMinMaxDict]
         proposal: Optional[float]
         renames: Union[str, Sequence[str]]
         latex: str
@@ -57,19 +69,17 @@ else:
 
     # partags = set(ParamDict.__annotations__)
 
-    ParamsDict = Dict[str, Union[ParamDict, None, str, float, List[float]]]
-
-
     class ModelDict(TypedDict, total=False):
         theory: TheoriesDict
         likelihood: LikesDict
         prior: PriorsDict
         params: ParamsDict
+        auto_params: ParamsDict
 
 
     class PostDict(TypedDict, total=False):
         add: Optional[ModelDict]
-        remove: Optional[ModelDict]
+        remove: Union[None, ModelDict, Dict[str, Union[str, Sequence[str]]]]
         output: Optional[str]
         suffix: Optional[str]
         skip: Union[None, float, int]
@@ -79,7 +89,7 @@ else:
 
     class InputDict(ModelDict, total=False):
         sampler: SamplersDict
-        post: Optional[PostDict]
+        post: PostDict
         force: bool
         debug: bool
         debug_file: Optional[str]

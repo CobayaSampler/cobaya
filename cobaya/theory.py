@@ -32,10 +32,10 @@ see :doc:`theories_and_dependencies`.
 
 import inspect
 from collections import deque
-from typing import Sequence, Optional, Union, Tuple, Dict, Iterable
+from typing import Sequence, Optional, Union, Tuple, Dict, Iterable, Set, Any
 # Local
 from cobaya.typing import TheoryDict, TheoriesDict, InfoDict, ParamValuesDict, \
-    ParamsDict, empty_dict
+    ParamsDict, empty_dict, unset_params
 from cobaya.component import CobayaComponent, ComponentCollection
 from cobaya.tools import get_resolved_class, str_to_list
 from cobaya.log import LoggedError, always_stop_exceptions
@@ -51,9 +51,11 @@ class Theory(CobayaComponent):
     params: ParamsDict
 
     # special components set by the dependency resolver;
-    # included in updated yaml but not in defaults
-    input_params: Sequence[str] = None
-    output_params: Sequence[str] = None
+    # (for Theory included in updated yaml but not in defaults)
+    input_params: Sequence[str] = unset_params
+    output_params: Sequence[str] = unset_params
+
+    _states: deque
 
     def __init__(self, info: TheoryDict = empty_dict,
                  name: Optional[str] = None, timing: Optional[bool] = None,
@@ -65,12 +67,12 @@ class Theory(CobayaComponent):
                          packages_path=packages_path, initialize=initialize,
                          standalone=standalone)
 
-        self.provider = None  # set to Provider instance before calculations
+        self.provider: Any = None  # set to Provider instance before calculations
         # Generate cache states, to avoid recomputing.
         # Default 3, but can be changed by sampler
         self.set_cache_size(3)
-        self._helpers = {}
-        self._input_params_extra = set()
+        self._helpers: Dict[str, 'Theory'] = {}
+        self._input_params_extra: Set[str] = set()
 
     def get_requirements(self) -> Union[InfoDict, Sequence[str],
                                         Sequence[Tuple[str, InfoDict]]]:
@@ -105,8 +107,9 @@ class Theory(CobayaComponent):
                 "The .needs() method has been deprecated in favour of must_provide(). "
                 "Please rename your method.")
             # BEHAVIOUR TO BE REPLACED BY AN ERROR
-            return self.needs(**requirements)
+            return getattr(self, "needs")(**requirements)
         # END OF DEPRECATION BLOCK
+        return None
 
     def calculate(self, state, want_derived=True, **params_values_dict):
         """

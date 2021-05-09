@@ -25,13 +25,13 @@ class can be used as and when needed.
 # Global
 import inspect
 from time import sleep
-from typing import Mapping, Optional, Union
+from typing import Mapping, Optional, Union, Dict
 from itertools import chain
 import numpy as np
 import numbers
 
 # Local
-from cobaya.typing import LikesDict, LikeDict, empty_dict
+from cobaya.typing import LikesDict, LikeDict, ParamValuesDict, empty_dict
 from cobaya.tools import get_resolved_class, get_external_function, getfullargspec, \
     str_to_list
 from cobaya.log import LoggedError
@@ -50,10 +50,10 @@ class LikelihoodInterface:
     need to be changed.
     """
 
-    current_state: Mapping[str, Mapping]
+    current_state: Dict
 
     @property
-    def current_logp(self):
+    def current_logp(self) -> float:
         """
         Gets log likelihood for the current point
 
@@ -127,11 +127,11 @@ class Likelihood(Theory, LikelihoodInterface):
         Return False is the calculation fails.
 
         """
-        derived = {} if want_derived else None
+        derived: Optional[ParamValuesDict] = {} if want_derived else None
         state["logp"] = -np.inf  # in case of exception
         state["logp"] = self.logp(_derived=derived, **params_values_dict)
         self.log.debug("Computed log-likelihood = %g", state["logp"])
-        if want_derived:
+        if derived is not None:
             state["derived"] = derived.copy()
 
     def wait(self):
@@ -151,9 +151,7 @@ class LikelihoodExternalFunction(Likelihood):
         self.external_function = get_external_function(info["external"], name=name)
         self._self_arg = "_self"
         argspec = getfullargspec(self.external_function)
-        if info.get("input_params", []):
-            setattr(self, "input_params", str_to_list(info.get("input_params")))
-
+        self.input_params = str_to_list(self.input_params)
         ignore_args = [self._self_arg]
         # MARKED FOR DEPRECATION IN v3.0
         ignore_args += ["_derived", "_theory"]
@@ -166,10 +164,10 @@ class LikelihoodExternalFunction(Likelihood):
         # MARKED FOR DEPRECATION IN v3.0
         self._derived_through_arg = "_derived" in argspec.args
         # END OF DEPRECATION BLOCK
-        if info.get("output_params", []):
-            setattr(self, "output_params", str_to_list(info.get("output_params")))
+        if self.output_params or not self._derived_through_arg:
+            self.output_params = str_to_list(self.output_params) or []
         # MARKED FOR DEPRECATION IN v3.0
-        elif self._derived_through_arg:
+        else:
             self.log.warning(
                 "The use of a `_derived` argument to deal with derived parameters will be"
                 " deprecated in a future version. From now on please list your derived "
@@ -177,11 +175,10 @@ class LikelihoodExternalFunction(Likelihood):
                 "documentation) and have your function return a tuple "
                 "`(logp, {derived_param_1: value_1, ...})`.", "output_params")
             # BEHAVIOUR TO BE REPLACED BY ERROR:
+            assert argspec.defaults
             derived_kw_index = argspec.args[-len(argspec.defaults):].index("_derived")
-            setattr(self, "output_params", argspec.defaults[derived_kw_index])
+            self.output_params = argspec.defaults[derived_kw_index]
         # END OF DEPRECATION BLOCK
-        else:
-            setattr(self, "output_params", [])
         # Make sure `types` is a list of data types, for aggregated chi2
         self.type = str_to_list(getattr(self, "type", []) or [])
         # Required quantities from other components
@@ -201,6 +198,7 @@ class LikelihoodExternalFunction(Likelihood):
                 "documentation) and have your function take a parameter `_self`.",
                 "requires")
             # BEHAVIOUR TO BE REPLACED BY ERROR:
+            assert argspec.defaults
             info["requires"] = argspec.defaults[
                 argspec.args[-len(argspec.defaults):].index("_theory")]
         # END OF DEPRECATION BLOCK
@@ -278,7 +276,7 @@ class LikelihoodCollection(ComponentCollection):
                 name, info = name.get_name(), info
             if isinstance(info, Theory):
                 self.add_instance(name, info)
-            elif "external" in info:
+            elif isinstance(info, Mapping) and "external" in info:
                 if isinstance(info["external"], Theory):
                     self.add_instance(name, info["external"])
                 elif inspect.isclass(info["external"]):
@@ -295,9 +293,11 @@ class LikelihoodCollection(ComponentCollection):
                                                        name=name))
                 else:
                     # If it has an "external" key, wrap it up. Else, load it up
+                    # noinspection PyTypeChecker
                     self.add_instance(name, LikelihoodExternalFunction(info, name,
                                                                        timing=timing))
             else:
+                assert isinstance(info, Mapping)
                 like_class = get_resolved_class(
                     name, kind="likelihood",
                     component_path=info.get("python_path", None),

@@ -10,7 +10,7 @@ from itertools import chain
 import numpy as np
 from pandas import DataFrame
 import datetime
-from typing import Sequence, Optional
+from typing import Sequence, Optional, Callable
 import re
 from copy import deepcopy
 
@@ -49,7 +49,7 @@ class mcmc(CovmatSampler):
     max_tries: NumberWithUnits
     max_samples: int
     drag: bool
-    callback_function: Optional[callable]
+    callback_function: Optional[Callable]
     blocking: Optional[Sequence]
     proposal_scale: float
     learn_proposal: bool
@@ -66,7 +66,7 @@ class mcmc(CovmatSampler):
     def set_instance_defaults(self):
         super().set_instance_defaults()
         # checkpoint variables
-        self.converged = None
+        self.converged = False
         self.mpi_size = None
         self.Rminus1_last = np.inf
 
@@ -780,7 +780,7 @@ class mcmc(CovmatSampler):
             checkpoint_filename = self.checkpoint_filename()
             self.dump_covmat(self.proposer.get_covariance())
             checkpoint_info = {"sampler": {self.get_name(): dict([
-                ("converged", bool(self.converged)),
+                ("converged", self.converged),
                 ("Rminus1_last", self.Rminus1_last),
                 ("burn_in", (self.burn_in.value  # initial: repeat burn-in if not finished
                              if not self.n() and self.burn_in_left else

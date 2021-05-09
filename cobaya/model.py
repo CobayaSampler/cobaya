@@ -9,20 +9,21 @@
 import logging
 from copy import deepcopy
 from itertools import chain
-from typing import NamedTuple, Sequence, Mapping, Iterable, Optional, Union
+from typing import NamedTuple, Sequence, Mapping, Iterable, Optional, \
+    Union, List, Any, Dict, Set
 import numpy as np
 import os
 
 # Local
 from cobaya.conventions import overhead_time, debug_default, get_chi2_name
 from cobaya.typing import InfoDict, InputDict, LikesDict, TheoriesDict, \
-    ParamsDict, PriorsDict, empty_dict
+    ParamsDict, PriorsDict, ParamValuesDict, ArrayLike, empty_dict, unset_params
 from cobaya.input import update_info, load_input_dict
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection, AbsorbUnusedParamsLikelihood, \
     is_LikelihoodInterface
-from cobaya.theory import TheoryCollection
+from cobaya.theory import TheoryCollection, Theory
 from cobaya.log import LoggedError, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
 from cobaya.tools import deepcopy_where_possible, are_different_params_lists, \
@@ -33,10 +34,10 @@ from cobaya import mpi
 
 # Log-posterior namedtuple
 class LogPosterior(NamedTuple):
-    logpost: float = None
-    logpriors: Sequence[float] = None
-    loglikes: Sequence[float] = []
-    derived: Sequence[float] = []
+    logpost: float
+    logpriors: Sequence[float]
+    loglikes: Sequence[float]
+    derived: Sequence[float]
 
 
 class Requirement(NamedTuple):
@@ -69,14 +70,6 @@ def as_requirement_list(requirements):
 
     raise ValueError('Requirements must be a dict of names and options, a list of names, '
                      'or an iterable of requirement (name, option) pairs')
-
-
-# Dummy component prefix for manual requirements
-_dummy_prefix = "_DUMMY"
-
-
-def is_dummy_component(component):
-    return isinstance(component, str) and component.startswith(_dummy_prefix)
 
 
 def _dict_equal(d1, d2):
@@ -118,6 +111,8 @@ class Model(HasLogger):
     with some info as input.
     """
 
+    provider: Any
+
     def __init__(self, info_params: ParamsDict, info_likelihood: LikesDict,
                  info_prior: Optional[PriorsDict] = None,
                  info_theory: Optional[TheoriesDict] = None,
@@ -125,7 +120,7 @@ class Model(HasLogger):
                  post=False, prior_parameterization=None,
                  skip_unused_theories=False, dropped_theory_params=None):
         self.set_logger()
-        self._updated_info = {
+        self._updated_info: InputDict = {
             "params": deepcopy_where_possible(info_params),
             "likelihood": deepcopy_where_possible(info_likelihood)}
         if not self._updated_info["likelihood"]:
@@ -133,7 +128,7 @@ class Model(HasLogger):
         for k, v in (("prior", info_prior), ("theory", info_theory),
                      ("packages_path", packages_path), ("timing", timing)):
             if v not in (None, {}):
-                self._updated_info[k] = deepcopy_where_possible(v)
+                self._updated_info[k] = deepcopy_where_possible(v)  # type: ignore
         self.parameterization = Parameterization(self._updated_info["params"],
                                                  allow_renames=allow_renames,
                                                  ignore_unused_sampled=post)
@@ -141,7 +136,7 @@ class Model(HasLogger):
                            self._updated_info.get("prior"))
         self.timing = timing
         info_theory = self._updated_info.get("theory")
-        self.theory = TheoryCollection(info_theory, packages_path=packages_path,
+        self.theory = TheoryCollection(info_theory or {}, packages_path=packages_path,
                                        timing=timing)
         info_likelihood = self._updated_info["likelihood"]
         self.likelihood = LikelihoodCollection(info_likelihood, theory=self.theory,
@@ -166,7 +161,7 @@ class Model(HasLogger):
         """
         return deepcopy_where_possible(self._updated_info)
 
-    def _to_sampled_array(self, params_values):
+    def _to_sampled_array(self, params_values) -> np.ndarray:
         """
         Internal method to interact with the prior.
         Needs correct (not renamed) parameter names.
@@ -184,7 +179,7 @@ class Model(HasLogger):
                 self.log, "Cannot take arrays of points as inputs, just single points.")
         return params_values_array
 
-    def logpriors(self, params_values, make_finite=False):
+    def logpriors(self, params_values, make_finite=False) -> ArrayLike:
         """
         Takes an array or dictionary of sampled parameter values.
         If the argument is an array, parameters must have the same order as in the input.
@@ -227,7 +222,7 @@ class Model(HasLogger):
 
     def logps(self, input_params, return_derived=True, cached=True, make_finite=False):
         # Calculate required results and returns likelihoods
-        derived_dict = {}
+        derived_dict: ParamValuesDict = {}
         compute_success = True
         self.provider.set_current_input_params(input_params)
         self.log.debug("Got input parameters: %r", input_params)
@@ -248,12 +243,13 @@ class Model(HasLogger):
             # Add chi2's to derived parameters
             if is_LikelihoodInterface(component):
                 try:
-                    loglikes[like_index] = float(component.current_logp)
+                    loglikes[like_index] = float(component.current_logp)  # type: ignore
                 except TypeError:
                     raise LoggedError(
                         self.log,
                         "Likelihood %s has not returned a valid log-likelihood, "
-                        "but %r instead.", component, component.current_logp)
+                        "but %r instead.", component,
+                        component.current_logp)  # type: ignore
                 if return_derived:
                     derived_dict[get_chi2_name(component.get_name().replace(".", "_"))] \
                         = -2 * loglikes[like_index]
@@ -266,6 +262,7 @@ class Model(HasLogger):
             loglikes = np.nan_to_num(loglikes)
         if return_derived:
             # Turn the derived params dict into a list and return
+            derived_list: list
             if not compute_success:
                 derived_list = [np.nan] * len(self.output_params)
             else:
@@ -300,7 +297,7 @@ class Model(HasLogger):
         elif hasattr(params_values, "keys") and not _no_check:
             params_values = self.parameterization.check_sampled(**params_values)
 
-        input_params = self.parameterization.to_input(params_values, copied=False)
+        input_params = self.parameterization.to_input(params_values)
         return self._loglikes_input_params(input_params, return_derived=return_derived,
                                            cached=cached, make_finite=make_finite)
 
@@ -352,8 +349,8 @@ class Model(HasLogger):
                 return np.nan_to_num(loglike)
             return loglike
 
-    def logposterior(self, params_values,
-                     return_derived=True, make_finite=False, cached=True):
+    def logposterior(self, params_values, return_derived=True,
+                     make_finite=False, cached=True) -> LogPosterior:
         """
         Takes an array or dictionary of sampled parameter values.
         If the argument is an array, parameters must have the same order as in the input.
@@ -402,8 +399,7 @@ class Model(HasLogger):
             logpriors = [-np.inf] * (1 + len(self.prior.external))
             logpost = -np.inf
         else:
-            input_params = self.parameterization.to_input(params_values_array,
-                                                          copied=False)
+            input_params = self.parameterization.to_input(params_values_array)
             logpriors = [logps]
             if self.prior.external:
                 logpriors.extend(self.prior.logps_external(input_params))
@@ -427,7 +423,7 @@ class Model(HasLogger):
         return LogPosterior(logpost=logpost, logpriors=logpriors,
                             loglikes=loglikes, derived=derived_sampler)
 
-    def logpost(self, params_values, make_finite=False, cached=True):
+    def logpost(self, params_values, make_finite=False, cached=True) -> float:
         """
         Takes an array or dictionary of sampled parameter values.
         If the argument is an array, parameters must have the same order as in the input.
@@ -504,7 +500,7 @@ class Model(HasLogger):
                     likelihood=self.likelihood.get_speeds(ignore_sub=ignore_sub))
 
     def _set_component_order(self, components, dependencies):
-        dependence_order = []
+        dependence_order: List[Theory] = []
         deps = {p: s.copy() for p, s in dependencies.items()}
         comps = [c for c in components if not isinstance(c, AbsorbUnusedParamsLikelihood)]
         target_length = len(comps)
@@ -526,8 +522,8 @@ class Model(HasLogger):
 
     def _set_dependencies_and_providers(self, manual_requirements=empty_dict,
                                         skip_unused_theories=False):
-        components = self.components
-        direct_param_dependence = {c: set() for c in components}
+        components: List[Theory] = self.components
+        direct_param_dependence: Dict[Theory, Set[str]] = {c: set() for c in components}
 
         def _tidy_requirements(_require, _component=None):
             # take input requirement and return tuples of
@@ -547,8 +543,10 @@ class Model(HasLogger):
                 return _require
 
         # ## 1. Get the requirements and providers ##
-        requirements = {}  # requirements of each component
-        providers = {}  # providers of each *available* requirement (requested or not)
+        # requirements of each component
+        requirements: Dict[Theory, List[Requirement]] = {}
+        # providers of each *available* requirement (requested or not)
+        providers: Dict[str, List[Theory]] = {}
         for component in components:
             # MARKED FOR DEPRECATION IN v3.0
             if hasattr(component, "add_theory"):
@@ -563,7 +561,7 @@ class Model(HasLogger):
             # Component params converted to requirements if not explicitly sampled
             requirements[component] += \
                 [Requirement(p, None) for p in (getattr(component, "params", {}) or []) if
-                 p not in self.input_params + component.output_params]
+                 p not in self.input_params and p not in component.output_params]
             # Gather what this component can provide
             can_provide = (list(component.get_can_provide()) +
                            list(component.get_can_provide_methods()))
@@ -578,26 +576,23 @@ class Model(HasLogger):
                     # no need to know which are params
                     provide_params.remove(p)
             # Invert to get the provider(s) of each available product/parameter
-            for k in can_provide + component.output_params + provide_params:
+            for k in chain(can_provide, component.output_params, provide_params):
                 providers[k] = providers.get(k, []) + [component]
         # Add requirements requested by hand
+        manual_theory = Theory(name='_manual')
         if manual_requirements:
-            if not hasattr(self, "_manual_requirements"):
-                self._manual_requirements = {}
-                self._last_dummy = -1
-            self._last_dummy += 1
-            self._manual_requirements[_dummy_prefix + str(self._last_dummy)] = \
-                _tidy_requirements(manual_requirements)
-            for dummy in self._manual_requirements:
-                requirements[dummy] = deepcopy(self._manual_requirements[dummy])
+            self._manual_requirements = getattr(self, "_manual_requirements", []) \
+                                        + _tidy_requirements(manual_requirements)
+            requirements[manual_theory] = deepcopy(self._manual_requirements)
 
         # ## 2. Assign each requirement to a provider ##
         # store requirements assigned to each provider:
-        self._must_provide = {c: [] for c in components}
+        self._must_provide: Dict[Theory, List[Requirement]] = {c: [] for c in components}
         # inverse of the one above, *minus conditional requirements* --
         # this is the one we need to initialise the provider
         requirement_providers = {}
-        dependencies = {}  # set of components of which each component depends
+        dependencies: Dict[
+            Theory, Set[Theory]] = {}  # set of components of which each component depends
         used_suppliers = set(c for c in components if c.output_params)
         there_are_more_requirements = True
         # temp list of dictionary of requirements for each component
@@ -613,6 +608,7 @@ class Model(HasLogger):
                                           "Requirement %s of %r is not provided by any "
                                           "component, nor sampled directly",
                                           requirement.name, component)
+                    supplier: Optional[Theory]
                     if len(suppliers) == 1:
                         supplier = suppliers[0]
                     else:
@@ -645,7 +641,7 @@ class Model(HasLogger):
                         dependencies.get(component, set()) | {supplier}
                     # Requirements per component excluding input params
                     # -- saves some overhead in theory.check_cache_and_compute
-                    if not is_dummy_component(component) and \
+                    if component is not manual_theory and \
                             requirement.name not in component.input_params and \
                             requirement.options is None:
                         component.input_params_extra.add(requirement.name)
@@ -674,9 +670,7 @@ class Model(HasLogger):
             # Reset list
             must_provide = {c: [] for c in components}
         # Expunge manual requirements
-        for component in list(requirements):
-            if is_dummy_component(component):
-                requirements.pop(component)
+        requirements.pop(manual_theory, None)
         # Check that unassigned input parameters are at least required by some component
         if self._unassigned_input:
             self._unassigned_input.difference_update(*direct_param_dependence.values())
@@ -716,13 +710,14 @@ class Model(HasLogger):
         # ## 3. Save dependencies on components and their parameters ##
         self._dependencies = {c: dependencies_of(c) for c in components}
         # this next one is not a dict to save a lookup per iteration
-        self._params_of_dependencies = [set() for _ in self._component_order]
+        self._params_of_dependencies: List[Set[str]] \
+            = [set() for _ in self._component_order]
         for component, param_dep in zip(self._component_order,
                                         self._params_of_dependencies):
-            param_dep.update(direct_param_dependence.get(component))
+            param_dep.update(direct_param_dependence.get(component) or [])
             for dep in self._dependencies.get(component, []):
                 param_dep.update(
-                    set(dep.input_params).union(direct_param_dependence.get(dep)))
+                    set(dep.input_params).union(direct_param_dependence.get(dep) or []))
             param_dep -= set(component.input_params)
             if not len(component.input_params) and not param_dep \
                     and component.get_name() != 'one':
@@ -731,7 +726,8 @@ class Model(HasLogger):
                               "(neither directly nor indirectly)", component)
         # Store the input params and components on which each sampled params depends.
         sampled_input_dependence = self.parameterization.sampled_input_dependence()
-        sampled_dependence = {p: [] for p in sampled_input_dependence}
+        sampled_dependence: Dict[str, List[Theory]] \
+            = {p: [] for p in sampled_input_dependence}
         for p, i_s in sampled_input_dependence.items():
             for component in components:
                 if p in component.input_params or i_s and \
@@ -747,8 +743,8 @@ class Model(HasLogger):
         if self.log.getEffectiveLevel() <= logging.DEBUG:
             if requirement_providers:
                 self.log.debug("Requirements will be calculated by these components:")
-                for requirement, provider in requirement_providers.items():
-                    self.log.debug("- %s: %s", requirement, provider)
+                for req, provider in requirement_providers.items():
+                    self.log.debug("- %s: %s", req, provider)
             else:
                 self.log.debug("No requirements need to be computed")
 
@@ -780,20 +776,20 @@ class Model(HasLogger):
         self.input_params = [p for p in self.parameterization.input_params() if p not in
                              self.parameterization.dropped_param_set()]
         self.output_params = list(self.parameterization.output_params())
-        input_assign = {p: [] for p in self.input_params}
-        output_assign = {p: [] for p in self.output_params}
-        agnostic_likes = {"input": [], "output": []}
+        input_assign: Dict[str, List[Theory]] = {p: [] for p in self.input_params}
+        output_assign: Dict[str, List[Theory]] = {p: [] for p in self.output_params}
         # Go through all components.
         # NB: self.components iterates over likelihoods first, and then theories
         # so unassigned can by default go to theories
         assign_components = [c for c in self.components
                              if not isinstance(c, AbsorbUnusedParamsLikelihood)]
-        for io_kind, assign, option, prefix, derived_param in (
-                ["input", input_assign, "input_params", "input_params_prefix", False],
-                ["output", output_assign, "output_params", "output_params_prefix", True]):
+        for assign, option, prefix, derived_param in (
+                (input_assign, "input_params", "input_params_prefix", False),
+                (output_assign, "output_params", "output_params_prefix", True)):
+            agnostic_likes = []
             for component in assign_components:
                 if derived_param:
-                    required_params = str_to_list(getattr(component, "provides", []))
+                    required_params = set(str_to_list(getattr(component, "provides", [])))
                 else:
                     required_params = set(
                         p for p, v in as_requirement_list(component.get_requirements())
@@ -802,7 +798,7 @@ class Model(HasLogger):
                 # Identify parameters understood by this likelihood/theory
                 # 1a. Does it have input/output params list?
                 #     (takes into account that for callables, we can ignore elements)
-                if getattr(component, option, None) is not None:
+                if getattr(component, option) is not unset_params:
                     for p in getattr(component, option):
                         try:
                             assign[p] += [component]
@@ -828,14 +824,14 @@ class Model(HasLogger):
                                 if p in assign:
                                     assign[p] += [component]
                     elif component.get_allow_agnostic():
-                        agnostic_likes[io_kind] += [component]
+                        agnostic_likes += [component]
                     if required_params:
                         for p in required_params:
                             if p in assign and component not in assign[p]:
                                 assign[p] += [component]
                 # 5. No parameter knowledge: store as parameter agnostic
                 elif component.get_allow_agnostic():
-                    agnostic_likes[io_kind] += [component]
+                    agnostic_likes += [component]
 
             # 6. If parameter not already assigned give to any component that supports it
             #    Input parameters always assigned to any supporting component.
@@ -853,13 +849,13 @@ class Model(HasLogger):
                         assign[p] += [component]
             # Check that there is only one non-knowledgeable element, and assign
             # unused params
-            if len(agnostic_likes[io_kind]) > 1 and not all(assign.values()):
+            if len(agnostic_likes) > 1 and not all(assign.values()):
                 raise LoggedError(
                     self.log, "More than one parameter-agnostic likelihood/theory "
-                              "with respect to %s parameters: %r. Cannot decide "
-                              "parameter assignments.", io_kind, agnostic_likes)
-            elif agnostic_likes[io_kind]:  # if there is only one
-                component = agnostic_likes[io_kind][0]
+                              "with respect to %s: %r. Cannot decide "
+                              "parameter assignments.", option, agnostic_likes)
+            elif agnostic_likes:  # if there is only one
+                component = agnostic_likes[0]
                 for p, assigned in assign.items():
                     if not assigned:
                         assign[p] += [component]
@@ -912,11 +908,10 @@ class Model(HasLogger):
                 "Output params can only be computed by one likelihood/theory, "
                 "but some were claimed by more than one: %r.", multiassigned_output)
         # Finished! Assign and update infos
-        for assign, option, attr in (
-                [input_assign, "input_params", "input_params"],
-                [output_assign, "output_params", "output_params"]):
+        for assign, option in ((input_assign, "input_params"),
+                               (output_assign, "output_params")):
             for component in self.components:
-                setattr(component, attr,
+                setattr(component, option,
                         [p for p, assign in assign.items() if component in assign])
                 # Update infos! (helper theory parameters stored in yaml with host)
                 inf = (info_theory, info_likelihood)[
@@ -924,7 +919,7 @@ class Model(HasLogger):
                 inf = inf.get(component.get_name())
                 if inf:
                     inf.pop("params", None)
-                    inf[option] = component.get_attr_list_with_helpers(attr)
+                    inf[option] = component.get_attr_list_with_helpers(option)
         if self.log.getEffectiveLevel() <= logging.DEBUG:
             self.log.debug("Parameters were assigned as follows:")
             for component in self.components:
@@ -933,7 +928,7 @@ class Model(HasLogger):
                 self.log.debug("     Output: %r", component.output_params)
 
     @property
-    def components(self):
+    def components(self) -> List[Theory]:
         return list(chain(self.likelihood.values(), self.theory.values()))
 
     def get_param_blocking_for_sampler(self, split_fast_slow=False, oversample_power=0):
@@ -1002,13 +997,13 @@ class Model(HasLogger):
             costs_per_block = costs - np.concatenate([costs[1:], [0]])
             # Split them so that "adding the next block to the slow ones" has max cost
             log_differences = np.log(costs_per_block[:-1]) - np.log(costs_per_block[1:])
-            i_last_slow = np.argmax(log_differences)
+            i_last_slow: int = np.argmax(log_differences)  # type: ignore
             blocks_split = (lambda l: [list(chain(*l[:i_last_slow + 1])),
                                        list(chain(*l[i_last_slow + 1:]))])(blocks_sorted)
             footprints_split = (
                     [np.array(footprints_sorted[:i_last_slow + 1]).sum(axis=0)] +
                     [np.array(footprints_sorted[i_last_slow + 1:]).sum(axis=0)])
-            footprints_split = np.clip(np.array(footprints_split), 0, 1)
+            footprints_split = np.clip(np.array(footprints_split), 0, 1)  # type: ignore
             # Recalculate oversampling factor with 2 blocks
             _, _, oversample_factors = sort_parameter_blocks(
                 blocks_split, np.array(list(speeds.values()), dtype=float),
@@ -1130,7 +1125,8 @@ class Model(HasLogger):
             if self.loglike(point, cached=False)[0] != -np.inf:
                 n_done += 1
         self.log.debug("Computed %d points to measure speeds.", n_done)
-        times = [component.timer.get_time_avg() or 0 for component in self.components]
+        times = [component.timer.get_time_avg() or 0  # type: ignore
+                 for component in self.components]
         if mpi.more_than_one_process():
             # average for different points
             times = np.average(mpi.allgather(times), axis=0)
@@ -1152,7 +1148,7 @@ def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike]) -> Model
     for k in list(info):
         if k not in ["params", "likelihood", "prior", "theory", "packages_path",
                      "timing", "stop_at_error"]:
-            ignored_info[k] = info.pop(k)
+            ignored_info[k] = info.pop(k)  # type: ignore
     if ignored_info:
         logging.getLogger(__name__.split(".")[-1]).warning(
             "Ignored blocks/options: %r", list(ignored_info))

@@ -56,6 +56,10 @@ def checkArguments(**kwargs):
 class jobSettings:
     names: list
     jobId: str
+    path: str
+    onerun: int
+    inputFiles: list
+    subTime: float
 
     def __init__(self, jobName, msg=False, **kwargs):
         self.jobName = jobName
@@ -354,6 +358,7 @@ def submitJob(jobName, inputFiles, sequential=False, msg=False, **kwargs):
                 j.inputFiles = inputFiles
                 if 'Your job ' in res:
                     m = re.search(r'Your job (\d*) ', res)
+                    assert m
                     res = m.group(1)
                 j.jobId = res
                 j.subTime = time.time()
@@ -370,32 +375,32 @@ def queue_job_details(batchPath=None, running=True, queued=True, warnNotBatch=Tr
         print('No existing job index found')
         return []
     if spawn.find_executable("showq") is not None:
-        res = str(subprocess.check_output('showq -U $USER', shell=True)).strip()
+        res_str = str(subprocess.check_output('showq -U $USER', shell=True)).strip()
         runningTxt = ' Running '
     else:
         # e.g. Sun Grid Engine/OGS
-        res = str(subprocess.check_output('qstat -u $USER', shell=True)).strip()
+        res_str = str(subprocess.check_output('qstat -u $USER', shell=True)).strip()
         runningTxt = ' r '
-    res = res.split("\n")
+    res = res_str.split("\n")
     names = []
     jobNames = []
     ids = []
     infos = []
     for line in res[2:]:
-        if ((' ' + os.environ.get('USER') + ' ' in line and
+        if ((' ' + str(os.environ.get('USER')) + ' ' in line and
              (queued and not re.search(runningTxt, line, re.IGNORECASE) or
               running and re.search(runningTxt, line, re.IGNORECASE)))):
             items = line.split()
             jobId = items[0]
             j = index.jobSettings.get(jobId)
             if j is None:
-                jobId = items[0].split('.')
-                if jobId[0].upper() == 'TOTAL':
+                jobId_items = items[0].split('.')
+                if jobId_items[0].upper() == 'TOTAL':
                     continue
-                if len(jobId) == 1 or jobId[0].isdigit():
-                    jobId = jobId[0]
+                if len(jobId_items) == 1 or jobId_items[0].isdigit():
+                    jobId = jobId_items[0]
                 else:
-                    jobId = jobId[1]
+                    jobId = jobId_items[1]
                 j = index.jobSettings.get(jobId)
             if j is None:
                 if warnNotBatch:

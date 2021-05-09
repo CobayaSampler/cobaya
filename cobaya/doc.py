@@ -84,8 +84,8 @@ def doc_script(args=None):
                 print("# This file contains defaults. "
                       "To populate them, use the flag --%s (or -%s)." % (
                           expand_flag, expand_flag[expand_flag_ishort]))
-    except Exception:
-        if isinstance(Exception, LoggedError.__class__):
+    except Exception as e:
+        if isinstance(e, LoggedError):
             pass
         else:
             if not arguments.kind:

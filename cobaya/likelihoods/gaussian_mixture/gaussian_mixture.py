@@ -98,13 +98,14 @@ class gaussian_mixture(Likelihood):
         self.gaussians = [multivariate_normal(mean=mean, cov=cov)
                           for mean, cov in zip(self.means, self.covs)]
         if self.weights:
+            self.weights = np.asarray(self.weights)
             if not len(self.weights) == len(self.gaussians):
                 raise LoggedError(self.log,
                                   "There must be as many weights as components.")
             if not np.isclose(sum(self.weights), 1):
                 self.weights = self.weights / sum(self.weights)
                 self.log.warning(
-                    "Weights of components renormalized to %r", list(self.weights))
+                    "Weights of components renormalized to %r", self.weights)
         else:
             self.weights = 1 / len(self.gaussians)
 

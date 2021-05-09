@@ -23,6 +23,7 @@ from typing import Mapping, Optional
 # Local
 from cobaya.tools import prepare_comment, recursive_update
 from cobaya.conventions import Extension
+from cobaya.typing import InfoDict
 
 
 # Exceptions #############################################################################
@@ -66,7 +67,7 @@ def _construct_defaults(loader, node):
     except ConstructorError:
         defaults_files = loader.construct_sequence(node)
     folder = loader.current_folder
-    loaded_defaults = {}
+    loaded_defaults: InfoDict = {}
     for dfile in defaults_files:
         dfilename = os.path.abspath(os.path.join(folder, dfile))
         try:
@@ -84,7 +85,7 @@ def _construct_defaults(loader, node):
 DefaultsLoader.add_constructor('!defaults', _construct_defaults)
 
 
-def yaml_load(text_stream, file_name=None):
+def yaml_load(text_stream, file_name=None) -> InfoDict:
     try:
         # set current_folder to store the file name, to be used to locate relative
         # defaults files
@@ -94,9 +95,10 @@ def yaml_load(text_stream, file_name=None):
     except (yaml.YAMLError, TypeError) as exception:
         errstr = "Error in your input file " + (
             "'" + file_name + "'" if file_name else "")
-        if hasattr(exception, "problem_mark"):
-            line = 1 + exception.problem_mark.line
-            column = 1 + exception.problem_mark.column
+        mark = getattr(exception, "problem_mark", None)
+        if mark is not None:
+            line = 1 + mark.line
+            column = 1 + mark.column
             signal = " --> "
             signal_right = "    <---- "
             sep = "|"
@@ -122,7 +124,7 @@ def yaml_load(text_stream, file_name=None):
             raise InputSyntaxError(errstr)
 
 
-def yaml_load_file(file_name: str, yaml_text: Optional[str] = None):
+def yaml_load_file(file_name: str, yaml_text: Optional[str] = None) -> InfoDict:
     """Wrapper to load a yaml file.
 
     Manages !defaults directive."""
@@ -134,8 +136,8 @@ def yaml_load_file(file_name: str, yaml_text: Optional[str] = None):
 
 # Custom dumper ##########################################################################
 
-def yaml_dump(info: dict, stream=None, Dumper=yaml.Dumper, **kwds):
-    class CustomDumper(Dumper):
+def yaml_dump(info: dict, stream=None, **kwds):
+    class CustomDumper(yaml.Dumper):
         pass
 
     # Make sure dicts preserve order when dumped

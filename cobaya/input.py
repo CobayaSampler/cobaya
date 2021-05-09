@@ -15,7 +15,7 @@ from copy import deepcopy
 from importlib import import_module
 from itertools import chain
 from functools import reduce
-from typing import Mapping, Union
+from typing import Mapping, Union, Optional, TypeVar, Callable, Dict, List
 from collections import defaultdict
 from inspect import cleandoc
 import pkg_resources
@@ -23,7 +23,8 @@ import pkg_resources
 # Local
 from cobaya.conventions import products_path, kinds, separator_files, \
     reserved_attributes, get_chi2_name, get_chi2_label, Extension, FileSuffix
-from cobaya.typing import InputDict, empty_dict
+from cobaya.typing import InputDict, InfoDict, ModelDict, ExpandedParamsDict, LikesDict, \
+    empty_dict
 from cobaya.tools import recursive_update, str_to_list, get_base_classes, \
     fuzzy_match, deepcopy_where_possible, get_resolved_class
 from cobaya.yaml import yaml_load_file, yaml_dump, yaml_load
@@ -41,7 +42,7 @@ def load_input_dict(info_or_yaml_or_file: Union[InputDict, str, os.PathLike]
         return load_input_file(info_or_yaml_or_file)
     elif isinstance(info_or_yaml_or_file, str):
         if "\n" in info_or_yaml_or_file:
-            return yaml_load(info_or_yaml_or_file)
+            return yaml_load(info_or_yaml_or_file)  # type: ignore
         else:
             return load_input_file(info_or_yaml_or_file)
     elif isinstance(info_or_yaml_or_file, (dict, Mapping)):
@@ -52,7 +53,8 @@ def load_input_dict(info_or_yaml_or_file: Union[InputDict, str, os.PathLike]
 
 
 def load_input_file(input_file: Union[str, os.PathLike],
-                    no_mpi: bool = False, help_commands: [str, None] = None) -> InputDict:
+                    no_mpi: bool = False,
+                    help_commands: Optional[str] = None) -> InputDict:
     if no_mpi:
         mpi.set_mpi_disabled()
     input_file = str(input_file)
@@ -95,8 +97,9 @@ def load_input(input_file: str) -> InputDict:
     """
     file_name, extension = os.path.splitext(input_file)
     file_name = os.path.basename(file_name)
+    info: InputDict
     if extension.lower() in Extension.yamls:
-        info = yaml_load_file(input_file) or {}
+        info = yaml_load_file(input_file) or {}  # type: ignore
     elif extension == Extension.dill:
         info = load_info_dump(input_file) or {}
     else:
@@ -111,7 +114,7 @@ def load_input(input_file: str) -> InputDict:
                     "output")
     # contained? Ensure that output is sent where it should
     if "CONTAINED" in os.environ:
-        for out in ["output", "debug_file"]:
+        for out in ("output", "debug_file"):
             if info.get(out):
                 if not info[out].startswith("/"):
                     info[out] = os.path.join(products_path, info[out])
@@ -175,24 +178,24 @@ def get_used_components(*infos, return_infos=False):
     the original class' name.
     """
     # TODO: take inheritance into account
-    components = defaultdict(list)
-    components_infos = defaultdict(dict)
+    comps: Dict[str, List[str]] = defaultdict(list)
+    comp_infos: Dict[str, dict] = defaultdict(dict)
     for info in infos:
         for kind in kinds:
             try:
-                components[kind] += [a for a in (info.get(kind) or [])
-                                     if a not in components[kind]]
+                comps[kind] += [a for a in (info.get(kind) or [])
+                                if a not in comps[kind]]
             except TypeError:
                 raise LoggedError(
                     log, "Your input info is not well formatted at the '%s' block. "
                          "It must be a dictionary {'%s_i':{options}, ...}. ",
                     kind, kind)
             if return_infos:
-                for c in components[kind]:
-                    components_infos[c].update(info[kind][c] or {})
+                for c in comps[kind]:
+                    comp_infos[c].update(info[kind][c] or {})
     # return dictionary of non-empty blocks
-    components = {k: v for k, v in components.items() if v}
-    return (components, dict(components_infos)) if return_infos else components
+    components = {k: v for k, v in comps.items() if v}
+    return (components, dict(comp_infos)) if return_infos else components
 
 
 def get_default_info(component_or_class, kind=None, return_yaml=False,
@@ -225,8 +228,11 @@ def add_aggregated_chi2_params(param_info, all_types):
             "latex": get_chi2_label(t), "derived": True}
 
 
+_Dict = TypeVar('_Dict', InputDict, ModelDict)
+
+
 # noinspection PyTypedDict
-def update_info(info: InputDict) -> InputDict:
+def update_info(info: _Dict) -> _Dict:
     """
     Creates an updated info starting from the defaults for each component and updating it
     with the input info.
@@ -235,28 +241,29 @@ def update_info(info: InputDict) -> InputDict:
     # Don't modify the original input, and convert all Mapping to consistent dict
     input_info = deepcopy_where_possible(info)
     # Creates an equivalent info using only the defaults
-    updated_info: InputDict = {}
+    updated_info: _Dict = {}
     default_params_info = {}
     default_prior_info = {}
-    components = get_used_components(input_info)
+    used_kind_members = get_used_components(input_info)
     from cobaya.component import CobayaComponent
-    for block in components:
-        updated = {}
+    for block in used_kind_members:
+        updated: InfoDict = {}
         updated_info[block] = updated
         input_block = input_info[block]
-        for component in components[block]:
+        kind: str
+        for kind in used_kind_members[block]:
             # Preprocess "no options" and "external function" in input
             try:
-                input_block[component] = input_block[component] or {}
+                input_block[kind] = input_block[kind] or {}
             except TypeError:
                 raise LoggedError(
                     log, "Your input info is not well formatted at the '%s' block. "
                          "It must be a dictionary {'%s_i':{options}, ...}. ",
                     block, block)
-            if isinstance(component, CobayaComponent) or \
-                    isinstance(input_block[component], CobayaComponent):
+            if isinstance(kind, CobayaComponent) or \
+                    isinstance(input_block[kind], CobayaComponent):
                 raise LoggedError(log, "Input for %s:%s should specify a class not "
-                                       "an instance", block, component)
+                                       "an instance", block, kind)
                 # TODO: allow instance passing?
                 #       could allow this, but would have to sort out deepcopy
                 # if input_block[component]:
@@ -266,38 +273,37 @@ def update_info(info: InputDict) -> InputDict:
                 #           {"external": component})
                 # updated[component.get_name()] = input_block[component.get_name()].copy()
                 # continue
-            if inspect.isclass(input_block[component]) or \
-                    not isinstance(input_block[component], dict):
-                input_block[component] = {"external": input_block[component]}
-            ext = input_block[component].get("external")
+            if inspect.isclass(input_block[kind]) or \
+                    not isinstance(input_block[kind], dict):
+                input_block[kind] = {"external": input_block[kind]}
+            ext = input_block[kind].get("external")
             annotations = {}
             if ext:
                 if inspect.isclass(ext):
                     default_class_info, annotations = \
-                        get_default_info(ext, block, input_options=input_block[component],
+                        get_default_info(ext, block, input_options=input_block[kind],
                                          return_undefined_annotations=True)
                 else:
                     default_class_info = deepcopy_where_possible(
                         component_base_classes[block].get_defaults())
             else:
-                component_path = input_block[component].get("python_path", None)
+                component_path = input_block[kind].get("python_path", None)
                 default_class_info, annotations = get_default_info(
-                    component, block, class_name=input_block[component].get("class"),
-                    component_path=component_path, input_options=input_block[component],
+                    kind, block, class_name=input_block[kind].get("class"),
+                    component_path=component_path, input_options=input_block[kind],
                     return_undefined_annotations=True)
-            updated[component] = default_class_info or {}
+            updated[kind] = default_class_info or {}
             # Update default options with input info
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
             # Reserved attributes not necessarily already in default info:
             reserved = {"external", "class", "provides", "requires", "renames",
                         "input_params", "output_params", "python_path", "aliases"}
-            options_not_recognized = set(input_block[component]).difference(
-                chain(reserved, updated[component], annotations))
+            options_not_recognized = set(input_block[kind]).difference(
+                chain(reserved, updated[kind], annotations))
             if options_not_recognized:
                 alternatives = {}
-                available = (
-                    {"external", "class", "requires", "renames"}.union(
-                        updated_info[block][component]))
+                available = ({"external", "class", "requires", "renames"}.union(
+                    updated_info[block][kind]))
                 while options_not_recognized:
                     option = options_not_recognized.pop()
                     alternatives[option] = fuzzy_match(option, available, n=3)
@@ -308,11 +314,11 @@ def update_info(info: InputDict) -> InputDict:
                 raise LoggedError(
                     log, "%s '%s' does not recognize some options: %s. "
                          "Check the documentation for '%s'.",
-                    block, component, did_you_mean, block)
-            updated[component].update(input_block[component])
+                    block, kind, did_you_mean, block)
+            updated[kind].update(input_block[kind])
             # save params and priors of class to combine later
-            default_params_info[component] = default_class_info.get("params", {})
-            default_prior_info[component] = default_class_info.get("prior", {})
+            default_params_info[kind] = default_class_info.get("params", {})
+            default_prior_info[kind] = default_class_info.get("prior", {})
     # Add priors info, after the necessary checks
     if "prior" in input_info or any(default_prior_info.values()):
         updated_info["prior"] = input_info.get("prior", {})
@@ -324,38 +330,43 @@ def update_info(info: InputDict) -> InputDict:
             updated_info["prior"][name] = prior
     # Add parameters info, after the necessary updates and checks
     defaults_merged = merge_default_params_info(default_params_info)
-    updated_info["params"] = merge_params_info([defaults_merged,
-                                                input_info.get("params", {})],
-                                               default_derived=False)
+    param_info: ExpandedParamsDict = merge_params_info([defaults_merged,
+                                                        input_info.get("params", {})],
+                                                       default_derived=False)
+    updated_info["params"] = param_info  # type: ignore
     # Add aggregated chi2 params
-    if "likelihood" in info:
+    if info.get("likelihood"):
         all_types = set(chain(
             *[str_to_list(like_info.get("type", []) or [])
-              for like_info in updated_info["likelihood"].values()]))
-        add_aggregated_chi2_params(updated_info["params"], all_types)
+              for like_info in updated_info["likelihood"].values() if
+              like_info is not None]))
+        add_aggregated_chi2_params(param_info, all_types)
     # Add automatically-defined parameters
     if "auto_params" in updated_info:
-        make_auto_params(updated_info.pop("auto_params"), updated_info["params"])
+        make_auto_params(updated_info.pop("auto_params"), param_info)
     # Add aliases for theory params (after merging!)
-    for kind in [k for k in ["theory", "likelihood"] if k in updated_info]:
-        for item in updated_info[kind].values():
-            renames = item.get("renames")
-            if renames:
-                if not isinstance(renames, Mapping):
-                    raise LoggedError(log,
-                                      "'renames' should be a dictionary of name mappings "
-                                      "(or you meant to use 'aliases')")
-                renames_flat = [set([k] + str_to_list(v)) for k, v in renames.items()]
-                for p in updated_info["params"]:
-                    # Probably could be made faster by inverting the renames dicts *once*
-                    renames_pairs = [a for a in renames_flat if p in a]
-                    if renames_pairs:
-                        this_renames = reduce(
-                            lambda x, y: x.union(y), [a for a in renames_flat if p in a])
-                        updated_info["params"][p]["renames"] = \
-                            list(set(chain(this_renames, str_to_list(
-                                updated_info["params"][p].get("renames", []))))
-                                 .difference({p}))
+    for kind in ("theory", "likelihood"):
+        if isinstance(updated_info.get(kind), dict):
+            for item in updated_info[kind].values():
+                renames = item.get("renames")
+                if renames:
+                    if not isinstance(renames, Mapping):
+                        raise LoggedError(log, "'renames' should be a dictionary of "
+                                               "name mappings "
+                                               "(or you meant to use 'aliases')")
+                    renames_flat = [set([k] + str_to_list(v)) for k, v in renames.items()]
+                    for p in param_info:
+                        # Probably could be made faster by inverting
+                        # the renames dicts *once*
+                        renames_pairs = [a for a in renames_flat if p in a]
+                        if renames_pairs:
+                            this_renames = reduce(
+                                lambda x, y: x.union(y),
+                                [a for a in renames_flat if p in a])
+                            param_info[p]["renames"] = \
+                                list(set(chain(this_renames, str_to_list(
+                                    param_info[p].get("renames", []))))
+                                     .difference({p}))
     # Rest of the options
     for k, v in input_info.items():
         if k not in updated_info:
@@ -363,12 +374,12 @@ def update_info(info: InputDict) -> InputDict:
     return updated_info
 
 
-def merge_default_params_info(defaults):
+def merge_default_params_info(defaults: LikesDict):
     """
     Merges default parameters info for all likelihoods.
     Checks that multiple defined (=shared) parameters have equal info.
     """
-    defaults_merged = {}
+    defaults_merged: LikesDict = {}
     for lik, params in defaults.items():
         for p, info in (params or {}).items():
             # if already there, check consistency
@@ -405,18 +416,16 @@ def merge_params_info(params_infos, default_derived=True):
             current_info[p].update(deepcopy(new_info_p))
             # Account for incompatibilities: "prior" and ("value" or "derived"+bounds)
             incompatibilities = {"prior": ["value", "derived", "min", "max"],
-                                 "value": ["prior", "ref",
-                                           "proposal"],
-                                 "derived": ["prior", "drop", "ref",
-                                             "proposal"]}
+                                 "value": ["prior", "ref", "proposal"],
+                                 "derived": ["prior", "drop", "ref", "proposal"]}
             for f1, incomp in incompatibilities.items():
                 if f1 in new_info_p:
                     for f2 in incomp:
-                        current_info[p].pop(f2, None)
+                        current_info[p].pop(f2, None)  # type: ignore
     # Re-sort, so that rightmost info takes precedence *also* in the sorting
-    new_order = chain(*[list(params) for params in params_infos[::-1]])
+    new_order_sorted = chain(*params_infos[::-1])
     # The following removes duplicates maintaining order (keeps the first occurrence)
-    new_order = list(dict.fromkeys(new_order))
+    new_order = dict.fromkeys(new_order_sorted)
     current_info = {p: current_info[p] for p in new_order}
     return current_info
 
@@ -449,6 +458,8 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
     Set ``strict=False`` (default: ``True``) to ignore options that would not affect
     the statistics of a posterior sample, including order of params/priors/likelihoods.
     """
+    myprint: Callable
+    myprint_debug: Callable
     if print_not_log:
         myprint = print
         myprint_debug = lambda x: x
@@ -542,7 +553,7 @@ def get_preferred_old_values(info_old):
     """
     Returns selected values in `info_old`, which are preferred at resuming.
     """
-    keep_old = {}
+    keep_old: InfoDict = {}
     for block_name, block in info_old.items():
         if block_name not in kinds or not block:
             continue

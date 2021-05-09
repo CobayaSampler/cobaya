@@ -12,7 +12,7 @@ import logging
 from itertools import chain
 import numpy as np
 import sys
-from typing import List, Union, NamedTuple
+from typing import List, Union, NamedTuple, Optional
 
 # Local
 from cobaya.parameterization import Parameterization
@@ -20,7 +20,7 @@ from cobaya.parameterization import is_fixed_or_function_param, is_sampled_param
     is_derived_param
 from cobaya.conventions import prior_1d_name, OutPar, get_chi2_name, \
     undo_chi2_name, get_minuslogpior_name, separator_files, minuslogprior_names
-from cobaya.typing import ParamValuesDict, InputDict, InfoDict
+from cobaya.typing import ParamValuesDict, InputDict, InfoDict, PostDict
 from cobaya.collection import Collection
 from cobaya.log import logger_setup, LoggedError
 from cobaya.input import update_info, add_aggregated_chi2_params, load_input_dict
@@ -80,7 +80,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # BEHAVIOUR TO BE REPLACED BY ERROR:
     check_deprecated_modules_path(info)
     # END OF DEPRECATION BLOCK
-    info_post = info.get("post")
+    info_post: PostDict = info.get("post") or {}
     if not info_post:
         raise LoggedError(log, "No 'post' block given. Nothing to do!")
     if mpi.is_main_process() and info.get("resume"):
@@ -93,19 +93,18 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                                "main block not under 'post'). ")
     # 1. Load existing sample
     output_in = get_output(prefix=info.get("output"))
+    info_in: InputDict  # temp workaround for typing bug
     if output_in:
         info_in = output_in.load_updated_info() or update_info(info)
     else:
         info_in = update_info(info)
-    info_in: InputDict  # temp workaround for typing bug
     dummy_model_in = DummyModel(info_in["params"], info_in.get("likelihood", {}),
                                 info_in.get("prior"))
 
     in_collections = []
     thin = info_post.get("thin", 1)
     skip = info_post.get("skip", 0)
-    # noinspection PyTypedDict
-    if info.get('thin') is not None or info.get('skip') is not None:
+    if info.get('thin') is not None or info.get('skip') is not None:  # type: ignore
         raise LoggedError(log, "'thin' and 'skip' should be "
                                "parameters of the 'post' block")
 
@@ -172,6 +171,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             add["params"].pop(p)
 
     # 2.1 Adding/removing derived parameters and changes in priors of sampled parameters
+    # noinspection PyTypeChecker
     out_combined: InputDict = {"params": deepcopy_where_possible(info_in["params"])}
     remove_params = list(str_to_list(remove.get("params")) or [])
     for p in remove_params:
@@ -303,11 +303,11 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # {post: {output: None}} suppresses output, and if it's a string, updates it.
     out_prefix = info_post.get("output", info.get("output"))
     if out_prefix not in [None, False]:
-        if "suffix" not in info_post:
+        if info_post.get("suffix") is None:
             raise LoggedError(log, "You need to provide a '%s' for your output chains.",
                               "suffix")
-        out_prefix += separator_files + "post" + separator_files + info_post[
-            "suffix"]
+        assert isinstance(out_prefix, str)
+        out_prefix += separator_files + "post" + separator_files + info_post["suffix"]
     output_out = get_output(prefix=out_prefix, force=info.get("force"))
     output_out.set_lock()
 
@@ -366,6 +366,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     if prior_recompute_1d:
         missing_priors.discard(_minuslogprior_1d_name)
         mlprior_names_add.insert(0, _minuslogprior_1d_name)
+    prior_regenerate: Optional[Prior]
     if missing_priors and "prior" in info_in:
         # in case there are input priors that are not stored in input samples
         # e.g. when postprocessing GetDist/CosmoMC-format chains
@@ -399,7 +400,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             log.debug("Point: %r", point)
             sampled = np.array([all_params[param] for param in
                                 dummy_model_in.parameterization.sampled_params()])
-            all_params = out_func_parameterization.to_input(all_params)
+            all_params = out_func_parameterization.to_input(all_params).copy()
 
             # Add/remove priors
             if prior_recompute_1d:
@@ -506,26 +507,27 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         min_weight = min(min_weight, np.min(importance_weights))
         max_weight = max(max_weight, np.max(output_weights))
         sum_w2 += np.dot(output_weights, output_weights)
-    tot_weight, min_weight, max_weight, sum_w2, points, points_removed = \
+    tot_weights, min_weights, max_weights, sum_w2s, points_s, points_removed_s = \
         mpi.zip_gather([tot_weight, min_weight, max_weight, sum_w2,
                         points, points_removed])
+
     if mpi.is_main_process():
         output_out.clear_lock()
-        log.info("Finished! Final number of distinct sample points: %s", sum(points))
-        log.info("Minimum scaled importance weight: %.4g", min(min_weight))
-        if sum(points_removed):
-            log.info("Points deleted due to zero weight: %s", sum(points_removed))
+        log.info("Finished! Final number of distinct sample points: %s", sum(points_s))
+        log.info("Minimum scaled importance weight: %.4g", min(min_weights))
+        if sum(points_removed_s):
+            log.info("Points deleted due to zero weight: %s", sum(points_removed_s))
         log.info("Effective number of single samples if independent (sum w)/max(w): %s",
-                 int(sum(tot_weight) / max(max_weight)))
+                 int(sum(tot_weights) / max(max_weights)))
         log.info(
             "Effective number of weighted samples if independent (sum w)^2/sum(w^2): "
-            "%s", int(sum(tot_weight) ** 2 / sum(sum_w2)))
+            "%s", int(sum(tot_weights) ** 2 / sum(sum_w2s)))
     products: PostResultDict = {"sample": value_or_list(out_collections),
-                                "stats": {'min_weight': min(min_weight),
-                                          'points_removed': sum(points_removed),
-                                          'tot_weight': sum(tot_weight),
-                                          'max_weight': max(max_weight),
-                                          'sum_w2': sum(sum_w2),
-                                          'points': sum(points)},
+                                "stats": {'min_weight': min(min_weights),
+                                          'points_removed': sum(points_removed_s),
+                                          'tot_weight': sum(tot_weights),
+                                          'max_weight': max(max_weights),
+                                          'sum_w2': sum(sum_w2s),
+                                          'points': sum(points_s)},
                                 "weights": value_or_list(weights)}
     return PostTuple(info=out_combined, products=products)

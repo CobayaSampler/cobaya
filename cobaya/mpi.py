@@ -9,9 +9,8 @@
 import os
 import sys
 import functools
-from typing import List, Iterable
+from typing import List, Iterable, Union, Callable, Any, Optional
 import numpy as np
-from typing import Any, Optional
 import logging
 import time
 from enum import IntEnum
@@ -22,7 +21,7 @@ default_error_timeout_seconds = 5
 _mpi: Any = None if os.environ.get('COBAYA_NOMPI', False) else -1
 _mpi_size = -1
 _mpi_comm: Any = -1
-_mpi_rank = -1
+_mpi_rank: Optional[int] = -1
 
 
 def set_mpi_disabled(disabled=True):
@@ -185,7 +184,7 @@ def zip_gather(list_of_data, root=0) -> Iterable[tuple]:
         return ((item,) for item in list_of_data)
 
 
-def array_gather(list_of_data, root=0) -> List[np.array]:
+def array_gather(list_of_data, root=0) -> List[np.ndarray]:
     return [np.array(i) for i in zip_gather(list_of_data, root=root)]
 
 
@@ -339,7 +338,7 @@ class SyncError(OtherProcessError):
     pass
 
 
-_tags = []
+_tags: List[str] = []
 
 # log = logging.getLogger('state')
 log: Any = None
@@ -348,9 +347,9 @@ log: Any = None
 class ProcessState:
 
     def __init__(self, name='error',
-                 time_out_seconds: [float, int] = default_error_timeout_seconds,
+                 time_out_seconds: Union[float, int] = default_error_timeout_seconds,
                  sleep_interval=0.01,
-                 timeout_abort_proc: callable = abort_if_mpi):
+                 timeout_abort_proc: Callable = abort_if_mpi):
         self.name = str(name)
         if name not in _tags:
             _tags.append(name)

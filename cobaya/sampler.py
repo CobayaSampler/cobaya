@@ -87,8 +87,8 @@ def check_sane_info_sampler(info_sampler: SamplersDict):
         raise LoggedError(log, "Only one sampler currently supported at a time.")
 
 
-def check_sampler_info(info_old: Optional[SamplersDict] = None,
-                       info_new: Optional[SamplersDict] = None, is_resuming=False):
+def check_sampler_info(info_old: Optional[SamplersDict],
+                       info_new: SamplersDict, is_resuming=False):
     """
     Checks compatibility between the new sampler info and that of a pre-existing run.
 
@@ -141,8 +141,7 @@ def get_sampler(info_sampler: SamplersDict, model: Model, output: Optional[Outpu
         output = OutputDummy()
     # Check and update info
     check_sane_info_sampler(info_sampler)
-    updated_info_sampler = update_info(
-        {"sampler": info_sampler})["sampler"]
+    updated_info_sampler = update_info({"sampler": info_sampler})["sampler"]
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
         logger_sampler.debug(
             "Input info updated with defaults (dumped to YAML):\n%s",
@@ -371,6 +370,7 @@ class Sampler(CobayaComponent):
         """
         if not output:
             return
+        resuming: Optional[bool]
         if mpi.is_main_process():
             resuming = False
             if output.force:

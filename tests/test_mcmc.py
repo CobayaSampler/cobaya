@@ -15,7 +15,6 @@ pytestmark = pytest.mark.mpi
 max_runs = 3
 
 
-@flaky(max_runs=max_runs, min_passes=1)
 def test_mcmc(tmpdir, packages_path=None):
     dimension = 3
     # Random initial proposal
@@ -95,10 +94,9 @@ class GaussLike2(Likelihood):
                   params_values_dict['b'] ** 2) / 0.2 / 2
 
 
-@flaky(max_runs=max_runs, min_passes=1)
 @mpi.sync_errors
 def test_mcmc_drag_results():
-    info = yaml_load(yaml_drag)
+    info: InputDict = yaml_load(yaml_drag)
     info['likelihood'] = {'g1': {'external': GaussLike}, 'g2': {'external': GaussLike2}}
     updated_info, sampler = run(info)
     products = sampler.products()
@@ -138,7 +136,7 @@ sampler:
 
 @pytest.mark.mpionly
 def test_mcmc_sync():
-    info = yaml_load(yaml)
+    info: InputDict = yaml_load(yaml)
     print('Test end synchronization')
 
     if mpi.rank() == 1:
@@ -228,9 +226,10 @@ def _test_overhead_timing(dim=15):
     from cobaya.samplers.mcmc import proposal  # one-time numba compile out of profiling
 
     LikeTest = _make_gaussian_like(dim)
-    info: InputDict = {'likelihood': {'like': LikeTest}, 'debug': False, 'sampler': {
-        'mcmc': {'max_samples': 1000, 'burn_in': 0, "learn_proposal": False,
-                 "Rminus1_stop": 0.0001}}}
+    info: InputDict = {'likelihood': {'like': LikeTest}, 'debug': False,
+                       'sampler': {'mcmc': {'max_samples': 1000, 'burn_in': 0,
+                                            "learn_proposal": False,
+                                            "Rminus1_stop": 0.0001}}}
     prof = Profile()
     prof.enable()
     run(info)

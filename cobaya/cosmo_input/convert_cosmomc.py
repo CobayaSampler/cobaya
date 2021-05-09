@@ -1,7 +1,7 @@
 import os
 from getdist import IniFile, ParamNames
 from getdist.parampriors import ParamBounds
-from cobaya.typing import InputDict, ParamsDict
+from cobaya.typing import InputDict, ParamDict, ParamsDict, LikesDict
 
 
 def cosmomc_root_to_cobaya_info_dict(root: str, derived_to_input=()) -> InputDict:
@@ -37,21 +37,22 @@ def cosmomc_root_to_cobaya_info_dict(root: str, derived_to_input=()) -> InputDic
             name = name.replace('chi2_', 'chi2__')
         if name.startswith('minuslogprior') or name == 'chi2':
             continue
-        d[name] = {'latex': par.label}
+        param_dict: ParamDict = {'latex': par.label}
+        d[name] = param_dict
         if par.renames:
-            d[name]['renames'] = par.renames
+            param_dict['renames'] = par.renames
         if par.isDerived:
             if name not in derived_to_input:
-                d[name]['derived'] = True
+                param_dict['derived'] = True
             else:
                 par.isDerived = False
         if ranges and name in ranges.names:
             if par.isDerived:
                 low_up = ranges.getLower(name), ranges.getUpper(name)
                 if any(r is not None for r in low_up):
-                    d[name]['min'], d[name]['max'] = low_up
+                    param_dict['min'], param_dict['max'] = low_up
             else:
-                d[name]["prior"] = [ranges.getLower(name), ranges.getUpper(name)]
+                param_dict["prior"] = [ranges.getLower(name), ranges.getUpper(name)]
     if ranges:
         d.update(ranges.fixedValueDict())
     if names.numberOfName('As') == -1 and names.numberOfName('logA') != -1:
@@ -95,7 +96,7 @@ def cosmomc_root_to_cobaya_info_dict(root: str, derived_to_input=()) -> InputDic
                         "lambda %s: stats.norm.logpdf(%s, loc=%g, scale=%g)" % (
                             ",".join(inputs), linear, mean, std)
     if os.path.exists(root + '.likelihoods'):
-        info_like = {}
+        info_like: LikesDict = {}
         info['likelihood'] = info_like
         with open(root + '.likelihoods', 'r') as f:
             for line in f.readlines():

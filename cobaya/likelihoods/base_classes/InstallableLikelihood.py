@@ -12,10 +12,11 @@ import logging
 
 # Local
 from cobaya.likelihood import Likelihood
+from cobaya.typing import InfoDict
 
 
 class InstallableLikelihood(Likelihood):
-    install_options = {}
+    install_options: InfoDict = {}
 
     @classmethod
     def get_install_options(cls):

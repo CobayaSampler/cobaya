@@ -4,7 +4,7 @@ from typing import Optional, Union, List, Any
 
 from cobaya.log import HasLogger, LoggedError
 from cobaya.input import HasDefaults
-from cobaya.typing import InfoDict, empty_dict
+from cobaya.typing import InfoDict, ParamValuesDict, empty_dict
 from cobaya.tools import resolve_packages_path
 
 
@@ -56,8 +56,8 @@ class CobayaComponent(HasLogger, HasDefaults):
     """
     # The next lists of options apply when comparing existing versus new info at resuming.
     # When defining it for subclasses, redefine append adding this list to new entries.
-    _at_resume_prefer_new = ["version"]
-    _at_resume_prefer_old = []
+    _at_resume_prefer_new: List[str] = ["version"]
+    _at_resume_prefer_old: List[str] = []
 
     def __init__(self, info: InfoDict = empty_dict,
                  name: Optional[str] = None,
@@ -232,10 +232,12 @@ class Provider:
     if the parameter is defined there.
     """
 
+    params: ParamValuesDict
+
     def __init__(self, model, requirement_providers):
         self.model = model
         self.requirement_providers = requirement_providers
-        self.params = None
+        self.params = {}
 
     def set_current_input_params(self, params):
         self.params = params
@@ -250,9 +252,9 @@ class Provider:
         :return: value of parameter, or list of parameter values
         """
         if isinstance(param, (list, tuple)):
-            return [self.get_param(p) for p in param]
+            return [self.get_param(p) for p in param]  # type: ignore
         if param in self.params:
-            return self.params[param]
+            return self.params[param]  # type: ignore
         else:
             return self.requirement_providers[param].get_param(param)
 

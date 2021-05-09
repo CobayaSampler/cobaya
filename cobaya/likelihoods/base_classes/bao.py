@@ -129,6 +129,7 @@ from typing import Optional, Sequence
 # Local
 from cobaya.log import LoggedError
 from cobaya.conventions import Const
+from cobaya.typing import InfoDict
 from cobaya.likelihoods.base_classes import InstallableLikelihood
 
 
@@ -234,7 +235,7 @@ class BAO(InstallableLikelihood):
         # Requisites
         zs = {obs: self.data.loc[self.data["observable"] == obs, "z"].values
               for obs in self.data["observable"].unique()}
-        theory_reqs = {
+        theory_reqs: InfoDict = {
             "DV_over_rs": {
                 "angular_diameter_distance": {"z": zs.get("DV_over_rs", None)},
                 "Hubble": {"z": zs.get("DV_over_rs", None)},

@@ -4,7 +4,7 @@ import pickle
 from itertools import chain
 import numpy as np
 import re
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 # Local
 from cobaya.conventions import Extension
@@ -25,7 +25,7 @@ covmat_folders = [
     "{%s}/data/bicep_keck_2015/BK15_cosmomc/planck_covmats/" % "packages_path"]
 
 # Global instance of loaded database, for fast calls to get_best_covmat in GUI
-_loaded_covmats_database = None
+_loaded_covmats_database: Optional[List[Dict]] = None
 
 
 def get_covmat_database(packages_path, cached=True) -> List[dict]:
@@ -90,6 +90,8 @@ def get_best_covmat(info, packages_path=None, cached=True, random_state=None):
     info_sampled_params = updated_info["params"]
     covmat_data = get_best_covmat_ext(packages_path, updated_info["params"],
                                       updated_info["likelihood"], random_state, cached)
+    if covmat_data is None:
+        return None
     covmat = np.atleast_2d(np.loadtxt(os.path.join(
         covmat_data["folder"].format(packages_path=packages_path), covmat_data["name"])))
     params_in_covmat = get_translated_params(info_sampled_params, covmat_data["params"])

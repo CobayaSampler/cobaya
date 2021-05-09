@@ -16,10 +16,7 @@ def translate(p, info=None, dictionary=None):
     # Try to modify lambda parameters too!
     if isinstance(info, str):
         if info.startswith("lambda"):
-            arguments = info.split(":")[0].split()[1:]
-            if not isinstance(arguments, str):
-                arguments = "".join(arguments)
-            arguments = arguments.split(",")
+            arguments = "".join(info.split(":")[0].split()[1:]).split(",")
             arguments_t = [translate(pi, dictionary=dictionary)[0] for pi in arguments]
             for pi, pit in zip(arguments, arguments_t):
                 info = info.replace(pi, pit)
@@ -43,7 +40,7 @@ def create_input(**kwargs):
     # Need to copy to select theory.
     # Likelihoods always AT THE END!
     # (to check that sampled parameters are not redefined as derived)
-    infos = {}
+    infos: dict = {}
     kwargs_params = ["primordial", "geometry", "hubble", "matter", "neutrinos",
                      "dark_energy", "bbn", "reionization"]
     kwargs_likes = ["like_cmb", "like_bao", "like_des", "like_sn", "like_H0"]
@@ -86,7 +83,7 @@ def create_input(**kwargs):
             for p in remove_derived:
                 info["params"].pop(p)
     # Prepare sampler info
-    info_sampler = deepcopy(input_database.sampler.get(kwargs.get("sampler"), {}))
+    info_sampler = deepcopy(input_database.sampler.get(kwargs.get("sampler") or "", {}))
     if info_sampler:
         sampler_name = list(info_sampler["sampler"])[0]
         info_sampler["sampler"][sampler_name] = info_sampler["sampler"][

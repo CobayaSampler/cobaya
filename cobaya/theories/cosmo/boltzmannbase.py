@@ -8,21 +8,24 @@
 """
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
-from typing import Mapping, Iterable
+from typing import Mapping, Iterable, Callable, Optional
 
 # Local
 from cobaya.theory import Theory
 from cobaya.tools import deepcopy_where_possible
 from cobaya.log import LoggedError, abstract
 from cobaya.conventions import Const
-from cobaya.typing import empty_dict
+from cobaya.typing import empty_dict, InfoDict
 
 H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": Const.c_km_s}
 
 
 class BoltzmannBase(Theory):
-    _get_z_dependent: callable  # defined by inheriting classes
+    _get_z_dependent: Callable  # defined by inheriting classes
     renames: Mapping[str, str] = empty_dict
+    extra_args: InfoDict
+    _must_provide: Optional[dict]
+    path: str
 
     def initialize(self):
 
@@ -132,7 +135,7 @@ class BoltzmannBase(Theory):
 
         """
         super().must_provide(**requirements)
-        self._must_provide: dict = self._must_provide or dict.fromkeys(self.output_params)
+        self._must_provide = self._must_provide or dict.fromkeys(self.output_params or [])
         # Accumulate the requirements across several calls in a safe way;
         # e.g. take maximum of all values of a requested precision parameter
         for k, v in requirements.items():
@@ -219,7 +222,7 @@ class BoltzmannBase(Theory):
 
         Should be called at initialisation, and at the end of every call to must_provide()
         """
-        common = set(self.input_params).intersection(set(self.extra_args))
+        common = set(self.input_params).intersection(self.extra_args)
         if common:
             raise LoggedError(
                 self.log, "The following parameters appear both as input parameters and "

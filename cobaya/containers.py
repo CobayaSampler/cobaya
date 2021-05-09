@@ -22,7 +22,8 @@ from cobaya.log import logger_setup, LoggedError
 from cobaya.input import get_used_components, load_input
 from cobaya.yaml import yaml_dump
 from cobaya.install import install
-from cobaya.conventions import products_path, packages_path_env, packages_path_arg, code_path, data_path
+from cobaya.conventions import products_path, packages_path_env, packages_path_arg, \
+    code_path, data_path
 from cobaya.tools import warn_deprecation
 
 log = logging.getLogger(__name__.split(".")[-1])
@@ -152,7 +153,7 @@ def create_base_image(mpi=None, version=None, sub=None):
         sub = "." + sub
     try:
         tag = "cobaya/base_%s_%s:latest" % (mpi.lower(), version + sub)
-    except KeyError():
+    except KeyError:
         raise LoggedError(log, "MPI library '%s' not recognized.", mpi)
     URL = MPI_URL[mpi.lower()].replace("_VER_", str(version)).replace("_DOT_SUB_", sub)
     if head(URL).status_code >= 400:
@@ -235,7 +236,8 @@ def create_singularity_image(filenames, MPI_version=None):
         %s
         """ % (requirements_file_path,
                # TODO: this looks wrong?
-               "packages_path", os.path.join(packages_path_arg, "packages_path", data_path),
+               "packages_path",
+               os.path.join(packages_path_arg, "packages_path", data_path),
                "\n        ".join(image_help("singularity").split("\n")[1:]))))
     with NamedTemporaryFile(delete=False) as recipe_file:
         recipe_file.write(recipe)

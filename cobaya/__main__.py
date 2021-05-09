@@ -20,7 +20,6 @@ commands = {"install": ["install", "install_script"],
             "run-job": ["grid_tools.runMPI", "run_single"],
             }
 
-
 help_msg = ("Add a one of the following commands and its arguments "
             "(`<command> -h` for help): %r" % list(commands))
 
@@ -36,6 +35,7 @@ if __name__ == "__main__":
 
         if module is not None:
             sys.argv.pop(1)
+            assert func is not None
             getattr(import_module("cobaya." + module), func)()
         else:
             if command_or_input in ["-h", "--help"]:

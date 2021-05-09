@@ -35,6 +35,7 @@ class PlanckClik(Likelihood):
     type = "CMB"
 
     path: str
+    clik_file: str
 
     def initialize(self):
         if "2015" in self.get_name():
@@ -292,6 +293,7 @@ def execute(command):
     if _clik_verbose:
         process = Popen(command, stdout=PIPE, stderr=STDOUT)
         out = []
+        assert process.stdout
         while True:
             nextline = process.stdout.readline()
             if nextline == b"" and process.poll() is not None:

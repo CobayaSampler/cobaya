@@ -138,7 +138,7 @@ import os
 import numpy as np
 from copy import deepcopy
 import logging
-from typing import NamedTuple, Sequence, Union, Optional
+from typing import NamedTuple, Sequence, Union, Optional, Callable
 
 # Local
 from cobaya.theories.cosmo import BoltzmannBase
@@ -154,8 +154,8 @@ class Collector(NamedTuple):
     args: Sequence = []
     args_names: Sequence = []
     kwargs: dict = {}
-    arg_array: Union[int, Sequence] = None
-    post: Optional[callable] = None
+    arg_array: Union[int, Sequence, None] = None
+    post: Optional[Callable] = None
 
 
 # default non linear code -- same as CAMB

@@ -20,7 +20,7 @@ from importlib import import_module
 from copy import deepcopy
 from packaging import version
 from itertools import permutations
-from typing import Mapping, Sequence, Any, List, TypeVar
+from typing import Mapping, Sequence, Any, List, TypeVar, Optional, Union
 from numbers import Number
 from types import ModuleType
 from inspect import cleandoc, getfullargspec
@@ -190,13 +190,12 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
     assert allow_internal or allow_external
 
     def return_class(_module_name, package=None):
-        _module = load_module(_module_name, package=package, path=component_path)
+        _module: Any = load_module(_module_name, package=package, path=component_path)
         if not class_name and hasattr(_module, "get_cobaya_class"):
             return _module.get_cobaya_class()
         _class_name = class_name or module_name
-        if hasattr(_module, _class_name):
-            cls = getattr(_module, _class_name)
-        else:
+        cls = getattr(_module, _class_name, None)
+        if not cls:
             _module = load_module(_module_name + '.' + _class_name,
                                   package=package, path=component_path)
             cls = getattr(_module, _class_name)
@@ -400,7 +399,7 @@ def recursive_update(base, update):
     return base
 
 
-def invert_dict(dict_in):
+def invert_dict(dict_in: Mapping) -> dict:
     """
     Inverts a dictionary, where values in the returned ones are always lists of the
     original keys. Order is not preserved.
@@ -426,6 +425,7 @@ def ensure_nolatex(string):
 
 
 class NumberWithUnits:
+    unit: Optional[str]
 
     def __init__(self, n_with_unit, unit: str, dtype=float, scale=None):
         """
@@ -438,7 +438,7 @@ class NumberWithUnits:
         :param dtype: type for number
         :param scale: multiple to apply for the unit
         """
-        self.value = None
+        self.value: Union[int, float] = np.nan
 
         def cast(x):
             try:
@@ -576,7 +576,7 @@ def get_scipy_1d_pdf(info):
             raise LoggedError(
                 log, "You cannot use the 'loc/scale' convention and the 'min/max' "
                      "convention at the same time. Either use one or the other.")
-        minmaxvalues = {"min": 0, "max": 1}
+        minmaxvalues = {"min": 0., "max": 1.}
         for limit in minmaxvalues:
             value = info2.pop(limit, minmaxvalues[limit])
             try:
@@ -763,7 +763,7 @@ def deepcopy_where_possible(base: _R) -> _R:
         for key, value in (base or {}).items():
             key_copy = deepcopy(key)
             _copy[key_copy] = deepcopy_where_possible(value)
-        return _copy
+        return _copy  # type: ignore
     else:
         try:
             return deepcopy(base)
@@ -824,7 +824,7 @@ def sort_parameter_blocks(blocks, speeds, footprints, oversample_power=0.):
         [(n_params_per_block[list(o)] * permuted_oversample_factors[i])
              .dot(permuted_costs_per_param_per_block[i])
          for i, o in enumerate(orderings)])
-    i_optimal = np.argmin(total_costs)
+    i_optimal: int = np.argmin(total_costs)  # type: ignore
     optimal_ordering = orderings[i_optimal]
     costs = permuted_costs_per_param_per_block[i_optimal]
     oversample_factors = np.floor(permuted_oversample_factors[i_optimal]).astype(int)
@@ -878,7 +878,7 @@ def get_cache_path():
     Defaults to the system's temp folder.
     """
     if platform.system() == "Windows":
-        base = os.environ.get("CSIDL_LOCAL_APPDATA", os.environ.get("TMP"))
+        base = os.environ.get("CSIDL_LOCAL_APPDATA", os.environ.get("TMP")) or ""
         cache_path = os.path.join(base, "cobaya/Cache")
     elif platform.system() == "Linux":
         base = os.environ.get("XDG_CACHE_HOME",
@@ -888,7 +888,7 @@ def get_cache_path():
         base = os.path.join(os.environ["HOME"], "Library/Caches")
         cache_path = os.path.join(base, "cobaya")
     else:
-        base = os.environ.get("TMP")
+        base = os.environ.get("TMP", "")
         cache_path = os.path.join(base, "cobaya")
     try:
         if not os.path.exists(cache_path):

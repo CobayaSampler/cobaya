@@ -11,14 +11,13 @@ import os
 import functools
 import numpy as np
 import pandas as pd
-from typing import Optional
 from getdist import MCSamples, chains
 from copy import deepcopy
 from math import isclose
 
 # Local
-from cobaya.conventions import OutPar, minuslogprior_names, \
-    chi2_names, derived_par_name_separator
+from cobaya.conventions import OutPar, minuslogprior_names, chi2_names, \
+    derived_par_name_separator
 from cobaya.tools import load_DataFrame
 from cobaya.log import LoggedError, HasLogger, NoLogging
 
@@ -210,7 +209,7 @@ class Collection(BaseCollection):
         logpriors_sum = sum(logpriors) if logpriors is not None else None
         loglikes_sum = sum(loglikes) if loglikes is not None else None
         try:
-            logpost_sum = logpriors_sum + loglikes_sum
+            logpost_sum = logpriors_sum + loglikes_sum  # type: ignore
             if logpost is None:
                 logpost = logpost_sum
             else:
@@ -311,7 +310,7 @@ class Collection(BaseCollection):
     def n_last_out(self):
         return self._n_last_out
 
-    @property
+    @property  # type: ignore
     @ensure_cache_dumped
     def data(self):
         return self._data
@@ -435,7 +434,7 @@ class Collection(BaseCollection):
     def filtered_copy(self, where) -> 'Collection':
         return self._copy(self.data[where].reset_index(drop=True))
 
-    def thin_samples(self, thin, inplace=False) -> 'Optional[Collection]':
+    def thin_samples(self, thin, inplace=False) -> 'Collection':
         if thin == 1:
             return self if inplace else self.copy()
         if thin != int(thin) or thin < 1:
@@ -461,6 +460,7 @@ class Collection(BaseCollection):
                 self._n = self._data.last_valid_index() + 1
             else:
                 return self._copy(data)
+        return self
 
     def bestfit(self):
         """Best fit (maximum likelihood) sample. Returns a copy."""

@@ -12,6 +12,7 @@ from getdist import IniFile
 # Local
 from cobaya.log import LoggedError
 from cobaya.install import NotInstalledError
+from cobaya.typing import InfoDict
 from .InstallableLikelihood import InstallableLikelihood
 
 
@@ -32,7 +33,7 @@ class DataSetLikelihood(InstallableLikelihood):
     """A likelihood reading parameters and file names from a .dataset plain text
     .ini file (as CosmoMC)"""
 
-    _default_dataset_params = {}
+    _default_dataset_params: InfoDict = {}
 
     _fast_chi_squared = _fast_chi_square()
 

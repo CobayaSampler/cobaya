@@ -87,12 +87,12 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             raise ValueError("'rename' and 'force' are exclusive options")
         info["resume"] = bool(resume)
         info["force"] = bool(force)
-    if "post" in info:
-        if output or output is False:
+    if info.get("post"):
+        if isinstance(output, str) or output is False:
             info["post"]["output"] = output or None
         return post(info)
 
-    if output or output is False:
+    if isinstance(output, str) or output is False:
         info["output"] = output or None
     logger_setup(info.get("debug"), info.get("debug_file"))
     logger_run = logging.getLogger(run.__name__)
@@ -110,20 +110,20 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                         "`sampler: {mcmc: None}.`")
     infix = "minimize" if which_sampler == "minimize" else None
     with get_output(prefix=info.get("output"), resume=info.get("resume"),
-                    force=info.get("force"), infix=infix) as output:
+                    force=info.get("force"), infix=infix) as out:
         # 2. Update the input info with the defaults for each component
         updated_info = update_info(info)
         if logging.root.getEffectiveLevel() <= logging.DEBUG:
             # Dump only if not doing output
             # (otherwise, the user can check the .updated file)
-            if not output and mpi.is_main_process():
+            if not out and mpi.is_main_process():
                 logger_run.info(
                     "Input info updated with defaults (dumped to YAML):\n%s",
                     yaml_dump(sort_cosmetic(updated_info)))
         # 3. If output requested, check compatibility if existing one, and dump.
         # 3.1 First: model only
-        output.check_and_dump_info(info, updated_info, cache_old=True,
-                                   ignore_blocks=["sampler"])
+        out.check_and_dump_info(info, updated_info, cache_old=True,
+                                ignore_blocks=["sampler"])
         # 3.2 Then sampler -- 1st get the last sampler mentioned in the updated.yaml
         # TODO: ideally, using Minimizer would *append* to the sampler block.
         #       Some code already in place, but not possible at the moment.
@@ -134,13 +134,13 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             raise LoggedError(logger_run, "No sampler requested.")
         sampler_name, sampler_class = get_sampler_name_and_class(last_sampler_info)
         check_sampler_info(
-            (output.reload_updated_info(use_cache=True) or {}).get("sampler"),
-            updated_info["sampler"], is_resuming=output.is_resuming())
+            (out.reload_updated_info(use_cache=True) or {}).get("sampler"),
+            updated_info["sampler"], is_resuming=out.is_resuming())
         # Dump again, now including sampler info
-        output.check_and_dump_info(info, updated_info, check_compatible=False)
+        out.check_and_dump_info(info, updated_info, check_compatible=False)
         # Check if resumable run
         sampler_class.check_force_resume(
-            output, info=updated_info["sampler"][sampler_name])
+            out, info=updated_info["sampler"][sampler_name])
         # 4. Initialize the posterior and the sampler
         with Model(updated_info["params"], updated_info["likelihood"],
                    updated_info.get("prior"), updated_info.get("theory"),
@@ -150,9 +150,9 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                    stop_at_error=info.get("stop_at_error", False)) as model:
             # Re-dump the updated info, now containing parameter routes and version info
             updated_info = recursive_update(updated_info, model.info())
-            output.check_and_dump_info(None, updated_info, check_compatible=False)
+            out.check_and_dump_info(None, updated_info, check_compatible=False)
             sampler = sampler_class(updated_info["sampler"][sampler_name],
-                                    model, output,
+                                    model, out,
                                     packages_path=info.get("packages_path"))
             # Re-dump updated info, now also containing updates from the sampler
             updated_info["sampler"][sampler.get_name()] = \
@@ -160,7 +160,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                     updated_info["sampler"][sampler.get_name()], sampler.info())
             # TODO -- maybe also re-dump model info, now possibly with measured speeds
             # (waiting until the camb.transfers issue is solved)
-            output.check_and_dump_info(None, updated_info, check_compatible=False)
+            out.check_and_dump_info(None, updated_info, check_compatible=False)
             mpi.sync_processes()
             if info.get("test", False):
                 logger_run.info("Test initialization successful! "

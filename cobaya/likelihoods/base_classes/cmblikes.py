@@ -11,6 +11,7 @@
 # Global
 import os
 import numpy as np
+from typing import List
 from getdist import ParamNames, IniFile
 from scipy.linalg import sqrtm
 
@@ -207,7 +208,9 @@ class CMBlikes(DataSetLikelihood):
             raise LoggedError(self.log, 'init_map_cls: size mismatch')
 
         class CrossPowerSpectrum:
-            pass
+            map_ij: List[int]
+            theory_ij: List[int]
+            CL: np.ndarray
 
         cls = np.empty((nmaps, nmaps), dtype=object)
         for i in range(nmaps):
@@ -244,9 +247,9 @@ class CMBlikes(DataSetLikelihood):
             use_theory_field = [True] * self.tot_theory_fields
         maps_use = ini.split('maps_use', [])
         if len(maps_use):
-            if np.any(not i for i in use_theory_field):
+            if any(not i for i in use_theory_field):
                 self.log.warning('maps_use overrides fields_use')
-            self.use_map = np.zeros(len(self.map_names), dtype=bool)
+            self.use_map = [False] * len(self.map_names)
             for j, map_used in enumerate(maps_use):
                 if map_used in self.map_names:
                     self.use_map[self.map_names.index(map_used)] = True
