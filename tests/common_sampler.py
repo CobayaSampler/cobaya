@@ -14,7 +14,7 @@ from .common import process_packages_path, is_travis
 from .conftest import install_test_wrapper
 from cobaya import mpi
 
-KL_tolerance = 0.05
+KL_tolerance = 0.07
 logZ_nsigmas = 2
 O_std_min = 0.01
 O_std_max = 0.05

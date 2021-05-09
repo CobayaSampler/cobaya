@@ -15,6 +15,7 @@ pytestmark = pytest.mark.mpi
 max_runs = 3
 
 
+@flaky(max_runs=max_runs, min_passes=1)
 def test_mcmc(tmpdir, packages_path=None):
     dimension = 3
     # Random initial proposal
@@ -94,6 +95,7 @@ class GaussLike2(Likelihood):
                   params_values_dict['b'] ** 2) / 0.2 / 2
 
 
+@flaky(max_runs=max_runs, min_passes=1)
 @mpi.sync_errors
 def test_mcmc_drag_results():
     info: InputDict = yaml_load(yaml_drag)
