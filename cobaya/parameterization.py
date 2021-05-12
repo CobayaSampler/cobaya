@@ -12,38 +12,38 @@ import numpy as np
 from numbers import Real
 from itertools import chain
 from copy import deepcopy
-from typing import Mapping, Sequence, Dict, Set, List
+from typing import Mapping, Sequence, Dict, Set, List, Tuple, Any, Callable
 
 # Local
-from cobaya.typing import ParamsDict, ParamDict, ParamSpec, \
+from cobaya.typing import ParamsDict, ParamDict, ParamInput, \
     ExpandedParamsDict, ParamValuesDict, partags
 from cobaya.tools import get_external_function, ensure_nolatex, is_valid_variable_name, \
     getfullargspec, deepcopy_where_possible, invert_dict, str_to_list
 from cobaya.log import LoggedError, HasLogger
 
 
-def is_fixed_or_function_param(info_param: ParamSpec) -> bool:
+def is_fixed_or_function_param(info_param: ParamInput) -> bool:
     """
     Returns True if the parameter has been fixed to a value or through a function.
     """
     return expand_info_param(info_param).get("value") is not None
 
 
-def is_sampled_param(info_param: ParamSpec) -> bool:
+def is_sampled_param(info_param: ParamInput) -> bool:
     """
     Returns True if the parameter has a prior.
     """
     return "prior" in expand_info_param(info_param)
 
 
-def is_derived_param(info_param: ParamSpec) -> bool:
+def is_derived_param(info_param: ParamInput) -> bool:
     """
     Returns True if the parameter is saved as a derived one.
     """
     return expand_info_param(info_param).get("derived", False) is not False
 
 
-def expand_info_param(info_param: ParamSpec, default_derived=True) -> ParamDict:
+def expand_info_param(info_param: ParamInput, default_derived=True) -> ParamDict:
     """
     Expands the info of a parameter, from the user friendly, shorter format
     to a more unambiguous one.
@@ -77,7 +77,7 @@ def expand_info_param(info_param: ParamSpec, default_derived=True) -> ParamDict:
     return info_param
 
 
-def reduce_info_param(info_param: ParamDict) -> ParamSpec:
+def reduce_info_param(info_param: ParamDict) -> ParamInput:
     """
     Compresses the info of a parameter, suppressing default values.
     This is the opposite of :func:`~input.expand_info_param`.
@@ -89,9 +89,12 @@ def reduce_info_param(info_param: ParamDict) -> ParamSpec:
     if info_param.get("derived") is True:
         info_param.pop("derived")
     # Fixed parameters with single "value" key
-    if list(info_param) == ["value"]:
+    if list(info_param) == ["value"] and not callable(info_param["value"]):
         return info_param["value"]
     return info_param
+
+
+_WrappedFunc = Tuple[Callable, Dict[str, Any], List[str]]
 
 
 class Parameterization(HasLogger):
@@ -353,16 +356,14 @@ class Parameterization(HasLogger):
             input_ = not_used.intersection(self._input)
             unknown = not_used.difference(derived).difference(input_)
             msg_text = ("Incorrect parameters! " +
-                        ("\n   Duplicated entries (using their aliases): %r" % list(
-                            duplicated)
-                         if duplicated else "") +
+                        ("\n   Duplicated entries (using their aliases): %r" %
+                         list(duplicated) if duplicated else "") +
                         ("\n   Not known: %r" % list(unknown) if unknown else "") +
                         ("\n   Cannot be fixed: %r " % list(input_) +
                          "--> instead, fix sampled parameters that depend on them!"
                          if input_ else "") +
-                        (
-                            "\n   Cannot be fixed because are derived parameters: %r " % list(
-                                derived) if derived else ""))
+                        ("\n   Cannot be fixed because are derived parameters: %r " %
+                         list(derived) if derived else ""))
             for line in msg_text.split("\n"):
                 self.log.error(line)
             raise LoggedError
@@ -411,7 +412,7 @@ class Parameterization(HasLogger):
         # get evaluation order for input and derived parameter function
         # and pre-prepare argument dicts
 
-        wrapped_funcs = ({}, {})
+        wrapped_funcs: Tuple[Dict[str, _WrappedFunc], Dict[str, _WrappedFunc]] = ({}, {})
         known = set(chain(self._constant, self._sampled))
 
         for derived, wrapped_func in zip((False, True), wrapped_funcs):

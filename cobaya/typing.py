@@ -1,22 +1,31 @@
-from typing import Dict, Any, Optional, Union, Sequence, Type, Callable
-import numpy as np
+from typing import Dict, Any, Optional, Union, Sequence, Type, Callable, Mapping
 from types import MappingProxyType
-
-# an immutable empty dict (e.g. for argument defaults)
-empty_dict = MappingProxyType({})
-# empty list-type object that can be used like None to test if assigned
-unset_params: Sequence[str] = ()
+import sys
 
 InfoDict = Dict[str, Any]
+InfoDictIn = Mapping[str, Any]
+
+# an immutable empty dict (e.g. for argument defaults)
+empty_dict: InfoDictIn = MappingProxyType({})
+# empty iterator-compatible object that can be used like None to test if assigned
+unset_params: Sequence[str] = ()
+
 LikeDict = InfoDict
 TheoryDict = InfoDict
 SamplerDict = InfoDict
 
+# Read-only versions for input
+LikeDictIn = InfoDictIn
+TheoryDictIn = InfoDictIn
+SamplerDictIn = InfoDictIn
+
 ParamValuesDict = Dict[str, float]
+# Do not yet explicitly support passing instances here
 TheoriesDict = Dict[str, Union[None, TheoryDict, Type]]
-LikesDict = Dict[str, Union[None, LikeDict, Type]]
+LikesDict = Dict[str, Union[None, LikeDict, Type, Callable]]
 SamplersDict = Dict[str, Optional[SamplerDict]]
 PriorsDict = Dict[str, Union[str, Callable]]
+
 # parameters in a params list can be specified on input by
 # 1. a ParamDict dictionary
 # 2. constant value
@@ -25,22 +34,18 @@ PriorsDict = Dict[str, Union[str, Callable]]
 # 5. Sequence specifying uniform prior range [min, max] and optionally
 #    'ref' mean and standard deviation for starting positions, and optionally
 #    proposal width. Allowed lengths, 2, 4, 5
-ParamSpec = Union['ParamDict', None, str, float, Sequence[float]]
-ParamsDict = Dict[str, ParamSpec]
+ParamInput = Union['ParamDict', None, str, float, Sequence[float]]
+ParamsDict = Dict[str, ParamInput]
 ExpandedParamsDict = Dict[str, 'ParamDict']
 
 partags = {"prior", "ref", "proposal", "value", "drop",
            "derived", "latex", "renames", "min", "max"}
 
-try:
-    # noinspection PyUnresolvedReferences
-    from typing import TypedDict
-except ImportError:
-    InputDict = InfoDict
-    ParamDict = InfoDict
-    ModelDict = InfoDict
-    PostDict = InfoDict
-else:
+if sys.version_info >= (3, 8):
+    from typing import TypedDict, Literal
+
+    LiteralFalse = Literal[False]
+
 
     class SciPyDistDict(TypedDict):
         dist: str
@@ -66,8 +71,6 @@ else:
         min: float  # hard bounds (does not affect prior)
         max: float
 
-
-    # partags = set(ParamDict.__annotations__)
 
     class ModelDict(TypedDict, total=False):
         theory: TheoriesDict
@@ -101,10 +104,8 @@ else:
         output: Optional[str]
         version: Optional[Union[str, InfoDict]]
 
-try:
-    from numpy.typing import ArrayLike
-except ImportError:
-    ArrayLike = Union[Sequence, np.ndarray]
-
-OptionalArrayLike = Optional[ArrayLike]
-ArrayOrFloat = Union[float, ArrayLike]
+else:
+    # avoid PyCharm parsing these too...
+    globals().update((k, InfoDict) for k in
+                     ('InputDict', 'ParamDict', 'ModelDict', 'PostDict'))
+    globals()['LiteralFalse'] = bool

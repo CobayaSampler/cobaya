@@ -4,7 +4,7 @@ from copy import deepcopy
 from cobaya.model import get_model
 from cobaya.theory import Theory
 from cobaya.likelihood import LikelihoodInterface, Likelihood
-from cobaya.typing import InputDict, empty_dict
+from cobaya.typing import InputDict, empty_dict, ParamDict
 from .common import process_packages_path
 from .conftest import install_test_wrapper
 from .test_cosmo_camb import get_camb
@@ -242,7 +242,7 @@ class BinnedPk(Theory):
     k_min_bin: float = np.log10(0.001)
     k_max_bin: float = np.log10(0.35)
     scale: float = 1e-9
-    bin_par = {'prior': {'min': 0, 'max': 100}}
+    bin_par: ParamDict = {'prior': {'min': 0, 'max': 100}}
 
     def initialize(self):
         self.ks = np.logspace(self.k_min_bin, self.k_max_bin, self.nbins)

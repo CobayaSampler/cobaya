@@ -240,7 +240,7 @@ def create_singularity_image(filenames, MPI_version=None):
                os.path.join(packages_path_arg, "packages_path", data_path),
                "\n        ".join(image_help("singularity").split("\n")[1:]))))
     with NamedTemporaryFile(delete=False) as recipe_file:
-        recipe_file.write(recipe)
+        recipe_file.write(recipe.encode('utf-8'))
         recipe_file_name = recipe_file.name
     image_name = "cobaya_" + uuid.uuid4().hex[:6] + ".simg"
     process_build = Popen(["singularity", "build", image_name, recipe_file_name],

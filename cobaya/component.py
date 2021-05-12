@@ -4,7 +4,7 @@ from typing import Optional, Union, List, Any
 
 from cobaya.log import HasLogger, LoggedError
 from cobaya.input import HasDefaults
-from cobaya.typing import InfoDict, ParamValuesDict, empty_dict
+from cobaya.typing import InfoDict, InfoDictIn, ParamValuesDict, empty_dict
 from cobaya.tools import resolve_packages_path
 
 
@@ -59,7 +59,7 @@ class CobayaComponent(HasLogger, HasDefaults):
     _at_resume_prefer_new: List[str] = ["version"]
     _at_resume_prefer_old: List[str] = []
 
-    def __init__(self, info: InfoDict = empty_dict,
+    def __init__(self, info: InfoDictIn = empty_dict,
                  name: Optional[str] = None,
                  timing: Optional[bool] = None,
                  packages_path: Optional[str] = None,

@@ -596,7 +596,7 @@ class Prior(HasLogger):
         return self._ref_is_pointlike
 
     def reference(self, max_tries=np.inf, warn_if_tries="10d", ignore_fixed=False,
-                  warn_if_no_ref=True, random_state=None):
+                  warn_if_no_ref=True, random_state=None) -> np.ndarray:
         """
         Returns:
           One sample from the ref pdf. For those parameters that do not have a ref pdf

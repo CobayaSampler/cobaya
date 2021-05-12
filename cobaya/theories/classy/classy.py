@@ -138,7 +138,7 @@ import os
 import numpy as np
 from copy import deepcopy
 import logging
-from typing import NamedTuple, Sequence, Union, Optional, Callable
+from typing import NamedTuple, Sequence, Union, Optional, Callable, Any
 
 # Local
 from cobaya.theories.cosmo import BoltzmannBase
@@ -172,7 +172,8 @@ class classy(BoltzmannBase):
     _classy_min_gcc_version = "6.4"  # Lower ones are possible atm, but leak memory!
     _classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', _min_classy_version)
 
-    # noinspection PyUnresolvedReferences
+    classy_module: Any
+
     def initialize(self):
         """Importing CLASS from the correct path, if given, and if not, globally."""
         # Allow global import if no direct path specification
@@ -183,9 +184,7 @@ class classy(BoltzmannBase):
         if not self.classy_module:
             raise NotInstalledError(
                 self.log, "Could not find CLASS. Check error message above.")
-        from classy import Class, CosmoSevereError, CosmoComputationError
-        global CosmoComputationError, CosmoSevereError
-        self.classy = Class()
+        self.classy = self.classy_module.Class()
         super().initialize()
         # Add general CLASS stuff
         self.extra_args["output"] = self.extra_args.get("output", "")
@@ -340,7 +339,7 @@ class classy(BoltzmannBase):
         try:
             self.classy.compute()
         # "Valid" failure of CLASS: parameters too extreme -> log and report
-        except CosmoComputationError as e:
+        except self.classy_module.CosmoComputationError as e:
             if self.stop_at_error:
                 self.log.error(
                     "Computation error (see traceback below)! "
@@ -354,7 +353,7 @@ class classy(BoltzmannBase):
                                "The output of the CLASS error was %s" % e)
             return False
         # CLASS not correctly initialized, or input parameters not correct
-        except CosmoSevereError:
+        except self.classy_module.CosmoSevereError:
             self.log.error("Serious error setting parameters or computing results. "
                            "The parameters passed were %r and %r. To see the original "
                            "CLASS' error traceback, make 'debug: True'.",

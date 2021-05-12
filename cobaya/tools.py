@@ -16,6 +16,7 @@ import inspect
 import re
 import pandas as pd
 import numpy as np
+from itertools import chain
 from importlib import import_module
 from copy import deepcopy
 from packaging import version
@@ -35,7 +36,7 @@ with warnings.catch_warnings():
 # Local
 from cobaya.conventions import cobaya_package, subfolders, kinds, \
     packages_path_config_file, packages_path_env, packages_path_arg, dump_sort_cosmetic
-from cobaya.log import LoggedError
+from cobaya.log import LoggedError, HasLogger
 
 # Set up logger
 log = logging.getLogger(__name__.split(".")[-1])
@@ -92,23 +93,23 @@ def get_base_classes():
     return {"sampler": Sampler, "likelihood": Likelihood, "theory": Theory}
 
 
-def get_kind(name, allow_external=True):
+def get_kind(name: str, allow_external=True) -> str:
     """
     Given a helpfully unique component name, tries to determine it's kind:
     ``sampler``, ``theory`` or ``likelihood``.
     """
-    try:
-        return next(
-            k for k in kinds
-            if name in get_available_internal_class_names(k))
-    except StopIteration:
-        if allow_external:
-            cls = get_class(name, None_if_not_found=True, allow_internal=False)
-            if cls:
-                for kind, tp in get_base_classes().items():
-                    if issubclass(cls, tp):
-                        return kind
+    for i, kind in enumerate(kinds):
+        cls = get_class(name, kind, allow_external=allow_external and i == len(kinds) - 1,
+                        None_if_not_found=True)
+        if cls is not None:
+            break
+    else:
         raise LoggedError(log, "Could not find component with name %r", name)
+    for kind, tp in get_base_classes().items():
+        if issubclass(cls, tp):
+            return kind
+
+    raise LoggedError(log, "Class %r is not a standard class type %r", name, kinds)
 
 
 class PythonPath:
@@ -189,18 +190,28 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
         class_name = None
     assert allow_internal or allow_external
 
+    def get_matching_class_name(_module: Any, _class_name, none=False):
+        cls = getattr(_module, _class_name, None)
+        if cls is None and _class_name == _class_name.lower():
+            # where the _class_name may be a module name, find CamelCased class
+            cls = module_class_for_name(_module, _class_name)
+        if cls or none:
+            return cls
+        else:
+            return getattr(_module, _class_name)
+
     def return_class(_module_name, package=None):
         _module: Any = load_module(_module_name, package=package, path=component_path)
         if not class_name and hasattr(_module, "get_cobaya_class"):
             return _module.get_cobaya_class()
         _class_name = class_name or module_name
-        cls = getattr(_module, _class_name, None)
+        cls = get_matching_class_name(_module, _class_name, none=True)
         if not cls:
             _module = load_module(_module_name + '.' + _class_name,
                                   package=package, path=component_path)
-            cls = getattr(_module, _class_name)
-        if not inspect.isclass(cls):
-            return getattr(cls, _class_name)
+            cls = get_matching_class_name(_module, _class_name)
+        if not isinstance(cls, type):
+            return get_matching_class_name(cls, _class_name)
         else:
             return cls
 
@@ -224,10 +235,10 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
                 return return_class(module_name)
             except:
                 exc_info = sys.exc_info()
+    if None_if_not_found:
+        return None
     if ((exc_info[0] is ModuleNotFoundError and
          str(exc_info[1]).rstrip("'").endswith(name))):
-        if None_if_not_found:
-            return None
         if allow_internal:
             suggestions = fuzzy_match(name, get_available_internal_class_names(kind), n=3)
             if suggestions:
@@ -250,20 +261,19 @@ def get_resolved_class(component_or_class, kind=None, component_path=None,
 
     If the first argument is a class, it is simply returned. If it is a string, it
     retrieves the corresponding class name, using the value of `class_name` instead if
-    present.
+    present.`
     """
-    if inspect.isclass(component_or_class):
-        return component_or_class
-    else:
-        return get_class(class_name or component_or_class, kind,
-                         component_path=component_path,
-                         None_if_not_found=None_if_not_found)
+    if isinstance(component_or_class, str):
+        component_or_class = get_class(class_name or component_or_class, kind,
+                                       component_path=component_path,
+                                       None_if_not_found=None_if_not_found)
+    return component_or_class
 
 
 def import_all_classes(path, pkg, subclass_of, hidden=False, helpers=False):
     import pkgutil
     result = set()
-    ignore = {"cobaya/likelihoods": ["base_classes", "test"]}
+    ignore = {os.path.join("cobaya", "likelihoods"): ["base_classes", "test"]}
     from cobaya.theory import HelperTheory
     for (module_loader, name, ispkg) in pkgutil.iter_modules([path]):
         ignore_this_one = \
@@ -283,6 +293,26 @@ def import_all_classes(path, pkg, subclass_of, hidden=False, helpers=False):
     return result
 
 
+def classes_in_module(m, subclass_of=None, allow_imported=False):
+    return set(cls for _, cls in inspect.getmembers(m, inspect.isclass)
+               if (not subclass_of or issubclass(cls, subclass_of))
+               and (allow_imported or cls.__module__ == m.__name__))
+
+
+def module_class_for_name(m, name):
+    # Get Camel- or uppercase class name matching name in module m
+    result = None
+    valid_names = {name, name[:1] + name[1:].replace('_', '')}
+    from cobaya.component import CobayaComponent
+    for cls in classes_in_module(m, subclass_of=CobayaComponent):
+        if cls.__name__.lower() in valid_names:
+            if result is not None:
+                raise ValueError('More than one class with same lowercase name %s',
+                                 name)
+            result = cls
+    return result
+
+
 def get_available_internal_classes(kind, hidden=False):
     """
     Gets all class names of a given kind.
@@ -295,16 +325,13 @@ def get_available_internal_classes(kind, hidden=False):
 
 
 def get_all_available_internal_classes(hidden=False):
-    result = set()
-    for classes in [get_available_internal_classes(k, hidden) for k in kinds]:
-        result.update(classes)
-    return result
+    return set(chain(*(get_available_internal_classes(k, hidden) for k in kinds)))
 
 
-def get_available_internal_class_names(kind, hidden=False):
-    return sorted(set(
-        cls.get_qualified_class_name() for cls in
-        get_available_internal_classes(kind, hidden)))
+def get_available_internal_class_names(kind=None, hidden=False):
+    return sorted(set(cls.get_qualified_class_name() for cls in
+                      (get_available_internal_classes(kind, hidden) if kind
+                       else get_all_available_internal_classes(hidden))))
 
 
 def replace_optimizations(function_string):
@@ -376,27 +403,31 @@ def recursive_mappings_to_dict(mapping):
         return mapping
 
 
-def recursive_update(base, update):
+_Dict = TypeVar('_Dict', bound=Mapping)
+
+
+def recursive_update(base: Optional[_Dict], update: _Dict, copied=True) -> _Dict:
     """
     Recursive dictionary update, from `this stackoverflow question
     <https://stackoverflow.com/questions/3232943>`_.
     Modified for yaml input, where None and {} are almost equivalent
     """
-    base = base or {}
+    updated: dict = (deepcopy_where_possible(base) if copied and base  # type: ignore
+                     else base or {})
     for update_key, update_value in (update or {}).items():
         if isinstance(update_value, Mapping):
-            base[update_key] = recursive_update(
-                base.get(update_key, {}), update_value)
+            updated[update_key] = recursive_update(updated.get(update_key, {}),
+                                                   update_value, copied=False)
         elif update_value is None:
-            if update_key not in base:
-                base[update_key] = {}
+            if update_key not in updated:
+                updated[update_key] = {}
         else:
-            base[update_key] = update_value
+            updated[update_key] = update_value
     # Trim terminal dicts
-    for k, v in (base or {}).items():
+    for k, v in (updated or {}).items():
         if isinstance(v, Mapping) and len(v) == 0:
-            base[k] = None
-    return base
+            updated[k] = None
+    return updated  # type: ignore
 
 
 def invert_dict(dict_in: Mapping) -> dict:
@@ -427,7 +458,7 @@ def ensure_nolatex(string):
 class NumberWithUnits:
     unit: Optional[str]
 
-    def __init__(self, n_with_unit, unit: str, dtype=float, scale=None):
+    def __init__(self, n_with_unit: Any, unit: str, dtype=float, scale=None):
         """
         Reads number possibly with some `unit`, e.g. 10s, 4d.
         Loaded from a a case-insensitive string of a number followed by a unit,
@@ -477,7 +508,7 @@ class NumberWithUnits:
         return bool(self.unit_value)
 
 
-def read_dnumber(n, dim):
+def read_dnumber(n: Any, dim: int):
     """
     Reads number possibly as a multiple of dimension `dim`.
     """
@@ -749,7 +780,7 @@ _R = TypeVar('_R')
 def deepcopy_where_possible(base: _R) -> _R:
     """
     Deepcopies an object whenever possible. If the object cannot be copied, returns a
-    reference to the original object (this applies recursively to keys and values of
+    reference to the original object (this applies recursively to values of
     a dictionary, and converts all Mapping objects into dict).
 
     Rationale: cobaya tries to manipulate its input as non-destructively as possible,
@@ -760,10 +791,11 @@ def deepcopy_where_possible(base: _R) -> _R:
     """
     if isinstance(base, Mapping):
         _copy = {}
-        for key, value in (base or {}).items():
-            key_copy = deepcopy(key)
-            _copy[key_copy] = deepcopy_where_possible(value)
+        for key, value in base.items():
+            _copy[key] = deepcopy_where_possible(value)
         return _copy  # type: ignore
+    if isinstance(base, (HasLogger, type)):
+        return base  # type: ignore
     else:
         try:
             return deepcopy(base)

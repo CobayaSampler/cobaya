@@ -18,7 +18,7 @@ import numpy as np
 from yaml.resolver import BaseResolver
 from yaml.constructor import ConstructorError
 from collections import OrderedDict
-from typing import Mapping, Optional
+from typing import Mapping, Optional, Any
 
 # Local
 from cobaya.tools import prepare_comment, recursive_update
@@ -55,7 +55,7 @@ ScientificLoader.add_implicit_resolver(
 
 
 class DefaultsLoader(ScientificLoader):
-    current_folder = None
+    current_folder: Optional[str] = None
 
 
 def _construct_defaults(loader, node):
@@ -124,11 +124,12 @@ def yaml_load(text_stream, file_name=None) -> InfoDict:
             raise InputSyntaxError(errstr)
 
 
-def yaml_load_file(file_name: str, yaml_text: Optional[str] = None) -> InfoDict:
+def yaml_load_file(file_name: Optional[str], yaml_text: Optional[str] = None) -> InfoDict:
     """Wrapper to load a yaml file.
 
     Manages !defaults directive."""
     if yaml_text is None:
+        assert file_name
         with open(file_name, "r", encoding="utf-8-sig") as file:
             yaml_text = "".join(file.readlines())
     return yaml_load(yaml_text, file_name=file_name)
@@ -136,7 +137,7 @@ def yaml_load_file(file_name: str, yaml_text: Optional[str] = None) -> InfoDict:
 
 # Custom dumper ##########################################################################
 
-def yaml_dump(info: dict, stream=None, **kwds):
+def yaml_dump(info: Mapping[str, Any], stream=None, **kwds):
     class CustomDumper(yaml.Dumper):
         pass
 

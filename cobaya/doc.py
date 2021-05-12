@@ -52,8 +52,8 @@ def doc_script(args=None):
         print(msg + "\n" + "-" * len(msg))
         for kind in kinds:
             print("%s:" % kind)
-            print(
-                _indent + ("\n" + _indent).join(get_available_internal_class_names(kind)))
+            print(_indent + ("\n" + _indent).join(
+                get_available_internal_class_names(kind)))
         return
     # Kind given: list all components of that kind
     if arguments.component.lower() in kinds:

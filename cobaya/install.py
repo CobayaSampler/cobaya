@@ -19,6 +19,7 @@ from itertools import chain
 from pkg_resources import parse_version
 import requests
 import tqdm
+from typing import List
 
 # Local
 from cobaya.log import logger_setup, LoggedError, NoLogging
@@ -30,6 +31,7 @@ from cobaya.conventions import code_path, data_path, packages_path_arg, \
     packages_path_config_file
 from cobaya.mpi import set_mpi_disabled
 from cobaya.tools import resolve_packages_path
+from cobaya.typing import InputDict
 
 log = logging.getLogger(__name__.split(".")[-1])
 
@@ -393,7 +395,7 @@ def install_script(args=None):
     logger_setup()
     logger = logging.getLogger(__name__.split(".")[-1])
     # Gather requests
-    infos = []
+    infos: List[InputDict] = []
     for f in arguments.files_or_components:
         if f.lower() == "cosmo":
             logger.info("Installing basic cosmological packages.")

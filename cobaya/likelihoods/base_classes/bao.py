@@ -141,12 +141,12 @@ class BAO(InstallableLikelihood):
                        "github_release": "v1.1"}
 
     prob_dist_bounds: Optional[Sequence[float]]
-    measurements_file: str
-    rs_fid: Optional[float]
-    rs_rescale: Optional[float]
-    prob_dist: Optional[str]
-    cov_file: Optional[str]
-    invcov_file: Optional[str]
+    measurements_file: Optional[str] = None
+    rs_fid: Optional[float] = None
+    rs_rescale: Optional[float] = None
+    prob_dist: Optional[str] = None
+    cov_file: Optional[str] = None
+    invcov_file: Optional[str] = None
     path: Optional[str]
 
     def initialize(self):
@@ -159,13 +159,13 @@ class BAO(InstallableLikelihood):
         data_file_path = os.path.normpath(getattr(self, "path", None) or
                                           os.path.join(self.packages_path, "data"))
         # Rescaling by a fiducial value of the sound horizon
-        if getattr(self, "rs_rescale", None) is None:
-            if getattr(self, "rs_fid", None) is not None:
+        if self.rs_rescale is None:
+            if self.rs_fid is not None:
                 self.rs_rescale = 1 / self.rs_fid
             else:
                 self.rs_rescale = 1
         # Load "measurements file" and covmat of requested
-        if getattr(self, "measurements_file", None):
+        if self.measurements_file:
             try:
                 self.data = pd.read_csv(
                     os.path.join(data_file_path, self.measurements_file),
@@ -189,7 +189,7 @@ class BAO(InstallableLikelihood):
         self.data["observable"] = [(c[len(prefix):] if c.startswith(prefix) else c)
                                    for c in self.data["observable"]]
         # Probability distribution
-        if getattr(self, "prob_dist", None):
+        if self.prob_dist:
             try:
                 chi2 = np.loadtxt(os.path.join(data_file_path, self.prob_dist))
             except IOError:
@@ -198,6 +198,7 @@ class BAO(InstallableLikelihood):
                               "in folder '%s'. " % (self.prob_dist, data_file_path) +
                               "Check your paths.")
             try:
+                assert self.prob_dist_bounds
                 alpha = np.linspace(
                     self.prob_dist_bounds[0], self.prob_dist_bounds[1], len(chi2))
             except (TypeError, AttributeError, IndexError, ValueError):
@@ -211,9 +212,9 @@ class BAO(InstallableLikelihood):
         # Covariance --> read and re-sort as self.data
         else:
             try:
-                if getattr(self, "cov_file", None):
+                if self.cov_file:
                     self.cov = np.loadtxt(os.path.join(data_file_path, self.cov_file))
-                elif getattr(self, "invcov_file", None):
+                elif self.invcov_file:
                     invcov = np.loadtxt(os.path.join(data_file_path, self.invcov_file))
                     self.cov = np.linalg.inv(invcov)
                 elif "error" in self.data.columns:
@@ -226,7 +227,7 @@ class BAO(InstallableLikelihood):
             except IOError:
                 raise LoggedError(
                     self.log, "Couldn't find (inv)cov file '%s' in folder '%s'. " % (
-                        getattr(self, "cov_file", getattr(self, "invcov_file", None)),
+                        self.cov_file or self.invcov_file,
                         data_file_path) + "Check your paths.")
             self.logpdf = lambda x: (lambda x_: -0.5 * x_.dot(self.invcov).dot(x_))(
                 x - self.data["value"].values)

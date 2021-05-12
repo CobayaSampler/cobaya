@@ -12,7 +12,7 @@ import numpy as np
 import logging
 import inspect
 from itertools import chain
-from typing import Any
+from typing import Any, Callable
 from tempfile import gettempdir
 import re
 
@@ -21,7 +21,7 @@ from cobaya.tools import read_dnumber, get_external_function, \
     find_with_regexp, NumberWithUnits, load_module, VersionCheckError
 from cobaya.sampler import Sampler
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
-from cobaya.collection import Collection
+from cobaya.collection import SampleCollection
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, NotInstalledError
 from cobaya.yaml import yaml_dump_file
@@ -46,11 +46,12 @@ class polychord(Sampler):
     do_clustering: bool
     num_repeats: int
     confidence_for_unbounded: float
-    callback_function: callable
+    callback_function: Callable
     blocking: Any
     measure_speeds: bool
     oversample_power: float
     nlive: NumberWithUnits
+    path: str
 
     def initialize(self):
         """Imports the PolyChord sampler and prepares its arguments."""
@@ -152,7 +153,7 @@ class polychord(Sampler):
         # Check if priors are bounded (nan's to inf)
         inf = np.where(np.isinf(bounds))
         if len(inf[0]):
-            params_names = self.model.parameterization.sampled_params()
+            params_names = list(self.model.parameterization.sampled_params())
             params = [params_names[i] for i in sorted(list(set(inf[0])))]
             raise LoggedError(
                 self.log, "PolyChord needs bounded priors, but the parameter(s) '"
@@ -169,8 +170,8 @@ class polychord(Sampler):
                 get_external_function(self.callback_function))
         self.last_point_callback = 0
         # Prepare runtime live and dead points collections
-        self.live = Collection(self.model, None, name="live")
-        self.dead = Collection(self.model, self.output, name="dead")
+        self.live = SampleCollection(self.model, None, name="live")
+        self.dead = SampleCollection(self.model, self.output, name="dead")
         # Done!
         if is_main_process():
             self.log.debug("Calling PolyChord with arguments:")
@@ -266,7 +267,7 @@ class polychord(Sampler):
         sample = np.atleast_2d(np.loadtxt(fname))
         if not sample.size:
             return None
-        collection = Collection(self.model, self.output, name=str(name))
+        collection = SampleCollection(self.model, self.output, name=str(name))
         for row in sample:
             collection.add(
                 row[2:2 + self.n_sampled],
@@ -376,7 +377,7 @@ class polychord(Sampler):
         Auxiliary function to define what should be returned in a scripted call.
 
         Returns:
-           The sample ``Collection`` containing the sequentially discarded live points.
+           The sample ``SampleCollection`` containing the sequentially discarded live points.
         """
         if is_main_process():
             products = {

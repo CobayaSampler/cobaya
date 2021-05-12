@@ -116,7 +116,8 @@ class SN(DataSetLikelihood):
     # Data type for aggregated chi2 (case sensitive)
     type = "SN"
 
-    install_options = {"github_repository": "CobayaSampler/sn_data", "github_release": "v1.3"}
+    install_options = {"github_repository": "CobayaSampler/sn_data",
+                       "github_release": "v1.3"}
 
     def init_params(self, ini):
 
@@ -331,7 +332,8 @@ class SN(DataSetLikelihood):
         return - chi2 / 2
 
     def logp(self, **params_values):
-        angular_diameter_distances = self.provider.get_angular_diameter_distance(self.zcmb)
+        angular_diameter_distances = \
+            self.provider.get_angular_diameter_distance(self.zcmb)
         lumdists = (5 * np.log10((1 + self.zhel) * (1 + self.zcmb) *
                                  angular_diameter_distances))
         if self.marginalize:

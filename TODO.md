@@ -12,7 +12,8 @@
 ## In the docs "Bases" (and UML diagram) not hyperlinked correctly (not sure how to fix)
 ## dump log info along with each chain file if saving to file (currently in stdout)
 ## PolyChord: check overhead
-## PolyChord: lower dimension of tests?
+## PolyChord: 
+## update like/theory dict types to allow for instances (remove log.warning if all OK)
 
 # Enhancements/Refactorings
 

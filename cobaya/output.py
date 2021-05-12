@@ -21,7 +21,7 @@ from cobaya.typing import InputDict
 from cobaya.log import LoggedError, HasLogger, get_traceback_text
 from cobaya.input import is_equal_info, get_resolved_class, load_info_dump, split_prefix
 from cobaya.input import get_info_path
-from cobaya.collection import Collection
+from cobaya.collection import SampleCollection
 from cobaya.tools import deepcopy_where_possible, find_with_regexp, sort_cosmetic
 from cobaya.tools import has_non_yaml_reproducible
 from cobaya import mpi
@@ -128,7 +128,7 @@ class Output(HasLogger):
     """
     Basic output driver. It takes care of creating the output files, checking
     compatibility with old runs when resuming, cleaning up when forcing, preparing
-    :class:`~collection.Collection` files, etc.
+    :class:`~collection.SampleCollection` files, etc.
     """
 
     _old_updated_info: Optional[InputDict]
@@ -312,7 +312,7 @@ class Output(HasLogger):
                 # use consistent yaml read-in types
                 # TODO: could probably just compare full infos here, with externals?
                 #  for the moment cautiously keeping old behaviour
-                old_info = yaml_load(yaml_dump(old_info))
+                old_info = yaml_load(yaml_dump(old_info))  # type: ignore
                 new_info = yaml_load(yaml_dump(updated_info_trimmed))
                 if not is_equal_info(old_info, new_info, strict=False,
                                      ignore_blocks=list(ignore_blocks) + [
@@ -326,7 +326,7 @@ class Output(HasLogger):
                 # (For Cobaya's own version, prefer new one always)
                 old_version = old_info.get("version")
                 new_version = new_info.get("version")
-                if old_version and new_version:
+                if isinstance(old_version, str) and isinstance(new_version, str):
                     if version.parse(old_version) > version.parse(new_version):
                         raise LoggedError(
                             self.log, "You are trying to resume a run performed with a "
@@ -338,7 +338,7 @@ class Output(HasLogger):
                         continue
                     for c in updated_info[k]:
                         new_version = updated_info[k][c].get("version")
-                        old_version = old_info[k][c].get("version")
+                        old_version = old_info[k][c].get("version")  # type: ignore
                         if new_version is None:
                             updated_info[k][c]["version"] = old_version
                             updated_info_trimmed[k][c]["version"] = old_version
@@ -500,8 +500,8 @@ class Output(HasLogger):
         self.check_lock()
         filenames = self.find_collections(name=name, extension=extension)
         collections = [
-            Collection(model, self, name="%d" % (1 + i), file_name=filename,
-                       load=True, onload_skip=skip, onload_thin=thin)
+            SampleCollection(model, self, name="%d" % (1 + i), file_name=filename,
+                             load=True, onload_skip=skip, onload_thin=thin)
             for i, filename in enumerate(filenames)]
         if concatenate and collections:
             collection = collections[0]

@@ -26,7 +26,7 @@ You can run file postprocessing with MPI (with number of processes up to the num
 
    In a **scripted call**, text I/O works a bit differently:
 
-   - If there is no text input, but an input :class:`collection.Collection` object (see example below), specify it (or a list of them) as the second argument of :func:`post.post`. In that case, no output files will be produced (unless forced by setting ``output: [new prefix]`` inside ``post``). Notice that in this case, the input info for ``post`` must include the updated info of the original sample (see example below).
+   - If there is no text input, but an input :class:`collection.SampleCollection` object (see example below), specify it (or a list of them) as the second argument of :func:`post.post`. In that case, no output files will be produced (unless forced by setting ``output: [new prefix]`` inside ``post``). Notice that in this case, the input info for ``post`` must include the updated info of the original sample (see example below).
 
    - If the input sample is a text file (more precisely an ``output`` prefix), text file output will be produced with a suffix, as explained above. To suppress the text output, set ``output: None`` inside ``post``.
 

@@ -11,8 +11,8 @@ def test_polychord(packages_path, skip_not_installed, tmpdir):
     dimension = 3
     n_modes = 1
     info_sampler = {"polychord": {"nlive": 25 * dimension * n_modes}}
-    body_of_test(dimension=dimension, n_modes=n_modes,
-                 info_sampler=info_sampler, tmpdir=str(tmpdir),
+    body_of_test(info_sampler, dimension=dimension, n_modes=n_modes,
+                 tmpdir=str(tmpdir),
                  packages_path=packages_path, skip_not_installed=skip_not_installed)
 
 
@@ -59,8 +59,8 @@ def test_polychord_multimodal(packages_path, skip_not_installed, tmpdir):
     dimension = 2
     n_modes = 2
     info_sampler = {"polychord": {"nlive": 40 * dimension * n_modes}}
-    body_of_test(dimension=dimension, n_modes=n_modes,
-                 info_sampler=info_sampler, tmpdir=str(tmpdir),
+    body_of_test(info_sampler, dimension=dimension, n_modes=n_modes,
+                 tmpdir=str(tmpdir),
                  packages_path=packages_path, skip_not_installed=skip_not_installed)
 
 

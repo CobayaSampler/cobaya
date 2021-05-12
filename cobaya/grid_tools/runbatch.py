@@ -17,7 +17,7 @@ def run():
     Opts.parser.add_argument('--subitems', action='store_true',
                              help='include sub-grid items')
     Opts.parser.add_argument('--not_queued', action='store_true')
-    Opts.parser.add_argument('--minimize', action='store_true',
+    Opts.parser.add_argument('--Minimize', action='store_true',
                              help='Run minimization jobs')
     Opts.parser.add_argument('--importance_minimize', action='store_true',
                              help=('Run minimization jobs for chains '

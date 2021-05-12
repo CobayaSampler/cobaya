@@ -250,60 +250,52 @@ def update_info(info: _Dict) -> _Dict:
         updated: InfoDict = {}
         updated_info[block] = updated
         input_block = input_info[block]
-        kind: str
-        for kind in used_kind_members[block]:
+        name: str
+        for name in used_kind_members[block]:
             # Preprocess "no options" and "external function" in input
             try:
-                input_block[kind] = input_block[kind] or {}
+                input_block[name] = input_block[name] or {}
             except TypeError:
                 raise LoggedError(
                     log, "Your input info is not well formatted at the '%s' block. "
                          "It must be a dictionary {'%s_i':{options}, ...}. ",
                     block, block)
-            if isinstance(kind, CobayaComponent) or \
-                    isinstance(input_block[kind], CobayaComponent):
-                raise LoggedError(log, "Input for %s:%s should specify a class not "
-                                       "an instance", block, kind)
-                # TODO: allow instance passing?
-                #       could allow this, but would have to sort out deepcopy
-                # if input_block[component]:
-                #   raise LoggedError(log, "Instances should be passed a dictionary "
-                #                           "entry of the form 'instance: None'")
-                # change_key(input_block, component, component.get_name(),
-                #           {"external": component})
-                # updated[component.get_name()] = input_block[component.get_name()].copy()
-                # continue
-            if inspect.isclass(input_block[kind]) or \
-                    not isinstance(input_block[kind], dict):
-                input_block[kind] = {"external": input_block[kind]}
-            ext = input_block[kind].get("external")
+            if isinstance(name, CobayaComponent) or isinstance(name, type):
+                raise LoggedError(log, "Instances and classes should be passed a "
+                                       "dictionary entry of the form 'name: instance'")
+            if isinstance(input_block[name], CobayaComponent):
+                log.warning("Support for input instances is experimental")
+            if isinstance(input_block[name], type) or \
+                    not isinstance(input_block[name], dict):
+                input_block[name] = {"external": input_block[name]}
+            ext = input_block[name].get("external")
             annotations = {}
             if ext:
-                if inspect.isclass(ext):
+                if isinstance(ext, type):
                     default_class_info, annotations = \
-                        get_default_info(ext, block, input_options=input_block[kind],
+                        get_default_info(ext, block, input_options=input_block[name],
                                          return_undefined_annotations=True)
                 else:
                     default_class_info = deepcopy_where_possible(
                         component_base_classes[block].get_defaults())
             else:
-                component_path = input_block[kind].get("python_path", None)
+                component_path = input_block[name].get("python_path")
                 default_class_info, annotations = get_default_info(
-                    kind, block, class_name=input_block[kind].get("class"),
-                    component_path=component_path, input_options=input_block[kind],
+                    name, block, class_name=input_block[name].get("class"),
+                    component_path=component_path, input_options=input_block[name],
                     return_undefined_annotations=True)
-            updated[kind] = default_class_info or {}
+            updated[name] = default_class_info or {}
             # Update default options with input info
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
             # Reserved attributes not necessarily already in default info:
             reserved = {"external", "class", "provides", "requires", "renames",
                         "input_params", "output_params", "python_path", "aliases"}
-            options_not_recognized = set(input_block[kind]).difference(
-                chain(reserved, updated[kind], annotations))
+            options_not_recognized = set(input_block[name]).difference(
+                chain(reserved, updated[name], annotations))
             if options_not_recognized:
                 alternatives = {}
-                available = ({"external", "class", "requires", "renames"}.union(
-                    updated_info[block][kind]))
+                available = {"external", "class", "requires", "renames"}.union(
+                    updated_info[block][name])
                 while options_not_recognized:
                     option = options_not_recognized.pop()
                     alternatives[option] = fuzzy_match(option, available, n=3)
@@ -314,11 +306,11 @@ def update_info(info: _Dict) -> _Dict:
                 raise LoggedError(
                     log, "%s '%s' does not recognize some options: %s. "
                          "Check the documentation for '%s'.",
-                    block, kind, did_you_mean, block)
-            updated[kind].update(input_block[kind])
+                    block, name, did_you_mean, block)
+            updated[name].update(input_block[name])
             # save params and priors of class to combine later
-            default_params_info[kind] = default_class_info.get("params", {})
-            default_prior_info[kind] = default_class_info.get("prior", {})
+            default_params_info[name] = default_class_info.get("params", {})
+            default_prior_info[name] = default_class_info.get("prior", {})
     # Add priors info, after the necessary checks
     if "prior" in input_info or any(default_prior_info.values()):
         updated_info["prior"] = input_info.get("prior", {})
@@ -345,9 +337,9 @@ def update_info(info: _Dict) -> _Dict:
     if "auto_params" in updated_info:
         make_auto_params(updated_info.pop("auto_params"), param_info)
     # Add aliases for theory params (after merging!)
-    for kind in ("theory", "likelihood"):
-        if isinstance(updated_info.get(kind), dict):
-            for item in updated_info[kind].values():
+    for name in ("theory", "likelihood"):
+        if isinstance(updated_info.get(name), dict):
+            for item in updated_info[name].values():
                 renames = item.get("renames")
                 if renames:
                     if not isinstance(renames, Mapping):
@@ -443,7 +435,7 @@ def merge_info(*infos):
         previous_params_info = deepcopy(previous_info.pop("params", {}) or {})
         new_params_info = deepcopy(new_info).pop("params", {}) or {}
         # NS: params have been popped, since they have their own merge function
-        current_info = recursive_update(deepcopy(previous_info), new_info)
+        current_info = recursive_update(previous_info, new_info)
         current_info["params"] = merge_params_info(
             [previous_params_info, new_params_info])
         previous_info = current_info
@@ -575,7 +567,7 @@ def get_preferred_old_values(info_old):
     return keep_old
 
 
-class Description(object):
+class Description:
     """Allows for calling get_desc as both class and instance method."""
 
     def __get__(self, instance, cls):
@@ -602,7 +594,7 @@ class HasDefaults:
     """
 
     @classmethod
-    def get_qualified_names(cls):
+    def get_qualified_names(cls) -> List[str]:
         if cls.__module__ == '__main__':
             return [cls.__name__]
         parts = cls.__module__.split('.')
@@ -615,14 +607,16 @@ class HasDefaults:
             else:
                 if getattr(imported, cls.__name__, None) is cls:
                     parts = parts[:-1]
-        if parts[-1] == cls.__name__:
+        # allow removing class name that is CamelCase equivalent of module name
+        if parts[-1] == cls.__name__ or (cls.__name__.lower() ==
+                                         parts[-1][:1] + parts[-1][1:].replace('_', '')):
             return ['.'.join(parts[i:]) for i in range(len(parts))]
         else:
             return ['.'.join(parts[i:]) + '.' + cls.__name__ for i in
                     range(len(parts) + 1)]
 
     @classmethod
-    def get_qualified_class_name(cls):
+    def get_qualified_class_name(cls) -> str:
         """
         Get the distinct shortest reference name for the class of the form
         module.ClassName or module.submodule.ClassName etc.
@@ -641,18 +635,26 @@ class HasDefaults:
             return qualified_names[0]
 
     @classmethod
-    def get_class_path(cls):
+    def get_class_path(cls) -> str:
         """
         Get the file path for the class.
         """
         return os.path.abspath(os.path.dirname(inspect.getfile(cls)))
 
     @classmethod
-    def get_root_file_name(cls):
-        return os.path.join(cls.get_class_path(), cls.__name__)
+    def get_file_base_name(cls) -> str:
+        """
+        Gets the string used as the name for .yaml, .bib files, typically the
+        class name or a un-CamelCased class name
+        """
+        return cls.__dict__.get('file_base_name') or cls.__name__
 
     @classmethod
-    def get_yaml_file(cls):
+    def get_root_file_name(cls) -> str:
+        return os.path.join(cls.get_class_path(), cls.get_file_base_name())
+
+    @classmethod
+    def get_yaml_file(cls) -> Optional[str]:
         """
         Gets the file name of the .yaml file for this component if it exists on file
         (otherwise None).
@@ -662,55 +664,45 @@ class HasDefaults:
             return filename
         return None
 
-    get_desc = Description()
+    get_desc: str = Description()
 
     @classmethod
     def _get_desc(cls, info=None):
         return cleandoc(cls.__doc__) if cls.__doc__ else ""
 
     @classmethod
-    def get_bibtex(cls):
+    def get_bibtex(cls) -> Optional[str]:
         """
         Get the content of .bibtex file for this component. If no specific bibtex
         from this class, it will return the result from an inherited class if that
         provides bibtex.
         """
-        filename = cls.__dict__.get('bibtex_file', None)
+        filename = cls.__dict__.get('bibtex_file')
         if filename:
-            bib = pkg_resources.resource_string(cls.__module__, filename)
+            bib = pkg_resources.resource_string(cls.__module__, filename).decode("utf-8")
         else:
             bib = cls.get_associated_file_content('.bibtex')
         if bib:
-            try:
-                return bib.decode("utf-8")
-            except:
-                return bib
+            return bib
         for base in cls.__bases__:
             if issubclass(base, HasDefaults) and base is not HasDefaults:
-                bib = base.get_bibtex()
-                if bib:
-                    try:
-                        return bib.decode("utf-8")
-                    except:
-                        return bib
+                return base.get_bibtex()
         return None
 
     @classmethod
-    def get_associated_file_content(cls, ext, file_root=None):
+    def get_associated_file_content(cls, ext, file_root=None) -> Optional[str]:
         # handle extracting package files when may be inside a zipped package so files
         # not accessible directly
         try:
-            string = pkg_resources.resource_string(cls.__module__,
-                                                   (file_root or cls.__name__) + ext)
-            try:
-                return string.decode("utf-8")
-            except:
-                return string
+            string = pkg_resources.resource_string(
+                cls.__module__, (file_root or cls.get_file_base_name()) + ext)
         except Exception:
             return None
+        else:
+            return string.decode("utf-8")
 
     @classmethod
-    def get_class_options(cls, input_options=empty_dict):
+    def get_class_options(cls, input_options=empty_dict) -> InfoDict:
         """
         Returns dictionary of names and values for class variables that can also be
         input and output in yaml files, by default it takes all the
@@ -789,7 +781,7 @@ class HasDefaults:
             return defaults
 
     @classmethod
-    def get_annotations(cls):
+    def get_annotations(cls) -> InfoDict:
         d = {}
         for base in cls.__bases__:
             if issubclass(base, HasDefaults) and base is not HasDefaults:

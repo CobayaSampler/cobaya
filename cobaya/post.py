@@ -21,7 +21,7 @@ from cobaya.parameterization import is_fixed_or_function_param, is_sampled_param
 from cobaya.conventions import prior_1d_name, OutPar, get_chi2_name, \
     undo_chi2_name, get_minuslogpior_name, separator_files, minuslogprior_names
 from cobaya.typing import ParamValuesDict, InputDict, InfoDict, PostDict
-from cobaya.collection import Collection
+from cobaya.collection import SampleCollection
 from cobaya.log import logger_setup, LoggedError
 from cobaya.input import update_info, add_aggregated_chi2_params, load_input_dict
 from cobaya.output import get_output
@@ -36,7 +36,7 @@ if sys.version_info >= (3, 8):
 
 
     class PostResultDict(TypedDict):
-        sample: Union[Collection, List[Collection]]
+        sample: Union[SampleCollection, List[SampleCollection]]
         stats: ParamValuesDict
         weights: Union[np.ndarray, List[np.ndarray]]
 else:
@@ -71,7 +71,7 @@ class DummyModel:
 # noinspection PyTypedDict
 @mpi.sync_state
 def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
-         sample: Union[Collection, List[Collection], None] = None
+         sample: Union[SampleCollection, List[SampleCollection], None] = None
          ) -> PostTuple:
     info = load_input_dict(info_or_yaml_or_file)
     logger_setup(info.get("debug"), info.get("debug_file"))
@@ -112,7 +112,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         # If MPI, assume for each MPI process post is passed in the list of
         # collections that should be processed by that process
         # (e.g. single chain output from sampler)
-        if isinstance(sample, Collection):
+        if isinstance(sample, SampleCollection):
             in_collections = [sample]
         else:
             in_collections = sample
@@ -136,10 +136,10 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                                        "the number of sample files (%s)",
                                   mpi.size(), len(files))
             for num in range(mpi.rank(), len(files), mpi.size()):
-                in_collections += [Collection(dummy_model_in, output_in,
-                                              onload_thin=thin, onload_skip=skip,
-                                              load=True, file_name=files[num],
-                                              name=str(num + 1) if numbered else "")]
+                in_collections += [SampleCollection(
+                    dummy_model_in, output_in,
+                    onload_thin=thin, onload_skip=skip, load=True, file_name=files[num],
+                    name=str(num + 1) if numbered else "")]
         else:
             raise LoggedError(log, "No samples found for the input model with prefix %s",
                               os.path.join(output_in.folder, output_in.prefix))
@@ -215,7 +215,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             # Only one possibility left "fixed" parameter that was not present before:
             # input of new likelihood, or just an argument for dynamical derived (dropped)
             if ((p in info_in["params"] and
-                 pinfo["value"] != (pinfo_in or {}).get("value", None))):
+                 pinfo["value"] != (pinfo_in or {}).get("value"))):
                 raise LoggedError(
                     log,
                     "You tried to add a fixed parameter '%s: %r' that was already present"
@@ -236,18 +236,18 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     out_params_with_computed = deepcopy_where_possible(out_combined["params"])
     dropped_theory = set()
     for p, pinfo in out_params_with_computed.items():
-        if (is_derived_param(pinfo) and not ("value" in pinfo)
+        if (is_derived_param(pinfo) and "value" not in pinfo
                 and p not in add.get("params", {})):
             out_params_with_computed[p] = {"value": np.nan}
             dropped_theory.add(p)
     # 2.2 Manage adding/removing priors and likelihoods
     warn_remove = False
-    for kind in ["prior", "likelihood", "theory"]:
+    for kind in ("prior", "likelihood", "theory"):
         out_combined[kind] = deepcopy_where_possible(info_in.get(kind)) or {}
         for remove_item in str_to_list(remove.get(kind)) or []:
             try:
                 out_combined[kind].pop(remove_item, None)
-                if remove_item not in add.get(kind, {}) or [] and kind != "theory":
+                if remove_item not in (add.get(kind) or []) and kind != "theory":
                     warn_remove = True
             except ValueError:
                 raise LoggedError(
@@ -302,12 +302,12 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # Use default prefix if it exists. If it does not, produce no output by default.
     # {post: {output: None}} suppresses output, and if it's a string, updates it.
     out_prefix = info_post.get("output", info.get("output"))
-    if out_prefix not in [None, False]:
-        if info_post.get("suffix") is None:
+    if out_prefix:
+        suffix = info_post.get("suffix")
+        if not suffix:
             raise LoggedError(log, "You need to provide a '%s' for your output chains.",
                               "suffix")
-        assert isinstance(out_prefix, str)
-        out_prefix += separator_files + "post" + separator_files + info_post["suffix"]
+        out_prefix += separator_files + "post" + separator_files + suffix
     output_out = get_output(prefix=out_prefix, force=info.get("force"))
     output_out.set_lock()
 
@@ -341,8 +341,8 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                       skip_unused_theories=True, dropped_theory_params=dropped_theory)
     # Remove auxiliary "one" before dumping -- 'add' *is* info_out["post"]["add"]
     add["likelihood"].pop("one")
-    out_collections = [Collection(dummy_model_out, output_out, name=c.name,
-                                  cache_size=_default_post_cache_size)
+    out_collections = [SampleCollection(dummy_model_out, output_out, name=c.name,
+                                        cache_size=_default_post_cache_size)
                        for c in in_collections]
     # TODO: should maybe add skip/thin to out_combined, so can tell post-processed?
     output_out.check_and_dump_info(info_out, out_combined, check_compatible=False)

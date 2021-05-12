@@ -159,6 +159,7 @@ class DES(DataSetLikelihood):
     binned_bessels: bool
     use_hankel: bool
     use_Weyl: bool
+    l_max: int
 
     def load_dataset_file(self, filename, dataset_params=None):
         self.l_max = self.l_max or int(50000 * self.acc)

@@ -8,7 +8,7 @@
 """
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
-from typing import Mapping, Iterable, Callable, Optional
+from typing import Mapping, Iterable, Callable
 
 # Local
 from cobaya.theory import Theory
@@ -24,7 +24,7 @@ class BoltzmannBase(Theory):
     _get_z_dependent: Callable  # defined by inheriting classes
     renames: Mapping[str, str] = empty_dict
     extra_args: InfoDict
-    _must_provide: Optional[dict]
+    _must_provide: dict
     path: str
 
     def initialize(self):
@@ -33,7 +33,7 @@ class BoltzmannBase(Theory):
         self.collectors = {}
         # Additional input parameters to pass to CAMB, and attributes to set_ manually
         self.extra_args = deepcopy_where_possible(self.extra_args) or {}
-        self._must_provide = None
+        self._must_provide = {}
 
     def initialize_with_params(self):
         self.check_no_repeated_input_extra()
@@ -416,7 +416,8 @@ class BoltzmannBase(Theory):
     def get_fsigma8(self, z):
         r"""
         Structure growth rate :math:`f\sigma_8`, as defined in eq. 33 of
-        `Planck 2015 results. XIII. Cosmological parameters <https://arxiv.org/pdf/1502.01589.pdf>`_,
+        `Planck 2015 results. XIII.
+        Cosmological parameters <https://arxiv.org/pdf/1502.01589.pdf>`_,
         at the given redshift(s) ``z``.
 
         The redshifts must be a subset of those requested when

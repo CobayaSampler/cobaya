@@ -20,6 +20,7 @@ from cobaya.conventions import OutPar, minuslogprior_names, chi2_names, \
     derived_par_name_separator
 from cobaya.tools import load_DataFrame
 from cobaya.log import LoggedError, HasLogger, NoLogging
+from cobaya.model import LogPosterior
 
 # Suppress getdist output
 chains.print_load_details = False
@@ -74,7 +75,7 @@ class BaseCollection(HasLogger):
 
 def ensure_cache_dumped(method):
     """
-    Decorator for Collection methods that need the cache cleaned before running.
+    Decorator for SampleCollection methods that need the cache cleaned before running.
     """
 
     @functools.wraps(method)
@@ -85,12 +86,13 @@ def ensure_cache_dumped(method):
     return wrapper
 
 
-class Collection(BaseCollection):
+class SampleCollection(BaseCollection):
     """
     Holds a collection of samples, stored internally into a ``pandas.DataFrame``.
 
-    The DataFrame itself is accessible as the ``Collection.data`` property, but slicing
-    can be done on the ``Collection`` itself (returns a copy, not a view).
+    The DataFrame itself is accessible as the ``SampleCollection.data`` property,
+    but slicing can be done on the ``SampleCollection`` itself
+    (returns a copy, not a view).
 
     Note for developers: when expanding this class or inheriting from it, always access
     the underlying DataFrame as `self.data` and not `self._data`, to ensure the cache has
@@ -124,9 +126,9 @@ class Collection(BaseCollection):
                         self.thin_samples(onload_thin, inplace=True)
                     if load:
                         self.columns = list(self.data.columns)
-                        loaded_chi2_names = set(name for name in self.columns if
-                                                name.startswith(
-                                                    OutPar.chi2 + derived_par_name_separator))
+                        loaded_chi2_names = set(
+                            name for name in self.columns
+                            if name.startswith(OutPar.chi2 + derived_par_name_separator))
                         loaded_chi2_names.discard(
                             OutPar.chi2 + derived_par_name_separator + 'prior')
                         if set(self.chi2_names).difference(loaded_chi2_names):
@@ -186,6 +188,14 @@ class Collection(BaseCollection):
                                           derived=derived, weight=weight)
         self._cache_add(values, logps, derived=derived, weight=weight,
                         logpriors=logpriors, loglikes=loglikes)
+
+    def add_log_posterior(self, values: np.ndarray, results: LogPosterior, weight=1):
+        logprior_sum = sum(results.logpriors)
+        loglike_sum = sum(results.loglikes)
+        assert np.isclose(logprior_sum + loglike_sum, results.logpost)
+        self._cache_add(values, (results.logpost, logprior_sum, loglike_sum),
+                        derived=results.derived, weight=weight,
+                        logpriors=results.logpriors, loglikes=results.loglikes)
 
     def _check_before_adding(self, values, logpriors, loglikes, logpost=None,
                              derived=None, weight=None):
@@ -294,16 +304,6 @@ class Collection(BaseCollection):
         self._data = pd.concat([self.data[:len(self)], collection.data],
                                ignore_index=True)
 
-    # Retrieve-like methods
-    # MARKED FOR DEPRECATION IN v3.0
-    def n(self):
-        self.log.warning("*DEPRECATION*: `Collection.n()` will be deprecated soon "
-                         "in favor of `len(Collection)`")
-        # BEHAVIOUR TO BE REPLACED BY ERROR:
-        return len(self)
-
-    # END OF DEPRECATION BLOCK
-
     def __len__(self):
         return len(self._data) + (self._cache_last + 1)
 
@@ -357,10 +357,13 @@ class Collection(BaseCollection):
         return self._copy(data=new_data)
 
     @property
-    def values(self):
-        return self.data.values
+    def values(self) -> np.ndarray:
+        return self.data.to_numpy()
 
-    def _copy(self, data=None) -> 'Collection':
+    def to_numpy(self, dtype=None, copy=False) -> np.ndarray:
+        return self.data.to_numpy(copy=copy, dtype=dtype)
+
+    def _copy(self, data=None) -> 'SampleCollection':
         """
         Returns a copy of the collection.
 
@@ -380,7 +383,7 @@ class Collection(BaseCollection):
         return self_copy
 
     # Dummy function to avoid exposing `data` kwarg, since no checks are performed on it.
-    def copy(self) -> 'Collection':
+    def copy(self) -> 'SampleCollection':
         """
         Returns a copy of the collection.
         """
@@ -397,16 +400,14 @@ class Collection(BaseCollection):
         The estimate of the mean in this case is unstable; use carefully.
         """
         if pweight:
-            logps = -self[OutPar.minuslogpost][first:last].values.copy()
+            logps = -self[OutPar.minuslogpost][first:last].to_numpy(copy=True)
             logps -= max(logps)
             weights = np.exp(logps)
         else:
-            weights = self[OutPar.weight][first:last].values
-        return np.average(
-            self[list(self.sampled_params) +
-                 (list(self.derived_params) if derived else [])]
-            [first:last].T,
-            weights=weights, axis=-1)
+            weights = self[OutPar.weight][first:last].to_numpy()
+        return np.average(self[list(self.sampled_params) +
+                               (list(self.derived_params) if derived else [])]
+                          [first:last].T, weights=weights, axis=-1)
 
     def cov(self, first=None, last=None, derived=False, pweight=False):
         """
@@ -418,12 +419,12 @@ class Collection(BaseCollection):
         The estimate of the covariance matrix in this case is unstable; use carefully.
         """
         if pweight:
-            logps = -self[OutPar.minuslogpost][first:last].values.copy()
+            logps = -self[OutPar.minuslogpost][first:last].to_numpy(copy=True)
             logps -= max(logps)
             weights = np.exp(logps)
             kwarg = "aweights"
         else:
-            weights = self[OutPar.weight][first:last].values
+            weights = self[OutPar.weight][first:last].to_numpy()
             kwarg = "fweights" if np.allclose(np.round(weights), weights) else "aweights"
         weights_kwarg = {kwarg: weights}
         return np.atleast_2d(np.cov(
@@ -431,10 +432,10 @@ class Collection(BaseCollection):
                  (list(self.derived_params) if derived else [])][first:last].T,
             **weights_kwarg))
 
-    def filtered_copy(self, where) -> 'Collection':
+    def filtered_copy(self, where) -> 'SampleCollection':
         return self._copy(self.data[where].reset_index(drop=True))
 
-    def thin_samples(self, thin, inplace=False) -> 'Collection':
+    def thin_samples(self, thin, inplace=False) -> 'SampleCollection':
         if thin == 1:
             return self if inplace else self.copy()
         if thin != int(thin) or thin < 1:
@@ -445,8 +446,8 @@ class Collection(BaseCollection):
         try:
             if hasattr(WeightedSamples, "thin_indices_and_weights"):
                 unique, counts = \
-                    WeightedSamples.thin_indices_and_weights(thin,
-                                                             self[OutPar.weight].values)
+                    WeightedSamples.thin_indices_and_weights(
+                        thin, self[OutPar.weight].to_numpy())
             else:
                 raise LoggedError(self.log, "Thinning requires GetDist 1.2+", )
         except WeightedSampleError as e:
@@ -584,22 +585,25 @@ class Collection(BaseCollection):
 class OneSamplePoint:
     """Wrapper to hold a single point, e.g. the current point of an MCMC.
     Alternative to :class:`~collection.OnePoint`, faster but with less functionality."""
+    results: LogPosterior
+    values: np.ndarray
+    weight: int
 
     def __init__(self, model, output_thin=1):
         self.sampled_params = list(model.parameterization.sampled_params())
         self.output_thin = output_thin
         self._added_weight = 0
 
-    def add(self, values, weight=1, **kwargs):
+    def add(self, values, results: LogPosterior):
         self.values = values
-        self.kwargs = kwargs
-        self.weight = weight
+        self.results = results
+        self.weight = 1
 
     @property
     def logpost(self):
-        return self.kwargs['logpost']
+        return self.results.logpost
 
-    def add_to_collection(self, collection):
+    def add_to_collection(self, collection: SampleCollection):
         """Adds this point at the end of a given collection."""
         if self.output_thin > 1:
             self._added_weight += self.weight
@@ -610,7 +614,7 @@ class OneSamplePoint:
                 return False
         else:
             weight = self.weight
-        collection.add(self.values, weight=weight, **self.kwargs)
+        collection.add_log_posterior(self.values, self.results, weight=weight)
         return True
 
     def __str__(self):
@@ -618,8 +622,8 @@ class OneSamplePoint:
             ['%s:%.7g' % (k, v) for k, v in zip(self.sampled_params, self.values)])
 
 
-class OnePoint(Collection):
-    """Wrapper of :class:`~collection.Collection` to hold a single point,
+class OnePoint(SampleCollection):
+    """Wrapper of :class:`~collection.SampleCollection` to hold a single point,
     e.g. the best-fit point of a minimization run (not used by default MCMC)."""
 
     def __getitem__(self, columns):
@@ -627,8 +631,8 @@ class OnePoint(Collection):
             return self.data.values[0, self.data.columns.get_loc(columns)]
         else:
             try:
-                return self.data.values[
-                    0, [self.data.columns.get_loc(c) for c in columns]]
+                return self.data.values[0,
+                                        [self.data.columns.get_loc(c) for c in columns]]
             except KeyError:
                 raise ValueError("Some of the indices are not valid columns.")
 

@@ -6,6 +6,7 @@
 
 """
 # Global
+from typing import Any
 import numpy as np
 from scipy.stats import multivariate_normal, uniform, random_correlation
 from scipy.special import logsumexp
@@ -14,20 +15,21 @@ from scipy.special import logsumexp
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
 from cobaya.mpi import share_mpi, is_main_process
-from cobaya.typing import ArrayLike, ArrayOrFloat, InputDict
+from cobaya.typing import InputDict, Union, Sequence
 
 derived_suffix = "_derived"
 
 
-class gaussian_mixture(Likelihood):
+class GaussianMixture(Likelihood):
     """
     Gaussian likelihood.
     """
+    file_base_name = 'gaussian_mixture'
 
     # yaml variables
-    means: ArrayLike
-    covs: ArrayLike
-    weights: ArrayOrFloat
+    means: Union[Sequence, np.ndarray]
+    covs: Union[Sequence, np.ndarray]
+    weights: Union[np.ndarray, float]
     derived: bool
     input_params_prefix: str
     output_params_prefix: str
@@ -201,6 +203,8 @@ def info_random_gaussian_mixture(ranges, n_modes=1, input_params_prefix="",
     If ``mpi_aware=True``, it draws the random stuff only once, and communicates it to
     the rest of the MPI processes.
     """
+    cov: Any
+    mean: Any
     if is_main_process() or not mpi_aware:
         cov = random_cov(ranges, n_modes=n_modes, O_std_min=O_std_min,
                          O_std_max=O_std_max, mpi_warn=False, random_state=random_state)
@@ -228,12 +232,12 @@ def info_random_gaussian_mixture(ranges, n_modes=1, input_params_prefix="",
         "output_params_prefix": output_params_prefix, "derived": derived}},
         "params": dict(
             # sampled
-            [(input_params_prefix + "_%d" % i,
-              {"prior": {"min": ranges[i][0], "max": ranges[i][1]},
-               "latex": r"\alpha_{%i}" % i})
-             for i in range(dimension)] +
+            tuple((input_params_prefix + "_%d" % i,
+                   {"prior": {"min": ranges[i][0], "max": ranges[i][1]},
+                    "latex": r"\alpha_{%i}" % i})
+                  for i in range(dimension)) +
             # derived
-            ([[output_params_prefix + "_%d" % i,
-               {"latex": r"\beta_{%i}" % i}]
-              for i in range(dimension * n_modes)] if derived else []))}
+            (tuple((output_params_prefix + "_%d" % i,
+                    {"latex": r"\beta_{%i}" % i})
+                   for i in range(dimension * n_modes)) if derived else ()))}
     return info

@@ -21,7 +21,8 @@ cl_names = ['tt', 'te', 'ee']
 
 class PlanckPlikLite(DataSetLikelihood):
     install_options = {
-        "download_url": "https://cdn.cosmologist.info/cosmobox/test2019_kaml/plik_lite_AL.zip",
+        "download_url":
+            "https://cdn.cosmologist.info/cosmobox/test2019_kaml/plik_lite_AL.zip",
         "data_path": "planck_2018_pliklite_native"}
 
     bibtex_file = 'planck2018.bibtex'

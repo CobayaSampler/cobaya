@@ -173,7 +173,7 @@ import logging
 import numbers
 import ctypes
 from copy import deepcopy
-from typing import NamedTuple, Any
+from typing import NamedTuple, Any, Callable, Optional
 import numpy as np
 from itertools import chain
 # Local
@@ -183,12 +183,12 @@ from cobaya.install import download_github_release, check_gcc_version, NotInstal
 from cobaya.tools import getfullargspec, get_class_methods, get_properties, load_module, \
     VersionCheckError, str_to_list
 from cobaya.theory import HelperTheory
-from cobaya.typing import OptionalArrayLike
+from cobaya.typing import InfoDict
 
 
 # Result collector
 class Collector(NamedTuple):
-    method: callable
+    method: Callable
     args: list = []
     kwargs: dict = {}
 
@@ -199,7 +199,7 @@ class CAMBOutputs(NamedTuple):
     derived: dict
 
 
-class camb(BoltzmannBase):
+class CAMB(BoltzmannBase):
     r"""
     CAMB cosmological Boltzmann code \cite{Lewis:1999bs,Howlett:2012mh}.
     """
@@ -209,6 +209,7 @@ class camb(BoltzmannBase):
     _camb_min_gcc_version = "6.4"
     _min_camb_version = '1.1.3'
 
+    file_base_name = 'camb'
     external_primordial_pk: bool
     camb: Any
 
@@ -412,7 +413,7 @@ class camb(BoltzmannBase):
                 self.needs_perts = True
             elif k == "source_Cl":
                 if not getattr(self, "sources", None):
-                    self.sources = {}
+                    self.sources: InfoDict = {}
                 for source, window in v["sources"].items():
                     # If it was already there, BoltzmannBase.must_provide() has already
                     # checked that old info == new info
@@ -455,8 +456,9 @@ class camb(BoltzmannBase):
         # set-set base CAMB params if anything might have changed
         self._base_params = None
 
-        must_provide = {'CAMB_transfers': {'non_linear': self.non_linear_sources,
-                                           'needs_perts': self.needs_perts}}
+        must_provide: InfoDict = {
+            'CAMB_transfers': {'non_linear': self.non_linear_sources,
+                               'needs_perts': self.needs_perts}}
         if self.external_primordial_pk and self.needs_perts:
             must_provide['primordial_scalar_pk'] = {'lmax': self.extra_args.get("lmax"),
                                                     'kmax': self.extra_args.get('kmax')}
@@ -608,7 +610,7 @@ class camb(BoltzmannBase):
         for sp, i in mapping.items():
             cls[sp] = cl_camb[:, i]
         if lensed:
-            cl_lens: OptionalArrayLike = self.current_state["Cl"].get("lens_potential")
+            cl_lens: Optional[np.ndarray] = self.current_state["Cl"].get("lens_potential")
             if cl_lens is not None:
                 cls["pp"] = cl_lens[:, 0].copy()
                 if not ell_factor:
@@ -652,7 +654,7 @@ class camb(BoltzmannBase):
             raise LoggedError(
                 self.log, "No source Cl's were computed. "
                           "Are you sure that you have requested some source?")
-        cls_dict = dict()
+        cls_dict: dict = dict()
         for term, cl in cls.items():
             term_tuple = tuple(
                 (lambda x: x if x == "P" else list(self.sources)[int(x) - 1])(

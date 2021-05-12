@@ -231,7 +231,7 @@ When writing to the hard drive (i.e. when an ``[output_prefix].progress`` file e
 Callback functions
 ------------------
 
-A callback function can be specified through the ``callback_function`` option. It must be a function of a single argument, which at runtime is the current instance of the ``mcmc`` sampler. You can access its attributes and methods inside your function, including the :class:`~collection.Collection` of chain points and the ``model`` (of which ``prior`` and ``likelihood`` are attributes). For example, the following callback function would print the points added to the chain since the last callback:
+A callback function can be specified through the ``callback_function`` option. It must be a function of a single argument, which at runtime is the current instance of the ``mcmc`` sampler. You can access its attributes and methods inside your function, including the :class:`~collection.SampleCollection` of chain points and the ``model`` (of which ``prior`` and ``likelihood`` are attributes). For example, the following callback function would print the points added to the chain since the last callback:
 
 .. code:: python
 
@@ -314,7 +314,7 @@ Module documentation
 MCMC sampler class
 ^^^^^^^^^^^^^^^^^^^
 
-.. autoclass:: samplers.mcmc.mcmc
+.. autoclass:: samplers.mcmc.MCMC
    :members:
 
 Progress monitoring

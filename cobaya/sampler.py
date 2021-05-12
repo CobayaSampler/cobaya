@@ -47,15 +47,15 @@ implement only the methods ``initialize``, ``_run``, and ``products``.
 import os
 import logging
 import numpy as np
-from typing import Optional, Sequence, Mapping, Union, Any
+from typing import Optional, Sequence, Mapping, Union
 from itertools import chain
 from numpy.random import SeedSequence, default_rng
 
 # Local
 from cobaya.conventions import Extension
 from cobaya.typing import InfoDict, SamplersDict, SamplerDict
-from cobaya.tools import get_class, deepcopy_where_possible, find_with_regexp
-from cobaya.tools import recursive_update, str_to_list
+from cobaya.tools import deepcopy_where_possible, find_with_regexp
+from cobaya.tools import recursive_update, str_to_list, get_resolved_class
 from cobaya.model import Model
 from cobaya.log import LoggedError
 from cobaya.yaml import yaml_load_file, yaml_dump
@@ -71,7 +71,9 @@ def get_sampler_name_and_class(info_sampler: SamplersDict):
     """
     check_sane_info_sampler(info_sampler)
     name = list(info_sampler)[0]
-    return name, get_class(name, kind="sampler")
+    sampler_class = get_resolved_class(name, kind="sampler")
+    assert issubclass(sampler_class, Sampler)
+    return name, sampler_class
 
 
 def check_sane_info_sampler(info_sampler: SamplersDict):
@@ -141,7 +143,8 @@ def get_sampler(info_sampler: SamplersDict, model: Model, output: Optional[Outpu
         output = OutputDummy()
     # Check and update info
     check_sane_info_sampler(info_sampler)
-    updated_info_sampler = update_info({"sampler": info_sampler})["sampler"]
+    updated_info_sampler = update_info(
+        {"sampler": info_sampler})["sampler"]  # type: ignore
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
         logger_sampler.debug(
             "Input info updated with defaults (dumped to YAML):\n%s",
@@ -170,7 +173,7 @@ class Sampler(CobayaComponent):
 
     # What you *must* implement to create your own sampler:
 
-    seed: Any
+    seed: Union[None, int, Sequence[int]]
     version: Optional[Union[dict, str]] = None
 
     _rng: np.random.Generator
@@ -292,6 +295,7 @@ class Sampler(CobayaComponent):
             setattr(self, k, v)
         # check if convergence parameters changed, and if so converged=False
         old_info = self.output.reload_updated_info(use_cache=True)
+        assert old_info
         if self.converge_info_changed(old_info["sampler"][self.get_name()],
                                       self._updated_info):
             self.converged = False
@@ -455,6 +459,7 @@ class CovmatSampler(Sampler):
                 self.log.info("Could not automatically find a good covmat. "
                               "Will generate from parameter info (proposal and prior).")
         # If given, load and test the covariance matrix
+        loaded_params: Sequence[str]
         if isinstance(self.covmat, str):
             covmat_pre = "{%s}" % "packages_path"
             if self.covmat.startswith(covmat_pre):
@@ -531,7 +536,7 @@ class CovmatSampler(Sampler):
                     "The parameters %s have duplicated aliases. Can't assign them an "
                     "element of the covariance matrix unambiguously.",
                     ", ".join([list(params_infos)[i] for i in first]))
-            indices_sampler = list(chain(*indices_sampler))
+            indices_sampler = tuple(chain(*indices_sampler))
             covmat[np.ix_(indices_sampler, indices_sampler)] = (
                 loaded_covmat[np.ix_(indices_used, indices_used)])
             self.log.info(

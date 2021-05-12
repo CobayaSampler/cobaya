@@ -18,17 +18,18 @@ from copy import deepcopy
 from cobaya.sampler import CovmatSampler
 from cobaya.mpi import get_mpi_size
 from cobaya.mpi import more_than_one_process, is_main_process, sync_processes
-from cobaya.collection import Collection, OneSamplePoint
+from cobaya.collection import SampleCollection, OneSamplePoint
 from cobaya.conventions import OutPar, Extension, line_width, get_version
 from cobaya.typing import empty_dict
 from cobaya.samplers.mcmc.proposal import BlockedProposer
 from cobaya.log import LoggedError
 from cobaya.tools import get_external_function, NumberWithUnits, load_DataFrame
 from cobaya.yaml import yaml_dump_file
+from cobaya.model import LogPosterior
 from cobaya import mpi
 
 
-class mcmc(CovmatSampler):
+class MCMC(CovmatSampler):
     r"""
     Adaptive, speed-hierarchy-aware MCMC sampler (adapted from CosmoMC)
     \cite{Lewis:2002ah,Lewis:2013hha}.
@@ -40,6 +41,7 @@ class mcmc(CovmatSampler):
         "Rminus1_cl_level", "covmat", "covmat_params"]
     _at_resume_prefer_old = CovmatSampler._at_resume_prefer_new + [
         "proposal_scale", "blocking"]
+    file_base_name = 'mcmc'
 
     # instance variables from yaml
     burn_in: NumberWithUnits
@@ -53,6 +55,7 @@ class mcmc(CovmatSampler):
     blocking: Optional[Sequence]
     proposal_scale: float
     learn_proposal: bool
+    learn_proposal_Rminus1_max: float
     learn_proposal_Rminus1_max_early: float
     Rminus1_cl_level: float
     Rminus1_stop: float
@@ -107,7 +110,7 @@ class mcmc(CovmatSampler):
         sync_processes()
         # One collection per MPI process: `name` is the MPI rank + 1
         name = str(1 + mpi.rank())
-        self.collection = Collection(
+        self.collection = SampleCollection(
             self.model, self.output, name=name, resuming=self.output.is_resuming())
         self.current_point = OneSamplePoint(self.model)
         # Use standard MH steps by default
@@ -135,21 +138,22 @@ class mcmc(CovmatSampler):
         # we may be saving the initial state of some block.
         # NB: if resuming but nothing was written (burn-in not finished): re-start
         if self.output.is_resuming() and len(self.collection):
+            last = len(self.collection) - 1
             initial_point = (self.collection[self.collection.sampled_params]
-                .iloc[len(self.collection) - 1]).values.copy()
-            logpost = -(self.collection[OutPar.minuslogpost]
-                        .iloc[len(self.collection) - 1].copy())
-            logpriors = -(self.collection[self.collection.minuslogprior_names]
-                          .iloc[len(self.collection) - 1].copy())
-            loglikes = -0.5 * (self.collection[self.collection.chi2_names]
-                               .iloc[len(self.collection) - 1].copy())
-            derived = (self.collection[self.collection.derived_params]
-                       .iloc[len(self.collection) - 1].values.copy())
+                .iloc[last]).to_numpy(copy=True)
+            results = LogPosterior(
+                logpost=-self.collection[OutPar.minuslogpost].iloc[last],
+                logpriors=-(self.collection[self.collection.minuslogprior_names]
+                            .iloc[last].to_numpy(copy=True)),
+                loglikes=-0.5 * (self.collection[self.collection.chi2_names]
+                                 .iloc[last].to_numpy(copy=True)),
+                derived=(self.collection[self.collection.derived_params].iloc[last]
+                         .to_numpy(copy=True)))
         else:
             # NB: max_tries adjusted to dim instead of #cycles (blocking not computed yet)
             self.max_tries.set_scale(self.model.prior.d())
             self.log.info("Getting initial point... (this may take a few seconds)")
-            initial_point, logpost, logpriors, loglikes, derived = \
+            initial_point, results = \
                 self.model.get_valid_point(max_tries=self.max_tries.value,
                                            random_state=self._rng)
             # If resuming but no existing chain, assume failed run and ignore blocking
@@ -165,8 +169,8 @@ class mcmc(CovmatSampler):
                 self.model.measure_and_set_speeds(n=n, discard=0, random_state=self._rng)
         self.set_proposer_blocking()
         self.set_proposer_covmat(load=True)
-        self.current_point.add(initial_point, derived=derived, logpost=logpost,
-                               logpriors=logpriors, loglikes=loglikes)
+
+        self.current_point.add(initial_point, results)
         self.log.info("Initial point: %s", self.current_point)
         # Max #(learn+convergence checks) to wait,
         # in case one process dies without sending MPI_ABORT
@@ -213,9 +217,9 @@ class mcmc(CovmatSampler):
     def n_fast(self):
         return len(self.fast_params)
 
-    @property
-    def acceptance_rate(self):
-        return self.n() / self.collection[OutPar.weight].sum()
+    def get_acceptance_rate(self, first=0, last=None):
+        return (((last or self.n()) - (first or 0)) /
+                self.collection[OutPar.weight][first:last].sum())
 
     def set_proposer_blocking(self):
         if self.blocking:
@@ -333,7 +337,7 @@ class mcmc(CovmatSampler):
                        self.burn_in.value + "have been obtained)"
                        if self.burn_in.value else ""))
         self.n_steps_raw = 0
-        last_output = 0
+        last_output: float = 0
         last_n = self.n()
         with mpi.ProcessState(self) as state:
             while last_n < self.max_samples and not self.converged:
@@ -407,11 +411,9 @@ class mcmc(CovmatSampler):
         """
         trial = self.current_point.values.copy()
         self.proposer.get_proposal(trial)
-        logpost_trial, logprior_trial, loglikes_trial, derived = \
-            self.model.logposterior(trial)
-        accept = self.metropolis_accept(logpost_trial, self.current_point.logpost)
-        self.process_accept_or_reject(accept, trial, derived,
-                                      logpost_trial, logprior_trial, loglikes_trial)
+        trial_results = self.model.logposterior(trial)
+        accept = self.metropolis_accept(trial_results.logpost, self.current_point.logpost)
+        self.process_accept_or_reject(accept, trial, trial_results)
         return accept
 
     def get_new_sample_dragging(self):
@@ -428,31 +430,23 @@ class mcmc(CovmatSampler):
         """
         # Prepare starting and ending points *in the SLOW subspace*
         # "start_" and "end_" mean here the extremes in the SLOW subspace
-        start_slow_point = self.current_point.values.copy()
-        start_slow_logpost = self.current_point.logpost
-        end_slow_point = start_slow_point.copy()
-        self.proposer.get_proposal_slow(end_slow_point)
-        self.log.debug("Proposed slow end-point: %r", end_slow_point)
+        current_start_point = self.current_point.values
+        current_start_logpost = self.current_point.logpost
+        current_end_point = current_start_point.copy()
+        self.proposer.get_proposal_slow(current_end_point)
+        self.log.debug("Proposed slow end-point: %r", current_end_point)
         # Save derived parameters of delta_slow jump, in case I reject all the dragging
         # steps but accept the move in the slow direction only
-        end_slow_logpost, end_slow_logprior, end_slow_loglikes, derived = (
-            self.model.logposterior(end_slow_point))
-        if end_slow_logpost == -np.inf:
+        current_end = self.model.logposterior(current_end_point)
+        if current_end.logpost == -np.inf:
             self.current_point.weight += 1
             return False
-        # trackers of the dragging
-        current_start_point = start_slow_point
-        current_end_point = end_slow_point
-        current_start_logpost = start_slow_logpost
-        current_end_logpost = end_slow_logpost
-        current_end_logprior = end_slow_logprior
-        current_end_loglikes = end_slow_loglikes
         # accumulators for the "dragging" probabilities to be metropolis-tested
         # at the end of the interpolation
-        start_drag_logpost_acc = start_slow_logpost
-        end_drag_logpost_acc = end_slow_logpost
+        start_drag_logpost_acc = current_start_logpost
+        end_drag_logpost_acc = current_end.logpost
         # alloc mem
-        delta_fast = np.zeros(len(current_start_point))
+        delta_fast = np.empty(len(current_start_point))
         # start dragging
         for i_step in range(1, 1 + self.drag_interp_steps):
             self.log.debug("Dragging step: %d", i_step)
@@ -461,49 +455,49 @@ class mcmc(CovmatSampler):
             self.proposer.get_proposal_fast(delta_fast)
             self.log.debug("Proposed fast step delta: %r", delta_fast)
             proposal_start_point = current_start_point + delta_fast
-            proposal_end_point = current_end_point + delta_fast
             # get the new extremes for the interpolated probability
             # (reject if any of them = -inf; avoid evaluating both if just one fails)
             # Force the computation of the (slow blocks) derived params at the starting
             # point, but discard them, since they contain the starting point's fast ones,
             # not used later -- save the end point's ones.
-            proposal_start_logpost = self.model.logposterior(proposal_start_point)[0]
-            (proposal_end_logpost, proposal_end_logprior, proposal_end_loglikes,
-             derived_proposal_end) = (self.model.logposterior(proposal_end_point)
-                                      if proposal_start_logpost > -np.inf
-                                      else (-np.inf, None, [], []))
-            if proposal_start_logpost > -np.inf and proposal_end_logpost > -np.inf:
-                # create the interpolated probability and do a Metropolis test
-                frac = i_step / (1 + self.drag_interp_steps)
-                proposal_interp_logpost = ((1 - frac) * proposal_start_logpost
-                                           + frac * proposal_end_logpost)
-                current_interp_logpost = ((1 - frac) * current_start_logpost
-                                          + frac * current_end_logpost)
-                accept_drag = self.metropolis_accept(proposal_interp_logpost,
-                                                     current_interp_logpost)
+            proposal_start_logpost = self.model.logposterior(
+                proposal_start_point, return_derived=False).logpost
+
+            if proposal_start_logpost > -np.inf:
+                proposal_end_point = current_end_point + delta_fast
+                proposal_end = self.model.logposterior(proposal_end_point)
+
+                if proposal_end.logpost > -np.inf:
+                    # create the interpolated probability and do a Metropolis test
+
+                    frac = i_step / (1 + self.drag_interp_steps)
+                    proposal_interp_logpost = ((1 - frac) * proposal_start_logpost
+                                               + frac * proposal_end.logpost)
+                    current_interp_logpost = ((1 - frac) * current_start_logpost
+                                              + frac * current_end.logpost)
+                    accept_drag = self.metropolis_accept(proposal_interp_logpost,
+                                                         current_interp_logpost)
+                    if accept_drag:
+                        # If the dragging step was accepted, do the drag
+                        current_start_point = proposal_start_point
+                        current_start_logpost = proposal_start_logpost
+                        current_end_point = proposal_end_point
+                        current_end = proposal_end
+                else:
+                    accept_drag = False
             else:
                 accept_drag = False
             self.log.debug("Dragging step: %s",
                            ("accepted" if accept_drag else "rejected"))
-            # If the dragging step was accepted, do the drag
-            if accept_drag:
-                current_start_point = proposal_start_point
-                current_start_logpost = proposal_start_logpost
-                current_end_point = proposal_end_point
-                current_end_logpost = proposal_end_logpost
-                current_end_logprior = proposal_end_logprior
-                current_end_loglikes = proposal_end_loglikes
-                derived = derived_proposal_end
+
             # In any case, update the dragging probability for the final metropolis test
             start_drag_logpost_acc += current_start_logpost
-            end_drag_logpost_acc += current_end_logpost
+            end_drag_logpost_acc += current_end.logpost
         # Test for the TOTAL step
         n_average = 1 + self.drag_interp_steps
         accept = self.metropolis_accept(end_drag_logpost_acc / n_average,
                                         start_drag_logpost_acc / n_average)
-        self.process_accept_or_reject(
-            accept, current_end_point, derived,
-            current_end_logpost, current_end_logprior, current_end_loglikes)
+        self.process_accept_or_reject(accept, current_end_point, current_end)
         self.log.debug("TOTAL step: %s", ("accepted" if accept else "rejected"))
         return accept
 
@@ -521,9 +515,7 @@ class mcmc(CovmatSampler):
         else:
             return self._rng.exponential() > (logp_current - logp_trial)
 
-    def process_accept_or_reject(self, accept_state, trial=None, derived=None,
-                                 logpost_trial=None, logprior_trial=None,
-                                 loglikes_trial=None):
+    def process_accept_or_reject(self, accept_state, trial, trial_results):
         """Processes the acceptance/rejection of the new point."""
         if accept_state:
             # add the old point to the collection (if not burning or initial point)
@@ -542,8 +534,7 @@ class mcmc(CovmatSampler):
                     self.log.info("Finished burn-in phase: discarded %d accepted steps.",
                                   self.burn_in.value)
             # set the new point as the current one, with weight one
-            self.current_point.add(trial, derived=derived, logpost=logpost_trial,
-                                   logpriors=logprior_trial, loglikes=loglikes_trial)
+            self.current_point.add(trial, trial_results)
         else:  # not accepted
             self.current_point.weight += 1
             # Failure criterion: chain stuck! (but be more permissive during burn_in)
@@ -594,14 +585,16 @@ class mcmc(CovmatSampler):
             use_first = int(self.n() / 2)
             mean = self.collection.mean(first=use_first)
             cov = self.collection.cov(first=use_first)
+            acceptance_rate = self.get_acceptance_rate(use_first)
             Ns, means, covs, acceptance_rates = mpi.array_gather(
-                [self.n(), mean, cov, self.acceptance_rate])
+                [self.n(), mean, cov, acceptance_rate])
         else:
             # Compute and gather means, covs and CL intervals of last m-1 chain fractions
             m = 1 + self.Rminus1_single_split
             cut = int(len(self.collection) / m)
             try:
-                Ns = (m - 1) * [cut]
+                acceptance_rate = self.get_acceptance_rate(cut)
+                Ns = np.ones(m - 1) * cut
                 means = np.array(
                     [self.collection.mean(first=i * cut, last=(i + 1) * cut - 1) for i in
                      range(1, m)])
@@ -618,7 +611,7 @@ class mcmc(CovmatSampler):
             self.progress.at[self.i_learn, "timestamp"] = \
                 datetime.datetime.now().isoformat()
             acceptance_rate = (np.average(acceptance_rates, weights=Ns)
-                               if acceptance_rates is not None else self.acceptance_rate)
+                               if acceptance_rates is not None else acceptance_rate)
             self.log.info(" - Acceptance rate: %.3f" +
                           (" = avg(%r)" % list(acceptance_rates)
                            if acceptance_rates is not None else ""), acceptance_rate)
@@ -809,7 +802,7 @@ class mcmc(CovmatSampler):
         Auxiliary function to define what should be returned in a scripted call.
 
         Returns:
-           The sample ``Collection`` containing the accepted steps.
+           The sample ``SampleCollection`` containing the accepted steps.
         """
         products = {"sample": self.collection}
         if is_main_process():
@@ -833,17 +826,14 @@ class mcmc(CovmatSampler):
 
     @classmethod
     def _get_desc(cls, info=None):
+        drag_string = r" using the fast-dragging procedure described in \cite{Neal:2005}"
         if info is None:
-            drag = None
+            # Unknown case (no info passed)
+            string = " [(if drag: True)%s]" % drag_string
         else:
-            drag = info.get("drag", cls.get_defaults()["drag"])
-        drag_string = {
-            True: r" using the fast-dragging procedure described in \cite{Neal:2005}",
-            False: ""}
-        # Unknown case (no info passed)
-        drag_string[None] = " [(if drag: True)%s]" % drag_string[True]
+            string = drag_string if info.get("drag", cls.get_defaults()["drag"]) else ""
         return ("Adaptive, speed-hierarchy-aware MCMC sampler (adapted from CosmoMC) "
-                r"\cite{Lewis:2002ah,Lewis:2013hha}" + drag_string[drag] + ".")
+                r"\cite{Lewis:2002ah,Lewis:2013hha}" + string + ".")
 
 
 # Plotting tool for chain progress #######################################################

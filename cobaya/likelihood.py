@@ -23,7 +23,6 @@ class can be used as and when needed.
 """
 
 # Global
-import inspect
 from time import sleep
 from typing import Mapping, Optional, Union, Dict
 from itertools import chain
@@ -31,7 +30,7 @@ import numpy as np
 import numbers
 
 # Local
-from cobaya.typing import LikesDict, LikeDict, ParamValuesDict, empty_dict
+from cobaya.typing import LikesDict, LikeDictIn, ParamValuesDict, empty_dict
 from cobaya.tools import get_resolved_class, get_external_function, getfullargspec, \
     str_to_list
 from cobaya.log import LoggedError
@@ -82,7 +81,7 @@ class Likelihood(Theory, LikelihoodInterface):
 
     type: Optional[Union[list, str]] = []
 
-    def __init__(self, info: LikeDict = empty_dict,
+    def __init__(self, info: LikeDictIn = empty_dict,
                  name: Optional[str] = None,
                  timing: Optional[bool] = None,
                  packages_path: Optional[str] = None,
@@ -188,6 +187,7 @@ class LikelihoodExternalFunction(Likelihood):
                 self.log, "If a likelihood has external requirements, declared under %r, "
                           "it needs to accept a keyword argument %r.", "requires",
                 self._self_arg)
+        self._requirements = info.get("requires") or {}
         # MARKED FOR DEPRECATION IN v3.0
         self._uses_old_theory = "_theory" in argspec.args
         if self._uses_old_theory:
@@ -199,7 +199,7 @@ class LikelihoodExternalFunction(Likelihood):
                 "requires")
             # BEHAVIOUR TO BE REPLACED BY ERROR:
             assert argspec.defaults
-            info["requires"] = argspec.defaults[
+            self._requirements = argspec.defaults[
                 argspec.args[-len(argspec.defaults):].index("_theory")]
         # END OF DEPRECATION BLOCK
 
@@ -212,7 +212,6 @@ class LikelihoodExternalFunction(Likelihood):
         self._args = set(chain(self._optional_args, self.params))
         if argspec.varkw:
             self._args.update(self.input_params)
-        self._requirements = info.get("requires") or {}
         self.log.info("Initialized external likelihood.")
 
     def get_requirements(self):
@@ -277,20 +276,19 @@ class LikelihoodCollection(ComponentCollection):
             if isinstance(info, Theory):
                 self.add_instance(name, info)
             elif isinstance(info, Mapping) and "external" in info:
-                if isinstance(info["external"], Theory):
-                    self.add_instance(name, info["external"])
-                elif inspect.isclass(info["external"]):
-                    if not is_LikelihoodInterface(info["external"]) or \
-                            not issubclass(info["external"], Theory):
+                external = info["external"]
+                if isinstance(external, Theory):
+                    self.add_instance(name, external)
+                elif isinstance(external, type):
+                    if not is_LikelihoodInterface(external) or \
+                            not issubclass(external, Theory):
                         raise LoggedError(self.log, "%s: external class likelihood must "
                                                     "be a subclass of Theory and have "
                                                     "logp, current_logp attributes",
-                                          info["external"].__name__)
-                    self.add_instance(name,
-                                      info["external"](info, packages_path=packages_path,
-                                                       timing=timing,
-                                                       standalone=False,
-                                                       name=name))
+                                          external.__name__)
+                    self.add_instance(name, external(info, packages_path=packages_path,
+                                                     timing=timing, standalone=False,
+                                                     name=name))
                 else:
                     # If it has an "external" key, wrap it up. Else, load it up
                     # noinspection PyTypeChecker
@@ -298,7 +296,7 @@ class LikelihoodCollection(ComponentCollection):
                                                                        timing=timing))
             else:
                 assert isinstance(info, Mapping)
-                like_class = get_resolved_class(
+                like_class: type = get_resolved_class(
                     name, kind="likelihood",
                     component_path=info.get("python_path", None),
                     class_name=info.get("class"))

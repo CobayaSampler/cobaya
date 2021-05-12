@@ -5,6 +5,7 @@ from typing import MutableMapping, Mapping
 # Local
 from cobaya.input import get_default_info, merge_info
 from cobaya.parameterization import reduce_info_param
+from cobaya.typing import InputDict
 from . import input_database
 
 
@@ -30,7 +31,7 @@ def translate(p, info=None, dictionary=None):
     return p, info
 
 
-def create_input(**kwargs):
+def create_input(**kwargs) -> InputDict:
     get_comments = kwargs.pop("get_comments", False)
     preset = kwargs.pop("preset", None)
     if preset:
@@ -112,9 +113,9 @@ def create_input(**kwargs):
                                                  theory_requested] or {}
         merged["theory"][theory_requested]["use_renames"] = True
     else:
-        merged_params_translated = dict([
+        merged_params_translated = dict(
             translate(p, info, planck_to_theo)
-            for p, info in merged["params"].items()])
+            for p, info in merged["params"].items())
         merged["params"] = merged_params_translated
     if get_comments and comments:
         merged["comment"] = comments

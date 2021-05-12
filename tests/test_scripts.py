@@ -34,7 +34,7 @@ likelihood:
 theory:
  camb:
 sampler:
- minimize:
+ Minimize:
 """
 
 

@@ -7,7 +7,7 @@ from scipy.stats import multivariate_normal
 from getdist.mcsamples import MCSamplesFromCobaya
 
 from cobaya.likelihoods.gaussian_mixture import info_random_gaussian_mixture
-from cobaya.typing import InputDict, empty_dict
+from cobaya.typing import InputDict, SamplersDict
 from cobaya.tools import KL_norm
 from cobaya.run import run
 from .common import process_packages_path, is_travis
@@ -52,7 +52,7 @@ def generate_random_info(n_modes, ranges, random_state):
 
 
 @mpi.sync_errors
-def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
+def body_of_test(info_sampler: SamplersDict, dimension=1, n_modes=1, tmpdir="",
                  packages_path=None, skip_not_installed=False, fixed=False,
                  random_state=None):
     # Info of likelihood and prior
@@ -153,7 +153,7 @@ def body_of_test(dimension=1, n_modes=1, info_sampler=empty_dict, tmpdir="",
 
 
 @mpi.sync_errors
-def body_of_test_speeds(info_sampler=empty_dict, manual_blocking=False,
+def body_of_test_speeds(info_sampler, manual_blocking=False,
                         packages_path=None, skip_not_installed=False, random_state=None):
     # #dimensions and speed ratio mutually prime (e.g. 2,3,5)
     dim0, dim1 = 5, 2

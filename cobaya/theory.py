@@ -30,11 +30,10 @@ see :doc:`theories_and_dependencies`.
 
 """
 
-import inspect
 from collections import deque
 from typing import Sequence, Optional, Union, Tuple, Dict, Iterable, Set, Any
 # Local
-from cobaya.typing import TheoryDict, TheoriesDict, InfoDict, ParamValuesDict, \
+from cobaya.typing import TheoryDictIn, TheoriesDict, InfoDict, ParamValuesDict, \
     ParamsDict, empty_dict, unset_params
 from cobaya.component import CobayaComponent, ComponentCollection
 from cobaya.tools import get_resolved_class, str_to_list
@@ -57,7 +56,7 @@ class Theory(CobayaComponent):
 
     _states: deque
 
-    def __init__(self, info: TheoryDict = empty_dict,
+    def __init__(self, info: TheoryDictIn = empty_dict,
                  name: Optional[str] = None, timing: Optional[bool] = None,
                  packages_path: Optional[str] = None,
                  initialize=True, standalone=True):
@@ -376,10 +375,12 @@ class TheoryCollection(ComponentCollection):
                 # If it has an "external" key, wrap it up. Else, load it up
                 if isinstance(info, Theory):
                     self.add_instance(name, info)
+                elif isinstance(info.get("external"), Theory):
+                    self.add_instance(name, info["external"])
                 else:
                     if "external" in info:
                         theory_class = info["external"]
-                        if not inspect.isclass(theory_class) or \
+                        if not isinstance(theory_class, type) or \
                                 not issubclass(theory_class, Theory):
                             raise LoggedError(self.log,
                                               "Theory %s is not a Theory subclass", name)

@@ -24,7 +24,8 @@ kinds = ("sampler", "theory", "likelihood")
 
 # Reserved attributes for component classes with defaults.
 # These are ignored by HasDefaults.get_class_options()
-reserved_attributes = {"input_params", "output_params", "install_options", "bibtex_file"}
+reserved_attributes = {"input_params", "output_params", "install_options",
+                       "bibtex_file", "file_base_name"}
 
 # Conventional order for yaml dumping (purely cosmetic)
 dump_sort_cosmetic = ["theory", "likelihood", "prior", "params", "sampler", "post"]

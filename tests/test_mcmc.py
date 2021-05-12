@@ -50,7 +50,7 @@ def test_mcmc(tmpdir, packages_path=None):
         info_sampler["mcmc"].update({
             # Callback to check KL divergence -- disabled in the automatic test
             "callback_function": check_gaussian, "callback_every": 100})
-    body_of_test(dimension=dimension, fixed=True, info_sampler=info_sampler,
+    body_of_test(info_sampler, dimension=dimension, fixed=True,
                  tmpdir=tmpdir, random_state=np.random.default_rng(1))
 
 

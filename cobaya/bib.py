@@ -45,7 +45,7 @@ cobaya_bib = r"""
 def get_desc_component(component, kind, info=None):
     cls = get_class(component, kind, None_if_not_found=True)
     if cls:
-        lines = cleandoc(cls.get_desc(info))
+        lines = cleandoc(cls.get_desc(info) or "")
     else:
         lines = "[no description found]"
     return lines + "\n"
@@ -132,7 +132,7 @@ def bib_script(args=None):
                 print(create_banner(
                     component, symbol=_default_symbol, length=_default_length))
                 print(get_bib_component(component, arguments.kind))
-            except:
+            except Exception:
                 if not arguments.kind:
                     print("Specify its kind with '--%s [component_kind]'." % kind_opt +
                           "(NB: all requested components must have the same kind, "

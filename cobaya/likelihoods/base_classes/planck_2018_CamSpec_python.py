@@ -276,9 +276,12 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         # State requisites to the theory code
         l_max = np.max(self.lmax)
         used = []
-        if np.any(self.cl_used[:4]): used += ['tt']
-        if 'TE' in self.use_cl: used += ['te']
-        if 'EE' in self.use_cl: used += ['ee']
+        if np.any(self.cl_used[:4]):
+            used += ['tt']
+        if 'TE' in self.use_cl:
+            used += ['te']
+        if 'EE' in self.use_cl:
+            used += ['ee']
         return {"Cl": {cl: l_max for cl in used}}
 
     def coadded_TT(self, data_params=None, foregrounds=None, cals=None,
@@ -374,8 +377,8 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         lmin = np.max([min(r) for r in self.ell_ranges[[i, j]]])
 
         diff = np.zeros(self.ls[-1] + 1)
-        diff[self.ell_ranges[i]] = self.data_vector[off1:off1 + self.used_sizes[i]] * \
-                                   cals[i] - foregrounds[i][self.ell_ranges[i]]
+        diff[self.ell_ranges[i]] = (self.data_vector[off1:off1 + self.used_sizes[i]] *
+                                    cals[i] - foregrounds[i][self.ell_ranges[i]])
         diff[self.ell_ranges[j]] -= (
                 self.data_vector[off2:off2 + self.used_sizes[j]] * cals[j] -
                 foregrounds[j][

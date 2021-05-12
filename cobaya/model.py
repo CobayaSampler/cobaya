@@ -17,7 +17,7 @@ import os
 # Local
 from cobaya.conventions import overhead_time, debug_default, get_chi2_name
 from cobaya.typing import InfoDict, InputDict, LikesDict, TheoriesDict, \
-    ParamsDict, PriorsDict, ParamValuesDict, ArrayLike, empty_dict, unset_params
+    ParamsDict, PriorsDict, ParamValuesDict, empty_dict, unset_params
 from cobaya.input import update_info, load_input_dict
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
@@ -85,7 +85,7 @@ def _dict_equal(d1, d2):
     if isinstance(d1, str):
         return d1 == d2
     if isinstance(d1, Mapping):
-        if set(list(d1)) != set(list(d2)):
+        if set(d1) != set(d2):
             return False
         for k, v in d1.items():
             if not _dict_equal(v, d2[k]):
@@ -154,7 +154,7 @@ class Model(HasLogger):
         # Evaluation of non-uniform priors will add some overhead per parameter.
         self.overhead = overhead_time
 
-    def info(self):
+    def info(self) -> InputDict:
         """
         Returns a copy of the information used to create the model, including defaults
         and some new values that are only available after initialisation.
@@ -179,7 +179,7 @@ class Model(HasLogger):
                 self.log, "Cannot take arrays of points as inputs, just single points.")
         return params_values_array
 
-    def logpriors(self, params_values, make_finite=False) -> ArrayLike:
+    def logpriors(self, params_values, make_finite=False) -> np.ndarray:
         """
         Takes an array or dictionary of sampled parameter values.
         If the argument is an array, parameters must have the same order as in the input.
@@ -197,7 +197,7 @@ class Model(HasLogger):
         if hasattr(params_values, "keys"):
             params_values = self.parameterization.check_sampled(**params_values)
         params_values_array = self._to_sampled_array(params_values)
-        logpriors = self.prior.logps(params_values_array)
+        logpriors = np.asarray(self.prior.logps(params_values_array))
         if make_finite:
             return np.nan_to_num(logpriors)
         return logpriors
@@ -451,15 +451,15 @@ class Model(HasLogger):
         ignored in favor of the full prior, ensuring some randomness for all parameters
         (useful e.g. to prevent caching when measuring speeds).
 
-        Returns (point, logpost, logpriors, loglikes, derived)
+        Returns (point, LogPosterior(logpost, logpriors, loglikes, derived))
         """
         for loop in range(max(1, max_tries // self.prior.d())):
             initial_point = self.prior.reference(max_tries=max_tries,
                                                  ignore_fixed=ignore_fixed_ref,
                                                  warn_if_no_ref=not loop,
                                                  random_state=random_state)
-            logpost, logpriors, loglikes, derived = self.logposterior(initial_point)
-            if logpost != -np.inf:
+            results = self.logposterior(initial_point)
+            if results.logpost != -np.inf:
                 break
         else:
             if self.prior.reference_is_pointlike():
@@ -468,7 +468,7 @@ class Model(HasLogger):
                                             "or a pdf.")
             raise LoggedError(self.log, "Could not find random point giving finite "
                                         "posterior after %g tries", max_tries)
-        return initial_point, logpost, logpriors, loglikes, derived
+        return initial_point, results
 
     def dump_timing(self):
         """
