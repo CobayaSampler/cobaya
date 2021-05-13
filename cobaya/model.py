@@ -23,12 +23,11 @@ from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection, AbsorbUnusedParamsLikelihood, \
     is_LikelihoodInterface
-from cobaya.theory import TheoryCollection, Theory
+from cobaya.theory import TheoryCollection, Theory, Provider
 from cobaya.log import LoggedError, logger_setup, HasLogger
 from cobaya.yaml import yaml_dump
 from cobaya.tools import deepcopy_where_possible, are_different_params_lists, \
     str_to_list, sort_parameter_blocks, recursive_update, sort_cosmetic
-from cobaya.component import Provider
 from cobaya import mpi
 
 
@@ -227,12 +226,13 @@ class Model(HasLogger):
         self.provider.set_current_input_params(input_params)
         self.log.debug("Got input parameters: %r", input_params)
         loglikes = np.zeros(len(self.likelihood))
+        need_derived = self.requires_derived or return_derived
         for (component, like_index), param_dep in zip(self._component_order.items(),
                                                       self._params_of_dependencies):
             depend_list = [input_params[p] for p in param_dep]
             params = {p: input_params[p] for p in component.input_params}
             compute_success = component.check_cache_and_compute(
-                params, want_derived=return_derived,
+                params, want_derived=need_derived,
                 dependency_params=depend_list, cached=cached)
             if not compute_success:
                 loglikes[:] = -np.inf
@@ -547,6 +547,8 @@ class Model(HasLogger):
         requirements: Dict[Theory, List[Requirement]] = {}
         # providers of each *available* requirement (requested or not)
         providers: Dict[str, List[Theory]] = {}
+        # set of requirement names that may be required derived parameters
+        requirements_are_params: Set[str] = set()
         for component in components:
             # MARKED FOR DEPRECATION IN v3.0
             if hasattr(component, "add_theory"):
@@ -575,6 +577,7 @@ class Model(HasLogger):
                 if any(p == req.name for req in requirements[component]):
                     # no need to know which are params
                     provide_params.remove(p)
+            requirements_are_params.update(provide_params)
             # Invert to get the provider(s) of each available product/parameter
             for k in chain(can_provide, component.output_params, provide_params):
                 providers[k] = providers.get(k, []) + [component]
@@ -726,8 +729,8 @@ class Model(HasLogger):
                               "(neither directly nor indirectly)", component)
         # Store the input params and components on which each sampled params depends.
         sampled_input_dependence = self.parameterization.sampled_input_dependence()
-        sampled_dependence: Dict[str, List[Theory]] \
-            = {p: [] for p in sampled_input_dependence}
+        sampled_dependence: Dict[str, List[Theory]] = {p: []
+                                                       for p in sampled_input_dependence}
         for p, i_s in sampled_input_dependence.items():
             for component in components:
                 if p in component.input_params or i_s and \
@@ -738,6 +741,8 @@ class Model(HasLogger):
                                 component in self._dependencies.get(comp, []):
                             sampled_dependence[p].append(comp)
         self.sampled_dependence = sampled_dependence
+        self.requires_derived = requirements_are_params.intersection(
+            requirement_providers)
 
         # ## 4. Initialize the provider and pass it to each component ##
         if self.log.getEffectiveLevel() <= logging.DEBUG:
@@ -1122,7 +1127,7 @@ class Model(HasLogger):
             point = self.prior.reference(random_state=random_state,
                                          max_tries=max_tries, ignore_fixed=True,
                                          warn_if_no_ref=False)
-            if self.loglike(point, cached=False, return_derived=False) != -np.inf:
+            if self.loglike(point, cached=False)[0] != -np.inf:
                 n_done += 1
         self.log.debug("Computed %d points to measure speeds.", n_done)
         times = [component.timer.get_time_avg() or 0  # type: ignore

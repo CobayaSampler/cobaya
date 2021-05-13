@@ -31,7 +31,7 @@ see :doc:`theories_and_dependencies`.
 """
 
 from collections import deque
-from typing import Sequence, Optional, Union, Tuple, Dict, Iterable, Set, Any
+from typing import Sequence, Optional, Union, Tuple, Dict, Iterable, Set, Any, List
 # Local
 from cobaya.typing import TheoryDictIn, TheoriesDict, InfoDict, ParamValuesDict, \
     ParamsDict, empty_dict, unset_params
@@ -66,7 +66,8 @@ class Theory(CobayaComponent):
                          packages_path=packages_path, initialize=initialize,
                          standalone=standalone)
 
-        self.provider: Any = None  # set to Provider instance before calculations
+        # set to Provider instance before calculations
+        self.provider: Any = None
         # Generate cache states, to avoid recomputing.
         # Default 3, but can be changed by sampler
         self.set_cache_size(3)
@@ -127,13 +128,13 @@ class Theory(CobayaComponent):
         set).
         """
 
-    def initialize_with_provider(self, provider):
+    def initialize_with_provider(self, provider: 'Provider'):
         """
         Final initialization after parameters, provider and assigned requirements set.
         The provider is used to get the requirements of this theory using provider.get_X()
         and provider.get_param('Y').
 
-        :param provider: the :class:`component.Provider` instance that should be used by
+        :param provider: the :class:`theory.Provider` instance that should be used by
                          this component to get computed requirements
         """
         self.provider = provider
@@ -254,7 +255,7 @@ class Theory(CobayaComponent):
             self.log.debug("Computing new state")
             state = {"params": params_values_dict,
                      "dependency_params": dependency_params,
-                     "derived": {} if want_derived else None, "derived_extra": None}
+                     "derived": {}, "derived_extra": None}
             if self.timer:
                 self.timer.start()
             try:
@@ -407,3 +408,51 @@ class HelperTheory(Theory):
     def has_version(self):
         # assume the main component handles all version checking
         return False
+
+
+class Provider:
+    """
+    Class used to retrieve computed requirements.
+    Just passes on get_X and get_param methods to the component assigned to compute them.
+
+    For get_param it will also take values directly from the current sampling parameters
+    if the parameter is defined there.
+    """
+
+    params: ParamValuesDict
+
+    def __init__(self, model, requirement_providers: Dict[str, Theory]):
+        self.model = model
+        self.requirement_providers = requirement_providers
+        self.params = {}
+
+    def set_current_input_params(self, params):
+        self.params = params
+
+    def get_param(self, param: Union[str, Iterable[str]]) -> Union[float, List[float]]:
+        """
+        Returns the value of a derived (or sampled) parameter. If it is not a sampled
+        parameter it calls :meth:`Theory.get_param` on component assigned to compute
+        this derived parameter.
+
+        :param param: parameter name, or a list of parameter names
+        :return: value of parameter, or list of parameter values
+        """
+        if not isinstance(param, str):
+            return [self.get_param(p) for p in param]
+        if param in self.params:
+            return self.params[param]
+        else:
+            return self.requirement_providers[param].get_param(param)
+
+    def get_result(self, result_name, **kwargs) -> Any:
+        return self.requirement_providers[result_name].get_result(result_name, **kwargs)
+
+    def __getattr__(self, name):
+        if name.startswith('get_'):
+            requirement = name[4:]
+            try:
+                return getattr(self.requirement_providers[requirement], name)
+            except KeyError:  # requirement not listed (parameter or result)
+                raise AttributeError
+        return object.__getattribute__(self, name)

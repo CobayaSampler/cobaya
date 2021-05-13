@@ -37,7 +37,7 @@ class LoggedError(Exception):
 
 # Exceptions that will never be ignored when a component's calculation fails
 always_stop_exceptions = (LoggedError, KeyboardInterrupt, SystemExit, NameError,
-                          SyntaxError, AttributeError, KeyError, ImportError)
+                          SyntaxError, AttributeError, KeyError, ImportError, TypeError)
 
 
 def abstract(method):

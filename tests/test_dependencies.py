@@ -121,6 +121,8 @@ def _test_loglike(theories):
         model = get_model(info)
 
         assert model.loglikes({})[0] == 8, "test loglike failed for %s" % th
+        assert model.loglikes({}, return_derived=False,
+                              cached=False) == 8, "non-derived loglike failed for %s" % th
 
 
 def test_dependencies(packages_path):
