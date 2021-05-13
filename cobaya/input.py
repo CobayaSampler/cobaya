@@ -496,18 +496,15 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
                     # Unify notation
                     block1[param] = expand_info_param(block1[param])
                     block2[param] = expand_info_param(block2[param])
-                    ignore_k.update({"latex", "renames", "ref",
-                                     "proposal", "min", "max"})
+                    ignore_k.update({"latex", "renames", "ref", "proposal", "min", "max"})
                     # Fixed params, it doesn't matter if they are saved as derived
                     if "value" in block1[param]:
                         block1[param].pop("derived", None)
                     if "value" in block2[param]:
                         block2[param].pop("derived", None)
                     # Renames: order does not matter
-                    block1[param]["renames"] = set(
-                        block1[param].get("renames", []))
-                    block2[param]["renames"] = set(
-                        block2[param].get("renames", []))
+                    block1[param]["renames"] = set(block1[param].get("renames", []))
+                    block2[param]["renames"] = set(block2[param].get("renames", []))
         # 3. Now check component/parameters one-by-one
         for k in block1:
             if not strict:

@@ -15,7 +15,8 @@ import logging
 from packaging import version
 from typing import Optional, Any
 # Local
-from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, OutputError
+from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, \
+    OutputError, InputImportError
 from cobaya.conventions import resume_default, Extension, kinds, get_version
 from cobaya.typing import InputDict
 from cobaya.log import LoggedError, HasLogger, get_traceback_text
@@ -307,7 +308,13 @@ class Output(HasLogger):
         if check_compatible:
             # We will test the old info against the dumped+loaded new info.
             # This is because we can't actually check if python objects do change
-            old_info = self.reload_updated_info(cache=cache_old, use_cache=use_cache_old)
+            try:
+                old_info = self.reload_updated_info(cache=cache_old,
+                                                    use_cache=use_cache_old)
+            except InputImportError:
+                # for example, when there's a dynamically generated class that cannot
+                # be found by the yaml loader (could use yaml loader that ignores them)
+                old_info = None
             if old_info:
                 # use consistent yaml read-in types
                 # TODO: could probably just compare full infos here, with externals?
@@ -383,8 +390,14 @@ class Output(HasLogger):
             except ImportError:
                 self.mpi_info('Install "dill" to save reproducible options file.')
             else:
-                with open(self.dump_file_updated, 'wb') as f:
-                    dill.dump(sort_cosmetic(updated_info_trimmed), f)
+                import pickle
+                try:
+                    with open(self.dump_file_updated, 'wb') as f:
+                        dill.dump(sort_cosmetic(updated_info_trimmed), f,
+                                  pickle.HIGHEST_PROTOCOL)
+                except pickle.PicklingError as e:
+                    os.remove(self.dump_file_updated)
+                    self.mpi_info('Options file cannot be pickled %s', e)
 
     def delete_with_regexp(self, regexp, root=None):
         """

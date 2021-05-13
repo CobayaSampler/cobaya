@@ -12,7 +12,6 @@ from pandas import DataFrame
 import datetime
 from typing import Sequence, Optional, Callable
 import re
-from copy import deepcopy
 
 # Local
 from cobaya.sampler import CovmatSampler
@@ -173,7 +172,7 @@ class MCMC(CovmatSampler):
         self.current_point.add(initial_point, results)
         self.log.info("Initial point: %s", self.current_point)
         # Max #(learn+convergence checks) to wait,
-        # in case one process dies without sending MPI_ABORT
+        # in case one process dies/hangs without raising error
         self.been_waiting = 0
         self.max_waiting = max(50, self.max_tries.unit_value)
         # Burning-in countdown -- the +1 accounts for the initial point (always accepted)
@@ -339,6 +338,7 @@ class MCMC(CovmatSampler):
         self.n_steps_raw = 0
         last_output: float = 0
         last_n = self.n()
+        state_check_every = 1
         with mpi.ProcessState(self) as state:
             while last_n < self.max_samples and not self.converged:
                 self.get_new_sample()
@@ -380,6 +380,11 @@ class MCMC(CovmatSampler):
                                 self.log.debug(self._msg_ready)
                                 self.check_convergence_and_learn_proposal()
                                 self.i_learn += 1
+                elif self.current_point.weight % state_check_every == 0:
+                    state.check_error()
+                    # more frequent checks near beginning
+                    state_check_every = min(10, state_check_every + 1)
+
             if last_n == self.max_samples:
                 self.log.info("Reached maximum number of accepted steps allowed (%s). "
                               "Stopping.", self.max_samples)
@@ -572,6 +577,7 @@ class MCMC(CovmatSampler):
         return False
 
     # noinspection PyUnboundLocalVariable
+    @np.errstate(all="ignore")
     def check_convergence_and_learn_proposal(self):
         """
         Checks the convergence of the sampling process, and, if requested,
@@ -626,13 +632,9 @@ class MCMC(CovmatSampler):
             # For numerical stability, we turn mean_of_covs into correlation matrix:
             #   rho = (diag(Sigma))^(-1/2) * Sigma * (diag(Sigma))^(-1/2)
             # and apply the same transformation to the mean of covs (same eigenvals!)
-            # NB: disables warnings from numpy
-            prev_err_state = deepcopy(np.geterr())
-            np.seterr(divide="ignore")
-            diagSinvsqrt = np.diag(np.power(np.diag(cov_of_means), -0.5))
-            np.seterr(**prev_err_state)
-            corr_of_means = diagSinvsqrt.dot(cov_of_means).dot(diagSinvsqrt)
-            norm_mean_of_covs = diagSinvsqrt.dot(mean_of_covs).dot(diagSinvsqrt)
+            d = np.sqrt(np.diag(cov_of_means))
+            corr_of_means = (cov_of_means / d).T / d
+            norm_mean_of_covs = (mean_of_covs / d).T / d
             success_means = False
             converged_means = False
             # Cholesky of (normalized) mean of covs and eigvals of Linv*cov_of_means*L
@@ -646,9 +648,6 @@ class MCMC(CovmatSampler):
                     "Skipping learning a new covmat for now.")
             else:
                 Linv = np.linalg.inv(L)
-                # Suppress numpy warnings (restored later in this function)
-                error_handling = deepcopy(np.geterr())
-                np.seterr(all="ignore")
                 try:
                     eigvals = np.linalg.eigvalsh(Linv.dot(corr_of_means).dot(Linv.T))
                     success_means = True
@@ -734,7 +733,6 @@ class MCMC(CovmatSampler):
                 else:
                     self.log.info("Computation of the bounds was not possible. "
                                   "Waiting until the next converge check.")
-                np.seterr(**error_handling)
         # Broadcast and save the convergence status and the last R-1 of means
         if success_means:
             self.Rminus1_last, self.converged = mpi.share(

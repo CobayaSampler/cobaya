@@ -49,7 +49,6 @@ def test_minimize_gaussian(tmpdir):
 
 @mpi.sync_errors
 def test_run_minimize(tmpdir):
-    tmpdir = 'z:\\'
     info: InputDict = {'likelihood': {'like': NoisyCovLike},
                        "sampler": {"mcmc": {"Rminus1_stop": 0.5}},
                        "output": os.path.join(tmpdir, 'testchain')}

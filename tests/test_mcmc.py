@@ -7,7 +7,7 @@ from typing import Type
 from cobaya import mpi, run, Likelihood, InputDict
 from cobaya.tools import KL_norm
 from cobaya.yaml import yaml_load
-from .common_sampler import body_of_test, body_of_test_speeds
+from .common_sampler import body_of_sampler_test, body_of_test_speeds
 
 pytestmark = pytest.mark.mpi
 
@@ -28,8 +28,6 @@ def test_mcmc(tmpdir, packages_path=None):
     info_sampler = {"mcmc": {
         # Bad guess for covmat, so big burn in and max_tries
         "max_tries": 3000, "burn_in": 100 * dimension,
-        # Learn proposal
-        # "learn_proposal": True,  # default now!
         # Proposal
         "covmat": cov}}
 
@@ -40,18 +38,16 @@ def test_mcmc(tmpdir, packages_path=None):
         KL_sample = KL_norm(
             m1=sampler_instance.model.likelihood["gaussian_mixture"].means[0],
             S1=sampler_instance.model.likelihood["gaussian_mixture"].covs[0],
-            m2=sampler_instance.collection.mean(
-                first=int(sampler_instance.n() / 2)),
-            S2=sampler_instance.collection.cov(
-                first=int(sampler_instance.n() / 2)))
+            m2=sampler_instance.collection.mean(first=int(sampler_instance.n() / 2)),
+            S2=sampler_instance.collection.cov(first=int(sampler_instance.n() / 2)))
         print("KL proposer: %g ; KL sample: %g" % (KL_proposer, KL_sample))
 
     if mpi.rank() == 0:
         info_sampler["mcmc"].update({
             # Callback to check KL divergence -- disabled in the automatic test
             "callback_function": check_gaussian, "callback_every": 100})
-    body_of_test(info_sampler, dimension=dimension, fixed=True,
-                 tmpdir=tmpdir, random_state=np.random.default_rng(1))
+    body_of_sampler_test(info_sampler, dimension=dimension, fixed=True,
+                         tmpdir=tmpdir, random_state=np.random.default_rng(1))
 
 
 yaml_drag = r"""
@@ -160,6 +156,8 @@ def test_mcmc_sync():
         with pytest.raises(mpi.OtherProcessError):
             run(info)
 
+    print('Test one-process hang abort')
+
     aborted = False
 
     def test_abort():
@@ -174,7 +172,7 @@ def test_mcmc_sync():
             if mpi.rank() != 1:
                 time.sleep(0.6)  # fake hang
             else:
-                raise ValueError('errored')
+                raise ValueError('Expected test error')
     if mpi.rank() == 1:
         assert aborted
 
@@ -216,6 +214,8 @@ def _make_gaussian_like(nparam) -> Type[Likelihood]:
         def calculate(self, state, want_derived=True, **params_values_dict):
             state["logp"] = -np.sum(np.array(list(params_values_dict.values())) ** 2 / 2)
 
+    # to make dynamically generated class picklable: (can't be loaded from yaml anyway)
+    LikeTest.__module__ = '__main__'
     return LikeTest
 
 

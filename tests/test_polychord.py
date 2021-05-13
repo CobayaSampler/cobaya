@@ -2,7 +2,7 @@ from flaky import flaky
 import numpy as np
 
 from cobaya.run import run
-from .common_sampler import body_of_test, body_of_test_speeds
+from .common_sampler import body_of_sampler_test, body_of_test_speeds
 from .conftest import install_test_wrapper
 
 
@@ -11,9 +11,9 @@ def test_polychord(packages_path, skip_not_installed, tmpdir):
     dimension = 3
     n_modes = 1
     info_sampler = {"polychord": {"nlive": 25 * dimension * n_modes}}
-    body_of_test(info_sampler, dimension=dimension, n_modes=n_modes,
-                 tmpdir=str(tmpdir),
-                 packages_path=packages_path, skip_not_installed=skip_not_installed)
+    body_of_sampler_test(info_sampler, dimension=dimension, n_modes=n_modes,
+                         tmpdir=str(tmpdir),
+                         packages_path=packages_path, skip_not_installed=skip_not_installed)
 
 
 def test_polychord_resume(packages_path, skip_not_installed, tmpdir):
@@ -59,9 +59,9 @@ def test_polychord_multimodal(packages_path, skip_not_installed, tmpdir):
     dimension = 2
     n_modes = 2
     info_sampler = {"polychord": {"nlive": 40 * dimension * n_modes}}
-    body_of_test(info_sampler, dimension=dimension, n_modes=n_modes,
-                 tmpdir=str(tmpdir),
-                 packages_path=packages_path, skip_not_installed=skip_not_installed)
+    body_of_sampler_test(info_sampler, dimension=dimension, n_modes=n_modes,
+                         tmpdir=str(tmpdir),
+                         packages_path=packages_path, skip_not_installed=skip_not_installed)
 
 
 @flaky(max_runs=3, min_passes=1)

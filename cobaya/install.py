@@ -33,7 +33,7 @@ from cobaya.mpi import set_mpi_disabled
 from cobaya.tools import resolve_packages_path
 from cobaya.typing import InputDict
 
-log = logging.getLogger(__name__.split(".")[-1])
+log = logging.getLogger("install")
 
 _banner_symbol = "="
 _banner_length = 80

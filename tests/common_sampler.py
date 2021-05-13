@@ -52,9 +52,9 @@ def generate_random_info(n_modes, ranges, random_state):
 
 
 @mpi.sync_errors
-def body_of_test(info_sampler: SamplersDict, dimension=1, n_modes=1, tmpdir="",
-                 packages_path=None, skip_not_installed=False, fixed=False,
-                 random_state=None):
+def body_of_sampler_test(info_sampler: SamplersDict, dimension=1, n_modes=1, tmpdir="",
+                         packages_path=None, skip_not_installed=False, fixed=False,
+                         random_state=None):
     # Info of likelihood and prior
     ranges = np.array([[-1, 1] for _ in range(dimension)])
     if fixed:
@@ -119,11 +119,11 @@ def body_of_test(info_sampler: SamplersDict, dimension=1, n_modes=1, tmpdir="",
                 print("Plotting failed!")
         # 1st test: KL divergence
         if n_modes == 1:
-            cov_sample, mean_sample = results.getCov(), results.getMeans()
+            cov_sample, mean_sample = results.getCov(dimension), results.getMeans()
             KL_final = KL_norm(m1=info["likelihood"]["gaussian_mixture"]["means"][0],
                                S1=info["likelihood"]["gaussian_mixture"]["covs"][0],
                                m2=mean_sample[:dimension],
-                               S2=cov_sample[:dimension, :dimension])
+                               S2=cov_sample)
             print("Final KL: ", KL_final)
             assert KL_final <= KL_tolerance
         # 2nd test: clusters

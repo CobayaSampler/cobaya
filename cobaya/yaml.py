@@ -32,6 +32,10 @@ class InputSyntaxError(Exception):
     """Syntax error in YAML input."""
 
 
+class InputImportError(Exception):
+    """Error loading classes in YAML input."""
+
+
 class OutputError(Exception):
     """Error when dumping YAML info."""
 
@@ -43,15 +47,15 @@ class ScientificLoader(yaml.Loader):
 
 
 ScientificLoader.add_implicit_resolver(
-    u'tag:yaml.org,2002:float',
-    re.compile(u'''^(?:
+    'tag:yaml.org,2002:float',
+    re.compile('''^(?:
         [-+]?[0-9][0-9_]*\\.[0-9_]*(?:[eE][-+]?[0-9]+)?
         |[-+]?[0-9][0-9_]*[eE][-+]?[0-9]+
         |\\.[0-9_]+(?:[eE][-+][0-9]+)?
         |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*
         |[-+]?\\.(?:inf|Inf|INF)
         |\\.(?:nan|NaN|NAN))$''', re.X),
-    list(u'-+0123456789.'))
+    list('-+0123456789.'))
 
 
 class DefaultsLoader(ScientificLoader):
@@ -86,15 +90,17 @@ DefaultsLoader.add_constructor('!defaults', _construct_defaults)
 
 
 def yaml_load(text_stream, file_name=None) -> InfoDict:
+    errstr = "Error in your input file " + (
+        "'" + file_name + "'" if file_name else "")
     try:
         # set current_folder to store the file name, to be used to locate relative
         # defaults files
         DefaultsLoader.current_folder = os.path.dirname(file_name) if file_name else None
         return yaml.load(text_stream, DefaultsLoader)
     # Redefining the general exception to give more user-friendly information
+    except yaml.constructor.ConstructorError as e:
+        raise InputImportError(errstr + ':\n' + str(e))
     except (yaml.YAMLError, TypeError) as exception:
-        errstr = "Error in your input file " + (
-            "'" + file_name + "'" if file_name else "")
         mark = getattr(exception, "problem_mark", None)
         if mark is not None:
             line = 1 + mark.line
