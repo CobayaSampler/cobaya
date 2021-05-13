@@ -255,7 +255,7 @@ class Theory(CobayaComponent):
             self.log.debug("Computing new state")
             state = {"params": params_values_dict,
                      "dependency_params": dependency_params,
-                     "derived": {}, "derived_extra": None}
+                     "derived": {} if want_derived else None, "derived_extra": None}
             if self.timer:
                 self.timer.start()
             try:
@@ -313,7 +313,7 @@ class Theory(CobayaComponent):
         """
         return self
 
-    def get_helper_theories(self):
+    def get_helper_theories(self) -> Dict[str, 'Theory']:
         """
         Return dictionary of optional names and helper Theory instances that should be
         used in conjunction with this component. The helpers can be created here
@@ -323,10 +323,10 @@ class Theory(CobayaComponent):
         """
         return {}
 
-    def update_for_helper_theories(self, helpers):
+    def update_for_helper_theories(self, helpers: Dict[str, 'Theory']):
         self._helpers = helpers
         if helpers:
-            components = list(helpers.values()) + [self]
+            components: List[Theory] = list(helpers.values()) + [self]
             for output, attr in enumerate(["input_params", "output_params"]):
                 pars = getattr(self, attr, None)
                 if pars is not None:
@@ -439,13 +439,14 @@ class Provider:
         :return: value of parameter, or list of parameter values
         """
         if not isinstance(param, str):
-            return [self.get_param(p) for p in param]
+            return [(self.params[p] if p in self.params else
+                     self.requirement_providers[p].get_param(p)) for p in param]
         if param in self.params:
             return self.params[param]
         else:
             return self.requirement_providers[param].get_param(param)
 
-    def get_result(self, result_name, **kwargs) -> Any:
+    def get_result(self, result_name: str, **kwargs) -> Any:
         return self.requirement_providers[result_name].get_result(result_name, **kwargs)
 
     def __getattr__(self, name):
