@@ -518,7 +518,7 @@ class MCMC(CovmatSampler):
         elif logp_trial > logp_current:
             return True
         else:
-            return self._rng.exponential() > (logp_current - logp_trial)
+            return self._rng.standard_exponential() > (logp_current - logp_trial)
 
     def process_accept_or_reject(self, accept_state, trial, trial_results):
         """Processes the acceptance/rejection of the new point."""

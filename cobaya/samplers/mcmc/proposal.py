@@ -82,7 +82,7 @@ else:
         """
         dim = np.int64(dim)
         H = np.eye(dim)
-        xx = random_state.normal(size=(dim + 2) * (dim - 1) // 2)
+        xx = random_state.standard_normal(size=(dim + 2) * (dim - 1) // 2)
         _rvs(dim, xx, H)
         return H
 
@@ -132,9 +132,9 @@ class RandDirectionProposer(IndexCycler):
         :return: random distance (unit scale)
         """
         if self.random_state.uniform() < 0.33:
-            return self.random_state.exponential()
+            return self.random_state.standard_exponential()
         else:
-            return np.linalg.norm(self.random_state.normal(size=min(self.n, 2)))
+            return np.sqrt(self.random_state.chisquare(min(self.n, 2)))
 
 
 class RandProposer1D(RandDirectionProposer):

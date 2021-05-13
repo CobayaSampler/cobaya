@@ -14,6 +14,7 @@
 ## PolyChord: check overhead
 ## PolyChord: 
 ## update like/theory dict types to allow for instances (remove log.warning if all OK)
+## skip measure_and_set_speeds if only one component
 
 # Enhancements/Refactorings
 

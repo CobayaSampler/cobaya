@@ -1122,7 +1122,7 @@ class Model(HasLogger):
             point = self.prior.reference(random_state=random_state,
                                          max_tries=max_tries, ignore_fixed=True,
                                          warn_if_no_ref=False)
-            if self.loglike(point, cached=False)[0] != -np.inf:
+            if self.loglike(point, cached=False, return_derived=False) != -np.inf:
                 n_done += 1
         self.log.debug("Computed %d points to measure speeds.", n_done)
         times = [component.timer.get_time_avg() or 0  # type: ignore
