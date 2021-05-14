@@ -239,6 +239,9 @@ class Sampler(CobayaComponent):
         self._updated_info = deepcopy_where_possible(info_sampler)
         super().__init__(info_sampler, packages_path=packages_path,
                          name=name, initialize=False, standalone=False)
+        if not model.parameterization.sampled_params():
+            self.mpi_warning("No sampled parameters requested! "
+                             "This will fail for non-mock samplers.")
         # Load checkpoint info, if resuming
         if self.output.is_resuming() and not isinstance(self, Minimizer):
             checkpoint_info = None

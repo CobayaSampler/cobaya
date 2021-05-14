@@ -371,9 +371,6 @@ class Prior(HasLogger):
         self.set_logger()
         self._parameterization = parameterization
         sampled_params_info = parameterization.sampled_params_info()
-        if not sampled_params_info:
-            self.mpi_warning("No sampled parameters requested! "
-                             "This will fail for non-mock samplers.")
         # pdf: a list of independent components
         # in principle, separable: one per parameter
         self.params = []
@@ -668,11 +665,3 @@ class Prior(HasLogger):
                              "Using prior's sigma instead for them.")
             covmat[where_no_ref] = self.covmat(ignore_external=True)[where_no_ref]
         return covmat
-
-    # Python magic for the "with" statement
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exception_type, exception_value, traceback):
-        pass

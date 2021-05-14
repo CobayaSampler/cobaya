@@ -450,6 +450,9 @@ class MCMC(CovmatSampler):
         # at the end of the interpolation
         start_drag_logpost_acc = current_start_logpost
         end_drag_logpost_acc = current_end.logpost
+        # don't compute derived during drag, unless must be computed anyway
+        derived = self.model.requires_derived
+
         # alloc mem
         delta_fast = np.empty(len(current_start_point))
         # start dragging
@@ -466,11 +469,12 @@ class MCMC(CovmatSampler):
             # point, but discard them, since they contain the starting point's fast ones,
             # not used later -- save the end point's ones.
             proposal_start_logpost = self.model.logposterior(
-                proposal_start_point, return_derived=False).logpost
+                proposal_start_point, return_derived=derived, _no_check=True).logpost
 
             if proposal_start_logpost > -np.inf:
                 proposal_end_point = current_end_point + delta_fast
-                proposal_end = self.model.logposterior(proposal_end_point)
+                proposal_end = self.model.logposterior(
+                    proposal_end_point, return_derived=derived, _no_check=True)
 
                 if proposal_end.logpost > -np.inf:
                     # create the interpolated probability and do a Metropolis test
@@ -502,6 +506,10 @@ class MCMC(CovmatSampler):
         n_average = 1 + self.drag_interp_steps
         accept = self.metropolis_accept(end_drag_logpost_acc / n_average,
                                         start_drag_logpost_acc / n_average)
+        if accept and not derived:
+            # recompute with derived parameters (slow parameter ones should be cached)
+            current_end = self.model.logposterior(current_end_point)
+
         self.process_accept_or_reject(accept, current_end_point, current_end)
         self.log.debug("TOTAL step: %s", ("accepted" if accept else "rejected"))
         return accept

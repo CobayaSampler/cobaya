@@ -281,8 +281,7 @@ class Parameterization(HasLogger):
             # Then evaluate the functions
             for p, (func, args, to_set) in self._wrapped_input_funcs.items():
                 for arg in to_set:
-                    args[arg] = self._input.get(arg,
-                                                sampled_params_values.get(arg, None))
+                    args[arg] = self._input.get(arg, sampled_params_values.get(arg))
                 self._input[p] = self._call_param_func(p, func, args)
         return self._input
 
@@ -458,10 +457,3 @@ class Parameterization(HasLogger):
                                   "Maybe there is a circular dependency between derived "
                                   "parameters?", list(inputs))
         return wrapped_funcs
-
-    # Python magic for the "with" statement
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exception_type, exception_value, traceback):
-        return

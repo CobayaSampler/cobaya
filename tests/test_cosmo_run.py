@@ -1,3 +1,4 @@
+import logging
 import os
 import numpy as np
 import pytest
@@ -7,6 +8,7 @@ from cobaya import mpi, run, Theory, InputDict, PostDict, LoggedError
 from cobaya.conventions import Extension
 from cobaya.tools import deepcopy_where_possible
 from cobaya.cosmo_input.convert_cosmomc import cosmomc_root_to_cobaya_info_dict
+from cobaya.log import NoLogging
 from .common import process_packages_path
 
 pytestmark = pytest.mark.mpi
@@ -68,21 +70,22 @@ info: InputDict = {"params": {
 
 
 def test_not_found():
-    inf = deepcopy_where_possible(info)
-    inf["likelihood"]["H0.perfect"] = None
-    with pytest.raises(LoggedError) as e:
-        run(inf)
-    assert "Failed to get defaults for component" in str(e)
-    inf = deepcopy_where_possible(info)
-    inf["likelihood"]["none"] = None
-    with pytest.raises(LoggedError) as e:
-        run(inf)
-    assert "Failed to get defaults for component" in str(e)
-    inf = deepcopy_where_possible(info)
-    inf["likelihood"]["pandas.plotting.PlotAccessor"] = None
-    with pytest.raises(LoggedError) as e:
-        run(inf)
-    assert "Failed to get defaults for component" in str(e)
+    with NoLogging(logging.ERROR):
+        inf = deepcopy_where_possible(info)
+        inf["likelihood"]["H0.perfect"] = None
+        with pytest.raises(LoggedError) as e:
+            run(inf)
+        assert "Failed to get defaults for component" in str(e)
+        inf = deepcopy_where_possible(info)
+        inf["likelihood"]["none"] = None
+        with pytest.raises(LoggedError) as e:
+            run(inf)
+        assert "Failed to get defaults for component" in str(e)
+        inf = deepcopy_where_possible(info)
+        inf["likelihood"]["pandas.plotting.PlotAccessor"] = None
+        with pytest.raises(LoggedError) as e:
+            run(inf)
+        assert "Failed to get defaults for component" in str(e)
 
 
 @flaky(max_runs=2, min_passes=1)

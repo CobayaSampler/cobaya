@@ -271,7 +271,7 @@ class Model(HasLogger):
         return loglikes
 
     def loglikes(self, params_values=None, return_derived=True, make_finite=False,
-                 cached=True, _no_check=False):
+                 cached=True):
         """
         Takes an array or dictionary of sampled parameter values.
         If the argument is an array, parameters must have the same order as in the input.
@@ -294,7 +294,7 @@ class Model(HasLogger):
         """
         if params_values is None:
             params_values = []
-        elif hasattr(params_values, "keys") and not _no_check:
+        elif hasattr(params_values, "keys"):
             params_values = self.parameterization.check_sampled(**params_values)
 
         input_params = self.parameterization.to_input(params_values)
@@ -303,8 +303,8 @@ class Model(HasLogger):
 
     def _loglikes_input_params(self, input_params, return_derived=True, make_finite=False,
                                cached=True):
-        result = self.logps(input_params, return_derived=return_derived,
-                            cached=cached, make_finite=make_finite)
+        result = self.logps(input_params, return_derived=return_derived, cached=cached,
+                            make_finite=make_finite)
         if return_derived:
             loglikes, derived_list = result
             derived_sampler = self.parameterization.to_derived(derived_list)
@@ -336,8 +336,8 @@ class Model(HasLogger):
         If ``cached=False`` (default: True), it ignores previously computed results that
         could be reused.
         """
-        ret_value = self.loglikes(
-            params_values, return_derived=return_derived, cached=cached)
+        ret_value = self.loglikes(params_values, return_derived=return_derived,
+                                  cached=cached)
         if return_derived:
             loglike = np.sum(ret_value[0])
             if make_finite:
@@ -350,7 +350,7 @@ class Model(HasLogger):
             return loglike
 
     def logposterior(self, params_values, return_derived=True,
-                     make_finite=False, cached=True) -> LogPosterior:
+                     make_finite=False, cached=True, _no_check=False) -> LogPosterior:
         """
         Takes an array or dictionary of sampled parameter values.
         If the argument is an array, parameters must have the same order as in the input.
@@ -380,17 +380,22 @@ class Model(HasLogger):
         If ``cached=False`` (default: True), it ignores previously computed results that
         could be reused.
         """
-        if hasattr(params_values, "keys"):
-            params_values = self.parameterization.check_sampled(**params_values)
-        params_values_array = self._to_sampled_array(params_values)
-        if self.log.getEffectiveLevel() <= logging.DEBUG:
-            self.log.debug(
-                "Posterior to be computed for parameters %s",
-                dict(zip(self.parameterization.sampled_params(), params_values_array)))
-        if not np.all(np.isfinite(params_values_array)):
-            raise LoggedError(
-                self.log, "Got non-finite parameter values: %r",
-                dict(zip(self.parameterization.sampled_params(), params_values_array)))
+        if _no_check:
+            params_values_array = params_values
+        else:
+            if hasattr(params_values, "keys"):
+                params_values = self.parameterization.check_sampled(**params_values)
+            params_values_array = self._to_sampled_array(params_values)
+            if self.log.getEffectiveLevel() <= logging.DEBUG:
+                self.log.debug(
+                    "Posterior to be computed for parameters %s",
+                    dict(zip(self.parameterization.sampled_params(),
+                             params_values_array)))
+            if not np.all(np.isfinite(params_values_array)):
+                raise LoggedError(
+                    self.log, "Got non-finite parameter values: %r",
+                    dict(zip(self.parameterization.sampled_params(),
+                             params_values_array)))
 
         # Notice that we don't use the make_finite in the prior call,
         # to correctly check if we have to compute the likelihood
@@ -567,19 +572,15 @@ class Model(HasLogger):
             # Gather what this component can provide
             can_provide = (list(component.get_can_provide()) +
                            list(component.get_can_provide_methods()))
-            # Parameters that can be provided but not already explicitly assigned
-            # (i.e. it is not a declared output param of that component)
-            provide_params = [p for p in component.get_can_provide_params() if
-                              p not in self.output_params]
+            # Parameters that can be provided
             # Corner case: some components can either take some parameters as input OR
             # provide their own calculation of them. Pop those if required as input.
-            for p in provide_params.copy():  # iterating over copy
-                if any(p == req.name for req in requirements[component]):
-                    # no need to know which are params
-                    provide_params.remove(p)
+            provide_params = set(p for p in component.get_can_provide_params() if
+                                 all(p != req.name for req in requirements[component]))
+            provide_params.update(component.output_params)
             requirements_are_params.update(provide_params)
             # Invert to get the provider(s) of each available product/parameter
-            for k in chain(can_provide, component.output_params, provide_params):
+            for k in chain(can_provide, provide_params):
                 providers[k] = providers.get(k, []) + [component]
         # Add requirements requested by hand
         manual_theory = Theory(name='_manual')
@@ -646,7 +647,7 @@ class Model(HasLogger):
                     # -- saves some overhead in theory.check_cache_and_compute
                     if component is not manual_theory and \
                             requirement.name not in component.input_params and \
-                            requirement.options is None:
+                            requirement.name in requirements_are_params:
                         component.input_params_extra.add(requirement.name)
             # tell each component what it must provide, and collect the
             # conditional requirements for those requests
@@ -741,8 +742,8 @@ class Model(HasLogger):
                                 component in self._dependencies.get(comp, []):
                             sampled_dependence[p].append(comp)
         self.sampled_dependence = sampled_dependence
-        self.requires_derived = requirements_are_params.intersection(
-            requirement_providers)
+        self.requires_derived = \
+            requirements_are_params.intersection(requirement_providers)
 
         # ## 4. Initialize the provider and pass it to each component ##
         if self.log.getEffectiveLevel() <= logging.DEBUG:
@@ -823,9 +824,9 @@ class Model(HasLogger):
                 elif getattr(component, "params", None) or required_params:
                     if getattr(component, "params", None):
                         for p, options in getattr(component, "params", {}).items():
-                            if not hasattr(options, 'get') or \
-                                    options.get('derived',
-                                                derived_param) is derived_param:
+                            if not hasattr(options, 'get') and not derived_param or \
+                                    (options or {}).get('derived',
+                                                        False) is derived_param:
                                 if p in assign:
                                     assign[p] += [component]
                     elif component.get_allow_agnostic():

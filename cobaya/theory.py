@@ -234,12 +234,10 @@ class Theory(CobayaComponent):
         params_values_dict can be safely modified and stored.
         """
 
-        for p in list(self._input_params_extra):
-            try:
-                params_values_dict[p] = self.provider.get_param(p)
-            except:
-                # Pop non-parameter (only done during 1st call)
-                self._input_params_extra.discard(p)
+        if self._input_params_extra:
+            params_values_dict.update(
+                zip(self._input_params_extra,
+                    self.provider.get_param(self._input_params_extra)))
         self.log.debug("Got parameters %r", params_values_dict)
         state = None
         if cached:
@@ -255,7 +253,7 @@ class Theory(CobayaComponent):
             self.log.debug("Computing new state")
             state = {"params": params_values_dict,
                      "dependency_params": dependency_params,
-                     "derived": {} if want_derived else None, "derived_extra": None}
+                     "derived": {} if want_derived else None}
             if self.timer:
                 self.timer.start()
             try:
