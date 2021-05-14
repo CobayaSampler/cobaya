@@ -661,7 +661,7 @@ class HasDefaults:
             return filename
         return None
 
-    get_desc: str = Description()
+    get_desc = Description()
 
     @classmethod
     def _get_desc(cls, info=None):

@@ -471,12 +471,12 @@ class MCMC(CovmatSampler):
             proposal_start_logpost = self.model.logposterior(
                 proposal_start_point, return_derived=derived, _no_check=True).logpost
 
-            if proposal_start_logpost > -np.inf:
+            if proposal_start_logpost != -np.inf:
                 proposal_end_point = current_end_point + delta_fast
                 proposal_end = self.model.logposterior(
                     proposal_end_point, return_derived=derived, _no_check=True)
 
-                if proposal_end.logpost > -np.inf:
+                if proposal_end.logpost != -np.inf:
                     # create the interpolated probability and do a Metropolis test
 
                     frac = i_step / (1 + self.drag_interp_steps)

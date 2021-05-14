@@ -28,8 +28,8 @@ def test_mcmc(tmpdir, packages_path=None):
     info_sampler = {"mcmc": {
         # Bad guess for covmat, so big burn in and max_tries
         "max_tries": 3000, "burn_in": 100 * dimension,
-        # Proposal
-        "covmat": cov}}
+        # Proposal, relearn quickly as poor guess
+        "covmat": cov, "learn_proposal_Rminus1_max": 30}}
 
     def check_gaussian(sampler_instance):
         KL_proposer = KL_norm(

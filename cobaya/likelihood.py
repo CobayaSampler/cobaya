@@ -315,6 +315,5 @@ class LikelihoodCollection(ComponentCollection):
     @property
     def all_types(self):
         if not hasattr(self, "_all_types"):
-            self._all_types = set(chain(
-                *[str_to_list(getattr(self[like], "type", []) or []) for like in self]))
+            self._all_types = set(chain(*[like.type for like in self.values()]))
         return self._all_types

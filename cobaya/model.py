@@ -149,6 +149,8 @@ class Model(HasLogger):
         # Add to the updated info some values that are only available after initialisation
         self._updated_info = recursive_update(
             self._updated_info, self.get_versions(add_version_field=True))
+        # get names and likelihood indices for aggregated chi2 derived parameter names
+        self._set_chi2_names()
         # Overhead per likelihood evaluation, approximately ind from # input params
         # Evaluation of non-uniform priors will add some overhead per parameter.
         self.overhead = overhead_time
@@ -241,7 +243,7 @@ class Model(HasLogger):
             if return_derived:
                 derived_dict.update(component.current_derived)
             # Add chi2's to derived parameters
-            if is_LikelihoodInterface(component):
+            if like_index is not None:
                 try:
                     loglikes[like_index] = float(component.current_logp)  # type: ignore
                 except TypeError:
@@ -250,22 +252,15 @@ class Model(HasLogger):
                         "Likelihood %s has not returned a valid log-likelihood, "
                         "but %r instead.", component,
                         component.current_logp)  # type: ignore
-                if return_derived:
-                    derived_dict[get_chi2_name(component.get_name().replace(".", "_"))] \
-                        = -2 * loglikes[like_index]
-                    for this_type in getattr(component, "type", []) or []:
-                        aggr_chi2_name = get_chi2_name(this_type)
-                        if aggr_chi2_name not in derived_dict:
-                            derived_dict[aggr_chi2_name] = 0.
-                        derived_dict[aggr_chi2_name] += -2 * loglikes[like_index]
         if make_finite:
             loglikes = np.nan_to_num(loglikes)
         if return_derived:
             # Turn the derived params dict into a list and return
-            derived_list: list
             if not compute_success:
                 derived_list = [np.nan] * len(self.output_params)
             else:
+                for type_chi2_name, indices in self._chi2_type_names:
+                    derived_dict[type_chi2_name] = -2 * sum(loglikes[i] for i in indices)
                 derived_list = [derived_dict[p] for p in self.output_params]
             return loglikes, derived_list
         return loglikes
@@ -742,7 +737,7 @@ class Model(HasLogger):
                                 component in self._dependencies.get(comp, []):
                             sampled_dependence[p].append(comp)
         self.sampled_dependence = sampled_dependence
-        self.requires_derived = \
+        self.requires_derived: Set[str] = \
             requirements_are_params.intersection(requirement_providers)
 
         # ## 4. Initialize the provider and pass it to each component ##
@@ -757,6 +752,17 @@ class Model(HasLogger):
         self.provider = Provider(self, requirement_providers)
         for component in components:
             component.initialize_with_provider(self.provider)
+
+    def _set_chi2_names(self):
+
+        chi2_type_names: Dict[str, List[int]] = {}
+        for i, like in enumerate(self.likelihood.values()):
+            for tp in like.type:
+                name = get_chi2_name(tp)
+                if name not in chi2_type_names:
+                    chi2_type_names[name] = []
+                chi2_type_names[name].append(i)
+        self._chi2_type_names = tuple(chi2_type_names.items())
 
     def add_requirements(self, requirements):
         """
@@ -881,26 +887,11 @@ class Model(HasLogger):
                     in input_assign.items() if assigned)))
 
         # Remove aggregated chi2 that may have been picked up by an agnostic component
-        aggr_chi2_names = [get_chi2_name(t) for t in self.likelihood.all_types]
-        for p in aggr_chi2_names:
-            output_assign.pop(p, None)
-        # Assign the single-likelihood "chi2__" output parameters
-        for p in output_assign:
-            # TODO: do we need this? (not used in tests)
-            if p.startswith(get_chi2_name("")):
-                if p in aggr_chi2_names:
-                    continue  # it's an aggregated likelihood
-                like = p[len(get_chi2_name("")):]
-                if like not in [lik.replace(".", "_") for lik in self.likelihood]:
-                    raise LoggedError(
-                        self.log, "Your derived parameters depend on an unknown "
-                                  "likelihood: '%s'", like)
-                # They may have been already assigned to an agnostic likelihood,
-                # so purge first: no "=+"
-                output_assign[p] = [self.likelihood[like]]
+        for t in self.likelihood.all_types:
+            output_assign.pop(get_chi2_name(t), None)
         # Check that there are no unassigned parameters (with the exception of aggr chi2)
         unassigned_output = [p for p, assigned in output_assign.items()
-                             if not assigned and p not in aggr_chi2_names]
+                             if not assigned]
         if unassigned_output:
             raise LoggedError(
                 self.log, "Could not find whom to assign output parameters %r.",

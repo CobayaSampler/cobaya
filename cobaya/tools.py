@@ -435,7 +435,7 @@ def invert_dict(dict_in: Mapping) -> dict:
     Inverts a dictionary, where values in the returned ones are always lists of the
     original keys. Order is not preserved.
     """
-    dict_out = {v: [] for v in dict_in.values()}
+    dict_out: dict = {v: [] for v in dict_in.values()}
     for k, v in dict_in.items():
         dict_out[v].append(k)
     return dict_out
