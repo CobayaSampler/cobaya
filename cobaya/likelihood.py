@@ -90,8 +90,6 @@ class Likelihood(Theory, LikelihoodInterface):
         super().__init__(info, name=name, timing=timing,
                          packages_path=packages_path, initialize=initialize,
                          standalone=standalone)
-        # Make sure `types` is a list of data types, for aggregated chi2
-        self.type = str_to_list(getattr(self, "type", []) or [])
 
     @property
     def theory(self):
@@ -178,8 +176,6 @@ class LikelihoodExternalFunction(Likelihood):
             derived_kw_index = argspec.args[-len(argspec.defaults):].index("_derived")
             self.output_params = argspec.defaults[derived_kw_index]
         # END OF DEPRECATION BLOCK
-        # Make sure `types` is a list of data types, for aggregated chi2
-        self.type = str_to_list(getattr(self, "type", []) or [])
         # Required quantities from other components
         self._uses_self_arg = self._self_arg in argspec.args
         if info.get("requires") and not self._uses_self_arg:
@@ -315,5 +311,5 @@ class LikelihoodCollection(ComponentCollection):
     @property
     def all_types(self):
         if not hasattr(self, "_all_types"):
-            self._all_types = set(chain(*[like.type for like in self.values()]))
+            self._all_types = set(chain(*[like.type_list for like in self.values()]))
         return self._all_types

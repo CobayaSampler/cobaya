@@ -876,7 +876,7 @@ class Model(HasLogger):
         chi2_names: Dict[str, List[int]] = {}
         # Add aggregated chi2 for likelihood types
         for i, like in enumerate(self.likelihood.values()):
-            for tp in like.type:
+            for tp in like.type_list:
                 name = get_chi2_name(tp)
                 if name not in chi2_names:
                     chi2_names[name] = []

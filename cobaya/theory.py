@@ -291,6 +291,12 @@ class Theory(CobayaComponent):
     def current_derived(self) -> ParamValuesDict:
         return self.current_state.get("derived", {})
 
+    @property
+    def type_list(self) -> List[str]:
+        # like of labels that classify this component
+        # not usually used for Theory, can used for aggregated chi2 in likelihoods
+        return str_to_list(getattr(self, "type", []) or [])
+
     # MARKED FOR DEPRECATION IN v3.1
     def get_current_derived(self):
         self.log.warning("'Theory.get_current_derived()' method will soon be deprecated "
