@@ -262,7 +262,7 @@ def test_conditional_dependencies(packages_path):
     _test_loglike2(theories)
 
     theories = [('A', A), ('D', D), ('E', E)]
-    with pytest.raises(LoggedError) as e, NoLogging(logging.Error):
+    with pytest.raises(LoggedError) as e, NoLogging(logging.ERROR):
         _test_loglike2(theories)
     assert "seems not to depend on any parameters" in str(e.value)
 
@@ -272,6 +272,6 @@ def test_conditional_dependencies(packages_path):
 
     info2['likelihood']['like'] = Like4
     theories = [('A', A), ('E', E), ('F', F), ('D', D)]
-    with pytest.raises(LoggedError) as e, NoLogging(logging.Error):
+    with pytest.raises(LoggedError) as e, NoLogging(logging.ERROR):
         _test_loglike2(theories)
     assert "Circular dependency" in str(e.value)

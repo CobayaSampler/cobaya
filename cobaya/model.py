@@ -824,9 +824,9 @@ class Model(HasLogger):
                 elif getattr(component, "params", None) or required_params:
                     if getattr(component, "params", None):
                         for p, options in getattr(component, "params", {}).items():
-                            if not hasattr(options, 'get') and not derived_param or \
-                                    (options or {}).get('derived',
-                                                        False) is derived_param:
+                            if not isinstance(options, Mapping) and not derived_param or \
+                                    isinstance(options, Mapping) and \
+                                    options.get('derived', False) is derived_param:
                                 if p in assign:
                                     assign[p] += [component]
                     elif component.get_allow_agnostic():
