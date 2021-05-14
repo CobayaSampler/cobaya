@@ -149,8 +149,6 @@ class Model(HasLogger):
         # Add to the updated info some values that are only available after initialisation
         self._updated_info = recursive_update(
             self._updated_info, self.get_versions(add_version_field=True))
-        # get names and likelihood indices for aggregated chi2 derived parameter names
-        self._set_chi2_names()
         # Overhead per likelihood evaluation, approximately ind from # input params
         # Evaluation of non-uniform priors will add some overhead per parameter.
         self.overhead = overhead_time
@@ -259,8 +257,8 @@ class Model(HasLogger):
             if not compute_success:
                 derived_list = [np.nan] * len(self.output_params)
             else:
-                for type_chi2_name, indices in self._chi2_type_names:
-                    derived_dict[type_chi2_name] = -2 * sum(loglikes[i] for i in indices)
+                for chi2_name, indices in self._chi2_names:
+                    derived_dict[chi2_name] = -2 * sum(loglikes[i] for i in indices)
                 derived_list = [derived_dict[p] for p in self.output_params]
             return loglikes, derived_list
         return loglikes
@@ -753,17 +751,6 @@ class Model(HasLogger):
         for component in components:
             component.initialize_with_provider(self.provider)
 
-    def _set_chi2_names(self):
-
-        chi2_type_names: Dict[str, List[int]] = {}
-        for i, like in enumerate(self.likelihood.values()):
-            for tp in like.type:
-                name = get_chi2_name(tp)
-                if name not in chi2_type_names:
-                    chi2_type_names[name] = []
-                chi2_type_names[name].append(i)
-        self._chi2_type_names = tuple(chi2_type_names.items())
-
     def add_requirements(self, requirements):
         """
         Adds quantities to be computed by the pipeline, for testing purposes.
@@ -886,9 +873,36 @@ class Model(HasLogger):
             chain(*(self.parameterization.input_dependencies.get(p, []) for p, assigned
                     in input_assign.items() if assigned)))
 
+        chi2_names: Dict[str, List[int]] = {}
+        # Add aggregated chi2 for likelihood types
+        for i, like in enumerate(self.likelihood.values()):
+            for tp in like.type:
+                name = get_chi2_name(tp)
+                if name not in chi2_names:
+                    chi2_names[name] = []
+                chi2_names[name].append(i)
         # Remove aggregated chi2 that may have been picked up by an agnostic component
-        for t in self.likelihood.all_types:
-            output_assign.pop(get_chi2_name(t), None)
+        for chi2_name in chi2_names:
+            output_assign.pop(chi2_name, None)
+        # If chi2__like single-likelihood parameters are explicitly requested, include
+        # in derived outputs for use in on output derived parameters
+        for p in output_assign:
+            if p.startswith(get_chi2_name("")):
+                like = p[len(get_chi2_name("")):]
+                index = list(self.likelihood).index(like)
+                if index is None:
+                    raise LoggedError(
+                        self.log, "Your derived parameters depend on an unknown "
+                                  "likelihood: '%s'", like)
+                if p in chi2_names:
+                    raise LoggedError(
+                        self.log, "Your have likelihoods with type labels that are the "
+                                  "same as a likelihood", like)
+                chi2_names[p] = [index]
+                # They may have been already assigned to an agnostic likelihood,
+                # so purge first: no "=+"
+                output_assign[p] = [self.likelihood[like]]
+        self._chi2_names = tuple(chi2_names.items())
         # Check that there are no unassigned parameters (with the exception of aggr chi2)
         unassigned_output = [p for p, assigned in output_assign.items()
                              if not assigned]
