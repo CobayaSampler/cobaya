@@ -12,7 +12,7 @@ import numpy as np
 import logging
 import inspect
 from itertools import chain
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 from tempfile import gettempdir
 import re
 
@@ -457,13 +457,12 @@ class polychord(Sampler):
         log = logging.getLogger(cls.__name__)
         if not kwargs.get("code", True):
             return True
-        path = kwargs["path"]
+        path: Optional[str] = kwargs["path"]
         if path is not None and path.lower() == "global":
             path = None
         if path and not kwargs.get("allow_global"):
             if is_main_process():
                 log.info("Importing *local* PolyChord from '%s'.", path)
-            # noinspection PyTypeChecker
             if not os.path.exists(path):
                 if is_main_process():
                     log.error("The given folder does not exist: '%s'", path)

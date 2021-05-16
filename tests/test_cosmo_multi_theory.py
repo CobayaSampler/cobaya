@@ -159,15 +159,13 @@ def test_bbn_likelihood(packages_path, skip_not_installed):
     install_test_wrapper(skip_not_installed, get_camb, packages_path)
     from camb.bbn import BBN_table_interpolator
     BBN_likelihood.bbn = BBN_table_interpolator(bbn_table)
-    info_error['packages_path'] = packages_path
-    model = get_model(info_error)
+    model = get_model(info_error, packages_path=packages_path)
     assert np.allclose(model.loglikes({'YHe': 0.246})[0], [0.246, -0.84340], rtol=1e-4), \
         "Failed BBN likelihood with %s" % info_error
 
     # second case, BBN likelihood has to be calculated before CAMB
     BBN_with_theory_errors.bbn = BBN_likelihood.bbn
-    info_error2['packages_path'] = packages_path
-    model = get_model(info_error2)
+    model = get_model(info_error2, packages_path=packages_path)
     assert np.allclose(model.loglikes({'BBN_delta': 1.0})[0], [0.24594834, -0.5],
                        rtol=1e-4)
 

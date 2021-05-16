@@ -293,7 +293,7 @@ class Theory(CobayaComponent):
 
     @property
     def type_list(self) -> List[str]:
-        # like of labels that classify this component
+        # list of labels that classify this component
         # not usually used for Theory, can used for aggregated chi2 in likelihoods
         return str_to_list(getattr(self, "type", []) or [])
 
@@ -331,9 +331,9 @@ class Theory(CobayaComponent):
         self._helpers = helpers
         if helpers:
             components: List[Theory] = list(helpers.values()) + [self]
-            for output, attr in enumerate(["input_params", "output_params"]):
-                pars = getattr(self, attr, None)
-                if pars is not None:
+            for output, attr in enumerate(("input_params", "output_params")):
+                pars = getattr(self, attr, unset_params)
+                if pars is not unset_params:
                     for component in components:
                         if not component.get_allow_agnostic():
                             if output:

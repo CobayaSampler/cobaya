@@ -224,15 +224,13 @@ def get_default_info(component_or_class, kind=None, return_yaml=False,
 
 def add_aggregated_chi2_params(param_info, all_types):
     for t in sorted(all_types):
-        param_info[get_chi2_name(t)] = {
-            "latex": get_chi2_label(t), "derived": True}
+        param_info[get_chi2_name(t)] = {"latex": get_chi2_label(t), "derived": True}
 
 
 _Dict = TypeVar('_Dict', InputDict, ModelDict)
 
 
-# noinspection PyTypedDict
-def update_info(info: _Dict) -> _Dict:
+def update_info(info: _Dict, add_aggr_chi2=True) -> _Dict:
     """
     Creates an updated info starting from the defaults for each component and updating it
     with the input info.
@@ -327,7 +325,7 @@ def update_info(info: _Dict) -> _Dict:
                                                        default_derived=False)
     updated_info["params"] = param_info  # type: ignore
     # Add aggregated chi2 params
-    if info.get("likelihood"):
+    if info.get("likelihood") and add_aggr_chi2:
         all_types = set(chain(
             *[str_to_list(like_info.get("type", []) or [])
               for like_info in updated_info["likelihood"].values() if

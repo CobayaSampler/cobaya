@@ -20,7 +20,8 @@ from cobaya.parameterization import is_fixed_or_function_param, is_sampled_param
     is_derived_param
 from cobaya.conventions import prior_1d_name, OutPar, get_chi2_name, \
     undo_chi2_name, get_minuslogpior_name, separator_files, minuslogprior_names
-from cobaya.typing import ParamValuesDict, InputDict, InfoDict, PostDict
+from cobaya.typing import ExpandedParamsDict, ModelBlock, ParamValuesDict, InputDict, \
+    InfoDict, PostDict
 from cobaya.collection import SampleCollection
 from cobaya.log import logger_setup, LoggedError
 from cobaya.input import update_info, add_aggregated_chi2_params, load_input_dict
@@ -40,7 +41,7 @@ if sys.version_info >= (3, 8):
         stats: ParamValuesDict
         weights: Union[np.ndarray, List[np.ndarray]]
 else:
-    PostResultDict = InfoDict
+    globals()['PostResultDict'] = InfoDict
 
 _minuslogprior_1d_name = get_minuslogpior_name(prior_1d_name)
 _default_post_cache_size = 2000
@@ -68,7 +69,6 @@ class DummyModel:
         self.likelihood = list(info_likelihood)
 
 
-# noinspection PyTypedDict
 @mpi.sync_state
 def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
          sample: Union[SampleCollection, List[SampleCollection], None] = None
@@ -93,12 +93,12 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                                "main block not under 'post'). ")
     # 1. Load existing sample
     output_in = get_output(prefix=info.get("output"))
-    info_in: InputDict  # temp workaround for typing bug
     if output_in:
         info_in = output_in.load_updated_info() or update_info(info)
     else:
         info_in = update_info(info)
-    dummy_model_in = DummyModel(info_in["params"], info_in.get("likelihood", {}),
+    params_in: ExpandedParamsDict = info_in["params"]  # type: ignore
+    dummy_model_in = DummyModel(params_in, info_in.get("likelihood", {}),
                                 info_in.get("prior"))
 
     in_collections = []
@@ -165,30 +165,30 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     add["likelihood"]["one"] = None
     # Expand the "add" info, but don't add new default sampled parameters
     orig_params = set(add.get("params") or [])
-    add = update_info(add)
-    for p in set(add["params"]) - orig_params:
-        if p in info_in["params"]:
-            add["params"].pop(p)
+    add = update_info(add, add_aggr_chi2=False)
+    add_params: ExpandedParamsDict = add["params"]  # type: ignore
+    for p in set(add_params) - orig_params:
+        if p in params_in:
+            add_params.pop(p)
 
     # 2.1 Adding/removing derived parameters and changes in priors of sampled parameters
-    # noinspection PyTypeChecker
-    out_combined: InputDict = {"params": deepcopy_where_possible(info_in["params"])}
+    out_combined_params = deepcopy_where_possible(params_in)
     remove_params = list(str_to_list(remove.get("params")) or [])
     for p in remove_params:
-        pinfo = info_in["params"].get(p)
+        pinfo = params_in.get(p)
         if pinfo is None or not is_derived_param(pinfo):
             raise LoggedError(
                 log,
                 "You tried to remove parameter '%s', which is not a derived parameter. "
                 "Only derived parameters can be removed during post-processing.", p)
-        out_combined["params"].pop(p)
+        out_combined_params.pop(p)
     # Force recomputation of aggregated chi2
-    for p in list(out_combined["params"]):
+    for p in list(out_combined_params):
         if p.startswith(get_chi2_name("")):
-            out_combined["params"].pop(p)
+            out_combined_params.pop(p)
     prior_recompute_1d = False
-    for p, pinfo in (add.get("params") or {}).items():
-        pinfo_in = info_in["params"].get(p)
+    for p, pinfo in add_params.items():
+        pinfo_in = params_in.get(p)
         if is_sampled_param(pinfo):
             if not is_sampled_param(pinfo_in):
                 # No added sampled parameters (de-marginalisation not implemented)
@@ -207,15 +207,14 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             # recompute prior if potentially changed sampled parameter priors
             prior_recompute_1d = True
         elif is_derived_param(pinfo):
-            if p in out_combined["params"]:
+            if p in out_combined_params:
                 raise LoggedError(
                     log, "You tried to add derived parameter '%s', which is already "
                          "present. To force its recomputation, 'remove' it too.", p)
         elif is_fixed_or_function_param(pinfo):
             # Only one possibility left "fixed" parameter that was not present before:
             # input of new likelihood, or just an argument for dynamical derived (dropped)
-            if ((p in info_in["params"] and
-                 pinfo["value"] != (pinfo_in or {}).get("value"))):
+            if pinfo_in and p in params_in and pinfo["value"] != pinfo_in.get("value"):
                 raise LoggedError(
                     log,
                     "You tried to add a fixed parameter '%s: %r' that was already present"
@@ -224,7 +223,9 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                     p, dict(pinfo), p, dict(pinfo_in))
         elif not pinfo_in:  # OK as long as we have known value for it
             raise LoggedError(log, "Parameter %s no known value. ", p)
-        out_combined["params"][p] = pinfo
+        out_combined_params[p] = pinfo
+
+    out_combined: InputDict = {"params": out_combined_params}  # type: ignore
     # Turn the rest of *derived* parameters into constants,
     # so that the likelihoods do not try to recompute them
     # But be careful to exclude *input* params that have a "derived: True" value
@@ -233,15 +234,17 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # recomputed if needed. If the theory does not need to be computed, it doesn't matter
     # if it is already assigned parameters in the usual way; likelihoods can get
     # the required derived parameters from the stored sample derived parameter inputs.
-    out_params_with_computed = deepcopy_where_possible(out_combined["params"])
+    out_params_with_computed = deepcopy_where_possible(out_combined_params)
+
     dropped_theory = set()
     for p, pinfo in out_params_with_computed.items():
         if (is_derived_param(pinfo) and "value" not in pinfo
-                and p not in add.get("params", {})):
+                and p not in add_params):
             out_params_with_computed[p] = {"value": np.nan}
             dropped_theory.add(p)
     # 2.2 Manage adding/removing priors and likelihoods
     warn_remove = False
+    kind: ModelBlock
     for kind in ("prior", "likelihood", "theory"):
         out_combined[kind] = deepcopy_where_possible(info_in.get(kind)) or {}
         for remove_item in str_to_list(remove.get(kind)) or []:
@@ -276,7 +279,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     add_theory = add.get("theory")
     if add_theory:
         if len(add["likelihood"]) == 1 and not any(
-                is_derived_param(pinfo) for pinfo in add.get("params", {}).values()):
+                is_derived_param(pinfo) for pinfo in add_params.values()):
             log.warning("You are adding a theory, but this does not force recomputation "
                         "of any likelihood or derived parameters unless explicitly "
                         "removed+added.")
@@ -289,14 +292,14 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         out_combined["theory"].update(added_theory)
 
     # Prepare recomputation of aggregated chi2
-    # (they need to be recomputed by hand, because its auto-computation won't pick up
+    # (they need to be recomputed by hand, because auto-computation won't pick up
     #  old likelihoods for a given type)
     all_types = {like: str_to_list(opts.get("type") or [])
                  for like, opts in out_combined["likelihood"].items()}
     types = set(chain(*all_types.values()))
     inv_types = {t: [like for like, like_types in all_types.items() if t in like_types]
                  for t in sorted(types)}
-    add_aggregated_chi2_params(out_combined["params"], types)
+    add_aggregated_chi2_params(out_combined_params, types)
 
     # 3. Create output collection
     # Use default prefix if it exists. If it does not, produce no output by default.
@@ -323,11 +326,10 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     info_post = info_post.copy()
     info_out["post"] = info_post
     # Updated with input info and extended (updated) add info
-    # noinspection PyTypeChecker
-    info_out.update(info_in)
+    info_out.update(info_in)  # type: ignore
     info_post["add"] = add
 
-    dummy_model_out = DummyModel(out_combined["params"], out_combined["likelihood"],
+    dummy_model_out = DummyModel(out_combined_params, out_combined["likelihood"],
                                  info_prior=out_combined["prior"])
     out_func_parameterization = Parameterization(out_params_with_computed)
 

@@ -45,6 +45,8 @@ if sys.version_info >= (3, 8):
     from typing import TypedDict, Literal
 
     LiteralFalse = Literal[False]
+    ModelBlock = Literal["theory", "likelihood", "prior", "params"]
+    Kind = Literal["theory", "likelihood", "sampler"]
 
 
     class SciPyDistDict(TypedDict):
@@ -109,3 +111,5 @@ else:
     globals().update((k, InfoDict) for k in
                      ('InputDict', 'ParamDict', 'ModelDict', 'PostDict'))
     globals()['LiteralFalse'] = bool
+    globals()['Kind'] = str
+    globals()['ModelBlock'] = str

@@ -15,11 +15,11 @@ import os
 from cobaya.conventions import packages_path_arg, packages_path_arg_posix, get_version
 from cobaya.typing import InputDict, LiteralFalse
 from cobaya.output import get_output
-from cobaya.model import Model
+from cobaya.model import Model, load_info_overrides
 from cobaya.sampler import get_sampler_name_and_class, check_sampler_info, Sampler
 from cobaya.log import logger_setup, LoggedError
 from cobaya.yaml import yaml_dump
-from cobaya.input import update_info, load_input_file, load_input_dict
+from cobaya.input import update_info, load_input_file
 from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic, \
     check_deprecated_modules_path
 from cobaya.post import post, PostTuple
@@ -66,21 +66,11 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     if no_mpi or test:
         mpi.set_mpi_disabled()
 
-    info: InputDict = load_input_dict(info_or_yaml_or_file)  # makes deep copy if dict
+    info: InputDict = load_info_overrides(info_or_yaml_or_file, debug, stop_at_error,
+                                          packages_path, override)
 
-    if override:
-        if "post" in override:
-            info["resume"] = False
-        info = recursive_update(info, override, copied=False)
-    # solve packages installation path cmd > env > input
-    if packages_path:
-        info["packages_path"] = packages_path
-    if debug is not None:
-        info["debug"] = bool(debug)
     if test:
         info["test"] = True
-    if stop_at_error is not None:
-        info["stop_at_error"] = bool(stop_at_error)
     # If any of resume|force given as cmd args, ignore those in the input file
     if resume or force:
         if resume and force:
@@ -191,16 +181,16 @@ def run_script(args=None):
                              "Alias for %s, which should be used instead." %
                              packages_path_arg_posix)
     # END OF DEPRECATION BLOCK -- CONTINUES BELOW!
-    parser.add_argument("-" + "output"[0], "--" + "output",
+    parser.add_argument("-" + "o", "--" + "output",
                         action="store", metavar="/some/path", default=None,
                         help="Path and prefix for the text output.")
-    parser.add_argument("-" + "debug"[0], "--" + "debug", action="store_true",
+    parser.add_argument("-" + "d", "--" + "debug", action="store_true",
                         help="Produce verbose debug output.")
     continuation = parser.add_mutually_exclusive_group(required=False)
-    continuation.add_argument("-" + "resume"[0], "--" + "resume", action="store_true",
+    continuation.add_argument("-" + "r", "--" + "resume", action="store_true",
                               help="Resume an existing chain if it has similar info "
                                    "(fails otherwise).")
-    continuation.add_argument("-" + "force"[0], "--" + "force", action="store_true",
+    continuation.add_argument("-" + "f", "--" + "force", action="store_true",
                               help="Overwrites previous output, if it exists "
                                    "(use with care!)")
     parser.add_argument("--%s" % "test", action="store_true",

@@ -14,6 +14,7 @@ import platform
 import warnings
 import inspect
 import re
+import numbers
 import pandas as pd
 import numpy as np
 from itertools import chain
@@ -21,22 +22,18 @@ from importlib import import_module
 from copy import deepcopy
 from packaging import version
 from itertools import permutations
-from typing import Mapping, Sequence, Any, List, TypeVar, Optional, Union
-from numbers import Number
+from typing import Mapping, Sequence, Any, List, TypeVar, Optional, Union, \
+    Iterable, Set, Dict
 from types import ModuleType
 from inspect import cleandoc, getfullargspec
 from ast import parse
 import traceback
 
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore")
-    # Suppress message about optional dependency
-    from fuzzywuzzy import process as fuzzy_process
-
 # Local
 from cobaya.conventions import cobaya_package, subfolders, kinds, \
     packages_path_config_file, packages_path_env, packages_path_arg, dump_sort_cosmetic
 from cobaya.log import LoggedError, HasLogger
+from cobaya.typing import Kind
 
 # Set up logger
 log = logging.getLogger(__name__.split(".")[-1])
@@ -78,7 +75,7 @@ def change_key(info, old, new, value):
     return info
 
 
-def get_internal_class_component_name(name, kind):
+def get_internal_class_component_name(name, kind) -> str:
     """
     Gets qualified name of internal component, relative to the package source,
     of a likelihood, theory or sampler.
@@ -86,14 +83,15 @@ def get_internal_class_component_name(name, kind):
     return '.' + subfolders[kind] + '.' + name
 
 
-def get_base_classes():
+def get_base_classes() -> Dict[Kind, Any]:
     from cobaya.likelihood import Likelihood
     from cobaya.theory import Theory
     from cobaya.sampler import Sampler
-    return {"sampler": Sampler, "likelihood": Likelihood, "theory": Theory}
+    return {"sampler": Sampler, "likelihood": Likelihood,  # type: ignore
+            "theory": Theory}
 
 
-def get_kind(name: str, allow_external=True) -> str:
+def get_kind(name: str, allow_external=True) -> Kind:
     """
     Given a helpfully unique component name, tries to determine it's kind:
     ``sampler``, ``theory`` or ``likelihood``.
@@ -272,28 +270,26 @@ def get_resolved_class(component_or_class, kind=None, component_path=None,
 
 def import_all_classes(path, pkg, subclass_of, hidden=False, helpers=False):
     import pkgutil
-    result = set()
-    ignore = {os.path.join("cobaya", "likelihoods"): ["base_classes", "test"]}
     from cobaya.theory import HelperTheory
+    result = set()
     for (module_loader, name, ispkg) in pkgutil.iter_modules([path]):
-        ignore_this_one = \
-            name in next((which for p, which in ignore.items() if path.endswith(p)), [])
-        ignore_this_one = ignore_this_one or name.startswith('_')
-        if hidden or not ignore_this_one:
+        if hidden or not name.startswith('_'):
             module_name = pkg + '.' + name
             m = load_module(module_name)
-            for class_name, cls in inspect.getmembers(m, inspect.isclass):
-                if issubclass(cls, subclass_of) and \
-                        (helpers or not issubclass(cls, HelperTheory)) and \
-                        cls.__module__ == module_name:
-                    result.add(cls)
-            if ispkg:
-                result.update(import_all_classes(os.path.dirname(m.__file__), m.__name__,
-                                                 subclass_of, hidden))
+            if hidden or not getattr(m, '_is_abstract', False):
+                for class_name, cls in inspect.getmembers(m, inspect.isclass):
+                    if issubclass(cls, subclass_of) and \
+                            (helpers or not issubclass(cls, HelperTheory)) and \
+                            cls.__module__ == module_name and \
+                            (hidden or not cls.__dict__.get('_is_abstract')):
+                        result.add(cls)
+                if ispkg:
+                    result.update(import_all_classes(os.path.dirname(m.__file__),
+                                                     m.__name__, subclass_of, hidden))
     return result
 
 
-def classes_in_module(m, subclass_of=None, allow_imported=False):
+def classes_in_module(m, subclass_of=None, allow_imported=False) -> Set[type]:
     return set(cls for _, cls in inspect.getmembers(m, inspect.isclass)
                if (not subclass_of or issubclass(cls, subclass_of))
                and (allow_imported or cls.__module__ == m.__name__))
@@ -328,13 +324,13 @@ def get_all_available_internal_classes(hidden=False):
     return set(chain(*(get_available_internal_classes(k, hidden) for k in kinds)))
 
 
-def get_available_internal_class_names(kind=None, hidden=False):
+def get_available_internal_class_names(kind=None, hidden=False) -> Iterable[str]:
     return sorted(set(cls.get_qualified_class_name() for cls in
                       (get_available_internal_classes(kind, hidden) if kind
                        else get_all_available_internal_classes(hidden))))
 
 
-def replace_optimizations(function_string):
+def replace_optimizations(function_string: str) -> str:
     # make fast version of stats.norm.logpdf for fixed scale and loc
     # can save quite a lot of time evaluating Gaussian priors
     if 'stats.norm.logpdf' not in function_string:
@@ -560,7 +556,6 @@ def prepare_comment(comment):
         ["# " + line.lstrip("#") for line in comment.split("\n") if line]) + "\n"
 
 
-# Self describing
 def is_valid_variable_name(name):
     try:
         parse("%s=None" % name)
@@ -578,7 +573,7 @@ def get_scipy_1d_pdf(info):
                                "sampled parameter '%s'." % param)
     # If list of 2 numbers, it's a uniform prior
     elif isinstance(info2, Sequence) and len(info2) == 2 and all(
-            isinstance(n, Number) for n in info2):
+            isinstance(n, numbers.Real) for n in info2):
         info2 = {"min": info2[0], "max": info2[1]}
     elif not isinstance(info2, Mapping):
         raise LoggedError(log, "Prior format not recognized. "
@@ -759,6 +754,10 @@ def progress_bar(logger, percentage, final_text=""):
 
 
 def fuzzy_match(input_string, choices, n=3, score_cutoff=50):
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        # Suppress message about optional dependency
+        from fuzzywuzzy import process as fuzzy_process
     try:
         return list(zip(*(fuzzy_process.extractBests(
             input_string, choices, score_cutoff=score_cutoff))))[0][:n]

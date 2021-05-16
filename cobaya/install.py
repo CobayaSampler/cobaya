@@ -364,7 +364,7 @@ def install_script(args=None):
                         version=output_show_packages_path,
                         help="Prints default external packages installation folder "
                              "and exits.")
-    parser.add_argument("-" + "force"[0], "--" + "force", action="store_true",
+    parser.add_argument("-" + "f", "--" + "force", action="store_true",
                         default=False,
                         help="Force re-installation of apparently installed packages.")
     parser.add_argument("--skip", action="store", nargs="*",
@@ -383,7 +383,7 @@ def install_script(args=None):
                         help="Do not store the installation path for later runs.")
     parser.add_argument("--skip-global", action="store_true", default=False,
                         help="Skip installation of already-available Python modules.")
-    parser.add_argument("-" + "debug"[0], "--" + "debug", action="store_true",
+    parser.add_argument("-" + "d", "--" + "debug", action="store_true",
                         help="Produce verbose debug output.")
     group_just = parser.add_mutually_exclusive_group(required=False)
     group_just.add_argument("-C", "--just-code", action="store_false", default=True,

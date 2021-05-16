@@ -40,7 +40,6 @@ class GaussianMixture(Likelihood):
         """
         return len(self.input_params)
 
-    # noinspection PyTupleAssignmentBalance
     def initialize_with_params(self):
         """
         Initializes the gaussian distributions.

@@ -58,7 +58,7 @@ def undo_chi2_name(p):
 
 
 def get_chi2_label(p):
-    return r"\chi^2_\mathrm{" + str(p).replace("_", r"\ ") + r"}"
+    return r"\chi^2_\mathrm{" + str(p).replace("_", r"\ ") + "}"
 
 
 def get_minuslogpior_name(piname):

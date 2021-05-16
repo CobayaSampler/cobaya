@@ -12,7 +12,7 @@ import numpy as np
 from numbers import Real
 from itertools import chain
 from copy import deepcopy
-from typing import Mapping, Sequence, Dict, Set, List, Tuple, Any, Callable
+from typing import Mapping, Sequence, Dict, Set, List, Tuple, Any, Callable, Union
 
 # Local
 from cobaya.typing import ParamsDict, ParamDict, ParamInput, \
@@ -103,7 +103,8 @@ class Parameterization(HasLogger):
     Translates parameter between sampler+prior and likelihood
     """
 
-    def __init__(self, info_params: ParamsDict, allow_renames=True,
+    def __init__(self, info_params: Union[ParamsDict, ExpandedParamsDict],
+                 allow_renames=True,
                  ignore_unused_sampled=False):
         self.set_logger()
         self.allow_renames = allow_renames

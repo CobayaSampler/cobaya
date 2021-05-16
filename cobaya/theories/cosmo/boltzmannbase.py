@@ -21,6 +21,7 @@ H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": Const.c_km_s}
 
 
 class BoltzmannBase(Theory):
+    _is_abstract = True
     _get_z_dependent: Callable  # defined by inheriting classes
     renames: Mapping[str, str] = empty_dict
     extra_args: InfoDict

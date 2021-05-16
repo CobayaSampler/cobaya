@@ -287,7 +287,6 @@ class LikelihoodCollection(ComponentCollection):
                                                      name=name))
                 else:
                     # If it has an "external" key, wrap it up. Else, load it up
-                    # noinspection PyTypeChecker
                     self.add_instance(name, LikelihoodExternalFunction(info, name,
                                                                        timing=timing))
             else:

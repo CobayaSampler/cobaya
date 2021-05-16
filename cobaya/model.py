@@ -7,6 +7,7 @@
 """
 # Global
 import logging
+from contextlib import contextmanager
 from copy import deepcopy
 from itertools import chain
 from typing import NamedTuple, Sequence, Mapping, Iterable, Optional, \
@@ -29,6 +30,18 @@ from cobaya.yaml import yaml_dump
 from cobaya.tools import deepcopy_where_possible, are_different_params_lists, \
     str_to_list, sort_parameter_blocks, recursive_update, sort_cosmetic
 from cobaya import mpi
+
+
+@contextmanager
+def timing_on(model: 'Model'):
+    was_on = model.timing
+    if not was_on:
+        model.set_timing_on(True)
+    try:
+        yield
+    finally:
+        if not was_on:
+            model.set_timing_on(False)
 
 
 # Log-posterior namedtuple
@@ -116,8 +129,8 @@ class Model(HasLogger):
                  info_prior: Optional[PriorsDict] = None,
                  info_theory: Optional[TheoriesDict] = None,
                  packages_path=None, timing=None, allow_renames=True, stop_at_error=False,
-                 post=False, prior_parameterization=None,
-                 skip_unused_theories=False, dropped_theory_params=None):
+                 post=False, skip_unused_theories=False,
+                 dropped_theory_params: Optional[Iterable[str]] = None):
         self.set_logger()
         self._updated_info: InputDict = {
             "params": deepcopy_where_possible(info_params),
@@ -131,8 +144,7 @@ class Model(HasLogger):
         self.parameterization = Parameterization(self._updated_info["params"],
                                                  allow_renames=allow_renames,
                                                  ignore_unused_sampled=post)
-        self.prior = Prior(prior_parameterization or self.parameterization,
-                           self._updated_info.get("prior"))
+        self.prior = Prior(self.parameterization, self._updated_info.get("prior"))
         self.timing = timing
         info_theory = self._updated_info.get("theory")
         self.theory = TheoryCollection(info_theory or {}, packages_path=packages_path,
@@ -842,7 +854,7 @@ class Model(HasLogger):
                     supports_params = component.get_can_support_params()
                 pars_to_assign = set(supports_params)
                 if dropped_theory_params and not is_LikelihoodInterface(component):
-                    pars_to_assign -= dropped_theory_params
+                    pars_to_assign.difference_update(dropped_theory_params)
                 for p in (unassigned if derived_param else assign):
                     if p in pars_to_assign and component not in assign[p]:
                         assign[p] += [component]
@@ -904,8 +916,7 @@ class Model(HasLogger):
                 output_assign[p] = [self.likelihood[like]]
         self._chi2_names = tuple(chi2_names.items())
         # Check that there are no unassigned parameters (with the exception of aggr chi2)
-        unassigned_output = [p for p, assigned in output_assign.items()
-                             if not assigned]
+        unassigned_output = [p for p, assigned in output_assign.items() if not assigned]
         if unassigned_output:
             raise LoggedError(
                 self.log, "Could not find whom to assign output parameters %r.",
@@ -925,8 +936,8 @@ class Model(HasLogger):
                 setattr(component, option,
                         [p for p, assign in assign.items() if component in assign])
                 # Update infos! (helper theory parameters stored in yaml with host)
-                inf = (info_theory, info_likelihood)[
-                    component in self.likelihood.values()]
+                inf = (info_likelihood if component in self.likelihood.values() else
+                       info_theory)
                 inf = inf.get(component.get_name())
                 if inf:
                     inf.pop("params", None)
@@ -1122,22 +1133,20 @@ class Model(HasLogger):
         Stops after encountering `max_tries` points (default: inf) with non-finite
         posterior.
         """
-        timing_on = self.timing
-        if not timing_on:
-            self.set_timing_on(True)
         self.mpi_info("Measuring speeds... (this may take a few seconds)")
         if n is None:
             n = 1 if mpi.more_than_one_process() else 3
         n_done = 0
-        while n_done < int(n) + int(discard):
-            point = self.prior.reference(random_state=random_state,
-                                         max_tries=max_tries, ignore_fixed=True,
-                                         warn_if_no_ref=False)
-            if self.loglike(point, cached=False)[0] != -np.inf:
-                n_done += 1
-        self.log.debug("Computed %d points to measure speeds.", n_done)
-        times = [component.timer.get_time_avg() or 0  # type: ignore
-                 for component in self.components]
+        with timing_on(self):
+            while n_done < int(n) + int(discard):
+                point = self.prior.reference(random_state=random_state,
+                                             max_tries=max_tries, ignore_fixed=True,
+                                             warn_if_no_ref=False)
+                if self.loglike(point, cached=False)[0] != -np.inf:
+                    n_done += 1
+            self.log.debug("Computed %d points to measure speeds.", n_done)
+            times = [component.timer.get_time_avg() or 0  # type: ignore
+                     for component in self.components]
         if mpi.more_than_one_process():
             # average for different points
             times = np.average(mpi.allgather(times), axis=0)
@@ -1145,26 +1154,34 @@ class Model(HasLogger):
         self.mpi_info('Setting measured speeds (per sec): %r',
                       {component: float("%.3g" % speed) for component, speed in
                        zip(self.components, measured_speeds)})
-        if not timing_on:
-            self.set_timing_on(False)
+
         for component, speed in zip(self.components, measured_speeds):
             component.set_measured_speed(speed)
 
 
-def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike]) -> Model:
-    info = load_input_dict(info_or_yaml_or_file)
+def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
+              debug: Optional[bool] = None,
+              stop_at_error: Optional[bool] = None,
+              packages_path: Optional[str] = None,
+              override: Optional[InputDict] = None
+              ) -> Model:
+    info = load_info_overrides(info_or_yaml_or_file, debug, stop_at_error,
+                               packages_path, override)
     logger_setup(info.pop("debug", debug_default), info.pop("debug_file", None))
+
     # Inform about ignored info keys
-    ignored_info = {}
+    ignored_info = []
     for k in list(info):
         if k not in ["params", "likelihood", "prior", "theory", "packages_path",
-                     "timing", "stop_at_error"]:
-            ignored_info[k] = info.pop(k)  # type: ignore
-    if ignored_info:
-        logging.getLogger(__name__.split(".")[-1]).warning(
-            "Ignored blocks/options: %r", list(ignored_info))
+                     "timing", "stop_at_error", "auto_params"]:
+            value = info.pop(k)  # type: ignore
+            if value is not None and (not isinstance(value, Mapping) or value):
+                ignored_info.append(k)
     # Create the updated input information, including defaults for each component.
     updated_info = update_info(info)
+    if ignored_info:
+        logging.getLogger(__name__.split(".")[-1]).warning(
+            "Ignored blocks/options: %r", ignored_info)
     if logging.root.getEffectiveLevel() <= logging.DEBUG:
         logging.getLogger(__name__.split(".")[-1]).debug(
             "Input info updated with defaults (dumped to YAML):\n%s",
@@ -1175,3 +1192,20 @@ def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike]) -> Model
                  packages_path=info.get("packages_path"),
                  timing=updated_info.get("timing"),
                  stop_at_error=info.get("stop_at_error", False))
+
+
+def load_info_overrides(info_or_yaml_or_file, debug, stop_at_error,
+                        packages_path, override=None) -> InputDict:
+    info = load_input_dict(info_or_yaml_or_file)  # makes deep copy if dict
+
+    if override:
+        if "post" in override:
+            info["resume"] = False
+        info = recursive_update(info, override, copied=False)
+    if packages_path:
+        info["packages_path"] = packages_path
+    if debug is not None:
+        info["debug"] = bool(debug)
+    if stop_at_error is not None:
+        info["stop_at_error"] = bool(stop_at_error)
+    return info
