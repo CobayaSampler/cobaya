@@ -526,7 +526,12 @@ like_H0: InfoDict = \
      "Freedman2020": {
          "desc": "Local H0 measurement from Freedman et al. 2020",
          "theory": theory,
-         "likelihood": {"H0.freedman2020": None}}}
+         "likelihood": {"H0.freedman2020": None}},
+     "Riess2020Mb": {
+         "desc": "Local magnitude measurement as from Riess et al. 2020",
+         "theory": theory,
+         "likelihood": {"H0.riess2020Mb": None}},
+     }
 
 # SAMPLERS ###############################################################################
 

@@ -9,6 +9,9 @@ from .conftest import install_test_wrapper
 fiducial_H0 = 70
 fiducial_H0_std = 1
 
+fiducial_Mb = -19.2
+fiducial_Mb_std = 0.1
+
 
 def test_H0_riess2018a(packages_path, skip_not_installed):
     body_of_test(packages_path, like_name="H0.riess2018a",
@@ -34,7 +37,14 @@ def test_H0_docs(packages_path, skip_not_installed):
                  skip_not_installed=skip_not_installed)
 
 
-def body_of_test(packages_path, like_name=None, like_info=None, skip_not_installed=False):
+def test_Mb_riess2020Mb(packages_path, skip_not_installed):
+    # Does NOT test use with Pantheon, just trivial chi2 check
+    body_of_test(packages_path, like_name="H0.riess2020Mb",
+                 skip_not_installed=skip_not_installed, Mb=True)
+
+
+def body_of_test(packages_path, like_name=None, like_info=None,
+                 skip_not_installed=False, Mb=False):
     info = {"packages_path": process_packages_path(packages_path),
             "sampler": {"evaluate": None}}
     if like_name:
@@ -42,13 +52,15 @@ def body_of_test(packages_path, like_name=None, like_info=None, skip_not_install
     elif like_info:
         info["likelihood"] = like_info
         like_name = list(like_info)[0]
-    info["params"] = {"H0": fiducial_H0}
+    fiducial, fiducial_std, name = (fiducial_Mb, fiducial_Mb_std, "Mb") if Mb \
+        else (fiducial_H0, fiducial_H0_std, "H0")
+    info["params"] = {name: fiducial}
     updated_info, sampler = install_test_wrapper(skip_not_installed, run, info)
     products = sampler.products()
     # The default values for .get are for the _docs_ test
-    mean = updated_info["likelihood"][like_name].get("H0_mean", fiducial_H0)
-    std = updated_info["likelihood"][like_name].get("H0_std", fiducial_H0_std)
-    reference_chi2 = (fiducial_H0 - mean) ** 2 / std ** 2
+    mean = updated_info["likelihood"][like_name].get("%s_mean" % name, fiducial)
+    std = updated_info["likelihood"][like_name].get("%s_std" % name, fiducial_std)
+    reference_chi2 = (fiducial - mean) ** 2 / std ** 2
     computed_chi2 = (
         products["sample"]["chi2__" + list(info["likelihood"])[0]].values[0])
     assert np.allclose(computed_chi2, reference_chi2)
