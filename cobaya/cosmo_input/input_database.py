@@ -558,10 +558,18 @@ like_H0 = dict([
     ["Riess201903", {
         _desc: "Local H0 measurement from Riess et al. 2019",
         kinds.theory: {_camb: None, _classy: None},
-        kinds.likelihood: dict([
+        kinds.likelihooHd: dict([
             ["H0.riess201903", None]])}],
 ])
 
+like_Mb = dict([
+    [_none, {}],
+    ["Riess2020Mb", {
+        _desc: "Local H0 measurement from Riess et al. 2018a (used in Planck 2018)",
+        kinds.theory: {_camb: None, _classy: None},
+        kinds.likelihood: dict([
+            ["H0.riess2020Mb", None]])}],
+])
 # SAMPLERS ###############################################################################
 
 sampler = dict([
