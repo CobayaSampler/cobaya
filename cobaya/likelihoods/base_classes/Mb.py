@@ -1,32 +1,24 @@
 r"""
-.. module:: H0
+.. module:: Mb
 
-:Synopsis: Prototype class for local Hubble parameter measurements
-:Author: Jesus Torrado
+:Synopsis: Prototype class for local type Ia SNe absolute magnitude 
+measurements, which combined with a SNe data set yield Hubble parameter constraints
+:Author: Pablo Lemos
 
-This is a simple gaussian likelihood for the latest local :math:`H_0` measurements
+This is a simple gaussian likelihood for the latest local :math:`M_b` measurements
 using a combination of different data.
 
 It defines the following likelihoods
 
-- ``H0.riess2018a``: A legacy local measurement of :math:`H_0`, used in the analysis of
-  Planck data for the Planck 2018 release.
-  `(arXiv:1801.01120) <https://arxiv.org/abs/1801.01120>`_
-- ``H0.riess2018b``: Updated local measurement of :math:`H_0`.
-  `(arXiv:1804.10655) <https://arxiv.org/abs/1804.10655>`_
-- ``H0.riess201903``:  Riess et al. 2019 constraint
-  `(arXiv:1903.07603) <https://arxiv.org/abs/1903.07603>`_
+- ``H0.riess2020Mb``: Updated local measurement of :math:`H_0`.
+  `(arXiv:2012.08534) <https://arxiv.org/abs/2012.08534>`_
 
+Combining with SNe data sets
+----------------------------
+This likelihood can only be combined with the Pantheon SNe data set. 
+The JLA data set cannot be used in combination with Mb, as it uses a different
+callibration!
 
-Using a different measurement
------------------------------
-
-If you would like to use different values for the :math:`H_0` constraint, as a mean and a
-standard deviation, simply add the following likelihood, substituting ``mu_H0`` and
-``sigma_H0`` for the respective values:
-
-.. literalinclude:: ./src_examples/H0/custom_likelihood.yaml
-   :language: yaml
 
 """
 
