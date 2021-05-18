@@ -2,7 +2,6 @@ import logging
 import os
 import numpy as np
 import pytest
-from flaky import flaky
 from getdist.mcsamples import MCSamplesFromCobaya, loadMCSamples
 from cobaya import mpi, run, Theory, InputDict, PostDict, LoggedError
 from cobaya.conventions import Extension
@@ -88,7 +87,6 @@ def test_cosmo_run_not_found():
         assert "Failed to get defaults for component" in str(e)
 
 
-@flaky(max_runs=2, min_passes=1)
 @mpi.sync_errors
 def test_cosmo_run_resume_post(tmpdir, packages_path=None):
     # only vary As, so fast chain. Chain does not need to converge (tested elsewhere).
