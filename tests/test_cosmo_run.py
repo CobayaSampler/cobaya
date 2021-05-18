@@ -69,7 +69,7 @@ info: InputDict = {"params": {
 }
 
 
-def test_not_found():
+def test_cosmo_run_not_found():
     with NoLogging(logging.ERROR):
         inf = deepcopy_where_possible(info)
         inf["likelihood"]["H0.perfect"] = None
@@ -91,7 +91,7 @@ def test_not_found():
 @flaky(max_runs=2, min_passes=1)
 @mpi.sync_errors
 def test_cosmo_run_resume_post(tmpdir, packages_path=None):
-    # only vary As, so fast chain
+    # only vary As, so fast chain. Chain does not need to converge (tested elsewhere).
     info['output'] = os.path.join(tmpdir, 'testchain')
     if packages_path:
         info["packages_path"] = process_packages_path(packages_path)
@@ -105,7 +105,6 @@ def test_cosmo_run_resume_post(tmpdir, packages_path=None):
     results = mpi.allgather(sampler.products()["sample"])
     samp = MCSamplesFromCobaya(updated_info, results, ignore_rows=0.2)
     assert np.isclose(samp.mean('As100'), 100 * samp.mean('As'))
-    assert abs(samp.mean('sigma8') - 0.69) < 0.02
 
     # post-processing
     info_post: PostDict = {'add': {'params': {'h': None},
@@ -118,7 +117,13 @@ def test_cosmo_run_resume_post(tmpdir, packages_path=None):
     output_info, products = run(updated_info, override={'post': info_post}, force=True)
     results2 = mpi.allgather(products["sample"])
     samp2 = MCSamplesFromCobaya(output_info, results2)
-    assert abs(samp2.mean('sigma8') - 0.75) < 0.03
+    samp_test = samp.copy()
+    samp_test.weighted_thin(4)
+    sigma8 = samp_test.getParams().sigma8
+    samp_test.weights = np.asarray(samp_test.weights, dtype=np.float64)  # temp type fix
+    samp_test.reweightAddingLogLikes(-(sigma8 - 0.7) ** 2 / 0.1 ** 2
+                                     + (sigma8 - 0.75) ** 2 / 0.07 ** 2)
+    assert np.isclose(samp_test.mean('sigma8'), samp2.mean('sigma8'))
 
     # from getdist-format chain files
     root = os.path.join(tmpdir, 'getdist_format')
@@ -150,7 +155,7 @@ def test_cosmo_run_resume_post(tmpdir, packages_path=None):
     output_info, products = run({'output': info['output'], 'post': info_post}, force=True)
     results3 = mpi.allgather(products["sample"])
     samp3 = MCSamplesFromCobaya(output_info, results3)
-    assert abs(samp3.mean('sigma8') - 0.75) < 0.02
+    assert np.isclose(samp3.mean("sigma8"), samp2.mean("sigma8"))
     assert np.isclose(samp3.mean("joint"), samp2.mean("joint"))
     samps4 = loadMCSamples(info['output'] + '.post.testpost')
     assert np.isclose(samp3.mean("joint"), samps4.mean("joint"))
