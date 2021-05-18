@@ -97,13 +97,15 @@ before_install:
     source activate test-environment;
     pip install mpi4py;
     else
-    pip install mpi4py pytest-forked pytest-cov flaky matplotlib dill coverage ;
+    pip install mpi4py pytest-forked pytest-cov flaky matplotlib dill coverage flake8;
     fi
   - python --version
 
 script:
-  - export COBAYA_PACKAGES_PATH="../packages"
+  # Find undeclared references and syntax errors
+  - flake8 cobaya --select=E9,F63,F7,F82 --show-source --statistics
   # General tests:
+  - export COBAYA_PACKAGES_PATH="../packages"
   - coverage run --parallel-mode -m cobaya.install polychord --debug
   - coverage run --parallel-mode -m pytest tests/ -k "not cosmo" --skip-not-installed --no-flaky-report
   - pip install numba

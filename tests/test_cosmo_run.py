@@ -120,7 +120,6 @@ def test_cosmo_run_resume_post(tmpdir, packages_path=None):
     samp_test = samp.copy()
     samp_test.weighted_thin(4)
     sigma8 = samp_test.getParams().sigma8
-    samp_test.weights = np.asarray(samp_test.weights, dtype=np.float64)  # temp type fix
     samp_test.reweightAddingLogLikes(-(sigma8 - 0.7) ** 2 / 0.1 ** 2
                                      + (sigma8 - 0.75) ** 2 / 0.07 ** 2)
     assert np.isclose(samp_test.mean('sigma8'), samp2.mean('sigma8'))
@@ -172,9 +171,8 @@ def test_cosmo_run_resume_post(tmpdir, packages_path=None):
     results_revert = mpi.allgather(products["sample"])
     samp_revert = MCSamplesFromCobaya(output_info, results_revert)
 
-    results_thin = [chain.filtered_copy(slice(int(round(0.2 * len(chain))), None)
-                                        ).thin_samples(thin=4) for chain in results]
-    samp_thin = MCSamplesFromCobaya(updated_info, results_thin)
+    samp_thin = MCSamplesFromCobaya(updated_info, results, ignore_rows=0.2)
+    samp_thin.weighted_thin(4)
     assert samp_thin.numrows == samp_revert.numrows + products["stats"]["points_removed"]
     if not products["stats"]["points_removed"]:
         assert np.isclose(samp_revert.mean("sigma8"), samp_thin.mean("sigma8"))
