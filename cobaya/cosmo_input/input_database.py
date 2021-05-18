@@ -33,7 +33,7 @@ primordial = {
                         'proposal': 0.002, 'latex': 'n_\\mathrm{s}'}}},
     'SFSR_DESpriors': {
         'desc': 'Adiabatic scalar perturbations, '
-                'power law + running spectrum -- DESpriors',
+                'power law - DESpriors',
         'theory': theory,
         'params': {
             'As_1e9': {'prior': {'min': 0.5, 'max': 5},
@@ -41,8 +41,21 @@ primordial = {
                        'proposal': 0.25, 'latex': '10^9 A_\\mathrm{s})', 'drop': True,
                        'renames': 'A'},
             'As': {'value': 'lambda As_1e9: 1e-9 * As_1e9', 'latex': 'A_\\mathrm{s}'},
-            'ns': {'prior': {'min': 0.8, 'max': 1.2},
-                   'ref': {'dist': 'norm', 'loc': 0.965, 'scale': 0.004},
+            'ns': {'prior': {'min': 0.87, 'max': 1.07},
+                   'ref': {'dist': 'norm', 'loc': 0.965, 'scale': 0.05},
+                   'proposal': 0.002, 'latex': 'n_\\mathrm{s}'}}},
+    'SFSR_lenspriors': {
+        'desc': 'Adiabatic scalar perturbations, '
+                'power law -- Planck lensing priors',
+        'theory': theory,
+        'params': {
+            'logA': {'prior': {'min': 1.61, 'max': 3.91},
+                     'ref': {'dist': 'norm', 'loc': 3.05, 'scale': 0.01},
+                     'proposal': 0.005, 'latex': '\\log(10^{10} A_\\mathrm{s})',
+                     'drop': True},
+            'As': {'value': 'lambda logA: 1e-10*np.exp(logA)', 'latex': 'A_\\mathrm{s}'},
+            'ns': {'prior': {'dist': 'norm', 'loc': 0.96, 'scale': 0.02},
+                   'ref': {'dist': 'norm', 'loc': 0.965, 'scale': 0.02},
                    'proposal': 0.002, 'latex': 'n_\\mathrm{s}'}}},
     'SFSR_run':
         {'desc': 'Adiabatic scalar perturbations, power law + running spectrum',
@@ -169,7 +182,26 @@ hubble = {
                                            'drop': True}, '100*theta_s': {
                                'value': 'lambda theta_s_1e2: theta_s_1e2',
                                'derived': False},
-                           'H0': {'latex': 'H_0'}}}}}}
+                           'H0': {'latex': 'H_0'}}}}},
+    'sound_horizon_lensonly': {
+        'desc': 'Angular size of the sound horizon (h>0.4)'
+                '(approximate, if using CAMB)',
+        'theory': {'camb':
+                       {'params':
+                            {'theta_MC_100': {'prior': {'min': 0.5, 'max': 10},
+                                              'ref': {'dist': 'norm',
+                                                      'loc': 1.04109,
+                                                      'scale': 0.002},
+                                              'proposal': 0.001,
+                                              'latex': '100\\theta_\\mathrm{MC}',
+                                              'drop': True, 'renames': 'theta'},
+                             'cosmomc_theta': {
+                                 'value': 'lambda theta_MC_100: 1.e-2*theta_MC_100',
+                                 'derived': False},
+                             'H0': {'latex': 'H_0', 'min': 40, 'max': H0_max}},
+                        'extra_args': {'theta_H0_range': [40, H0_max]}},
+                   }},
+}
 
 # Matter sector (minus light species)
 N_eff_std = 3.046
@@ -208,7 +240,19 @@ matter: InfoDict = {
              'omegach2': {
                  'value': "lambda omegam, omegab, mnu, H0: (omegam-omegab)*(H0/100)**2"
                           "-(mnu*(%g/3)**0.75)/%g" % (N_eff_std, nu_mass_fac),
-                 'latex': '\\Omega_\\mathrm{c} h^2'}}}}
+                 'latex': '\\Omega_\\mathrm{c} h^2'}}},
+    'omegab_h2_lenspriors': {
+        'desc': 'BBN-like prior on Omega*h^2 for baryons, with cold dark matter',
+        'theory': theory,
+        'params': {
+            'omegabh2': {'prior': {'dist': 'norm', 'loc': 0.0222, 'scale': 0.0005},
+                         'ref': {'dist': 'norm', 'loc': 0.0222, 'scale': 0.0005},
+                         'proposal': 0.0004, 'latex': '\\Omega_\\mathrm{b} h^2'},
+            'omegach2': {'prior': {'min': 0.001, 'max': 0.99},
+                         'ref': {'dist': 'norm', 'loc': 0.12, 'scale': 0.003},
+                         'proposal': 0.002, 'latex': '\\Omega_\\mathrm{c} h^2'},
+            'omegam': {'latex': '\\Omega_\\mathrm{m}'}}},
+}
 
 for m in matter.values():
     m["params"]["omegamh2"] = {"derived": "lambda omegam, H0: omegam*(H0/100)**2",
@@ -362,6 +406,8 @@ cmb_precision["camb"].update({"bbn_predictor": "PArthENoPE_880.2_standard.dat",
                               "lens_potential_accuracy": 1})
 cmb_sampler_recommended: InfoDict = {"mcmc": {
     "drag": True, "oversample_power": 0.4, "proposal_scale": 1.9}}
+cmb_sampler_mcmc: InfoDict = {"mcmc": {
+    "drag": False, "proposal_scale": 1.9}}
 
 like_cmb: InfoDict = {
     none: {},
@@ -389,7 +435,7 @@ like_cmb: InfoDict = {
             "bicep_keck_2015": None}},
     "planck_2018_CMBmarged_lensing": {
         "desc": "Planck 2018 CMB-marginalized lensing",
-        "sampler": cmb_sampler_recommended,
+        "sampler": cmb_sampler_mcmc,
         "theory": {theo: {"extra_args": cmb_precision[theo]}
                    for theo in ["camb", "classy"]},
         "likelihood": {"planck_2018_lensing.CMBMarged": None}}}
@@ -407,7 +453,9 @@ derived_params = {'sigma8': {'latex': '\\sigma_8'},
                   'clamp': {'derived': 'lambda As, tau: 1e9*As*np.exp(-2*tau)',
                             'latex': '10^9 A_\\mathrm{s} e^{-2\\tau}'},
                   'age': {'latex': '{\\rm{Age}}/\\mathrm{Gyr}'},
-                  'rdrag': {'latex': 'r_\\mathrm{drag}'}}
+                  'rdrag': {'latex': 'r_\\mathrm{drag}'},
+                  "thetastar": {"latex": r"100\theta_*"},
+                  }
 for name, m in like_cmb.items():
     # Don't add the derived parameter to the no-CMB case!
     if not m:
@@ -422,7 +470,6 @@ for name, m in like_cmb.items():
 # https://wiki.cosmos.esa.int/planckpla2015/images/b/b9/Parameter_tag_definitions_2015.pdf
 #    "zstar":       {"latex": r"z_*"},
 #    "rstar":       {"latex": r"r_*"},
-#    "thetastar":   {"latex": r"100\theta_*"},
 #    "DAstar":      {"latex": r"D_\mathrm{A}/\mathrm{Gpc}"},
 #    "zdrag":       {"latex": r"z_\mathrm{drag}"},
 #    "kd":          {"latex": r"k_\mathrm{D}"},
@@ -581,6 +628,20 @@ for pre in preset.values():
 # Lensing-only ###################################################
 preset.update({
     none: {"desc": "(No preset chosen)"},
+    "planck_2018_lensonly_camb": {
+        "desc": "Planck 2018 lensing only with CAMB",
+        "theory": "camb",
+        "like_cmb": "planck_2018_CMBmarged_lensing",
+        "like_des": none,
+        "primordial": "SFSR_lenspriors",
+        "geometry": "flat",
+        "hubble": "sound_horizon_lensonly",
+        "matter": "omegab_h2_lenspriors",
+        "neutrinos": "one_heavy_planck",
+        "dark_energy": "lambda",
+        "bbn": "consistency",
+        "reionization": "irrelevant"
+    },
     "planck_2018_DES_lensingonly_camb": {
         "desc": "Planck 2018 + DES Y1 lensing-only with CAMB",
         "theory": "camb",
@@ -592,7 +653,7 @@ preset.update({
         "like_cmb": "planck_2018_CMBmarged_lensing",
         "like_des": "des_y1_shear"}})
 
-lensingonly_model = {
+lensingonly_DES_model = {
     "primordial": "SFSR_DESpriors",
     "geometry": "flat",
     "hubble": "H_DESpriors",
@@ -606,7 +667,7 @@ lensingonly_model = {
 for name, pre in preset.items():
     if "lensingonly" in name:
         pre.update(
-            {field: value for field, value in lensingonly_model.items() if
+            {field: value for field, value in lensingonly_DES_model.items() if
              field not in pre})
     pre.update(default_sampler)
 

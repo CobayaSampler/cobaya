@@ -17,7 +17,8 @@ _inv_cov = np.linalg.inv(cov)
 
 
 class NoisyCovLike(Likelihood):
-    params = {'a': [0, 1], 'b': [0, 1], 'c': [0, 1]}
+    params = {'a': [0, 1, 0.5, 0.3, 0.08], 'b': [0, 1, 0.5, 0.3, 0.08],
+              'c': [0, 1, 0.5, 0.3, 0.08]}
     noise = 0
 
     def logp(self, **params_values):
@@ -49,8 +50,10 @@ def test_minimize_gaussian(tmpdir):
 
 @mpi.sync_errors
 def test_run_minimize(tmpdir):
+    NoisyCovLike.noise = 0
     info: InputDict = {'likelihood': {'like': NoisyCovLike},
-                       "sampler": {"mcmc": {"Rminus1_stop": 0.5}},
+                       "sampler": {"mcmc": {"Rminus1_stop": 0.5, 'Rminus1_cl_stop': 0.4,
+                                            'seed': 2}},
                        "output": os.path.join(tmpdir, 'testchain')}
     run(info, force=True)
     min_info: InputDict = dict(info, sampler={'minimize': None})
