@@ -413,7 +413,6 @@ like_cmb: InfoDict = {
     none: {},
     "planck_2018": {
         "desc": "Planck 2018 (Polarized CMB + lensing)",
-        "note": None,
         "sampler": cmb_sampler_recommended,
         "theory": {theo: {"extra_args": cmb_precision[theo]}
                    for theo in ["camb", "classy"]},
@@ -440,7 +439,6 @@ like_cmb: InfoDict = {
                    for theo in ["camb", "classy"]},
         "likelihood": {"planck_2018_lensing.CMBMarged": None}}}
 
-like_cmb["planck_2018_bk15"]["note"] = like_cmb["planck_2018"]["note"]
 # Add common CMB derived parameters
 derived_params = {'sigma8': {'latex': '\\sigma_8'},
                   's8h5': {'derived': 'lambda sigma8, H0: sigma8*(H0*1e-2)**(-0.5)',
@@ -453,8 +451,7 @@ derived_params = {'sigma8': {'latex': '\\sigma_8'},
                   'clamp': {'derived': 'lambda As, tau: 1e9*As*np.exp(-2*tau)',
                             'latex': '10^9 A_\\mathrm{s} e^{-2\\tau}'},
                   'age': {'latex': '{\\rm{Age}}/\\mathrm{Gyr}'},
-                  'rdrag': {'latex': 'r_\\mathrm{drag}'},
-                  "thetastar": {"latex": r"100\theta_*"},
+                  'rdrag': {'latex': 'r_\\mathrm{drag}'}
                   }
 for name, m in like_cmb.items():
     # Don't add the derived parameter to the no-CMB case!
@@ -477,6 +474,7 @@ for name, m in like_cmb.items():
 #    "zeq":         {"latex": r"z_\mathrm{eq}"},
 #    "keq":         {"latex": r"k_\mathrm{eq}"},
 #    "thetaeq":     {"latex": r"100\theta_\mathrm{eq}"},
+#    "thetastar":   {"latex": r"100\theta_*"},
 #    "thetarseq":   {"latex": r"100\theta_\mathrm{s,eq}"},
 
 like_bao = {none: {},
