@@ -19,6 +19,7 @@ See https://arxiv.org/abs/1304.4473
 # Global
 import numpy as np
 from itertools import chain
+import logging
 
 # Local
 from cobaya.tools import choleskyL
@@ -87,6 +88,7 @@ else:
         return H
 
 
+    logging.getLogger('numba').setLevel(logging.ERROR)
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
 
