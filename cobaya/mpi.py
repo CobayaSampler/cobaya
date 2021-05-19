@@ -338,22 +338,20 @@ class SyncError(OtherProcessError):
     pass
 
 
-_tags: List[str] = []
-
 # log = logging.getLogger('state')
 log: Any = None
 
 
 class ProcessState:
+    _id: int = 1
 
     def __init__(self, name='error',
                  time_out_seconds: Union[float, int] = default_error_timeout_seconds,
                  sleep_interval=0.01,
                  timeout_abort_proc: Callable = abort_if_mpi):
         self.name = str(name)
-        if name not in _tags:
-            _tags.append(name)
-        self.tag = _tags.index(name) + 1
+        ProcessState._id += 1
+        self.tag = ProcessState._id
         self.states = np.empty(size(), dtype=int)
         self.sleep_interval = sleep_interval
         self.time_out_seconds = time_out_seconds
@@ -368,7 +366,7 @@ class ProcessState:
         """
         if self.states[self._rank] != value:
             if log:
-                log.info('SET %s', value)
+                log.info('SET %s %s %s', self.name, self.tag, value)
             self.states[self._rank] = value
             for i_rank in self._others:
                 _mpi_comm.Isend(self.states[self._rank],
@@ -392,7 +390,7 @@ class ProcessState:
             if check_error and state == State.ERROR:
                 self.fire_error(SyncError)
             if log:
-                log.info('SYNC %s', self.states)
+                log.info('SYNC %s %s %s', self.name, self.tag, self.states)
 
     def check_error(self):
         """
@@ -428,14 +426,16 @@ class ProcessState:
 
     def __enter__(self):
         if more_than_one_process():
+            self.tag = share(self.tag)
             self.last_process_state = process_state
             set_current_process_state(self)
-            self.sync()
         self.states[:] = State.NONE
         return self
 
     @more_than_one
     def __exit__(self, exc_type, exc_val, exc_tb):
+        if log:
+            log.info('END %s %s', self.name, self.tag)
         if exc_type:
             self.set(State.ERROR)
             if not self.wait_all_ended(

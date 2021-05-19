@@ -3,8 +3,10 @@ import numpy as np
 import pytest
 import time
 from typing import Type
+import logging
 
 from cobaya import mpi, run, Likelihood, InputDict
+from cobaya.log import NoLogging, LoggedError
 from cobaya.tools import KL_norm
 from cobaya.yaml import yaml_load
 from .common_sampler import body_of_sampler_test, body_of_test_speeds
@@ -131,11 +133,13 @@ sampler:
   mcmc:
     """
 
+logger = logging.getLogger('test')
+
 
 @pytest.mark.mpionly
 def test_mcmc_sync():
     info: InputDict = yaml_load(yaml)
-    print('Test end synchronization')
+    logger.info('Test end synchronization')
 
     if mpi.rank() == 1:
         max_samples = 200
@@ -147,16 +151,16 @@ def test_mcmc_sync():
     updated_info, sampler = run(info)
     assert len(sampler.products()["sample"]) == max_samples
 
-    print('Test error synchronization')
+    logger.info('Test error synchronization')
     if mpi.rank() == 0:
-        info['sampler']['mcmc'] = {'max_samples': 'none'}
-        with pytest.raises(TypeError):
+        info['sampler']['mcmc'] = {'max_samples': 'none'}  # 'none' not valid
+        with NoLogging(logging.ERROR), pytest.raises(TypeError):
             run(info)
     else:
         with pytest.raises(mpi.OtherProcessError):
             run(info)
 
-    print('Test one-process hang abort')
+    logger.info('Test one-process hang abort')
 
     aborted = False
 
@@ -166,13 +170,13 @@ def test_mcmc_sync():
 
     # test error converted into MPI_ABORT after timeout
     # noinspection PyTypeChecker
-    with pytest.raises((ValueError, mpi.OtherProcessError)):
+    with pytest.raises((LoggedError, mpi.OtherProcessError)), NoLogging(logging.ERROR):
         with mpi.ProcessState('test', time_out_seconds=0.5,
                               timeout_abort_proc=test_abort):
             if mpi.rank() != 1:
                 time.sleep(0.6)  # fake hang
             else:
-                raise ValueError('Expected test error')
+                raise LoggedError(logger, 'Expected test error')
     if mpi.rank() == 1:
         assert aborted
 
