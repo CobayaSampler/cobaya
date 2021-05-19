@@ -170,11 +170,11 @@ class SN(DataSetLikelihood):
                         else:
                             getattr(self, col)[ix] = np.float64(val)
                     ix += 1
-        
-        if has_x0_cov: 
-            sf = - 2.5/(self.x0*np.log(10))
-            self.cov_mag_stretch = self.cov_s_x0*sf
-            self.cov_mag_colour = self.cov_c_x0*sf
+
+        if has_x0_cov:
+            sf = - 2.5 / (self.x0 * np.log(10))
+            self.cov_mag_stretch = self.cov_s_x0 * sf
+            self.cov_mag_colour = self.cov_c_x0 * sf
 
         self.z_var = self.dz ** 2
         self.mag_var = self.dmb ** 2
@@ -258,7 +258,7 @@ class SN(DataSetLikelihood):
         if self.use_abs_mag:
             reqs["Mb"] = None
         return reqs
-        
+
     def _read_covmat(self, filename):
         cov = np.loadtxt(filename)
         if np.isscalar(cov[0]) and cov[0] ** 2 + 1 == len(cov):
@@ -298,20 +298,21 @@ class SN(DataSetLikelihood):
         self.invcov = np.linalg.inv(invcovmat)
         return self.invcov
 
-    def alpha_beta_logp(self, lumdists, alpha=0, beta=0, Mb = 0, invcovmat=None):
+    def alpha_beta_logp(self, lumdists, alpha=0, beta=0, Mb=0, invcovmat=None):
         if self.alphabeta_covmat:
             if self.use_abs_mag:
-                self.log.warning("You seem to be using JLA with the absolute magnitude module. JLA uses a different callibration, the Mb module only works with Pantheon SNe!")
+                self.log.warning(
+                    "You seem to be using JLA with the absolute magnitude module. JLA uses a different callibration, the Mb module only works with Pantheon SNe!")
                 estimated_scriptm = Mb + 25
             else:
                 alphasq = alpha * alpha
                 betasq = beta * beta
                 alphabeta = alpha * beta
                 invvars = 1.0 / (self.pre_vars + alphasq * self.stretch_var +
-                                betasq * self.colour_var +
-                                2.0 * alpha * self.cov_mag_stretch -
-                                2.0 * beta * self.cov_mag_colour -
-                                2.0 * alphabeta * self.cov_stretch_colour)
+                                 betasq * self.colour_var +
+                                 2.0 * alpha * self.cov_mag_stretch -
+                                 2.0 * beta * self.cov_mag_colour -
+                                 2.0 * alphabeta * self.cov_stretch_colour)
                 wtval = np.sum(invvars)
                 estimated_scriptm = np.sum((self.mag - lumdists) * invvars) / wtval
             diffmag = (self.mag - lumdists + alpha * self.stretch -
@@ -353,7 +354,7 @@ class SN(DataSetLikelihood):
             amarg_B = np.sum(invvars)
             amarg_E = np.sum(invcovmat)
             if self.use_abs_mag:
-                chi2 = amarg_A + np.log(amarg_E / _twopi) 
+                chi2 = amarg_A + np.log(amarg_E / _twopi)
             else:
                 chi2 = amarg_A + np.log(amarg_E / _twopi) - amarg_B ** 2 / amarg_E
         return - chi2 / 2
@@ -363,17 +364,17 @@ class SN(DataSetLikelihood):
             self.provider.get_angular_diameter_distance(self.zcmb)
         lumdists = (5 * np.log10((1 + self.zhel) * (1 + self.zcmb) *
                                  angular_diameter_distances))
-        
+
         if self.use_abs_mag:
             Mb = params_values.get('Mb', None)
-        else: 
+        else:
             Mb = 0
         if self.marginalize:
             # Should parallelize this loop
             for i in range(self.int_points):
                 self.marge_grid[i] = - self.alpha_beta_logp(
                     lumdists, self.alpha_grid[i],
-                    self.beta_grid[i], Mb, 
+                    self.beta_grid[i], Mb,
                     invcovmat=self.invcovs[i])
             grid_best = np.min(self.marge_grid)
             return - grid_best + np.log(

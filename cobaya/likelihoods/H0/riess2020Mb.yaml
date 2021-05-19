@@ -10,8 +10,8 @@ aliases: [Riess20Mb]
 speed: 4500
 
 params:
-  Mb: 
-    prior: 
+  Mb:
+    prior:
       min: -18
       max: -20
     latex: M_b
