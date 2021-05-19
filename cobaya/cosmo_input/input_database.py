@@ -184,8 +184,7 @@ hubble = {
                                'derived': False},
                            'H0': {'latex': 'H_0'}}}}},
     'sound_horizon_lensonly': {
-        'desc': 'Angular size of the sound horizon (h>0.4)'
-                '(approximate, if using CAMB)',
+        'desc': 'Angular size of the sound horizon (h>0.4; approximate, if using CAMB)',
         'theory': {'camb':
                        {'params':
                             {'theta_MC_100': {'prior': {'min': 0.5, 'max': 10},
@@ -406,8 +405,7 @@ cmb_precision["camb"].update({"bbn_predictor": "PArthENoPE_880.2_standard.dat",
                               "lens_potential_accuracy": 1})
 cmb_sampler_recommended: InfoDict = {"mcmc": {
     "drag": True, "oversample_power": 0.4, "proposal_scale": 1.9}}
-cmb_sampler_mcmc: InfoDict = {"mcmc": {
-    "drag": False, "proposal_scale": 1.9}}
+cmb_sampler_mcmc: InfoDict = {"mcmc": {"drag": False, "proposal_scale": 1.9}}
 
 like_cmb: InfoDict = {
     none: {},
@@ -433,7 +431,7 @@ like_cmb: InfoDict = {
             "planck_2018_lensing.clik": None,
             "bicep_keck_2015": None}},
     "planck_2018_CMBmarged_lensing": {
-        "desc": "Planck 2018 CMB-marginalized lensing",
+        "desc": "Planck 2018 CMB-marginalized lensing only",
         "sampler": cmb_sampler_mcmc,
         "theory": {theo: {"extra_args": cmb_precision[theo]}
                    for theo in ["camb", "classy"]},
@@ -488,24 +486,22 @@ like_des: InfoDict = \
     {none: {},
      "des_y1_clustering": {
          "desc": "Galaxy clustering from DES Y1",
-         "theory": {theo: {"extra_args": base_precision[theo]}
-                    for theo in ["camb", "classy"]},
          "likelihood": {"des_y1.clustering": None}},
      "des_y1_galaxy_galaxy": {
          "desc": "Galaxy-galaxy lensing from DES Y1",
-         "theory": {theo: {"extra_args": base_precision[theo]}
-                    for theo in ["camb", "classy"]},
          "likelihood": {"des_y1.galaxy_galaxy": None}},
      "des_y1_shear": {
          "desc": "Cosmic shear data from DES Y1",
-         "theory": {theo: {"extra_args": base_precision[theo]}
-                    for theo in ["camb", "classy"]},
          "likelihood": {"des_y1.shear": None}},
      "des_y1_joint": {
          "desc": "Combination of galaxy clustering and weak lensing data from DES Y1",
-         "theory": {theo: {"extra_args": base_precision[theo]}
-                    for theo in ["camb", "classy"]},
          "likelihood": {"des_y1.joint": None}}}
+
+for key, value in like_des.items():
+    if key is not none:
+        value['theory'] = {theo: {"extra_args": base_precision[theo]}
+                           for theo in ["camb", "classy"]}
+        value['sampler'] = cmb_sampler_recommended
 
 like_sn: InfoDict = {none: {},
                      "Pantheon": {
@@ -538,6 +534,10 @@ sampler: InfoDict = {
     "MCMC":
         {"desc": "MCMC sampler with covmat learning",
          "sampler": {"mcmc": {"covmat": "auto"}}},
+    "MCMC dragging":
+        {"desc": "MCMC fast-dragging sampler with covmat learning",
+         "sampler": {"mcmc": {"drag": True, "oversample_power": 0.4,
+                              "proposal_scale": 1.9, "covmat": "auto"}}},
     "PolyChord": {
         "desc": "Nested sampler, affine invariant and multi-modal",
         "sampler": {"polychord": None}}}
@@ -553,7 +553,7 @@ planck_base_model = {
     "dark_energy": "lambda",
     "bbn": "consistency",
     "reionization": "std"}
-default_sampler = {"sampler": "MCMC"}
+default_sampler = {"sampler": "MCMC dragging"}
 
 preset: InfoDict = dict([
     (none, {"desc": "(No preset chosen)"}),
@@ -621,7 +621,6 @@ preset: InfoDict = dict([
 for pre in preset.values():
     pre.update(
         {field: value for field, value in planck_base_model.items() if field not in pre})
-    pre.update(default_sampler)
 
 # Lensing-only ###################################################
 preset.update({
@@ -638,7 +637,8 @@ preset.update({
         "neutrinos": "one_heavy_planck",
         "dark_energy": "lambda",
         "bbn": "consistency",
-        "reionization": "irrelevant"
+        "reionization": "irrelevant",
+        "sampler": "MCMC"
     },
     "planck_2018_DES_lensingonly_camb": {
         "desc": "Planck 2018 + DES Y1 lensing-only with CAMB",
@@ -659,7 +659,8 @@ lensingonly_DES_model = {
     "neutrinos": "one_heavy_planck",
     "dark_energy": "lambda",
     "bbn": "YHe_des_y1",
-    "reionization": "irrelevant"}
+    "reionization": "irrelevant"
+}
 
 # Add planck baseline model
 for name, pre in preset.items():
@@ -667,7 +668,8 @@ for name, pre in preset.items():
         pre.update(
             {field: value for field, value in lensingonly_DES_model.items() if
              field not in pre})
-    pre.update(default_sampler)
+    if pre.get("sampler") != 'MCMC':
+        pre.update(default_sampler)
 
 # BASIC INSTALLATION #####################################################################
 install_basic: InputDict = {
