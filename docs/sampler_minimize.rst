@@ -16,5 +16,5 @@ Simply copy this block in your input ``yaml`` file and modify whatever options y
 Minimize class
 --------------
    
-.. autoclass:: samplers.minimize.minimize
+.. autoclass:: samplers.minimize.Minimize
    :members:

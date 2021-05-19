@@ -18,15 +18,17 @@ The `post` component provides a way to post-process an existing sample in differ
 
 The requested operations are detailed in a ``post`` block, which may contain one ``add`` and one ``remove`` sub-block. Under ``add``, *using standard input syntax*, specify what you want to add during preprocessing, and under ``remove`` what you would like to remove (no options necessary for removed stuff: just a mention). To force an update of a prior/likelihood/derived-parameter, include it both under ``remove`` and ``add``, with the new options, if needed inside ``add``.
 
-The input sample is specified via the ``output`` option with the same value as the original sample. Cobaya will look for it and check that it is compatible with the requested operations. If multiple samples are found (e.g. from an MPI run), all of them are loaded and concatenated. The resulting sample will have a suffix ``.post.[your_suffix]``, where ``[your_suffix]`` is specified with the ``suffix`` option of ``post`` (you can also change the original prefix by setting ``output: [new prefix]`` inside ``post``.
+The input sample is specified via the ``output`` option with the same value as the original sample. Cobaya will look for it and check that it is compatible with the requested operations. If multiple samples are found (e.g. from an MPI run), all of them are loaded and each processed separately. The resulting samples will have a suffix ``.post.[your_suffix]``, where ``[your_suffix]`` is specified with the ``suffix`` option of ``post`` (you can also change the original prefix [path and base for file name] by setting ``output: [new prefix]`` inside ``post``.
+
+You can run file postprocessing with MPI (with number of processes up to the number of input sample files): it will split the samples up as evenly as possible between the processors for processing, producing the same out files as a non-MPI run.
 
 .. note::
 
    In a **scripted call**, text I/O works a bit differently:
 
-   - If there is no text input, but an input :class:`collection.Collection` object (see example below), specify it (or a list of them) as the second argument of :func:`post.post`. In that case, no output will be produced (unless forced by setting ``output: [new prefix]`` inside ``post``). Notice that in this case, the input info for ``post`` must include the updated info of the original sample (see example below).
+   - If there is no text input, but an input :class:`collection.SampleCollection` object (see example below), specify it (or a list of them) as the second argument of :func:`post.post`. In that case, no output files will be produced (unless forced by setting ``output: [new prefix]`` inside ``post``). Notice that in this case, the input info for ``post`` must include the updated info of the original sample (see example below).
 
-   - If the input sample is a text file (more precisely an ``output`` prefix), text output will be produced with a suffix, as explained above. To suppress the text output, set ``output: None`` inside ``post``.
+   - If the input sample is a text file (more precisely an ``output`` prefix), text file output will be produced with a suffix, as explained above. To suppress the text output, set ``output: None`` inside ``post``.
 
 
 Example
@@ -126,16 +128,14 @@ And let us define the additions and run post-processing:
 Interaction with theory codes
 -----------------------------
 
-If you would like to recompute part or all of the theory model, mention the theory code under ``add`` with the new desired options.
+Theory code results will be recomputed if required by likelihoods that are included under ``add``, making the processing much faster
+if new likelihoods do not require a full recomputation of the theory results.
+If you would like to change the options for the theory code, you can add it under ``add`` with the new options
+(but it will only actually be recomputed if needed by added likelihoods or derived parameters).
 
-The user is responsible for tracking dependencies: theory recomputation only updates removed+added likelihoods and derived parameters (including dynamic derived parameters that may depend on recomputed ones; this includes partial typical partial likelihood sums as those in :doc:`cosmo_basic_runs`).
+When a theory is recomputed, new results only update removed+added likelihoods and derived parameters (including dynamic derived parameters that may depend on recomputed ones; this includes partial typical partial likelihood sums as those in :doc:`cosmo_basic_runs`).
 
 If a theory code was present in the original sample and a new likelihood or theory-derived parameter is added, the theory is automatically inherited: you do not need to repeat its info (unless you want e.g. to specify a new path from which to load the code).
-
-.. warning::
-
-   In order to post-process samples created with a version of Cobaya :math:`<1.2`, you need to manually add inside the theory code block a list the input parameters used in the **original chain**: ``theory: {[code]: {input_params: [param1, param2, ...], [...]}}``.
-
 
 You can see a realistic example in :ref:`cosmo_post`.
 
@@ -145,12 +145,11 @@ Ignoring burn-in and thinning the sample
 
 You can **skip** any number of initial samples using the option ``skip``, with an integer value for a precise number of rows, and and a value :math:`<1` for an initial fraction of the chain.
 
-To **thin** the sample, give the ``thin`` option any value :math:`>1`, and only one every ``[thin]`` samples will be used.
+To **thin** the sample, give the ``thin`` option any value :math:`>1`, and only one every ``[thin]`` samples will be used (accounting for sample weights, which must be integer).
 
 
 Sequential application of post-processing
 -----------------------------------------
 
-.. warning::
-
-   This is still WIP, sorry!
+The .updated.yaml file produced by ``post`` contains a merged set of likelihood and parameters, similar to an MCMC run.
+The post-processed chain can therefore be used as an an original chain for further importance sampling if required.

@@ -20,7 +20,7 @@ ComponentCollection class
 Provider class
 ---------------
 
-.. autoclass:: component.Provider
+.. autoclass:: theory.Provider
    :members:
 
 

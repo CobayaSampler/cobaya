@@ -1,12 +1,14 @@
 import pytest
-
+import logging
 from cobaya.model import get_model
 from cobaya.theory import Theory
 from cobaya.likelihood import Likelihood
-from cobaya.log import LoggedError
+from cobaya.log import LoggedError, NoLogging
+from cobaya.typing import InputDict
 from .common import process_packages_path
 
-debug = True
+debug = False
+
 
 # Aderived = 1
 # Aout = [Ain]
@@ -48,6 +50,20 @@ class B(Theory):
         return self.current_state['Bout']
 
 
+class Balt(Theory):
+    params = {'Bpar': None, 'Aderived': None}
+
+    def get_requirements(self):
+        return {'Aresult'}
+
+    def calculate(self, state, want_derived=True, **params_values_dict):
+        state['Bout'] = (params_values_dict['Aderived'] * params_values_dict['Bpar']
+                         , self.provider.get_Aresult())
+
+    def get_Bout(self):
+        return self.current_state['Bout']
+
+
 class B2(Theory):
 
     def get_requirements(self):
@@ -66,7 +82,7 @@ class B2(Theory):
 
 class A2(Theory):  # circular
     def get_requirements(self):
-        return {'Ain', 'Bout'}
+        return ('Ain', None), ('Bout', None)
 
     def get_can_provide_params(self):
         return ['Aderived', 'Aresult']
@@ -94,9 +110,9 @@ class Like(Likelihood):
         state["logp"] = res[0] + res[1][0]
 
 
-info = {'likelihood': {'like': Like},
-        'params': {'Bpar': 3, 'Ain': 5},
-        'debug': debug}
+info: InputDict = {'likelihood': {'like': Like},
+                   'params': {'Bpar': 3, 'Ain': 5},
+                   'debug': debug}
 
 
 def _test_loglike(theories):
@@ -105,6 +121,8 @@ def _test_loglike(theories):
         model = get_model(info)
 
         assert model.loglikes({})[0] == 8, "test loglike failed for %s" % th
+        assert model.loglikes({}, return_derived=False,
+                              cached=False) == 8, "non-derived loglike failed for %s" % th
 
 
 def test_dependencies(packages_path):
@@ -112,6 +130,13 @@ def test_dependencies(packages_path):
     theories = [('A', A), ('B', B)]
     _test_loglike(theories)
     _test_loglike([('A', A), ('B', B2)])
+    _test_loglike([('A', A), ('B', Balt)])
+
+    info['params']['Aderived'] = None
+    _test_loglike([('A', A), ('B', Balt)])
+    info['params']['Aderived'] = {'derived': True}
+    _test_loglike([('A', A), ('B', Balt)])
+    del info['params']['Aderived']
 
     info['params']['Bderived'] = {'derived': True}
     info['theory'] = dict(theories)
@@ -119,13 +144,13 @@ def test_dependencies(packages_path):
     assert model.loglikes({})[1] == [10], "failed"
     info['params'].pop('Bderived')
 
-    with pytest.raises(LoggedError) as e:
+    with pytest.raises(LoggedError) as e, NoLogging(logging.ERROR):
         _test_loglike([('A', A2), ('B', B)])
     assert "Circular dependency" in str(e.value)
 
     _test_loglike([('A', {'external': A}), ('B', B2)])
 
-    with pytest.raises(LoggedError) as e:
+    with pytest.raises(LoggedError) as e, NoLogging(logging.ERROR):
         _test_loglike([('A', A), ('B', B2), ('C', C)])
     assert "Bout is provided by more than one component" in str(e.value)
 
@@ -133,10 +158,22 @@ def test_dependencies(packages_path):
     _test_loglike([('A', A), ('B', {'external': B2, 'provides': ['Bout']}),
                    ('C', {'external': C})])
 
-    with pytest.raises(LoggedError) as e:
+    with pytest.raises(LoggedError) as e, NoLogging(logging.ERROR):
         _test_loglike([('A', A), ('B', {'external': B2, 'provides': ['Bout']}),
                        ('C', {'external': C, 'provides': ['Bout']})])
     assert "more than one component provides Bout" in str(e.value)
+
+    inf: InputDict = info.copy()
+    inf['params'] = info['params'].copy()
+    inf['params']['notused'] = [1, 10, 2, 5, 1]
+    inf['theory'] = dict(theories)
+    with pytest.raises(LoggedError) as e, NoLogging(logging.ERROR):
+        get_model(inf)
+    assert "Could not find anything to use input parameter" in str(e.value)
+    inf['params']['notused'] = [1, 10, 2]
+    with pytest.raises(LoggedError) as e, NoLogging(logging.ERROR):
+        get_model(inf)
+    assert "Parameter info length not valid" in str(e.value)
 
 
 # test conditional requirements
@@ -208,9 +245,9 @@ class Like4(Likelihood):
         pass
 
 
-info2 = {'likelihood': {'like': Like2},
-         'params': {'Ain': 5},
-         'debug': debug, 'stop_at_error': True}
+info2: InputDict = {'likelihood': {'like': Like2},
+                    'params': {'Ain': 5},
+                    'debug': debug, 'stop_at_error': True}
 
 
 def _test_loglike2(theories):
@@ -225,7 +262,7 @@ def test_conditional_dependencies(packages_path):
     _test_loglike2(theories)
 
     theories = [('A', A), ('D', D), ('E', E)]
-    with pytest.raises(LoggedError) as e:
+    with pytest.raises(LoggedError) as e, NoLogging(logging.ERROR):
         _test_loglike2(theories)
     assert "seems not to depend on any parameters" in str(e.value)
 
@@ -235,6 +272,6 @@ def test_conditional_dependencies(packages_path):
 
     info2['likelihood']['like'] = Like4
     theories = [('A', A), ('E', E), ('F', F), ('D', D)]
-    with pytest.raises(LoggedError) as e:
+    with pytest.raises(LoggedError) as e, NoLogging(logging.ERROR):
         _test_loglike2(theories)
     assert "Circular dependency" in str(e.value)

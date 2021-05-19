@@ -7,6 +7,6 @@ CAMB
 camb class
 ----------
    
-.. autoclass:: theories.camb.camb
+.. autoclass:: theories.camb.CAMB
    :members:
 

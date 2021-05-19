@@ -10,9 +10,9 @@ import os
 from getdist import IniFile
 
 # Local
-from cobaya.conventions import _packages_path
 from cobaya.log import LoggedError
 from cobaya.install import NotInstalledError
+from cobaya.typing import InfoDict
 from .InstallableLikelihood import InstallableLikelihood
 
 
@@ -33,7 +33,7 @@ class DataSetLikelihood(InstallableLikelihood):
     """A likelihood reading parameters and file names from a .dataset plain text
     .ini file (as CosmoMC)"""
 
-    _default_dataset_params = {}
+    _default_dataset_params: InfoDict = {}
 
     _fast_chi_squared = _fast_chi_square()
 
@@ -54,7 +54,7 @@ class DataSetLikelihood(InstallableLikelihood):
             if not self.path:
                 raise LoggedError(self.log, "No path given for %s. Set the likelihood "
                                             "property 'path' or the common property '%s'."
-                                  , self.dataset_file, _packages_path)
+                                  , self.dataset_file, "packages_path")
 
             data_file = os.path.normpath(os.path.join(self.path, self.dataset_file))
         if not os.path.exists(data_file):

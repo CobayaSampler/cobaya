@@ -1,11 +1,18 @@
 # Always prefer setuptools over distutils
 from setuptools import setup, find_packages
-# To use a consistent encoding
 from os import path
 from itertools import chain
-# Package data and conventions
-from cobaya import __author__, __version__, __url__
-from cobaya.conventions import subfolders
+import re
+
+subfolders = {"likelihood": "likelihoods", "sampler": "samplers", "theory": "theories"}
+
+
+def find_version():
+    init_file = open(path.join(path.dirname(__file__), 'cobaya', '__init__.py')).read()
+    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", init_file, re.M)
+    if version_match:
+        return version_match.group(1)
+    raise RuntimeError("Unable to find version string.")
 
 
 # Get the long description from the README file
@@ -21,16 +28,16 @@ def get_long_description():
 
 setup(
     name='cobaya',
-    version=__version__,
+    version=find_version(),
     description='Code for Bayesian Analysis',
     long_description=get_long_description(),
-    url=__url__,
+    url="https://cobaya.readthedocs.io",
     project_urls={
         'Source': 'https://github.com/CobayaSampler/cobaya',
         'Tracker': 'https://github.com/CobayaSampler/cobaya/issues',
         'Licensing': 'https://github.com/CobayaSampler/cobaya/blob/master/LICENCE.txt'
     },
-    author=__author__,
+    author="Jesus Torrado and Antony Lewis",
     license='LGPL',
     zip_safe=False,
     classifiers=[
@@ -48,11 +55,11 @@ setup(
     python_requires='>=3.6.1',
     keywords='montecarlo sampling MCMC cosmology',
     packages=find_packages(exclude=['docs', 'tests']),
-    install_requires=['numpy>=1.12.0', 'scipy>=1.0', 'pandas>=1.0.1',
+    install_requires=['numpy>=1.17.0', 'scipy>=1.0', 'pandas>=1.0.1',
                       'PyYAML>=5.1', 'requests>=2.18', 'py-bobyqa>=1.2',
-                      'GetDist>=1.1.1', 'fuzzywuzzy>=0.17', 'packaging', 'tqdm'],
+                      'GetDist>=1.2.2', 'fuzzywuzzy>=0.17', 'packaging', 'tqdm'],
     extras_require={
-        'test': ['pytest', 'pytest-forked', 'flaky', 'mpi4py'],
+        'test': ['pytest', 'pytest-forked', 'flaky', 'mpi4py', 'dill'],
         'gui': ['pyqt5', 'pyside2']},
     package_data={
         'cobaya': list(chain(*[['%s/*/*.yaml' % folder, '%s/*/*.bibtex' % folder]
