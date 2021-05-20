@@ -14,7 +14,7 @@
    viewBox="0 0 86.047301 119.08093"
    version="1.1"
    id="svg8"
-   inkscape:version="0.92.3 (2405546, 2018-03-11)"
+   inkscape:version="0.92.5 (2060ec1f9f, 2020-04-08)"
    sodipodi:docname="diagram.svg">
   <defs
      id="defs2">
@@ -235,13 +235,13 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="1.8724806"
-     inkscape:cx="137.77906"
+     inkscape:cx="40.314766"
      inkscape:cy="210.8109"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="false"
-     inkscape:window-width="1920"
-     inkscape:window-height="1019"
+     inkscape:window-width="2560"
+     inkscape:window-height="1373"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
@@ -432,8 +432,8 @@
        d="M 92.898105,117.19956 V 97.700934"
        style="fill:none;stroke:#999999;stroke-width:0.35277778;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#marker4069)" />
     <path
-       style="fill:none;stroke:#999999;stroke-width:0.35277775;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#marker5993)"
-       d="m 60.645876,136.54661 v -25.16276 h 7.147813"
+       style="fill:none;stroke:#999999;stroke-width:0.35277772;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#marker5993)"
+       d="M 60.177634,136.95656 V 122.7361 h 4.126804"
        id="path2227"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="ccc" />

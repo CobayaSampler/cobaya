@@ -27,6 +27,13 @@ Development flow for contributors
 
 Contributors must agree to the license (see ``LICENCE.txt`` in the root folder).
 
+Before committing check code formatting and spacing are consistent, and run a check (in
+PyCharm this is automatic - you can do Code -> Inspect to find static errors, generally
+anything at Warning and above should be fixed, but strict PEP8 is not required).
+
+To set Cobaya's line-length convention in PyCharm set
+Pycharm: File -> Settings -> Editor -> Code Style -> Hard wrap to 90
+Ctrl+Alt+L will then auto-format code consistently, including wrap and spacing etc.
 
 Release checklist
 -----------------
