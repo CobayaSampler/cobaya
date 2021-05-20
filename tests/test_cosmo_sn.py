@@ -59,11 +59,22 @@ def test_sn_jla_lite_slow_camb(packages_path, skip_not_installed):
                  skip_not_installed=skip_not_installed)
 
 
+def test_sn_pantheon_Mb(packages_path, skip_not_installed):
+    best_fit_test = deepcopy(params_lowTEB_highTTTEEE)
+    best_fit_test.update(best_fit_Mb)
+    info_likelihood = {"sn.pantheon": {"use_abs_mag": True}, "H0.riess2020Mb": None}
+    info_theory = {"camb": None}
+    body_of_test(packages_path, best_fit_test, info_likelihood, info_theory,
+                 chi2_sn_pantheon_Mb, skip_not_installed=skip_not_installed)
+
+
 # BEST FIT AND REFERENCE VALUES ##########################################################
 
 best_fit = deepcopy(params_lowTEB_highTTTEEE)
 best_fit_sn = {"alpha_jla": 0.1325237, "beta_jla": 2.959805}
+best_fit_Mb = {"Mb": -19.2}
 
 chi2_sn_pantheon = {"sn.pantheon": 1035.30, "tolerance": 0.1}
+chi2_sn_pantheon_Mb = {"sn.pantheon": 4025.30, "H0.riess2020Mb": 1.65, "tolerance": 0.1}
 chi2_sn_jla = {"sn.jla": 700.582, "tolerance": 0.1}
 chi2_sn_jla_lite = {"sn.jla_lite": 706.882, "tolerance": 0.1}

@@ -2,7 +2,8 @@
 .. module:: sn
 
 :Synopsis: Supernovae likelihood, from CosmoMC's JLA module, for Pantheon and JLA samples.
-:Author: Alex Conley, Marc Betoule, Antony Lewis, Pablo Lemos (see source for more specific authorship)
+:Author: Alex Conley, Marc Betoule, Antony Lewis, Pablo Lemos
+         (see source for more specific authorship)
 
 This code provides the following likelihoods:
 
@@ -301,8 +302,9 @@ class SN(DataSetLikelihood):
     def alpha_beta_logp(self, lumdists, alpha=0, beta=0, Mb=0, invcovmat=None):
         if self.alphabeta_covmat:
             if self.use_abs_mag:
-                self.log.warning(
-                    "You seem to be using JLA with the absolute magnitude module. JLA uses a different callibration, the Mb module only works with Pantheon SNe!")
+                self.log.warning("You seem to be using JLA with the absolute magnitude "
+                                 "module. JLA uses a different callibration, the Mb "
+                                 "module only works with Pantheon SNe!")
                 estimated_scriptm = Mb + 25
             else:
                 alphasq = alpha * alpha
