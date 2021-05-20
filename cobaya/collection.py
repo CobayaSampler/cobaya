@@ -102,7 +102,7 @@ class SampleCollection(BaseCollection):
 
     def __init__(self, model, output=None, cache_size=_default_cache_size, name=None,
                  extension=None, file_name=None, resuming=False, load=False,
-                 onload_skip=0, onload_thin=1):
+                 weight_temperature=None, onload_skip=0, onload_thin=1):
         super().__init__(model, name)
         self.cache_size = cache_size
         # Create/load the main data frame and the tracking indices
@@ -167,6 +167,7 @@ class SampleCollection(BaseCollection):
             self._out_delete()
         if not resuming and not load:
             self.reset()
+        self.weight_temperature = weight_temperature
         # Prepare fast numpy cache
         self._icol = {col: i for i, col in enumerate(self.columns)}
         self._cache_reset()
@@ -390,7 +391,8 @@ class SampleCollection(BaseCollection):
         return self._copy()
 
     # Statistical computations
-    def mean(self, first=None, last=None, derived=False, pweight=False):
+    def mean(self, first=None, last=None, derived=False, pweight=False,
+             ignore_temperature=False):
         """
         Returns the (weighted) mean of the parameters in the chain,
         between `first` (default 0) and `last` (default last obtained),
@@ -404,12 +406,16 @@ class SampleCollection(BaseCollection):
             logps -= max(logps)
             weights = np.exp(logps)
         else:
-            weights = self[OutPar.weight][first:last].to_numpy()
+            if ignore_temperature:
+                weights = self[OutPar.weight][first:last].to_numpy()
+            else:
+                weights = self.tempered_weights(first, last)
         return np.average(self[list(self.sampled_params) +
                                (list(self.derived_params) if derived else [])]
                           [first:last].T, weights=weights, axis=-1)
 
-    def cov(self, first=None, last=None, derived=False, pweight=False):
+    def cov(self, first=None, last=None, derived=False, pweight=False,
+            ignore_temperature=False):
         """
         Returns the (weighted) covariance matrix of the parameters in the chain,
         between `first` (default 0) and `last` (default last obtained),
@@ -424,13 +430,29 @@ class SampleCollection(BaseCollection):
             weights = np.exp(logps)
             kwarg = "aweights"
         else:
-            weights = self[OutPar.weight][first:last].to_numpy()
+            if ignore_temperature:
+                weights = self[OutPar.weight][first:last].to_numpy()
+            else:
+                weights = self.tempered_weights(first, last)
             kwarg = "fweights" if np.allclose(np.round(weights), weights) else "aweights"
         weights_kwarg = {kwarg: weights}
         return np.atleast_2d(np.cov(
             self[list(self.sampled_params) +
                  (list(self.derived_params) if derived else [])][first:last].T,
             **weights_kwarg))
+
+    def tempered_weights(self, first=None, last=None):
+        """
+        Returns the weights after applying the sampling temperature.
+        """
+        if self.weight_temperature:
+            maxlogpost = -self.MAP()[OutPar.minuslogpost]
+            reweighting = np.exp(
+                (-self[OutPar.minuslogpost][first:last].to_numpy() - maxlogpost) *
+                (1 - 1 / self.weight_temperature))
+        else:
+            reweighting = 1
+        return self[OutPar.weight][first:last].to_numpy() * reweighting
 
     def filtered_copy(self, where) -> 'SampleCollection':
         return self._copy(self.data[where].reset_index(drop=True))

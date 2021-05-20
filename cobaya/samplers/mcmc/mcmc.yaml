@@ -20,6 +20,8 @@ proposal_scale: 2.4
 output_every: 60s
 # Number of distinct accepted points between proposal learn & convergence checks
 learn_every: 40d
+# Posterior temperature: >1 for more exploratory chains
+temperature:
 # Proposal covariance matrix learning
 # -----------------------------------
 learn_proposal: True

@@ -47,6 +47,7 @@ class MCMC(CovmatSampler):
     learn_every: NumberWithUnits
     output_every: NumberWithUnits
     callback_every: NumberWithUnits
+    temperature: float
     max_tries: NumberWithUnits
     max_samples: int
     drag: bool
@@ -110,7 +111,8 @@ class MCMC(CovmatSampler):
         # One collection per MPI process: `name` is the MPI rank + 1
         name = str(1 + mpi.rank())
         self.collection = SampleCollection(
-            self.model, self.output, name=name, resuming=self.output.is_resuming())
+            self.model, self.output, name=name, resuming=self.output.is_resuming(),
+            weight_temperature=self.temperature)
         self.current_point = OneSamplePoint(self.model)
         # Use standard MH steps by default
         self.get_new_sample = self.get_new_sample_metropolis
@@ -260,6 +262,10 @@ class MCMC(CovmatSampler):
                                  "Use 'oversample_power' to control the amount of "
                                  "dragging steps.")
             # END OF DEPRECATION BLOCK
+            if self.temperature:
+                raise LoggedError(
+                    self.log,
+                    "Temperature != 1 and dragging are not compatible at the moment.")
             self.get_new_sample = self.get_new_sample_dragging
             self.mpi_info("Dragging with number of interpolating steps:")
             max_width = len(str(self.drag_interp_steps))
@@ -526,7 +532,10 @@ class MCMC(CovmatSampler):
         elif logp_trial > logp_current:
             return True
         else:
-            return self._rng.standard_exponential() > (logp_current - logp_trial)
+            posterior_ratio = logp_current - logp_trial
+            if self.temperature:
+                posterior_ratio /= self.temperature
+            return self._rng.standard_exponential() > posterior_ratio
 
     def process_accept_or_reject(self, accept_state, trial, trial_results):
         """Processes the acceptance/rejection of the new point."""
@@ -597,8 +606,8 @@ class MCMC(CovmatSampler):
         if more_than_one_process():
             # Compute and gather means and covs
             use_first = int(self.n() / 2)
-            mean = self.collection.mean(first=use_first)
-            cov = self.collection.cov(first=use_first)
+            mean = self.collection.mean(first=use_first, ignore_temperature=True)
+            cov = self.collection.cov(first=use_first, ignore_temperature=True)
             acceptance_rate = self.get_acceptance_rate(use_first)
             Ns, means, covs, acceptance_rates = mpi.array_gather(
                 [self.n(), mean, cov, acceptance_rate])
@@ -610,11 +619,13 @@ class MCMC(CovmatSampler):
                 acceptance_rate = self.get_acceptance_rate(cut)
                 Ns = np.ones(m - 1) * cut
                 means = np.array(
-                    [self.collection.mean(first=i * cut, last=(i + 1) * cut - 1) for i in
-                     range(1, m)])
+                    [self.collection.mean(first=i * cut, last=(i + 1) * cut - 1,
+                                          ignore_temperature=True)
+                     for i in range(1, m)])
                 covs = np.array(
-                    [self.collection.cov(first=i * cut, last=(i + 1) * cut - 1) for i in
-                     range(1, m)])
+                    [self.collection.cov(first=i * cut, last=(i + 1) * cut - 1,
+                                         ignore_temperature=True)
+                     for i in range(1, m)])
             except:
                 self.log.info("Not enough points in chain to check convergence. "
                               "Waiting for next checkpoint.")
