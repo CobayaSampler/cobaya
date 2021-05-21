@@ -51,6 +51,7 @@ class Planck2018CamSpecPython(DataSetLikelihood):
             r"https://cdn.cosmologist.info/cosmobox/test2019_kaml/CamSpec2018.zip",
         "data_path": "planck_2018_CamSpec_native"}
     bibtex_file = 'planck2018.bibtex'
+    type = "CMB"
 
     def read_normalized(self, filename, pivot=None):
         # arrays all based at L=0, in L(L+1)/2pi units

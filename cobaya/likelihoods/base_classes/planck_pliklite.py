@@ -26,6 +26,7 @@ class PlanckPlikLite(DataSetLikelihood):
         "data_path": "planck_2018_pliklite_native"}
 
     bibtex_file = 'planck2018.bibtex'
+    type = "CMB"
 
     def init_params(self, ini):
         self.use_cl = [c.lower() for c in ini.list('use_cl')]
