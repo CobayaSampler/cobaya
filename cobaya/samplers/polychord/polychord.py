@@ -178,8 +178,8 @@ class polychord(CovmatSampler):
 
         if self.use_supernest:
             # For the choice probability, and choice indicator. 
-            self.grade_dims.extend([2])
-            self.grade_frac.extend([0.1])
+            # self.grade_dims.extend([1,1])
+            self.grade_dims[-1]+=2
             self.pc_settings = PolyChordSettings(
                 self.nDims + 2,  # FIXME: only true for one proposal.
                 self.nDerived,
