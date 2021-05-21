@@ -53,7 +53,8 @@ class PlanckClik(Likelihood):
                 self.log, "No path given to the Planck likelihood. Set the "
                           "likelihood property 'path' or the common property "
                           "'%s'.", "packages_path")
-        clik: Any = is_installed_clik(path=self.path_clik, allow_global=allow_global)
+        clik: Any = is_installed_clik(path=self.path_clik, allow_global=allow_global,
+                                      check=False)
         if not clik:
             raise NotInstalledError(
                 self.log, "Could not find the 'clik' Planck likelihood code. "
@@ -154,7 +155,8 @@ class PlanckClik(Likelihood):
         result = True
         if kwargs.get("code", True):
             result &= bool(is_installed_clik(os.path.realpath(
-                os.path.join(kwargs["path"], "code", code_path))))
+                os.path.join(kwargs["path"], "code", code_path)),
+                check=kwargs.get("check", True)))
         if kwargs.get("data", True):
             _, filename = get_product_id_and_clik_file(cls.get_qualified_class_name())
             result &= os.path.exists(os.path.realpath(
@@ -250,8 +252,9 @@ def get_clik_source_folder(starting_path):
     return source_dir
 
 
-def is_installed_clik(path, allow_global=False):
+def is_installed_clik(path, allow_global=False, check=True):
     log = logging.getLogger("clik")
+    func = log.info if check else log.error
     if path is not None and path.lower() == "global":
         path = None
     clik_path = None
@@ -260,7 +263,7 @@ def is_installed_clik(path, allow_global=False):
             clik_path = os.path.join(
                 get_clik_source_folder(path), 'lib/python/site-packages')
         except FileNotFoundError:
-            log.error("The given folder does not exist: '%s'", clik_path or path)
+            func("The given folder does not exist: '%s'", clik_path or path)
             return False
     if path and not allow_global:
         log.info("Importing *local* clik from %s ", path)
@@ -272,9 +275,9 @@ def is_installed_clik(path, allow_global=False):
         return load_module("clik", path=clik_path)
     except ImportError:
         if path is not None and path.lower() != "global":
-            log.error("Couldn't find the clik python interface at '%s'. "
-                      "Are you sure it has been installed and compiled there?", path)
-        else:
+            func("Couldn't find the clik python interface at '%s'. "
+                 "Are you sure it has been installed and compiled there?", path)
+        elif not check:
             log.error("Could not import global clik installation. "
                       "Specify a Cobaya or clik installation path, "
                       "or install the clik Python interface globally.")

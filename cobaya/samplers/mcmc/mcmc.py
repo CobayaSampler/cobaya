@@ -237,8 +237,7 @@ class MCMC(CovmatSampler):
                     "Dragging disabled: not possible if there is only one block.")
             if max(self.oversampling_factors) / min(self.oversampling_factors) < 2:
                 self.drag = False
-                self.log.warning(
-                    "Dragging disabled: speed ratios < 2.")
+                self.log.warning("Dragging disabled: speed ratios < 2.")
         if self.drag:
             # The definition of oversample_power=1 as spending the same amount of time in
             # the slow and fast block would suggest a 1/2 factor here, but this additional
@@ -249,9 +248,8 @@ class MCMC(CovmatSampler):
                          self.n_fast / self.n_slow))
             if self.drag_interp_steps < 2:
                 self.drag = False
-                self.log.warning(
-                    "Dragging disabled: "
-                    "speed ratio and fast-to-slow ratio not large enough.")
+                self.log.warning("Dragging disabled: "
+                                 "speed ratio and fast-to-slow ratio not large enough.")
         # Define proposer and other blocking-related quantities
         if self.drag:
             # MARKED FOR DEPRECATION IN v3.0

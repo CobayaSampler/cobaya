@@ -170,7 +170,8 @@ def install(*infos, **kwargs):
                 continue
             # test installation
             with NoLogging(None if debug else logging.ERROR):
-                successfully_installed = is_installed(path=install_path, **kwargs_install)
+                successfully_installed = is_installed(path=install_path, check=False,
+                                                      **kwargs_install)
             if not successfully_installed:
                 log.error("Installation apparently worked, "
                           "but the subsequent installation test failed! "

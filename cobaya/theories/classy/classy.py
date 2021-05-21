@@ -180,7 +180,8 @@ class classy(BoltzmannBase):
         allow_global = not self.path
         if not self.path and self.packages_path:
             self.path = self.get_path(self.packages_path)
-        self.classy_module = self.is_installed(path=self.path, allow_global=allow_global)
+        self.classy_module = self.is_installed(path=self.path, allow_global=allow_global,
+                                               check=False)
         if not self.classy_module:
             raise NotInstalledError(
                 self.log, "Could not find CLASS. Check error message above.")
@@ -524,9 +525,11 @@ class classy(BoltzmannBase):
 
     @classmethod
     def is_installed(cls, **kwargs):
-        log = logging.getLogger(cls.__name__)
         if not kwargs.get("code", True):
             return True
+        log = logging.getLogger(cls.__name__)
+        check = kwargs.get("check", True)
+        func = log.info if check else log.error
         path = kwargs["path"]
         if path is not None and path.lower() == "global":
             path = None
@@ -534,7 +537,7 @@ class classy(BoltzmannBase):
             log.info("Importing *local* CLASS from '%s'.", path)
             assert path is not None
             if not os.path.exists(path):
-                log.error("The given folder does not exist: '%s'", path)
+                func("The given folder does not exist: '%s'", path)
                 return False
             classy_build_path = cls.get_import_path(path)
             if not classy_build_path:
@@ -550,9 +553,9 @@ class classy(BoltzmannBase):
                 'classy', path=classy_build_path, min_version=cls._classy_repo_version)
         except ImportError:
             if path is not None and path.lower() != "global":
-                log.error("Couldn't find the CLASS python interface at '%s'. "
-                          "Are you sure it has been installed there?", path)
-            else:
+                func("Couldn't find the CLASS python interface at '%s'. "
+                     "Are you sure it has been installed there?", path)
+            elif not check:
                 log.error("Could not import global CLASS installation. "
                           "Specify a Cobaya or CLASS installation path, "
                           "or install the CLASS Python interface globally with "

@@ -41,7 +41,8 @@ class InstallableLikelihood(Likelihood):
             if not opts:
                 return True
             elif not (os.path.exists(path) and len(os.listdir(path)) > 0):
-                log.error("The given installation path does not exist: '%s'", path)
+                func = log.info if kwargs.get("check", True) else log.error
+                func("The given installation path does not exist: '%s'", path)
                 return False
         return True
 

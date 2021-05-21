@@ -59,7 +59,8 @@ class polychord(Sampler):
         allow_global = not self.path
         if not self.path and self.packages_path:
             self.path = self.get_path(self.packages_path)
-        self.pc: Any = self.is_installed(path=self.path, allow_global=allow_global)
+        self.pc: Any = self.is_installed(path=self.path, allow_global=allow_global,
+                                         check=False)
         if not self.pc:
             raise NotInstalledError(
                 self.log, "Could not find PolyChord. Check error message above. "
@@ -457,6 +458,8 @@ class polychord(Sampler):
         log = logging.getLogger(cls.__name__)
         if not kwargs.get("code", True):
             return True
+        check = kwargs.get("check", True)
+        func = log.info if check else log.error
         path: Optional[str] = kwargs["path"]
         if path is not None and path.lower() == "global":
             path = None
@@ -465,7 +468,7 @@ class polychord(Sampler):
                 log.info("Importing *local* PolyChord from '%s'.", path)
             if not os.path.exists(path):
                 if is_main_process():
-                    log.error("The given folder does not exist: '%s'", path)
+                    func("The given folder does not exist: '%s'", path)
                 return False
             poly_build_path = cls.get_import_path(path)
             if not poly_build_path:
@@ -487,7 +490,7 @@ class polychord(Sampler):
             if path is not None and path.lower() != "global":
                 log.error("Couldn't find the PolyChord python interface at '%s'. "
                           "Are you sure it has been installed there?", path)
-            else:
+            elif not check:
                 log.error("Could not import global PolyChord installation. "
                           "Specify a Cobaya or PolyChord installation path, "
                           "or install the PolyChord Python interface globally with "
