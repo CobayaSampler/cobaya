@@ -200,6 +200,6 @@ def test_cosmo_run_resume_post(tmpdir, packages_path=None):
     assert np.isclose(samp3.mean("As1000"), samp2.mean("As") * 1000)
 
     info_post['add']['theory'] = {'new_param_theory': CTheory}
-    with pytest.raises(LoggedError) as e:
+    with pytest.raises(LoggedError) as e, NoLogging(logging.ERROR):
         run(updated_info, override={'post': info_post}, output=False)
     assert 'Parameter AsX no known value' in str(e)

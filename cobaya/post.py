@@ -6,31 +6,30 @@
 
 """
 
-# Global
-import os
 import logging
-from itertools import chain
-import numpy as np
+import os
 import sys
+import time
+from itertools import chain
 from typing import List, Union, NamedTuple, Optional
+import numpy as np
 
-# Local
+from cobaya import mpi
+from cobaya.collection import SampleCollection
+from cobaya.conventions import prior_1d_name, OutPar, get_chi2_name, \
+    undo_chi2_name, get_minuslogpior_name, separator_files, minuslogprior_names
+from cobaya.input import update_info, add_aggregated_chi2_params, load_input_dict
+from cobaya.log import logger_setup, LoggedError
+from cobaya.model import Model
+from cobaya.output import get_output
 from cobaya.parameterization import Parameterization
 from cobaya.parameterization import is_fixed_or_function_param, is_sampled_param, \
     is_derived_param
-from cobaya.conventions import prior_1d_name, OutPar, get_chi2_name, \
-    undo_chi2_name, get_minuslogpior_name, separator_files, minuslogprior_names
-from cobaya.typing import ExpandedParamsDict, ModelBlock, ParamValuesDict, InputDict, \
-    InfoDict, PostDict
-from cobaya.collection import SampleCollection
-from cobaya.log import logger_setup, LoggedError
-from cobaya.input import update_info, add_aggregated_chi2_params, load_input_dict
-from cobaya.output import get_output
-from cobaya import mpi
+from cobaya.prior import Prior
 from cobaya.tools import progress_bar, recursive_update, deepcopy_where_possible, \
     check_deprecated_modules_path, str_to_list
-from cobaya.model import Model
-from cobaya.prior import Prior
+from cobaya.typing import ExpandedParamsDict, ModelBlock, ParamValuesDict, InputDict, \
+    InfoDict, PostDict
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict
@@ -39,12 +38,20 @@ if sys.version_info >= (3, 8):
     class PostResultDict(TypedDict):
         sample: Union[SampleCollection, List[SampleCollection]]
         stats: ParamValuesDict
+        logpost_weight_offset: float
         weights: Union[np.ndarray, List[np.ndarray]]
 else:
     globals()['PostResultDict'] = InfoDict
 
 _minuslogprior_1d_name = get_minuslogpior_name(prior_1d_name)
-_default_post_cache_size = 2000
+
+
+class OutputOptions:
+    default_post_cache_size = 2000
+    # to reweight we need to know absolute size of log likelihoods
+    # but want to dump out regularly, so set _reweight_after as minimum to check first
+    reweight_after = 100
+    output_inteveral_s = 60
 
 
 class PostTuple(NamedTuple):
@@ -336,15 +343,15 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # TODO: check allow_renames=False?
     model_add = Model(out_params_with_computed, add["likelihood"],
                       info_prior=add.get("prior"), info_theory=out_combined["theory"],
-                      packages_path=info_post.get("packages_path") or
-                                    info.get("packages_path"),
+                      packages_path=(info_post.get("packages_path") or
+                                     info.get("packages_path")),
                       allow_renames=False, post=True,
                       stop_at_error=info.get('stop_at_error', False),
                       skip_unused_theories=True, dropped_theory_params=dropped_theory)
     # Remove auxiliary "one" before dumping -- 'add' *is* info_out["post"]["add"]
     add["likelihood"].pop("one")
     out_collections = [SampleCollection(dummy_model_out, output_out, name=c.name,
-                                        cache_size=_default_post_cache_size)
+                                        cache_size=OutputOptions.default_post_cache_size)
                        for c in in_collections]
     # TODO: should maybe add skip/thin to out_combined, so can tell post-processed?
     output_out.check_and_dump_info(info_out, out_combined, check_compatible=False)
@@ -391,10 +398,30 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # 4. Main loop! Loop over input samples and adjust as required.
     if mpi.is_main_process():
         log.info("Running post-processing...")
-    difflogmax = -np.inf
+    difflogmax: Optional[float] = None
     to_do = sum(len(c) for c in in_collections)
+    weights = []
     done = 0
+    last_dump_time = time.time()
     for collection_in, collection_out in zip(in_collections, out_collections):
+        importance_weights = []
+
+        def set_difflogmax():
+            nonlocal difflogmax
+            difflog = (collection_in[OutPar.minuslogpost].to_numpy()[:len(collection_out)]
+                       - collection_out[OutPar.minuslogpost].to_numpy())
+            difflogmax = np.max(difflog)
+            if abs(difflogmax) < 1:
+                difflogmax = 0  # keep simple when e.g. very similar
+            log.debug("difflogmax: %g", difflogmax)
+            if mpi.more_than_one_process():
+                difflogmax = max(mpi.allgather(difflogmax))
+            if mpi.is_main_process():
+                log.debug("Set difflogmax: %g", difflogmax)
+            _weights = np.exp(difflog - difflogmax)
+            importance_weights.extend(_weights)
+            collection_out.reweight(_weights)
+
         for i, point in collection_in.data.iterrows():
             all_params = point.to_dict()
             for p in remove_params:
@@ -461,75 +488,89 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                            for p in dummy_model_out.parameterization.derived_params()
                            if p in add["params"]})
             # Save to the collection (keep old weight for now)
-            collection_out.add(
-                sampled, derived=derived.values(),
-                weight=point.get(OutPar.weight),
-                logpriors=logpriors_new, loglikes=loglikes_new)
+            weight = point.get(OutPar.weight)
             mpi.check_errors()
+            if difflogmax is None and i > OutputOptions.reweight_after and \
+                    time.time() - last_dump_time > OutputOptions.output_inteveral_s / 2:
+                set_difflogmax()
+                collection_out.out_update()
+
+            if difflogmax is not None:
+                logpost_new = sum(logpriors_new) + sum(loglikes_new)
+                importance_weight = np.exp(logpost_new + point.get(OutPar.minuslogpost)
+                                           - difflogmax)
+                weight = weight * importance_weight
+                importance_weights.append(importance_weight)
+                if time.time() - last_dump_time > OutputOptions.output_inteveral_s:
+                    collection_out.out_update()
+                    last_dump_time = time.time()
+
+            if weight > 0:
+                collection_out.add(sampled, derived=derived.values(), weight=weight,
+                                   logpriors=logpriors_new, loglikes=loglikes_new)
+
             # Display progress
             percent = int(np.round((i + done) / to_do * 100))
             if percent != last_percent and not percent % 5:
                 last_percent = percent
                 progress_bar(log, percent, " (%d/%d)" % (i + done, to_do))
+
+        if difflogmax is None:
+            set_difflogmax()
         if not collection_out.data.last_valid_index():
             raise LoggedError(
                 log, "No elements in the final sample. Possible causes: "
                      "added a prior or likelihood valued zero over the full sampled "
                      "domain, or the computation of the theory failed everywhere, etc.")
-
-        difflogmax = max(difflogmax, max(collection_in[OutPar.minuslogpost]
-                                         - collection_out[OutPar.minuslogpost]))
+        collection_out.out_update()
+        weights.append(np.array(importance_weights))
         done += len(collection_in)
 
-    # Reweight -- account for large dynamic range!
-    #   Prefer to rescale +inf to finite, and ignore final points with -inf.
-    #   Remove -inf (0-weight), and correct indices
-
-    difflogmax = max(mpi.allgather(difflogmax))
-
+    assert difflogmax is not None
     points = 0
     tot_weight = 0
     min_weight = np.inf
     max_weight = -np.inf
+    max_output_weight = -np.inf
     sum_w2 = 0
     points_removed = 0
-    weights = []
-    for collection_in, collection_out in zip(in_collections, out_collections):
-        importance_weights = np.exp(
-            collection_in[OutPar.minuslogpost] - collection_out[
-                OutPar.minuslogpost] - difflogmax)
-        weights.append(importance_weights)
-        collection_out.reweight(importance_weights)
-        # Write!
-        collection_out.out_update()
+    for collection_in, collection_out, importance_weights in zip(in_collections,
+                                                                 out_collections,
+                                                                 weights):
         output_weights = collection_out[OutPar.weight]
         points += len(collection_out)
         tot_weight += np.sum(output_weights)
         points_removed += len(importance_weights) - len(output_weights)
         min_weight = min(min_weight, np.min(importance_weights))
-        max_weight = max(max_weight, np.max(output_weights))
+        max_weight = max(max_weight, np.max(importance_weights))
+        max_output_weight = max(max_output_weight, np.max(output_weights))
         sum_w2 += np.dot(output_weights, output_weights)
-    tot_weights, min_weights, max_weights, sum_w2s, points_s, points_removed_s = \
-        mpi.zip_gather([tot_weight, min_weight, max_weight, sum_w2,
-                        points, points_removed])
+
+    (tot_weights, min_weights, max_weights, max_output_weights, sum_w2s, points_s,
+     points_removed_s) = mpi.zip_gather(
+        [tot_weight, min_weight, max_weight, max_output_weight, sum_w2,
+         points, points_removed])
 
     if mpi.is_main_process():
         output_out.clear_lock()
         log.info("Finished! Final number of distinct sample points: %s", sum(points_s))
-        log.info("Minimum scaled importance weight: %.4g", min(min_weights))
+        log.info("Importance weight range: %.4g -- %.4g",
+                 min(min_weights), max(max_weights))
         if sum(points_removed_s):
             log.info("Points deleted due to zero weight: %s", sum(points_removed_s))
         log.info("Effective number of single samples if independent (sum w)/max(w): %s",
-                 int(sum(tot_weights) / max(max_weights)))
+                 int(sum(tot_weights) / max(max_output_weights)))
         log.info(
             "Effective number of weighted samples if independent (sum w)^2/sum(w^2): "
             "%s", int(sum(tot_weights) ** 2 / sum(sum_w2s)))
     products: PostResultDict = {"sample": value_or_list(out_collections),
-                                "stats": {'min_weight': min(min_weights),
+                                "stats": {'min_importance_weight': (min(min_weights) /
+                                                                    max(max_weights)),
                                           'points_removed': sum(points_removed_s),
                                           'tot_weight': sum(tot_weights),
-                                          'max_weight': max(max_weights),
+                                          'max_weight': max(max_output_weights),
                                           'sum_w2': sum(sum_w2s),
                                           'points': sum(points_s)},
+                                "logpost_weight_offset": difflogmax,
                                 "weights": value_or_list(weights)}
     return PostTuple(info=out_combined, products=products)

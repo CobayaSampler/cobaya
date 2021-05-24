@@ -403,9 +403,11 @@ base_precision: InfoDict = {"camb": {"halofit_version": "mead"},
 cmb_precision = deepcopy(base_precision)
 cmb_precision["camb"].update({"bbn_predictor": "PArthENoPE_880.2_standard.dat",
                               "lens_potential_accuracy": 1})
-cmb_sampler_recommended: InfoDict = {"mcmc": {
-    "drag": True, "oversample_power": 0.4, "proposal_scale": 1.9}}
-cmb_sampler_mcmc: InfoDict = {"mcmc": {"drag": False, "proposal_scale": 1.9}}
+default_mcmc_options = {"proposal_scale": 1.9,
+                        "Rminus1_stop": 0.01, "Rminus1_cl_stop": 0.2}
+cmb_sampler_recommended: InfoDict = {"mcmc": dict(drag=True, oversample_power=0.4,
+                                                  **default_mcmc_options)}
+cmb_sampler_mcmc: InfoDict = {"mcmc": dict(drag=False, **default_mcmc_options)}
 
 like_cmb: InfoDict = {
     none: {},

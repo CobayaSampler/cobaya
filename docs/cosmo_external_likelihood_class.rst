@@ -171,9 +171,9 @@ Likelihoods, like Theory classes,  can also provide derived parameters. To do th
     class MyLikelihood(Likelihood):
         params = {'D': None, 'Dx10': {'derived': True}}
 
-        def logp(self, **params_values):
-            if params_values["_derived"] is not None:
-                params_values["_derived"]["Dx10"] = params_values['D'] * 10
+        def logp(self, _derived=None, **params_values):
+            if _derived is not None:
+                _derived["Dx10"] = params_values['D'] * 10
 
         ...
 
