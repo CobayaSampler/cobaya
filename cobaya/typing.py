@@ -96,7 +96,7 @@ if sys.version_info >= (3, 8):
         sampler: SamplersDict
         post: PostDict
         force: bool
-        debug: bool
+        debug: Union[bool, int, str]
         debug_file: Optional[str]
         resume: bool
         stop_at_error: bool

@@ -22,7 +22,7 @@ from cobaya.tools import read_dnumber, get_external_function, \
 from cobaya.sampler import Sampler
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
 from cobaya.collection import SampleCollection
-from cobaya.log import LoggedError
+from cobaya.log import LoggedError, get_logger
 from cobaya.install import download_github_release, NotInstalledError
 from cobaya.yaml import yaml_dump_file
 from cobaya.conventions import derived_par_name_separator, packages_path_arg, Extension
@@ -431,7 +431,7 @@ class polychord(Sampler):
 
     @classmethod
     def get_import_path(cls, path):
-        log = logging.getLogger(cls.__name__)
+        log = get_logger(cls.__name__)
         poly_build_path = os.path.join(path, "build")
         if not os.path.isdir(poly_build_path):
             log.error("Either PolyChord is not in the given folder, "
@@ -456,7 +456,7 @@ class polychord(Sampler):
 
     @classmethod
     def is_installed(cls, **kwargs):
-        log = logging.getLogger(cls.__name__)
+        log = get_logger(cls.__name__)
         if not kwargs.get("code", True):
             return True
         check = kwargs.get("check", True)
@@ -506,7 +506,7 @@ class polychord(Sampler):
                 no_progress_bars=False):
         if not code:
             return True
-        log = logging.getLogger(__name__.split(".")[-1])
+        log = get_logger(__name__)
         log.info("Downloading PolyChord...")
         success = download_github_release(os.path.join(path, "code"), cls._pc_repo_name,
                                           cls._pc_repo_version,

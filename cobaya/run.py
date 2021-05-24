@@ -8,7 +8,6 @@
 
 # Global
 from typing import Union, Optional, NamedTuple
-import logging
 import os
 
 # Local
@@ -17,7 +16,7 @@ from cobaya.typing import InputDict, LiteralFalse
 from cobaya.output import get_output
 from cobaya.model import Model, load_info_overrides
 from cobaya.sampler import get_sampler_name_and_class, check_sampler_info, Sampler
-from cobaya.log import logger_setup, LoggedError
+from cobaya.log import logger_setup, is_debug, get_logger, LoggedError
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info
 from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic, \
@@ -34,7 +33,7 @@ class InfoSamplerTuple(NamedTuple):
 def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         packages_path: Optional[str] = None,
         output: Union[str, LiteralFalse, None] = None,
-        debug: Optional[bool] = None,
+        debug: Union[bool, int, None] = None,
         stop_at_error: Optional[bool] = None,
         resume: bool = False, force: bool = False,
         no_mpi: bool = False, test: bool = False,
@@ -47,7 +46,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     :param info_or_yaml_or_file: input options dictionary, yaml file, or yaml text
     :param packages_path: path where external packages were installed
     :param output: path name prefix for output files, or False for no file output
-    :param debug: verbose debug output
+    :param debug: true for verbose debug output, or a specific logging level
     :param stop_at_error: stop if an error is raised
     :param resume: continue an existing run
     :param force: overwrite existing output if it exists
@@ -85,7 +84,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         if isinstance(output, str) or output is False:
             info["output"] = output or None
         logger_setup(info.get("debug"), info.get("debug_file"))
-        logger_run = logging.getLogger(run.__name__)
+        logger_run = get_logger(run.__name__)
         # MARKED FOR DEPRECATION IN v3.0
         # BEHAVIOUR TO BE REPLACED BY ERROR:
         check_deprecated_modules_path(info)
@@ -103,7 +102,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                         force=info.get("force"), infix=infix) as out:
             # 2. Update the input info with the defaults for each component
             updated_info = update_info(info)
-            if logging.root.getEffectiveLevel() <= logging.DEBUG:
+            if is_debug(logger_run):
                 # Dump only if not doing output
                 # (otherwise, the user can check the .updated file)
                 if not out and mpi.is_main_process():
@@ -148,8 +147,6 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                 updated_info["sampler"][sampler_name] = \
                     recursive_update(updated_info["sampler"][sampler_name],
                                      sampler.info())
-                # TODO -- maybe also re-dump model info, now possibly with measured speeds
-                # (waiting until the camb.transfers issue is solved)
                 out.check_and_dump_info(None, updated_info, check_compatible=False)
                 mpi.sync_processes()
                 if info.get("test", False):
@@ -205,7 +202,7 @@ def run_script(args=None):
     # MARKED FOR DEPRECATION IN v3.0
     if arguments.modules is not None:
         logger_setup()
-        logger = logging.getLogger(__name__.split(".")[-1])
+        logger = get_logger("run")
         logger.warning("*DEPRECATION*: -m/--modules will be deprecated in favor of "
                        "-%s/--%s in the next version. Please, use that one instead.",
                        packages_path_arg[0], packages_path_arg_posix)

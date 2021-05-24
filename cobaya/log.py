@@ -7,6 +7,7 @@
 """
 
 # Global
+import os
 import sys
 import logging
 import traceback
@@ -24,8 +25,11 @@ class LoggedError(Exception):
     """
 
     def __init__(self, logger, *args, **kwargs):
+        if isinstance(logger, str):
+            logger = get_logger(logger)
         if not isinstance(logger, logging.Logger):
-            raise SyntaxError("The first argument of %s must be a logger instance." %
+            raise SyntaxError("The first argument of %s must be a logger "
+                              "instance or name." %
                               self.__class__.__name__)
         if args:
             logger.error(*args, **kwargs)
@@ -38,6 +42,17 @@ class LoggedError(Exception):
 # Exceptions that will never be ignored when a component's calculation fails
 always_stop_exceptions = (LoggedError, KeyboardInterrupt, SystemExit, NameError,
                           SyntaxError, AttributeError, KeyError, ImportError, TypeError)
+
+
+def is_debug(log=None):
+    log = log or logging.root
+    return log.getEffectiveLevel() <= logging.DEBUG
+
+
+def get_logger(name):
+    if name.startswith('cobaya.'):
+        name = name.split('.')[-1]
+    return logging.getLogger(name)
 
 
 def abstract(method):
@@ -89,11 +104,11 @@ def exception_handler(exception_type, exception_instance, trace_back):
             log.error(str(exception_instance))
         if want_abort:
             mpi.abort_if_mpi()
-        if log.getEffectiveLevel() > logging.DEBUG:
+        if is_debug(log):
             return  # no traceback printed
     elif exception_type == mpi.OtherProcessError:
         log.info(str(exception_instance))
-        if log.getEffectiveLevel() > logging.DEBUG:
+        if is_debug(log):
             return  # no traceback printed
 
     line = "-------------------------------------------------------------\n"
@@ -103,7 +118,7 @@ def exception_handler(exception_type, exception_instance, trace_back):
                  line)
     if exception_type == KeyboardInterrupt:
         log.critical("Interrupted by the user.")
-    elif log.getEffectiveLevel() > logging.DEBUG:
+    elif is_debug(log):
         log.critical(
             "Some unexpected ERROR occurred. "
             "You can see the exception information above.\n"
@@ -124,14 +139,15 @@ def logger_setup(debug=None, debug_file=None):
     Level: if debug=True, take DEBUG. If numerical, use "logging"'s corresponding level.
     Default: INFO
     """
-    if debug is True:
+    if debug is True or os.getenv('COBAYA_DEBUG'):
         level = logging.DEBUG
     elif debug in (False, None):
         level = logging.INFO
     else:
-        level = int(debug)
+        level = debug
     # Set the default level, to make sure the handlers have a higher one
     logging.root.setLevel(level)
+    debug = is_debug(logging.root)
 
     # Custom formatter
     class MyFormatter(logging.Formatter):
@@ -200,6 +216,9 @@ class HasLogger:
     def __setstate__(self, d):
         self.__dict__ = d
         self.set_logger()
+
+    def is_debug(self):
+        return is_debug(self.log)
 
     @mpi.root_only
     def mpi_warning(self, msg, *args, **kwargs):

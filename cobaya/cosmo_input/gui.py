@@ -384,9 +384,8 @@ def gui_script():
         # TODO: fix this long logger setup
         from cobaya.log import logger_setup, LoggedError
         logger_setup(0, None)
-        import logging
         raise LoggedError(
-            logging.getLogger("cosmo_generator"),
+            "cosmo_generator",
             "PySide2 is not installed! "
             "Check Cobaya's documentation for the cosmo_generator "
             "('Basic cosmology runs').")

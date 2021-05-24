@@ -6,7 +6,6 @@
 
 """
 
-import logging
 import os
 import sys
 import time
@@ -19,7 +18,7 @@ from cobaya.collection import SampleCollection
 from cobaya.conventions import prior_1d_name, OutPar, get_chi2_name, \
     undo_chi2_name, get_minuslogpior_name, separator_files, minuslogprior_names
 from cobaya.input import update_info, add_aggregated_chi2_params, load_input_dict
-from cobaya.log import logger_setup, LoggedError
+from cobaya.log import logger_setup, get_logger, is_debug, LoggedError
 from cobaya.model import Model
 from cobaya.output import get_output
 from cobaya.parameterization import Parameterization
@@ -82,7 +81,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
          ) -> PostTuple:
     info = load_input_dict(info_or_yaml_or_file)
     logger_setup(info.get("debug"), info.get("debug_file"))
-    log = logging.getLogger(__name__.split(".")[-1])
+    log = get_logger(__name__)
     # MARKED FOR DEPRECATION IN v3.0
     # BEHAVIOUR TO BE REPLACED BY ERROR:
     check_deprecated_modules_path(info)
@@ -452,7 +451,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                     if name in regenerated_prior_names:
                         logpriors_new[_i] = regenerated[name]
 
-            if log.getEffectiveLevel() <= logging.DEBUG:
+            if is_debug(log):
                 log.debug("New set of priors: %r",
                           dict(zip(dummy_model_out.prior, logpriors_new)))
             if -np.inf in logpriors_new:
@@ -463,7 +462,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             output_derived = dict(zip(model_add.output_params, output_derived))
             loglikes_new = [loglikes_add.get(name, -0.5 * point.get(name, 0))
                             for name in collection_out.chi2_names]
-            if log.getEffectiveLevel() <= logging.DEBUG:
+            if is_debug(log):
                 log.debug(
                     "New set of likelihoods: %r",
                     dict(zip(dummy_model_out.likelihood, loglikes_new)))
@@ -482,7 +481,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                     -2 * lvalue for lname, lvalue
                     in zip(collection_out.chi2_names, loglikes_new)
                     if undo_chi2_name(lname) in likes)
-            if log.getEffectiveLevel() <= logging.DEBUG:
+            if is_debug(log):
                 log.debug("New derived parameters: %r",
                           {p: derived[p]
                            for p in dummy_model_out.parameterization.derived_params()

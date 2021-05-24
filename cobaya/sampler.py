@@ -45,7 +45,6 @@ implement only the methods ``initialize``, ``_run``, and ``products``.
 """
 # Global
 import os
-import logging
 import numpy as np
 from typing import Optional, Sequence, Mapping, Union
 from itertools import chain
@@ -57,7 +56,7 @@ from cobaya.typing import InfoDict, SamplersDict, SamplerDict
 from cobaya.tools import deepcopy_where_possible, find_with_regexp
 from cobaya.tools import recursive_update, str_to_list, get_resolved_class
 from cobaya.model import Model
-from cobaya.log import LoggedError
+from cobaya.log import LoggedError, get_logger, is_debug
 from cobaya.yaml import yaml_load_file, yaml_dump
 from cobaya.component import CobayaComponent
 from cobaya.input import update_info, is_equal_info, get_preferred_old_values
@@ -77,16 +76,15 @@ def get_sampler_name_and_class(info_sampler: SamplersDict):
 
 
 def check_sane_info_sampler(info_sampler: SamplersDict):
-    log = logging.getLogger(__name__.split(".")[-1])
     if not info_sampler:
-        raise LoggedError(log, "No sampler given!")
+        raise LoggedError(__name__, "No sampler given!")
     try:
         list(info_sampler)[0]
     except AttributeError:
         raise LoggedError(
-            log, "The sampler block must be a dictionary 'sampler: {options}'.")
+            __name__, "The sampler block must be a dictionary 'sampler: {options}'.")
     if len(info_sampler) > 1:
-        raise LoggedError(log, "Only one sampler currently supported at a time.")
+        raise LoggedError(__name__, "Only one sampler currently supported at a time.")
 
 
 def check_sampler_info(info_old: Optional[SamplersDict],
@@ -97,7 +95,7 @@ def check_sampler_info(info_old: Optional[SamplersDict],
     Done separately from `Output.check_compatible_and_dump` because there may be
     multiple samplers mentioned in an `updated.yaml` file, e.g. `MCMC` + `Minimize`.
     """
-    logger_sampler = logging.getLogger(__name__.split(".")[-1])
+    logger_sampler = get_logger(__name__)
     if not info_old:
         return
     # TODO: restore this at some point: just append minimize info to the old one
@@ -137,7 +135,7 @@ def get_sampler(info_sampler: SamplersDict, model: Model, output: Optional[Outpu
         "If you were trying to pass the name of an input file instead, "
         "load it first with 'cobaya.input.load_input', "
         "or, if you were passing a yaml string, load it with 'cobaya.yaml.yaml_load'.")
-    logger_sampler = logging.getLogger(__name__.split(".")[-1])
+    logger_sampler = get_logger(__name__)
     info_sampler = deepcopy_where_possible(info_sampler)
     if output is None:
         output = OutputDummy()
@@ -145,7 +143,7 @@ def get_sampler(info_sampler: SamplersDict, model: Model, output: Optional[Outpu
     check_sane_info_sampler(info_sampler)
     updated_info_sampler = update_info(
         {"sampler": info_sampler})["sampler"]  # type: ignore
-    if logging.root.getEffectiveLevel() <= logging.DEBUG:
+    if is_debug(logger_sampler):
         logger_sampler.debug(
             "Input info updated with defaults (dumped to YAML):\n%s",
             yaml_dump(updated_info_sampler))

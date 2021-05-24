@@ -169,7 +169,6 @@ the input block for CAMB (otherwise a system-wide CAMB may be used instead):
 # Global
 import sys
 import os
-import logging
 import numbers
 import ctypes
 from copy import deepcopy
@@ -178,7 +177,7 @@ import numpy as np
 from itertools import chain
 # Local
 from cobaya.theories.cosmo import BoltzmannBase
-from cobaya.log import LoggedError
+from cobaya.log import LoggedError, get_logger
 from cobaya.install import download_github_release, check_gcc_version, NotInstalledError
 from cobaya.tools import getfullargspec, get_class_methods, get_properties, load_module, \
     VersionCheckError, str_to_list
@@ -806,7 +805,7 @@ class CAMB(BoltzmannBase):
     def is_installed(cls, **kwargs):
         if not kwargs.get("code", True):
             return True
-        log = logging.getLogger(cls.__name__)
+        log = get_logger(cls.__name__)
         import platform
         check = kwargs.get("check", True)
         func = log.info if check else log.error
@@ -849,7 +848,7 @@ class CAMB(BoltzmannBase):
 
     @classmethod
     def install(cls, path=None, code=True, no_progress_bars=False, **_kwargs):
-        log = logging.getLogger(cls.__name__)
+        log = get_logger(cls.__name__)
         if not code:
             log.info("Code not requested. Nothing to do.")
             return True

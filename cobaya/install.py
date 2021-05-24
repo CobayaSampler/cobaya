@@ -22,7 +22,7 @@ import tqdm
 from typing import List
 
 # Local
-from cobaya.log import logger_setup, LoggedError, NoLogging
+from cobaya.log import logger_setup, LoggedError, NoLogging, get_logger
 from cobaya.tools import create_banner, warn_deprecation, get_resolved_class, \
     write_packages_path_in_config_file, get_config_path, get_kind
 from cobaya.input import get_used_components
@@ -33,7 +33,7 @@ from cobaya.mpi import set_mpi_disabled
 from cobaya.tools import resolve_packages_path
 from cobaya.typing import InputDict
 
-log = logging.getLogger("install")
+log = get_logger("install")
 
 _banner_symbol = "="
 _banner_length = 80
@@ -50,7 +50,7 @@ def install(*infos, **kwargs):
     debug = kwargs.get("debug")
     # noinspection PyUnresolvedReferences
     if not log.root.handlers:
-        logger_setup()
+        logger_setup(debug=debug)
     path = kwargs.get("path")
     if not path:
         path = resolve_packages_path(infos)
@@ -216,7 +216,7 @@ def _skip_helper(name, skip_keywords, skip_keywords_env, logger):
 
 
 def download_file(url, path, no_progress_bars=False, decompress=False, logger=None):
-    logger = logger or logging.getLogger(__name__)
+    logger = logger or get_logger("install")
     with tempfile.TemporaryDirectory() as tmp_path:
         try:
             req = requests.get(url, allow_redirects=True, stream=True)
@@ -268,7 +268,7 @@ def download_file(url, path, no_progress_bars=False, decompress=False, logger=No
 
 def download_github_release(directory, repo_name, release_name, repo_rename=None,
                             no_progress_bars=False, logger=None):
-    logger = logger or logging.getLogger(__name__)
+    logger = logger or get_logger("install")
     if "/" in repo_name:
         github_user = repo_name[:repo_name.find("/")]
         repo_name = repo_name[repo_name.find("/") + 1:]
@@ -394,7 +394,7 @@ def install_script(args=None):
     arguments = parser.parse_args(args)
     # Configure the logger ASAP
     logger_setup()
-    logger = logging.getLogger(__name__.split(".")[-1])
+    logger = get_logger("install")
     # Gather requests
     infos: List[InputDict] = []
     for f in arguments.files_or_components:

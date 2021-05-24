@@ -169,7 +169,7 @@ def test_mcmc_sync():
 
     # test error converted into MPI_ABORT after timeout
     # noinspection PyTypeChecker
-    with pytest.raises((LoggedError, mpi.OtherProcessError)), NoLogging(logging.ERROR):
+    with pytest.raises((LoggedError, mpi.OtherProcessError)), NoLogging(logging.CRITICAL):
         with mpi.ProcessState('test', time_out_seconds=0.5,
                               timeout_abort_proc=test_abort):
             if mpi.rank() != 1:

@@ -6,7 +6,6 @@
 
 """
 # Global
-import logging
 from contextlib import contextmanager
 from copy import deepcopy
 from itertools import chain
@@ -25,7 +24,7 @@ from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection, AbsorbUnusedParamsLikelihood, \
     is_LikelihoodInterface
 from cobaya.theory import TheoryCollection, Theory, Provider
-from cobaya.log import LoggedError, logger_setup, HasLogger
+from cobaya.log import LoggedError, logger_setup, get_logger, is_debug, HasLogger
 from cobaya.yaml import yaml_dump
 from cobaya.tools import deepcopy_where_possible, are_different_params_lists, \
     str_to_list, sort_parameter_blocks, recursive_update, sort_cosmetic
@@ -313,9 +312,7 @@ class Model(HasLogger):
         if return_derived:
             loglikes, derived_list = result
             derived_sampler = self.parameterization.to_derived(derived_list)
-            if self.log.getEffectiveLevel() <= logging.DEBUG:
-                self.log.debug(
-                    "Computed derived parameters: %s", derived_sampler)
+            self.log.debug("Computed derived parameters: %s", derived_sampler)
             return loglikes, list(derived_sampler.values())
         return result
 
@@ -391,7 +388,7 @@ class Model(HasLogger):
             if hasattr(params_values, "keys"):
                 params_values = self.parameterization.check_sampled(**params_values)
             params_values_array = self._to_sampled_array(params_values)
-            if self.log.getEffectiveLevel() <= logging.DEBUG:
+            if self.is_debug():
                 self.log.debug(
                     "Posterior to be computed for parameters %s",
                     dict(zip(self.parameterization.sampled_params(),
@@ -705,7 +702,7 @@ class Model(HasLogger):
                 self.log.warning('Theories %s do not appear to be actually used '
                                  'for anything', unused_theories)
 
-        if self.log.getEffectiveLevel() <= logging.DEBUG:
+        if self.is_debug():
             self.log.debug("Components will be computed in the order:")
             self.log.debug(" - %r" % list(self._component_order))
 
@@ -751,7 +748,7 @@ class Model(HasLogger):
             requirements_are_params.intersection(requirement_providers)
 
         # ## 4. Initialize the provider and pass it to each component ##
-        if self.log.getEffectiveLevel() <= logging.DEBUG:
+        if self.is_debug():
             if requirement_providers:
                 self.log.debug("Requirements will be calculated by these components:")
                 for req, provider in requirement_providers.items():
@@ -942,7 +939,7 @@ class Model(HasLogger):
                 if inf:
                     inf.pop("params", None)
                     inf[option] = component.get_attr_list_with_helpers(option)
-        if self.log.getEffectiveLevel() <= logging.DEBUG:
+        if self.is_debug():
             self.log.debug("Parameters were assigned as follows:")
             for component in self.components:
                 self.log.debug("- %r:", component)
@@ -1168,7 +1165,6 @@ def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     info = load_info_overrides(info_or_yaml_or_file, debug, stop_at_error,
                                packages_path, override)
     logger_setup(info.pop("debug", debug_default), info.pop("debug_file", None))
-
     # Inform about ignored info keys
     ignored_info = []
     for k in list(info):
@@ -1180,10 +1176,9 @@ def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # Create the updated input information, including defaults for each component.
     updated_info = update_info(info)
     if ignored_info:
-        logging.getLogger(__name__.split(".")[-1]).warning(
-            "Ignored blocks/options: %r", ignored_info)
-    if logging.root.getEffectiveLevel() <= logging.DEBUG:
-        logging.getLogger(__name__.split(".")[-1]).debug(
+        get_logger(__name__).warning("Ignored blocks/options: %r", ignored_info)
+    if is_debug():
+        get_logger(__name__).debug(
             "Input info updated with defaults (dumped to YAML):\n%s",
             yaml_dump(sort_cosmetic(updated_info)))
     # Initialize the parameters and posterior
@@ -1205,7 +1200,7 @@ def load_info_overrides(info_or_yaml_or_file, debug, stop_at_error,
     if packages_path:
         info["packages_path"] = packages_path
     if debug is not None:
-        info["debug"] = bool(debug)
+        info["debug"] = debug if isinstance(debug, (int, str)) else bool(debug)
     if stop_at_error is not None:
         info["stop_at_error"] = bool(stop_at_error)
     return info

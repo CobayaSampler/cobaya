@@ -8,11 +8,11 @@ r"""
 
 # Global
 import os
-import logging
 
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.typing import InfoDict
+from cobaya.log import get_logger
 
 
 class InstallableLikelihood(Likelihood):
@@ -34,13 +34,13 @@ class InstallableLikelihood(Likelihood):
 
     @classmethod
     def is_installed(cls, **kwargs):
-        log = logging.getLogger(cls.__name__)
         if kwargs.get("data", True):
             path = kwargs["path"]
             opts = cls.get_install_options()
             if not opts:
                 return True
             elif not (os.path.exists(path) and len(os.listdir(path)) > 0):
+                log = get_logger(cls.get_qualified_class_name())
                 func = log.info if kwargs.get("check", True) else log.error
                 func("The given installation path does not exist: '%s'", path)
                 return False
@@ -50,7 +50,7 @@ class InstallableLikelihood(Likelihood):
     def install(cls, path=None, data=True, no_progress_bars=False, **_kwargs):
         if not data:
             return True
-        log = logging.getLogger(cls.get_qualified_class_name())
+        log = get_logger(cls.get_qualified_class_name())
         opts = cls.get_install_options()
         if not opts:
             log.info("No install options. Nothing to do.")

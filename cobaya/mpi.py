@@ -11,7 +11,6 @@ import sys
 import functools
 from typing import List, Iterable, Union, Callable, Any, Optional
 import numpy as np
-import logging
 import time
 from enum import IntEnum
 
@@ -440,8 +439,8 @@ class ProcessState:
             self.set(State.ERROR)
             if not self.wait_all_ended(
                     timeout=not issubclass(exc_type, OtherProcessError)):
-                from cobaya.log import get_traceback_text, LoggedError
-                logging.getLogger(self.name).critical(
+                from cobaya.log import get_traceback_text, LoggedError, get_logger
+                get_logger(self.name).critical(
                     "Aborting MPI due to error" if issubclass(exc_type, LoggedError) else
                     get_traceback_text(sys.exc_info()))
                 self.timeout_abort_proc()

@@ -11,14 +11,11 @@ from cobaya.conventions import Extension
 from cobaya.tools import str_to_list, get_translated_params, get_cache_path
 from cobaya.parameterization import is_sampled_param
 from cobaya.input import update_info
-from cobaya.log import LoggedError
-
-# Logger
-import logging
+from cobaya.log import LoggedError, get_logger, is_debug
 
 _covmats_file = "covmats_database.pkl"
 
-log = logging.getLogger(__name__.split(".")[-1])
+log = get_logger(__name__)
 
 covmat_folders = [
     "{%s}/data/planck_supp_data_and_covmats/covmats/" % "packages_path",
@@ -135,7 +132,7 @@ def get_best_covmat_ext(packages_path, params_info, likelihoods_info, random_sta
     score_likes = (
         lambda covmat: len([0 for r in likes_regexps if r.search(covmat["name"])]))
     best_p_l = get_best_score(best_p, score_likes)
-    if log.getEffectiveLevel() <= logging.DEBUG:
+    if is_debug(log):
         log.debug("Subset based on params + likes:\n - " +
                   "\n - ".join([b["name"] for b in best_p_l]))
 
@@ -145,13 +142,13 @@ def get_best_covmat_ext(packages_path, params_info, likelihoods_info, random_sta
         return -len(covmat["params"])
 
     best_p_l_sp = get_best_score(best_p_l, score_simpler_params)
-    if log.getEffectiveLevel() <= logging.DEBUG:
+    if is_debug(log):
         log.debug("Subset based on params + likes + fewest params:\n - " +
                   "\n - ".join([b["name"] for b in best_p_l_sp]))
     score_simpler_name = (
         lambda covmat: -len(covmat["name"].replace("_", " ").replace("-", " ").split()))
     best_p_l_sp_sn = get_best_score(best_p_l_sp, score_simpler_name)
-    if log.getEffectiveLevel() <= logging.DEBUG:
+    if is_debug(log):
         log.debug("Subset based on params + likes + fewest params + shortest name:\n - " +
                   "\n - ".join([b["name"] for b in best_p_l_sp_sn]))
     # if there is more than one (unlikely), just pick one at random

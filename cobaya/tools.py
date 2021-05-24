@@ -9,7 +9,6 @@
 # Global
 import os
 import sys
-import logging
 import platform
 import warnings
 import inspect
@@ -32,11 +31,11 @@ import traceback
 # Local
 from cobaya.conventions import cobaya_package, subfolders, kinds, \
     packages_path_config_file, packages_path_env, packages_path_arg, dump_sort_cosmetic
-from cobaya.log import LoggedError, HasLogger
+from cobaya.log import LoggedError, HasLogger, get_logger
 from cobaya.typing import Kind
 
 # Set up logger
-log = logging.getLogger(__name__.split(".")[-1])
+log = get_logger(__name__)
 
 
 def str_to_list(x) -> List:
