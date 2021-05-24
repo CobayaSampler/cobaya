@@ -12,24 +12,27 @@ import numpy as np
 import logging
 import inspect
 from itertools import chain
-from random import random
-from typing import Any
+from typing import Any, Callable, Optional
 from tempfile import gettempdir
 import re
 
 # Local
-from cobaya.tools import read_dnumber, get_external_function, PythonPath, \
+from cobaya.tools import read_dnumber, get_external_function, \
     find_with_regexp, NumberWithUnits, load_module, VersionCheckError
 from cobaya.sampler import Sampler
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
-from cobaya.collection import Collection
+from cobaya.collection import SampleCollection
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, NotInstalledError
 from cobaya.yaml import yaml_dump_file
-from cobaya.conventions import _separator, _evidence_extension, _packages_path_arg
+from cobaya.conventions import derived_par_name_separator, packages_path_arg, Extension
 
 
 class polychord(Sampler):
+    r"""
+    PolyChord sampler \cite{Handley:2015fda,2015MNRAS.453.4384H}, a nested sampler
+    tailored for high-dimensional parameter spaces with a speed hierarchy.
+    """
     # Name of the PolyChord repo and version to download
     _pc_repo_name = "PolyChord/PolyChordLite"
     _pc_repo_version = "1.17.1"
@@ -37,16 +40,18 @@ class polychord(Sampler):
     _clusters_dir = "clusters"
     _at_resume_prefer_old = Sampler._at_resume_prefer_old + ["blocking"]
     _at_resume_prefer_new = Sampler._at_resume_prefer_new + ["callback_function"]
+    pypolychord: Any
 
     # variables from yaml
     do_clustering: bool
     num_repeats: int
     confidence_for_unbounded: float
-    callback_function: callable
+    callback_function: Callable
     blocking: Any
     measure_speeds: bool
     oversample_power: float
     nlive: NumberWithUnits
+    path: str
 
     def initialize(self):
         """Imports the PolyChord sampler and prepares its arguments."""
@@ -54,14 +59,14 @@ class polychord(Sampler):
         allow_global = not self.path
         if not self.path and self.packages_path:
             self.path = self.get_path(self.packages_path)
-        self.pc = self.is_installed(path=self.path, allow_global=allow_global)
+        self.pc: Any = self.is_installed(path=self.path, allow_global=allow_global,
+                                         check=False)
         if not self.pc:
             raise NotInstalledError(
                 self.log, "Could not find PolyChord. Check error message above. "
                           "To install it, run 'cobaya-install polychord --%s "
-                          "[packages_path]'", _packages_path_arg)
+                          "[packages_path]'", packages_path_arg)
         # Prepare arguments and settings
-        from pypolychord.settings import PolyChordSettings
         self.n_sampled = len(self.model.parameterization.sampled_params())
         self.n_derived = len(self.model.parameterization.derived_params())
         self.n_priors = len(self.model.prior)
@@ -92,7 +97,7 @@ class polychord(Sampler):
             self.file_root = self.output.prefix
             self.read_resume = self.output.is_resuming()
         else:
-            output_prefix = share_mpi(hex(int(random() * 16 ** 6))[2:]
+            output_prefix = share_mpi(hex(int(self._rng.random() * 16 ** 6))[2:]
                                       if is_main_process() else None)
             self.file_root = output_prefix
             # dummy output -- no resume!
@@ -103,14 +108,14 @@ class polychord(Sampler):
         if self.do_clustering:
             self.clusters_folder = self.get_clusters_dir(self.output)
             self.output.create_folder(self.clusters_folder)
-        if is_main_process():
-            self.log.info("Storing raw PolyChord output in '%s'.", self.base_dir)
+        self.mpi_info("Storing raw PolyChord output in '%s'.", self.base_dir)
         # Exploiting the speed hierarchy
         if self.blocking:
             blocks, oversampling_factors = self.model.check_blocking(self.blocking)
         else:
             if self.measure_speeds:
-                self.model.measure_and_set_speeds(n=self.measure_speeds)
+                self.model.measure_and_set_speeds(n=self.measure_speeds,
+                                                  random_state=self._rng)
             blocks, oversampling_factors = self.model.get_param_blocking_for_sampler(
                 oversample_power=self.oversample_power)
         self.mpi_info("Parameter blocks and their oversampling factors:")
@@ -140,7 +145,7 @@ class polychord(Sampler):
                    "grade_dims"]
         # As stated above, num_repeats is ignored, so let's not pass it
         pc_args.pop(pc_args.index("num_repeats"))
-        self.pc_settings = PolyChordSettings(
+        self.pc_settings = self.pc.settings.PolyChordSettings(
             self.nDims, self.nDerived, seed=(self.seed if self.seed is not None else -1),
             **{p: getattr(self, p) for p in pc_args if getattr(self, p) is not None})
         # prior conversion from the hypercube
@@ -149,7 +154,7 @@ class polychord(Sampler):
         # Check if priors are bounded (nan's to inf)
         inf = np.where(np.isinf(bounds))
         if len(inf[0]):
-            params_names = self.model.parameterization.sampled_params()
+            params_names = list(self.model.parameterization.sampled_params())
             params = [params_names[i] for i in sorted(list(set(inf[0])))]
             raise LoggedError(
                 self.log, "PolyChord needs bounded priors, but the parameter(s) '"
@@ -166,18 +171,19 @@ class polychord(Sampler):
                 get_external_function(self.callback_function))
         self.last_point_callback = 0
         # Prepare runtime live and dead points collections
-        self.live = Collection(
-            self.model, None, name="live", initial_size=self.pc_settings.nlive)
-        self.dead = Collection(self.model, self.output, name="dead")
+        self.live = SampleCollection(self.model, None, name="live")
+        self.dead = SampleCollection(self.model, self.output, name="dead")
         # Done!
         if is_main_process():
             self.log.debug("Calling PolyChord with arguments:")
             for p, v in inspect.getmembers(self.pc_settings, lambda a: not (callable(a))):
                 if not p.startswith("_"):
                     self.log.debug("  %s: %s", p, v)
-        self.log.info("Initialized!")
+        self.mpi_info("Initialized!")
 
     def dumper(self, live_points, dead_points, logweights, logZ, logZstd):
+        if self.callback_function is None:
+            return
         # Store live and dead points and evidence computed so far
         self.live.reset()
         for point in live_points:
@@ -211,7 +217,7 @@ class polychord(Sampler):
                 self.log.error("The callback function produced an error: %r", str(e))
             self.last_point_callback = len(self.dead)
 
-    def _run(self):
+    def run(self):
         """
         Prepares the posterior function and calls ``PolyChord``'s ``run`` function.
         """
@@ -243,10 +249,6 @@ class polychord(Sampler):
             self.pc_settings.base_dir, self.pc_settings.file_root)
 
     def dump_paramnames(self, prefix):
-        paramnames = (list() +
-                      [p + "*" for p in (
-                              list(self.model.parameterization.derived_params()) +
-                              list(self.model.prior) + list(self.model.likelihood))])
         labels = self.model.parameterization.labels()
         with open(prefix + ".paramnames", "w") as f_paramnames:
             for p in self.model.parameterization.sampled_params():
@@ -255,18 +257,18 @@ class polychord(Sampler):
                 f_paramnames.write("%s*\t%s\n" % (p, labels.get(p, "")))
             for p in self.model.prior:
                 f_paramnames.write("%s*\t%s\n" % (
-                    "logprior" + _separator + p,
+                    "logprior" + derived_par_name_separator + p,
                     r"\pi_\mathrm{" + p.replace("_", r"\ ") + r"}"))
             for p in self.model.likelihood:
                 f_paramnames.write("%s*\t%s\n" % (
-                    "loglike" + _separator + p,
+                    "loglike" + derived_par_name_separator + p,
                     r"\log\mathcal{L}_\mathrm{" + p.replace("_", r"\ ") + r"}"))
 
     def save_sample(self, fname, name):
         sample = np.atleast_2d(np.loadtxt(fname))
         if not sample.size:
             return None
-        collection = Collection(self.model, self.output, name=str(name))
+        collection = SampleCollection(self.model, self.output, name=str(name))
         for row in sample:
             collection.add(
                 row[2:2 + self.n_sampled],
@@ -323,6 +325,7 @@ class polychord(Sampler):
                         self.output.folder = self.clusters_folder
                     sample = self.save_sample(f, str(i))
                     if self.output:
+                        # noinspection PyUnboundLocalVariable
                         self.output.folder = old_folder
                     self.clusters[i] = {"sample": sample}
             # Prepare the evidence(s) and write to file
@@ -353,7 +356,7 @@ class polychord(Sampler):
                             logZ=self.clusters[i]["logZ"],
                             logZstd=self.clusters[i]["logZstd"])
                 fname = os.path.join(self.output.folder,
-                                     self.output.prefix + _evidence_extension)
+                                     self.output.prefix + Extension.evidence)
                 yaml_dump_file(fname, out_evidences, comment="log-evidence",
                                error_if_exists=False)
         # TODO: try to broadcast the collections
@@ -370,13 +373,12 @@ class polychord(Sampler):
                 self.logZ, self.logZstd,
                 *[np.exp(self.logZ + n * self.logZstd) for n in [-1, 1]])
 
-
     def products(self):
         """
         Auxiliary function to define what should be returned in a scripted call.
 
         Returns:
-           The sample ``Collection`` containing the sequentially discarded live points.
+           The sample ``SampleCollection`` containing the sequentially discarded live points.
         """
         if is_main_process():
             products = {
@@ -411,7 +413,7 @@ class polychord(Sampler):
             # Main sample
             (output.collection_regexp(name=None), None),
             # Evidence
-            (re.compile(re.escape(output.prefix + _evidence_extension)), None),
+            (re.compile(re.escape(output.prefix + Extension.evidence)), None),
             # Clusters
             (None, cls.get_clusters_dir(output))
         ]
@@ -456,22 +458,29 @@ class polychord(Sampler):
         log = logging.getLogger(cls.__name__)
         if not kwargs.get("code", True):
             return True
-        path = kwargs["path"]
+        check = kwargs.get("check", True)
+        func = log.info if check else log.error
+        path: Optional[str] = kwargs["path"]
         if path is not None and path.lower() == "global":
             path = None
         if path and not kwargs.get("allow_global"):
-            log.info("Importing *local* PolyChord from '%s'.", path)
+            if is_main_process():
+                log.info("Importing *local* PolyChord from '%s'.", path)
             if not os.path.exists(path):
-                log.error("The given folder does not exist: '%s'", path)
+                if is_main_process():
+                    func("The given folder does not exist: '%s'", path)
                 return False
             poly_build_path = cls.get_import_path(path)
             if not poly_build_path:
                 return False
         elif not path:
-            log.info("Importing *global* PolyChord.")
+            if is_main_process():
+                log.info("Importing *global* PolyChord.")
             poly_build_path = None
         else:
-            log.info("Importing *auto-installed* PolyChord (but defaulting to *global*).")
+            if is_main_process():
+                log.info(
+                    "Importing *auto-installed* PolyChord (but defaulting to *global*).")
             poly_build_path = cls.get_import_path(path)
         try:
             # TODO: add min_version when polychord module version available
@@ -481,7 +490,7 @@ class polychord(Sampler):
             if path is not None and path.lower() != "global":
                 log.error("Couldn't find the PolyChord python interface at '%s'. "
                           "Are you sure it has been installed there?", path)
-            else:
+            elif not check:
                 log.error("Could not import global PolyChord installation. "
                           "Specify a Cobaya or PolyChord installation path, "
                           "or install the PolyChord Python interface globally with "
@@ -490,6 +499,7 @@ class polychord(Sampler):
         except VersionCheckError as e:
             log.error(str(e))
             return False
+
     @classmethod
     def install(cls, path=None, force=False, code=False, data=False,
                 no_progress_bars=False):

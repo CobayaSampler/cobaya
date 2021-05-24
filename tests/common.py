@@ -7,7 +7,7 @@ def is_travis():
     return os.environ.get('TRAVIS') == 'true'
 
 
-def process_packages_path(packages_path):
+def process_packages_path(packages_path) -> str:
     packages_path = os.getenv('COBAYA_FORCE_PACKAGES_PATH', packages_path)
     if not packages_path:
         if os.path.exists(os.path.join(os.getcwd(), '..', 'packages_path')):

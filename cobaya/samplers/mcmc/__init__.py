@@ -1,1 +1,1 @@
-from .mcmc import mcmc, plot_progress
+from .mcmc import MCMC, plot_progress

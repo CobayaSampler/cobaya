@@ -13,7 +13,7 @@
 
 :Support: For general support, CosmoCoffee_; for bugs and issues, use the `issue tracker <https://github.com/CobayaSampler/cobaya/issues>`_.
 
-:Installation: ``pip install cobaya --upgrade --user`` (see the `installation instructions <https://cobaya.readthedocs.io/en/latest/installation.html>`_; in general do *not* clone)
+:Installation: ``pip install cobaya --upgrade`` (see the `installation instructions <https://cobaya.readthedocs.io/en/latest/installation.html>`_; in general do *not* clone)
 
 .. image:: https://travis-ci.org/CobayaSampler/cobaya.svg?branch=master
    :target: https://travis-ci.org/CobayaSampler/cobaya
@@ -21,8 +21,8 @@
    :target: https://pypi.python.org/pypi/cobaya/
 .. image:: https://readthedocs.org/projects/cobaya/badge/?version=latest
    :target: https://cobaya.readthedocs.org/en/latest
-
-
+.. image:: https://codecov.io/gh/CobayaSampler/cobaya/branch/master/graphs/badge.svg
+   :target: https://codecov.io/github/CobayaSampler/cobaya/branch/master
 
 **Cobaya** (**co**\ de for **bay**\ esian **a**\ nalysis, and Spanish for *Guinea Pig*) is a framework for sampling and statistical modelling: it allows you to explore an arbitrary prior or posterior using a range of Monte Carlo samplers (including the advanced MCMC sampler from CosmoMC_, and the advanced nested sampler PolyChord_). The results of the sampling can be analysed with GetDist_. It supports MPI parallelization (and very soon HPC containerization with Docker/Shifter and Singularity).
 
@@ -48,7 +48,7 @@ Acknowledgements
 
 Thanks to `J. Lesgourgues`_ and `W. Handley`_ for support on interfacing CLASS_ and PolyChord_ respectively.
 
-Thanks too to `G. Cañas Herrera`_, `A. Finke`_, `X. Garrido`_, `S. Heimersheim`_, `L. Hergt`_, `M.S. Madhavacheril`_, `V. Miranda`_, `T. Morton`_, `J. Zunz`_ and many others for extensive and somewhat painful testing.
+Thanks too to `G. Cañas Herrera`_, `A. Finke`_, `X. Garrido`_, `S. Heimersheim`_, `L. Hergt`_, `C. Hill`_, `P. Lemos`_, `M.S. Madhavacheril`_, `V. Miranda`_, `T. Morton`_,  `M. Rashkovetskyi`_, `J. Zunz`_ and many others for extensive and somewhat painful testing.
 
 .. _`Jesus Torrado`: https://web.physik.rwth-aachen.de/user/torrado
 .. _`Antony Lewis`: https://cosmologist.info
@@ -67,9 +67,12 @@ Thanks too to `G. Cañas Herrera`_, `A. Finke`_, `X. Garrido`_, `S. Heimersheim`
 .. _`X. Garrido`: https://xgarrido.github.io/
 .. _`S. Heimersheim`: https://www.ast.cam.ac.uk/people/Stefan.Heimersheim
 .. _`L. Hergt`: https://www.kicc.cam.ac.uk/directory/lh561
+.. _`C. Hill`: http://user.astro.columbia.edu/~jch/
+.. _`P. Lemos`: https://pablo-lemos.github.io/
 .. _`M.S. Madhavacheril`: https://msyriac.github.io/
 .. _`V. Miranda`: https://github.com/vivianmiranda
 .. _`T. Morton`: https://github.com/timothydmorton
+.. _`M. Rashkovetskyi`: https://misharash.github.io/
 .. _`J. Zunz`: https://github.com/joezuntz
 
 

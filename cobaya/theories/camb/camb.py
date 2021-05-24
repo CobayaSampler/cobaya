@@ -9,7 +9,7 @@
    <br />
 
 This module imports and manages the CAMB cosmological code.
-It requires CAMB 1.1.2 or higher.
+It requires CAMB 1.1.3 or higher.
 
 .. note::
 
@@ -162,8 +162,8 @@ the input block for CAMB (otherwise a system-wide CAMB may be used instead):
 .. note::
 
    In any of these methods, if you intent to switch between different versions or
-   modifications of CAMB you should not  install CAMB as python package using
-   ``python setup.py install --user``, as the official instructions suggest.
+   modifications of CAMB you should not install CAMB as python package using
+   ``python setup.py install``, as the official instructions suggest.
 """
 
 # Global
@@ -173,21 +173,22 @@ import logging
 import numbers
 import ctypes
 from copy import deepcopy
-from typing import NamedTuple, Any
+from typing import NamedTuple, Any, Callable, Optional
 import numpy as np
+from itertools import chain
 # Local
-from cobaya.theories._cosmo import BoltzmannBase
+from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.log import LoggedError
 from cobaya.install import download_github_release, check_gcc_version, NotInstalledError
 from cobaya.tools import getfullargspec, get_class_methods, get_properties, load_module, \
     VersionCheckError, str_to_list
 from cobaya.theory import HelperTheory
-from cobaya.conventions import _requires
+from cobaya.typing import InfoDict
 
 
 # Result collector
 class Collector(NamedTuple):
-    method: callable
+    method: Callable
     args: list = []
     kwargs: dict = {}
 
@@ -198,13 +199,17 @@ class CAMBOutputs(NamedTuple):
     derived: dict
 
 
-class camb(BoltzmannBase):
+class CAMB(BoltzmannBase):
+    r"""
+    CAMB cosmological Boltzmann code \cite{Lewis:1999bs,Howlett:2012mh}.
+    """
     # Name of the Class repo/folder and version to download
     _camb_repo_name = "cmbant/CAMB"
     _camb_repo_version = os.environ.get("CAMB_REPO_VERSION", "master")
     _camb_min_gcc_version = "6.4"
     _min_camb_version = '1.1.3'
 
+    file_base_name = 'camb'
     external_primordial_pk: bool
     camb: Any
 
@@ -214,7 +219,8 @@ class camb(BoltzmannBase):
         allow_global = not self.path
         if not self.path and self.packages_path:
             self.path = self.get_path(self.packages_path)
-        self.camb = self.is_installed(path=self.path, allow_global=allow_global)
+        self.camb = self.is_installed(path=self.path, allow_global=allow_global,
+                                      check=False)
         if not self.camb:
             raise NotInstalledError(
                 self.log, "Could not find CAMB. Check error message above.")
@@ -251,7 +257,7 @@ class camb(BoltzmannBase):
 
         self.nonlin_args, self.nonlin_params = self._extract_params(nonlin.set_params)
 
-        self.requires = str_to_list(getattr(self, _requires, []))
+        self.requires = str_to_list(getattr(self, "requires", []))
         self._transfer_requires = [p for p in self.requires if
                                    p not in self.get_can_support_params()]
         self.requires = [p for p in self.requires if p not in self._transfer_requires]
@@ -261,11 +267,16 @@ class camb(BoltzmannBase):
         args = {}
         params = []
         pars = getfullargspec(set_func)
-        for arg, v in zip(pars.args[1:], pars.defaults[1:]):
-            if arg in self.extra_args:
-                args[arg] = self.extra_args.pop(arg)
-            elif isinstance(v, numbers.Number) or v is None:
-                params.append(arg)
+        for arg in pars.args[1:len(pars.args) - len(pars.defaults or [])]:
+            params.append(arg)
+        if pars.defaults:
+            for arg, v in zip(pars.args[len(pars.args) - len(pars.defaults):],
+                              pars.defaults):
+                if arg in self.extra_args:
+                    args[arg] = self.extra_args.pop(arg)
+                elif (isinstance(v,
+                                 numbers.Number) or v is None) and 'version' not in arg:
+                    params.append(arg)
         return args, params
 
     def initialize_with_params(self):
@@ -279,6 +290,18 @@ class camb(BoltzmannBase):
 
     def get_allow_agnostic(self):
         return False
+
+    def set_cl_reqs(self, reqs):
+        """
+        Sets some common settings for both lensend and unlensed Cl's.
+        """
+        self.extra_args["lmax"] = max(
+            max(reqs.values()), self.extra_args.get("lmax", 0))
+        self.needs_perts = True
+        self.extra_attrs["Want_CMB"] = True
+        self.extra_attrs["WantCls"] = True
+        if 'TCMB' not in self.derived_extra:
+            self.derived_extra += ['TCMB']
 
     def must_provide(self, **requirements):
         # Computed quantities required by the likelihoods
@@ -296,8 +319,7 @@ class camb(BoltzmannBase):
         for k, v in self._must_provide.items():
             # Products and other computations
             if k == "Cl":
-                self.extra_args["lmax"] = max(
-                    max(v.values()), self.extra_args.get("lmax", 0))
+                self.set_cl_reqs(v)
                 cls = [a.lower() for a in v]
                 needs_lensing = set(cls).intersection({"pp", "pt", "pe", "tp", "ep"})
                 self.collectors[k] = Collector(
@@ -308,9 +330,6 @@ class camb(BoltzmannBase):
                              if k in self.collectors else []) +
                             ["total"] + (["lens_potential"] if needs_lensing else []))),
                         "raw_cl": False})
-                self.needs_perts = True
-                self.extra_attrs["Want_CMB"] = True
-                self.extra_attrs["WantCls"] = True
                 if "pp" in cls and self.extra_args.get(
                         "lens_potential_accuracy") is None:
                     self.extra_args["lens_potential_accuracy"] = 1
@@ -318,8 +337,11 @@ class camb(BoltzmannBase):
                                                               1) >= 1
                 if set(cls).intersection({"pt", "pe", "tp", "ep"}):
                     self._needs_lensing_cross = True
-                if 'TCMB' not in self.derived_extra:
-                    self.derived_extra += ['TCMB']
+            elif k == "unlensed_Cl":
+                self.set_cl_reqs(v)
+                self.collectors[k] = Collector(
+                    method=CAMBdata.get_cmb_power_spectra,
+                    kwargs={"spectra": ["unlensed_total"], "raw_cl": False})
             elif k == "Hubble":
                 self.collectors[k] = Collector(
                     method=CAMBdata.h_of_z,
@@ -328,6 +350,12 @@ class camb(BoltzmannBase):
                 self.collectors[k] = Collector(
                     method=getattr(CAMBdata, k),
                     kwargs={"z": self._combine_z(k, v)})
+            elif k == "sigma8_z":
+                self.add_to_redshifts(v["z"])
+                self.collectors[k] = Collector(
+                    method=CAMBdata.get_sigma8,
+                    kwargs={})
+                self.needs_perts = True
             elif k == "fsigma8":
                 self.add_to_redshifts(v["z"])
                 self.collectors[k] = Collector(
@@ -344,7 +372,7 @@ class camb(BoltzmannBase):
 
                 def get_sigmaR(results, **tmp):
                     _indices = self._sigmaR_z_indices.get(var_pair)
-                    if not _indices:
+                    if _indices is None or list(_indices) == []:
                         z_indices = []
                         calc = np.array(results.Params.Transfer.PK_redshifts[
                                         :results.Params.Transfer.PK_num_redshifts])
@@ -386,7 +414,7 @@ class camb(BoltzmannBase):
                 self.needs_perts = True
             elif k == "source_Cl":
                 if not getattr(self, "sources", None):
-                    self.sources = {}
+                    self.sources: InfoDict = {}
                 for source, window in v["sources"].items():
                     # If it was already there, BoltzmannBase.must_provide() has already
                     # checked that old info == new info
@@ -413,6 +441,7 @@ class camb(BoltzmannBase):
                 if k == "sigma8":
                     self.extra_attrs["WantTransfer"] = True
                     self.needs_perts = True
+                    self.add_to_redshifts([0.])
             else:
                 raise LoggedError(self.log, "This should not be happening. Contact the "
                                             "developers.")
@@ -428,8 +457,9 @@ class camb(BoltzmannBase):
         # set-set base CAMB params if anything might have changed
         self._base_params = None
 
-        must_provide = {'CAMB_transfers': {'non_linear': self.non_linear_sources,
-                                           'needs_perts': self.needs_perts}}
+        must_provide: InfoDict = {
+            'CAMB_transfers': {'non_linear': self.non_linear_sources,
+                               'needs_perts': self.needs_perts}}
         if self.external_primordial_pk and self.needs_perts:
             must_provide['primordial_scalar_pk'] = {'lmax': self.extra_args.get("lmax"),
                                                     'kmax': self.extra_args.get('kmax')}
@@ -454,7 +484,7 @@ class camb(BoltzmannBase):
     def calculate(self, state, want_derived=True, **params_values_dict):
         try:
             params, results = self.provider.get_CAMB_transfers()
-            if self.collectors:
+            if self.collectors or 'sigma8' in self.derived_extra:
                 if self.external_primordial_pk and self.needs_perts:
                     primordial_pk = self.provider.get_primordial_scalar_pk()
                     if primordial_pk.get('log_regular', True):
@@ -519,7 +549,8 @@ class camb(BoltzmannBase):
         state["derived_extra"] = {
             p: self._get_derived(p, intermediates) for p in self.derived_extra}
 
-    def _get_derived(self, p, intermediates):
+    @staticmethod
+    def _get_derived(p, intermediates):
         """
         General function to extract a single derived parameter.
 
@@ -531,7 +562,7 @@ class camb(BoltzmannBase):
                 return derived
         # Specific calls, if general ones fail:
         if p == "sigma8":
-            return intermediates.results.get_sigma8()[-1]
+            return intermediates.results.get_sigma8_0()
         try:
             return getattr(intermediates.camb_params, p)
         except AttributeError:
@@ -556,17 +587,17 @@ class camb(BoltzmannBase):
                                             " in the CAMB interface", p)
         return derived
 
-    def get_Cl(self, ell_factor=False, units="FIRASmuK2"):
-        current_state = self._current_state
-        # get C_l^XX from the cosmological code
+    def _get_Cl(self, ell_factor=False, units="FIRASmuK2", lensed=True):
+        which_key = "Cl" if lensed else "unlensed_Cl"
+        which_result = "total" if lensed else "unlensed_total"
+        which_error = "lensed" if lensed else "unlensed"
         try:
-            cl_camb = current_state["Cl"]["total"].copy()
+            cl_camb = self.current_state[which_key][which_result].copy()
         except:
-            raise LoggedError(self.log, "No Cl's were computed. Are you sure that you "
-                                        "have requested them?")
-
-        units_factor = self._cmb_unit_factor(units, current_state['derived_extra']['TCMB'])
-
+            raise LoggedError(self.log, "No %s Cl's were computed. Are you sure that you "
+                                        "have requested them?", which_error)
+        units_factor = self._cmb_unit_factor(
+            units, self.current_state['derived_extra']['TCMB'])
         ls = np.arange(cl_camb.shape[0], dtype=np.int64)
         if not ell_factor:
             # unit conversion and ell_factor. CAMB output is *with* the factors already
@@ -575,34 +606,43 @@ class camb(BoltzmannBase):
             cl_camb[1:, :] *= (2 * np.pi) * units_factor ** 2
         elif units_factor != 1:
             cl_camb *= units_factor ** 2
-
         mapping = {"tt": 0, "ee": 1, "bb": 2, "te": 3, "et": 3}
         cls = {"ell": ls}
         for sp, i in mapping.items():
             cls[sp] = cl_camb[:, i]
-
-        cl_lens = current_state["Cl"].get("lens_potential")
-        if cl_lens is not None:
-            cls["pp"] = cl_lens[:, 0].copy()
-            if not ell_factor:
-                cls["pp"][1:] /= ells_factor ** 2 / (2 * np.pi)
-            if self._needs_lensing_cross:
-                for i, cross in enumerate(['pt', 'pe']):
-                    cls[cross] = cl_lens[:, i + 1].copy() * units_factor
-                    if not ell_factor:
-                        cls[cross][1:] /= ells_factor ** (3. / 2) / (2 * np.pi)
-                    cls[cross[::-1]] = cls[cross]
+        if lensed:
+            cl_lens: Optional[np.ndarray] = self.current_state["Cl"].get("lens_potential")
+            if cl_lens is not None:
+                cls["pp"] = cl_lens[:, 0].copy()
+                if not ell_factor:
+                    # noinspection PyUnboundLocalVariable
+                    cls["pp"][1:] /= ells_factor ** 2 / (2 * np.pi)
+                if self._needs_lensing_cross:
+                    for i, cross in enumerate(['pt', 'pe']):
+                        cls[cross] = cl_lens[:, i + 1].copy() * units_factor
+                        if not ell_factor:
+                            cls[cross][1:] /= ells_factor ** (3. / 2) / (2 * np.pi)
+                        cls[cross[::-1]] = cls[cross]
         return cls
 
+    def get_Cl(self, ell_factor=False, units="FIRASmuK2"):
+        return self._get_Cl(ell_factor=ell_factor, units=units, lensed=True)
+
+    def get_unlensed_Cl(self, ell_factor=False, units="FIRASmuK2"):
+        return self._get_Cl(ell_factor=ell_factor, units=units, lensed=False)
+
     def _get_z_dependent(self, quantity, z):
-        if quantity == "fsigma8":
+        if quantity in ["sigma8_z", "fsigma8"]:
             computed_redshifts = self.extra_args["redshifts"]
             i_kwarg_z = np.concatenate(
                 [np.where(computed_redshifts == zi)[0] for zi in np.atleast_1d(z)])
         else:
             computed_redshifts = self.collectors[quantity].kwargs["z"]
             i_kwarg_z = np.searchsorted(computed_redshifts, np.atleast_1d(z))
-        return np.array(self._current_state[quantity], copy=True)[i_kwarg_z]
+        return np.array(self.current_state[quantity], copy=True)[i_kwarg_z]
+
+    def get_sigma8_z(self, z):
+        return self._get_z_dependent("sigma8_z", z)
 
     def get_fsigma8(self, z):
         return self._get_z_dependent("fsigma8", z)
@@ -610,12 +650,12 @@ class camb(BoltzmannBase):
     def get_source_Cl(self):
         # get C_l^XX from the cosmological code
         try:
-            cls = deepcopy(self._current_state["source_Cl"])
+            cls = deepcopy(self.current_state["source_Cl"])
         except:
             raise LoggedError(
                 self.log, "No source Cl's were computed. "
                           "Are you sure that you have requested some source?")
-        cls_dict = dict()
+        cls_dict: dict = dict()
         for term, cl in cls.items():
             term_tuple = tuple(
                 (lambda x: x if x == "P" else list(self.sources)[int(x) - 1])(
@@ -631,7 +671,7 @@ class camb(BoltzmannBase):
         :return: CAMB's `CAMBdata <https://camb.readthedocs.io/en/latest/results.html>`_
                  result instance for the current parameters
         """
-        return self._current_state['CAMBdata']
+        return self.current_state['CAMBdata']
 
     def get_can_provide_params(self):
         # possible derived parameters for derived_extra, excluding things that are
@@ -639,6 +679,7 @@ class camb(BoltzmannBase):
         params_derived = list(get_class_methods(self.camb.CAMBparams))
         params_derived.remove("custom_source_names")
         fields = []
+        # noinspection PyProtectedMember
         for f, tp in self.camb.CAMBparams._fields_:
             if tp is ctypes.c_double and 'max_eta_k' not in f \
                     and f not in ['Alens', 'num_nu_massless']:
@@ -650,8 +691,7 @@ class camb(BoltzmannBase):
             if mapped in names:
                 names.append(name)
         # remove any parameters explicitly tagged as input requirements
-        return set(names).difference(
-            set(self._transfer_requires).union(set(self.requires)))
+        return set(names).difference(chain(self._transfer_requires, self.requires))
 
     def get_version(self):
         return self.camb.__version__
@@ -713,8 +753,7 @@ class camb(BoltzmannBase):
                     params.SourceWindows = source_windows
                     params.SourceTerms.limber_windows = self.limber
                 self._base_params = params
-            else:
-                args.update(self._reduced_extra_args)
+            args.update(self._reduced_extra_args)
             return self.camb.set_params(self._base_params.copy(), **args)
         except self.camb.baseconfig.CAMBParamRangeError:
             if self.stop_at_error:
@@ -745,7 +784,7 @@ class camb(BoltzmannBase):
         self._camb_transfers = CambTransfers(self, 'camb.transfers',
                                              dict(stop_at_error=self.stop_at_error),
                                              timing=self.timer)
-        setattr(self._camb_transfers, _requires, self._transfer_requires)
+        setattr(self._camb_transfers, "requires", self._transfer_requires)
         return {'camb.transfers': self._camb_transfers}
 
     def get_speed(self):
@@ -765,26 +804,27 @@ class camb(BoltzmannBase):
 
     @classmethod
     def is_installed(cls, **kwargs):
-        log = logging.getLogger(cls.__name__)
-        import platform
         if not kwargs.get("code", True):
             return True
+        log = logging.getLogger(cls.__name__)
+        import platform
+        check = kwargs.get("check", True)
+        func = log.info if check else log.error
         path = kwargs["path"]
         if path is not None and path.lower() == "global":
             path = None
-        if path and not kwargs.get("allow_global"):
+        if isinstance(path, str) and not kwargs.get("allow_global"):
             log.info("Importing *local* CAMB from " + path)
             if not os.path.exists(path):
-                log.error("The given folder does not exist: '%s'", path)
+                func("The given folder does not exist: '%s'", path)
                 return False
             if not os.path.exists(os.path.join(path, "setup.py")):
-                log.error("Either CAMB is not in the given folder, '%s', or you are using"
-                          " a very old version without the Python interface.", path)
+                func("Either CAMB is not in the given folder, '%s', or you are using"
+                     " a very old version without the Python interface.", path)
                 return False
             if not os.path.isfile(os.path.realpath(
-                    os.path.join(path,
-                                 "camb", "cambdll.dll" if (
-                                platform.system() == "Windows") else "camblib.so"))):
+                    os.path.join(path, "camb", "cambdll.dll" if (
+                            platform.system() == "Windows") else "camblib.so"))):
                 log.error("CAMB installation at '%s' appears not to be compiled.", path)
                 return False
         elif not path:
@@ -796,9 +836,9 @@ class camb(BoltzmannBase):
             return load_module("camb", path=path, min_version=cls._min_camb_version)
         except ImportError:
             if path is not None and path.lower() != "global":
-                log.error("Couldn't find the CAMB python interface at '%s'. "
-                          "Are you sure it has been installed there?", path)
-            else:
+                func("Couldn't find the CAMB python interface at '%s'. "
+                     "Are you sure it has been installed there?", path)
+            elif not check:
                 log.error("Could not import global CAMB installation. "
                           "Specify a Cobaya or CAMB installation path, "
                           "or install the 'camb' Python package globally.")
@@ -808,7 +848,7 @@ class camb(BoltzmannBase):
             return False
 
     @classmethod
-    def install(cls, path=None, code=True, no_progress_bars=False, **kwargs):
+    def install(cls, path=None, code=True, no_progress_bars=False, **_kwargs):
         log = logging.getLogger(cls.__name__)
         if not code:
             log.info("Code not requested. Nothing to do.")
@@ -880,7 +920,7 @@ class CambTransfers(HelperTheory):
         self.cobaya_camb.check_no_repeated_input_extra()
 
     def get_CAMB_transfers(self):
-        return self._current_state['results']
+        return self.current_state['results']
 
     def calculate(self, state, want_derived=True, **params_values_dict):
         # Set parameters

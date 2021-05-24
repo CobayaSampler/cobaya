@@ -14,6 +14,7 @@ import pickle
 import copy
 import sys
 import time
+from typing import Callable
 from getdist import types, IniFile
 from getdist.mcsamples import loadMCSamples
 
@@ -78,7 +79,7 @@ def getCodeRootPath():
 
 
 class PropertiesItem:
-    propertiesIniFile: callable
+    propertiesIniFile: Callable
 
     def propertiesIni(self):
         if os.path.exists(self.propertiesIniFile()):
@@ -90,6 +91,9 @@ class PropertiesItem:
 
 
 class DataSet:
+    importanceNames: list
+    importanceParams: list
+
     def __init__(self, names, params=None, covmat=None, dist_settings=None):
         if not dist_settings:
             dist_settings = {}
@@ -210,7 +214,7 @@ class ImportanceSetting:
         self.dist_settings = dist_settings or {}
         self.want_minimize = minimize
 
-    def wantImportance(self, jobItem):
+    def wantImportance(self, _jobItem):
         return True
 
 
@@ -224,6 +228,10 @@ class ImportanceFilter(ImportanceSetting):
 
 
 class JobItem(PropertiesItem):
+    importanceTag: str
+    importanceSettings: list
+    importanceFilter: ImportanceFilter
+
     def __init__(self, path, param_set, data_set, base='base', minimize=True):
         self.param_set = param_set
         if not isinstance(data_set, DataSet):

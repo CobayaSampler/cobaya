@@ -22,15 +22,17 @@ from cobaya.log import logger_setup, LoggedError
 from cobaya.input import get_used_components, load_input
 from cobaya.yaml import yaml_dump
 from cobaya.install import install
-from cobaya.conventions import _products_path, _code, _data
-from cobaya.conventions import _packages_path_env, _packages_path
-from cobaya.conventions import _requirements_file, _help_file, _packages_path_arg
+from cobaya.conventions import products_path, packages_path_env, packages_path_arg, \
+    code_path, data_path
 from cobaya.tools import warn_deprecation
 
 log = logging.getLogger(__name__.split(".")[-1])
 
-requirements_file_path = os.path.join(_packages_path, _requirements_file)
-help_file_path = os.path.join(_packages_path, _help_file)
+_requirements_file = "requirements.yaml"
+_help_file = "readme.md"
+
+requirements_file_path = os.path.join("packages_path", _requirements_file)
+help_file_path = os.path.join("packages_path", _help_file)
 
 base_recipe = r"""
 # OS -------------------------------------------------------------------------
@@ -58,8 +60,8 @@ RUN mkdir $%s && \
 # getdist fork (it will be an automatic requisite in the future)
 RUN cd $%s && git clone https://github.com/JesusTorrado/cobaya.git && \
     cd $%s/cobaya && python -m pip install -e .
-""" % (_packages_path_env, _packages_path, _products_path,
-       _packages_path_env, _packages_path_env, _packages_path_env)
+""" % (packages_path_env, "packages_path", products_path,
+       packages_path_env, packages_path_env, packages_path_env)
 
 MPI_URL = {
     "mpich": "https://www.mpich.org/static/downloads/_VER_/mpich-_VER_.tar.gz",
@@ -151,7 +153,7 @@ def create_base_image(mpi=None, version=None, sub=None):
         sub = "." + sub
     try:
         tag = "cobaya/base_%s_%s:latest" % (mpi.lower(), version + sub)
-    except KeyError():
+    except KeyError:
         raise LoggedError(log, "MPI library '%s' not recognized.", mpi)
     URL = MPI_URL[mpi.lower()].replace("_VER_", str(version)).replace("_DOT_SUB_", sub)
     if head(URL).status_code >= 400:
@@ -197,8 +199,8 @@ def create_docker_image(filenames, MPI_version=None):
     RUN cobaya-install %s --%s %s --just-code --force ### NEEDS PYTHON UPDATE! --no-progress-bars
     %s
     CMD ["cat", "%s"]
-    """ % (MPI_version, echos_reqs, requirements_file_path, _packages_path_arg,
-           _packages_path, echos_help, help_file_path)
+    """ % (MPI_version, echos_reqs, requirements_file_path, packages_path_arg,
+           "packages_path", echos_help, help_file_path)
     image_name = "cobaya:" + uuid.uuid4().hex[:6]
     with StringIO(recipe) as stream:
         dc.images.build(fileobj=stream, tag=image_name)
@@ -233,10 +235,12 @@ def create_singularity_image(filenames, MPI_version=None):
 
         %s
         """ % (requirements_file_path,
-               _packages_path, os.path.join(_packages_path_arg, _packages_path, _data),
+               # TODO: this looks wrong?
+               "packages_path",
+               os.path.join(packages_path_arg, "packages_path", data_path),
                "\n        ".join(image_help("singularity").split("\n")[1:]))))
     with NamedTemporaryFile(delete=False) as recipe_file:
-        recipe_file.write(recipe)
+        recipe_file.write(recipe.encode('utf-8'))
         recipe_file_name = recipe_file.name
     image_name = "cobaya_" + uuid.uuid4().hex[:6] + ".simg"
     process_build = Popen(["singularity", "build", image_name, recipe_file_name],
@@ -254,11 +258,13 @@ def create_singularity_image(filenames, MPI_version=None):
 def create_image_script():
     warn_deprecation()
     logger_setup()
-    parser = argparse.ArgumentParser(description=(
-        "Cobaya's tool for preparing Docker (for Shifter) and Singularity images."))
+    parser = argparse.ArgumentParser(
+        prog="cobaya create-image",
+        description=(
+            "Cobaya's tool for preparing Docker (for Shifter) and Singularity images."))
     parser.add_argument("files", action="store", nargs="+", metavar="input_file.yaml",
                         help="One or more input files.")
-    parser.add_argument("-v", "--mpi-version", action="store", nargs=1, default=[None],
+    parser.add_argument("-v", "--mpi-version", action="store", default=None,
                         metavar="X.Y(.Z)", dest="version", help="Version of the MPI lib.")
     group_type = parser.add_mutually_exclusive_group(required=True)
     group_type.add_argument("-d", "--docker", action="store_const", const="docker",
@@ -267,9 +273,9 @@ def create_image_script():
                             const="singularity", help="Create a Singularity image.")
     arguments = parser.parse_args()
     if arguments.type == "docker":
-        create_docker_image(arguments.files, MPI_version=arguments.version[0])
+        create_docker_image(arguments.files, MPI_version=arguments.version)
     elif arguments.type == "singularity":
-        create_singularity_image(arguments.files, MPI_version=arguments.version[0])
+        create_singularity_image(arguments.files, MPI_version=arguments.version)
 
 
 def prepare_data_script():
@@ -279,6 +285,7 @@ def prepare_data_script():
         raise LoggedError(log, "This command should only be run within a container. "
                                "Run 'cobaya-install' instead.")
     parser = argparse.ArgumentParser(
+        prog="cobaya prepare-data",
         description="Cobaya's installation tool for the data needed by a container.")
     parser.add_argument("-f", "--force", action="store_true", default=False,
                         help="Force re-installation of apparently installed packages.")
@@ -286,7 +293,7 @@ def prepare_data_script():
     try:
         info = load_input(requirements_file_path)
     except IOError:
-        raise LoggedError(log,
-                          "Cannot find the requirements file. This should not be happening.")
-    install(info, path=_packages_path, force=arguments.force,
-            **{_code: False, _data: True})
+        raise LoggedError(log, "Cannot find the requirements file. "
+                               "This should not be happening.")
+    install(info, path="packages_path", force=arguments.force,
+            **{code_path: False, data_path: True})

@@ -6,30 +6,30 @@
 
 """
 # Global
+from typing import Any
 import numpy as np
 from scipy.stats import multivariate_normal, uniform, random_correlation
 from scipy.special import logsumexp
-from typing import Sequence, Optional
 
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
 from cobaya.mpi import share_mpi, is_main_process
-from cobaya.conventions import kinds, _params
-from cobaya.conventions import _input_params_prefix, _output_params_prefix
+from cobaya.typing import InputDict, Union, Sequence
 
 derived_suffix = "_derived"
 
 
-class gaussian_mixture(Likelihood):
+class GaussianMixture(Likelihood):
     """
     Gaussian likelihood.
     """
+    file_base_name = 'gaussian_mixture'
 
     # yaml variables
-    means: Optional[Sequence]
-    covs: Optional[Sequence]
-    weights: Optional[Sequence[float]]
+    means: Union[Sequence, np.ndarray]
+    covs: Union[Sequence, np.ndarray]
+    weights: Union[np.ndarray, float]
     derived: bool
     input_params_prefix: str
     output_params_prefix: str
@@ -99,18 +99,19 @@ class gaussian_mixture(Likelihood):
         self.gaussians = [multivariate_normal(mean=mean, cov=cov)
                           for mean, cov in zip(self.means, self.covs)]
         if self.weights:
+            self.weights = np.asarray(self.weights)
             if not len(self.weights) == len(self.gaussians):
                 raise LoggedError(self.log,
                                   "There must be as many weights as components.")
             if not np.isclose(sum(self.weights), 1):
                 self.weights = self.weights / sum(self.weights)
                 self.log.warning(
-                    "Weights of components renormalized to %r", list(self.weights))
+                    "Weights of components renormalized to %r", self.weights)
         else:
             self.weights = 1 / len(self.gaussians)
 
         # Prepare the transformation(s) for the derived parameters
-        self.choleskyL = [np.linalg.cholesky(cov) for cov in self.covs]
+        self.inv_choleskyL = [np.linalg.inv(np.linalg.cholesky(cov)) for cov in self.covs]
 
     def logp(self, **params_values):
         """
@@ -122,19 +123,23 @@ class gaussian_mixture(Likelihood):
         # Fill the derived parameters
         derived = params_values.get("_derived")
         if derived is not None:
+            n = self.d()
             for i in range(self.n_modes):
-                standard = np.linalg.inv(self.choleskyL[i]).dot((x - self.means[i]))
-                derived.update(dict(
-                    [(p, v) for p, v in
-                     zip(list(self.output_params)[i * self.d():(i + 1) * self.d()],
-                         standard)]))
+                standard = self.inv_choleskyL[i].dot(x - self.means[i])
+                derived.update(
+                    (p, v) for p, v in
+                    zip(list(self.output_params)[i * n:(i + 1) * n], standard))
         # Compute the likelihood and return
-        return logsumexp([gauss.logpdf(x) for gauss in self.gaussians], b=self.weights)
+        if len(self.gaussians) == 1:
+            return self.gaussians[0].logpdf(x)
+        else:
+            return logsumexp([gauss.logpdf(x) for gauss in self.gaussians],
+                             b=self.weights)
 
 
 # Scripts to generate random means and covariances #######################################
 
-def random_mean(ranges, n_modes=1, mpi_warn=True):
+def random_mean(ranges, n_modes=1, mpi_warn=True, random_state=None):
     """
     Returns a uniformly sampled point (as an array) within a list of bounds ``ranges``.
 
@@ -146,15 +151,16 @@ def random_mean(ranges, n_modes=1, mpi_warn=True):
     if not is_main_process() and mpi_warn:
         print("WARNING! "
               "Using with MPI: different process will produce different random results.")
-    mean = np.array([uniform.rvs(loc=r[0], scale=r[1] - r[0], size=n_modes)
-                     for r in ranges])
+    mean = np.array([uniform.rvs(loc=r[0], scale=r[1] - r[0], size=n_modes,
+                                 random_state=random_state) for r in ranges])
     mean = mean.T
     if n_modes == 1:
         mean = mean[0]
     return mean
 
 
-def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1, mpi_warn=True):
+def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1,
+               mpi_warn=True, random_state=None):
     """
     Returns a random covariance matrix, with standard deviations sampled log-uniformly
     from the length of the parameter ranges times ``O_std_min`` and ``O_std_max``, and
@@ -171,12 +177,13 @@ def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1, mpi_warn=True):
     dim = len(ranges)
     scales = np.array([r[1] - r[0] for r in ranges])
     cov = []
-    for i in range(n_modes):
+    for _ in range(n_modes):
         stds = scales * 10 ** (uniform.rvs(size=dim, loc=np.log10(O_std_min),
-                                           scale=np.log10(O_std_max / O_std_min)))
+                                           scale=np.log10(O_std_max / O_std_min),
+                                           random_state=random_state))
         this_cov = np.diag(stds).dot(
-            (random_correlation.rvs(dim * stds / sum(stds)) if dim > 1 else np.eye(1))
-                .dot(np.diag(stds)))
+            (random_correlation.rvs(dim * stds / sum(stds), random_state=random_state)
+             if dim > 1 else np.eye(1)).dot(np.diag(stds)))
         # Symmetrize (numerical noise is usually introduced in the last step)
         cov += [(this_cov + this_cov.T) / 2]
     if n_modes == 1:
@@ -184,9 +191,10 @@ def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1, mpi_warn=True):
     return cov
 
 
-def info_random_gaussian_mixture(
-        ranges, n_modes=1, input_params_prefix="", output_params_prefix="",
-        O_std_min=1e-2, O_std_max=1, derived=False, mpi_aware=True):
+def info_random_gaussian_mixture(ranges, n_modes=1, input_params_prefix="",
+                                 output_params_prefix="", O_std_min=1e-2, O_std_max=1,
+                                 derived=False, mpi_aware=True,
+                                 random_state=None):
     """
     Wrapper around ``random_mean`` and ``random_cov`` to generate the likelihood and
     parameter info for a random Gaussian.
@@ -194,9 +202,11 @@ def info_random_gaussian_mixture(
     If ``mpi_aware=True``, it draws the random stuff only once, and communicates it to
     the rest of the MPI processes.
     """
+    cov: Any
+    mean: Any
     if is_main_process() or not mpi_aware:
-        cov = random_cov(ranges, n_modes=n_modes,
-                         O_std_min=O_std_min, O_std_max=O_std_max, mpi_warn=False)
+        cov = random_cov(ranges, n_modes=n_modes, O_std_min=O_std_min,
+                         O_std_max=O_std_max, mpi_warn=False, random_state=random_state)
         if n_modes == 1:
             cov = [cov]
         # Make sure it stays away from the edges
@@ -204,26 +214,29 @@ def info_random_gaussian_mixture(
         for i in range(n_modes):
             std = np.sqrt(cov[i].diagonal())
             factor = 3
-            ranges_mean = [[l[0] + factor * s, l[1] - +factor * s] for l, s in
+            ranges_mean = [[r[0] + factor * s, r[1] - +factor * s] for r, s in
                            zip(ranges, std)]
             # If this implies min>max, take the centre
             ranges_mean = [
-                (l if l[0] <= l[1] else 2 * [(l[0] + l[1]) / 2]) for l in ranges_mean]
-            mean[i] = random_mean(ranges_mean, n_modes=1, mpi_warn=False)
+                (r if r[0] <= r[1] else 2 * [(r[0] + r[1]) / 2]) for r in ranges_mean]
+            mean[i] = random_mean(ranges_mean, n_modes=1, mpi_warn=False,
+                                  random_state=random_state)
+    else:
+        mean, cov = None, None
     if mpi_aware:
-        mean, cov = share_mpi((mean, cov) if is_main_process() else None)
+        mean, cov = share_mpi((mean, cov))
     dimension = len(ranges)
-    info = {kinds.likelihood: {"gaussian_mixture": {
-        "means": mean, "covs": cov, _input_params_prefix: input_params_prefix,
-        _output_params_prefix: output_params_prefix, "derived": derived}}}
-    info[_params] = dict(
-        # sampled
-        [(input_params_prefix + "_%d" % i,
-          {"prior": {"min": ranges[i][0], "max": ranges[i][1]},
-           "latex": r"\alpha_{%i}" % i})
-         for i in range(dimension)] +
-        # derived
-        ([[output_params_prefix + "_%d" % i,
-           {"min": -3, "max": 3, "latex": r"\beta_{%i}" % i}]
-          for i in range(dimension * n_modes)] if derived else []))
+    info: InputDict = {"likelihood": {"gaussian_mixture": {
+        "means": mean, "covs": cov, "input_params_prefix": input_params_prefix,
+        "output_params_prefix": output_params_prefix, "derived": derived}},
+        "params": dict(
+            # sampled
+            tuple((input_params_prefix + "_%d" % i,
+                   {"prior": {"min": ranges[i][0], "max": ranges[i][1]},
+                    "latex": r"\alpha_{%i}" % i})
+                  for i in range(dimension)) +
+            # derived
+            (tuple((output_params_prefix + "_%d" % i,
+                    {"latex": r"\beta_{%i}" % i})
+                   for i in range(dimension * n_modes)) if derived else ()))}
     return info

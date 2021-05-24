@@ -13,35 +13,33 @@ import logging
 import platform
 import warnings
 import inspect
+import re
+import numbers
 import pandas as pd
-import numpy as np  # don't delete: necessary for get_external_function
+import numpy as np
+from itertools import chain
 from importlib import import_module
 from copy import deepcopy
 from packaging import version
 from itertools import permutations
-from typing import Mapping
+from typing import Mapping, Sequence, Any, List, TypeVar, Optional, Union, \
+    Iterable, Set, Dict
 from types import ModuleType
 from inspect import cleandoc, getfullargspec
-from math import gcd
 from ast import parse
-
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore")
-    # Suppress message about optional dependency
-    from fuzzywuzzy import process as fuzzy_process
+import traceback
 
 # Local
-from cobaya import __obsolete__
-from cobaya.conventions import _cobaya_package, subfolders, partag, kinds, _packages_path, \
-    _packages_path_config_file, _packages_path_env, _packages_path_arg, \
-    _dump_sort_cosmetic
-from cobaya.log import LoggedError
+from cobaya.conventions import cobaya_package, subfolders, kinds, \
+    packages_path_config_file, packages_path_env, packages_path_arg, dump_sort_cosmetic
+from cobaya.log import LoggedError, HasLogger
+from cobaya.typing import Kind
 
 # Set up logger
 log = logging.getLogger(__name__.split(".")[-1])
 
 
-def str_to_list(x):
+def str_to_list(x) -> List:
     """
     Makes sure that the input is a list of strings (could be string).
     """
@@ -77,7 +75,7 @@ def change_key(info, old, new, value):
     return info
 
 
-def get_internal_class_component_name(name, kind):
+def get_internal_class_component_name(name, kind) -> str:
     """
     Gets qualified name of internal component, relative to the package source,
     of a likelihood, theory or sampler.
@@ -85,31 +83,31 @@ def get_internal_class_component_name(name, kind):
     return '.' + subfolders[kind] + '.' + name
 
 
-def get_base_classes():
+def get_base_classes() -> Dict[Kind, Any]:
     from cobaya.likelihood import Likelihood
     from cobaya.theory import Theory
     from cobaya.sampler import Sampler
-    return {kinds.sampler: Sampler, kinds.likelihood: Likelihood, kinds.theory: Theory}
+    return {"sampler": Sampler, "likelihood": Likelihood,  # type: ignore
+            "theory": Theory}
 
 
-def get_kind(name, allow_external=True):
+def get_kind(name: str, allow_external=True) -> Kind:
     """
     Given a helpfully unique component name, tries to determine it's kind:
     ``sampler``, ``theory`` or ``likelihood``.
     """
-    try:
-        return next(
-            k for k in kinds
-            if name in get_available_internal_class_names(k))
-    except StopIteration:
-        if allow_external:
-            cls = get_class(name, None_if_not_found=True, allow_internal=False)
-            if cls:
-                for kind, tp in get_base_classes().items():
-                    if issubclass(cls, tp):
-                        return kind
-
+    for i, kind in enumerate(kinds):
+        cls = get_class(name, kind, allow_external=allow_external and i == len(kinds) - 1,
+                        None_if_not_found=True)
+        if cls is not None:
+            break
+    else:
         raise LoggedError(log, "Could not find component with name %r", name)
+    for kind, tp in get_base_classes().items():
+        if issubclass(cls, tp):
+            return kind
+
+    raise LoggedError(log, "Class %r is not a standard class type %r", name, kinds)
 
 
 class PythonPath:
@@ -142,7 +140,7 @@ def check_component_path(component, path):
             component.__name__, path)
 
 
-def check_component_version(component, min_version):
+def check_component_version(component: Any, min_version):
     if not hasattr(component, "__version__") or \
             version.parse(component.__version__) < version.parse(min_version):
         raise VersionCheckError(
@@ -190,19 +188,28 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
         class_name = None
     assert allow_internal or allow_external
 
+    def get_matching_class_name(_module: Any, _class_name, none=False):
+        cls = getattr(_module, _class_name, None)
+        if cls is None and _class_name == _class_name.lower():
+            # where the _class_name may be a module name, find CamelCased class
+            cls = module_class_for_name(_module, _class_name)
+        if cls or none:
+            return cls
+        else:
+            return getattr(_module, _class_name)
+
     def return_class(_module_name, package=None):
-        _module = load_module(_module_name, package=package, path=component_path)
+        _module: Any = load_module(_module_name, package=package, path=component_path)
         if not class_name and hasattr(_module, "get_cobaya_class"):
             return _module.get_cobaya_class()
         _class_name = class_name or module_name
-        if hasattr(_module, _class_name):
-            cls = getattr(_module, _class_name)
-        else:
+        cls = get_matching_class_name(_module, _class_name, none=True)
+        if not cls:
             _module = load_module(_module_name + '.' + _class_name,
                                   package=package, path=component_path)
-            cls = getattr(_module, _class_name)
-        if not inspect.isclass(cls):
-            return getattr(cls, _class_name)
+            cls = get_matching_class_name(_module, _class_name)
+        if not isinstance(cls, type):
+            return get_matching_class_name(cls, _class_name)
         else:
             return cls
 
@@ -211,55 +218,94 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
             return return_class(module_name)
         elif allow_internal:
             internal_module_name = get_internal_class_component_name(module_name, kind)
-            return return_class(internal_module_name, package=_cobaya_package)
+            return return_class(internal_module_name, package=cobaya_package)
         else:
             raise Exception()
     except:
         exc_info = sys.exc_info()
-        if allow_external and not component_path:
+    if allow_external and not component_path:
+        try:
+            import_module(module_name)
+        except Exception:
+            exc_info = sys.exc_info()
+        else:
             try:
-                import_module(module_name)
-            except Exception:
-                pass
-            else:
-                try:
-                    return return_class(module_name)
-                except:
-                    exc_info = sys.exc_info()
-        if ((exc_info[0] is ModuleNotFoundError and
-             str(exc_info[1]).rstrip("'").endswith(name))):
-            if None_if_not_found:
-                return None
-            if allow_internal:
+                return return_class(module_name)
+            except:
+                exc_info = sys.exc_info()
+    if None_if_not_found:
+        return None
+    if ((exc_info[0] is ModuleNotFoundError and
+         str(exc_info[1]).rstrip("'").endswith(name))):
+        if allow_internal:
+            suggestions = fuzzy_match(name, get_available_internal_class_names(kind), n=3)
+            if suggestions:
                 raise LoggedError(
                     log, "%s '%s' not found. Maybe you meant one of the following "
                          "(capitalization is important!): %s",
-                    kind.capitalize(), name,
-                    fuzzy_match(name, get_available_internal_class_names(kind), n=3))
-            else:
-                raise LoggedError(log, "'%s' not found", name)
-        else:
-            log.error("There was a problem when importing %s '%s':", kind or "external",
-                      name)
-            raise exc_info[1]
+                    kind.capitalize(), name, suggestions)
+        raise LoggedError(log, "'%s' not found", name)
+    else:
+        log.error("".join(list(traceback.format_exception(*exc_info))))
+        log.error("There was a problem when importing %s '%s':", kind or "external",
+                  name)
+        raise exc_info[1]
+
+
+def get_resolved_class(component_or_class, kind=None, component_path=None,
+                       class_name=None, None_if_not_found=False):
+    """
+    Returns the class corresponding to the component indicated as first argument.
+
+    If the first argument is a class, it is simply returned. If it is a string, it
+    retrieves the corresponding class name, using the value of `class_name` instead if
+    present.`
+    """
+    if isinstance(component_or_class, str):
+        component_or_class = get_class(class_name or component_or_class, kind,
+                                       component_path=component_path,
+                                       None_if_not_found=None_if_not_found)
+    return component_or_class
 
 
 def import_all_classes(path, pkg, subclass_of, hidden=False, helpers=False):
     import pkgutil
-    result = set()
     from cobaya.theory import HelperTheory
+    result = set()
     for (module_loader, name, ispkg) in pkgutil.iter_modules([path]):
         if hidden or not name.startswith('_'):
             module_name = pkg + '.' + name
             m = load_module(module_name)
-            for class_name, cls in inspect.getmembers(m, inspect.isclass):
-                if issubclass(cls, subclass_of) and \
-                        (helpers or not issubclass(cls, HelperTheory)) and \
-                        cls.__module__ == module_name:
-                    result.add(cls)
-            if ispkg:
-                result.update(import_all_classes(os.path.dirname(m.__file__), m.__name__,
-                                                 subclass_of, hidden))
+            if hidden or not getattr(m, '_is_abstract', False):
+                for class_name, cls in inspect.getmembers(m, inspect.isclass):
+                    if issubclass(cls, subclass_of) and \
+                            (helpers or not issubclass(cls, HelperTheory)) and \
+                            cls.__module__ == module_name and \
+                            (hidden or not cls.__dict__.get('_is_abstract')):
+                        result.add(cls)
+                if ispkg:
+                    result.update(import_all_classes(os.path.dirname(m.__file__),
+                                                     m.__name__, subclass_of, hidden))
+    return result
+
+
+def classes_in_module(m, subclass_of=None, allow_imported=False) -> Set[type]:
+    return set(cls for _, cls in inspect.getmembers(m, inspect.isclass)
+               if (not subclass_of or issubclass(cls, subclass_of))
+               and (allow_imported or cls.__module__ == m.__name__))
+
+
+def module_class_for_name(m, name):
+    # Get Camel- or uppercase class name matching name in module m
+    result = None
+    valid_names = {name, name[:1] + name[1:].replace('_', '')}
+    from cobaya.component import CobayaComponent
+    for cls in classes_in_module(m, subclass_of=CobayaComponent):
+        if cls.__name__.lower() in valid_names:
+            if result is not None:
+                raise ValueError('More than one class with same lowercase name %s',
+                                 name)
+            result = cls
     return result
 
 
@@ -275,16 +321,33 @@ def get_available_internal_classes(kind, hidden=False):
 
 
 def get_all_available_internal_classes(hidden=False):
-    result = set()
-    for classes in [get_available_internal_classes(k, hidden) for k in kinds]:
-        result.update(classes)
-    return result
+    return set(chain(*(get_available_internal_classes(k, hidden) for k in kinds)))
 
 
-def get_available_internal_class_names(kind, hidden=False):
-    return sorted(set(
-        cls.get_qualified_class_name() for cls in
-        get_available_internal_classes(kind, hidden)))
+def get_available_internal_class_names(kind=None, hidden=False) -> Iterable[str]:
+    return sorted(set(cls.get_qualified_class_name() for cls in
+                      (get_available_internal_classes(kind, hidden) if kind
+                       else get_all_available_internal_classes(hidden))))
+
+
+def replace_optimizations(function_string: str) -> str:
+    # make fast version of stats.norm.logpdf for fixed scale and loc
+    # can save quite a lot of time evaluating Gaussian priors
+    if 'stats.norm.logpdf' not in function_string:
+        return function_string
+    number = r"[+-]?(\d+([.]\d*)?(e[+-]?\d+)?|[.]\d+(e[+-]?\d+)?)"
+    regex = r"stats\.norm\.logpdf\((?P<arg>[^,\)]+)," \
+            r"\s*loc\s*=\s*(?P<loc>%s)\s*," \
+            r"\s*scale\s*=\s*(?P<scale>%s)\s*\)" % (number, number)
+    p = re.compile(regex)
+    match = p.search(function_string)
+    if not match:
+        return function_string
+    span = match.span()
+    loc, scale = float(match.group("loc")), float(match.group("scale"))
+    replacement = "(-(%s %+.16g)**2/%.16g %+.16g)" % (
+        match.group("arg"), -loc, 2 * scale ** 2, -np.log(2 * np.pi * scale ** 2) / 2)
+    return function_string[0:span[0]] + replacement + function_string[span[1]:]
 
 
 def get_external_function(string_or_function, name=None):
@@ -301,13 +364,14 @@ def get_external_function(string_or_function, name=None):
     Returns the function.
     """
     if isinstance(string_or_function, Mapping):
-        string_or_function = string_or_function.get(partag.value, None)
+        string_or_function = string_or_function.get("value")
     if isinstance(string_or_function, str):
         try:
             scope = globals()
             import scipy.stats as stats  # provide default scope for eval
             scope['stats'] = stats
             scope['np'] = np
+            string_or_function = replace_optimizations(string_or_function)
             with PythonPath(os.curdir, when="import_module" in string_or_function):
                 function = eval(string_or_function, scope)
         except Exception as e:
@@ -335,25 +399,42 @@ def recursive_mappings_to_dict(mapping):
         return mapping
 
 
-def recursive_update(base, update):
+_Dict = TypeVar('_Dict', bound=Mapping)
+
+
+def recursive_update(base: Optional[_Dict], update: _Dict, copied=True) -> _Dict:
     """
     Recursive dictionary update, from `this stackoverflow question
     <https://stackoverflow.com/questions/3232943>`_.
     Modified for yaml input, where None and {} are almost equivalent
     """
-    base = base or {}
+    updated: dict = (deepcopy_where_possible(base) if copied and base  # type: ignore
+                     else base or {})
     for update_key, update_value in (update or {}).items():
-        update_value = update_value if update_value is not None else {}
         if isinstance(update_value, Mapping):
-            base[update_key] = recursive_update(
-                base.get(update_key, {}), update_value)
+            updated[update_key] = recursive_update(updated.get(update_key, {}),
+                                                   update_value, copied=False)
+        elif update_value is None:
+            if update_key not in updated:
+                updated[update_key] = {}
         else:
-            base[update_key] = update_value
-    # Trim terminal (o)dicts
-    for k, v in (base or {}).items():
+            updated[update_key] = update_value
+    # Trim terminal dicts
+    for k, v in (updated or {}).items():
         if isinstance(v, Mapping) and len(v) == 0:
-            base[k] = None
-    return base
+            updated[k] = None
+    return updated  # type: ignore
+
+
+def invert_dict(dict_in: Mapping) -> dict:
+    """
+    Inverts a dictionary, where values in the returned ones are always lists of the
+    original keys. Order is not preserved.
+    """
+    dict_out: dict = {v: [] for v in dict_in.values()}
+    for k, v in dict_in.items():
+        dict_out[v].append(k)
+    return dict_out
 
 
 def ensure_latex(string):
@@ -371,8 +452,9 @@ def ensure_nolatex(string):
 
 
 class NumberWithUnits:
+    unit: Optional[str]
 
-    def __init__(self, n_with_unit, unit: str, dtype=float, scale=None):
+    def __init__(self, n_with_unit: Any, unit: str, dtype=float, scale=None):
         """
         Reads number possibly with some `unit`, e.g. 10s, 4d.
         Loaded from a a case-insensitive string of a number followed by a unit,
@@ -383,7 +465,7 @@ class NumberWithUnits:
         :param dtype: type for number
         :param scale: multiple to apply for the unit
         """
-        self.value = None
+        self.value: Union[int, float] = np.nan
 
         def cast(x):
             try:
@@ -422,36 +504,50 @@ class NumberWithUnits:
         return bool(self.unit_value)
 
 
-def read_dnumber(n, dim):
+def read_dnumber(n: Any, dim: int):
     """
     Reads number possibly as a multiple of dimension `dim`.
     """
     return NumberWithUnits(n, "d", dtype=int, scale=dim).value
 
 
-def load_DataFrame(file_name, skip=0, thin=1):
+def load_DataFrame(file_name, skip=0, root_file_name=None):
     """
     Loads a `pandas.DataFrame` from a text file
     with column names in the first line, preceded by ``#``.
 
     Can skip any number of first lines, and thin with some factor.
     """
-    with open(file_name, "r") as inp:
-        cols = [a.strip() for a in inp.readline().lstrip("#").split()]
+    with open(file_name, "r", encoding="utf-8-sig") as inp:
+        top_line = inp.readline().strip()
+        if not top_line.startswith('#'):
+            # try getdist format chains with .paramnames file
+            if root_file_name and os.path.exists(root_file_name + '.paramnames'):
+                from getdist import ParamNames
+                from cobaya.conventions import OutPar, derived_par_name_separator
+                names = ParamNames(root_file_name + '.paramnames').list()
+                for i, name in enumerate(names):
+                    if name.startswith(OutPar.chi2 + '_') and not name.startswith(
+                            OutPar.chi2 + derived_par_name_separator):
+                        names[i] = name.replace(OutPar.chi2 + '_',
+                                                OutPar.chi2 + derived_par_name_separator)
+                cols = ['weight', 'minuslogpost'] + names
+                inp.seek(0)
+            else:
+                raise LoggedError(log, "Input sample file does not have header: %s",
+                                  file_name)
+        else:
+            cols = [a.strip() for a in top_line.lstrip("#").split()]
         if 0 < skip < 1:
             # turn into #lines (need to know total line number)
-            for n, line in enumerate(inp):
-                pass
-            skip = int(skip * (n + 1))
+            n = sum(1 for _ in inp)
+            skip = int(round(skip * n)) + 1  # match getdist
             inp.seek(0)
-        thin = int(thin)
-        skiprows = lambda i: i < skip or i % thin
-        if thin != 1:
-            raise LoggedError(log, "thin is not supported yet")
-        # TODO: looks like this thinning is not correctly account for weights???
-        return pd.read_csv(
+        data = pd.read_csv(
             inp, sep=" ", header=None, names=cols, comment="#", skipinitialspace=True,
-            skiprows=skiprows, index_col=False)
+            skiprows=skip, index_col=False)
+
+        return data
 
 
 def prepare_comment(comment):
@@ -460,7 +556,6 @@ def prepare_comment(comment):
         ["# " + line.lstrip("#") for line in comment.split("\n") if line]) + "\n"
 
 
-# Self describing
 def is_valid_variable_name(name):
     try:
         parse("%s=None" % name)
@@ -476,9 +571,16 @@ def get_scipy_1d_pdf(info):
     if not info2:
         raise LoggedError(log, "No specific prior info given for "
                                "sampled parameter '%s'." % param)
+    # If list of 2 numbers, it's a uniform prior
+    elif isinstance(info2, Sequence) and len(info2) == 2 and all(
+            isinstance(n, numbers.Real) for n in info2):
+        info2 = {"min": info2[0], "max": info2[1]}
+    elif not isinstance(info2, Mapping):
+        raise LoggedError(log, "Prior format not recognized. "
+                               "Check documentation for prior specification.")
     # What distribution?
     try:
-        dist = info2.pop(partag.dist).lower()
+        dist = info2.pop("dist").lower()
     # Not specified: uniform by default
     except KeyError:
         dist = "uniform"
@@ -500,11 +602,11 @@ def get_scipy_1d_pdf(info):
             raise LoggedError(
                 log, "You cannot use the 'loc/scale' convention and the 'min/max' "
                      "convention at the same time. Either use one or the other.")
-        minmaxvalues = {"min": 0, "max": 1}
+        minmaxvalues = {"min": 0., "max": 1.}
         for limit in minmaxvalues:
+            value = info2.pop(limit, minmaxvalues[limit])
             try:
-                value = info2.pop(limit, minmaxvalues[limit])
-                minmaxvalues[limit] = np.float(value)
+                minmaxvalues[limit] = float(value)
             except (TypeError, ValueError):
                 raise LoggedError(
                     log, "Invalid value '%s: %r' in param '%s' (it must be a number)",
@@ -530,24 +632,12 @@ def get_scipy_1d_pdf(info):
             str(tp), dist)
 
 
-def _fast_uniform_logpdf(self, x):
-    # not normally used since uniform handled as special case
-    """WARNING: logpdf(nan) = -inf"""
-    if not hasattr(self, "_cobaya_mlogscale"):
-        self._cobaya_mlogscale = -np.log(self.kwds["scale"])
-        self._cobaya_max = self.kwds["loc"] + self.kwds["scale"]
-        self._cobaya_loc = self.kwds['loc']
-    if self._cobaya_loc <= x <= self._cobaya_max:
-        return self._cobaya_mlogscale
-    else:
-        return -np.inf
-
-
 def _fast_norm_logpdf(self, x):
     """WARNING: logpdf(nan) = -inf"""
     if not hasattr(self, "_cobaya_mlogscale"):
         self._cobaya_mlogscale = -np.log(self.kwds["scale"])
     x_ = (np.array(x) - self.kwds["loc"]) / self.kwds["scale"]
+    # noinspection PyProtectedMember
     return self.dist._logpdf(x_) + self._cobaya_mlogscale
 
 
@@ -627,16 +717,6 @@ def are_different_params_lists(list_A, list_B, name_A="A", name_B="B"):
     return result
 
 
-def relative_to_int(numbers, precision=1 / 10):
-    """
-    Turns relative numbers (e.g. relative speeds) into integer,
-    up to some given `precision` on differences.
-    """
-    numbers = np.array(np.round(np.array(numbers) / min(numbers) / precision), dtype=int)
-    return np.array(
-        numbers / np.ufunc.reduce(np.frompyfunc(gcd, 2, 1), numbers), dtype=int)
-
-
 def create_banner(msg, symbol="*", length=None):
     """
     Puts message into an attention-grabbing banner.
@@ -646,7 +726,7 @@ def create_banner(msg, symbol="*", length=None):
     """
     msg_clean = cleandoc(msg)
     if not length:
-        length = max([len(line) for line in msg_clean.split("\n")])
+        length = max(len(line) for line in msg_clean.split("\n"))
     return symbol * length + "\n" + msg_clean + "\n" + symbol * length + "\n"
 
 
@@ -656,6 +736,7 @@ def warn_deprecation_version(logger=None):
     Unless intentionally doing so, please, update asap to the latest version
     (e.g. with ``python -m pip install cobaya --upgrade``).
     """
+    from cobaya import __obsolete__
     if __obsolete__:
         for line in create_banner(msg).split("\n"):
             getattr(logger, "warning", (lambda x: print("*WARNING*", x)))(line)
@@ -673,6 +754,10 @@ def progress_bar(logger, percentage, final_text=""):
 
 
 def fuzzy_match(input_string, choices, n=3, score_cutoff=50):
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        # Suppress message about optional dependency
+        from fuzzywuzzy import process as fuzzy_process
     try:
         return list(zip(*(fuzzy_process.extractBests(
             input_string, choices, score_cutoff=score_cutoff))))[0][:n]
@@ -680,10 +765,21 @@ def fuzzy_match(input_string, choices, n=3, score_cutoff=50):
         return []
 
 
-def deepcopy_where_possible(base):
+def has_non_yaml_reproducible(info):
+    for value in info.values():
+        if callable(value) or \
+                isinstance(value, Mapping) and has_non_yaml_reproducible(value):
+            return True
+    return False
+
+
+_R = TypeVar('_R')
+
+
+def deepcopy_where_possible(base: _R) -> _R:
     """
     Deepcopies an object whenever possible. If the object cannot be copied, returns a
-    reference to the original object (this applies recursively to keys and values of
+    reference to the original object (this applies recursively to values of
     a dictionary, and converts all Mapping objects into dict).
 
     Rationale: cobaya tries to manipulate its input as non-destructively as possible,
@@ -694,10 +790,11 @@ def deepcopy_where_possible(base):
     """
     if isinstance(base, Mapping):
         _copy = {}
-        for key, value in (base or {}).items():
-            key_copy = deepcopy(key)
-            _copy[key_copy] = deepcopy_where_possible(value)
-        return _copy
+        for key, value in base.items():
+            _copy[key] = deepcopy_where_possible(value)
+        return _copy  # type: ignore
+    if isinstance(base, (HasLogger, type)):
+        return base  # type: ignore
     else:
         try:
             return deepcopy(base)
@@ -710,7 +807,8 @@ def get_class_methods(cls, not_base=None, start='get_', excludes=(), first='self
     for k, v in inspect.getmembers(cls):
         if k.startswith(start) and k not in excludes and \
                 (not_base is None or not hasattr(not_base, k)) and \
-                getfullargspec(v).args[:1] == [first]:
+                getfullargspec(v).args[:1] == [first] and \
+                not getattr(v, '_is_abstract', None):
             methods[k[len(start):]] = v
     return methods
 
@@ -757,7 +855,7 @@ def sort_parameter_blocks(blocks, speeds, footprints, oversample_power=0.):
         [(n_params_per_block[list(o)] * permuted_oversample_factors[i])
              .dot(permuted_costs_per_param_per_block[i])
          for i, o in enumerate(orderings)])
-    i_optimal = np.argmin(total_costs)
+    i_optimal: int = np.argmin(total_costs)  # type: ignore
     optimal_ordering = orderings[i_optimal]
     costs = permuted_costs_per_param_per_block[i_optimal]
     oversample_factors = np.floor(permuted_oversample_factors[i_optimal]).astype(int)
@@ -795,7 +893,7 @@ def get_translated_params(params_info, params_list):
     """
     translations = {}
     for p, pinfo in params_info.items():
-        renames = {p}.union(set(str_to_list(pinfo.get(partag.renames, []))))
+        renames = {p}.union(str_to_list(pinfo.get("renames", [])))
         try:
             trans = next(r for r in renames if r in params_list)
             translations[p] = trans
@@ -811,7 +909,7 @@ def get_cache_path():
     Defaults to the system's temp folder.
     """
     if platform.system() == "Windows":
-        base = os.environ.get("CSIDL_LOCAL_APPDATA", os.environ.get("TMP"))
+        base = os.environ.get("CSIDL_LOCAL_APPDATA", os.environ.get("TMP")) or ""
         cache_path = os.path.join(base, "cobaya/Cache")
     elif platform.system() == "Linux":
         base = os.environ.get("XDG_CACHE_HOME",
@@ -821,7 +919,7 @@ def get_cache_path():
         base = os.path.join(os.environ["HOME"], "Library/Caches")
         cache_path = os.path.join(base, "cobaya")
     else:
-        base = os.environ.get("TMP")
+        base = os.environ.get("TMP", "")
         cache_path = os.path.join(base, "cobaya")
     try:
         if not os.path.exists(cache_path):
@@ -836,6 +934,7 @@ def get_config_path():
     """
     Gets path for config files, and creates it if it does not exist.
     """
+    config_path = None
     try:
         if platform.system() == "Windows":
             base = os.environ.get("LOCALAPPDATA")
@@ -867,7 +966,7 @@ def load_config_file():
     from cobaya.yaml import yaml_load_file
     try:
         return yaml_load_file(
-            os.path.join(get_config_path(), _packages_path_config_file))
+            os.path.join(get_config_path(), packages_path_config_file))
     except:
         return {}
 
@@ -883,7 +982,7 @@ def write_config_file(config_info, append=True):
         if append:
             info.update(load_config_file())
         info.update(config_info)
-        yaml_dump_file(os.path.join(get_config_path(), _packages_path_config_file),
+        yaml_dump_file(os.path.join(get_config_path(), packages_path_config_file),
                        info, error_if_exists=False)
     except Exception as e:
         log.error("Could not write the external packages installation path into the "
@@ -895,7 +994,7 @@ def load_packages_path_from_config_file():
     Returns the external packages path stored in the config file,
     or `None` if it can't be found.
     """
-    return load_config_file().get(_packages_path)
+    return load_config_file().get("packages_path")
 
 
 def write_packages_path_in_config_file(packages_path):
@@ -904,21 +1003,22 @@ def write_packages_path_in_config_file(packages_path):
 
     Relative paths are converted into absolute ones.
     """
-    write_config_file({_packages_path: os.path.abspath(packages_path)})
+    write_config_file({"packages_path": os.path.abspath(packages_path)})
 
 
 def resolve_packages_path(infos=None):
+    # noinspection PyStatementEffect
     """
-    Gets the external packages installation path given some infos.
-    If more than one occurrence of the external packages path in the infos,
-    raises an error.
-
-    If there is no external packages path defined in the given infos,
-    defaults to the env variable `%s`, and in its absence to that stored
-    in the config file.
-
-    If no path at all could be found, returns `None`.
-    """ % _packages_path_env
+        Gets the external packages installation path given some infos.
+        If more than one occurrence of the external packages path in the infos,
+        raises an error.
+    
+        If there is no external packages path defined in the given infos,
+        defaults to the env variable `%s`, and in its absence to that stored
+        in the config file.
+    
+        If no path at all could be found, returns `None`.
+        """ % packages_path_env
     if not infos:
         infos = []
     elif isinstance(infos, Mapping):
@@ -927,7 +1027,7 @@ def resolve_packages_path(infos=None):
     # BEHAVIOUR TO BE REPLACED BY ERROR:
     [check_deprecated_modules_path(info) for info in infos]
     # END OF DEPRECATION BLOCK
-    paths = set(p for p in [info.get(_packages_path) for info in infos] if p)
+    paths = set(p for p in [info.get("packages_path") for info in infos] if p)
     if len(paths) == 1:
         return list(paths)[0]
     elif len(paths) > 1:
@@ -935,15 +1035,15 @@ def resolve_packages_path(infos=None):
             log, "More than one packages installation path defined in the given infos. "
                  "Cannot resolve a unique one to use. "
                  "Maybe specify one via a command line argument '-%s [...]'?",
-            _packages_path_arg[0])
-    path_env = os.environ.get(_packages_path_env)
+            packages_path_arg[0])
+    path_env = os.environ.get(packages_path_env)
     # MARKED FOR DEPRECATION IN v3.0
     old_env = "COBAYA_MODULES"
     path_old_env = os.environ.get(old_env)
     if path_old_env and not path_env:
         log.warning("*DEPRECATION*: The env var %r will be deprecated in favor of %r in "
                     "the next version. Please, use that one instead.",
-                    old_env, _packages_path_env)
+                    old_env, packages_path_env)
         # BEHAVIOUR TO BE REPLACED BY ERROR:
         path_env = path_old_env
     # END OF DEPRECATION BLOCK -- CONTINUES BELOW!
@@ -953,12 +1053,13 @@ def resolve_packages_path(infos=None):
 
 
 def sort_cosmetic(info):
+    # noinspection PyStatementEffect
     """
-    Returns a sorted version of the given info dict, re-ordered as %r, and finally the
-    rest of the blocks/options.
-    """ % _dump_sort_cosmetic
+        Returns a sorted version of the given info dict, re-ordered as %r, and finally the
+        rest of the blocks/options.
+        """ % dump_sort_cosmetic
     sorted_info = dict()
-    for k in _dump_sort_cosmetic:
+    for k in dump_sort_cosmetic:
         if k in info:
             sorted_info[k] = info[k]
     sorted_info.update({k: v for k, v in info.items() if k not in sorted_info})
@@ -970,8 +1071,8 @@ def check_deprecated_modules_path(info):
     if info.get("modules"):
         log.warning("*DEPRECATION*: The input field 'modules' will be deprecated in "
                     "favor of %r in the next version. Please, use that one instead.",
-                    _packages_path)
+                    "packages_path")
         # BEHAVIOUR TO BE REPLACED BY ERROR:
-        if not info.get(_packages_path):
-            info[_packages_path] = info["modules"]
+        if not info.get("packages_path"):
+            info["packages_path"] = info["modules"]
 # END OF DEPRECATION BLOCK

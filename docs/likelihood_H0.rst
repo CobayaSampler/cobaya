@@ -1,5 +1,5 @@
 Local measurement of *H*:sub:`0`
 ================================
 
-.. automodule:: cobaya.likelihoods._base_classes._H0_prototype
+.. automodule:: cobaya.likelihoods.base_classes.H0
    :noindex:

@@ -70,17 +70,21 @@ After this, mention the path to this likelihood when you include it in an input 
 """
 
 import numpy as np
+from typing import Any
 
 # Local
-from cobaya.likelihoods._base_classes import _CMBlikes
-from cobaya.conventions import _h_J_s, _kB_J_K
+from cobaya.likelihoods.base_classes import CMBlikes
+from cobaya.conventions import Const
 
 # Physical constants
-Ghz_Kelvin = _h_J_s / _kB_J_K * 1e9
+Ghz_Kelvin = Const.h_J_s / Const.kB_J_K * 1e9
 T_CMB_K = 2.7255  # fiducial CMB temperature
 
 
-class bicep_keck_2015(_CMBlikes):
+class bicep_keck_2015(CMBlikes):
+    r"""
+    CMB power spectrum likelihood of Bicep2/Keck Array X \cite{Ade:2018gkx}.
+    """
     install_options = {
         "download_url": r"http://bicepkeck.org/BK15_datarelease/BK15_cosmomc.tgz"}
 
@@ -101,7 +105,7 @@ class bicep_keck_2015(_CMBlikes):
         self.lform_sync_decorr = ini.string('lform_sync_decorr', 'flat')
 
     def read_bandpass(self, fname):
-        bandpass = Bandpass()
+        bandpass: Any = Bandpass()
         bandpass.R = np.loadtxt(fname)
         nu = bandpass.R[:, 0]
         bandpass.dnu = np.hstack(

@@ -18,17 +18,22 @@ import numpy as np
 from yaml.resolver import BaseResolver
 from yaml.constructor import ConstructorError
 from collections import OrderedDict
-from typing import Mapping
+from typing import Mapping, Optional, Any
 
 # Local
 from cobaya.tools import prepare_comment, recursive_update
-from cobaya.conventions import _yaml_extensions
+from cobaya.conventions import Extension
+from cobaya.typing import InfoDict
 
 
 # Exceptions #############################################################################
 
 class InputSyntaxError(Exception):
     """Syntax error in YAML input."""
+
+
+class InputImportError(Exception):
+    """Error loading classes in YAML input."""
 
 
 class OutputError(Exception):
@@ -42,19 +47,19 @@ class ScientificLoader(yaml.Loader):
 
 
 ScientificLoader.add_implicit_resolver(
-    u'tag:yaml.org,2002:float',
-    re.compile(u'''^(?:
-        [-+]?(?:[0-9][0-9_]*)\\.[0-9_]*(?:[eE][-+]?[0-9]+)?
-        |[-+]?(?:[0-9][0-9_]*)(?:[eE][-+]?[0-9]+)
+    'tag:yaml.org,2002:float',
+    re.compile('''^(?:
+        [-+]?[0-9][0-9_]*\\.[0-9_]*(?:[eE][-+]?[0-9]+)?
+        |[-+]?[0-9][0-9_]*[eE][-+]?[0-9]+
         |\\.[0-9_]+(?:[eE][-+][0-9]+)?
         |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*
         |[-+]?\\.(?:inf|Inf|INF)
         |\\.(?:nan|NaN|NAN))$''', re.X),
-    list(u'-+0123456789.'))
+    list('-+0123456789.'))
 
 
 class DefaultsLoader(ScientificLoader):
-    current_folder = None
+    current_folder: Optional[str] = None
 
 
 def _construct_defaults(loader, node):
@@ -66,11 +71,11 @@ def _construct_defaults(loader, node):
     except ConstructorError:
         defaults_files = loader.construct_sequence(node)
     folder = loader.current_folder
-    loaded_defaults = {}
+    loaded_defaults: InfoDict = {}
     for dfile in defaults_files:
         dfilename = os.path.abspath(os.path.join(folder, dfile))
         try:
-            dfilename += next(ext for ext in [""] + list(_yaml_extensions)
+            dfilename += next(ext for ext in [""] + list(Extension.yamls)
                               if (os.path.basename(dfilename) + ext
                                   in os.listdir(os.path.dirname(dfilename))))
         except StopIteration:
@@ -84,19 +89,22 @@ def _construct_defaults(loader, node):
 DefaultsLoader.add_constructor('!defaults', _construct_defaults)
 
 
-def yaml_load(text_stream, file_name=None):
+def yaml_load(text_stream, file_name=None) -> InfoDict:
+    errstr = "Error in your input file " + (
+        "'" + file_name + "'" if file_name else "")
     try:
         # set current_folder to store the file name, to be used to locate relative
         # defaults files
         DefaultsLoader.current_folder = os.path.dirname(file_name) if file_name else None
         return yaml.load(text_stream, DefaultsLoader)
     # Redefining the general exception to give more user-friendly information
+    except yaml.constructor.ConstructorError as e:
+        raise InputImportError(errstr + ':\n' + str(e))
     except (yaml.YAMLError, TypeError) as exception:
-        errstr = "Error in your input file " + (
-            "'" + file_name + "'" if file_name else "")
-        if hasattr(exception, "problem_mark"):
-            line = 1 + exception.problem_mark.line
-            column = 1 + exception.problem_mark.column
+        mark = getattr(exception, "problem_mark", None)
+        if mark is not None:
+            line = 1 + mark.line
+            column = 1 + mark.column
             signal = " --> "
             signal_right = "    <---- "
             sep = "|"
@@ -122,11 +130,12 @@ def yaml_load(text_stream, file_name=None):
             raise InputSyntaxError(errstr)
 
 
-def yaml_load_file(file_name, yaml_text=None):
+def yaml_load_file(file_name: Optional[str], yaml_text: Optional[str] = None) -> InfoDict:
     """Wrapper to load a yaml file.
 
     Manages !defaults directive."""
     if yaml_text is None:
+        assert file_name
         with open(file_name, "r", encoding="utf-8-sig") as file:
             yaml_text = "".join(file.readlines())
     return yaml_load(yaml_text, file_name=file_name)
@@ -134,8 +143,8 @@ def yaml_load_file(file_name, yaml_text=None):
 
 # Custom dumper ##########################################################################
 
-def yaml_dump(info, stream=None, Dumper=yaml.Dumper, **kwds):
-    class CustomDumper(Dumper):
+def yaml_dump(info: Mapping[str, Any], stream=None, **kwds):
+    class CustomDumper(yaml.Dumper):
         pass
 
     # Make sure dicts preserve order when dumped
@@ -173,6 +182,7 @@ def yaml_dump(info, stream=None, Dumper=yaml.Dumper, **kwds):
 
     # Dummy representer that prints True for non-representable python objects
     # (prints True instead of nothing because some functions try cast values to bool)
+    # noinspection PyUnusedLocal
     def _null_representer(dumper, data):
         return dumper.represent_scalar('tag:yaml.org,2002:bool', 'true')
 
@@ -183,7 +193,7 @@ def yaml_dump(info, stream=None, Dumper=yaml.Dumper, **kwds):
     return yaml.dump(info, stream, CustomDumper, allow_unicode=True, **kwds)
 
 
-def yaml_dump_file(file_name, data, comment=None, error_if_exists=True):
+def yaml_dump_file(file_name: str, data, comment=None, error_if_exists=True):
     if error_if_exists and os.path.isfile(file_name):
         raise IOError("File exists: '%s'" % file_name)
     with open(file_name, "w+", encoding="utf-8") as f:

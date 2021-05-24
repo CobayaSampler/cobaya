@@ -1,5 +1,5 @@
 Type Ia Supernovae
 ==================
 
-.. automodule:: cobaya.likelihoods._base_classes._sn_prototype
+.. automodule:: cobaya.likelihoods.base_classes.SN
    :noindex:

@@ -1,6 +1,6 @@
 # Optional: define an output driver
 from cobaya.output import get_output
-out = get_output(output_prefix="chains/my_model", resume=False, force=True)
+out = get_output(prefix="chains/my_model", resume=False, force=True)
 
 # Initialise and run the sampler
 info_sampler = {"mcmc": {"burn_in": 0, "max_samples": 1}}
