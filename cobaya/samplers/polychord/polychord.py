@@ -289,7 +289,7 @@ class polychord(Sampler):
                 lines = list(pf.readlines())
             get_value_str = lambda line: line[line.find("=") + 1:]
             get_value_str_var = lambda var: get_value_str(
-                next(l for l in lines if l.lstrip().startswith(var)))
+                next(line for line in lines if line.lstrip().startswith(var)))
             nprior = int(get_value_str_var("nprior"))
             ndiscarded = int(get_value_str_var("ndiscarded"))
             self._frac_unphysical = nprior / ndiscarded
@@ -332,11 +332,11 @@ class polychord(Sampler):
             pre = "log(Z"
             active = "(Still active)"
             with open(self.raw_prefix + ".stats", "r", encoding="utf-8-sig") as statsfile:
-                lines = [l for l in statsfile.readlines() if l.startswith(pre)]
-            for l in lines:
+                lines = [line for line in statsfile.readlines() if line.startswith(pre)]
+            for line in lines:
                 logZ, logZstd = [float(n.replace(active, "")) for n in
-                                 l.split("=")[-1].split("+/-")]
-                component = l.split("=")[0].lstrip(pre + "_").rstrip(") ")
+                                 line.split("=")[-1].split("+/-")]
+                component = line.split("=")[0].lstrip(pre + "_").rstrip(") ")
                 if not component:
                     self.logZ, self.logZstd = logZ, logZstd
                 elif self.pc_settings.do_clustering:
@@ -378,7 +378,8 @@ class polychord(Sampler):
         Auxiliary function to define what should be returned in a scripted call.
 
         Returns:
-           The sample ``SampleCollection`` containing the sequentially discarded live points.
+           The sample ``SampleCollection`` containing the sequentially
+           discarded live points.
         """
         if is_main_process():
             products = {

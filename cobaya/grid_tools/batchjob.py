@@ -149,7 +149,7 @@ class DataSet:
         if isinstance(params, dict) or isinstance(params, str):
             params = [params]
         for i in range(len(params)):
-            if isinstance(params[i], str) and not '.ini' in params[i]:
+            if isinstance(params[i], str) and '.ini' not in params[i]:
                 params[i] += '.ini'
         return params
 
@@ -290,7 +290,7 @@ class JobItem(PropertiesItem):
                           minimize=impRun.want_minimize)
             job.importanceTag = "_".join(impRun.names)
             job.importanceSettings = impRun.inis
-            if not '_post_' in self.name:
+            if '_post_' not in self.name:
                 tag = '_post_' + job.importanceTag
             else:
                 tag = '_' + job.importanceTag
@@ -562,7 +562,7 @@ class BatchJob(PropertiesItem):
     def normed_name_item(self, name, wantSubItems=True, wantImportance=False,
                          exclude=None):
         for jobItem in self.items(wantSubItems, wantImportance):
-            if jobItem.normed_name == name and not jobItem is exclude:
+            if jobItem.normed_name == name and jobItem is not exclude:
                 return jobItem
         return None
 

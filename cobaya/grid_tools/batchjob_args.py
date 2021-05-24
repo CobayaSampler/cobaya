@@ -113,7 +113,7 @@ class batchArgs:
 
     def groupMatches(self, jobItem):
         return (self.args.group is None or jobItem.group in self.args.group) and (
-                self.args.skip_group is None or not jobItem.group in self.args.skip_group)
+                self.args.skip_group is None or jobItem.group not in self.args.skip_group)
 
     def dataMatches(self, jobItem):
         if self.args.musthave_data is not None and not jobItem.data_set.hasAll(
@@ -153,7 +153,8 @@ class batchArgs:
         items = dict()
         for jobItem in self.filteredBatchItems():
             if not chainExist or jobItem.chainExists():
-                if not jobItem.paramtag in items: items[jobItem.paramtag] = []
+                if jobItem.paramtag not in items:
+                    items[jobItem.paramtag] = []
                 items[jobItem.paramtag].append(jobItem)
         return sorted(items.items())
 

@@ -102,8 +102,9 @@ before_install:
   - python --version
 
 script:
-  # Find undeclared references and syntax errors
-  - flake8 cobaya --select=E9,F63,F7,F82 --show-source --statistics
+  # Find undeclared references and syntax errors, plus standardize whitespace etc;
+  # See https://pycodestyle.pycqa.org/en/latest/intro.html#error-codes
+  - flake8 cobaya --select=E713,E704,E703,E714,E741,E10,E11,E20,E22,E23,E25,E27,E301,E302,E304,E9,F405,F406,F5,F6,F7,F8,W1,W2,W3,W6 --show-source --statistics
   # General tests:
   - export COBAYA_PACKAGES_PATH="../packages"
   - coverage run --parallel-mode -m cobaya.install polychord --debug

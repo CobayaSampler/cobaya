@@ -52,9 +52,10 @@ class DataSetLikelihood(InstallableLikelihood):
                 self.path = self.get_path(self.packages_path)
             self.path = self.path or self.get_class_path()
             if not self.path:
-                raise LoggedError(self.log, "No path given for %s. Set the likelihood "
-                                            "property 'path' or the common property '%s'."
-                                  , self.dataset_file, "packages_path")
+                raise LoggedError(self.log,
+                                  "No path given for %s. Set the likelihood "
+                                  "property 'path' or the common property '%s'.",
+                                  self.dataset_file, "packages_path")
 
             data_file = os.path.normpath(os.path.join(self.path, self.dataset_file))
         if not os.path.exists(data_file):
