@@ -417,6 +417,8 @@ class CovmatSampler(Sampler):
     Parent class for samplers that are initialised with a covariance matrix.
     """
     covmat_params: Sequence[str]
+    # Amount by which to shrink covmat diagonals when set from priors or reference.
+    fallback_covmat_scale: float = 4
 
     @mpi.from_root
     def _load_covmat(self, prefer_load_old, auto_params=None):
@@ -565,8 +567,8 @@ class CovmatSampler(Sampler):
             # the variances are likely too large for a good proposal, e.g. conditional
             # widths may be much smaller than the marginalized ones.
             # Divide by 4, better to be too small than too large.
-            covmat[where_nan2, where_nan2] = \
-                self.model.prior.reference_variances()[where_nan2] / 4
+            covmat[where_nan2, where_nan2] = (self.model.prior.reference_variances()
+                                              [where_nan2] / self.fallback_covmat_scale)
         assert not np.any(np.isnan(covmat))
         return covmat, where_nan
 
