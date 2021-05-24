@@ -562,8 +562,11 @@ class CovmatSampler(Sampler):
                  for info in params_infos.values()])[where_nan]
         where_nan2 = np.isnan(covmat.diagonal())
         if np.any(where_nan2):
-            covmat[where_nan2, where_nan2] = (
-                self.model.prior.reference_covmat().diagonal()[where_nan2])
+            # the variances are likely too large for a good proposal, e.g. conditional
+            # widths may be much smaller than the marginalized ones.
+            # Divide by 4, better to be too small than too large.
+            covmat[where_nan2, where_nan2] = \
+                self.model.prior.reference_variances()[where_nan2] / 4
         assert not np.any(np.isnan(covmat))
         return covmat, where_nan
 
