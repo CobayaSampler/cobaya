@@ -66,12 +66,12 @@ def test_post_prior(tmpdir):
         "likelihood": {"one": None}, "prior": {"gaussian": sampled_pdf}}
     info_post: InputDict = {
         "output": info["output"], "force": True,
-        "post": {"suffix": "foo", 'skip': 0,
+        "post": {"suffix": "foo", 'skip': 0.1,
                  "remove": {"prior": {"gaussian": None}},
                  "add": {"prior": {"target": target_pdf_prior}}}}
     _, sampler = run(info)
     if mpi.is_main_process():
-        mcsamples_in = loadMCSamples(info["output"])
+        mcsamples_in = loadMCSamples(info["output"], settings={'ignore_rows': 0.1})
         target_mean, target_cov = mpi.share(_get_targets(mcsamples_in))
     else:
         target_mean, target_cov = mpi.share()
