@@ -13,8 +13,8 @@ from distutils import spawn
 from cobaya.conventions import Extension
 from .conventions import _script_folder, _script_ext, _log_folder, _jobid_ext
 
-code_prefix = 'COSMOMC'
-default_program = './cosmomc'
+code_prefix = 'COBAYA'
+default_program = 'cobaya-run'
 
 
 def set_default_program(program, env_prefix):
