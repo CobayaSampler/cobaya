@@ -45,6 +45,8 @@ try:
 except ImportError:
     QWidget, Slot = object, (lambda: lambda *x: None)
 
+os.environ['QT_API'] = 'pyside2'
+
 # Quit with C-c
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 

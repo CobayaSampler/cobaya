@@ -444,9 +444,8 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             logpriors_new = [logpriors_add.get(name, - point.get(name, 0))
                              for name in collection_out.minuslogprior_names]
             if prior_regenerate:
-                regenerated = dict(
-                    zip(regenerated_prior_names,
-                        prior_regenerate.logps_external(all_params)))
+                regenerated = dict(zip(regenerated_prior_names,
+                                       prior_regenerate.logps_external(all_params)))
                 for _i, name in enumerate(collection_out.minuslogprior_names):
                     if name in regenerated_prior_names:
                         logpriors_new[_i] = regenerated[name]
@@ -463,9 +462,8 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             loglikes_new = [loglikes_add.get(name, -0.5 * point.get(name, 0))
                             for name in collection_out.chi2_names]
             if is_debug(log):
-                log.debug(
-                    "New set of likelihoods: %r",
-                    dict(zip(dummy_model_out.likelihood, loglikes_new)))
+                log.debug("New set of likelihoods: %r",
+                          dict(zip(dummy_model_out.likelihood, loglikes_new)))
                 if output_derived:
                     log.debug("New set of derived parameters: %r", output_derived)
             if -np.inf in loglikes_new:
