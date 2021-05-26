@@ -9,7 +9,7 @@ from cobaya.tools import warn_deprecation
 
 def run():
     warn_deprecation()
-    Opts = batchjob_args.batchArgs(
+    Opts = batchjob_args.BatchArgs(
         prog='cobaya grid-run',
         desc='Submit jobs to run chains or importance sample',
         notExist=True, notall=True, converge=True)
@@ -69,7 +69,7 @@ def run():
         print('Combining multiple (hopefully fast) into single job script: ' +
               args.combine_one_job_name)
     iniFiles = []
-    jobqueue.checkArguments(**args.__dict__)
+    jobqueue.check_arguments(**args.__dict__)
 
     def jobName():
         s = "-".join([os.path.splitext(os.path.basename(ini))[0] for ini in iniFiles])

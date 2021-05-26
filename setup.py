@@ -75,6 +75,8 @@ setup(
             'cobaya-grid-create=cobaya.grid_tools:make_grid_script',
             'cobaya-grid-run=cobaya.grid_tools.runbatch:run',
             'cobaya-run-job=cobaya.grid_tools.runMPI:run_single',
+            'cobaya-running-jobs=cobaya.grid_tools.running_jobs:running_jobs',
+            'cobaya-delete-jobs=cobaya.grid_tools.delete_jobs:delete_jobs',
             'cobaya-cosmo-generator=cobaya.cosmo_input:gui_script',
         ],
     },

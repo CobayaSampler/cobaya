@@ -18,7 +18,7 @@ from typing import Callable
 from getdist import types, IniFile
 from getdist.mcsamples import loadMCSamples
 
-from .conventions import _input_folder, _script_folder, _log_folder
+from .conventions import input_folder, script_folder, log_folder
 
 
 def grid_cache_file(directory):
@@ -67,7 +67,8 @@ def saveobject(obj, filename):
 
 
 def makePath(s):
-    if not os.path.exists(s): os.makedirs(s)
+    if not os.path.exists(s):
+        os.makedirs(s)
 
 
 def nonEmptyFile(fname):
@@ -97,12 +98,14 @@ class DataSet:
     def __init__(self, names, params=None, covmat=None, dist_settings=None):
         if not dist_settings:
             dist_settings = {}
-        if isinstance(names, str): names = [names]
+        if isinstance(names, str):
+            names = [names]
         if params is None:
             params = [(name + '.ini') for name in names]
         else:
             params = self.standardizeParams(params)
-        if covmat is not None: self.covmat = covmat
+        if covmat is not None:
+            self.covmat = covmat
         self.names = names
         self.params = params
         # can be an array of items, either ini file name or dictionaries of parameters
@@ -176,7 +179,8 @@ class DataSet:
         return "_".join(items)
 
     def namesReplacing(self, dic):
-        if dic is None: return self.names
+        if dic is None:
+            return self.names
         items = []
         for name in self.names:
             if name in dic:
@@ -255,10 +259,10 @@ class JobItem(PropertiesItem):
         self.parent = None
         self.dist_settings = copy.copy(data_set.dist_settings)
         self.makeIDs()
-        self.iniFile_path = _input_folder
+        self.iniFile_path = input_folder
         self.iniFile_ext = ".yaml"
-        self.scriptFile_path = _script_folder
-        self.logFile_path = _log_folder
+        self.scriptFile_path = script_folder
+        self.logFile_path = log_folder
 
     def iniFile(self, variant=''):
         if not self.isImportanceJob:
@@ -277,9 +281,11 @@ class JobItem(PropertiesItem):
     def makeImportance(self, importanceRuns):
         for impRun in importanceRuns:
             if isinstance(impRun, ImportanceSetting):
-                if not impRun.wantImportance(self): continue
+                if not impRun.wantImportance(self):
+                    continue
             else:
-                if len(impRun) > 2 and not impRun[2].wantImportance(self): continue
+                if len(impRun) > 2 and not impRun[2].wantImportance(self):
+                    continue
                 impRun = ImportanceSetting(impRun[0], impRun[1])
             if len(set(impRun.names).intersection(self.data_set.names)) > 0:
                 print('importance job duplicating parent data set: %s with %s' % (
@@ -314,7 +320,8 @@ class JobItem(PropertiesItem):
         normed_params = "_".join(sorted(self.param_set))
         normed_data = self.data_set.makeNormedDatatag(dataSubs)
         normed_name = self.base
-        if len(normed_params) > 0: normed_name += '_' + normed_params
+        if len(normed_params) > 0:
+            normed_name += '_' + normed_params
         normed_name += '_' + normed_data
         return normed_name, normed_params, normed_data
 
@@ -322,7 +329,8 @@ class JobItem(PropertiesItem):
         self.normed_name, self.normed_params, self.normed_data = self.makeNormedName()
 
     def matchesDatatag(self, tagList):
-        if self.datatag in tagList or self.normed_data in tagList: return True
+        if self.datatag in tagList or self.normed_data in tagList:
+            return True
         return self.datatag.replace('_post', '') in [tag.replace('_post', '') for tag in
                                                      tagList]
 
@@ -390,7 +398,8 @@ class JobItem(PropertiesItem):
         return os.path.exists(self.chainName(i + 1)) or max(dates) - min(dates) > interval
 
     def notRunning(self):
-        if not self.chainExists(): return False  # might be in queue
+        if not self.chainExists():
+            return False  # might be in queue
         lastWrite = self.chainFileDate()
         return lastWrite < time.time() - 5 * 60
 
@@ -406,40 +415,46 @@ class JobItem(PropertiesItem):
 
     def chainMinimumConverged(self):
         bf = self.chainBestfit()
-        if bf is None: return False
+        if bf is None:
+            return False
         return bf.logLike < 1e29
 
     def convergeStat(self):
         fname = self.chainRoot + '.converge_stat'
-        if not nonEmptyFile(fname): return None, None
+        if not nonEmptyFile(fname):
+            return None, None
         textFileHandle = open(fname, encoding="utf-8")
         textFileLines = textFileHandle.readlines()
         textFileHandle.close()
-        return float(textFileLines[0].strip()), len(textFileLines) > 1 and textFileLines[
-            1].strip() == 'Done'
+        return (float(textFileLines[0].strip()), len(textFileLines) > 1
+                and textFileLines[1].strip() == 'Done')
 
     def chainFinished(self):
         if self.isImportanceJob:
             done = self.parent.convergeStat()[1]
-            if done is None or self.parentChanged() or not self.notRunning(): return False
+            if done is None or self.parentChanged() or not self.notRunning():
+                return False
         else:
             done = self.convergeStat()[1]
-        if done is None: return False
+        if done is None:
+            return False
         return done
 
     def wantCheckpointContinue(self, minR=0):
         R, done = self.convergeStat()
-        if R is None: return False
-        if not os.path.exists(self.chainRoot + '_1.chk'): return False
+        if R is None:
+            return False
+        if not os.path.exists(self.chainRoot + '_1.chk'):
+            return False
         return not done and R > minR
 
     def getDistExists(self):
         return os.path.exists(self.distRoot + '.margestats')
 
     def getDistNeedsUpdate(self):
-        return self.chainExists() and (
-                not self.getDistExists() or self.chainFileDate() > os.path.getmtime(
-            self.distRoot + '.margestats'))
+        return self.chainExists() and (not self.getDistExists()
+                                       or self.chainFileDate() >
+                                       os.path.getmtime(self.distRoot + '.margestats'))
 
     def parentChanged(self):
         return (not self.chainExists() or
@@ -448,14 +463,16 @@ class JobItem(PropertiesItem):
     def R(self):
         if self.result_converge is None:
             fname = self.distRoot + '.converge'
-            if not nonEmptyFile(fname): return None
+            if not nonEmptyFile(fname):
+                return None
             self.result_converge = types.ConvergeStats(fname)
         return float(self.result_converge.worstR())
 
     def hasConvergeBetterThan(self, R, returnNotExist=False):
         try:
             chainR = self.R()
-            if chainR is None: return returnNotExist
+            if chainR is None:
+                return returnNotExist
             return chainR <= R
         except:
             print('WARNING: Bad .converge for ' + self.name)
@@ -470,8 +487,9 @@ class JobItem(PropertiesItem):
         if not bestfitonly:
             marge_root = self.distRoot
             if self.getDistExists():
-                if not noconverge: self.result_converge = types.ConvergeStats(
-                    marge_root + '.converge')
+                if not noconverge:
+                    self.result_converge = types.ConvergeStats(
+                        marge_root + '.converge')
                 self.result_marge = types.MargeStats(marge_root + '.margestats',
                                                      paramNameFile)
                 self.result_likemarge = types.LikeStats(marge_root + '.likestats')
@@ -489,11 +507,11 @@ class BatchJob(PropertiesItem):
         self.batchPath = path
         self.skip = []
         self.subBatches = []
-        ##        self.jobItems = None
+        # self.jobItems = None
         self.getdist_options = {}
-        self.iniFile_path = _input_folder
-        self.scriptFile_path = _script_folder
-        self.logFile_path = _log_folder
+        self.iniFile_path = input_folder
+        self.scriptFile_path = script_folder
+        self.logFile_path = log_folder
 
     def propertiesIniFile(self):
         return os.path.join(self.batchPath, 'config', 'config.ini')
@@ -551,7 +569,8 @@ class BatchJob(PropertiesItem):
 
     def hasName(self, name, wantSubItems=True):
         for jobItem in self.items(wantSubItems):
-            if jobItem.name == name: return True
+            if jobItem.name == name:
+                return True
         return False
 
     def has_normed_name(self, name, wantSubItems=True, wantImportance=False,

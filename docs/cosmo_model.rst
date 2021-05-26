@@ -80,7 +80,7 @@ Which will print something like
 
    {classy: [{'Cl': {'pp': 2048, 'bb': 29, 'ee': 2508, 'tt': 2508, 'eb': 0, 'te': 2508, 'tb': 0}}]}
 
-If we take a look at the documentation of :meth:`~.theories._cosmo.BoltzmannBase.must_provide`, we will see that to request the power spectrum we would use the method ``get_Cl``:
+If we take a look at the documentation of :meth:`~.theories.cosmo.BoltzmannBase.must_provide`, we will see that to request the power spectrum we would use the method ``get_Cl``:
 
 .. literalinclude:: ./src_examples/cosmo_model/4.py
    :language: python
@@ -93,7 +93,7 @@ If we take a look at the documentation of :meth:`~.theories._cosmo.BoltzmannBase
    Cosmological observables requested this way **always correspond to the last set of parameters with which the likelihood was evaluated**.
 
 
-If we want to request additional observables not already requested by the likelihoods, we can use the method :meth:`~.theories._cosmo.BoltzmannBase.must_provide` of the theory code (check out its documentation for the syntax).
+If we want to request additional observables not already requested by the likelihoods, we can use the method :meth:`~.theories.cosmo.BoltzmannBase.must_provide` of the theory code (check out its documentation for the syntax).
 
 As a final example, let us request the Hubble parameter for a number of redshifts and plot both it and the power spectrum for a range of values of :math:`\Omega_\mathrm{CDM}h^2`:
 
