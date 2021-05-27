@@ -3,7 +3,10 @@ from cobaya.likelihoods.base_classes.planck_2018_CamSpec_python import Planck201
 
 class planck_2020_CamSpec_python(Planck2018CamSpecPython):
     install_options = {
-        "github_repository": "CobayaSampler/planck_native_data"}
+        "download_url": "https://github.com/CobayaSampler/planck_native_data/"
+                        "releases/download/v1/CamSpec2020.zip",
+        "data_path": "planck_2018_CamSpec2021"}
+
     bibtex_file = 'CamSpec2020.bibtex'
     def get_powerlaw_residuals(self, data_params):
         
