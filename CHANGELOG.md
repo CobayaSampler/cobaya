@@ -2,6 +2,7 @@
 
 ### General
 
+- updated and added documentation for cobaya-run-job; added cobaya-running-jobs and cobaya-delete-jobs
 - Allow for more general dependencies between input parameters, derived parameters and likelihood/theory/prior inputs
 - run, post and get_model can now all take inputs from a dictionary, yaml text or yaml
   filename
