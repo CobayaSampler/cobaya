@@ -137,12 +137,11 @@ import sys
 import os
 import numpy as np
 from copy import deepcopy
-import logging
 from typing import NamedTuple, Sequence, Union, Optional, Callable, Any
 
 # Local
 from cobaya.theories.cosmo import BoltzmannBase
-from cobaya.log import LoggedError
+from cobaya.log import LoggedError, get_logger
 from cobaya.install import download_github_release, pip_install, NotInstalledError, \
     check_gcc_version
 from cobaya.tools import load_module, VersionCheckError
@@ -500,7 +499,7 @@ class classy(BoltzmannBase):
 
     @classmethod
     def get_import_path(cls, path):
-        log = logging.getLogger(cls.__name__)
+        log = get_logger(cls.__name__)
         classy_build_path = os.path.join(path, "python", "build")
         if not os.path.isdir(classy_build_path):
             log.error("Either CLASS is not in the given folder, "
@@ -527,7 +526,7 @@ class classy(BoltzmannBase):
     def is_installed(cls, **kwargs):
         if not kwargs.get("code", True):
             return True
-        log = logging.getLogger(cls.__name__)
+        log = get_logger(cls.__name__)
         check = kwargs.get("check", True)
         func = log.info if check else log.error
         path = kwargs["path"]
@@ -567,7 +566,7 @@ class classy(BoltzmannBase):
 
     @classmethod
     def install(cls, path=None, code=True, no_progress_bars=False, **_kwargs):
-        log = logging.getLogger(cls.__name__)
+        log = get_logger(cls.__name__)
         if not code:
             log.info("Code not requested. Nothing to do.")
             return True

@@ -11,7 +11,6 @@ import sys
 import datetime
 import re
 import shutil
-import logging
 from packaging import version
 from typing import Optional, Any
 # Local
@@ -19,7 +18,7 @@ from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, \
     OutputError, InputImportError
 from cobaya.conventions import resume_default, Extension, kinds, get_version
 from cobaya.typing import InputDict
-from cobaya.log import LoggedError, HasLogger, get_traceback_text
+from cobaya.log import LoggedError, HasLogger, get_logger, get_traceback_text
 from cobaya.input import is_equal_info, get_resolved_class, load_info_dump, split_prefix
 from cobaya.input import get_info_path
 from cobaya.collection import SampleCollection
@@ -50,7 +49,7 @@ class FileLock:
             os.remove(self.lock_error_file)
         except OSError:
             pass
-        self.log = log or logging.getLogger("file_lock")
+        self.log = log or get_logger("file_lock")
         try:
             h: Any = None
             try:

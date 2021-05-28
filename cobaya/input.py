@@ -9,7 +9,6 @@
 # Global
 import os
 import inspect
-import logging
 import platform
 from copy import deepcopy
 from importlib import import_module
@@ -28,12 +27,12 @@ from cobaya.typing import InputDict, InfoDict, ModelDict, ExpandedParamsDict, Li
 from cobaya.tools import recursive_update, str_to_list, get_base_classes, \
     fuzzy_match, deepcopy_where_possible, get_resolved_class
 from cobaya.yaml import yaml_load_file, yaml_dump, yaml_load
-from cobaya.log import LoggedError
+from cobaya.log import LoggedError, get_logger
 from cobaya.parameterization import expand_info_param
 from cobaya import mpi
 
 # Logger
-log = logging.getLogger(__name__.split(".")[-1])
+log = get_logger(__name__)
 
 
 def load_input_dict(info_or_yaml_or_file: Union[InputDict, str, os.PathLike]

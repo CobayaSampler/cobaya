@@ -651,17 +651,19 @@ class Prior(HasLogger):
                       "Maybe your prior is improper of your reference pdf is "
                       "null-defined in the domain of the prior.", max_tries)
 
-    def reference_covmat(self):
+    def reference_variances(self):
         """
         Returns:
-          The standard deviation of the 1d ref pdf's. For those parameters that do not
-          have a ref pdf defined, the standard deviation of the prior is taken instead.
+          The standard variances of the 1d ref pdf's. For those parameters that do not
+          have a proposal defined, the standard deviation of the prior can be taken
+          as a starting point to estimate one.
         """
-        covmat = np.diag([getattr(ref_pdf, "var", lambda: np.nan)()
-                          for i, ref_pdf in enumerate(self.ref_pdf)])
-        where_no_ref = np.isnan(covmat)
+        variances = np.array([getattr(ref_pdf, "var", lambda: np.nan)()
+                              for i, ref_pdf in enumerate(self.ref_pdf)])
+        where_no_ref = np.isnan(variances)
         if np.any(where_no_ref):
             self.mpi_warning("Reference pdf not defined or improper for some parameters. "
                              "Using prior's sigma instead for them.")
-            covmat[where_no_ref] = self.covmat(ignore_external=True)[where_no_ref]
-        return covmat
+            variances[where_no_ref] = np.diag(self.covmat(ignore_external=True
+                                                          ))[where_no_ref]
+        return variances

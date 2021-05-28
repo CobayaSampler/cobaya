@@ -9,7 +9,6 @@
 # Global
 import os
 import sys
-import logging
 import platform
 import warnings
 import inspect
@@ -32,11 +31,11 @@ import traceback
 # Local
 from cobaya.conventions import cobaya_package, subfolders, kinds, \
     packages_path_config_file, packages_path_env, packages_path_arg, dump_sort_cosmetic
-from cobaya.log import LoggedError, HasLogger
+from cobaya.log import LoggedError, HasLogger, get_logger
 from cobaya.typing import Kind
 
 # Set up logger
-log = logging.getLogger(__name__.split(".")[-1])
+log = get_logger(__name__)
 
 
 def str_to_list(x) -> List:
@@ -1009,16 +1008,16 @@ def write_packages_path_in_config_file(packages_path):
 def resolve_packages_path(infos=None):
     # noinspection PyStatementEffect
     """
-        Gets the external packages installation path given some infos.
-        If more than one occurrence of the external packages path in the infos,
-        raises an error.
-    
-        If there is no external packages path defined in the given infos,
-        defaults to the env variable `%s`, and in its absence to that stored
-        in the config file.
-    
-        If no path at all could be found, returns `None`.
-        """ % packages_path_env
+    Gets the external packages installation path given some infos.
+    If more than one occurrence of the external packages path in the infos,
+    raises an error.
+
+    If there is no external packages path defined in the given infos,
+    defaults to the env variable `%s`, and in its absence to that stored
+    in the config file.
+
+    If no path at all could be found, returns `None`.
+    """ % packages_path_env
     if not infos:
         infos = []
     elif isinstance(infos, Mapping):

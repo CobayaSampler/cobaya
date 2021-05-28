@@ -64,6 +64,7 @@ Table of contents
    :caption: Running on clusters
    :maxdepth: 1
 
+   run_job
    cluster_amazon
 
 .. toctree::

@@ -4,7 +4,7 @@ import argparse
 from cobaya.grid_tools import batchjob
 
 
-class batchArgs:
+class BatchArgs:
     def __init__(self, prog=None, desc='', importance=True, noBatchPath=False,
                  notExist=False, notall=False, converge=False,
                  plots=False, batchPathOptional=False):
@@ -16,8 +16,9 @@ class batchArgs:
             else:
                 self.parser.add_argument('batchPath',
                                          help='directory containing the grid')
-        if converge: self.parser.add_argument('--converge', type=float, default=0,
-                                              help='minimum R-1 convergence')
+        if converge:
+            self.parser.add_argument('--converge', type=float, default=0,
+                                     help='minimum R-1 convergence')
         self.importanceParameter = importance
         self.notExist = notExist
         self.notall = notall
@@ -28,22 +29,27 @@ class batchArgs:
             self.parser.add_argument('--noimportance', action='store_true',
                                      help='original chains only, no importance sampled')
             self.parser.add_argument('--importance', nargs='*', default=None,
-                                     help='data names for importance sampling runs to include')
+                                     help='data names for importance sampling '
+                                          'runs to include')
             self.parser.add_argument('--importancetag', nargs='*', default=None,
-                                     help='importance tags for importance sampling runs to include')
+                                     help='importance tags for importance '
+                                          'sampling runs to include')
 
         self.parser.add_argument('--name', default=None, nargs='+',
-                                 help='specific chain full name only (base_paramx_data1_data2)')
+                                 help='specific chain full name only '
+                                      '(base_paramx_data1_data2)')
         self.parser.add_argument('--param', default=None, nargs='+',
                                  help='runs including specific parameter only (paramx)')
         self.parser.add_argument('--paramtag', default=None, nargs='+',
-                                 help='runs with specific parameter tag only (base_paramx)')
+                                 help='runs with specific parameter tag only '
+                                      '(base_paramx)')
         self.parser.add_argument('--data', nargs='+', default=None,
                                  help='runs including specific data only (data1)')
         self.parser.add_argument('--datatag', nargs='+', default=None,
                                  help='runs with specific data tag only (data1_data2)')
         self.parser.add_argument('--musthave-data', nargs='+', default=None,
-                                 help='include only runs that include specific data (data1)')
+                                 help='include only runs that include specific data '
+                                      '(data1)')
         self.parser.add_argument('--skip-data', nargs='+', default=None,
                                  help='skip runs containing specific data (data1)')
         self.parser.add_argument('--skip-param', nargs='+', default=None,
@@ -55,15 +61,19 @@ class batchArgs:
 
         if self.notExist:
             self.parser.add_argument('--notexist', action='store_true',
-                                     help='only include chains that don\'t already exist on disk')
+                                     help='only include chains that don\'t already '
+                                          'exist on disk')
         if self.notall:
             self.parser.add_argument('--notall', type=int, default=None,
-                                     help='only include chains where all N chains don\'t already exist on disk')
+                                     help='only include chains where all N chains '
+                                          'don\'t already exist on disk')
         if self.doplots:
             self.parser.add_argument('--paramNameFile', default='clik_latex.paramnames',
-                                     help=".paramnames file for custom labels for parameters")
+                                     help=".paramnames file for custom labels for "
+                                          "parameters")
             self.parser.add_argument('--paramList', default=None,
-                                     help=".paramnames file listing specific parameters to include (only)")
+                                     help=".paramnames file listing specific parameters "
+                                          "to include (only)")
             self.parser.add_argument('--size_inch', type=float, default=None,
                                      help='output subplot size in inches')
             self.parser.add_argument('--nx', default=None, help='number of plots per row')
@@ -83,7 +93,7 @@ class batchArgs:
 
                 if args.paramList is not None:
                     args.paramList = paramnames.ParamNames(
-                    args.paramList)
+                        args.paramList)
                 g = plots.GetDistPlotter(chain_dir=self.batch.batchPath)
                 if args.size_inch is not None:
                     g.settings.setWithSubplotSize(args.size_inch)
@@ -106,14 +116,16 @@ class batchArgs:
                self.wantImportance(jobItem)
 
     def nameMatches(self, jobItem):
-        if self.args.name is None: return True
+        if self.args.name is None:
+            return True
         for pat in self.args.name:
-            if fnmatch.fnmatch(jobItem.name, pat): return True
+            if fnmatch.fnmatch(jobItem.name, pat):
+                return True
         return False
 
     def groupMatches(self, jobItem):
         return (self.args.group is None or jobItem.group in self.args.group) and (
-                self.args.skip_group is None or not jobItem.group in self.args.skip_group)
+                self.args.skip_group is None or jobItem.group not in self.args.skip_group)
 
     def dataMatches(self, jobItem):
         if self.args.musthave_data is not None and not jobItem.data_set.hasAll(
@@ -153,7 +165,8 @@ class batchArgs:
         items = dict()
         for jobItem in self.filteredBatchItems():
             if not chainExist or jobItem.chainExists():
-                if not jobItem.paramtag in items: items[jobItem.paramtag] = []
+                if jobItem.paramtag not in items:
+                    items[jobItem.paramtag] = []
                 items[jobItem.paramtag].append(jobItem)
         return sorted(items.items())
 

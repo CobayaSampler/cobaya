@@ -108,8 +108,6 @@ Both sample files and collections contain the following columns, in this order:
 
 .. autoclass:: output.Output
    :members:
-.. autoclass:: output.Output_MPI
-   :noindex:
 .. autoclass:: output.OutputDummy
    :noindex:
 

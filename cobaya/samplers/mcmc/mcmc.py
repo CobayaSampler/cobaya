@@ -549,16 +549,23 @@ class MCMC(CovmatSampler):
         else:  # not accepted
             self.current_point.weight += 1
             # Failure criterion: chain stuck! (but be more permissive during burn_in)
-            max_tries_now = self.max_tries.value * \
-                            (1 + (10 - 1) * np.sign(self.burn_in_left))
+            max_tries_now = self.max_tries.value * (
+                    1 + (10 - 1) * np.sign(self.burn_in_left))
             if self.current_point.weight > max_tries_now:
                 self.collection.out_update()
                 raise LoggedError(
                     self.log,
-                    "The chain has been stuck for %d attempts. Stopping sampling. "
-                    "If this has happened often, try improving your "
-                    "reference point/distribution. Alternatively (though not advisable) "
-                    "make 'max_tries: np.inf' (or 'max_tries: .inf' in yaml).\n"
+                    "The chain has been stuck for %d attempts, stopping sampling. "
+                    "Make sure the reference point is semsible and initial covmat."
+                    "For parameters not included in an initial covmat, the 'proposal' "
+                    "width set for each parameter should be of order of the expected "
+                    "conditional posterior width, which may be much smaller than the "
+                    "marginalized posterior width - choose a smaller "
+                    "rather than larger value if in doubt. You can also decrease the "
+                    "'proposal_scale' option for mcmc, though small values will sample "
+                    "less efficiently once things converge.\n"
+                    "Alternatively (though not advisable) make 'max_tries: np.inf' "
+                    "(or 'max_tries: .inf' in yaml).\n"
                     "Current point: %s", max_tries_now, self.current_point)
 
     # Functions to check convergence and learn the covariance of the proposal distribution

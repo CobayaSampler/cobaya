@@ -26,10 +26,10 @@ Each iteration of a sampler reproduces the model using the following steps:
 Cosmological theory code
 ------------------------
 
-.. autoclass:: theories._cosmo.BoltzmannBase
+.. autoclass:: theories.cosmo.BoltzmannBase
    :members:
 
-.. autoclass:: theories._cosmo.PowerSpectrumInterpolator
+.. autoclass:: theories.cosmo.PowerSpectrumInterpolator
    :members:
 
 

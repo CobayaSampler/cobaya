@@ -10,12 +10,11 @@ r"""
 import os
 import sys
 import numpy as np
-import logging
 from typing import Any
 
 # Local
 from cobaya.likelihood import Likelihood
-from cobaya.log import LoggedError
+from cobaya.log import LoggedError, get_logger
 from cobaya.input import get_default_info
 from cobaya.install import pip_install, download_file, NotInstalledError
 from cobaya.tools import are_different_params_lists, create_banner, load_module
@@ -170,7 +169,7 @@ class PlanckClik(Likelihood):
     def install(cls, path=None, force=False, code=True, data=True,
                 no_progress_bars=False):
         name = cls.get_qualified_class_name()
-        log = logging.getLogger(name)
+        log = get_logger(name)
         path_names = {"code": common_path, "data": get_data_path(name)}
         import platform
         if platform.system() == "Windows":
@@ -253,7 +252,7 @@ def get_clik_source_folder(starting_path):
 
 
 def is_installed_clik(path, allow_global=False, check=True):
-    log = logging.getLogger("clik")
+    log = get_logger("clik")
     func = log.info if check else log.error
     if path is not None and path.lower() == "global":
         path = None
@@ -313,7 +312,7 @@ def execute(command):
 
 
 def install_clik(path, no_progress_bars=False):
-    log = logging.getLogger("clik")
+    log = get_logger("clik")
     log.info("Installing pre-requisites...")
     for req in ("cython", "astropy"):
         exit_status = pip_install(req)

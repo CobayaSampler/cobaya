@@ -2,6 +2,7 @@
 
 ### General
 
+- updated and added documentation for cobaya-run-job; added cobaya-running-jobs and cobaya-delete-jobs
 - Allow for more general dependencies between input parameters, derived parameters and likelihood/theory/prior inputs
 - run, post and get_model can now all take inputs from a dictionary, yaml text or yaml
   filename
@@ -9,7 +10,7 @@
 - run has optional arguments to set debug, force, output, etc settings
 - More input and output typing  for easier static error detection; added cobaya.typing for static checking of input dictionaries using TypedDict when available
 - Refactoring of cobaya.conventions to remove most string literals and rename non-private constants starting with _
-- Uses GetDist 1.2.1+ which fixes sign loading the logposterior value from Cobaya
+- Uses GetDist 1.2.2+ which fixes sign loading the logposterior value from Cobaya
   collection
 - Optimized calculation of Gaussian 1D priors
 - run settings saved to ".updated.dill_pickle" pickle file in cases where callable/class
@@ -28,14 +29,16 @@
 
 ### MCMC
 
-- Fixed bug with drag: True that gave wrong results
+- Fixed bug with "drag: True" that gave wrong results
 - MPI reworked, now avoids ending and error deadlocks, and synchronizing exceptions
   (raising OtherProcessError on non-excepting processes)
 - Random number generation now using numpy 1.17 generators and MPI seeds generated using SeedSequence
   (note MPI runs generally not reproducible with fixed seed due to thead timing/asynchronous mpi exchanges)
 - Overhead reduced by at least 40%, thanks to caching in Collection
+- Optimization of derived parameter output (for dragging, not computed at each dragging step)
 - Some refactoring/simplification to pass LogPosterior instances more 
 - Reported acceptance rate is now only over last half chains (for MPI), or skipping first Rminus1_single_split fraction
+- When no covamt or 'prosposal' setting for a parameter, the fallback proposal width is now scaled (narrower) from the ref or prior variance
 
 ### Post-processing
 
@@ -43,6 +46,7 @@
   operations
 - On one process operating on list of samples outputs consistent list of samples rather
   than concatenating
+- Output is produced incrementally, so terminated jobs still produce valid output
 - No unnecessary theory recalculations
 - Support for loading from CosmoMC/Getdist-format chains.
 - Function in cobaya.cosmo_input.convert_cosmomc to general Cobaya-style info from
@@ -67,6 +71,7 @@
 - drag: True running test
 - Coverage reporting added to Travis
 - More useful traceback and console log when error raised running pytest
+- added COBAYA_DEBUG env variable that can be set to force debug output (e.g. set in travis for failed build rerun)
 
 ## 3.0.4 – 2021-03-10
 

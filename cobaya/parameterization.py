@@ -7,7 +7,6 @@
 
 """
 # Global
-import logging
 import numpy as np
 from numbers import Real
 from itertools import chain
@@ -56,11 +55,10 @@ def expand_info_param(info_param: ParamInput, default_derived=True) -> ParamDict
             values = list(info_param)
             allowed_lengths = [2, 4, 5]
             if len(values) not in allowed_lengths:
-                logger = logging.getLogger(__name__.split(".")[-1])
-                raise LoggedError(
-                    logger, "Parameter info length not valid: %d. "
-                            "The allowed lengths are %r. See documentation.",
-                    len(values), allowed_lengths)
+                raise LoggedError(__name__,
+                                  "Parameter info length not valid: %d. "
+                                  "The allowed lengths are %r. See documentation.",
+                                  len(values), allowed_lengths)
             info_param = {"prior": [values[0], values[1]]}
             if len(values) >= 4:
                 info_param["ref"] = [values[2], values[3]]

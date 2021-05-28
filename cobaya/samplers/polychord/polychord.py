@@ -22,7 +22,7 @@ from cobaya.tools import read_dnumber, get_external_function, \
 from cobaya.sampler import Sampler
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
 from cobaya.collection import SampleCollection
-from cobaya.log import LoggedError
+from cobaya.log import LoggedError, get_logger
 from cobaya.install import download_github_release, NotInstalledError
 from cobaya.yaml import yaml_dump_file
 from cobaya.conventions import derived_par_name_separator, packages_path_arg, Extension
@@ -289,7 +289,7 @@ class polychord(Sampler):
                 lines = list(pf.readlines())
             get_value_str = lambda line: line[line.find("=") + 1:]
             get_value_str_var = lambda var: get_value_str(
-                next(l for l in lines if l.lstrip().startswith(var)))
+                next(line for line in lines if line.lstrip().startswith(var)))
             nprior = int(get_value_str_var("nprior"))
             ndiscarded = int(get_value_str_var("ndiscarded"))
             self._frac_unphysical = nprior / ndiscarded
@@ -332,11 +332,11 @@ class polychord(Sampler):
             pre = "log(Z"
             active = "(Still active)"
             with open(self.raw_prefix + ".stats", "r", encoding="utf-8-sig") as statsfile:
-                lines = [l for l in statsfile.readlines() if l.startswith(pre)]
-            for l in lines:
+                lines = [line for line in statsfile.readlines() if line.startswith(pre)]
+            for line in lines:
                 logZ, logZstd = [float(n.replace(active, "")) for n in
-                                 l.split("=")[-1].split("+/-")]
-                component = l.split("=")[0].lstrip(pre + "_").rstrip(") ")
+                                 line.split("=")[-1].split("+/-")]
+                component = line.split("=")[0].lstrip(pre + "_").rstrip(") ")
                 if not component:
                     self.logZ, self.logZstd = logZ, logZstd
                 elif self.pc_settings.do_clustering:
@@ -378,7 +378,8 @@ class polychord(Sampler):
         Auxiliary function to define what should be returned in a scripted call.
 
         Returns:
-           The sample ``SampleCollection`` containing the sequentially discarded live points.
+           The sample ``SampleCollection`` containing the sequentially
+           discarded live points.
         """
         if is_main_process():
             products = {
@@ -430,7 +431,7 @@ class polychord(Sampler):
 
     @classmethod
     def get_import_path(cls, path):
-        log = logging.getLogger(cls.__name__)
+        log = get_logger(cls.__name__)
         poly_build_path = os.path.join(path, "build")
         if not os.path.isdir(poly_build_path):
             log.error("Either PolyChord is not in the given folder, "
@@ -455,7 +456,7 @@ class polychord(Sampler):
 
     @classmethod
     def is_installed(cls, **kwargs):
-        log = logging.getLogger(cls.__name__)
+        log = get_logger(cls.__name__)
         if not kwargs.get("code", True):
             return True
         check = kwargs.get("check", True)
@@ -505,7 +506,7 @@ class polychord(Sampler):
                 no_progress_bars=False):
         if not code:
             return True
-        log = logging.getLogger(__name__.split(".")[-1])
+        log = get_logger(__name__)
         log.info("Downloading PolyChord...")
         success = download_github_release(os.path.join(path, "code"), cls._pc_repo_name,
                                           cls._pc_repo_version,

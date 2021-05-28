@@ -8,7 +8,6 @@
 
 # Global
 import os
-import logging
 from io import StringIO
 from tempfile import NamedTemporaryFile
 from subprocess import Popen, PIPE
@@ -18,7 +17,7 @@ from textwrap import dedent
 from requests import head
 
 # Local
-from cobaya.log import logger_setup, LoggedError
+from cobaya.log import logger_setup, LoggedError, get_logger
 from cobaya.input import get_used_components, load_input
 from cobaya.yaml import yaml_dump
 from cobaya.install import install
@@ -26,7 +25,7 @@ from cobaya.conventions import products_path, packages_path_env, packages_path_a
     code_path, data_path
 from cobaya.tools import warn_deprecation
 
-log = logging.getLogger(__name__.split(".")[-1])
+log = get_logger(__name__)
 
 _requirements_file = "requirements.yaml"
 _help_file = "readme.md"
