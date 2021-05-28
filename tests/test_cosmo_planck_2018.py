@@ -125,6 +125,21 @@ def test_planck_2018_t_CamSpec_native_camb(packages_path, skip_not_installed, pl
     body_of_test(packages_path, best_fit, info_likelihood, info_theory, chi2,
                  skip_not_installed=skip_not_installed)
 
+def test_planck_2018_t_CamSpec2021_camb(packages_path, skip_not_installed):
+    # TODO: sort out calPlanck vs A_planck
+    name = "planck_2018_highl_CamSpec2021.TT"
+    info_likelihood = {name: None}
+    #chi2 = {name: 6356.32, 'tolerance': 0.2}
+    chi2 = {name: 6357.96, 'tolerance': 0.2}
+    best_fit = params_lowTE_highTTTEEE_lite_lensingcmblikes.copy()
+    best_fit['calPlanck'] = best_fit['A_planck']
+    best_fit.pop("H0")
+    best_fit.update(
+        {'amp_143': 19.70529, 'amp_217': 15.25289, 'amp_143x217': 10.42223,
+         'n_143': 0.94730, 'n_217': 1.05608, 'n_143x217': 0.96638})
+    info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory, chi2,
+                 skip_not_installed=skip_not_installed)
 
 def test_planck_2018_t_CamSpec_clik_camb(packages_path, skip_not_installed):
     test_planck_2018_t_CamSpec_native_camb(packages_path, plik=True,
@@ -151,6 +166,20 @@ def test_planck_2018_p_CamSpec_native_camb(packages_path, skip_not_installed, pl
     body_of_test(packages_path, best_fit, info_likelihood, info_theory, chi2,
                  skip_not_installed=skip_not_installed)
 
+def test_planck_2018_p_CamSpec2021_camb(packages_path, skip_not_installed):
+    # TODO: sort out calPlanck vs A_planck
+    name = "planck_2018_highl_CamSpec2021.TTTEEE"
+    info_likelihood = {name: None}
+    chi2 = {name: 10120.27, 'tolerance': 0.2}
+    best_fit = params_lowTE_highTTTEEE_lite_lensingcmblikes.copy()
+    best_fit['calPlanck'] = best_fit['A_planck']
+    best_fit.pop("H0")
+    best_fit.update(
+        {'amp_143': 17.49600, 'amp_217': 13.13760, 'amp_143x217': 8.26404,
+         'n_143': 1.09456, 'n_217': 1.33554, 'n_143x217': 1.33658, 'calTE': 1.00048, 'calEE': 1.00124})
+    info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory, chi2,
+                 skip_not_installed=skip_not_installed)
 
 def test_planck_2018_p_CamSpec_clik_camb(packages_path, skip_not_installed):
     test_planck_2018_p_CamSpec_native_camb(packages_path, plik=True,
