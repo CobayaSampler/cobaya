@@ -100,7 +100,7 @@ After this, mention the path to this likelihood when you include it in an input 
 #   AL, Mar 2014: updates for latest CosmoMC structure
 #   AL, June 2014: updated JLA_marginalize=T handling so it should work
 #   AL, March 2018: this python version
-#   PL, May 2021: Included option to use absolute magnitude from local SNe measurements. 
+#   PL, May 2021: Included option to use absolute magnitude from local SNe measurements.
 
 # Global
 import numpy as np
