@@ -690,6 +690,7 @@ install_tests["likelihood"].update({"planck_2015_lowl": None,
                                     "planck_2018_highl_plik.TT_lite_native": None,
                                     "planck_2018_highl_CamSpec.TT": None,
                                     "planck_2018_highl_CamSpec.TT_native": None,
+                                    "planck_2018_highl_CamSpec2021.TT": None,
                                     })
 
 # CONTENTS FOR COMBO-BOXED IN A GUI ######################################################

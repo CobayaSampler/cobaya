@@ -575,8 +575,9 @@ def get_scipy_1d_pdf(info):
             isinstance(n, numbers.Real) for n in info2):
         info2 = {"min": info2[0], "max": info2[1]}
     elif not isinstance(info2, Mapping):
-        raise LoggedError(log, "Prior format not recognized. "
-                               "Check documentation for prior specification.")
+        raise LoggedError(log, "Prior format not recognized for %s: %r "
+                               "Check documentation for prior specification.",
+                          param, info2)
     # What distribution?
     try:
         dist = info2.pop("dist").lower()
@@ -610,6 +611,10 @@ def get_scipy_1d_pdf(info):
                 raise LoggedError(
                     log, "Invalid value '%s: %r' in param '%s' (it must be a number)",
                     limit, value, param)
+        if minmaxvalues["max"] < minmaxvalues["min"]:
+            raise LoggedError(
+                log, "Minimum larger than maximum: '%s, %s' for param '%s'",
+                minmaxvalues["min"], minmaxvalues["max"], param)
         info2["loc"] = minmaxvalues["min"]
         info2["scale"] = minmaxvalues["max"] - minmaxvalues["min"]
 

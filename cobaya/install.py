@@ -140,7 +140,7 @@ def install(*infos, **kwargs):
                     log.info("Doing nothing.")
                     continue
             else:
-                log.info("Installation check failed!")
+                log.info("Check found no existing installation")
                 if not debug:
                     log.info(
                         "(If you expected this to be already installed, re-run "
