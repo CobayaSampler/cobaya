@@ -12,6 +12,6 @@ speed: 4500
 params:
   Mb:
     prior:
-      min: -18
-      max: -20
+      min: -20
+      max: -18
     latex: M_b
