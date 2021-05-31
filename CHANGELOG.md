@@ -61,6 +61,9 @@
 
 ### Cosmology:
 
+- Added CamSpec 2021 Planck high-l likelihoods (based on legacy maps, not NPIPE; thanks Erik Rosenberg)
+- Added Riess et al H0 constraint (H0.riess2020Mb) in terms of magnitude rather than directly on H0
+  (use combined with sn.pantheon with use_abs_mag: True; thanks Pablo Lemos)
 - Install updated Planck clik code (3.1) 
 
 ### Tests
