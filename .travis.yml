@@ -83,7 +83,7 @@ before_install:
     export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libgfortran.so.5;
     fi
   - if [[ "$GCC_VERSION" == "6" ]]; then
-    export COBAYA_INSTALL_SKIP=$COBAYA_INSTALL_SKIP,polychord
+    export COBAYA_INSTALL_SKIP=$COBAYA_INSTALL_SKIP,polychord;
     fi
   - gfortran --version
   # Install rest of system requisites
