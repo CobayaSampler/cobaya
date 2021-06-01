@@ -35,7 +35,7 @@ class polychord(Sampler):
     """
     # Name of the PolyChord repo and version to download
     _pc_repo_name = "PolyChord/PolyChordLite"
-    _pc_repo_version = "1.17.1"
+    _pc_repo_version = "1.18.2"
     _base_dir_suffix = "polychord_raw"
     _clusters_dir = "clusters"
     _at_resume_prefer_old = Sampler._at_resume_prefer_old + ["blocking"]
@@ -145,7 +145,9 @@ class polychord(Sampler):
                    "grade_dims"]
         # As stated above, num_repeats is ignored, so let's not pass it
         pc_args.pop(pc_args.index("num_repeats"))
-        self.pc_settings = self.pc.settings.PolyChordSettings(
+        settings: Any = load_module('pypolychord.settings', path=self._poly_build_path,
+                                    min_version=None)
+        self.pc_settings = settings.PolyChordSettings(
             self.nDims, self.nDerived, seed=(self.seed if self.seed is not None else -1),
             **{p: getattr(self, p) for p in pc_args if getattr(self, p) is not None})
         # prior conversion from the hypercube
@@ -155,7 +157,7 @@ class polychord(Sampler):
         inf = np.where(np.isinf(bounds))
         if len(inf[0]):
             params_names = list(self.model.parameterization.sampled_params())
-            params = [params_names[i] for i in sorted(list(set(inf[0])))]
+            params = [params_names[i] for i in sorted(set(inf[0]))]
             raise LoggedError(
                 self.log, "PolyChord needs bounded priors, but the parameter(s) '"
                           "', '".join(params) + "' is(are) unbounded.")
@@ -483,6 +485,7 @@ class polychord(Sampler):
                 log.info(
                     "Importing *auto-installed* PolyChord (but defaulting to *global*).")
             poly_build_path = cls.get_import_path(path)
+        cls._poly_build_path = poly_build_path
         try:
             # TODO: add min_version when polychord module version available
             return load_module(
