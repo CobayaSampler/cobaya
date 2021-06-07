@@ -61,7 +61,7 @@ setup(
                       'portalocker>=2.3.0', 'dill>=0.3.3'],
     extras_require={
         'test': ['pytest', 'pytest-forked', 'flaky', 'mpi4py'],
-        'gui': ['pyqt5', 'pyside2']},
+        'gui': ['pyqt5', 'pyside2', 'matplotlib']},
     package_data={
         'cobaya': list(chain(*[['%s/*/*.yaml' % folder, '%s/*/*.bibtex' % folder]
                                for folder in subfolders.values()]))},

@@ -5,7 +5,6 @@ import platform
 import signal
 from pprint import pformat
 import numpy as np
-from matplotlib import cm as cmap
 import io
 
 # Local
@@ -49,9 +48,6 @@ os.environ['QT_API'] = 'pyside2'
 
 # Quit with C-c
 signal.signal(signal.SIGINT, signal.SIG_DFL)
-
-# Color map for correlations
-cmap_corr = cmap.get_cmap("coolwarm_r")
 
 
 def text(key, contents):
@@ -273,6 +269,9 @@ class MainWindow(QWidget):
                 list(self.current_params_in_covmat))
             self.covmat_table.setVerticalHeaderLabels(
                 list(self.current_params_in_covmat))
+            # Color map for correlations
+            from matplotlib import cm as cmap
+            cmap_corr = cmap.get_cmap("coolwarm_r")
             for i, pi in enumerate(self.current_params_in_covmat):
                 for j, pj in enumerate(self.current_params_in_covmat):
                     self.covmat_table.setItem(
