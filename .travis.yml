@@ -56,16 +56,18 @@ jobs:
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="defaults"
       python: "3.7"
-    - name: "Latest: gcc-10, Python 3.9 Anaconda (conda-forge)"
+    - name: "Latest: gcc-11, Python 3.9 Anaconda (conda-forge)"
       dist: focal
       addons:
         apt:
+          sources:
+            - sourceline: "ppa:ubuntu-toolchain-r/test"
           packages:
-            - gcc-10
-            - gfortran-10
-            - g++-10
+            - gcc-11
+            - gfortran-11
+            - g++-11
       env:
-        - GCC_VERSION="10"
+        - GCC_VERSION="11"
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="conda-forge"
       python: "3.9"
@@ -79,7 +81,7 @@ before_install:
     ln -s /usr/bin/g++-$GCC_VERSION gcc-symlinks/g++;
     export PATH=$PWD/gcc-symlinks:$PATH;
     fi
-  - if [[ "$GCC_VERSION" == "10" ]]; then
+  - if [[ "$GCC_VERSION" == "11" ]]; then
     export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libgfortran.so.5;
     fi
   - if [[ "$GCC_VERSION" == "6" ]]; then
