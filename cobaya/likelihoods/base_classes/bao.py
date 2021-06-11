@@ -258,7 +258,7 @@ class BAO(InstallableLikelihood):
                 "rdrag": None},
             "f_sigma8": {
                 "fsigma8": {"z": zs.get("f_sigma8", None)},
-                "Hubble": {"z": zs.get("Hz_rs", None)}},
+                },
             "F_AP": {
                 "angular_diameter_distance": {"z": zs.get("F_AP", None)},
                 "Hubble": {"z": zs.get("F_AP", None)}}}
