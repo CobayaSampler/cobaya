@@ -7,14 +7,13 @@ import time
 import shutil
 import multiprocessing
 from typing import Any
-
 from distutils import spawn
 
-from cobaya.conventions import _yaml_extensions
-from .conventions import _script_folder, _script_ext, _log_folder, _jobid_ext
+from cobaya.conventions import Extension
+from .conventions import script_folder, script_ext, jobid_ext
 
-code_prefix = 'COSMOMC'
-default_program = './cosmomc'
+code_prefix = 'COBAYA'
+default_program = 'cobaya-run -r'
 
 
 def set_default_program(program, env_prefix):
@@ -34,8 +33,7 @@ def addArguments(parser, combinedJobs=False):
                             help=('run all one after another, under one job submission '
                                   '(good for many fast operations)'))
         parser.add_argument('--runs-per-job', type=int,
-                            default=int(
-                                os.environ.get(code_prefix + '_runsPerJob', '1')),
+                            default=int(os.environ.get(code_prefix + '_runsPerJob', '1')),
                             help=('submit multiple mpi runs at once from each job script '
                                   '(e.g. to get more than one run per node)'))
     parser.add_argument('--job-template',
@@ -45,32 +43,61 @@ def addArguments(parser, combinedJobs=False):
     parser.add_argument('--queue', help='name of queue to submit to')
     parser.add_argument('--jobclass', help='any class name of the job')
     parser.add_argument('--qsub', help='option to change qsub command to something else')
-    parser.add_argument('--dryrun', action='store_true')
-    parser.add_argument('--no_sub', action='store_true')
+    parser.add_argument('--dryrun', action='store_true',
+                        help="just test configuration and give summary for checking, "
+                             "don't produce or do anything")
+    parser.add_argument('--no_sub', action='store_true',
+                        help="produce job script but don't actually submit it")
 
 
-def checkArguments(**kwargs):
+def check_arguments(**kwargs):
     submitJob(None, None, msg=True, **kwargs)
 
 
-class jobSettings:
+grid_engine_defaults = {
+    'PBS': {},
+    'MOAB': {'qsub': 'msub', 'qdel': 'canceljob'},
+    'SLURM': {'qsub': 'sbatch', 'qdel': 'scancel', 'qstat': 'squeue'}
+}
+
+
+def engine_default(engine, command):
+    options = grid_engine_defaults.get(engine)
+    if options:
+        return options.get(command, command)
+    return command
+
+
+class JobSettings:
+    names: list
+    jobId: str
+    path: str
+    onerun: int
+    inputFiles: list
+    subTime: float
+
     def __init__(self, jobName, msg=False, **kwargs):
         self.jobName = jobName
         grid_engine = 'PBS'
-        if spawn.find_executable("msub") is not None:
-            grid_engine = 'MOAB'
+        for engine, options in grid_engine_defaults.items():
+            if 'qsub' in options:
+                if spawn.find_executable(options["qsub"]) is not None:
+                    grid_engine = engine
+                    break
         else:
-            try:
-                help_info = str(
-                    subprocess.check_output('qstat -help', shell=True)).strip()
-                if 'OGS/GE' in help_info:
-                    grid_engine = 'OGS'  # Open Grid Scheduler, as on StarCluster
-            except:
-                pass
-        self.job_template = getDefaulted('job_template', 'job_script', **kwargs)
+            if spawn.find_executable("qstat") is not None:
+                try:
+                    help_info = subprocess.check_output('qstat -help',
+                                                        shell=True).decode().strip()
+                    if 'OGS/GE' in help_info:
+                        grid_engine = 'OGS'  # Open Grid Scheduler, as on StarCluster
+                except:
+                    pass
+        self.job_template = get_defaulted('job_template', 'job_script', **kwargs)
         if not self.job_template or self.job_template == 'job_script' \
                 and not os.path.exists(self.job_template):
-            raise ValueError("You must provide a script template with '--job-template'.")
+            raise ValueError("You must provide a script template with '--job-template', "
+                             "or export COBAYA_job_template in your .bashrc")
         try:
             with open(self.job_template, 'r', encoding="utf-8-sig") as f:
                 template = f.read()
@@ -83,8 +110,8 @@ class jobSettings:
                 cores = 8
         except:
             cores = 8
-        self.cores_per_node = getDefaulted(
-            'cores_per_node', cores, tp=int, template=template, **kwargs)
+        self.cores_per_node = get_defaulted('cores_per_node', cores, tp=int,
+                                            template=template, **kwargs)
         if cores == 4:
             perNode = 2
         elif cores % 4 == 0:
@@ -93,13 +120,13 @@ class jobSettings:
             perNode = cores // 3
         else:
             perNode = 1
-        self.chains_per_node = getDefaulted(
-            'chains_per_node', perNode, tp=int, template=template, **kwargs)
-        self.nodes = getDefaulted(
-            'nodes', max(1, 4 // perNode), tp=int, template=template, **kwargs)
+        self.chains_per_node = get_defaulted('chains_per_node', perNode, tp=int,
+                                             template=template, **kwargs)
+        self.nodes = get_defaulted('nodes', max(1, 4 // perNode), tp=int,
+                                   template=template, **kwargs)
         self.nchains = self.nodes * self.chains_per_node
-        self.runsPerJob = getDefaulted(
-            'runsPerJob', 1, tp=int, template=template, **kwargs)
+        self.runsPerJob = get_defaulted('runsPerJob', 1, tp=int, template=template,
+                                        **kwargs)
         # also defaulted at input so should be set here unless called programmatically
         self.omp = self.cores_per_node / (self.chains_per_node * self.runsPerJob)
         if self.omp != np.floor(self.omp):
@@ -110,28 +137,26 @@ class jobSettings:
                   '(%i cores per node)' % (
                       self.runsPerJob, self.nchains, self.nodes, self.chains_per_node,
                       self.omp, self.cores_per_node))
-        self.mem_per_node = getDefaulted(
-            'mem_per_node', 63900, tp=int, template=template, **kwargs)
-        self.walltime = getDefaulted('walltime', '24:00:00', template=template, **kwargs)
-        self.program = getDefaulted('program', default_program, template=template,
-                                    **kwargs)
-        self.queue = getDefaulted('queue', '', template=template, **kwargs)
-        self.jobclass = getDefaulted('jobclass', '', template=template, **kwargs)
-        self.gridEngine = getDefaulted(
-            'GridEngine', grid_engine, template=template, **kwargs)
+        self.mem_per_node = get_defaulted('mem_per_node', 63900, tp=int,
+                                          template=template, **kwargs)
+        self.walltime = get_defaulted('walltime', '24:00:00', template=template, **kwargs)
+        self.program = get_defaulted('program', default_program, template=template,
+                                     **kwargs)
+        self.queue = get_defaulted('queue', '', template=template, **kwargs)
+        self.jobclass = get_defaulted('jobclass', '', template=template, **kwargs)
+        self.gridEngine = get_defaulted('GridEngine', grid_engine, template=template,
+                                        **kwargs)
         if grid_engine == 'OGS' and os.getenv('SGE_CLUSTER_NAME', '') == 'starcluster':
             self.qsub = 'qsub -pe orte ##NUMSLOTS##'
         else:
-            self.qsub = getDefaulted(
-                'qsub', 'msub' if self.gridEngine == 'MOAB' else 'qsub',
-                template=template, **kwargs)
-        self.qdel = getDefaulted(
-            'qdel', 'canceljob' if self.gridEngine == 'MOAB' else 'qdel',
-            template=template, **kwargs)
-        self.runCommand = extractValue(template, 'RUN')
+            self.qsub = get_defaulted('qsub', engine_default(grid_engine, 'qsub'),
+                                      template=template, **kwargs)
+        self.qdel = get_defaulted('qdel', engine_default(grid_engine, 'qdel'),
+                                  template=template, **kwargs)
+        self.runCommand = extract_value(template, 'RUN')
 
 
-class jobIndex:
+class JobIndex:
     """
     Stores the mappings between job Ids, jobNames
     """
@@ -154,29 +179,29 @@ class jobIndex:
             j = self.jobSettings.get(jobId)
             if j is not None:
                 for rootname in j.names:
-                    del (self.rootNames[rootname])
-                del (self.jobSettings[jobId])
-                del (self.jobNames[j.jobName])
+                    del self.rootNames[rootname]
+                del self.jobSettings[jobId]
+                del self.jobNames[j.jobName]
                 self.jobSequence = [s for s in self.jobSequence if s != jobId]
 
 
 def loadJobIndex(batchPath, must_exist=False):
     if batchPath is None:
-        batchPath = os.path.join(".", _script_folder)
-    fileName = os.path.join(batchPath, 'jobIndex.pyobj')
+        batchPath = os.path.join(".", script_folder)
+    fileName = os.path.join(batchPath, 'job_index.pyobj')
     if os.path.exists(fileName):
         with open(fileName, 'rb') as inp:
             return pickle.load(inp)
     else:
         if not must_exist:
-            return jobIndex()
+            return JobIndex()
         return None
 
 
 def saveJobIndex(obj, batchPath=None):
     if batchPath is None:
-        batchPath = os.path.join(".", _script_folder)
-    fname = os.path.join(batchPath, 'jobIndex.pyobj')
+        batchPath = os.path.join(".", script_folder)
+    fname = os.path.join(batchPath, 'job_index.pyobj')
     with open(fname + '_tmp', 'wb') as output:
         pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
     # try to prevent corruption from error mid-write
@@ -187,7 +212,7 @@ def saveJobIndex(obj, batchPath=None):
 
 def addJobIndex(batchPath, j):
     if batchPath is None:
-        batchPath = os.path.join(".", _script_folder)
+        batchPath = os.path.join(".", script_folder)
     index = loadJobIndex(batchPath)
     index.addJob(j)
     saveJobIndex(index, batchPath)
@@ -195,7 +220,7 @@ def addJobIndex(batchPath, j):
 
 def deleteJobNames(batchPath, jobNames):
     if batchPath is None:
-        batchPath = os.path.join(".", _script_folder)
+        batchPath = os.path.join(".", script_folder)
     index = loadJobIndex(batchPath)
     if not index:
         raise Exception('No existing job index found')
@@ -214,7 +239,7 @@ def deleteRootNames(batchPath, rootNames):
 def deleteJobs(batchPath, jobIds=None, rootNames=None, jobNames=None, jobId_minmax=None,
                jobId_min=None, confirm=True, running=False, queued=False):
     if batchPath is None:
-        batchPath = os.path.join(".", _script_folder)
+        batchPath = os.path.join(".", script_folder)
     index = loadJobIndex(batchPath)
     if not index:
         raise Exception('No existing job index found')
@@ -222,20 +247,15 @@ def deleteJobs(batchPath, jobIds=None, rootNames=None, jobNames=None, jobId_minm
         jobIds = []
     if isinstance(jobIds, str):
         jobIds = [jobIds]
+    jobIds = set(jobIds)
     if rootNames is not None:
         if isinstance(rootNames, str):
             rootNames = [rootNames]
-        for name in rootNames:
-            jobId = index.rootNames.get(name)
-            if jobId not in jobIds:
-                jobIds.append(jobId)
+        jobIds.update(index.rootNames.get(name) for name in rootNames)
     if jobNames is not None:
         if isinstance(jobNames, str):
             jobNames = [jobNames]
-        for name in jobNames:
-            jobId = index.jobNames.get(name)
-            if jobId not in jobIds:
-                jobIds.append(jobId)
+        jobIds.update(index.jobNames.get(name) for name in jobNames)
     if jobId_minmax is not None or jobId_min is not None:
         for jobIdStr, j in list(index.jobSettings.items()):
             parts = jobIdStr.split('.')
@@ -243,13 +263,12 @@ def deleteJobs(batchPath, jobIds=None, rootNames=None, jobNames=None, jobId_minm
                 jobId = int(parts[0])
             else:
                 jobId = int(parts[1])
-            if (((jobId_minmax is not None and
-                  (jobId_minmax[0] <= jobId <= jobId_minmax[1]) or
-                  jobId_min is not None and jobId >= jobId_min) and
-                 jobIdStr not in jobIds)):
-                jobIds.append(jobIdStr)
+            if (jobId_minmax is not None and
+                    (jobId_minmax[0] <= jobId <= jobId_minmax[1]) or
+                    jobId_min is not None and jobId >= jobId_min):
+                jobIds.add(jobIdStr)
     validIds = queue_job_details(batchPath, running=not queued, queued=not running)[0]
-    for jobId in jobIds:
+    for jobId in sorted(jobIds):
         j = index.jobSettings.get(jobId)
         if j is not None:
             if confirm:
@@ -268,33 +287,36 @@ def deleteJobs(batchPath, jobIds=None, rootNames=None, jobNames=None, jobId_minm
     return jobIds
 
 
-def submitJob(jobName, inputFiles, sequential=False, msg=False, **kwargs):
+def submitJob(job_name, input_files, sequential=False, msg=False, **kwargs):
     """
-    Submits a job with name ``jobName`` and input file(s) ``inputFiles``.
+    Submits a job with name ``jobName`` and input file(s) ``input_files``.
 
     If ``sequential=True`` (default: False), and multiple input files given,
     gathers the corresponding runs in a single job script, so that they are run
     sequentially.
 
-    The ``jobSettings`` are created using the non-explicit ``kwargs``.
+    The ``JobSettings`` are created using the non-explicit ``kwargs``.
     """
-    j = jobSettings(jobName, msg, **kwargs)
-    if kwargs.get('dryrun', False) or inputFiles is None:
+    j = JobSettings(job_name, msg, **kwargs)
+    if kwargs.get('dryrun', False) or input_files is None:
         return
-    if isinstance(inputFiles, str):
-        inputFiles = [inputFiles]
-    inputFiles = [
-        (os.path.splitext(p)[0] if os.path.splitext(p)[1] in _yaml_extensions else p)
-        for p in inputFiles]
-    j.runsPerJob = (len(inputFiles), 1)[sequential]
+    if isinstance(input_files, str):
+        input_files = [input_files]
+    input_files = [
+        (os.path.splitext(p)[0] if os.path.splitext(p)[1] in Extension.yamls else p)
+        for p in input_files]
+    j.runsPerJob = (len(input_files), 1)[sequential]
     # adjust omp for the actual number
     # (may not be equal to input runsPerJob because of non-integer multiple)
     j.omp = j.cores_per_node // (j.chains_per_node * j.runsPerJob)
     j.path = os.getcwd()
-    j.onerun = (0, 1)[len(inputFiles) == 1 or sequential]
+    j.onerun = (0, 1)[len(input_files) == 1 or sequential]
     base_path = os.path.abspath(kwargs.get('batchPath', './'))
+    script_dir = os.path.join(base_path, script_folder)
+    if not os.path.exists(script_dir):
+        os.makedirs(script_dir)
     vals = dict()
-    vals['JOBNAME'] = jobName
+    vals['JOBNAME'] = job_name
     vals['OMP'] = j.omp
     vals['MEM_MB'] = j.mem_per_node
     vals['WALLTIME'] = j.walltime
@@ -310,17 +332,17 @@ def submitJob(jobName, inputFiles, sequential=False, msg=False, **kwargs):
     vals['ONERUN'] = j.onerun
     vals['PROGRAM'] = j.program
     vals['QUEUE'] = j.queue
-    vals['LOGDIR'] = os.path.join(base_path, _log_folder)
+    vals['JOBSCRIPTDIR'] = script_dir
     if hasattr(j, 'jobclass'):
         vals['JOBCLASS'] = j.jobclass
-    j.names = [os.path.basename(param) for param in inputFiles]
+    j.names = [os.path.basename(param) for param in input_files]
     commands = []
-    for param, name in zip(inputFiles, j.names):
+    for param, name in zip(input_files, j.names):
         ini = param + '.yaml'
         if j.runCommand is not None:
             vals['INI'] = ini
             vals['INIBASE'] = name
-            command = replacePlaceholders(j.runCommand, vals)
+            command = replace_placeholders(j.runCommand, vals)
         else:
             command = ('mpirun -np %i %s %s' % (j.nchains, j.program, ini))
         commands.append(command)
@@ -330,79 +352,84 @@ def submitJob(jobName, inputFiles, sequential=False, msg=False, **kwargs):
         # Remove definition lines
         template = "\n".join(
             [line for line in template.split("\n") if not line.startswith("##")])
-        script = replacePlaceholders(template, vals)
-        scriptRoot = os.path.join(base_path, _script_folder, jobName)
-        scriptName = scriptRoot + _script_ext
+        script = replace_placeholders(template, vals)
+        scriptRoot = os.path.join(script_dir, job_name)
+        scriptName = scriptRoot + script_ext
         open(scriptName, 'w', encoding="utf-8").write(script)
-        if len(inputFiles) > 1:
+        if len(input_files) > 1:
             open(scriptRoot + '.batch', 'w', encoding="utf-8").write(
-                "\n".join(inputFiles))
+                "\n".join(input_files))
         if not kwargs.get('no_sub', False):
             try:
-                res = str(subprocess.check_output(
-                    replacePlaceholders(j.qsub, vals) + ' ' + scriptName, shell=True,
-                    stderr=subprocess.STDOUT)).strip()
+                res = subprocess.check_output(
+                    replace_placeholders(j.qsub, vals) + ' ' + scriptName, shell=True,
+                    stderr=subprocess.STDOUT).decode().strip()
             except subprocess.CalledProcessError as e:
                 print('Error calling %s: %s' % (j.qsub, e.output.decode().strip()))
-                return
-            if not res:
-                print('No qsub output')
             else:
-                j.inputFiles = inputFiles
-                if 'Your job ' in res:
-                    m = re.search('Your job (\d*) ', res)
-                    res = m.group(1)
-                j.jobId = res
-                j.subTime = time.time()
-                open(scriptRoot + _jobid_ext, 'w', encoding="utf-8").write(res)
-                addJobIndex(kwargs.get('batchPath'), j)
+                if not res:
+                    print('No qsub output')
+                else:
+                    j.inputFiles = input_files
+                    if 'Your job ' in res:
+                        m = re.search(r'Your job (\d*) ', res)
+                        assert m
+                        res = m.group(1)
+                    j.jobId = res
+                    j.subTime = time.time()
+                    open(scriptRoot + jobid_ext, 'w', encoding="utf-8").write(res)
+                    addJobIndex(kwargs.get('batchPath'), j)
 
 
 def queue_job_details(batchPath=None, running=True, queued=True, warnNotBatch=True):
     """
-    Return: list of jobIds, list of jobNames, list of list names
+    Return: list of jobIds, list of job_names, list of list names
     """
     index = loadJobIndex(batchPath)
     if not index:
         print('No existing job index found')
         return []
     if spawn.find_executable("showq") is not None:
-        res = str(subprocess.check_output('showq -U $USER', shell=True)).strip()
-        runningTxt = ' Running '
+        qstat = 'showq'
+        running_txt = ' Running '
     else:
-        # e.g. Sun Grid Engine/OGS
-        res = str(subprocess.check_output('qstat -u $USER', shell=True)).strip()
-        runningTxt = ' r '
-    res = res.split("\n")
+        if spawn.find_executable("squeue") is not None:
+            qstat = 'squeue'
+        else:
+            # e.g. Sun Grid Engine/OGS
+            qstat = 'qstat'
+        running_txt = ' r '
+    res_str = subprocess.check_output('%s -u $USER' % qstat, shell=True).decode().strip()
+    res = res_str.split("\n")
     names = []
-    jobNames = []
+    job_names = []
     ids = []
     infos = []
     for line in res[2:]:
-        if ((' ' + os.environ.get('USER') + ' ' in line and
-             (queued and not re.search(runningTxt, line, re.IGNORECASE) or
-              running and re.search(runningTxt, line, re.IGNORECASE)))):
+        if ((' ' + str(os.environ.get('USER')) + ' ' in line and
+             (queued and not re.search(running_txt, line, re.IGNORECASE) or
+              running and re.search(running_txt, line, re.IGNORECASE)))):
             items = line.split()
             jobId = items[0]
             j = index.jobSettings.get(jobId)
             if j is None:
-                jobId = items[0].split('.')
-                if jobId[0].upper() == 'TOTAL':
+                jobId_items = items[0].split('.')
+                if jobId_items[0].upper() == 'TOTAL':
                     continue
-                if len(jobId) == 1 or jobId[0].isdigit():
-                    jobId = jobId[0]
+                if len(jobId_items) == 1 or jobId_items[0].isdigit():
+                    jobId = jobId_items[0]
                 else:
-                    jobId = jobId[1]
+                    jobId = jobId_items[1]
                 j = index.jobSettings.get(jobId)
             if j is None:
                 if warnNotBatch:
                     print('...Job ' + jobId + ' not in this batch, skipping')
                 continue
             names += [j.names]
-            jobNames += [j.jobName]
+            job_names += [j.jobName]
             ids += [jobId]
             infos += [line]
-    return ids, jobNames, names, infos
+    return ids, job_names, names, infos
 
 
 def queue_job_names(batchPath=None, running=False, queued=True):
@@ -415,7 +442,7 @@ def queue_job_names(batchPath=None, running=False, queued=True):
 
 # Functions to manipulate job templates ##################################################
 
-def replacePlaceholders(txt, vals):
+def replace_placeholders(txt, vals):
     """
     Replaces placeholders ``vals`` (dict) in a template ``txt``.
     """
@@ -423,7 +450,7 @@ def replacePlaceholders(txt, vals):
     return txt
 
 
-def extractValue(txt, name):
+def extract_value(txt, name):
     """
     Extracts value of variable ``name`` defined in a template ``txt``
     as ``##name: value``.
@@ -434,11 +461,11 @@ def extractValue(txt, name):
     return None
 
 
-def getDefaulted(key_name, default=None, tp: Any = str, template=None, ext_env=None,
-                 **kwargs) -> Any:
+def get_defaulted(key_name, default=None, tp: Any = str, template=None, ext_env=None,
+                  **kwargs) -> Any:
     val = kwargs.get(key_name)
     if val is None and template is not None:
-        val = extractValue(template, 'DEFAULT_' + key_name)
+        val = extract_value(template, 'DEFAULT_' + key_name)
     if val is None:
         val = os.environ.get(code_prefix + '_' + key_name, None)
     if val is None and ext_env:

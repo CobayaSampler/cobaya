@@ -45,55 +45,57 @@ implement only the methods ``initialize``, ``_run``, and ``products``.
 """
 # Global
 import os
-import logging
 import numpy as np
-from typing import Optional, Sequence, Mapping, Union, Any
+from typing import Optional, Sequence, Mapping, Union
 from itertools import chain
+from numpy.random import SeedSequence, default_rng
 
 # Local
-from cobaya.conventions import kinds, _checkpoint_extension, _version
-from cobaya.conventions import _progress_extension, _covmat_extension
-from cobaya.conventions import partag, _packages_path, _force, _resume, _output_prefix
-from cobaya.tools import get_class, deepcopy_where_possible, find_with_regexp
-from cobaya.tools import recursive_update
-from cobaya.log import LoggedError
+from cobaya.conventions import Extension
+from cobaya.typing import InfoDict, SamplersDict, SamplerDict
+from cobaya.tools import deepcopy_where_possible, find_with_regexp
+from cobaya.tools import recursive_update, str_to_list, get_resolved_class
+from cobaya.model import Model
+from cobaya.log import LoggedError, get_logger, is_debug
 from cobaya.yaml import yaml_load_file, yaml_dump
-from cobaya.mpi import is_main_process, share_mpi, get_mpi_rank, more_than_one_process
 from cobaya.component import CobayaComponent
 from cobaya.input import update_info, is_equal_info, get_preferred_old_values
-from cobaya.output import OutputDummy
+from cobaya.output import OutputDummy, Output
+from cobaya import mpi
 
 
-def get_sampler_name_and_class(info_sampler):
+def get_sampler_name_and_class(info_sampler: SamplersDict):
     """
     Auxiliary function to retrieve the class of the required sampler.
     """
     check_sane_info_sampler(info_sampler)
     name = list(info_sampler)[0]
-    return name, get_class(name, kind=kinds.sampler)
+    sampler_class = get_resolved_class(name, kind="sampler")
+    assert issubclass(sampler_class, Sampler)
+    return name, sampler_class
 
 
-def check_sane_info_sampler(info_sampler):
-    log = logging.getLogger(__name__.split(".")[-1])
+def check_sane_info_sampler(info_sampler: SamplersDict):
     if not info_sampler:
-        raise LoggedError(log, "No sampler given!")
+        raise LoggedError(__name__, "No sampler given!")
     try:
         list(info_sampler)[0]
     except AttributeError:
         raise LoggedError(
-            log, "The sampler block must be a dictionary 'sampler: {options}'.")
+            __name__, "The sampler block must be a dictionary 'sampler: {options}'.")
     if len(info_sampler) > 1:
-        raise LoggedError(log, "Only one sampler currently supported at a time.")
+        raise LoggedError(__name__, "Only one sampler currently supported at a time.")
 
 
-def check_sampler_info(info_old=None, info_new=None, is_resuming=False):
+def check_sampler_info(info_old: Optional[SamplersDict],
+                       info_new: SamplersDict, is_resuming=False):
     """
     Checks compatibility between the new sampler info and that of a pre-existing run.
 
     Done separately from `Output.check_compatible_and_dump` because there may be
     multiple samplers mentioned in an `updated.yaml` file, e.g. `MCMC` + `Minimize`.
     """
-    logger_sampler = logging.getLogger(__name__.split(".")[-1])
+    logger_sampler = get_logger(__name__)
     if not info_old:
         return
     # TODO: restore this at some point: just append minimize info to the old one
@@ -110,10 +112,10 @@ def check_sampler_info(info_old=None, info_new=None, is_resuming=False):
         return
     if list(info_old) == list(info_new):
         # Restore some selected old values for some classes
-        keep_old = get_preferred_old_values({kinds.sampler: info_old})
-        info_new = recursive_update(info_new, keep_old.get(kinds.sampler, {}))
+        keep_old = get_preferred_old_values({"sampler": info_old})
+        info_new = recursive_update(info_new, keep_old.get("sampler", {}))
     if not is_equal_info(
-            {kinds.sampler: info_old}, {kinds.sampler: info_new}, strict=False):
+            {"sampler": info_old}, {"sampler": info_new}, strict=False):
         if is_resuming:
             raise LoggedError(
                 logger_sampler, "Old and new Sampler information not compatible! "
@@ -123,30 +125,32 @@ def check_sampler_info(info_old=None, info_new=None, is_resuming=False):
                 logger_sampler, "Found old Sampler information which is not compatible "
                                 "with the new one. Delete the previous output manually, "
                                 "or automatically with either "
-                                "'-%s', '--%s', '%s: True'" % (_force[0], _force, _force))
+                                "'-f', '--force', 'force: True'")
 
 
-def get_sampler(info_sampler, model, output=None, packages_path=None):
+def get_sampler(info_sampler: SamplersDict, model: Model, output: Optional[Output] = None,
+                packages_path: Optional[str] = None) -> 'Sampler':
     assert isinstance(info_sampler, Mapping), (
         "The first argument must be a dictionary with the info needed for the sampler. "
         "If you were trying to pass the name of an input file instead, "
         "load it first with 'cobaya.input.load_input', "
         "or, if you were passing a yaml string, load it with 'cobaya.yaml.yaml_load'.")
-    logger_sampler = logging.getLogger(__name__.split(".")[-1])
+    logger_sampler = get_logger(__name__)
     info_sampler = deepcopy_where_possible(info_sampler)
     if output is None:
         output = OutputDummy()
     # Check and update info
     check_sane_info_sampler(info_sampler)
-    updated_info_sampler = update_info({kinds.sampler: info_sampler})[kinds.sampler]
-    if logging.root.getEffectiveLevel() <= logging.DEBUG:
+    updated_info_sampler = update_info(
+        {"sampler": info_sampler})["sampler"]  # type: ignore
+    if is_debug(logger_sampler):
         logger_sampler.debug(
             "Input info updated with defaults (dumped to YAML):\n%s",
             yaml_dump(updated_info_sampler))
     # Get sampler class & check resume/force compatibility
     sampler_name, sampler_class = get_sampler_name_and_class(updated_info_sampler)
     check_sampler_info(
-        (output.reload_updated_info(use_cache=True) or {}).get(kinds.sampler),
+        (output.reload_updated_info(use_cache=True) or {}).get("sampler"),
         updated_info_sampler, is_resuming=output.is_resuming())
     # Check if resumable run
     sampler_class.check_force_resume(output, info=updated_info_sampler[sampler_name])
@@ -156,8 +160,8 @@ def get_sampler(info_sampler, model, output=None, packages_path=None):
     # If output, dump updated
     if output:
         to_dump = model.info()
-        to_dump[kinds.sampler] = {sampler_name: sampler_instance.info()}
-        to_dump[_output_prefix] = os.path.join(output.folder, output.prefix)
+        to_dump["sampler"] = {sampler_name: sampler_instance.info()}
+        to_dump["output"] = os.path.join(output.folder, output.prefix)
         output.check_and_dump_info(None, to_dump, check_compatible=False)
     return sampler_instance
 
@@ -167,11 +171,10 @@ class Sampler(CobayaComponent):
 
     # What you *must* implement to create your own sampler:
 
-    seed: Optional[int]
+    seed: Union[None, int, Sequence[int]]
     version: Optional[Union[dict, str]] = None
 
-    _old_rng_state: Any
-    _old_ext_rng_state: Any
+    _rng: np.random.Generator
 
     def initialize(self):
         """
@@ -187,7 +190,7 @@ class Sampler(CobayaComponent):
         """
         pass
 
-    def _run(self):
+    def run(self):
         """
         Runs the main part of the algorithm of the sampler.
         Normally, it looks somewhat like
@@ -200,54 +203,62 @@ class Sampler(CobayaComponent):
         """
         pass
 
-    def products(self):
+    def products(self) -> InfoDict:
         """
         Returns the products expected in a scripted call of cobaya,
         (e.g. a collection of samples or a list of them).
         """
-        return None
+        return {}
+
+    @property
+    def random_state(self) -> np.random.Generator:
+        return self._rng
+
+    @property
+    def model(self) -> Model:
+        return self._model
+
+    @property
+    def output(self) -> Output:
+        return self._output
 
     # Private methods: just ignore them:
-    def __init__(self, info_sampler, model, output=None, packages_path=None, name=None):
+    def __init__(self, info_sampler: SamplerDict, model: Model,
+                 output=Optional[Output], packages_path: Optional[str] = None,
+                 name: Optional[str] = None):
         """
         Actual initialization of the class. Loads the default and input information and
         call the custom ``initialize`` method.
 
         [Do not modify this one.]
         """
-        self.model = model
-        self.output = output
+        self._model = model
+        self._output = output
         self._updated_info = deepcopy_where_possible(info_sampler)
         super().__init__(info_sampler, packages_path=packages_path,
                          name=name, initialize=False, standalone=False)
-        # Seed, if requested
-        if getattr(self, "seed", None) is not None:
-            if not isinstance(self.seed, int) or not (0 <= self.seed <= 2 ** 32 - 1):
-                raise LoggedError(
-                    self.log, "Seeds must be a *positive integer* < 2**32 - 1, "
-                              "but got %r with type %r",
-                    self.seed, type(self.seed))
-            # MPI-awareness: sum the rank to the seed
-            if more_than_one_process():
-                self.seed += get_mpi_rank()
-            self.mpi_warning("This run has been SEEDED with seed %d", self.seed)
+        if not model.parameterization.sampled_params():
+            self.mpi_warning("No sampled parameters requested! "
+                             "This will fail for non-mock samplers.")
         # Load checkpoint info, if resuming
         if self.output.is_resuming() and not isinstance(self, Minimizer):
-            try:
-                checkpoint_info = yaml_load_file(self.checkpoint_filename())
+            checkpoint_info = None
+            if mpi.is_main_process():
                 try:
-                    for k, v in checkpoint_info[kinds.sampler][self.get_name()].items():
-                        setattr(self, k, v)
-                    self.mpi_info("Resuming from previous sample!")
-                except KeyError:
-                    if is_main_process():
+                    checkpoint_info = yaml_load_file(self.checkpoint_filename())
+
+                    if self.get_name() not in checkpoint_info["sampler"]:
                         raise LoggedError(
                             self.log, "Checkpoint file found at '%s' "
                                       "but it corresponds to a different sampler.",
                             self.checkpoint_filename())
-            except (IOError, TypeError):
-                pass
-        elif not isinstance(self, Minimizer):
+                except (IOError, TypeError):
+                    pass
+            checkpoint_info = mpi.share_mpi(checkpoint_info)
+            if checkpoint_info:
+                self.set_checkpoint_info(checkpoint_info)
+                self.mpi_info("Resuming from previous sample!")
+        elif not isinstance(self, Minimizer) and mpi.is_main_process():
             try:
                 output.delete_file_or_folder(self.checkpoint_filename())
                 output.delete_file_or_folder(self.progress_filename())
@@ -255,20 +266,10 @@ class Sampler(CobayaComponent):
                 pass
         self._set_rng()
         self.initialize()
-        self._release_rng()
-        self.model.set_cache_size(self._get_requested_cache_size())
+        model.set_cache_size(self._get_requested_cache_size())
         # Add to the updated info some values which are
         # only available after initialisation
-        self._updated_info[_version] = self.get_version()
-
-    def run(self):
-        """
-        Wrapper for `Sampler._run`, that takes care of seeding the
-        random number generator.
-        """
-        self._set_rng()
-        self._run()
-        self._release_rng()
+        self._updated_info["version"] = self.get_version()
 
     def info(self):
         """
@@ -281,14 +282,27 @@ class Sampler(CobayaComponent):
     def checkpoint_filename(self):
         if self.output:
             return os.path.join(
-                self.output.folder, self.output.prefix + _checkpoint_extension)
+                self.output.folder, self.output.prefix + Extension.checkpoint)
         return None
 
     def progress_filename(self):
         if self.output:
             return os.path.join(
-                self.output.folder, self.output.prefix + _progress_extension)
+                self.output.folder, self.output.prefix + Extension.progress)
         return None
+
+    def set_checkpoint_info(self, checkpoint_info):
+        for k, v in checkpoint_info["sampler"][self.get_name()].items():
+            setattr(self, k, v)
+        # check if convergence parameters changed, and if so converged=False
+        old_info = self.output.reload_updated_info(use_cache=True)
+        assert old_info
+        if self.converge_info_changed(old_info["sampler"][self.get_name()],
+                                      self._updated_info):
+            self.converged = False
+
+    def converge_info_changed(self, old_info, new_info):
+        return old_info != new_info
 
     def _get_requested_cache_size(self):
         """
@@ -301,28 +315,20 @@ class Sampler(CobayaComponent):
 
     def _set_rng(self):
         """
-        For seeded runs, sets the internal state of the RNG.#
+        Initialize random generator stream. For seeded runs, sets the state reproducibly.
         """
-        if getattr(self, "seed", None) is None:
-            return
-        # Store external state
-        self._old_ext_rng_state = np.random.get_state()
-        # Set our seed/state
-        if not hasattr(self, "_old_rng_state"):
-            np.random.seed(self.seed)
+        # TODO: checkpointing save of self._rng.bit_generator.state per process
+        if mpi.is_main_process():
+            seed = getattr(self, "seed", None)
+            if seed is not None:
+                self.mpi_warning("This run has been SEEDED with seed %s", seed)
+            ss = SeedSequence(seed)
+            child_seeds = ss.spawn(mpi.size())
         else:
-            np.random.set_state(self._old_rng_state)
-
-    def _release_rng(self):
-        """
-        For seeded runs, releases the state of the RNG, restoring the old one.
-        """
-        if getattr(self, "seed", None) is None:
-            return
-        # Store our state
-        self._old_rng_state = np.random.get_state()
-        # Restore external state
-        np.random.set_state(self._old_ext_rng_state)
+            child_seeds = None
+        ss = mpi.scatter(child_seeds)
+        self._entropy = ss.entropy  # for debugging store for reproducibility
+        self._rng = default_rng(ss)
 
     # TO BE DEPRECATED IN NEXT SUBVERSION
     def __getitem__(self, k):
@@ -346,13 +352,14 @@ class Sampler(CobayaComponent):
         return []
 
     @classmethod
+    @mpi.root_only
     def delete_output_files(cls, output, info=None):
-        if output and is_main_process():
+        if output:
             for (regexp, root) in cls.output_files_regexps(output, info=info):
                 # Special case: CovmatSampler's may have been given a covmat with the same
                 # name that the output one. In that case, don't delete it!
                 if issubclass(cls, CovmatSampler) and info:
-                    if regexp.pattern.rstrip("$").endswith(_covmat_extension):
+                    if regexp.pattern.rstrip("$").endswith(Extension.covmat):
                         covmat_file = info.get("covmat", "")
                         if (isinstance(covmat_file, str) and covmat_file ==
                                 getattr(regexp.match(covmat_file), "group",
@@ -368,9 +375,10 @@ class Sampler(CobayaComponent):
         """
         if not output:
             return
-        if is_main_process():
+        resuming: Optional[bool]
+        if mpi.is_main_process():
             resuming = False
-            if output.is_forcing():
+            if output.force:
                 cls.delete_output_files(output, info=info)
             elif any(find_with_regexp(regexp, root or output.folder) for (regexp, root)
                      in cls.output_files_regexps(output=output, info=info, minimal=True)):
@@ -381,9 +389,9 @@ class Sampler(CobayaComponent):
                     raise LoggedError(
                         output.log, "Delete the previous output manually, automatically "
                                     "('-%s', '--%s', '%s: True')" % (
-                                        _force[0], _force, _force) +
+                                        "force"[0], "force", "force") +
                                     " or request resuming ('-%s', '--%s', '%s: True')" % (
-                                        _resume[0], _resume, _resume))
+                                        "resume"[0], "resume", "resume"))
             else:
                 if output.is_resuming():
                     output.log.info(
@@ -407,20 +415,19 @@ class CovmatSampler(Sampler):
     Parent class for samplers that are initialised with a covariance matrix.
     """
     covmat_params: Sequence[str]
+    # Amount by which to shrink covmat diagonals when set from priors or reference.
+    fallback_covmat_scale: float = 4
 
+    @mpi.from_root
     def _load_covmat(self, prefer_load_old, auto_params=None):
         if prefer_load_old and os.path.exists(self.covmat_filename()):
-            if is_main_process():
-                covmat = np.atleast_2d(np.loadtxt(self.covmat_filename()))
-            else:
-                covmat = None
-            covmat = share_mpi(covmat)
+            covmat = np.atleast_2d(np.loadtxt(self.covmat_filename()))
             self.mpi_info("Covariance matrix from previous sample.")
             return covmat, []
         else:
-            return share_mpi(self.initial_proposal_covmat(auto_params=auto_params) if
-                             is_main_process() else None)
+            return self.initial_proposal_covmat(auto_params=auto_params)
 
+    # noinspection PyUnboundLocalVariable
     def initial_proposal_covmat(self, auto_params=None):
         """
         Build the initial covariance matrix, using the data provided, in descending order
@@ -445,7 +452,8 @@ class CovmatSampler(Sampler):
             for p in list(params_infos_covmat):
                 if p not in (auto_params or []):
                     params_infos_covmat.pop(p, None)
-            auto_covmat = self.model.get_auto_covmat(params_infos_covmat)
+            auto_covmat = self.model.get_auto_covmat(params_infos_covmat,
+                                                     random_state=self._rng)
             if auto_covmat:
                 self.covmat = os.path.join(auto_covmat["folder"], auto_covmat["name"])
                 self.log.info("Covariance matrix selected automatically: %s", self.covmat)
@@ -454,11 +462,12 @@ class CovmatSampler(Sampler):
                 self.log.info("Could not automatically find a good covmat. "
                               "Will generate from parameter info (proposal and prior).")
         # If given, load and test the covariance matrix
+        loaded_params: Sequence[str]
         if isinstance(self.covmat, str):
-            covmat_pre = "{%s}" % _packages_path
+            covmat_pre = "{%s}" % "packages_path"
             if self.covmat.startswith(covmat_pre):
                 self.covmat = self.covmat.format(
-                    **{_packages_path: self.packages_path}).replace("/", os.sep)
+                    **{"packages_path": self.packages_path}).replace("/", os.sep)
             try:
                 with open(self.covmat, "r", encoding="utf-8-sig") as file_covmat:
                     header = file_covmat.readline()
@@ -509,9 +518,8 @@ class CovmatSampler(Sampler):
                     self.log, "The covariance matrix %s is not a positive-definite, "
                               "symmetric square matrix.", str_msg)
             # Fill with parameters in the loaded covmat
-            renames = [[p] + np.atleast_1d(v.get(partag.renames, [])).tolist()
-                       for p, v in params_infos.items()]
-            renames = {a[0]: a for a in renames}
+            renames = {p: [p] + str_to_list(v.get("renames") or [])
+                       for p, v in params_infos.items()}
             indices_used, indices_sampler = zip(*[
                 [loaded_params.index(p),
                  [list(params_infos).index(q) for q, a in renames.items() if p in a]]
@@ -531,14 +539,14 @@ class CovmatSampler(Sampler):
                     "The parameters %s have duplicated aliases. Can't assign them an "
                     "element of the covariance matrix unambiguously.",
                     ", ".join([list(params_infos)[i] for i in first]))
-            indices_sampler = list(chain(*indices_sampler))
+            indices_sampler = tuple(chain(*indices_sampler))
             covmat[np.ix_(indices_sampler, indices_sampler)] = (
                 loaded_covmat[np.ix_(indices_used, indices_used)])
             self.log.info(
                 "Covariance matrix loaded for params %r",
                 [list(params_infos)[i] for i in indices_sampler])
             missing_params = set(params_infos).difference(
-                set(list(params_infos)[i] for i in indices_sampler))
+                list(params_infos)[i] for i in indices_sampler)
             if missing_params:
                 self.log.info(
                     "Missing proposal covariance for params %r",
@@ -550,19 +558,22 @@ class CovmatSampler(Sampler):
         where_nan = np.isnan(covmat.diagonal())
         if np.any(where_nan):
             covmat[where_nan, where_nan] = np.array(
-                [(info.get(partag.proposal, np.nan) or np.nan) ** 2
+                [(info.get("proposal", np.nan) or np.nan) ** 2
                  for info in params_infos.values()])[where_nan]
         where_nan2 = np.isnan(covmat.diagonal())
         if np.any(where_nan2):
-            covmat[where_nan2, where_nan2] = (
-                self.model.prior.reference_covmat().diagonal()[where_nan2])
+            # the variances are likely too large for a good proposal, e.g. conditional
+            # widths may be much smaller than the marginalized ones.
+            # Divide by 4, better to be too small than too large.
+            covmat[where_nan2, where_nan2] = (self.model.prior.reference_variances()
+                                              [where_nan2] / self.fallback_covmat_scale)
         assert not np.any(np.isnan(covmat))
         return covmat, where_nan
 
     def covmat_filename(self):
         if self.output:
             return os.path.join(
-                self.output.folder, self.output.prefix + _covmat_extension)
+                self.output.folder, self.output.prefix + Extension.covmat)
         return None
 
     def dump_covmat(self, covmat=None):

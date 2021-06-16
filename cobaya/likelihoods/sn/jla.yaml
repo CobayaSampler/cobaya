@@ -10,6 +10,8 @@ dataset_params:
   # field: value
 # Names of alpha and beta parameters if used and varied
 alpha_beta_names: ['alpha_jla', 'beta_jla']
+# Use absolute magnitude
+use_abs_mag: False
 # Aliases for automatic covariance matrix
 aliases: [JLA]
 # Speed in evaluations/second

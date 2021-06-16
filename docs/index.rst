@@ -59,11 +59,13 @@ Table of contents
    likelihood_des
    likelihood_bao
    likelihood_sn
+   likelihood_external
 
 .. toctree::
    :caption: Running on clusters
    :maxdepth: 1
 
+   run_job
    cluster_amazon
 
 .. toctree::

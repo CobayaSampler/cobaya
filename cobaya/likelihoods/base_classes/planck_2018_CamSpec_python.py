@@ -47,10 +47,11 @@ def range_to_ells(use_range):
 
 class Planck2018CamSpecPython(DataSetLikelihood):
     install_options = {
-        "download_url":
-            r"https://cdn.cosmologist.info/cosmobox/test2019_kaml/CamSpec2018.zip",
+        "download_url": "https://github.com/CobayaSampler/planck_native_data/"
+                        "releases/download/v1/CamSpec2018.zip",
         "data_path": "planck_2018_CamSpec_native"}
     bibtex_file = 'planck2018.bibtex'
+    type = "CMB"
 
     def read_normalized(self, filename, pivot=None):
         # arrays all based at L=0, in L(L+1)/2pi units
@@ -74,7 +75,8 @@ class Planck2018CamSpecPython(DataSetLikelihood):
                 for key, value in used_ell.items():
                     used_ell[key] = range_to_ells(value)
             else:
-                if silent: print('CamSpec using range: %s' % used_ell)
+                if silent:
+                    print('CamSpec using range: %s' % used_ell)
                 used_ell = range_to_ells(used_ell)
         else:
             used_ell = None
@@ -83,7 +85,8 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         used_indices = []
         with open(ini.relativeFileName('data_ranges'), "r", encoding="utf-8-sig") as f:
             lines = f.readlines()
-            while not lines[-1].strip(): lines = lines[:-1]
+            while not lines[-1].strip():
+                lines = lines[:-1]
             self.Nspec = len(lines)
             lmin = np.zeros(self.Nspec, dtype=int)
             lmax = np.zeros(self.Nspec, dtype=int)
@@ -120,8 +123,8 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         self.cl_used = np.array([name in self.use_cl for name in self.cl_names],
                                 dtype=bool)
         covfile = ini.relativeFileName('covmat_fiducial')
-        with open(covfile, "rb") as f:
-            cov = np.fromfile(f, dtype=[np.float32, np.float64]['64.bin' in covfile])
+        with open(covfile, "rb") as cov_f:
+            cov = np.fromfile(cov_f, dtype=[np.float32, np.float64]['64.bin' in covfile])
         assert (nX ** 2 == cov.shape[0])
         used_indices = np.concatenate(used_indices)
         self.data_vector = np.concatenate(data_vector)[used_indices]
@@ -169,7 +172,8 @@ class Planck2018CamSpecPython(DataSetLikelihood):
             self.covinv = np.load(cache_file).astype(np.float64)
         else:
             self.covinv = np.linalg.inv(self.cov)
-            if use_cache: np.save(cache_file, self.covinv.astype(np.float32))
+            if use_cache:
+                np.save(cache_file, self.covinv.astype(np.float32))
 
     def get_foregrounds(self, data_params):
 
@@ -254,6 +258,7 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         for i, (cal, n) in enumerate(zip(cals, self.used_sizes)):
             if n > 0:
                 if i <= 3:
+                    # noinspection PyUnboundLocalVariable
                     delta_vector[ix:ix + n] -= (CT[self.ell_ranges[i]] +
                                                 foregrounds[i][self.ell_ranges[i]]) / cal
                 elif i == 4:
@@ -272,9 +277,12 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         # State requisites to the theory code
         l_max = np.max(self.lmax)
         used = []
-        if np.any(self.cl_used[:4]): used += ['tt']
-        if 'TE' in self.use_cl: used += ['te']
-        if 'EE' in self.use_cl: used += ['ee']
+        if np.any(self.cl_used[:4]):
+            used += ['tt']
+        if 'TE' in self.use_cl:
+            used += ['te']
+        if 'EE' in self.use_cl:
+            used += ['ee']
         return {"Cl": {cl: l_max for cl in used}}
 
     def coadded_TT(self, data_params=None, foregrounds=None, cals=None,
@@ -370,8 +378,8 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         lmin = np.max([min(r) for r in self.ell_ranges[[i, j]]])
 
         diff = np.zeros(self.ls[-1] + 1)
-        diff[self.ell_ranges[i]] = self.data_vector[off1:off1 + self.used_sizes[i]] * \
-                                   cals[i] - foregrounds[i][self.ell_ranges[i]]
+        diff[self.ell_ranges[i]] = (self.data_vector[off1:off1 + self.used_sizes[i]] *
+                                    cals[i] - foregrounds[i][self.ell_ranges[i]])
         diff[self.ell_ranges[j]] -= (
                 self.data_vector[off2:off2 + self.used_sizes[j]] * cals[j] -
                 foregrounds[j][

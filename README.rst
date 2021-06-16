@@ -21,8 +21,10 @@
    :target: https://pypi.python.org/pypi/cobaya/
 .. image:: https://readthedocs.org/projects/cobaya/badge/?version=latest
    :target: https://cobaya.readthedocs.org/en/latest
-
-
+.. image:: https://codecov.io/gh/CobayaSampler/cobaya/branch/master/graphs/badge.svg
+   :target: https://codecov.io/github/CobayaSampler/cobaya/branch/master
+.. image:: https://img.shields.io/badge/arXiv-2005.05290-b31b1b.svg?color=0B6523
+   :target: https://arxiv.org/abs/2005.05290
 
 **Cobaya** (**co**\ de for **bay**\ esian **a**\ nalysis, and Spanish for *Guinea Pig*) is a framework for sampling and statistical modelling: it allows you to explore an arbitrary prior or posterior using a range of Monte Carlo samplers (including the advanced MCMC sampler from CosmoMC_, and the advanced nested sampler PolyChord_). The results of the sampling can be analysed with GetDist_. It supports MPI parallelization (and very soon HPC containerization with Docker/Shifter and Singularity).
 

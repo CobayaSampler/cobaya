@@ -7,18 +7,18 @@ import os
 import shutil
 from random import random
 import numpy as np
-import scipy.stats as stats
 from copy import deepcopy
+import scipy.stats as stats
 
 # Local
-from cobaya.conventions import _output_prefix, _params, _prior, kinds, _updated_suffix, \
-    _get_chi2_name, _input_params, _output_params, _external
+from cobaya.conventions import FileSuffix, get_chi2_name
 from cobaya.run import run
 from cobaya.yaml import yaml_load
 from cobaya.tools import getfullargspec
 from cobaya.likelihood import Likelihood
+from cobaya import mpi
 
-# Definition of external (log)pdf's
+# Definition of external (log)pdfs
 
 half_ring_str = "lambda x, y: stats.norm.logpdf(np.sqrt(x**2 + y**2), loc=0.5, scale=0.1)"
 half_ring_func = lambda x, y: eval(half_ring_str)(x, y)
@@ -34,6 +34,7 @@ def half_ring_func_derived(x, y=0.5):
 
 gaussian_str = "lambda y: stats.norm.logpdf(y, loc=0, scale=0.2)"
 gaussian_func = lambda y: eval(gaussian_str)(y)
+assert gaussian_func(0.1) == stats.norm.logpdf(0.1, loc=0, scale=0.2)
 
 # Info for the different tests
 
@@ -47,52 +48,52 @@ info_derived = {"half_ring": {
 
 # Common part of all tests
 
+@mpi.sync_errors
 def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
-    # For pytest's handling of tmp dirs
-    if hasattr(tmpdir, "dirpath"):
-        tmpdir = tmpdir.dirname
-    prefix = os.path.join(tmpdir, "%d" % round(1e8 * random())) + os.sep
-    if os.path.exists(prefix):
-        shutil.rmtree(prefix)
+    rand = mpi.share(random())
+    prefix = os.path.join(tmpdir, "%d" % round(1e8 * rand)) + os.sep
+    if mpi.is_main_process():
+        if os.path.exists(prefix):
+            shutil.rmtree(prefix)
     # build updated info
     info = {
-        _output_prefix: prefix,
-        _params: {
-            "x": {_prior: {"min": 0, "max": 1}, "proposal": 0.05},
-            "y": {_prior: {"min": -1, "max": 1}, "proposal": 0.05}},
-        kinds.sampler: {
+        "output": prefix,
+        "params": {
+            "x": {"prior": {"min": 0, "max": 1}, "proposal": 0.05},
+            "y": {"prior": {"min": -1, "max": 1}, "proposal": 0.05}},
+        "sampler": {
             "mcmc": {"max_samples": (10 if not manual else 5000),
                      "learn_proposal": False}}
     }
     if derived:
-        info[_params].update({"r": {"min": 0, "max": 1},
-                              "theta": {"min": -0.5, "max": 0.5}})
+        info["params"].update({"r": {"min": 0, "max": 1},
+                               "theta": {"min": -0.5, "max": 0.5}})
     # Complete according to kind
-    if kind == _prior:
-        info.update({_prior: info_logpdf,
-                     kinds.likelihood: {"one": None}})
-    elif kind == kinds.likelihood:
-        info.update({kinds.likelihood: info_logpdf})
+    if kind == "prior":
+        info.update({"prior": info_logpdf,
+                     "likelihood": {"one": None}})
+    elif kind == "likelihood":
+        info.update({"likelihood": info_logpdf})
     else:
         raise ValueError("Kind of test not known.")
     # If there is an ext function that is not a string, don't write output!
     stringy = {k: v for k, v in info_logpdf.items() if isinstance(v, str)}
     if stringy != info_logpdf:
-        info.pop(_output_prefix)
+        info.pop("output")
     # Run
     updated_info, sampler = run(info)
     products = sampler.products()
     # Test values
     logprior_base = - np.log(
-        (info[_params]["x"][_prior]["max"] -
-         info[_params]["x"][_prior]["min"]) *
-        (info[_params]["y"][_prior]["max"] -
-         info[_params]["y"][_prior]["min"]))
+        (info["params"]["x"]["prior"]["max"] -
+         info["params"]["x"]["prior"]["min"]) *
+        (info["params"]["y"]["prior"]["max"] -
+         info["params"]["y"]["prior"]["min"]))
     logps = {name: logpdf(**{arg: products["sample"][arg].values for arg in
                              getfullargspec(logpdf)[0]}) for name, logpdf in
              {"half_ring": half_ring_func, "gaussian_y": gaussian_func}.items()}
-    # Test #1: values of logpdf's
-    if kind == _prior:
+    # Test #1: values of logpdfs
+    if kind == "prior":
         columns_priors = [c for c in products["sample"].data.columns
                           if c.startswith("minuslogprior")]
         assert np.allclose(
@@ -102,10 +103,14 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
         assert np.allclose(logprior_base + sum(logps[p] for p in info_logpdf),
                            -products["sample"]["minuslogprior"].values), (
             "The value of the total prior is not reproduced correctly.")
-    elif kind == kinds.likelihood:
-        for lik in info[kinds.likelihood]:
+        assert np.isclose(sampler.model.logprior({'x': products["sample"]["x"][0],
+                                                  'y': products["sample"]["y"][0]}),
+                          -products["sample"]["minuslogprior"][0]), (
+            "The value of the total prior is not reproduced from mode.logprior.")
+    elif kind == "likelihood":
+        for lik in info["likelihood"]:
             assert np.allclose(-2 * logps[lik],
-                               products["sample"][_get_chi2_name(lik)].values), (
+                               products["sample"][get_chi2_name(lik)].values), (
                     "The value of the likelihood '%s' is not reproduced correctly." % lik)
     assert np.allclose(logprior_base + sum(logps[p] for p in info_logpdf),
                        -products["sample"]["minuslogpost"].values), (
@@ -119,35 +124,35 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
                    for p, v in derived_values.items()), (
             "The value of the derived parameters is not reproduced correctly.")
     # Test updated info -- scripted
-    if kind == _prior:
-        assert info[_prior] == updated_info[_prior], (
+    if kind == "prior":
+        assert info["prior"] == updated_info["prior"], (
             "The prior information has not been updated correctly.")
-    elif kind == kinds.likelihood:
+    elif kind == "likelihood":
         # Transform the likelihood info to the "external" convention and add defaults
-        info_likelihood = deepcopy(info[kinds.likelihood])
+        info_likelihood = deepcopy(info["likelihood"])
         for lik, value in list(info_likelihood.items()):
             if not hasattr(value, "get"):
-                info_likelihood[lik] = {_external: value}
+                info_likelihood[lik] = {"external": value}
             info_likelihood[lik].update({k: v for k, v in
                                          Likelihood.get_defaults().items()
                                          if k not in info_likelihood[lik]})
-            for k in [_input_params, _output_params]:
+            for k in ["input_params", "output_params"]:
                 info_likelihood[lik].pop(k, None)
-                updated_info[kinds.likelihood][lik].pop(k)
-        assert info_likelihood == updated_info[kinds.likelihood], (
+                updated_info["likelihood"][lik].pop(k)
+        assert info_likelihood == updated_info["likelihood"], (
                 "The likelihood information has not been updated correctly\n %r vs %r"
-                % (info_likelihood, updated_info[kinds.likelihood]))
+                % (info_likelihood, updated_info["likelihood"]))
     # Test updated info -- yaml
     # For now, only if ALL external pdfs are given as strings,
     # since the YAML load fails otherwise
     if stringy == info_logpdf:
-        updated_output_file = os.path.join(prefix, _updated_suffix + ".yaml")
+        updated_output_file = os.path.join(prefix, FileSuffix.updated + ".yaml")
         with open(updated_output_file) as updated:
             updated_yaml = yaml_load("".join(updated.readlines()))
         for k, v in stringy.items():
             to_test = updated_yaml[kind][k]
-            if kind == kinds.likelihood:
-                to_test = to_test[_external]
+            if kind == "likelihood":
+                to_test = to_test["external"]
             assert to_test == info_logpdf[k], (
                 "The updated external pdf info has not been written correctly.")
 

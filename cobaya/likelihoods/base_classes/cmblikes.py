@@ -11,9 +11,9 @@
 # Global
 import os
 import numpy as np
+from typing import List
 from getdist import ParamNames, IniFile
 from scipy.linalg import sqrtm
-from typing import Sequence
 
 # Local
 from cobaya.log import LoggedError
@@ -208,7 +208,9 @@ class CMBlikes(DataSetLikelihood):
             raise LoggedError(self.log, 'init_map_cls: size mismatch')
 
         class CrossPowerSpectrum:
-            pass
+            map_ij: List[int]
+            theory_ij: List[int]
+            CL: np.ndarray
 
         cls = np.empty((nmaps, nmaps), dtype=object)
         for i in range(nmaps):
@@ -245,9 +247,9 @@ class CMBlikes(DataSetLikelihood):
             use_theory_field = [True] * self.tot_theory_fields
         maps_use = ini.split('maps_use', [])
         if len(maps_use):
-            if np.any(not i for i in use_theory_field):
+            if any(not i for i in use_theory_field):
                 self.log.warning('maps_use overrides fields_use')
-            self.use_map = np.zeros(len(self.map_names), dtype=bool)
+            self.use_map = [False] * len(self.map_names)
             for j, map_used in enumerate(maps_use):
                 if map_used in self.map_names:
                     self.use_map[self.map_names.index(map_used)] = True
@@ -424,7 +426,8 @@ class CMBlikes(DataSetLikelihood):
             raise LoggedError(self.log, 'unbinned covariance not implemented yet')
         return pcov
 
-    def writeData(self, froot):
+    # noinspection PyTypeChecker
+    def writeData(self, froot):  # pragma: no cover
         np.savetxt(froot + '_cov.dat', self.cov)
         np.savetxt(froot + '_bandpowers.dat', self.full_bandpowers,
                    header=" ".join(self.full_bandpower_headers))
@@ -578,6 +581,7 @@ class CMBlikes(DataSetLikelihood):
         cls = self.provider.get_Cl(ell_factor=True)
         return self.log_likelihood(cls, **data_params)
 
+    # noinspection PyUnboundLocalVariable
     def log_likelihood(self, dls, **data_params):
         r"""
         Get log likelihood from the dls (CMB C_l scaled by L(L+1)/2\pi)
@@ -681,7 +685,8 @@ def white_noise_from_muK_arcmin(noise_muK_arcmin):
     return (noise_muK_arcmin * np.pi / 180 / 60.) ** 2
 
 
-def save_cl_dict(filename, array_dict, lmin=2, lmax=None, cl_dict_lmin=0):
+def save_cl_dict(filename, array_dict, lmin=2, lmax=None,
+                 cl_dict_lmin=0):  # pragma: no cover
     """
     Save a Cobaya dict of CL to a text file, with each line starting with L.
 
@@ -712,7 +717,7 @@ def make_forecast_cmb_dataset(fiducial_Cl, output_root, output_dir=None,
                               noise_muK_arcmin_P=None,
                               NoiseVar=None, ENoiseFac=2, fwhm_arcmin=None,
                               lmin=2, lmax=None, fsky=1.0,
-                              lens_recon_noise=None, cl_dict_lmin=0):
+                              lens_recon_noise=None, cl_dict_lmin=0):  # pragma: no cover
     """
     Make a simulated .dataset and associated files with 'data' set at the input fiducial
     model. Uses the exact full-sky log-likelihood, scaled by fsky.
@@ -744,7 +749,7 @@ def make_forecast_cmb_dataset(fiducial_Cl, output_root, output_dir=None,
     dataset = ini.params
 
     cl_keys = fiducial_Cl.keys()
-    use_CMB = set(cl_keys).intersection(set(CMB_keys))
+    use_CMB = set(cl_keys).intersection(CMB_keys)
     use_lensing = lens_recon_noise
 
     if use_CMB:
@@ -794,6 +799,7 @@ def make_forecast_cmb_dataset(fiducial_Cl, output_root, output_dir=None,
         for ell in range(lmin, lmax + 1):
             noises = []
             if use_CMB:
+                # noinspection PyUnboundLocalVariable
                 noise_cl = ell * (ell + 1.) / 2 / np.pi * NoiseVar * np.exp(
                     ell * (ell + 1) * sigma2)
                 noises += [noise_cl, ENoiseFac * noise_cl, ENoiseFac * noise_cl]

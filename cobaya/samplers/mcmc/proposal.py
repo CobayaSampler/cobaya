@@ -19,6 +19,7 @@ See https://arxiv.org/abs/1304.4473
 # Global
 import numpy as np
 from itertools import chain
+import logging
 
 # Local
 from cobaya.tools import choleskyL
@@ -26,19 +27,20 @@ from cobaya.log import LoggedError, HasLogger
 
 
 class IndexCycler:
-    def __init__(self, n):
+    def __init__(self, n, random_state):
         self.n = n
         self.loop_index = -1
+        self.random_state = random_state
 
 
 class CyclicIndexRandomizer(IndexCycler):
-    def __init__(self, n):
+    def __init__(self, n, random_state):
         if isinstance(n, int):
             self.sorted_indices = list(range(n))
         else:
             self.sorted_indices = n
             n = len(n)
-        super().__init__(n)
+        super().__init__(n, random_state)
         if n <= 2:
             self.indices = list(range(n))
 
@@ -50,7 +52,7 @@ class CyclicIndexRandomizer(IndexCycler):
         """
         self.loop_index = (self.loop_index + 1) % self.n
         if self.loop_index == 0 and self.n > 2:
-            self.indices = np.random.permutation(self.sorted_indices)
+            self.indices = self.random_state.permutation(self.sorted_indices)
         return self.indices[self.loop_index]
 
 
@@ -62,11 +64,10 @@ except ImportError:
     random_SO_N = special_ortho_group.rvs
     numba = None
 else:
-    from numpy.random import normal
     import warnings
 
 
-    def random_SO_N(dim):
+    def random_SO_N(dim, random_state):
         """
         Draw random samples from SO(N).
         Equivalent to scipy function but about 10x faster
@@ -74,6 +75,7 @@ else:
         ----------
         dim : integer
             Dimension of rotation space (N).
+        random_state: generator
         Returns
         -------
         rvs : Random size N-dimensional matrices, dimension (dim, dim)
@@ -81,11 +83,12 @@ else:
         """
         dim = np.int64(dim)
         H = np.eye(dim)
-        xx = normal(size=(dim + 2) * (dim - 1) // 2)
+        xx = random_state.standard_normal(size=(dim + 2) * (dim - 1) // 2)
         _rvs(dim, xx, H)
         return H
 
 
+    logging.getLogger('numba').setLevel(logging.ERROR)
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
 
@@ -119,7 +122,7 @@ class RandDirectionProposer(IndexCycler):
         """
         self.loop_index = (self.loop_index + 1) % self.n
         if self.loop_index == 0:
-            self.R = random_SO_N(self.n)
+            self.R = random_SO_N(self.n, random_state=self.random_state)
         return self.R[:, self.loop_index] * self.propose_r() * scale
 
     def propose_r(self):
@@ -130,20 +133,20 @@ class RandDirectionProposer(IndexCycler):
 
         :return: random distance (unit scale)
         """
-        if np.random.uniform() < 0.33:
-            return np.random.exponential()
+        if self.random_state.uniform() < 0.33:
+            return self.random_state.standard_exponential()
         else:
-            return np.linalg.norm(np.random.normal(size=min(self.n, 2)))
+            return np.sqrt(self.random_state.chisquare(min(self.n, 2)))
 
 
 class RandProposer1D(RandDirectionProposer):
     def propose_vec(self, scale: float = 1):
-        return np.array([self.propose_r() * scale if np.random.randint(2)
+        return np.array([self.propose_r() * scale if self.random_state.integers(2)
                          else -self.propose_r() * scale])
 
 
 class BlockedProposer(HasLogger):
-    def __init__(self, parameter_blocks, oversampling_factors=None,
+    def __init__(self, parameter_blocks, random_state, oversampling_factors=None,
                  i_last_slow_block=None, proposal_scale=2.4):
         """
         Proposal density for fast and slow parameters, where parameters are
@@ -161,6 +164,7 @@ class BlockedProposer(HasLogger):
         :param proposal_scale: overall scale for the proposal.
         """
         self.set_logger(lowercase=True)
+        self.random_state = random_state
         self.proposal_scale = proposal_scale
         if oversampling_factors is None:
             self.oversampling_factors = np.ones(len(parameter_blocks), dtype=int)
@@ -209,16 +213,16 @@ class BlockedProposer(HasLogger):
         self.iblock_of_j = list(
             chain(*[[iblock] * len(b) for iblock, b in enumerate(parameter_blocks)]))
         # Creating the blocked proposers
-        self.proposer = [(RandDirectionProposer(len(b)) if len(b) > 1
-                          else RandProposer1D(1)) for b in parameter_blocks]
+        self.proposer = [(RandDirectionProposer(len(b), random_state) if len(b) > 1
+                          else RandProposer1D(1, random_state)) for b in parameter_blocks]
         # Starting j index of each block
         self.j_start = [len(list(chain(*parameter_blocks[:iblock])))
                         for iblock, b in enumerate(parameter_blocks)]
         # Parameter cyclers, cycling over the j's
-        self.parameter_cycler = CyclicIndexRandomizer(indices_repeated)
+        self.parameter_cycler = CyclicIndexRandomizer(indices_repeated, random_state)
         # These ones are used by fast dragging only
-        self.parameter_cycler_slow = CyclicIndexRandomizer(n_slow)
-        self.parameter_cycler_fast = CyclicIndexRandomizer(n_all - n_slow)
+        self.parameter_cycler_slow = CyclicIndexRandomizer(n_slow, random_state)
+        self.parameter_cycler_fast = CyclicIndexRandomizer(n_all - n_slow, random_state)
 
     def d(self):
         return len(self.i_of_j)

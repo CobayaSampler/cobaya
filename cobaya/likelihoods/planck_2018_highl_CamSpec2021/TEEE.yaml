@@ -1,0 +1,12 @@
+path: null
+dataset_file: CamSpec2021/CamSpecHM_12_6_cl.dataset
+dataset_params:
+  use_cl: TE EE
+# Aliases for automatic covariance matrix
+aliases: [CamSpec2021HM_TEEE]
+# Speed in evaluations/second
+speed: 60
+
+params: !defaults [params_calib_CamSpec_2021, params_TE_CamSpec, params_EE_CamSpec]
+
+#prior: !defaults [prior_SZ_CamSpec]

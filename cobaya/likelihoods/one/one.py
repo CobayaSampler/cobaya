@@ -26,10 +26,13 @@ class one(AbsorbUnusedParamsLikelihood):
         else:
             self.logp = self.logp_one
 
-    def logp_one(self, **params_values):
+    def logp_one(self, **_params_values):
         self.wait()
         return 0.
 
-    def logp_noise(self, **params_values):
+    def logp_noise(self, **_params_values):
         self.wait()
-        return self.noise * random()
+        if self.noise:
+            return self.noise * random()
+        else:
+            return 0

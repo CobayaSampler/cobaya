@@ -12,12 +12,15 @@ from typing import Mapping
 
 # Local
 from cobaya.sampler import Sampler
-from cobaya.collection import Collection
+from cobaya.collection import SampleCollection
 from cobaya.log import LoggedError
 
 
-class evaluate(Sampler):
+class Evaluate(Sampler):
+    file_base_name = 'evaluate'
+
     override: Mapping[str, float]
+    N: int
 
     def initialize(self):
         """
@@ -26,15 +29,14 @@ class evaluate(Sampler):
         """
         try:
             self.N = int(self.N)
-        except:
+        except ValueError:
             raise LoggedError(
                 self.log,
                 "Could not convert the number of samples to an integer: %r", self.N)
-        self.one_point = Collection(
-            self.model, self.output, name="1")
+        self.one_point = SampleCollection(self.model, self.output, name="1")
         self.log.info("Initialized!")
 
-    def _run(self):
+    def run(self):
         """
         First gets a reference point. If a single reference point is not given,
         the point is sampled from the reference pdf. If that one is not defined either,
@@ -48,9 +50,9 @@ class evaluate(Sampler):
                 self.log.info("Evaluating sample #%d ------------------------------",
                               i + 1)
             self.log.info("Looking for a reference point with non-zero prior.")
-            reference_point = self.model.prior.reference()
+            reference_values = self.model.prior.reference(random_state=self._rng)
             reference_point = dict(
-                zip(self.model.parameterization.sampled_params(), reference_point))
+                zip(self.model.parameterization.sampled_params(), reference_values))
             for p, v in (self.override or {}).items():
                 if p not in reference_point:
                     raise LoggedError(
@@ -91,6 +93,7 @@ class evaluate(Sampler):
         Auxiliary function to define what should be returned in a scripted call.
 
         Returns:
-           The sample ``Collection`` containing the sequentially discarded live points.
+           The sample ``SampleCollection`` containing the
+           sequentially discarded live points.
         """
         return {"sample": self.one_point}

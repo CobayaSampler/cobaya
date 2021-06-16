@@ -23,11 +23,19 @@ Creating *from scratch* the input for a realistic cosmological case is quite a b
       $ python -m pip install pyqt5 pyside2
 
 
-   **Anaconda** users should instead do:
+   Anaconda users should instead do:
 
    .. code:: bash
 
       $ conda install -c conda-forge pyside2
+
+   Installing PySide2 via pip, and sometime Anaconda, is often problematic.
+   The most reliable solution seems to be to make a clean conda-forge environment and
+   use that, e.g. install Anaconda or Miniconda and use the environment created with
+
+  .. code:: bash
+
+      $ conda create -n py39forge -c conda-forge python=3.9 scipy pandas matplotlib PyYAML PySide2
 
 Start by choosing a preset, maybe modify some aspects using the options provided, and copy or save the generated input to a file, either in ``yaml`` form or as a python dictionary.
 
@@ -81,7 +89,8 @@ It is much harder to provide typical PolyChord running times. We recommend start
 Post-processing cosmological samples
 ------------------------------------
 
-Let's suppose that we want to importance-reweight a Plank sample, in particular the one we just generated with the input above, with some late time LSS data from BAO. To do that, we ``add`` the new BAO likelihoods. We would also like to increase the theory code's precision with some extra arguments: we will need to re-``add`` it, and set the new precision parameter under ``extra_args`` (the old ``extra_args`` will be inherited, unless specifically redefined). Since we do not need to recompute the CMB likelihoods, which are not too affected by the new precision parameter. On top of that, let us add a derived parameter.
+Let's suppose that we want to importance-reweight a Planck sample, in particular the one we just generated with the input above, with some late time LSS data from BAO. To do that, we ``add`` the new BAO likelihoods. We would also like to increase the theory code's precision with some extra arguments: we will need to re-``add`` it, and set the new precision parameter under ``extra_args`` (the old ``extra_args`` will be inherited, unless specifically redefined).
+For his example let's say we do not need to recompute the CMB likelihoods, so power spectra do not need to be recomputed, but we do want to add a new derived parameter.
 
 Assuming we saved the sample at ``chains/planck``, we need to define the following input file, which we can run with ``$ cobaya-run``:
 
@@ -93,9 +102,8 @@ Assuming we saved the sample at ``chains/planck``, we need to define the followi
    # Post-processing information
    post:
      suffix: BAO  # the new sample will be called "chains\planck_post_des*"
-     # If we want to skip the first third and take 1 every 3 samples
+     # If we want to skip the first third of the chain as burn in
      skip: 0.3
-     thin: 3
      # Now let's add the DES likelihood,
      # increase the precision (remember to repeat the extra_args)
      # and add the new derived parameter
@@ -117,17 +125,11 @@ Assuming we saved the sample at ``chains/planck``, we need to define the followi
        params:
          # h = H0/100. (nothing to add: CLASS/CAMB knows it)
          h:
-         # A dynamic derived parameter: sum of BAO chi-squared's
-         chi2__BAO:
-           derived: 'lambda chi2__sixdf_2011_bao, chi2__sdss_dr7_mgs, chi2__sdss_dr12_consensus_bao:
-                     sum([chi2__sixdf_2011_bao, chi2__sdss_dr7_mgs, chi2__sdss_dr12_consensus_bao])'
-           latex: \chi^2_\mathrm{BAO}
-
-
-.. warning::
-
-   In the current implementation, likelihood recomputation does not automatically trigger recomputation of the partial "chi2" sums as the one in the basic Planck examples above, ``chi2__cmb``. If you are recomputing one likelihood that is part of a partial sum, you need to re-define them inside the ``add`` block.
-
+         # A dynamic derived parameter (change omegam to Omega_m for classy)
+         # note that sigma8 itself is not recomputed unless we add+remove it
+         S8:
+           derived: 'lambda sigma8, omegam: sigma8*(omegam/0.3)**0.5'
+           latex: \sigma_8 (\Omega_\mathrm{m}/0.3)^{0.5}
 
 .. _citations:
 
