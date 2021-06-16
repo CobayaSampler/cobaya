@@ -2,7 +2,8 @@ r"""
 .. module:: bao
 
 :Synopsis: BAO, f_sigma8 and other measurements at single redshifts, with correlations
-:Author: Antony Lewis (adapted to Cobaya by Jesus Torrado, with little modification)
+:Author: Antony Lewis, Pablo Lemos (adapted to Cobaya by Jesus Torrado, with little 
+        modification)
 
 This code provides a template for BAO, :math:`f\sigma_8`, :math:`H`
 and other redshift dependent functions.
@@ -14,6 +15,10 @@ The datasets implemented at this moment are:
 - ``bao.sdss_dr12_consensus_bao``
 - ``bao.sdss_dr12_consensus_full_shape``
 - ``bao.sdss_dr12_consensus_final`` (combined data of the previous two)
+- ``bao.sdss_dr16_baoplus_lrg`` (combining data from BOSS DR12 and eBOSS DR16)
+- ``bao.sdss_dr16_baoplus_lyauto``
+- ``bao.sdss_dr16_baoplus_lyxqso``
+- ``bao.sdss_dr16_baoplus_qso``
 
 .. |br| raw:: html
 
@@ -121,7 +126,7 @@ After this, mention the path to this likelihood when you include it in an input 
 # Global
 import os
 import numpy as np
-from scipy.interpolate import UnivariateSpline
+from scipy.interpolate import UnivariateSpline, RectBivariateSpline
 import pandas as pd
 from typing import Optional, Sequence
 
@@ -173,20 +178,25 @@ class BAO(InstallableLikelihood):
                 raise LoggedError(
                     self.log, "Couldn't find measurements file '%s' in folder '%s'. " % (
                         self.measurements_file, data_file_path) + "Check your paths.")
+        elif getattr(self, "grid_file", None):
+            pass
         else:
             self.data = pd.DataFrame([self.data] if not hasattr(self.data[0], "__len__")
                                      else self.data)
-        # Columns: z value [err] [type]
-        self.has_type = self.data.iloc[:, -1].dtype == np.dtype("O")
-        assert self.has_type  # mandatory for now!
-        self.has_err = len(self.data.columns) > 2 and self.data[2].dtype == float
-        if self.has_err:
-            self.data.columns = ["z", "value", "error", "observable"]
-        else:
-            self.data.columns = ["z", "value", "observable"]
-        prefix = "bao_"
-        self.data["observable"] = [(c[len(prefix):] if c.startswith(prefix) else c)
-                                   for c in self.data["observable"]]
+ 
+        if not getattr(self, "grid_file", None):
+            # Columns: z value [err] [type]
+            self.has_type = self.data.iloc[:, -1].dtype == np.dtype("O")
+            assert self.has_type  # mandatory for now!
+            self.has_err = len(self.data.columns) > 2 and self.data[2].dtype == float
+            if self.has_err:
+                self.data.columns = ["z", "value", "error", "observable"]
+            else:
+                self.data.columns = ["z", "value", "observable"]
+            prefix = "bao_"
+            self.data["observable"] = [(c[len(prefix):] if c.startswith(prefix) else c)
+                                    for c in self.data["observable"]]
+
         # Probability distribution
         if self.prob_dist:
             try:
@@ -208,8 +218,52 @@ class BAO(InstallableLikelihood):
             self.logpdf = lambda x: (
                 spline(x)[0] if self.prob_dist_bounds[0] <= x <= self.prob_dist_bounds[1]
                 else -np.inf)
+        elif getattr(self, "grid_file", None):
+            try:
+                self.grid_data = np.loadtxt(
+                    os.path.join(data_file_path, self.grid_file)
+                    )
+            except IOError:
+                raise LoggedError(
+                    self.log, "Couldn't find grid file '%s' in folder '%s'. " % (
+                        self.grid_file, data_file_path) + "Check your paths.")
+            if (not getattr(self, "observable_1", None)) or (not getattr(self, "observable_2", None)):
+                raise LoggedError(
+                    self.log, "If using grid data, 'observable_1' and 'observable_2'"
+                              "need to be specified.")           
+            if (not getattr(self, "redshift", None)):
+                raise LoggedError(
+                    self.log, "If using grid data, 'redshift'"
+                              "needs to be specified.")
+
+            self.use_grid = True
+            self.has_type = True # Not sure what this is
+            self.data = pd.DataFrame()
+            self.data["observable"] = [self.observable_1, self.observable_2]
+            at = np.array(sorted(set(self.grid_data[:,0])))
+            ap = np.array(sorted(set(self.grid_data[:,1])))
+
+            N_at = at.shape[0]
+            N_ap = ap.shape[0]
+            grid = np.zeros((N_at,N_ap))
+
+            for i in range(N_ap):
+                # Filter the data to only those corresponding to the ap value.
+                indices = (self.grid_data[:,1] == ap[i])
+                scan_chunk = self.grid_data[indices, :]
+
+                # Ensure that they're sorted by at value.
+                scan_chunk = scan_chunk[scan_chunk[:,0].argsort()]
+                
+                # Add the chi2 column to the grid.
+                # Note that the grid is of shape (N_at,N_ap)
+                grid[:,i] = np.log(scan_chunk[:,2])
+
+            #Make the interpolator (x refers to at, y refers to ap).
+            self.interpolator = RectBivariateSpline(at, ap, grid, kx=3, ky=3)
         # Covariance --> read and re-sort as self.data
         else:
+            self.use_grid = False
             try:
                 if self.cov_file:
                     self.cov = np.loadtxt(os.path.join(data_file_path, self.cov_file))
@@ -233,9 +287,13 @@ class BAO(InstallableLikelihood):
 
     def get_requirements(self):
         # Requisites
-        zs = {obs: self.data.loc[self.data["observable"] == obs, "z"].values
-              for obs in self.data["observable"].unique()}
-        theory_reqs: InfoDict = {
+        if self.use_grid:
+            zs = {self.observable_1: np.array([self.redshift]), self.observable_2: np.array([self.redshift])}
+        else:
+            zs = {obs: self.data.loc[self.data["observable"] == obs, "z"].values
+                for obs in self.data["observable"].unique()}
+        print('zs', zs)
+        theory_reqs = {
             "DV_over_rs": {
                 "angular_diameter_distance": {"z": zs.get("DV_over_rs", None)},
                 "Hubble": {"z": zs.get("DV_over_rs", None)},
@@ -270,6 +328,7 @@ class BAO(InstallableLikelihood):
                           " implemented yet. Did you mean any of %s? "
                           "If you didn't, please, open an issue in github.",
                 obs_used_not_implemented, list(theory_reqs))
+        print('theory_reqs', theory_reqs)
         requisites = {}
         if self.has_type:
             for obs in self.data["observable"].unique():
@@ -314,11 +373,17 @@ class BAO(InstallableLikelihood):
         return self.provider.get_param("rdrag") * self.rs_rescale
 
     def logp(self, **params_values):
-        theory = np.array([self.theory_fun(z, obs) for z, obs
-                           in zip(self.data["z"], self.data["observable"])]).T[0]
-        if self.is_debug():
-            for i, (z, obs, theo) in enumerate(
-                    zip(self.data["z"], self.data["observable"], theory)):
-                self.log.debug("%s at z=%g : %g (theo) ; %g (data)",
-                               obs, z, theo, self.data.iloc[i, 1])
-        return self.logpdf(theory)
+        if self.use_grid:
+            at = self.theory_fun(self.redshift, self.observable_1)
+            ap = self.theory_fun(self.redshift, self.observable_2)
+            chi2 = float(self.interpolator(at, ap)[0])
+            return chi2 / 2
+        else:
+            theory = np.array([self.theory_fun(z, obs) for z, obs
+                            in zip(self.data["z"], self.data["observable"])]).T[0]
+            if self.log.getEffectiveLevel() == logging.DEBUG:
+                for i, (z, obs, theo) in enumerate(
+                        zip(self.data["z"], self.data["observable"], theory)):
+                    self.log.debug("%s at z=%g : %g (theo) ; %g (data)",
+                                obs, z, theo, self.data.iloc[i, 1])
+            return self.logpdf(theory)
