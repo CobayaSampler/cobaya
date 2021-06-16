@@ -126,7 +126,7 @@ After this, mention the path to this likelihood when you include it in an input 
 # Global
 import os
 import numpy as np
-from scipy.interpolate import UnivariateSpline, RectBivariateSpline
+from scipy.interpolate import UnivariateSpline, RectBivariateSpline, RegularGridInterpolator
 import pandas as pd
 from typing import Optional, Sequence
 
@@ -236,34 +236,53 @@ class BAO(InstallableLikelihood):
                     self.log, "If using grid data, 'redshift'"
                               "needs to be specified.")
 
-            self.use_grid = True
             self.has_type = True # Not sure what this is
             self.data = pd.DataFrame()
-            self.data["observable"] = [self.observable_1, self.observable_2]
-            at = np.array(sorted(set(self.grid_data[:,0])))
-            ap = np.array(sorted(set(self.grid_data[:,1])))
 
-            N_at = at.shape[0]
-            N_ap = ap.shape[0]
-            grid = np.zeros((N_at,N_ap))
+            if self.grid_data.shape[1] == 3:
+                self.use_grid_2d = True
+                self.use_grid_3d = False
+                self.data["observable"] = [self.observable_1, self.observable_2]
 
-            for i in range(N_ap):
-                # Filter the data to only those corresponding to the ap value.
-                indices = (self.grid_data[:,1] == ap[i])
-                scan_chunk = self.grid_data[indices, :]
+                x = np.unique(self.grid_data[:,0])
+                y = np.unique(self.grid_data[:,1])
 
-                # Ensure that they're sorted by at value.
-                scan_chunk = scan_chunk[scan_chunk[:,0].argsort()]
-                
-                # Add the chi2 column to the grid.
-                # Note that the grid is of shape (N_at,N_ap)
-                grid[:,i] = np.log(scan_chunk[:,2])
+                Nx = x.shape[0]
+                Ny = y.shape[0]
 
-            #Make the interpolator (x refers to at, y refers to ap).
-            self.interpolator = RectBivariateSpline(at, ap, grid, kx=3, ky=3)
+                chi2 = np.reshape(np.log(self.grid_data[:,2]), [Nx, Ny])
+
+                #Make the interpolator (x refers to at, y refers to ap).
+                self.interpolator = RectBivariateSpline(x, y, chi2, kx=3, ky=3)
+            elif self.grid_data.shape[1] == 4:
+                self.use_grid_2d = False
+                self.use_grid_3d = True
+                if (not getattr(self, "observable_3", None)):
+                    raise LoggedError(
+                        self.log, "If using 3D grid data, 'observable_3'"
+                                "needs to be specified.")           
+                self.data["observable"] = [self.observable_1, self.observable_2, 
+                                        self.observable_3]
+
+                x = np.unique(self.grid_data[:,0])
+                y = np.unique(self.grid_data[:,1])
+                z = np.unique(self.grid_data[:,2])
+
+                Nx = x.shape[0]
+                Ny = y.shape[0]
+                Nz = z.shape[0]
+
+                chi2 = np.reshape(np.log(self.grid_data[:,3]), [Nx, Ny,Nz])
+
+                self.interpolator = RegularGridInterpolator((x,y,z), chi2)
+
+            else: 
+                raise LoggedError(
+                    self.log, "Grid data has the wrong dimensions")  
         # Covariance --> read and re-sort as self.data
         else:
-            self.use_grid = False
+            self.use_grid_2d = False
+            self.use_grid_3d = False
             try:
                 if self.cov_file:
                     self.cov = np.loadtxt(os.path.join(data_file_path, self.cov_file))
@@ -287,8 +306,13 @@ class BAO(InstallableLikelihood):
 
     def get_requirements(self):
         # Requisites
-        if self.use_grid:
+        if self.use_grid_2d:
             zs = {self.observable_1: np.array([self.redshift]), self.observable_2: np.array([self.redshift])}
+        elif self.use_grid_3d:
+            zs = {self.observable_1: np.array([self.redshift]), 
+                  self.observable_2: np.array([self.redshift]),
+                  self.observable_3: np.array([self.redshift])
+                  }
         else:
             zs = {obs: self.data.loc[self.data["observable"] == obs, "z"].values
                 for obs in self.data["observable"].unique()}
@@ -373,10 +397,16 @@ class BAO(InstallableLikelihood):
         return self.provider.get_param("rdrag") * self.rs_rescale
 
     def logp(self, **params_values):
-        if self.use_grid:
-            at = self.theory_fun(self.redshift, self.observable_1)
-            ap = self.theory_fun(self.redshift, self.observable_2)
-            chi2 = float(self.interpolator(at, ap)[0])
+        if self.use_grid_2d:
+            x = self.theory_fun(self.redshift, self.observable_1)
+            y = self.theory_fun(self.redshift, self.observable_2)
+            chi2 = float(self.interpolator(x, y)[0])
+            return chi2 / 2
+        elif self.use_grid_3d:
+            x = self.theory_fun(self.redshift, self.observable_1)
+            y = self.theory_fun(self.redshift, self.observable_2)
+            z = self.theory_fun(self.redshift, self.observable_3)
+            chi2 = self.interpolator(np.array([x, y, z])[:,0])
             return chi2 / 2
         else:
             theory = np.array([self.theory_fun(z, obs) for z, obs
