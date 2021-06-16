@@ -411,7 +411,7 @@ class BAO(InstallableLikelihood):
         else:
             theory = np.array([self.theory_fun(z, obs) for z, obs
                             in zip(self.data["z"], self.data["observable"])]).T[0]
-            if self.log.getEffectiveLevel() == logging.DEBUG:
+            if self.is_debug():
                 for i, (z, obs, theo) in enumerate(
                         zip(self.data["z"], self.data["observable"], theory)):
                     self.log.debug("%s at z=%g : %g (theo) ; %g (data)",
