@@ -490,7 +490,7 @@ class polychord(Sampler):
             # TODO: add min_version when polychord module version available
             return load_module(
                 'pypolychord', path=poly_build_path, min_version=None)
-        except ImportError:
+        except ModuleNotFoundError:
             if path is not None and path.lower() != "global":
                 log.error("Couldn't find the PolyChord python interface at '%s'. "
                           "Are you sure it has been installed there?", path)
@@ -499,6 +499,10 @@ class polychord(Sampler):
                           "Specify a Cobaya or PolyChord installation path, "
                           "or install the PolyChord Python interface globally with "
                           "'cd /path/to/polychord/ ; python setup.py install'")
+            return False
+        except ImportError as e:
+            log.error("Couldn't load the PolyChord python interface in %s:\n"
+                      "%s", poly_build_path or "global", e)
             return False
         except VersionCheckError as e:
             log.error(str(e))
