@@ -14,9 +14,10 @@ import os
 from inspect import cleandoc
 
 # Local
-from cobaya.conventions import _yaml_extensions, kinds, _dump_sort_cosmetic
+from cobaya.conventions import Extension, kinds, dump_sort_cosmetic
 from cobaya.tools import create_banner, warn_deprecation, get_class
 from cobaya.input import load_input, get_used_components
+from cobaya.typing import InfoDict
 
 # Banner defaults
 _default_symbol = "="
@@ -24,19 +25,22 @@ _default_length = 80
 
 # Cobaya's own bib info
 cobaya_desc = cleandoc(r"""
-The posterior has been explored/maximised/reweighted using Cobaya \cite{torrado:2020xyz}.
+The posterior has been explored/maximized/reweighted using Cobaya \cite{torrado:2020xyz}.
 """)
 
 cobaya_bib = r"""
-@article{Torrado:2020xyz,
+@article{Torrado:2020dgo,
     author = "Torrado, Jesus and Lewis, Antony",
     title = "{Cobaya: Code for Bayesian Analysis of hierarchical physical models}",
     eprint = "2005.05290",
     archivePrefix = "arXiv",
     primaryClass = "astro-ph.IM",
     reportNumber = "TTK-20-15",
-    month = "5",
-    year = "2020"
+    doi = "10.1088/1475-7516/2021/05/057",
+    journal = "JCAP",
+    volume = "05",
+    pages = "057",
+    year = "2021"
 }
 """.lstrip("\n")
 
@@ -44,7 +48,7 @@ cobaya_bib = r"""
 def get_desc_component(component, kind, info=None):
     cls = get_class(component, kind, None_if_not_found=True)
     if cls:
-        lines = cleandoc(cls.get_desc(info))
+        lines = cleandoc(cls.get_desc(info) or "")
     else:
         lines = "[no description found]"
     return lines + "\n"
@@ -62,8 +66,8 @@ def get_bib_component(component, kind):
 
 def get_bib_info(*infos):
     used_components, component_infos = get_used_components(*infos, return_infos=True)
-    descs = {}
-    bibs = {}
+    descs: InfoDict = {}
+    bibs: InfoDict = {}
     for kind, components in get_used_components(*infos).items():
         descs[kind], bibs[kind] = {}, {}
         for component in components:
@@ -77,8 +81,8 @@ def get_bib_info(*infos):
 
 def prettyprint_bib(descs, bibs):
     # Sort them "optimally"
-    sorted_kinds = [k for k in _dump_sort_cosmetic if k in descs]
-    sorted_kinds += [k for k in descs if k not in _dump_sort_cosmetic]
+    sorted_kinds = [k for k in dump_sort_cosmetic if k in descs]
+    sorted_kinds += [k for k in descs if k not in dump_sort_cosmetic]
     txt = ""
     txt += create_banner(
         "Descriptions", symbol=_default_symbol, length=_default_length) + "\n"
@@ -97,10 +101,7 @@ def prettyprint_bib(descs, bibs):
 
 
 # Command-line script
-def bib_script():
-    from cobaya.mpi import is_main_process
-    if not is_main_process():
-        return
+def bib_script(args=None):
     warn_deprecation()
     # Parse arguments and launch
     import argparse
@@ -112,28 +113,29 @@ def bib_script():
                         help="Component(s) or input file(s) whose bib info is requested.")
     kind_opt, kind_opt_ishort = "kind", 0
     parser.add_argument("-" + kind_opt[kind_opt_ishort], "--" + kind_opt, action="store",
-                        nargs=1, default=None, metavar="component_kind",
+                        default=None, metavar="component_kind",
                         help=("If component name given, "
                               "kind of component whose bib is requested: " +
                               ", ".join(['%s' % kind for kind in kinds]) + ". " +
-                              "Use only when component name is not unique (it would fail)."))
-    arguments = parser.parse_args()
+                              "Use only when component name is not unique "
+                              "(it would fail)."))
+    arguments = parser.parse_args(args)
     # Case of files
     are_yaml = [
-        (os.path.splitext(f)[1] in _yaml_extensions) for f in arguments.components_or_files]
+        (os.path.splitext(f)[1] in Extension.yamls) for f in
+        arguments.components_or_files]
     if all(are_yaml):
         infos = [load_input(f) for f in arguments.components_or_files]
         print(prettyprint_bib(*get_bib_info(*infos)))
     elif not any(are_yaml):
         if arguments.kind:
-            arguments.kind = arguments.kind[0].lower()
+            arguments.kind = arguments.kind.lower()
         for component in arguments.components_or_files:
             try:
                 print(create_banner(
                     component, symbol=_default_symbol, length=_default_length))
                 print(get_bib_component(component, arguments.kind))
-                return
-            except:
+            except Exception:
                 if not arguments.kind:
                     print("Specify its kind with '--%s [component_kind]'." % kind_opt +
                           "(NB: all requested components must have the same kind, "
@@ -144,3 +146,7 @@ def bib_script():
               "or of component names (not a mix of them).")
         return 1
     return
+
+
+if __name__ == '__main__':
+    bib_script()

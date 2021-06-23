@@ -2,8 +2,7 @@ from flaky import flaky
 import numpy as np
 
 from cobaya.run import run
-from .common_sampler import body_of_test, body_of_test_speeds
-from cobaya.conventions import kinds, _params, partag, _output_prefix
+from .common_sampler import body_of_sampler_test, body_of_test_speeds
 from .conftest import install_test_wrapper
 
 
@@ -12,9 +11,9 @@ def test_polychord(packages_path, skip_not_installed, tmpdir):
     dimension = 3
     n_modes = 1
     info_sampler = {"polychord": {"nlive": 25 * dimension * n_modes}}
-    body_of_test(dimension=dimension, n_modes=n_modes,
-                 info_sampler=info_sampler, tmpdir=str(tmpdir),
-                 packages_path=packages_path, skip_not_installed=skip_not_installed)
+    body_of_sampler_test(info_sampler, dimension=dimension, n_modes=n_modes,
+                         tmpdir=str(tmpdir),
+                         packages_path=packages_path, skip_not_installed=skip_not_installed)
 
 
 def test_polychord_resume(packages_path, skip_not_installed, tmpdir):
@@ -27,28 +26,31 @@ def test_polychord_resume(packages_path, skip_not_installed, tmpdir):
     """
     nlive = 10
     max_ndead = 2 * nlive
+    dead_points = []
+
     def callback(sampler):
-        global dead_points
+        nonlocal dead_points
         dead_points = sampler.dead[["a", "b"]].values.copy()
+
     info = {
-        kinds.likelihood: {
+        "likelihood": {
             "A": {"external": "lambda a: stats.norm.logpdf(a)", "speed": 1},
             "B": {"external": "lambda b: stats.norm.logpdf(b)", "speed": 0.01}},
-        _params: {
-            "a": {partag.prior: {"min": 0, "max": 1}},
-            "b": {partag.prior: {"min": 0, "max": 1}}},
-        kinds.sampler: {
+        "params": {
+            "a": {"prior": {"min": 0, "max": 1}},
+            "b": {"prior": {"min": 0, "max": 1}}},
+        "sampler": {
             "polychord": {
                 "measure_speeds": True,
                 "nlive": nlive,
                 "max_ndead": max_ndead,
                 "callback_function": callback,
             }},
-        _output_prefix: str(tmpdir)}
-    upd_info, sampler = install_test_wrapper(skip_not_installed, run, info)
+        "output": str(tmpdir)}
+    install_test_wrapper(skip_not_installed, run, info)
     old_dead_points = dead_points.copy()
     info["resume"] = True
-    upd_info, sampler = run(info)
+    run(info)
     assert np.allclose(old_dead_points, dead_points)
 
 
@@ -57,9 +59,9 @@ def test_polychord_multimodal(packages_path, skip_not_installed, tmpdir):
     dimension = 2
     n_modes = 2
     info_sampler = {"polychord": {"nlive": 40 * dimension * n_modes}}
-    body_of_test(dimension=dimension, n_modes=n_modes,
-                 info_sampler=info_sampler, tmpdir=str(tmpdir),
-                 packages_path=packages_path, skip_not_installed=skip_not_installed)
+    body_of_sampler_test(info_sampler, dimension=dimension, n_modes=n_modes,
+                         tmpdir=str(tmpdir),
+                         packages_path=packages_path, skip_not_installed=skip_not_installed)
 
 
 @flaky(max_runs=3, min_passes=1)
@@ -98,8 +100,8 @@ def test_polychord_unphysical(packages_path, skip_not_installed):
     bound = 10
     info = {
         "likelihood": {
-            "gaussian":
-            "lambda a_0, a_1: stats.multivariate_normal.logpdf([a_0, a_1], mean=[0,0])"},
+            "gaussian": "lambda a_0, a_1: "
+                        "stats.multivariate_normal.logpdf([a_0, a_1], mean=[0,0])"},
         "prior": {"prior0": "lambda a_0, a_1: np.log(a_0 > a_1)"},
         "params": {
             "a_0": {"prior": {"min": -bound, "max": bound}},
@@ -119,5 +121,5 @@ def test_polychord_unphysical(packages_path, skip_not_installed):
     logZlikestd = sampler_with_like.products()["logZstd"]
     logZ = logZlike - logZpi
     sigma = logZlikestd + logZpistd
-    truth = 1/((2*bound)**2 / 2) * 0.5
-    assert logZ - 2*sigma < np.log(truth) < logZ + 2*sigma
+    truth = 1 / ((2 * bound) ** 2 / 2) * 0.5
+    assert logZ - 2 * sigma < np.log(truth) < logZ + 2 * sigma

@@ -66,10 +66,10 @@ In all cases, the output folder is based on the invocation folder if **cobaya** 
 
 .. _output_format:
 
-Sample files or ``Collection`` instances
-----------------------------------------
+Sample files or ``SampleCollection`` instances
+-----------------------------------------------
 
-Samples are stored in files (if text output requested) or :class:`~collection.Collection` instances (in interactive mode). A typical sample file will look like the one presented in the :doc:`quickstart example <example>`:
+Samples are stored in files (if text output requested) or :class:`~collection.SampleCollection` instances (in interactive mode). A typical sample file will look like the one presented in the :doc:`quickstart example <example>`:
 
 .. code::
 
@@ -108,8 +108,6 @@ Both sample files and collections contain the following columns, in this order:
 
 .. autoclass:: output.Output
    :members:
-.. autoclass:: output.Output_MPI
-   :noindex:
 .. autoclass:: output.OutputDummy
    :noindex:
 
@@ -120,7 +118,7 @@ Both sample files and collections contain the following columns, in this order:
 .. automodule:: collection
    :noindex:
 
-.. autoclass:: collection.Collection
+.. autoclass:: collection.SampleCollection
    :members:
 .. autoclass:: collection.OnePoint
    :noindex:

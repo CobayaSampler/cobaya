@@ -163,6 +163,23 @@ made private by starting the name with an underscore.
 Any class can have class attributes or a ``.yaml`` file, but not both. Class
 attributes or ``.yaml`` files are inherited, with re-definitions override the inherited value.
 
+Likelihoods, like Theory classes,  can also provide derived parameters. To do this use the special
+``_derived`` dictionary that is passed in as an argument to ``logp``. e.g.
+
+.. code:: python
+
+    class MyLikelihood(Likelihood):
+        params = {'D': None, 'Dx10': {'derived': True}}
+
+        def logp(self, _derived=None, **params_values):
+            if _derived is not None:
+                _derived["Dx10"] = params_values['D'] * 10
+
+        ...
+
+Alternatively, you could implement the Theory-inherited ``calculate`` method,
+and set both ``state['logp']`` and ``state['derived']``.
+
 InstallableLikelihood
 ---------------------
 

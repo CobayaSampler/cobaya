@@ -2,68 +2,167 @@
 .. module:: input
 
 :Synopsis: Input-related functions
-:Author: Jesus Torrado
+:Author: Jesus Torrado and Antony Lewis
 
 """
 
 # Global
 import os
 import inspect
-import logging
+import platform
 from copy import deepcopy
 from importlib import import_module
 from itertools import chain
 from functools import reduce
-from typing import Mapping
+from typing import Mapping, Union, Optional, TypeVar, Callable, Dict, List
 from collections import defaultdict
 from inspect import cleandoc
 import pkg_resources
 
 # Local
-from cobaya.conventions import _products_path, _packages_path, _resume, _force, _params, \
-    partag, _external, _output_prefix, _debug, _debug_file, _auto_params, _prior, \
-    kinds, _provides, _requires, _input_params, _output_params, _component_path, \
-    _aliases, _yaml_extensions, reserved_attributes, empty_dict, _get_chi2_name, \
-    _get_chi2_label, _test_run, _version, _class_name
+from cobaya.conventions import products_path, kinds, separator_files, \
+    reserved_attributes, get_chi2_name, get_chi2_label, Extension, FileSuffix
+from cobaya.typing import InputDict, InfoDict, ModelDict, ExpandedParamsDict, LikesDict, \
+    empty_dict
 from cobaya.tools import recursive_update, str_to_list, get_base_classes, \
     fuzzy_match, deepcopy_where_possible, get_resolved_class
-from cobaya.yaml import yaml_load_file, yaml_dump
-from cobaya.log import LoggedError
+from cobaya.yaml import yaml_load_file, yaml_dump, yaml_load
+from cobaya.log import LoggedError, get_logger
 from cobaya.parameterization import expand_info_param
-from cobaya.mpi import share_mpi, is_main_process
+from cobaya import mpi
 
 # Logger
-log = logging.getLogger(__name__.split(".")[-1])
+log = get_logger(__name__)
 
 
-def load_input(input_file):
+def load_input_dict(info_or_yaml_or_file: Union[InputDict, str, os.PathLike]
+                    ) -> InputDict:
+    if isinstance(info_or_yaml_or_file, os.PathLike):
+        return load_input_file(info_or_yaml_or_file)
+    elif isinstance(info_or_yaml_or_file, str):
+        if "\n" in info_or_yaml_or_file:
+            return yaml_load(info_or_yaml_or_file)  # type: ignore
+        else:
+            return load_input_file(info_or_yaml_or_file)
+    elif isinstance(info_or_yaml_or_file, (dict, Mapping)):
+        return deepcopy_where_possible(info_or_yaml_or_file)
+    else:
+        raise ValueError("The first argument must be a dictionary, file name or "
+                         "yaml string with the required input options.")
+
+
+def load_input_file(input_file: Union[str, os.PathLike],
+                    no_mpi: bool = False,
+                    help_commands: Optional[str] = None) -> InputDict:
+    if no_mpi:
+        mpi.set_mpi_disabled()
+    input_file = str(input_file)
+    stem, suffix = os.path.splitext(input_file)
+    if os.path.basename(stem) in ("input", "updated"):
+        raise ValueError("'input' and 'updated' are reserved file names. "
+                         "Please, use a different one.")
+    if suffix.lower() in Extension.yamls + (Extension.dill,):
+        info = load_input_MPI(input_file)
+        root, suffix = os.path.splitext(stem)
+        if suffix == ".updated":
+            # path may have been removed, so put in full path and name
+            info["output"] = root
+    else:
+        # Passed an existing output_prefix?
+        # First see if there is a binary info pickle
+        updated_file = get_info_path(*split_prefix(input_file), ext=Extension.dill)
+        if not os.path.exists(updated_file):
+            # Try to find the corresponding *.updated.yaml
+            updated_file = get_info_path(*split_prefix(input_file))
+        try:
+            info = load_input_MPI(updated_file)
+        except IOError:
+            err_msg = "Not a valid input file, or non-existent run to resume."
+            if help_commands:
+                err_msg += (" Maybe you mistyped one of the following commands: "
+                            + help_commands)
+            raise ValueError(err_msg)
+        # We need to update the output_prefix to resume the run *where it is*
+        info["output"] = input_file
+        if "post" not in info:
+            # If input given this way, we obviously want to resume!
+            info["resume"] = True
+    return info
+
+
+def load_input(input_file: str) -> InputDict:
     """
     Loads general info, and splits it into the right parts.
     """
     file_name, extension = os.path.splitext(input_file)
     file_name = os.path.basename(file_name)
-    if extension.lower() not in _yaml_extensions:
+    info: InputDict
+    if extension.lower() in Extension.yamls:
+        info = yaml_load_file(input_file) or {}  # type: ignore
+    elif extension == Extension.dill:
+        info = load_info_dump(input_file) or {}
+    else:
         raise LoggedError(log, "Extension of input file '%s' not recognized.", input_file)
-    info = yaml_load_file(input_file) or {}
+
     # if output_prefix not defined, default to input_file name (sans ext.) as prefix;
-    if _output_prefix not in info:
-        info[_output_prefix] = file_name
+    if "output" not in info:
+        info["output"] = file_name
     # warn if no output, since we are in shell-invocation mode.
-    elif info[_output_prefix] is None:
+    elif info["output"] is None:
         log.warning("WARNING: Output explicitly suppressed with '%s: null'",
-                    _output_prefix)
+                    "output")
     # contained? Ensure that output is sent where it should
     if "CONTAINED" in os.environ:
-        for out in [_output_prefix, _debug_file]:
+        for out in ("output", "debug_file"):
             if info.get(out):
                 if not info[out].startswith("/"):
-                    info[out] = os.path.join(_products_path, info[out])
+                    info[out] = os.path.join(products_path, info[out])
     return info
 
 
-# MPI wrapper for loading the input info
-def load_input_MPI(input_file):
-    return share_mpi(load_input(input_file) if is_main_process() else None)
+# separate MPI function, as sometimes just use load_input from root process only
+@mpi.from_root
+def load_input_MPI(input_file) -> InputDict:
+    return load_input(input_file)
+
+
+# load from dill pickle, including any lambda functions or external classes
+def load_info_dump(input_file) -> InputDict:
+    import dill
+    with open(input_file, 'rb') as f:
+        return dill.load(f)
+
+
+def split_prefix(prefix):
+    """
+    Splits an output prefix into folder and file name prefix.
+
+    If on Windows, allows for unix-like input.
+    """
+    if platform.system() == "Windows":
+        prefix = prefix.replace("/", os.sep)
+    folder = os.path.dirname(prefix) or "."
+    file_prefix = os.path.basename(prefix)
+    if file_prefix == ".":
+        file_prefix = ""
+    return folder, file_prefix
+
+
+def get_info_path(folder, prefix, infix=None, kind="updated", ext=Extension.yamls[0]):
+    """
+    Gets path to info files saved by Output.
+    """
+    if infix is None:
+        infix = ""
+    elif not infix.endswith("."):
+        infix += "."
+    info_file_prefix = os.path.join(
+        folder, prefix + (separator_files if prefix else ""))
+    try:
+        suffix = {"input": FileSuffix.input, "updated": FileSuffix.updated}[kind.lower()]
+    except KeyError:
+        raise ValueError("`kind` must be `input|updated`")
+    return info_file_prefix + infix + suffix + ext
 
 
 def get_used_components(*infos, return_infos=False):
@@ -78,24 +177,24 @@ def get_used_components(*infos, return_infos=False):
     the original class' name.
     """
     # TODO: take inheritance into account
-    components = defaultdict(list)
-    components_infos = defaultdict(dict)
+    comps: Dict[str, List[str]] = defaultdict(list)
+    comp_infos: Dict[str, dict] = defaultdict(dict)
     for info in infos:
         for kind in kinds:
             try:
-                components[kind] += [a for a in (info.get(kind) or [])
-                                     if a not in components[kind]]
+                comps[kind] += [a for a in (info.get(kind) or [])
+                                if a not in comps[kind]]
             except TypeError:
                 raise LoggedError(
                     log, "Your input info is not well formatted at the '%s' block. "
                          "It must be a dictionary {'%s_i':{options}, ...}. ",
                     kind, kind)
             if return_infos:
-                for c in components[kind]:
-                    components_infos[c].update(info[kind][c] or {})
+                for c in comps[kind]:
+                    comp_infos[c].update(info[kind][c] or {})
     # return dictionary of non-empty blocks
-    components = {k: v for k, v in components.items() if v}
-    return (components, dict(components_infos)) if return_infos else components
+    components = {k: v for k, v in comps.items() if v}
+    return (components, dict(comp_infos)) if return_infos else components
 
 
 def get_default_info(component_or_class, kind=None, return_yaml=False,
@@ -122,7 +221,15 @@ def get_default_info(component_or_class, kind=None, return_yaml=False,
         return default_component_info
 
 
-def update_info(info):
+def add_aggregated_chi2_params(param_info, all_types):
+    for t in sorted(all_types):
+        param_info[get_chi2_name(t)] = {"latex": get_chi2_label(t), "derived": True}
+
+
+_Dict = TypeVar('_Dict', InputDict, ModelDict)
+
+
+def update_info(info: _Dict, add_aggr_chi2=True) -> _Dict:
     """
     Creates an updated info starting from the defaults for each component and updating it
     with the input info.
@@ -131,71 +238,61 @@ def update_info(info):
     # Don't modify the original input, and convert all Mapping to consistent dict
     input_info = deepcopy_where_possible(info)
     # Creates an equivalent info using only the defaults
-    updated_info = {}
+    updated_info: _Dict = {}
     default_params_info = {}
     default_prior_info = {}
-    components = get_used_components(input_info)
+    used_kind_members = get_used_components(input_info)
     from cobaya.component import CobayaComponent
-    for block in components:
-        updated = {}
+    for block in used_kind_members:
+        updated: InfoDict = {}
         updated_info[block] = updated
         input_block = input_info[block]
-        for component in components[block]:
+        name: str
+        for name in used_kind_members[block]:
             # Preprocess "no options" and "external function" in input
             try:
-                input_block[component] = input_block[component] or {}
+                input_block[name] = input_block[name] or {}
             except TypeError:
                 raise LoggedError(
                     log, "Your input info is not well formatted at the '%s' block. "
                          "It must be a dictionary {'%s_i':{options}, ...}. ",
                     block, block)
-            if isinstance(component, CobayaComponent) or \
-                    isinstance(input_block[component], CobayaComponent):
-                raise LoggedError(log, "Input for %s:%s should specify a class not "
-                                       "an instance", block, component)
-                # TODO: allow instance passing?
-                #       could allow this, but would have to sort out deepcopy
-                # if input_block[component]:
-                #   raise LoggedError(log, "Instances should be passed a dictionary "
-                #                           "entry of the form 'instance: None'")
-                # change_key(input_block, component, component.get_name(),
-                #           {_external: component})
-                # updated[component.get_name()] = input_block[component.get_name()].copy()
-                # continue
-            if inspect.isclass(input_block[component]) or \
-                    not isinstance(input_block[component], dict):
-                input_block[component] = {_external: input_block[component]}
-            ext = input_block[component].get(_external)
+            if isinstance(name, CobayaComponent) or isinstance(name, type):
+                raise LoggedError(log, "Instances and classes should be passed a "
+                                       "dictionary entry of the form 'name: instance'")
+            if isinstance(input_block[name], CobayaComponent):
+                log.warning("Support for input instances is experimental")
+            if isinstance(input_block[name], type) or \
+                    not isinstance(input_block[name], dict):
+                input_block[name] = {"external": input_block[name]}
+            ext = input_block[name].get("external")
             annotations = {}
             if ext:
-                if inspect.isclass(ext):
+                if isinstance(ext, type):
                     default_class_info, annotations = \
-                        get_default_info(ext, block, input_options=input_block[component],
+                        get_default_info(ext, block, input_options=input_block[name],
                                          return_undefined_annotations=True)
                 else:
                     default_class_info = deepcopy_where_possible(
                         component_base_classes[block].get_defaults())
             else:
-                component_path = input_block[component].get(_component_path, None)
+                component_path = input_block[name].get("python_path")
                 default_class_info, annotations = get_default_info(
-                    component, block, class_name=input_block[component].get(_class_name),
-                    component_path=component_path, input_options=input_block[component],
+                    name, block, class_name=input_block[name].get("class"),
+                    component_path=component_path, input_options=input_block[name],
                     return_undefined_annotations=True)
-            updated[component] = default_class_info or {}
+            updated[name] = default_class_info or {}
             # Update default options with input info
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
             # Reserved attributes not necessarily already in default info:
-            reserved = {_external, _class_name, _provides, _requires, partag.renames,
-                        _input_params, _output_params, _component_path, _aliases}
-            options_not_recognized = (set(input_block[component])
-                                      .difference(reserved)
-                                      .difference(set(updated[component]))
-                                      .difference(set(annotations)))
+            reserved = {"external", "class", "provides", "requires", "renames",
+                        "input_params", "output_params", "python_path", "aliases"}
+            options_not_recognized = set(input_block[name]).difference(
+                chain(reserved, updated[name], annotations))
             if options_not_recognized:
                 alternatives = {}
-                available = (
-                    {_external, _class_name, _requires, partag.renames}.union(
-                        updated_info[block][component]))
+                available = {"external", "class", "requires", "renames"}.union(
+                    updated_info[block][name])
                 while options_not_recognized:
                     option = options_not_recognized.pop()
                     alternatives[option] = fuzzy_match(option, available, n=3)
@@ -206,56 +303,59 @@ def update_info(info):
                 raise LoggedError(
                     log, "%s '%s' does not recognize some options: %s. "
                          "Check the documentation for '%s'.",
-                    block, component, did_you_mean, block)
-            updated[component].update(input_block[component])
+                    block, name, did_you_mean, block)
+            updated[name].update(input_block[name])
             # save params and priors of class to combine later
-            default_params_info[component] = default_class_info.get(_params, {})
-            default_prior_info[component] = default_class_info.get(_prior, {})
+            default_params_info[name] = default_class_info.get("params", {})
+            default_prior_info[name] = default_class_info.get("prior", {})
     # Add priors info, after the necessary checks
-    if _prior in input_info or any(default_prior_info.values()):
-        updated_info[_prior] = input_info.get(_prior, {})
+    if "prior" in input_info or any(default_prior_info.values()):
+        updated_info["prior"] = input_info.get("prior", {})
     for prior_info in default_prior_info.values():
         for name, prior in prior_info.items():
-            if updated_info[_prior].get(name, prior) != prior:
+            if updated_info["prior"].get(name, prior) != prior:
                 raise LoggedError(
                     log, "Two different priors cannot have the same name: '%s'.", name)
-            updated_info[_prior][name] = prior
+            updated_info["prior"][name] = prior
     # Add parameters info, after the necessary updates and checks
     defaults_merged = merge_default_params_info(default_params_info)
-    updated_info[_params] = merge_params_info([defaults_merged,
-                                               input_info.get(_params, {})],
-                                              default_derived=False)
+    param_info: ExpandedParamsDict = merge_params_info([defaults_merged,
+                                                        input_info.get("params", {})],
+                                                       default_derived=False)
+    updated_info["params"] = param_info  # type: ignore
     # Add aggregated chi2 params
-    if kinds.likelihood in info:
+    if info.get("likelihood") and add_aggr_chi2:
         all_types = set(chain(
             *[str_to_list(like_info.get("type", []) or [])
-              for like_info in updated_info[kinds.likelihood].values()]))
-        for t in all_types:
-            updated_info[_params][_get_chi2_name(t)] = {
-                partag.latex: _get_chi2_label(t), partag.derived: True}
+              for like_info in updated_info["likelihood"].values() if
+              like_info is not None]))
+        add_aggregated_chi2_params(param_info, all_types)
     # Add automatically-defined parameters
-    if _auto_params in updated_info:
-        make_auto_params(updated_info.pop(_auto_params), updated_info[_params])
+    if "auto_params" in updated_info:
+        make_auto_params(updated_info.pop("auto_params"), param_info)
     # Add aliases for theory params (after merging!)
-    for kind in [k for k in [kinds.theory, kinds.likelihood] if k in updated_info]:
-        for item in updated_info[kind].values():
-            renames = item.get(partag.renames)
-            if renames:
-                if not isinstance(renames, Mapping):
-                    raise LoggedError(log,
-                                      "'renames' should be a dictionary of name mappings "
-                                      "(or you meant to use 'aliases')")
-                renames_flat = [set([k] + str_to_list(v)) for k, v in renames.items()]
-                for p in updated_info[_params]:
-                    # Probably could be made faster by inverting the renames dicts *once*
-                    renames_pairs = [a for a in renames_flat if p in a]
-                    if renames_pairs:
-                        this_renames = reduce(
-                            lambda x, y: x.union(y), [a for a in renames_flat if p in a])
-                        updated_info[_params][p][partag.renames] = \
-                            list(set(this_renames).union(set(str_to_list(
-                                updated_info[_params][p].get(partag.renames, []))))
-                                 .difference({p}))
+    for name in ("theory", "likelihood"):
+        if isinstance(updated_info.get(name), dict):
+            for item in updated_info[name].values():
+                renames = item.get("renames")
+                if renames:
+                    if not isinstance(renames, Mapping):
+                        raise LoggedError(log, "'renames' should be a dictionary of "
+                                               "name mappings "
+                                               "(or you meant to use 'aliases')")
+                    renames_flat = [set([k] + str_to_list(v)) for k, v in renames.items()]
+                    for p in param_info:
+                        # Probably could be made faster by inverting
+                        # the renames dicts *once*
+                        renames_pairs = [a for a in renames_flat if p in a]
+                        if renames_pairs:
+                            this_renames = reduce(
+                                lambda x, y: x.union(y),
+                                [a for a in renames_flat if p in a])
+                            param_info[p]["renames"] = \
+                                list(set(chain(this_renames, str_to_list(
+                                    param_info[p].get("renames", []))))
+                                     .difference({p}))
     # Rest of the options
     for k, v in input_info.items():
         if k not in updated_info:
@@ -263,12 +363,12 @@ def update_info(info):
     return updated_info
 
 
-def merge_default_params_info(defaults):
+def merge_default_params_info(defaults: LikesDict):
     """
     Merges default parameters info for all likelihoods.
     Checks that multiple defined (=shared) parameters have equal info.
     """
-    defaults_merged = {}
+    defaults_merged: LikesDict = {}
     for lik, params in defaults.items():
         for p, info in (params or {}).items():
             # if already there, check consistency
@@ -304,19 +404,17 @@ def merge_params_info(params_infos, default_derived=True):
             new_info_p = expand_info_param(new_info_p)
             current_info[p].update(deepcopy(new_info_p))
             # Account for incompatibilities: "prior" and ("value" or "derived"+bounds)
-            incompatibilities = {_prior: [partag.value, partag.derived, "min", "max"],
-                                 partag.value: [partag.prior, partag.ref,
-                                                partag.proposal],
-                                 partag.derived: [partag.prior, partag.drop, partag.ref,
-                                                  partag.proposal]}
+            incompatibilities = {"prior": ["value", "derived", "min", "max"],
+                                 "value": ["prior", "ref", "proposal"],
+                                 "derived": ["prior", "drop", "ref", "proposal"]}
             for f1, incomp in incompatibilities.items():
                 if f1 in new_info_p:
                     for f2 in incomp:
-                        current_info[p].pop(f2, None)
+                        current_info[p].pop(f2, None)  # type: ignore
     # Re-sort, so that rightmost info takes precedence *also* in the sorting
-    new_order = chain(*[list(params) for params in params_infos[::-1]])
+    new_order_sorted = chain(*params_infos[::-1])
     # The following removes duplicates maintaining order (keeps the first occurrence)
-    new_order = list(dict.fromkeys(new_order))
+    new_order = dict.fromkeys(new_order_sorted)
     current_info = {p: current_info[p] for p in new_order}
     return current_info
 
@@ -329,12 +427,14 @@ def merge_info(*infos):
     previous_info = deepcopy(infos[0])
     if len(infos) == 1:
         return previous_info
+    current_info = None
     for new_info in infos[1:]:
-        previous_params_info = deepcopy(previous_info.pop(_params, {}) or {})
-        new_params_info = deepcopy(new_info).pop(_params, {}) or {}
+        previous_params_info = deepcopy(previous_info.pop("params", {}) or {})
+        new_params_info = deepcopy(new_info).pop("params", {}) or {}
         # NS: params have been popped, since they have their own merge function
-        current_info = recursive_update(deepcopy(previous_info), new_info)
-        current_info[_params] = merge_params_info([previous_params_info, new_params_info])
+        current_info = recursive_update(previous_info, new_info)
+        current_info["params"] = merge_params_info(
+            [previous_params_info, new_params_info])
         previous_info = current_info
     return current_info
 
@@ -347,6 +447,8 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
     Set ``strict=False`` (default: ``True``) to ignore options that would not affect
     the statistics of a posterior sample, including order of params/priors/likelihoods.
     """
+    myprint: Callable
+    myprint_debug: Callable
     if print_not_log:
         myprint = print
         myprint_debug = lambda x: x
@@ -355,11 +457,10 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
         myprint_debug = log.debug
     myname = inspect.stack()[0][3]
     ignore = set() if strict else \
-        {_debug, _debug_file, _resume, _force, _packages_path, _test_run, _version}
-    ignore = ignore.union(set(ignore_blocks or []))
-    if set(info for info in info_old if info_old[info] is not None).difference(ignore) \
-            != set(info for info in info_new if info_new[info] is not None).difference(
-        ignore):
+        {"debug", "debug_file", "resume", "force", "packages_path", "test", "version"}
+    ignore = ignore.union(ignore_blocks or [])
+    if set(info for info in info_old if info_old[info] is not None) - ignore \
+            != set(info for info in info_new if info_new[info] is not None) - ignore:
         myprint(myname + ": different blocks or options: %r (old) vs %r (new)" % (
             set(info_old).difference(ignore), set(info_new).difference(ignore)))
         return False
@@ -383,46 +484,43 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
                     block_name, list(block1), list(block2)))
             return False
         # 2. Gather general options to be ignored
+        ignore_k = set()
         if not strict:
-            ignore_k = set()
-            if block_name in [kinds.theory, kinds.likelihood]:
-                ignore_k = ignore_k.union({_input_params, _output_params})
-            elif block_name == _params:
+            if block_name in ["theory", "likelihood"]:
+                ignore_k.update({"input_params", "output_params"})
+            elif block_name == "params":
                 for param in block1:
                     # Unify notation
                     block1[param] = expand_info_param(block1[param])
                     block2[param] = expand_info_param(block2[param])
-                    ignore_k = ignore_k.union({partag.latex, partag.renames, partag.ref,
-                                               partag.proposal, "min", "max"})
+                    ignore_k.update({"latex", "renames", "ref", "proposal", "min", "max"})
                     # Fixed params, it doesn't matter if they are saved as derived
-                    if partag.value in block1[param]:
-                        block1[param].pop(partag.derived, None)
-                    if partag.value in block2[param]:
-                        block2[param].pop(partag.derived, None)
+                    if "value" in block1[param]:
+                        block1[param].pop("derived", None)
+                    if "value" in block2[param]:
+                        block2[param].pop("derived", None)
                     # Renames: order does not matter
-                    block1[param][partag.renames] = set(
-                        block1[param].get(partag.renames, []))
-                    block2[param][partag.renames] = set(
-                        block2[param].get(partag.renames, []))
+                    block1[param]["renames"] = set(block1[param].get("renames", []))
+                    block2[param]["renames"] = set(block2[param].get("renames", []))
         # 3. Now check component/parameters one-by-one
         for k in block1:
             if not strict:
                 # Add component-specific options to be ignored
                 if block_name in kinds:
-                    ignore_k_this = ignore_k.copy()
-                    if _external not in block1[k]:
+                    ignore_k_this = ignore_k.union({"python_path"})
+                    if "external" not in block1[k]:
                         try:
-                            component_path = block1[k].pop(_component_path, None) \
+                            component_path = block1[k].pop("python_path", None) \
                                 if isinstance(block1[k], dict) else None
                             cls = get_resolved_class(
                                 k, kind=block_name, component_path=component_path,
-                                class_name=(block1[k] or {}).get(_class_name))
-                            ignore_k_this = ignore_k_this.union(
-                                set(getattr(cls, "_at_resume_prefer_new", {})))
+                                class_name=(block1[k] or {}).get("class"))
+                            ignore_k_this.update(set(
+                                getattr(cls, "_at_resume_prefer_new", {})))
                         except ImportError:
                             pass
                     # Pop ignored and kept options
-                    for j in list(ignore_k_this):
+                    for j in ignore_k_this:
                         block1[k].pop(j, None)
                         block2[k].pop(j, None)
             if block1[k] != block2[k]:
@@ -441,17 +539,17 @@ def get_preferred_old_values(info_old):
     """
     Returns selected values in `info_old`, which are preferred at resuming.
     """
-    keep_old = {}
+    keep_old: InfoDict = {}
     for block_name, block in info_old.items():
         if block_name not in kinds or not block:
             continue
         for k in block:
             try:
-                component_path = block[k].pop(_component_path, None) \
+                component_path = block[k].pop("python_path", None) \
                     if isinstance(block[k], dict) else None
                 cls = get_resolved_class(
                     k, kind=block_name, component_path=component_path,
-                    class_name=(block[k] or {}).get(_class_name))
+                    class_name=(block[k] or {}).get("class"))
                 prefer_old_k_this = getattr(cls, "_at_resume_prefer_old", {})
                 if prefer_old_k_this:
                     if block_name not in keep_old:
@@ -463,7 +561,7 @@ def get_preferred_old_values(info_old):
     return keep_old
 
 
-class Description(object):
+class Description:
     """Allows for calling get_desc as both class and instance method."""
 
     def __get__(self, instance, cls):
@@ -490,7 +588,7 @@ class HasDefaults:
     """
 
     @classmethod
-    def get_qualified_names(cls):
+    def get_qualified_names(cls) -> List[str]:
         if cls.__module__ == '__main__':
             return [cls.__name__]
         parts = cls.__module__.split('.')
@@ -503,14 +601,16 @@ class HasDefaults:
             else:
                 if getattr(imported, cls.__name__, None) is cls:
                     parts = parts[:-1]
-        if parts[-1] == cls.__name__:
+        # allow removing class name that is CamelCase equivalent of module name
+        if parts[-1] == cls.__name__ or (cls.__name__.lower() ==
+                                         parts[-1][:1] + parts[-1][1:].replace('_', '')):
             return ['.'.join(parts[i:]) for i in range(len(parts))]
         else:
             return ['.'.join(parts[i:]) + '.' + cls.__name__ for i in
                     range(len(parts) + 1)]
 
     @classmethod
-    def get_qualified_class_name(cls):
+    def get_qualified_class_name(cls) -> str:
         """
         Get the distinct shortest reference name for the class of the form
         module.ClassName or module.submodule.ClassName etc.
@@ -529,18 +629,26 @@ class HasDefaults:
             return qualified_names[0]
 
     @classmethod
-    def get_class_path(cls):
+    def get_class_path(cls) -> str:
         """
         Get the file path for the class.
         """
         return os.path.abspath(os.path.dirname(inspect.getfile(cls)))
 
     @classmethod
-    def get_root_file_name(cls):
-        return os.path.join(cls.get_class_path(), cls.__name__)
+    def get_file_base_name(cls) -> str:
+        """
+        Gets the string used as the name for .yaml, .bib files, typically the
+        class name or a un-CamelCased class name
+        """
+        return cls.__dict__.get('file_base_name') or cls.__name__
 
     @classmethod
-    def get_yaml_file(cls):
+    def get_root_file_name(cls) -> str:
+        return os.path.join(cls.get_class_path(), cls.get_file_base_name())
+
+    @classmethod
+    def get_yaml_file(cls) -> Optional[str]:
         """
         Gets the file name of the .yaml file for this component if it exists on file
         (otherwise None).
@@ -554,51 +662,41 @@ class HasDefaults:
 
     @classmethod
     def _get_desc(cls, info=None):
-        return cleandoc(cls.__doc__)
+        return cleandoc(cls.__doc__) if cls.__doc__ else ""
 
     @classmethod
-    def get_bibtex(cls):
+    def get_bibtex(cls) -> Optional[str]:
         """
         Get the content of .bibtex file for this component. If no specific bibtex
         from this class, it will return the result from an inherited class if that
         provides bibtex.
         """
-        filename = cls.__dict__.get('bibtex_file', None)
+        filename = cls.__dict__.get('bibtex_file')
         if filename:
-            bib = pkg_resources.resource_string(cls.__module__, filename)
+            bib = pkg_resources.resource_string(cls.__module__, filename).decode("utf-8")
         else:
             bib = cls.get_associated_file_content('.bibtex')
         if bib:
-            try:
-                return bib.decode("utf-8")
-            except:
-                return bib
+            return bib
         for base in cls.__bases__:
             if issubclass(base, HasDefaults) and base is not HasDefaults:
-                bib = base.get_bibtex()
-                if bib:
-                    try:
-                        return bib.decode("utf-8")
-                    except:
-                        return bib
+                return base.get_bibtex()
         return None
 
     @classmethod
-    def get_associated_file_content(cls, ext, file_root=None):
+    def get_associated_file_content(cls, ext, file_root=None) -> Optional[str]:
         # handle extracting package files when may be inside a zipped package so files
         # not accessible directly
         try:
-            string = pkg_resources.resource_string(cls.__module__,
-                                                   (file_root or cls.__name__) + ext)
-            try:
-                return string.decode("utf-8")
-            except:
-                return string
+            string = pkg_resources.resource_string(
+                cls.__module__, (file_root or cls.get_file_base_name()) + ext)
         except Exception:
             return None
+        else:
+            return string.decode("utf-8")
 
     @classmethod
-    def get_class_options(cls, input_options=empty_dict):
+    def get_class_options(cls, input_options=empty_dict) -> InfoDict:
         """
         Returns dictionary of names and values for class variables that can also be
         input and output in yaml files, by default it takes all the
@@ -677,7 +775,7 @@ class HasDefaults:
             return defaults
 
     @classmethod
-    def get_annotations(cls):
+    def get_annotations(cls) -> InfoDict:
         d = {}
         for base in cls.__bases__:
             if issubclass(base, HasDefaults) and base is not HasDefaults:

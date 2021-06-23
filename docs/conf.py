@@ -37,7 +37,8 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.inheritance_diagram',
-    'sphinx.ext.graphviz'
+    'sphinx.ext.graphviz',
+    'sphinxcontrib.programoutput'
 ]
 
 inheritance_graph_attrs = dict(rankdir="LR", size='""')

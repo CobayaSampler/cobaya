@@ -137,12 +137,11 @@ import sys
 import os
 import numpy as np
 from copy import deepcopy
-import logging
-from typing import NamedTuple, Sequence, Union, Optional
+from typing import NamedTuple, Sequence, Union, Optional, Callable, Any
 
 # Local
-from cobaya.theories._cosmo import BoltzmannBase
-from cobaya.log import LoggedError
+from cobaya.theories.cosmo import BoltzmannBase
+from cobaya.log import LoggedError, get_logger
 from cobaya.install import download_github_release, pip_install, NotInstalledError, \
     check_gcc_version
 from cobaya.tools import load_module, VersionCheckError
@@ -154,8 +153,8 @@ class Collector(NamedTuple):
     args: Sequence = []
     args_names: Sequence = []
     kwargs: dict = {}
-    arg_array: Union[int, Sequence] = None
-    post: Optional[callable] = None
+    arg_array: Union[int, Sequence, None] = None
+    post: Optional[Callable] = None
 
 
 # default non linear code -- same as CAMB
@@ -172,19 +171,20 @@ class classy(BoltzmannBase):
     _classy_min_gcc_version = "6.4"  # Lower ones are possible atm, but leak memory!
     _classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', _min_classy_version)
 
+    classy_module: Any
+
     def initialize(self):
         """Importing CLASS from the correct path, if given, and if not, globally."""
         # Allow global import if no direct path specification
         allow_global = not self.path
         if not self.path and self.packages_path:
             self.path = self.get_path(self.packages_path)
-        self.classy_module = self.is_installed(path=self.path, allow_global=allow_global)
+        self.classy_module = self.is_installed(path=self.path, allow_global=allow_global,
+                                               check=False)
         if not self.classy_module:
             raise NotInstalledError(
                 self.log, "Could not find CLASS. Check error message above.")
-        from classy import Class, CosmoSevereError, CosmoComputationError
-        global CosmoComputationError, CosmoSevereError
-        self.classy = Class()
+        self.classy = self.classy_module.Class()
         super().initialize()
         # Add general CLASS stuff
         self.extra_args["output"] = self.extra_args.get("output", "")
@@ -339,7 +339,7 @@ class classy(BoltzmannBase):
         try:
             self.classy.compute()
         # "Valid" failure of CLASS: parameters too extreme -> log and report
-        except CosmoComputationError as e:
+        except self.classy_module.CosmoComputationError as e:
             if self.stop_at_error:
                 self.log.error(
                     "Computation error (see traceback below)! "
@@ -353,7 +353,7 @@ class classy(BoltzmannBase):
                                "The output of the CLASS error was %s" % e)
             return False
         # CLASS not correctly initialized, or input parameters not correct
-        except CosmoSevereError:
+        except self.classy_module.CosmoSevereError:
             self.log.error("Serious error setting parameters or computing results. "
                            "The parameters passed were %r and %r. To see the original "
                            "CLASS' error traceback, make 'debug: True'.",
@@ -408,7 +408,7 @@ class classy(BoltzmannBase):
         # Put all parameters in CLASS nomenclature (self.derived_extra already is)
         requested = [self.translate_param(p) for p in (
             self.output_params if derived_requested else [])]
-        requested_and_extra = dict.fromkeys(set(requested).union(set(self.derived_extra)))
+        requested_and_extra = dict.fromkeys(set(requested).union(self.derived_extra))
         # Parameters with their own getters
         if "rs_drag" in requested_and_extra:
             requested_and_extra["rs_drag"] = self.classy.rs_drag()
@@ -438,7 +438,7 @@ class classy(BoltzmannBase):
             cls = deepcopy(self.current_state[which_key])
         except:
             raise LoggedError(self.log, "No %s Cl's were computed. Are you sure that you "
-                              "have requested them?", which_error)
+                                        "have requested them?", which_error)
         # unit conversion and ell_factor
         ells_factor = ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[
                       2:] if ell_factor else 1
@@ -483,6 +483,11 @@ class classy(BoltzmannBase):
                 names.append(name)
         return names
 
+    def get_can_support_params(self):
+        # non-exhaustive list of supported input parameters that will be assigne do classy
+        # if they are varied
+        return ['H0']
+
     def get_version(self):
         return getattr(self.classy_module, '__version__', None)
 
@@ -494,7 +499,7 @@ class classy(BoltzmannBase):
 
     @classmethod
     def get_import_path(cls, path):
-        log = logging.getLogger(cls.__name__)
+        log = get_logger(cls.__name__)
         classy_build_path = os.path.join(path, "python", "build")
         if not os.path.isdir(classy_build_path):
             log.error("Either CLASS is not in the given folder, "
@@ -519,16 +524,19 @@ class classy(BoltzmannBase):
 
     @classmethod
     def is_installed(cls, **kwargs):
-        log = logging.getLogger(cls.__name__)
         if not kwargs.get("code", True):
             return True
+        log = get_logger(cls.__name__)
+        check = kwargs.get("check", True)
+        func = log.info if check else log.error
         path = kwargs["path"]
         if path is not None and path.lower() == "global":
             path = None
         if path and not kwargs.get("allow_global"):
             log.info("Importing *local* CLASS from '%s'.", path)
+            assert path is not None
             if not os.path.exists(path):
-                log.error("The given folder does not exist: '%s'", path)
+                func("The given folder does not exist: '%s'", path)
                 return False
             classy_build_path = cls.get_import_path(path)
             if not classy_build_path:
@@ -544,9 +552,9 @@ class classy(BoltzmannBase):
                 'classy', path=classy_build_path, min_version=cls._classy_repo_version)
         except ImportError:
             if path is not None and path.lower() != "global":
-                log.error("Couldn't find the CLASS python interface at '%s'. "
-                          "Are you sure it has been installed there?", path)
-            else:
+                func("Couldn't find the CLASS python interface at '%s'. "
+                     "Are you sure it has been installed there?", path)
+            elif not check:
                 log.error("Could not import global CLASS installation. "
                           "Specify a Cobaya or CLASS installation path, "
                           "or install the CLASS Python interface globally with "
@@ -557,8 +565,8 @@ class classy(BoltzmannBase):
             return False
 
     @classmethod
-    def install(cls, path=None, force=False, code=True, no_progress_bars=False, **kwargs):
-        log = logging.getLogger(cls.__name__)
+    def install(cls, path=None, code=True, no_progress_bars=False, **_kwargs):
+        log = get_logger(cls.__name__)
         if not code:
             log.info("Code not requested. Nothing to do.")
             return True

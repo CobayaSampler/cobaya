@@ -169,25 +169,25 @@ the input block for CAMB (otherwise a system-wide CAMB may be used instead):
 # Global
 import sys
 import os
-import logging
 import numbers
 import ctypes
 from copy import deepcopy
-from typing import NamedTuple, Any
+from typing import NamedTuple, Any, Callable, Optional
 import numpy as np
+from itertools import chain
 # Local
-from cobaya.theories._cosmo import BoltzmannBase
-from cobaya.log import LoggedError
+from cobaya.theories.cosmo import BoltzmannBase
+from cobaya.log import LoggedError, get_logger
 from cobaya.install import download_github_release, check_gcc_version, NotInstalledError
 from cobaya.tools import getfullargspec, get_class_methods, get_properties, load_module, \
     VersionCheckError, str_to_list
 from cobaya.theory import HelperTheory
-from cobaya.conventions import _requires
+from cobaya.typing import InfoDict
 
 
 # Result collector
 class Collector(NamedTuple):
-    method: callable
+    method: Callable
     args: list = []
     kwargs: dict = {}
 
@@ -198,7 +198,7 @@ class CAMBOutputs(NamedTuple):
     derived: dict
 
 
-class camb(BoltzmannBase):
+class CAMB(BoltzmannBase):
     r"""
     CAMB cosmological Boltzmann code \cite{Lewis:1999bs,Howlett:2012mh}.
     """
@@ -208,6 +208,7 @@ class camb(BoltzmannBase):
     _camb_min_gcc_version = "6.4"
     _min_camb_version = '1.1.3'
 
+    file_base_name = 'camb'
     external_primordial_pk: bool
     camb: Any
 
@@ -217,7 +218,8 @@ class camb(BoltzmannBase):
         allow_global = not self.path
         if not self.path and self.packages_path:
             self.path = self.get_path(self.packages_path)
-        self.camb = self.is_installed(path=self.path, allow_global=allow_global)
+        self.camb = self.is_installed(path=self.path, allow_global=allow_global,
+                                      check=False)
         if not self.camb:
             raise NotInstalledError(
                 self.log, "Could not find CAMB. Check error message above.")
@@ -254,7 +256,7 @@ class camb(BoltzmannBase):
 
         self.nonlin_args, self.nonlin_params = self._extract_params(nonlin.set_params)
 
-        self.requires = str_to_list(getattr(self, _requires, []))
+        self.requires = str_to_list(getattr(self, "requires", []))
         self._transfer_requires = [p for p in self.requires if
                                    p not in self.get_can_support_params()]
         self.requires = [p for p in self.requires if p not in self._transfer_requires]
@@ -411,7 +413,7 @@ class camb(BoltzmannBase):
                 self.needs_perts = True
             elif k == "source_Cl":
                 if not getattr(self, "sources", None):
-                    self.sources = {}
+                    self.sources: InfoDict = {}
                 for source, window in v["sources"].items():
                     # If it was already there, BoltzmannBase.must_provide() has already
                     # checked that old info == new info
@@ -454,8 +456,9 @@ class camb(BoltzmannBase):
         # set-set base CAMB params if anything might have changed
         self._base_params = None
 
-        must_provide = {'CAMB_transfers': {'non_linear': self.non_linear_sources,
-                                           'needs_perts': self.needs_perts}}
+        must_provide: InfoDict = {
+            'CAMB_transfers': {'non_linear': self.non_linear_sources,
+                               'needs_perts': self.needs_perts}}
         if self.external_primordial_pk and self.needs_perts:
             must_provide['primordial_scalar_pk'] = {'lmax': self.extra_args.get("lmax"),
                                                     'kmax': self.extra_args.get('kmax')}
@@ -545,7 +548,8 @@ class camb(BoltzmannBase):
         state["derived_extra"] = {
             p: self._get_derived(p, intermediates) for p in self.derived_extra}
 
-    def _get_derived(self, p, intermediates):
+    @staticmethod
+    def _get_derived(p, intermediates):
         """
         General function to extract a single derived parameter.
 
@@ -606,10 +610,11 @@ class camb(BoltzmannBase):
         for sp, i in mapping.items():
             cls[sp] = cl_camb[:, i]
         if lensed:
-            cl_lens = self.current_state["Cl"].get("lens_potential")
+            cl_lens: Optional[np.ndarray] = self.current_state["Cl"].get("lens_potential")
             if cl_lens is not None:
                 cls["pp"] = cl_lens[:, 0].copy()
                 if not ell_factor:
+                    # noinspection PyUnboundLocalVariable
                     cls["pp"][1:] /= ells_factor ** 2 / (2 * np.pi)
                 if self._needs_lensing_cross:
                     for i, cross in enumerate(['pt', 'pe']):
@@ -635,7 +640,7 @@ class camb(BoltzmannBase):
             i_kwarg_z = np.searchsorted(computed_redshifts, np.atleast_1d(z))
         return np.array(self.current_state[quantity], copy=True)[i_kwarg_z]
 
-    def get_sigma8_z(self, z):        
+    def get_sigma8_z(self, z):
         return self._get_z_dependent("sigma8_z", z)
 
     def get_fsigma8(self, z):
@@ -649,7 +654,7 @@ class camb(BoltzmannBase):
             raise LoggedError(
                 self.log, "No source Cl's were computed. "
                           "Are you sure that you have requested some source?")
-        cls_dict = dict()
+        cls_dict: dict = dict()
         for term, cl in cls.items():
             term_tuple = tuple(
                 (lambda x: x if x == "P" else list(self.sources)[int(x) - 1])(
@@ -673,6 +678,7 @@ class camb(BoltzmannBase):
         params_derived = list(get_class_methods(self.camb.CAMBparams))
         params_derived.remove("custom_source_names")
         fields = []
+        # noinspection PyProtectedMember
         for f, tp in self.camb.CAMBparams._fields_:
             if tp is ctypes.c_double and 'max_eta_k' not in f \
                     and f not in ['Alens', 'num_nu_massless']:
@@ -684,8 +690,7 @@ class camb(BoltzmannBase):
             if mapped in names:
                 names.append(name)
         # remove any parameters explicitly tagged as input requirements
-        return set(names).difference(
-            set(self._transfer_requires).union(set(self.requires)))
+        return set(names).difference(chain(self._transfer_requires, self.requires))
 
     def get_version(self):
         return self.camb.__version__
@@ -778,7 +783,7 @@ class camb(BoltzmannBase):
         self._camb_transfers = CambTransfers(self, 'camb.transfers',
                                              dict(stop_at_error=self.stop_at_error),
                                              timing=self.timer)
-        setattr(self._camb_transfers, _requires, self._transfer_requires)
+        setattr(self._camb_transfers, "requires", self._transfer_requires)
         return {'camb.transfers': self._camb_transfers}
 
     def get_speed(self):
@@ -798,26 +803,27 @@ class camb(BoltzmannBase):
 
     @classmethod
     def is_installed(cls, **kwargs):
-        log = logging.getLogger(cls.__name__)
-        import platform
         if not kwargs.get("code", True):
             return True
+        log = get_logger(cls.__name__)
+        import platform
+        check = kwargs.get("check", True)
+        func = log.info if check else log.error
         path = kwargs["path"]
         if path is not None and path.lower() == "global":
             path = None
         if isinstance(path, str) and not kwargs.get("allow_global"):
             log.info("Importing *local* CAMB from " + path)
             if not os.path.exists(path):
-                log.error("The given folder does not exist: '%s'", path)
+                func("The given folder does not exist: '%s'", path)
                 return False
             if not os.path.exists(os.path.join(path, "setup.py")):
-                log.error("Either CAMB is not in the given folder, '%s', or you are using"
-                          " a very old version without the Python interface.", path)
+                func("Either CAMB is not in the given folder, '%s', or you are using"
+                     " a very old version without the Python interface.", path)
                 return False
             if not os.path.isfile(os.path.realpath(
-                    os.path.join(path,
-                                 "camb", "cambdll.dll" if (
-                                platform.system() == "Windows") else "camblib.so"))):
+                    os.path.join(path, "camb", "cambdll.dll" if (
+                            platform.system() == "Windows") else "camblib.so"))):
                 log.error("CAMB installation at '%s' appears not to be compiled.", path)
                 return False
         elif not path:
@@ -829,9 +835,9 @@ class camb(BoltzmannBase):
             return load_module("camb", path=path, min_version=cls._min_camb_version)
         except ImportError:
             if path is not None and path.lower() != "global":
-                log.error("Couldn't find the CAMB python interface at '%s'. "
-                          "Are you sure it has been installed there?", path)
-            else:
+                func("Couldn't find the CAMB python interface at '%s'. "
+                     "Are you sure it has been installed there?", path)
+            elif not check:
                 log.error("Could not import global CAMB installation. "
                           "Specify a Cobaya or CAMB installation path, "
                           "or install the 'camb' Python package globally.")
@@ -841,8 +847,8 @@ class camb(BoltzmannBase):
             return False
 
     @classmethod
-    def install(cls, path=None, code=True, no_progress_bars=False, **kwargs):
-        log = logging.getLogger(cls.__name__)
+    def install(cls, path=None, code=True, no_progress_bars=False, **_kwargs):
+        log = get_logger(cls.__name__)
         if not code:
             log.info("Code not requested. Nothing to do.")
             return True

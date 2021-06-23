@@ -8,20 +8,25 @@
 """
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
-from typing import Mapping, Iterable
+from typing import Mapping, Iterable, Callable
 
 # Local
 from cobaya.theory import Theory
 from cobaya.tools import deepcopy_where_possible
 from cobaya.log import LoggedError, abstract
-from cobaya.conventions import _c_km_s, empty_dict
+from cobaya.conventions import Const
+from cobaya.typing import empty_dict, InfoDict
 
-H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": _c_km_s}
+H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": Const.c_km_s}
 
 
 class BoltzmannBase(Theory):
-    _get_z_dependent: callable  # defined by inheriting classes
+    _is_abstract = True
+    _get_z_dependent: Callable  # defined by inheriting classes
     renames: Mapping[str, str] = empty_dict
+    extra_args: InfoDict
+    _must_provide: dict
+    path: str
 
     def initialize(self):
 
@@ -29,7 +34,7 @@ class BoltzmannBase(Theory):
         self.collectors = {}
         # Additional input parameters to pass to CAMB, and attributes to set_ manually
         self.extra_args = deepcopy_where_possible(self.extra_args) or {}
-        self._must_provide = None
+        self._must_provide = {}
 
     def initialize_with_params(self):
         self.check_no_repeated_input_extra()
@@ -60,7 +65,7 @@ class BoltzmannBase(Theory):
             vars_pairs = [vars_pairs]
         pairs = set()
         for pair in vars_pairs:
-            if len(pair) != 2 or not all(isinstance(x, str) for x in pair):
+            if len(list(pair)) != 2 or not all(isinstance(x, str) for x in pair):
                 raise LoggedError(self.log,
                                   "Cannot understand vars_pairs '%r' for %s",
                                   vars_pairs, name)
@@ -131,7 +136,7 @@ class BoltzmannBase(Theory):
 
         """
         super().must_provide(**requirements)
-        self._must_provide = self._must_provide or dict.fromkeys(self.output_params)
+        self._must_provide = self._must_provide or dict.fromkeys(self.output_params or [])
         # Accumulate the requirements across several calls in a safe way;
         # e.g. take maximum of all values of a requested precision parameter
         for k, v in requirements.items():
@@ -218,7 +223,7 @@ class BoltzmannBase(Theory):
 
         Should be called at initialisation, and at the end of every call to must_provide()
         """
-        common = set(self.input_params).intersection(set(self.extra_args))
+        common = set(self.input_params).intersection(self.extra_args)
         if common:
             raise LoggedError(
                 self.log, "The following parameters appear both as input parameters and "
@@ -396,38 +401,39 @@ class BoltzmannBase(Theory):
         sources ``([source1], [source2])``, and an additional key ``ell`` containing the
         multipoles.
         """
-    
+
     @abstract
     def get_sigma8_z(self, z):
         r"""
-        Present day linear theory root-mean-square amplitude of the matter 
+        Present day linear theory root-mean-square amplitude of the matter
         fluctuation spectrum averaged in spheres of radius 8 h^{−1} Mpc.
 
         The redshifts must be a subset of those requested when
         :func:`~BoltzmannBase.must_provide` was called.
         """
-        pass
 
     @abstract
     def get_fsigma8(self, z):
         r"""
         Structure growth rate :math:`f\sigma_8`, as defined in eq. 33 of
-        `Planck 2015 results. XIII. Cosmological parameters <https://arxiv.org/pdf/1502.01589.pdf>`_,
+        `Planck 2015 results. XIII.
+        Cosmological parameters <https://arxiv.org/pdf/1502.01589.pdf>`_,
         at the given redshift(s) ``z``.
 
         The redshifts must be a subset of those requested when
         :func:`~BoltzmannBase.must_provide` was called.
         """
 
-    def get_auto_covmat(self, params_info, likes_info):
+    def get_auto_covmat(self, params_info, likes_info, random_state=None):
         r"""
         Tries to get match to a database of existing covariance matrix files for the
         current model and data.
 
         ``params_info`` should contain preferably the slow parameters only.
         """
-        from cobaya.cosmo_input import _get_best_covmat
-        return _get_best_covmat(self.packages_path, params_info, likes_info)
+        from cobaya.cosmo_input import get_best_covmat_ext
+        return get_best_covmat_ext(self.packages_path, params_info, likes_info,
+                                   random_state)
 
 
 class PowerSpectrumInterpolator(RectBivariateSpline):

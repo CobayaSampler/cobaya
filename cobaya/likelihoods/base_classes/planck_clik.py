@@ -2,20 +2,19 @@ r"""
 .. module:: planck_clik
 
 :Synopsis: Definition of the clik-based likelihoods
-:Author: Jesus Torrado
-         (initially based on MontePython's version by Julien Lesgourgues and Benjamin Audren)
+:Author: Jesus Torrado (initially based on MontePython's version
+         by Julien Lesgourgues and Benjamin Audren)
 
 """
 # Global
 import os
 import sys
 import numpy as np
-import logging
+from typing import Any
 
 # Local
 from cobaya.likelihood import Likelihood
-from cobaya.log import LoggedError
-from cobaya.conventions import _packages_path, kinds
+from cobaya.log import LoggedError, get_logger
 from cobaya.input import get_default_info
 from cobaya.install import pip_install, download_file, NotInstalledError
 from cobaya.tools import are_different_params_lists, create_banner, load_module
@@ -35,12 +34,12 @@ class PlanckClik(Likelihood):
     type = "CMB"
 
     path: str
+    clik_file: str
 
     def initialize(self):
         if "2015" in self.get_name():
             for line in _deprecation_msg_2015.split("\n"):
                 self.log.warning(line)
-        code_path = common_path
         data_path = get_data_path(self.__class__.get_qualified_class_name())
         # Allow global import if no direct path specification
         allow_global = not self.path
@@ -52,8 +51,9 @@ class PlanckClik(Likelihood):
             raise LoggedError(
                 self.log, "No path given to the Planck likelihood. Set the "
                           "likelihood property 'path' or the common property "
-                          "'%s'.", _packages_path)
-        clik = is_installed_clik(path=self.path_clik, allow_global=allow_global)
+                          "'%s'.", "packages_path")
+        clik: Any = is_installed_clik(path=self.path_clik, allow_global=allow_global,
+                                      check=False)
         if not clik:
             raise NotInstalledError(
                 self.log, "Could not find the 'clik' Planck likelihood code. "
@@ -154,7 +154,8 @@ class PlanckClik(Likelihood):
         result = True
         if kwargs.get("code", True):
             result &= bool(is_installed_clik(os.path.realpath(
-                os.path.join(kwargs["path"], "code", code_path))))
+                os.path.join(kwargs["path"], "code", code_path)),
+                check=kwargs.get("check", True)))
         if kwargs.get("data", True):
             _, filename = get_product_id_and_clik_file(cls.get_qualified_class_name())
             result &= os.path.exists(os.path.realpath(
@@ -168,7 +169,7 @@ class PlanckClik(Likelihood):
     def install(cls, path=None, force=False, code=True, data=True,
                 no_progress_bars=False):
         name = cls.get_qualified_class_name()
-        log = logging.getLogger(name)
+        log = get_logger(name)
         path_names = {"code": common_path, "data": get_data_path(name)}
         import platform
         if platform.system() == "Windows":
@@ -222,13 +223,10 @@ class PlanckClik(Likelihood):
 common_path = "planck"
 
 # To see full clik build output even if installs OK (e.g. to check warnings)
-_clik_verbose = any(
-    [(s in os.getenv('TRAVIS_COMMIT_MESSAGE', '')) for s in ["clik", "planck"]])
+_clik_verbose = any((s in os.getenv('TRAVIS_COMMIT_MESSAGE', ''))
+                    for s in ["clik", "planck"])
 # Don't try again to install clik if it failed for a previous likelihood
-try:
-    _clik_install_failed
-except NameError:
-    _clik_install_failed = False
+_clik_install_failed = False
 
 
 def get_data_path(name):
@@ -253,8 +251,9 @@ def get_clik_source_folder(starting_path):
     return source_dir
 
 
-def is_installed_clik(path, allow_global=False):
-    log = logging.getLogger("clik")
+def is_installed_clik(path, allow_global=False, check=True):
+    log = get_logger("clik")
+    func = log.info if check else log.error
     if path is not None and path.lower() == "global":
         path = None
     clik_path = None
@@ -263,7 +262,7 @@ def is_installed_clik(path, allow_global=False):
             clik_path = os.path.join(
                 get_clik_source_folder(path), 'lib/python/site-packages')
         except FileNotFoundError:
-            log.error("The given folder does not exist: '%s'", clik_path or path)
+            func("The given folder does not exist: '%s'", clik_path or path)
             return False
     if path and not allow_global:
         log.info("Importing *local* clik from %s ", path)
@@ -275,9 +274,9 @@ def is_installed_clik(path, allow_global=False):
         return load_module("clik", path=clik_path)
     except ImportError:
         if path is not None and path.lower() != "global":
-            log.error("Couldn't find the clik python interface at '%s'. "
-                      "Are you sure it has been installed and compiled there?", path)
-        else:
+            func("Couldn't find the clik python interface at '%s'. "
+                 "Are you sure it has been installed and compiled there?", path)
+        elif not check:
             log.error("Could not import global clik installation. "
                       "Specify a Cobaya or clik installation path, "
                       "or install the clik Python interface globally.")
@@ -292,6 +291,7 @@ def execute(command):
     if _clik_verbose:
         process = Popen(command, stdout=PIPE, stderr=STDOUT)
         out = []
+        assert process.stdout
         while True:
             nextline = process.stdout.readline()
             if nextline == b"" and process.poll() is not None:
@@ -303,42 +303,29 @@ def execute(command):
         return b"finished successfully" in out[-1]
     else:
         process = Popen(command, stdout=PIPE, stderr=PIPE)
-        out, err = process.communicate()
-        OK = b"finished successfully" in out.split(b"\n")[-2]
+        stdout, stderr = process.communicate()
+        OK = b"finished successfully" in stdout.split(b"\n")[-2]
         if not OK:
-            print(out.decode('utf-8'))
-            print(err.decode('utf-8'))
+            print(stdout.decode('utf-8'))
+            print(stderr.decode('utf-8'))
         return OK
 
 
 def install_clik(path, no_progress_bars=False):
-    log = logging.getLogger("clik")
+    log = get_logger("clik")
     log.info("Installing pre-requisites...")
     for req in ("cython", "astropy"):
         exit_status = pip_install(req)
         if exit_status:
             raise LoggedError(log, "Failed installing '%s'.", req)
     log.info("Downloading...")
-    click_url = pla_url_prefix + '151912'
+    click_url = pla_url_prefix + '152000'
     if not download_file(click_url, path, decompress=True,
                          no_progress_bars=no_progress_bars, logger=log):
         log.error("Not possible to download clik.")
         return False
     source_dir = get_clik_source_folder(path)
     log.info('Installing from directory %s' % source_dir)
-    # The following code patches a problem with the download source of cfitsio.
-    # Left here in case the FTP server breaks again.
-    if True:  # should be fixed: maybe a ping to the FTP server???
-        log.info("Patching origin of cfitsio")
-        cfitsio_filename = os.path.join(source_dir, "waf_tools", "cfitsio.py")
-        with open(cfitsio_filename, "r") as cfitsio_file:
-            lines = cfitsio_file.readlines()
-            i_offending = next(i for i, l in enumerate(lines) if ".tar.gz" in l)
-            lines[i_offending] = lines[i_offending].replace(
-                "ftp://heasarc.gsfc.nasa.gov/software/fitsio/c/cfitsio3280.tar.gz",
-                "https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio3280.tar.gz")
-        with open(cfitsio_filename, "w") as cfitsio_file:
-            cfitsio_file.write("".join(lines))
     cwd = os.getcwd()
     try:
         os.chdir(source_dir)
@@ -360,7 +347,7 @@ def install_clik(path, no_progress_bars=False):
 
 def get_product_id_and_clik_file(name):
     """Gets the PLA product info from the defaults file."""
-    defaults = get_default_info(name, kinds.likelihood)
+    defaults = get_default_info(name, "likelihood")
     return defaults.get("product_id"), defaults.get("clik_file")
 
 

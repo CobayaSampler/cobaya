@@ -1,1 +1,1 @@
-from .camb import camb
+from .camb import CAMB
