@@ -272,9 +272,11 @@ class BAO(InstallableLikelihood):
                 Ny = y.shape[0]
                 Nz = z.shape[0]
 
-                chi2 = np.reshape(np.log(self.grid_data[:,3]), [Nx, Ny,Nz])
+                chi2 = np.reshape(np.log(self.grid_data[:,3]+1e-300), [Nx, Ny,Nz])
 
-                self.interpolator = RegularGridInterpolator((x,y,z), chi2)
+                self.interpolator = RegularGridInterpolator((x,y,z), chi2, 
+                                    bounds_error = False, 
+                                    fill_value = np.log(1e-300))
 
             else: 
                 raise LoggedError(
