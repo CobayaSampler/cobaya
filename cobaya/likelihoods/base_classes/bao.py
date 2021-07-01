@@ -1,4 +1,4 @@
-r"""
+"""
 .. module:: bao
 
 :Synopsis: BAO, f_sigma8 and other measurements at single redshifts, with correlations
@@ -126,7 +126,8 @@ After this, mention the path to this likelihood when you include it in an input 
 # Global
 import os
 import numpy as np
-from scipy.interpolate import UnivariateSpline, RectBivariateSpline, RegularGridInterpolator
+from scipy.interpolate import UnivariateSpline, RectBivariateSpline, \
+    RegularGridInterpolator
 import pandas as pd
 from typing import Optional, Sequence
 
@@ -195,7 +196,7 @@ class BAO(InstallableLikelihood):
                 self.data.columns = ["z", "value", "observable"]
             prefix = "bao_"
             self.data["observable"] = [(c[len(prefix):] if c.startswith(prefix) else c)
-                                    for c in self.data["observable"]]
+                                       for c in self.data["observable"]]
 
         # Probability distribution
         if self.prob_dist:
@@ -222,12 +223,13 @@ class BAO(InstallableLikelihood):
             try:
                 self.grid_data = np.loadtxt(
                     os.path.join(data_file_path, self.grid_file)
-                    )
+                )
             except IOError:
                 raise LoggedError(
                     self.log, "Couldn't find grid file '%s' in folder '%s'. " % (
                         self.grid_file, data_file_path) + "Check your paths.")
-            if (not getattr(self, "observable_1", None)) or (not getattr(self, "observable_2", None)):
+            if (not getattr(self, "observable_1", None)) or \
+                    (not getattr(self, "observable_2", None)):
                 raise LoggedError(
                     self.log, "If using grid data, 'observable_1' and 'observable_2'"
                               "need to be specified.")           
@@ -260,9 +262,9 @@ class BAO(InstallableLikelihood):
                 if (not getattr(self, "observable_3", None)):
                     raise LoggedError(
                         self.log, "If using 3D grid data, 'observable_3'"
-                                "needs to be specified.")           
+                                  "needs to be specified.")
                 self.data["observable"] = [self.observable_1, self.observable_2, 
-                                        self.observable_3]
+                                           self.observable_3]
 
                 x = np.unique(self.grid_data[:,0])
                 y = np.unique(self.grid_data[:,1])
@@ -275,13 +277,13 @@ class BAO(InstallableLikelihood):
                 chi2 = np.reshape(np.log(self.grid_data[:,3]+1e-300), [Nx, Ny,Nz])
 
                 self.interpolator = RegularGridInterpolator((x,y,z), chi2, 
-                                    bounds_error = False, 
-                                    fill_value = np.log(1e-300))
+                                                            bounds_error = False,
+                                                            fill_value = np.log(1e-300))
 
             else: 
                 raise LoggedError(
                     self.log, "Grid data has the wrong dimensions")  
-        # Covariance --> read and re-sort as self.data
+                # Covariance --> read and re-sort as self.data
         else:
             self.use_grid_2d = False
             self.use_grid_3d = False
@@ -309,7 +311,8 @@ class BAO(InstallableLikelihood):
     def get_requirements(self):
         # Requisites
         if self.use_grid_2d:
-            zs = {self.observable_1: np.array([self.redshift]), self.observable_2: np.array([self.redshift])}
+            zs = {self.observable_1: np.array([self.redshift]),
+                  self.observable_2: np.array([self.redshift])}
         elif self.use_grid_3d:
             zs = {self.observable_1: np.array([self.redshift]), 
                   self.observable_2: np.array([self.redshift]),
@@ -317,7 +320,7 @@ class BAO(InstallableLikelihood):
                   }
         else:
             zs = {obs: self.data.loc[self.data["observable"] == obs, "z"].values
-                for obs in self.data["observable"].unique()}
+                  for obs in self.data["observable"].unique()}
         print('zs', zs)
         theory_reqs = {
             "DV_over_rs": {
@@ -342,7 +345,7 @@ class BAO(InstallableLikelihood):
                 "rdrag": None},
             "f_sigma8": {
                 "fsigma8": {"z": zs.get("f_sigma8", None)},
-                },
+            },
             "F_AP": {
                 "angular_diameter_distance": {"z": zs.get("F_AP", None)},
                 "Hubble": {"z": zs.get("F_AP", None)}}}
@@ -374,7 +377,7 @@ class BAO(InstallableLikelihood):
             return np.cbrt(
                 ((1 + z) * self.provider.get_angular_diameter_distance(z)) ** 2 *
                 Const.c_km_s * z / self.provider.get_Hubble(z, units="km/s/Mpc")) ** (
-                       -1) * self.rs()
+                -1) * self.rs()
         # Comoving angular diameter distance, over sound horizon radius
         elif observable == "DM_over_rs":
             return (1 + z) * self.provider.get_angular_diameter_distance(z) / self.rs()
@@ -412,10 +415,11 @@ class BAO(InstallableLikelihood):
             return chi2 / 2
         else:
             theory = np.array([self.theory_fun(z, obs) for z, obs
-                            in zip(self.data["z"], self.data["observable"])]).T[0]
+                               in zip(self.data["z"], self.data["observable"])]).T[0]
             if self.is_debug():
                 for i, (z, obs, theo) in enumerate(
                         zip(self.data["z"], self.data["observable"], theory)):
                     self.log.debug("%s at z=%g : %g (theo) ; %g (data)",
-                                obs, z, theo, self.data.iloc[i, 1])
+                                   obs, z, theo, self.data.iloc[i, 1])
             return self.logpdf(theory)
+å
