@@ -532,7 +532,7 @@ like_H0: InfoDict = \
      "Riess2020Mb": {
          "desc": "Local magnitude measurement as from Riess et al. 2020",
          "theory": theory,
-         "likelihood": {"H0.riess2020Mb": None, "sn.pantheoon": {"use_abs_mag": True}}},
+         "likelihood": {"H0.riess2020Mb": None, "sn.pantheon": {"use_abs_mag": True}}},
      }
 
 # SAMPLERS ###############################################################################
