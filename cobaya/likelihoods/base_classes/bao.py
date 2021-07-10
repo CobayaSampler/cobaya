@@ -236,7 +236,7 @@ class BAO(InstallableLikelihood):
                     self.log, "If using grid data, 'redshift'"
                               "needs to be specified.")
 
-            self.has_type = True # Not sure what this is
+            self.has_type = True  # Not sure what this is
             self.data = pd.DataFrame()
 
             if self.grid_data.shape[1] == 3:
@@ -252,7 +252,7 @@ class BAO(InstallableLikelihood):
 
                 chi2 = np.reshape(np.log(self.grid_data[:, 2]), [Nx, Ny])
 
-                #Make the interpolator (x refers to at, y refers to ap).
+                # Make the interpolator (x refers to at, y refers to ap).
                 self.interpolator = RectBivariateSpline(x, y, chi2, kx=3, ky=3)
             elif self.grid_data.shape[1] == 4:
                 self.use_grid_2d = False
@@ -375,7 +375,7 @@ class BAO(InstallableLikelihood):
             return np.cbrt(
                 ((1 + z) * self.provider.get_angular_diameter_distance(z)) ** 2 *
                 Const.c_km_s * z / self.provider.get_Hubble(z, units="km/s/Mpc")) ** (
-                -1) * self.rs()
+                       -1) * self.rs()
         # Comoving angular diameter distance, over sound horizon radius
         elif observable == "DM_over_rs":
             return (1 + z) * self.provider.get_angular_diameter_distance(z) / self.rs()
