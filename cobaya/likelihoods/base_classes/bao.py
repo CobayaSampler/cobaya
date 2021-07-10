@@ -120,7 +120,6 @@ After this, mention the path to this likelihood when you include it in an input 
      bao.sdss_dr12_consensus_[bao|full_shape|final|...]:
        path: /path/to/likelihoods/bao_data
 """
-
 # Global
 import os
 import numpy as np
