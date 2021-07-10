@@ -2,7 +2,7 @@
 .. module:: bao
 
 :Synopsis: BAO, f_sigma8 and other measurements at single redshifts, with correlations
-:Author: Antony Lewis, Pablo Lemos (adapted to Cobaya by Jesus Torrado, with little 
+:Author: Antony Lewis, Pablo Lemos (adapted to Cobaya by Jesus Torrado, with little
         modification)
 
 This code provides a template for BAO, :math:`f\sigma_8`, :math:`H`
@@ -119,8 +119,6 @@ After this, mention the path to this likelihood when you include it in an input 
    likelihood:
      bao.sdss_dr12_consensus_[bao|full_shape|final|...]:
        path: /path/to/likelihoods/bao_data
-
-
 """
 
 # Global
@@ -184,7 +182,7 @@ class BAO(InstallableLikelihood):
         else:
             self.data = pd.DataFrame([self.data] if not hasattr(self.data[0], "__len__")
                                      else self.data)
- 
+
         if not getattr(self, "grid_file", None):
             # Columns: z value [err] [type]
             self.has_type = self.data.iloc[:, -1].dtype == np.dtype("O")
@@ -232,7 +230,7 @@ class BAO(InstallableLikelihood):
                     (not getattr(self, "observable_2", None)):
                 raise LoggedError(
                     self.log, "If using grid data, 'observable_1' and 'observable_2'"
-                              "need to be specified.")           
+                              "need to be specified.")
             if (not getattr(self, "redshift", None)):
                 raise LoggedError(
                     self.log, "If using grid data, 'redshift'"
@@ -246,13 +244,13 @@ class BAO(InstallableLikelihood):
                 self.use_grid_3d = False
                 self.data["observable"] = [self.observable_1, self.observable_2]
 
-                x = np.unique(self.grid_data[:,0])
-                y = np.unique(self.grid_data[:,1])
+                x = np.unique(self.grid_data[:, 0])
+                y = np.unique(self.grid_data[:, 1])
 
                 Nx = x.shape[0]
                 Ny = y.shape[0]
 
-                chi2 = np.reshape(np.log(self.grid_data[:,2]), [Nx, Ny])
+                chi2 = np.reshape(np.log(self.grid_data[:, 2]), [Nx, Ny])
 
                 #Make the interpolator (x refers to at, y refers to ap).
                 self.interpolator = RectBivariateSpline(x, y, chi2, kx=3, ky=3)
@@ -263,26 +261,26 @@ class BAO(InstallableLikelihood):
                     raise LoggedError(
                         self.log, "If using 3D grid data, 'observable_3'"
                                   "needs to be specified.")
-                self.data["observable"] = [self.observable_1, self.observable_2, 
+                self.data["observable"] = [self.observable_1, self.observable_2,
                                            self.observable_3]
 
-                x = np.unique(self.grid_data[:,0])
-                y = np.unique(self.grid_data[:,1])
-                z = np.unique(self.grid_data[:,2])
+                x = np.unique(self.grid_data[:, 0])
+                y = np.unique(self.grid_data[:, 1])
+                z = np.unique(self.grid_data[:, 2])
 
                 Nx = x.shape[0]
                 Ny = y.shape[0]
                 Nz = z.shape[0]
 
-                chi2 = np.reshape(np.log(self.grid_data[:,3]+1e-300), [Nx, Ny,Nz])
+                chi2 = np.reshape(np.log(self.grid_data[:, 3] + 1e-300), [Nx, Ny, Nz])
 
-                self.interpolator = RegularGridInterpolator((x,y,z), chi2, 
-                                                            bounds_error = False,
-                                                            fill_value = np.log(1e-300))
+                self.interpolator = RegularGridInterpolator((x, y, z), chi2,
+                                                            bounds_error=False,
+                                                            fill_value=np.log(1e-300))
 
-            else: 
+            else:
                 raise LoggedError(
-                    self.log, "Grid data has the wrong dimensions")  
+                    self.log, "Grid data has the wrong dimensions")
                 # Covariance --> read and re-sort as self.data
         else:
             self.use_grid_2d = False
@@ -314,7 +312,7 @@ class BAO(InstallableLikelihood):
             zs = {self.observable_1: np.array([self.redshift]),
                   self.observable_2: np.array([self.redshift])}
         elif self.use_grid_3d:
-            zs = {self.observable_1: np.array([self.redshift]), 
+            zs = {self.observable_1: np.array([self.redshift]),
                   self.observable_2: np.array([self.redshift]),
                   self.observable_3: np.array([self.redshift])
                   }
@@ -411,7 +409,7 @@ class BAO(InstallableLikelihood):
             x = self.theory_fun(self.redshift, self.observable_1)
             y = self.theory_fun(self.redshift, self.observable_2)
             z = self.theory_fun(self.redshift, self.observable_3)
-            chi2 = self.interpolator(np.array([x, y, z])[:,0])
+            chi2 = self.interpolator(np.array([x, y, z])[:, 0])
             return chi2 / 2
         else:
             theory = np.array([self.theory_fun(z, obs) for z, obs
@@ -422,4 +420,3 @@ class BAO(InstallableLikelihood):
                     self.log.debug("%s at z=%g : %g (theo) ; %g (data)",
                                    obs, z, theo, self.data.iloc[i, 1])
             return self.logpdf(theory)
-å
