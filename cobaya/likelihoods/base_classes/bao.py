@@ -183,6 +183,8 @@ class BAO(InstallableLikelihood):
                                      else self.data)
 
         if not getattr(self, "grid_file", None):
+            self.use_grid_2d = False
+            self.use_grid_3d = False
             # Columns: z value [err] [type]
             self.has_type = self.data.iloc[:, -1].dtype == np.dtype("O")
             assert self.has_type  # mandatory for now!
