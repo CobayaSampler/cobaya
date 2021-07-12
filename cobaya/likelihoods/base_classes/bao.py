@@ -1,4 +1,4 @@
-"""
+r"""
 .. module:: bao
 
 :Synopsis: BAO, f_sigma8 and other measurements at single redshifts, with correlations
@@ -320,7 +320,6 @@ class BAO(InstallableLikelihood):
         else:
             zs = {obs: self.data.loc[self.data["observable"] == obs, "z"].values
                   for obs in self.data["observable"].unique()}
-        print('zs', zs)
         theory_reqs = {
             "DV_over_rs": {
                 "angular_diameter_distance": {"z": zs.get("DV_over_rs", None)},
@@ -356,7 +355,6 @@ class BAO(InstallableLikelihood):
                           " implemented yet. Did you mean any of %s? "
                           "If you didn't, please, open an issue in github.",
                 obs_used_not_implemented, list(theory_reqs))
-        print('theory_reqs', theory_reqs)
         requisites = {}
         if self.has_type:
             for obs in self.data["observable"].unique():
