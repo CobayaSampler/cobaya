@@ -479,10 +479,16 @@ for name, m in like_cmb.items():
 
 like_bao = {none: {},
             'BAO_planck_2018': {
-                'desc': 'Baryon acoustic oscillation data from DR12, MGS and 6DF',
+                'desc': 'Baryon acoustic oscillation data from BOSS DR12, eBOSS DR16, '
+                        'MGS and 6DF',
                 'theory': theory,
                 'likelihood': {'bao.sixdf_2011_bao': None, 'bao.sdss_dr7_mgs': None,
-                               'bao.sdss_dr12_consensus_bao': None}}}
+                               'bao.sdss_dr16_baoplus_lrg': None,
+                               'bao.sdss_dr16_baoplus_elg': None,
+                               'bao.sdss_dr16_baoplus_qso': None,
+                               'bao.sdss_dr16_baoplus_lyauto': None,
+                               'bao.sdss_dr16_baoplus_lyxqso': None,
+                               }}}
 
 like_des: InfoDict = \
     {none: {},
