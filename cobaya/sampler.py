@@ -517,6 +517,8 @@ class CovmatSampler(Sampler):
                     self.log, "The covariance matrix %s is not a  "
                               "symmetric square matrix.", str_msg)
             if not np.all(np.linalg.eigvals(loaded_covmat) > 0):
+                self.log.debug(loaded_covmat)
+                self.log.debug(np.linalg.eigvals(loaded_coamt))
                 str_msg = "passed"
                 if isinstance(self.covmat, str):
                     str_msg = "loaded from %r" % self.covmat
