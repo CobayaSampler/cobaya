@@ -25,5 +25,9 @@ params:
 
 sampler:
   polychord:
+    use_supernest: True
+    mean: {'a': 0.2, 'b': 0}
+    covmat_params: ['a', 'b']
+    covmat: [[0.1, 0.05], [0.05,0.2]]
 
 output: chains/gaussian

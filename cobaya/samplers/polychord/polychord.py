@@ -23,9 +23,10 @@ from cobaya.tools import read_dnumber, get_external_function,  \
     find_with_regexp, NumberWithUnits, load_module, VersionCheckError
 from cobaya.sampler import Sampler, CovmatSampler
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
+from cobaya import mpi
 from cobaya.collection import SampleCollection
 from cobaya.log import LoggedError, get_logger
-from cobaya.install import download_github_release, NotInstalledError
+from cobaya.install import download_github_release, NotInstalledError, pip_install
 from cobaya.yaml import yaml_dump_file
 from cobaya.conventions import derived_par_name_separator, packages_path_arg, Extension
 
@@ -59,6 +60,16 @@ class polychord(CovmatSampler):
     oversample_power: float
     nlive: NumberWithUnits
     path: str
+
+    @mpi.from_root
+    def _load_mean(self):
+        ref_point = dict(zip(self.model.parameterization.sampled_params(), self.model.prior.reference()))
+        try:
+            return np.array(
+                [(self.mean or {}).get(p, ref_point[p])
+                 for p in self.model.parameterization.sampled_params()])
+        except:
+            raise LoggedError(self.log, "`mean` must be a dict 'param: value'")
 
     def initialize(self):
         """Import the PolyChord sampler and prepare its arguments."""
@@ -207,11 +218,6 @@ class polychord(CovmatSampler):
                    if getattr(self, p) is not None}
             )
 
-
-
-        self.pc_settings = settings.PolyChordSettings(
-            self.nDims, self.nDerived, seed=(self.seed if self.seed is not None else -1),
-            **{p: getattr(self, p) for p in pc_args if getattr(self, p) is not None})
 
         # prior conversion from the hypercube
         self.bounds = self.model.prior.bounds(
