@@ -191,6 +191,7 @@ class polychord(CovmatSampler):
             # For the choice probability, and choice indicator. 
             # self.grade_dims.extend([1,1])
             self.grade_dims[-1]+=2
+            self.log.debug('Grade dims are' + str(self.grade_dims))
             self.pc_settings = settings.PolyChordSettings(
                 self.nDims + 2,  # FIXME: only true for one proposal.
                 self.nDerived,
@@ -208,7 +209,7 @@ class polychord(CovmatSampler):
                 DataFrame(self._covmat,
                           columns=self.model.parameterization.sampled_params(),
                           index=self.model.parameterization.sampled_params())\
-                .to_string(line_width=_line_width))
+                .to_string())
         else:
             self.pc_settings = settings.PolyChordSettings(
                 self.nDims,
@@ -610,6 +611,10 @@ class polychord(CovmatSampler):
             no_progress_bars=no_progress_bars,
             logger=log
         )
+        if self.use_supernest:
+            log.info('Fetching supernest')
+            if not pip_install('supernest'):
+                log.error('Could not install supernest.')
         if not success:
             log.error("Could not download PolyChord.")
             return False
