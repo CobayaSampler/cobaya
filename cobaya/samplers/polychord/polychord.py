@@ -347,6 +347,8 @@ class polychord(CovmatSampler):
                 f_paramnames.write("%s*\t%s\n" % (
                     "loglike" + derived_par_name_separator + p,
                     r"\log\mathcal{L}_\mathrm{" + p.replace("_", r"\ ") + r"}"))
+            if self.use_supernest:
+                f_paramnames.write("%s\n%s" % ("switch_probability", "switch"))
 
     def save_sample(self, fname, name):
         sample = np.atleast_2d(np.loadtxt(fname))
@@ -611,10 +613,6 @@ class polychord(CovmatSampler):
             no_progress_bars=no_progress_bars,
             logger=log
         )
-        if self.use_supernest:
-            log.info('Fetching supernest')
-            if not pip_install('supernest'):
-                log.error('Could not install supernest.')
         if not success:
             log.error("Could not download PolyChord.")
             return False
