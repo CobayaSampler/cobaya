@@ -7,7 +7,7 @@ This document gathers some notes about the development flow, release checklist, 
 
   This document may not always be up to date
 
-git`` development model
+``git`` development model
 -------------------------
 
 * Non-breaking travis-passing latest changes and fixes are in master

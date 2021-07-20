@@ -407,8 +407,8 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
 
         def set_difflogmax():
             nonlocal difflogmax
-            difflog = (collection_in[OutPar.minuslogpost].to_numpy()[:len(collection_out)]
-                       - collection_out[OutPar.minuslogpost].to_numpy())
+            difflog = (collection_in[OutPar.minuslogpost].to_numpy(dtype=np.float64)[:len(collection_out)]
+                       - collection_out[OutPar.minuslogpost].to_numpy(dtype=np.float64))
             difflogmax = np.max(difflog)
             if abs(difflogmax) < 1:
                 difflogmax = 0  # keep simple when e.g. very similar
