@@ -22,6 +22,10 @@ sampled = {"mean": mean, "cov": cov}
 target = {"mean": mean + np.array([sigma / 2, 0]), "cov": cov}
 
 
+def allclose(a, b):
+    return np.allclose(a.to_numpy(dtype=np.float64), b.to_numpy(dtype=np.float64))
+
+
 def sampled_pdf(a, b):
     return multivariate_normal.logpdf([a, b], mean=sampled["mean"], cov=sampled["cov"])
 
@@ -148,11 +152,11 @@ def test_post_likelihood():
             new_mean, new_cov = mpi.share()
         assert np.allclose(new_mean, target_mean)
         assert np.allclose(new_cov, target_cov)
-        assert np.allclose(products_post["sample"]["chi2__A"],
-                           products_post["sample"]["chi2__target"])
-        assert np.allclose(products_post["sample"]["chi2__BB"],
-                           products_post["sample"]["chi2__dummy"] +
-                           products_post["sample"]["chi2__dummy_add"])
+        assert allclose(products_post["sample"]["chi2__A"],
+                        products_post["sample"]["chi2__target"])
+        assert allclose(products_post["sample"]["chi2__BB"],
+                        products_post["sample"]["chi2__dummy"] +
+                        products_post["sample"]["chi2__dummy_add"])
     finally:
         OutputOptions.output_inteveral_s = orig_interval
 
@@ -183,10 +187,9 @@ def test_post_params():
     info_post.update(updated_info_gaussian)
     products = post(info_post, products_gaussian["sample"]).products
     # Compare parameters
-    assert np.allclose(
-        products["sample"]["a"] - products["sample"]["b"],
-        products["sample"]["a_minus_b"])
-    assert np.allclose(
-        products["sample"]["cprime"], info_post["post"]["add"]["params"]["c"])
-    assert np.allclose(
-        products["sample"]["my_chi2__target"], products["sample"]["chi2__target"])
+    assert allclose(products["sample"]["a"] - products["sample"]["b"],
+                    products["sample"]["a_minus_b"])
+    assert np.allclose(products["sample"]["cprime"].to_numpy(dtype=np.float64),
+                       info_post["post"]["add"]["params"]["c"])
+    assert allclose(products["sample"]["my_chi2__target"],
+                    products["sample"]["chi2__target"])

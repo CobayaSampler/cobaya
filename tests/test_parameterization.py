@@ -102,7 +102,8 @@ def test_parameterization():
         j = get_external_function(info["params"]["j"])(b)
         k = get_external_function(info["params"]["k"]["derived"])(f)
         assert np.allclose(
-            point[["b", "c", "e", "f", "g", "h", "j", "k"]], [b, c, e, f, g, h, j, k])
+            point[["b", "c", "e", "f", "g", "h", "j", "k"]].to_numpy(np.float64),
+            [b, c, e, f, g, h, j, k])
         # Test for GetDist too (except fixed ones, ignored by GetDist)
         bcefffg_getdist = [gdsample.samples[i][gdsample.paramNames.list().index(p)]
                            for p in ["b", "c", "e", "f", "g", "j", "k"]]
@@ -206,7 +207,8 @@ def test_parameterization_old_derived_specification():
         j = get_external_function(info["params"]["j"])(b)
         k = get_external_function(info["params"]["k"]["derived"])(f)
         assert np.allclose(
-            point[["b", "c", "e", "f", "g", "h", "j", "k"]], [b, c, e, f, g, h, j, k])
+            point[["b", "c", "e", "f", "g", "h", "j", "k"]].to_numpy(dtype=np.float64),
+            [b, c, e, f, g, h, j, k])
         # Test for GetDist too (except fixed ones, ignored by GetDist)
         bcefffg_getdist = [gdsample.samples[i][gdsample.paramNames.list().index(p)]
                            for p in ["b", "c", "e", "f", "g", "j", "k"]]

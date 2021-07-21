@@ -71,6 +71,8 @@ jobs:
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="conda-forge"
       python: "3.9"
+  allow_failures:
+    - name: "Latest: gcc-11, Python 3.9 Anaconda (conda-forge)"
 
 before_install:
   # Configure right compiler versions

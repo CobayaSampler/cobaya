@@ -21,7 +21,7 @@ from cobaya.collection import SampleCollection, OneSamplePoint
 from cobaya.conventions import OutPar, Extension, line_width, get_version
 from cobaya.typing import empty_dict
 from cobaya.samplers.mcmc.proposal import BlockedProposer
-from cobaya.log import LoggedError
+from cobaya.log import LoggedError, always_stop_exceptions
 from cobaya.tools import get_external_function, NumberWithUnits, load_DataFrame
 from cobaya.yaml import yaml_dump_file
 from cobaya.model import LogPosterior
@@ -139,15 +139,15 @@ class MCMC(CovmatSampler):
         if self.output.is_resuming() and len(self.collection):
             last = len(self.collection) - 1
             initial_point = (self.collection[self.collection.sampled_params]
-                .iloc[last]).to_numpy(copy=True)
+                .iloc[last]).to_numpy(dtype=np.float64, copy=True)
             results = LogPosterior(
                 logpost=-self.collection[OutPar.minuslogpost].iloc[last],
                 logpriors=-(self.collection[self.collection.minuslogprior_names]
-                            .iloc[last].to_numpy(copy=True)),
+                            .iloc[last].to_numpy(dtype=np.float64, copy=True)),
                 loglikes=-0.5 * (self.collection[self.collection.chi2_names]
-                                 .iloc[last].to_numpy(copy=True)),
+                                 .iloc[last].to_numpy(dtype=np.float64, copy=True)),
                 derived=(self.collection[self.collection.derived_params].iloc[last]
-                         .to_numpy(copy=True)))
+                         .to_numpy(dtype=np.float64, copy=True)))
         else:
             # NB: max_tries adjusted to dim instead of #cycles (blocking not computed yet)
             self.max_tries.set_scale(self.model.prior.d())
@@ -620,7 +620,9 @@ class MCMC(CovmatSampler):
                 covs = np.array(
                     [self.collection.cov(first=i * cut, last=(i + 1) * cut - 1) for i in
                      range(1, m)])
-            except:
+            except always_stop_exceptions:
+                raise
+            except Exception:
                 self.log.info("Not enough points in chain to check convergence. "
                               "Waiting for next checkpoint.")
                 return
@@ -710,6 +712,8 @@ class MCMC(CovmatSampler):
                         self.collection.sampled_to_getdist_mcsamples(
                             first=i * cut, last=(i + 1) * cut - 1)
                         for i in range(1, m)]
+                except always_stop_exceptions:
+                    raise
                 except:
                     self.log.info("Not enough points in chain to check c.l. convergence. "
                                   "Waiting for next checkpoint.")
