@@ -12,7 +12,6 @@ from pandas import DataFrame
 import datetime
 from typing import Sequence, Optional, Callable
 import re
-import sys
 
 # Local
 from cobaya.sampler import CovmatSampler
