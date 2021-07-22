@@ -358,10 +358,10 @@ class SampleCollection(BaseCollection):
 
     @property
     def values(self) -> np.ndarray:
-        return self.data.to_numpy()
+        return self.data.to_numpy(dtype=np.float64)
 
     def to_numpy(self, dtype=None, copy=False) -> np.ndarray:
-        return self.data.to_numpy(copy=copy, dtype=dtype)
+        return self.data.to_numpy(copy=copy, dtype=dtype or np.float64)
 
     def _copy(self, data=None) -> 'SampleCollection':
         """
@@ -400,14 +400,16 @@ class SampleCollection(BaseCollection):
         The estimate of the mean in this case is unstable; use carefully.
         """
         if pweight:
-            logps = -self[OutPar.minuslogpost][first:last].to_numpy(copy=True)
+            logps = -self[OutPar.minuslogpost][first:last].to_numpy(dtype=np.float64,
+                                                                    copy=True)
             logps -= max(logps)
             weights = np.exp(logps)
         else:
-            weights = self[OutPar.weight][first:last].to_numpy()
+            weights = self[OutPar.weight][first:last].to_numpy(dtype=np.float64)
         return np.average(self[list(self.sampled_params) +
                                (list(self.derived_params) if derived else [])]
-                          [first:last].T, weights=weights, axis=-1)
+                          [first:last].to_numpy(dtype=np.float64).T, weights=weights,
+                          axis=-1)
 
     def cov(self, first=None, last=None, derived=False, pweight=False):
         """
@@ -419,17 +421,19 @@ class SampleCollection(BaseCollection):
         The estimate of the covariance matrix in this case is unstable; use carefully.
         """
         if pweight:
-            logps = -self[OutPar.minuslogpost][first:last].to_numpy(copy=True)
+            logps = -self[OutPar.minuslogpost][first:last].to_numpy(dtype=np.float64,
+                                                                    copy=True)
             logps -= max(logps)
             weights = np.exp(logps)
             kwarg = "aweights"
         else:
-            weights = self[OutPar.weight][first:last].to_numpy()
+            weights = self[OutPar.weight][first:last].to_numpy(dtype=np.float64)
             kwarg = "fweights" if np.allclose(np.round(weights), weights) else "aweights"
         weights_kwarg = {kwarg: weights}
         return np.atleast_2d(np.cov(
             self[list(self.sampled_params) +
-                 (list(self.derived_params) if derived else [])][first:last].T,
+                 (list(self.derived_params) if derived else [])][first:last].to_numpy(
+                dtype=np.float64).T,
             **weights_kwarg))
 
     def filtered_copy(self, where) -> 'SampleCollection':
@@ -447,7 +451,7 @@ class SampleCollection(BaseCollection):
             if hasattr(WeightedSamples, "thin_indices_and_weights"):
                 unique, counts = \
                     WeightedSamples.thin_indices_and_weights(
-                        thin, self[OutPar.weight].to_numpy())
+                        thin, self[OutPar.weight].to_numpy(dtype=np.float64))
             else:
                 raise LoggedError(self.log, "Thinning requires GetDist 1.2+", )
         except WeightedSampleError as e:
@@ -481,9 +485,12 @@ class SampleCollection(BaseCollection):
         # No logging of warnings temporarily, so getdist won't complain unnecessarily
         with NoLogging():
             mcsamples = MCSamples(
-                samples=self.data[:len(self)][names].values[first:last],
-                weights=self.data[:len(self)][OutPar.weight].values[first:last],
-                loglikes=self.data[:len(self)][OutPar.minuslogpost].values[first:last],
+                samples=self.data[:len(self)][names].to_numpy(dtype=np.float64)[
+                        first:last],
+                weights=self.data[:len(self)][OutPar.weight].to_numpy(dtype=np.float64)[
+                        first:last],
+                loglikes=self.data[:len(self)][OutPar.minuslogpost].to_numpy(
+                    dtype=np.float64)[first:last],
                 names=names)
         return mcsamples
 
@@ -552,7 +559,8 @@ class SampleCollection(BaseCollection):
                     f(col) for f, col
                     in zip(self._header_formatter, self.data.columns))[1:] + "\n")
         with open(self.file_name, "a", encoding="utf-8") as out:
-            np.savetxt(out, self.data[n_min:n_max].to_numpy(), fmt=self._numpy_fmts)
+            np.savetxt(out, self.data[n_min:n_max].to_numpy(dtype=np.float64),
+                       fmt=self._numpy_fmts)
 
     def _delete__txt(self):
         try:

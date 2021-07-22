@@ -276,7 +276,8 @@ def body_of_test_speeds(info_sampler, manual_blocking=False,
                 "Chain has %r but should be %r. " % (
                     [chi2_0_chain, chi2_1_chain], [chi2_0_good, chi2_1_good]) +
                 "Full chain point: %r" % products["sample"][i])
-        derived_chain = products["sample"][["sum_like0", "sum_like1"]].values[i]
+        derived_chain = \
+            products["sample"][["sum_like0", "sum_like1"]].to_numpy(dtype=np.float64)[i]
         derived_good = np.array([
             sum(products["sample"][params0].values[i]),
             sum(products["sample"][params1].values[i])])
