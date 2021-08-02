@@ -36,10 +36,13 @@ try:
 except ImportError:
     supernest_loaded = False
 
+
 class polychord(CovmatSampler):
-    r"""
-    PolyChord sampler \cite{Handley:2015fda,2015MNRAS.453.4384H}, a nested sampler
-    tailored for high-dimensional parameter spaces with a speed hierarchy.
+    r"""PolyChord sampler \cite{Handley:2015fda,2015MNRAS.453.4384H}.
+
+    A nested sampler tailored for high-dimensional parameter spaces
+    with a speed hierarchy.
+
     """
     # Name of the PolyChord repo and version to download
     _pc_repo_name = "PolyChord/PolyChordLite"
