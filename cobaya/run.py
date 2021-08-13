@@ -20,8 +20,7 @@ from cobaya.sampler import get_sampler_name_and_class, check_sampler_info, Sampl
 from cobaya.log import logger_setup, is_debug, get_logger, LoggedError
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info
-from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic, \
-    check_deprecated_modules_path
+from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic
 from cobaya.post import post, PostTuple
 from cobaya import mpi
 
@@ -87,8 +86,9 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         logger_setup(info.get("debug"), info.get("debug_file"))
         logger_run = get_logger(run.__name__)
         # MARKED FOR DEPRECATION IN v3.0
-        # BEHAVIOUR TO BE REPLACED BY ERROR:
-        check_deprecated_modules_path(info)
+        if info.get("modules"):
+            raise LoggedError(logger_run, "The input field 'modules' has been deprecated."
+                                          "Please use instead %r", packages_path_input)
         # END OF DEPRECATION BLOCK
         # 1. Prepare output driver, if requested by defining an output_prefix
         # GetDist needs to know the original sampler, so don't overwrite if minimizer
@@ -176,9 +176,7 @@ def run_script(args=None):
     parser.add_argument("-" + modules[0], "--" + modules,
                         action="store", required=False,
                         metavar="/packages/path", default=None,
-                        help="To be deprecated! "
-                             "Alias for %s, which should be used instead." %
-                             packages_path_arg_posix)
+                        help="Deprecated! Use %s instead." % packages_path_arg_posix)
     # END OF DEPRECATION BLOCK -- CONTINUES BELOW!
     parser.add_argument("-" + "o", "--" + "output",
                         action="store", metavar="/some/path", default=None,
@@ -204,13 +202,9 @@ def run_script(args=None):
     if arguments.modules is not None:
         logger_setup()
         logger = get_logger("run")
-        logger.warning("*DEPRECATION*: -m/--modules will be deprecated in favor of "
-                       "-%s/--%s in the next version. Please, use that one instead.",
-                       packages_path_arg[0], packages_path_arg_posix)
-        # BEHAVIOUR TO BE REPLACED BY ERROR:
-        if getattr(arguments, packages_path_arg) is None:
-            setattr(arguments, packages_path_arg, arguments.modules)
-    del arguments.modules
+        raise LoggedError(logger, "-m/--modules has been deprecated. "
+                                  "Use -%s/--%s instead.",
+                          packages_path_arg[0], packages_path_arg_posix)
     # END OF DEPRECATION BLOCK
     info = arguments.input_file
     del arguments.input_file

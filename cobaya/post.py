@@ -27,7 +27,7 @@ from cobaya.parameterization import is_fixed_or_function_param, is_sampled_param
     is_derived_param
 from cobaya.prior import Prior
 from cobaya.tools import progress_bar, recursive_update, deepcopy_where_possible, \
-    check_deprecated_modules_path, str_to_list
+    str_to_list
 from cobaya.typing import ExpandedParamsDict, ModelBlock, ParamValuesDict, InputDict, \
     InfoDict, PostDict
 
@@ -84,8 +84,9 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     logger_setup(info.get("debug"), info.get("debug_file"))
     log = get_logger(__name__)
     # MARKED FOR DEPRECATION IN v3.0
-    # BEHAVIOUR TO BE REPLACED BY ERROR:
-    check_deprecated_modules_path(info)
+    if info.get("modules"):
+        raise LoggedError(log, "The input field 'modules' has been deprecated."
+                               "Please use instead %r", packages_path_input)
     # END OF DEPRECATION BLOCK
     info_post: PostDict = info.get("post") or {}
     if not info_post:

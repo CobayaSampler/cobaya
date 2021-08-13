@@ -1049,12 +1049,9 @@ def resolve_packages_path(infos=None):
     old_env = "COBAYA_MODULES"
     path_old_env = os.environ.get(old_env)
     if path_old_env and not path_env:
-        log.warning("*DEPRECATION*: The env var %r will be deprecated in favor of %r in "
-                    "the next version. Please, use that one instead.",
-                    old_env, packages_path_env)
-        # BEHAVIOUR TO BE REPLACED BY ERROR:
-        path_env = path_old_env
-    # END OF DEPRECATION BLOCK -- CONTINUES BELOW!
+        raise LoggedError(log, "The env var %r has been deprecated in favor of %r",
+                          old_env, packages_path_env)
+    # END OF DEPRECATION BLOCK
     if path_env:
         return path_env
     return load_packages_path_from_config_file()
@@ -1063,9 +1060,9 @@ def resolve_packages_path(infos=None):
 def sort_cosmetic(info):
     # noinspection PyStatementEffect
     """
-        Returns a sorted version of the given info dict, re-ordered as %r, and finally the
-        rest of the blocks/options.
-        """ % dump_sort_cosmetic
+    Returns a sorted version of the given info dict, re-ordered as %r, and finally the
+    rest of the blocks/options.
+    """ % dump_sort_cosmetic
     sorted_info = dict()
     for k in dump_sort_cosmetic:
         if k in info:

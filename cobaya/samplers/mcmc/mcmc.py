@@ -80,16 +80,14 @@ class MCMC(CovmatSampler):
         self.log.debug("Initializing")
         # MARKED FOR DEPRECATION IN v3.0
         if getattr(self, "oversample", None) is not None:
-            self.log.warning("*DEPRECATION*: `oversample` will be deprecated in the "
-                             "next version. Oversampling is now requested by setting "
-                             "`oversample_power` > 0.")
+            raise LoggedError(self.log, "`oversample` has been deprecated. "
+                                        "Oversampling is now requested by setting "
+                                        "`oversample_power` > 0.")
         # END OF DEPRECATION BLOCK
         # MARKED FOR DEPRECATION IN v3.0
         if getattr(self, "check_every", None) is not None:
-            self.log.warning("*DEPRECATION*: `check_every` will be deprecated in the "
-                             "next version. Please use `learn_every` instead.")
-            # BEHAVIOUR TO BE REPLACED BY ERROR:
-            self.learn_every = getattr(self, "check_every")
+            raise LoggedError(self.log, "`check_every` has been deprecated. "
+                                        "Please use `learn_every` instead.")
         # END OF DEPRECATION BLOCK
         if self.callback_every is None:
             self.callback_every = self.learn_every
@@ -254,9 +252,9 @@ class MCMC(CovmatSampler):
         if self.drag:
             # MARKED FOR DEPRECATION IN v3.0
             if getattr(self, "drag_limits", None) is not None:
-                self.log.warning("*DEPRECATION*: 'drag_limits' has been deprecated. "
-                                 "Use 'oversample_power' to control the amount of "
-                                 "dragging steps.")
+                raise LoggedError(self.log, "`drag_limits` has been deprecated. "
+                                            "Use 'oversample_power' to control the amount"
+                                            " of dragging steps.")
             # END OF DEPRECATION BLOCK
             self.get_new_sample = self.get_new_sample_dragging
             self.mpi_info("Dragging with number of interpolating steps:")

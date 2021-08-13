@@ -142,10 +142,8 @@ class Output(HasLogger):
         # MARKED FOR DEPRECATION IN v3.0
         # -- also remove output_prefix kwarg above
         if output_prefix is not None:
-            self.log.warning("*DEPRECATION*: `output_prefix` will be deprecated in the "
-                             "next version. Please use `prefix` instead.")
-            # BEHAVIOUR TO BE REPLACED BY ERROR:
-            prefix = output_prefix
+            raise LoggedError(self.log, "`output_prefix` has been deprecated. "
+                                        "Please use `prefix` instead.")
         # END OF DEPRECATION BLOCK
         self.lock = FileLock()
         self.folder, self.prefix = split_prefix(prefix)
@@ -569,7 +567,8 @@ def get_output(*args, **kwargs) -> Output:
     """
     # MARKED FOR DEPRECATION IN v3.0
     if kwargs.get("output_prefix") is not None:
-        kwargs["prefix"] = kwargs["output_prefix"]
+        raise ValueError("DEPRECATION: `output_prefix` has been deprecated. "
+                         "Please use `prefix` instead.")
     # END OF DEPRECATION BLOCK
     if kwargs.get("prefix"):
         return Output(*args, **kwargs)
