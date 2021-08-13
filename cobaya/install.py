@@ -28,7 +28,7 @@ from cobaya.tools import create_banner, warn_deprecation, get_resolved_class, \
 from cobaya.input import get_used_components
 from cobaya.conventions import code_path, data_path, packages_path_arg, \
     packages_path_env, Extension, install_skip_env, packages_path_arg_posix, \
-    packages_path_config_file
+    packages_path_config_file, packages_path_input
 from cobaya.mpi import set_mpi_disabled
 from cobaya.tools import resolve_packages_path
 from cobaya.typing import InputDict
@@ -59,7 +59,7 @@ def install(*infos, **kwargs):
             log, "No 'path' argument given, and none could be found in input infos "
                  "(as %r), the %r env variable or the config file. "
                  "Maybe specify one via a command line argument '-%s [...]'?",
-            "packages_path", packages_path_env, packages_path_arg[0])
+            packages_path_input, packages_path_env, packages_path_arg[0])
     abspath = os.path.abspath(path)
     log.info("Installing external packages at '%s'", abspath)
     kwargs_install = {"force": kwargs.get("force", False),

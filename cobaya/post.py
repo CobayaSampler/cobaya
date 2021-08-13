@@ -16,7 +16,8 @@ import numpy as np
 from cobaya import mpi
 from cobaya.collection import SampleCollection
 from cobaya.conventions import prior_1d_name, OutPar, get_chi2_name, \
-    undo_chi2_name, get_minuslogpior_name, separator_files, minuslogprior_names
+    undo_chi2_name, get_minuslogpior_name, separator_files, minuslogprior_names, \
+    packages_path_input
 from cobaya.input import update_info, add_aggregated_chi2_params, load_input_dict
 from cobaya.log import logger_setup, get_logger, is_debug, LoggedError
 from cobaya.model import Model
@@ -342,8 +343,8 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # TODO: check allow_renames=False?
     model_add = Model(out_params_with_computed, add["likelihood"],
                       info_prior=add.get("prior"), info_theory=out_combined["theory"],
-                      packages_path=(info_post.get("packages_path") or
-                                     info.get("packages_path")),
+                      packages_path=(info_post.get(packages_path_input) or
+                                     info.get(packages_path_input)),
                       allow_renames=False, post=True,
                       stop_at_error=info.get('stop_at_error', False),
                       skip_unused_theories=True, dropped_theory_params=dropped_theory)

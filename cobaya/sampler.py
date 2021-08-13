@@ -51,7 +51,7 @@ from itertools import chain
 from numpy.random import SeedSequence, default_rng
 
 # Local
-from cobaya.conventions import Extension
+from cobaya.conventions import Extension, packages_path_input
 from cobaya.typing import InfoDict, SamplersDict, SamplerDict
 from cobaya.tools import deepcopy_where_possible, find_with_regexp
 from cobaya.tools import recursive_update, str_to_list, get_resolved_class
@@ -464,10 +464,10 @@ class CovmatSampler(Sampler):
         # If given, load and test the covariance matrix
         loaded_params: Sequence[str]
         if isinstance(self.covmat, str):
-            covmat_pre = "{%s}" % "packages_path"
+            covmat_pre = "{%s}" % packages_path_input
             if self.covmat.startswith(covmat_pre):
                 self.covmat = self.covmat.format(
-                    **{"packages_path": self.packages_path}).replace("/", os.sep)
+                    **{packages_path_input: self.packages_path}).replace("/", os.sep)
             try:
                 with open(self.covmat, "r", encoding="utf-8-sig") as file_covmat:
                     header = file_covmat.readline()

@@ -15,7 +15,8 @@ import numpy as np
 import os
 
 # Local
-from cobaya.conventions import overhead_time, debug_default, get_chi2_name
+from cobaya.conventions import overhead_time, debug_default, get_chi2_name, \
+    packages_path_input
 from cobaya.typing import InfoDict, InputDict, LikesDict, TheoriesDict, \
     ParamsDict, PriorsDict, ParamValuesDict, empty_dict, unset_params
 from cobaya.input import update_info, load_input_dict
@@ -137,7 +138,7 @@ class Model(HasLogger):
         if not self._updated_info["likelihood"]:
             raise LoggedError(self.log, "No likelihood requested!")
         for k, v in (("prior", info_prior), ("theory", info_theory),
-                     ("packages_path", packages_path), ("timing", timing)):
+                     (packages_path_input, packages_path), ("timing", timing)):
             if v not in (None, {}):
                 self._updated_info[k] = deepcopy_where_possible(v)  # type: ignore
         self.parameterization = Parameterization(self._updated_info["params"],
@@ -1168,7 +1169,7 @@ def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # Inform about ignored info keys
     ignored_info = []
     for k in list(info):
-        if k not in ["params", "likelihood", "prior", "theory", "packages_path",
+        if k not in ["params", "likelihood", "prior", "theory", packages_path_input,
                      "timing", "stop_at_error", "auto_params"]:
             value = info.pop(k)  # type: ignore
             if value is not None and (not isinstance(value, Mapping) or value):
@@ -1184,7 +1185,7 @@ def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # Initialize the parameters and posterior
     return Model(updated_info["params"], updated_info["likelihood"],
                  updated_info.get("prior"), updated_info.get("theory"),
-                 packages_path=info.get("packages_path"),
+                 packages_path=info.get(packages_path_input),
                  timing=updated_info.get("timing"),
                  stop_at_error=info.get("stop_at_error", False))
 
@@ -1198,7 +1199,7 @@ def load_info_overrides(info_or_yaml_or_file, debug, stop_at_error,
             info["resume"] = False
         info = recursive_update(info, override, copied=False)
     if packages_path:
-        info["packages_path"] = packages_path
+        info[packages_path_input] = packages_path
     if debug is not None:
         info["debug"] = debug if isinstance(debug, (int, str)) else bool(debug)
     if stop_at_error is not None:

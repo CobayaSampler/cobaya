@@ -127,7 +127,7 @@ from typing import Optional, Sequence
 
 # Local
 from cobaya.log import LoggedError
-from cobaya.conventions import Const
+from cobaya.conventions import Const, packages_path_input
 from cobaya.typing import InfoDict
 from cobaya.likelihoods.base_classes import InstallableLikelihood
 
@@ -150,10 +150,11 @@ class BAO(InstallableLikelihood):
 
     def initialize(self):
         self.log.info("Initialising.")
-        if not getattr(self, "path", None) and not getattr(self, "packages_path", None):
+        if not getattr(self, "path", None) and \
+           not getattr(self, packages_path_input, None):
             raise LoggedError(
                 self.log, "No path given to BAO data. Set the likelihood property "
-                          "'path' or the common property '%s'.", "packages_path")
+                          "'path' or the common property '%s'.", packages_path_input)
         # If no path specified, use the external packages path
         data_file_path = os.path.normpath(getattr(self, "path", None) or
                                           os.path.join(self.packages_path, "data"))

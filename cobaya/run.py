@@ -11,7 +11,8 @@ from typing import Union, Optional, NamedTuple
 import os
 
 # Local
-from cobaya.conventions import packages_path_arg, packages_path_arg_posix, get_version
+from cobaya.conventions import packages_path_arg, packages_path_arg_posix, get_version, \
+    packages_path_input
 from cobaya.typing import InputDict, LiteralFalse
 from cobaya.output import get_output
 from cobaya.model import Model, load_info_overrides
@@ -133,7 +134,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             # 4. Initialize the posterior and the sampler
             with Model(updated_info["params"], updated_info["likelihood"],
                        updated_info.get("prior"), updated_info.get("theory"),
-                       packages_path=info.get("packages_path"),
+                       packages_path=info.get(packages_path_input),
                        timing=updated_info.get("timing"),
                        allow_renames=False,
                        stop_at_error=info.get("stop_at_error", False)) as model:
@@ -142,7 +143,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                 out.check_and_dump_info(None, updated_info, check_compatible=False)
                 sampler = sampler_class(updated_info["sampler"][sampler_name],
                                         model, out, name=sampler_name,
-                                        packages_path=info.get("packages_path"))
+                                        packages_path=info.get(packages_path_input))
                 # Re-dump updated info, now also containing updates from the sampler
                 updated_info["sampler"][sampler_name] = \
                     recursive_update(updated_info["sampler"][sampler_name],
