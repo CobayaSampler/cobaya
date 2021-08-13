@@ -1,3 +1,7 @@
+## 3.X.Y – YYYY-MM-DD
+
+- Use of vector parameters now documented (requires upgraded GetDist). (PR #191; inspired by @lukashergt, thanks!)
+
 ## 3.1.1 – 2021-07-22
 
 - Changes for compatibility with Pandas 1.3 (which broke convergence testing amongst other things).
