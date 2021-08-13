@@ -1034,8 +1034,8 @@ def resolve_packages_path(infos=None):
             raise LoggedError(log, "The input field 'modules' has been deprecated."
                                    "Please use instead %r", packages_path_input)
     # END OF DEPRECATION BLOCK
-    paths = set(p for p in
-                [os.path.realpath(info.get(packages_path_input)) for info in infos] if p)
+    paths = set(os.path.realpath(p) for p in
+                [info.get(packages_path_input) for info in infos] if p)
     if len(paths) == 1:
         return list(paths)[0]
     elif len(paths) > 1:

@@ -205,6 +205,7 @@ def run_script(args=None):
         raise LoggedError(logger, "-m/--modules has been deprecated. "
                                   "Use -%s/--%s instead.",
                           packages_path_arg[0], packages_path_arg_posix)
+    del arguments.modules
     # END OF DEPRECATION BLOCK
     info = arguments.input_file
     del arguments.input_file
