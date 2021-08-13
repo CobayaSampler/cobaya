@@ -48,6 +48,15 @@ CLASS will be loaded from the automatic-install ``packages_path`` folder, if spe
 otherwise imported as a globally-installed Python package. Cobaya will print at
 initialisation where it is getting CLASS from.
 
+String-vector parameters
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+At the time of writing, the CLASS Python interface takes some vector-like parameters
+as string in which different components are separater by a space. To be able to set priors
+or fixed values on each components, see `this trick
+<https://github.com/CobayaSampler/cobaya/issues/110#issuecomment-652333489>`_, and don't
+forget the ``derived: False`` in the vector parameter (thanks to Lukas Hergt).
+
 .. _classy_modify:
 
 Modifying CLASS
@@ -55,7 +64,7 @@ Modifying CLASS
 
 If you modify CLASS and add new variables, make sure that the variables you create are
 exposed in the Python interface
-(`instructions here <https://github.com/lesgourg/class_public/wiki/Python-wrapper>`__).
+(`instructions here <https://github.com/lesgourg/class_public/wiki/Python-wrapper>`_).
 If you follow those instructions you do not need to make any additional modification in
 Cobaya.
 
