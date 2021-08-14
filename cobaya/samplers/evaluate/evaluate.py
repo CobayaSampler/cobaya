@@ -69,12 +69,12 @@ class Evaluate(Sampler):
                 logpost=self.logposterior.logpost, logpriors=self.logposterior.logpriors,
                 loglikes=self.logposterior.loglikes)
             self.log.info("log-posterior  = %g", self.logposterior.logpost)
-            self.log.info("log-prior      = %g", sum(self.logposterior.logpriors))
+            self.log.info("log-prior      = %g", self.logposterior.logprior)
             for j, name in enumerate(self.model.prior):
                 self.log.info(
                     "   logprior_" + name + " = %g", self.logposterior.logpriors[j])
-            if sum(self.logposterior.logpriors) > -np.inf:
-                self.log.info("log-likelihood = %g", sum(self.logposterior.loglikes))
+            if self.logposterior.logprior > -np.inf:
+                self.log.info("log-likelihood = %g", self.logposterior.loglike)
                 for j, name in enumerate(self.model.likelihood):
                     self.log.info(
                         "   chi2_" + name + " = %g", (-2 * self.logposterior.loglikes[j]))
