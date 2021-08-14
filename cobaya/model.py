@@ -112,6 +112,18 @@ class LogPosterior:
             object.__setattr__(self, 'loglikes', np.nan_to_num(self.loglikes))
             object.__setattr__(self, 'loglike', np.nan_to_num(self.loglike))
 
+    def as_dict(self, model: "Model") -> dict:
+        """
+        Given a :class:`~model.Model`, returns a more informative version of itself,
+        containing the names of priors, likelihoods and derived parameters.
+        """
+        return {
+            "logpost": self.logpost,
+            "logpriors": dict(zip(list(model.prior), self.logpriors)),
+            "loglikes": dict(zip(list(model.likelihood), self.loglikes)),
+            "derived": dict(zip(
+                list(model.parameterization.derived_params()), self.derived))}
+
 
 class Requirement(NamedTuple):
     name: str
