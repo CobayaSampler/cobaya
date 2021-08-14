@@ -136,6 +136,11 @@ You can define a sampler and an optional output driver in the following way:
 .. literalinclude:: ./src_examples/cosmo_model/6.py
    :language: python
 
+LogPosterior dataclass
+----------------------
+
+.. autoclass:: model.LogPosterior
+   :members:
 
 Model wrapper class
 -------------------
