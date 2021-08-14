@@ -50,12 +50,16 @@ class LogPosterior:
     """
     Class holding the result of a log-posterior computation, including log-priors,
     log-likelihoods and derived parameters.
+
+    If ``finite=True`` (default: False), it will try to represent infinities as the
+    largest real numbers allowed by machine precision.
     """
 
     logpost: float = None
     logpriors: Sequence[float] = None
     loglikes: Sequence[float] = None
     derived: Sequence[float] = None
+    finite: bool = False
     logprior: float = dataclasses.field(init=False, repr=False)
     loglike: float = dataclasses.field(init=False, repr=False)
 
@@ -67,6 +71,8 @@ class LogPosterior:
         object.__setattr__(
             self, 'loglike',
             sum(self.loglikes) if self.loglikes is not None else None)
+        if self.finite:
+            self.make_finite()
         if self.logpost is None:
             if self.logpriors is None or self.loglikes is None:
                 raise ValueError("If `logpost` not passed, both `logpriors` and "
@@ -84,8 +90,24 @@ class LogPosterior:
         passed.
         """
         if [self.logpost, self.logpriors, self.loglikes] is not 3 * [None]:
-            return np.isclose(self.logpost, self.logprior + self.loglike)
+            f = (lambda x: np.nan_to_num(x)) if self.finite else (lambda x: x)
+            return np.isclose(f(self.logpost), f(self.logprior + self.loglike))
         return True
+
+    def make_finite(self):
+        """
+        Ensures that infinities are represented as the largest real numbers allowed by
+        machine precision, instead of `+/- numpy.inf`.
+        """
+        object.__setattr__(self, 'finite', True)
+        if self.logpost is not None:
+            object.__setattr__(self, 'logpost', np.nan_to_num(self.logpost))
+        if self.logpriors is not None:
+            object.__setattr__(self, 'logpriors', np.nan_to_num(self.logpriors))
+            object.__setattr__(self, 'logprior', np.nan_to_num(self.logprior))
+        if self.loglikes is not None:
+            object.__setattr__(self, 'loglikes', np.nan_to_num(self.loglikes))
+            object.__setattr__(self, 'loglike', np.nan_to_num(self.loglike))
 
 
 class Requirement(NamedTuple):
@@ -437,34 +459,25 @@ class Model(HasLogger):
                              params_values_array)))
         # Notice that we don't use the make_finite in the prior call,
         # to correctly check if we have to compute the likelihood
-        logps = self.prior.logps_internal(params_values_array)
-        if logps == -np.inf:
+        logpriors_1d = self.prior.logps_internal(params_values_array)
+        if logpriors_1d == -np.inf:
             logpriors = [-np.inf] * (1 + len(self.prior.external))
-            logpost = -np.inf
         else:
             input_params = self.parameterization.to_input(params_values_array)
-            logpriors = [logps]
+            logpriors = [logpriors_1d]
             if self.prior.external:
                 logpriors.extend(self.prior.logps_external(input_params))
-                logpost = sum(logpriors)
-            else:
-                logpost = logps
-
-        if logps != -np.inf:
+        if logpriors_1d != -np.inf:
             # noinspection PyUnboundLocalVariable
             like = self._loglikes_input_params(input_params,
                                                return_derived=return_derived,
                                                cached=cached, make_finite=make_finite)
             loglikes, derived_sampler = like if return_derived else (like, [])
-            logpost += sum(loglikes)
         else:
             loglikes = []
             derived_sampler = []
-        if make_finite:
-            logpriors = np.nan_to_num(logpriors)
-            logpost = np.nan_to_num(logpost)
-        return LogPosterior(logpost=logpost, logpriors=logpriors,
-                            loglikes=loglikes, derived=derived_sampler)
+        return LogPosterior(logpriors=logpriors, loglikes=loglikes,
+                            derived=derived_sampler, finite=make_finite)
 
     def logpost(self, params_values, make_finite=False, cached=True) -> float:
         """
