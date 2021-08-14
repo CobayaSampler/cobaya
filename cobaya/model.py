@@ -52,17 +52,38 @@ class LogPosterior:
     log-likelihoods and derived parameters.
     """
 
-    logpost: float
-    logpriors: Sequence[float]
-    loglikes: Sequence[float]
-    derived: Sequence[float]
-    logprior: float = dataclasses.field(init=False)
-    loglike: float = dataclasses.field(init=False)
+    logpost: float = None
+    logpriors: Sequence[float] = None
+    loglikes: Sequence[float] = None
+    derived: Sequence[float] = None
+    logprior: float = dataclasses.field(init=False, repr=False)
+    loglike: float = dataclasses.field(init=False, repr=False)
 
     def __post_init__(self):
-        """Sets the sums of priors and posterior."""
-        object.__setattr__(self, 'logprior', sum(self.logpriors))
-        object.__setattr__(self, 'loglike', sum(self.loglikes))
+        """Sets the value of logpost if necessary, and checks for consistency."""
+        object.__setattr__(
+            self, 'logprior',
+            sum(self.logpriors) if self.logpriors is not None else None)
+        object.__setattr__(
+            self, 'loglike',
+            sum(self.loglikes) if self.loglikes is not None else None)
+        if self.logpost is None:
+            if None in [self.logpriors, self.loglikes]:
+                raise ValueError("If `logpost` not passed, both `logpriors` and "
+                                 "`loglikes` must be passed.")
+            object.__setattr__(self, 'logpost', self.logprior + self.loglike)
+        if not self.logpost_is_consistent():
+            raise ValueError("The given log-posterior is not equal to the "
+                             "sum of given log-likelihoods and log-priors")
+
+    def logpost_is_consistent(self):
+        """
+        Checks that the sum of logpriors and loglikes (if present) add up to logpost, if
+        passed.
+        """
+        if None not in [self.logpost, self.logpriors, self.loglikes]:
+            return np.isclose(self.logpost, self.logprior + self.loglike)
+        return True
 
 
 class Requirement(NamedTuple):
