@@ -72,11 +72,13 @@ class LogPosterior:
                 raise ValueError("If `logpost` not passed, both `logpriors` and "
                                  "`loglikes` must be passed.")
             object.__setattr__(self, 'logpost', self.logprior + self.loglike)
-        if not self.logpost_is_consistent():
+        if not self._logpost_is_consistent():
             raise ValueError("The given log-posterior is not equal to the "
-                             "sum of given log-likelihoods and log-priors")
+                             "sum of given log-priors and log-likelihoods: "
+                             "%g != sum(%r) + sum(%r)" %
+                             (self.logpost, self.logpriors, self.loglikes))
 
-    def logpost_is_consistent(self):
+    def _logpost_is_consistent(self):
         """
         Checks that the sum of logpriors and loglikes (if present) add up to logpost, if
         passed.
@@ -394,7 +396,7 @@ class Model(HasLogger):
         When in doubt, you can get the correct order as
         ``list([your_model].parameterization.sampled_params())``.
 
-        Returns the a ``logposterior`` ``NamedTuple``, with the following fields:
+        Returns a :class:`~model.LogPosterior` object, with the following fields:
 
         - ``logpost``: log-value of the posterior.
         - ``logpriors``: log-values of the priors, in the same order as in
@@ -433,7 +435,6 @@ class Model(HasLogger):
                     self.log, "Got non-finite parameter values: %r",
                     dict(zip(self.parameterization.sampled_params(),
                              params_values_array)))
-
         # Notice that we don't use the make_finite in the prior call,
         # to correctly check if we have to compute the likelihood
         logps = self.prior.logps_internal(params_values_array)
