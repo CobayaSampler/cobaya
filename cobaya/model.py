@@ -68,7 +68,7 @@ class LogPosterior:
             self, 'loglike',
             sum(self.loglikes) if self.loglikes is not None else None)
         if self.logpost is None:
-            if None in [self.logpriors, self.loglikes]:
+            if self.logpriors is None or self.loglikes is None:
                 raise ValueError("If `logpost` not passed, both `logpriors` and "
                                  "`loglikes` must be passed.")
             object.__setattr__(self, 'logpost', self.logprior + self.loglike)
@@ -81,7 +81,7 @@ class LogPosterior:
         Checks that the sum of logpriors and loglikes (if present) add up to logpost, if
         passed.
         """
-        if None not in [self.logpost, self.logpriors, self.loglikes]:
+        if [self.logpost, self.logpriors, self.loglikes] is not 3 * [None]:
             return np.isclose(self.logpost, self.logprior + self.loglike)
         return True
 
