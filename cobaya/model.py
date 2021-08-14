@@ -65,6 +65,9 @@ class LogPosterior:
 
     def __post_init__(self):
         """Sets the value of logpost if necessary, and checks for consistency."""
+        # Consistency: derived = None --> []
+        if self.derived is None:
+            object.__setattr__(self, 'derived', [])
         object.__setattr__(
             self, 'logprior',
             sum(self.logpriors) if self.logpriors is not None else None)
