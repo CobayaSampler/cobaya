@@ -236,9 +236,8 @@ class polychord(Sampler):
             if len(derived) != self.n_derived:
                 derived = np.full(self.n_derived, np.nan)
             derived = list(derived) + list(result.logpriors) + list(loglikes)
-            return (
-                max(result.logpost + self.logvolume, self.pc_settings.logzero),
-                derived)
+            return (max(result.logpost + self.logvolume, self.pc_settings.logzero),
+                    derived)
 
         sync_processes()
         self.mpi_info("Calling PolyChord...")

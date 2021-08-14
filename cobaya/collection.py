@@ -232,7 +232,7 @@ class SampleCollection(BaseCollection):
                         "loglikes not consistent with LogPosterior object passed.")
             if derived is not None:
                 # A simple np.allclose is not enough, because np.allclose([1], []) = True!
-                if logpost.derived is None or len(derived) != len(logpost.derived) or \
+                if len(derived) != len(logpost.derived) or \
                    not np.allclose(derived, logpost.derived):
                     raise LoggedError(
                         self.log,
@@ -285,7 +285,7 @@ class SampleCollection(BaseCollection):
             for name, value in zip(self.chi2_names, logposterior.loglikes):
                 self._cache[pos, self._icol[name]] = -2 * value
             self._cache[pos, self._icol[OutPar.chi2]] = -2 * logposterior.loglike
-        if logposterior.derived is not None:
+        if logposterior.derived != []:
             for name, value in zip(self.derived_params, logposterior.derived):
                 self._cache[pos, self._icol[name]] = value
 
