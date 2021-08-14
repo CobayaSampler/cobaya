@@ -6,13 +6,14 @@
 
 """
 # Global
+import os
+import dataclasses
+import numpy as np
 from contextlib import contextmanager
 from copy import deepcopy
 from itertools import chain
 from typing import NamedTuple, Sequence, Mapping, Iterable, Optional, \
     Union, List, Any, Dict, Set
-import numpy as np
-import os
 
 # Local
 from cobaya.conventions import overhead_time, debug_default, get_chi2_name, \
@@ -44,12 +45,24 @@ def timing_on(model: 'Model'):
             model.set_timing_on(False)
 
 
-# Log-posterior namedtuple
-class LogPosterior(NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class LogPosterior:
+    """
+    Class holding the result of a log-posterior computation, including log-priors,
+    log-likelihoods and derived parameters.
+    """
+
     logpost: float
     logpriors: Sequence[float]
     loglikes: Sequence[float]
     derived: Sequence[float]
+    logprior: float = dataclasses.field(init=False)
+    loglike: float = dataclasses.field(init=False)
+
+    def __post_init__(self):
+        """Sets the sums of priors and posterior."""
+        object.__setattr__(self, 'logprior', sum(self.logpriors))
+        object.__setattr__(self, 'loglike', sum(self.loglikes))
 
 
 class Requirement(NamedTuple):

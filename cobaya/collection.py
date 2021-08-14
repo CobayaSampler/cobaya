@@ -190,10 +190,8 @@ class SampleCollection(BaseCollection):
                         logpriors=logpriors, loglikes=loglikes)
 
     def add_log_posterior(self, values: np.ndarray, results: LogPosterior, weight=1):
-        logprior_sum = sum(results.logpriors)
-        loglike_sum = sum(results.loglikes)
-        assert np.isclose(logprior_sum + loglike_sum, results.logpost)
-        self._cache_add(values, (results.logpost, logprior_sum, loglike_sum),
+        assert np.isclose(results.logprior + results.loglike, results.logpost)
+        self._cache_add(values, (results.logpost, results.logprior, results.loglike),
                         derived=results.derived, weight=weight,
                         logpriors=results.logpriors, loglikes=results.loglikes)
 

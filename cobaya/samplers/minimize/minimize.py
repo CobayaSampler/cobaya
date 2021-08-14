@@ -333,7 +333,7 @@ class Minimize(Minimizer, CovmatSampler):
         self.log.info("-log(%s) minimized to %g",
                       "likelihood" if self.ignore_prior else "posterior", -logp_min)
         recomputed_post_min = self.model.logposterior(x_min, cached=False)
-        recomputed_logp_min = (sum(recomputed_post_min.loglikes) if self.ignore_prior
+        recomputed_logp_min = (recomputed_post_min.loglike if self.ignore_prior
                                else recomputed_post_min.logpost)
         if not np.allclose(logp_min, recomputed_logp_min, atol=1e-2):
             raise LoggedError(
