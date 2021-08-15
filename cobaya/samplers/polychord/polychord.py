@@ -3,6 +3,7 @@
 
 :Synopsis: Interface for the PolyChord nested sampler
 :Author: Will Handley, Mike Hobson and Anthony Lasenby (for PolyChord),
+         Aleksandr Petrosyan, and Will Handley (for supernest)
          Jesus Torrado (for the cobaya wrapper only)
 """
 # Global
@@ -14,24 +15,34 @@ import inspect
 from itertools import chain
 from typing import Any, Callable, Optional
 from tempfile import gettempdir
+from pandas import DataFrame
 import re
 
 # Local
-from cobaya.tools import read_dnumber, get_external_function, \
+from cobaya.tools import read_dnumber, get_external_function,  \
     find_with_regexp, NumberWithUnits, load_module, VersionCheckError
-from cobaya.sampler import Sampler
+from cobaya.sampler import Sampler, CovmatSampler
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
+from cobaya import mpi
 from cobaya.collection import SampleCollection
 from cobaya.log import LoggedError, get_logger
-from cobaya.install import download_github_release, NotInstalledError
+from cobaya.install import download_github_release, NotInstalledError, pip_install
 from cobaya.yaml import yaml_dump_file
 from cobaya.conventions import derived_par_name_separator, packages_path_arg, Extension
 
+try:
+    import supernest
+    supernest_loaded = True
+except ImportError:
+    supernest_loaded = False
 
-class polychord(Sampler):
-    r"""
-    PolyChord sampler \cite{Handley:2015fda,2015MNRAS.453.4384H}, a nested sampler
-    tailored for high-dimensional parameter spaces with a speed hierarchy.
+
+class polychord(CovmatSampler):
+    r"""PolyChord sampler \cite{Handley:2015fda,2015MNRAS.453.4384H}.
+
+    A nested sampler tailored for high-dimensional parameter spaces
+    with a speed hierarchy.
+
     """
     # Name of the PolyChord repo and version to download
     _pc_repo_name = "PolyChord/PolyChordLite"
@@ -42,7 +53,7 @@ class polychord(Sampler):
     _at_resume_prefer_new = Sampler._at_resume_prefer_new + ["callback_function"]
     pypolychord: Any
 
-    # variables from yaml
+    # Variables from yaml
     do_clustering: bool
     num_repeats: int
     confidence_for_unbounded: float
@@ -53,9 +64,29 @@ class polychord(Sampler):
     nlive: NumberWithUnits
     path: str
 
+    @mpi.from_root
+    def _load_mean(self):
+        ref_point = dict(zip(self.model.parameterization.sampled_params(), self.model.prior.reference()))
+        try:
+            return np.array(
+                [(self.mean or {}).get(p, ref_point[p])
+                 for p in self.model.parameterization.sampled_params()])
+        except:
+            raise LoggedError(self.log, "`mean` must be a dict 'param: value'")
+
     def initialize(self):
-        """Imports the PolyChord sampler and prepares its arguments."""
+        """Import the PolyChord sampler and prepare its arguments."""
         # Allow global import if no direct path specification
+        if self.use_supernest and not supernest_loaded:
+            raise NotInstalledError(
+                self.log,
+                "Could not find "
+                "supernest. Check error message above. The setup you "
+                "requested depends on 'supernest', which is an external "
+                "package not yet handled by 'cobaya-install'. Please "
+                "install it using 'pip3 install supernest' or "
+                "otherwise, remove 'use_supernest: True' from the "
+                "run-time parameters. " )
         allow_global = not self.path
         if not self.path and self.packages_path:
             self.path = self.get_path(self.packages_path)
@@ -86,11 +117,18 @@ class polychord(Sampler):
         for p in self._quants_nlive_units:
             if getattr(self, p) is not None:
                 setattr(self, p, NumberWithUnits(
-                    getattr(self, p), "nlive", scale=self.nlive, dtype=int).value)
+                    getattr(self, p),
+                    "nlive",
+                    scale=self.nlive, dtype=int).value)
         # Fill the automatic ones
-        if getattr(self, "feedback", None) is None:
-            values = {logging.CRITICAL: 0, logging.ERROR: 0, logging.WARNING: 0,
-                      logging.INFO: 1, logging.DEBUG: 2}
+        if getattr(self, 'feedback', None) is None:
+            values = {
+                logging.CRITICAL: 0,
+                logging.ERROR: 0,
+                logging.WARNING: 0,
+                logging.INFO: 1,
+                logging.DEBUG: 2
+            }
             self.feedback = values[self.log.getEffectiveLevel()]
         # Prepare output folders and prefixes
         if self.output:
@@ -125,47 +163,82 @@ class polychord(Sampler):
         # Save blocking in updated info, in case we want to resume
         self._updated_info["blocking"] = list(zip(oversampling_factors, blocks))
         blocks_flat = list(chain(*blocks))
-        self.ordering = [
-            blocks_flat.index(p) for p in self.model.parameterization.sampled_params()]
+        self.ordering = [blocks_flat.index(p) for p in
+                         self.model.parameterization.sampled_params()]
         self.grade_dims = [len(block) for block in blocks]
         # Steps per block
         # NB: num_repeats is ignored by PolyChord when int "grade_frac" given,
         # so needs to be applied by hand.
         # In num_repeats, `d` is interpreted as dimension of each block
-        self.grade_frac = [
-            int(o * read_dnumber(self.num_repeats, dim_block))
-            for o, dim_block in zip(oversampling_factors, self.grade_dims)]
+        self.grade_frac = [int(o * read_dnumber(self.num_repeats, dim_block))
+                           for o, dim_block in
+                           zip(oversampling_factors, self.grade_dims)]
         # Assign settings
         pc_args = ["nlive", "num_repeats", "nprior", "do_clustering",
-                   "precision_criterion", "max_ndead", "boost_posterior", "feedback",
-                   "logzero", "posteriors", "equals", "compression_factor",
-                   "cluster_posteriors", "write_resume", "read_resume", "write_stats",
-                   "write_live", "write_dead", "base_dir", "grade_frac", "grade_dims",
-                   "feedback", "read_resume", "base_dir", "file_root", "grade_frac",
+                   "precision_criterion", "max_ndead",
+                   "boost_posterior", "feedback", "logzero",
+                   "posteriors", "equals", "compression_factor",
+                   "cluster_posteriors", "write_resume",
+                   "read_resume", "write_stats", "write_live",
+                   "write_dead", "base_dir", "grade_frac",
+                   "grade_dims", "feedback", "read_resume",
+                   "base_dir", "file_root", "grade_frac",
                    "grade_dims"]
         # As stated above, num_repeats is ignored, so let's not pass it
         pc_args.pop(pc_args.index("num_repeats"))
-        settings: Any = load_module('pypolychord.settings', path=self._poly_build_path,
+        settings: Any = load_module('pypolychord.settings',
+                                    path=self._poly_build_path,
                                     min_version=None)
-        self.pc_settings = settings.PolyChordSettings(
-            self.nDims, self.nDerived, seed=(self.seed if self.seed is not None else -1),
-            **{p: getattr(self, p) for p in pc_args if getattr(self, p) is not None})
+
+        if self.use_supernest:
+            # For the choice probability, and choice indicator. 
+            # self.grade_dims.extend([1,1])
+            self.grade_dims[-1]+=2
+            self.log.debug('Grade dims are' + str(self.grade_dims))
+            self.pc_settings = settings.PolyChordSettings(
+                self.nDims + 2,  # FIXME: only true for one proposal.
+                self.nDerived,
+                seed=(self.seed if self.seed is not None else -1),
+                **{p: getattr(self, p) for p in pc_args
+                   if getattr(self, p) is not None})
+            self.mpi_info('Creating proposal')
+            self._mean = self._load_mean()
+            self.log.debug(
+                "Proposal mean: %r",
+                dict(zip(self.model.parameterization.sampled_params(), self._mean)))
+            self._covmat, where_nan = self._load_covmat(prefer_load_old=False)
+            self.log.debug(
+                "Proposal covmat:\n%s",
+                DataFrame(self._covmat,
+                          columns=self.model.parameterization.sampled_params(),
+                          index=self.model.parameterization.sampled_params())\
+                .to_string())
+        else:
+            self.pc_settings = settings.PolyChordSettings(
+                self.nDims,
+                self.nDerived,
+                seed=(self.seed if self.seed is not None else -1),
+                **{p: getattr(self, p) for p in pc_args
+                   if getattr(self, p) is not None}
+            )
+
+
         # prior conversion from the hypercube
-        bounds = self.model.prior.bounds(
+        self.bounds = self.model.prior.bounds(
             confidence_for_unbounded=self.confidence_for_unbounded)
         # Check if priors are bounded (nan's to inf)
-        inf = np.where(np.isinf(bounds))
+        inf = np.where(np.isinf(self.bounds))
         if len(inf[0]):
             params_names = list(self.model.parameterization.sampled_params())
             params = [params_names[i] for i in sorted(set(inf[0]))]
             raise LoggedError(
                 self.log, "PolyChord needs bounded priors, but the parameter(s) '"
                           "', '".join(params) + "' is(are) unbounded.")
-        locs = bounds[:, 0]
-        scales = bounds[:, 1] - bounds[:, 0]
+        locs = self.bounds[:, 0]
+        scales = self.bounds[:, 1] - self.bounds[:, 0]
         # This function re-scales the parameters AND puts them in the right order
         self.pc_prior = lambda x: (locs + np.array(x)[self.ordering] * scales).tolist()
-        # We will need the volume of the prior domain, since PolyChord divides by it
+        # We will need the volume of the prior domain; PolyChord divides by it
         self.logvolume = np.log(np.prod(scales))
         # Prepare callback function
         if self.callback_function is not None:
@@ -184,6 +257,7 @@ class polychord(Sampler):
         self.mpi_info("Initialized!")
 
     def dumper(self, live_points, dead_points, logweights, logZ, logZstd):
+        """Store live and dead points and evidence computed so far"""
         if self.callback_function is None:
             return
         # Store live and dead points and evidence computed so far
@@ -216,15 +290,14 @@ class polychord(Sampler):
             try:
                 self.callback_function_callable(self)
             except Exception as e:
-                self.log.error("The callback function produced an error: %r", str(e))
+                self.log.error("The callback function produced an error: %r",
+                               str(e))
             self.last_point_callback = len(self.dead)
 
     def run(self):
         """
         Prepares the posterior function and calls ``PolyChord``'s ``run`` function.
         """
-
-        # Prepare the posterior
         # Don't forget to multiply by the volume of the physical hypercube,
         # since PolyChord divides by it
         def logpost(params_values):
@@ -237,12 +310,26 @@ class polychord(Sampler):
             derived = list(derived) + list(logpriors) + list(loglikes)
             return (
                 max(logposterior + self.logvolume, self.pc_settings.logzero),
-                derived)
+                derived
+            )
 
         sync_processes()
         self.mpi_info("Calling PolyChord...")
-        self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
-                              self.pc_prior, self.dumper)
+        if self.use_supernest:
+            # Compatibility checked and if fails, causes a ValueError.
+            proposal = supernest.truncated_gaussian_proposal(self.bounds.T,
+                                                             self._mean,
+                                                             self._covmat,
+                                                             loglike=logpost)
+            nDims, prior, ll = supernest.superimpose([proposal,
+                                                      (self.pc_prior, logpost)],
+                                                     nDims = self.nDims)
+            self.pc.run_polychord(ll, nDims, self.nDerived, self.pc_settings,
+                                  prior, self.dumper)
+        else:
+            self.mpi_info('Not using SuperNest. Add `use_supernest: True`')
+            self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
+                                  self.pc_prior, self.dumper)
         self.process_raw_output()
 
     @property
@@ -255,6 +342,8 @@ class polychord(Sampler):
         with open(prefix + ".paramnames", "w") as f_paramnames:
             for p in self.model.parameterization.sampled_params():
                 f_paramnames.write("%s\t%s\n" % (p, labels.get(p, "")))
+            if self.use_supernest:
+                f_paramnames.write("%s" % "proposal0")
             for p in self.model.parameterization.derived_params():
                 f_paramnames.write("%s*\t%s\n" % (p, labels.get(p, "")))
             for p in self.model.prior:
@@ -265,6 +354,8 @@ class polychord(Sampler):
                 f_paramnames.write("%s*\t%s\n" % (
                     "loglike" + derived_par_name_separator + p,
                     r"\log\mathcal{L}_\mathrm{" + p.replace("_", r"\ ") + r"}"))
+            if self.use_supernest:
+                f_paramnames.write("%s\n%s" % ("switch_probability", "switch"))
 
     def save_sample(self, fname, name):
         sample = np.atleast_2d(np.loadtxt(fname))
@@ -305,7 +396,7 @@ class polychord(Sampler):
 
     def process_raw_output(self):
         """
-        Loads the sample of live points from ``PolyChord``'s raw output and writes it
+        Load the sample of live points from ``PolyChord``'s raw output and write it
         (if ``txt`` output requested).
         """
         if is_main_process():
@@ -318,8 +409,11 @@ class polychord(Sampler):
                 clusters_raw_regexp = re.compile(
                     re.escape(self.pc_settings.file_root + "_") + r"\d+\.txt")
                 cluster_raw_files = sorted(find_with_regexp(
-                    clusters_raw_regexp, os.path.join(
-                        self.pc_settings.base_dir, self._clusters_dir), walk_tree=True))
+                    clusters_raw_regexp,
+                    os.path.join(
+                        self.pc_settings.base_dir,
+                        self._clusters_dir),
+                    walk_tree=True))
                 for f in cluster_raw_files:
                     i = int(f[f.rfind("_") + 1:-len(".txt")])
                     if self.output:
@@ -369,7 +463,8 @@ class polychord(Sampler):
         if is_main_process():
             self.log.info("Finished! Raw PolyChord output stored in '%s', "
                           "with prefix '%s'",
-                          self.pc_settings.base_dir, self.pc_settings.file_root)
+                          self.pc_settings.base_dir,
+                          self.pc_settings.file_root)
             self.log.info(
                 "log(Z) = %g +/- %g ; Z in [%.8g, %.8g] (68%% C.L. log-gaussian)",
                 self.logZ, self.logZstd,
@@ -385,7 +480,10 @@ class polychord(Sampler):
         """
         if is_main_process():
             products = {
-                "sample": self.collection, "logZ": self.logZ, "logZstd": self.logZstd}
+                "sample": self.collection,
+                "logZ": self.logZ,
+                "logZstd": self.logZstd
+            }
             if self.pc_settings.do_clustering:
                 products.update({"clusters": self.clusters})
             return products
@@ -515,10 +613,13 @@ class polychord(Sampler):
             return True
         log = get_logger(__name__)
         log.info("Downloading PolyChord...")
-        success = download_github_release(os.path.join(path, "code"), cls._pc_repo_name,
-                                          cls._pc_repo_version,
-                                          no_progress_bars=no_progress_bars,
-                                          logger=log)
+        success = download_github_release(
+            os.path.join(path, "code"),
+            cls._pc_repo_name,
+            cls._pc_repo_version,
+            no_progress_bars=no_progress_bars,
+            logger=log
+        )
         if not success:
             log.error("Could not download PolyChord.")
             return False
@@ -530,8 +631,8 @@ class polychord(Sampler):
                            cls._pc_repo_name[cls._pc_repo_name.find("/") + 1:])
         my_env = os.environ.copy()
         my_env.update({"PWD": cwd})
-        process_make = Popen(["make", "pypolychord", "MPI=1"], cwd=cwd, env=my_env,
-                             stdout=PIPE, stderr=PIPE)
+        process_make = Popen(["make", "pypolychord", "MPI=1"], cwd=cwd,
+                             env=my_env, stdout=PIPE, stderr=PIPE)
         out, err = process_make.communicate()
         if process_make.returncode:
             log.info(out.decode("utf-8"))

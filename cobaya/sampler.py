@@ -359,7 +359,7 @@ class Sampler(CobayaComponent):
             for (regexp, root) in cls.output_files_regexps(output, info=info):
                 # Special case: CovmatSampler's may have been given a covmat with the same
                 # name that the output one. In that case, don't delete it!
-                if issubclass(cls, CovmatSampler) and info:
+                if issubclass(cls, CovmatSampler) and info and regexp:
                     if regexp.pattern.rstrip("$").endswith(Extension.covmat):
                         covmat_file = info.get("covmat", "")
                         if (isinstance(covmat_file, str) and covmat_file ==
@@ -510,14 +510,22 @@ class CovmatSampler(Sampler):
                     self.log, "The number of parameters in %s and the "
                               "dimensions of the matrix do not agree: %d vs %r",
                     str_msg, len(loaded_params), loaded_covmat.shape)
-            if not (np.allclose(loaded_covmat.T, loaded_covmat) and
-                    np.all(np.linalg.eigvals(loaded_covmat) > 0)):
+            if not np.allclose(loaded_covmat.T, loaded_covmat):
                 str_msg = "passed"
                 if isinstance(self.covmat, str):
                     str_msg = "loaded from %r" % self.covmat
                 raise LoggedError(
-                    self.log, "The covariance matrix %s is not a positive-definite, "
+                    self.log, "The covariance matrix %s is not a  "
                               "symmetric square matrix.", str_msg)
+            if not np.all(np.linalg.eigvals(loaded_covmat) > 0):
+                self.log.debug(loaded_covmat)
+                self.log.debug(np.linalg.eigvals(loaded_covmat))
+                str_msg = "passed"
+                if isinstance(self.covmat, str):
+                    str_msg = "loaded from %r" % self.covmat
+                raise LoggedError(
+                    self.log, "The covariance matrix %s is not a  "
+                              "positive definite matrix.", str_msg)
             # Fill with parameters in the loaded covmat
             renames = {p: [p] + str_to_list(v.get("renames") or [])
                        for p, v in params_infos.items()}

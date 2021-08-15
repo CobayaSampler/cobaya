@@ -1065,7 +1065,7 @@ class Model(HasLogger):
             oversampling_factors, blocks = zip(*list(blocking))
         except:
             raise LoggedError(
-                self.log, "Manual blocking not understood. Check documentation.")
+                self.log, f"Manual blocking not understood: {list(blocking)} is not an acceptable specification.")
         sampled_params = list(self.sampled_dependence)
         check = are_different_params_lists(list(chain(*blocks)), sampled_params)
         duplicate = check.pop("duplicate_A", None)

@@ -69,3 +69,9 @@ read_resume: True
 write_stats: True
 write_live: True
 write_dead: True
+# SuperNest:
+# ----------
+use_supernest: False
+covmat_params:
+covmat:
+mean:
