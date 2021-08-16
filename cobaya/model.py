@@ -119,10 +119,9 @@ class LogPosterior:
         """
         return {
             "logpost": self.logpost,
-            "logpriors": dict(zip(list(model.prior), self.logpriors)),
-            "loglikes": dict(zip(list(model.likelihood), self.loglikes)),
-            "derived": dict(zip(
-                list(model.parameterization.derived_params()), self.derived))}
+            "logpriors": dict(zip(model.prior, self.logpriors)),
+            "loglikes": dict(zip(model.likelihood, self.loglikes)),
+            "derived": dict(zip(model.parameterization.derived_params(), self.derived))}
 
 
 class Requirement(NamedTuple):
@@ -263,7 +262,7 @@ class Model(HasLogger):
                 self.log, "Cannot take arrays of points as inputs, just single points.")
         return params_values_array
 
-    def logpriors(self, params_values, make_finite=False) -> np.ndarray:
+    def logpriors(self, params_values, as_dict=False, make_finite=False) -> np.ndarray:
         """
         Takes an array or dictionary of sampled parameter values.
         If the argument is an array, parameters must have the same order as in the input.
@@ -275,6 +274,9 @@ class Model(HasLogger):
         product of the 1-dimensional priors specified in the ``params`` block, and it's
         normalized (in general, the external prior densities aren't).
 
+        If ``as_dict=True`` (default: False), returns a dictionary containing the prior
+        names as keys, instead of an array.
+
         If ``make_finite=True``, it will try to represent infinities as the largest real
         numbers allowed by machine precision.
         """
@@ -284,7 +286,10 @@ class Model(HasLogger):
         logpriors = np.asarray(self.prior.logps(params_values_array))
         if make_finite:
             return np.nan_to_num(logpriors)
-        return logpriors
+        if as_dict:
+            return dict(zip(self.prior, logpriors))
+        else:
+            return logpriors
 
     def logprior(self, params_values, make_finite=False):
         """
@@ -348,8 +353,8 @@ class Model(HasLogger):
             return loglikes, derived_list
         return loglikes
 
-    def loglikes(self, params_values=None, return_derived=True, make_finite=False,
-                 cached=True):
+    def loglikes(self, params_values=None, return_derived=True, as_dict=False,
+                 make_finite=False, cached=True):
         """
         Takes an array or dictionary of sampled parameter values.
         If the argument is an array, parameters must have the same order as in the input.
@@ -364,6 +369,10 @@ class Model(HasLogger):
 
         To return just the list of log-likelihood values, make ``return_derived=False``.
 
+        If ``as_dict=True`` (default: False), returns a dictionary containing the
+        likelihood names (and derived parameters, if ``return_derived=True``) as keys,
+        instead of an array.
+
         If ``make_finite=True``, it will try to represent infinities as the largest real
         numbers allowed by machine precision.
 
@@ -376,8 +385,16 @@ class Model(HasLogger):
             params_values = self.parameterization.check_sampled(**params_values)
 
         input_params = self.parameterization.to_input(params_values)
-        return self._loglikes_input_params(input_params, return_derived=return_derived,
-                                           cached=cached, make_finite=make_finite)
+        result = self._loglikes_input_params(input_params, return_derived=return_derived,
+                                             cached=cached, make_finite=make_finite)
+        if as_dict:
+            if return_derived:
+                return (dict(zip(self.likelihood, result[0])),
+                        dict(zip(self.parameterization.derived_params(), result[1])))
+            else:
+                return dict(zip(self.likelihood, result))
+        else:
+            return result
 
     def _loglikes_input_params(self, input_params, return_derived=True, make_finite=False,
                                cached=True):
@@ -425,7 +442,7 @@ class Model(HasLogger):
                 return np.nan_to_num(loglike)
             return loglike
 
-    def logposterior(self, params_values, return_derived=True,
+    def logposterior(self, params_values, return_derived=True, as_dict=False,
                      make_finite=False, cached=True, _no_check=False) -> LogPosterior:
         """
         Takes an array or dictionary of sampled parameter values.
@@ -433,7 +450,8 @@ class Model(HasLogger):
         When in doubt, you can get the correct order as
         ``list([your_model].parameterization.sampled_params())``.
 
-        Returns a :class:`~model.LogPosterior` object, with the following fields:
+        Returns a :class:`~model.LogPosterior` object (except if ``as_dict=True``, see
+        below), with the following fields:
 
         - ``logpost``: log-value of the posterior.
         - ``logpriors``: log-values of the priors, in the same order as in
@@ -449,6 +467,10 @@ class Model(HasLogger):
         non-null (otherwise the fields ``loglikes`` and ``derived`` are empty lists).
 
         To ignore the derived parameters, make ``return_derived=False``.
+
+        If ``as_dict=True`` (default: False), returns a dictionary containing prior names,
+        likelihoods names and, if applicable, derived parameters names as keys, instead of
+        a :class:`~model.LogPosterior` object.
 
         If ``make_finite=True``, it will try to represent infinities as the largest real
         numbers allowed by machine precision.
@@ -491,8 +513,12 @@ class Model(HasLogger):
         else:
             loglikes = []
             derived_sampler = []
-        return LogPosterior(logpriors=logpriors, loglikes=loglikes,
-                            derived=derived_sampler, finite=make_finite)
+        logposterior = LogPosterior(logpriors=logpriors, loglikes=loglikes,
+                                    derived=derived_sampler, finite=make_finite)
+        if as_dict:
+            return logposterior.as_dict(self)
+        else:
+            return logposterior
 
     def logpost(self, params_values, make_finite=False, cached=True) -> float:
         """
