@@ -220,6 +220,7 @@ parameters:
   having being assigned a fixed value or a function. Here, ``x`` would be an input
   parameter, but not ``logx``.
 
+.. _cobaya_diagram:
 .. image:: ./img/diagram.svg
    :align: center
    :width: 60%

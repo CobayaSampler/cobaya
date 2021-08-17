@@ -12,22 +12,21 @@ In this example, we will see how to sample from priors and likelihoods given as 
 From a Python interpreter
 -------------------------
 
-Our likelihood will be a gaussian quarter ring centred at 0, with radius 1. We define it with the following Python function and add it to the information dictionary like this:
+Our likelihood will be a gaussian quarter ring centred at 0, with radius 1. We define it with the following Python function
 
-.. code:: python
-
-    import numpy as np
-    from scipy import stats
-
-    def gauss_ring_logp(x, y):
-        return stats.norm.logpdf(np.sqrt(x**2+y**2), loc=1, scale=0.02)
-
-    info = {"likelihood": {"ring": gauss_ring_logp}}
+.. literalinclude:: ./src_examples/advanced_and_models/my_likelihood.py
+   :language: python
 
 
 .. note::
 
    NB: external likelihood and priors (as well as internal ones) must return **log**-probabilities.
+
+And we add it to the information dictionary like this:
+
+.. code:: python
+
+    info = {"likelihood": {"ring": gauss_ring_logp}}
 
 
 **cobaya** will automatically recognise ``x`` and ``y`` (or whatever parameter names of your choice) as the input parameters of that likelihood, which we have named ``ring``. Let's define a prior for them:
@@ -208,7 +207,7 @@ More complex functions must be saved into a separate file and imported on the fl
 .. code::
 
     # Notice the use of single vs double quotes
-    info = {"likelihood": {"ring": "import_module('my_likelihood').ring"}}
+    info = {"likelihood": {"ring": "import_module('my_likelihood').gauss_ring_logp"}}
 
 
 With those changes, we would be able to run our Python script from the shell (with MPI, if desired) and have the chains saved where requested.
@@ -254,39 +253,5 @@ Bu we could also have incorporated those text definitions into a ``yaml`` file, 
 
 If we would like to sample on ``theta`` and ``r`` instead, our input file would be:
 
-.. code:: yaml
-
-    likelihood:
-      ring: import_module('my_likelihood').gauss_ring_logp
-
-    params:
-      r:
-        prior: {min: 0, max: 2}
-        ref: 1
-        proposal: 0.01
-        drop: True
-      theta:
-        prior: {min: 0, max: 1.571}  # =~ [0, pi/2]
-        ref: 0
-        proposal: 0.5
-        latex: \theta
-        drop: True
-      x:
-        value: 'lambda r,theta: r*np.cos(theta)'
-        min: 0
-        max: 2
-      y:
-        value: 'lambda r,theta: r*np.sin(theta)'
-        min: 0
-        max: 2
-
-    prior:
-      Jacobian: 'lambda r: np.log(r)'
-      x_eq_y_band: 'lambda r, theta: stats.norm.logpdf(
-          r * (np.cos(theta) - np.sin(theta)), loc=0, scale=0.3)'
-
-    sampler:
-      mcmc:
-        Rminus1_stop: 0.001
-
-    output: chains/ring
+.. literalinclude:: ./src_examples/advanced_and_models/sample_r_theta.yaml
+   :language: yaml

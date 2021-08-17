@@ -18,6 +18,7 @@ Table of contents
    input
    output
    params_prior
+   models
    likelihoods
    likelihood_one
    likelihood_gaussian_mixture
