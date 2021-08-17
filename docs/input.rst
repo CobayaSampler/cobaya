@@ -175,3 +175,9 @@ Some common YAML *gotchas*
 .. note::
 
    For the YAML *connoisseur*, notice that the YAML parser used here has been modified to simplify the input/output notation: it now retains the ordering of parameters and likelihoods and prints arrays as lists.
+
+
+``run`` function
+----------------
+
+.. autofunction:: run.run

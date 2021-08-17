@@ -203,6 +203,11 @@ class Model(HasLogger):
                  packages_path=None, timing=None, allow_renames=True, stop_at_error=False,
                  post=False, skip_unused_theories=False,
                  dropped_theory_params: Optional[Iterable[str]] = None):
+        """
+        Creates an instance of :class:`model.Model`.
+
+        It is recommended to use the simpler function :func:`~model.get_model` instead.
+        """
         self.set_logger()
         self._updated_info: InputDict = {
             "params": deepcopy_where_possible(info_params),
@@ -1110,8 +1115,8 @@ class Model(HasLogger):
             blocks_split = (lambda l: [list(chain(*l[:i_last_slow + 1])),
                                        list(chain(*l[i_last_slow + 1:]))])(blocks_sorted)
             footprints_split = (
-                    [np.array(footprints_sorted[:i_last_slow + 1]).sum(axis=0)] +
-                    [np.array(footprints_sorted[i_last_slow + 1:]).sum(axis=0)])
+                [np.array(footprints_sorted[:i_last_slow + 1]).sum(axis=0)] +
+                [np.array(footprints_sorted[i_last_slow + 1:]).sum(axis=0)])
             footprints_split = np.clip(np.array(footprints_split), 0, 1)  # type: ignore
             # Recalculate oversampling factor with 2 blocks
             _, _, oversample_factors = sort_parameter_blocks(
@@ -1129,8 +1134,8 @@ class Model(HasLogger):
             # NB: the int() below forces the copy of the factors.
             #     Otherwise the yaml_representer prints references to a single object.
             oversample_factors = (
-                    [int(oversample_factors[0])] * (1 + i_last_slow) +
-                    [int(oversample_factors[1])] * (len(blocks) - (1 + i_last_slow)))
+                [int(oversample_factors[0])] * (1 + i_last_slow) +
+                [int(oversample_factors[1])] * (len(blocks) - (1 + i_last_slow)))
             self.log.debug("Doing slow/fast split. The oversampling factors for the fast "
                            "blocks should be interpreted as a global one for all of them")
         self.log.debug(
@@ -1252,6 +1257,21 @@ def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
               packages_path: Optional[str] = None,
               override: Optional[InputDict] = None
               ) -> Model:
+    """
+    Creates a :class:`model.Model`, from Cobaya's input (either as a dictionary, yaml file
+    or yaml string). Input fields/options not needed (e.g. ``sampler``, ``output``,
+    ``force``, ...) will simply be ignored.
+
+    :param info_or_yaml_or_file: input options dictionary, yaml file, or yaml text
+    :param debug: true for verbose debug output, or a specific logging level
+    :param packages_path: path where external packages were installed
+       (if external dependencies are present).
+    :param stop_at_error: stop if an error is raised
+    :param override: option dictionary to merge into the input one, overriding settings
+       (but with lower precedence than the explicit keyword arguments)
+    :return: a :class:`model.Model` instance.
+
+    """
     info = load_info_overrides(info_or_yaml_or_file, debug, stop_at_error,
                                packages_path, override)
     logger_setup(info.pop("debug", debug_default), info.pop("debug_file", None))
