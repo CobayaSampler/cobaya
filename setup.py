@@ -15,8 +15,8 @@ def find_version():
     raise RuntimeError("Unable to find version string.")
 
 
-# Get the long description from the README file
 def get_long_description():
+    """Get the long description from the README file."""
     with open(path.join(path.abspath(path.dirname(__file__)), 'README.rst'),
               encoding='utf-8') as f:
         lines = f.readlines()
@@ -24,6 +24,18 @@ def get_long_description():
         while '=====' not in lines[i]:
             i -= 1
         return "".join(lines[:i])
+
+
+def extract_docs_requirements():
+    """Get requirements for building the documentation."""
+    path_docs_requirements = path.join(path.abspath(path.dirname(__file__)),
+                                       "docs/requirements.txt")
+    with open(path_docs_requirements, "r") as f:
+        lines = f.readlines()
+    i_first = next(i for i, line in enumerate(lines)
+                   if line.strip().startswith("-e")) + 1
+    reqs = [line.strip() for line in lines[i_first:]]
+    return ["sphinx"] + reqs
 
 
 setup(
@@ -64,7 +76,8 @@ setup(
                       'dataclasses>=0.6'],
     extras_require={
         'test': ['pytest', 'pytest-forked', 'flaky', 'mpi4py'],
-        'gui': ['pyqt5', 'pyside2', 'matplotlib']},
+        'gui': ['pyqt5', 'pyside2', 'matplotlib'],
+        'docs': extract_docs_requirements()},
     package_data={
         'cobaya': list(chain(*[['%s/*/*.yaml' % folder, '%s/*/*.bibtex' % folder]
                                for folder in subfolders.values()]))},
