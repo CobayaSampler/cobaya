@@ -78,6 +78,12 @@ As another example, to plot the value of the likelihood along the radial directi
 .. image:: img/model_slice.png
    :align: center
 
+.. note::
+
+   Intermediate quantities that are computed as inter-dependencies between different parts of the pipeline, as described in section :doc:`theories_and_dependencies`, can also be obtained from a model. To get them, on the ``provider`` attribute of your :class:`model.Model` instance, use the a ``get_`` method as described in that section.
+
+   A practical example of this can be seen in section :doc:`cosmo_model`.
+
 
 .. _model_sampler_interaction:
 

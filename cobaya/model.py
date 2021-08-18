@@ -19,7 +19,7 @@ from typing import NamedTuple, Sequence, Mapping, Iterable, Optional, \
 from cobaya.conventions import overhead_time, debug_default, get_chi2_name, \
     packages_path_input
 from cobaya.typing import InfoDict, InputDict, LikesDict, TheoriesDict, \
-    ParamsDict, PriorsDict, ParamValuesDict, empty_dict, unset_params
+    ParamsDict, PriorsDict, ParamValuesDict, empty_dict, unset_params, ParamDict
 from cobaya.input import update_info, load_input_dict
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
@@ -575,7 +575,7 @@ class Model(HasLogger):
                                  return_derived=False, cached=cached).logpost
 
     def get_valid_point(self, max_tries: int, ignore_fixed_ref: bool = False,
-                        logposterior_as_dict: bool = False, random_state = None,
+                        logposterior_as_dict: bool = False, random_state=None,
                         ) -> Union[Tuple[np.ndarray, LogPosterior],
                                    Tuple[np.ndarray, dict]]:
         """
