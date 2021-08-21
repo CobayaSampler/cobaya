@@ -241,8 +241,8 @@ class SampleCollection(BaseCollection):
             return_logpost = logpost
         elif isinstance(logpost, float) or logpost is None:
             try:
-                return_logpost = LogPosterior(logpost=logpost, logpriors=logpriors,
-                                              loglikes=loglikes, derived=derived)
+                return_logpost = LogPosterior(
+                    logpriors=logpriors, loglikes=loglikes, derived=derived)
             except ValueError as valerr:
                 # missing logpriors/loglikes if logpost is None,
                 # or inconsistent sum if logpost given
