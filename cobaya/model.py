@@ -55,11 +55,11 @@ class LogPosterior:
     largest real numbers allowed by machine precision.
     """
 
-    logpost: float = None
-    logpriors: Sequence[float] = None
-    loglikes: Sequence[float] = None
-    derived: Sequence[float] = None
-    finite: bool = False
+    logpost: Optional[float] = None
+    logpriors: Optional[Sequence[float]] = None
+    loglikes: Optional[Sequence[float]] = None
+    derived: Optional[Sequence[float]] = None
+    finite: Optional[bool] = False
     logprior: float = dataclasses.field(init=False, repr=False)
     loglike: float = dataclasses.field(init=False, repr=False)
 
@@ -321,9 +321,9 @@ class Model(HasLogger):
         return logprior
 
     def _loglikes_input_params(
-            self, input_params: Dict[str, float] = None, return_derived: bool = True,
-            return_output_params: bool = False, as_dict: bool = False,
-            make_finite: bool = False, cached: bool = True
+            self, input_params: Optional[Dict[str, float]] = None,
+            return_derived: bool = True, return_output_params: bool = False,
+            as_dict: bool = False, make_finite: bool = False, cached: bool = True
     ) -> Union[np.ndarray, Dict[str, float], Tuple[np.ndarray, np.ndarray],
                Tuple[Dict[str, float], Dict[str, float]]]:
         """
@@ -386,7 +386,7 @@ class Model(HasLogger):
                                        self.parameterization.derived_params)
                 if as_dict:
                     return_params = dict(
-                        return_params_names, [np.nan] * len(return_params_names))
+                        zip(return_params_names, [np.nan] * len(return_params_names)))
                 else:
                     return_params = [np.nan] * len(return_params_names)
             else:
@@ -405,7 +405,7 @@ class Model(HasLogger):
         return loglikes
 
     def loglikes(self,
-                 params_values: Union[Dict[str, float], Sequence[float]] = None,
+                 params_values: Optional[Union[Dict[str, float], Sequence[float]]] = None,
                  as_dict: bool = False, make_finite: bool = False,
                  return_derived: bool = True, cached: bool = True
                  ) -> Union[np.ndarray, Dict[str, float], Tuple[np.ndarray, np.ndarray],
@@ -442,7 +442,7 @@ class Model(HasLogger):
                                            as_dict=as_dict)
 
     def loglike(self,
-                params_values: Union[Dict[str, float], Sequence[float]] = None,
+                params_values: Optional[Union[Dict[str, float], Sequence[float]]] = None,
                 make_finite: bool = False, return_derived: bool = True,
                 cached: bool = True) -> Union[float, Tuple[float, np.ndarray]]:
         """
@@ -538,7 +538,7 @@ class Model(HasLogger):
             logpriors = [logpriors_1d]
             if self.prior.external:
                 logpriors.extend(self.prior.logps_external(input_params))
-        if logpriors_1d != -np.inf:
+        if -np.inf not in logpriors:
             # noinspection PyUnboundLocalVariable
             like = self._loglikes_input_params(input_params,
                                                return_derived=return_derived,
@@ -609,7 +609,7 @@ class Model(HasLogger):
             raise LoggedError(self.log, "Could not find random point giving finite "
                                         "posterior after %g tries", max_tries)
         if logposterior_as_dict:
-            results = results.as_dict(logposterior_as_dict)
+            results = results.as_dict(self)
         return initial_point, results
 
     def dump_timing(self):
