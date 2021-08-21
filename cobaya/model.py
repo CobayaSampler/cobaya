@@ -51,6 +51,11 @@ class LogPosterior:
     Class holding the result of a log-posterior computation, including log-priors,
     log-likelihoods and derived parameters.
 
+    A consistency check will be performed if initialized simultaneously with
+    log-posterior, log-priors and log-likelihoods, so, for faster initialisation,
+    you may prefer to pass log-priors and log-likelhoods only, and only pass all three
+    (so that the test is performed) only when e.g. loading from an old sample.
+
     If ``finite=True`` (default: False), it will try to represent infinities as the
     largest real numbers allowed by machine precision.
     """
@@ -81,21 +86,23 @@ class LogPosterior:
                 raise ValueError("If `logpost` not passed, both `logpriors` and "
                                  "`loglikes` must be passed.")
             object.__setattr__(self, 'logpost', self.logprior + self.loglike)
-        if not self._logpost_is_consistent():
-            raise ValueError("The given log-posterior is not equal to the "
-                             "sum of given log-priors and log-likelihoods: "
-                             "%g != sum(%r) + sum(%r)" %
-                             (self.logpost, self.logpriors, self.loglikes))
+        elif self.logpriors is not None and self.loglikes is not None:
+            if not self._logpost_is_consistent():
+                raise ValueError("The given log-posterior is not equal to the "
+                                 "sum of given log-priors and log-likelihoods: "
+                                 "%g != sum(%r) + sum(%r)" %
+                                 (self.logpost, self.logpriors, self.loglikes))
 
     def _logpost_is_consistent(self):
         """
         Checks that the sum of logpriors and loglikes (if present) add up to logpost, if
         passed.
         """
-        if [self.logpost, self.logpriors, self.loglikes] is not 3 * [None]:
-            f = (lambda x: np.nan_to_num(x)) if self.finite else (lambda x: x)
-            return np.isclose(f(self.logpost), f(self.logprior + self.loglike))
-        return True
+        if self.finite:
+            return np.isclose(np.nan_to_num(self.logpost),
+                              np.nan_to_num(self.logprior + self.loglike))
+        else:
+            return np.isclose(self.logpost, self.logprior + self.loglike)
 
     def make_finite(self):
         """
