@@ -12,7 +12,7 @@ import functools
 import numpy as np
 import pandas as pd
 from copy import deepcopy
-from typing import Union, Sequence
+from typing import Union, Sequence, Optional
 from getdist import MCSamples, chains
 
 # Local
@@ -178,11 +178,11 @@ class SampleCollection(BaseCollection):
         if getattr(self, "file_name", None):
             self._n_last_out = 0
 
-    def add(self, values: np.ndarray,
-            logpost: Union[LogPosterior, float] = None,
-            logpriors: Sequence[float] = None,
-            loglikes: Sequence[float] = None,
-            derived: Sequence[float] = None,
+    def add(self, values: Union[Sequence[float], np.ndarray],
+            logpost: Optional[Union[LogPosterior, float]] = None,
+            logpriors: Optional[Sequence[float]] = None,
+            loglikes: Optional[Sequence[float]] = None,
+            derived: Optional[Sequence[float]] = None,
             weight: float = 1):
         """
         Adds a point to the collection.
@@ -195,11 +195,11 @@ class SampleCollection(BaseCollection):
             loglikes=loglikes, derived=derived, weight=weight)
         self._cache_add(values, logposterior=logposterior, weight=weight)
 
-    def _check_before_adding(self, values: np.ndarray,
-                             logpost: Union[LogPosterior, float] = None,
-                             logpriors: Sequence[float] = None,
-                             loglikes: Sequence[float] = None,
-                             derived: Sequence[float] = None,
+    def _check_before_adding(self, values: Union[Sequence[float], np.ndarray],
+                             logpost: Optional[Union[LogPosterior, float]] = None,
+                             logpriors: Optional[Sequence[float]] = None,
+                             loglikes: Optional[Sequence[float]] = None,
+                             derived: Optional[Sequence[float]] = None,
                              weight: float = 1
                              ) -> LogPosterior:
         """
@@ -257,7 +257,7 @@ class SampleCollection(BaseCollection):
         self._cache = np.full((self.cache_size, len(self.columns)), np.nan)
         self._cache_last = -1
 
-    def _cache_add(self, values: np.ndarray,
+    def _cache_add(self, values: Union[Sequence[float], np.ndarray],
                    logposterior: LogPosterior, weight: float = 1):
         """
         Adds the given point to the cache. Dumps and resets the cache if full.
@@ -268,7 +268,7 @@ class SampleCollection(BaseCollection):
             self._cache_last + 1, values, logposterior=logposterior, weight=weight)
         self._cache_last += 1
 
-    def _cache_add_row(self, pos: int, values: np.ndarray,
+    def _cache_add_row(self, pos: int, values: Union[Sequence[float], np.ndarray],
                        logposterior: LogPosterior, weight: float = 1):
         """
         Adds the given point to the cache at the given position.
