@@ -28,7 +28,7 @@ from cobaya.tools import create_banner, warn_deprecation, get_resolved_class, \
 from cobaya.input import get_used_components
 from cobaya.conventions import code_path, data_path, packages_path_arg, \
     packages_path_env, Extension, install_skip_env, packages_path_arg_posix, \
-    packages_path_config_file
+    packages_path_config_file, packages_path_input
 from cobaya.mpi import set_mpi_disabled
 from cobaya.tools import resolve_packages_path
 from cobaya.typing import InputDict
@@ -59,7 +59,7 @@ def install(*infos, **kwargs):
             log, "No 'path' argument given, and none could be found in input infos "
                  "(as %r), the %r env variable or the config file. "
                  "Maybe specify one via a command line argument '-%s [...]'?",
-            "packages_path", packages_path_env, packages_path_arg[0])
+            packages_path_input, packages_path_env, packages_path_arg[0])
     abspath = os.path.abspath(path)
     log.info("Installing external packages at '%s'", abspath)
     kwargs_install = {"force": kwargs.get("force", False),
@@ -350,9 +350,7 @@ def install_script(args=None):
     parser.add_argument("-" + modules[0], "--" + modules,
                         action="store", required=False,
                         metavar="/packages/path", default=None,
-                        help="To be deprecated! "
-                             "Alias for %s, which should be used instead." %
-                             packages_path_arg_posix)
+                        help="Deprecated! Use %s instead." % packages_path_arg_posix)
     # END OF DEPRECATION BLOCK -- CONTINUES BELOW!
     output_show_packages_path = resolve_packages_path()
     if output_show_packages_path and os.environ.get(packages_path_env):
@@ -418,24 +416,18 @@ def install_script(args=None):
     if not infos:
         logger.info("Nothing to install.")
         return
-    # MARKED FOR DEPRECATION IN v3.0
+    # List of deprecation warnings, to be printed *after* installation
     deprecation_warnings = []
+    # MARKED FOR DEPRECATION IN v3.0
     if getattr(arguments, modules) is not None:
-        deprecation_warnings.append(
-            "*DEPRECATION*: -m/--modules will be deprecated in favor of "
-            "-%s/--%s in the next version. Please, use that one instead." %
-            (packages_path_arg[0], packages_path_arg_posix))
-        # BEHAVIOUR TO BE REPLACED BY ERROR:
-        if getattr(arguments, packages_path_arg) is None:
-            setattr(arguments, packages_path_arg, getattr(arguments, modules))
+        raise LoggedError(logger, "-m/--modules has been deprecated in favor of "
+                                  "-%s/--%s",
+                          packages_path_arg[0], packages_path_arg_posix)
     # END OF DEPRECATION BLOCK
     # MARKED FOR DEPRECATION IN v3.0
     if arguments.just_check is True:
-        deprecation_warnings.append(
-            "*DEPRECATION*: --just-check will be deprecated in favor of "
-            "--%s in the next version. Please, use that one instead." % "test")
-    # BEHAVIOUR TO BE REPLACED BY ERROR:
-    setattr(arguments, "test", getattr(arguments, "test") or arguments.just_check)
+        raise LoggedError(logger, "--just-check has been deprecated in favor of --%s",
+                          "test")
     # END OF DEPRECATION BLOCK
     # Launch installer
     install(*infos, path=getattr(arguments, packages_path_arg),

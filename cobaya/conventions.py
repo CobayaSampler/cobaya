@@ -92,6 +92,7 @@ class Extension:
 
 # Installation and container definitions
 packages_path_arg = "packages_path"
+packages_path_input = packages_path_arg
 packages_path_arg_posix = packages_path_arg.replace("_", "-")
 packages_path_env = "COBAYA_PACKAGES_PATH"
 packages_path_config_file = "config.yaml"

@@ -21,7 +21,8 @@ import pkg_resources
 
 # Local
 from cobaya.conventions import products_path, kinds, separator_files, \
-    reserved_attributes, get_chi2_name, get_chi2_label, Extension, FileSuffix
+    reserved_attributes, get_chi2_name, get_chi2_label, Extension, FileSuffix, \
+    packages_path_input
 from cobaya.typing import InputDict, InfoDict, ModelDict, ExpandedParamsDict, LikesDict, \
     empty_dict
 from cobaya.tools import recursive_update, str_to_list, get_base_classes, \
@@ -457,7 +458,7 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
         myprint_debug = log.debug
     myname = inspect.stack()[0][3]
     ignore = set() if strict else \
-        {"debug", "debug_file", "resume", "force", "packages_path", "test", "version"}
+        {"debug", "debug_file", "resume", "force", packages_path_input, "test", "version"}
     ignore = ignore.union(ignore_blocks or [])
     if set(info for info in info_old if info_old[info] is not None) - ignore \
             != set(info for info in info_new if info_new[info] is not None) - ignore:

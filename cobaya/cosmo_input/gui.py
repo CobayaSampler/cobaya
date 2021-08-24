@@ -17,7 +17,7 @@ from cobaya.bib import prettyprint_bib, get_bib_info, get_bib_component
 from cobaya.tools import warn_deprecation, get_available_internal_class_names, \
     cov_to_std_and_corr, resolve_packages_path, sort_cosmetic
 from cobaya.input import get_default_info
-from cobaya.conventions import subfolders, kinds, packages_path_env
+from cobaya.conventions import subfolders, kinds, packages_path_env, packages_path_input
 
 # per-platform settings for correct high-DPI scaling
 if platform.system() == "Linux":
@@ -249,7 +249,7 @@ class MainWindow(QWidget):
                 "\nIn order to find a covariance matrix, you need to define an external "
                 "packages installation path, e.g. via the env variable %r.\n" %
                 packages_path_env)
-        elif any(not os.path.isdir(d.format(**{"packages_path": packages_path}))
+        elif any(not os.path.isdir(d.format(**{packages_path_input: packages_path}))
                  for d in covmat_folders):
             self.covmat_text.setText(
                 "\nThe external cosmological packages appear not to be installed where "

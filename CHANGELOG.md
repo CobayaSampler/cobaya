@@ -1,3 +1,9 @@
+## 3.1.1 – 2021-07-22
+
+- Changes for compatibility with Pandas 1.3 (which broke convergence testing amongst other things).
+- Updated docs with list of external likelihood codes, and to help avoid issues with PySide install
+- Minor fixes in BAO/SN likelihoods
+
 ## 3.1 – 2021-06-04
 
 ### General
