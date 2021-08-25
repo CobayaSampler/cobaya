@@ -389,8 +389,8 @@ class Model(HasLogger):
             loglikes = dict(zip(self.likelihood, loglikes))
         if return_derived or return_output_params:
             if not compute_success:
-                return_params_names = (self.output_params if return_output_params else
-                                       self.parameterization.derived_params)
+                return_params_names = (
+                    self.output_params if return_output_params else self.derived_params)
                 if as_dict:
                     return_params = dict(
                         zip(return_params_names, [np.nan] * len(return_params_names)))
@@ -926,6 +926,7 @@ class Model(HasLogger):
         self.input_params = [p for p in self.parameterization.input_params() if p not in
                              self.parameterization.dropped_param_set()]
         self.output_params = list(self.parameterization.output_params())
+        self.derived_params = list(self.parameterization.derived_params())
         input_assign: Dict[str, List[Theory]] = {p: [] for p in self.input_params}
         output_assign: Dict[str, List[Theory]] = {p: [] for p in self.output_params}
         # Go through all components.
