@@ -1,5 +1,5 @@
 """
-.. module:: likelihoods.gaussian
+.. module:: likelihoods.gaussian_mixture
 
 :Synopsis: Gaussian mixture likelihood
 :Author: Jesus Torrado

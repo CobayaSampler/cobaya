@@ -70,7 +70,7 @@ sampler:
   mcmc:
    drag: True
    measure_speeds: False
-   Rminus1_stop: 0.001   
+   Rminus1_stop: 0.001
    Rminus1_cl_stop: 0.04
    seed: 1
 """
